@@ -31,22 +31,24 @@ class ConvolutionBackwardDataImpl::AlgoBase: public Algorithm {
         struct SizeArgs {
             HandleImpl *handle;
             CanonizedFilterMeta filter_meta;
-            const TensorLayout *diff_layout, *grad_layout;
+            const TensorLayout *diff_layout, *grad_layout, *filter_layout;
             ConvolutionBackwardDataImpl *opr;
 
             std::string to_string() const;
             void init_desc(convolution::CUDNNBwdDataDescs &desc) const {
                 desc.set(filter_meta, *diff_layout, *grad_layout, opr->param());
             }
-            SizeArgs(ConvolutionBackwardDataImpl *opr,
-                    const TensorLayout &filter, const TensorLayout &diff,
-                    const TensorLayout &grad);
-            SizeArgs(ConvolutionBackwardDataImpl *opr,
-                    const CanonizedFilterMeta &filter, const TensorLayout &diff,
-                    const TensorLayout &grad);
+            SizeArgs(ConvolutionBackwardDataImpl* opr,
+                     const TensorLayout& filter, const TensorLayout& diff,
+                     const TensorLayout& grad);
+            SizeArgs(ConvolutionBackwardDataImpl* opr,
+                     const TensorLayout& filter,
+                     const CanonizedFilterMeta& filter_meta,
+                     const TensorLayout& diff, const TensorLayout& grad);
 
             convolution::ForwardSizeArgs as_fwd_args() const {
-                return {handle, grad_layout, filter_meta, diff_layout};
+                return {handle, grad_layout, filter_layout, filter_meta,
+                        diff_layout};
             }
         };
         struct ExecArgs: public SizeArgs {
@@ -170,6 +172,25 @@ class ConvolutionBackwardDataImpl::AlgoChanwiseSmall final: public AlgoBase {
         }
 };
 
+class ConvolutionBackwardDataImpl::AlgoBFloat16 final : public AlgoBase {
+public:
+    AlgoBFloat16(ConvolutionBackwardDataImpl::AlgoBase*);
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    const char* name() const override { return m_name.c_str(); }
+    bool is_reproducible() const override { return true; }
+
+private:
+    std::string m_name;
+    ConvolutionBackwardDataImpl::AlgoBase* m_algorithm = nullptr;
+    SizeArgs float_args(const SizeArgs& args, ConvolutionBackwardDataImpl* opr,
+                        TensorLayout& fsrc, TensorLayout& ffilter,
+                        TensorLayout& fdst) const;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+};
+
 //! implement group conv by another algo
 class ConvolutionBackwardDataImpl::AlgoGroupConvGeneral final: public AlgoBase {
     AlgoBase *m_impl;
@@ -210,12 +231,14 @@ class ConvolutionBackwardDataImpl::AlgoPack {
         AlgoChanwiseSmall chanwise_small;
         std::vector<AlgoGroupConvGeneral> gconv;
         std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
+        std::vector<std::unique_ptr<AlgoBFloat16>> bfloat16_refhold;
 
         std::vector<AlgoBase*>
             //! all algorithms
             all_algos,
             //! non-cudnn algos, used for heuristic if cudnn is not supported
-            non_cudnn_algos;
+            non_cudnn_algos,
+            bfloat16_algos;
 
         AlgoCUDNN* cudnn_from_enum(cudnnConvolutionBwdDataAlgo_t algo);
 };

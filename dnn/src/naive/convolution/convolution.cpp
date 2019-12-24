@@ -59,6 +59,9 @@ void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
     DISPATCH(QuantizedS8, QuantizedS32, dt_int8, dt_int32, dt_int32);
     MEGDNN_INC_FLOAT16(DISPATCH_CMODE(Float16, Float16, dt_float16, dt_float16,
                                       dt_float32, ComputeMode::FLOAT32));
+    MEGDNN_INC_FLOAT16(DISPATCH_CMODE(BFloat16, BFloat16, dt_bfloat16,
+                                      dt_bfloat16, dt_float32,
+                                      ComputeMode::FLOAT32));
     DISPATCH(Quantized8Asymm, QuantizedS32, dt_quint8, dt_qint32, dt_qint32);
     DISPATCH(QuantizedS8, QuantizedS8, dt_int8, dt_int8, dt_int32);
 #undef DISPATCH
@@ -77,7 +80,7 @@ size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(const TensorLayout& f
     auto grad_dt = grad.dtype.enumv();
     auto diff_dt = diff.dtype.enumv();
 #if !MEGDNN_DISABLE_FLOAT16
-    if (flt_dt == DTypeEnum::Float16) {
+    if (flt_dt == DTypeEnum::Float16 || flt_dt == DTypeEnum::BFloat16) {
         megdnn_assert(flt_dt == grad_dt && flt_dt == diff_dt);
         workspace_size = grad.span().dist_elem() * dtype::Float32().size();
     }
@@ -128,6 +131,20 @@ void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
         type_cvt->exec(grad_fp32, grad);
         return;
     }
+    if (filter.layout.dtype == dtype::BFloat16() &&
+        cmode == ComputeMode::FLOAT32) {
+        TensorND grad_fp32;
+        grad_fp32.layout = grad.layout;
+        grad_fp32.layout.dtype = dtype::Float32();
+        grad_fp32.raw_ptr = workspace.raw_ptr;
+        auto&& type_cvt = handle()->create_operator<TypeCvt>();
+        type_cvt->exec(grad, grad_fp32);
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                (convolution::backward_data<dt_bfloat16, dt_bfloat16, dt_float32>(
+                        filter, diff, grad_fp32, filter_meta)););
+        type_cvt->exec(grad_fp32, grad);
+        return;
+    }
 #endif
     auto flt_dt = filter.layout.dtype.enumv();
     auto grad_dt = grad.layout.dtype.enumv();
@@ -174,7 +191,7 @@ size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
     auto src_dt = src.dtype.enumv();
     auto grad_dt = grad.dtype.enumv();
     auto diff_dt = diff.dtype.enumv();
-    if (src_dt == DTypeEnum::Float16) {
+    if (src_dt == DTypeEnum::Float16 || src_dt == DTypeEnum::BFloat16) {
         megdnn_assert(src_dt == grad_dt && src_dt == diff_dt);
         workspace_size = grad.span().dist_elem() * dtype::Float32().size();
     }
@@ -221,6 +238,22 @@ void ConvolutionBackwardFilterImpl::exec(_megdnn_tensor_in src,
         type_cvt->exec(grad_fp32, grad);
         return;
     }
+    if (src.layout.dtype == dtype::BFloat16() &&
+        cmode == ComputeMode::FLOAT32) {
+        TensorND grad_fp32;
+        grad_fp32.layout = grad.layout;
+        grad_fp32.layout.dtype = dtype::Float32();
+        grad_fp32.raw_ptr = workspace.raw_ptr;
+        auto&& type_cvt = handle()->create_operator<TypeCvt>();
+        type_cvt->exec(grad, grad_fp32);
+        MEGDNN_DISPATCH_CPU_KERN_OPR(
+                (convolution::backward_filter<dt_bfloat16, dt_bfloat16,
+                                              dt_float32>(src, diff, grad_fp32,
+                                                          filter_meta)););
+        type_cvt->exec(grad_fp32, grad);
+        return;
+    }
+
 #endif
 
     megdnn_assert_internal(0);

@@ -117,4 +117,54 @@ TEST_F(NAIVE, TYPECVT_QINT4) {
                   });
 }
 
+TEST_F(NAIVE, TYPECVT_BFLOAT16) {
+    Checker<TypeCvt> checker(handle(), false);
+
+    checker.exect(
+            Testcase{TensorValue({1, 1, 2, 4}, dtype::Float32(),
+                                 {
+                                         0.19921875,          // 0x3E4C0000
+                                         0.19970703125,       // 0x3E4C8000
+                                         0.1997108459472656,  // 0x3E4C8100
+                                         0.1997032165527344,  // 0x3E4C7F00
+                                         0.2001953125,        // 0x3E4D0000
+                                         0.20068359375,       // 0x3E4D8000
+                                         0.2006874084472656,  // 0x3E4D8100
+                                         0.2006797790527344   // 0x3E4D7F00
+                                 }),
+                     {}},
+            Testcase{{},
+                     TensorValue({1, 1, 2, 4}, dtype::BFloat16(),
+                                 {
+                                         0.19921875,    // 0x3E4C
+                                         0.19921875,    // 0x3E4C
+                                         0.2001953125,  // 0x3E4D
+                                         0.19921875,    // 0x3E4C
+                                         0.2001953125,  // 0x3E4D
+                                         0.201171875,   // 0x3E4E
+                                         0.201171875,   // 0x3E4E
+                                         0.2001953125   // 0x3E4D
+                                 })}
+
+    );
+    checker.exect(Testcase{TensorValue({1, 1, 2, 2}, dtype::Float32(),
+                                       {
+                                               -123456.f,  // C7F12000
+                                               -123648.f,  // C7F18000
+                                               -123136.f,  // C7F08000
+                                               -124160.f   // C7F28000
+                                       }),
+                           {}},
+                  Testcase{{},
+                           TensorValue({1, 1, 2, 2}, dtype::BFloat16(),
+                                       {
+                                               -123392.f,  // C7F1
+                                               -123904.f,  // C7F2
+                                               -122880.f,  // C7F0
+                                               -123904.f   // C7F2
+                                       })}
+
+    );
+}
+
 // vim: syntax=cpp.doxygen

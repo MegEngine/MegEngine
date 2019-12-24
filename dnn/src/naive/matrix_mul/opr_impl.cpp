@@ -66,6 +66,13 @@ void dispatch_ta_tb(_megdnn_tensor_in A, _megdnn_tensor_in B,
         } else if (param.compute_mode == Param::ComputeMode::FLOAT32) {
             cb(dt_float16, dt_float16, dt_float32);
         }
+    } else if (A.layout.dtype == dtype::BFloat16()) {
+        using Param = MatrixMul::Param;
+        if (param.compute_mode == Param::ComputeMode::DEFAULT) {
+            cb(dt_bfloat16, dt_bfloat16, dt_bfloat16);
+        } else if (param.compute_mode == Param::ComputeMode::FLOAT32) {
+            cb(dt_bfloat16, dt_bfloat16, dt_float32);
+        }
 #endif
     } else if (A.layout.dtype == dtype::Int8() &&
                C.layout.dtype == dtype::Int16()) {

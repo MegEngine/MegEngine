@@ -29,6 +29,10 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&cublas_lt);
 #endif
     all_algos.push_back(&naive);
+#if !MEGDNN_DISABLE_FLOAT16
+    cublas_bfloat16 = std::make_unique<AlgoBFloat16>(&cublas);
+    all_algos.push_back(cublas_bfloat16.get());
+#endif
 }
 
 MatrixMulForwardImpl::AlgoPack MatrixMulForwardImpl::sm_algo_pack;

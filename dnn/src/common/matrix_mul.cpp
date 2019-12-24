@@ -69,11 +69,11 @@ void MatrixMulForward::deduce_layout(const TensorLayout& A,
         C = TensorLayout(TensorShape({A0, B1}), C.dtype);
     } else {
         auto do_deduce = [&](size_t pack_size) {
-            megdnn_assert(
-                    A.ndim == 4 && B.ndim == 3,
-                    "matmul requires input dimension to be A(4), B(3); get: %s %s",
-                    A.TensorShape::to_string().c_str(),
-                    B.TensorShape::to_string().c_str());
+            megdnn_assert(A.ndim == 4 && B.ndim == 3,
+                          "matmul requires input dimension to be A(4), B(3); "
+                          "get: %s %s",
+                          A.TensorShape::to_string().c_str(),
+                          B.TensorShape::to_string().c_str());
             A0 = A.shape[0];
             A1 = A.shape[1];
             B0 = B.shape[0];
@@ -82,11 +82,11 @@ void MatrixMulForward::deduce_layout(const TensorLayout& A,
                 std::swap(A0, A1);
             if (m_param.transposeB)
                 std::swap(B0, B1);
-            megdnn_assert(
-                    A1 == B0,
-                    "shape mismatch in matmal: (transposed) A is (%zu,%zu,4,4), "
-                    "(transposed) B is (%zu,%zu,4)",
-                    A0, A1, B0, B1);
+            megdnn_assert(A1 == B0,
+                          "shape mismatch in matmal: (transposed) A is "
+                          "(%zu,%zu,4,4), "
+                          "(transposed) B is (%zu,%zu,4)",
+                          A0, A1, B0, B1);
             C = TensorLayout(TensorShape({A0, B1, pack_size}), C.dtype);
         };
         do_deduce(pack_size(param().format));
@@ -172,8 +172,9 @@ void MatrixMulForward::check_exec(const TensorLayout& A, const TensorLayout& B,
     }
     megdnn_assert(param().compute_mode !=
                           Param::ComputeMode::FLOAT32 MEGDNN_INC_FLOAT16(
-                                  || A.dtype == dtype::Float16()),
-                  "ComputeMode::FLOAT32 is only available for Float16 "
+                                  || A.dtype == dtype::Float16() ||
+                                  A.dtype == dtype::BFloat16()),
+                  "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
                   "input / output.");
     auto required_workspace_in_bytes = get_workspace_in_bytes(A, B, C);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);

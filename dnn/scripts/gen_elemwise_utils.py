@@ -6,7 +6,8 @@ DTYPES = {'dt_int32': ('Int32', 'INT'),
           'dt_int8': ('Int8', 'INT'),
           'dt_int16': ('Int16', 'INT'),
           'dt_float32': ('Float32', 'FLOAT'),
-          'dt_float16': ('Float16', 'FLOAT')
+          'dt_float16': ('Float16', 'FLOAT'),
+          'dt_bfloat16': ('BFloat16', 'FLOAT')
           }
 
 MODES = {

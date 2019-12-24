@@ -15,6 +15,7 @@
 #include "test/common/checker.h"
 #include "test/common/random_state.h"
 #include "test/common/convolution.h"
+#include "test/common/extra_impl_helper.h"
 
 using namespace megdnn;
 using namespace test;
@@ -242,6 +243,127 @@ TEST_F(NAIVE, CONVOLUTION_WITH_NCHW4) {
             .execs({{20, 15, 30, 30, 4}, {5, 4, 3, 3, 3, 4}, {}})
             .execs({{20, 25, 30, 30, 4}, {5, 4, 5, 1, 1, 4}, {}})
             .execs({{20, 27, 30, 30, 4}, {3, 4, 9, 1, 1, 4}, {}});
+}
+
+TEST_F(NAIVE, CONVOLUTION_BFLOAT16) {
+    Checker<Convolution> checker(handle(), false);
+    using Param = Convolution::Param;
+    Param param;
+    param.sparse = param::Convolution::Sparse::DENSE;
+    Param impl_param = param;
+
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
+                   size_t fh, size_t fw) {
+        float scale = 1.0f / sqrt(ic * fh * fw);
+        UniformFloatRNG rng(scale, 2 * scale);
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 1;
+        impl_param.pad_h = impl_param.pad_w = 1;
+        impl_param.stride_h = impl_param.stride_w = 1;
+        auto extra_impl =
+                    extra_impl_helper<Convolution>(handle(), impl_param);
+        for (auto cmode :
+             std::vector<Param::ComputeMode>{Param::ComputeMode::DEFAULT,
+                                             Param::ComputeMode::FLOAT32}) {
+            param.compute_mode = cmode;
+            checker.set_param(param)
+                    .set_dtype(0, dtype::BFloat16())
+                    .set_dtype(1, dtype::BFloat16())
+                    // Use inferred output dtype.
+                    .set_dtype(2, {})
+                    .set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_extra_opr_impl(extra_impl)
+                    .set_epsilon(1e-1)
+                    .execs({{n, ic, ih, iw}, {oc, ic, fh, fw}, {}});
+        }
+    };
+
+    run(1, 1, 20, 20, 5, 3, 3);
+    run(1, 2, 8, 7, 11, 3, 1);
+}
+
+TEST_F(NAIVE, CONVOLUTION_BACKWARD_DATA_BFLOAT16) {
+    Checker<ConvolutionBackwardData> checker(handle(), false);
+    using Param = ConvolutionBackwardData::Param;
+
+    Param param, impl_param;
+    param.sparse = Param::Sparse::DENSE;
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
+                   size_t fh, size_t fw, size_t stride, size_t padding,
+                   const Param::ComputeMode& cmode =
+                           Param::ComputeMode::DEFAULT) {
+        param.pad_h = param.pad_w = padding;
+        param.stride_h = param.stride_w = stride;
+        param.dilate_h = param.dilate_w = 1;
+        param.compute_mode = cmode;
+
+        TensorLayout diff =
+                TensorLayout{{n, oc, oh, ow}, dtype::BFloat16()};
+        TensorLayout grad;
+        TensorLayout filter;
+        filter = {{oc, ic, fh, fw}, dtype::BFloat16()};
+        // TensorLayout grad;
+        {
+            auto opr = handle()->create_operator<ConvolutionBackwardData>();
+            opr->param() = param;
+            opr->deduce_layout(filter, diff, grad);
+        }
+        impl_param = param;
+        impl_param.compute_mode = Param::ComputeMode::DEFAULT;
+        auto extra_impl = extra_impl_helper<ConvolutionBackwardData>(
+                handle(), impl_param);
+        checker.set_param(param)
+                .set_extra_opr_impl(extra_impl)
+                .set_epsilon(1e-1)
+                .set_dtype(0, dtype::BFloat16())
+                .set_dtype(1, dtype::BFloat16());
+        checker.exec(TensorLayoutArray{filter, diff, grad});
+    };
+
+    run(4, 3, 10, 13, 5, 1, 1, 1, 0);
+    run(2, 1, 24, 43, 11, 3, 3, 2, 1, Param::ComputeMode::FLOAT32);
+}
+
+TEST_F(NAIVE, CONVOLUTION_BACKWARD_FILTER_BFLOAT16) {
+    using namespace convolution;
+    Checker<ConvolutionBackwardFilter> checker(handle(), false);
+    using Param = ConvolutionBackwardFilter::Param;
+    Param param;
+    Param impl_param = param;
+
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
+                   size_t fh, size_t fw,
+                   const Param::ComputeMode& cmode =
+                           Param::ComputeMode::DEFAULT) {
+        auto src = TensorLayout({n, ic, ih, iw}, dtype::BFloat16());
+        auto filter = TensorLayout({oc, ic, fh, fw}, dtype::BFloat16());
+        TensorLayout dst;
+        {
+            auto opr = handle()->create_operator<Convolution>();
+            opr->param() = param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        float scale = 1.0f / sqrt(dst[2] * dst[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        src.dtype = dst.dtype = filter.dtype = dtype::BFloat16();
+        param.compute_mode = cmode;
+        impl_param = param;
+        impl_param.compute_mode = Param::ComputeMode::DEFAULT;
+        auto extra_impl = extra_impl_helper<ConvolutionBackwardFilter>(
+                handle(), impl_param);
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_dtype(0, dtype::BFloat16())
+                .set_dtype(1, dtype::BFloat16())
+                .set_epsilon(1e-1)
+                .set_extra_opr_impl(extra_impl)
+                .set_param(param)
+                .exec(TensorLayoutArray{src, dst, filter});
+    };
+
+    run(1, 2, 8, 7, 11, 3, 1);
+    run(1, 1, 20, 20, 5, 3, 3, Param::ComputeMode::FLOAT32);
 }
 
 // vim: syntax=cpp.doxygen

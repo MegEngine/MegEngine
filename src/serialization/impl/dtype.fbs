@@ -20,6 +20,7 @@ enum DTypeEnum : byte {
     Quantized4Asymm,
     QuantizedS4,
     QuantizedS16,
+    BFloat16,
 }
 
 table LinearQuantizationParam {

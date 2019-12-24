@@ -108,6 +108,13 @@ TEST_F(CUDA, CONVOLUTION_FORWARD)
                 .set_epsilon(1e-1)
                 .set_param(arg.param)
                 .execs({arg.src, arg.filter, {}});
+        checker.set_dtype(0, dtype::BFloat16())
+                .set_dtype(1, dtype::BFloat16())
+                .set_dtype(2, dtype::BFloat16())
+                .set_epsilon(1e-1)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
+
     }
 }
 
@@ -216,6 +223,13 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
                     .set_epsilon(1e-1)
                     .set_param(arg.param)
                     .exec(TensorLayoutArray{filter, dst, src});
+            src.dtype = dst.dtype = filter.dtype = dtype::BFloat16();
+            checker.
+                set_rng(0, &rng).
+                set_rng(1, &rng).
+                set_epsilon(1e-1).
+                set_param(arg.param).
+                exec(TensorLayoutArray{filter, dst, src});
         }
     }
 }
@@ -303,6 +317,12 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
             set_param(arg.param).
             exec(TensorLayoutArray{src, dst, filter});
         arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_epsilon(1e-1)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{src, dst, filter});
+        src.dtype = dst.dtype = filter.dtype = dtype::BFloat16();
         checker.set_rng(0, &rng)
                 .set_rng(1, &rng)
                 .set_epsilon(1e-1)

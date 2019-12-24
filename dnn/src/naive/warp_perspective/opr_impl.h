@@ -76,7 +76,8 @@ class WarpPerspectiveForwardImpl: public WarpPerspectiveForward {
                 }
                 if (src.layout.dtype.enumv() == DTypeEnum::Float32 ||
                     MEGDNN_FLOAT16_SELECT(
-                            src.layout.dtype.enumv() == DTypeEnum::Float16,
+                            (src.layout.dtype.enumv() == DTypeEnum::Float16 ||
+                             src.layout.dtype.enumv() == DTypeEnum::BFloat16),
                             false) ||
                     src.layout.dtype.enumv() == DTypeEnum::Int8 ||
                     src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
@@ -123,6 +124,27 @@ class WarpPerspectiveForwardImpl: public WarpPerspectiveForward {
 };
 
 class WarpPerspectiveBackwardDataImpl : public WarpPerspectiveBackwardData {
+protected:
+    template <typename ctype, typename mtype>
+    struct KernParam {
+        size_t n, c, ih, iw, oh, ow;
+        ctype *sptr, *hptr;
+        mtype* mptr;
+
+        static KernParam from_tensors(_megdnn_tensor_in mat,
+                                      _megdnn_tensor_in diff,
+                                      _megdnn_tensor_out grad) {
+            KernParam ret;
+            ret.n = grad.layout.shape[0], ret.c = grad.layout.shape[1],
+            ret.ih = grad.layout.shape[2], ret.iw = grad.layout.shape[3];
+            ret.oh = diff.layout.shape[2], ret.ow = diff.layout.shape[3];
+            ret.hptr = diff.ptr<ctype>();
+            ret.mptr = mat.ptr<mtype>();
+            ret.sptr = grad.ptr<ctype>();
+            return ret;
+        }
+    };
+
 public:
     using WarpPerspectiveBackwardData::WarpPerspectiveBackwardData;
     void exec(_megdnn_tensor_in mat, _megdnn_tensor_in diff,
@@ -131,9 +153,36 @@ public:
                                   const TensorLayout&) override {
         return 0;
     }
+private:
+    template <typename ctype, typename mtype>
+    void kern_naive(const KernParam<ctype, mtype>& kern_param);
 };
 
 class WarpPerspectiveBackwardMatImpl : public WarpPerspectiveBackwardMat {
+protected:
+    template <typename ctype, typename mtype>
+    struct KernParam {
+        size_t n, c, ih, iw, oh, ow;
+        ctype *sptr, *hptr;
+        mtype* mptr, *res;
+        float border_val;
+        static KernParam from_tensors(float border_val_, _megdnn_tensor_in src,
+                                      _megdnn_tensor_in mat,
+                                      _megdnn_tensor_in diff,
+                                      _megdnn_tensor_out grad) {
+            KernParam ret;
+            ret.border_val = border_val_;
+            ret.n = src.layout.shape[0], ret.c = src.layout.shape[1],
+            ret.ih = src.layout.shape[2], ret.iw = src.layout.shape[3];
+            ret.oh = diff.layout.shape[2], ret.ow = diff.layout.shape[3];
+            ret.hptr = diff.ptr<ctype>();
+            ret.mptr = mat.ptr<mtype>();
+            ret.sptr = src.ptr<ctype>();
+            ret.res = grad.ptr<mtype>();
+            return ret;
+        }
+    };
+
 public:
     using WarpPerspectiveBackwardMat::WarpPerspectiveBackwardMat;
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
@@ -144,6 +193,10 @@ public:
                                   const TensorLayout&) override {
         return 0;
     }
+
+private:
+    template <typename ctype, typename mtype>
+    void kern_naive(const KernParam<ctype, mtype>& kern_param);
 };
 
 #define UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(p)                         \

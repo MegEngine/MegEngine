@@ -141,6 +141,9 @@ INST_FOR_CTYPE
 #define ct dt_float16
 INST_FOR_CTYPE
 #undef ct
+#define ct dt_bfloat16
+INST_FOR_CTYPE
+#undef ct
 #define ct dt_int8
 INST_FOR_CTYPE
 #undef ct

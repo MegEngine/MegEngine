@@ -38,6 +38,15 @@ namespace {
     }
 #endif
 
+#if !MEGDNN_DISABLE_FLOAT16
+    template<>
+    dt_bfloat16 uniform_int2float(uint64_t x) {
+        union U { uint16_t i; dt_bfloat16 f; U(): f(0) {} } u;
+        u.i = (0x7F << 7) | (x >> 57);
+        return dt_bfloat16(2.f) - u.f;
+    }
+#endif
+
     template<typename ctype>
     void fill_uniform(Xoroshiro128plus *rng, ctype *dst, size_t size) {
         for (size_t i = 0; i < size; ++ i) {

@@ -11,7 +11,7 @@ from typing import Union
 
 import numpy as np
 
-from .mgb import intb1, intb2, intb4
+from .mgb import bfloat16, intb1, intb2, intb4
 
 _QuantDtypeMetadata = collections.namedtuple(
     "QuantDtypeMetadata", ["name", "np_dtype_str", "is_unsigned", "qmin", "qmax",]
@@ -38,6 +38,10 @@ def is_quantize(dtype):
 
 def is_lowbit(dtype):
     return (dtype is intb1) or (dtype is intb2) or (dtype is intb4)
+
+
+def is_bfloat16(dtype):
+    return dtype is bfloat16
 
 
 def get_scale(dtype):

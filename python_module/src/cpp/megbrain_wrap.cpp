@@ -905,6 +905,9 @@ SymbolVar fill_retain_dtype(SymbolVar var, PyObject *value) {
         case DTypeEnum::Float16:
             return var.fill_retain_dtype(
                     static_cast<float>(*tensor.ptr<dt_float16>()));
+        case DTypeEnum::BFloat16:
+            return var.fill_retain_dtype(
+                    static_cast<float>(*tensor.ptr<dt_bfloat16>()));
         // TODO: What does this mean?
         case DTypeEnum::Quantized8Asymm:
         case DTypeEnum::QuantizedS32:

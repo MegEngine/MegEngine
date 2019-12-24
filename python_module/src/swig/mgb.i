@@ -14,11 +14,13 @@
 #define SWIG_FILE_WITH_INIT 1
 void mgb_init_numpy(); // implemented in python_helper.cpp
 void _init_intbx_types(PyObject *m); // implemented in intbx.cpp
+void _init_bfloat16_types(PyObject *m); // implemented in bfloat16.cpp
 %}
 
 %init %{
     mgb_init_numpy();
     _init_intbx_types(m);
+    _init_bfloat16_types(m);
 %}
 
 %include "std_vector.i"
@@ -36,6 +38,7 @@ import os
 intb1 = _mgb.intb1
 intb2 = _mgb.intb2
 intb4 = _mgb.intb4
+bfloat16 = _mgb.bfloat16
 %}
 
 %{

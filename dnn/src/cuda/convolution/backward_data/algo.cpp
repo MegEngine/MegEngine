@@ -33,11 +33,12 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
 
     // add gconv algos by AlgoGroupConvGeneral
     auto all_algos_data = all_algos.data();
-    for (size_t i = 2; i < all_algos.size(); ++ i) {
+    size_t group_algo_start = 2;
+    for (size_t i = group_algo_start; i < all_algos.size(); ++ i) {
         gconv.push_back({all_algos[i]});
     }
-    for (size_t i = 2; i < all_algos.size(); ++ i) {
-        algo2gconv[all_algos[i]] = &gconv[i - 2];
+    for (size_t i = group_algo_start; i < all_algos.size(); ++ i) {
+        algo2gconv[all_algos[i]] = &gconv[i - group_algo_start];
     }
     for (auto &&i: gconv) {
         all_algos.push_back(&i);
@@ -45,6 +46,12 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
     megdnn_assert(all_algos_data == all_algos.data());
 
     non_cudnn_algos.push_back(all_algos.rbegin()[0]);   // group matmul
+    size_t algo_size = all_algos.size();
+    for (size_t i=0; i<algo_size; ++i) {
+        bfloat16_refhold.emplace_back(new AlgoBFloat16(all_algos[i]));
+        all_algos.push_back(bfloat16_refhold.back().get());
+        bfloat16_algos.push_back(bfloat16_refhold.back().get());
+    }
 }
 
 ConvolutionBackwardDataImpl::AlgoCUDNN*
@@ -65,18 +72,19 @@ ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvolutionBackwardDataImpl *o,
         const TensorLayout &filter, const TensorLayout &diff,
         const TensorLayout &grad):
-    SizeArgs(o, o->check_layout_fwd(grad, filter, diff), diff, grad)
+    SizeArgs(o, filter, o->check_layout_fwd(grad, filter, diff), diff, grad)
 {
 }
 
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvolutionBackwardDataImpl *o,
-        const CanonizedFilterMeta &filter, const TensorLayout &diff,
+        ConvolutionBackwardDataImpl *o, const TensorLayout& filter,
+        const CanonizedFilterMeta &filter_meta, const TensorLayout &diff,
         const TensorLayout &grad):
     handle{concrete_handle(o->handle())},
-    filter_meta{filter},
+    filter_meta{filter_meta},
     diff_layout{&diff},
     grad_layout{&grad},
+    filter_layout{&filter},
     opr{o}
 {
 }

@@ -211,6 +211,7 @@ void backward_proxy(const int nthreads, const T* top_diff,
             T*, const T*, cudaStream_t);
 INST(dt_float32)
 INST(dt_float16)
+INST(dt_bfloat16)
 #undef INST
 
 } // namespace roi_pooling

@@ -50,7 +50,7 @@ class Convolution3DForwardImpl::AlgoBase: public Algorithm {
                     const CanonizedFilterMeta &filter,
                     const TensorLayout &dst);
         };
-        struct ExecArgs: public SizeArgs {
+        struct ExecArgs : public SizeArgs {
             const TensorND *src_tensor, *filter_tensor, *dst_tensor;
             Workspace workspace;
 

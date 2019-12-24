@@ -229,6 +229,8 @@ MGB_DEFINE_OPR_CLASS(LoopImpl::DescImplBase::LoopCondManager::GetCondOpr,
 #if !MEGDNN_DISABLE_FLOAT16
                 case DTypeEnum::Float16:
                     return std::abs(cond.ptr<dt_float16>()[0]) > 1e-5;
+                case DTypeEnum::BFloat16:
+                    return std::abs(cond.ptr<dt_bfloat16>()[0]) > 1e-5;
 #endif
 
 #define cb(_dt) case DTypeTrait<_dt>::enumv: \

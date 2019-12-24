@@ -494,11 +494,56 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     MIDOUT_END();
 }
 
-void PoolingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                               _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+WorkspaceBundle PoolingBackwardImpl::get_workspace_bundle(
+        void* ptr, const TensorLayout& src, const TensorLayout& dst,
+        const TensorLayout& diff, const TensorLayout& grad) const {
+    SmallVector<size_t> sizes;
+    TensorLayout fsrc = src;
+    TensorLayout fdst = dst;
+    TensorLayout fdiff = diff;
+    TensorLayout fgrad = grad;
+    auto get_workspace = [&sizes](TensorLayout& layout) {
+        if (MEGDNN_FLOAT16_SELECT(layout.dtype == dtype::BFloat16(), false)) {
+            layout.dtype = dtype::Float32();
+            sizes.push_back(layout.span().dist_byte());
+        }
+    };
+    get_workspace(fsrc);
+    get_workspace(fdst);
+    get_workspace(fdiff);
+    get_workspace(fgrad);
+    return {ptr, std::move(sizes)};
+}
+
+size_t PoolingBackwardImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst,
+        const TensorLayout& diff, const TensorLayout& grad) {
+    return get_workspace_bundle(nullptr, src, dst, diff, grad)
+            .total_size_in_bytes();
+}
+
+void PoolingBackwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_in sdst,
+                               _megdnn_tensor_in sdiff,
+                               _megdnn_tensor_out sgrad,
                                _megdnn_workspace workspace) {
-    check_exec(src.layout, dst.layout, diff.layout, grad.layout,
+    check_exec(ssrc.layout, sdst.layout, sdiff.layout, sgrad.layout,
                workspace.size);
+    TensorND src = ssrc;
+    TensorND dst = sdst;
+    TensorND diff = sdiff;
+    TensorND grad = sgrad;
+#if !MEGDNN_DISABLE_FLOAT16
+    auto wsb = get_workspace_bundle(workspace.raw_ptr, ssrc.layout, sdst.layout,
+                                    sdiff.layout, sgrad.layout);
+    auto ctypecvt = CompTypeCvter<dtype::BFloat16, dtype::Float32>(
+            static_cast<HandleImpl*>(handle()), &wsb);
+    if (ssrc.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
+        ctypecvt.src_to_comp_type(ssrc, src)
+                .src_to_comp_type(sdst, dst)
+                .src_to_comp_type(sdiff, diff)
+                .src_to_comp_type(sgrad, grad);
+    }
+#endif
     size_t c_pos, spatial_pos;
     if (param().format == Param::Format::NCHW) {
         c_pos = 1;
@@ -520,7 +565,7 @@ void PoolingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
     MEGDNN_DISPATCH_CPU_KERN(static_cast<naive::HandleImpl*>(handle()),      \
                              Func<ctype MEGDNN_COMMA IdxGetter>(             \
                                      sptr, dptr, diffptr, gradptr, N, C, IH, \
-                                     IW, OH, OW, PH, PW, SH, SW, FH, FW));
+                                     IW, OH, OW, PH, PW, SH, SW, FH, FW));   \
 
 #define DISPATCH_WITH_FUNC(Func, ctype)                                    \
     switch (param().format) {                                              \
@@ -542,27 +587,33 @@ void PoolingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
                 auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>(),         \
                      diffptr = diff.ptr<ctype>(), gradptr = grad.ptr<ctype>(); \
                 DISPATCH_WITH_FUNC(pooling_backward_avg_impl, ctype);          \
-                return;                                                        \
+                break;                                                         \
             }                                                                  \
             case Mode::AVERAGE_COUNT_EXCLUDE_PADDING: {                        \
                 auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>(),         \
                      diffptr = diff.ptr<ctype>(), gradptr = grad.ptr<ctype>(); \
                 DISPATCH_WITH_FUNC(pooling_backward_avg_expd_impl, ctype);     \
-                return;                                                        \
+                break;                                                         \
             }                                                                  \
             case Mode::MAX: {                                                  \
                 auto sptr = src.ptr<ctype>(), dptr = dst.ptr<ctype>(),         \
                      diffptr = diff.ptr<ctype>(), gradptr = grad.ptr<ctype>(); \
                 DISPATCH_WITH_FUNC(pooling_backward_max_impl, ctype);          \
-                return;                                                        \
+                break;                                                         \
             }                                                                  \
+            default:                                                           \
+                megdnn_assert_internal(0);                                     \
         }                                                                      \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
 #undef DISPATCH_WITH_FUNC_AND_IDX_GETTER
 #undef DISPATCH_WITH_FUNC
-    megdnn_assert_internal(0);
+#if !MEGDNN_DISABLE_FLOAT16
+    if (sgrad.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
+        ctypecvt.comp_to_dst_type(grad, sgrad);
+    }
+#endif
 }
 
 }  // namespace naive

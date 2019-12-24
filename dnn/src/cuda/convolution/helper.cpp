@@ -16,6 +16,10 @@ using namespace cuda;
 using namespace convolution;
 
 bool convolution::is_cudnn_supported(const ForwardSizeArgs &args) {
+    if (args.src_layout->dtype == args.filter_layout->dtype &&
+        args.src_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
 
     // CUDNN_STATUS_EXECUTION_FAILED on Tegra K1, so disable CUDNN
     // on Tegra K1.

@@ -60,11 +60,11 @@ class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
                                            const TensorLayout& grad,
                                            size_t workspace_limit_in_bytes,
                                            bool reproducible) override;
-        Algorithm* get_algorithm_heuristic(const CanonizedFilterMeta& filter,
-                                           const TensorLayout& diff,
-                                           const TensorLayout& grad,
-                                           size_t workspace_limit_in_bytes,
-                                           bool reproducible);
+        Algorithm* get_algorithm_heuristic(
+                const TensorLayout& filter,
+                const CanonizedFilterMeta& filter_meta,
+                const TensorLayout& diff, const TensorLayout& grad,
+                size_t workspace_limit_in_bytes, bool reproducible);
         size_t get_workspace_in_bytes(const TensorLayout& filter,
                                       const TensorLayout& diff,
                                       const TensorLayout& grad) override;
@@ -76,6 +76,7 @@ class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
         class AlgoChanwise;
         class AlgoChanwiseSmall;
         class AlgoGroupConvGeneral;
+        class AlgoBFloat16;
 
         class AlgoPack;
 
@@ -104,7 +105,8 @@ class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
                                            bool reproducible) override;
         Algorithm* get_algorithm_heuristic(const TensorLayout& src,
                                            const TensorLayout& diff,
-                                           const CanonizedFilterMeta& grad,
+                                           const TensorLayout& gradk,
+                                           const CanonizedFilterMeta& grad_meta,
                                            size_t workspace_limit_in_bytes,
                                            bool reproducible);
         size_t get_workspace_in_bytes(const TensorLayout& src,
@@ -117,6 +119,7 @@ class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
         class AlgoMatmul;
         class AlgoChanwise;
         class AlgoGroupConvGeneral;
+        class AlgoBFloat16;
 
         class AlgoPack;
 

@@ -19,10 +19,11 @@
     cb(2) \
     cb(4) \
 
-#define FOREACH_MGB_DTYPE_PAIR(cb) \
-    cb(IntB1, npy_num_intb1()) \
-    cb(IntB2, npy_num_intb2()) \
-    cb(IntB4, npy_num_intb4()) \
+#define FOREACH_MGB_DTYPE_PAIR(cb)  \
+    cb(IntB1, npy_num_intb1())      \
+    cb(IntB2, npy_num_intb2())      \
+    cb(IntB4, npy_num_intb4())      \
+    cb(BFloat16, npy_num_bfloat16())
 
 namespace mgb {
     //! numpy type num for intb2 type
@@ -30,6 +31,7 @@ namespace mgb {
     int npy_num_intb##n();
 FOREACH_MGB_LOW_BIT(DEFINE_NPY_INTBX)
 #undef DEFINE_NPY_INTBX
+    int npy_num_bfloat16();
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

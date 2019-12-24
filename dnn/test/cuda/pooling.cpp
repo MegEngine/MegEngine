@@ -28,7 +28,7 @@ TEST_F(CUDA, POOLING_FORWARD)
 {
     auto args = pooling::get_args();
     using Format = param::Pooling::Format;
-    std::vector<DType> dtypes{dtype::Float16(), dtype::Float32()};
+    std::vector<DType> dtypes{dtype::Float16(), dtype::BFloat16(), dtype::Float32()};
     if (check_compute_capability(6, 0)) {
         // int pooling is supported only for Pascal or higher
         dtypes.push_back(dtype::Int8());
@@ -47,6 +47,8 @@ TEST_F(CUDA, POOLING_FORWARD)
             // different versions of cuDNN differs in rounding behavior;
             // setting eps to 1 to allow for rounding errors.
             checker.set_epsilon(1 + 1e-3);
+        } else if (dtype == dtype::BFloat16()) {
+            checker.set_epsilon(2e-2);
         } else {
             checker.set_epsilon(1e-2);
         }
@@ -75,7 +77,10 @@ TEST_F(CUDA, POOLING_FORWARD)
             // different versions of cuDNN differs in rounding behavior;
             // setting eps to 1 to allow for rounding errors.
             checker.set_epsilon(1 + 1e-3);
-        } else {
+        } else if (dtype == dtype::BFloat16()) {
+            checker.set_epsilon(2e-2);
+        }
+        else {
             checker.set_epsilon(1e-2);
         }
         checker.set_param(param)
@@ -153,6 +158,12 @@ TEST_F(CUDA, POOLING_BACKWARD)
             .set_epsilon(1e-2)
             .exec(TensorShapeArray{
                     ilayout, olayout, olayout, ilayout});
+        BFloat16PeriodicalRNG bf16_rng;
+        set_dtype(dtype::BFloat16());
+        checker.set_param(arg.param)
+                .set_rng(0, &bf16_rng)
+                .set_epsilon(1e-2)
+                .exec(TensorShapeArray{ilayout, olayout, olayout, ilayout});
     }
 
     /* add test for new Mode temporarily */
@@ -223,6 +234,12 @@ TEST_F(CUDA, POOLING_BACKWARD)
             .set_epsilon(1e-2)
             .exec(TensorShapeArray{
                     ilayout, olayout, olayout, ilayout});
+        BFloat16PeriodicalRNG bf16_rng;
+        set_dtype(dtype::BFloat16());
+        checker.set_param(arg.param)
+                .set_rng(0, &bf16_rng)
+                .set_epsilon(1e-2)
+                .exec(TensorShapeArray{ilayout, olayout, olayout, ilayout});
     }
 }
 

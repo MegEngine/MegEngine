@@ -43,6 +43,12 @@ ConvolutionBackwardFilterImpl::AlgoPack::AlgoPack() {
     megdnn_assert(all_algos_data == all_algos.data());
 
     non_cudnn_algos.push_back(all_algos.rbegin()[0]);   // group matmul
+    size_t algo_size = all_algos.size();
+    for (size_t i=0; i<algo_size; ++i) {
+        bfloat16_refhold.emplace_back(new AlgoBFloat16(all_algos[i]));
+        all_algos.push_back(bfloat16_refhold.back().get());
+        bfloat16_algos.push_back(bfloat16_refhold.back().get());
+    }
 }
 
 ConvolutionBackwardFilterImpl::AlgoCUDNN*
@@ -64,21 +70,20 @@ ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvolutionBackwardFilterImpl *o,
         const TensorLayout &src, const TensorLayout &diff,
         const TensorLayout &grad):
-    SizeArgs(o, src, diff, o->check_layout_fwd(src, grad, diff))
+    SizeArgs(o, src, diff, grad, o->check_layout_fwd(src, grad, diff))
 {
 }
 
 ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvolutionBackwardFilterImpl *o,
-        const TensorLayout &src, const TensorLayout &diff,
-        const CanonizedFilterMeta &grad):
-    handle{concrete_handle(o->handle())},
-    src_layout{&src},
-    diff_layout{&diff},
-    grad_filter_meta{grad},
-    opr{o}
-{
-}
+        ConvolutionBackwardFilterImpl* o, const TensorLayout& src,
+        const TensorLayout& diff, const TensorLayout& grad,
+        const CanonizedFilterMeta& grad_meta)
+        : handle{concrete_handle(o->handle())},
+          src_layout{&src},
+          diff_layout{&diff},
+          grad_layout{&grad},
+          grad_filter_meta{grad_meta},
+          opr{o} {}
 
 ConvolutionBackwardFilterImpl::AlgoBase::ExecArgs::ExecArgs(
         ConvolutionBackwardFilterImpl *opr,

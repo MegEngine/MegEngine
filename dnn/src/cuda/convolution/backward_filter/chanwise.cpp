@@ -19,6 +19,10 @@ using namespace convolution;
 
 bool ConvolutionBackwardFilterImpl::AlgoChanwise::is_available(
         const SizeArgs &args) const {
+    if (args.src_layout->dtype == args.src_layout->dtype &&
+        args.diff_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
     auto &&fm = args.grad_filter_meta;
     return fm.format == Param::Format::NCHW &&
         args.diff_layout->dtype.category() == DTypeCategory::FLOAT &&

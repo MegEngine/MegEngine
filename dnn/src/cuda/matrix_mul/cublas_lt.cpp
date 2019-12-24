@@ -18,10 +18,11 @@ using namespace megdnn;
 using namespace cuda;
 
 bool MatrixMulForwardImpl::AlgoCuBlasLt::is_available(
-        const SizeArgs &args) const {
+        const SizeArgs& args) const {
     if (args.opr->param().format != param::MatrixMul::Format::DEFAULT)
         return false;
-    if (args.layout_a.dtype.enumv() == DTypeEnum::Quantized4Asymm)
+    if (args.layout_a.dtype.enumv() == DTypeEnum::Quantized4Asymm ||
+        args.layout_a.dtype.enumv() == DTypeEnum::BFloat16)
         return false;
     CUBLASLTMatmulDesc::SizeArgs ltArgs(args);
     return CUBLASLTMatmulDesc(ltArgs).is_available(ltArgs, INT_MAX);

@@ -610,6 +610,10 @@ def get_opr_fp_graph_exec(comp_graph, output_vars):
 
 def to_mgb_supported_dtype(dtype_):
     """get the dtype supported by megbrain nearest to given dtype"""
-    if dtype.is_lowbit(dtype_) or dtype.is_quantize(dtype_):
+    if (
+        dtype.is_lowbit(dtype_)
+        or dtype.is_quantize(dtype_)
+        or dtype.is_bfloat16(dtype_)
+    ):
         return dtype_
     return _detail._to_mgb_supported_dtype(dtype_)

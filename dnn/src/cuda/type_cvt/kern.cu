@@ -242,6 +242,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
     cb(dtype_src, dt_uint8) \
     cb(dtype_src, dt_float32) \
     cb(dtype_src, dt_float16) \
+    cb(dtype_src, dt_bfloat16) \
 
 #define MEGDNN_FOREACH_QUANTIZED_DTYPE_WITH_DTYPE_SRC(dtype_src, cb) \
     cb(dtype_src, dt_quint8) \
@@ -263,6 +264,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
     cb(dt_uint8) \
     cb(dt_float32) \
     cb(dt_float16) \
+    cb(dt_bfloat16) \
 
 #define MEGDNN_FOREACH_QUANTIZED_CTYPE(cb) \
     cb(dt_quint8) \

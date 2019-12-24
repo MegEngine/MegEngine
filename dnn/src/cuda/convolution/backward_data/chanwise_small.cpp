@@ -29,6 +29,10 @@ inline bool is_available_small(const chanwise::Param& param) {
 
 bool ConvolutionBackwardDataImpl::AlgoChanwiseSmall::is_available(
         const SizeArgs &args) const {
+    if (args.diff_layout->dtype == args.filter_layout->dtype &&
+        args.diff_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
 #if CUDA_VERSION < 9000
     if (args.diff_layout->dtype.enumv() == DTypeEnum::Float16)
         return false;

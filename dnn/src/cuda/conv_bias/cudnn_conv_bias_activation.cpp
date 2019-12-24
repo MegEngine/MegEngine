@@ -23,6 +23,10 @@ using namespace conv_bias;
 
 bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         const SizeArgs& args) const {
+    if (args.src_layout->dtype == args.filter_layout->dtype &&
+        args.src_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
     if (args.bias_layout->ndim == 0 ||
         args.bias_layout->eq_shape(*args.dst_layout))
         return false;

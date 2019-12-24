@@ -102,7 +102,8 @@ void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
         _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, filter, diff, grad, workspace);
-    auto algo = get_algorithm(this, args.filter_meta, diff.layout, grad.layout);
+    auto algo = get_algorithm(this, filter.layout, args.filter_meta,
+                              diff.layout, grad.layout);
     algo->check_workspace(args, workspace).exec(args);
 }
 
@@ -120,16 +121,16 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
         bool reproducible) {
     auto fm = check_layout_fwd(grad, filter, diff);
-    return get_algorithm_heuristic(fm, diff, grad, workspace_limit_in_bytes,
-                                   reproducible);
+    return get_algorithm_heuristic(filter, fm, diff, grad,
+                                   workspace_limit_in_bytes, reproducible);
 }
 
 ConvolutionBackwardDataImpl::Algorithm*
-ConvolutionBackwardDataImpl::get_algorithm_heuristic(
-        const CanonizedFilterMeta& filter, const TensorLayout& diff,
+ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
+        const CanonizedFilterMeta& filter_meta, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
         bool reproducible) {
-    AlgoBase::SizeArgs args(this, filter, diff, grad);
+    AlgoBase::SizeArgs args(this, filter, filter_meta, diff, grad);
 
     if (args.filter_meta.group > 1 &&
         sm_algo_pack.chanwise.is_available_reproducible(
@@ -209,14 +210,27 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         args = orig_args;
     }
 
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<ConvolutionBackwardDataImpl>(
-                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
-                "cuda conv bwd_data");
+    if (args.filter_layout->dtype.enumv() !=
+        DTypeTrait<dtype::BFloat16>::enumv) {
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvolutionBackwardDataImpl>(
+                    sm_algo_pack.non_cudnn_algos, args,
+                    workspace_limit_in_bytes, "cuda conv bwd_data");
+        } else {
+            return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
+                    sm_algo_pack.non_cudnn_algos, args,
+                    workspace_limit_in_bytes, "cuda conv bwd_data");
+        }
     } else {
-        return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
-                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
-                "cuda conv bwd_data");
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvolutionBackwardDataImpl>(
+                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                    "cuda conv bwd_data");
+        } else {
+            return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
+                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                    "cuda conv bwd_data");
+        }
     }
 }
 
@@ -225,7 +239,7 @@ size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout &diff,
         const TensorLayout &grad) {
     AlgoBase::SizeArgs args(this, filter, diff, grad);
-    return get_algorithm(this, args.filter_meta, diff, grad)->
+    return get_algorithm(this, filter, args.filter_meta, diff, grad)->
         get_workspace_in_bytes(args);
 }
 
@@ -241,7 +255,7 @@ void ConvolutionBackwardFilterImpl::exec(_megdnn_tensor_in src,
         _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, src, diff, grad, workspace);
     auto algo = get_algorithm(this, src.layout, diff.layout,
-            args.grad_filter_meta);
+            grad.layout, args.grad_filter_meta);
     algo->check_workspace(args, workspace).exec(args);
 }
 
@@ -259,16 +273,16 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
         bool reproducible) {
     auto fm = check_layout_fwd(src, grad, diff);
-    return get_algorithm_heuristic(src, diff, fm, workspace_limit_in_bytes,
-                                   reproducible);
+    return get_algorithm_heuristic(src, diff, grad, fm,
+                                   workspace_limit_in_bytes, reproducible);
 }
 
 ConvolutionBackwardFilterImpl::Algorithm*
 ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
-        const CanonizedFilterMeta& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
-    AlgoBase::SizeArgs args(this, src, diff, grad);
+        const TensorLayout& grad, const CanonizedFilterMeta& grad_meta,
+        size_t workspace_limit_in_bytes, bool reproducible) {
+    AlgoBase::SizeArgs args(this, src, diff, grad, grad_meta);
 
     if (args.grad_filter_meta.group > 1 &&
         sm_algo_pack.chanwise.is_available_reproducible(
@@ -349,14 +363,26 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         args = orig_args;
     }
 
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<ConvolutionBackwardFilterImpl>(
-                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
-                "cuda conv bwd_filter");
+    if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvolutionBackwardFilterImpl>(
+                    sm_algo_pack.non_cudnn_algos, args,
+                    workspace_limit_in_bytes, "cuda conv bwd_filter");
+        } else {
+            return megdnn::get_usable_algo<ConvolutionBackwardFilterImpl>(
+                    sm_algo_pack.non_cudnn_algos, args,
+                    workspace_limit_in_bytes, "cuda conv bwd_filter");
+        }
     } else {
-        return megdnn::get_usable_algo<ConvolutionBackwardFilterImpl>(
-                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
-                "cuda conv bwd_filter");
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvolutionBackwardFilterImpl>(
+                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                    "cuda conv bwd_filter");
+        } else {
+            return megdnn::get_usable_algo<ConvolutionBackwardFilterImpl>(
+                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                    "cuda conv bwd_filter");
+        }
     }
 }
 
@@ -365,7 +391,7 @@ size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
         const TensorLayout &diff,
         const TensorLayout &grad) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
-    return get_algorithm(this, src, diff, args.grad_filter_meta)->
+    return get_algorithm(this, src, diff, grad, args.grad_filter_meta)->
         get_workspace_in_bytes(args);
 }
 

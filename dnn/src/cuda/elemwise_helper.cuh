@@ -68,6 +68,17 @@ namespace elemwise_intl {
         return t;
     }
 
+    struct __attribute__((aligned(8))) bhalf4 {
+        dt_bfloat16 x, y, z, w;
+    };
+
+    __device__ __forceinline__ bhalf4 make_bhalf4(dt_bfloat16 x, dt_bfloat16 y,
+                                                dt_bfloat16 z, dt_bfloat16 w) {
+        bhalf4 t;
+        t.x = x, t.y = y, t.z = z, t.w = w;
+        return t;
+    }
+
 #define INST(_ctype, _vect_type)                                               \
     template <>                                                                \
     class VectTypeTrait<_ctype> {                                              \
@@ -87,6 +98,7 @@ namespace elemwise_intl {
     INST(dt_uint8, uchar4);
     INST(dt_float32, float4);
     INST(dt_float16, half4);
+    INST(dt_bfloat16, bhalf4);
     INST(dt_int32, int4);
     INST(dt_int16, short4);
 #undef as_raw

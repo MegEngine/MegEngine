@@ -174,6 +174,105 @@ TEST_F(CUDA, ELEMWISE_IBYTE) {
 #undef RUN_TERNARY_IBYTE
 }
 
+// from common/elemwise.cpp
+TEST_F(CUDA, ELEMWISE_BFLOAT16) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle_cuda());
+
+    // unary
+#define UNARY_TEST_CASE(_optr)                            \
+    checker.set_param(Mode::_optr).execs({{1, 127}, {}}); \
+    checker.set_param(Mode::_optr).execs({{1, 7}, {}});
+
+#define BUILD_UNARY_TEST_CASE_FLOAT \
+    UNARY_TEST_CASE(ABS)            \
+    UNARY_TEST_CASE(LOG)            \
+    UNARY_TEST_CASE(COS)            \
+    UNARY_TEST_CASE(SIN)            \
+    UNARY_TEST_CASE(FLOOR)          \
+    UNARY_TEST_CASE(CEIL)           \
+    UNARY_TEST_CASE(SIGMOID)        \
+    UNARY_TEST_CASE(EXP)            \
+    UNARY_TEST_CASE(TANH)           \
+    UNARY_TEST_CASE(FAST_TANH)      \
+    UNARY_TEST_CASE(RELU)           \
+    UNARY_TEST_CASE(ROUND)
+
+    checker.set_dtype(0, dtype::BFloat16());
+    checker.set_dtype(1, dtype::BFloat16());
+    UniformFloatRNG rng0(1e-2, 6e1);
+    checker.set_rng(0, &rng0);
+    checker.set_epsilon(1e-2);
+    BUILD_UNARY_TEST_CASE_FLOAT
+
+#undef UNARY_TEST_CASE
+#undef BUILD_UNARY_TEST_CASE_FLOAT
+
+    // binary
+#define BINARY_COMPLATE_TEST_CASE(_optr)                                    \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {}});       \
+    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7}, {1, 4, 1, 1}, {}}); \
+    checker.set_param(Mode::_optr).execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {}}); \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {1, 4, 1}, {}});       \
+    checker.set_param(Mode::_optr).execs({{1, 4, 1}, {3, 4, 7}, {}});       \
+    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7}, {1, 1, 1, 1}, {}}); \
+    checker.set_param(Mode::_optr).execs({{1, 1, 1, 1}, {3, 4, 5, 7}, {}}); \
+    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {}});             \
+    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 2, 1}, {}});       \
+    checker.set_param(Mode::_optr).execs({{1, 2, 1}, {1, 2, 2}, {}});       \
+    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 1, 1}, {}});       \
+    checker.set_param(Mode::_optr).execs({{1, 1, 1}, {1, 2, 2}, {}});       \
+    checker.set_param(Mode::_optr).execs({{3, 4, 1}, {3, 4, 1}, {}});
+
+#define BUILD_BINARY_COMPLATE_TEST_CASE \
+    BINARY_COMPLATE_TEST_CASE(ADD)      \
+    BINARY_COMPLATE_TEST_CASE(MUL)      \
+    BINARY_COMPLATE_TEST_CASE(MAX)      \
+    BINARY_COMPLATE_TEST_CASE(MIN)      \
+    BINARY_COMPLATE_TEST_CASE(SUB)
+
+    UniformFloatRNG rng1(1e-5, 7e1);
+    checker.set_rng(0, &rng1);
+    checker.set_epsilon(1e-2);
+    checker.set_dtype(0, dtype::BFloat16());
+    checker.set_dtype(1, dtype::BFloat16());
+    BUILD_BINARY_COMPLATE_TEST_CASE
+
+#undef BINARY_COMPLATE_TEST_CASE
+#undef BUILD_BINARY_COMPLATE_TEST_CASE
+
+    // ternary
+#define TERNARY_COMPLATE_TEST_CASE(_optr)                               \
+    checker.set_param(Mode::_optr)                                      \
+            .execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});              \
+    checker.set_param(Mode::_optr)                                      \
+            .execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});     \
+    checker.set_param(Mode::_optr)                                      \
+            .execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}});              \
+    checker.set_param(Mode::_optr)                                      \
+            .execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});     \
+    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {1, 7}, {}}); \
+    checker.set_param(Mode::_optr)                                      \
+            .execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}});              \
+    checker.set_param(Mode::_optr)                                      \
+            .execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}});              \
+    checker.set_param(Mode::_optr).execs({{3, 4, 1}, {3, 4, 1}, {3, 4, 1}, {}});
+
+#define BUILD_TERNARY_COMPLATE_TEST_CASE \
+    TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
+
+    UniformFloatRNG rng2(1e-5, 7e1);
+    checker.set_rng(0, &rng2);
+    checker.set_epsilon(1e-2);
+    checker.set_dtype(0, dtype::BFloat16());
+    checker.set_dtype(1, dtype::BFloat16());
+    checker.set_dtype(2, dtype::BFloat16());
+    BUILD_TERNARY_COMPLATE_TEST_CASE
+
+#undef TERNARY_COMPLATE_TEST_CASE
+#undef BUILD_TERNARY_COMPLATE_TEST_CASE
+}
+
 //! the memory of this test case is too large, sometimes will fail on tx1
 TEST_F(CUDA, ELEMWISE_BENCHMARK_DENSE) {
     constexpr size_t A = 256 * 1024 * 64,

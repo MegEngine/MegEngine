@@ -46,6 +46,14 @@ struct RoundingConverter<half_float::half> {
     }
 };
 
+template <>
+struct RoundingConverter<half_bfloat16::bfloat16> {
+    __host__ __device__ __forceinline__ half_bfloat16::bfloat16 operator()(
+            float x) const {
+        return static_cast<half_bfloat16::bfloat16>(x);
+    }
+};
+
 #endif  // #ifdef MEGDNN_DISABLE_FLOAT16
 
 template <>

@@ -382,6 +382,18 @@ cg::OperatorNodeBase::NodeProp* Loop::do_make_node_prop() const {
                             ++ inext;
                         return std::max<int>(inext, 0);
                     }
+                case DTypeEnum::BFloat16:
+                    {
+                        float iv;
+                        if (val.dtype().enumv() == DTypeEnum::BFloat16)
+                            iv = val.ptr<dt_bfloat16>()[0];
+                        else
+                            iv = val.ptr<float>()[0];
+                        auto inext = std::ceil(iv);
+                        if (iv == inext && contain_eq)
+                            ++ inext;
+                        return std::max<int>(inext, 0);
+                    }
 #endif
                 case DTypeEnum::Byte:
                     break;

@@ -50,6 +50,10 @@ ConvBiasForwardImpl::AlgoGroupConvGeneral::AlgoGroupConvGeneral(AlgoBase* impl)
 
 bool ConvBiasForwardImpl::AlgoGroupConvGeneral::is_available(
         const SizeArgs& args) const {
+    if (args.src_layout->dtype == args.filter_layout->dtype &&
+        args.src_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
     if (args.z_layout->ndim > 0 || args.filter_meta.group <= 1)
         return false;
     auto&& param = args.opr->param();

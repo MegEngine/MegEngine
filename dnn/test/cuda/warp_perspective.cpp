@@ -401,6 +401,91 @@ TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT)
     }
 }
 
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_BFLOAT16)
+{
+    using Param = WarpPerspective::Param;
+    Checker<WarpPerspectiveForward> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+    checker.set_rng(1, &rng);
+    checker.set_dtype(0, dtype::BFloat16())
+        .set_dtype(1, dtype::Float32())
+        .set_dtype(2, dtype::BFloat16());
+    for (auto bmode: {WarpPerspective::BorderMode::WRAP,
+            WarpPerspective::BorderMode::REFLECT,
+            WarpPerspective::BorderMode::REPLICATE,
+            WarpPerspective::BorderMode::CONSTANT})
+    {
+        WarpPerspective::Param param;
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+
+        param.format = Param::Format::NHWC;
+        checker.set_param(param);
+        checker.set_epsilon(2.1).set_max_avg_error(4e-2);
+        checker.execs({{2, 10, 11, 3}, {2, 3, 3}, {2, 11, 12, 3}});
+
+        param.format = Param::Format::NCHW;
+        checker.set_param(param);
+        checker.execs({{2, 3, 10, 11}, {2, 3, 3}, {2, 3, 11, 12}});
+        checker.execs({{20, 3000, 10, 11}, {20, 3, 3}, {20, 3000, 11, 12}});
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA_BFLOAT16)
+{
+    Checker<WarpPerspectiveBackwardData> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+    checker.set_rng(0, &rng)
+    .set_epsilon(1e-1)
+    .set_dtype(0, dtype::Float32())
+    .set_dtype(1, dtype::BFloat16())
+    .set_dtype(2, dtype::BFloat16());
+    for (int i = 0; i < 1; ++i) {
+        for (auto bmode: {WarpPerspective::BorderMode::WRAP,
+                WarpPerspective::BorderMode::REFLECT,
+                WarpPerspective::BorderMode::REPLICATE,
+                WarpPerspective::BorderMode::CONSTANT})
+        {
+            WarpPerspective::Param param;
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+            checker.set_param(param);
+            checker.execs({{2, 3, 3}, {2, 3, 11, 12}, {2, 3, 10, 11}});
+        }
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT_BFLOAT16)
+{
+    Checker<WarpPerspectiveBackwardMat> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+    checker.set_rng(1, &rng)
+    .set_epsilon(1e-2)
+    .set_dtype(0, dtype::BFloat16())
+    .set_dtype(1, dtype::Float32())
+    .set_dtype(2, dtype::BFloat16())
+    .set_dtype(3, dtype::Float32());
+    for (int i = 0; i < 1; ++i) {
+        for (auto bmode: {WarpPerspective::BorderMode::WRAP,
+                WarpPerspective::BorderMode::REFLECT,
+                WarpPerspective::BorderMode::REPLICATE,
+                WarpPerspective::BorderMode::CONSTANT})
+        {
+            WarpPerspective::Param param;
+            param.border_val = 0.3f;
+            param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+            param.bmode = bmode;
+            checker.set_param(param);
+            checker.execs({
+                    {1000, 3, 11, 12}, {1000, 3, 3},
+                    {1000, 3, 10, 11}, {1000, 3, 3}
+                    });
+        }
+    }
+}
+
 TEST_F(CUDA, WARP_PERSPECTIVE_MAT_IDX) {
     warp_perspective::run_mat_idx_test(handle_cuda());
 }

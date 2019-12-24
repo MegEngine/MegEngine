@@ -30,7 +30,7 @@ class ConvolutionBackwardFilterImpl::AlgoBase: public Algorithm {
     public:
         struct SizeArgs {
             HandleImpl *handle;
-            const TensorLayout *src_layout, *diff_layout;
+            const TensorLayout *src_layout, *diff_layout, *grad_layout;
             CanonizedFilterMeta grad_filter_meta;
             ConvolutionBackwardFilterImpl *opr;
 
@@ -42,12 +42,14 @@ class ConvolutionBackwardFilterImpl::AlgoBase: public Algorithm {
             SizeArgs(ConvolutionBackwardFilterImpl *opr,
                     const TensorLayout &src, const TensorLayout &diff,
                     const TensorLayout &grad);
-            SizeArgs(ConvolutionBackwardFilterImpl *opr,
-                    const TensorLayout &src, const TensorLayout &diff,
-                    const CanonizedFilterMeta &grad);
+            SizeArgs(ConvolutionBackwardFilterImpl* opr,
+                     const TensorLayout& src, const TensorLayout& diff,
+                     const TensorLayout& grad,
+                     const CanonizedFilterMeta& grad_meta);
 
             convolution::ForwardSizeArgs as_fwd_args() const {
-                return {handle, src_layout, grad_filter_meta, diff_layout};
+                return {handle, src_layout, grad_layout, grad_filter_meta,
+                        diff_layout};
             }
         };
         struct ExecArgs: public SizeArgs {
@@ -157,6 +159,25 @@ class ConvolutionBackwardFilterImpl::AlgoChanwise final: public AlgoBase {
         }
 };
 
+class ConvolutionBackwardFilterImpl::AlgoBFloat16 final : public AlgoBase {
+public:
+    AlgoBFloat16(ConvolutionBackwardFilterImpl::AlgoBase*);
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    const char* name() const override { return m_name.c_str(); }
+    bool is_reproducible() const override { return true; }
+
+private:
+    std::string m_name;
+    ConvolutionBackwardFilterImpl::AlgoBase* m_algorithm = nullptr;
+    SizeArgs float_args(const SizeArgs& args,
+                        ConvolutionBackwardFilterImpl* opr, TensorLayout& fsrc,
+                        TensorLayout& ffilter, TensorLayout& fdst) const;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+};
+
 //! implement group conv by another algo
 class ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral final: public AlgoBase {
     AlgoBase *m_impl;
@@ -196,12 +217,14 @@ class ConvolutionBackwardFilterImpl::AlgoPack {
         AlgoChanwise chanwise;
         std::vector<AlgoGroupConvGeneral> gconv;
         std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
+        std::vector<std::unique_ptr<AlgoBFloat16>> bfloat16_refhold;
 
         std::vector<AlgoBase*>
             //! all algorithms
             all_algos,
             //! non-cudnn algos, used for heuristic if cudnn is not supported
-            non_cudnn_algos;
+            non_cudnn_algos,
+            bfloat16_algos;
 
         AlgoCUDNN* cudnn_from_enum(cudnnConvolutionBwdFilterAlgo_t algo);
 };

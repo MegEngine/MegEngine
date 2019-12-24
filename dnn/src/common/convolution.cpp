@@ -618,9 +618,10 @@ void ConvolutionBase<Parameter>::check_or_deduce_dtype_fwd(DType src,
     megdnn_assert(param().compute_mode != Param::ComputeMode::FLOAT32
 #if !MEGDNN_DISABLE_FLOAT16
                           || src.enumv() == DTypeEnum::Float16
+                          || src.enumv() == DTypeEnum::BFloat16
 #endif
-                  ,
-                  "ComputeMode::FLOAT32 is only available for Float16 "
+                          ,
+                  "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
                   "input / output.");
 }
 
@@ -1036,9 +1037,10 @@ void ConvolutionBackwardData::deduce_dtype(DType filter, DType diff,
     megdnn_assert(param().compute_mode != Param::ComputeMode::FLOAT32
 #if !MEGDNN_DISABLE_FLOAT16
                           || filter.enumv() == DTypeEnum::Float16
+                          || filter.enumv() == DTypeEnum::BFloat16
 #endif
-                  ,
-                  "ComputeMode::FLOAT32 is only available for Float16 "
+                          ,
+                  "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
                   "input / output.");
 }
 

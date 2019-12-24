@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/cuda/conv_bias/opr_impl.h"
+#include "megdnn/dtype.h"
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/handle.h"
@@ -176,14 +177,26 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         conv_args = orig_args;
     }
 
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<ConvBiasForwardImpl>(
-                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
-                "cuda convbias fwd");
+    if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvBiasForwardImpl>(
+                    sm_algo_pack.non_cudnn_algos, args,
+                    workspace_limit_in_bytes, "cuda convbias fwd");
+        } else {
+            return megdnn::get_usable_algo<ConvBiasForwardImpl>(
+                    sm_algo_pack.non_cudnn_algos, args,
+                    workspace_limit_in_bytes, "cuda convbias fwd");
+        }
     } else {
-        return megdnn::get_usable_algo<ConvBiasForwardImpl>(
-                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
-                "cuda convbias fwd");
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvBiasForwardImpl>(
+                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                    "cuda convbias fwd");
+        } else {
+            return megdnn::get_usable_algo<ConvBiasForwardImpl>(
+                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                    "cuda convbias fwd");
+        }
     }
 }
 

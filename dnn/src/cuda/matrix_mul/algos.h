@@ -15,6 +15,7 @@
 #include "src/cuda/matrix_mul/opr_impl.h"
 
 #include <cuda.h>
+#include <memory>
 #if CUDA_VERSION >= 10010
 #include <cublasLt.h>
 #endif
@@ -140,6 +141,24 @@ public:
     bool is_reproducible() const override { return true; }
 };
 
+#if !MEGDNN_DISABLE_FLOAT16
+class MatrixMulForwardImpl::AlgoBFloat16 final : public AlgoBase {
+public:
+    AlgoBFloat16(MatrixMulForwardImpl::AlgoBase*);
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    void exec(const ExecArgs& args) const override;
+    bool is_reproducible() const override { return true; }
+
+private:
+    MatrixMulForwardImpl::AlgoBase* m_algorithm = nullptr;
+    std::string m_name;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+    SizeArgs float_args(const SizeArgs& args) const;
+};
+#endif
+
 class MatrixMulForwardImpl::AlgoPack {
     AlgoPack(const AlgoPack&) = delete;
     AlgoPack& operator=(const AlgoPack&) = delete;
@@ -154,7 +173,9 @@ public:
 #if CUDA_VERSION >= 10010
     AlgoCuBlasLt cublas_lt;
 #endif
-
+#if !MEGDNN_DISABLE_FLOAT16
+    std::unique_ptr<AlgoBFloat16> cublas_bfloat16;
+#endif
     std::vector<AlgoBase*> all_algos;
 };
 

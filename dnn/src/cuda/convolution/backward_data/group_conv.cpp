@@ -38,6 +38,10 @@ ConvolutionBackwardDataImpl::AlgoGroupConvGeneral::AlgoGroupConvGeneral(
 
 bool ConvolutionBackwardDataImpl::AlgoGroupConvGeneral::is_available(
         const SizeArgs &args) const {
+    if (args.diff_layout->dtype == args.filter_layout->dtype &&
+        args.diff_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
     auto sub_args = args;
     TensorLayout diff_pg, grad_pg;
     modify_size_args(sub_args, diff_pg, grad_pg);

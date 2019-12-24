@@ -25,6 +25,7 @@ namespace convolution {
     struct ForwardSizeArgs {
         HandleImpl *handle;
         const TensorLayout *src_layout;
+        const TensorLayout *filter_layout;
         CanonizedFilterMeta filter_meta;
         const TensorLayout *dst_layout;
     };

@@ -85,6 +85,8 @@ TEST_F(CUDA, ROI_ALIGN_BACKWARD) {
     };
     run(dtype::Float32());
     run(dtype::Float16());
+    checker.set_epsilon(5e-2);
+    run(dtype::BFloat16());
 }
 
 }  // namespace test

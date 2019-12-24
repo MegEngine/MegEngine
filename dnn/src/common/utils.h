@@ -16,6 +16,7 @@
 #include "megdnn/dtype.h"
 #include "megdnn/handle.h"
 #include "megdnn/thin/small_vector.h"
+#include "megdnn/oprs/general.h"
 
 #include "src/common/hash_ct.h"
 #include "src/common/utils.cuh"
@@ -548,6 +549,59 @@ public:
     std::string to_string() const;
 };
 
+/**!
+ * \brief helpers for oprs using typecvt between comp_type and dst_type
+ * \tparam SrcType src type
+ * \tparam CompType compute type, such as fp32 for conv
+ * \tparam DstType dst type
+ */
+template <typename SrcType, typename CompType, typename DstType = SrcType>
+struct CompTypeCvter {
+    std::unique_ptr<TypeCvt> m_cvt_opr;
+    WorkspaceBundle* m_workspace_bundle;
+    size_t m_workspace_idx;
+    CompTypeCvter(Handle* handle, WorkspaceBundle* bundle)
+            : m_workspace_bundle(bundle), m_workspace_idx(0) {
+        megdnn_assert(
+                (DTypeTrait<SrcType>::enumv != DTypeTrait<CompType>::enumv &&
+                 DTypeTrait<DstType>::enumv != DTypeTrait<CompType>::enumv),
+                "SrcType(%s) == CompType(%s) or DstType(%s) == CompType(%s) is "
+                "not "
+                "supportted.",
+                SrcType().name(), CompType().name(), DstType().name(),
+                CompType().name());
+        m_cvt_opr = handle->create_operator<TypeCvt>();
+    }
+
+    //! Convert tensor dtype from SrcType to CompType.
+    CompTypeCvter& src_to_comp_type(const TensorND& src, TensorND& comp) {
+        if (src.layout.dtype.enumv() == DTypeTrait<SrcType>::enumv) {
+            if (!comp.layout.dtype.valid() ||
+                comp.layout.dtype.enumv() != DTypeTrait<CompType>::enumv) {
+                comp.layout.dtype = CompType();
+                comp.layout.init_contiguous_stride();
+                comp.raw_ptr = m_workspace_bundle->get(m_workspace_idx++);
+                if (src.layout.ndim) {
+                    m_cvt_opr->exec(src, comp);
+                }
+            }
+        }
+        return *this;
+    }
+
+    //! Convert tensor dtype from CompType to DstType.
+    CompTypeCvter& comp_to_dst_type(const TensorND& comp, const TensorND& dst) {
+        megdnn_assert(comp.layout.dtype.enumv() == DTypeTrait<CompType>::enumv);
+        if (dst.layout.dtype.enumv() == DTypeTrait<DstType>::enumv) {
+            m_cvt_opr->exec(comp, dst);
+        }
+        return *this;
+    }
+
+    Workspace workspace() {
+        return m_workspace_bundle->get_workspace(m_workspace_idx);
+    }
+};
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

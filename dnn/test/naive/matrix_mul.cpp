@@ -12,8 +12,9 @@
 
 #include "megdnn/oprs/linalg.h"
 #include "test/common/checker.h"
-#include "test/common/random_state.h"
 #include "test/common/matrix_mul.h"
+#include "test/common/random_state.h"
+#include "test/common/extra_impl_helper.h"
 
 using namespace megdnn;
 using namespace test;
@@ -29,8 +30,8 @@ void run_matmul_mk_format(Handle* handle, param::MatrixMul::Format format,
     auto extra_impl = [](const TensorNDArray& tensors, param::MatrixMul param,
                          Handle* handle, size_t pack_size) {
         megdnn_assert((param.format == param::MatrixMul::Format::MK4 ||
-                      param.format == param::MatrixMul::Format::MK8) &&
-                              tensors.size() == 3);
+                       param.format == param::MatrixMul::Format::MK8) &&
+                      tensors.size() == 3);
         param::MatrixMul new_param = param;
         new_param.format = param::MatrixMul::Format::DEFAULT;
         size_t M = tensors[2].layout[0] * pack_size;
@@ -133,7 +134,7 @@ void run_matmul_mk_format(Handle* handle, param::MatrixMul::Format format,
 }  // namespace
 
 TEST_F(NAIVE, MATRIX_MUL_QUANTIZED4x4x32) {
-    Checker<MatrixMul> checker(handle(), /* check_dispatch */false);
+    Checker<MatrixMul> checker(handle(), /* check_dispatch */ false);
     auto GenTensorValueQuint4 = [](const TensorShape& shape,
                                    dtype::Quantized4Asymm dtype,
                                    const std::vector<int>& values) {
@@ -186,49 +187,45 @@ TEST_F(NAIVE, MATRIX_MUL_QUANTIZED4x4x32) {
 }
 
 TEST_F(NAIVE, MATRIX_MUL_QUANTIZED8x8x32) {
-    Checker<MatrixMul> checker(handle(), /* check_dispatch */false);
+    Checker<MatrixMul> checker(handle(), /* check_dispatch */ false);
     MatrixMul::Param param;
     param.transposeA = false;
     param.transposeB = false;
 
     checker.set_param(param).exect(
-        Testcase{
-          TensorValue({4, 7}, dtype::Quantized8Asymm(0.1f, (uint8_t)128),
-                      {6,  97, 210,  47, 213, 246,  92,
-                       121, 132, 133,  37,  31,  87,  71,
-                       0,   5, 198,  11,  97, 141, 222,
-                       166,  76, 212, 190, 108, 245, 143}),
-          TensorValue({7, 5}, dtype::Quantized8Asymm(0.2f, (uint8_t)233),
-                      { 89, 207,  79, 135,  43,
-                        29, 235, 171,  40,  78,
-                       119, 145, 254, 162, 184,
-                       139, 248, 214, 201, 183,
-                       127,  75,  48, 200,  96,
-                       109,  63,  60, 100, 120,
-                       111, 182, 150, 227,  92}),
-          {}},
-        Testcase{
-          {},
-          {},
-          TensorValue({4, 5}, dtype::QuantizedS32(0.1f * 0.2f),
-                      {  2908, -36975,  -9180,  -3574,   8114,
-                        30496,  23588,  32433,  11467,  30974,
-                        36748,  -6939,  26715,  33787,  35329,
-                       -24486, -25049, -19828, -16627, -18972})});
+            Testcase{TensorValue(
+                             {4, 7}, dtype::Quantized8Asymm(0.1f, (uint8_t)128),
+                             {6,   97,  210, 47,  213, 246, 92,  121, 132, 133,
+                              37,  31,  87,  71,  0,   5,   198, 11,  97,  141,
+                              222, 166, 76,  212, 190, 108, 245, 143}),
+                     TensorValue({7, 5},
+                                 dtype::Quantized8Asymm(0.2f, (uint8_t)233),
+                                 {89,  207, 79,  135, 43,  29,  235, 171, 40,
+                                  78,  119, 145, 254, 162, 184, 139, 248, 214,
+                                  201, 183, 127, 75,  48,  200, 96,  109, 63,
+                                  60,  100, 120, 111, 182, 150, 227, 92}),
+                     {}},
+            Testcase{{},
+                     {},
+                     TensorValue({4, 5}, dtype::QuantizedS32(0.1f * 0.2f),
+                                 {2908,   -36975, -9180,  -3574,  8114,
+                                  30496,  23588,  32433,  11467,  30974,
+                                  36748,  -6939,  26715,  33787,  35329,
+                                  -24486, -25049, -19828, -16627, -18972})});
 
     param.transposeA = true;
     checker.set_param(param).exect(
-        Testcase{
-            TensorValue({2, 1}, dtype::Quantized8Asymm(0.7f, (uint8_t)128),
-                        {129, 129}),
-            TensorValue({2, 1}, dtype::Quantized8Asymm(0.4f, (uint8_t)128),
-                        {129, 129}),
-            {}
-        },
-        Testcase{
-          {},
-          {},
-          TensorValue({1, 1}, dtype::QuantizedS32(0.7f * 0.4f), {2})});
+            Testcase{TensorValue({2, 1},
+                                 dtype::Quantized8Asymm(0.7f, (uint8_t)128),
+                                 {129, 129}),
+                     TensorValue({2, 1},
+                                 dtype::Quantized8Asymm(0.4f, (uint8_t)128),
+                                 {129, 129}),
+                     {}},
+            Testcase{{},
+                     {},
+                     TensorValue({1, 1}, dtype::QuantizedS32(0.7f * 0.4f),
+                                 {2})});
 }
 
 TEST_F(NAIVE, MATRIX_MUL_MK4) {
@@ -239,6 +236,28 @@ TEST_F(NAIVE, MATRIX_MUL_MK4) {
 TEST_F(NAIVE, MATRIX_MUL_MK8) {
     run_matmul_mk_format(handle(), param::MatrixMul::Format::MK8,
                          dtype::Int16(), dtype::Int16(), dtype::Int32());
+}
+
+TEST_F(NAIVE, MATRIX_MUL_BFLOAT16) {
+    Checker<MatrixMul> checker(handle(), /* check_dispatch */ false);
+    MatrixMul::Param param, fp32_param;
+    fp32_param = param;
+    param.compute_mode = param::MatrixMul::ComputeMode::FLOAT32;
+    checker.set_param(param);
+    checker.set_dtype(0, dtype::BFloat16());
+    checker.set_dtype(1, dtype::BFloat16());
+    checker.set_dtype(2, dtype::BFloat16());
+    auto extra_impl = extra_impl_helper<MatrixMul>(handle(), fp32_param);
+
+    checker.set_extra_opr_impl(extra_impl);
+    checker.set_epsilon(1.5e-2);
+    UniformFloatRNG frng{1e-2, 5.f};
+    checker.set_rng(0, &frng);
+    checker.set_rng(1, &frng);
+    checker.execs({{8, 8}, {8, 8}, {}});
+    param.compute_mode = param::MatrixMul::ComputeMode::DEFAULT;
+    checker.set_param(param);
+    checker.execs({{8, 8}, {8, 8}, {}});
 }
 
 // vim: syntax=cpp.doxygen

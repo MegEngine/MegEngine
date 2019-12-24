@@ -12,6 +12,7 @@
 #include "megdnn/dtype.h"
 
 #include "test/common/utils.h"
+#include "test/common/random_state.h"
 #include <random>
 #include <set>
 
@@ -39,6 +40,54 @@ private:
     void gen_all_valid_float16();
     size_t m_offset;
     std::vector<dt_float16> m_sequence;
+};
+
+class BFloat16PeriodicalRNG : public RNG {
+public:
+    BFloat16PeriodicalRNG() {
+        size_t bits = sizeof(dt_bfloat16) * 8;
+        size_t mantissa_bits = std::numeric_limits<dt_bfloat16>::digits - 1;
+        size_t exponent_bits = bits - mantissa_bits - 1;
+        for (size_t exp = 1u << (exponent_bits - 2);
+             exp < (1u << exponent_bits) - (1u << (exponent_bits - 2)); ++exp) {
+            for (size_t x = 0; x < 1u << mantissa_bits; ++x) {
+                size_t pos_num = (exp << mantissa_bits) + x;
+                size_t neg_num =
+                        (1u << (bits - 1)) + (exp << mantissa_bits) + x;
+                union U {
+                    U() {}
+                    uint16_t i;
+                    dt_bfloat16 f;
+                } i2f;
+                i2f.i = static_cast<uint16_t>(pos_num);
+                m_sequence.push_back(i2f.f);
+                i2f.i = static_cast<uint16_t>(neg_num);
+                m_sequence.push_back(i2f.f);
+            }
+        }
+        std::shuffle(m_sequence.begin(), m_sequence.end(),
+                     RandomState::generator());
+    }
+
+    void gen(const TensorND& tensor) override {
+        megdnn_assert(tensor.layout.dtype.enumv() == DTypeTrait<dt_bfloat16>::enumv);
+        size_t nr_elems = tensor.layout.span().dist_elem();
+        auto offset = tensor.layout.span().low_elem;
+        for (size_t i = 0; i < nr_elems; ++i) {
+            tensor.ptr<dt_bfloat16>()[offset + i] = get_single_val();
+        }
+    }
+
+    dt_bfloat16 get_single_val() {
+        if (m_offset >= m_sequence.size()) {
+            m_offset = 0;
+        }
+        return m_sequence[m_offset++];
+    }
+
+private:
+    size_t m_offset = 0;
+    std::vector<dt_bfloat16> m_sequence;
 };
 
 class IIDRNG : public RNG {

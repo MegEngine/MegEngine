@@ -136,6 +136,11 @@ void ConvBiasDesc::set_conv(DType data_type, const param::ConvBias& param,
 namespace conv_bias {
 
 bool is_cudnn_supported(const BiasForwardSizeArgs& args) {
+    if (args.src_layout->dtype == args.filter_layout->dtype &&
+        args.src_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
+
     // CUDNN_STATUS_EXECUTION_FAILED on Tegra K1, so disable CUDNN
     // on Tegra K1.
     if (args.handle->is_tegra_k1())

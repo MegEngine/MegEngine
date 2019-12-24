@@ -499,6 +499,28 @@ private:
 };
 #endif
 
+class ConvBiasForwardImpl::AlgoBFloat16 final : public AlgoBase {
+public:
+    AlgoBFloat16(AlgoBase* impl);
+
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+
+    const char* name() const override { return m_name.c_str(); }
+
+    bool is_reproducible() const override { return m_impl->is_reproducible(); }
+
+private:
+    SizeArgs float_args(const SizeArgs& args, ConvBiasForwardImpl* opr,
+                        TensorLayout& fsrc, TensorLayout& ffilter,
+                        TensorLayout& fbias, TensorLayout& fz,
+                        TensorLayout& fdst) const;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+    AlgoBase* m_impl;
+    std::string m_name;
+};
+
 class ConvBiasForwardImpl::AlgoPack {
     AlgoPack(const AlgoPack&) = delete;
     AlgoPack& operator=(const AlgoPack&) = delete;
@@ -508,7 +530,8 @@ public:
 
     std::vector<AlgoBase*> all_algos,
             //! non-cudnn algos, used for heuristic if cudnn is not supported
-            non_cudnn_algos;
+            non_cudnn_algos,
+            bfloat16_algos;
     std::vector<AlgoCUDNNConvBiasActivation> cudnn_conv_bias_activations;
     std::vector<AlgoCUDNNConv> cudnn_convs;
     AlgoChanwise chanwise;
@@ -531,6 +554,7 @@ public:
             int8_chwn4_imma_unroll_width;
 #endif
     std::vector<std::unique_ptr<AlgoGroupConvGeneral>> gconv_refhold;
+    std::vector<std::unique_ptr<AlgoBFloat16>> bfloat16_refhold;
     std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
 
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);

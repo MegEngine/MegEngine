@@ -29,6 +29,7 @@
 #define MEGDNN_FLOAT16_SELECT(_x, _y)   _y
 #else
 #include "megdnn/dtype/half.hpp"
+#include "megdnn/dtype/bfloat16.hpp"
 #define MEGDNN_INC_FLOAT16(_x) _x
 #define MEGDNN_FLOAT16_SELECT(_x, _y)   _x
 #endif
@@ -49,6 +50,7 @@ namespace megdnn {
     cb(IntB4) \
     cb(Byte) \
     MEGDNN_INC_FLOAT16(cb(Float16)) \
+    MEGDNN_INC_FLOAT16(cb(BFloat16)) \
     cb(UintB4) \
 
 /*!
@@ -62,6 +64,7 @@ namespace megdnn {
     cb(Int32) \
     cb(Byte) \
     MEGDNN_INC_FLOAT16(cb(Float16)) \
+    MEGDNN_INC_FLOAT16(cb(BFloat16)) \
 
 /*!
  * \brief iterate through each fractional byte dtype
@@ -101,6 +104,7 @@ namespace megdnn {
 #define MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb) \
     cb(::megdnn::dtype::Float32) \
     MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::Float16)) \
+    MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::BFloat16)) \
 
 /*!
  * \brief iterate through each dtype object that can be involved in integer
@@ -345,6 +349,7 @@ typedef int16_t dt_int16;
 typedef int8_t dt_int8;
 typedef uint8_t dt_uint8;
 MEGDNN_INC_FLOAT16(typedef half_float::half dt_float16;)
+MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 
 #define MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE 100000
 #if MEGDNN_CC_HOST
@@ -367,6 +372,9 @@ MEGDNN_INC_FLOAT16(typedef half_float::half dt_float16;)
             Float16,
 #endif
             UintB4 = 10,
+#if !MEGDNN_DISABLE_FLOAT16
+            BFloat16 = 11,
+#endif
 
             #define FST(_name) _name = MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE,
             #define D(_name) _name,
@@ -702,6 +710,9 @@ MEGDNN_DEF_DT(Uint8, dt_uint8, INT, UNSIGNED, 0, UINT8_MAX);
 MEGDNN_INC_FLOAT16(MEGDNN_DEF_DT(Float16, dt_float16, FLOAT, SIGNED,
             std::numeric_limits<dt_float16>::lowest(),
             std::numeric_limits<dt_float16>::max()));
+MEGDNN_INC_FLOAT16(MEGDNN_DEF_DT(BFloat16, dt_bfloat16, FLOAT, SIGNED,
+            std::numeric_limits<dt_bfloat16>::lowest(),
+            std::numeric_limits<dt_bfloat16>::max()));
 
 template <>
 struct DTypeTrait<dtype::Byte> {

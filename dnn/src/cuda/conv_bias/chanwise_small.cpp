@@ -30,6 +30,10 @@ inline bool is_available_small(const chanwise::Param& param) {
 
 bool ConvBiasForwardImpl::AlgoChanwiseSmall::is_available(
         const SizeArgs& args) const {
+    if (args.src_layout->dtype == args.filter_layout->dtype &&
+        args.src_layout->dtype == dtype::BFloat16()) {
+        return false;
+    }
     if (args.z_layout->ndim > 0)
         return false;
 #if CUDA_VERSION < 9000

@@ -47,6 +47,9 @@ public:
     class AlgoCuBlasLt;
 #endif
     class AlgoNaive;
+#if !MEGDNN_DISABLE_FLOAT16
+    class AlgoBFloat16;
+#endif
     class AlgoPack;
 
     static const AlgoPack& algo_pack() {

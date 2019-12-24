@@ -106,6 +106,21 @@ TEST_F(CUDA, QUANTIZED_TYPECVT) {
     run(dtype::Quantized8Asymm(1e-3f, (uint8_t)18), dtype::QuantizedS32(7e-4f));
 }
 
+TEST_F(CUDA, TYPE_CVT_BFLOAT16) {
+    Checker<TypeCvt> checker(handle_cuda());
+    UniformFloatRNG rng(-20, 20);
+    checker.set_rng(0, &rng);
+    std::vector<DType> dtypes = {dtype::Float32(), dtype::Float16(),
+                                 dtype::Int32(),   dtype::Int16(),
+                                 dtype::Int8()};
+    for (auto sdtype : dtypes) {
+        TensorLayout src({10, 10}, sdtype), dst({10, 10}, dtype::BFloat16());
+        checker.exec(TensorLayoutArray{src, dst});
+        TensorLayout src2({10, 10}, dtype::BFloat16()), dst2({10, 10}, sdtype);
+        checker.exec(TensorLayoutArray{src2, dst2});
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_TYPE_CVT) {
     UniformIntRNG rng{-128, 127};
