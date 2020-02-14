@@ -1,0 +1,17 @@
+decl_raw_opr(
+    'tensor_rt_runtime',
+    desc='create an operator that embeds a TensorRT ICudaEngine',
+    inputs=[
+        Doc('inputs', 'input vars', 'list of :class:`.SymbolVar`'),
+        Doc('data_bytes', 'serialized ICudaEngine'),
+    ],
+    body=[
+        'assert isinstance(data_bytes, bytes), '
+            '"data must be bytes; got {}".format(type(data_bytes))',
+        'output = _mgb._Opr.tensor_rt_runtime(inputs, data_bytes, config)',
+        'cvt_result_kwargs["explode_single"] = False',
+    ],
+)
+
+# vim: ft=python
+

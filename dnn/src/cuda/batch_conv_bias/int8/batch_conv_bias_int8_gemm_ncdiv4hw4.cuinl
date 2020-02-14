@@ -1,0 +1,194 @@
+/**
+ * \file dnn/src/cuda/batch_conv_bias/int8/batch_conv_bias_int8_gemm_ncdiv4hw4.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "src/cuda/batch_conv_bias/batch_conv_bias.cuh"
+#include "src/cuda/batch_conv_bias/helper.cuh"
+#include "src/cuda/convolution_helper/activation.cuh"
+#include "src/cuda/convolution_helper/bias_visitor.cuh"
+#include "src/cuda/convolution_helper/conv_trait/ibatch_conv_trait.cuh"
+#include "src/cuda/convolution_helper/epilogue.cuh"
+#include "src/cuda/convolution_helper/kernel.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace convolution;
+
+//! dispatch macros
+#define DISPATCH_mxnxk_CHK(hw_, co_, ci_, tx_, ty_)                          \
+    if (img_pixels >= hw_) {                                                 \
+        if (param.co >= co_) {                                               \
+            if (param.ci % ci_ == 0) {                                       \
+                static constexpr int reg_k = (ci_);                          \
+                static constexpr int reg_m = ((co_) + (ty_)-1) / (ty_);      \
+                static constexpr int reg_n = 1;                              \
+                static constexpr int reg_width = ((hw_) + (tx_)-1) / (tx_);  \
+                static constexpr int thread_x = tx_;                         \
+                static constexpr int thread_y = ty_;                         \
+                typedef RegBlockConfig<reg_m, reg_n, reg_k, reg_width>       \
+                        RegBlockConfig;                                      \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;       \
+                typedef IBatchConvTrait_f1x1s1x1<                            \
+                        true, int, typename LdgTypeTrait<ci_>::ldg_type,     \
+                        RegBlockConfig, ThreadConfig>                        \
+                        ConvTrait;                                           \
+                kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>; \
+                launch_config.nr_threads_x = thread_x;                       \
+                launch_config.nr_threads_y = thread_y;                       \
+                launch_config.nr_threads_z = 1;                              \
+                launch_config.nr_blocks_x = DIVUP(                           \
+                        img_pixels, ConvTrait::DataTileCount::               \
+                                            block_tile_out_height_width);    \
+                launch_config.nr_blocks_y = DIVUP(                           \
+                        param.co,                                            \
+                        ConvTrait::FilterTileCount::block_tile_out_channel); \
+                launch_config.nr_blocks_z = param.n;                         \
+                launch_config.smem_size_in_bytes =                           \
+                        sizeof(int32_t) *                                    \
+                        (ConvTrait::DataTileCount::smem_tot +                \
+                         ConvTrait::FilterTileCount::smem_tot);              \
+            }                                                                \
+        }                                                                    \
+    }
+#define DISPATCH_mxnxk_CHK_small(hw_, co_, ci_, tx_, ty_)                    \
+    if (img_pixels >= hw_) {                                                 \
+        if (param.co >= co_) {                                               \
+            if (param.ci % ci_ == 0) {                                       \
+                static constexpr int reg_k = (ci_);                          \
+                static constexpr int reg_m = 4;                              \
+                static constexpr int reg_n = 1;                              \
+                static constexpr int reg_width = ((hw_) + (tx_)-1) / (tx_);  \
+                static constexpr int thread_x = tx_;                         \
+                static constexpr int thread_y = ty_;                         \
+                typedef RegBlockConfig<reg_m, reg_n, reg_k, reg_width>       \
+                        RegBlockConfig;                                      \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;       \
+                typedef IBatchConvTrait_f1x1s1x1<                            \
+                        true, int, typename LdgTypeTrait<ci_>::ldg_type,     \
+                        RegBlockConfig, ThreadConfig>                        \
+                        ConvTrait;                                           \
+                kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>; \
+                launch_config.nr_threads_x = thread_x;                       \
+                launch_config.nr_threads_y = thread_y;                       \
+                launch_config.nr_threads_z = 1;                              \
+                launch_config.nr_blocks_x = DIVUP(                           \
+                        img_pixels, ConvTrait::DataTileCount::               \
+                                            block_tile_out_height_width);    \
+                launch_config.nr_blocks_y = DIVUP(                           \
+                        param.co,                                            \
+                        ConvTrait::FilterTileCount::block_tile_out_channel); \
+                launch_config.nr_blocks_z = param.n;                         \
+                launch_config.smem_size_in_bytes =                           \
+                        sizeof(int32_t) *                                    \
+                        (ConvTrait::DataTileCount::smem_tot +                \
+                         ConvTrait::FilterTileCount::smem_tot);              \
+            }                                                                \
+        }                                                                    \
+    }
+#define DISPATCH_mxn_CHK(hw_, co_)          \
+    DISPATCH_mxnxk_CHK(hw_, co_, 4, 16, 8); \
+    DISPATCH_mxnxk_CHK(hw_, co_, 8, 16, 8); \
+    DISPATCH_mxnxk_CHK(hw_, co_, 16, 16, 8);
+
+#define DISPATCH_mxn_CHK_small(hw_)             \
+    DISPATCH_mxnxk_CHK_small(hw_, 4, 4, 16, 8); \
+    DISPATCH_mxnxk_CHK_small(hw_, 4, 8, 16, 8); \
+    DISPATCH_mxnxk_CHK_small(hw_, 4, 16, 16, 8);
+
+#define DISPATCH_n_CHK(hw_)      \
+    DISPATCH_mxn_CHK_small(hw_); \
+    DISPATCH_mxn_CHK(hw_, 32);   \
+    DISPATCH_mxn_CHK(hw_, 64);   \
+    DISPATCH_mxn_CHK(hw_, 128);
+#define DISPATCH_m_CHK(co_)    \
+    DISPATCH_mxn_CHK(1, co_);  \
+    DISPATCH_mxn_CHK(32, co_); \
+    DISPATCH_mxn_CHK(64, co_); \
+    DISPATCH_mxn_CHK(128, co_);
+namespace {
+template <int k_>
+struct LdgTypeTrait;
+
+template <>
+struct LdgTypeTrait<4> {
+    using ldg_type = int32_t;
+};
+
+template <>
+struct LdgTypeTrait<8> {
+    using ldg_type = int2;
+};
+
+template <>
+struct LdgTypeTrait<16> {
+    using ldg_type = int4;
+};
+
+template <typename BiasVisitor, typename Epilogue>
+void (*get_kern(const ConvParam& param,
+                batch_conv_bias::LaunchConfig& launch_config))(
+        const int8_t* __restrict__, const int8_t* __restrict__, BiasVisitor,
+        Epilogue, ConvParam, float, float) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    kern = nullptr;
+    const int img_pixels = param.ho * param.wo;
+
+    if (img_pixels >= 256 && param.co >= 256) {
+        DISPATCH_mxnxk_CHK(128, 128, 4, 16, 8);
+        DISPATCH_mxnxk_CHK(128, 128, 8, 16, 8);
+        DISPATCH_mxnxk_CHK(128, 128, 16, 16, 8);
+    } else if (img_pixels >= 256) {
+        DISPATCH_n_CHK(128);
+    } else if (param.co >= 256) {
+        DISPATCH_m_CHK(128);
+    } else {
+        DISPATCH_n_CHK(1);
+        DISPATCH_n_CHK(32);
+        DISPATCH_n_CHK(64);
+        DISPATCH_n_CHK(128);
+    }
+    megdnn_assert(kern != nullptr,
+                  "no usable kernel implementation for "
+                  "conv_bias");
+    return kern;
+}
+}  // namespace
+
+template <typename BiasVisitor, typename Epilogue>
+void megdnn::cuda::batch_conv_bias::do_batch_conv_bias_int8_gemm_ncdiv4hw4(
+        const int8_t* d_src, const int8_t* d_filter, BiasVisitor bias,
+        Epilogue epilogue, const ConvParam& param, float alpha, float beta,
+        cudaStream_t stream) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    batch_conv_bias::LaunchConfig launch_config;
+    kern = get_kern<BiasVisitor, Epilogue>(param, launch_config);
+
+    uint32_t nr_threads_x = launch_config.nr_threads_x,
+             nr_threads_y = launch_config.nr_threads_y,
+             nr_blocks_x = launch_config.nr_blocks_x,
+             nr_blocks_y = launch_config.nr_blocks_y,
+             nr_blocks_z = launch_config.nr_blocks_z,
+             smem_size_in_bytes = launch_config.smem_size_in_bytes;
+
+    dim3 block_size{nr_threads_x, nr_threads_y, 1};
+    dim3 grid_size{nr_blocks_x, nr_blocks_y, nr_blocks_z};
+
+    cuda_check(cudaFuncSetCacheConfig(reinterpret_cast<const void*>(kern),
+                                      cudaFuncCachePreferShared));
+    cuda_check(cudaFuncSetSharedMemConfig(reinterpret_cast<const void*>(kern),
+                                          cudaSharedMemBankSizeEightByte));
+
+    kern<<<grid_size, block_size, smem_size_in_bytes, stream>>>(
+            d_src, d_filter, bias, epilogue, param, alpha, beta);
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

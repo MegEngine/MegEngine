@@ -1,0 +1,58 @@
+decl_opr('IndexingOneHot', pyname='_indexing_one_hot',
+         inputs=['src', 'index'],
+         params=[('axis', 'Axis')])
+
+decl_raw_opr(
+    'indexing_one_hot',
+    inputs=[Doc('src', 'input data, n-dimensional'),
+            Doc('axis',
+                'the axis on *src* for which values in *index* index', 'int'),
+            Doc('index', 'index, (n-1)-dimensional, dtype must be int32_t'),
+            Doc('keepdims', 'whether not to remove the axis in result',
+                'bool', 'False')],
+    body=[
+        'output = _indexing_one_hot(src, index, axis=axis, config=config)',
+        'if not keepdims:',
+        '   output = remove_axis(output, axis)'],
+    desc='One-hot indexing for some axis. '
+    'If ``keepdims == True``, output data is n-dimensional, but its shape on '
+    'indexing axis is 1. Given src, axis and index, for all valid subscript '
+    ' tuples i, we have: ``dst[i[0], ..., i[axis-1], 0, i[axis], ..., i[n-1]] '
+    '= src[i[0], ..., i[axis-1], index[i], i[axis], ..., i[n-1]]``'
+)
+
+decl_opr('IndexingSetOneHot', pyname='_indexing_set_one_hot',
+         inputs=['src', 'index', 'value'],
+         params=[('axis', 'Axis')])
+
+decl_raw_opr(
+    'indexing_set_one_hot',
+    inputs=['src', Doc('axis', '', 'int'), 'index', 'value'],
+    body=[
+        'output = _indexing_set_one_hot(src, index, value, axis=axis, '
+                                       'config=config)'
+    ],
+    desc='set subtensor given by *index* in *src* to *value*; see '
+    ':func:`indexing_one_hot` for how the indexing works.')
+
+decl_opr('IndexingRemap',
+         inputs=['src', 'map_'],
+         params='IndexingRemap',
+         desc=Doc(None,
+r"""
+    Generate an output tensor by treating *map_* as indices to take from *src*.
+
+    Assume shape of *src* is :math:`(s_0, s_1, \ldots, s_{n-1})` and shape of
+    *map_* is :math:`(t_0, t_1, \ldots, t_{m-1})`, then the remap requires
+    :math:`t_{m-1}=n`, and the output shape would be
+    :math:`(t_0, \ldots, t_{m-2})`; for each output element, it has :math:`n`
+    corresponding elements in *map_* that would be used as the index to look up
+    in *src*.
+
+    .. note::
+        This operator accepts a special parameter *is_non_overlapping*; see
+        :class:`~.opr_param_defs.IndexingRemap` for its explanation.
+
+"""))
+
+# vim: ft=python

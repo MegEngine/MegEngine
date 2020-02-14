@@ -1,0 +1,25 @@
+decl_raw_opr(
+    'extern_c_opr_placeholder',
+    desc='create a placeholder operator that would be replaced by a '
+    'registered implementation during graph load. '
+    'See :class:`.ExternCOprPlaceholder` for more details.',
+    inputs=[
+        Doc('inputs', 'input vars', 'list of :class:`.SymbolVar`'),
+        Doc('output_shapes', 'shapes of output vars', 'list of list of int'),
+        Doc('dump_name', 'name to be used for matching the loader', 'str'),
+        Doc('dump_data', 'data to be dumped that can be read by loader',
+            'bytes'),
+        Doc('output_dtypes', 'dtypes of output vars', 'list of dtypes',
+            default="None"),
+    ],
+    body=[
+        'cvt_result_kwargs["explode_single"] = False',
+        'assert isinstance(dump_data, bytes), '
+            '"data must be bytes; got {}".format(type(dump_data))',
+        'output_shapes = _helper.cvt_to_vector_of_shape(output_shapes)',
+        'output = _mgb._Opr.extern_c_opr_placeholder(inputs, output_shapes, '
+            'output_dtypes, dump_name, dump_data, config)'
+    ]
+)
+
+# vim: ft=python

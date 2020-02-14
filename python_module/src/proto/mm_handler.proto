@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package mm_handler;
+
+message OprRegisterRequest {
+    string key = 1;
+    uint32 rank = 2;
+    uint64 stream = 3;
+    uint32 nr_expected_devices = 4;
+}
+
+message OprRegisterResponse {
+    uint64 hash = 1; 
+}
+
+message GatherUidRequest {
+    bytes uid = 1;
+    string key = 2;
+    uint32 size = 3;
+    uint32 rank = 4;
+}
+
+message GatherUidResponse {
+    repeated bytes uids = 1;
+}
+
+message SetOutputShapeRequest {
+    string key = 1;
+    TensorShape shape = 2;
+}
+
+message SetOutputShapeResponse {
+}
+
+message GetOutputShapeRequest {
+    string key = 1;
+}
+
+message GetOutputShapeResponse {
+    TensorShape shape = 1;
+}
+
+message TensorShape {
+    uint64 ndim = 1;
+    repeated uint64 shape = 2;
+}
+
+message GroupBarrierRequest {
+    uint32 size = 1;
+    uint32 rank = 2;
+}
+
+message GroupBarrierResponse {
+    uint32 size = 1;
+}

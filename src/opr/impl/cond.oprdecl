@@ -1,0 +1,52 @@
+decl_opr(
+    'CondExecPred',
+    inputs=['pred', '*keys'],
+    canonize_input_vars_args='keys + (pred, )',
+    params='CondExecPred',
+    body=['cvt_result_kwargs["explode_single"] = False'],
+    desc='generate predicate proxy vars for conditional execution;  '
+    'see docs in ``MegBrain/src/opr/include/megbrain/opr/cond.h``'
+)
+
+decl_opr(
+    'CondExecPredLogical',
+    inputs=['*ppvs'],
+    params='CondExecPredLogical',
+    desc='apply logical arithmetic on predicate proxy vars; '
+    'see docs in ``MegBrain/src/opr/include/megbrain/opr/cond.h``'
+)
+
+decl_opr(
+    'CondExecMark',
+    inputs=['ppv', '*inputs'],
+    canonize_input_vars_args='inputs + (ppv, )',
+    body=['cvt_result_kwargs["explode_single"] = False'],
+    params='CondExecMark',
+    desc='mark the beginning of conditional execution; '
+    'see docs in ``MegBrain/src/opr/include/megbrain/opr/cond.h``'
+)
+
+decl_opr(
+    'CondExecMarkIfNeed',
+    inputs=['maybe_ppv', 'input'],
+    params='CondExecMark',
+    desc='call :func:`cond_exec_mark` on ``input`` if ``maybe_ppv`` is a PPV '
+    'or a conditonally-executed var'
+)
+
+decl_opr(
+    'CondExecMerge',
+    inputs=[Doc('inputs',
+                'a list of vars to represent the outputs of the branches'),
+            Doc('out_shapes',
+                'shapes for each output var if no branch is taken and mode is '
+                ':attr:`~megbrain.opr_param_defs.CondExecMerge.Mode.SUM`',
+                default='[]')],
+    params='CondExecMerge',
+    canonize_input_vars_args='list(inputs) + list(out_shapes)',
+    body=['cvt_result_kwargs["explode_single"] = False'],
+    desc='merge multiple conditional branches and generate unconditioned '
+    'output; see docs in ``MegBrain/src/opr/include/megbrain/opr/cond.h``'
+)
+
+# vim: ft=python

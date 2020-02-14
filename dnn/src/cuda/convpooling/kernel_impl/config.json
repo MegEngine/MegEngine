@@ -1,0 +1,7 @@
+{
+    "templateFile":"kernel_impl.template",
+    "fileNamePrefix":"kernel_impl",
+    "kernelSize":"1",
+    "nonlineType":"Identity",
+    "nonlineTypeLower":"identity"
+}

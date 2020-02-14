@@ -1,0 +1,43 @@
+decl_opr('UniformRNG', pyname='_uniform_rng',
+         inputs=['shape'],
+         params='UniformRNG',
+         canonize_input_vars='canonize_shape_input')
+
+decl_opr('GaussianRNG', pyname='_gaussian_rng',
+         inputs=['shape'],
+         params='GaussianRNG',
+         canonize_input_vars='canonize_shape_input')
+
+inputs = [
+    Doc('shape',
+        'output shape, can be either a symvar or immediate shape'),
+    Doc('seed', 'seed to initiate internal RNG state', 'int', 0)
+]
+
+decl_raw_opr(
+    'uniform_rng',
+    inputs=inputs,
+    body=[
+        'output = _uniform_rng(shape, seed=seed, '
+                               'config=config, comp_graph=comp_graph)'
+    ],
+    desc='random number obeying uniform distribution in (0, 1].\n\n'
+    '.. note::\n'
+    '   Results are 32-bit floating point values between 0.0f and 1.0f, '
+    'excluding 0.0f and including 1.0f.'
+)
+
+decl_raw_opr(
+    'gaussian_rng',
+    inputs=inputs + [
+        Doc('mean', 'mean value of the distribution', 'float', 0),
+        Doc('std', 'standard deviation of the distribution', 'float', 1)
+    ],
+    body=[
+        'output = _gaussian_rng(shape, seed=seed, mean=mean, std=std, '
+                               'config=config, comp_graph=comp_graph)'
+    ],
+    desc='random number obeying gaussian distribution of given mean and std'
+)
+
+# vim: ft=python

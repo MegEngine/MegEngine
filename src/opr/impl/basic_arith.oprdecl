@@ -1,0 +1,26 @@
+decl_opr('Elemwise',
+         inputs=[Doc('*inputs', 'input vars that match given param')],
+         params='Elemwise',
+         desc='element-wise arithmetic operations')
+
+decl_opr('Reduce', pyname='reduce_general',
+         inputs=[Doc('*inputs', 'input var, with possibly target shape')],
+         params='Reduce',
+         desc='reduce to a target shape or reduce along an axis; '
+         'if target shape is given, it should be the second symvar in the '
+         'inputs and axis should be max_ndim; otherwise, a valid axis must be '
+         'provided', version=2)
+
+decl_opr('TypeCvt', inputs=['src'], params='SerializedDType', pyname='_typecvt',
+         version=2)
+
+decl_raw_opr(
+    'typecvt',
+    inputs=['src',
+            Doc('target_dtype', 'target data type',
+                ':class:`numpy.dtype` compatible')],
+    body=['output = _typecvt(src, dtype=target_dtype, config=config)']
+)
+
+
+# vim: ft=python

@@ -1,0 +1,32 @@
+decl_raw_opr(
+    'remote_send',
+    desc='send the value of a variable to a remote machine; the output is an '
+    'empty var, only used for expressing dependency on this opr. This is the '
+    'client side of a send-recv pair. See also :func:`remote_recv`.',
+    inputs=[
+        Doc('address', 'communicate multiple machines server address', 'str'),
+        Doc('port', 'communicate multiple machines server port', 'int'),
+        Doc('key', 'key to bind send-recv pair', 'str'),
+        Doc('var', 'variable to be sent', ':class:`.SymbolVar`'),
+        Doc('is_grad', 'whether the send', 'bool'),
+    ]
+)
+
+decl_raw_opr(
+    'remote_recv',
+    desc='receive from remote machine. This is the server side of a send-recv '
+    'pair. See also :func:`remote_send`',
+    inputs=[
+        Doc('address', 'communicate multiple machines server address', 'str'),
+        Doc('port', 'communicate multiple machines server port', 'int'),
+        Doc('key', 'key to bind send-recv pair', 'str'),
+        Doc('comp_graph', 'computing graph to put the output var',
+            ':class:`.CompGraph`'),
+        Doc('shape', 'output var shape'),
+        Doc('dtype', 'data type of the output var; must match dtype at sender',
+            ':class:`numpy.dtype` compatible')
+    ]
+)
+
+
+# vim: ft=python

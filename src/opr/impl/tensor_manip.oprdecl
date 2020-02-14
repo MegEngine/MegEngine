@@ -1,0 +1,56 @@
+decl_opr('GetVarShape',
+         inputs=['src'],
+         params=[('axis', 'OptionalAxisV1')],
+         desc='get shape of a variable; if axis is provided, get the shape '
+         'on that axis', version=1)
+
+decl_opr('Reshape', canonize_input_vars='canonize_reshape',
+         inputs=['src',
+                 Doc('target_shape', ' target shape, which can either be a '
+                     ':class:`.SymbolVar` or a list of elements. In the '
+                     'latter case, the components would be concatenated to '
+                     'form the target shape, and it can contain an element '
+                     'of -1 representing unspec_axis.')],
+         params=[(Doc('unspec_axis',
+                      'if provided, indicates that this axis of output shape '
+                      'would be inferred from input shape and other output '
+                      'axes.'),
+                  'OptionalAxisV1')],
+         desc='Reshape a tensor to given target shape; total number of '
+         'logical elements must remain unchanged',
+         body=['unspec_axis = '
+               '_helper.cvt_to_reshape_unspec_axis(unspec_axis, target_shape)'],
+         version=1)
+
+decl_opr(
+    'Concat',
+    desc='concat a list of tensors along given axis. Note that input tensors '
+    'can be on different comp nodes, and in such case target comp node must '
+    'be given',
+    inputs=[Doc('*inputs', 'input tensors', 'list of :class:`.SymbolVar`')],
+    params=[('axis', 'Axis')]
+)
+
+decl_opr('Broadcast', canonize_input_vars='canonize_reshape',
+         inputs=['src', 'target_shape'],
+         params='Empty',
+         desc='Boradcast a var to given target shape; target shape and '
+         'original shape can only differ on axes where original shape is 1')
+
+decl_raw_opr('add_axis', desc='add dimension(s) before given axis/axes',
+             inputs=['src',
+                     Doc('axis', 'place of new axes',
+                         ':class:`int` or ``list of int``')])
+
+decl_raw_opr('remove_axis', desc='remove dimension(s) of shape 1',
+             inputs=['src',
+                     Doc('axis', 'axes to be removed',
+                         ':class:`int` or ``list of int``')])
+
+decl_opr('RelayoutFormat',
+        inputs=['src'], params='RelayoutFormat',
+        desc='Change tensor format to relayout a tensor, usually used for '
+         'conv on particular devices. See the docs of '
+         ':class:`~.opr_param_defs.RelayoutFormat` for more details')
+
+# vim: ft=python

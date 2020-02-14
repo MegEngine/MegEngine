@@ -1,0 +1,297 @@
+decl_opr('Convolution',
+         pyname='convolution_v0',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern row, kern col) format')],
+         params=[('param', 'ConvolutionV0'),
+                 ('execution_polity', 'ExecutionPolicy')],
+         desc='batched convolution on channeled 2D images')
+
+decl_opr('Convolution',
+        inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern row, kern col) format')],
+         params=[('param', 'Convolution'),
+                 ('execution_polity', 'ExecutionPolicy')],
+         desc='batched convolution on channeled 2D images',
+         version=1, has_out_dtype=True)
+
+decl_opr('ConvolutionBackwardData',
+         pyname='deconvolution_v0',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern row, kern col) format')],
+         params=[('param', 'ConvolutionV0'),
+                 ('execution_polity', 'ExecutionPolicy')],
+         body=[
+             'a, b = all_inputs',
+             'all_inputs = [b, a]'
+         ],
+         desc='batched deconvolution on channeled 2D images; the underlying '
+         'computation is in fact gradient of convolution w.r.t. data')
+
+decl_opr('ConvolutionBackwardData',
+         pyname='deconvolution',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern row, kern col) format')],
+         params=[('param', 'Convolution'),
+                 ('execution_polity', 'ExecutionPolicy')],
+         body=[
+             'a, b = all_inputs',
+             'all_inputs = [b, a]'
+         ],
+         desc='batched deconvolution on channeled 2D images; the underlying '
+         'computation is in fact gradient of convolution w.r.t. data',
+         version=1)
+
+decl_opr('MaskConvolution',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern row, kern col) format'),
+                 Doc('mask',
+                     'the 0/1 matrix, each element at (i, j) indicates the '
+                     '*output(i, j)* of DefaultConvolution should be zero')],
+         params=[('param', 'Convolution')],
+         desc=('batched mask conv on channeled 2D images, mask is correspoding '
+               'to output'),
+         version=1)
+
+decl_opr('MaskPropagate',
+         inputs=[Doc('src',
+                     '0/1 matrix for MaskConvolution\'s input')],
+         params=[('param', 'MaskPropagate')],
+         desc=('calculates the mask for output by given kernel, stride and '
+               'padding'))
+
+decl_opr('Images2Neibs',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format')],
+         params='Images2Neibs',
+         desc=Doc(None,
+r"""
+    Apply a sliding window to input tensor and copy content in the window to
+    corresponding output location. Assume input shape is :math:`(N, C, IH, IW)`,
+    then output shape would be :math:`(N, C, OH, OW, window_h, window_w)` where
+    :math:`(OH, OW)` would be computed from padding, stride, window and
+    :math:`(IH, IW)`, as in convolution. For each output location, we have;
+
+    .. math::
+
+        out_{n, c, oh, ow, wh, ww} &= src_{n, c, ih+wh, iw+ww} \\\\
+        \\text{where } & ih=-pad_h+oh \\times stride_h \\\\
+                       & iw=-pad_w+ow \\times
+        stride_w
+"""))
+
+decl_opr('Local',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out row, out col, in channel, '
+                     'kern row, kern col, out channel) format')],
+         params='ConvolutionV0',
+         desc='batched convolution on channeled 2D images, but kernels are '
+         'not shared across different output positions')
+
+decl_opr('GroupLocal',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(group, out row, out col, in channel / group, '
+                     'kern row, kern col, out channel / group) format')],
+         params='ConvolutionV0',
+		 desc='batched convolution on groupped channeled 2D images, but '
+         'kernels are not shared across different output positions')
+
+decl_opr('LRN',
+         inputs=['src'],
+         params='LRN',
+         desc='local response normalization')
+
+decl_opr('Pooling',
+         inputs=['src'],
+         params='Pooling')
+
+decl_opr('ROIPooling', outputs=[0],
+         inputs=[Doc('src', 'input image, shape (n, c, ih, iw)'),
+                 Doc('rois', 'regions of interest, shape (m, 5). '
+                     'Note that rois[:, 0] denotes the input image index; we '
+                     'store it as a float, but it should be an integral value.'
+                     ' The rois[:, 1:5] are (x0, y0, x1, y1) for each ROI, '
+                     'which would be multiplied by the scale value given in '
+                     'param.'),
+                 Doc('dest_shape', 'a var to describe output shape, should '
+                     'contain exactly two elements')],
+         params='ROIPooling',
+         desc='ROI pooling, see '
+         'https://github.com/rbgirshick/caffe-fast-rcnn. '
+         'The output shape is (m, c, oh, ow), where (oh, ow) is given by '
+         '*dest_shape*.')
+
+
+decl_opr('Convolution3D',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, depth, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern depth, kern row, kern col) format')],
+         params=[('param', 'Convolution3D'),
+                 ('execution_polity', 'ExecutionPolicy')],
+         desc='batched convolution on channeled 3D images')
+
+
+decl_opr('Convolution3DBackwardData',
+         pyname='deconvolution3d',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, depth, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out channel, in channel, kern depth, kern row, kern col) format')],
+         params=[('param', 'Convolution3D'),
+                 ('execution_policy', 'ExecutionPolicy')],
+         body=[
+             'a, b = all_inputs',
+             'all_inputs = [b, a]'
+         ],
+         desc='batched deconvolution on channeled 3D images; the underlying '
+         'computation is in fact gradient of convolution w.r.t. data')
+
+decl_opr('ConvBiasForward',
+         pyname='conv_bias_activation_v1',
+         inputs=[
+             Doc('src', 'input image, allow NCHW, NHWC, NCHW4'),
+             Doc('filter', 'filter'),
+             Doc('bias', 'bias'),
+         ],
+         params=[('param', 'ConvBiasV1'),
+                 ('execution_policy', 'ExecutionPolicy')],
+         desc=('activation(convolution(src, filter) + bias) with specified '
+               'dtype'),
+         has_out_dtype=True)
+
+decl_opr('ConvBiasForward',
+         pyname='conv_bias_activation',
+         inputs=[
+             Doc('src', 'input image, allow NCHW, NHWC, NCHW4'),
+             Doc('filter', 'filter'),
+             Doc('bias', 'bias'),
+         ],
+         params=[('param', 'ConvBias'),
+                 ('execution_policy', 'ExecutionPolicy')],
+         desc=('activation(convolution(src, filter) + bias) with specified '
+               'dtype'),
+         version=3, has_out_dtype=True)
+
+decl_opr('BatchNorm',
+         pyname='batch_norm',
+         inputs=['x', 'scale', 'bias', 'running_mean', 'running_variance'],
+         desc=('batch normalization similar to cudnn, all params '
+               'have the same definition with cudnnBatchNormalization. '
+               'It has five outputs: running_mean, running_variance, '
+               'save_mean, save_inv_variance, y.'),
+         params='BN')
+
+decl_opr('BatchNorm',
+         pyname='batch_norm_no_statistic',
+         inputs=['x', 'scale', 'bias'],
+         desc=('batch noamlization and no need to update mean and variance. '
+               'It has three outputs: save_mean, save_inv_variance, y.'),
+         params='BN')
+
+decl_opr('LocalShareForward',
+         pyname='local_share',
+         inputs=[Doc('src', 'input image in (batch, channel, row, col) format'),
+                 Doc('filter', 'local share weights in '
+                     '(spatial_groups_h, spatial_groups_w, in channel, kern row, kern col, out channel) format')],
+         params=[('param', 'LocalShare'),
+                 ('execution_policy', 'ExecutionPolicy')],
+         desc=Doc(None,
+r"""
+    Apply a spatial group convolution of input tensor and filter tensor. The output tensor will be split into spatial_groups_hxspatial_groups_w groups. Output locations in the same spatial group share same weights. And weights corresponding to different spatial groups are different.
+    Assume input shape is :math:`(N, IC, IH, IW)` and spatial groups in horizontal and vertical directions are :math:`(spatial_groups_h, spatial_groups_w)`,
+    then filter shape would be :math:`(spatial_groups_h, spatial_groups_w, IC, FH, FW, OC)` and output shape would be :math:`(N, OC, OH, OW)` where :math:`(OH, OW)` would be computed from padding, stride, :math:`(FH, FW)` and :math:`(IH, IW)`, as in convolution.
+    for each output location, we have;
+
+    .. math::
+
+        out_{n, oc, oh, ow} &= \sum_{ic=0}^{IC}\sum_{kh=0}^{FH}\sum_{kw=0}^{FW}src_{n, ic, ih+kh, iw+kw}
+                            * filter_{grp_h, grp_w, ic, kh, kw, oc} \\\\
+        \\text{where} & ih=-pad_h+oh \\times stride_h \\\\
+                      & iw=-pad_w+ow \\times stride_w \\\\
+                      & grp_h = oh / (OH / spatial_groups_h) \\\\
+                      & grp_w = ow / (OW / spatial_groups_w)
+"""),
+         has_out_dtype=True)
+
+decl_opr('ROIAlign', outputs=[0],
+         inputs=[Doc('src', 'input image, shape (n, c, ih, iw)'),
+                 Doc('rois', 'regions of interest, shape (m, 5). '
+                     'Note that rois[:, 0] denotes the input image index; we '
+                     'store it as a float, but it should be an integral value.'
+                     ' The rois[:, 1:5] are (x0, y0, x1, y1) for each ROI, '
+                     'which would be multiplied by the scale value given in '
+                     'param.')], 
+         params='ROIAlign',
+         desc='ROI Align, see '
+         'Mask-RCNN: https://arxiv.org/pdf/1703.06870.pdf, '
+         'The output shape is (m, c, pooled_height, pooled_width), where (pooled_height, pooled_width) is given by '
+         '*Param*.')
+
+decl_opr('DeformableConvForward',
+         pyname='deformable_conv',
+         inputs=[Doc('im', 'input feature map in (batch, channel, row, col) format'),
+                 Doc('filter', 'weights in (output channel, input channel, filter row, filter col) or (group, output channel per group, input channel per group, filter row, filter col) format'),
+                 Doc('offset', 'deformable offset in (batch, deformable group * filter row * filter col * 2, output row, output col) format'),
+                 Doc('mask', 'deformable mask in (batch, deformable group * filter row * filter col, output row, output col) format')],
+         params=[('param', 'Convolution'), ('execution_policy', 'ExecutionPolicy')],
+         desc=Doc(None, r""" Apply a deformable convolution to input tensor and filter tensor. The offset tensor will adjust the position of each grid of a convolution filter. The mask tensor will be applied to the deformed input tensor. """),
+         has_out_dtype=True)
+
+decl_opr('DeformablePSROIPoolingForward',
+         pyname='deformable_psroi_pooling',
+         inputs=[Doc('data', 'input feature map in (batch, channel, row, col) format'),
+                 Doc('rois', 'region of interest in (bbox count, 5) format'),
+                 Doc('trans', 'bbox position transform parameter in (bbox count, 2, pooled_h, pooled_w) format')],
+         params=[('param', 'DeformablePSROIPooling')],
+         desc=Doc(None, r""" PSROIPooling with a bbox deformation. """),
+         has_out_dtype=True)
+
+decl_opr('BatchConvBiasForward',
+         pyname='batch_conv_bias_activation',
+         inputs=[Doc('src', 'input image in (batch, channel//4, row, col, 4) format'),
+                 Doc('filter', 'weights unshared in batch dimension'
+                     '(batch, out_channel, in_channel//4, kern row, kern col, 4) format'),
+                 Doc('bias', 'bias'),
+         ],
+         params=[('param', 'BatchConvBias'),
+                 ('execution_policy', 'ExecutionPolicy')],
+         desc=Doc(None,
+r"""
+    Apply a convolution of input tensor and filter tensor whose weights are not shared in batch dimensions. Outputs with batch index use the same weight. 
+    Assume input shape is :math:`(N, IC, IH, IW)` and filter shape is :math:`(batch, OC, IC, FH, FW)`, the output shape will be :math:`(N, OC, OH, OW)` where :math:`(OH, OW)` would be computed from padding, stride, :math:`(FH, FW)` and :math:`(IH, IW)`, as in convolution.
+    for each output location, we have;
+
+    .. math::
+
+        out_{n, oc, oh, ow} &= \sum_{ic=0}^{IC}\sum_{kh=0}^{FH}\sum_{kw=0}^{FW}src_{n, ic, ih+kh, iw+kw}
+                            * filter_{n, oc, ic, kh, kw} \\\\
+        \\text{where} & ih=-pad_h+oh \\times stride_h \\\\
+                      & iw=-pad_w+ow \\times stride_w
+"""),
+         has_out_dtype=True)
+
+
+# vim: ft=python

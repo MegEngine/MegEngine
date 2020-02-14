@@ -1,0 +1,135 @@
+include "dtype.fbs";
+include "opr_param_defs.fbs";
+include "mgb_opr_param_defs.fbs";
+include "mgb_cpp_opr.fbs";
+
+namespace mgb.serialization.fbs;
+
+file_identifier "mgb1";
+
+table CompNode {
+    logical_locator:string;
+}
+
+table Tensor {
+    name:string;
+    shape:[uint];
+    comp_node:CompNode;
+    dtype:DType;
+    /// Size of the out of band tensor value blob.
+    data_size:uint;
+    /// Skip `offset` bytes before feeding data to value loader.
+    offset:uint = 0;
+}
+
+/// Opaque byte buffer defined by operator implementation
+table Blob {
+    data:[ubyte] (required);
+}
+
+table Reserved0 {}
+
+union OperatorParam {
+    param.Empty,
+    param.Axis,
+    param.Convolution,
+    param.MaskPropagate,
+    param.ConvPooling,
+    param.ConvBias,
+    param.SeparableConv,
+    param.Images2Neibs,
+    param.Pooling,
+    param.LRN,
+    param.BN,
+    param.ROIPooling,
+    param.WarpPerspective,
+    param.SpatialTfGridGenerator,
+    param.SpatialTfSampler,
+    param.MGBAddUpdate,
+    param.Elemwise,
+    param.ElemwiseMultiType,
+    param.PowC,
+    param.MatrixMul,
+    param.Winograd,
+    param.SVD,
+    param.Reduce,
+    param.Cumsum,
+    param.CondTake,
+    param.Argsort,
+    param.IndexingRemap,
+    param.MGBSleep,
+    param.Linspace,
+    param.LinspaceFull,
+    param.Eye,
+    param.UniformRNG,
+    param.GaussianRNG,
+    param.Flip,
+    param.Rotate,
+    param.ROICopy,
+    param.CvtColor,
+    param.WarpAffine,
+    param.GaussianBlur,
+    param.Resize,
+    param.Convolution3D,
+    param.Conv3DBias,
+    param.SeparableConv3D,
+    param.TopK,
+    param.RelayoutFormat,
+    param.SeparableFilter,
+    param.LocalShare,
+    param.ROIAlign,
+    param.DeformablePSROIPooling,
+    param.BatchConvBias,
+    param.DType,
+    param.PersistentOutputStorage,
+    param.OptionalAxis,
+    param.OptionalAxisV1,
+    param.ExecutionPolicy,
+    param.AssertEqual,
+    Reserved0,
+    param.CollectiveComm,
+    param.CondExecPred,
+    param.CondExecPredLogical,
+    param.CondExecMark,
+    param.CondExecMerge,
+    param.Host2DeviceCopy,
+    param.Dimshuffle,
+    param.AxisAddRemove,
+    param.IndexDescMaskDump,
+    DType,
+}
+
+table Operator {
+    type_id:ulong;
+    /// Operator parameter
+    param:OperatorParam;
+    /// ID of the input variable
+    inputs:[uint];
+    comp_node:[CompNode];
+    output_name:[string];
+    output_dtype:DType;
+    tensors:[Tensor];
+    priority:int = 0;
+
+    /// Operator may want to save big, opaque byte buffers.
+    blobs:[Blob];
+    /// Operator may want to save more than one OperatorParam
+    additional_params:[OperatorParam];
+}
+
+struct OutputVar {
+    compact_id:uint;
+    original_id:uint;
+}
+
+table Graph {
+    mgb_version:uint;
+    /// Hash of the graph computed in unspecified way. May be used as graph
+    /// identifier.
+    hash:ulong;
+    nr_shared_tensor:uint;
+    oprs:[Operator];
+    output_vars_idx:[OutputVar];
+}
+
+root_type Graph;

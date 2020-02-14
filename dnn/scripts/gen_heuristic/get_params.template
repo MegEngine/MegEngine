@@ -1,0 +1,31 @@
+#include "src/cuda/convolution/cudnn_heuristic.h"
+#include "megdnn.h"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace convolution;
+
+bool convolution::heuristic_params_available(
+        int cuda_major, int cuda_minor, size_t* layer_num_p,
+        const size_t** layers_dim_p, const float** matrices_p,
+        const float** biases_p, const float** alpha_p, const float** beta_p,
+        const ConvolutionType& conv_type, float** hidden_units_p,
+        float** time_pred_p, float** mask_p) {
+    MEGDNN_MARK_USED_VAR(cuda_major);
+    MEGDNN_MARK_USED_VAR(cuda_minor);
+    MEGDNN_MARK_USED_VAR(layer_num_p);
+    MEGDNN_MARK_USED_VAR(layers_dim_p);
+    MEGDNN_MARK_USED_VAR(matrices_p);
+    MEGDNN_MARK_USED_VAR(biases_p);
+    MEGDNN_MARK_USED_VAR(alpha_p);
+    MEGDNN_MARK_USED_VAR(beta_p);
+    MEGDNN_MARK_USED_VAR(conv_type);
+    MEGDNN_MARK_USED_VAR(hidden_units_p);
+    MEGDNN_MARK_USED_VAR(time_pred_p);
+    MEGDNN_MARK_USED_VAR(mask_p);
+
+{cudnn_select}
+    return false;
+}
+
+// vim: syntax=cpp.doxygen

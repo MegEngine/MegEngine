@@ -1,0 +1,50 @@
+decl_opr(
+    'Alloc',
+    inputs=['shape'],
+    params='DType',
+    canonize_input_vars='canonize_shape_input',
+    pyname='_alloc'
+)
+
+decl_raw_opr(
+    'alloc',
+    desc='allocate a tensor of given shape and dtype',
+    inputs=[
+        Doc('shape', 'shape of output value'),
+        Doc('dtype', 'data type of output value',
+            ':class:`numpy.dtype`-compatible', '"float32"')
+    ],
+    body=[
+        'output=_alloc(shape, dtype=dtype, '
+        'config=config, comp_graph=comp_graph)'
+    ]
+)
+
+decl_opr(
+    'Linspace',
+    desc='like :func:`numpy.linspace`, generate a sequence of equally-spaced '
+    'numbers; dtype is always ``float32``.',
+    inputs=[
+        Doc('start', 'The starting value of the sequence.'),
+        Doc('stop', 'The end value of the sequence, unless endpoint is set to '
+            '``False``. In that case, the sequence consists of all but the '
+            'last of ``num + 1`` evenly spaced samples, so that stop is '
+            'excluded. Note that the step size changes when endpoint is '
+            'False.'),
+        Doc('num', 'Number of samples to generate.'),
+    ],
+    params='Linspace'
+)
+
+decl_opr(
+    'Eye',
+    desc='Generate a matrix with ones on the diagonal and zeros elsewhere',
+    inputs=[
+        Doc('shape', 'Shape of the generated matrix; it must contain one or '
+            'two elements')
+    ],
+    params='Eye',
+    canonize_input_vars='canonize_shape_input'
+)
+
+# vim: ft=python

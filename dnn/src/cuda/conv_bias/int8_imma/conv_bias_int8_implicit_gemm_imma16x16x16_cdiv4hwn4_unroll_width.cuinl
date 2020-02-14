@@ -1,0 +1,372 @@
+/**
+ * \file dnn/src/cuda/conv_bias/int8_imma/conv_bias_int8_implicit_gemm_imma16x16x16_cdiv4hwn4_unroll_width.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "src/cuda/conv_bias/conv_bias_int8.cuh"
+#include "src/cuda/convolution_helper/kernel.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace convolution;
+
+namespace {
+template <typename BiasVisitor, typename Epilogue>
+void (*get_kern(const ConvParam& param,
+                conv_bias_int8::LaunchConfig& launch_config))(
+        const int8_t* __restrict__, const int8_t* __restrict__, BiasVisitor,
+        Epilogue, ConvParam, float, float) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    kern = nullptr;
+    static constexpr int wmma_m = 16;
+    static constexpr int wmma_n = 16;
+    static constexpr int wmma_k = 16;
+
+// common defs
+#define DISPATCH_ODD(cb) \
+    cb(1);               \
+    cb(3);               \
+    cb(5);               \
+    cb(7);
+#define DISPATCH_EVEN(cb) \
+    cb(2);                \
+    cb(4);                \
+    cb(6);                \
+    cb(8);
+#define DISPATCH_BLOCK(cb1, cb2, cb3, cb4) \
+    DISPATCH_ODD(cb1);                     \
+    DISPATCH_EVEN(cb2);                    \
+    if (param.n % wmma_n == 0) {           \
+        DISPATCH_ODD(cb3);                 \
+        DISPATCH_EVEN(cb4);                \
+    }
+    if (param.fw == 1) {
+#define DISPATCH_CHK(_wo, _co, _ci, _warp_x, _warp_y)                          \
+    if (param.wo % _wo == 0) {                                                 \
+        if (param.co >= _co) {                                                 \
+            if (param.ci % _ci == 0) {                                         \
+                static constexpr int warp_x = _warp_x;                         \
+                static constexpr int warp_y = _warp_y;                         \
+                static constexpr int thread_x = warp_x * WARP_SIZE;            \
+                static constexpr int thread_y = warp_y;                        \
+                static constexpr int warp_tile_k = (_ci) / (wmma_k);           \
+                static constexpr int warp_tile_m =                             \
+                        ((_co) + (warp_y * wmma_m - 1)) / (warp_y * wmma_m);   \
+                static constexpr int warp_tile_n =                             \
+                        ((_wo) + warp_x - 1) / (warp_x);                       \
+                typedef IMMAConfig<wmma_m, wmma_n, wmma_k> IMMAConfig;         \
+                typedef WarpTileConfig<warp_tile_m, warp_tile_n, warp_tile_k>  \
+                        WarpTileConfig;                                        \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;         \
+                typedef IConvIMMATraitUnrollWidth<                             \
+                        true, IMMAConfig, WarpTileConfig, ThreadConfig>        \
+                        ConvTrait;                                             \
+                kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>;   \
+                launch_config.nr_threads_x = ThreadConfig::nr_thread_x;        \
+                launch_config.nr_threads_y = ThreadConfig::nr_thread_y;        \
+                launch_config.nr_threads_z = 1;                                \
+                launch_config.nr_blocks_x =                                    \
+                        param.ho *                                             \
+                        DIVUP(param.wo,                                        \
+                              ConvTrait::DataTileCount::block_tile_out_width); \
+                launch_config.nr_blocks_y = DIVUP(                             \
+                        param.n, ConvTrait::DataTileCount::block_tile_batch);  \
+                launch_config.nr_blocks_z = DIVUP(                             \
+                        param.co,                                              \
+                        ConvTrait::FilterTileCount::block_tile_out_channel);   \
+                launch_config.smem_size_in_bytes =                             \
+                        sizeof(int32_t) *                                      \
+                        (ConvTrait::DataTileCount::smem_tot +                  \
+                         ConvTrait::FilterTileCount::smem_tot +                \
+                         ConvTrait::GlobalMemoryStoreCount::smem_tot);         \
+            }                                                                  \
+        }                                                                      \
+    }
+#define DISPATCH_NOCHK(_wo, _co, _ci, _warp_x, _warp_y)                        \
+    if (param.wo % _wo == 0) {                                                 \
+        if (param.co % _co == 0) {                                             \
+            if (param.ci % _ci == 0) {                                         \
+                static constexpr int warp_x = _warp_x;                         \
+                static constexpr int warp_y = _warp_y;                         \
+                static constexpr int thread_x = warp_x * WARP_SIZE;            \
+                static constexpr int thread_y = warp_y;                        \
+                static constexpr int warp_tile_k = (_ci) / (wmma_k);           \
+                static constexpr int warp_tile_m = (_co) / (warp_y * wmma_m);  \
+                static constexpr int warp_tile_n = (_wo) / (warp_x);           \
+                typedef IMMAConfig<wmma_m, wmma_n, wmma_k> IMMAConfig;         \
+                typedef WarpTileConfig<warp_tile_m, warp_tile_n, warp_tile_k>  \
+                        WarpTileConfig;                                        \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;         \
+                typedef IConvIMMATraitUnrollWidth<                             \
+                        false, IMMAConfig, WarpTileConfig, ThreadConfig>       \
+                        ConvTrait;                                             \
+                kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>;   \
+                launch_config.nr_threads_x = ThreadConfig::nr_thread_x;        \
+                launch_config.nr_threads_y = ThreadConfig::nr_thread_y;        \
+                launch_config.nr_threads_z = 1;                                \
+                launch_config.nr_blocks_x =                                    \
+                        param.ho *                                             \
+                        DIVUP(param.wo,                                        \
+                              ConvTrait::DataTileCount::block_tile_out_width); \
+                launch_config.nr_blocks_y = DIVUP(                             \
+                        param.n, ConvTrait::DataTileCount::block_tile_batch);  \
+                launch_config.nr_blocks_z = DIVUP(                             \
+                        param.co,                                              \
+                        ConvTrait::FilterTileCount::block_tile_out_channel);   \
+                launch_config.smem_size_in_bytes =                             \
+                        sizeof(int32_t) *                                      \
+                        (ConvTrait::DataTileCount::smem_tot +                  \
+                         ConvTrait::FilterTileCount::smem_tot +                \
+                         ConvTrait::GlobalMemoryStoreCount::smem_tot);         \
+            }                                                                  \
+        }                                                                      \
+    }
+// dispatch block for fw = 3
+#define DISPATCH_CHK14(_wo, _co)     \
+    DISPATCH_CHK(_wo, _co, 16, 1, 4) \
+    DISPATCH_CHK(_wo, _co, 32, 1, 4) DISPATCH_CHK(_wo, _co, 64, 1, 4)
+#define DISPATCH_CHK22(_wo, _co)     \
+    DISPATCH_CHK(_wo, _co, 16, 2, 2) \
+    DISPATCH_CHK(_wo, _co, 32, 2, 2) DISPATCH_CHK(_wo, _co, 64, 2, 2)
+#define DISPATCH_NOCHK14(_wo, _co)     \
+    DISPATCH_NOCHK(_wo, _co, 16, 1, 4) \
+    DISPATCH_NOCHK(_wo, _co, 32, 1, 4) DISPATCH_NOCHK(_wo, _co, 64, 1, 4)
+#define DISPATCH_NOCHK22(_wo, _co)     \
+    DISPATCH_NOCHK(_wo, _co, 16, 2, 2) \
+    DISPATCH_NOCHK(_wo, _co, 32, 2, 2) DISPATCH_NOCHK(_wo, _co, 64, 2, 2)
+#define cb1(_wo)            \
+    DISPATCH_CHK14(_wo, 1)  \
+    DISPATCH_CHK14(_wo, 64) \
+    DISPATCH_CHK14(_wo, 128)
+#define cb2(_wo)            \
+    DISPATCH_CHK22(_wo, 1)  \
+    DISPATCH_CHK22(_wo, 32) \
+    DISPATCH_CHK22(_wo, 64) \
+    DISPATCH_CHK22(_wo, 128)
+#define cb3(_wo)              \
+    DISPATCH_NOCHK14(_wo, 64) \
+    DISPATCH_NOCHK14(_wo, 128)
+#define cb4(_wo)              \
+    DISPATCH_NOCHK22(_wo, 32) \
+    DISPATCH_NOCHK22(_wo, 64) \
+    DISPATCH_NOCHK22(_wo, 128)
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+#undef DISPATCH_CHK14
+#undef DISPATCH_CHK22
+#undef DISPATCH_NOCHK14
+#undef DISPATCH_NOCHK22
+    } else if (param.fw == 3 && param.sw == 1) {
+#undef cb1
+#undef cb2
+#undef cb3
+#undef cb4
+#undef DISPATCH_CHK
+#undef DISPATCH_NOCHK
+#define DISPATCH_CHK(_wo, _co, _warp_x, _warp_y)                               \
+    if (param.wo % _wo == 0) {                                                 \
+        if (param.co >= _co) {                                                 \
+            static constexpr int warp_x = _warp_x;                             \
+            static constexpr int warp_y = _warp_y;                             \
+            static constexpr int thread_x = warp_x * WARP_SIZE;                \
+            static constexpr int thread_y = warp_y;                            \
+            static constexpr int warp_tile_k = 1;                              \
+            static constexpr int warp_tile_m =                                 \
+                    ((_co) + (warp_y * wmma_m - 1)) / (warp_y * wmma_m);       \
+            static constexpr int warp_tile_n =                                 \
+                    ((_wo) + warp_x - 1) / (warp_x);                           \
+            typedef Conv1dConfig<fw, sw> Conv1dConfig;                         \
+            typedef IMMAConfig<wmma_m, wmma_n, wmma_k> IMMAConfig;             \
+            typedef WarpTileConfig<warp_tile_m, warp_tile_n, warp_tile_k>      \
+                    WarpTileConfig;                                            \
+            typedef ThreadConfig<thread_x, thread_y> ThreadConfig;             \
+            typedef IConvIMMATraitUnrollWidthV2<true, Conv1dConfig,            \
+                                                IMMAConfig, WarpTileConfig,    \
+                                                ThreadConfig>                  \
+                    ConvTrait;                                                 \
+            kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>;       \
+            launch_config.nr_threads_x = ThreadConfig::nr_thread_x;            \
+            launch_config.nr_threads_y = ThreadConfig::nr_thread_y;            \
+            launch_config.nr_threads_z = 1;                                    \
+            launch_config.nr_blocks_x =                                        \
+                    param.ho *                                                 \
+                    DIVUP(param.wo,                                            \
+                          ConvTrait::DataTileCount::block_tile_out_width);     \
+            launch_config.nr_blocks_y = DIVUP(                                 \
+                    param.n, ConvTrait::DataTileCount::block_tile_batch);      \
+            launch_config.nr_blocks_z =                                        \
+                    DIVUP(param.co,                                            \
+                          ConvTrait::FilterTileCount::block_tile_out_channel); \
+            launch_config.smem_size_in_bytes =                                 \
+                    sizeof(int32_t) *                                          \
+                    (ConvTrait::DataTileCount::smem_tot +                      \
+                     ConvTrait::FilterTileCount::smem_tot +                    \
+                     ConvTrait::GlobalMemoryStoreCount::smem_tot);             \
+        }                                                                      \
+    }
+#define DISPATCH_NOCHK(_wo, _co, _warp_x, _warp_y)                             \
+    if (param.wo % _wo == 0) {                                                 \
+        if (param.co % _co == 0) {                                             \
+            static constexpr int warp_x = _warp_x;                             \
+            static constexpr int warp_y = _warp_y;                             \
+            static constexpr int thread_x = warp_x * WARP_SIZE;                \
+            static constexpr int thread_y = warp_y;                            \
+            static constexpr int warp_tile_k = 1;                              \
+            static constexpr int warp_tile_m = (_co) / (warp_y * wmma_m);      \
+            static constexpr int warp_tile_n = (_wo) / (warp_x);               \
+            typedef Conv1dConfig<fw, sw> Conv1dConfig;                         \
+            typedef IMMAConfig<wmma_m, wmma_n, wmma_k> IMMAConfig;             \
+            typedef WarpTileConfig<warp_tile_m, warp_tile_n, warp_tile_k>      \
+                    WarpTileConfig;                                            \
+            typedef ThreadConfig<thread_x, thread_y> ThreadConfig;             \
+            typedef IConvIMMATraitUnrollWidthV2<false, Conv1dConfig,           \
+                                                IMMAConfig, WarpTileConfig,    \
+                                                ThreadConfig>                  \
+                    ConvTrait;                                                 \
+            kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>;       \
+            launch_config.nr_threads_x = ThreadConfig::nr_thread_x;            \
+            launch_config.nr_threads_y = ThreadConfig::nr_thread_y;            \
+            launch_config.nr_threads_z = 1;                                    \
+            launch_config.nr_blocks_x =                                        \
+                    param.ho *                                                 \
+                    DIVUP(param.wo,                                            \
+                          ConvTrait::DataTileCount::block_tile_out_width);     \
+            launch_config.nr_blocks_y = DIVUP(                                 \
+                    param.n, ConvTrait::DataTileCount::block_tile_batch);      \
+            launch_config.nr_blocks_z =                                        \
+                    DIVUP(param.co,                                            \
+                          ConvTrait::FilterTileCount::block_tile_out_channel); \
+            launch_config.smem_size_in_bytes =                                 \
+                    sizeof(int32_t) *                                          \
+                    (ConvTrait::DataTileCount::smem_tot +                      \
+                     ConvTrait::FilterTileCount::smem_tot +                    \
+                     ConvTrait::GlobalMemoryStoreCount::smem_tot);             \
+        }                                                                      \
+    }
+// dispatch block for fw = 3
+#define cb1(_wo)                \
+    DISPATCH_CHK(_wo, 1, 1, 4)  \
+    DISPATCH_CHK(_wo, 64, 1, 4) \
+    DISPATCH_CHK(_wo, 128, 1, 4)
+#define cb2(_wo)                \
+    DISPATCH_CHK(_wo, 1, 2, 2)  \
+    DISPATCH_CHK(_wo, 32, 2, 2) \
+    DISPATCH_CHK(_wo, 64, 2, 2) \
+    DISPATCH_CHK(_wo, 128, 2, 2)
+#define cb3(_wo)                  \
+    DISPATCH_NOCHK(_wo, 64, 1, 4) \
+    DISPATCH_NOCHK(_wo, 128, 1, 4)
+#define cb4(_wo)                  \
+    DISPATCH_NOCHK(_wo, 32, 2, 2) \
+    DISPATCH_NOCHK(_wo, 64, 2, 2) \
+    DISPATCH_NOCHK(_wo, 128, 2, 2)
+        static constexpr int fw = 3;
+        static constexpr int sw = 1;
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+        if (param.n % wmma_n == 0 && param.co == 16) {
+#define DISPATCH(_wo) DISPATCH_NOCHK(_wo, 16, 4, 1)
+            DISPATCH(4);
+            DISPATCH(8);
+            DISPATCH(12);
+            DISPATCH(16);
+#undef DISPATCH
+        }
+    } else if (param.fw == 3 && param.sw == 2) {
+        static constexpr int fw = 3;
+        static constexpr int sw = 2;
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+        if (param.n % wmma_n == 0 && param.co == 16) {
+#define DISPATCH(_wo) DISPATCH_NOCHK(_wo, 16, 4, 1)
+            DISPATCH(4);
+            DISPATCH(8);
+            DISPATCH(12);
+            DISPATCH(16);
+#undef DISPATCH
+        }
+    } else if (param.fw == 5 && param.sw == 1) {
+#undef cb1
+#undef cb2
+#undef cb3
+#undef cb4
+// dispatch block for fw = 5, 7
+#define cb1(_wo)               \
+    DISPATCH_CHK(_wo, 1, 1, 8) \
+    DISPATCH_CHK(_wo, 128, 1, 8)
+#define cb2(_wo)                \
+    DISPATCH_CHK(_wo, 1, 2, 4)  \
+    DISPATCH_CHK(_wo, 64, 2, 4) \
+    DISPATCH_CHK(_wo, 128, 2, 4)
+#define cb3(_wo) DISPATCH_NOCHK(_wo, 128, 1, 8)
+#define cb4(_wo)                  \
+    DISPATCH_NOCHK(_wo, 64, 2, 4) \
+    DISPATCH_NOCHK(_wo, 128, 2, 4)
+        static constexpr int fw = 5;
+        static constexpr int sw = 1;
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+    } else if (param.fw == 5 && param.sw == 2) {
+        static constexpr int fw = 5;
+        static constexpr int sw = 2;
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+    } else if (param.fw == 7 && param.sw == 1) {
+        static constexpr int fw = 7;
+        static constexpr int sw = 1;
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+    } else if (param.fw == 7 && param.sw == 2) {
+        static constexpr int fw = 7;
+        static constexpr int sw = 2;
+        DISPATCH_BLOCK(cb1, cb2, cb3, cb4);
+    }
+    megdnn_assert(kern != nullptr,
+                  "no usable kernel implementation for "
+                  "conv_bias (fw,sw,n,co,ci)=(%d,%d,%d,%d,%d)",
+                  param.fw, param.sw, param.n, param.co, param.ci);
+#undef cb1
+#undef cb2
+#undef cb3
+#undef cb4
+#undef DISPATCH_BLOCK
+#undef DISPATCH_CHK
+#undef DISPATCH_NOCHK
+#undef DISPATCH_ODD
+#undef DISPATCH_EVEN
+    return kern;
+}
+}  // namespace
+
+template <typename BiasVisitor, typename Epilogue>
+void megdnn::cuda::conv_bias_int8::
+        do_conv_bias_int8_implicit_gemm_imma16x16x16_cdiv4hwn4_unroll_width(
+                const int8_t* d_src, const int8_t* d_filter, BiasVisitor bias,
+                Epilogue epilogue, const ConvParam& param, float alpha,
+                float beta, cudaStream_t stream) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    conv_bias_int8::LaunchConfig launch_config;
+    kern = get_kern<BiasVisitor, Epilogue>(param, launch_config);
+
+    uint32_t nr_threads_x = launch_config.nr_threads_x,
+             nr_threads_y = launch_config.nr_threads_y,
+             nr_blocks_x = launch_config.nr_blocks_x,
+             nr_blocks_y = launch_config.nr_blocks_y,
+             nr_blocks_z = launch_config.nr_blocks_z,
+             smem_size_in_bytes = launch_config.smem_size_in_bytes;
+
+    dim3 block_size{nr_threads_x, nr_threads_y, 1};
+    dim3 grid_size{nr_blocks_x, nr_blocks_y, nr_blocks_z};
+
+    cuda_check(cudaFuncSetCacheConfig(reinterpret_cast<const void*>(kern),
+                                      cudaFuncCachePreferShared));
+    cuda_check(cudaFuncSetSharedMemConfig(reinterpret_cast<const void*>(kern),
+                                          cudaSharedMemBankSizeEightByte));
+
+    kern<<<grid_size, block_size, smem_size_in_bytes, stream>>>(
+            d_src, d_filter, bias, epilogue, param, alpha, beta);
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

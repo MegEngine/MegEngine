@@ -1,0 +1,39 @@
+namespace mgb.serialization.fbs;
+
+// Keep in sync with dnn/include/megdnn/dtype.h
+// Please only add new dtypes at the end of this list
+enum DTypeEnum : byte {
+    Float32,
+    Uint8,
+    Int8,
+    Int16,
+    Int32,
+    IntB1,
+    IntB2,
+    IntB4,
+    Byte,
+    Float16,
+    UintB4,
+    Quantized8Asymm,
+    QuantizedS32,
+    QuantizedS8,
+    Quantized4Asymm,
+    QuantizedS4,
+    QuantizedS16,
+}
+
+table LinearQuantizationParam {
+    scale:float;
+
+    // Won't be set for symmetric quantization types
+    zero_point:ubyte;
+}
+
+union DTypeParam {
+    LinearQuantizationParam,
+}
+
+table DType {
+    type:DTypeEnum;
+    param:DTypeParam;
+}

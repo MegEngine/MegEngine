@@ -1,0 +1,18 @@
+decl_opr(
+    'AffineInt',
+    inputs=['x', 'k', 'b'],
+    params='Empty',
+    desc='deprecated; use :attr:`FUSE_MUL_ADD3_IXxF32xF32xI8` mode in '
+    ':func:`elemwise_multi_type`'
+)
+
+decl_opr(
+    'ElemwiseMultiType',
+    inputs=[Doc('*inputs', 'input vars that match given param')],
+    params='ElemwiseMultiType',
+    desc='element-wise arithmetic operations that allow different '
+    'input/output data types',
+    has_out_dtype=True
+)
+
+# vim: ft=python

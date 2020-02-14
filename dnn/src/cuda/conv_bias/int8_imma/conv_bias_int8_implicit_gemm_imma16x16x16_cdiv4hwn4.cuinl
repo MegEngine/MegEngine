@@ -1,0 +1,169 @@
+/**
+ * \file dnn/src/cuda/conv_bias/int8_imma/conv_bias_int8_implicit_gemm_imma16x16x16_cdiv4hwn4.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "src/cuda/conv_bias/conv_bias_int8.cuh"
+#include "src/cuda/convolution_helper/kernel.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace convolution;
+
+namespace {
+template <typename BiasVisitor, typename Epilogue>
+void (*get_kern(const ConvParam& param,
+                conv_bias_int8::LaunchConfig& launch_config))(
+        const int8_t* __restrict__, const int8_t* __restrict__, BiasVisitor,
+        Epilogue, ConvParam, float, float) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    kern = nullptr;
+    static constexpr int wmma_m = 16;
+    static constexpr int wmma_n = 16;
+    static constexpr int wmma_k = 16;
+#define CHK3(_n, _co, _ci, _warp_x, _warp_y)                                  \
+    if (param.n >= _n) {                                                      \
+        if (param.co >= _co) {                                                \
+            if (param.ci % _ci == 0) {                                        \
+                static constexpr int warp_x = _warp_x;                        \
+                static constexpr int warp_y = _warp_y;                        \
+                static constexpr int thread_x = warp_x * WARP_SIZE;           \
+                static constexpr int thread_y = warp_y;                       \
+                static constexpr int warp_tile_k = (_ci) / wmma_k;            \
+                static constexpr int warp_tile_m =                            \
+                        ((_co) + warp_y * wmma_m - 1) / (warp_y * wmma_m);    \
+                static constexpr int warp_tile_n =                            \
+                        ((_n) + warp_x * wmma_n - 1) / (warp_x * wmma_n);     \
+                typedef IMMAConfig<wmma_m, wmma_n, wmma_k> IMMAConfig;        \
+                typedef WarpTileConfig<warp_tile_m, warp_tile_n, warp_tile_k> \
+                        WarpTileConfig;                                       \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;        \
+                typedef IConvIMMATrait<true, IMMAConfig, WarpTileConfig,      \
+                                       ThreadConfig>                          \
+                        ConvTrait;                                            \
+                kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>;  \
+                launch_config.nr_threads_x = ThreadConfig::nr_thread_x;       \
+                launch_config.nr_threads_y = ThreadConfig::nr_thread_y;       \
+                launch_config.nr_threads_z = 1;                               \
+                launch_config.nr_blocks_x = param.ho * param.wo;              \
+                launch_config.nr_blocks_y = DIVUP(                            \
+                        param.n, ConvTrait::DataTileCount::block_tile_batch); \
+                launch_config.nr_blocks_z = DIVUP(                            \
+                        param.co,                                             \
+                        ConvTrait::FilterTileCount::block_tile_out_channel);  \
+                launch_config.smem_size_in_bytes =                            \
+                        sizeof(int32_t) *                                     \
+                        (ConvTrait::DataTileCount::smem_tot +                 \
+                         ConvTrait::FilterTileCount::smem_tot +               \
+                         ConvTrait::GlobalMemoryStoreCount::smem_tot);        \
+            }                                                                 \
+        }                                                                     \
+    }
+#define CHK2(_n, _co) \
+    CHK3(_n, _co, 16, 2, 2) CHK3(_n, _co, 32, 2, 2) CHK3(_n, _co, 64, 2, 2)
+#define CHK(_n)  \
+    CHK2(_n, 1)  \
+    CHK2(_n, 32) \
+    CHK2(_n, 64) \
+    CHK2(_n, 128)
+    CHK(1);
+    CHK(32);
+    CHK(64);
+    CHK(128);
+#undef CHK3
+#undef CHK2
+#undef CHK
+#define CHK3(_n, _co, _ci, _warp_x, _warp_y)                                  \
+    if (param.n % _n == 0) {                                                  \
+        if (param.co % _co == 0) {                                            \
+            if (param.ci % _ci == 0) {                                        \
+                static constexpr int warp_x = _warp_x;                        \
+                static constexpr int warp_y = _warp_y;                        \
+                static constexpr int thread_x = warp_x * WARP_SIZE;           \
+                static constexpr int thread_y = warp_y;                       \
+                static constexpr int warp_tile_k = (_ci) / wmma_k;            \
+                static constexpr int warp_tile_m = (_co) / (warp_y * wmma_m); \
+                static constexpr int warp_tile_n = (_n) / (warp_x * wmma_n);  \
+                typedef IMMAConfig<wmma_m, wmma_n, wmma_k> IMMAConfig;        \
+                typedef WarpTileConfig<warp_tile_m, warp_tile_n, warp_tile_k> \
+                        WarpTileConfig;                                       \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;        \
+                typedef IConvIMMATrait<false, IMMAConfig, WarpTileConfig,     \
+                                       ThreadConfig>                          \
+                        ConvTrait;                                            \
+                kern = convolution_kernel<ConvTrait, BiasVisitor, Epilogue>;  \
+                launch_config.nr_threads_x = ThreadConfig::nr_thread_x;       \
+                launch_config.nr_threads_y = ThreadConfig::nr_thread_y;       \
+                launch_config.nr_threads_z = 1;                               \
+                launch_config.nr_blocks_x = param.ho * param.wo;              \
+                launch_config.nr_blocks_y = DIVUP(                            \
+                        param.n, ConvTrait::DataTileCount::block_tile_batch); \
+                launch_config.nr_blocks_z = DIVUP(                            \
+                        param.co,                                             \
+                        ConvTrait::FilterTileCount::block_tile_out_channel);  \
+                launch_config.smem_size_in_bytes =                            \
+                        sizeof(int32_t) *                                     \
+                        (ConvTrait::DataTileCount::smem_tot +                 \
+                         ConvTrait::FilterTileCount::smem_tot +               \
+                         ConvTrait::GlobalMemoryStoreCount::smem_tot);        \
+            }                                                                 \
+        }                                                                     \
+    }
+#define CHK2(_n, _co) \
+    CHK3(_n, _co, 16, 2, 2) CHK3(_n, _co, 32, 2, 2) CHK3(_n, _co, 64, 2, 2)
+#define CHK(_n)  \
+    CHK2(_n, 32) \
+    CHK2(_n, 64) \
+    CHK2(_n, 128)
+    CHK(32);
+    CHK(64);
+    CHK(128);
+#undef CHK3
+#undef CHK2
+#undef CHK
+    megdnn_assert(kern != nullptr,
+                  "no usable kernel implementation for "
+                  "conv_bias (n,co,ci)=(%d,%d,%d)",
+                  param.n, param.co, param.ci);
+    return kern;
+}
+}  // namespace
+
+template <typename BiasVisitor, typename Epilogue>
+void megdnn::cuda::conv_bias_int8::
+        do_conv_bias_int8_implicit_gemm_imma16x16x16_cdiv4hwn4(
+                const int8_t* d_src, const int8_t* d_filter, BiasVisitor bias,
+                Epilogue epilogue, const ConvParam& param, float alpha,
+                float beta, cudaStream_t stream) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    conv_bias_int8::LaunchConfig launch_config;
+    kern = get_kern<BiasVisitor, Epilogue>(param, launch_config);
+
+    uint32_t nr_threads_x = launch_config.nr_threads_x,
+             nr_threads_y = launch_config.nr_threads_y,
+             nr_blocks_x = launch_config.nr_blocks_x,
+             nr_blocks_y = launch_config.nr_blocks_y,
+             nr_blocks_z = launch_config.nr_blocks_z,
+             smem_size_in_bytes = launch_config.smem_size_in_bytes;
+
+    dim3 block_size{nr_threads_x, nr_threads_y, 1};
+    dim3 grid_size{nr_blocks_x, nr_blocks_y, nr_blocks_z};
+
+    cuda_check(cudaFuncSetCacheConfig(reinterpret_cast<const void*>(kern),
+                                      cudaFuncCachePreferShared));
+    cuda_check(cudaFuncSetSharedMemConfig(reinterpret_cast<const void*>(kern),
+                                          cudaSharedMemBankSizeEightByte));
+
+    kern<<<grid_size, block_size, smem_size_in_bytes, stream>>>(
+            d_src, d_filter, bias, epilogue, param, alpha, beta);
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

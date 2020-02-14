@@ -1,0 +1,82 @@
+decl_opr(
+    'WarpPerspective',
+    inputs=[
+        Doc('src', 'input image, in (batch, channel, row, col), (batch,'
+            'row, col, channel) or (batch, channel / 4, row, col, 4) format, '
+            'decided by Format(NHWC, NCHW, NCHW4).'),
+        Doc('mat', 'batch-wise transforming matrix, in (batch, 3, 3) format. '
+            'Note that this matrix maps from output coordinate to input '
+            'coordinate'),
+        Doc('out_shape', 'output image shape, containing two elements '
+            'specifying output height and width')],
+    params='WarpPerspective',
+    desc='Apply perspective transformation to batched 2D images; '
+    'see http://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html '
+    'for details on perspective transformations.')
+
+decl_opr(
+    'WarpPerspective',
+    pyname='warp_perspective_mat_idx',
+    inputs=[
+        'src', 'mat', 'mat_idx', 'out_shape'
+    ],
+    params='WarpPerspective',
+    desc='like :func:`warp_perspective`, but the **mat** param does not have '
+    'to have the same batch size as **src**; instead, **mat_idx** specifies '
+    'the batch number of each matrix in **mat**'
+)
+
+decl_opr('Rotate',
+    inputs=[
+        Doc('src', 'source image, in (batch, row, col, channel) format. '
+            'Note the channel size must be 1 or 3')],
+    params='Rotate',
+    desc='Rotate images 90 degree, clockwise indicate the direction.')
+
+decl_opr('CvtColor',
+    inputs=[
+        Doc('src', 'source image, in (batch, row, col, channel) format. '
+            'Note the channel size must be 1 or 3 or 4')],
+    params='CvtColor',
+    desc='Converts images from one color space to another. '
+    'see http://docs.opencv.org/2.4/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cv2.cvtColor'
+    ' for details.')
+
+decl_opr('GaussianBlur',
+    inputs=[
+        Doc('src', 'source image, in (batch, row, col, channel) format. '
+            'Note the channel size must be 1 or 3')],
+    params='GaussianBlur',
+         desc='Blurs images using a Gaussian filter. '
+         'http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=gaussianblur#gaussianblur'
+         ' for details.')
+
+decl_opr('Resize',
+    inputs=[
+        Doc('src', 'source image, in (batch, row, col, channel), '
+            '(batch, channel, row, col), (batch, channel / 4, row, col, 4) '
+            'format, decided by specific format NHWC, NCHW or NCHW4'),
+        Doc('out_shape', 'output image shape, containing two elements '
+            'specifying output height and width')],
+    params='Resize',
+         desc='Resize an image. '
+         'see http://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#cv2.resize'
+         ' for details.',
+    version=1)
+
+decl_opr(
+    'WarpAffine',
+    inputs=[
+        Doc('src', 'input image, in (batch, row, col, channel) format'),
+        Doc('mat', 'batch-wise transforming matrix, in (batch, 2, 3) format. '
+            'Note that this matrix maps from output coordinate to input '
+            'coordinate'),
+        Doc('out_shape', 'output image shape, containing two elements '
+            'specifying output height and width')],
+    params='WarpAffine',
+    desc='Apply affine transformation to batched 2D images; '
+    'see http://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html '
+    'for details on affine transformations.',
+    version=1)
+
+# vim: ft=python

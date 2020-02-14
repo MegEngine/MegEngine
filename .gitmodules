@@ -1,0 +1,27 @@
+[submodule "third_party/Halide"]
+	path = third_party/Halide
+	url = https://github.com/halide/Halide.git
+[submodule "third_party/OpenBLAS"]
+	path = third_party/OpenBLAS
+	url = https://github.com/xianyi/OpenBLAS.git
+[submodule "third_party/cppzmq"]
+	path = third_party/cppzmq
+	url = https://github.com/zeromq/cppzmq.git
+[submodule "third_party/gtest"]
+	path = third_party/gtest
+	url = https://github.com/google/googletest.git
+[submodule "third_party/mkl-dnn"]
+	path = third_party/intel-mkl-dnn
+	url = https://github.com/intel/mkl-dnn.git
+[submodule "third_party/libzmq"]
+	path = third_party/libzmq
+	url = https://github.com/zeromq/libzmq.git
+[submodule "third_party/protobuf"]
+	path = third_party/protobuf
+	url = https://github.com/protocolbuffers/protobuf
+[submodule "third_party/MegRay"]
+	path = third_party/MegRay
+	url = https://github.com/MegEngine/MegRay.git
+[submodule "third_party/flatbuffers"]
+	path = third_party/flatbuffers
+	url = https://github.com/google/flatbuffers.git

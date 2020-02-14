@@ -1,0 +1,165 @@
+/**
+ * \file dnn/src/cuda/conv_bias/int8/conv_bias_int8_implicit_gemm_cdiv4hwn4_unroll_width.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#include "src/cuda/conv_bias/conv_bias_int8.cuh"
+#include "src/cuda/convolution_helper/kernel.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace convolution;
+
+namespace {
+template <typename BiasVisitor, typename Epilogue>
+void (*get_kern(const ConvParam& param,
+                conv_bias_int8::LaunchConfig& launch_config))(
+        const int8_t* __restrict__, const int8_t* __restrict__, BiasVisitor,
+        Epilogue, ConvParam, float, float) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    kern = nullptr;
+#define CHK3_(n_, co_, wo_, ci_, tx_, ty_)                                     \
+    if (param.n >= n_) {                                                       \
+        if (param.co >= co_) {                                                 \
+            if (param.ci % ci_ == 0) {                                         \
+                if (param.wo % wo_ == 0) {                                     \
+                    static constexpr int reg_k = (ci_);                        \
+                    static constexpr int reg_m = 4;                            \
+                    static constexpr int reg_n = (n_ + tx_ - 1) / (tx_);       \
+                    static constexpr int reg_width = wo_;                      \
+                    static constexpr int thread_x = tx_;                       \
+                    static constexpr int thread_y = ty_;                       \
+                    typedef RegBlockConfig<reg_m, reg_n, reg_k, reg_width>     \
+                            RegBlockConfig;                                    \
+                    typedef ThreadConfig<thread_x, thread_y> ThreadConfig;     \
+                    typedef IConvTraitUnrollWidth<true, int, RegBlockConfig,   \
+                                                  ThreadConfig>                \
+                            ConvTrait;                                         \
+                    kern = convolution_kernel<ConvTrait, BiasVisitor,          \
+                                              Epilogue>;                       \
+                    launch_config.nr_threads_x = thread_x;                     \
+                    launch_config.nr_threads_y = thread_y;                     \
+                    launch_config.nr_threads_z = 1;                            \
+                    launch_config.nr_blocks_x =                                \
+                            param.ho * DIVUP(param.wo, reg_width);             \
+                    launch_config.nr_blocks_y =                                \
+                            DIVUP(param.n,                                     \
+                                  ConvTrait::DataTileCount::block_tile_batch); \
+                    launch_config.nr_blocks_z =                                \
+                            DIVUP(param.co, ConvTrait::FilterTileCount::       \
+                                                    block_tile_out_channel);   \
+                    launch_config.smem_size_in_bytes =                         \
+                            sizeof(int32_t) *                                  \
+                            (ConvTrait::DataTileCount::smem_tot +              \
+                             ConvTrait::FilterTileCount::smem_tot);            \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+    }
+#define CHK3(n_, co_, wo_, ci_, tx_, ty_)                                      \
+    if (param.n >= n_) {                                                       \
+        if (param.co >= co_) {                                                 \
+            if (param.ci % ci_ == 0) {                                         \
+                if (param.wo % wo_ == 0) {                                     \
+                    static constexpr int reg_k = (ci_);                        \
+                    static constexpr int reg_m = (co_ + ty_ - 1) / (ty_);      \
+                    static constexpr int reg_n = (n_ + tx_ - 1) / (tx_);       \
+                    static constexpr int reg_width = wo_;                      \
+                    static constexpr int thread_x = tx_;                       \
+                    static constexpr int thread_y = ty_;                       \
+                    typedef RegBlockConfig<reg_m, reg_n, reg_k, reg_width>     \
+                            RegBlockConfig;                                    \
+                    typedef ThreadConfig<thread_x, thread_y> ThreadConfig;     \
+                    typedef IConvTraitUnrollWidth<true, int, RegBlockConfig,   \
+                                                  ThreadConfig>                \
+                            ConvTrait;                                         \
+                    kern = convolution_kernel<ConvTrait, BiasVisitor,          \
+                                              Epilogue>;                       \
+                    launch_config.nr_threads_x = thread_x;                     \
+                    launch_config.nr_threads_y = thread_y;                     \
+                    launch_config.nr_threads_z = 1;                            \
+                    launch_config.nr_blocks_x =                                \
+                            param.ho * DIVUP(param.wo, reg_width);             \
+                    launch_config.nr_blocks_y =                                \
+                            DIVUP(param.n,                                     \
+                                  ConvTrait::DataTileCount::block_tile_batch); \
+                    launch_config.nr_blocks_z =                                \
+                            DIVUP(param.co, ConvTrait::FilterTileCount::       \
+                                                    block_tile_out_channel);   \
+                    launch_config.smem_size_in_bytes =                         \
+                            sizeof(int32_t) *                                  \
+                            (ConvTrait::DataTileCount::smem_tot +              \
+                             ConvTrait::FilterTileCount::smem_tot);            \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+    }
+#define CHK2(n_, wo_, co_)       \
+    CHK3(n_, co_, wo_, 4, 16, 8) \
+    CHK3(n_, co_, wo_, 8, 16, 8) \
+    CHK3(n_, co_, wo_, 16, 16, 8)
+#define CHK(n_, wo_)             \
+    CHK3_(n_, 4, wo_, 4, 16, 8)  \
+    CHK3_(n_, 4, wo_, 8, 16, 8)  \
+    CHK3_(n_, 4, wo_, 16, 16, 8) \
+    CHK2(n_, wo_, 32)            \
+    CHK2(n_, wo_, 64)            \
+    CHK2(n_, wo_, 128)
+    CHK(1, 2);
+    CHK(1, 3);
+    CHK(1, 4);
+    CHK(1, 8);
+    CHK(16, 2);
+    CHK(16, 3);
+    CHK(16, 4);
+    CHK(16, 8);
+    CHK(32, 2);
+    CHK(32, 3);
+    CHK(32, 4);
+    CHK(64, 2);
+#undef CHK
+#undef CHK2
+#undef CHK3
+#undef CHK3_
+    megdnn_assert(kern != nullptr,
+                  "no usable kernel implementation for "
+                  "conv_bias");
+    return kern;
+}
+}  // namespace
+
+template <typename BiasVisitor, typename Epilogue>
+void megdnn::cuda::conv_bias_int8::
+        do_conv_bias_int8_implicit_gemm_cdiv4hwn4_unroll_width(
+                const int8_t* d_src, const int8_t* d_filter, BiasVisitor bias,
+                Epilogue epilogue, const ConvParam& param, float alpha,
+                float beta, cudaStream_t stream) {
+    void (*kern)(const int8_t* __restrict__, const int8_t* __restrict__,
+                 BiasVisitor, Epilogue, ConvParam, float, float);
+    conv_bias_int8::LaunchConfig launch_config;
+    kern = get_kern<BiasVisitor, Epilogue>(param, launch_config);
+
+    uint32_t nr_threads_x = launch_config.nr_threads_x,
+             nr_threads_y = launch_config.nr_threads_y,
+             nr_blocks_x = launch_config.nr_blocks_x,
+             nr_blocks_y = launch_config.nr_blocks_y,
+             nr_blocks_z = launch_config.nr_blocks_z,
+             smem_size_in_bytes = launch_config.smem_size_in_bytes;
+
+    dim3 block_size{nr_threads_x, nr_threads_y, 1};
+    dim3 grid_size{nr_blocks_x, nr_blocks_y, nr_blocks_z};
+    cuda_check(cudaFuncSetSharedMemConfig(reinterpret_cast<const void*>(kern),
+                                          cudaSharedMemBankSizeEightByte));
+
+    kern<<<grid_size, block_size, smem_size_in_bytes, stream>>>(
+            d_src, d_filter, bias, epilogue, param, alpha, beta);
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

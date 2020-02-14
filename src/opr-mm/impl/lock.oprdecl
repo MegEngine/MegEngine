@@ -1,0 +1,20 @@
+inputs = [
+    Doc('var', 'variable associated with this lock', ':class:`.SymbolVar`'),
+    Doc('lock_id', 'a global ID for this lock', 'int'),
+    Doc('group_id', 'an ID used in this computing graph; lock action is '
+        'taken only when all variables in the same group are computed', 'int')
+]
+
+decl_raw_opr(
+    'lock_acquire',
+    desc='acquire the lock associated with a var',
+    inputs=inputs
+)
+
+decl_raw_opr(
+    'lock_release',
+    desc='release the lock associated with a var',
+    inputs=inputs
+)
+
+# vim: ft=python

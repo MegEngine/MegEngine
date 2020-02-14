@@ -1,0 +1,13 @@
+#include "./kernel_impl.h"
+#include "../conv_pooling_utils.cuh"
+
+namespace megdnn {
+namespace cuda {
+namespace conv_pool {
+
+DISPATCH_POOLSHAPE(Identity, 1)
+
+} // namespace conv_pool
+} // namespace cuda
+} // namespace megdnn
+// vim: syntax=cpp.doxygen

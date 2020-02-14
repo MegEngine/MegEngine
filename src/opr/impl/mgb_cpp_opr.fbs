@@ -1,0 +1,57 @@
+include "dtype.fbs";
+
+namespace mgb.serialization.fbs.param;
+
+struct PersistentDTypeScalar {
+    dtype:DTypeEnum;
+    storage:[ubyte:4];
+}
+
+table MGBAddUpdate {
+    alpha:PersistentDTypeScalar;
+    beta:PersistentDTypeScalar;
+    bias:PersistentDTypeScalar;
+}
+
+table Host2DeviceCopy {
+    enable_value_infer:bool = true;
+    dump_default_value:bool = false;
+    allow_cpu_mem_fwd:bool = true;
+}
+
+table Dimshuffle {
+    pattern:[int];
+    ndim:uint;
+}
+
+enum AxisDescMethod : byte {
+    ADD_1,
+    REMOVE,
+}
+
+struct AxisDesc {
+    method:AxisDescMethod;
+    axis:int;
+}
+
+table AxisAddRemove {
+    desc:[AxisDesc];
+}
+
+table MGBSleep {
+    device:bool = true;
+    host:bool = false;
+    seconds:double;
+}
+
+struct IndexDescMaskItem {
+    axis:byte;
+    begin:bool;
+    end:bool;
+    step:bool;
+    idx:bool;
+}
+
+table IndexDescMaskDump {
+    items:[IndexDescMaskItem];
+}

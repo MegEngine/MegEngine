@@ -1,0 +1,6 @@
+decl_opr('Copy',
+         inputs=['src'],
+         params='Empty',
+         desc='copy a tensor to a different computing node')
+
+# vim: ft=python
