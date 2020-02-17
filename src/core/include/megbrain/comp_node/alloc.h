@@ -200,6 +200,13 @@ class DevMemAlloc: virtual public MemAllocBase {
 #endif
 
 
+#if MGB_CAMBRICON
+        /*!
+         * \brief create a new allocator for a device that merely forward
+         * cnrtMalloc and cnrtFree.
+         */
+        static std::unique_ptr<DevMemAlloc> make_cambricon_alloc();
+#endif
 
         virtual ~DevMemAlloc() = default;
 

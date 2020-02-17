@@ -56,4 +56,3 @@ target_link_libraries(megdnn ${MGE_BLAS_LIBS})
 if(CMAKE_THREAD_LIBS_INIT)
     target_link_libraries(megdnn Threads::Threads)
 endif()
-

@@ -30,6 +30,7 @@ class Handle {
             FALLBACK = 1,
             X86 = 2,
             CUDA = 6,
+            CAMBRICON = 12,
         };
 
     protected:

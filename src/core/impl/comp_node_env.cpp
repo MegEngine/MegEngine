@@ -22,7 +22,6 @@
 #endif
 #endif
 
-
 using namespace mgb;
 
 /* =================== MegDNNHandle =================== */

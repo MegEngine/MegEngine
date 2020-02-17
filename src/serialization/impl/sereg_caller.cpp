@@ -35,3 +35,6 @@ namespace mgb{void call_sereg(){}}
 #if MGB_JIT
 #include "../../jit/impl/jit.sereg.h"
 #endif
+#if MGB_CAMBRICON
+#include "../../cambricon/impl/cambricon_runtime_opr.sereg.h"
+#endif

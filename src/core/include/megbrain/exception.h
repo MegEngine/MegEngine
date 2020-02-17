@@ -146,6 +146,27 @@ class CudaError final: public SystemError {
 
 
 
+class CnrtError final: public SystemError {
+    public:
+        /*!
+         * \brief get extra info for current cnrt status, to be appended in
+         * error message
+         */
+        static std::string get_cnrt_extra_info();
+
+        CnrtError(const std::string& msg);
+};
+
+class CndevError final: public SystemError {
+    public:
+        CndevError(const std::string& msg);
+};
+
+class CnmlError final: public SystemError {
+    public:
+        CnmlError(const std::string& msg);
+};
+
 class AssertionError final: public MegBrainError {
     public:
         using MegBrainError::MegBrainError;

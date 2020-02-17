@@ -49,7 +49,8 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("cpu2:23"), make_lc(D::CPU, 2, 23));
     ASSERT_EQ(L::parse("cpu21:23"), make_lc(D::CPU, 21, 23));
 
-    ASSERT_EQ(L::parse("xpu"), make_lc(D::UNSPEC, -1, 0)); 
+    
+    ASSERT_EQ(L::parse("xpu"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpux"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpu23"), make_lc(D::UNSPEC, 23, 0));
     ASSERT_EQ(L::parse("xpu23:1"), make_lc(D::UNSPEC, 23, 1));
@@ -70,6 +71,7 @@ TEST(TestCompNode, Parse) {
     ASSERT_THROW(L::parse("cpu2:23x"), MegBrainError);
     ASSERT_THROW(L::parse("heaxgon0"), MegBrainError);
     ASSERT_THROW(L::parse("rcom0"), MegBrainError);
+    ASSERT_THROW(L::parse("cmabricon0"), MegBrainError);
 }
 
 TEST(TestCompNode, SetDefaultDev) {
@@ -545,6 +547,7 @@ TEST(TestCompNode, MultipleLoad) {
         }
     }
 }
+
 
 namespace {
 class CompNodeDepedentObjectInst final : public CompNodeDepedentObject {

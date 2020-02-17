@@ -530,6 +530,7 @@ void test_gather_other(CompNode cn0, CompNode cn1) {
     func->execute();
 }
 #endif
+
 }  // namespace
 
 #if MGB_CUDA
@@ -561,5 +562,6 @@ TEST(TestCudaMemAlloc, FreeMem) {
     test_free_mem(cn0, cn1, policy.get(), reserve, restore);
 }
 #endif  // MGB_CUDA
+
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

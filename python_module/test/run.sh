@@ -9,5 +9,6 @@ pushd $(dirname "${BASH_SOURCE[0]}")/.. >/dev/null
         --ignore test/unit/data \
         --ignore test/integration/manual \
         --ignore megengine/module/pytorch \
+        --ignore test/unit/module/test_external.py \
         megengine test
 popd >/dev/null
