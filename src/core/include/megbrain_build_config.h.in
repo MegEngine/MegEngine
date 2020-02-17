@@ -97,6 +97,10 @@
 #endif
 
 
+#ifndef MGB_CAMBRICON
+#define MGB_CAMBRICON 0
+#endif
+
 // whether to enable TensorRT support
 #ifndef MGB_ENABLE_TENSOR_RT
 #define MGB_ENABLE_TENSOR_RT    MGB_CUDA
