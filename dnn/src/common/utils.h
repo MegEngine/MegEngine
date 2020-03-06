@@ -434,6 +434,20 @@ int8_t convert<dt_qint4, int8_t>(dt_qint4 src, int8_t dst, size_t offset);
 template <>
 dt_qint4 convert<int8_t, dt_qint4>(int8_t src, dt_qint4 dst, size_t offset);
 
+/*!
+ * \brief check float equal within given ULP(unit in the last place)
+ */
+template <class T>
+static inline
+        typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
+        almost_equal(T x, T y, int unit_last_place = 1) {
+    return std::abs(x - y) < (std::numeric_limits<T>::epsilon() *
+                              std::abs(x + y) * unit_last_place) ||
+           std::abs(x - y) < std::numeric_limits<T>::min();
+}
+
+bool dtype_almost_equal(DType lhs, DType rhs);
+
 /**
  * \brief N-dimensional index space
  */

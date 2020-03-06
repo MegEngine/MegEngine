@@ -132,6 +132,15 @@ namespace megdnn {
     cb(::megdnn::dtype::Quantized4Asymm) \
     cb(::megdnn::dtype::QuantizedS4)
 
+#define MEGDNN_FOREACH_QUANTIZED_DTYPE_SYMM(cb) \
+    cb(::megdnn::dtype::QuantizedS32) \
+    cb(::megdnn::dtype::QuantizedS8) \
+    cb(::megdnn::dtype::QuantizedS4)
+
+#define MEGDNN_FOREACH_QUANTIZED_DTYPE_ASYMM(cb) \
+    cb(::megdnn::dtype::Quantized8Asymm) \
+    cb(::megdnn::dtype::Quantized4Asymm)
+
 /*!
  * \brief a POD representation of a single byte
  *
