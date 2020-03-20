@@ -111,7 +111,6 @@ static void copy_padding_kern(WorkspaceBundle bundle,
     size_t channel_id = ncb_index.ndrange_id[2];
 
     size_t padding_group_size = IH2 * IW2 * IC;
-    size_t input_channel_offset = IH * IW * channel_id;
     size_t workspace_channel_offset = IH2 * IW2 * channel_id;
     size_t workspace_group_offset = group_id * padding_group_size;
     size_t workspace_batch_offset =
@@ -123,7 +122,7 @@ static void copy_padding_kern(WorkspaceBundle bundle,
         src_zp = param.src_type.param<dtype::Quantized8Asymm>().zero_point;
     }
     src_ctype* src = const_cast<src_ctype*>(
-            param.src<src_ctype>(batch_id, group_id) + input_channel_offset);
+            param.src<src_ctype>(batch_id, group_id, channel_id));
     src_ctype* src2;
     src2 = static_cast<src_ctype*>(
                    bundle.get(Im2colBundelIndex::BUNDLE_PADDING_INDEX)) +

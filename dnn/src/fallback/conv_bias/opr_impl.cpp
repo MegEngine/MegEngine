@@ -246,10 +246,9 @@ void ConvBiasImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                       ConvBiasImpl::Algorithm* algo) {
     auto ncb_kerns = ncb_algo_dispatch_kerns(algo, param);
     for (auto&& kernel : ncb_kerns) {
-        auto run = [=](size_t index, size_t thread_id) {
-            auto copy_param = param;
+        auto run = [kernel, param](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
-            kernel.kern(copy_param, {thread_id, ndrange_id});
+            kernel.kern(param, {thread_id, ndrange_id});
         };
         static_cast<naive::HandleImpl*>(handle())->dispatch_kern(
                 run, kernel.global_size.total_size());
@@ -328,28 +327,29 @@ const char* ConvBiasImpl::get_algorithm_set_name() const {
 
 namespace megdnn{
 namespace fallback {
-//! when format is nchwxx and channel wise mode, multi group will pack
-        //! together, so pack_group_size is the number of packed group
+
 template <typename T>
-const T* ConvBiasImpl::NCBKernParam::src(size_t batch_id, size_t group_id,
-                                   size_t group_pack_size) const {
-    src_type.assert_is_compatible_ctype<T>();
+const T* ConvBiasImpl::NCBKernParam::src(size_t batch_id, size_t group_pack_id,
+                                         size_t channel_pack_id,
+                                         size_t group_pack_size,
+                                         size_t channel_pack_size) const {
     size_t batch_offset = batch_id * inp_bs * src_type.size();
-    size_t group_offset = group_pack_size * group_id * filter_meta.icpg *
+    size_t group_offset = group_pack_size * group_pack_id * filter_meta.icpg *
                           isz[0] * isz[1] * src_type.size();
+    size_t channel_offset = channel_pack_size * channel_pack_id * isz[0] *
+                            isz[1] * src_type.size();
     return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(src_ptr) +
-                                batch_offset + group_offset);
+                                batch_offset + group_offset + channel_offset);
 }
 
-//! when format is nchwxx and channel wise mode, multi group will pack
-//! together, so pack_group_size is the number of packed group
+
 template <typename T>
-const T* ConvBiasImpl::NCBKernParam::filter(size_t group_id,
+const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
                                             size_t pack_group_size) const {
     size_t group_offset = 0_z;
     switch (filter_meta.format) {
         case Param::Format::NCHW: {
-            group_offset = pack_group_size * group_id * filter_meta.icpg *
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
                            filter_meta.ocpg * filter_meta.spatial[0] *
                            filter_meta.spatial[1] * filter_type.size();
             break;
@@ -359,15 +359,15 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_id,
             size_t icpg = filter_meta.icpg;
             size_t ocpg = filter_meta.ocpg;
             //! four format of weight layout
-            //! 1. {oc/8, ic/8, fh, fw, 8, 8}, 2. {g, oc/8, ic/8, fh,
-            //! fw, 8, 8}
-            //! 3. {g/8, 1, 1, fh, fw, 8, 8}, 3. {oc/8 ,fh, fw, ic, 8}
+            //! 1. {oc/8, ic/8, fh, fw, 8, 8},
+            //! 2. {g, oc/8, ic/8, fh, fw, 8, 8},
+            //! 3. {g/8, fh, fw, 1, 1, 8}, 4. {oc/8, fh, fw, ic, 8}
             megdnn_assert((icpg % 8 == 0 && ocpg % 8 == 0) ||
                                   (group % 8 == 0 && icpg == 1 && ocpg == 1 &&
                                    pack_group_size > 1) ||
                                   (group == 1 && ocpg % 8 == 0),
                           "The filter shepe is not right of nchw88");
-            group_offset = pack_group_size * group_id * filter_meta.icpg *
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
                            filter_meta.ocpg * filter_meta.spatial[0] *
                            filter_meta.spatial[1] * filter_type.size();
 
@@ -380,7 +380,7 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_id,
             //! 2. {alpha, alpha, ocpg/8, icpg/8, 8, 8}
             //! 3. {g, alpha, alpha, oc, ic, 8, 8}
             //! 4. {alpha, alpha, oc, ic}
-            group_offset = pack_group_size * group_id * filter_meta.icpg *
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
                            filter_meta.ocpg *
                            (filter_meta.spatial[0] + output_block_size - 1) *
                            (filter_meta.spatial[1] + output_block_size - 1) *
@@ -388,58 +388,66 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_id,
             break;
         }
         default:
-            megdnn_assert("other filter format is not support yet");
+            megdnn_assert(0, "other filter format is not support yet");
     }
     return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(filter_ptr) +
                                 group_offset);
 }
 
-//! when format is nchwxx and channel wise mode, multi group will pack
-//! together, so pack_group_size is the number of packed group
 template <typename T>
-const T* ConvBiasImpl::NCBKernParam::bias(size_t batch_id, size_t group_id,
-                                          size_t group_pack_size) const {
-    bias_type.assert_is_compatible_ctype<T>();
+const T* ConvBiasImpl::NCBKernParam::bias(size_t batch_id, size_t group_pack_id,
+                                          size_t channel_pack_id,
+                                          size_t group_pack_size,
+                                          size_t channel_pack_size) const {
     size_t batch_offset = 0_z;
     size_t group_offset = 0_z;
+    size_t channel_offset = 0_z;
     if (bias_mode == BiasMode::BIAS) {
         batch_offset = batch_id * bias_bs * bias_type.size();
-        group_offset = group_pack_size * group_id * filter_meta.ocpg * osz[0] *
-                       osz[1] * bias_type.size();
+        group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
+                       osz[0] * osz[1] * bias_type.size();
+        channel_offset = channel_pack_size * channel_pack_id * osz[0] * osz[1] *
+                         bias_type.size();
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-        group_offset = group_pack_size * group_id * filter_meta.ocpg *
+        group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
                        bias_type.size();
+        channel_offset = channel_pack_size * channel_pack_id * bias_type.size();
     }
     return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(bias_ptr) +
-                                batch_offset + group_offset);
+                                batch_offset + group_offset + channel_offset);
 }
 
-//! when format is nchwxx and channel wise mode, multi group will pack
-//! together, so pack_group_size is the number of packed group
 template <typename T>
-T* ConvBiasImpl::NCBKernParam::dst(size_t batch_id, size_t group_id,
-                                   size_t group_pack_size) const {
-    dst_type.assert_is_compatible_ctype<T>();
+T* ConvBiasImpl::NCBKernParam::dst(size_t batch_id, size_t group_pack_id,
+                                   size_t channel_pack_id,
+                                   size_t group_pack_size,
+                                   size_t channel_pack_size) const {
     size_t batch_offset = batch_id * out_bs * dst_type.size();
-    size_t group_offset = group_pack_size * group_id * filter_meta.ocpg *
+    size_t group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
                           osz[0] * osz[1] * dst_type.size();
+    size_t channel_offset = channel_pack_size * channel_pack_id * osz[0] *
+                            osz[1] * dst_type.size();
     return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(dst_ptr) +
-                                batch_offset + group_offset);
+                                batch_offset + group_offset + channel_offset);
 }
 
-#define INST(T)                                                              \
-    template const T* ConvBiasImpl::NCBKernParam::src<T>(                    \
-            size_t batch_id, size_t group_id, size_t group_pack_size) const; \
-    template const T* ConvBiasImpl::NCBKernParam::bias<T>(                   \
-            size_t batch_id, size_t group_id, size_t group_pack_size) const; \
-    template const T* ConvBiasImpl::NCBKernParam::filter<T>(                 \
-            size_t group_id, size_t group_pack_size) const;                  \
-    template T* ConvBiasImpl::NCBKernParam::dst<T>(                          \
-            size_t batch_id, size_t group_id, size_t group_pack_size) const;
+#define INST(T)                                                      \
+    template const T* ConvBiasImpl::NCBKernParam::src<T>(            \
+            size_t batch_id, size_t group_id, size_t channel_id,     \
+            size_t group_pack_size, size_t channel_pack_size) const; \
+    template const T* ConvBiasImpl::NCBKernParam::bias<T>(           \
+            size_t batch_id, size_t group_id, size_t channel_id,     \
+            size_t group_pack_size, size_t channel_pack_size) const; \
+    template const T* ConvBiasImpl::NCBKernParam::filter<T>(         \
+            size_t group_id, size_t group_pack_size) const;          \
+    template T* ConvBiasImpl::NCBKernParam::dst<T>(                  \
+            size_t batch_id, size_t group_id, size_t channel_id,     \
+            size_t group_pack_size, size_t channel_pack_size) const;
 
 #define INST_DT(d) INST(DTypeTrait<d>::ctype)
 
 MEGDNN_FOREACH_COMPUTING_DTYPE(INST_DT)
+INST(void)
 #undef INST
 #undef INST_DT
 }  // namespace fallback

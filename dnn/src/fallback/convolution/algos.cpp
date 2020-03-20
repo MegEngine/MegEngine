@@ -197,9 +197,12 @@ ConvolutionImpl::AlgoFallback::dispatch_kern(
     auto kern_fallback = [workspace_per_thread](const NCBKernParam& p,
                                                 const NCBKernIndex& ncb_index) {
         UNPACK_CONV_F32_NCB_KERN_SIZES(p);
+        size_t batch_id = ncb_index.ndrange_id[1];
+        size_t group_id = ncb_index.ndrange_id[0];
         MEGDNN_MARK_USED_VAR(N);
-        auto src = p.src<float>(), filter = p.filter<float>();
-        auto dst = p.dst<float>();
+        auto src = p.src<float>(batch_id, group_id),
+             filter = p.filter<float>(group_id);
+        auto dst = p.dst<float>(batch_id, group_id);
         size_t thread_id = ncb_index.thread_id;
         void* workspace_ptr = reinterpret_cast<void*>(
                 reinterpret_cast<ptrdiff_t>(p.workspace_ptr) +

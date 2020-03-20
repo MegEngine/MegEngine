@@ -146,9 +146,11 @@ WorkspaceBundle ConvBiasImpl::AlgoMkldnnQint8::get_bundle(
     } while (0)
 
 void ConvBiasImpl::AlgoMkldnnQint8::kern_mkldnn_s8x8x32(
-        const NCBKernParam& param, const NCBKernIndex&) {
+        const NCBKernParam& param, const NCBKernIndex& ncb_index) {
     UNPACK_CONV_F32_NCB_KERN_SIZES(param);
     MEGDNN_MARK_USED_VAR(N);
+    size_t group_id = ncb_index.ndrange_id[0];
+    size_t batch_id = ncb_index.ndrange_id[1];
     auto x86_handle = static_cast<HandleImpl*>(inplace_cpu_handle().get());
     megdnn_assert(x86_handle != nullptr, "x86 handle can not be null");
     auto eng_mkldnn = x86_handle->mkldnn_engine();
@@ -167,10 +169,11 @@ void ConvBiasImpl::AlgoMkldnnQint8::kern_mkldnn_s8x8x32(
     auto megdnn_dst_md = memory::desc({dst_shape}, memory::data_type::s32,
                                       memory::format_tag::nchw);
 
-    auto megdnn_weight_memory = memory(megdnn_weight_md, eng_mkldnn,
-                                       const_cast<void*>(param.filter_ptr));
-    int8_t* src = const_cast<int8_t*>(param.src<int8_t>());
-    int32_t* dst = param.dst<int32_t>();
+    auto megdnn_weight_memory =
+            memory(megdnn_weight_md, eng_mkldnn,
+                   const_cast<void*>(param.filter<void>(group_id)));
+    int8_t* src = const_cast<int8_t*>(param.src<int8_t>(batch_id, group_id));
+    int32_t* dst = param.dst<int32_t>(batch_id, group_id);
 
     auto megdnn_src_memory =
             memory(megdnn_src_md, eng_mkldnn, static_cast<void*>(src));
@@ -353,18 +356,18 @@ MatrixMul* ConvBiasImpl::AlgoMkldnnMatmulQint8::get_matmul_opr() {
 }
 
 void ConvBiasImpl::AlgoMkldnnMatmulQint8::kern_mkldnn_matmul_s8x8x32(
-        const NCBKernParam& param, const NCBKernIndex&) {
+        const NCBKernParam& param, const NCBKernIndex& ncb_index) {
     UNPACK_CONV_F32_NCB_KERN_SIZES(param);
     auto IH2 = IH + 2 * PH;
     auto IW2 = IW + 2 * PW;
+    size_t group_id = ncb_index.ndrange_id[0];
     bool is_xcorr = !param.filter_meta.should_flip;
     auto bundle = get_bundle(param);
     bundle.set(param.workspace_ptr);
 
     for (size_t n = 0; n < N; ++n) {
-        int8_t* src =
-                const_cast<int8_t*>(param.src<int8_t>()) + n * param.inp_bs;
-        int32_t* dst = param.dst<int32_t>() + n * param.out_bs;
+        int8_t* src = const_cast<int8_t*>(param.src<int8_t>(n, group_id));
+        int32_t* dst = param.dst<int32_t>(n, group_id);
         int8_t *B, *src2;
         if (FH == 1 && FW == 1 && SH == 1 && SW == 1 && PH == 0 && PW == 0) {
             // special case: 1x1
@@ -414,7 +417,7 @@ void ConvBiasImpl::AlgoMkldnnMatmulQint8::kern_mkldnn_matmul_s8x8x32(
         {
             TensorND A_, B_, C_;
             A_.layout = TensorLayout({OC, IC * FH * FW}, dtype::Int8());
-            A_.raw_ptr = const_cast<int8_t*>(param.filter<int8_t>());
+            A_.raw_ptr = const_cast<int8_t*>(param.filter<int8_t>(group_id));
             B_.layout = TensorLayout({IC * FH * FW, OH * OW}, dtype::Int8());
             B_.raw_ptr = B;
             C_.layout = TensorLayout({OC, OH * OW}, dtype::Int32());

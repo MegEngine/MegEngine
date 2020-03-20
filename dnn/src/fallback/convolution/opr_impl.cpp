@@ -189,41 +189,15 @@ ConvolutionImpl::NCBKernParam ConvolutionImpl::make_ncb_kern_param(
 void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                          Algorithm* algo) {
     auto kerns = ncb_algo_dispatch_kern(algo, param);
-    size_t src_batch_stride = param.inp_bs * param.src_type.size();
-    size_t dst_batch_stride = param.out_bs * param.dst_type.size();
-    auto group = param.filter_meta.group;
     auto fallback_handle = handle();
     for (auto kernel : kerns) {
         megdnn_assert(param.filter_meta.format == Param::Format::NCHW ||
-                      param.filter_meta.format == Param::Format::NHWC ||
+                              param.filter_meta.format == Param::Format::NHWC ||
+                              param.filter_meta.format == Param::Format::NCHW88,
                       "invalid conv format");
-
-        ptrdiff_t istrd = 0, fstrd = 0, ostrd = 0;
-        fstrd = param.filter_meta.icpg * param.filter_meta.ocpg *
-                param.filter_meta.spatial[0] * param.filter_meta.spatial[1] *
-                param.filter_type.size();
-        istrd = param.filter_meta.icpg * param.src_type.size();
-        ostrd = param.filter_meta.ocpg * param.dst_type.size();
-        if (param.filter_meta.format == Param::Format::NCHW) {
-            istrd *= param.isz[0] * param.isz[1];
-            ostrd *= param.osz[0] * param.osz[1];
-        } else {
-            // must be NHWC. No action performed.
-        }
-        auto run = [=](size_t index, size_t thread_id) {
-            auto copy_param = param;
+        auto run = [param, kernel](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
-            size_t group_id = ndrange_id[0];
-            size_t batch_id = ndrange_id[1];
-            megdnn_assert(group_id < group,
-                          "The group id should smaller than gruop");
-            //! The kernel ptr point to batch index
-            incr_ptr(copy_param.src_ptr,
-                     group_id * istrd + batch_id * src_batch_stride);
-            incr_ptr(copy_param.filter_ptr, group_id * fstrd);
-            incr_ptr(copy_param.dst_ptr,
-                     group_id * ostrd + batch_id * dst_batch_stride);
-            kernel.kern(copy_param, {thread_id, ndrange_id});
+            kernel.kern(param, {thread_id, ndrange_id});
         };
         static_cast<naive::HandleImpl*>(fallback_handle)
                 ->dispatch_kern(run, kernel.global_size.total_size());

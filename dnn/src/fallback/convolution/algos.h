@@ -20,18 +20,25 @@ namespace fallback {
 
 template <typename ST, typename DT, typename CT>
 void kern_naive_forward(const ConvolutionImpl::NCBKernParam& p,
-                        const ConvolutionImpl::NCBKernIndex& /*index*/) {
+                        const ConvolutionImpl::NCBKernIndex& ncb_index) {
+    size_t batch_id = ncb_index.ndrange_id[1];
+    size_t group_id = ncb_index.ndrange_id[0];
     auto IC = p.filter_meta.icpg, IH = p.isz[0], IW = p.isz[1],
          OC = p.filter_meta.ocpg, OH = p.osz[0], OW = p.osz[1];
+    ptrdiff_t fstrd = p.filter_meta.icpg * p.filter_meta.ocpg *
+                      p.filter_meta.spatial[0] * p.filter_meta.spatial[1] *
+                      p.filter_type.size();
+    ptrdiff_t istrd = p.filter_meta.icpg * p.src_type.size();
+    ptrdiff_t ostrd = p.filter_meta.ocpg * p.dst_type.size();
     TensorND src, dst;
-    src.raw_ptr = const_cast<void*>(p.src_ptr);
-    dst.raw_ptr = p.dst_ptr;
 
     src.layout.dtype = p.src_type;
     dst.layout.dtype = p.dst_type;
     if (p.filter_meta.format == param::Convolution::Format::NCHW) {
-        src.layout.init_contiguous_stride({1, IC, IH, IW});
-        dst.layout.init_contiguous_stride({1, OC, OH, OW});
+       istrd *= p.isz[0] * p.isz[1];
+       ostrd *= p.osz[0] * p.osz[1];
+       src.layout.init_contiguous_stride({1, IC, IH, IW});
+       dst.layout.init_contiguous_stride({1, OC, OH, OW});
     } else {
         // Must be NHWC
         megdnn_assert(
@@ -41,9 +48,17 @@ void kern_naive_forward(const ConvolutionImpl::NCBKernParam& p,
         src.layout.init_contiguous_stride({1, IH, IW, IC});
         dst.layout.init_contiguous_stride({1, OH, OW, OC});
     }
+    src.raw_ptr = reinterpret_cast<void*>(
+            reinterpret_cast<uintptr_t>(p.src_ptr) +
+            batch_id * p.inp_bs * p.src_type.size() + group_id * istrd);
+    dst.raw_ptr = reinterpret_cast<void*>(
+            reinterpret_cast<uintptr_t>(p.dst_ptr) +
+            batch_id * p.out_bs * p.dst_type.size() + group_id * ostrd);
+    ST* filter = reinterpret_cast<ST*>(
+            reinterpret_cast<uintptr_t>(p.filter_ptr) + group_id * fstrd);
     std::copy(p.inp_s, p.inp_s + 4, src.layout.stride);
     std::copy(p.out_s, p.out_s + 4, dst.layout.stride);
-    naive::convolution::forward<ST, ST, DT, CT>(src, p.filter<ST>(), dst,
+    naive::convolution::forward<ST, ST, DT, CT>(src, filter, dst,
                                                 p.filter_meta);
 }
 
