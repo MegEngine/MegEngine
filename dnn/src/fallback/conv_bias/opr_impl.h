@@ -105,10 +105,17 @@ public:
         }
 
         template <typename T>
+        const T* src(size_t batch_id, size_t group_id,
+               size_t group_pack_size = 1_z) const;
+
+        template <typename T>
         const T* filter() const {
             filter_type.assert_is_compatible_ctype<T>();
             return static_cast<const T*>(filter_ptr);
         }
+
+        template <typename T>
+        const T* filter(size_t group_id, size_t pack_group_size = 1_z) const;
 
         template <typename T>
         const T* bias() const {
@@ -117,10 +124,18 @@ public:
         }
 
         template <typename T>
+        const T* bias(size_t batch_id, size_t group_id,
+                      size_t group_pack_size = 1_z) const;
+
+        template <typename T>
         T* dst() const {
             dst_type.assert_is_compatible_ctype<T>();
             return static_cast<T*>(dst_ptr);
         }
+
+        template <typename T>
+        T* dst(size_t batch_id, size_t group_id,
+               size_t group_pack_size = 1_z) const;
 
         template <typename T>
         T* workspace() const {

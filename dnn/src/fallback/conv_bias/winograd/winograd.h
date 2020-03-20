@@ -210,7 +210,7 @@ public:
                 reinterpret_cast<input_filter_compute_type*>(
                         reinterpret_cast<uintptr_t>(bundle_compute.get(2)) +
                         compute_workspace_size_per_thread * thread_id);
-        const stype* filter_ptr = kern_param.filter<stype>();
+        const stype* filter_ptr = kern_param.filter<stype>(group_id);
         size_t oc_start = oc_id, oc_end = oc_id+1;
         if (kern_param.filter_meta.format == param::ConvBias::Format::NCHW88) {
             oc_start = 8 * oc_id;
@@ -246,16 +246,19 @@ public:
 
         size_t oc_block_id = ncb_index.ndrange_id[3];
         size_t tile_id = ncb_index.ndrange_id[2];
+        size_t batch_id = ncb_index.ndrange_id[1];
         size_t group_id = ncb_index.ndrange_id[0];
         size_t thread_id = ncb_index.thread_id;
 
         bundle_top.set(ncb_param.workspace_ptr);
         bundle_compute.set(bundle_top.get(0));
 
-        const stype* src_ptr = ncb_param.src<stype>();
-        dst_type* dst_ptr = ncb_param.dst<dst_type>();
+        const stype* src_ptr = ncb_param.src<stype>(batch_id, group_id);
+        dst_type* dst_ptr = ncb_param.dst<dst_type>(batch_id, group_id);
         const output_compute_type* bias_ptr =
-                static_cast<const output_compute_type*>(ncb_param.bias_ptr);
+                static_cast<const output_compute_type*>(
+                        ncb_param.bias<output_compute_type>(batch_id,
+                                                            group_id));
 
         input_filter_compute_type* input_transform_buf =
                 reinterpret_cast<input_filter_compute_type*>(
@@ -271,9 +274,10 @@ public:
                         reinterpret_cast<uintptr_t>(bundle_compute.get(2)) +
                         compute_workspace_size_per_thread * thread_id);
 
+        //! NCHW88_WINOGRAD and NCHW_WINOGRAD is the same offset
         const input_filter_compute_type* filter_transform_buf =
                 static_cast<const input_filter_compute_type*>(
-                        ncb_param.filter_ptr);
+                        ncb_param.filter<input_filter_compute_type>(group_id));
         if (ncb_param.filter_meta.format == param::ConvBias::Format::NCHW ||
             ncb_param.filter_meta.format == param::ConvBias::Format::NCHW88) {
             filter_transform_buf = reinterpret_cast<input_filter_compute_type*>(
