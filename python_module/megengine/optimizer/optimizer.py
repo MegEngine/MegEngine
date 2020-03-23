@@ -168,6 +168,8 @@ class Optimizer(metaclass=ABCMeta):
 
         cg = get_default_graph()
         grads = grad_func(loss, params, use_virtual_grad=not cg.is_eager())
+        if not isinstance(grads, list):
+            grads = [grads]
         assert len(grads) == len(params)
 
         for param, grad in zip(params, grads):

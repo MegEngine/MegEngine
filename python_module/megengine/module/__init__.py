@@ -16,3 +16,4 @@ from .linear import Linear
 from .module import Module
 from .pooling import AvgPool2d, MaxPool2d
 from .sequential import Sequential
+from .parampack import ParamPack
