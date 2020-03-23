@@ -247,33 +247,31 @@ void StrategyHelper<
     Getter<ctype, input_filter_compute_type> getter(dtype);
     InputVisitor<layout, format> intput_visitor(IC);
 
-    rep(ic, IC) {
-        memset(mid_buf1, 0, alpha * alpha * sizeof(input_filter_compute_type));
-        rep(i, alpha) rep(j, alpha) {
-            int ih = ih_start + i;
-            int iw = iw_start + j;
-            if (ih >= 0 && ih < (int)IH && iw >= 0 && iw < (int)IW) {
-                mid_buf1[i * alpha + j] = getter(
-                        input[intput_visitor.get(alpha, ic, IH, IW, ih, iw)]);
-            }
+    memset(mid_buf1, 0, alpha * alpha * sizeof(input_filter_compute_type));
+    rep(i, alpha) rep(j, alpha) {
+        int ih = ih_start + i;
+        int iw = iw_start + j;
+        if (ih >= 0 && ih < (int)IH && iw >= 0 && iw < (int)IW) {
+            mid_buf1[i * alpha + j] = getter(
+                    input[intput_visitor.get(alpha, ic, IH, IW, ih, iw)]);
         }
+    }
 
-        megdnn::naive::run_matrix_mul_tpl<input_filter_compute_type,
-                                          input_filter_compute_type, true,
-                                          false>(
-                winograd_coeff.B(rescale).data(), mid_buf1, mid_buf2, alpha,
-                alpha, alpha, alpha, alpha, alpha, dtype, dtype);
-        megdnn::naive::run_matrix_mul_tpl<input_filter_compute_type,
-                                          input_filter_compute_type, false,
-                                          false>(
-                mid_buf2, winograd_coeff.B(rescale).data(), mid_buf1, alpha,
-                alpha, alpha, alpha, alpha, alpha, dtype, dtype);
+    megdnn::naive::run_matrix_mul_tpl<input_filter_compute_type,
+                                        input_filter_compute_type, true,
+                                        false>(
+            winograd_coeff.B(rescale).data(), mid_buf1, mid_buf2, alpha,
+            alpha, alpha, alpha, alpha, alpha, dtype, dtype);
+    megdnn::naive::run_matrix_mul_tpl<input_filter_compute_type,
+                                        input_filter_compute_type, false,
+                                        false>(
+            mid_buf2, winograd_coeff.B(rescale).data(), mid_buf1, alpha,
+            alpha, alpha, alpha, alpha, alpha, dtype, dtype);
 
-        rep(i, alpha) rep(j, alpha) {
-            input_transform_buf[intput_visitor.put(alpha, ic, nr_units_in_tile,
-                                                   unit_idx, i, j)] =
-                    mid_buf1[i * alpha + j];
-        }
+    rep(i, alpha) rep(j, alpha) {
+        input_transform_buf[intput_visitor.put(alpha, ic, nr_units_in_tile,
+                                                unit_idx, i, j)] =
+                mid_buf1[i * alpha + j];
     }
 }
 
@@ -287,7 +285,7 @@ void StrategyHelper<
                         output_compute_type* transform_mid_buf, BiasMode bmode,
                         NonlineMode nonline_mode, size_t oh_start,
                         size_t ow_start, size_t OH, size_t OW, size_t oc_start,
-                        size_t oc_end, size_t unit_idx, size_t nr_units_in_tile,
+                        size_t oc_index, size_t unit_idx, size_t nr_units_in_tile,
                         size_t m, size_t r,
                         const std::vector<float>& interp_points, DType dtype,
                         float input_filter_scale, float input_filter_rescale,
@@ -300,49 +298,49 @@ void StrategyHelper<
     OutputGetter<output_compute_type, dst_type> getter(dtype);
     OutputVisitor<layout, format> output_visitor(oc_end - oc_start);
 
-    for (size_t oc = oc_start; oc < oc_end; oc++) {
-        /* gather */
-        rep(i, alpha) rep(j, alpha) {
-            mid_buf1[i * alpha + j] = output_transform_buf[output_visitor.get(
-                    alpha, oc - oc_start, oc, nr_units_in_tile, unit_idx, i,
-                    j)];
-        }
-        /* A[alpha*m] M[alpha*alpha] */
-        megdnn::naive::run_matrix_mul_tpl<output_compute_type,
-                                          output_compute_type, true, false>(
-                winograd_coeff.A(rescale).data(), mid_buf1, mid_buf2, m, alpha,
-                alpha, m, alpha, alpha, dtype, dtype);
-        megdnn::naive::run_matrix_mul_tpl<output_compute_type,
-                                          output_compute_type, false, false>(
-                mid_buf2, winograd_coeff.A(rescale).data(), mid_buf1, m, m,
-                alpha, alpha, m, m, dtype, dtype);
+    size_t oc = oc_start + oc_index;
 
-        rep(i, m) rep(j, m) {
-            auto oh = oh_start + i;
-            auto ow = ow_start + j;
-            if (oh < OH && ow < OW) {
-                float val = mid_buf1[i * m + j];
-                if (bmode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-                    val += bias[oc] * input_filter_rescale *
-                           input_filter_rescale;
-                } else if (bmode == BiasMode::BIAS) {
-                    val += bias[output_visitor.put(oc, OH, OW, oh, ow)] *
-                           input_filter_rescale * input_filter_rescale;
-                }
-                val = val * input_filter_scale /
-                      (input_filter_rescale * input_filter_rescale * rescale *
-                       rescale);
-                if (nonline_mode == NonlineMode::RELU) {
-                    val = val > 0 ? val : 0;
-                } else if (nonline_mode == NonlineMode::SIGMOID) {
-                    val = 1.f / (expf(-val) + 1.f);
-                } else if (nonline_mode == NonlineMode::H_SWISH) {
-                    val = val * std::min(std::max(val + 3, 0.f), 6.f) / 6.f;
-                } else {
-                    megdnn_assert(nonline_mode == NonlineMode::IDENTITY);
-                }
-                output[output_visitor.put(oc, OH, OW, oh, ow)] = getter(val);
+    /* gather */
+    rep(i, alpha) rep(j, alpha) {
+        mid_buf1[i * alpha + j] = output_transform_buf[output_visitor.get(
+                alpha, oc_index, oc, nr_units_in_tile, unit_idx, i,
+                j)];
+    }
+    /* A[alpha*m] M[alpha*alpha] */
+    megdnn::naive::run_matrix_mul_tpl<output_compute_type,
+                                        output_compute_type, true, false>(
+            winograd_coeff.A(rescale).data(), mid_buf1, mid_buf2, m, alpha,
+            alpha, m, alpha, alpha, dtype, dtype);
+    megdnn::naive::run_matrix_mul_tpl<output_compute_type,
+                                        output_compute_type, false, false>(
+            mid_buf2, winograd_coeff.A(rescale).data(), mid_buf1, m, m,
+            alpha, alpha, m, m, dtype, dtype);
+
+    rep(i, m) rep(j, m) {
+        auto oh = oh_start + i;
+        auto ow = ow_start + j;
+        if (oh < OH && ow < OW) {
+            float val = mid_buf1[i * m + j];
+            if (bmode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+                val += bias[oc] * input_filter_rescale *
+                        input_filter_rescale;
+            } else if (bmode == BiasMode::BIAS) {
+                val += bias[output_visitor.put(oc, OH, OW, oh, ow)] *
+                        input_filter_rescale * input_filter_rescale;
             }
+            val = val * input_filter_scale /
+                    (input_filter_rescale * input_filter_rescale * rescale *
+                    rescale);
+            if (nonline_mode == NonlineMode::RELU) {
+                val = val > 0 ? val : 0;
+            } else if (nonline_mode == NonlineMode::SIGMOID) {
+                val = 1.f / (expf(-val) + 1.f);
+            } else if (nonline_mode == NonlineMode::H_SWISH) {
+                val = val * std::min(std::max(val + 3, 0.f), 6.f) / 6.f;
+            } else {
+                megdnn_assert(nonline_mode == NonlineMode::IDENTITY);
+            }
+            output[output_visitor.put(oc, OH, OW, oh, ow)] = getter(val);
         }
     }
 };

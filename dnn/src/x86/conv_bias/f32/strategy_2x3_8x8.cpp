@@ -274,31 +274,43 @@ void winograd_nchw88_2x3_8x8_f::filter(const float* filter,
                                          transform_mid_buf, OC, IC, oc_start,
                                          oc_end);
 }
+
 void winograd_nchw88_2x3_8x8_f::input(const float* input,
                                       float* input_transform_buf,
-                                      float* transform_mid_buf, int ih_start,
-                                      int iw_start, size_t IH, size_t IW,
-                                      size_t IC, size_t unit_idx,
+                                      float* transform_mid_buf, size_t IH,
+                                      size_t IW, size_t IC, size_t PH,
+                                      size_t PW, size_t unit_start_idx,
                                       size_t nr_units_in_tile) {
     megdnn_assert(IC % 8 == 0);
+
+    // OW = IW + 2 * PW - KERNEL_SIZE + 1
+    auto units_w = div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
     float* patch = transform_mid_buf;
     float* patchT = transform_mid_buf + 8 * alpha * alpha;
-    if (ih_start >= 0 && ih_start + alpha <= static_cast<size_t>(IH) &&
-        iw_start >= 0 && iw_start + alpha <= static_cast<size_t>(IW)) {
-        for (size_t ic = 0; ic < IC; ic += 8) {
-            InputTransform2X3_NCHW88::prepare<true>(
-                    input, patch, patchT, ih_start, iw_start, IH, IW, ic, IC);
-            InputTransform2X3_NCHW88::transform(patchT, input_transform_buf,
-                                                unit_idx, nr_units_in_tile, ic,
-                                                IC);
-        }
-    } else {
-        for (size_t ic = 0; ic < IC; ic += 8) {
-            InputTransform2X3_NCHW88::prepare<false>(input, patch, patchT, ih_start,
-                                              iw_start, IH, IW, ic, IC);
-            InputTransform2X3_NCHW88::transform(patchT, input_transform_buf,
-                                                unit_idx, nr_units_in_tile, ic,
-                                                IC);
+
+    for (size_t ic = 0; ic < IC; ic += 8) {
+        rep(unit_idx, nr_units_in_tile) {
+            size_t index = unit_start_idx + unit_idx;
+            size_t nh = index / units_w;
+            size_t nw = index % units_w;
+            int ih_start = nh * OUTPUT_BLOCK_SIZE - PH;
+            int iw_start = nw * OUTPUT_BLOCK_SIZE - PW;
+            if (ih_start >= 0 && ih_start + alpha <= static_cast<size_t>(IH) &&
+                iw_start >= 0 && iw_start + alpha <= static_cast<size_t>(IW)) {
+                InputTransform2X3_NCHW88::prepare<true>(input, patch, patchT,
+                                                        ih_start, iw_start, IH,
+                                                        IW, ic, IC);
+                InputTransform2X3_NCHW88::transform(patchT, input_transform_buf,
+                                                    unit_idx, nr_units_in_tile,
+                                                    ic, IC);
+            } else {
+                InputTransform2X3_NCHW88::prepare<false>(input, patch, patchT,
+                                                         ih_start, iw_start, IH,
+                                                         IW, ic, IC);
+                InputTransform2X3_NCHW88::transform(patchT, input_transform_buf,
+                                                    unit_idx, nr_units_in_tile,
+                                                    ic, IC);
+            }
         }
     }
 }

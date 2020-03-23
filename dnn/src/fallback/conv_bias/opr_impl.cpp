@@ -55,7 +55,7 @@ public:
                         ohw_tile_size));
                 all_algos.emplace_back(refhold.back().get());
             }
-#if 0
+#if 1
         //! As these algos maybe very slow, it will make fastrun search slow, so
         //! we disable it, but for the test of strategyhelper, we just keep it.
         //! FIXME: I do not know a better way to do it.

@@ -321,17 +321,10 @@ public:
                           "nr_tiles_in_unit: %zu TILE_SIZE:%zu",
                           nr_tiles_in_unit, unit_tile_size);
         }
-        rep(unit_idx, nr_tiles_in_unit) {
-            size_t index = unit_start_idx + unit_idx;
-            size_t nh = index / units_w;
-            size_t nw = index % units_w;
-            int ih_start = nh * Strategy::OUTPUT_BLOCK_SIZE - PH;
-            int iw_start = nw * Strategy::OUTPUT_BLOCK_SIZE - PW;
+        //! BTdB
+        strategy.input(src_ptr, input_transform_buf, transform_mid_buf,
+                       IH, IW, IC, PH, PW, unit_start_idx, nr_tiles_in_unit);
 
-            strategy.input(src_ptr, input_transform_buf, transform_mid_buf,
-                           ih_start, iw_start, IH, IW, IC, unit_idx,
-                           nr_tiles_in_unit);
-        }
         rep(i, Strategy::ALPHA) rep(j, Strategy::ALPHA) {
             if (format == param::MatrixMul::Format::DEFAULT) {
                 matmul_param.A_ptr =
@@ -368,22 +361,14 @@ public:
             }
             matmul_kern(matmul_param);
         }
-        /* Y = ATmA */
-        rep(unit_idx, nr_tiles_in_unit) {
-            size_t index = unit_start_idx + unit_idx;
-            auto nh = index / units_w;
-            auto nw = index % units_w;
-            size_t oh_start = nh * Strategy::OUTPUT_BLOCK_SIZE;
-            size_t ow_start = nw * Strategy::OUTPUT_BLOCK_SIZE;
-            size_t oc_end_idx = oc_start_idx + nr_oc_in_unit;
 
-            strategy.output(
-                    output_transform_buf, bias_ptr, dst_ptr,
-                    reinterpret_cast<output_compute_type*>(transform_mid_buf),
-                    ncb_param.bias_mode, ncb_param.nonlineMode, oh_start,
-                    ow_start, OH, OW, oc_start_idx, oc_end_idx, unit_idx,
-                    nr_tiles_in_unit);
-        }
+        //! Y = ATmA
+        size_t oc_end_idx = oc_start_idx + nr_oc_in_unit;
+        strategy.output(
+                output_transform_buf, bias_ptr, dst_ptr,
+                reinterpret_cast<output_compute_type*>(transform_mid_buf),
+                ncb_param.bias_mode, ncb_param.nonlineMode, OH, OW,
+                oc_start_idx, oc_end_idx, unit_start_idx, nr_tiles_in_unit);
     };
 
     SmallVector<NCBKern> get_kerns(
@@ -542,15 +527,16 @@ public:
                     size_t IC, size_t oc_start, size_t oc_end);                \
         void input(const stype* input,                                         \
                    input_filter_compute_type* input_transform_buf,             \
-                   input_filter_compute_type* transform_mid_buf, int ih_start, \
-                   int iw_start, size_t IH, size_t IW, size_t IC,              \
-                   size_t unit_idx, size_t nr_tiles_in_unit);                  \
+                   input_filter_compute_type* transform_mid_buf,               \
+                   size_t IH, size_t IW, size_t IC, size_t PH, size_t PW,      \
+                   size_t unit_start_idx, size_t nr_tiles_in_unit);            \
         void output(const output_compute_type* output_transform_buf,           \
                     const output_compute_type* bias, dst_type* output,         \
                     output_compute_type* transform_mid_buf, BiasMode bmode,    \
-                    NonlineMode nonline_mode, size_t oh_start,                 \
-                    size_t ow_start, size_t OH, size_t OW, size_t oc_start,    \
-                    size_t oc_end, size_t unit_idx, size_t nr_tiles_in_unit);  \
+                    NonlineMode nonline_mode, size_t OH, size_t OW,            \
+                    size_t oc_start, size_t oc_end, size_t unit_start_idx,     \
+                    size_t nr_tiles_in_unit);                                  \
+
     };
 
 #define MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(_strategy_cls_name)     \
