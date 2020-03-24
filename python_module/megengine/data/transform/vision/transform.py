@@ -50,29 +50,25 @@ class VisionTransform(Transform):
 
     :param order: Input type order. Input is a tuple contains different structures,
         order is used to specify the order of structures. For example, if your input
-        is (image, boxes) type, then the order should be ("image", "boxes"). 
+        is (image, boxes) type, then the order should be ("image", "boxes").
         Current available strings & data type are describe below:
-            "image": 
-                input image, with shape of (H, W, C)
-            "coords": 
-                coordinates, with shape of (N, 2)
-            "boxes": 
-                bounding boxes, with shape of (N, 4), "xyxy" format,
-                the 1st "xy" represents top left point of a box,
-                the 2nd "xy" represents right bottom point.
-            "mask": 
-                map used for segmentation, with shape of (H, W, 1)
-            "keypoints": 
-                keypoints with shape of (N, K, 3), N for number of instances, and K for number of keypoints in one instance. The first two dimensions
-                of last axis is coordinate of keypoints and the the 3rd dimension is
-                the label of keypoints.
-            "polygons": A sequence contains numpy array, its length is number of instances.
-                Each numpy array represents polygon coordinate of one instance.
-            "category": categories for some data type. For example, "image_category"
-                means category of the input image and "boxes_category" means categories of
-                bounding boxes.
-            "info": 
-                information for images such as image shapes and image path.
+
+        * "image": input image, with shape of (H, W, C)
+        * "coords": coordinates, with shape of (N, 2)
+        * "boxes": bounding boxes, with shape of (N, 4), "xyxy" format,
+          the 1st "xy" represents top left point of a box,
+          the 2nd "xy" represents right bottom point.
+        * "mask": map used for segmentation, with shape of (H, W, 1)
+        * "keypoints": keypoints with shape of (N, K, 3), N for number of instances,
+          and K for number of keypoints in one instance. The first two dimensions
+          of last axis is coordinate of keypoints and the the 3rd dimension is
+          the label of keypoints.
+        * "polygons": A sequence contains numpy array, its length is number of instances.
+          Each numpy array represents polygon coordinate of one instance.
+        * "category": categories for some data type. For example, "image_category"
+          means category of the input image and "boxes_category" means categories of
+          bounding boxes.
+        * "info": information for images such as image shapes and image path.
 
         You can also customize your data types only if you implement the corresponding
         _apply_*() methods, otherwise ``NotImplementedError`` will be raised.
@@ -356,7 +352,7 @@ class Resize(VisionTransform):
 
     :param output_size: Target size of image, with (height, width) shape.
     :param interpolation: Interpolation method. All methods are listed below:
-        
+
         * cv2.INTER_NEAREST – a nearest-neighbor interpolation.
         * cv2.INTER_LINEAR – a bilinear interpolation (used by default).
         * cv2.INTER_AREA – resampling using pixel area relation.

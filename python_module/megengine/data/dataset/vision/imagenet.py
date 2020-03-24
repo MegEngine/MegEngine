@@ -69,20 +69,26 @@ class ImageNet(ImageFolder):
     """
 
     def __init__(self, root: str = None, train: bool = True, **kwargs):
-        r"""initilization
+        r"""
+        initialization:
 
-        if ``root`` contains ``self.target_folder`` depent on ``train``:
-            initialize ImageFolder with target_folder
-        else:
-            if all raw files are in ``root``:
-                parse ``self.target_folder`` from raw files
-                initialize ImageFolder with ``self.target_folder``
-            else:
-                raise error
+        * if ``root`` contains ``self.target_folder`` depent on ``train``:
+
+          * initialize ImageFolder with target_folder
+
+        * else:
+
+          * if all raw files are in ``root``:
+
+            * parse ``self.target_folder`` from raw files
+            * initialize ImageFolder with ``self.target_folder``
+
+          * else:
+
+            * raise error
 
         :param root: root directory of imagenet data, if root is ``None``, used default_dataset_root
         :param train: if ``True``, load the train split, otherwise load the validation split
-        :param **kwarg: other keyword arguments for ImageFolder init
         """
 
         # process the root path

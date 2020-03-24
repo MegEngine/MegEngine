@@ -117,8 +117,8 @@ def cross_entropy(
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
-        
-        
+
+
         data_shape = (1, 2)
         label_shape = (1, )
 
@@ -156,8 +156,10 @@ def cross_entropy_with_softmax(
     It has better numerical stability compared with sequential calls to :func:`~.softmax` and :func:`~.cross_entropy`.
 
     When using label smoothing, the label distribution is as follows:
+
     .. math::
         y^{LS}_{k}=y_{k}\left(1-\alpha\right)+\alpha/K
+
     where :math:`y^{LS}` and :math:`y` are new label distribution and origin label distribution respectively.
     k is the index of label distribution. :math:`\alpha` is label_smooth and :math:`K` is the number of classes.
 
@@ -197,7 +199,7 @@ def triplet_margin_loss(
     Creates a criterion that measures the triplet loss given an input tensors.
 
     .. math::
-        L(a, p, n) = max\left\{d\left(a_{i},p_{i}\right)-d\left(a_{i}, n_{i}\right)+margin, 0\right\},\ 
+        L(a, p, n) = max\left\{d\left(a_{i},p_{i}\right)-d\left(a_{i}, n_{i}\right)+margin, 0\right\},\
         d\left(x_{i},y_{i}\right)=\left\|x_{i}-y_{i}\right\|_{p}
 
     :param anchor: The input tensor representing the anchor samples.
