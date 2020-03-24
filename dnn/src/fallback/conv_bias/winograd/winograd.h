@@ -536,7 +536,6 @@ public:
                     NonlineMode nonline_mode, size_t OH, size_t OW,            \
                     size_t oc_start, size_t oc_end, size_t unit_start_idx,     \
                     size_t nr_tiles_in_unit);                                  \
-
     };
 
 #define MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(_strategy_cls_name)     \

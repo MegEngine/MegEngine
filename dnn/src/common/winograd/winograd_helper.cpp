@@ -235,7 +235,7 @@ void StrategyHelper<
                        input_filter_compute_type* input_transform_buf,
                        input_filter_compute_type* transform_mid_buf,
                        int ih_start, int iw_start, size_t IH, size_t IW,
-                       size_t IC, size_t unit_idx, size_t nr_units_in_tile,
+                       size_t IC, size_t ic, size_t unit_idx, size_t nr_units_in_tile,
                        size_t m, size_t r,
                        const std::vector<float>& interp_points, DType dtype,
                        float rescale) {
@@ -284,7 +284,7 @@ void StrategyHelper<
                         const output_compute_type* bias, dst_type* output,
                         output_compute_type* transform_mid_buf, BiasMode bmode,
                         NonlineMode nonline_mode, size_t oh_start,
-                        size_t ow_start, size_t OH, size_t OW, size_t oc_start,
+                        size_t ow_start, size_t OH, size_t OW, size_t OC, size_t oc_start,
                         size_t oc_index, size_t unit_idx, size_t nr_units_in_tile,
                         size_t m, size_t r,
                         const std::vector<float>& interp_points, DType dtype,
@@ -296,7 +296,7 @@ void StrategyHelper<
     output_compute_type* mid_buf1 = transform_mid_buf;
     output_compute_type* mid_buf2 = transform_mid_buf + alpha * alpha;
     OutputGetter<output_compute_type, dst_type> getter(dtype);
-    OutputVisitor<layout, format> output_visitor(oc_end - oc_start);
+    OutputVisitor<layout, format> output_visitor(OC);
 
     size_t oc = oc_start + oc_index;
 

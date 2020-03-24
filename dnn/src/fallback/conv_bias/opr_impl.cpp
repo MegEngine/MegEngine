@@ -45,7 +45,6 @@ public:
                 static_cast<fallback::MatrixMulImpl*>(matmul_opr)->algo_pack();
         for (auto&& algo : matmul_algos) {
             if (algo->algoset() ==
-                //! TODO: threre should filter MK matmul
                 MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
                 continue;
             }
