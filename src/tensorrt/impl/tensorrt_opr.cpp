@@ -83,8 +83,11 @@ void TensorRTOpr::Logger::log(nvinfer1::ILogger::Severity severity,
         case Severity::kINFO:
             mgb_log_debug("TRT_INFO: %s", msg);
             return;
+        case Severity::kVERBOSE:
+            mgb_log_debug("TRT_VERBOSE: %s", msg);
+            return;
         default:
-            mgb_log("TRT_UNKNOWN: %s", msg);
+            mgb_log_debug("TRT_UNKNOWN: %s", msg);
             return;
     }
 }
