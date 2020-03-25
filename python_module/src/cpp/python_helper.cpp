@@ -452,6 +452,23 @@ std::unique_ptr<PyArray_Descr, PyArrayDescrDeleter> dtype_mgb2np_descr(
                         {{"scale", PyFloat_FromDouble(param.scale)}});
                 break;
             }
+            case DTypeEnum::Quantized4Asymm: {
+                auto& param = dtype.param<dtype::Quantized4Asymm>();
+                type_descr = PyArray_DescrNewFromType(NPY_UINT8);
+                type_descr->metadata = build_mgb_dtype_dict(
+                        DTypeTrait<dtype::Quantized4Asymm>::name,
+                        {{"scale", PyFloat_FromDouble(param.scale)},
+                         {"zero_point", PyLong_FromLong(param.zero_point)}});
+                break;
+            }
+            case DTypeEnum::QuantizedS4: {
+                auto& param = dtype.param<dtype::QuantizedS4>();
+                type_descr = PyArray_DescrNewFromType(NPY_INT8);
+                type_descr->metadata = build_mgb_dtype_dict(
+                        DTypeTrait<dtype::QuantizedS4>::name,
+                        {{"scale", PyFloat_FromDouble(param.scale)}});
+                break;
+            }
             case DTypeEnum::QuantizedS32: {
                 auto& param = dtype.param<dtype::QuantizedS32>();
                 type_descr = PyArray_DescrNewFromType(NPY_INT32);
@@ -529,7 +546,29 @@ DType dtype_np2mgb_descr(PyArray_Descr* descr) {
                     static_cast<float>(PyFloat_AS_DOUBLE(scale_py)),
                     static_cast<uint8_t>(zero_point));
         }
-        if (dtype_name == "QuantizedS32" || dtype_name == "QuantizedS8") {
+        if (dtype_name == "Quantized4Asymm") {
+            PyObject* scale_py = PyDict_GetItemString(metadata, "scale");
+            PyObject* zero_point_py =
+                    PyDict_GetItemString(metadata, "zero_point");
+            mgb_assert(scale_py && zero_point_py,
+                       "Invalid Quantized4Asymm metadata: missing scale or "
+                       "zero_point.");
+            mgb_assert(
+                    PyFloat_Check(scale_py),
+                    "Invalid Quantized4Asymm metadata: scale should be float");
+            mgb_assert(PyLong_Check(zero_point_py),
+                       "Invalid Quantized4Asymm metadata: zero_point should be "
+                       "integer");
+            auto zero_point = PyLong_AS_LONG(zero_point_py);
+            mgb_assert(zero_point >= 0 && zero_point < 15,
+                       "Invalid Quantized4Asymm metadata: zero_point should be "
+                       "in [0, 15)");
+            return dtype::Quantized4Asymm(
+                    static_cast<float>(PyFloat_AS_DOUBLE(scale_py)),
+                    static_cast<uint8_t>(zero_point));
+        }
+        if (dtype_name == "QuantizedS32" || dtype_name == "QuantizedS8" ||
+            dtype_name == "QuantizedS4") {
             PyObject* scale_py = PyDict_GetItemString(metadata, "scale");
             mgb_assert(scale_py, "Invalid metadata: missing scale");
             mgb_assert(PyFloat_Check(scale_py),
@@ -537,8 +576,10 @@ DType dtype_np2mgb_descr(PyArray_Descr* descr) {
             float scale = static_cast<float>(PyFloat_AS_DOUBLE(scale_py));
             if (dtype_name == "QuantizedS32") {
                 return dtype::QuantizedS32(scale);
-            } else {
+            } else if (dtype_name == "QuantizedS8"){
                 return dtype::QuantizedS8(scale);
+            } else {
+                return dtype::QuantizedS4(scale);
             }
         }
         throw ConversionError(

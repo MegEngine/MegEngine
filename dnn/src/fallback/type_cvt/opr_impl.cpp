@@ -451,7 +451,12 @@ namespace fallback {
 
 void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     check_exec(src.layout, dst.layout);
-    if (src.layout.is_contiguous() && dst.layout.is_contiguous()) {
+    auto is_quantize_lowbit = [](const DType& dt) {
+        return dt.category() == DTypeCategory::QUANTIZED && dt.is_low_bit();
+    };
+    if (src.layout.is_contiguous() && dst.layout.is_contiguous() &&
+        !is_quantize_lowbit(src.layout.dtype) &&
+        !is_quantize_lowbit(dst.layout.dtype)) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(run_contiguous(src, dst));
     } else {
         naive::TypeCvtImpl::exec(src, dst);

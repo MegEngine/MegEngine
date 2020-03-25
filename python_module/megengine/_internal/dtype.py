@@ -32,7 +32,7 @@ def get_scale(dtype):
 def get_zero_point(dtype):
     assert is_quantize(dtype)
     metadata = dtype.metadata["mgb_dtype"]
-    assert metadata["name"] == "Quantized8Asymm"
+    assert metadata["name"] in ("Quantized8Asymm", "Quantized4Asymm")
     return metadata["zero_point"]
 
 
@@ -76,6 +76,38 @@ def qint32(scale):
     return np.dtype(
         np.int32,
         metadata={"mgb_dtype": {"name": "QuantizedS32", "scale": float(scale)}},
+    )
+
+
+def quint4(scale, zero_point):
+    """
+    Consturct a quantized unsigned int4 data type with ``scale`` (float) and
+    ``zero_point`` (uint8). The real value represented by a quint4 data type is
+    float_val = scale * (uint4_val - zero_point)
+    """
+    int_zp = int(zero_point)
+    assert int_zp == zero_point, "zero_point should be an integer"
+    if int_zp < 0 or int_zp > 15:
+        raise ValueError("zero_point should be within [0, 15] for quint4")
+    return np.dtype(
+        np.uint8,
+        metadata={
+            "mgb_dtype": {
+                "name": "Quantized4Asymm",
+                "scale": float(scale),
+                "zero_point": int(zero_point),
+            }
+        },
+    )
+
+
+def qint4(scale):
+    """
+    Construct a quantized int4 data type with ``scale`` (float). The real value
+    represented by a qint4 data type is float_val = scale * int4_val
+    """
+    return np.dtype(
+        np.int8, metadata={"mgb_dtype": {"name": "QuantizedS4", "scale": float(scale)}}
     )
 
 
@@ -175,5 +207,73 @@ def convert_from_qint32(arr):
         "mgb_dtype" in arr.dtype.metadata
         and arr.dtype.metadata["mgb_dtype"]["name"] == "QuantizedS32"
     ), "arr should be a ndarray with qint8 dtype"
+    scale = arr.dtype.metadata["mgb_dtype"]["scale"]
+    return arr.astype(np.float32) * scale
+
+
+def convert_to_quint4(arr, q):
+    """
+    Quantize a float NumPy ndarray into a quint4 one with specified params.
+
+    :param arr: Input ndarray.
+    :type arr: :class:`np.ndarray`
+    :param q: Target data type, should be a quint4.
+    :type q: :class:`np.dtype`
+    """
+    assert isinstance(arr, np.ndarray)
+    assert (
+        "mgb_dtype" in q.metadata
+        and q.metadata["mgb_dtype"]["name"] == "Quantized4Asymm"
+    ), "q should be a quint4 dtype"
+    scale, zp = q.metadata["mgb_dtype"]["scale"], q.metadata["mgb_dtype"]["zero_point"]
+    return (np.round(arr / scale) + zp).clip(0, 15).astype(q)
+
+
+def convert_from_quint4(arr):
+    """
+    Dequantize a quint4 NumPy ndarray into a float one.
+
+    :param arr: Input ndarray.
+    """
+    assert isinstance(arr, np.ndarray)
+    assert (
+        "mgb_dtype" in arr.dtype.metadata
+        and arr.dtype.metadata["mgb_dtype"]["name"] == "Quantized4Asymm"
+    ), "arr should be a ndarray with quint4 dtype"
+    scale, zp = (
+        arr.dtype.metadata["mgb_dtype"]["scale"],
+        arr.dtype.metadata["mgb_dtype"]["zero_point"],
+    )
+    return (arr.astype(np.float32) - zp) * scale
+
+
+def convert_to_qint4(arr, q):
+    """
+    Quantize a float NumPy ndarray into a qint4 one with specified params.
+
+    :param arr: Input ndarray.
+    :type arr: :class:`np.ndarray`
+    :param q: Target data type, should be a qint4.
+    :type q: :class:`np.dtype`
+    """
+    assert isinstance(arr, np.ndarray)
+    assert (
+        "mgb_dtype" in q.metadata and q.metadata["mgb_dtype"]["name"] == "QuantizedS4"
+    ), "q should be a qint4 dtype"
+    scale = q.metadata["mgb_dtype"]["scale"]
+    return (np.round(arr / scale)).clip(-8, 7).astype(q)
+
+
+def convert_from_qint4(arr):
+    """
+    Dequantize a qint4 NumPy ndarray into a float one.
+
+    :param arr: Input ndarray.
+    """
+    assert isinstance(arr, np.ndarray)
+    assert (
+        "mgb_dtype" in arr.dtype.metadata
+        and arr.dtype.metadata["mgb_dtype"]["name"] == "QuantizedS4"
+    ), "arr should be a ndarray with qint4 dtype"
     scale = arr.dtype.metadata["mgb_dtype"]["scale"]
     return arr.astype(np.float32) * scale
