@@ -305,6 +305,8 @@ class PyTorchSubgraphImplOpr(mgb.craniotome.CraniotomeBase):
 
         ret.__dict__["_last_forward_inputs"] = d0.pop("_last_forward_inputs")
         ret.__dict__["_last_forward_outputs"] = d0.pop("_last_forward_outputs")
+        ret.__dict__["_last_forward_params"] = d0.pop("_last_forward_params")
+        ret.__dict__["_func"] = d0.pop("_func")
 
         d0.pop("_grad_opr")
         later_copy = self._grad_opr in _copy_dict
