@@ -156,7 +156,7 @@ if(UNIX)
     target_link_libraries(megbrain dl rt)
     find_library(libatomic atomic)
     if(NOT libatomic STREQUAL "libatomic-NOTFOUND")
-        target_link_libraries(megbrain libatomic)
+        target_link_libraries(megbrain ${libatomic})
     endif()
 endif()
 
