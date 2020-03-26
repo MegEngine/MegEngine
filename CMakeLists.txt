@@ -29,7 +29,7 @@ if(${MGE_ARCH} STREQUAL "AUTO")
     elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i386" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i686")
         set(MGE_ARCH "i386")
     else()
-        message(FATAL "Unknown machine architecture for MegEngine.")
+        message(FATAL_ERROR "Unknown machine architecture for MegEngine.")
     endif()
 endif()
 
