@@ -140,7 +140,7 @@ if(${MGE_ARCH} STREQUAL "AUTO")
     elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^arm")
         set(MGE_ARCH "armv7")
     else()
-        message(FATAL "Unknown machine architecture for MegEngine.")
+        message(FATAL_ERROR "Unknown machine architecture for MegEngine.")
     endif()
 endif()
 
