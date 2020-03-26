@@ -365,8 +365,7 @@ def shapeof(x: Tensor, axis=None):
 
 @wrap_io_tensor
 def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
-    r
-    """
+    r"""
     Swap shapes and strides according to given pattern
 
     :param inp: Input tensor
@@ -408,8 +407,7 @@ def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
 
 @wrap_io_tensor
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
-    r
-    """
+    r"""
     Reshape a tensor to given target shape; total number of logical elements must
     remain unchanged
 
@@ -447,8 +445,7 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
 
 @functools.wraps(dimshuffle)
 def transpose(*args, **kwargs):
-    r
-    """See :func:`dimshuffle`
+    r"""See :func:`dimshuffle`
     """
     return dimshuffle(*args, **kwargs)
 
