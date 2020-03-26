@@ -1,8 +1,8 @@
 # MegEngine Tests
 
-* unit: This directory has same layout as megengine directory.
-* regression: Small tests to check whether old issue is fixed.
-* integration: Tests involve multiple parts of megengine, tests that longer than 1min should be an manual test.
+* unit: This directory has the same layout as megengine directory.
+* regression: Small tests to check whether the old issue is fixed.
+* integration: Tests involve multiple parts of megengine, tests that longer than 1min should be a manual test.
 * pytorch_comparison: Special directory for torch-related test
 * helpers
     - Test utilities should placed in this directory
