@@ -1,2 +1,5 @@
-/build/
-__pycache__/
+build/
+.idea/
+.DS_Store
+*~
+.vscode 
