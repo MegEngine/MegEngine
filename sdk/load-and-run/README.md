@@ -27,8 +27,8 @@ The input file must be a python pickle. It can be in one of the following two
 formats:
 
 1. Contain a network that can be loaded by `meghair.utils.io.load_network`; in
-   such case, `--data` must be given and network output evaulated on current
-   computing device is used as groundtruth. All output vars would be checked.
+   such case, `--data` must be given and network output evaluated on a current
+   computing device is used as ground-truth. All output vars would be checked.
    The input data can be one of the following:
    1. In the format `var0:file0;var1:file1...` meaning that `var0` should use
       image file `file0`, `var1` should use image `file1` and so on. If there
