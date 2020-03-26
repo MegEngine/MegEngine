@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/fallback/convolution/opr_impl.h"
@@ -142,7 +143,8 @@ ConvolutionImpl::NCBKernSizeParam ConvolutionImpl::make_ncb_kern_size_param(
     size_t spatial_pos;
     if (param().format == Param::Format::NCHW88 ||
         param().format == Param::Format::NCHW8 ||
-        param().format == Param::Format::NCHW4) {
+        param().format == Param::Format::NCHW4 ||
+        param().format == Param::Format::NCHW44) {
         spatial_pos = 2;
     } else if (param().format == Param::Format::NCHW ||
                param().format == Param::Format::NCHW_WINOGRAD) {

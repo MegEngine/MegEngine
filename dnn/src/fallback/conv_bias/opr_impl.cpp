@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/fallback/convolution/opr_impl.h"
 #include "src/common/algo_chooser.h"
@@ -157,9 +158,11 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
     if (param().format == Param::Format::NCHW88 ||
         param().format == Param::Format::NCHW8 ||
         param().format == Param::Format::NCHW4 ||
+        param().format == Param::Format::NCHW44 ||
         param().format == Param::Format::NCHW ||
         param().format == Param::Format::NCHW_WINOGRAD ||
-        param().format == Param::Format::NCHW88_WINOGRAD) {
+        param().format == Param::Format::NCHW88_WINOGRAD ||
+        param().format == Param::Format::NCHW44_WINOGRAD) {
         spatial_pos = 2;
     } else if (param().format == Param::Format::NHWC) {
         spatial_pos = 1;
@@ -188,7 +191,8 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
 
     param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT;
     if (param().format == Param::Format::NCHW_WINOGRAD ||
-        param().format == Param::Format::NCHW88_WINOGRAD) {
+        param().format == Param::Format::NCHW88_WINOGRAD ||
+        param().format == Param::Format::NCHW44_WINOGRAD) {
         size_t flt_start = 0;
         if (param().sparse == Param::Sparse::GROUP) {
             flt_start = 1;
@@ -325,7 +329,7 @@ const char* ConvBiasImpl::get_algorithm_set_name() const {
     return "F0";
 }
 
-namespace megdnn{
+namespace megdnn {
 namespace fallback {
 
 template <typename T>
@@ -341,7 +345,6 @@ const T* ConvBiasImpl::NCBKernParam::src(size_t batch_id, size_t group_pack_id,
     return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(src_ptr) +
                                 batch_offset + group_offset + channel_offset);
 }
-
 
 template <typename T>
 const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
@@ -452,6 +455,5 @@ INST(void)
 #undef INST_DT
 }  // namespace fallback
 }  // namespace megdnn
-
 
 // vim: syntax=cpp.doxygen

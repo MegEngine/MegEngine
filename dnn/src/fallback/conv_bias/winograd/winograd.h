@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -87,7 +88,9 @@ class ConvBias {
         if (param.filter_meta.format !=
                     param::ConvBias::Format::NCHW_WINOGRAD &&
             param.filter_meta.format !=
-                    param::ConvBias::Format::NCHW88_WINOGRAD) {
+                    param::ConvBias::Format::NCHW88_WINOGRAD &&
+            param.filter_meta.format !=
+                    param::ConvBias::Format::NCHW44_WINOGRAD) {
             filter_transform_buf_size = Strategy::ALPHA * Strategy::ALPHA * OC *
                                         IC * sizeof(input_filter_compute_type);
         }
@@ -95,7 +98,8 @@ class ConvBias {
                 get_wbundle_compute(param, matmul_algo).total_size_in_bytes() *
                 nr_threads;
         if (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-            param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+            param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+            param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             return WorkspaceBundle(
                     nullptr,
                     {winograd_comput_size, filter_transform_buf_size * GROUP});
@@ -103,7 +107,9 @@ class ConvBias {
             megdnn_assert(param.filter_meta.format ==
                                   param::ConvBias::Format::NCHW_WINOGRAD ||
                           param.filter_meta.format ==
-                                  param::ConvBias::Format::NCHW88_WINOGRAD);
+                                  param::ConvBias::Format::NCHW88_WINOGRAD ||
+                          param.filter_meta.format ==
+                                  param::ConvBias::Format::NCHW44_WINOGRAD);
             return WorkspaceBundle(nullptr, {winograd_comput_size});
         }
     }
@@ -210,11 +216,17 @@ public:
                 reinterpret_cast<input_filter_compute_type*>(
                         reinterpret_cast<uintptr_t>(bundle_compute.get(2)) +
                         compute_workspace_size_per_thread * thread_id);
+
         const stype* filter_ptr = kern_param.filter<stype>(group_id);
-        size_t oc_start = oc_id, oc_end = oc_id+1;
+        size_t oc_start = oc_id, oc_end = oc_id + 1;
+
         if (kern_param.filter_meta.format == param::ConvBias::Format::NCHW88) {
             oc_start = 8 * oc_id;
             oc_end = oc_start + 8;
+        } else if (kern_param.filter_meta.format ==
+                   param::ConvBias::Format::NCHW44) {
+            oc_start = 4 * oc_id;
+            oc_end = oc_start + 4;
         }
         strategy.filter(filter_ptr, filter_transform_buf, transform_mid_buf, OC,
                         IC, oc_start, oc_end);
@@ -279,7 +291,8 @@ public:
                 static_cast<const input_filter_compute_type*>(
                         ncb_param.filter<input_filter_compute_type>(group_id));
         if (ncb_param.filter_meta.format == param::ConvBias::Format::NCHW ||
-            ncb_param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+            ncb_param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+            ncb_param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             filter_transform_buf = reinterpret_cast<input_filter_compute_type*>(
                     reinterpret_cast<uintptr_t>(bundle_top.get(1)) +
                     group_id * filter_group_size);
@@ -404,14 +417,18 @@ public:
                 param.filter_meta.stride[1] == 1 &&
                 (param.filter_meta.format == param::ConvBias::Format::NCHW ||
                  param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+                 param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
                  param.filter_meta.format ==
                          param::ConvBias::Format::NCHW_WINOGRAD ||
                  param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW88_WINOGRAD));
+                         param::ConvBias::Format::NCHW88_WINOGRAD ||
+                 param.filter_meta.format ==
+                         param::ConvBias::Format::NCHW44_WINOGRAD));
 
         SmallVector<NCBKern> kerns;
         if (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-            param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+            param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+            param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             //! probably a gcc bug, labmda require capturing 'this' to call
             //! static member function
             auto filter_process_kern = [this, strategy, bundle_top,
@@ -426,6 +443,10 @@ public:
             if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
                 megdnn_assert(OC % 8 == 0);
                 oc_parallelism = OC / 8;
+            } else if (param.filter_meta.format ==
+                       param::ConvBias::Format::NCHW44) {
+                megdnn_assert(OC % 4 == 0);
+                oc_parallelism = OC / 4;
             }
             kerns.push_back({filter_process_kern, {GROUP, 1, oc_parallelism}});
         }

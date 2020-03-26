@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megdnn/oprs/nn.h"
@@ -55,7 +56,13 @@ spatial_getter<param::ConvBias, param::ConvBias::Format::NCHW88_WINOGRAD>(
     //! f = m + r - 1 -> r = f + 1 - m
     return filter - param.output_block_size + 1;
 }
-
+template <>
+uint32_t
+spatial_getter<param::ConvBias, param::ConvBias::Format::NCHW44_WINOGRAD>(
+        uint32_t filter, const param::ConvBias& param) {
+    //! f = m + r - 1 -> r = f + 1 - m
+    return filter - param.output_block_size + 1;
+}
 
 template <typename Parameter, typename Param>
 void make_canonized_filter_meta_nchw_nhwc(
@@ -273,7 +280,7 @@ void make_canonized_filter_meta_nchwxx(
     /**
      * input: N IC/pack_size, H, W, pack_size
      *
-     * NCHW88 mode
+     * NCHW88 and NCHW44 mode
      * filter:
      *        {OC/pack_size, IC/pack_size, FH, FW, pack_size(IC), pack_size(OC)}
      * [dense]
@@ -281,7 +288,7 @@ void make_canonized_filter_meta_nchwxx(
      *                  FH, FW, pack_size(IC), pack_size(OC)} [group]
      *        {GROUP/pack_size, 1, 1, FH, FW, pack_size} [chan]
      *
-     ** NCHW88_WINOGRAD mode
+     ** NCHW88_WINOGRAD and NCHW44_WINOGRAD mode
      * filter:
      *        {alpha, alpha, OC/pack_size, IC/pack_size, pack_size(IC),
      *pack_size(OC)} [dense]
@@ -291,6 +298,7 @@ void make_canonized_filter_meta_nchwxx(
      */
 
     megdnn_assert(param.format == Param::Format::NCHW88 ||
+                  param.format == Param::Format::NCHW44 ||
                   param.format == Param::Format::NCHW88_WINOGRAD);
     size_t img_ndim = 2;
     size_t flt_start = 0;
@@ -305,7 +313,8 @@ void make_canonized_filter_meta_nchwxx(
                           filter[filter.ndim - 1]);
             ret.group = 1;
             flt_start = 0;
-            if (param.format == Param::Format::NCHW88_WINOGRAD) {
+            if (param.format == Param::Format::NCHW88_WINOGRAD ||
+                param.format == Param::Format::NCHW44_WINOGRAD) {
                 flt_start = 2;
             }
             ret.ocpg = filter[flt_start] * pack_size;
@@ -314,6 +323,8 @@ void make_canonized_filter_meta_nchwxx(
             // ohwi8o
             megdnn_assert(param.format != Param::Format::NCHW88_WINOGRAD,
                           "Hybrid nchw88 mode in not support winograd");
+            megdnn_assert(param.format != Param::Format::NCHW44_WINOGRAD,
+                          "Hybrid nchw44 mode in not support winograd");
             flt_start = 0;
             flt_spatial_start = 1;
             ret.group = 1;
@@ -321,20 +332,22 @@ void make_canonized_filter_meta_nchwxx(
             ret.icpg = filter[flt_start + 3];
 
         } else {
-            megdnn_assert(0, "not support nchw88 filter dim = %zu",
+            megdnn_assert(0, "not support nchwxx filter dim = %zu",
                           filter.ndim);
         }
     } else {
         megdnn_assert(param.sparse == Param::Sparse::GROUP,
                       "invalid convolution sparse type");
         flt_start = 1;
-        if (param.format == Param::Format::NCHW88_WINOGRAD) {
+        if (param.format == Param::Format::NCHW88_WINOGRAD ||
+            param.format == Param::Format::NCHW44_WINOGRAD) {
             flt_start = 3;
         }
         auto filter_oc = filter[flt_start];
         auto filter_ic = filter[flt_start + 1];
         if (filter_oc == 1 && filter_ic == 1 && filter.ndim == (img_ndim + 4) &&
-            param.format != Param::Format::NCHW88_WINOGRAD) {
+            param.format != Param::Format::NCHW88_WINOGRAD &&
+            param.format != Param::Format::NCHW44_WINOGRAD) {
             // Depthwise case goihw8g
             megdnn_assert(filter.ndim == img_ndim + 4,
                           "bad filter ndim for group convolution: "
@@ -343,7 +356,7 @@ void make_canonized_filter_meta_nchwxx(
             megdnn_assert(filter[filter.ndim - 1] == pack_size,
                           "last dim of filter must be %zu, but %zu", pack_size,
                           filter[filter.ndim - 1]);
-            ret.group = filter[0] * 8;
+            ret.group = filter[0] * pack_size;
             ret.ocpg = filter_oc;
             ret.icpg = filter_ic;
 
@@ -380,6 +393,10 @@ void make_canonized_filter_meta_nchwxx(
         if (param.format == Param::Format::NCHW88_WINOGRAD) {
             ret.spatial[i] =
                     spatial_getter<Param, Param::Format::NCHW88_WINOGRAD>(
+                            filter[i + flt_start - 2], param);
+        } else if (param.format == Param::Format::NCHW44_WINOGRAD) {
+            ret.spatial[i] =
+                    spatial_getter<Param, Param::Format::NCHW44_WINOGRAD>(
                             filter[i + flt_start - 2], param);
         } else {
             ret.spatial[i] = filter[i + flt_start + flt_spatial_start];
@@ -535,6 +552,10 @@ ConvolutionBase<Parameter>::make_canonized_filter_meta(
                param().format == Param::Format::NCHW88_WINOGRAD) {
         make_canonized_filter_meta_nchwxx<8, Parameter>(src_ndim, filter,
                                                         param(), ret);
+    } else if (param().format == Param::Format::NCHW44 ||
+               param().format == Param::Format::NCHW44_WINOGRAD) {
+        make_canonized_filter_meta_nchwxx<4, Parameter>(src_ndim, filter,
+                                                        param(), ret);
     } else if (param().format == Param::Format::NCHW32) {
         make_canonized_filter_meta_nchwx<32, Parameter>(src_ndim, filter,
                                                         param(), ret);
@@ -629,18 +650,22 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
     } else {
         megdnn_assert(param().format == Param::Format::NHWCD4 ||
                       param().format == Param::Format::NCHW4 ||
+                      param().format == Param::Format::NCHW44 ||
                       param().format == Param::Format::NCHW8 ||
                       param().format == Param::Format::NCHW32 ||
                       param().format == Param::Format::NCHW88 ||
                       param().format == Param::Format::NCHW88_WINOGRAD ||
                       param().format == Param::Format::CHWN4);
         img_dim = src.ndim - 3;
-        if (param().format == Param::Format::NCHW88 && filter.ndim == 5) {
+        if ((param().format == Param::Format::NCHW88 ||
+             param().format == Param::Format::NCHW44) &&
+            filter.ndim == 5) {
             img_dim = src.ndim - 2;
         }
         megdnn_assert(filter.ndim == img_dim + 3 ||
                               (filter.ndim == img_dim + 2 &&
-                               param().format == Param::Format::NCHW88) ||
+                               (param().format == Param::Format::NCHW88 ||
+                                param().format == Param::Format::NCHW44)) ||
                               filter.ndim == img_dim + 4 ||
                               filter.ndim == img_dim + 5,
                       "%s", errmsg().c_str());
@@ -689,6 +714,21 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                                    src[src.ndim - 1] == 8),
                           "NCHW88 require src ndim is 5 and filter's ndim is 6 "
                           ", and last shape two is 8 but got src %s, filter %s",
+                          src.to_string().c_str(), filter.to_string().c_str());
+        }
+        if (param().format == Param::Format::NCHW44 ||
+            param().format == Param::Format::NCHW44_WINOGRAD) {
+            megdnn_assert((src.ndim == 4 && filter.ndim == 5 &&
+                           filter[filter.ndim - 1] == 4) ||
+                                  (src.ndim == 5 &&
+                                   ((filter.ndim == 6 &&
+                                     filter[filter.ndim - 1] == 4) ||
+                                    (filter.ndim == 7 &&
+                                     filter[filter.ndim - 1] == 4 &&
+                                     filter[filter.ndim - 2] == 4)) &&
+                                   src[src.ndim - 1] == 4),
+                          "NCHW44 require src ndim is 5 and filter's ndim is 6 "
+                          ", and last shape two is 4 but got src %s, filter %s",
                           src.to_string().c_str(), filter.to_string().c_str());
         }
         if (param().format == Param::Format::CHWN4) {
@@ -808,6 +848,27 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                           cflt.group);
         }
 
+    } else if (param().format == Param::Format::NCHW44 ||
+               param().format == Param::Format::NCHW44_WINOGRAD) {
+        megdnn_assert(src.ndim == 5 || (src.ndim == 4 && src[1] <= 8),
+                      "invalid src ndim for NCHW44, expected=5 or 4, got=%zu",
+                      src.ndim);
+        dst.ndim = 5;
+        dst[0] = src[0];
+        auto oc = cflt.ocpg * cflt.group;
+        megdnn_assert(oc % 4 == 0);
+        dst[1] = oc / 4;
+        dst[2] = infer_conv_shape(src[2], cflt.dilated_spatial[0],
+                                  cflt.stride[0], cflt.padding[0]);
+        dst[3] = infer_conv_shape(src[3], cflt.dilated_spatial[1],
+                                  cflt.stride[1], cflt.padding[1]);
+        dst[4] = 4;
+        if (cflt.group == 1) {
+            megdnn_assert(cflt.icpg * cflt.group == src[1] * 4 ||
+                                  (cflt.icpg * cflt.group == src[1]),
+                          "%s icpg=%u group=%u", errmsg().c_str(), cflt.icpg,
+                          cflt.group);
+        }
     } else if (param().format == Param::Format::CHWN4) {
         megdnn_assert(src.ndim == 5,
                       "invalid src ndim for CHWN4, expected=5, got=%zu",

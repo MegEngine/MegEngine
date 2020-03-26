@@ -35,9 +35,10 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           ).
  add_enum(Doc('Format', 'convolution data/filter/output format; see '
               ':class:`RelayoutFormat` for more details'),
-          'NCHW', 'NHWC', 'NHWCD4', 'NCHW4', 'NCHW8', 'NCHW32', 'NCHW88',
+          'NCHW', 'NHWC', 'NHWCD4', 'NCHW4', 'NCHW8', 'NCHW32', 'NCHW88', 'NCHW44', 
           Doc('NCHW_WINOGRAD', 'NCHW layout with weights tranformed by winograd'), 
           Doc('NCHW88_WINOGRAD', 'NCHW88 layout with weights tranformed by winograd'), 
+          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'), 
           Doc('CHWN4', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
               'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'))
  )
