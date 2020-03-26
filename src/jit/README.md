@@ -1,10 +1,10 @@
 # JIT
-A optimization for MegBrain by just-in-time compilation.
-JIT can reduce the global memory access times by fusing elemwise kernels into a
-single larger one fusion kernel to improve performence.
+An optimization for MegBrain by just-in-time compilation.
+JIT can reduce global memory access times by fusing elemwise kernels into a
+single larger one fusion kernel to improve performance.
 
-For some regular expressions like *a * b + c* and *a * b + c * d*, MegBrain have
-alreay did FMA3_FUSE and FMA4_FUSE optimization. Now MegBrain can speed up any
+For some regular expressions like *a * b + c* and *a * b + c * d*, MegBrain has
+already did FMA3_FUSE and FMA4_FUSE optimization. Now MegBrain can speed up any
 elemwise expressions by JIT.
 
 ## Benchmark Result
@@ -42,7 +42,7 @@ The detection is implemented in [impl/fusion_pass.cpp](impl/fusion_pass.cpp),
 the main detection logic is in function *Fusion::Impl::on_opr*. Compared to nnvm
 fusion, our fusion logic can fuse more operators into one fusion kernel.
 
-For now , JIT just support CUDA, but it has reserved interface to extend other
+For now, JIT just support CUDA, but it has reserved interface to extend other
 platforms.
 
 ## How to enable JIT
