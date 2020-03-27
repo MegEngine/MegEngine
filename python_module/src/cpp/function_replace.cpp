@@ -35,7 +35,6 @@ void throw_fork_cuda_exc() {
     // call chain:
     // python -> fork() -> pthread_atfork -> CudaCheckOnFork ->
     // ForkAfterCudaError::throw_
-    GILManager a;
     mgb_log_warn("try to raise python exception for fork after cuda");
     PyErr_SetString(PyExc_SystemError, "fork after cuda has been initialized");
 }

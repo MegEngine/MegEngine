@@ -87,6 +87,9 @@ setup_kwargs = dict(
         'data': [
             'scipy',
         ],
+        'ci': [
+            'pytest==5.3.0',
+        ],
     },
     cmdclass={'build_ext': build_ext},
 )
