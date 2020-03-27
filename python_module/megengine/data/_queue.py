@@ -16,6 +16,19 @@ import pyarrow.plasma as plasma
 
 MGE_PLASMA_MEMORY = int(os.environ.get("MGE_PLASMA_MEMORY", 4000000000))  # 4GB
 
+# Each process only need to start one plasma store, so we set it as a global variable.
+# TODO: how to share between different processes?
+MGE_PLASMA_STORE_MANAGER = None
+
+
+def _clear_plasma_store():
+    # `_PlasmaStoreManager.__del__` will not ne called automaticly in subprocess,
+    # so this function should be called explicitly
+    global MGE_PLASMA_STORE_MANAGER
+    if MGE_PLASMA_STORE_MANAGER is not None:
+        del MGE_PLASMA_STORE_MANAGER
+        MGE_PLASMA_STORE_MANAGER = None
+
 
 class _PlasmaStoreManager:
     def __init__(self):
@@ -34,11 +47,6 @@ class _PlasmaStoreManager:
             self.plasma_store.kill()
 
 
-# Each process only need to start one plasma store, so we set it as a global variable.
-# TODO: how to share between different processes?
-MGE_PLASMA_STORE_MANAGER = _PlasmaStoreManager()
-
-
 class PlasmaShmQueue:
     def __init__(self, maxsize: int = 0):
         r"""Use pyarrow in-memory plasma store to implement shared memory queue.
@@ -50,6 +58,17 @@ class PlasmaShmQueue:
         :type maxsize: int
         :param maxsize: maximum size of the queue, `None` means no limit. (default: ``None``)
         """
+
+        # Lazy start the plasma store manager
+        global MGE_PLASMA_STORE_MANAGER
+        if MGE_PLASMA_STORE_MANAGER is None:
+            try:
+                MGE_PLASMA_STORE_MANAGER = _PlasmaStoreManager()
+            except FileNotFoundError as e:
+                raise FileNotFoundError(
+                    "command 'plasma_store' not found in your $PATH!"
+                    "Please make sure pyarrow installed and add into $PATH."
+                )
 
         self.socket_name = MGE_PLASMA_STORE_MANAGER.socket_name
 
@@ -100,6 +119,7 @@ class PlasmaShmQueue:
     def close(self):
         self.queue.close()
         self.disconnect_client()
+        _clear_plasma_store()
 
     def cancel_join_thread(self):
         self.queue.cancel_join_thread()

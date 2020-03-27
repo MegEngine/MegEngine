@@ -17,12 +17,13 @@ import numpy as np
 
 import megengine as mge
 
+from ..logger import get_logger
 from .collator import Collator
 from .dataset import Dataset
 from .sampler import Sampler, SequentialSampler
 from .transform import PseudoTransform, Transform
 
-logger = mge.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 MP_QUEUE_GET_TIMEOUT = 5
@@ -167,7 +168,7 @@ class _SerialDataLoaderIter(_BaseDataLoaderIter):
 
 
 class _ParallelDataLoaderIter(_BaseDataLoaderIter):
-    __initialzed = False
+    __initialized = False
 
     def __init__(self, loader):
         super(_ParallelDataLoaderIter, self).__init__(loader)
