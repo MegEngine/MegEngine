@@ -11,6 +11,7 @@ import functools
 
 import megengine._internal as mgb
 
+from ..core.graph import _use_default_if_none
 from ..core.tensor import Tensor, wrap_io_tensor
 
 __all__ = [
@@ -45,11 +46,17 @@ __all__ = [
 
 def _elemwise(mode):  # DONT export
     """Decorator helps to wrap megbrain element-wise oprs"""
-
     def elemwise_decorator(func):
         @functools.wraps(func)
         @wrap_io_tensor
         def elemwise_func(*inputs) -> Tensor:
+            if all(isinstance(i, (int,float)) for i in inputs):
+                device, comp_graph = _use_default_if_none(None, None)
+                ret = mgb.opr.elemwise(*inputs,
+                                       mode=mode,
+                                       comp_node=device,
+                                       comp_graph=comp_graph)
+                return ret.inferred_value[0]
             return mgb.opr.elemwise(*inputs, mode=mode)
 
         return elemwise_func
