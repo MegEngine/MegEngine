@@ -1045,13 +1045,18 @@ TEST(TestGoptInference, ConvertFormatPadIC) {
     param.sparse = opr::Convolution::Param::Sparse::DENSE;
     auto w1 = mkcvar("w1", {12, 12, 3, 3});
     auto y = opr::Convolution::make(concat, w1, param);
-    MGB_MARK_USED_VAR(y);
     SymbolVar y_opt;
-    ASSERT_THROW(unpack_vector(gopt::optimize_for_inference(
-                                       {y}, gopt::OptimizeForInferenceOptions{}
-                                                    .enable_use_nhwcd4()),
-                               y_opt),
-                 AssertionError);
+    unpack_vector(
+            gopt::optimize_for_inference(
+                    {y},
+                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
+            y_opt);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
 TEST(TestGoptInference, ConvertBatchNormPass) {
