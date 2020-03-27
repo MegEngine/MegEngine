@@ -195,10 +195,10 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32Vnni::get_kern(
     return int8x8x32_kern_vnni;
 }
 
-MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_PACKA(AlgoInt8x8x32Vnni,
-                                           megdnn_x86_matmul_kern, 5,
-                                           x86::matmul::gemm_int8_vnni_12x32x4,
-                                           dt_int8, dt_int32, dt_uint8);
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(AlgoInt8x8x32Vnni,
+                                            megdnn_x86_matmul_kern, 5,
+                                            x86::matmul::gemm_int8_vnni_12x32x4,
+                                            dt_int8, dt_int32, dt_uint8);
 #endif
 
 /* ===================== Int8 mkldnn algo ===================== */
@@ -364,7 +364,9 @@ size_t MatrixMulImpl::AlgoInt8x8x32AVX2M4N16K2::get_workspace(
                    m, n, k, trans_a, trans_b, strategy, cacheline)
             .get_workspace_size();
 }
-
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(
+        AlgoInt8x8x32AVX2M4N16K2, megdnn_x86_matmul_kern, 8,
+        x86::matmul::gemm_avx2_s8s8s32_4x16x2, dt_int8, dt_int32, dt_int16);
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32AVX2M2N4K16::get_kern(
         const KernSizeParam&) const {
@@ -436,6 +438,10 @@ size_t MatrixMulImpl::AlgoInt8x8x32SSEM4N8K2::get_workspace(
                    m, n, k, trans_a, trans_b, strategy, cacheline)
             .get_workspace_size();
 }
+
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(
+        AlgoInt8x8x32SSEM4N8K2, megdnn_x86_matmul_kern, 9,
+        x86::matmul::gemm_sse_s8s8s32_4x8x2, dt_int8, dt_int32, dt_int16);
 
 /*************************AlgoF32MK8_8x8********************/
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32MK8_8x8::get_kern(

@@ -741,7 +741,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
                           TensorShape{oc, ic, kernel, kernel}, TensorShape{});
     };
 
-    for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
+    for (size_t kernel : {2, 3, 4, 5, 6, 7})
         for (size_t ic : {1, 4, 8, 16})
             for (size_t oc : {1, 4, 8})
                 for (size_t p : {0, 2})
@@ -751,7 +751,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
     //! test OC block
-    run(2046, 1, 8, 8, 1, 0, NonlineMode::IDENTITY);
+    run(2046, 1, 8, 8, 2, 0, NonlineMode::IDENTITY);
 
     Checker<ConvBias> checker(handle());
     UniformIntRNG rng{-50, 50};
@@ -826,7 +826,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
                             (w + 2 * p - kernel) / param.stride_w + 1});
     };
 
-    for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
+    for (size_t kernel : {2, 3, 4, 5, 6, 7})
         for (size_t ic : {1, 4, 8, 16})
             for (size_t oc : {1, 4, 8, 16, 300})
                 for (size_t p : {0, 2})
@@ -895,7 +895,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
                             (w + 2 * param.pad_w - kernel) / 1 + 1});
     };
 
-    for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
+    for (size_t kernel : {2, 3, 4, 5, 6, 7})
         for (size_t ic : {1, 4, 8, 16})
             for (size_t oc : {1, 4, 8, 16})
                 for (size_t p : {0, 1})
@@ -945,7 +945,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8) {
                           TensorShape{1, oc, 1, 1});
     };
 
-    for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
+    for (size_t kernel : {2, 3, 4, 5, 6, 7})
         for (size_t ic : {1, 4, 8, 16})
             for (size_t oc : {1, 4, 8})
                 for (size_t p : {0, 2})
@@ -2183,7 +2183,7 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_INT8X8X32) {
 
     std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
                                     dtype::Int32(), dtype::Int32()};
-    std::string algo_name = "IM2COLMATMUL:X86_INT8X8X32_AVX2_4X16X2";
+    std::string algo_name = "IM2COLMATMUL:X86_INT8X8X32_AVX2_4X16X2:192";
     // std::string algo_name = "IM2COLMATMUL:X86_INT8X8X32_AVX2_2X4X16";
     // printf("Benchmark IM2COLMATMUL:X86_INT8X8X32_AVX2_4X16X2 algo\n");
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,

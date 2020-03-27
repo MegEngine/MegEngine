@@ -67,8 +67,7 @@ public:
         }
         auto&& fm = param.filter_meta;
         auto OC = fm.ocpg, IC = fm.icpg;
-        return (fm.spatial[0] == fm.spatial[1] && fm.spatial[0] == 1) ||
-               OC >= 32 || IC >= 32;
+        return OC >= 32 || IC >= 32;
     }
 
 private:
