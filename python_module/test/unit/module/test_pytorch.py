@@ -94,9 +94,7 @@ def test_pytorch_mixed():
         def __init__(self):
             super().__init__()
             self.torch_module = PyTorchModule(self.SubModule())
-            a = list(self.SubModule().named_parameters(recurse=True))
-            a = list(self.SubModule().parameters())
-            self.multiplier = Parameter(np.array(init_param[1]), dtype=np.float32)
+            self.multiplier = Parameter(init_param[1], dtype=np.float32)
 
         def forward(self, inp):
             return self.torch_module(inp) * self.multiplier

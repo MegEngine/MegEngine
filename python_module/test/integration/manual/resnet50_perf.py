@@ -14,7 +14,6 @@ import sys
 import time
 
 import numpy as np
-from resnet50 import Resnet50
 
 import megengine as mge
 import megengine.distributed as dist
@@ -69,6 +68,9 @@ def run_perf(
     scale_batch_size=False,
     eager=False,
 ):
+
+    # pylint: disable = import-outside-toplevel
+    from resnet50 import Resnet50
 
     if conv_fastrun:
         set_conv_execution_strategy("PROFILE")
