@@ -8,7 +8,6 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <cstddef>
 #include "src/common/utils.h"
 
 namespace {
@@ -42,7 +41,8 @@ void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
     }
 }
 
-//! add for im2col matmul multithread
+//!add for im2col matmul multithread
+
 template <bool is_xcorr, typename dtype>
 void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
                     const int OC, const int OH, const int OW, const int IC,

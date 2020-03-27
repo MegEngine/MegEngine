@@ -323,6 +323,7 @@ struct UnaryOpBase<SIMDType::NONE, dt_qint32, dt_qint8>
         init(src_scale, dst_scale);
     }
 };
+
 template <>
 struct UnaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8>
         : OpBase<dt_qint32, dt_quint8> {
@@ -330,20 +331,24 @@ struct UnaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8>
     using src_ctype = dt_qint32;
     using dst_ctype = dt_quint8;
     float scale, scale_src, scale_dst;
-    void init(float src_scale, float dst_scale) {
+    uint8_t dzp;
+    void init(float src_scale, float dst_scale, uint8_t dst_zp) {
         scale_src = src_scale;
-        scale_dst = 1.f / dst_scale;
+        scale_dst = 1.0f / dst_scale;
+        dzp = dst_zp;
         scale = src_scale / dst_scale;
     }
     UnaryOpBase(DType src_dtype, DType dst_dtype) {
         float src_scale = src_dtype.param<dtype::QuantizedS32>().scale;
-        float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;
-        init(src_scale, dst_scale);
+        float dst_scale = dst_dtype.param<dtype::Quantized8Asymm>().scale;
+        uint8_t dst_zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point;
+        init(src_scale, dst_scale, dst_zp);
     }
-    UnaryOpBase(float src_scale, float dst_scale) {
-        init(src_scale, dst_scale);
+    UnaryOpBase(float src_scale, float dst_scale, uint8_t dst_zp) {
+        init(src_scale, dst_scale, dst_zp);
     }
 };
+
 #define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)   \
     template <>                                                            \
     struct UnaryOpBase<_simd_type, dt_float32, dt_qint8>                   \
@@ -828,7 +833,6 @@ template <typename Op>
 struct UnaryQuantizationOp<SIMDType::NONE, dt_qint32, dt_quint8, Op>
         : UnaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8> {
     using UnaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8>::UnaryOpBase;
-    constexpr static size_t SIMD_WIDTH = 8;
     Op op;
 
     void operator()(const dt_qint32& src, dt_quint8* dst) const {
