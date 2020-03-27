@@ -82,7 +82,7 @@ class ParamPack(Module):
                 group = group[idx:]
                 if idx == 1:
                     # ignore param packs with only one item
-                    self._packed_params.append(params[0])
+                    self._packed_params.append(params[0]['tensor'])
                     self._grouped_params.append(params)
                     continue
 
