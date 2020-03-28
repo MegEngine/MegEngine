@@ -33,16 +33,16 @@ class JITFusionPass::Impl final {
     CompNode::UnorderedMap<size_t> m_cn2max_nr_input;
 
     SubGraph::Rewriter m_rewriter;
-    SmallVector<std::unique_ptr<InternalGraphGenrator>> m_igraph_gen_storage;
-    ThinHashMap<VarNode*, InternalGraphGenrator*> m_var2igraph_gen;
+    SmallVector<std::unique_ptr<InternalGraphGenerator>> m_igraph_gen_storage;
+    ThinHashMap<VarNode*, InternalGraphGenerator*> m_var2igraph_gen;
 
     //! map from var to its reader oprs and the corresponding dependency types
     ThinHashMap<VarNode*, SmallVector<std::pair<OperatorNodeBase*, DepType>>>
             m_var_readers;
     ThinHashSet<VarNode*> m_endpoint_set;
 
-    //! create a new InternalGraphGenrator rooted at given opr
-    InternalGraphGenrator* create_new_igraph_gen(OperatorNodeBase* opr);
+    //! create a new InternalGraphGenerator rooted at given opr
+    InternalGraphGenerator* create_new_igraph_gen(OperatorNodeBase* opr);
 
     //! process a single operator, maintaining m_var2igraph_gen
     void process_opr(OperatorNodeBase* opr);
@@ -51,11 +51,11 @@ class JITFusionPass::Impl final {
 
     //! check whether all oprs which depend on the var are in i_graph
     bool test_all_readers_in_the_graph(VarNode* var,
-                                       InternalGraphGenrator* i_graph);
+                                       InternalGraphGenerator* i_graph);
 
     //! check shape to determine whether the opr should be added to the internal
     //! graph
-    bool check_shape(cg::OperatorNodeBase* opr, InternalGraphGenrator* i_graph);
+    bool check_shape(cg::OperatorNodeBase* opr, InternalGraphGenerator* i_graph);
 
     //! use m_rewriter to update graph
     void update_graph();
@@ -155,7 +155,7 @@ void JITFusionPass::Impl::update_graph() {
 }
 
 bool JITFusionPass::Impl::test_all_readers_in_the_graph(
-        VarNode* var, InternalGraphGenrator* ig_gen) {
+        VarNode* var, InternalGraphGenerator* ig_gen) {
     for (auto&& reader : m_var_readers.at(var)) {
         if (reader.second & DepType::DEV_VALUE) {
             if (ig_gen->opr_set().count(reader.first) == 0) {
@@ -167,7 +167,7 @@ bool JITFusionPass::Impl::test_all_readers_in_the_graph(
 }
 
 bool JITFusionPass::Impl::check_shape(cg::OperatorNodeBase* opr,
-                                      InternalGraphGenrator* ig_gen) {
+                                      InternalGraphGenerator* ig_gen) {
     if (!cg::is_static_var_shape(opr->output(0))) {
         // currently we do not handle dynamic shape in JIT
         return false;
@@ -249,9 +249,9 @@ bool JITFusionPass::Impl::check_shape(cg::OperatorNodeBase* opr,
     }
 }
 
-InternalGraphGenrator* JITFusionPass::Impl::create_new_igraph_gen(
+InternalGraphGenerator* JITFusionPass::Impl::create_new_igraph_gen(
         OperatorNodeBase* opr) {
-    auto uptr = std::make_unique<InternalGraphGenrator>(opr);
+    auto uptr = std::make_unique<InternalGraphGenerator>(opr);
     auto ptr = uptr.get();
     m_igraph_gen_storage.emplace_back(std::move(uptr));
     m_var2igraph_gen[opr->output(0)] = ptr;
@@ -267,7 +267,7 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
     }
     // dimshuffle should not be an endpoint, because megbrain has lazy
     // dimshuffle machanism
-    InternalGraphGenrator* ig_gen = nullptr;
+    InternalGraphGenerator* ig_gen = nullptr;
     if (m_var2igraph_gen.count(opr->output(0)) == 0) {
         // because of the reverse traversal, when an operator is being
         // processed but not in m_var2igraph_gen, means it is a endpoint of a
