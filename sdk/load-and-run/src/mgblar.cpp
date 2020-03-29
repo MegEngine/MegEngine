@@ -11,6 +11,8 @@
 
 #include "./mgblar.h"
 #include "./infile_persistent_cache.h"
+#include "./json_loader.h"
+#include "./npy.h"
 
 #include "megbrain/utils/debug.h"
 #include "megbrain/serialization/serializer.h"
@@ -33,6 +35,8 @@
 #include <cstring>
 #include <cerrno>
 #include <cstdio>
+#include <cctype>
+#include <numeric>
 #include <sstream>
 
 #if defined(_WIN32)
@@ -78,6 +82,11 @@ R"__usage__(
         profiling device time, which may cause additional overhead and make it
         hard to profile host time. Use --profile-host to focus on host time
         profiling.
+  --input [ filepath | string]
+    Set up inputs for megbrain model. for example: --data image.ppm --data 
+    param.json --data bbox:bbox.npy@batchid:b.npy --data rect:[0,0,227,227];
+    batchid:0,1,2,3. --io-dump or --bin-io-dump
+    should be enabled at the same time.
   --io-dump <output> | --bin-io-dump <output dir>
     Dump input/output values of all internal variables to output file or
     directory, in text or binary format. The binary file can be parsed by
@@ -183,6 +192,273 @@ R"__usage__(
 
 ;
 
+struct DataParser {
+    struct Brace {
+        Brace() { parent = nullptr; }
+
+        std::shared_ptr<Brace> parent;
+        std::vector<std::shared_ptr<Brace>> chidren;
+    };
+
+    void feed(const std::string& path) {
+        std::string blob_name = "data", blob_string = path;
+        size_t sep = path.find(":");
+        if (sep != std::string::npos) {
+            blob_name = path.substr(0, sep);
+            blob_string = path.substr(sep + 1);
+        }
+
+        auto endWith = [blob_string](std::string suffix) -> bool {
+            return blob_string.rfind(suffix) ==
+                   (blob_string.length() - suffix.length());
+        };
+
+        if (endWith(".ppm") || endWith(".pgm")) {
+            parse_image(blob_name, blob_string);
+        } else if (endWith(".json")) {
+            parse_json(blob_string);
+        } else if (endWith(".npy")) {
+            parse_npy(blob_name, blob_string);
+        } else {
+            parse_string(blob_name, blob_string);
+        }
+    }
+
+    std::map<std::string, HostTensorND> inputs;
+
+private:
+    void parse_json(const std::string& path) {
+        JsonLoader json;
+        std::shared_ptr<JsonLoader::Value> root = json.load(path.c_str());
+
+        mgb_assert(root != nullptr, "parse json %s fail", path.c_str());
+
+        // parse json to data map
+        const std::string SHAPE = "shape", TYPE = "type", RAW = "raw";
+        for (auto& item : root->objects()) {
+            auto&& value = *item.second;
+            auto&& shape = value[SHAPE];
+            mgb_assert(shape->is_array());
+
+            auto&& type = value[TYPE];
+            mgb_assert(type->is_str());
+
+            auto&& raw = value[RAW];
+            mgb_assert(raw->is_array());
+
+            megdnn::SmallVector<size_t> data_shape;
+            for (auto&& shape_ptr : shape->array()) {
+                data_shape.append(
+                        {static_cast<size_t>(std::round(shape_ptr->number()))});
+            }
+
+            // get type
+            const std::map<std::string, megdnn::DType> type_map = {
+                    {"float32", dtype::Float32()}, {"float", dtype::Float32()},
+                    {"int32", dtype::Int32()},     {"int", dtype::Int32()},
+                    {"int8", dtype::Int8()},       {"uint8", dtype::Uint8()}};
+
+            const std::string& type_str = type->str();
+            mgb_assert(type_map.find(type_str) != type_map.end(),
+                       "unknown json data type for --data");
+
+            DType datatype = type_map.at(type_str);
+            HostTensorND hv;
+            hv.comp_node(mgb::CompNode::default_cpu(), true)
+                    .dtype(datatype)
+                    .resize(data_shape);
+            dt_byte* raw_ptr = hv.raw_ptr();
+            size_t elem_size = datatype.size();
+
+            // get raw
+            const size_t array_size = raw->len();
+            for (size_t idx = 0; idx < array_size; ++idx) {
+                double tmp = (*raw)[idx]->number();
+
+                switch (datatype.enumv()) {
+                    case megdnn::DTypeEnum::Int32: {
+                        int32_t ival = std::round(tmp);
+                        memcpy(raw_ptr + idx * elem_size, &ival, elem_size);
+                    } break;
+                    case megdnn::DTypeEnum::Uint8:
+                    case megdnn::DTypeEnum::Int8: {
+                        int8_t cval = std::round(tmp);
+                        memcpy(raw_ptr + idx, &cval, sizeof(int8_t));
+                    } break;
+                    case megdnn::DTypeEnum::Float32: {
+                        float fval = tmp;
+                        memcpy(raw_ptr + idx * elem_size, &fval, elem_size);
+                    } break;
+                    default:
+                        break;
+                }
+            }
+
+            inputs.insert(std::make_pair(item.first, std::move(hv)));
+        }
+    }
+
+    void parse_image(const std::string& name, const std::string& path) {
+        // load ppm/pgm
+        std::ifstream fin;
+        fin.open(path, std::ifstream::binary | std::ifstream::in);
+        mgb_assert(fin.is_open(), "open file %s failed for --input",
+                   path.c_str());
+
+        size_t w = 0, h = 0, channel = 0;
+        char buf[128] = {0};
+
+        fin.getline(buf, 128);
+        if ('5' == buf[1]) {
+            channel = 1;
+        } else if ('6' == buf[1]) {
+            channel = 3;
+        } else {
+            mgb_assert(0, "not a formal ppm/pgm");
+        }
+
+        while (fin.getline(buf, 128)) {
+            // skip OCV comment, check
+            // https://github.com/opencv/opencv/pull/17006
+            if (buf[0] == '#') {
+                continue;
+            }
+            break;
+        }
+        std::stringstream ss;
+        ss << std::string(buf);
+        ss >> w;
+        ss >> h;
+
+        mgb_assert(w > 0 and h > 0);
+
+        HostTensorND hv;
+        hv.comp_node(mgb::CompNode::default_cpu(), true)
+                .dtype(dtype::Uint8())
+                .resize({1, h, w, channel});
+
+        fin.read((char*)(hv.raw_ptr()), hv.layout().total_nr_elems());
+        fin.close();
+        inputs.insert(std::make_pair(name, std::move(hv)));
+    }
+
+    void parse_npy(const std::string& name, const std::string& path) {
+        std::string type_str;
+        std::vector<npy::ndarray_len_t> stl_shape;
+        std::vector<int8_t> raw;
+        npy::LoadArrayFromNumpy(path, type_str, stl_shape, raw);
+
+        megdnn::SmallVector<size_t> shape;
+        for (auto val : stl_shape) {
+            shape.append({static_cast<size_t>(val)});
+        }
+
+        const std::map<std::string, megdnn::DType> type_map = {
+                {"f4", dtype::Float32()},
+                {"i4", dtype::Int32()},
+                {"i1", dtype::Int8()},
+                {"u1", dtype::Uint8()}};
+
+        megdnn::DType hv_type;
+        for (auto& item : type_map) {
+            if (type_str.find(item.first) != std::string::npos) {
+                hv_type = item.second;
+                break;
+            }
+        }
+
+        HostTensorND hv;
+        hv.comp_node(mgb::CompNode::default_cpu(), true)
+                .dtype(hv_type)
+                .resize(shape);
+        dt_byte* raw_ptr = hv.raw_ptr();
+        memcpy(raw_ptr, raw.data(), raw.size());
+
+        inputs.insert(std::make_pair(name, std::move(hv)));
+    }
+
+    void parse_string(const std::string name, const std::string& str) {
+        // data type
+        megdnn::DType data_type = dtype::Int32();
+        if (str.find(".") != std::string::npos or
+            str.find(".") != std::string::npos) {
+            data_type = dtype::Float32();
+        }
+        // shape
+        size_t number_cnt = 0;
+
+        std::shared_ptr<Brace> brace_root = std::make_shared<Brace>();
+        std::shared_ptr<Brace> cur = brace_root;
+        for (size_t i = 0; i < str.size(); ++i) {
+            char c = str[i];
+            if (c == '[') {
+                std::shared_ptr<Brace> child = std::make_shared<Brace>();
+                child->parent = cur;
+                cur->chidren.emplace_back(child);
+                cur = child;
+            } else if (c == ']') {
+                cur = cur->parent;
+            } else if (c == ',') {
+                number_cnt++;
+            }
+            continue;
+        }
+        ++number_cnt;
+
+        mgb_assert(cur == brace_root, "braces not closed for --input");
+        megdnn::SmallVector<size_t> shape;
+        cur = brace_root;
+        while (not cur->chidren.empty()) {
+            shape.append({cur->chidren.size()});
+            number_cnt /= cur->chidren.size();
+            cur = cur->chidren[0];
+        }
+        mgb_assert(number_cnt > 0);
+        shape.append({number_cnt});
+
+        // data
+        std::string json_arr;
+        for (size_t i = 0; i < str.size(); ++i) {
+            char c = str[i];
+            if (c != '[' and c != ']') {
+                json_arr += c;
+            }
+        }
+        json_arr = "[" + json_arr + "]";
+
+        // reuse json parser to resolve raw data
+        JsonLoader json;
+        std::shared_ptr<JsonLoader::Value> json_root =
+                json.load(json_arr.data(), json_arr.size());
+        mgb_assert(json_root != nullptr, "parse json fail in parse_string");
+
+        HostTensorND hv;
+        hv.comp_node(mgb::CompNode::default_cpu(), true)
+                .dtype(data_type)
+                .resize(shape);
+        dt_byte* raw_ptr = hv.raw_ptr();
+
+        const size_t array_len = json_root->len();
+        const size_t elem_size = data_type.size();
+        for (size_t idx = 0; idx < array_len; ++idx) {
+            double tmp = json_root->array()[idx]->number();
+            switch (data_type.enumv()) {
+                case megdnn::DTypeEnum::Int32: {
+                    int32_t ival = std::round(tmp);
+                    memcpy(raw_ptr + idx * elem_size, &ival, elem_size);
+                } break;
+                case megdnn::DTypeEnum::Float32: {
+                    float fval = tmp;
+                    memcpy(raw_ptr + idx * elem_size, &fval, elem_size);
+                } break;
+                default:
+                    break;
+            }
+        }
+        inputs.insert(std::make_pair(name, std::move(hv)));
+    };
+};
+
 struct Args {
     int args_parse_ret = 0;
 
@@ -200,6 +476,7 @@ struct Args {
     int nr_thread = 1;
     int multithread_number = 1;
     size_t workspace_limit = SIZE_MAX;
+    std::vector<std::string> data_files;
     serialization::GraphLoader::LoadResult load_ret;
 #if MGB_ENABLE_JSON
     std::unique_ptr<GraphProfiler> profiler;
@@ -481,6 +758,32 @@ void run_test_st(Args &env) {
         }
 
         printf("=== total time: %.3fms\n", tot_time);
+    } else if (not env.data_files.empty()) {
+        auto& tensormap = env.load_ret.tensor_map;
+
+        DataParser parser;
+        for (auto path : env.data_files) {
+            parser.feed(path);
+        }
+        auto inputs = parser.inputs;
+        for (auto& i : inputs) {
+            if (tensormap.find(i.first) == tensormap.end()) {
+                continue;
+            }
+
+            auto& in = tensormap.find(i.first)->second;
+            in->copy_from(i.second);
+        }
+
+        timer.reset();
+        func->execute();
+        auto exec_time = timer.get_msecs();
+        func->wait();
+        output_dumper.write_to_file();
+        auto cur = timer.get_msecs();
+        printf("%.3fms  %.3fms (device=%.3f)\n", cur, exec_time,
+               func->get_prev_exec_time() * 1e3);
+
     } else {
         // run speed test for a raw mgb graph
         mgb_assert(env.load_ret.tensor_map.empty(),
@@ -607,7 +910,7 @@ Args Args::from_argv(int argc, char **argv) {
                              ret.multithread_number](CompNode::Locator& loc) {
                         loc.type = CompNode::DeviceType::MULTITHREAD;
                         loc.device = 0;
-                        loc.nr_threads = nr_threads;
+                        loc.stream = nr_threads;
                     };
             continue;
         }
@@ -692,6 +995,25 @@ Args Args::from_argv(int argc, char **argv) {
             continue;
         }
 #endif
+        if (!strcmp(argv[i], "--input")) {
+            ++i;
+            mgb_assert(i < argc, "input file not given for --input");
+
+            size_t start = 0;
+            std::string cmd = argv[i];
+
+            while (true) {
+                auto end = cmd.find(";", start);
+                if (end == std::string::npos) {
+                    ret.data_files.emplace_back(cmd.substr(start));
+                    break;
+                }
+                std::string substr = cmd.substr(start, end);
+                ret.data_files.emplace_back(substr);
+                start = end + 1;
+            }
+            continue;
+        }
         if (!strcmp(argv[i], "--io-dump")) {
             mgb_log_warn("enable opr io dump");
             ++ i;
@@ -712,7 +1034,7 @@ Args Args::from_argv(int argc, char **argv) {
             continue;
         }
         if (!strcmp(argv[i], "--bin-out-dump")) {
-            ++i;
+            ++ i;
             mgb_assert(i < argc,
                     "output directory not given for --bin-out-dump");
             ret.bin_out_dump = argv[i];
