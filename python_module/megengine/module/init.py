@@ -12,7 +12,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 
-from ..core import Tensor, Graph
+from ..core import Graph, Tensor
 from ..random import gaussian, uniform
 
 

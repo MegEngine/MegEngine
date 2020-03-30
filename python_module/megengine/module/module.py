@@ -168,10 +168,9 @@ class Module(metaclass=ABCMeta):
         """
         yield from self._flatten(predicate=_is_buffer, recursive=recursive)
 
-    def replace_param(self,
-                      params: dict,
-                      start_pos: int,
-                      seen: Optional[Set[int]] = None):
+    def replace_param(
+        self, params: dict, start_pos: int, seen: Optional[Set[int]] = None
+    ):
         offset = 0
         if seen is None:
             seen = set([id(self)])
@@ -183,12 +182,13 @@ class Module(metaclass=ABCMeta):
             seen.add(hash_id)
             if isinstance(module_dict[key], Parameter):
                 if start_pos + offset in params:
-                    assert module_dict[key].shape == params[start_pos +
-                                                            offset].shape
+                    assert module_dict[key].shape == params[start_pos + offset].shape
                     module_dict[key] = params[start_pos + offset]
                 offset += 1
             if isinstance(module_dict[key], Module):
-                offset += module_dict[key].replace_param(params, start_pos + offset, seen)
+                offset += module_dict[key].replace_param(
+                    params, start_pos + offset, seen
+                )
         return offset
 
     def named_buffers(

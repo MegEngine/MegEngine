@@ -15,10 +15,10 @@ import pytest
 
 import megengine as mge
 import megengine._internal as mgb
+import megengine.module as M
 from megengine import jit, tensor
 from megengine.core.tensor import Tensor
 from megengine.test import assertTensorClose
-import megengine.module as M
 
 
 @contextlib.contextmanager
@@ -158,13 +158,14 @@ def test_shape_infer():
 
 
 def test_dump_bn_fused():
-
     class ConvBNReLU(M.Sequential):
         def __init__(self):
             super(ConvBNReLU, self).__init__(
                 M.Conv2d(3, 4, 3, 1, 1, groups=1, bias=False),
                 M.BatchNorm2d(4),
-                M.ReLU())
+                M.ReLU(),
+            )
+
     net = ConvBNReLU()
     net.eval()
 
@@ -178,8 +179,9 @@ def test_dump_bn_fused():
         fun.dump(out, optimize_for_inference=True)
         cg, _, outputs = mgb.load_comp_graph_from_file(out)
 
-    out, = outputs
+    (out,) = outputs
     inputs = mgb.cgtools.get_inputs(out)
     assert len(inputs) == 2 and (
-        mgb.cgtools.get_type(inputs[0]) == 'MultipleDeviceTensorHolder' and
-        mgb.cgtools.get_type(inputs[1]) == 'ConvolutionForward')
+        mgb.cgtools.get_type(inputs[0]) == "MultipleDeviceTensorHolder"
+        and mgb.cgtools.get_type(inputs[1]) == "ConvolutionForward"
+    )

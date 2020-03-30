@@ -75,10 +75,9 @@ class XORNet(Module):
 @pytest.mark.slow
 def test_static_graph_parampack():
     net = XORNet()
-    net = ParamPack(net,
-                    nr_ignore_first=0,
-                    max_size_per_group=10,
-                    max_nr_params_per_group=100)
+    net = ParamPack(
+        net, nr_ignore_first=0, max_size_per_group=10, max_nr_params_per_group=100
+    )
     opt = SGD(
         net.parameters(requires_grad=True), lr=0.01, momentum=0.9, weight_decay=5e-4
     )
@@ -109,13 +108,12 @@ def test_static_graph_parampack():
     data, _ = next(train_dataset)
     pred = infer(data).numpy()
     assert calculate_precision(data, pred) > 0.95, "Test precision must be high enough"
+
 
 @pytest.mark.slow
 def test_nopack_parampack():
     net = XORNet()
-    net = ParamPack(net,
-                    max_size_per_group=0,
-                    max_nr_params_per_group=0)
+    net = ParamPack(net, max_size_per_group=0, max_nr_params_per_group=0)
     opt = SGD(
         net.parameters(requires_grad=True), lr=0.01, momentum=0.9, weight_decay=5e-4
     )
@@ -145,14 +143,14 @@ def test_nopack_parampack():
     data, _ = next(train_dataset)
     pred = infer(data).numpy()
     assert calculate_precision(data, pred) > 0.95, "Test precision must be high enough"
+
 
 @pytest.mark.slow
 def test_dynamic_graph_parampack():
     net = XORNet()
-    net = ParamPack(net,
-                    nr_ignore_first=0,
-                    max_size_per_group=10,
-                    max_nr_params_per_group=100)
+    net = ParamPack(
+        net, nr_ignore_first=0, max_size_per_group=10, max_nr_params_per_group=100
+    )
     opt = SGD(
         net.parameters(requires_grad=True), lr=0.01, momentum=0.9, weight_decay=5e-4
     )
@@ -183,6 +181,7 @@ def test_dynamic_graph_parampack():
     data, _ = next(train_dataset)
     pred = infer(data).numpy()
     assert calculate_precision(data, pred) > 0.95, "Test precision must be high enough"
+
 
 @pytest.mark.slow
 def test_correctness_parampack():
@@ -192,10 +191,9 @@ def test_correctness_parampack():
     params2 = net2.parameters()
     for param1, param2 in zip(params1, params2):
         param1.set_value(param2.numpy())
-    net1 = ParamPack(net1,
-                     nr_ignore_first=0,
-                     max_size_per_group=10,
-                     max_nr_params_per_group=100)
+    net1 = ParamPack(
+        net1, nr_ignore_first=0, max_size_per_group=10, max_nr_params_per_group=100
+    )
     opt1 = SGD(
         net1.parameters(requires_grad=True), lr=0.01, momentum=0.9, weight_decay=5e-4
     )

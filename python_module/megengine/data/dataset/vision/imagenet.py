@@ -87,7 +87,7 @@ class ImageNet(ImageFolder):
 
         if not os.path.exists(self.root):
             raise FileNotFoundError("dir %s does not exist" % self.root)
-        
+
         self.devkit_dir = os.path.join(self.root, self.default_devkit_dir)
 
         if not os.path.exists(self.devkit_dir):
@@ -159,8 +159,14 @@ class ImageNet(ImageFolder):
             classes = [tuple(clss.split(", ")) for clss in classes]
             idx_to_wnid = {idx: wnid for idx, wnid in zip(idcs, wnids)}
             wnid_to_classes = {wnid: clss for wnid, clss in zip(wnids, classes)}
-            logger.info("saving cached meta file to %s", os.path.join(self.devkit_dir, "meta.pkl"))
-            save((idx_to_wnid, wnid_to_classes), os.path.join(self.devkit_dir, "meta.pkl"))
+            logger.info(
+                "saving cached meta file to %s",
+                os.path.join(self.devkit_dir, "meta.pkl"),
+            )
+            save(
+                (idx_to_wnid, wnid_to_classes),
+                os.path.join(self.devkit_dir, "meta.pkl"),
+            )
             return idx_to_wnid, wnid_to_classes
 
     def check_raw_file(self) -> bool:
@@ -177,7 +183,10 @@ class ImageNet(ImageFolder):
         val_wnids = [id2wnid[idx] for idx in val_idcs]
 
         val_images = sorted(
-            [os.path.join(self.target_folder, image) for image in os.listdir(self.target_folder)]
+            [
+                os.path.join(self.target_folder, image)
+                for image in os.listdir(self.target_folder)
+            ]
         )
 
         logger.debug("mkdir for val set wnids")
@@ -198,23 +207,24 @@ class ImageNet(ImageFolder):
         raw_filename, checksum = self.raw_file_meta["val"]
         raw_file = os.path.join(self.root, raw_filename)
         logger.info("checksum valid tar file {} ..".format(raw_file))
-        assert calculate_md5(raw_file) == checksum, \
-            "checksum mismatch, {} may be damaged".format(raw_file)
+        assert (
+            calculate_md5(raw_file) == checksum
+        ), "checksum mismatch, {} may be damaged".format(raw_file)
         logger.info("extract valid tar file.. this may take 10-20 minutes")
         untar(os.path.join(self.root, raw_file), self.target_folder)
         self._organize_val_data()
-    
+
     def _prepare_train(self):
         assert self.train
         raw_filename, checksum = self.raw_file_meta["train"]
         raw_file = os.path.join(self.root, raw_filename)
         logger.info("checksum train tar file {} ..".format(raw_file))
-        assert calculate_md5(raw_file) == checksum, \
-            "checksum mismatch, {} may be damaged".format(raw_file)
+        assert (
+            calculate_md5(raw_file) == checksum
+        ), "checksum mismatch, {} may be damaged".format(raw_file)
         logger.info("extract train tar file.. this may take several hours")
         untar(
-            os.path.join(self.root, raw_file),
-            self.target_folder,
+            os.path.join(self.root, raw_file), self.target_folder,
         )
         paths = [
             os.path.join(self.target_folder, child_dir)
@@ -227,7 +237,8 @@ class ImageNet(ImageFolder):
         raw_filename, checksum = self.raw_file_meta["devkit"]
         raw_file = os.path.join(self.root, raw_filename)
         logger.info("checksum devkit tar file {} ..".format(raw_file))
-        assert calculate_md5(raw_file) == checksum, \
-            "checksum mismatch, {} may be damaged".format(raw_file)
+        assert (
+            calculate_md5(raw_file) == checksum
+        ), "checksum mismatch, {} may be damaged".format(raw_file)
         logger.info("extract devkit file..")
         untargz(os.path.join(self.root, self.raw_file_meta["devkit"][0]))

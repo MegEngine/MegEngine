@@ -14,6 +14,6 @@ from .embedding import Embedding
 from .identity import Identity
 from .linear import Linear
 from .module import Module
+from .parampack import ParamPack
 from .pooling import AvgPool2d, MaxPool2d
 from .sequential import Sequential
-from .parampack import ParamPack

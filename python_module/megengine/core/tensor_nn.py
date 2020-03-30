@@ -30,7 +30,7 @@ class Parameter(Tensor):
         else:
             t = tensor(value, dtype=dtype, device=device, requires_grad=requires_grad)
         self.__dict__.update(t.__dict__)
-    
+
     @property
     def shape(self):
         r"""Return shape of parameter.

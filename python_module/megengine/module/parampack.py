@@ -8,11 +8,12 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
 from typing import Iterable, Optional
+
 import numpy as np
 
+from .._internal.opr import param_pack_split
 from ..core import Parameter, Tensor
 from .module import Module
-from .._internal.opr import param_pack_split
 
 
 class ParamPack(Module):
@@ -24,11 +25,14 @@ class ParamPack(Module):
     :param max_nr_params_per_group: upper bound of the number of parameters of each group.
 
     """
-    def __init__(self,
-                 model: Module,
-                 nr_ignore_first:int = 8,
-                 max_size_per_group: int = 10,
-                 max_nr_params_per_group: int = 100):
+
+    def __init__(
+        self,
+        model: Module,
+        nr_ignore_first: int = 8,
+        max_size_per_group: int = 10,
+        max_nr_params_per_group: int = 100,
+    ):
         super().__init__()
         self._model = model
         self._nr_ignore_first = nr_ignore_first
@@ -52,11 +56,11 @@ class ParamPack(Module):
         for param in params:
             if self._nr_ignore_first > ignored:
                 ignored += 1
-                self._grouped_params.append([{'tensor': param, 'id': param_id}])
+                self._grouped_params.append([{"tensor": param, "id": param_id}])
                 self._packed_params.append(param)
             else:
                 key = (param.dtype, param.device, param.requires_grad)
-                groups[key].append({'tensor': param, 'id': param_id})
+                groups[key].append({"tensor": param, "id": param_id})
             param_id += 1
         for (dtype, device, requires_grad) in groups.keys():
             dtype_sz = np.dtype(dtype).itemsize
@@ -75,33 +79,36 @@ class ParamPack(Module):
                 idx = 0
                 while idx < len(group):
                     param = group[idx]
-                    assert param['tensor'].device == device
+                    assert param["tensor"].device == device
                     padding = (align - (offset & (align - 1))) & (align - 1)
                     offset += padding
                     aligned_pos.append(offset)
                     params.append(param)
-                    offset += int(np.prod(param['tensor'].shape))
+                    offset += int(np.prod(param["tensor"].shape))
                     idx += 1
 
-                    if (offset * dtype_sz >=
-                            self._max_size_per_group * 1024 * 1024
-                            or idx >= self._max_nr_params_per_group):
+                    if (
+                        offset * dtype_sz >= self._max_size_per_group * 1024 * 1024
+                        or idx >= self._max_nr_params_per_group
+                    ):
                         break
                 group = group[idx:]
                 if idx == 1:
                     # ignore param packs with only one item
-                    self._packed_params.append(params[0]['tensor'])
+                    self._packed_params.append(params[0]["tensor"])
                     self._grouped_params.append(params)
                     continue
 
-                packed_value = np.zeros((offset, ), dtype=dtype)
+                packed_value = np.zeros((offset,), dtype=dtype)
                 for param, pos in zip(params, aligned_pos):
-                    val = param['tensor'].numpy()
-                    packed_value[pos:pos + val.size] = val.flatten()
-                new_param = Parameter(value=packed_value,
-                                      device=device,
-                                      dtype=dtype,
-                                      requires_grad=requires_grad)
+                    val = param["tensor"].numpy()
+                    packed_value[pos : pos + val.size] = val.flatten()
+                new_param = Parameter(
+                    value=packed_value,
+                    device=device,
+                    dtype=dtype,
+                    requires_grad=requires_grad,
+                )
                 self._packed_params.append(new_param)
                 self._grouped_params.append(params)
 
@@ -112,14 +119,15 @@ class ParamPack(Module):
             grouped_params = self._grouped_params[i]
             if len(grouped_params) == 1:
                 continue
-            split = param_pack_split(packed_param._symvar,
-                                     [i['tensor'].shape for i in grouped_params])
+            split = param_pack_split(
+                packed_param._symvar, [i["tensor"].shape for i in grouped_params]
+            )
             split = [
                 Parameter(Tensor(i, requires_grad=packed_param.requires_grad))
                 for i in split
             ]
             for j in range(len(split)):
-                replace_param[grouped_params[j]['id']] = split[j]
+                replace_param[grouped_params[j]["id"]] = split[j]
         self._model.replace_param(replace_param, 0)
 
         return self._model.forward(*args, **kwargs)

@@ -12,9 +12,9 @@
 #
 # Copyright (c) 2018 Facebook
 # ---------------------------------------------------------------------
-from collections import OrderedDict, defaultdict
 import json
 import os
+from collections import OrderedDict, defaultdict
 
 import cv2
 import numpy as np
