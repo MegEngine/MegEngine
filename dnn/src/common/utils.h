@@ -17,6 +17,7 @@
 #include "megdnn/handle.h"
 #include "megdnn/thin/small_vector.h"
 
+#include "src/common/hash_ct.h"
 #include "src/common/utils.cuh"
 
 #include <cmath>
@@ -226,6 +227,10 @@ private:
 
 MEGDNN_CONSTEXPR std::size_t operator"" _z(unsigned long long n) {
     return n;
+}
+
+constexpr uint32_t operator"" _hash(char const* str, size_t count) {
+    return XXHash64CT::hash(str, count, 20160701);
 }
 
 template <typename Vec>
