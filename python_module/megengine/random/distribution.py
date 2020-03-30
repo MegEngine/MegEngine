@@ -42,13 +42,14 @@ def gaussian(
         import megengine as mge
         import megengine.random as rand
 
+        rand.manual_seed(0)
         x = rand.gaussian((2, 2), mean=0, std=1)
         print(x.numpy())
 
     .. testoutput::
 
-        [[ 0.2925366  -0.718359  ]
-         [ 0.09999694 -0.3931978 ]]
+        [[-0.20235455 -0.6959438 ]
+         [-1.4939808  -1.5824696 ]]
 
     """
     comp_node, comp_graph = _use_default_if_none(comp_node, comp_graph)
@@ -78,13 +79,14 @@ def uniform(
         import megengine as mge
         import megengine.random as rand
 
+        rand.manual_seed(0)
         x = rand.uniform((2, 2))
         print(x.numpy())
 
     .. testoutput::
 
-        [[0.74021935 0.9209938 ]
-         [0.03902049 0.9689629 ]]
+        [[0.76901674 0.70496535]
+         [0.09365904 0.62957656]]
 
     """
     comp_node, comp_graph = _use_default_if_none(comp_node, comp_graph)

@@ -114,7 +114,7 @@ def max_pool2d(
     :param stride: The stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
     :param padding: Implicit zero padding to be added on both sides. Default: 0
-    
+
     Refer to :class:`~.MaxPool2d` for more information.
     """
 
@@ -615,7 +615,7 @@ def interpolate(
     :param mode: interpolation methods, acceptable values are:
         'bilinear'(default), 'linear', 'nearest' (todo), 'cubic' (todo), 'area' (todo)
 
-    
+
 
     Examples:
 
@@ -743,7 +743,9 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
+        from megengine.random import manual_seed
 
+        manual_seed(0)
         data = tensor(np.ones(10, dtype=np.float32))
         out = F.dropout(data, 1./3.)
         print(out.numpy())
@@ -767,7 +769,7 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
 @wrap_io_tensor
 def identity(inp: Tensor) -> Tensor:
     """applies an identity transform to the input tensor.
-    
+
     :param inp: The input tensor
     """
     return mgb.opr.identity(inp)
