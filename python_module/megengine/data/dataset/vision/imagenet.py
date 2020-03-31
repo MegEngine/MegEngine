@@ -220,5 +220,7 @@ class ImageNet(ImageFolder):
             logger.info("process devkit file..")
             untargz(os.path.join(self.root, self.raw_file_meta["devkit"][0]))
             logger.info("process valid raw file.. this may take 10-20 minutes")
-            untar(os.path.join(self.root, self.raw_file_meta["val"][0]))
+            raw_val_dir = os.path.join(self.root, "ILSVRC2012_img_val")
+            os.makedirs(raw_val_dir, exist_ok=True)
+            untar(os.path.join(self.root, self.raw_file_meta["val"][0]), raw_val_dir)
             self.organize_val_data()
