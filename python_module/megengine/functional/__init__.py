@@ -53,6 +53,7 @@ from .nn import (
     batch_norm2d,
     batched_matrix_mul,
     conv2d,
+    conv_transpose2d,
     dropout,
     embedding,
     eye,

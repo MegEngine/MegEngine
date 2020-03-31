@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from .activation import LeakyReLU, PReLU, ReLU, Sigmoid, Softmax
 from .batchnorm import BatchNorm1d, BatchNorm2d
-from .conv import Conv2d
+from .conv import Conv2d, ConvTranspose2d
 from .dropout import Dropout
 from .embedding import Embedding
 from .identity import Identity
