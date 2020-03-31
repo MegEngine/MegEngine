@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/naive/winograd_filter_preprocess/opr_impl.h"
@@ -49,17 +50,16 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
     size_t m = param().output_block_size;
 
     bool execed = false;
-#define cb(_ctype, _dst_type, _input_filter_compute_type,                     \
-           _output_compute_type, _format, rescale)                            \
-    if (param().format == _format) {                                          \
-        return winograd::StrategyHelper<                                      \
-                _ctype, _dst_type, _input_filter_compute_type,                \
-                _output_compute_type, _format>::filter(src_ptr, dst_ptr,      \
-                                                       workspace_ptr, OC, IC, \
-                                                       0, OC, m, FW,          \
-                                                       interp_points,         \
-                                                       src.layout.dtype,      \
-                                                       rescale);              \
+
+#define cb(_ctype, _dst_type, _input_filter_compute_type,                    \
+           _output_compute_type, _format, rescale)                           \
+    if (param().format == _format) {                                         \
+        return winograd::StrategyHelper<                                     \
+                _ctype, _dst_type, _input_filter_compute_type,               \
+                _output_compute_type, param::ConvBias::Format::NCHW,         \
+                _format>::filter(src_ptr, dst_ptr, workspace_ptr, OC, IC, 0, \
+                                 OC, m, FW, interp_points, src.layout.dtype, \
+                                 rescale);                                   \
     }
 
 #define DISPATCH_FORMAT_MK4(_ctype, _dst_type, _input_filter_compute_type,  \
@@ -110,8 +110,9 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
         DISPATCH_KERNEL(dt_float16, dt_float16, dt_float16, dt_float16,      \
                         DISPATCH_FORMAT_MK8, 1.0f, _midout_tag, 2);          \
     })
-    //! normal nchw mode
+
     if (src.layout.ndim <= 5) {
+        //! dispatch_dtype with consider layout and format.
         if (FW == 3) {
             if (m == 2) {
                 std::vector<float> interp_points = {0, 1, -1};
@@ -131,22 +132,20 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                 DISPATCH_DTYPE(3);
             }
         }
-    }
 #undef cb
 #undef DISPATCH_FORMAT_MK4
 #undef DISPATCH_FORMAT_MK8
 #undef DISPATCH_DTYPE
-#define cb(_ctype, _dst_type, _input_filter_compute_type,                     \
-           _output_compute_type, _format, rescale)                            \
-    if (param().format == _format) {                                          \
-        return winograd::StrategyHelperNchwxx<                                \
-                _ctype, _dst_type, _input_filter_compute_type,                \
-                _output_compute_type, _format>::filter(src_ptr, dst_ptr,      \
-                                                       workspace_ptr, OC, IC, \
-                                                       0, OC, m, FW,          \
-                                                       interp_points,         \
-                                                       src.layout.dtype,      \
-                                                       rescale);              \
+    } else {
+#define cb(_ctype, _dst_type, _input_filter_compute_type,                    \
+           _output_compute_type, _format, rescale)                           \
+    if (param().format == _format) {                                         \
+        return winograd::StrategyHelper<                                     \
+                _ctype, _dst_type, _input_filter_compute_type,               \
+                _output_compute_type, param::ConvBias::Format::NCHW88,       \
+                _format>::filter(src_ptr, dst_ptr, workspace_ptr, OC, IC, 0, \
+                                 OC, m, FW, interp_points, src.layout.dtype, \
+                                 rescale);                                   \
     }
 
 #define DISPATCH_FORMAT_MK8(_ctype, _dst_type, _input_filter_compute_type,  \
@@ -159,8 +158,6 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
         DISPATCH_KERNEL(dt_float32, dt_float32, dt_float32, dt_float32, \
                         DISPATCH_FORMAT_MK8, 1.0f, _midout_tag, 0);     \
     }
-    //! nchwxx mode
-    else {
         megdnn_assert(src.layout.ndim == 6 || src.layout.ndim == 7);
         if (FW == 3) {
             if (m == 2) {
@@ -171,11 +168,11 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                 DISPATCH_DTYPE(5);
             }
         }
-    }
 #undef cb
 #undef DISPATCH_FORMAT_MK8
 #undef DISPATCH_KERNEL
 #undef DISPATCH_DTYPE
+    }
     megdnn_assert(execed,
                   "Unsupport winograd filter preprocess. m: %zu src: %s", m,
                   src.layout.to_string().c_str());

@@ -6,13 +6,14 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/fallback/conv_bias/winograd/strategy.h"
-#include "src/fallback/conv_bias/winograd/winograd.h"
-#include "src/common/winograd/winograd_helper.h"
 #include "src/common/utils.h"
+#include "src/common/winograd/winograd_helper.h"
+#include "src/fallback/conv_bias/winograd/winograd.h"
 
 namespace megdnn {
 namespace fallback {
@@ -60,7 +61,7 @@ void winograd_2x3_4x4_f::filter(const float* filter,
                                 float* transform_mid_buf, size_t OC, size_t IC,
                                 size_t oc_start, size_t oc_end) {
     ::megdnn::winograd::StrategyHelper<
-            float, float, float, float,
+            float, float, float, float, param::ConvBias::Format::NCHW,
             param::MatrixMul::Format::MK4>::filter(filter, filter_transform_buf,
                                                    transform_mid_buf, OC, IC,
                                                    oc_start, oc_end,
@@ -73,11 +74,15 @@ void winograd_2x3_4x4_f::input(const float* input, float* input_transform_buf,
                                float* transform_mid_buf, int ih_start,
                                int iw_start, size_t IH, size_t IW, size_t IC,
                                size_t unit_idx, size_t nr_units_in_tile) {
-    ::megdnn::winograd::StrategyHelper<float, float, float, float,
-                                       param::MatrixMul::Format::MK4>::
-            input(input, input_transform_buf, transform_mid_buf, ih_start,
-                  iw_start, IH, IW, IC, unit_idx, nr_units_in_tile,
-                  OUTPUT_BLOCK_SIZE, KERNEL_SIZE, {0, 1, -1}, src_dtype);
+    ::megdnn::winograd::StrategyHelper<
+            float, float, float, float, param::ConvBias::Format::NCHW,
+            param::MatrixMul::Format::MK4>::input(input, input_transform_buf,
+                                                  transform_mid_buf, ih_start,
+                                                  iw_start, IH, IW, IC,
+                                                  unit_idx, nr_units_in_tile,
+                                                  OUTPUT_BLOCK_SIZE,
+                                                  KERNEL_SIZE, {0, 1, -1},
+                                                  src_dtype);
 }
 
 void winograd_2x3_4x4_f::output(const float* output_transform_buf,
@@ -87,15 +92,18 @@ void winograd_2x3_4x4_f::output(const float* output_transform_buf,
                                 size_t ow_start, size_t OH, size_t OW,
                                 size_t oc_start, size_t oc_end, size_t unit_idx,
                                 size_t nr_units_in_tile) {
-    ::megdnn::winograd::StrategyHelper<float, float, float, float,
-                                       param::MatrixMul::Format::MK4>::
-            output(output_transform_buf, bias, output, transform_mid_buf, bmode,
-                   nonline_mode, oh_start, ow_start, OH, OW, oc_start, oc_end,
-                   unit_idx, nr_units_in_tile, OUTPUT_BLOCK_SIZE, KERNEL_SIZE,
-                   {0, 1, -1}, dst_dtype);
+    ::megdnn::winograd::StrategyHelper<
+            float, float, float, float, param::ConvBias::Format::NCHW,
+            param::MatrixMul::Format::MK4>::output(output_transform_buf, bias,
+                                                   output, transform_mid_buf,
+                                                   bmode, nonline_mode,
+                                                   oh_start, ow_start, OH, OW,
+                                                   oc_start, oc_end, unit_idx,
+                                                   nr_units_in_tile,
+                                                   OUTPUT_BLOCK_SIZE,
+                                                   KERNEL_SIZE, {0, 1, -1},
+                                                   dst_dtype);
 }
-
-
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_2x3_1x1_qs8)
 
@@ -136,7 +144,6 @@ void winograd_2x3_1x1_qs8::output(const int* output_transform_buf,
             {0, 1, -1}, dst_dtype, scale_input * scale_filter, 2.0f, 1.0f);
 }
 
-
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_2x3_8x8_qs8)
 
 void winograd_2x3_8x8_qs8::filter(const int8_t* filter,
@@ -144,7 +151,7 @@ void winograd_2x3_8x8_qs8::filter(const int8_t* filter,
                                   int16_t* transform_mid_buf, size_t OC,
                                   size_t IC, size_t oc_start, size_t oc_end) {
     ::megdnn::winograd::StrategyHelper<
-            int8_t, int8_t, int16_t, int,
+            int8_t, int8_t, int16_t, int, param::ConvBias::Format::NCHW,
             param::MatrixMul::Format::MK8>::filter(filter, filter_transform_buf,
                                                    transform_mid_buf, OC, IC,
                                                    oc_start, oc_end,
@@ -158,11 +165,15 @@ void winograd_2x3_8x8_qs8::input(const int8_t* input,
                                  int16_t* transform_mid_buf, int ih_start,
                                  int iw_start, size_t IH, size_t IW, size_t IC,
                                  size_t unit_idx, size_t nr_units_in_tile) {
-    ::megdnn::winograd::StrategyHelper<int8_t, int8_t, int16_t, int,
-                                       param::MatrixMul::Format::MK8>::
-            input(input, input_transform_buf, transform_mid_buf, ih_start,
-                  iw_start, IH, IW, IC, unit_idx, nr_units_in_tile,
-                  OUTPUT_BLOCK_SIZE, KERNEL_SIZE, {0, 1, -1}, src_dtype, 1.0f);
+    ::megdnn::winograd::StrategyHelper<
+            int8_t, int8_t, int16_t, int, param::ConvBias::Format::NCHW,
+            param::MatrixMul::Format::MK8>::input(input, input_transform_buf,
+                                                  transform_mid_buf, ih_start,
+                                                  iw_start, IH, IW, IC,
+                                                  unit_idx, nr_units_in_tile,
+                                                  OUTPUT_BLOCK_SIZE,
+                                                  KERNEL_SIZE, {0, 1, -1},
+                                                  src_dtype, 1.0f);
 }
 
 void winograd_2x3_8x8_qs8::output(const int* output_transform_buf,
@@ -180,13 +191,19 @@ void winograd_2x3_8x8_qs8::output(const int* output_transform_buf,
         megdnn_assert(filter_dtype.enumv() == DTypeEnum::QuantizedS16);
         scale_filter = filter_dtype.param<dtype::QuantizedS16>().scale;
     }
-    ::megdnn::winograd::StrategyHelper<int8_t, int8_t, int16_t, int,
-                                       param::MatrixMul::Format::MK8>::
-            output(output_transform_buf, bias, output, transform_mid_buf, bmode,
-                   nonline_mode, oh_start, ow_start, OH, OW, oc_start, oc_end,
-                   unit_idx, nr_units_in_tile, OUTPUT_BLOCK_SIZE, KERNEL_SIZE,
-                   {0, 1, -1}, dst_dtype, scale_input * scale_filter, 2.0f,
-                   1.0f);
+    ::megdnn::winograd::StrategyHelper<
+            int8_t, int8_t, int16_t, int, param::ConvBias::Format::NCHW,
+            param::MatrixMul::Format::MK8>::output(output_transform_buf, bias,
+                                                   output, transform_mid_buf,
+                                                   bmode, nonline_mode,
+                                                   oh_start, ow_start, OH, OW,
+                                                   oc_start, oc_end, unit_idx,
+                                                   nr_units_in_tile,
+                                                   OUTPUT_BLOCK_SIZE,
+                                                   KERNEL_SIZE, {0, 1, -1},
+                                                   dst_dtype,
+                                                   scale_input * scale_filter,
+                                                   2.0f, 1.0f);
 }
 
 }  // namespace winograd
