@@ -123,9 +123,9 @@ StaticDeviceMemoryManager::make_default_impl() {
 }
 #endif  // MGB_THREAD_SAFE
 
-/* ==================== CUDAAsyncVarReleaser ==================== */
-#if MGB_CUDA
-class VarNodeMemManager::CUDAAsyncVarReleaser {
+/* ==================== AsyncVarReleaser ==================== */
+#if MGB_CUDA 
+class VarNodeMemManager::AsyncVarReleaser {
     struct WaiterParam {
         CompNode cn;
         CompNode::Event *event;
@@ -133,10 +133,10 @@ class VarNodeMemManager::CUDAAsyncVarReleaser {
     };
 
     class Waiter final: public AsyncQueueSC<WaiterParam, Waiter> {
-        CUDAAsyncVarReleaser *m_par_releaser;
+        AsyncVarReleaser *m_par_releaser;
 
         public:
-            Waiter(CUDAAsyncVarReleaser *releaser):
+            Waiter(AsyncVarReleaser *releaser):
                 m_par_releaser(releaser)
             {
             }
@@ -159,7 +159,7 @@ class VarNodeMemManager::CUDAAsyncVarReleaser {
     Spinlock m_event_pool_lock;
 
     public:
-        ~CUDAAsyncVarReleaser() {
+        ~AsyncVarReleaser() {
             wait_release_finish();
         }
 
@@ -247,15 +247,16 @@ bool VarNodeMemManager::ImpureMemPlanManager::check_need_realloc() {
 VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl *graph):
     m_owner_graph(graph),
     m_seq_mem_opt(graph)
-#if MGB_CUDA
-    ,m_cuda_asyn_var_releaser(new CUDAAsyncVarReleaser)
+#if MGB_CUDA 
+    ,m_asyn_var_releaser(new AsyncVarReleaser)
 #endif
 {
     auto on_comp_seq_finish = [this](const event::CompSeqExecFinished& ev) {
+        MGB_MARK_USED_VAR(ev);
         // async release is only used for sync between multiple comp nodes, and
         // does not wait for device to finish
-#if MGB_CUDA
-        m_cuda_asyn_var_releaser->wait_release_finish();
+#if MGB_CUDA 
+        m_asyn_var_releaser->wait_release_finish();
 #endif
         m_cpu_async_release_barrier.wait_zero();
     };
@@ -295,9 +296,10 @@ VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl *graph):
     graph->event().register_receiver_permanent<event::CompSeqExecError>(
             on_comp_seq_error);
 
-#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER
+#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER && (MGB_CUDA \
+                )
     auto on_mem_defrag_start = [this](const event::BeforeMemDefrag&) {
-        m_cuda_asyn_var_releaser->wait_release_finish();
+        m_asyn_var_releaser->wait_release_finish();
     };
     graph->event().register_receiver_permanent<event::BeforeMemDefrag>(
             on_mem_defrag_start);
@@ -1341,7 +1343,7 @@ void VarNodeMemManager::decr_var_mem_refcnt(
             }
 #if MGB_CUDA
         case DT::CUDA:
-            m_cuda_asyn_var_releaser->add(dispatch_cn, var);
+            m_asyn_var_releaser->add(dispatch_cn, var);
             break;
 #endif
         default:

@@ -53,6 +53,7 @@
 #cmakedefine01 MEGDNN_THREADS_512
 #cmakedefine01 MEGDNN_ENABLE_MULTI_THREADS
 
+
 // whether cuda is available
 #ifndef MGB_CUDA
 #define MGB_CUDA    1

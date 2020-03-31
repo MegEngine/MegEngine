@@ -96,7 +96,7 @@ megcore::AsyncErrorInfo* MegDNNHandle::make_async_error_info(
             cn.free_device(ptr);
         }
     };
-    megcore::AsyncErrorInfo zero_info{0, nullptr, "", {0,0,0,0}};
+    megcore::AsyncErrorInfo zero_info{0, nullptr, "", {0, 0, 0, 0}};
     auto ptr = static_cast<megcore::AsyncErrorInfo*>(
             env.comp_node().alloc_device(sizeof(zero_info)));
     cn.copy_to_device(ptr, &zero_info, sizeof(zero_info));
@@ -106,7 +106,7 @@ megcore::AsyncErrorInfo* MegDNNHandle::make_async_error_info(
 }
 #endif
 
-/* =================== misc =================== */
+    /* =================== misc =================== */
 
 #if MGB_CUDA
 

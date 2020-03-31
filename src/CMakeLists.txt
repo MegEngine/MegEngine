@@ -88,7 +88,7 @@ if (MGB_WITH_FLATBUFFERS)
             ${CMAKE_CURRENT_BINARY_DIR}/serialization/impl/opr_param_defs.fbs
         COMMAND
             ${PYTHON_EXECUTABLE} ${GEN_FLATBUFFERS_SCHEMA_PY} ${OPR_PARAM_DEFS_PY} ${CMAKE_CURRENT_BINARY_DIR}/serialization/impl/opr_param_defs.fbs
-        DEPENDS ${GEN_FLATBUFFERS_SCHEMA_PY} ${OPR_PARAM_DEFS_PY} 
+        DEPENDS ${GEN_FLATBUFFERS_SCHEMA_PY} ${OPR_PARAM_DEFS_PY}
         VERBATIM
     )
     add_custom_command(
@@ -124,7 +124,6 @@ if (MGB_WITH_FLATBUFFERS)
     target_include_directories(megbrain PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/serialization/include)
     target_compile_definitions(megbrain PUBLIC MGB_ENABLE_FBS_SERIALIZATION=1)
     target_link_libraries(megbrain PUBLIC flatbuffers)
-    
     set (GENERATED_FLATBUFFERS_CONVERTER_PATH ${CMAKE_CURRENT_BINARY_DIR}/genfiles)
     set (GEN_FLATBUFFERS_CONVERTER_PY ${PROJECT_SOURCE_DIR}/dnn/scripts/gen_flatbuffers_converter.py)
     file (MAKE_DIRECTORY ${GENERATED_FLATBUFFERS_CONVERTER_PATH})

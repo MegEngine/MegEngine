@@ -38,6 +38,7 @@ class DeviceContext {
         virtual size_t mem_alignment_in_bytes() const noexcept = 0;
 
         virtual void activate() = 0;
+        virtual void deactivate() {}
         virtual void *malloc(size_t size_in_bytes) = 0;
         virtual void free(void *ptr) = 0;
 

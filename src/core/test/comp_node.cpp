@@ -59,9 +59,6 @@ TEST(TestCompNode, Parse) {
     ASSERT_THROW(L::parse("cpu0:"), MegBrainError);
     ASSERT_THROW(L::parse("cpu0:x"), MegBrainError);
     ASSERT_THROW(L::parse("cpu2:23x"), MegBrainError);
-    ASSERT_THROW(L::parse("heaxgon0"), MegBrainError);
-    ASSERT_THROW(L::parse("rcom0"), MegBrainError);
-    ASSERT_THROW(L::parse("cmabricon0"), MegBrainError);
     ASSERT_THROW(L::parse("multithread"), MegBrainError);
     ASSERT_THROW(L::parse("multithread1:"), MegBrainError);
     ASSERT_THROW(L::parse("multithread1:default"), MegBrainError);

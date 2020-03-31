@@ -18,7 +18,6 @@
 #if MGB_ENABLE_OPR_MM
 #include "megbrain/opr/collective_comm.h"
 #endif
-
 using AxisIndexer = mgb::opr::indexing::AxisIndexer;
 
 /*!

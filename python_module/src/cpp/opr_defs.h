@@ -118,6 +118,8 @@ static SymbolVarArray tensor_rt_runtime(const SymbolVarArray& inputs,
                                         PyObject* data_bytes,
                                         const OperatorNodeConfig& config);
 
+
+
 static SymbolVar timestamp(SymbolVar input, PyObject* dest, size_t dest_off,
                            const OperatorNodeConfig& config);
 

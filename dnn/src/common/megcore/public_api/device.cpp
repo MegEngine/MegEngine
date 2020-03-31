@@ -74,6 +74,13 @@ megcoreStatus_t megcoreActivate(megcoreDeviceHandle_t handle)
     return megcoreSuccess;
 }
 
+megcoreStatus_t megcoreDeactivate(megcoreDeviceHandle_t handle)
+{
+    megdnn_assert(handle);
+    handle->content->deactivate();
+    return megcoreSuccess;
+}
+
 megcoreStatus_t megcoreMalloc(megcoreDeviceHandle_t handle,
         void **devPtr, size_t sizeInBytes)
 {

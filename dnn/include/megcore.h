@@ -84,6 +84,7 @@ megcoreStatus_t megcoreGetDeviceFlags(
         unsigned int *flags);
 
 megcoreStatus_t megcoreActivate(megcoreDeviceHandle_t handle);
+megcoreStatus_t megcoreDeactivate(megcoreDeviceHandle_t handle);
 megcoreStatus_t megcoreMalloc(megcoreDeviceHandle_t handle,
         void **devPtr, size_t sizeInBytes);
 megcoreStatus_t megcoreFree(megcoreDeviceHandle_t handle,

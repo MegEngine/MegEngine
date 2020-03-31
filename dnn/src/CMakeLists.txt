@@ -86,6 +86,7 @@ if (BUILD_SHARED_LIBS)
 else()
     target_link_libraries(megdnn PRIVATE ${MGE_BLAS_LIBS})
 endif()
+
 if(CMAKE_THREAD_LIBS_INIT)
     target_link_libraries(megdnn PRIVATE Threads::Threads)
 endif()

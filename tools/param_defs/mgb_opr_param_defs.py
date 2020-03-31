@@ -21,8 +21,8 @@ pdef('PersistentOutputStorage').add_fields(
 (pdef('ExecutionPolicy', 'specify how to select an algorithm for an operator').
  add_enum('Strategy',
           Doc('HEURISTIC', 'use heuristic to choose the fastest algorithm'),
-          Doc('HEURISTIC_REPRODUCIBLE', 'use heuristic to choose the fastest algorithm, ' 
-              'and the chosen algorithm is reproducible'), 
+          Doc('HEURISTIC_REPRODUCIBLE', 'use heuristic to choose the fastest algorithm, '
+              'and the chosen algorithm is reproducible'),
           Doc('PROFILE',
               'run possible algorithms on real device to find the best'),
           Doc('PROFILE_REPRODUCIBLE',

@@ -431,10 +431,10 @@ class VarNodeMemManager {
         SyncableCounter m_cpu_async_release_barrier;
 
 
-#if MGB_CUDA
-        //! release dynamic var on after cuda event finishes
-        class CUDAAsyncVarReleaser;
-        std::unique_ptr<CUDAAsyncVarReleaser> m_cuda_asyn_var_releaser;
+#if MGB_CUDA 
+        //! release dynamic var on after compnode event finishes
+        class AsyncVarReleaser;
+        std::unique_ptr<AsyncVarReleaser> m_asyn_var_releaser;
 #endif
 
         VarDevMemDefragmenter m_var_dev_mem_defragmenter{this};

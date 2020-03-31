@@ -41,9 +41,9 @@
         }                                                               \
     } while (0)
 
-#endif  // MGB_ENABLE_LOGGING
+#endif //MGB_ENABLE_LOGGING
+#endif //MGB_CUDA
 
-#endif
 
 //! whether to enable asynchronous initialization for CompNode and CompNodeEnv
 #define MGB_ENABLE_COMP_NODE_ASYNC_INIT (MGB_CUDA)

@@ -246,6 +246,7 @@ SymbolVarArray _Opr::tensor_rt_runtime(const SymbolVarArray& inputs,
 }
 #endif
 
+
 SymbolVar _Opr::timestamp(SymbolVar input, PyObject* dest, size_t dest_off,
                            const OperatorNodeConfig& config) {
     auto tensor = std::make_shared<HostTensorND>(

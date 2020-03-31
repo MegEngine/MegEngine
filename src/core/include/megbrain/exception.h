@@ -136,7 +136,6 @@ public:
      *      error message
      */
     static std::string get_cuda_extra_info();
-
     CudaError(const std::string& msg);
 };
 

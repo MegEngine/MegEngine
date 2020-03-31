@@ -175,7 +175,7 @@ class RNGxorshf {
 };
 
 enum class RandomDistribution {
-    GAUSSIAN, UNIFORM
+    GAUSSIAN, UNIFORM, CONSTANT
 };
 
 template<class dtype>
@@ -320,6 +320,26 @@ class HostTensorGenerator<dtype, RandomDistribution::UNIFORM> final:
 
     private:
         ctype m_lo, m_hi;
+};
+
+//! const value
+template<class dtype>
+class HostTensorGenerator<dtype, RandomDistribution::CONSTANT> final:
+        public HostTensorGeneratorBase {
+
+    public:
+        using ctype = typename DTypeTrait<dtype>::ctype;
+
+        HostTensorGenerator(ctype default_val)
+                : HostTensorGeneratorBase{next_rand_seed()},
+                  m_default_val{default_val} {}
+
+        std::shared_ptr<HostTensorND> operator ()(
+                const TensorShape &shape, CompNode cn = {}) override;
+        using HostTensorGeneratorBase::operator();
+
+    private:
+        ctype m_default_val;
 };
 
 template <>
