@@ -224,7 +224,7 @@ class ImageNet(ImageFolder):
             untar(path, os.path.splitext(path)[0], remove=True)
 
     def _prepare_devkit(self):
-        raw_filename, checksum = self.raw_file_meta["val"]
+        raw_filename, checksum = self.raw_file_meta["devkit"]
         raw_file = os.path.join(self.root, raw_filename)
         logger.info("checksum devkit tar file {} ..".format(raw_file))
         assert calculate_md5(raw_file) == checksum, \
