@@ -42,11 +42,11 @@ def gaussian(
         import megengine as mge
         import megengine.random as rand
 
-        rand.manual_seed(0)
         x = rand.gaussian((2, 2), mean=0, std=1)
         print(x.numpy())
 
     .. testoutput::
+        :options: +SKIP
 
         [[-0.20235455 -0.6959438 ]
          [-1.4939808  -1.5824696 ]]
@@ -79,11 +79,11 @@ def uniform(
         import megengine as mge
         import megengine.random as rand
 
-        rand.manual_seed(0)
         x = rand.uniform((2, 2))
         print(x.numpy())
 
     .. testoutput::
+        :options: +SKIP
 
         [[0.76901674 0.70496535]
          [0.09365904 0.62957656]]

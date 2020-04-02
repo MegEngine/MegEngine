@@ -741,11 +741,11 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
     .. testcode::
 
         import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-        from megengine.random import manual_seed
+        import megengine as mge
 
-        manual_seed(0)
+        import megengine.functional as F
+        from megengine import tensor
+
         data = tensor(np.ones(10, dtype=np.float32))
         out = F.dropout(data, 1./3.)
         print(out.numpy())
@@ -753,6 +753,7 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
     Outputs:
 
     .. testoutput::
+        :options: +SKIP
 
         [1.5 1.5 0.  1.5 1.5 1.5 1.5 1.5 1.5 1.5]
 

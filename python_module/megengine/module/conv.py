@@ -115,7 +115,7 @@ class Conv2d(_ConvNd):
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be ``(groups,
         out_channel // groups, in_channels // groups, *kernel_size)``.
-    :param bias: wether to add a bias onto the result of convolution. Default:
+    :param bias: whether to add a bias onto the result of convolution. Default:
         True
     :param conv_mode: Supports `CROSS_CORRELATION` or `CONVOLUTION`. Default:
         `CROSS_CORRELATION`.
