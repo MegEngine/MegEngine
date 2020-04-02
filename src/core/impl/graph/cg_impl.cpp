@@ -726,4 +726,48 @@ std::string ComputingGraphImpl::VarReceiverInfo::to_string() const {
             allow_empty_value);
 }
 
+#if MGB_ENABLE_JSON
+std::shared_ptr<json::Value> ComputingGraphImpl::get_dynamic_info() const {
+    auto make_var_json = [](VarNode* single_var) {
+        auto &&cur_mem_plan = single_var->mem_plan();
+        if (cur_mem_plan.valid())
+            return json::Object::make({
+                {"name", json::String::make(single_var->name())},
+                {"memory", json::Number::make(cur_mem_plan.chunk().size())},
+                {"dev_ptr", json::NumberInt::make(
+                reinterpret_cast<size_t>(single_var->dev_tensor().raw_ptr()))}
+            });
+        else
+            return json::Object::make({
+                {"name", json::String::make(single_var->name())},
+                {"memory", json::Null::make()},
+                {"dev_ptr", json::Null::make()}
+            });
+    };
+
+    auto objlist = json::Array::make();
+
+    for(auto &opri: m_opr_refkeeper){
+        auto cur_opr = opri.get();
+
+        auto objptr = json::Object::make();
+        auto &&objbody = *objptr;
+
+        objbody["name"] = json::String::make(cur_opr->name());
+
+        auto jvars = json::Array::make();
+        for(auto &outputi: cur_opr->output()){
+            jvars->add(make_var_json(outputi));
+        }
+        objbody["output"] = jvars;
+
+        auto obj = json::Object::make({{std::to_string(cur_opr->id()), objptr}});
+
+        objlist->add(obj);
+    }
+
+    return objlist;
+}
+#endif // MGB_ENABLE_JSON
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

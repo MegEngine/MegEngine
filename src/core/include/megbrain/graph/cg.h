@@ -17,6 +17,10 @@
 #include "megbrain/graph/seq_comp_node_opt.h"
 #include "megbrain/utils/event.h"
 
+#if MGB_ENABLE_JSON
+#include "megbrain/utils/json.h"
+#endif
+
 namespace mgb {
 namespace cg {
 
@@ -170,6 +174,10 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
          */
         virtual const VarReceiverInfo& var_receiver_in_current_comp_seq(
                 const VarNode *var) const = 0;
+
+#if MGB_ENABLE_JSON
+        virtual std::shared_ptr<json::Value> get_dynamic_info() const = 0;
+#endif
 
         /*!
          * \brief find var node by its ID

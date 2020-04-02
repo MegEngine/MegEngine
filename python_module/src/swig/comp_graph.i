@@ -69,6 +69,15 @@ class CompGraph {
                 return reinterpret_cast<size_t>(&$self->get());
             }
 
+            std::string get_dynamic_info() const {
+#ifdef MGB_ENABLE_JSON
+                auto jsonstr = self->get().get_dynamic_info();
+                return jsonstr->to_string();
+#else
+                return std::string("");
+#endif
+            }
+
             std::string __repr__() const {
                 auto &&graph = $self->get();
                 return mgb::ssprintf("<CompGraph #%zu at %p>", graph.id(), &graph);
