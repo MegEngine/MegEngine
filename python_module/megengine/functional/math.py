@@ -190,7 +190,6 @@ def sqrt(inp: Tensor) -> Tensor:
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [[0.      1.     1.4142]
          [1.7321  2.     2.2361 ]]

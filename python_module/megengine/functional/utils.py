@@ -50,7 +50,6 @@ def accuracy(logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [0.] [0.375]
     """

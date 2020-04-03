@@ -636,7 +636,6 @@ def interpolate(
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [[[[1.   1.25 1.75 2.  ]
            [1.5  1.75 2.25 2.5 ]

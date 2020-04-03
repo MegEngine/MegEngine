@@ -20,7 +20,7 @@ class Softmax(Module):
     .. math::
             \text{Softmax}(x_{i}) = \frac{exp(x_i)}{\sum_j exp(x_j)}
 
-    It is applied to an n-dimensional input Tensor and rescaling them so that the elements of the 
+    It is applied to an n-dimensional input Tensor and rescaling them so that the elements of the
     n-dimensional output Tensor lie in the range of `[0, 1]` and sum to 1.
 
     :param axis: An axis along which softmax will be applied. By default,
@@ -137,8 +137,8 @@ class PReLU(Module):
         ax, & \text{ otherwise }
         \end{cases}
 
-    Here :math:`a` is a learnable parameter. When called without arguments, `PReLU()` uses 
-    a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`, 
+    Here :math:`a` is a learnable parameter. When called without arguments, `PReLU()` uses
+    a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`,
     a seperate :math:`a` is used for each input channle.
 
     :param num_parameters: number of :math:`a` to learn, there is only two
@@ -218,7 +218,6 @@ class LeakyReLU(Module):
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [-0.08   -0.12  6.   10.  ]
 

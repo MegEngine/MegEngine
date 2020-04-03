@@ -39,7 +39,6 @@ def argsort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [1. 2.] [0 1]
 
@@ -93,7 +92,6 @@ def top_k(
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [1. 2. 3. 4. 5.] [7 0 6 1 5]
 
