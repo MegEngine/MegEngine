@@ -1239,18 +1239,21 @@ OperatorNodeBase* SeqModifierForSublinearMemory::copy_opr_from_new_inputs(
     //    and config, we use instance id to differentiate them.
     config.name(opr->name() + (recomp ? ":recomp" : ":dup"))
           .instance_id(recomp ? nullptr : this);
-    if (!config.has_comp_node_set()) {
-        auto out_cn = opr->output(0)->comp_node();
-        for (auto i : opr->output()) {
-            auto cn = i->comp_node();
-            if (out_cn != cn) {
-                out_cn = {};
-                break;
-            }
+
+    // Note: if all outputs of op were placed on the same comp_node, since its
+    // stream maybe changed during seq_comp_node_opt, output's comp_node has
+    // higher priority than opr->config()
+    auto out_cn = opr->output(0)->comp_node();
+    for (auto i : opr->output()) {
+        auto cn = i->comp_node();
+        if (out_cn != cn) {
+            out_cn = {};
+            break;
         }
-        if (out_cn.valid())
-            config.comp_node(out_cn);
     }
+    if (out_cn.valid())
+        config.comp_node(out_cn);
+
     auto opr_new = serialization::copy_opr_shallow(*opr, m_new_inputs, config);
     mgb_assert(opr_new != opr);
 
