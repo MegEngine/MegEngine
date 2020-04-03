@@ -56,7 +56,7 @@ class ParamPack(Module):
         for param in params:
             if self._nr_ignore_first > ignored:
                 ignored += 1
-                self._grouped_params.append([{"tensor": param, "id": param_id}])
+                self._grouped_params.append([{"shape": param.shape, "id": param_id}])
                 self._packed_params.append(param)
             else:
                 key = (param.dtype, param.device, param.requires_grad)
@@ -96,7 +96,9 @@ class ParamPack(Module):
                 if idx == 1:
                     # ignore param packs with only one item
                     self._packed_params.append(params[0]["tensor"])
-                    self._grouped_params.append(params)
+                    self._grouped_params.append(
+                        [{"shape": params[0]["tensor"].shape, "id": params[0]["id"]}]
+                    )
                     continue
 
                 packed_value = np.zeros((offset,), dtype=dtype)
@@ -110,7 +112,9 @@ class ParamPack(Module):
                     requires_grad=requires_grad,
                 )
                 self._packed_params.append(new_param)
-                self._grouped_params.append(params)
+                self._grouped_params.append(
+                    [{"shape": i["tensor"].shape, "id": i["id"]} for i in params]
+                )
 
     def forward(self, *args, **kwargs):
         replace_param = dict()
@@ -120,7 +124,7 @@ class ParamPack(Module):
             if len(grouped_params) == 1:
                 continue
             split = param_pack_split(
-                packed_param._symvar, [i["tensor"].shape for i in grouped_params]
+                packed_param._symvar, [i["shape"] for i in grouped_params]
             )
             split = [
                 Parameter(Tensor(i, requires_grad=packed_param.requires_grad))

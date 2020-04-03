@@ -35,4 +35,8 @@ class Parameter(Tensor):
     def shape(self):
         r"""Return shape of parameter.
         """
-        return self._symvar.imm_shape
+        if self._Tensor__val is not None:
+            return self._Tensor__val.shape
+        elif self._Tensor__sym is not None:
+            return self._Tensor__sym.imm_shape
+        return None
