@@ -33,16 +33,18 @@ class ImageNet(ImageFolder):
     r"""
     Load ImageNet from raw files or folder, expected folder looks like
 
-    ${root}/
-    |       [REQUIRED TAR FILES]
-    |-  ILSVRC2012_img_train.tar
-    |-  ILSVRC2012_img_val.tar
-    |-  ILSVRC2012_devkit_t12.tar.gz
-    |       [OPTIONAL IMAGE FOLDERS]
-    |-  train/cls/xxx.${img_ext}
-    |-  val/cls/xxx.${img_ext}
-    |-  ILSVRC2012_devkit_t12/data/meta.mat
-    |-  ILSVRC2012_devkit_t12/data/ILSVRC2012_validation_ground_truth.txt
+    .. code-block:: bash
+
+        ${root}/
+        |       [REQUIRED TAR FILES]
+        |-  ILSVRC2012_img_train.tar
+        |-  ILSVRC2012_img_val.tar
+        |-  ILSVRC2012_devkit_t12.tar.gz
+        |       [OPTIONAL IMAGE FOLDERS]
+        |-  train/cls/xxx.${img_ext}
+        |-  val/cls/xxx.${img_ext}
+        |-  ILSVRC2012_devkit_t12/data/meta.mat
+        |-  ILSVRC2012_devkit_t12/data/ILSVRC2012_validation_ground_truth.txt
 
     If the image folders don't exist, raw tar files are required to get extracted and processed.
     """
