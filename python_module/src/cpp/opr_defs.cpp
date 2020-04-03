@@ -224,7 +224,7 @@ SymbolVarArray _Opr::extern_c_opr_placeholder(
         }
     }
 
-    auto opr = serialization::ExternCOprRunner::make_placeholder(
+    auto opr = opr::ExternCOprRunner::make_placeholder(
             inputs, cpp_output_shapes, dump_name, PyBytes_AsString(data_bytes),
             PyBytes_Size(data_bytes), config, cpp_output_dtypes);
     SymbolVarArray ret;

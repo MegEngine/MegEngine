@@ -179,9 +179,18 @@ namespace {  \
     } \
     MGB_SEREG_OPR_INTL_CALL_ENTRY(_cls, _OprReg##_cls)
 
+//! use to check type is complete or not, midout need a complete type
+template <class T, class = void>
+struct IsComplete : std::false_type {};
+
+template <class T>
+struct IsComplete<T, decltype(void(sizeof(T)))> : std::true_type {};
+
 //! call OprRegistry::add with only loader, used for backward compatibility
 #define MGB_SEREG_OPR_COMPAT(_name, _load)                                  \
     namespace {                                                             \
+    static_assert(IsComplete<_name>(),                                      \
+                  "need a complete type for MGB_SEREG_OPR_COMPAT");         \
     struct _OprReg##_name {                                                 \
         static cg::OperatorNodeBase* compat_loader(                         \
                 serialization::OprLoadContext& ctx,                         \

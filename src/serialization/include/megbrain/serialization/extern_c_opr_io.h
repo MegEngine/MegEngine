@@ -16,7 +16,7 @@
 #include "megbrain/serialization/opr_registry.h"
 
 namespace mgb {
-namespace serialization {
+namespace opr {
 
 //! an operator to run extern C oprs
 MGB_DEFINE_OPR_CLASS(ExternCOprRunner,
@@ -68,10 +68,11 @@ public:
     static bool unregister_loader(const char* name);
 
     //! impl for serialization dump
-    static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr);
+    static void dump(serialization::OprDumpContext& ctx,
+                     const cg::OperatorNodeBase& opr);
 
     //! impl for serialization load
-    static cg::OperatorNodeBase* load(OprLoadContext& ctx,
+    static cg::OperatorNodeBase* load(serialization::OprLoadContext& ctx,
                                       const cg::VarNodeArray& inputs,
                                       const OperatorNodeConfig& config);
 
@@ -88,7 +89,7 @@ public:
     static TensorShape tensor_shape_from_c(const MGBTensorShape& shape);
 };
 
-}  // namespace serialization
+}  // namespace opr
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -182,7 +182,7 @@ std::vector<uint8_t> create_graph_dump(float bias, float extra_scale,
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     if (sleep)
         x = opr::Sleep::make(x, sleep);
-    x = serialization::ExternCOprRunner::make_placeholder(
+    x = opr::ExternCOprRunner::make_placeholder(
                 {x}, {TensorShape{1}},
                 dtype == MGB_DTYPE_FLOAT32
                         ? "bias_adder_dump"
@@ -280,7 +280,7 @@ TEST(TestExternCOpr, Dedup) {
         auto graph = ComputingGraph::make();
         auto x = opr::Host2DeviceCopy::make(*graph, host_x);
         auto make_opr = [x](float bias) {
-            return ExternCOprRunner::make_from_desc(
+            return opr::ExternCOprRunner::make_from_desc(
                     {x.node()}, MGBOprDescImpl<>::make(bias));
         };
         auto y0 = make_opr(0.5), y1 = make_opr(0.6), y2 = make_opr(0.5);
