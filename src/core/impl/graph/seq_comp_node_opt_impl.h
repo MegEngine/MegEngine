@@ -23,6 +23,7 @@ class SeqCompNodeOptimizerImpl final: public SeqCompNodeOptimizer {
     ComputingGraphImpl *m_owner_graph;
     std::vector<std::pair<VarNode*, CompNode>> m_comp_node_to_restore;
     ThinHashSet<OperatorNodeBase*> m_comp_node_changed_oprs;
+    ThinHashMap<VarNode*, PropFunction> m_var2prop_func;
 
     /*!
      * cn0 -> (cn1 -> [(a, b)]): an opr at step \p a on \p cn0 is known to start
@@ -55,6 +56,8 @@ class SeqCompNodeOptimizerImpl final: public SeqCompNodeOptimizer {
         void restore_comp_nodes();
 
         void register_stream_var(VarNode* var, StreamPropType prop_type) override;
+
+        void register_propagate_function(VarNode* var, PropFunction prop_func) override;
 
         StreamPropType stream_prop_type(VarNode *var) override {
             auto iter = m_var2prop_type.find(var);

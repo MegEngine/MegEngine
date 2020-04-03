@@ -168,4 +168,14 @@ void ForwardInputToOutput::mixin_scn_do_execute(OperatorNodeBase &opr) {
 
 void ForwardInputToOutput::scn_do_execute_finish(const DeviceTensorND&) {}
 
+void ForwardInputToOutput::register_stream_propagate_in2out(OperatorNodeBase &opr) {
+    auto &&ovar = opr.output(0);
+    auto&& mgr = ovar->owner_graph()->seq_comp_node_optimizer();
+    using PropType = cg::SeqCompNodeOptimizer::StreamPropType;
+    auto func = [](PropType& dst, const SmallVector<PropType>& inp) {
+        dst = inp[0];
+    };
+    mgr.register_propagate_function(ovar, func);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

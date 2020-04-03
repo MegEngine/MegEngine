@@ -87,6 +87,12 @@ class ForwardInputToOutput: public cg::OperatorNodeMixinBase {
          */
         void set_ignore_side_effect();
 
+        /*!
+         * \brief register stream propagate function which forwards the
+         * StreamPropType from \p opr input(0) to output(0).
+         */
+        void register_stream_propagate_in2out(OperatorNodeBase &opr);
+
     public:
 
         /*!
@@ -177,6 +183,11 @@ MGB_DEFINE_CLS_WITH_SUPER(ForwardInputToOutput,
 
         void init_output_static_infer_desc() override {
             this->mixin_init_output_static_infer_desc(*this);
+        }
+
+        void init_output_comp_node() override {
+            Super::init_output_comp_node();
+            this->register_stream_propagate_in2out(*this);
         }
 };
 
