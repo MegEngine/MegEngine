@@ -637,7 +637,7 @@ CompNode::Impl* CudaCompNode::load_cuda(
     if (!available_node) {
         mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE,
                 "too many CompNode allocated");
-        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE,
+        mgb_assert(locator.device < sd.MAX_NR_DEVICE,
                 "device number too large");
         available_node = &sd.node[sd.nr_node ++];
     }
