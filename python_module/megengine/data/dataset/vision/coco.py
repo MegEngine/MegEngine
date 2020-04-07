@@ -139,7 +139,7 @@ class COCO(VisionDataset):
                 target.append(image)
             elif k == "boxes":
                 boxes = [obj["bbox"] for obj in anno]
-                boxes = np.array(boxes).reshape(-1, 4)
+                boxes = np.array(boxes, dtype=np.float32).reshape(-1, 4)
                 # transfer boxes from xywh to xyxy
                 boxes[:, 2:] += boxes[:, :2]
                 target.append(boxes)
@@ -148,17 +148,21 @@ class COCO(VisionDataset):
                 boxes_category = [
                     self.json_category_id_to_contiguous_id[c] for c in boxes_category
                 ]
-                boxes_category = np.array(boxes_category)
+                boxes_category = np.array(boxes_category, dtype=np.int32)
                 target.append(boxes_category)
-            # TODO: need to check
-            # elif k == "keypoints":
-            #     keypoints = [obj["keypoints"] for obj in anno]
-            #     keypoints = np.array(keypoints).reshape(-1, len(self.keypoint_names), 3)
-            #     target.append(keypoints)
-            # elif k == "polygons":
-            #     polygons = [obj["segmentation"] for obj in anno]
-            #     polygons = [[np.array(p).reshape(-1, 2) for p in ps] for ps in polygons]
-            #     target.append(polygons)
+            elif k == "keypoints":
+                keypoints = [obj["keypoints"] for obj in anno]
+                keypoints = np.array(keypoints, dtype=np.float32).reshape(
+                    -1, len(self.keypoint_names), 3
+                )
+                target.append(keypoints)
+            elif k == "polygons":
+                polygons = [obj["segmentation"] for obj in anno]
+                polygons = [
+                    [np.array(p, dtype=np.float32).reshape(-1, 2) for p in ps]
+                    for ps in polygons
+                ]
+                target.append(polygons)
             elif k == "info":
                 info = self.imgs[img_id]
                 info = [info["height"], info["width"], info["file_name"]]

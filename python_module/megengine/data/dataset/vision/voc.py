@@ -77,13 +77,13 @@ class PascalVOC(VisionDataset):
                 if "aug" in self.image_set:
                     mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
                 else:
-                    mask = np.array(cv2.imread(self.masks[index], cv2.IMREAD_COLOR))
+                    mask = cv2.imread(self.masks[index], cv2.IMREAD_COLOR)
                     mask = self._trans_mask(mask)
                 mask = mask[:, :, np.newaxis]
                 target.append(mask)
-            # elif k == "boxes":
-            #     boxes = self.parse_voc_xml(ET.parse(self.annotations[index]).getroot())
-            #     target.append(boxes)
+            elif k == "boxes":
+                boxes = self.parse_voc_xml(ET.parse(self.annotations[index]).getroot())
+                target.append(boxes)
             elif k == "info":
                 if image is None:
                     image = cv2.imread(self.images[index], cv2.IMREAD_COLOR)
@@ -104,7 +104,7 @@ class PascalVOC(VisionDataset):
             label[
                 (mask[:, :, 0] == b) & (mask[:, :, 1] == g) & (mask[:, :, 2] == r)
             ] = i
-        return label.astype("uint8")
+        return label.astype(np.uint8)
 
     def parse_voc_xml(self, node):
         voc_dict = {}
