@@ -76,7 +76,7 @@ setup_kwargs = dict(
     ext_modules=[PrecompiledExtesion('megengine._internal._mgb')],
     install_requires=requires,
     extras_require={
-        'dev': [*requires_style, *requires_test],
+        'dev': requires_style + requires_test,
         'ci': requires_test,
     },
     cmdclass={'build_ext': build_ext},
