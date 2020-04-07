@@ -49,6 +49,13 @@ option(MGE_WITH_TRT "Build MegEngine with TensorRT." ON)
 option(MGE_USE_SYSTEM_LIB "Build MegEngine with system libraries." OFF)
 option(MGB_WITH_FLATBUFFERS "Build MegBrain with FlatBuffers serialization support." ON)
 
+if(NOT MGE_WITH_JIT)
+    if(MGE_WITH_HALIDE)
+        message(WARNING "MGE_WITH_HALIDE is set to OFF with MGE_WITH_JIT disabled")
+        set(MGE_WITH_HALIDE OFF)
+    endif()
+endif()
+
 if(MGE_WITH_CUDA)
     include(CheckLanguage)
     check_language(CUDA)
@@ -77,9 +84,6 @@ if(${CMAKE_THREAD_LIBS_INIT} STREQUAL "-pthread" AND MGE_WITH_CUDA)
         PROPERTY INTERFACE_COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-pthread>"
         "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-pthread>")
 endif()
-if(CMAKE_THREAD_LIBS_INIT)
-    add_definitions(-DMGB_HAVE_THREAD=1)
-endif()
 
 
 set(MGE_BLAS MKL CACHE STRING "BLAS implementaion used by MegEngine.")
@@ -92,12 +96,6 @@ endif()
 option(MGE_ENABLE_RTTI "Build with RTTI" ON)
 option(MGE_ENABLE_LOGGING "Build with logging" ON)
 option(MGE_DEBUG_UTIL "Enable debug utility" ON)
-
-if(MGE_DEBUG_UTIL)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMGB_ENABLE_DEBUG_UTIL=1")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMGB_ENABLE_DEBUG_UTIL=0")
-endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
     message(STATUS "Setting build type to 'RelWithDebInfo' as none was specified.")
@@ -113,33 +111,6 @@ if(NOT MGE_ENABLE_EXCEPTIONS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exception")
 endif()
 
-# RTTI
-if(MGE_ENABLE_RTTI)
-    add_definitions(-DMEGDNN_ENABLE_MANGLING=0 -DMEGDNN_ENABLE_RTTI=1)
-else()
-    add_definitions(-DMEGDNN_ENABLE_MANGLING=1 -DMEGDNN_ENABLE_RTTI=0)
-endif()
-
-# Logging
-if(MGE_ENABLE_LOGGING)
-    add_definitions(-DMEGDNN_ENABLE_LOGGING=1 -DMGB_ENABLE_LOGGING=1 -DMGB_ENABLE_JSON=1)
-else()
-    add_definitions(-DMEGDNN_ENABLE_LOGGING=0 -DMGB_ENABLE_LOGGING=0 -DMGB_ENABLE_JSON=0)
-endif()
-
-# Exception
-if(MGE_ENABLE_EXCEPTIONS)
-    add_definitions(-DMEGDNN_ENABLE_EXCEPTIONS=1)
-else()
-    message(STATUS "Exceptions disabled; MegEngine would kill itself when it is supposed to throw an exception.")
-    add_definitions(-DMEGDNN_ENABLE_EXCEPTIONS=0)
-endif()
-
-if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
-    set(HALIDE_SHARED_LIBRARY OFF CACHE BOOL "Build as a shared library")
-    include(cmake/Halide.cmake)
-    add_definitions(-DMGB_JIT_HALIDE=1)
-endif()
 
 option(MGE_WITH_TEST "Enable test for MegEngine." OFF)
 if(MGE_WITH_TEST)
@@ -319,24 +290,77 @@ if(MGE_WITH_MKLDNN AND ${MGE_ARCH} STREQUAL "x86_64")
     include(cmake/MKL_DNN.cmake)
 endif()
 
+# RTTI
+if(MGE_ENABLE_RTTI)
+    add_definitions(-DMEGDNN_ENABLE_MANGLING=0 -DMEGDNN_ENABLE_RTTI=1)
+else()
+    add_definitions(-DMEGDNN_ENABLE_MANGLING=1 -DMEGDNN_ENABLE_RTTI=0)
+endif()
+set(MGB_VERBOSE_TYPEINFO_NAME ${MGE_ENABLE_RTTI})
+
+# Logging
+if(MGE_ENABLE_LOGGING)
+    add_definitions(-DMEGDNN_ENABLE_LOGGING=1)
+else()
+    add_definitions(-DMEGDNN_ENABLE_LOGGING=0)
+endif()
+set(MGB_ENABLE_LOGGING ${MGE_ENABLE_LOGGING})
+set(MGB_ENABLE_JSON ${MGE_ENABLE_LOGGING})
+
+# Exception
+if(MGE_ENABLE_EXCEPTIONS)
+    add_definitions(-DMEGDNN_ENABLE_EXCEPTIONS=1)
+else()
+    message(STATUS "Exceptions disabled; MegEngine would kill itself when it is supposed to throw an exception.")
+    add_definitions(-DMEGDNN_ENABLE_EXCEPTIONS=0)
+endif()
+set(MGB_ENABLE_EXCEPTION ${MGE_ENABLE_EXCEPTIONS})
+
+# JIT
+if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
+    set(HALIDE_SHARED_LIBRARY OFF CACHE BOOL "Build as a shared library")
+    include(cmake/Halide.cmake)
+endif()
+set(MGB_JIT ${MGE_WITH_JIT})
+set(MGB_JIT_HALIDE ${MGE_WITH_HALIDE})
+
+# Thread
+if(CMAKE_THREAD_LIBS_INIT)
+    set(MGB_HAVE_THREAD 1)
+endif()
+
+# CUDA
+set(MGB_CUDA ${MGE_WITH_CUDA})
+
+# Debug info
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+    set(MGB_ASSERT_LOC 1)
+    set(MGB_ENABLE_DEBUG_UTIL 1)
+else()
+    set(MGB_ASSERT_LOC 0)
+    set(MGB_ENABLE_DEBUG_UTIL 0)
+endif()
+
+# TensorRT
+set(MGB_ENABLE_TENSOR_RT ${MGE_WITH_TRT})
+
+# Inference only
+if(MGE_INFERENCE_ONLY)
+    set(MGB_ENABLE_GRAD 0)
+    set(MGB_BUILD_SLIM_SERVING 1)
+else()
+    set(MGB_ENABLE_GRAD 1)
+    set(MGB_BUILD_SLIM_SERVING 0)
+endif()
+
+# Distributed communication
+set(MGB_ENABLE_OPR_MM ${MGE_WITH_DISTRIBUTED})
+
+# Write out megbrain_build_config.h
+configure_file(src/core/include/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h DESTINATION include)
 
 add_subdirectory(dnn)
-
-
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DMGB_ASSERT_LOC=1")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DMGB_ASSERT_LOC=0")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -DMGB_ASSERT_LOC=1")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -DMGB_ASSERT_LOC=0")
-
-if(MGE_ENABLE_RTTI)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMGB_VERBOSE_TYPEINFO_NAME=1")
-endif()
-
-if(MGE_ENABLE_EXCEPTIONS)
-    add_definitions(-DMGB_ENABLE_EXCEPTION=1)
-else()
-    add_definitions(-DMGB_ENABLE_EXCEPTION=0)
-endif()
 
 list(APPEND MGB_OPR_PARAM_DEFS_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tools/param_defs/mgb_opr_param_defs.py)
 set(MGB_OPR_PARAM_DEFS_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/dnn/scripts/gen_param_defs.py)
@@ -401,25 +425,4 @@ if(TARGET _mgb)
         VERBATIM
     )
 endif()
-
-set(MGB_CUDA ${MGE_WITH_CUDA})
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-    set(MGB_ASSERT_LOC 1)
-else()
-    set(MGB_ASSERT_LOC 0)
-endif()
-set(MGB_ENABLE_DEBUG_UTIL ${MGE_DEBUG_UTIL})
-set(MGB_ENABLE_LOGGING ${MGE_ENABLE_LOGGING})
-set(MGB_VERBOSE_TYPEINFO_NAME ${MGE_ENABLE_RTTI})
-set(MGB_ENABLE_EXCEPTION ${MGE_ENABLE_EXCEPTIONS})
-set(MGB_JIT ${MGE_WITH_JIT})
-set(MGB_JIT_HALIDE ${MGE_WITH_HALIDE})
-set(MGB_ENABLE_TENSOR_RT ${MGE_WITH_TRT})
-set(MGB_ENABLE_JSON ${MGE_ENABLE_LOGGING})
-set(MGB_ENABLE_GRAD NOT ${MGE_INFERENCE_ONLY})
-set(MGB_BUILD_SLIM_SERVING ${MGE_INFERENCE_ONLY})
-configure_file(src/core/include/megbrain_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
-file(READ src/core/include/megbrain_build_config.h _CONTENT)
-file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h ${_CONTENT})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h DESTINATION include)
 

@@ -2,19 +2,9 @@
 
 file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
 
-set(MGB_DEF)
 if(MGE_WITH_JIT)
-    list(APPEND MGB_DEF -DMGB_JIT=1)
     file(GLOB_RECURSE SOURCES_ jit/impl/*.cpp jit/impl/*.inl)
     list(APPEND SOURCES ${SOURCES_})
-else()
-    list(APPEND MGB_DEF -DMGB_JIT=0)
-endif()
-
-if(MGE_INFERENCE_ONLY)
-    list(APPEND MGB_DEF -DMGB_ENABLE_GRAD=0 -DMGB_BUILD_SLIM_SERVING=1)
-else()
-    list(APPEND MGB_DEF -DMGB_ENABLE_GRAD=1 -DMGB_BUILD_SLIM_SERVING=0)
 endif()
 
 if(MGE_WITH_DISTRIBUTED)
@@ -22,7 +12,7 @@ if(MGE_WITH_DISTRIBUTED)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
-set(MGB_INC core/include gopt/include opr/include plugin/include serialization/include)
+set(MGB_INC ${PROJECT_BINARY_DIR}/genfiles core/include gopt/include opr/include plugin/include serialization/include)
 
 if(MGE_WITH_JIT)
     list(APPEND MGB_INC jit/include)
@@ -32,25 +22,13 @@ if(MGE_WITH_JIT)
 endif()
 
 if(MGE_WITH_DISTRIBUTED)
-    list(APPEND MGB_DEF -DMGB_ENABLE_OPR_MM=1)
     list(APPEND MGB_INC opr-mm/include)
-else()
-    list(APPEND MGB_DEF -DMGB_ENABLE_OPR_MM=0)
-endif()
-
-if(MGE_WITH_CUDA)
-list(APPEND MGB_DEF -DMGB_CUDA=1)
-else()
-list(APPEND MGB_DEF -DMGB_CUDA=0)
 endif()
 
 if(MGE_WITH_CUDA AND MGE_WITH_TRT)
-    list(APPEND MGB_DEF -DMGB_ENABLE_TENSOR_RT=1)
     list(APPEND MGB_INC tensorrt/include)
     file(GLOB_RECURSE SOURCES_ tensorrt/impl/*.cpp tensorrt/impl/*.inl)
     list(APPEND SOURCES ${SOURCES_})
-else()
-    list(APPEND MGB_DEF -DMGB_ENABLE_TENSOR_RT=0)
 endif()
 
 set(MGB_DEF ${MGB_DEF} PARENT_SCOPE)

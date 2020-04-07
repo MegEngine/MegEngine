@@ -10,9 +10,6 @@ find_package(Numpy REQUIRED)
 find_package(SWIG REQUIRED)
 set(SWIG_SRC src/swig/mgb.i)
 set(CMAKE_SWIG_FLAGS -Wall -threads -py3 -modern -DSWIGWORDSIZE64)
-if(MGB_ENABLE_JSON)
-    set(CMAKE_SWIG_FLAGS ${CMAKE_SWIG_FLAGS} -DMGB_ENABLE_JSON)
-endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 
 if(MGE_WITH_DISTRIBUTED)
@@ -105,5 +102,6 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/src/serialization/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/src/plugin/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/dnn/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/genfiles/megbrain_build_config.h ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include/megbrain_build_config.h
 )
 

@@ -146,9 +146,7 @@ public:
         return m_var_receiver.at(var);
     }
 
-#if MGB_ENABLE_JSON
-    std::shared_ptr<json::Value> get_dynamic_info() const override;
-#endif
+    std::string get_mem_allocation_info() const override;
 
     VarNode* find_var_by_id(size_t id) const override;
 

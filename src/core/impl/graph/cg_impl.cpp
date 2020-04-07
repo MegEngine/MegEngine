@@ -726,8 +726,8 @@ std::string ComputingGraphImpl::VarReceiverInfo::to_string() const {
             allow_empty_value);
 }
 
+std::string ComputingGraphImpl::get_mem_allocation_info() const {
 #if MGB_ENABLE_JSON
-std::shared_ptr<json::Value> ComputingGraphImpl::get_dynamic_info() const {
     auto make_var_json = [](VarNode* single_var) {
         auto &&cur_mem_plan = single_var->mem_plan();
         if (cur_mem_plan.valid())
@@ -766,8 +766,11 @@ std::shared_ptr<json::Value> ComputingGraphImpl::get_dynamic_info() const {
         objlist->add(obj);
     }
 
-    return objlist;
-}
+    return objlist->to_string();
 #endif // MGB_ENABLE_JSON
+    mgb_log_warn("mgb is not configured with MGB_ENABLE_JSON on,"
+                 "get_mem_allocation_info returns null string");
+    return std::string();
+}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
