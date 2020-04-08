@@ -1898,7 +1898,7 @@ void test_param_pack_concat(const TensorShapeArray &shapes, DType type){
         srcs.push_back(nd);
     }
 
-    auto host_table_gen = megdnn::ParamPackSplit::gen_table(shapes,
+    auto host_table_gen = megdnn::ParamPackSplit::gen_offsets(shapes,
             cn.get_mem_addr_alignment(), 4);
     ASSERT_EQ(host_table_gen.size(), size * 2);
     auto host_table = std::make_shared<HostTensorND>();
@@ -1944,7 +1944,7 @@ void test_param_pack_split(const TensorShapeArray& shapes) {
 
     auto make_graph = [&](const typename Checker::SymInpArray& inputs) ->
             typename Checker::SymOutArray {
-        auto table_val = megdnn::ParamPackSplit::gen_table(
+        auto table_val = megdnn::ParamPackSplit::gen_offsets(
                 shapes, cn.get_mem_addr_alignment(), 4);
         HostTensorND table;
         std::copy_n(table_val.data(), table_val.size(),
@@ -1954,7 +1954,8 @@ void test_param_pack_split(const TensorShapeArray& shapes) {
                             .ptr<dt_int32>());
         auto sym_table = opr::SharedDeviceTensor::make(
                 *inputs[0].node()->owner_graph(), table);
-        auto out = opr::ParamPackSplit::make(inputs[0], sym_table, shapes);
+        auto out = opr::ParamPackSplit::make(inputs[0], sym_table, table_val,
+                                             shapes);
         mgb_assert(out.size() == nr_out);
         typename Checker::SymOutArray ret;
         for (size_t i = 0; i < nr_out; ++i) {

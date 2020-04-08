@@ -47,19 +47,19 @@ SymbolVarArray _Opr::param_pack_split(
         shapearr[i] = npy::vec2shape(shapes[i]);
     }
 
+    auto cn = src.node()->comp_node();
+    auto table_val = megdnn::ParamPackSplit::gen_offsets(
+            shapearr, cn.get_mem_addr_alignment(), src.dtype().size());
     if (!table.node()) {
-        auto cn = src.node()->comp_node();
         if (config.has_comp_node_set()) {
             cn = config.get_single_comp_node();
         }
-        auto table_val = megdnn::ParamPackSplit::gen_table(
-                shapearr, cn.get_mem_addr_alignment(), src.dtype().size());
-        HostTensorND hv{cn, TensorShape{table_val.size()}, dtype::Int32{}};
+        HostTensorND hv{cn, TensorShape{{table_val.size()}}, dtype::Int32{}};
         memcpy(hv.raw_ptr(), table_val.data(), table_val.size() * sizeof(int));
         table = opr::ImmutableTensor::make(*src.node()->owner_graph(), hv);
     }
 
-    return mgb::opr::ParamPackSplit::make(src, table, shapearr, config);
+    return mgb::opr::ParamPackSplit::make(src, table, table_val, shapearr, config);
 }
 
 #if MGB_ENABLE_OPR_MM

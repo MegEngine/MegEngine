@@ -570,31 +570,31 @@ public:
  * \brief Opr used to split parameter
  */
 MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
-    //! input pointer buffer
-    SmallVector<void*> m_inp_ptr;
-
-    intl::UniqPtrWithCN<megdnn::ParamPackSplit> m_opr;
     TensorShapeArray m_shapes;
+    std::vector<dt_int32> m_offsets;
+    std::vector<bool> m_mem_fwd_success;
 
     void scn_do_execute() override;
     void init_output_static_infer_desc() override;
-    void on_output_comp_node_stream_changed() override;
-
     bool infer_shape(size_t index, TensorShape &dest,
             const cg::static_infer::InpVal &inp);
-
     void init_output_dtype() override;
-
+    void mem_plan_fwd_in2out_readonly() override;
     void add_input_layout_constraint() override;
 
-    void init_megdnn_opr();
-
 public:
-    ParamPackSplit(VarNode* src, VarNode* table, TensorShapeArray& shapes,
-            const OperatorNodeConfig &config);
+    ParamPackSplit(VarNode* src, VarNode* offsets,
+                   const std::vector<dt_int32> offsets_val,
+                   TensorShapeArray& shapes, const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(const SymbolVar &src, const SymbolVar &table,
-            TensorShapeArray shapes, const OperatorNodeConfig &config = {});
+    static SymbolVarArray make(const SymbolVar& src, const SymbolVar& offsets,
+                               const std::vector<dt_int32> offsets_val,
+                               TensorShapeArray shapes,
+                               const OperatorNodeConfig& config = {});
+
+    const std::vector<dt_int32>& get_offsets() const {
+        return m_offsets;
+    }
 
     const TensorShapeArray& get_output_shapes() const {
         return m_shapes;

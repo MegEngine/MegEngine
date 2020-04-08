@@ -185,9 +185,10 @@ namespace opr {
             const cg::OperatorNodeBase &opr_, const VarNodeArray &inputs,
             const OperatorNodeConfig &config){
          auto &&opr = opr_.cast_final_safe<ParamPackSplit>();
+         auto &&offsets = opr.get_offsets();
          auto &&shape = opr.get_output_shapes();
 
-         return ParamPackSplit::make(inputs[0], inputs[1], shape, config).at(0).
+         return ParamPackSplit::make(inputs[0], inputs[1], offsets, shape, config).at(0).
              node()->owner_opr();
     }
 

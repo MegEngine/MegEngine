@@ -1430,20 +1430,22 @@ void ParamPackConcat::on_output_comp_node_stream_changed(){
 /* f{{{ ======================= ParamPackSplit ======================= */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ParamPackSplit);
-ParamPackSplit::ParamPackSplit(VarNode* src, VarNode* table,
-        TensorShapeArray& shapes, const OperatorNodeConfig& config)
-        : Super{src->owner_graph(), config, "ParamPackSplit", {src, table}},
-        m_shapes(shapes){
-    mgb_assert(src->comp_node() == table->comp_node());
+ParamPackSplit::ParamPackSplit(VarNode* src, VarNode* offsets,
+                               const std::vector<dt_int32> offsets_val,
+                               TensorShapeArray& shapes,
+                               const OperatorNodeConfig& config)
+        : Super{src->owner_graph(), config, "ParamPackSplit", {src, offsets}},
+          m_shapes(shapes), m_offsets(offsets_val) {
+    mgb_assert(src->comp_node() == offsets->comp_node());
     add_input({src});
-    add_input({table});
+    add_input({offsets});
+    m_mem_fwd_success.resize(m_shapes.size());
 
     for (size_t i = 0; i < shapes.size(); i++) {
         mgb_assert(shapes[i].total_nr_elems(), "empty param is not allowed!");
-        add_output(ssprintf("param_pack_o%zu", i))->dtype(src->dtype());
+        add_output(ssprintf("param_pack_o%zu", i))
+                ->dtype(src->dtype()).shape(shapes[i]);
     }
-
-    cg::add_workspace_output(this);
 }
 
 void ParamPackSplit::add_input_layout_constraint(){
@@ -1451,17 +1453,19 @@ void ParamPackSplit::add_input_layout_constraint(){
 }
 
 SymbolVarArray ParamPackSplit::make(const SymbolVar& src,
-                                    const SymbolVar& table,
+                                    const SymbolVar& offsets,
+                                    const std::vector<dt_int32> offsets_val,
                                     TensorShapeArray shapes,
                                     const OperatorNodeConfig& config) {
     auto&& out = src.node()
                          ->owner_graph()
                          ->insert_opr(std::make_unique<ParamPackSplit>(
-                                 src.node(), table.node(), shapes, config))
+                                 src.node(), offsets.node(), offsets_val,
+                                 shapes, config))
                          ->output();
 
     SymbolVarArray ret;
-    ret.resize(out.size() - 1); // do not return workspace
+    ret.resize(out.size());
     for (size_t i = 0; i < ret.size(); ++i) {
         ret[i] = out[i];
     }
@@ -1469,41 +1473,25 @@ SymbolVarArray ParamPackSplit::make(const SymbolVar& src,
 }
 
 void ParamPackSplit::scn_do_execute() {
-    mgb_assert(m_opr.comp_node() == comp_node());
-    megdnn::TensorND src = input(0)->dev_tensor().as_megdnn(),
-                     table = input(1)->dev_tensor().as_megdnn();
-    auto outputs = output();
-    m_inp_ptr.resize(outputs.size() - 1);
-    auto ptr = m_inp_ptr.data();
-
-    for (size_t i = 0; i < outputs.size() - 1; i++) {
-        ptr[i] = outputs[i]->dev_tensor().as_megdnn().raw_ptr;
-    }
-    megdnn::TensorND dsts(
-            ptr, megdnn::TensorLayout({outputs.size() - 1}, dtype::Int32()));
-
-    m_opr->exec(src, table, dsts,
-                get_megdnn_workspace_from_var(outputs.back()));
-}
-
-void ParamPackSplit::on_output_comp_node_stream_changed() {
-    Super::on_output_comp_node_stream_changed();
-    init_megdnn_opr();
-}
-
-void ParamPackSplit::init_megdnn_opr(){
-    m_opr = intl::create_megdnn_opr<megdnn::ParamPackSplit>(comp_node());
 }
 
 void ParamPackSplit::init_output_dtype() {
     // already initialized in constructor
 }
 
+void ParamPackSplit::mem_plan_fwd_in2out_readonly() {
+    mgb_assert(m_offsets.size() == output().size());
+    for (size_t i = 0; i < output().size(); i++) {
+        auto layout = output(i)->layout();
+        auto spec = SubTensorSpec::make_from_offset_elem(layout, m_offsets[i]);
+        m_mem_fwd_success[i] = output(i)->set_fwd_in2out_readonly(
+            input(0), spec);
+        mgb_assert(m_mem_fwd_success[i]);
+    }
+}
+
 bool ParamPackSplit::infer_shape(size_t index, TensorShape& dest,
                                  const cg::static_infer::InpVal& inp) {
-    if (!m_opr.get()){
-        init_megdnn_opr();
-    }
     dest = m_shapes[index];
     return true;
 }
@@ -1515,33 +1503,19 @@ void ParamPackSplit::init_output_static_infer_desc() {
 
     DepVal shp_deps{{input(0), DepType::SHAPE}, {input(1), DepType::SHAPE}};
 
-    auto infer_wk = [this](TensorShape &dst, const InpVal &inp){
-        dst.ndim = 1;
-
-        if(!m_opr.get()){
-            init_megdnn_opr();
-        }
-
-        dst.shape[0] = m_opr->get_workspace_in_bytes(
-                inp.val.at(0).shape(), inp.val.at(1).shape(), m_shapes);
-        return true;
-    };
-
-    for (size_t i = 0; i < output().size() - 1; i++) {
+    for (size_t i = 0; i < output().size(); i++) {
         auto ov = output(i);
         mgr.register_shape_infer(
                 ov, {SourceType::DEP, shp_deps,
                      std::bind(&ParamPackSplit::infer_shape, this, i, _1, _2)});
     }
-    mgr.register_shape_infer(
-            output().back(), {SourceType::DEP, shp_deps, infer_wk});
 }
 
 MGB_IMPL_OPR_GRAD(ParamPackSplit) {
     mgb_assert(out_grad.size() == opr.output().size());
     SmallVector<SymbolVar> grad;
     // last var is workspace, ignore it
-    for (size_t i = 0; i < out_grad.size() - 1; ++i) {
+    for (size_t i = 0; i < out_grad.size(); ++i) {
         auto gval = out_grad[i];
         if (!gval) {
             gval = SymbolVar{opr.output(i)}.fill_retain_dtype(0).node();
