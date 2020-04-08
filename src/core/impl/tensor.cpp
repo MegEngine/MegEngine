@@ -28,15 +28,32 @@ namespace {
 
     //! implement non-contiguous d2d copy
     void noncont_tensor_copy(
-            const DeviceTensorND &dest, const DeviceTensorND &src, bool, bool) {
-        auto &&src_env = CompNodeEnv::from_comp_node(src.comp_node());
+            const DeviceTensorND &dest, const DeviceTensorND &src,
+            bool contig_dest, bool contig_src) {
+        auto src_cn = src.comp_node();
         auto dst_cn = dest.comp_node();
-        auto relayout = opr::intl::get_megdnn_global_opr<megdnn::Relayout>(
-                dst_cn);
-        dst_cn.activate();
-        relayout->exec(
-                const_cast<DeviceTensorND&>(src).as_megdnn(),
-                dest.as_megdnn(), MegDNNHandle::get(src_env).handle());
+        if (src_cn.device_type() == dst_cn.device_type()) {
+            // perform relayout op for better performance when src and dst are
+            // placed on comp nodes with the same device type
+            auto &&src_env = CompNodeEnv::from_comp_node(src.comp_node());
+            auto relayout = opr::intl::get_megdnn_global_opr<megdnn::Relayout>(
+                    dst_cn);
+            dst_cn.activate();
+            relayout->exec(
+                    const_cast<DeviceTensorND&>(src).as_megdnn(),
+                    dest.as_megdnn(), MegDNNHandle::get(src_env).handle());
+        } else {
+            if (contig_src) {
+                mgb_assert(!contig_dest);
+                DeviceTensorND tmp{dst_cn};
+                tmp.copy_from(src);
+                dest.copy_from_fixlayout(tmp);
+                return;
+            }
+            DeviceTensorND tmp;
+            tmp.copy_from(src);
+            dest.copy_from_fixlayout(tmp);
+        }
     }
 
     //! implement non-contiguous h2h copy
@@ -346,7 +363,28 @@ template<> template<>
 void TensorStorage<DeviceTensorStorageTrait>::copy_from(
         const TensorStorage<DeviceTensorStorageTrait> &src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
-    src.comp_node().peer_copy_to(m_comp_node, ptr(), src.ptr(), size);
+    if (src.comp_node().device_type() == CompNode::DeviceType::CPU &&
+        comp_node().device_type() == CompNode::DeviceType::CUDA) {
+        // current thread(i.e. cuda dispatcher thread) should wait for all
+        // operations on src's comp_node to finish, otherwise a race condition
+        // might occur between the worker thread of src's comp_node and the
+        // thread responsible for copying pageable memory in \p src to a pinned
+        // buffer, refer to
+        // https://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html
+        //
+        // Note: it is highly recommended that copy tensor from cpu to cuda
+        // with asynchronized disaptching(see graph option async_exec_level),
+        // or main thread might be blocked by worker thread corresponding to
+        // the src's comp_node, resulting in bad performance
+        //
+        // TODO: consider using cudaMallocHost or cudaHostRegister
+        // to pin the memory of src tensor, so it does not require synchronization
+        // and is more efficient
+        src.comp_node().sync();
+        comp_node().copy_to_device(ptr(), src.ptr(), size);
+    } else {
+        src.comp_node().peer_copy_to(m_comp_node, ptr(), src.ptr(), size);
+    }
 }
 
 

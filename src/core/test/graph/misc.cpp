@@ -1733,22 +1733,25 @@ TEST(TestGraph, UpdateStaticAllocPlan) {
 
 TEST(TestGraph, CPUGPUHybrid) {
     REQUIRE_GPU(1);
-    auto cn_cpu = CompNode::load("cpu:default"),
-         cn_gpu = CompNode::load("gpu0");
-    auto graph = ComputingGraph::make();
-    HostTensorGenerator<> gen;
-    auto host_x = gen({42});
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x, {cn_cpu}),
-         y = x * 2,
-         z = opr::Copy::make(y, cn_gpu) + 1;
-    HostTensorND host_z;
-    auto func = graph->compile({make_callback_copy(z, host_z)});
-    func->execute();
-    for (size_t i = 0; i < 42; ++ i) {
-        MGB_ASSERT_FLOAT_EQ(host_x->ptr<float>()[i] * 2 + 1,
-                            host_z.ptr<float>()[i]);
+    auto cn_gpu = CompNode::load("gpu0");
+    for (auto&& cn_cpu : {CompNode::load("cpu0"), CompNode::default_cpu()}) {
+        auto graph = ComputingGraph::make();
+        HostTensorGenerator<> gen;
+        constexpr size_t length = 23333;
+        auto host_x = gen({length});
+        graph->options().var_sanity_check_first_run = false;
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x, {cn_cpu}),
+            y = opr::Sleep::make(x, 0.5) * 2,
+            z_gpu = opr::Copy::make(y, cn_gpu) + 1,
+            z = opr::Copy::make(z_gpu, cn_cpu) * 2;
+        HostTensorND host_z;
+        auto func = graph->compile({make_callback_copy(z, host_z)});
+        func->execute();
+        for (size_t i = 0; i < length; ++ i) {
+            MGB_ASSERT_FLOAT_EQ((host_x->ptr<float>()[i] * 2 + 1) * 2,
+                                host_z.ptr<float>()[i]);
+        }
     }
-
 }
 
 TEST(TestGraph, In2OutOpStreamPropagate) {

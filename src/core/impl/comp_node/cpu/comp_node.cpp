@@ -836,9 +836,10 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
     {
         auto type = cn_impl->env().property().type;
         mgb_throw_if(type != CompNode::DeviceType::CPU
+                             && type != CompNode::DeviceType::CUDA
                              ,
                      MegBrainError,
-                     "currently CPU can only wait for CPU"
+                     "currently CPU can only wait for CPU, CUDA"
         );
     }
 
