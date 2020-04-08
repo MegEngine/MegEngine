@@ -112,8 +112,8 @@ void test_param_pack_split(Handle* handle, const TensorShapeArray& shapes,
     std::vector<int32_t> table =
             create_table<T>(shapes, handle->alignment_requirement());
     ASSERT_EQ(table,
-              ParamPackSplit::gen_table(shapes, handle->alignment_requirement(),
-                                        sizeof(T)));
+              ParamPackSplit::gen_offsets(
+                      shapes, handle->alignment_requirement(), sizeof(T)));
     size_t pack_size = table.size() / 2;
     int32_t* table_gpu = create_device_data<int32_t>(handle, table.data(),
             table.size());
