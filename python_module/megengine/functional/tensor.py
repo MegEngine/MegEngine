@@ -445,11 +445,10 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
     return mgb.opr.reshape(inp, target_shape)
 
 
-@functools.wraps(dimshuffle)
-def transpose(*args, **kwargs):
-    r"""See :func:`dimshuffle`
+def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
+    r"""Equivalent to :func:`dimshuffle`
     """
-    return dimshuffle(*args, **kwargs)
+    return dimshuffle(inp, pattern)
 
 
 @wrap_io_tensor
