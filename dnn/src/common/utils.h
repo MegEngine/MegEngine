@@ -41,6 +41,7 @@
 #endif
 
 #define rep(i, n) for (auto i = decltype(n){0}; i < (n); ++i)
+#define rep_step(i, n, step) for (auto i = decltype(n){0}; i < (n); i += (step))
 
 #define megdnn_assert_contiguous(layout)                              \
     do {                                                              \
