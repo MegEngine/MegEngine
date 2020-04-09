@@ -40,6 +40,165 @@ TEST_F(X86, CONV_BIAS_FORWARD) {
                 .execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
+
+TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE1_INT8x8x32) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+
+    auto run = [&](size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        param.sparse = param::ConvBias::Sparse::GROUP;
+        //! no bias
+        args.emplace_back(param, TensorShape{2, ic, h, w},
+                          TensorShape{ic, 1, 1, kernel, kernel}, TensorShape{});
+        //! bias channel
+        args.emplace_back(param, TensorShape{2, ic, h, w},
+                          TensorShape{ic, 1, 1, kernel, kernel},
+                          TensorShape{1, ic, 1, 1});
+    };
+
+    for (size_t kernel : {2, 3, 5, 7})
+        for (size_t pad : {0, 1})
+            for (size_t ic : {1, 5, 17, 20})
+                for (size_t h : {7, 16, 38, 40})
+                    for (size_t w : {16, 25, 40, 55})
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY})
+                            run(ic, w, h, kernel, pad, nonline_mode);
+
+    Checker<ConvBias> checker(handle());
+    UniformIntRNG rng{-50, 50};
+    checker.set_dtype(0, dtype::Int8())
+            .set_dtype(1, dtype::Int8())
+            .set_dtype(2, dtype::Int32())
+            .set_dtype(4, dtype::Int32())
+            .set_rng(0, &rng)
+            .set_rng(1, &rng)
+            .set_rng(2, &rng)
+            .set_epsilon(1e-3);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1"));
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).exec(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE1_QuantizedS32) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+
+    auto run = [&](size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        param.sparse = param::ConvBias::Sparse::GROUP;
+        //! no bias
+        args.emplace_back(param, TensorShape{2, ic, h, w},
+                          TensorShape{ic, 1, 1, kernel, kernel}, TensorShape{});
+        //! bias channel
+        args.emplace_back(param, TensorShape{2, ic, h, w},
+                          TensorShape{ic, 1, 1, kernel, kernel},
+                          TensorShape{1, ic, 1, 1});
+    };
+
+    for (size_t kernel : {2, 3, 5, 7})
+        for (size_t pad : {0, 1})
+            for (size_t ic : {1, 3, 5, 7, 17})
+                for (size_t h : {10, 17, 25, 30})
+                    for (size_t w : {19, 28, 58, 168})
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY})
+                            run(ic, w, h, kernel, pad, nonline_mode);
+
+    Checker<ConvBias> checker(handle());
+    UniformIntRNG rng{-50, 50};
+    checker.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, {})
+            .set_rng(0, &rng)
+            .set_rng(1, &rng)
+            .set_rng(2, &rng)
+            .set_epsilon(1e-3);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1"));
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).exec(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE1_QuantizedS8x8x8) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+
+    auto run = [&](size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        param.sparse = param::ConvBias::Sparse::GROUP;
+        //! no bias
+        args.emplace_back(param, TensorShape{2, ic, h, w},
+                          TensorShape{ic, 1, 1, kernel, kernel}, TensorShape{});
+        //! bias channel
+        args.emplace_back(param, TensorShape{2, ic, h, w},
+                          TensorShape{ic, 1, 1, kernel, kernel},
+                          TensorShape{1, ic, 1, 1});
+    };
+
+    for (size_t kernel : {2, 3, 5, 7})
+        for (size_t pad : {0, 1})
+            for (size_t ic : {1, 3, 5, 7, 17})
+                for (size_t h : {10, 15, 17, 30})
+                    for (size_t w : {19, 28, 58, 168})
+                        for (NonlineMode nonline_mode :
+                             {NonlineMode::IDENTITY, NonlineMode::H_SWISH,
+                              NonlineMode::RELU})
+                            run(ic, w, h, kernel, pad, nonline_mode);
+
+    Checker<ConvBias> checker(handle());
+    UniformIntRNG rng{-50, 50};
+    checker.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f))
+            .set_rng(0, &rng)
+            .set_rng(1, &rng)
+            .set_rng(2, &rng)
+            .set_epsilon(1e-3);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1"));
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).exec(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
 TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_INT8x8x32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
@@ -1556,6 +1715,67 @@ void benchmark_impl_comp(const param::ConvBias param,
 }
 
 }  // namespace
+TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_CHANWISE_AVX2_INT8) {
+    constexpr size_t RUNS = 50;
+    param::ConvBias param;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.sparse = param::ConvBias::Sparse::GROUP;
+
+    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
+                                    dtype::Int32(), dtype::Int32()};
+
+    std::vector<std::pair<SmallVector<TensorShape>, float>>
+            shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t H, size_t W, size_t FS) {
+        param.pad_h = FS / 2;
+        param.pad_w = FS / 2;
+
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W}, {IC, 1, 1, FS, FS}, {}, {}, {}};
+        TensorShape dst{N, IC, (H + 2 * param.pad_h - FS) + 1,
+                        (W + 2 * param.pad_w - FS) + 1};
+        float computations = (FS * FS * dst.total_nr_elems() * 2) * 1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 32, 112, 112, 7);
+    bench_case(1, 144, 56, 56, 7);
+    bench_case(1, 192, 28, 28, 7);
+    bench_case(1, 384, 28, 28, 7);
+    bench_case(1, 576, 14, 14, 7);
+    bench_case(1, 960, 7, 7, 7);
+
+    bench_case(1, 32, 112, 112, 5);
+    bench_case(1, 144, 56, 56, 5);
+    bench_case(1, 192, 28, 28, 5);
+    bench_case(1, 384, 28, 28, 5);
+    bench_case(1, 576, 14, 14, 5);
+    bench_case(1, 960, 7, 7, 5);
+
+    bench_case(1, 32, 112, 112, 3);
+    bench_case(1, 144, 56, 56, 3);
+    bench_case(1, 192, 28, 28, 3);
+    bench_case(1, 384, 28, 28, 3);
+    bench_case(1, 576, 14, 14, 3);
+    bench_case(1, 960, 7, 7, 3);
+
+    bench_case(1, 32, 112, 112, 2);
+    bench_case(1, 144, 56, 56, 2);
+    bench_case(1, 192, 28, 28, 2);
+    bench_case(1, 384, 28, 28, 2);
+    bench_case(1, 576, 14, 14, 2);
+    bench_case(1, 960, 7, 7, 2);
+
+    std::string algo_name = "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1";
+    printf("Benchmark X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1\n");
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
+                   {1, {4}}, data_type);
+    shapes_and_computation.clear();
+}
+
 TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8) {
     constexpr size_t RUNS = 50;
     param::ConvBias param;

@@ -40,6 +40,15 @@
     UNROLL_RAW16(cb, v0, ##a)                                               \
     cb(16, ##a) cb(17, ##a) cb(18, ##a) cb(19, ##a) cb(20, ##a) cb(21, ##a) \
             cb(22, ##a) cb(23, ##a)
+#define UNROLL_RAW25(cb, v0, a...) \
+    UNROLL_RAW24(cb, v0, ##a)      \
+    cb(24, ##a)
+#define UNROLL_RAW49(cb, v0, a...)                                          \
+    UNROLL_RAW25(cb, v0, ##a)                                               \
+    cb(25, ##a) cb(26, ##a) cb(27, ##a) cb(28, ##a) cb(29, ##a) cb(30, ##a) \
+    cb(31, ##a) cb(32, ##a) cb(33, ##a) cb(34, ##a) cb(35, ##a) cb(36, ##a) \
+    cb(37, ##a) cb(38, ##a) cb(39, ##a) cb(40, ##a) cb(41, ##a) cb(42, ##a) \
+    cb(43, ##a) cb(44, ##a) cb(45, ##a) cb(46, ##a) cb(47, ##a) cb(48, ##a)
 
 #define UNROLL_CALL0(step, cb, v...) UNROLL_RAW##step(cb, 0, ##v)
 #define UNROLL_CALL1(step, cb, v...) UNROLL_CALL0(step, cb, ##v)

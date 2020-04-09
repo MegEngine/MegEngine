@@ -31,6 +31,7 @@ public:
     class AlgoMatrixMul;
     class AlgoDirectAvx2Stride1Int8;
     class AlgoAVX2DirectConvStride2;
+    class AlgoChanWiseAvx2Stride1Qint8;
 #if defined(MEGDNN_X86_WITH_MKL_DNN)
     class AlgoMkldnnConv;
     class AlgoMkldnnQint8;

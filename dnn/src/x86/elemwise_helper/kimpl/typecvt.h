@@ -258,6 +258,32 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint32, dt_qint8>
 };
 
 template <>
+struct TypeCvtOp<SIMDType::AVX2, dt_qint32, dt_qint8>
+        : UnaryOpBase<SIMDType::AVX2, dt_qint32, dt_qint8> {
+    using UnaryOpBase::UnaryOpBase;
+    constexpr static size_t SIMD_WIDTH = 8;
+
+    MEGDNN_ATTRIBUTE_TARGET("avx2")
+    void operator()(const __m256ix2& vsrc, dt_qint8* dst) const {
+        _mm_store_si128((__m128i*)(dst), (operator()(vsrc)));
+    }
+
+    MEGDNN_ATTRIBUTE_TARGET("avx2")
+    __m128i operator()(const __m256ix2& vsrc) const {
+        auto cvtps_src0 = _mm256_cvtepi32_ps(vsrc.val[0]);
+        auto cvtps_src1 = _mm256_cvtepi32_ps(vsrc.val[1]);
+        auto vitem0 = _mm256_mul_ps(cvtps_src0, _mm256_set1_ps(this->scale));
+        auto vitem1 = _mm256_mul_ps(cvtps_src1, _mm256_set1_ps(this->scale));
+        return QConverter::convert<__m128i, __m256x2>({{vitem0, vitem1}});
+    }
+
+    void operator()(src_ctype src, dst_ctype* dst) {
+        *reinterpret_cast<int8_t*>(dst) = saturate<int8_t, float>(
+                std::round(src.as_int32() * scale), -128, 127);
+    }
+};
+
+template <>
 struct TypeCvtOp<SIMDType::SSE4_2, dt_float32, dt_qint8>
         : UnaryOpBase<SIMDType::SSE4_2, dt_float32, dt_qint8> {
     using UnaryOpBase::UnaryOpBase;

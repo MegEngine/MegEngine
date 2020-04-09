@@ -10,7 +10,6 @@
  */
 
 #include "src/x86/conv_bias/int8/avx2_direct_conv_stride2.h"
-#include "src/common/unroll_macro.h"
 #include "src/x86/conv_bias/int8/common_helper.h"
 #include "src/x86/conv_bias/postprocess_helper.h"
 
