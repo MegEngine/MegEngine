@@ -28,6 +28,7 @@ size_t dispatch_dtype_workspace(const TensorLayout& src, const TensorLayout&,
                                 Reduce::DataType data_type) {
     using f16 = DTypeTrait<dtype::Float16>::ctype;
     using f32 = DTypeTrait<dtype::Float32>::ctype;
+    using i32 = DTypeTrait<dtype::Int32>::ctype;
     if (data_type == Reduce::DataType::DEFAULT) {
 #define cb(_dt)                                                             \
     case DTypeTrait<_dt>::enumv: {                                          \
@@ -46,6 +47,8 @@ size_t dispatch_dtype_workspace(const TensorLayout& src, const TensorLayout&,
             return get_reduce_workspace_in_bytes<Op<f16, f32, f32>>(A, B, C);
         else if (src.dtype == dtype::Float32())
             return get_reduce_workspace_in_bytes<Op<f32, f32, f32>>(A, B, C);
+        else if (src.dtype == dtype::Int32())
+            return get_reduce_workspace_in_bytes<Op<i32, f32, f32>>(A, B, C);
     } else if (data_type == Reduce::DataType::FLOAT_O16xC32) {
         if (src.dtype == dtype::Float16())
             return get_reduce_workspace_in_bytes<Op<f16, f16, f32>>(A, B, C);
@@ -61,6 +64,7 @@ void dispatch_dtype(cudaStream_t stream, const TensorND& src,
                     size_t B, size_t C, Reduce::DataType data_type) {
     using f16 = DTypeTrait<dtype::Float16>::ctype;
     using f32 = DTypeTrait<dtype::Float32>::ctype;
+    using i32 = DTypeTrait<dtype::Int32>::ctype;
     if (data_type == Reduce::DataType::DEFAULT) {
         switch (src.layout.dtype.enumv()) {
 #define cb(_dt)                                                             \
@@ -80,10 +84,14 @@ void dispatch_dtype(cudaStream_t stream, const TensorND& src,
             return run_reduce<Op<f16, f32, f32>, false>(
                     workspace.ptr<f32>(), A, B, C, stream,
                     Op<f16, f32, f32>(src.ptr<f16>(), dst.ptr<f32>(), B));
-        } else {
+        } else if (src.layout.dtype == dtype::Float32()) {
             return run_reduce<Op<f32, f32, f32>, false>(
                     workspace.ptr<f32>(), A, B, C, stream,
                     Op<f32, f32, f32>(src.ptr<f32>(), dst.ptr<f32>(), B));
+        } else if (src.layout.dtype == dtype::Int32()) {
+            return run_reduce<Op<i32, f32, f32>, false>(
+                    workspace.ptr<f32>(), A, B, C, stream,
+                    Op<i32, f32, f32>(src.ptr<i32>(), dst.ptr<f32>(), B));
         }
     } else if (data_type == Reduce::DataType::FLOAT_O16xC32) {
         if (src.layout.dtype == dtype::Float16()) {

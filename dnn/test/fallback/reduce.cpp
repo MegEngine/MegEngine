@@ -50,6 +50,10 @@ TEST_F(FALLBACK, REDUCE) {
                     param.data_type = DataType::FLOAT_O32xC32;
                     config = Config(param, dtype, shape);
                     configs.push_back(config);
+                } else if (dtype == dtype::Int32()) {
+                    Param param(mode, axis, DataType::FLOAT_O32xC32);
+                    Config config(param, dtype, shape);
+                    configs.push_back(config);
                 }
             }
     // large (ABC) -> (A1C) case

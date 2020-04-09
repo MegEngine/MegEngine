@@ -36,6 +36,7 @@ MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 INST(dt_float16, dt_float16, float)
 INST(dt_float16, float, float)
 INST(float, dt_float16, float)
+INST(int, float, float)
 
 #undef cb
 #undef INST
