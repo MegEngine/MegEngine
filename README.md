@@ -4,7 +4,7 @@
 
 English | [中文](README_CN.md)
 
-MegEngine is a fast, scalable and easy-to-use numerical evaluation framework, with auto-differentiation.
+MegEngine is a fast, scalable and easy-to-use deep learning framework, with auto-differentiation.
 
 ------
 
@@ -124,6 +124,7 @@ We believe we can build an open and friendly community and power humanity with A
 * Issue: [github.com/MegEngine/MegEngine/issues](https://github.com/MegEngine/MegEngine/issues)
 * Email: [megengine-support@megvii.com](mailto:megengine-support@megvii.com)
 * Forum: [discuss.megengine.org.cn](https://discuss.megengine.org.cn)
+* OPENI: [codehub.openi.org.cn](https://codehub.openi.org.cn/codehub/project/991aefd932be4d909d8397ec9c181dc1/codehub/7272755/home?img=avatars%2FUser%2Fb&ui=p26948017)
 * QQ: 1029741705
 
 ## Resources
