@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/opr/dnn/local.h"
 #include "megbrain/test/helper.h"
 
 #include "megbrain/gopt/inference.h"
@@ -915,6 +916,69 @@ TEST(TestGoptInference, ConvertFormatNHWCD4) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 
     *host_x = *gen({8, 8, 16, 16}, cn);
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
+TEST(TestGoptInference, ConvertFormatNHWCD4LOCAL) {
+    // hwcd4 is only supported in naive handle
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x = gen({2, 8, 8, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 1;
+    auto w1 = mkcvar("w1", {4, 8, 3, 3}),
+         conv1 = opr::Convolution::make(x, w1, param);
+
+    auto w2 = mkcvar("w2", {8, 16, 4, 3, 3, 4}),
+         local = opr::Local::make(conv1, w2, param);
+
+    auto w3 = mkcvar("w3", {4, 4, 3, 3}),
+         conv2 = opr::Convolution::make(local, w3, param);
+
+    opr::GroupLocal::Param param_group_local;
+    param_group_local.pad_h = param_group_local.pad_w = 1;
+    auto w4 = mkcvar("w4", {2, 8, 16, 2, 3, 3, 2}),
+         group_local = opr::GroupLocal::make(conv2, w4, param_group_local);
+
+    auto w5 = mkcvar("w5", {4, 4, 3, 3}),
+         y = opr::Convolution::make(group_local, w5, param);
+
+    SymbolVar y_opt;
+    unpack_vector(
+            gopt::optimize_for_inference(
+                    {y},
+                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
+            y_opt);
+
+    ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
+              find_opr<opr::Convolution>(y_opt).param().format);
+
+    ASSERT_EQ(opr::Local::Param::Format::NCHW,
+              find_opr<opr::Local>(y_opt).param().format);
+
+    ASSERT_EQ(opr::GroupLocal::Param::Format::NCHW,
+              find_opr<opr::GroupLocal>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNHWCD4LOCAL.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }

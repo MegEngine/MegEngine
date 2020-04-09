@@ -14,6 +14,7 @@
 #include "megbrain/gopt/basic_arith.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/opr/dnn/batch_norm.h"
+#include "megbrain/opr/dnn/local.h"
 #include "megbrain/utils/shared_set.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/opr/basic_arith.h"
@@ -1358,23 +1359,28 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
         return new_pooling_opr.node()->owner_opr();
     };
 
-    auto relayout_inp_to_chw = [](OperatorNodeBase* opr,
+    auto var_to_chw = [](VarNode* inp, VarNode* new_inp) {
+        if (!inp->shape().eq_shape(new_inp->shape())) {
+            mgb_assert(inp->shape().ndim == 4 &&
+                       inp->format().type() !=
+                               TensorFormat::Type::IMAGE2D_PACK4);
+            mgb_assert(new_inp->shape().ndim == 5 &&
+                       new_inp->format().type() ==
+                               TensorFormat::Type::IMAGE2D_PACK4);
+            auto param = megdnn::param::RelayoutFormat();
+            param.mode = megdnn::param::RelayoutFormat::Mode::NHWCD4I_NCHW;
+            auto rf = opr::RelayoutFormat::make(new_inp, param);
+            return rf.node();
+        }
+        return new_inp;
+    };
+
+    auto relayout_inp_to_chw = [var_to_chw](OperatorNodeBase* opr,
                                   const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         VarNodeArray t_inp = new_inp;
         for (size_t i = 0; i < opr->input().size(); i++) {
-            if (!opr->input(i)->shape().eq_shape(new_inp[i]->shape())) {
-                mgb_assert(opr->input(i)->shape().ndim == 4 &&
-                           opr->input(i)->format().type() !=
-                                   TensorFormat::Type::IMAGE2D_PACK4);
-                mgb_assert(new_inp[i]->shape().ndim == 5 &&
-                           new_inp[i]->format().type() ==
-                                   TensorFormat::Type::IMAGE2D_PACK4);
-                auto param = megdnn::param::RelayoutFormat();
-                param.mode = megdnn::param::RelayoutFormat::Mode::NHWCD4I_NCHW;
-                auto rf = opr::RelayoutFormat::make(new_inp[i], param);
-                t_inp[i] = rf.node();
-            }
+            t_inp[i] = var_to_chw(opr->input(i), new_inp[i]);
         }
         auto new_opr =
                 serialization::copy_opr_shallow(*opr, t_inp, opr->config());
@@ -1415,6 +1421,18 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
         }
     };
 
+    /* This helper function converts the first input to the NCHW format to
+     * handle operations that do not support NHWCD4 format
+     */
+    auto relayout_first_inp_to_chw =
+            [var_to_chw](OperatorNodeBase* opr,
+               const VarNodeArray& new_inp) -> OperatorNodeBase* {
+        mgb_assert(opr->input().size() == new_inp.size());
+        VarNodeArray t_inp = new_inp;
+        t_inp[0] = var_to_chw(opr->input(0), new_inp[0]);
+        return serialization::copy_opr_shallow(*opr, t_inp, opr->config());
+    };
+
     auto ret = std::make_unique<ConvertFormatPass>();
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
     auto&& replace_func = ret->m_opr_replace_func;
@@ -1436,6 +1454,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
     replace_func[opr::WarpPerspectiveForward::typeinfo()] =
             replace_warp_perspective_opr;
     replace_func[opr::WarpAffineForward::typeinfo()] = replace_warp_affine_opr;
+    replace_func[opr::LocalForward::typeinfo()] = relayout_first_inp_to_chw;
+    replace_func[opr::GroupLocalForward::typeinfo()] =
+            relayout_first_inp_to_chw;
     return ret;
 }
 
