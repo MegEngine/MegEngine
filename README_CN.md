@@ -122,8 +122,8 @@ cmake -LAH .. 2>/dev/null| grep -B 1 'MGE_' | less
 * 问题: [github.com/MegEngine/MegEngine/issues](https://github.com/MegEngine/MegEngine/issues)
 * 邮箱: [megengine-support@megvii.com](mailto:megengine-support@megvii.com)
 * 论坛: [discuss.megengine.org.cn](https://discuss.megengine.org.cn)
-* OPENI: [codehub.openi.org.cn](https://codehub.openi.org.cn/codehub/project/991aefd932be4d909d8397ec9c181dc1/codehub/7272755/home?img=avatars%2FUser%2Fb&ui=p26948017)
 * QQ: 1029741705
+* OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html) 
 
 ## 资源
 
