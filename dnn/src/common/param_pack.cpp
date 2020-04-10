@@ -15,18 +15,16 @@
 using namespace megdnn;
 
 void ParamPackConcatSplitBase::check_exec(const TensorLayout& concated,
-                                          const TensorLayout& table,
+                                          const TensorLayout& offsets,
                                           const TensorLayout& parts) {
-    megdnn_assert(table.dtype == dtype::Int32{}, "bad dtype: %s",
-                  table.dtype.name());
-    megdnn_assert(concated.ndim == 1 && table.ndim == 1 && parts.ndim == 1 &&
-                          concated.stride[0] == 1 && table.stride[0] == 1 &&
+    megdnn_assert(offsets.dtype == dtype::Int32{}, "bad dtype: %s",
+                  offsets.dtype.name());
+    megdnn_assert(concated.ndim == 1 && offsets.ndim == 1 && parts.ndim == 1 &&
+                          concated.stride[0] == 1 && offsets.stride[0] == 1 &&
                           parts.stride[0] == 1,
-                  "bad layout: concated=%s table=%s parts=%s",
-                  concated.to_string().c_str(), table.to_string().c_str(),
+                  "bad layout: concated=%s offsets=%s parts=%s",
+                  concated.to_string().c_str(), offsets.to_string().c_str(),
                   parts.to_string().c_str());
-    megdnn_assert(table.shape[0] == concated.shape[0] * 2,
-                  "concated=%zu table=%zu", concated.shape[0], table.shape[0]);
 }
 
 std::vector<dt_int32> ParamPackConcatSplitBase::gen_offsets(
@@ -46,11 +44,13 @@ std::vector<dt_int32> ParamPackConcatSplitBase::gen_offsets(
         return v + ((alignment - mod) & (alignment - 1));
     };
 
-    std::vector<dt_int32> offsets(shapes.size());
+    std::vector<dt_int32> offsets(shapes.size() << 1);
     size_t offset = 0;
     for (size_t i = 0; i < shapes.size(); i++) {
-        offsets[i] = offset;
-        offset = get_aligned(offset) + shapes[i].total_nr_elems();
+        offset = get_aligned(offset);
+        offsets[i * 2] = offset;
+        offset += shapes[i].total_nr_elems();
+        offsets[i * 2 + 1] = offset;
     }
     return offsets;
 }

@@ -1906,7 +1906,7 @@ void test_param_pack_concat(const TensorShapeArray &shapes, DType type){
     memcpy(host_table->raw_ptr(), host_table_gen.data(), size * 8);
     auto table = opr::Host2DeviceCopy::make(*graph, host_table);
 
-    auto z = opr::ParamPackConcat::make(srcs, table);
+    auto z = opr::ParamPackConcat::make(srcs, table, host_table_gen);
     HostTensorND host_z;
 
     auto func = graph->compile({make_callback_copy(z, host_z)});

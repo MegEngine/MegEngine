@@ -1339,8 +1339,10 @@ void Concat::init_output_comp_node() {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ParamPackConcat);
 ParamPackConcat::ParamPackConcat(VarNodeArray& inp, VarNode* table,
+                                 const std::vector<dt_int32> offsets_val,
                                  const OperatorNodeConfig& config)
-        : Super(inp[0]->owner_graph(), config, "ParamPackConcat", inp) {
+        : Super(inp[0]->owner_graph(), config, "ParamPackConcat", inp),
+          m_offsets(offsets_val) {
     CompNode cn = inp[0]->comp_node();
     add_input({inp[0]});
     for (size_t i = 1; i < inp.size(); i++) {
@@ -1361,14 +1363,16 @@ void ParamPackConcat::add_input_layout_constraint(){
     }
 }
 
-SymbolVar ParamPackConcat::make(const SmallVector<SymbolVar> &inp,
-        const SymbolVar &table, const OperatorNodeConfig& config) {
+SymbolVar ParamPackConcat::make(const SmallVector<SymbolVar>& inp,
+                                const SymbolVar& offsets,
+                                const std::vector<dt_int32> offsets_val,
+                                const OperatorNodeConfig& config) {
     VarNodeArray array(inp.size());
     for (size_t i = 0; i < inp.size(); i++) {
         array[i] = inp[i].node();
     }
-    return inp.front().
-        insert_single_output_opr<ParamPackConcat>(array, table.node(), config);
+    return inp.front().insert_single_output_opr<ParamPackConcat>(
+            array, offsets.node(), offsets_val, config);
 }
 
 void ParamPackConcat::scn_do_execute() {
@@ -1379,13 +1383,13 @@ void ParamPackConcat::scn_do_execute() {
     for (size_t i = 0; i < inputs.size() - 1; i++) {
         ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr;
     }
-    auto table = inputs.back()->dev_tensor().as_megdnn();
+    auto offsets = inputs.back()->dev_tensor().as_megdnn();
     megdnn::TensorND srcs(
             ptr, megdnn::TensorLayout({inputs.size() - 1}, dtype::Int32()));
 
     auto&& dst = output(0)->dev_tensor().as_megdnn();
 
-    m_opr->exec(srcs, table, dst, get_megdnn_workspace_from_var(output(1)));
+    m_opr->exec(srcs, offsets, dst, get_megdnn_workspace_from_var(output(1)));
 }
 
 void ParamPackConcat::init_output_dtype() {
@@ -1396,8 +1400,8 @@ void ParamPackConcat::init_output_static_infer_desc(){
     using namespace cg::static_infer;
     auto &&mgr = owner_graph()->static_infer_manager();
 
-    auto infer_out = [](TensorShape &dest, const InpVal &inp) {
-        dest = {inp.val.back().shape().total_nr_elems()/2};
+    auto infer_out = [this](TensorShape &dest, const InpVal &inp) {
+        dest = {m_offsets.back()};
         return true;
     };
     DepVal shp_deps;
@@ -1480,10 +1484,10 @@ void ParamPackSplit::init_output_dtype() {
 }
 
 void ParamPackSplit::mem_plan_fwd_in2out_readonly() {
-    mgb_assert(m_offsets.size() == output().size());
+    mgb_assert(m_offsets.size() == output().size() * 2);
     for (size_t i = 0; i < output().size(); i++) {
         auto layout = output(i)->layout();
-        auto spec = SubTensorSpec::make_from_offset_elem(layout, m_offsets[i]);
+        auto spec = SubTensorSpec::make_from_offset_elem(layout, m_offsets[i * 2]);
         m_mem_fwd_success[i] = output(i)->set_fwd_in2out_readonly(
             input(0), spec);
         mgb_assert(m_mem_fwd_success[i]);
@@ -1524,7 +1528,7 @@ MGB_IMPL_OPR_GRAD(ParamPackSplit) {
     }
 
     return ParamPackConcat::make(
-                   grad, opr.input(1),
+                   grad, opr.input(1), opr.get_offsets(),
                    OperatorNodeConfig{}.follow_comp_node(opr.input(0)))
             .node();
 }

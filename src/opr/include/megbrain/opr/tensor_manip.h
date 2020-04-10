@@ -539,6 +539,7 @@ MGB_DEFINE_OPR_CLASS(Concat, cg::SingleCNOutshapePureByInshapeOprBase) // {
 MGB_DEFINE_OPR_CLASS(ParamPackConcat, cg::SingleCNOperatorNodeBase) // {
     //! input pointer buffer
     SmallVector<void*> m_inp_ptr;
+    std::vector<dt_int32> m_offsets;
     intl::UniqPtrWithCN<megdnn::ParamPackConcat> m_opr;
 
     void add_input_layout_constraint() override;
@@ -554,15 +555,23 @@ public:
         return {};
     }
 
-    ParamPackConcat(VarNodeArray &inp, VarNode *table,
-            const OperatorNodeConfig &config);
-    static SymbolVar make(const SmallVector<SymbolVar> &inp,
-            const SymbolVar &table, const OperatorNodeConfig &config = {});
+    ParamPackConcat(VarNodeArray& inp, VarNode* offsets,
+                    const std::vector<dt_int32> offsets_val,
+                    const OperatorNodeConfig& config);
+    static SymbolVar make(const SmallVector<SymbolVar>& inp,
+                          const SymbolVar& offsets,
+                          const std::vector<dt_int32> offsets_val,
+                          const OperatorNodeConfig& config = {});
 
-    static SymbolVar make(const SmallVector<SymbolVar> &inp,
-            const SymbolVar &table, const Param &,
-            const OperatorNodeConfig &config) {
-        return make(inp, table, config);
+    static SymbolVar make(const SmallVector<SymbolVar>& inp,
+                          const SymbolVar& offsets,
+                          const std::vector<dt_int32> offsets_val, const Param&,
+                          const OperatorNodeConfig& config) {
+        return make(inp, offsets, offsets_val, config);
+    }
+
+    const std::vector<dt_int32>& get_offsets() const {
+        return m_offsets;
     }
 };
 

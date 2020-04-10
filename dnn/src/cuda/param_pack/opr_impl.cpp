@@ -24,7 +24,7 @@ size_t ParamPackConcatImpl::get_workspace_in_bytes(const TensorShapeArray& srcs,
 
 template <typename T>
 void ParamPackConcatImpl::exec_internal(_megdnn_tensor_in srcs,
-                                        _megdnn_tensor_in table,
+                                        _megdnn_tensor_in offsets,
                                         _megdnn_tensor_out dst,
                                         _megdnn_workspace workspace) {
     size_t inp_size = srcs.layout.shape[0],
@@ -35,25 +35,25 @@ void ParamPackConcatImpl::exec_internal(_megdnn_tensor_in srcs,
     megdnn_assert_internal(src_cpu);
     auto src_gpu = reinterpret_cast<const T**>(workspace.raw_ptr);
 
-    auto table_outer_gpu = table.ptr<int32_t>(),
-         table_inner_gpu = table_outer_gpu + out_size;
+    auto offsets_gpu = offsets.ptr<int32_t>();
 
     cuda_check(cudaMemcpyAsync(src_gpu, src_cpu, sizeof(const T*) * inp_size,
                                cudaMemcpyHostToDevice, stream));
 
-    param_pack::concat_proxy<T>(src_gpu, dst.ptr<T>(), out_size,
-                                table_outer_gpu, table_inner_gpu, stream);
+    param_pack::concat_proxy<T>(src_gpu, dst.ptr<T>(), inp_size, out_size,
+                                offsets_gpu, stream);
 }
 
-void ParamPackConcatImpl::exec(_megdnn_tensor_in srcs, _megdnn_tensor_in table,
+void ParamPackConcatImpl::exec(_megdnn_tensor_in srcs,
+                               _megdnn_tensor_in offsets,
                                _megdnn_tensor_out dst,
                                _megdnn_workspace workspace) {
-    check_exec(dst.layout, table.layout, srcs.layout);
-#define cb(DType)                                          \
-    if (dst.layout.dtype == DType()) {                     \
-        using ctype = typename DTypeTrait<DType>::ctype;   \
-        exec_internal<ctype>(srcs, table, dst, workspace); \
-        return;                                            \
+    check_exec(dst.layout, offsets.layout, srcs.layout);
+#define cb(DType)                                            \
+    if (dst.layout.dtype == DType()) {                       \
+        using ctype = typename DTypeTrait<DType>::ctype;     \
+        exec_internal<ctype>(srcs, offsets, dst, workspace); \
+        return;                                              \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     megdnn_throw("bad type");
