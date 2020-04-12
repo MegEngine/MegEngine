@@ -25,13 +25,6 @@
 
 using namespace mgb;
 
-namespace mgb {
-    static inline std::ostream& operator << (std::ostream &os,
-            const CompNode::Locator &l) {
-        return os << l.to_string();
-    }
-}
-
 TEST(TestCompNode, Parse) {
     using L = CompNode::Locator;
     using D = CompNode::DeviceType;
@@ -49,13 +42,13 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("cpu2:23"), make_lc(D::CPU, 2, 23));
     ASSERT_EQ(L::parse("cpu21:23"), make_lc(D::CPU, 21, 23));
 
-    
     ASSERT_EQ(L::parse("xpu"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpux"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpu23"), make_lc(D::UNSPEC, 23, 0));
     ASSERT_EQ(L::parse("xpu23:1"), make_lc(D::UNSPEC, 23, 1));
 
-    ASSERT_EQ(L::parse("cpu:default"), make_lc(D::CPU, L::DEVICE_CPU_DEFAULT, 0));
+    ASSERT_EQ(L::parse("cpu:default"),
+              make_lc(D::CPU, L::DEVICE_CPU_DEFAULT, 0));
     ASSERT_EQ(L::parse("multithread0:2"), make_lc(D::MULTITHREAD, 0, 2));
     ASSERT_EQ(L::parse("multithread1:3"), make_lc(D::MULTITHREAD, 1, 3));
     ASSERT_EQ(L::parse("multithread:default:2"),
@@ -198,18 +191,18 @@ TEST(TestCompNodeCPU, CoreAffinity) {
     auto empty_task = []() {};
     auto cn0 = CompNode::load("cpu:default"), cn1 = CompNode::load("cpu0"),
          cn2 = CompNode::load("multithread0:2");
-    auto binding0 = [&](size_t thread_id) { data0 = 10; };
+    auto binding0 = [&](size_t) { data0 = 10; };
     CompNodeEnv::from_comp_node(cn0).cpu_env().set_affinity(binding0);
     CompNodeEnv::from_comp_node(cn0).cpu_env().dispatch(empty_task);
     cn0.sync();
 
-    auto binding1 = [&](size_t thread_id) { data1 = 20; };
+    auto binding1 = [&](size_t) { data1 = 20; };
     CompNodeEnv::from_comp_node(cn1).cpu_env().set_affinity(binding1);
     CompNodeEnv::from_comp_node(cn1).cpu_env().dispatch(empty_task);
     cn1.sync();
 
     auto binding2 = [&](size_t thread_id) { data_v[thread_id] = 30; };
-    auto temp_task = [](size_t index, size_t thread_id) {};
+    auto temp_task = [](size_t, size_t) {};
     CompNodeEnv::from_comp_node(cn2).cpu_env().set_affinity(binding2);
     CompNodeEnv::from_comp_node(cn2).cpu_env().dispatch(temp_task, 40u);
     cn2.sync();
