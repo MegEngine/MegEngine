@@ -122,7 +122,7 @@ struct InputVisitor {
     size_t IC;
     InputVisitor(size_t IC) : IC(IC) {}
 
-    size_t get(size_t alpha, size_t ic, size_t IH, size_t IW, size_t ih,
+    size_t get(size_t /*alpha*/, size_t ic, size_t IH, size_t IW, size_t ih,
                size_t iw) {
         constexpr size_t input_pack_size = layout_pack_size(layout);
         size_t icb_layout = ic / input_pack_size;
