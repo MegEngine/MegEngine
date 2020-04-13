@@ -38,8 +38,7 @@ SymbolVar _Opr::_axis_add_remove(SymbolVar src,
 }
 
 SymbolVarArray _Opr::param_pack_split(
-        SymbolVar src, SymbolVar table,
-        const std::vector<std::vector<size_t>>& shapes,
+        SymbolVar src, const std::vector<std::vector<size_t>>& shapes,
         const OperatorNodeConfig& config) {
     auto size = shapes.size();
     mgb::TensorShapeArray shapearr(size);
@@ -48,18 +47,16 @@ SymbolVarArray _Opr::param_pack_split(
     }
 
     auto cn = src.node()->comp_node();
-    auto table_val = megdnn::ParamPackSplit::gen_offsets(
+    auto offsets_val = megdnn::ParamPackConcat::gen_offsets(
             shapearr, cn.get_mem_addr_alignment(), src.dtype().size());
-    if (!table.node()) {
-        if (config.has_comp_node_set()) {
-            cn = config.get_single_comp_node();
-        }
-        HostTensorND hv{cn, TensorShape{{table_val.size()}}, dtype::Int32{}};
-        memcpy(hv.raw_ptr(), table_val.data(), table_val.size() * sizeof(int));
-        table = opr::ImmutableTensor::make(*src.node()->owner_graph(), hv);
+    if (config.has_comp_node_set()) {
+        cn = config.get_single_comp_node();
     }
+    HostTensorND hv{cn, TensorShape{{offsets_val.size()}}, dtype::Int32{}};
+    memcpy(hv.raw_ptr(), offsets_val.data(), offsets_val.size() * sizeof(int));
+    auto offsets = opr::ImmutableTensor::make(*src.node()->owner_graph(), hv);
 
-    return mgb::opr::ParamPackSplit::make(src, table, table_val, shapearr, config);
+    return mgb::opr::ParamPackSplit::make(src, offsets, offsets_val, shapearr, config);
 }
 
 #if MGB_ENABLE_OPR_MM

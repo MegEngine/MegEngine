@@ -31,21 +31,5 @@ private:
                        _megdnn_tensor_out dst, _megdnn_workspace workspace);
 };
 
-class ParamPackSplitImpl final : public ParamPackSplit {
-public:
-    using ParamPackSplit::ParamPackSplit;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in table,
-              _megdnn_tensor_out dsts, _megdnn_workspace workspace) override;
-
-    size_t get_workspace_in_bytes(const TensorShape& src,
-                                  const TensorShape& table,
-                                  const TensorShapeArray& dsts) override;
-
-private:
-    template <typename T>
-    void exec_internal(_megdnn_tensor_in src, _megdnn_tensor_in table,
-                       _megdnn_tensor_out dsts, _megdnn_workspace workspace);
-};
-
 }  // namespace cuda
 }  // namespace megdnn

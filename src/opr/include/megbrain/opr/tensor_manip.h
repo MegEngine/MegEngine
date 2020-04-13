@@ -583,7 +583,7 @@ MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
     std::vector<dt_int32> m_offsets;
     std::vector<bool> m_mem_fwd_success;
 
-    void scn_do_execute() override;
+    void scn_do_execute() override{};
     void init_output_static_infer_desc() override;
     bool infer_shape(size_t index, TensorShape &dest,
             const cg::static_infer::InpVal &inp);

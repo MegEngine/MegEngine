@@ -1400,8 +1400,8 @@ void ParamPackConcat::init_output_static_infer_desc(){
     using namespace cg::static_infer;
     auto &&mgr = owner_graph()->static_infer_manager();
 
-    auto infer_out = [this](TensorShape &dest, const InpVal &inp) {
-        dest = {m_offsets.back()};
+    auto infer_out = [this](TensorShape& dest, const InpVal& inp) {
+        dest = {static_cast<unsigned int>(m_offsets.back())};
         return true;
     };
     DepVal shp_deps;
@@ -1476,9 +1476,6 @@ SymbolVarArray ParamPackSplit::make(const SymbolVar& src,
     return ret;
 }
 
-void ParamPackSplit::scn_do_execute() {
-}
-
 void ParamPackSplit::init_output_dtype() {
     // already initialized in constructor
 }
@@ -1518,7 +1515,6 @@ void ParamPackSplit::init_output_static_infer_desc() {
 MGB_IMPL_OPR_GRAD(ParamPackSplit) {
     mgb_assert(out_grad.size() == opr.output().size());
     SmallVector<SymbolVar> grad;
-    // last var is workspace, ignore it
     for (size_t i = 0; i < out_grad.size(); ++i) {
         auto gval = out_grad[i];
         if (!gval) {

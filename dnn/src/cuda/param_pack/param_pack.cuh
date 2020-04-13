@@ -20,11 +20,6 @@ namespace cuda {
 namespace param_pack {
 
 template <typename T>
-void split_proxy(const T* src, T** dsts, size_t total_size,
-                         const int32_t* table_outer, const int32_t* table_inner,
-                         cudaStream_t stream);
-
-template <typename T>
 void concat_proxy(const T** srcs, T* dst, size_t srcs_size, size_t total_size,
                   const int32_t* offsets, cudaStream_t stream);
 

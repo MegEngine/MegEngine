@@ -44,8 +44,7 @@ static SymbolVar add_update(SymbolVar dest, SymbolVar delta,
 // tensor manip
 
 static SymbolVarArray param_pack_split(
-        SymbolVar src, SymbolVar table,
-        const std::vector<std::vector<size_t>>& shapes,
+        SymbolVar src, const std::vector<std::vector<size_t>>& shapes,
         const OperatorNodeConfig& config);
 
 static SymbolVar dimshuffle(SymbolVar src,

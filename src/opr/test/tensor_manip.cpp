@@ -1898,15 +1898,15 @@ void test_param_pack_concat(const TensorShapeArray &shapes, DType type){
         srcs.push_back(nd);
     }
 
-    auto host_table_gen = megdnn::ParamPackSplit::gen_offsets(shapes,
+    auto host_offsets_gen = megdnn::ParamPackConcat::gen_offsets(shapes,
             cn.get_mem_addr_alignment(), 4);
-    ASSERT_EQ(host_table_gen.size(), size * 2);
-    auto host_table = std::make_shared<HostTensorND>();
-    host_table->comp_node(cn).dtype(dtype::Int32{}).resize({size * 2});
-    memcpy(host_table->raw_ptr(), host_table_gen.data(), size * 8);
-    auto table = opr::Host2DeviceCopy::make(*graph, host_table);
+    ASSERT_EQ(host_offsets_gen.back(), size);
+    auto host_offsets = std::make_shared<HostTensorND>();
+    host_offsets->comp_node(cn).dtype(dtype::Int32{}).resize({srcs.size() * 2});
+    memcpy(host_offsets->raw_ptr(), host_offsets_gen.data(), srcs.size() * 8);
+    auto offsets = opr::Host2DeviceCopy::make(*graph, host_offsets);
 
-    auto z = opr::ParamPackConcat::make(srcs, table, host_table_gen);
+    auto z = opr::ParamPackConcat::make(srcs, offsets, host_offsets_gen);
     HostTensorND host_z;
 
     auto func = graph->compile({make_callback_copy(z, host_z)});
@@ -1944,17 +1944,17 @@ void test_param_pack_split(const TensorShapeArray& shapes) {
 
     auto make_graph = [&](const typename Checker::SymInpArray& inputs) ->
             typename Checker::SymOutArray {
-        auto table_val = megdnn::ParamPackSplit::gen_offsets(
+        auto offsets_val = megdnn::ParamPackConcat::gen_offsets(
                 shapes, cn.get_mem_addr_alignment(), 4);
-        HostTensorND table;
-        std::copy_n(table_val.data(), table_val.size(),
-                    table.dtype(dtype::Int32{})
+        HostTensorND offsets;
+        std::copy_n(offsets_val.data(), offsets_val.size(),
+                    offsets.dtype(dtype::Int32{})
                             .comp_node(cn)
-                            .resize({table_val.size()})
+                            .resize({offsets_val.size()})
                             .ptr<dt_int32>());
-        auto sym_table = opr::SharedDeviceTensor::make(
-                *inputs[0].node()->owner_graph(), table);
-        auto out = opr::ParamPackSplit::make(inputs[0], sym_table, table_val,
+        auto sym_offsets = opr::SharedDeviceTensor::make(
+                *inputs[0].node()->owner_graph(), offsets);
+        auto out = opr::ParamPackSplit::make(inputs[0], sym_offsets, offsets_val,
                                              shapes);
         mgb_assert(out.size() == nr_out);
         typename Checker::SymOutArray ret;

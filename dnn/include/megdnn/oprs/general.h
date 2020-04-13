@@ -500,44 +500,17 @@ public:
     /*
      * \param[in] srcs: TensorND on cpu. srcs[i] corresponding to the
      *                  address of i-th Tensor.
-     * \param[in] table: with size `2 * srcs.nr_total_elems()`.
-     *                  table[addr] corresponding to outer_idx,
-     *                  table[addr+srcs.nr_total_elems()] corresponding to
-     *                  inner_idx of dsts.
+     * \param[in] offsets: with size `2 * srcs.shape[0]`.
+     *                  offsets[i * 2] and offsets[i * 2 + 1] means
+     *                  the begin and the end of offset in
      * \param[out] dst: output TensorND, live on cpu or gpu
      */
-    virtual void exec(_megdnn_tensor_in srcs, _megdnn_tensor_in table,
+    virtual void exec(_megdnn_tensor_in srcs, _megdnn_tensor_in offsets,
                       _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
 
     virtual size_t get_workspace_in_bytes(const TensorShapeArray& srcs,
-                                          const TensorShape& table,
+                                          const TensorShape& offsets,
                                           const TensorShape& dst) = 0;
-};
-
-/**
- * \brief ParamPackSplit, used for network forwarding.
- * Split a single large param into several small tensors, use copy stategy
- * either.
- */
-class ParamPackSplit: public ParamPackConcatSplitBase {
-    DEF_OPR_IMPL(ParamPackSplit, ParamPackConcatSplitBase, 2, 1);
-
-public:
-    /*
-     * \param[in] src: input TensorND, live on cpu or gpu
-     * \param[in] table: with size `2 * srcs.nr_total_elems()`.
-     *                  table[addr] corresponding to outer_idx,
-     *                  table[addr+srcs.nr_total_elems()] corresponding to
-     *                  inner_idx of dsts.
-     * \param[out] dsts: TensorND on cpu. dsts[i] corresponding to the address
-     *                   of i-th Tensor
-     */
-    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in table,
-                      _megdnn_tensor_out dsts, _megdnn_workspace workspace) = 0;
-
-    virtual size_t get_workspace_in_bytes(const TensorShape& src,
-                                          const TensorShape& table,
-                                          const TensorShapeArray& dsts) = 0;
 };
 
 /**
