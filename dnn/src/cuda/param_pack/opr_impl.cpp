@@ -60,56 +60,5 @@ void ParamPackConcatImpl::exec(_megdnn_tensor_in srcs,
 #undef cb
 }
 
-size_t ParamPackSplitImpl::get_workspace_in_bytes(
-        const TensorShape&, const TensorShape&, const TensorShapeArray& dsts) {
-    return sizeof(size_t) * dsts.size();
-}
-
-template <typename T>
-void ParamPackSplitImpl::exec_internal(_megdnn_tensor_in src,
-                                       _megdnn_tensor_in table,
-                                       _megdnn_tensor_out dsts,
-                                       _megdnn_workspace workspace) {
-    // inner and outer table must be  int32
-    megdnn_assert(table.layout.dtype == dtype::Int32());
-    // dsts is src pointer, ndim must be 1
-    megdnn_assert(dsts.layout.ndim == 1);
-
-    auto out_size = dsts.layout.shape[0],
-         inp_size = src.layout.total_nr_elems();
-
-    auto stream = cuda_stream(this->handle());
-
-    auto total_workspace_size = sizeof(T*) * out_size;
-    auto dsts_cpu = static_cast<T**>(dsts.raw_ptr);
-    megdnn_assert_internal(dsts_cpu);
-    auto dsts_gpu = reinterpret_cast<T**>(workspace.raw_ptr);
-
-    auto table_outer_gpu = table.ptr<int32_t>();
-    auto table_inner_gpu = table_outer_gpu + inp_size;
-
-    cuda_check(cudaMemcpyAsync(dsts_gpu, dsts_cpu, total_workspace_size,
-                               cudaMemcpyHostToDevice, stream));
-
-    // param_pack_split_proxy()
-    param_pack::split_proxy<T>(src.ptr<T>(), dsts_gpu, inp_size,
-                               table_outer_gpu, table_inner_gpu, stream);
-}
-
-void ParamPackSplitImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in table,
-                              _megdnn_tensor_out dsts,
-                              _megdnn_workspace workspace) {
-    check_exec(src.layout, table.layout, dsts.layout);
-#define cb(DType)                                          \
-    if (src.layout.dtype == DType()) {                     \
-        using ctype = typename DTypeTrait<DType>::ctype;   \
-        exec_internal<ctype>(src, table, dsts, workspace); \
-        return;                                            \
-    }
-    MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-    megdnn_throw("bad type");
-#undef cb
-}
-
 }  // namespace cuda
 }  // namespace megdnn

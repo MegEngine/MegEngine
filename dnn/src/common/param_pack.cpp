@@ -48,9 +48,9 @@ std::vector<dt_int32> ParamPackConcatSplitBase::gen_offsets(
     size_t offset = 0;
     for (size_t i = 0; i < shapes.size(); i++) {
         offset = get_aligned(offset);
-        offsets[i * 2] = offset;
+        offsets[i << 1] = offset;
         offset += shapes[i].total_nr_elems();
-        offsets[i * 2 + 1] = offset;
+        offsets[(i << 1) + 1] = offset;
     }
     return offsets;
 }
