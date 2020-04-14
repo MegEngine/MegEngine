@@ -535,6 +535,10 @@ MGB_DEFINE_OPR_CLASS(Concat, cg::SingleCNOutshapePureByInshapeOprBase) // {
 /*!
  * \brief Opr used to pack parameter, all input node must in same device, dtype
  *      and shape is not needed to be same
+ * \param offsets: size of 2 * inputs.size()
+ *      offsets[i * 2] and offsets[i * 2 + 1] means
+ *      the begin and the end of inputs[i]'s offsets in output
+ * \param offsets_val: offsets value on cpu
  */
 MGB_DEFINE_OPR_CLASS(ParamPackConcat, cg::SingleCNOperatorNodeBase) // {
     //! input pointer buffer
@@ -577,6 +581,11 @@ public:
 
 /*!
  * \brief Opr used to split parameter
+ * \param offsets: size of 2 * outputs.size()
+ *      offsets[i * 2] and offsets[i * 2 + 1] means
+ *      the begin and the end of output[i]'s offsets in input
+ * \param offsets_val: offsets value on cpu
+ * \param shapes: shape of each output
  */
 MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
     TensorShapeArray m_shapes;
