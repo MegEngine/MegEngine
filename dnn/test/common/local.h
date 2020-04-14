@@ -68,6 +68,26 @@ static inline std::vector<TestArg> get_args_for_intel_gpu() {
     return test_args;
 }
 
+static inline std::vector<TestArg> get_args_for_opencl() {
+    std::vector<TestArg> test_args;
+
+    for (size_t N : {32, 64})
+        for (size_t IC : {1, 3, 32})
+            for (size_t OC : {1, 3, 32}) {
+                test_args.emplace_back(
+                        param::Convolution{
+                                param::Convolution::Mode::CROSS_CORRELATION, 0,
+                                0, 1, 1},
+                        N, IC, 7, 7, OC, 5, 5, 3, 3);
+                test_args.emplace_back(
+                        param::Convolution{
+                                param::Convolution::Mode::CROSS_CORRELATION, 1,
+                                1, 1, 1},
+                        N, IC, 7, 7, OC, 7, 7, 3, 3);
+            }
+    return test_args;
+}
+
 static inline std::vector<TestArg> get_args_bwd_data_for_cuda() {
     std::vector<TestArg> test_args;
     // clang-format off
