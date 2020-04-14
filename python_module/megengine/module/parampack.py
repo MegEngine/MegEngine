@@ -17,7 +17,10 @@ from .module import Module
 
 
 class ParamPack(Module):
-    r"""Pack module's parameters
+    r"""Pack module's parameters by gathering their memory to continuous address.
+    Using (device, dtype, requires_grad) as key, for example ('gpu0', float32, True),
+    parameters with same key will be packed togather.
+    It helps a lot for multimachine training by speeding up allreduce gradients.
 
     :param model: the module you want to pack parameters.
     :param nr_ignore_first: how many parameters will be unpacked at first.
