@@ -447,8 +447,7 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
 
 @functools.wraps(dimshuffle)
 def transpose(*args, **kwargs):
-    r
-    """See :func:`dimshuffle`
+    r"""See :func:`dimshuffle`
     """
     return dimshuffle(*args, **kwargs)
 
