@@ -28,9 +28,7 @@ using namespace mgb;
 TEST(TestCompNode, Parse) {
     using L = CompNode::Locator;
     using D = CompNode::DeviceType;
-    auto make_lc = [](D t, int dev, int s) -> L {
-        return {t, dev, s};
-    };
+    auto make_lc = [](D t, int dev, int s) -> L { return {t, dev, {s}}; };
 
     ASSERT_EQ(L::parse("xpux"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpux:23"), make_lc(D::UNSPEC, -1, 23));
@@ -47,10 +45,9 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("xpu23"), make_lc(D::UNSPEC, 23, 0));
     ASSERT_EQ(L::parse("xpu23:1"), make_lc(D::UNSPEC, 23, 1));
 
-    ASSERT_EQ(L::parse("cpu:default"),
-              make_lc(D::CPU, L::DEVICE_CPU_DEFAULT, 0));
-    ASSERT_EQ(L::parse("multithread0:2"), make_lc(D::MULTITHREAD, 0, 2));
-    ASSERT_EQ(L::parse("multithread1:3"), make_lc(D::MULTITHREAD, 1, 3));
+    ASSERT_EQ(L::parse("cpu:default"), make_lc(D::CPU, L::DEVICE_CPU_DEFAULT, 0));
+    ASSERT_EQ(L::parse("multithread2:0"), make_lc(D::MULTITHREAD, 0, 2));
+    ASSERT_EQ(L::parse("multithread1:3"), make_lc(D::MULTITHREAD, 3, 1));
     ASSERT_EQ(L::parse("multithread:default:2"),
               make_lc(D::MULTITHREAD, L::DEVICE_MULTITHREAD_DEFAULT, 2));
 
@@ -65,6 +62,10 @@ TEST(TestCompNode, Parse) {
     ASSERT_THROW(L::parse("heaxgon0"), MegBrainError);
     ASSERT_THROW(L::parse("rcom0"), MegBrainError);
     ASSERT_THROW(L::parse("cmabricon0"), MegBrainError);
+    ASSERT_THROW(L::parse("multithread"), MegBrainError);
+    ASSERT_THROW(L::parse("multithread1:"), MegBrainError);
+    ASSERT_THROW(L::parse("multithread1:default"), MegBrainError);
+    ASSERT_THROW(L::parse("multithread1:default:0"), MegBrainError);
 }
 
 TEST(TestCompNode, SetDefaultDev) {
@@ -107,12 +108,12 @@ TEST(TestCompNode, Load) {
 #endif
 
 #if MGB_HAVE_THREAD
-    auto cn_multi_thread0 = CompNode::load("multithread0:2");
-    auto cn_multi_thread1 = CompNode::load("multithread1:2");
-    ASSERT_EQ(CompNode::load("multithread0:2"), cn_multi_thread0);
-    ASSERT_EQ(CompNode::load("multithread1:2"), cn_multi_thread1);
-    ASSERT_NE(CompNode::load("multithread0:4"), cn_multi_thread0);
-    ASSERT_NE(CompNode::load("multithread1:4"), cn_multi_thread1);
+    auto cn_multi_thread0 = CompNode::load("multithread2:0");
+    auto cn_multi_thread1 = CompNode::load("multithread2:1");
+    ASSERT_EQ(CompNode::load("multithread2:0"), cn_multi_thread0);
+    ASSERT_EQ(CompNode::load("multithread2:1"), cn_multi_thread1);
+    ASSERT_NE(CompNode::load("multithread4:0"), cn_multi_thread0);
+    ASSERT_NE(CompNode::load("multithread4:1"), cn_multi_thread1);
 
     auto cn_multi_default0 = CompNode::load("multithread:default:2");
     auto cn_multi_default1 = CompNode::load("multithread:default:4");
@@ -139,7 +140,7 @@ TEST(TestCompNode, FreeAfterFinalize) {
         auto type = static_cast<CompNode::DeviceType>(i);
         if (!CompNode::get_device_count(type))
             continue;
-        auto cn = CompNode::load(CompNode::Locator{type});
+        auto cn = CompNode::load(CompNode::Locator{type, -1, {0}});
         auto ptr = cn.alloc_device(123);
         CompNode::finalize();
         cn.free_device(ptr);
@@ -190,13 +191,13 @@ TEST(TestCompNodeCPU, CoreAffinity) {
     size_t data0, data1 = 0;
     auto empty_task = []() {};
     auto cn0 = CompNode::load("cpu:default"), cn1 = CompNode::load("cpu0"),
-         cn2 = CompNode::load("multithread0:2");
+         cn2 = CompNode::load("multithread2:0");
     auto binding0 = [&](size_t) { data0 = 10; };
     CompNodeEnv::from_comp_node(cn0).cpu_env().set_affinity(binding0);
     CompNodeEnv::from_comp_node(cn0).cpu_env().dispatch(empty_task);
     cn0.sync();
 
-    auto binding1 = [&](size_t) { data1 = 20; };
+    auto binding1 = [&](size_t ) { data1 = 20; };
     CompNodeEnv::from_comp_node(cn1).cpu_env().set_affinity(binding1);
     CompNodeEnv::from_comp_node(cn1).cpu_env().dispatch(empty_task);
     cn1.sync();
@@ -238,7 +239,7 @@ TEST(TestCompNode, CPU_MULTI_THREAD) {
     };
 
     for (auto&& str : std::vector<std::string>{
-                 "multithread0:2", "multithread0:4", "multithread:default:4"}) {
+                 "multithread2:0", "multithread4:0", "multithread:default:4"}) {
         auto cn0 = CompNode::load("cpu0"), cn1 = CompNode::load(str);
         std::thread wk_thread0{std::ref(worker), std::ref(dst0), std::ref(cn0)};
         std::thread wk_thread1{std::ref(worker), std::ref(dst1), std::ref(cn1)};
@@ -271,9 +272,9 @@ TEST(TestCompNodeCPU, PhysicalDispatch) {
     L::set_device_map(DT, ID, 0);
     L::set_device_map(DT, ID + 1, 0);
     L::set_device_map(DT, ID + 2, 1);
-    auto cn0 = CompNode::load({DT, ID, 0}),
-         cn1 = CompNode::load({DT, ID + 1, 0}),
-         cn2 = CompNode::load({DT, ID + 2, 0});
+    auto cn0 = CompNode::load({DT, ID, {0}}),
+         cn1 = CompNode::load({DT, ID + 1, {0}}),
+         cn2 = CompNode::load({DT, ID + 2, {0}});
 #if MGB_HAVE_THREAD
     ASSERT_NE(cn0, cn1);
 #else
@@ -532,10 +533,10 @@ TEST(TestCompNode, MultipleLoad) {
     for (size_t i = 1; i < CompNode::NR_DEVICE_TYPE; ++i) {
         auto dt = static_cast<CompNode::DeviceType>(i);
         if (CompNode::get_device_count(dt)) {
-            auto cn = CompNode::load({dt});
+            auto cn = CompNode::load({dt, 0, {0}});
             mgb_log("comp node %s is available", cn.to_string().c_str());
             run(cn);
-            cn = CompNode::load({dt});
+            cn = CompNode::load({dt, 0, {0}});
             run(cn);
         }
     }
@@ -591,7 +592,7 @@ TYPED_TEST(TestCPUCompSeqRec, run_default_cpu) {
     comp_node_test::seq_rec::run<TypeParam>(CompNode::load("cpu:default"));
 }
 TYPED_TEST(TestCPUCompSeqRec, run_multi_thread) {
-    auto cn = CompNode::load("multithread0:4");
+    auto cn = CompNode::load("multithread4:0");
     comp_node_test::seq_rec::run<TypeParam>(cn);
 }
 

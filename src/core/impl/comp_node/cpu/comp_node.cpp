@@ -380,9 +380,9 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
                   m_locator_logical(locator_logical) {
             auto cn = make_comp_node_from_impl(this);
             if (locator.type == DeviceType::MULTITHREAD) {
-                //! When multi-thread the stream stand for thread number
-                m_thread_pool = std::unique_ptr<ThreadPool>(
-                        new ThreadPool(static_cast<size_t>(locator.stream)));
+                m_thread_pool = std::unique_ptr<ThreadPool>(new ThreadPool(
+                        static_cast<size_t>(locator.nr_threads)));
+                mgb_assert(m_thread_pool, "ThradPool create failed");
             }
 
             if (locator.type == DeviceType::CPU) {
@@ -398,7 +398,6 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
                             cn);
                 }
             } else if (locator.type == DeviceType::MULTITHREAD) {
-                mgb_assert(m_thread_pool, "ThradPool create failed");
                 if (locator.device == Locator::DEVICE_MULTITHREAD_DEFAULT) {
                     m_env.init_cpu(
                             {std::make_shared<InplaceCPUDispatcher>(
@@ -745,15 +744,14 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
     } else {
         mgb_assert(locator.type == DeviceType::MULTITHREAD);
         auto&& pqueue_weak = sm_pool->physical2queue_multithead[{
-                locator.device, locator.stream}];
+                locator.device, locator.nr_threads}];
         auto pqueue = pqueue_weak.lock();
         if (!pqueue) {
             pqueue = std::make_shared<WorkerQueue>(locator);
             pqueue_weak = pqueue;
         }
         auto&& pimpl = sm_pool->logical2impl_multi_thread[{
-                static_cast<int>(compact_logical_device),
-                locator_logical.stream}];
+                compact_logical_device, locator_logical.nr_threads}];
         if (!pimpl) {
             mgb_assert(sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
                        "too many cpu multithread comp nodes; max %d allowed",
