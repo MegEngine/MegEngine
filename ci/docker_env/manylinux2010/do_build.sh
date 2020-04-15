@@ -27,7 +27,7 @@ do
         make install
         mkdir -p staging
         mkdir -p /home/output/debug
-        cp -a python_module/{megengine,setup.py} staging/
+        cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
         pushd dnn/cuda-stub/ >/dev/null
             strip -s libcuda.so
             ln -sf libcuda.so libcuda.so.1
