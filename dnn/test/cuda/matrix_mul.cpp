@@ -193,8 +193,15 @@ TEST_F(CUDA, MATRIX_MUL)
     Checker<MatrixMul> checker(handle_cuda());
     using Param = MatrixMul::Param;
     size_t m = 12, n = 16, k = 20;
-    for (DType dtype: std::array<DType, 3>{
-            {dtype::Float32(), dtype::Float16(), dtype::Int32()}}) {
+
+    bool is_int_available = cuda::is_compute_capability_required(6, 1);
+    std::vector<DType> dtype_array;
+    dtype_array.push_back(dtype::Float32());
+    dtype_array.push_back(dtype::Float16());
+    if (is_int_available)
+        dtype_array.push_back(dtype::Int32());
+
+    for (DType dtype : dtype_array) {
         for (unsigned mask = 0; mask < 4; ++mask) {
             Param param;
             param.transposeA = mask & 1;
