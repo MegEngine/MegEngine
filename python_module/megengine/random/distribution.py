@@ -93,6 +93,8 @@ def uniform(
          [0.09365904 0.62957656]]
 
     """
+    assert low < high, "Uniform is not defined when low >= high"
+
     comp_node, comp_graph = _use_default_if_none(comp_node, comp_graph)
     seed = _random_seed_generator().__next__()
     return low + (high - low) * mgb.opr.uniform_rng(
