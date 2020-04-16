@@ -129,7 +129,7 @@ TEST_F(CUDA, PEAK_BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
 #endif
 
 TEST_F(CUDA, MATRIX_MUL_INT8x8x32_WITH_SPETIAL_STRIDES) {
-    if (cuda::current_device_prop().major < 6) {
+    if (!cuda::is_compute_capability_required(6, 1)) {
         printf("Skip CUDA.MATRIX_MUL test as current device doesn't support\n");
         return;
     }
@@ -151,7 +151,7 @@ TEST_F(CUDA, MATRIX_MUL_INT8x8x32_WITH_SPETIAL_STRIDES) {
 }
 
 TEST_F(CUDA, MATRIX_MUL_INT8x8x32_NAIVE) {
-    if (cuda::current_device_prop().major < 6) {
+    if (!cuda::is_compute_capability_required(6, 1)) {
         printf("Skip CUDA.MATRIX_MUL test as current device doesn't support\n");
         return;
     }
