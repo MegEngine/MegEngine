@@ -17,6 +17,7 @@ from megengine._internal import CompGraph, CompNode
 from ..core import zeros
 from ..core.graph import _use_default_if_none
 from ..core.tensor import Tensor, wrap_io_tensor
+from .elemwise import ceil
 from .utils import _decide_comp_node_and_comp_graph
 
 
@@ -551,6 +552,46 @@ def linspace(
         mgb.opr.linspace(start, stop, num, comp_node=device, comp_graph=comp_graph)
     )
     return ret.astype(dtype)
+
+
+def arange(
+    start: Union[int, float, Tensor],
+    end: Union[int, float, Tensor],
+    step: Union[int, float, Tensor] = 1,
+    dtype=np.float32,
+    device: Optional[CompNode] = None,
+    comp_graph: Optional[CompGraph] = None,
+) -> Tensor:
+    r"""
+    Returns a Tensor with values from `start` to `end` with adjacent interval `step`
+
+    :param start: starting value of the squence, shoule be scalar
+    :param end: ending value of the squence, shoule be scalar
+    :param step: the gap between each pair of adjacent values. Default 1
+    :param dtype: result data type
+    :return: The generated tensor
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+
+        a = F.arange(1, 5, 1)
+        print(a.numpy())
+
+    .. testoutput::
+
+        [1. 2. 3. 4.]
+
+    """
+    if dtype is not np.float32:
+        raise ValueError("arange is only implemented for float32")
+    num = ceil((end - start) / step)
+    stop = start + step * (num - 1)
+    ret = linspace(start, stop, num, device=device, comp_graph=comp_graph)
+    return ret
 
 
 def zeros_like(inp: Tensor) -> Tensor:
