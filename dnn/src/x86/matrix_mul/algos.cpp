@@ -438,7 +438,6 @@ size_t MatrixMulImpl::AlgoInt8x8x32SSEM4N8K2::get_workspace(
                    m, n, k, trans_a, trans_b, strategy, cacheline)
             .get_workspace_size();
 }
-
 MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(
         AlgoInt8x8x32SSEM4N8K2, megdnn_x86_matmul_kern, 9,
         x86::matmul::gemm_sse_s8s8s32_4x8x2, dt_int8, dt_int32, dt_int16);

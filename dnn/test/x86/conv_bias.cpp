@@ -919,6 +919,79 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
 
 #undef cb
 }
+
+/**************************** Conv1x1 PackA *************************/
+namespace {
+void checker_conv_bias(std::vector<conv_bias::TestArg> args, Handle* handle,
+                       RNG* rng, float epsilon, DType type0, DType type1,
+                       DType type2, DType type3, const char* algo_name) {
+    using namespace conv_bias;
+
+    Checker<ConvBias> checker(handle);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
+    checker.set_dtype(0, type0);
+    checker.set_dtype(1, type1);
+    checker.set_dtype(2, type2);
+    checker.set_dtype(4, type3);
+    checker.set_epsilon(epsilon);
+    if (NULL != rng) {
+        checker.set_rng(0, rng).set_rng(1, rng).set_rng(2, rng).set_rng(3, rng);
+    }
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+}  // namespace
+
+#if MEGDNN_X86_WITH_MKL
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_PACKA) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
+    check_conv_bias(args, handle(), "CONV1x1:X86_F32_MKL_PACKA:24");
+}
+
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_BLAS) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
+    check_conv_bias(args, handle(), "CONV1x1:X86_F32_BLAS:48");
+}
+#endif
+
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32) {
+    using namespace conv_bias;
+    UniformIntRNG rng{-50, 50};
+    float epsilon = 0.001;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+#if MEGDNN_X86_WITH_MKL_DNN
+    if (x86::is_supported(x86::SIMDType::VNNI)) {
+        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                        dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
+                        "CONV1x1:X86_INT8X8X32_MKLDNN:24");
+    }
+#endif
+#if MEGDNN_X86_WITH_VNNI
+    if (x86::is_supported(x86::SIMDType::VNNI)) {
+        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
+                          "CONV1x1:X86_INT8X8X32_VNNI:24");
+    }
+#endif
+    if (x86::is_supported(x86::SIMDType::AVX2)) {
+        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
+                          "CONV1x1:X86_INT8X8X32_AVX2_4X16X2:24");
+        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                        dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
+                        "CONV1x1:X86_INT8X8X32_AVX2_2X4X16:24");
+    }
+    checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                      dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
+                      "CONV1x1:X86_INT8X8X32_SSE_4X8X2:48");
+}
+/************************* End Conv1x1 PackA ************************/
+
 #endif
 
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8) {

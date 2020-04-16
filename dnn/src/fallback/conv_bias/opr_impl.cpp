@@ -15,6 +15,7 @@
 #include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/algos.h"
+#include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/naive/convolution/algorithms.h"
@@ -54,7 +55,13 @@ public:
                         ohw_tile_size));
                 all_algos.emplace_back(refhold.back().get());
             }
-#if 1
+            for (size_t oc_tile_size : {24, 48}) {
+                refhold.emplace_back(new AlgoConv1x1(
+                    static_cast<MatrixMulImpl::AlgoBase*>(algo),
+                    oc_tile_size));
+                all_algos.emplace_back(refhold.back().get());
+            }
+#if 0
         //! As these algos maybe very slow, it will make fastrun search slow, so
         //! we disable it, but for the test of strategyhelper, we just keep it.
         //! FIXME: I do not know a better way to do it.
