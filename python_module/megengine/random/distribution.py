@@ -62,12 +62,16 @@ def gaussian(
 @wrap_io_tensor
 def uniform(
     shape: Iterable[int],
+    low: float = 0,
+    high: float = 1,
     comp_node: Optional[CompNode] = None,
     comp_graph: Optional[CompGraph] = None,
 ) -> Tensor:
     r"""Random variable with uniform distribution $U(0, 1)$
 
     :param shape: Output tensor shape
+    :param low: Lower range
+    :param high: Upper range
     :param comp_node: The comp node output on, default to None
     :param comp_graph: The graph in which output is, default to None
     :return: The output tensor
@@ -91,6 +95,6 @@ def uniform(
     """
     comp_node, comp_graph = _use_default_if_none(comp_node, comp_graph)
     seed = _random_seed_generator().__next__()
-    return mgb.opr.uniform_rng(
+    return low + (high - low) * mgb.opr.uniform_rng(
         shape, seed=seed, comp_node=comp_node, comp_graph=comp_graph
     )
