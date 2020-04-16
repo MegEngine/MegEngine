@@ -157,6 +157,38 @@ def test_broadcast_to():
     opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
 
 
+def test_arange():
+    cases = [
+        {"input": [1, 9, 1]},
+        {"input": [2, 10, 2]},
+    ]
+    opr_test(
+        cases,
+        F.arange,
+        ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+    )
+
+    cases = [
+        {"input": [9, 1, -1]},
+        {"input": [10, 2, -2]},
+    ]
+    opr_test(
+        cases,
+        F.arange,
+        ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+    )
+
+    cases = [
+        {"input": [9.3, 1.2, -0.5]},
+        {"input": [10.3, 2.1, -1.7]},
+    ]
+    opr_test(
+        cases,
+        F.arange,
+        ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+    )
+
+
 def test_add_update():
     shape = (2, 3)
     v = np.random.random(shape).astype(np.float32)

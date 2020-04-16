@@ -75,6 +75,7 @@ from .nn import (
 from .sort import argsort, sort, top_k
 from .tensor import (
     add_axis,
+    arange,
     broadcast_to,
     concat,
     dimshuffle,
