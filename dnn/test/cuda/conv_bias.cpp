@@ -582,7 +582,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_1x1) {
 TEST_F(CUDA, CONV_BIAS_FORWARD_GROUP) {
     using NLMode = ConvBias::Param::NonlineMode;
     bool is_int_available = false;
-    if (megdnn::test::check_compute_capability((6), (0))) {
+    if (megdnn::test::check_compute_capability(6, 1)) {
         is_int_available = true;
     } else {
         is_int_available = false;
