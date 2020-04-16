@@ -3,7 +3,6 @@
 set -e
 
 BASEDIR=$(readlink -f "$(dirname "$0")"/..)
-source "${BASEDIR}/ci/utils.sh"
 
 export MGB_TEST_NO_LOG=1
 export MGB_STABLE_RNG=1
@@ -16,9 +15,9 @@ function cpp_test {
 }
 
 
-if [[ "$1" != "cpu" && "$1" != "cuda" ]] ; then
+if [[ "$1" == "cpu" || "$1" == "cuda" ]] ; then
+    cpp_test "$@"
+else
     echo "Argument must cpu or cuda"
     exit 1
 fi
-
-cpp_test "$@"
