@@ -777,7 +777,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
                 .execs({arg.src, arg.filter, {}, {}, {}});                     \
     }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
     if (megdnn::x86::is_supported(x86::SIMDType::VNNI)) {
         cb("IM2COLMATMUL:X86_INT8X8X32_MKLDNN");
     }
@@ -846,14 +846,14 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
                 {arg.src, arg.filter, arg.bias, {}, {}});         \
     }
 
-#if defined(MEGDNN_X86_WITH_MKL) || defined(MEGDNN_X86_WITH_OPENBLAS)
+#if MEGDNN_X86_WITH_MKL || MEGDNN_X86_WITH_OPENBLAS
     cb("IM2COLMATMUL:X86_F32_BLAS");
 #endif
 
 #undef cb
 }
 
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
     using namespace conv_bias;
     std::vector<TestArg> args;
@@ -973,7 +973,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8) {
                 .execs({arg.src, arg.filter, {}, {}, {}});        \
     }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
     if (x86::is_supported(x86::SIMDType::VNNI)) {
         cb("IM2COLMATMUL:X86_INT8X8X32_MKLDNN");
     }
@@ -1057,7 +1057,7 @@ TEST_F(X86, CONV_BIAS_MATMUL) {
     }
 }
 #if MEGDNN_WITH_BENCHMARK
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 static void x86_benchmark_fp32_mkldnn(Handle* handle) {
     constexpr size_t RUNS = 30;
     param::ConvBias param;
@@ -1304,7 +1304,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_WEIGHT_PREPROCESS) {
 }
 
 /*********************************** End winograd ************************/
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 static void x86_correctness_fp32_mkldnn_run(
         Checker<ConvBias>& checker, UniformIntRNG& rng, Handle* handle,
         ConvBiasForward::BiasMode bias_mode,

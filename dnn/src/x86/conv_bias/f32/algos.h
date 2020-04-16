@@ -186,7 +186,7 @@ public:
     void* type() const override;
 };
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 class ConvBiasImpl::AlgoMkldnnConv final : public AlgoBase {
     static void kern_mkldnn_fp32(const NCBKernParam& param,
                                  const NCBKernIndex&);

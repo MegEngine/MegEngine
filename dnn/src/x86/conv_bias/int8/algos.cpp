@@ -20,13 +20,13 @@
 #include "src/x86/conv_bias/postprocess_helper.h"
 #include "src/x86/handle.h"
 #include "src/x86/utils.h"
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 #include <mkldnn.hpp>
 #endif
 
 #include <cstring>
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 using namespace dnnl;
 #endif
 using namespace megdnn;
@@ -161,7 +161,7 @@ ConvBiasImpl::AlgoDirectAvx2Stride1Int8::get_kimpls(
     return direct_conv_avx2_stride1::get_kimpls(param, bundle);
 }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 bool ConvBiasImpl::AlgoMkldnnQint8::usable(FallbackConvBiasImpl*,
                                            const NCBKernSizeParam& param,
                                            AlgoSelectionStrategy) const {
@@ -353,7 +353,7 @@ void ConvBiasImpl::AlgoMkldnnQint8::kern_mkldnn_s8x8x32(
 #undef REORDER_MEMORY
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 /* ===================== mkldnn qint8 matmul algo ===================== */
 bool ConvBiasImpl::AlgoMkldnnMatmulQint8::usable(FallbackConvBiasImpl*,
                                                  const NCBKernSizeParam& param,

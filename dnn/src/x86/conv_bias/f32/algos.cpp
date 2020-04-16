@@ -645,7 +645,7 @@ void ConvBiasImpl::AlgoMatrixMul::kimpl(const NCBKernParam& param,
     }
 }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 static inline void mkldnn_fp32_conv_instance(
         const ConvBiasImpl::NCBKernParam& param, const uint32_t ocpg,
         const uint32_t icpg, const uint32_t group, const uint32_t in,

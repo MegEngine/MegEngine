@@ -24,7 +24,7 @@ TEST_F(X86, POOLING) {
     }
 }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, POOLING88) {
     Checker<Pooling> checker(handle());
     auto args = pooling::get_args();
@@ -105,7 +105,7 @@ TEST_F(X86_MULTI_THREADS, BENCHMARK_POOLING) {
     test_x86_megdnn_pooling(handle());
 }
 #endif
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, POOLING_INT8) {
     auto args = pooling::get_args();
     for (auto&& arg : args) {

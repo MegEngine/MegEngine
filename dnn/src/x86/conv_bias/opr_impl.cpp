@@ -25,7 +25,7 @@ namespace {
 uint8_t x86_algo_type_storage;
 void* x86_algo_type = &x86_algo_type_storage;
 }  // anonymous namespace
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 void* ConvBiasImpl::AlgoMkldnnQint8::type() const {
     return x86_algo_type;
 }
@@ -78,7 +78,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoAVX2DirectConvStride2 avx2_stride2_direct;
     AlgoChanWiseAvx2Stride1Qint8 avx2_stride1_chanwsie_qint8;
     AlgoMatrixMul matmul;
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
     AlgoMkldnnMatmulQint8 mkldnn_matmul_qint8;
     //! Because the mkldnnconv need handle
     AlgoMkldnnQint8 mkldnn_qint8;
@@ -87,7 +87,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
 public:
     AlgoPack() {
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
         //! Create the mkldnn algo
         all_algos.emplace_back(&mkldnn_conv_fp32);
         all_algos.emplace_back(&mkldnn_matmul_qint8);

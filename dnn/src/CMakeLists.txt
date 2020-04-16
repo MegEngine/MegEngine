@@ -1,6 +1,8 @@
-
 set(LIBMEGDNN_DEF)
 file(GLOB_RECURSE SOURCES common/*.cpp naive/*.cpp)
+
+# Build configure
+list(APPEND SOURCES ${PROJECT_BINARY_DIR}/genfiles/megbrain_build_config.h)
 
 if(NOT ${MGE_ARCH} STREQUAL "naive")
     file(GLOB_RECURSE SOURCES_ fallback/*.cpp)
@@ -24,7 +26,6 @@ if(MGE_WITH_CUDA)
 
     file(GLOB_RECURSE CUSOURCES cuda/*.cu)
     list(APPEND SOURCES ${CUSOURCES})
-    list(APPEND LIBMEGDNN_DEF -DMEGDNN_WITH_CUDA=1)
 endif()
 
 
@@ -33,7 +34,7 @@ add_definitions(${LIBMEGDNN_DEF})
 add_library(megdnn EXCLUDE_FROM_ALL STATIC ${SOURCES})
 
 target_link_libraries(megdnn opr_param_defs)
-target_include_directories(megdnn PUBLIC ${PROJECT_SOURCE_DIR}/dnn/include)
+target_include_directories(megdnn PUBLIC ${PROJECT_BINARY_DIR}/genfiles ${PROJECT_SOURCE_DIR}/dnn/include)
 target_include_directories(megdnn PRIVATE ${PROJECT_SOURCE_DIR}/dnn ${PROJECT_SOURCE_DIR}/third_party/midout/src)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/dnn/include DESTINATION . FILES_MATCHING PATTERN "*.h*")

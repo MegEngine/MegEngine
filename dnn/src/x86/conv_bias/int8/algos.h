@@ -58,7 +58,7 @@ public:
     void* type() const override;
 };
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 /* ===================== mkldnn qint8 algo ===================== */
 class ConvBiasImpl::AlgoMkldnnQint8 final : public AlgoBase {
     static void kern_mkldnn_s8x8x32(const NCBKernParam& param,

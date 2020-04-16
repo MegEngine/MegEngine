@@ -177,7 +177,7 @@ if(MGE_WITH_CUDA)
 
     if(NOT MGE_CUDA_GENCODE)
         if(${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386")
-            set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DMEGDNN_THREADS_512=0")
+            set(MEGDNN_THREADS_512 0)
             if(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER "10.0.0" OR ${CMAKE_CUDA_COMPILER_VERSION} VERSION_EQUAL "10.0.0")
                 set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_52,code=sm_52")
                 set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_60,code=sm_60")
@@ -202,7 +202,7 @@ if(MGE_WITH_CUDA)
             message(FATAL_ERROR "Unsupported CUDA host arch.")
         endif()
     else()
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DMEGDNN_THREADS_512=1")
+        set(MEGDNN_THREADS_512 1)
     endif()
 
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${MGE_CUDA_GENCODE}")
@@ -287,35 +287,31 @@ option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
 
 # MKLDNN build
 if(MGE_WITH_MKLDNN AND ${MGE_ARCH} STREQUAL "x86_64")
-    add_definitions(-DMEGDNN_X86_WITH_MKL_DNN)
     include(cmake/MKL_DNN.cmake)
+    set(MEGDNN_X86_WITH_MKL_DNN 1)
 endif()
 
 # RTTI
 if(MGE_ENABLE_RTTI)
-    add_definitions(-DMEGDNN_ENABLE_MANGLING=0 -DMEGDNN_ENABLE_RTTI=1)
+    set(MEGDNN_ENABLE_MANGLING 0)
+    set(MEGDNN_ENABLE_RTTI 1)
 else()
-    add_definitions(-DMEGDNN_ENABLE_MANGLING=1 -DMEGDNN_ENABLE_RTTI=0)
+    set(MEGDNN_ENABLE_MANGLING 1)
+    set(MEGDNN_ENABLE_RTTI 0)
 endif()
 set(MGB_VERBOSE_TYPEINFO_NAME ${MGE_ENABLE_RTTI})
 
 # Logging
-if(MGE_ENABLE_LOGGING)
-    add_definitions(-DMEGDNN_ENABLE_LOGGING=1)
-else()
-    add_definitions(-DMEGDNN_ENABLE_LOGGING=0)
-endif()
 set(MGB_ENABLE_LOGGING ${MGE_ENABLE_LOGGING})
+set(MEGDNN_ENABLE_LOGGING ${MGE_ENABLE_LOGGING})
 set(MGB_ENABLE_JSON ${MGE_ENABLE_LOGGING})
 
 # Exception
-if(MGE_ENABLE_EXCEPTIONS)
-    add_definitions(-DMEGDNN_ENABLE_EXCEPTIONS=1)
-else()
+if(NOT MGE_ENABLE_EXCEPTIONS)
     message(STATUS "Exceptions disabled; MegEngine would kill itself when it is supposed to throw an exception.")
-    add_definitions(-DMEGDNN_ENABLE_EXCEPTIONS=0)
 endif()
 set(MGB_ENABLE_EXCEPTION ${MGE_ENABLE_EXCEPTIONS})
+set(MEGDNN_ENABLE_EXCEPTIONS ${MGE_ENABLE_EXCEPTIONS})
 
 # JIT
 if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
@@ -330,8 +326,15 @@ if(CMAKE_THREAD_LIBS_INIT)
     set(MGB_HAVE_THREAD 1)
 endif()
 
+if(MGE_WITH_TEST)
+    # use intra-op multi threads
+    set(MEGDNN_ENABLE_MULTI_THREADS 1)
+endif()
+
 # CUDA
 set(MGB_CUDA ${MGE_WITH_CUDA})
+set(MEGDNN_WITH_CUDA ${MGE_WITH_CUDA})
+
 
 # Debug info
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
@@ -357,8 +360,46 @@ endif()
 # Distributed communication
 set(MGB_ENABLE_OPR_MM ${MGE_WITH_DISTRIBUTED})
 
+# MGE_ARCH related flags
+if(MGE_ARCH STREQUAL "x86_64" OR MGE_ARCH STREQUAL "i386")
+    if(MGE_BLAS STREQUAL "MKL")
+        set(MEGDNN_X86_WITH_MKL 1)
+    elseif(MGE_BLAS STREQUAL "OpenBLAS")
+        set(MEGDNN_X86_WITH_OPENBLAS 1)
+    endif()
+endif()
+
+# Enable Naive
+if(MGE_ARCH STREQUAL "naive")
+    set(MEGDNN_NAIVE 1)
+    message(WARNING "MEGDNN_NAIVE is enabled; MegDNN performance is degraded.")
+endif()
+
+if(MGE_ARCH STREQUAL "x86_64" OR MGE_ARCH STREQUAL "i386")
+    set(MEGDNN_X86 1)
+    if(MGE_ARCH STREQUAL "x86_64")
+        set(MEGDNN_X86_64 1)
+        set(MEGDNN_64_BIT 1)
+        if(NOT MSVC)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
+        endif()
+    else()
+        set(MEGDNN_X86_32 1)
+        if(NOT MSVC)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+        endif()
+    endif()
+    if(NOT MSVC)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -mfpmath=sse")
+    endif()
+endif()
+
+
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
+
 # Write out megbrain_build_config.h
-configure_file(src/core/include/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
+# It defines macros needed by both megbrain and dnn
+configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h DESTINATION include)
 
 add_subdirectory(dnn)

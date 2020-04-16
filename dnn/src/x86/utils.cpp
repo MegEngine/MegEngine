@@ -18,7 +18,7 @@
 #include <intrin.h>
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL) || defined(MEGDNN_X86_WITH_OPENBLAS)
+#if MEGDNN_X86_WITH_MKL || MEGDNN_X86_WITH_OPENBLAS
 #include <pmmintrin.h>
 #endif
 

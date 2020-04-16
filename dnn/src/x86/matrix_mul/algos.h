@@ -28,7 +28,7 @@ public:
     PackMode packmode() const override { return PackMode::NO_PACK; }
 };
 
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
 class MatrixMulImpl::AlgoF32MKLPackA : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
@@ -106,7 +106,7 @@ public:
 };
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 class MatrixMulImpl::AlgoInt8x8x32Mkldnn : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }

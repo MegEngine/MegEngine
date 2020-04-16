@@ -20,7 +20,7 @@
 #include "test/common/workspace_wrapper.h"
 
 namespace {
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 struct ConvArg {
     size_t batch_size, fh, sh, ph, ic, ih, iw, oc, groups;
 };
@@ -224,7 +224,7 @@ TEST_F(X86, DEFAULT_CONV_MATMUL) {
     }
 }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, CONVOLUTION_FORWARD_INT8) {
     Checker<ConvolutionForward> checker(handle());
     checker.set_before_exec_callback(
@@ -369,7 +369,7 @@ TEST_F(X86, CONVOLUTION_DIRECT_MKLDNN_C8) {
 #endif
 
 #if MEGDNN_WITH_BENCHMARK
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
     using namespace convolution;
     using Param = param::Convolution;
