@@ -600,12 +600,11 @@ MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
     void add_input_layout_constraint() override;
 
 public:
-    ParamPackSplit(VarNode* src, VarNode* offsets,
-                   const std::vector<dt_int32> offsets_val,
+    ParamPackSplit(VarNode* src, const std::vector<dt_int32> offsets,
                    TensorShapeArray& shapes, const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(const SymbolVar& src, const SymbolVar& offsets,
-                               const std::vector<dt_int32> offsets_val,
+    static SymbolVarArray make(const SymbolVar& src,
+                               const std::vector<dt_int32> offsets,
                                TensorShapeArray shapes,
                                const OperatorNodeConfig& config = {});
 
