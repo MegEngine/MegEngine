@@ -414,7 +414,7 @@ struct OpCallerBinary<Op, SIMDType::AVX2, BCAST101x_VEC> {
                     const typename Op::src_ctype* src1,
                     typename Op::dst_ctype* dst, DType src0_dtype,
                     DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t nr_blocks_in_channel, size_t channel_stride,
+                    size_t nr_channel_blocks, size_t channel_stride,
                     size_t channel_block_dim) {
         megdnn_assert(channel_block_dim == 8, "avx2 only support nchw88");
         Op op(src0_dtype, src1_dtype, dst_dtype);
@@ -422,7 +422,7 @@ struct OpCallerBinary<Op, SIMDType::AVX2, BCAST101x_VEC> {
         ParamElemVisitor<typename Op::src_ctype, SIMDType::AVX2> vis1;
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
-            for (size_t cb = 0; cb < nr_blocks_in_channel; cb++) {
+            for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
                 auto channel_block_vec = vis0(src0_block_ptr);
                 size_t img_index = 0;
@@ -451,12 +451,12 @@ struct OpCallerBinary<Op, SIMDType::NONE, BCAST101x_VEC> {
                     const typename Op::src_ctype* src1,
                     typename Op::dst_ctype* dst, DType src0_dtype,
                     DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t nr_blocks_in_channel, size_t channel_stride,
+                    size_t nr_channel_blocks, size_t channel_stride,
                     size_t channel_block_dim) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
-            for (size_t cb = 0; cb < nr_blocks_in_channel; cb++) {
+            for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
                 for (size_t i = 0; i < channel_stride; i++) {
                     for (size_t c_iter = 0; c_iter < channel_block_dim;
