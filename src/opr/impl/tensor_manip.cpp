@@ -1443,7 +1443,6 @@ ParamPackSplit::ParamPackSplit(VarNode* src, VarNode* offsets,
     mgb_assert(src->comp_node() == offsets->comp_node());
     add_input({src});
     add_input({offsets});
-    m_mem_fwd_success.resize(m_shapes.size());
 
     for (size_t i = 0; i < shapes.size(); i++) {
         mgb_assert(shapes[i].total_nr_elems(), "empty param is not allowed!");
@@ -1485,9 +1484,7 @@ void ParamPackSplit::mem_plan_fwd_in2out_readonly() {
     for (size_t i = 0; i < output().size(); i++) {
         auto layout = output(i)->layout();
         auto spec = SubTensorSpec::make_from_offset_elem(layout, m_offsets[i * 2]);
-        m_mem_fwd_success[i] = output(i)->set_fwd_in2out_readonly(
-            input(0), spec);
-        mgb_assert(m_mem_fwd_success[i]);
+        mgb_assert(output(i)->set_fwd_in2out_readonly(input(0), spec));
     }
 }
 

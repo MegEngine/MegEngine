@@ -590,7 +590,6 @@ public:
 MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
     TensorShapeArray m_shapes;
     std::vector<dt_int32> m_offsets;
-    std::vector<bool> m_mem_fwd_success;
 
     void scn_do_execute() override{};
     void init_output_static_infer_desc() override;
