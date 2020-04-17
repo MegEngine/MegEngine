@@ -234,16 +234,18 @@ namespace gopt {
      */
     class EnableNchwxxPass final : public TensorReformatPass {
         std::string m_name = "tensor_format_nchwxx";
+        size_t m_pack_c_size;
         VarNode* on_graph_endpoint_var(VarNode* new_var,
                                        VarNode* orig_var) const override;
         //! the flag for conv to transform to nchwxx
         enum class TransType {
-            TRANS_PURE_NCHWXX,    //!< weight and src all trans to nchw88
-            TRANS_HYBIRD_NCHWXX,  //!< input is nchw, output is nchw88
+            TRANS_PURE_NCHWXX,    //!< weight and src all trans to nchwxx
+            TRANS_HYBIRD_NCHWXX,  //!< input is nchw, output is nchwxx
             TRANS_NONE,           //!< no need trans
         };
 
     public:
+        EnableNchwxxPass(size_t pack_c_size) : m_pack_c_size(pack_c_size) {}
         const char* name() const override {
             return mgb_cstr_log(m_name.c_str());
         }
@@ -265,6 +267,8 @@ namespace gopt {
         bool use_nhwcd4 = false;
         //! whether to compute using NCHW88 tensor format
         bool use_nchw88 = false;
+        //! whether to compute using NCHW44 tensor format
+        bool use_nchw44 = false;
         //! whether to enable tensor core
         bool use_tensor_core = false;
         //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
@@ -283,6 +287,7 @@ namespace gopt {
         SET(use_tensor_core);
         SET(fuse_conv_bias_with_z);
         SET(use_nchw88);
+        SET(use_nchw44);
 #undef SET
     };
 
