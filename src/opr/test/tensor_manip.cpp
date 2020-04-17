@@ -1952,9 +1952,7 @@ void test_param_pack_split(const TensorShapeArray& shapes) {
                             .comp_node(cn)
                             .resize({offsets_val.size()})
                             .ptr<dt_int32>());
-        auto sym_offsets = opr::SharedDeviceTensor::make(
-                *inputs[0].node()->owner_graph(), offsets);
-        auto out = opr::ParamPackSplit::make(inputs[0], sym_offsets, offsets_val,
+        auto out = opr::ParamPackSplit::make(inputs[0], offsets_val,
                                              shapes);
         mgb_assert(out.size() == nr_out);
         typename Checker::SymOutArray ret;

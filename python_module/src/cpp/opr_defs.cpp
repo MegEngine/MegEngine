@@ -47,16 +47,10 @@ SymbolVarArray _Opr::param_pack_split(
     }
 
     auto cn = src.node()->comp_node();
-    auto offsets_val = megdnn::ParamPackConcat::gen_offsets(
+    auto offsets = megdnn::ParamPackConcat::gen_offsets(
             shapearr, cn.get_mem_addr_alignment(), src.dtype().size());
-    if (config.has_comp_node_set()) {
-        cn = config.get_single_comp_node();
-    }
-    HostTensorND hv{cn, TensorShape{{offsets_val.size()}}, dtype::Int32{}};
-    memcpy(hv.raw_ptr(), offsets_val.data(), offsets_val.size() * sizeof(int));
-    auto offsets = opr::ImmutableTensor::make(*src.node()->owner_graph(), hv);
 
-    return mgb::opr::ParamPackSplit::make(src, offsets, offsets_val, shapearr, config);
+    return mgb::opr::ParamPackSplit::make(src, offsets, shapearr, config);
 }
 
 #if MGB_ENABLE_OPR_MM
