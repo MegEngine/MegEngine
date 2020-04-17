@@ -233,9 +233,11 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
         [0 1 2 3 3]
 
     """
-    assert lower or upper, "At least one of 'lower' or 'upper' must not be None"
-    if lower:
-        if upper:
+    assert (
+        lower is not None or upper is not None
+    ), "At least one of 'lower' or 'upper' must not be None"
+    if lower is not None:
+        if upper is not None:
             assert lower <= upper, "clamp lower bound is bigger that upper bound"
             return minimum(maximum(inp, lower), upper)
         else:
