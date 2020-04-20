@@ -31,10 +31,8 @@ if(MGE_WITH_CUDA AND MGE_WITH_TRT)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
-set(MGB_DEF ${MGB_DEF} PARENT_SCOPE)
 add_library(megbrain STATIC EXCLUDE_FROM_ALL ${SOURCES})
 target_link_libraries(megbrain mgb_opr_param_defs)
-target_compile_definitions(megbrain PUBLIC ${MGB_DEF})
 target_include_directories(megbrain PUBLIC ${MGB_INC})
 
 if(MGE_WITH_CUDA)
