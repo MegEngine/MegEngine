@@ -464,6 +464,7 @@ public:
     }
     void raw_dev_free(void* ptr) override { MGB_CUDA_CHECK(cudaFree(ptr)); }
 };
+#endif
 
 using Callback = std::function<void()>;
 void test_free_mem(CompNode cn0, CompNode cn1, DevicePolicy* policy,
@@ -529,7 +530,6 @@ void test_gather_other(CompNode cn0, CompNode cn1) {
     opr::Sleep::sleep(cn1, 0.7);
     func->execute();
 }
-#endif
 
 }  // namespace
 
