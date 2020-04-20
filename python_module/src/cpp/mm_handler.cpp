@@ -12,7 +12,7 @@
 #include "megbrain/exception.h"
 #include "megbrain_config.h"
 
-#if MGB_CUDA
+#if MGB_ENABLE_OPR_MM
 #include "zmq_rpc.h"
 #include <future>
 
@@ -242,17 +242,11 @@ int _config::create_mm_server(const std::string& server_addr, int port) {
             server_addr, port, std::make_unique<GroupServerProxy>());
 }
 
-#else
-
-int _config::create_mm_server(const std::string& server_addr, int port) {
-    mgb_throw(mgb::MegBrainError, "CUDA suppport disable at compile time");
-    return 0;
-}
-
-#endif
-
 /* ======================== Group Barrier ========================== */
 
+/*! see definition : src/cpp/megbrain_config.h.
+ * Block until all ranks in the group reach this barrier
+ */
 void _config::group_barrier(const std::string& server_addr,
         int port, uint32_t size, uint32_t rank) {
     mgb_assert(rank < size, "invalid rank %d", rank);
@@ -262,5 +256,19 @@ void _config::group_barrier(const std::string& server_addr,
     mgb_assert(rsp != 0, "rank already registered: %d", rank);
     mgb_assert(size == rsp, "inconsistent size: %d, expect %d", size, rsp);
 }
+
+#else
+
+int _config::create_mm_server(const std::string& server_addr, int port) {
+    mgb_throw(mgb::MegBrainError, "distributed mode disabled at compile time");
+    return 0;
+}
+
+void _config::group_barrier(const std::string& server_addr,
+        int port, uint32_t size, uint32_t rank) {
+    mgb_throw(mgb::MegBrainError, "distributed mode disabled at compile time");
+}
+
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
