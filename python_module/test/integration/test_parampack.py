@@ -257,3 +257,18 @@ def test_correctness_parampack():
     pred1 = infer1(data).numpy()
     pred2 = infer2(data).numpy()
     assert np.allclose(pred1, pred2)
+
+
+def test_parampack_group_func():
+    net = XORNet()
+    net = ParamPack(
+        net,
+        nr_ignore_first=1,
+        max_size_per_group=10,
+        max_nr_params_per_group=100,
+        group_func=lambda n, p: "weight" in n,
+    )
+    for p in net.parameters(requires_grad=True):
+        assert p.pack_group_key is not None
+    for n, p in net.named_parameters(requires_grad=True):
+        assert p.pack_group_key is not None
