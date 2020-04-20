@@ -515,7 +515,7 @@ def remove_axis(inp: Tensor, axis: Union[int, Iterable[int]]) -> Tensor:
 def linspace(
     start: Union[int, float, Tensor],
     stop: Union[int, float, Tensor],
-    num: int = 100,
+    num: Union[int, Tensor],
     dtype=np.float32,
     device: Optional[CompNode] = None,
     comp_graph: Optional[CompGraph] = None,
