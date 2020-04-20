@@ -157,6 +157,28 @@ def test_broadcast_to():
     opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
 
 
+def test_linspace():
+    cases = [
+        {"input": [1, 9, 9]},
+        {"input": [3, 10, 8]},
+    ]
+    opr_test(
+        cases,
+        F.linspace,
+        ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
+    )
+
+    cases = [
+        {"input": [9, 1, 9]},
+        {"input": [10, 3, 8]},
+    ]
+    opr_test(
+        cases,
+        F.linspace,
+        ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
+    )
+
+
 def test_arange():
     cases = [
         {"input": [1, 9, 1]},
