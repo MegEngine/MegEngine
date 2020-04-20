@@ -65,12 +65,10 @@ class _config {
         static std::vector<std::pair<uint64_t, std::string>>
             dump_registered_oprs();
 
-#if MGB_ENABLE_OPR_MM
         static int create_mm_server(const std::string& server_addr, int port);
 
         static void group_barrier(const std::string& server_addr,
                 int port, uint32_t size, uint32_t rank);
-#endif
 };
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

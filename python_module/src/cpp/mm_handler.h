@@ -11,7 +11,7 @@
 
 #include "megbrain_build_config.h"
 
-#if MGB_CUDA
+#if MGB_ENABLE_OPR_MM
 
 #include "zmq_rpc.h"
 
