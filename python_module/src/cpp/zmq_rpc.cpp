@@ -101,30 +101,31 @@ ZmqRpcServer::ZmqRpcServer(string address, int port,
           m_backend(m_ctx, ZMQ_ROUTER),
           m_workers(&m_ctx, m_impl.get()) {
     try {
-        char full_addr[30];
+        char full_addr[100];
+        size_t size = sizeof(full_addr);
         sprintf(full_addr, "%s:%d", m_address.c_str(), m_port);
         m_frontend.bind(full_addr);
-    } catch (...) {
-        char full_addr[30];
-        for (int i = 1024; i < 49151; i++) {
-            m_port = 0;
-            try {
-                sprintf(full_addr, "%s:%d", m_address.c_str(), i);
-                m_frontend.bind(full_addr);
-                m_port = i;
-                break;
-            } catch (...) {
-            }
+        m_frontend.getsockopt(ZMQ_LAST_ENDPOINT, &full_addr, &size);
+        m_port = 0;
+        int pow = 1, len = strlen(full_addr);
+        for (int i = len - 1; i >= 0; i--) {
+            if (full_addr[i] == ':') break;
+            m_port += (full_addr[i] - '0') * pow;
+            pow *= 10;
         }
+    } catch(...) {
+        m_port = -1;
     }
     m_backend.bind("inproc://workers");
 }
 
 void ZmqRpcServer::run() {
+    if(m_port == -1) return;
     m_main_thread = make_unique<thread>([this] { this->work(); });
 }
 
 void ZmqRpcServer::close() {
+    if(m_port == -1) return;
     m_stop = true;
     if (m_main_thread->joinable())
         m_main_thread->join();
