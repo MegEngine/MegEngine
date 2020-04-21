@@ -21,6 +21,8 @@ from .elemwise import (
     floor,
     greater,
     greater_equal,
+    isinf,
+    isnan,
     less,
     less_equal,
     log,

@@ -27,6 +27,8 @@ __all__ = [
     "greater",
     "greater_equal",
     "floor",
+    "isinf",
+    "isnan",
     "less",
     "less_equal",
     "log",
@@ -244,3 +246,49 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
             return maximum(inp, lower)
     else:
         return minimum(inp, upper)
+
+
+def isnan(inp: Tensor) -> Tensor:
+    r"""Returns a new tensor representing if each element is NaN or not.
+
+    :param: inp
+    :return: a new tensor representing if each element in :attr:`inp` is NaN or not.
+
+    Examples:
+
+    .. testcode::
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, float("nan"), 0])
+
+        print(F.isnan(x))
+
+    .. testoutput::
+        Tensor([0 1 0], dtype=uint8)
+
+    """
+    return (inp != inp).astype("uint8")
+
+
+def isinf(inp: Tensor) -> Tensor:
+    r"""Returns a new tensor representing if each element is Inf or not.
+
+    :param: inp
+    :return: a new tensor representing if each element in :attr:`inp` is Inf or not.
+
+    Examples:
+
+    .. testcode::
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, float("inf"), 0])
+
+        print(F.isinf(x))
+
+    .. testoutput::
+        Tensor([0 1 0], dtype=uint8)
+
+    """
+    return (abs(inp) == float("inf")).astype("uint8")
