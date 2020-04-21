@@ -17,6 +17,7 @@
 #include "test/common/convolution.h"
 #include "test/common/rng.h"
 #include "test/cuda/benchmark.h"
+#include "test/cuda/utils.h"
 
 #include "src/cuda/utils.h"
 
@@ -203,18 +204,20 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
                 .set_epsilon(1e-3)
                 .set_param(arg.param)
                 .exec(TensorLayoutArray{filter, dst, src});
-        src.dtype = dst.dtype = filter.dtype = dtype::Float16();
-        checker.set_rng(0, &rng)
-                .set_rng(1, &rng)
-                .set_epsilon(1e-1)
-                .set_param(arg.param)
-                .exec(TensorLayoutArray{filter, dst, src});
-        arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
-        checker.set_rng(0, &rng)
-                .set_rng(1, &rng)
-                .set_epsilon(1e-1)
-                .set_param(arg.param)
-                .exec(TensorLayoutArray{filter, dst, src});
+        if (!megdnn::test::check_compute_capability(6, 0)) {
+            src.dtype = dst.dtype = filter.dtype = dtype::Float16();
+            checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-1)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+            arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+            checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-1)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+        }
     }
 }
 

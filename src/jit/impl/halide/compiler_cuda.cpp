@@ -49,7 +49,7 @@ HalideCudaTargetTrait::FeatureSet HalideCudaTargetTrait::features(
         set.set(Target::CUDACapability32);
     } else if (in(35, 40)) {
         set.set(Target::CUDACapability35);
-    } else if (in(50, 60)) {
+    } else if (in(50, 61)) {
         set.set(Target::CUDACapability50);
     } else if (in(61, 70)) {
         set.set(Target::CUDACapability61);
