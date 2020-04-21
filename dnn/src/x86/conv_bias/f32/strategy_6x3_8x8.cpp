@@ -16,7 +16,7 @@
 #include "src/fallback/conv_bias/winograd/winograd.h"
 #include "src/x86/conv_bias/f32/strategy.h"
 #include "src/x86/elemwise_helper/op_unary.h"
-#include "src/x86/simd_helper.h"
+#include "src/x86/avx_helper.h"
 
 #include <x86intrin.h>
 #ifdef WIN32CMAKE
