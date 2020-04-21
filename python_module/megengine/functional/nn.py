@@ -27,6 +27,11 @@ def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor
     """Applies a linear transformation to the input.
 
     Refer to :class:`~.Linear` for more information.
+
+    :param inp: the input tensor with shape `(N, in_features)`.
+    :param weight: the weight with shape `(out_features, in_features)`. 
+    :param bias: the bias with shape `(out_features,)`.
+        Default: ``None``
     """
     orig_shape = inp.shape
     inp = inp.reshape(-1, orig_shape[-1])
@@ -51,6 +56,8 @@ def conv2d(
 ) -> Tensor:
     """2D convolution operation.
 
+    Refer to :class:`~.Conv2d` for more information.
+
     :param inp: The feature map of the convolution operation
     :param weight: The convolution kernel
     :param bias: The bias added to the result of convolution (if given)
@@ -73,7 +80,6 @@ def conv2d(
         Float32 would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
 
-    Refer to :class:`~.Conv2d` for more information.
     """
     ph, pw = _pair(padding)
     sh, sw = _pair_nonzero(stride)
@@ -114,6 +120,8 @@ def conv_transpose2d(
 ) -> Tensor:
     """2D transposed convolution operation.
 
+    Refer to :class:`~.ConvTranspose2d` for more information.
+
     :param inp: The feature map of the convolution operation
     :param weight: The convolution kernel
     :param bias: The bias added to the result of convolution (if given)
@@ -136,7 +144,6 @@ def conv_transpose2d(
         Float32 would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
 
-    Refer to :class:`~.ConvTranspose2d` for more information.
     """
     ph, pw = _pair(padding)
     sh, sw = _pair_nonzero(stride)
@@ -172,13 +179,14 @@ def max_pool2d(
 ) -> Tensor:
     """Applies a 2D max pooling over an input.
 
+    Refer to :class:`~.MaxPool2d` for more information.
+
     :param inp: The input tensor.
     :param kernel_size: The size of the window.
     :param stride: The stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
     :param padding: Implicit zero padding to be added on both sides. Default: 0
 
-    Refer to :class:`~.MaxPool2d` for more information.
     """
 
     kh, kw = _pair_nonzero(kernel_size)
@@ -207,13 +215,14 @@ def avg_pool2d(
 ) -> Tensor:
     """ Applies a 2D average pooling over an input.
 
+    Refer to :class:`~.AvgPool2d` for more information.
+
     :param inp: The input tensor.
     :param kernel_size: The size of the window.
     :param stride: The stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
     :param padding: Implicit zero padding to be added on both sides. Default: 0
 
-    Refer to :class:`~.AvgPool2d` for more information.
     """
     kh, kw = _pair_nonzero(kernel_size)
     sh, sw = _pair_nonzero(stride or kernel_size)
@@ -343,6 +352,8 @@ def batch_norm2d(
 ) -> Tensor:
     """Applies batch normalization to the input.
 
+    Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
+
     :param inp: input tensor.
     :param running_mean: tensor to store running mean.
     :param running_var: tensor to store running variance.
@@ -358,7 +369,6 @@ def batch_norm2d(
     :param eps: a value added to the denominator for numerical stability.
         Default: 1e-5.
 
-    Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
     """
 
     inp = mgb.opr.mark_no_broadcast_elemwise(inp)
@@ -539,10 +549,10 @@ def eye(
     Fills the 2-dimensional input :class:`SymbolVar` with the identity matrix.
 
     :param n: The number of rows
-    :param m: The number of columns, default to None
-    :param dtype: The data type, default to None
-    :param device: Compute node of the matrix, defaults to None
-    :param comp_graph: Compute graph of the matrix, defaults to None
+    :param m: The number of columns. Default: None
+    :param dtype: The data type. Default: None
+    :param device: Compute node of the matrix. Default: None
+    :param comp_graph: Compute graph of the matrix. Default: None
     :return: The eye matrix
 
     Examples:
@@ -669,9 +679,7 @@ def interpolate(
     :param size: size of the output tensor. Default: ``None``
     :param scale_factor: scaling factor of the output tensor. Default: ``None``
     :param mode: interpolation methods, acceptable values are:
-        'bilinear'(default), 'linear', 'nearest' (todo), 'cubic' (todo), 'area' (todo)
-
-
+        'BILINEAR', 'LINEAR'. Default: ``BILINEAR``
 
     Examples:
 
@@ -701,7 +709,7 @@ def interpolate(
     """
     mode = mode.upper()
     if mode not in ["BILINEAR", "LINEAR"]:
-        raise ValueError("interpolate only support bilinear mode")
+        raise ValueError("interpolate only support linear or bilinear mode")
     if mode not in ["BILINEAR", "LINEAR"]:
         if align_corners is not None:
             raise ValueError(

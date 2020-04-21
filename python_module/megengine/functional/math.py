@@ -48,12 +48,12 @@ def sum(inp: Tensor, axis: Optional[int] = None, keepdims: bool = False) -> Tens
 @wrap_io_tensor
 def prod(inp: Tensor, axis: Optional[int] = None, keepdims=False) -> Tensor:
     r"""
-    Returns prod of input tensor along given *axis*.
+    Returns the element product of input tensor along given *axis*.
 
-        :param inp: The input tensor
-        :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: ``None``
-        :param keepdims: Whether the output tensor has *axis* retained or not. Default: ``False``
-        :return: The output tensor
+    :param inp: The input tensor
+    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: ``None``
+    :param keepdims: Whether the output tensor has *axis* retained or not. Default: ``False``
+    :return: The output tensor
 
     Examples:
 

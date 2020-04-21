@@ -179,10 +179,9 @@ def concat(
     Concat some tensors
 
     :param inps: Input tensors to concat
-    :param axis: the dimension over which the tensors are concatenated,
-        default to 0
-    :param device: The comp node output on, default to None
-    :param comp_graph: The graph in which output is, default to None
+    :param axis: the dimension over which the tensors are concatenated. Default: 0
+    :param device: The comp node output on. Default: None
+    :param comp_graph: The graph in which output is. Default: None
     :return: The output tensor
 
     Examples:
