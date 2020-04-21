@@ -204,7 +204,7 @@ class ConvTranspose2d(_ConvNd):
     with respect to its input.
 
     Convolution usually reduces the size of input, while transposed convolution works
-    the other way, transforming a smaller input to a larger output while preserving the
+    the opposite way, transforming a smaller input to a larger output while preserving the
     connectivity pattern.
 
     :param in_channels: number of input channels.

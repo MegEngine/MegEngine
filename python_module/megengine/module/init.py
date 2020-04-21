@@ -176,8 +176,8 @@ def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
         a = \text{gain} \times \sqrt{\frac{6}{\text{fan_in} + \text{fan_out}}}
 
     Also known as Glorot initialization. Detailed information can be retrieved from
-    `Understanding the difficulty of training deep feedforward neural networks` -
-    Glorot, X. & Bengio, Y. (2010).
+    `"Understanding the difficulty of training deep feedforward neural networks" <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_.
+
 
     :param tensor: An n-dimentional tensor to be initialized
     :param gain: Scaling factor for :math:`a`.
@@ -196,8 +196,7 @@ def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
         \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_in} + \text{fan_out}}}
 
     Also known as Glorot initialization. Detailed information can be retrieved from
-    `Understanding the difficulty of training deep feedforward neural networks` -
-    Glorot, X. & Bengio, Y. (2010).
+    `"Understanding the difficulty of training deep feedforward neural networks" <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_.
 
     :param tensor: An n-dimentional tensor to be initialized
     :param gain: Scaling factor for :math:`std`.
@@ -217,8 +216,9 @@ def msra_uniform_(
         \text{bound} = \sqrt{\frac{6}{(1 + a^2) \times \text{fan_in}}}
 
     Detailed information can be retrieved from
-    `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
-    classification`
+    `"Delving deep into rectifiers: Surpassing human-level performance on ImageNet
+    classification" <https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_.
+
 
     :param tensor: An n-dimentional tensor to be initialized
     :param a: Optional parameter for calculating gain for leaky_relu. See
@@ -246,8 +246,8 @@ def msra_normal_(
         \text{std} = \sqrt{\frac{2}{(1 + a^2) \times \text{fan_in}}}
 
     Detailed information can be retrieved from
-    `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
-    classification`
+    `"Delving deep into rectifiers: Surpassing human-level performance on ImageNet
+    classification" <https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_.
 
     :param tensor: An n-dimentional tensor to be initialized
     :param a: Optional parameter for calculating gain for leaky_relu. See

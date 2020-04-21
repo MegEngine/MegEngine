@@ -191,7 +191,7 @@ class LeakyReLU(Module):
     Applies the element-wise function:
 
     .. math::
-        \text{LeakyReLU}(x) = \max(0,x) + 0.01 * \min(0,x)
+        \text{LeakyReLU}(x) = \max(0,x) + negative\_slope \times \min(0,x)
 
     or
 
@@ -199,7 +199,7 @@ class LeakyReLU(Module):
         \text{LeakyReLU}(x) =
         \begin{cases}
         x, & \text{ if } x \geq 0 \\
-        0.01x, & \text{ otherwise }
+        negative\_slope \times x, & \text{ otherwise }
         \end{cases}
 
     Examples:
@@ -211,7 +211,7 @@ class LeakyReLU(Module):
         import megengine.module as M
         data = mge.tensor(np.array([-8, -12, 6, 10]).astype(np.float32))
 
-        leakyrelu = M.LeakyReLU()
+        leakyrelu = M.LeakyReLU(0.01)
         output = leakyrelu(data)
         print(output.numpy())
 

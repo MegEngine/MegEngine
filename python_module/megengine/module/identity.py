@@ -11,5 +11,7 @@ from .module import Module
 
 
 class Identity(Module):
+    r"""A placeholder identity operator that will ignore any argument."""
+
     def forward(self, x):
         return identity(x)
