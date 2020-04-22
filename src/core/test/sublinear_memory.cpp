@@ -504,57 +504,47 @@ TEST(TestSublinearMemory, DepsInTopoSort) {
 }
 
 TEST(TestSublinearMemory, BadOpr) {
-    constexpr const char* KEY = "MGB_SUBLINEAR_MEMORY_GENETIC_NR_ITER";
-    auto old_value = getenv(KEY);
-    setenv(KEY, "50", 1);
-    MGB_TRY {
-        HostTensorGenerator<> gen;
-        auto cn = CompNode::load("xpu0");
-        constexpr size_t N = 1024, Scale = 2;
-        auto host_x = gen({N}, cn);
-        for (bool bad : {false, true}) {
-            auto graph = ComputingGraph::make();
-            auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
-                bad_var = SublinearBadOpr::make(x, bad, Scale),
-                y0 = opr::reduce_sum(bad_var, x.make_scalar_dt(1)),
-                y1 = SublinearBadOpr::make(y0, false, N * Scale),
-                y = y1 + 1,
-                z = opr::reduce_max(bad_var, x.make_scalar_dt(1));
-            set_priority(y0, 0);
-            set_priority(y1, 1);
-            set_priority(y, 2);
-            set_priority(z, 3);
-            graph->options().graph_opt_level = 0;
-            graph->options().enable_sublinear_memory_opt = 1;
-            auto func = graph->compile({{y, {}}, {z, {}}});
-            auto&& results = static_cast<cg::ComputingGraphImpl*>(graph.get())
-                ->seq_modifier_for_sublinear_memory().prev_min_bottleneck();
-            // bottleneck: 
-            //  if bad : y = y1 + 1, bad_var should be saved to calculate
-            //      z later, total memory usage is
-            //      N * sclae * 2(bad_var and y1) + 1 (immutable tensor 1)
-            //  else : bad_var = BadOpr(x), total memory usage is
-            //      N(x) + N * scale(bad_var), bad_var would be recomputed
-            //      when calculate z = reduce(bad_var)
-            size_t expect = bad ? N * Scale * 2 + 1 : N * Scale + N;
-            ASSERT_EQ(results.at(cn), expect * host_x->dtype().size());
-            size_t nr_bad_opr = 0;
-            auto count_up = [&nr_bad_opr](cg::OperatorNodeBase* op) {
-                if (op->dyn_typeinfo() == SublinearBadOpr::typeinfo()) {
-                    ++ nr_bad_opr;
-                }
-                return true;
-            };
-            func->iter_opr_seq(count_up);
-            ASSERT_EQ(nr_bad_opr, bad ? 2 : 3);
-        }
-    } MGB_FINALLY(
-        if (old_value) {
-            setenv(KEY, old_value, 1);
-        } else {
-            unsetenv(KEY);
-        }
-    );
+   HostTensorGenerator<> gen;
+   auto cn = CompNode::load("xpu0");
+   constexpr size_t N = 1024, Scale = 2;
+   auto host_x = gen({N}, cn);
+   for (bool bad : {false, true}) {
+       auto graph = ComputingGraph::make();
+       auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
+           bad_var = SublinearBadOpr::make(x, bad, Scale),
+           y0 = opr::reduce_sum(bad_var, x.make_scalar_dt(1)),
+           y1 = SublinearBadOpr::make(y0, false, N * Scale),
+           y = y1 + 1,
+           z = opr::reduce_max(bad_var, x.make_scalar_dt(1));
+       set_priority(y0, 0);
+       set_priority(y1, 1);
+       set_priority(y, 2);
+       set_priority(z, 3);
+       graph->options().graph_opt_level = 0;
+       graph->options().enable_sublinear_memory_opt = 1;
+       graph->options().sublinear_mem_cofig.genetic_nr_iter = 50;
+       auto func = graph->compile({{y, {}}, {z, {}}});
+       auto&& results = static_cast<cg::ComputingGraphImpl*>(graph.get())
+           ->seq_modifier_for_sublinear_memory().prev_min_bottleneck();
+       // bottleneck:
+       //  if bad : y = y1 + 1, bad_var should be saved to calculate
+       //      z later, total memory usage is
+       //      N * sclae * 2(bad_var and y1) + 1 (immutable tensor 1)
+       //  else : bad_var = BadOpr(x), total memory usage is
+       //      N(x) + N * scale(bad_var), bad_var would be recomputed
+       //      when calculate z = reduce(bad_var)
+       size_t expect = bad ? N * Scale * 2 + 1 : N * Scale + N;
+       ASSERT_EQ(results.at(cn), expect * host_x->dtype().size());
+       size_t nr_bad_opr = 0;
+       auto count_up = [&nr_bad_opr](cg::OperatorNodeBase* op) {
+           if (op->dyn_typeinfo() == SublinearBadOpr::typeinfo()) {
+               ++ nr_bad_opr;
+           }
+           return true;
+       };
+       func->iter_opr_seq(count_up);
+       ASSERT_EQ(nr_bad_opr, bad ? 2 : 3);
+   }
 }
 
 #else

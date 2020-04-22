@@ -18,6 +18,7 @@ import megengine._internal as mgb
 from megengine._internal.plugin import CompGraphProfiler
 
 from ..core import Tensor, graph, tensor
+from .sublinear_memory_config import SublinearMemConfig
 
 
 def sideeffect(f):
@@ -78,10 +79,12 @@ class trace:
     * accelerated evalutaion via :meth:`.__call__`
 
     :param func: Positional only argument.
-    :param symbolic: Whether to use symbolic tensor.
+    :param symbolic: Whether to use symbolic tensor. Default: False
     :param opt_level: Optimization level for compiling trace.
     :param log_level: Log level.
-    :param profiling: Whether to profile compiled trace.
+    :param enable_sublinear: Enable sublinear memory optimization. Default: False
+    :param sublinear_mem_config: Configuration for sublinear memory optimization.
+    :param profiling: Whether to profile compiled trace. Default: False
     """
 
     _active_instance = None
@@ -103,12 +106,16 @@ class trace:
         symbolic: bool = False,
         opt_level: int = None,
         log_level: int = None,
+        enable_sublinear: bool = False,
+        sublinear_mem_config: SublinearMemConfig = None,
         profiling: bool = False
     ):
         self.__wrapped__ = func
         self._symbolic = symbolic
         self._graph_opt_level = opt_level
         self._log_level = log_level
+        self._enable_sublinear = enable_sublinear
+        self._sublinear_mem_config = sublinear_mem_config
         self._status = self._UNSTARTED
         self._args = None
         self._kwargs = None
@@ -280,11 +287,35 @@ class trace:
 
     def _apply_graph_options(self, cg):
         # graph opt level
-        if not self._graph_opt_level is None:
+        if not (self._graph_opt_level is None):
             cg.set_option("graph_opt_level", self._graph_opt_level)
         # log level
-        if not self._log_level is None:
+        if not (self._log_level is None):
             cg.set_option("log_level", self._log_level)
+        # sublinear
+        if self._enable_sublinear:
+            cg.set_option("enable_sublinear_memory_opt", True)
+            if not (self._sublinear_mem_config is None):
+                cg.set_option(
+                    "sublinear_mem_cofig.lb_memory",
+                    self._sublinear_mem_config.lb_memory,
+                )
+                cg.set_option(
+                    "sublinear_mem_cofig.genetic_nr_iter",
+                    self._sublinear_mem_config.genetic_nr_iter,
+                )
+                cg.set_option(
+                    "sublinear_mem_cofig.genetic_pool_size",
+                    self._sublinear_mem_config.genetic_pool_size,
+                )
+                cg.set_option(
+                    "sublinear_mem_cofig.thresh_nr_try",
+                    self._sublinear_mem_config.thresh_nr_try,
+                )
+                cg.set_option(
+                    "sublinear_mem_cofig.num_worker",
+                    self._sublinear_mem_config.num_worker,
+                )
         # profile
         if self._profiling:
             self._profiler = CompGraphProfiler(cg)

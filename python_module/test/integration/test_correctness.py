@@ -17,6 +17,7 @@ import megengine as mge
 import megengine.functional as F
 from megengine import jit, tensor
 from megengine.functional.debug_param import set_conv_execution_strategy
+from megengine.jit import SublinearMemConfig
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
 from megengine.test import assertTensorClose
@@ -130,7 +131,14 @@ def update_model(model_path):
     mge.save(checkpoint, model_path)
 
 
-def run_test(model_path, use_jit, use_symbolic):
+def run_test(
+    model_path,
+    use_jit,
+    use_symbolic,
+    enable_sublinear=False,
+    sublinear_mem_config=None,
+    max_err=None,
+):
 
     """
     Load the model with test cases and run the training for one iter.
@@ -152,11 +160,17 @@ def run_test(model_path, use_jit, use_symbolic):
     data.set_value(checkpoint["data"])
     label.set_value(checkpoint["label"])
 
-    max_err = 1e-5
+    if max_err is None:
+        max_err = 1e-5
 
     train_func = train
     if use_jit:
-        train_func = jit.trace(train_func, symbolic=use_symbolic)
+        train_func = jit.trace(
+            train_func,
+            symbolic=use_symbolic,
+            enable_sublinear=enable_sublinear,
+            sublinear_mem_config=sublinear_mem_config,
+        )
 
     opt.zero_grad()
     loss = train_func(data, label, net=net, opt=opt)
@@ -183,3 +197,14 @@ def test_correctness():
     run_test(model_path, False, False)
     run_test(model_path, True, False)
     run_test(model_path, True, True)
+
+    # sublinear
+    config = SublinearMemConfig(genetic_nr_iter=10)
+    run_test(
+        model_path,
+        True,
+        True,
+        enable_sublinear=True,
+        sublinear_mem_config=config,
+        max_err=1e-5,
+    )

@@ -217,7 +217,8 @@ ComputingGraphImpl::Components::Components(ComputingGraphImpl* owner)
           static_infer_comp_seq_manager{owner},
           grad_manager{owner},
 #if MGB_ENABLE_SUBLINEAR
-          seq_modifier_for_sublinear_memory{owner},
+          seq_modifier_for_sublinear_memory{owner,
+              &(owner->options().sublinear_mem_cofig)},
 #endif
 #if MGB_ENABLE_MEMORY_SWAP
           memory_swap_support{owner},
