@@ -106,8 +106,6 @@ def reduce_(src, mode, axis=None, keepdims=False, *,
         inputs.append(1)
         assert not keepdims, 'can not set axis=None and keepdims=True'
     else:
-        assert isinstance(axis, int) and axis >= 0, (
-            'bad axis: {!r}'.format(axis))
         remove_axis = not keepdims
         kwargs['axis'] = axis
 
