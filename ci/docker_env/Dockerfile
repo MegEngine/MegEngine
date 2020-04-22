@@ -35,5 +35,6 @@ RUN git lfs install
 
 ENV PATH=${PATH}:/usr/local/cuda/bin \
   LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/lib/stubs:/usr/local/cuda/lib64/stubs:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib64:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib64 \
-  LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib:/usr/local/cuda/lib64:/usr/local/cuda/lib/stubs:/usr/local/cuda/lib64/stubs:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib64:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib64:/usr/local/cuda/lib64/stubs/libcuda.so:/tmp/build/cuda/dnn/cuda-stub/libcuda.so.1 \
-  CPATH=${CPATH}:/usr/local/cuda/include:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/include:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/include
+  LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/lib64:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/lib64:/tmp/build/cuda/dnn/cuda-stub/libcuda.so \
+  CPATH=${CPATH}:/usr/local/cuda/include:/usr/local/cuda-10.1-libs/cudnn-v7.6.0/include:/usr/local/cuda-10.1-libs/TensorRT-5.1.5.0/include \
+  CUDA_BIN_PATH=/usr/local/cuda
