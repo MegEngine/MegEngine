@@ -48,7 +48,7 @@ from .loss import (
     square_loss,
     triplet_margin_loss,
 )
-from .math import argmax, argmin, max, mean, min, norm, prod, sqrt, sum
+from .math import argmax, argmin, max, mean, min, norm, normalize, prod, sqrt, sum
 from .nn import (
     assert_equal,
     avg_pool2d,

@@ -83,3 +83,32 @@ def test_sqrt():
 
     cases = [{"input": d1}, {"input": d2}]
     opr_test(cases, F.sqrt, ref_fn=np.sqrt)
+
+
+def test_normalize():
+    from functools import partial
+
+    cases = [
+        {"input": np.random.random((2, 3, 12, 12)).astype(np.float32)} for i in range(2)
+    ]
+
+    def np_normalize(x, p=2, axis=None, eps=1e-12):
+        if axis is None:
+            norm = np.sum(x ** p) ** (1.0 / p)
+        else:
+            norm = np.sum(x ** p, axis=axis, keepdims=True) ** (1.0 / p)
+        return x / np.clip(norm, a_min=eps, a_max=np.inf)
+
+    # Test L-2 norm along all dimensions
+    opr_test(cases, F.normalize, ref_fn=np_normalize)
+
+    # Test L-1 norm along all dimensions
+    opr_test(cases, partial(F.normalize, p=1), ref_fn=partial(np_normalize, p=1))
+
+    # Test L-2 norm along the second dimension
+    opr_test(cases, partial(F.normalize, axis=1), ref_fn=partial(np_normalize, axis=1))
+
+    # Test some norm == 0
+    cases[0]["input"][0, 0, 0, :] = 0
+    cases[1]["input"][0, 0, 0, :] = 0
+    opr_test(cases, partial(F.normalize, axis=3), ref_fn=partial(np_normalize, axis=3))
