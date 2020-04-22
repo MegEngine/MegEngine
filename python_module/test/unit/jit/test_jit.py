@@ -18,6 +18,7 @@ import megengine._internal as mgb
 import megengine.module as M
 from megengine import jit, tensor
 from megengine.core.tensor import Tensor
+from megengine.jit import SublinearMemConfig
 from megengine.test import assertTensorClose
 
 
@@ -185,3 +186,14 @@ def test_dump_bn_fused():
         mgb.cgtools.get_type(inputs[0]) == "MultipleDeviceTensorHolder"
         and mgb.cgtools.get_type(inputs[1]) == "ConvolutionForward"
     )
+
+
+# Simply verify the options passed down
+def test_sublinear():
+    config = SublinearMemConfig(genetic_nr_iter=10)
+
+    @jit.trace(symbolic=True, enable_sublinear=True, sublinear_mem_config=config)
+    def f(x):
+        return x + x
+
+    f([0.0])
