@@ -57,8 +57,8 @@ public:
             }
             for (size_t oc_tile_size : {24, 48}) {
                 refhold.emplace_back(new AlgoConv1x1(
-                    static_cast<MatrixMulImpl::AlgoBase*>(algo),
-                    oc_tile_size));
+                        static_cast<MatrixMulImpl::AlgoBase*>(algo),
+                        oc_tile_size));
                 all_algos.emplace_back(refhold.back().get());
             }
 #if 0
