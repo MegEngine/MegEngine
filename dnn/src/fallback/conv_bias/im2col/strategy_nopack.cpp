@@ -9,8 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megdnn/opr_param_defs.h"
-#include "src/common/utils.h"
 #include "src/fallback/conv_bias/im2col/strategy_base.h"
 #include "src/fallback/convolution/img2col_helper.h"
 #if MEGDNN_X86
@@ -22,22 +20,16 @@ using namespace megdnn;
 using namespace x86;
 #endif
 namespace megdnn {
-template <typename src_ctype, typename bias_ctype, typename dst_ctype,
-          typename op_ctype, typename op_dtype,
-          megdnn::PostprocessMode postprocess_mode>
-Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode,PackMode::NO_PACK>::Strategy()
-        : StrategyBase() {}
 
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
-        copy_padding_kern(
-                WorkspaceBundle bundle,
-                const fallback::ConvBiasImpl::NCBKernParam& param,
-                const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) {
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
+        copy_padding_kern(WorkspaceBundle bundle,
+                          const fallback::ConvBiasImpl::NCBKernParam& param,
+                          const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                          size_t) {
     UNPACK_CONV_F32_NCB_KERN_SIZES(param);
     MEGDNN_MARK_USED_VAR(N);
     MEGDNN_MARK_USED_VAR(OC);
@@ -96,12 +88,13 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         packA_kern(WorkspaceBundle bundle,
                    const fallback::ConvBiasImpl::NCBKernParam& param,
                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
                    fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                   const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) {
+                   const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                   size_t) {
     MEGDNN_MARK_USED_VAR(bundle);
     MEGDNN_MARK_USED_VAR(param);
     MEGDNN_MARK_USED_VAR(matmulparam);
@@ -115,7 +108,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void* Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                     postprocess_mode,PackMode::NO_PACK>::
+               postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         get_matmul_dst_ptr(const fallback::ConvBiasImpl::NCBKernParam& param,
                            const WorkspaceBundle& bundle_thread,
                            const StrategyParam& sparam) {
@@ -134,7 +127,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         exec_matmul(const fallback::ConvBiasImpl::NCBKernParam& param,
                     const StrategyParam& sparam, WorkspaceBundle bundle,
                     WorkspaceBundle bundle_thread,
@@ -167,29 +160,28 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam matmul_param,
-                    fallback::MatrixMulImpl::AlgoBase* matmul_algo
-                    ) {
+                    fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
     MEGDNN_MARK_USED_VAR(matmul_param);
     MEGDNN_MARK_USED_VAR(matmul_algo);
-    size_t m_sh = param.filter_meta.stride[0];
-    size_t m_sw = param.filter_meta.stride[1];
-    size_t m_oc = param.filter_meta.ocpg;
-    size_t m_oh = param.osz[0];
-    size_t m_ow = param.osz[1];
-    size_t m_ic = param.filter_meta.icpg;
-    size_t m_ih = param.isz[0] + param.filter_meta.padding[0] * 2;
-    size_t m_iw = param.isz[1] + param.filter_meta.padding[1] * 2;
-    size_t m_fh = param.filter_meta.spatial[0];
-    size_t m_fw = param.filter_meta.spatial[1];
-    size_t m_is_xcorr = !param.filter_meta.should_flip;
+    size_t sh = param.filter_meta.stride[0];
+    size_t sw = param.filter_meta.stride[1];
+    size_t oc = param.filter_meta.ocpg;
+    size_t oh = param.osz[0];
+    size_t ow = param.osz[1];
+    size_t ic = param.filter_meta.icpg;
+    size_t ih = param.isz[0] + param.filter_meta.padding[0] * 2;
+    size_t iw = param.isz[1] + param.filter_meta.padding[1] * 2;
+    size_t fh = param.filter_meta.spatial[0];
+    size_t fw = param.filter_meta.spatial[1];
+    size_t is_xcorr = !param.filter_meta.should_flip;
 
     size_t input_offset =
-            m_ih * m_iw * m_ic *
+            ih * iw * ic *
             (sparam.group_id + param.filter_meta.group * sparam.batch_id) *
             sizeof(src_ctype);
 
@@ -205,26 +197,22 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
     }
     src_ctype* im2col_dst = static_cast<src_ctype*>(
             bundle_thread.get(THREAD_BUNDLE_IM2COL_INDEX));
-    if (m_sh == 1 && m_sw == 1) {
-        if (m_is_xcorr) {
-            img2col<true>(src2, im2col_dst, m_oc, m_oh, m_ow, m_ic, m_ih, m_iw,
-                          m_fh, m_fw, sparam.ohw_cur_index,
-                          sparam.output_block_size);
+    if (sh == 1 && sw == 1) {
+        if (is_xcorr) {
+            img2col<true>(src2, im2col_dst, oc, oh, ow, ic, ih, iw, fh, fw,
+                          sparam.ohw_cur_index, sparam.output_block_size);
         } else {
-            img2col<false>(src2, im2col_dst, m_oc, m_oh, m_ow, m_ic, m_ih, m_iw,
-                           m_fh, m_fw, sparam.ohw_cur_index,
-                           sparam.output_block_size);
+            img2col<false>(src2, im2col_dst, oc, oh, ow, ic, ih, iw, fh, fw,
+                           sparam.ohw_cur_index, sparam.output_block_size);
         }
     } else {
-        if (m_is_xcorr) {
-            img2col_stride<true>(src2, im2col_dst, m_oc, m_oh, m_ow, m_ic, m_ih,
-                                 m_iw, m_fh, m_fw, m_sh, m_sw,
-                                 sparam.ohw_cur_index,
+        if (is_xcorr) {
+            img2col_stride<true>(src2, im2col_dst, oc, oh, ow, ic, ih, iw, fh,
+                                 fw, sh, sw, sparam.ohw_cur_index,
                                  sparam.output_block_size);
         } else {
-            img2col_stride<false>(src2, im2col_dst, m_oc, m_oh, m_ow, m_ic,
-                                  m_ih, m_iw, m_fh, m_fw, m_sh, m_sw,
-                                  sparam.ohw_cur_index,
+            img2col_stride<false>(src2, im2col_dst, oc, oh, ow, ic, ih, iw, fh,
+                                  fw, sh, sw, sparam.ohw_cur_index,
                                   sparam.output_block_size);
         }
     }
@@ -234,7 +222,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         exec_postprocess(const fallback::ConvBiasImpl::NCBKernParam& param,
                          const StrategyParam& sparam,
                          WorkspaceBundle bundle_thread) {
@@ -262,7 +250,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         copy_dst(const fallback::ConvBiasImpl::NCBKernParam& param,
                  const void* matmul_dst, const StrategyParam& sparam) {
     if (!sparam.skip_copy_dst) {
@@ -284,7 +272,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                    postprocess_mode,PackMode::NO_PACK>::
+              postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>::
         copy_bias(const fallback::ConvBiasImpl::NCBKernParam& param,
                   WorkspaceBundle bundle_thread, const StrategyParam& sparam) {
     const bias_ctype* bias_ptr = static_cast<const bias_ctype*>(
@@ -305,31 +293,20 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
     }
 }
 
-#define INSTANTIAL_CLASS(_src_ctype, _bias_ctype, _dst_ctype, _op_ctype,    \
-                         _op_dtype, _postprocess_mode)                      \
-    template class Strategy<_src_ctype, _bias_ctype, _dst_ctype, _op_ctype, \
-                            _op_dtype, _postprocess_mode, PackMode::NO_PACK>;
+#define INSTANTIAL_CLASS(_src_ctype, _bias_ctype, _dst_ctype, _op_ctype,     \
+                         _op_dtype, _postprocess_mode)                       \
+    template class Strategy<_src_ctype, _bias_ctype, _dst_ctype, _op_ctype,  \
+                            _op_dtype, _postprocess_mode, PackMode::NO_PACK, \
+                            FormatMode::NCHW>;
 
 INSTANTIAL_CLASS(dt_float32, dt_float32, dt_float32, dt_float32, dt_float32,
                  megdnn::PostprocessMode::FLOAT)
 
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, __fp16, __fp16,
-                 megdnn::PostprocessMode::FLOAT)
-#else
 #if !MEGDNN_DISABLE_FLOAT16
 INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, dt_float16, dt_float16,
                  megdnn::PostprocessMode::NO_PROCESS)
 #endif
-#endif
 
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
-//! x86 do not have uint8 matmul so only armv7 armv8 support uint8
-INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_uint8, dt_qint32, dt_quint8,
-                 megdnn::PostprocessMode::QUANTIZED)
-INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_int32, dt_qint32, dt_qint32,
-                 megdnn::PostprocessMode::NO_PROCESS)
-#endif
 
 INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int8, dt_qint32, dt_qint8,
                  megdnn::PostprocessMode::QUANTIZED)

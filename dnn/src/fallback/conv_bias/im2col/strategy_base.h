@@ -14,6 +14,7 @@
 namespace megdnn {
 
 using PackMode = fallback::MatrixMulImpl::AlgoBase::PackMode;
+using FormatMode = param::ConvBias::Format;
 
 struct StrategyParam {
     size_t batch_id;
@@ -28,6 +29,7 @@ struct StrategyParam {
     size_t block_m;
     size_t block_n;
     size_t block_k;
+    size_t pack_oc_size;
     bool skip_copy_dst;
     bool is_dst_8bit;
     bool is_ohw_size_bigger;
@@ -40,13 +42,15 @@ public:
     virtual void copy_padding_kern(
             WorkspaceBundle bundle,
             const fallback::ConvBiasImpl::NCBKernParam& param,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) = 0;
+            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+            size_t pack_size) = 0;
     virtual void packA_kern(
             WorkspaceBundle bundle,
             const fallback::ConvBiasImpl::NCBKernParam& param,
             fallback::MatrixMulImpl::KernSizeParam matmulparam,
             fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) = 0;
+            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+            size_t pack_size) = 0;
 
     virtual void exec_im2col(
             WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
@@ -70,14 +74,16 @@ public:
 
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
-          megdnn::PostprocessMode postprocess_mode, PackMode packmode>
+          megdnn::PostprocessMode postprocess_mode, PackMode packmode,
+          FormatMode format>
 class Strategy;
 
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::DEFAULT> : public StrategyBase {
+               postprocess_mode, PackMode::DEFAULT, FormatMode::NCHW>
+        : public StrategyBase {
 public:
     constexpr static size_t BUNDLE_PADDING_INDEX = 0;
     constexpr static size_t BUNDLE_PACKA_INDEX = 1;
@@ -85,24 +91,26 @@ public:
     constexpr static size_t THREAD_BUNDLE_IM2COL_INDEX = 1;
     constexpr static size_t THREAD_BUNDLE_BIAS_INDEX = 2;
 
-    Strategy();
+    Strategy() = default;
 
     void copy_padding_kern(
             WorkspaceBundle bundle,
             const fallback::ConvBiasImpl::NCBKernParam& param,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) override;
+            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+            size_t pack_size) override;
 
-    void packA_kern(
-            WorkspaceBundle bundle,
+    void packA_kern(WorkspaceBundle bundle,
+                    const fallback::ConvBiasImpl::NCBKernParam& param,
+                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
+                    fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                    size_t pack_size) override;
+    virtual void exec_im2col(
+            WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+            const StrategyParam& sparam,
             const fallback::ConvBiasImpl::NCBKernParam& param,
-            fallback::MatrixMulImpl::KernSizeParam matmulparam,
-            fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) override;
-    void exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
-                     const StrategyParam& sparam,
-                     const fallback::ConvBiasImpl::NCBKernParam& param,
-                     fallback::MatrixMulImpl::KernParam matmul_param,
-                     fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
+            fallback::MatrixMulImpl::KernParam matmul_param,
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
 
     void exec_matmul(
             const fallback::ConvBiasImpl::NCBKernParam& param,
@@ -132,7 +140,32 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::NO_PACK> : public StrategyBase {
+               postprocess_mode, PackMode::DEFAULT, FormatMode::NCHW44>
+        : public Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
+                          postprocess_mode, PackMode::DEFAULT,
+                          FormatMode::NCHW> {
+public:
+    const size_t BUNDLE_PADDING_INDEX = 0;
+    const size_t BUNDLE_PACKA_INDEX = 1;
+    const size_t THREAD_BUNDLE_PACKB_INDEX = 0;
+    const size_t THREAD_BUNDLE_IM2COL_INDEX = 1;
+    const size_t THREAD_BUNDLE_BIAS_INDEX = 2;
+
+    Strategy() = default;
+
+    void exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+                     const StrategyParam& sparam,
+                     const fallback::ConvBiasImpl::NCBKernParam& param,
+                     fallback::MatrixMulImpl::KernParam matmul_param,
+                     fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
+};
+
+template <typename src_ctype, typename bias_ctype, typename dst_ctype,
+          typename op_ctype, typename op_dtype,
+          megdnn::PostprocessMode postprocess_mode>
+class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
+               postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>
+        : public StrategyBase {
 public:
     constexpr static size_t BUNDLE_PADDING_INDEX = 0;
     constexpr static size_t BUNDLE_PACKA_INDEX = 1;
@@ -141,19 +174,20 @@ public:
     constexpr static size_t THREAD_BUNDLE_BIAS_INDEX = 2;
     constexpr static size_t THREAD_BUNDLE_MATCOMP_INDEX = 3;
 
-    Strategy();
+    Strategy() = default;
 
     void copy_padding_kern(
             WorkspaceBundle bundle,
             const fallback::ConvBiasImpl::NCBKernParam& param,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) override;
+            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+            size_t pack_size) override;
 
-    void packA_kern(
-            WorkspaceBundle bundle,
-            const fallback::ConvBiasImpl::NCBKernParam& param,
-            fallback::MatrixMulImpl::KernSizeParam matmulparam,
-            fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) override;
+    void packA_kern(WorkspaceBundle bundle,
+                    const fallback::ConvBiasImpl::NCBKernParam& param,
+                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
+                    fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                    size_t pack_size) override;
 
     void exec_matmul(
             const fallback::ConvBiasImpl::NCBKernParam& param,
@@ -197,7 +231,8 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::ONLY_PACKA> : public StrategyBase {
+               postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>
+        : public StrategyBase {
 public:
     constexpr static size_t BUNDLE_PADDING_INDEX = 0;
     constexpr static size_t BUNDLE_PACKA_INDEX = 1;
@@ -206,19 +241,20 @@ public:
     constexpr static size_t THREAD_BUNDLE_MATMULDST_INDEX = 2;
     constexpr static size_t THREAD_BUNDLE_BIAS_INDEX = 3;
 
-    Strategy();
+    Strategy() = default;
 
     void copy_padding_kern(
             WorkspaceBundle bundle,
             const fallback::ConvBiasImpl::NCBKernParam& param,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) override;
+            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+            size_t pack_size) override;
 
-    void packA_kern(
-            WorkspaceBundle bundle,
-            const fallback::ConvBiasImpl::NCBKernParam& param,
-            fallback::MatrixMulImpl::KernSizeParam matmulparam,
-            fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) override;
+    void packA_kern(WorkspaceBundle bundle,
+                    const fallback::ConvBiasImpl::NCBKernParam& param,
+                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
+                    fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                    size_t pack_size) override;
 
     void exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
                      const StrategyParam& sparam,

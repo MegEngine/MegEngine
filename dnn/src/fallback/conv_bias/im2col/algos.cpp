@@ -17,18 +17,14 @@
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/conv_bias/winograd/strategy.h"
 #include "src/naive/convolution/helper.h"
-#if MEGDNN_X86
-#include "src/x86/conv_bias/postprocess_helper.h"
-#endif
+
 #include "midout.h"
+
 MIDOUT_DECL(megdnn_fallback_im2col)
 
 using namespace megdnn;
 using namespace fallback;
 using namespace im2col;
-#if MEGDNN_X86
-using namespace x86;
-#endif
 
 /*======================== AlgoIm2col=======================*/
 /*!
@@ -47,8 +43,8 @@ using Pack_Mode=fallback::MatrixMulImpl::AlgoBase::PackMode;
 static void copy_padding_kern(WorkspaceBundle bundle,
                               const ConvBiasImpl::NCBKernParam& param,
                               const ConvBiasImpl::NCBKernIndex& ncb_index,
-                              StrategyBase* im2colstrategy) {
-    im2colstrategy->copy_padding_kern(bundle, param, ncb_index);
+                              StrategyBase* im2colstrategy, size_t pack_oc_size) {
+    im2colstrategy->copy_padding_kern(bundle, param, ncb_index, pack_oc_size);
 }
 
 //! packA_kern
@@ -57,9 +53,9 @@ static void packA_kern(WorkspaceBundle bundle,
                        fallback::MatrixMulImpl::KernSizeParam matmulparam,
                        fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                        const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
-                       StrategyBase* im2colstrategy) {
+                       StrategyBase* im2colstrategy, size_t pack_oc_size) {
     im2colstrategy->packA_kern(bundle, param, matmulparam, matmul_algo,
-                               ncb_index);
+                               ncb_index, pack_oc_size);
 }
 
 /*!
@@ -129,14 +125,17 @@ public:
             size_t oc_tile_size) {
         size_t IC = param.filter_meta.icpg, FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
-
+        size_t pack_oc_size = 1;
         size_t im2col = 0, packb = 0, bias_temp = 0;
         bool default_pack = matmul_algo->packmode() == Pack_Mode::DEFAULT;
         megdnn_assert(default_pack, "only support default packa");
+        if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
+            pack_oc_size = 4;
+        }
         size_t im2col_dst_size =
                 IC * FH * FW * ohw_tile_size * sizeof(param.src_type);
-        size_t matmul_dst_size =
-                oc_tile_size * ohw_tile_size * sizeof(param.bias_type);
+        size_t matmul_dst_size = pack_oc_size * oc_tile_size * ohw_tile_size *
+                                 sizeof(param.bias_type);
         //! matmul_dst and im2col_dst use the same memory
         WorkspaceBundle wb = matmul_algo->get_bundle(im2col_kern_param);
         packb = wb.get_size(1);
@@ -318,17 +317,18 @@ public:
     }
 };
 
-#undef FILL_IM2COL_STRATEGY_PARAM
-
 fallback::MatrixMulImpl::KernSizeParam
 ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
                                                  size_t ohw_tile_size,
                                                  size_t oc_tile_size) const {
+    bool is_nchw44 =
+            param.filter_meta.format == param::ConvBias::Format::NCHW44;
     size_t M = oc_tile_size;
     size_t N = ohw_tile_size;
     size_t K = param.filter_meta.icpg * param.filter_meta.spatial[0] *
                param.filter_meta.spatial[1];
-    size_t LDA = K, LDB = N, LDC = N;
+    size_t pack_oc_size = is_nchw44 ? 4 : 1;
+    size_t LDA = pack_oc_size * K, LDB = pack_oc_size * N, LDC = N;
     bool is_dst_8bit = (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                         param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
                        (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
@@ -345,7 +345,8 @@ ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
             false,
             false,
             param::MatrixMul::ComputeMode::DEFAULT,
-            param::MatrixMul::Format::DEFAULT};
+            is_nchw44 ? param::MatrixMul::Format::MK4
+                      : param::MatrixMul::Format::DEFAULT};
 }
 
 void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
@@ -405,6 +406,7 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
     size_t GROUP = param.filter_meta.group;
     bool need_pack = m_matmul_algo->packmode() == Pack_Mode::DEFAULT;
     bool only_packA = m_matmul_algo->packmode() == Pack_Mode::ONLY_PACKA;
+
     if (need_pack || only_packA) {
         auto inner_block = m_matmul_algo->get_inner_block_size();
         choice_ohw_oc_block(param, inner_block.m, inner_block.n, need_pack);
@@ -421,16 +423,19 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
                             need_pack);
         packa_group_size = 0;
     }
+
     if (no_need_pading) {
         padding = 0;  //! not need  padding
     } else {
         padding = (GROUP * N * IC * IH2 * IW2) *
                   sizeof(param.src_type);  //! for padding
     }
+
     packa_size = GROUP * packa_group_size;  //! for packA  size = GROUP * a_size
     WorkspaceBundle ws = {nullptr, {}};
     auto im2col_kern_param =
             get_matmul_kern_param(param, m_ohw_tile_size, m_oc_tile_size);
+
     if (m_matmul_algo->packmode() == Pack_Mode::DEFAULT) {
         Im2colKerns<Pack_Mode::DEFAULT> defaultkern;
         ws = defaultkern.get_thread_bundle(param, im2col_kern_param,
@@ -447,6 +452,7 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
                                           m_matmul_algo, m_ohw_tile_size,
                                           m_oc_tile_size);
     }
+
     return {nullptr,
             {padding, packa_size, ws.total_size_in_bytes() * nr_threads}};
 }
@@ -461,7 +467,7 @@ size_t ConvBiasImpl::AlgoIm2col::get_workspace(
 }
 
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
-        ConvBiasImpl* opr, const NCBKernSizeParam& param) const {
+        ConvBiasImpl*, const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 1) {
         UNPACK_CONV_F32_NCB_KERN_SIZES(param);
         MEGDNN_MARK_USED_VAR(SH);
@@ -473,7 +479,6 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         size_t ohw = OH * OW;
         size_t ohw_parallel_times = div_ceil(ohw, m_ohw_tile_size);
         size_t GROUP = param.filter_meta.group;
-
         WorkspaceBundle bundle = get_bundle(param);
         WorkspaceBundle bundle_thread = {nullptr, {}};
         size_t oc_parallel_times = div_ceil<size_t>(OC, m_oc_tile_size);
@@ -483,11 +488,14 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         bool no_pack = packmode == Pack_Mode::NO_PACK;
         bool only_packA = packmode == Pack_Mode::ONLY_PACKA;
         size_t packa_parallel_times = 0;
+        size_t pack_oc_size =
+                (param.filter_meta.format == param::ConvBias::Format::NCHW ? 1
+                                                                           : 4);
         if (only_packA) {
             packa_parallel_times = div_ceil<size_t>(OC, m_oc_tile_size);
         } else if (default_pack) {
             packa_parallel_times = div_ceil<size_t>(
-                    OC, m_matmul_algo->get_inner_block_size().m);
+                    OC, m_matmul_algo->get_inner_block_size().m * pack_oc_size);
         }
 
         auto matmul_param = get_matmul_kern_param(
@@ -520,25 +528,29 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         strategyparam.skip_copy_dst =
                 strategyparam.is_ohw_size_bigger && !strategyparam.is_dst_8bit;
         strategyparam.oc_tile_size = m_oc_tile_size;
+        strategyparam.pack_oc_size = pack_oc_size;
 
         SmallVector<ConvBiasImpl::NCBKern> ret_kern;
         MIDOUT_BEGIN(
                 megdnn_fallback_im2col,
                 midout_iv("ConvBiasImpl::AlgoIm2col::dispatch_kerns"_hash)) {
-            StrategyBase* im2colstrategy = Factory::get_im2col_strategy(
-                    param, m_matmul_algo, opr->param().format);
-            auto kern_padding = [bundle, im2colstrategy](
+            StrategyBase* im2colstrategy =
+                    Factory::get_im2col_strategy(param, m_matmul_algo);
+            auto kern_padding = [bundle, im2colstrategy,
+                                 pack_oc_size = pack_oc_size](
                                         const NCBKernParam& param,
                                         const NCBKernIndex& ncb_index) {
-                copy_padding_kern(bundle, param, ncb_index, im2colstrategy);
+                copy_padding_kern(bundle, param, ncb_index, im2colstrategy,
+                                  pack_oc_size);
             };
 
             auto kern_packA = [bundle, matmul_algo = m_matmul_algo,
-                               matmul_param,
-                               im2colstrategy](const NCBKernParam& param,
-                                               const NCBKernIndex& ncb_index) {
+                               matmul_param, im2colstrategy,
+                               pack_oc_size = pack_oc_size](
+                                      const NCBKernParam& param,
+                                      const NCBKernIndex& ncb_index) {
                 packA_kern(bundle, param, matmul_param, matmul_algo, ncb_index,
-                           im2colstrategy);
+                           im2colstrategy, pack_oc_size);
             };
             if (default_pack) {
                 auto kern_compute_default =
@@ -556,7 +568,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
                 ret_kern.push_back({kern_packA, {GROUP, packa_parallel_times}});
 
                 if (need_padding) {
-                    ret_kern.push_back({kern_padding, {param.n, GROUP, IC}});
+                    ret_kern.push_back({kern_padding,
+                                        {param.n, GROUP, IC / pack_oc_size}});
                 }
                 ret_kern.push_back(
                         {kern_compute_default,
@@ -629,19 +642,25 @@ bool ConvBiasImpl::AlgoIm2col::usable(
             param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
             return false;
         }
+        //! current now im2col only support int8 quantized s8 nchw44
+        if (opr->param().format == param::ConvBias::Format::NCHW44 &&
+            (param.src_type.enumv() == param.filter_type.enumv() &&
+             (param.src_type.enumv() != DTypeEnum::Int8) &&
+             (param.src_type.enumv() != DTypeEnum::QuantizedS8))) {
+            return false;
+        }
+
         fallback::MatrixMulImpl::KernSizeParam matmul_param =
                 get_matmul_kern_param(param, m_ohw_tile_size, m_oc_tile_size);
         bool matmulusable = m_matmul_algo->usable(matmul_param);
         return matmulusable &&
-               (opr->param().format == param::ConvBias::Format::NCHW) &&
-               ((param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
-                 (param.filter_meta.spatial[0] <= 7) &&
-                 (param.filter_meta.spatial[0] >= 2)) ||
-                (param.filter_meta.spatial[0] != param.filter_meta.spatial[1] &&
-                 (param.filter_meta.spatial[0] <= 7) &&
-                 (param.filter_meta.spatial[0] >= 1) &&
-                 (param.filter_meta.spatial[1] <= 7) &&
-                 (param.filter_meta.spatial[1] >= 1))) &&
+               (opr->param().format == param::ConvBias::Format::NCHW ||
+                opr->param().format == param::ConvBias::Format::NCHW44) &&
+               (!(param.filter_meta.spatial[0] ==
+                          param.filter_meta.spatial[1] &&
+                  (param.filter_meta.spatial[0] == 1) &&
+                  param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
+                  param.filter_meta.stride[0] == 1)) &&
                (param.filter_meta.dilation[0] ==
                         param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&

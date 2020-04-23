@@ -36,7 +36,6 @@ class ConvBiasImpl::AlgoIm2col final : public AlgoBase {
             const NCBKernSizeParam& param, size_t ohw_tile_size,
             size_t oc_tile_size) const;
     WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
-    WorkspaceBundle get_thread_bundle(const NCBKernSizeParam& param) const;
     void choice_ohw_oc_block(const NCBKernSizeParam& param, size_t block_m,
                              size_t block_n, bool pack_default) const;
 
