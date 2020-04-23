@@ -395,6 +395,12 @@ TEST_PASS(RemoveRedundantTypeCvtPass, Basic) {
     check(x_fp16, x_fp16_fp32_fp16);
 #endif
 
+    auto x_i32 = opr::TypeCvt::make(x, dtype::Int32());
+    auto x_i32_i16 = opr::TypeCvt::make(x_i32, dtype::Int16());
+    auto x_i32_i16_i8 = opr::TypeCvt::make(x_i32_i16, dtype::Int8());
+    auto x_i8 = opr::TypeCvt::make(x, dtype::Int8());
+    check(x_i8, x_i32_i16_i8);
+
     auto x_q8 = opr::TypeCvt::make(x, dtype::QuantizedS8(0.1f));
     auto x_q8_fp32 = opr::TypeCvt::make(x_q8, dtype::Float32());
     auto x_q8_fp32_q8 = opr::TypeCvt::make(x_q8_fp32, dtype::QuantizedS8(0.1f));
