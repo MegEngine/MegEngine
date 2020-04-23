@@ -17,9 +17,9 @@ using namespace test;
 
 namespace {
 
-template<class T>
+template <class T>
 std::vector<int32_t> create_offsets(const TensorShapeArray& shapes,
-                  size_t alignment) {
+                                    size_t alignment) {
     size_t dtype_size = sizeof(T);
     if (alignment < dtype_size)
         alignment = dtype_size;
@@ -41,14 +41,15 @@ std::vector<int32_t> create_offsets(const TensorShapeArray& shapes,
     return offsets;
 }
 
-template<class T>
-std::vector<T> create_pack(size_t pack_size, const std::vector<int32_t>& offsets,
-        const std::vector<std::vector<T>>& ptr) {
-    assert(pack_size == offsets.back());
+template <class T>
+std::vector<T> create_pack(size_t pack_size,
+                           const std::vector<int32_t>& offsets,
+                           const std::vector<std::vector<T>>& ptr) {
+    megdnn_assert(pack_size == static_cast<size_t>(offsets.back()));
     std::vector<T> data(pack_size, 0);
     for (size_t i = 0; i * 2 < offsets.size(); ++i) {
-        size_t begin = offsets[i * 2], end = offsets[i * 2 +1];
-        for (size_t j = 0;j < end - begin; j++)
+        size_t begin = offsets[i * 2], end = offsets[i * 2 + 1];
+        for (size_t j = 0; j < end - begin; j++)
             data[begin + j] = ptr[i][j];
     }
     return data;
@@ -79,25 +80,23 @@ T* create_device_data(Handle* handle, const T* data, size_t size) {
 
 template <class T>
 void test_param_pack_concat(Handle* handle, const TensorShapeArray& shapes,
-        DType type) {
+                            DType type) {
     auto concat = handle->create_operator<ParamPackConcat>();
     size_t nr_params = shapes.size();
 
     std::vector<T*> param_ptrs;
-    std::vector<std::vector<T>> params = create_params<T>(nr_params,
-            shapes);
+    std::vector<std::vector<T>> params = create_params<T>(nr_params, shapes);
     for (size_t i = 0; i < nr_params; ++i) {
-        param_ptrs.push_back(create_device_data<T>(handle,
-                    params[i].data(), shapes[i].total_nr_elems()));
+        param_ptrs.push_back(create_device_data<T>(handle, params[i].data(),
+                                                   shapes[i].total_nr_elems()));
     }
     std::vector<int32_t> offsets =
             create_offsets<T>(shapes, handle->alignment_requirement());
     size_t pack_size = offsets.back();
-    int32_t* offsets_gpu = create_device_data<int32_t>(handle, offsets.data(),
-            offsets.size());
+    int32_t* offsets_gpu =
+            create_device_data<int32_t>(handle, offsets.data(), offsets.size());
 
-    std::vector<T> expected_pack =
-        create_pack<T>(pack_size, offsets, params);
+    std::vector<T> expected_pack = create_pack<T>(pack_size, offsets, params);
     T* pack_gpu = create_device_data<T>(handle, nullptr, expected_pack.size());
 
     TensorLayout dst_layout({pack_size}, type);
@@ -106,17 +105,18 @@ void test_param_pack_concat(Handle* handle, const TensorShapeArray& shapes,
     TensorLayout offsets_layout({offsets.size()}, dtype::Int32());
     TensorND offsets_tensor(offsets_gpu, offsets_layout);
 
-    test::WorkspaceWrapper workspace(handle, concat->get_workspace_in_bytes(
-                shapes, offsets_layout, {pack_size}));
+    test::WorkspaceWrapper workspace(
+            handle, concat->get_workspace_in_bytes(shapes, offsets_layout,
+                                                   {pack_size}));
     TensorND src_tensor(param_ptrs.data(),
-            TensorLayout({nr_params}, dtype::Int32()));
+                        TensorLayout({nr_params}, dtype::Int32()));
 
     concat->exec(src_tensor, offsets_tensor, dst_tensor, workspace.workspace());
 
     // check
     T* actual_pack = static_cast<T*>(malloc(pack_size * sizeof(T)));
-    test::megdnn_memcpy_D2H(handle, actual_pack,
-            pack_gpu, sizeof(T) * pack_size);
+    test::megdnn_memcpy_D2H(handle, actual_pack, pack_gpu,
+                            sizeof(T) * pack_size);
     for (size_t i = 0; i < pack_size; ++i) {
         ASSERT_EQ(actual_pack[i], expected_pack[i]);
     }
