@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/group_local/fwd.cpp
+ * \file dnn/src/cuda/group_local/forward/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -14,7 +14,7 @@
 #include "src/cuda/local/local.cuh"
 #include "src/cuda/utils.h"
 
-#include "./cuda_interface.h"
+#include "src/cuda/group_local/forward/kern.cuh"
 
 namespace megdnn {
 namespace cuda {
@@ -46,7 +46,7 @@ void GroupLocalForwardImpl::exec(_megdnn_tensor_in src,
     auto one = handle->one_device();
     auto zero = handle->zero_device();
     if (prefer_inference_kernel(src.layout, filter.layout, dst.layout)) {
-        run_inference_kernel(sptr, fptr, dptr, wptr,
+        group_local::exec(sptr, fptr, dptr, wptr,
                 N, IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
@@ -141,11 +141,14 @@ bool GroupLocalForwardImpl::prefer_inference_kernel(const TensorLayout &src,
         const TensorLayout &filter,
         const TensorLayout &dst)
 {
-    megdnn_ignore(filter);
-    megdnn_ignore(dst);
-    return src.shape[0] <= 8;
+    MEGDNN_MARK_USED_VAR(filter);
+    MEGDNN_MARK_USED_VAR(dst);
+    auto handle = concrete_handle(this->handle());
+    size_t N = src.shape[0], IH = src.shape[2], IW = src.shape[3];
+    return N <= 8 && handle->device_prop().sharedMemPerBlock >=
+                             group_local::get_share_mem_in_bytes(IH, IW);
 }
 
-} // namespace cuda
-} // namespace megdnn
-// vim: syntax=cpp.doxygen
+}  // namespace cuda
+}  // namespace megdnn
+   // vim: syntax=cpp.doxygen
