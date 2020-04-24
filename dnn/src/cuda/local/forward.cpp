@@ -78,6 +78,8 @@ void LocalForwardImpl::exec(_megdnn_tensor_in src,
     auto cublas = cublas_handle(this->handle());
     auto one = handle->one_device();
     auto zero = handle->zero_device();
+    size_t src_batch_strd = src.layout.stride[0];
+    size_t dst_batch_strd = dst.layout.stride[0];
     if (use_cuda_convnet(src.layout, filter.layout, dst.layout)) {
         local::forward_proxy_convnet(src.ptr<dt_float32>(),
                 filter.ptr<dt_float32>(),
@@ -87,7 +89,7 @@ void LocalForwardImpl::exec(_megdnn_tensor_in src,
                 IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
-                IC*IH*IW, OC*OH*OW,
+                src_batch_strd, dst_batch_strd,
                 param().pad_h, param().pad_w,
                 param().stride_h, param().stride_w,
                 cublas, stream,
@@ -105,7 +107,7 @@ void LocalForwardImpl::exec(_megdnn_tensor_in src,
                 IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
-                IC*IH*IW, OC*OH*OW,
+                src_batch_strd, dst_batch_strd,
                 param().pad_h, param().pad_w,
                 param().stride_h, param().stride_w,
                 is_xcorr,
@@ -124,12 +126,14 @@ size_t LocalForwardImpl::get_workspace_in_bytes(const TensorLayout &src,
          FH = filter.shape[3], FW = filter.shape[4];
     auto PH = param().pad_h, PW = param().pad_w,
          SH = param().stride_h, SW = param().stride_w;
+    size_t src_batch_strd = src.stride[0];
+    size_t dst_batch_strd = dst.stride[0];
     if (use_cuda_convnet(src, filter, dst)) {
         res = local::get_workspace_in_floats_forward_proxy_convnet(N,
                 IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
-                IC*IH*IW, OC*OH*OW,
+                src_batch_strd, dst_batch_strd,
                 PH, PW,
                 SH, SW) * sizeof(dt_float32);
     } else {

@@ -29,7 +29,11 @@ void LocalBase::deduce_layout_fwd(const TensorLayout &src,
     auto errmsg_c = errmsg.c_str();
     MEGDNN_MARK_USED_VAR(errmsg_c);
 
-    megdnn_assert_contiguous(src);
+    //! in batch dim we don't need contiguous
+    TensorLayout src_contig = src;
+    src_contig.init_contiguous_stride();
+    src_contig.stride[0] = src.stride[0];
+    megdnn_assert_eq_layout(src_contig, src);
     megdnn_assert_contiguous(filter);
     megdnn_assert(src.ndim == 4_z, "%s", errmsg_c);
     megdnn_assert(filter.ndim == 6_z, "%s", errmsg_c);
@@ -67,6 +71,8 @@ void LocalBase::check_layout_fwd(const TensorLayout &src,
     megdnn_assert_eq_dtype(src, filter);
     megdnn_assert_eq_dtype(src, dst);
     deduce_layout_fwd(src, filter, dst_expected);
+    //! in batch dim we don't need contiguous
+    dst_expected.stride[0] = dst.stride[0];
     megdnn_assert_eq_layout(dst_expected, dst);
 
     megdnn_assert(src.dtype == filter.dtype && src.dtype == dst.dtype);
