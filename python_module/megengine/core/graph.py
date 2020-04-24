@@ -36,7 +36,7 @@ _default_graph = _DefaultGraph()
 
 class Graph(mgb.CompGraph):
     r"""
-    A ``comp_graph`` class supporting context management.
+    A computing graph that supporting context management.
 
     :param check_env_var: whether to check environment vars including ``MGB_COMP_GRAPH_OPT``.
     :param eager_evaluation: use dynamic graph(``True``) or static graph(``False``).
@@ -97,7 +97,7 @@ def _use_default_if_none(device, comp_graph):
 
 def dump(outputs, fpath, optimize_options=None, **kwargs):
     r"""
-    Serializes this computing graph and writes result to a file.
+    Serializes this computing graph and writes it to a file.
 
     :type outputs: ``Tensor`` or a collection of ``Tensor``
     :param outputs: output variables that need to be retrieved when
@@ -105,7 +105,7 @@ def dump(outputs, fpath, optimize_options=None, **kwargs):
     :type fpath: ``str``
     :param fpath: path for the output file
     :type optimize_options: ``list``
-    :param optimize_options: ``['f16_io_f32_comp', 'f16_io_comp', 'use_nhwcd4', 'fuse_conv_bias_nonlinearity']`` , four elements are optional, it can be an empty list, None or a list containing any of them. 
+    :param optimize_options: ``['f16_io_f32_comp', 'f16_io_comp', 'use_nhwcd4', 'fuse_conv_bias_nonlinearity']`` , four elements are optional, it can be an empty list, None or a list containing any of them.
 
         .. note::
 
@@ -115,7 +115,7 @@ def dump(outputs, fpath, optimize_options=None, **kwargs):
 
             ``use_nhwcd4`` – whether to use NHWCD4 data format. This is faster on some OpenCL devices;
 
-            ``fuse_conv_bias_nonlinearity`` – whether to fuse conv+bias+nonlinearty into one opr. This is supported only in NHWCD4 format.
+            ``fuse_conv_bias_nonlinearity`` – whether to fuse conv+bias+nonlinearty into one opr. This is supported only when ``use_nhwcd4`` is set.
 
     """
     from .tensor import Tensor

@@ -27,7 +27,7 @@ def get_device_count(device_type: str) -> int:
 
 
 def is_cuda_available() -> bool:
-    """ Returns whether cuda is avaiable.
+    """Returns whether cuda device is available on this system.
 
     """
     return mgb.config.get_device_count("gpu", warn=False) > 0
