@@ -29,6 +29,9 @@ class Handle {
             NAIVE = 0,
             FALLBACK = 1,
             X86 = 2,
+            ARM_COMMON = 3,
+            ARMV7 = 4,
+            AARCH64 = 5,
             CUDA = 6,
         };
 

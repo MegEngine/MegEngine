@@ -16,6 +16,8 @@
 #include "src/fallback/conv_bias/opr_impl.h"
 #if MEGDNN_X86
 #include "src/x86/conv_bias/postprocess_helper.h"
+#elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
+#include "src/arm_common/conv_bias/postprocess_helper.h"
 #endif
 
 namespace megdnn {
@@ -97,7 +99,7 @@ public:
                const ConvBiasImpl::NCBKernSizeParam& param,
                const ConvBiasImpl::NCBKernParam& ncb_param,
                const ConvBiasImpl::NCBKernIndex& ncb_index) override {
-        
+
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
             megdnn_log_error("NoPack mode has no packA kernel");
             return;
@@ -321,3 +323,5 @@ public:
 }  // namespace conv1x1
 }  // namespace fallback
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen

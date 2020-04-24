@@ -32,6 +32,9 @@
 // Platform macro's
 #cmakedefine01 MEGDNN_WITH_CUDA
 
+#cmakedefine01 MEGDNN_ARMV7
+#cmakedefine01 MEGDNN_AARCH64
+#cmakedefine01 MEGDNN_ENABLE_FP16_NEON
 
 #cmakedefine01 MEGDNN_X86_WITH_MKL
 #cmakedefine01 MEGDNN_X86_WITH_OPENBLAS

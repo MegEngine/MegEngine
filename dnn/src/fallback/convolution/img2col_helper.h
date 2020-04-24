@@ -9,6 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/common/utils.h"
+#if MEGDNN_ARMV7 || MEGDNN_AARCH64
+#include "src/arm_common/simd_macro/marm_neon.h"
+#endif
 namespace {
 
 template <bool is_xcorr, typename dtype>
@@ -314,11 +317,26 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                             fh2 = FH - fh - 1;
                             fw2 = FW - fw - 1;
                         }
+#if MEGDNN_ARMV7 || MEGDNN_AARCH64
+                        int w = cur_remain_w;
+                        size_t index = (ic * IH * IW + (start_h + fh2) * IW +
+                                        (w + fw2));
+                        for (; w + 3 < end_remain_w; w += 4) {
+                            vst1q_u32(&output[i],
+                                      vld1q_u32(&uint32_src[index]));
+                            i += 4;
+                            index += 4;
+                        }
+                        for (; w < end_remain_w; w++) {
+                            output[i++] = uint32_src[index];
+                        }
+#else
                         for (int w = cur_remain_w; w < end_remain_w; w++) {
                             size_t index = (ic * IH * IW +
                                             (start_h + fh2) * IW + (w + fw2));
                             output[i++] = uint32_src[index];
                         }
+#endif
                     }
                 }
             }
@@ -342,11 +360,27 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int h = start_h + 1; h < end_h; h++) {
+#if MEGDNN_ARMV7 || MEGDNN_AARCH64
+                            int ow = 0;
+                            size_t index = (ic * IH * IW + (h + fh2) * IW +
+                                            (ow + fw2));
+                            for (; ow + 3 < OW; ow += 4) {
+                                vst1q_u32(&output[i],
+                                          vld1q_u32(&uint32_src[index]));
+                                i += 4;
+                                index += 4;
+                            }
+
+                            for (; ow < OW; ow++) {
+                                output[i++] = uint32_src[index++];
+                            }
+#else
                             rep(ow, OW) {
                                 size_t index = (ic * IH * IW + (h + fh2) * IW +
                                                 (ow + fw2));
                                 output[i++] = uint32_src[index];
                             }
+#endif
                         }
 
                         for (int w = 0; w < end_remain_w; w++) {

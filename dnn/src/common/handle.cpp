@@ -22,6 +22,14 @@
 #include "src/x86/handle.h"
 #endif
 
+#if MEGDNN_ARMV7
+#include "src/armv7/handle.h"
+#endif
+
+#if MEGDNN_AARCH64
+#include "src/aarch64/handle.h"
+#endif
+
 
 #if MEGDNN_WITH_CUDA
 #include "src/cuda/handle.h"
@@ -59,6 +67,10 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
                 return std::unique_ptr<x86::HandleImpl>(
                         new x86::HandleImpl(computing_handle));
                 // return make_unique<x86::HandleImpl>(computing_handle);
+#elif MEGDNN_ARMV7
+                return make_unique<armv7::HandleImpl>(computing_handle);
+#elif MEGDNN_AARCH64
+                return make_unique<aarch64::HandleImpl>(computing_handle);
 #else
                 return make_unique<fallback::HandleImpl>(computing_handle);
 #endif
@@ -141,6 +153,15 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
             CASE(FALLBACK, fallback);
 #if MEGDNN_X86
             CASE(X86, x86);
+#endif
+#if MEGDNN_ARMV7
+            CASE(ARMV7, armv7);
+#endif
+#if MEGDNN_AARCH64
+            CASE(AARCH64, aarch64);
+#endif
+#if MEGDNN_ARMV7 || MEGDNN_AARCH64
+            CASE(ARM_COMMON, arm_common);
 #endif
 #endif  // !MEGDNN_NAIVE
 #if MEGDNN_WITH_CUDA

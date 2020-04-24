@@ -12,6 +12,8 @@
 #include "src/fallback/convolution/img2col_helper.h"
 #if MEGDNN_X86
 #include "src/x86/conv_bias/postprocess_helper.h"
+#elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
+#include "src/arm_common/conv_bias/postprocess_helper.h"
 #endif
 
 using namespace megdnn;
@@ -346,11 +348,23 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
 INSTANTIAL_CLASS(dt_float32, dt_float32, dt_float32, dt_float32, dt_float32,
                  megdnn::PostprocessMode::FLOAT)
 
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, __fp16, __fp16,
+                 megdnn::PostprocessMode::FLOAT)
+#else
 #if !MEGDNN_DISABLE_FLOAT16
 INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, dt_float16, dt_float16,
                  megdnn::PostprocessMode::NO_PROCESS)
 #endif
+#endif
 
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+//! x86 do not have uint8 matmul so only armv7 armv8 support uint8
+INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_uint8, dt_qint32, dt_quint8,
+                 megdnn::PostprocessMode::QUANTIZED)
+INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_int32, dt_qint32, dt_qint32,
+                 megdnn::PostprocessMode::NO_PROCESS)
+#endif
 
 INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int8, dt_qint32, dt_qint8,
                  megdnn::PostprocessMode::QUANTIZED)
@@ -363,3 +377,5 @@ INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int32, dt_qint32, dt_qint32,
 
 #undef INSTANTIAL_CLASS
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen

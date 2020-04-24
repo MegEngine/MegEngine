@@ -21,6 +21,8 @@
 
 #if MEGDNN_X86
 #include "src/x86/conv_bias/postprocess_helper.h"
+#elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
+#include "src/arm_common/conv_bias/postprocess_helper.h"
 #endif
 
 #include "midout.h"
@@ -52,7 +54,7 @@ size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
 
     auto matmul_param =
             get_matmul_kern_param(param, OH * OW, compt_oc_block_size);
-    
+
     auto pack_mode = m_matmul_algo->packmode();
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
         MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 0, 0) {

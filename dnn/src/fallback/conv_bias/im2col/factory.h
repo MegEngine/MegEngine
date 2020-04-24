@@ -23,11 +23,19 @@ namespace im2col {
 
 enum class StrategyType : uint32_t {
     FLOAT = 0,
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    FLOAT_FP16 = 1,
+#else
 #if !MEGDNN_DISABLE_FLOAT16
     FLOAT16_FLOAT16 = 2,
 #endif
+#endif
     INT8x8x32 = 3,
     INT8x8x16 = 4,
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+    QUINT8x8x32 = 5,
+    QUINT8x8x32x8 = 6,
+#endif
     QINT8x8x32 = 7,
     QINT8x8x32x8 = 8
 };
@@ -130,8 +138,12 @@ public:
     }
 
         cb1(dt_float32, dt_float32, StrategyType::FLOAT);
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+        cb1(dt_float16, __fp16, StrategyType::FLOAT_FP16);
+#else
 #if !MEGDNN_DISABLE_FLOAT16
         cb1(dt_float16, dt_float16, StrategyType::FLOAT16_FLOAT16);
+#endif
 #endif
 
         cb2(dt_int8, dt_int32, dt_int32, dt_int8, dt_int32, dt_int32,
@@ -140,6 +152,13 @@ public:
         cb2(dt_int8, dt_int16, dt_int16, dt_int8, dt_int16, dt_int16,
             StrategyType::INT8x8x16);
 
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+        cb2(dtype::Quantized8Asymm, dtype::QuantizedS32, dtype::QuantizedS32,
+            dt_uint8, dt_int32, dt_int32, StrategyType::QUINT8x8x32);
+
+        cb2(dtype::Quantized8Asymm, dtype::QuantizedS32, dtype::Quantized8Asymm,
+            dt_uint8, dt_int32, dt_uint8, StrategyType::QUINT8x8x32x8);
+#endif
         cb2(dtype::QuantizedS8, dtype::QuantizedS32, dtype::QuantizedS32,
             dt_int8, dt_int32, dt_int32, StrategyType::QINT8x8x32);
 
@@ -193,12 +212,19 @@ public:
                 cb1(NCHW, DEFAULT, dt_float32, dt_float32,
                     PostprocessMode::FLOAT, "DefaultStrategyType::FLOAT"_hash);
                 break;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+            case StrategyType::FLOAT_FP16:
+                cb1(NCHW, DEFAULT, dt_float16, __fp16, PostprocessMode::FLOAT,
+                    "DefaultStrategyType::FLOAT_FP16"_hash);
+                break;
+#else
 #if !MEGDNN_DISABLE_FLOAT16
             case StrategyType::FLOAT16_FLOAT16:
                 cb1(NCHW, DEFAULT, dt_float16, dt_float16,
                     PostprocessMode::NO_PROCESS,
                     "DefaultStrategyType::FLOAT16_FLOAT16"_hash);
                 break;
+#endif
 #endif
             case StrategyType::INT8x8x32:
                 if (format == param::ConvBias::Format::NCHW) {
@@ -220,6 +246,21 @@ public:
                     dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
                     "DefaultStrategyType::INT8x8x16"_hash);
                 break;
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+            case StrategyType::QUINT8x8x32:
+                cb2(NCHW, DEFAULT, dtype::Quantized8Asymm, dtype::QuantizedS32,
+                    dtype::QuantizedS32, dt_uint8, dt_int32, dt_int32,
+                    PostprocessMode::NO_PROCESS,
+                    "DefaultStrategyType::QUINT8x8x32"_hash);
+                break;
+
+            case StrategyType::QUINT8x8x32x8:
+                cb2(NCHW, DEFAULT, dtype::Quantized8Asymm, dtype::QuantizedS32,
+                    dtype::Quantized8Asymm, dt_uint8, dt_int32, dt_uint8,
+                    PostprocessMode::QUANTIZED,
+                    "DefaultStrategyType::QUINT8x8x32x8"_hash);
+                break;
+#endif
             case StrategyType::QINT8x8x32:
                 if (format == param::ConvBias::Format::NCHW) {
                     cb2(NCHW, DEFAULT, dtype::QuantizedS8, dtype::QuantizedS32,
@@ -265,12 +306,19 @@ public:
                 cb1(NCHW, NO_PACK, dt_float32, dt_float32,
                     PostprocessMode::FLOAT, "NoPackStrategyType::FLOAT"_hash);
                 break;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+            case StrategyType::FLOAT_FP16:
+                cb1(NCHW, NO_PACK, dt_float16, __fp16, PostprocessMode::FLOAT,
+                    "NoPackStrategyType::FLOAT_FP16"_hash);
+                break;
+#else
 #if !MEGDNN_DISABLE_FLOAT16
             case StrategyType::FLOAT16_FLOAT16:
                 cb1(NCHW, NO_PACK, dt_float16, dt_float16,
                     PostprocessMode::NO_PROCESS,
                     "NoPackStrategyType::FLOAT16_FLOAT16"_hash);
                 break;
+#endif
 #endif
             case StrategyType::INT8x8x32:
                 cb2(NCHW, NO_PACK, dt_int8, dt_int32, dt_int32, dt_int8,
@@ -284,6 +332,21 @@ public:
                     "NoPackStrategyType::INT8x8x16"_hash);
                 break;
 
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+            case StrategyType::QUINT8x8x32:
+                cb2(NCHW, NO_PACK, dtype::Quantized8Asymm, dtype::QuantizedS32,
+                    dtype::QuantizedS32, dt_uint8, dt_int32, dt_int32,
+                    PostprocessMode::NO_PROCESS,
+                    "NoPackStrategyType::QUINT8x8x32"_hash);
+                break;
+
+            case StrategyType::QUINT8x8x32x8:
+                cb2(NCHW, NO_PACK, dtype::Quantized8Asymm, dtype::QuantizedS32,
+                    dtype::Quantized8Asymm, dt_uint8, dt_int32, dt_uint8,
+                    PostprocessMode::QUANTIZED,
+                    "NoPackStrategyType::QUINT8x8x32x8"_hash);
+                break;
+#endif
             case StrategyType::QINT8x8x32:
                 cb2(NCHW, NO_PACK, dtype::QuantizedS8, dtype::QuantizedS32,
                     dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
@@ -312,12 +375,20 @@ public:
                     PostprocessMode::FLOAT,
                     "OnlyPackaStrategyType::FLOAT"_hash);
                 break;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+            case StrategyType::FLOAT_FP16:
+                cb1(NCHW, ONLY_PACKA, dt_float16, __fp16,
+                    PostprocessMode::FLOAT,
+                    "OnlyPackaStrategyType::FLOAT_FP16"_hash);
+                break;
+#else
 #if !MEGDNN_DISABLE_FLOAT16
             case StrategyType::FLOAT16_FLOAT16:
                 cb1(NCHW, ONLY_PACKA, dt_float16, dt_float16,
                     PostprocessMode::NO_PROCESS,
                     "OnlyPackaStrategyType::FLOAT16_FLOAT16"_hash);
                 break;
+#endif
 #endif
             case StrategyType::INT8x8x32:
                 cb2(NCHW, ONLY_PACKA, dt_int8, dt_int32, dt_int32, dt_int8,
@@ -331,6 +402,21 @@ public:
                     "OnlyPackaStrategyType::INT8x8x16"_hash);
                 break;
 
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+            case StrategyType::QUINT8x8x32:
+                cb2(NCHW, ONLY_PACKA, dtype::Quantized8Asymm,
+                    dtype::QuantizedS32, dtype::QuantizedS32, dt_uint8,
+                    dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+                    "OnlyPackaStrategyType::QUINT8x8x32"_hash);
+                break;
+
+            case StrategyType::QUINT8x8x32x8:
+                cb2(NCHW, ONLY_PACKA, dtype::Quantized8Asymm,
+                    dtype::QuantizedS32, dtype::Quantized8Asymm, dt_uint8,
+                    dt_int32, dt_uint8, PostprocessMode::QUANTIZED,
+                    "OnlyPackaStrategyType::QUINT8x8x32x8"_hash);
+                break;
+#endif
             case StrategyType::QINT8x8x32:
                 cb2(NCHW, ONLY_PACKA, dtype::QuantizedS8, dtype::QuantizedS32,
                     dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
@@ -409,3 +495,5 @@ Strategy* StrategyDelegationStorage::get(
 }  // namespace im2col
 }  // namespace fallback
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen
