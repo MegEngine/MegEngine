@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
-if(NOT MSVC)
+if(NOT MSVC AND NOT APPLE)
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
     set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
     set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
@@ -22,6 +22,15 @@ set_property(CACHE MGE_ARCH PROPERTY STRINGS AUTO
     naive fallback
 )
 
+option(MGE_WITH_JIT "Build MegEngine with JIT." ON)
+option(MGE_WITH_HALIDE "Build MegEngine with Halide JIT" ON)
+option(MGE_DISABLE_FLOAT16 "Disable MegEngine float16 support." OFF)
+option(MGE_WITH_CUDA "Enable MegEngine CUDA support." ON)
+option(MGE_CUDA_USE_STATIC "Enable MegEngine CUDA static linking." ON)
+option(MGE_WITH_TRT "Build MegEngine with TensorRT." ON)
+option(MGE_USE_SYSTEM_LIB "Build MegEngine with system libraries." OFF)
+option(MGB_WITH_FLATBUFFERS "Build MegBrain with FlatBuffers serialization support." ON)
+
 
 if(${MGE_ARCH} STREQUAL "AUTO")
     if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
@@ -34,20 +43,11 @@ if(${MGE_ARCH} STREQUAL "AUTO")
 endif()
 
 CHECK_CXX_COMPILER_FLAG(-fuse-ld=gold CXX_SUPPORT_GOLD)
-if(CXX_SUPPORT_GOLD)
+if(CXX_SUPPORT_GOLD AND NOT ANDROID AND NOT APPLE)
     message("-- Using GNU gold linker.")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fuse-ld=gold")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fuse-ld=gold")
 endif()
-
-option(MGE_WITH_JIT "Build MegEngine with JIT." ON)
-option(MGE_WITH_HALIDE "Build MegEngine with Halide JIT" ON)
-option(MGE_DISABLE_FLOAT16 "Disable MegEngine float16 support." OFF)
-option(MGE_WITH_CUDA "Enable MegEngine CUDA support." ON)
-option(MGE_CUDA_USE_STATIC "Enable MegEngine CUDA static linking." ON)
-option(MGE_WITH_TRT "Build MegEngine with TensorRT." ON)
-option(MGE_USE_SYSTEM_LIB "Build MegEngine with system libraries." OFF)
-option(MGB_WITH_FLATBUFFERS "Build MegBrain with FlatBuffers serialization support." ON)
 
 if(NOT MGE_WITH_JIT)
     if(MGE_WITH_HALIDE)
@@ -79,12 +79,13 @@ find_package(PythonInterp 3 REQUIRED)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
-if(${CMAKE_THREAD_LIBS_INIT} STREQUAL "-pthread" AND MGE_WITH_CUDA)
-    set_property(TARGET Threads::Threads
-        PROPERTY INTERFACE_COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-pthread>"
-        "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-pthread>")
+if(NOT "${CMAKE_THREAD_LIBS_INIT}" STREQUAL "")
+    if(${CMAKE_THREAD_LIBS_INIT} STREQUAL "-pthread" AND MGE_WITH_CUDA)
+        set_property(TARGET Threads::Threads
+            PROPERTY INTERFACE_COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-pthread>"
+            "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-pthread>")
+    endif()
 endif()
-
 
 set(MGE_BLAS MKL CACHE STRING "BLAS implementaion used by MegEngine.")
 set_property(CACHE MGE_BLAS PROPERTY STRINGS MKL OpenBLAS)
@@ -149,7 +150,11 @@ if(MSVC)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+    if(ANDROID)
+        set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
+    else()
+        set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    endif()
 endif()
 
 if(MGE_WITH_CUDA)
@@ -469,3 +474,10 @@ if(TARGET _mgb)
     )
 endif()
 
+IF(APPLE)
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()

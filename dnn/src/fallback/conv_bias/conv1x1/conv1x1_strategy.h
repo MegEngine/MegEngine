@@ -146,6 +146,7 @@ public:
                const ConvBiasImpl::NCBKernSizeParam& param,
                const ConvBiasImpl::NCBKernParam& ncb_param,
                const ConvBiasImpl::NCBKernIndex& ncb_index) override {
+        MEGDNN_MARK_USED_VAR(ncb_index);
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
             whole_bundle.set(ncb_param.workspace_ptr);
 

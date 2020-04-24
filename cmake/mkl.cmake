@@ -41,7 +41,11 @@ if(MGE_MKL_USE_STATIC)
     endif()
 
     add_library(libmkl INTERFACE)
-    target_link_libraries(libmkl INTERFACE -Wl,--start-group ${MKL_CORE_LIBRARY} ${MKL_SEQUENTIAL_LIBRARY} ${MKL_IPL_LIBRARY} -Wl,--end-group)
+    if(APPLE)
+        target_link_libraries(libmkl INTERFACE ${MKL_CORE_LIBRARY} ${MKL_SEQUENTIAL_LIBRARY} ${MKL_IPL_LIBRARY})
+    else()
+        target_link_libraries(libmkl INTERFACE -Wl,--start-group ${MKL_CORE_LIBRARY} ${MKL_SEQUENTIAL_LIBRARY} ${MKL_IPL_LIBRARY} -Wl,--end-group)
+    endif()
     target_include_directories(libmkl INTERFACE ${MKL_INCLUDE_DIR})
 else()
     find_library(MKL_CORE_LIBRARY
