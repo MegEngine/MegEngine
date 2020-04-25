@@ -254,6 +254,56 @@ TEST_F(ARM_COMMON, POOLING_MAX_W4x4_S2x2_NCHW44)
     }
     // clang-format on
 }
+TEST_F(ARM_COMMON, POOLING_MAX_W5x5_S1x1_NCHW44)
+{
+    // clang-format off
+    for (size_t ih: {5, 9, 19, 20, 39})
+    for (size_t iw: {5, 12, 23, 27, 39})
+    for (size_t ph: {0})
+    for (size_t pw: {0})
+    if (ih+2*ph >= 5 && iw+2*pw >= 5)
+    {
+        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+        Checker<Pooling> checker(handle());
+        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
+        checker.set_rng(0,&rng);
+
+        param::Pooling param;
+        param.mode = param::Pooling::Mode::MAX;
+        param.format = param::Pooling::Format::NCHW44;
+        param.pad_h = ph;
+        param.pad_w = pw;
+        param.stride_h = param.stride_w = 1;
+        param.window_h = param.window_w = 5;
+        checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
+    }
+    // clang-format on
+}
+TEST_F(ARM_COMMON, POOLING_MAX_W5x5_S2x2_NCHW44)
+{
+    // clang-format off
+    for (size_t ih: {5, 9, 19, 20, 39})
+    for (size_t iw: {5, 12, 23, 27, 39})
+    for (size_t ph: {0})
+    for (size_t pw: {0})
+    if (ih+2*ph >= 5 && iw+2*pw >= 5)
+    {
+        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+        Checker<Pooling> checker(handle());
+        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
+        checker.set_rng(0,&rng);
+
+        param::Pooling param;
+        param.mode = param::Pooling::Mode::MAX;
+        param.format = param::Pooling::Format::NCHW44;
+        param.pad_h = ph;
+        param.pad_w = pw;
+        param.stride_h = param.stride_w = 2;
+        param.window_h = param.window_w = 5;
+        checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
+    }
+    // clang-format on
+}
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARM_COMMON, POOLING_FP16) {

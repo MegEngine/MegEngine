@@ -87,6 +87,7 @@ private:
     class AlgoFilter3MaxStride2NCHW44;
     class AlgoFilter3MaxStride1NCHW44;
     class AlgoFilter4MaxStridexNCHW44;
+    class AlgoFilter5MaxStridexNCHW44;
     class AlgoPack;
 };
 }  // namespace arm_common

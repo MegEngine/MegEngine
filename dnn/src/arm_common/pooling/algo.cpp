@@ -13,6 +13,7 @@
 #include "megdnn/opr_param_defs.h"
 #include "src/arm_common/pooling/do_max_pooling_2x2_nchw44.h"
 #include "src/arm_common/pooling/do_max_pooling_4x4_nchw44.h"
+#include "src/arm_common/pooling/do_max_pooling_5x5_nchw44.h"
 #include "src/arm_common/pooling/do_max_pooling_3x3_s1x1_nchw44.h"
 #include "src/arm_common/pooling/do_max_pooling_3x3_s2x2_int8.h"
 #include "src/arm_common/pooling/do_max_pooling_3x3_s2x2_nchw44.h"
@@ -801,6 +802,75 @@ void PoolingImpl::AlgoFilter4MaxStridexNCHW44::exec(
     }
 
     DISPATCH_STRIDE(int8_t, int8, 11);
+
+#undef DISPATCH_STRIDE
+#undef DISPATCH_FUNC
+}
+
+bool PoolingImpl::AlgoFilter5MaxStridexNCHW44::usable(
+        const PoolingKernSizeParam& param) const {
+    auto SH = param.stride[0];
+    auto SW = param.stride[1];
+    auto FH = param.filter[0];
+    auto FW = param.filter[1];
+    auto PH = param.padding[0];
+    auto PW = param.padding[1];
+
+    bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                   param.format == Param::Format::NCHW44 &&
+                   param.mode == Mode::MAX && FH == 5 && FW == 5 && SH == SW &&
+                   (SW == 1 || SW == 2) && PH == 0 && PW == 0;
+    return avaible;
+}
+
+void PoolingImpl::AlgoFilter5MaxStridexNCHW44::exec(
+        const PoolingKernParam& param) const {
+    auto IH = param.isz[0], IW = param.isz[1];
+    auto OH = param.osz[0], OW = param.osz[1];
+    auto N = param.n, C = param.ic;
+    auto PH = param.padding[0];
+    auto PW = param.padding[1];
+    auto SW = param.stride[0];
+
+    void* src_ptr = param.src_ptr;
+    void* dst_ptr = param.dst_ptr;
+
+#define DISPATCH_FUNC(type, func, midout_type_id, i)                           \
+    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2),                      \
+                 midout_iv(midout_type_id)) {                                  \
+        auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr](              \
+                           size_t index, size_t thread_id) {                   \
+            MEGDNN_MARK_USED_VAR(thread_id);                                   \
+            size_t n = index / C;                                              \
+            size_t c = index % C;                                              \
+            do_max_pooling_5x5_stride##i##_##func##_nchw44_NEON(               \
+                    static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +  \
+                            c * IH * IW * 4,                                   \
+                    static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +        \
+                            c * OH * OW * 4,                                   \
+                    IH, IW, OH, OW, PH, PW);                                   \
+        };                                                                     \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                 \
+                static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, \
+                run);                                                          \
+    }                                                                          \
+    MIDOUT_END();
+
+#define DISPATCH_STRIDE(type, func, midout_type_id)       \
+    switch (SW) {                                         \
+        case 1: {                                         \
+            DISPATCH_FUNC(type, func, midout_type_id, 1); \
+            break;                                        \
+        }                                                 \
+        case 2: {                                         \
+            DISPATCH_FUNC(type, func, midout_type_id, 2); \
+            break;                                        \
+        }                                                 \
+        default:                                          \
+            megdnn_assert(0, "unsupport stride size");    \
+    }
+
+    DISPATCH_STRIDE(int8_t, int8, 12);
 
 #undef DISPATCH_STRIDE
 #undef DISPATCH_FUNC

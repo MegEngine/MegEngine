@@ -29,6 +29,7 @@ class PoolingImpl::AlgoPack : NonCopyableObj {
     AlgoFilter3MaxStride2NCHW44 algo_filter3_max_stride2_nchw4;
     AlgoFilter3MaxStride1NCHW44 algo_filter3_max_stride1_nchw4;
     AlgoFilter4MaxStridexNCHW44 algo_filter4_max_stridex_nchw4;
+    AlgoFilter5MaxStridexNCHW44 algo_filter5_max_stridex_nchw4;
 
 public:
     AlgoPack() {
@@ -44,6 +45,7 @@ public:
         all_algos.emplace_back(&algo_filter3_max_stride1_nchw4);
         all_algos.emplace_back(&algo_filter2_max_stridex_nchw4);
         all_algos.emplace_back(&algo_filter4_max_stridex_nchw4);
+        all_algos.emplace_back(&algo_filter5_max_stridex_nchw4);
     }
     SmallVector<AlgoBase*> all_algos;
 };
