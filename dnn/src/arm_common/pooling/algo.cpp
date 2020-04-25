@@ -10,7 +10,9 @@
  * implied.
  */
 #include "src/arm_common/pooling/algo.h"
+#include "megdnn/opr_param_defs.h"
 #include "src/arm_common/pooling/do_max_pooling_3x3_s2x2_int8.h"
+#include "src/arm_common/pooling/do_max_pooling_3x3_s2x2_nchw44.h"
 #include "src/arm_common/pooling/do_max_pooling_w2x2_s2x2.h"
 #include "src/arm_common/pooling/do_max_pooling_w4x4_s2x2.h"
 
@@ -556,6 +558,60 @@ void PoolingImpl::AlgoInt8Filter3MaxStride2::exec(
     }
     MIDOUT_END();
 }
+
+bool PoolingImpl::AlgoFilter3MaxStride2NCHW44::usable(
+        const PoolingKernSizeParam& param) const {
+    auto SH = param.stride[0];
+    auto SW = param.stride[1];
+    auto FH = param.filter[0];
+    auto FW = param.filter[1];
+    auto PH = param.padding[0];
+    auto PW = param.padding[1];
+
+    bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                   param.format == Param::Format::NCHW44 &&
+                   param.mode == Mode::MAX && FH == 3 && FW == 3 && SH == 2 &&
+                   SW == 2 && PH == 0 && PW == 0;
+    return avaible;
+}
+
+void PoolingImpl::AlgoFilter3MaxStride2NCHW44::exec(
+        const PoolingKernParam& param) const {
+    auto IH = param.isz[0], IW = param.isz[1];
+    auto OH = param.osz[0], OW = param.osz[1];
+    auto N = param.n, C = param.ic;
+    auto PH = param.padding[0];
+    auto PW = param.padding[1];
+
+    void* src_ptr = param.src_ptr;
+    void* dst_ptr = param.dst_ptr;
+
+#define DISPATCH_FUNC(type, func, midout_type_id)                              \
+    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2),                      \
+                 midout_iv(midout_type_id)) {                                  \
+        auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr](              \
+                           size_t index, size_t thread_id) {                   \
+            MEGDNN_MARK_USED_VAR(thread_id);                                   \
+            size_t n = index / C;                                              \
+            size_t c = index % C;                                              \
+            do_max_pooling_3x3_s2x2_##func##_nchw44_NEON(                      \
+                    static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +  \
+                            c * IH * IW * 4,                                   \
+                    static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +        \
+                            c * OH * OW * 4,                                   \
+                    IH, IW, OH, OW, PH, PW);                                   \
+        };                                                                     \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                 \
+                static_cast<::megdnn::naive::HandleImpl*>(param.handle), N* C, \
+                run);                                                          \
+    }                                                                          \
+    MIDOUT_END();
+
+    DISPATCH_FUNC(int8_t, int8, 9);
+
+#undef DISPATCH_FUNC
+}
+
 }  // namespace arm_common
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen

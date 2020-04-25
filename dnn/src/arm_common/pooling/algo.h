@@ -82,6 +82,15 @@ public:
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
+
+class PoolingImpl::AlgoFilter3MaxStride2NCHW44 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "ARM_POOLING_FILTER3_MAX_STRIDE2_NCHW44"; }
+    bool usable(const PoolingKernSizeParam& param) const override;
+    void exec(const PoolingKernParam& param) const override;
+};
+
 WorkspaceBundle get_bundle(const PoolingImpl::PoolingKernSizeParam& param);
 
 }  // namespace arm_common
