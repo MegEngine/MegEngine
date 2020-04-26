@@ -123,6 +123,7 @@ private:
     std::shared_ptr<MegRay::Context> m_megray_ctx;
     std::shared_ptr<MegRay::Communicator> m_megray_comm;
     bool m_init = false;
+    bool m_debug_mode = false;
 
     //! dev buffers for each outputs
     SmallVector<std::shared_ptr<DeviceTensorND>> m_dev_buffers;
