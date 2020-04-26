@@ -18,7 +18,7 @@ import megengine._internal as mgb
 import megengine.module as M
 from megengine import jit, tensor
 from megengine.core.tensor import Tensor
-from megengine.jit import SublinearMemConfig
+from megengine.jit import SublinearMemoryConfig
 from megengine.test import assertTensorClose
 
 
@@ -190,9 +190,9 @@ def test_dump_bn_fused():
 
 # Simply verify the options passed down
 def test_sublinear():
-    config = SublinearMemConfig(genetic_nr_iter=10)
+    config = SublinearMemoryConfig(genetic_nr_iter=10)
 
-    @jit.trace(symbolic=True, enable_sublinear=True, sublinear_mem_config=config)
+    @jit.trace(symbolic=True, sublinear_memory_config=config)
     def f(x):
         return x + x
 

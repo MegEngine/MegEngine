@@ -17,7 +17,7 @@ import megengine as mge
 import megengine.functional as F
 from megengine import jit, tensor
 from megengine.functional.debug_param import set_conv_execution_strategy
-from megengine.jit import SublinearMemConfig
+from megengine.jit import SublinearMemoryConfig
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
 from megengine.test import assertTensorClose
@@ -132,12 +132,7 @@ def update_model(model_path):
 
 
 def run_test(
-    model_path,
-    use_jit,
-    use_symbolic,
-    enable_sublinear=False,
-    sublinear_mem_config=None,
-    max_err=None,
+    model_path, use_jit, use_symbolic, sublinear_memory_config=None, max_err=None,
 ):
 
     """
@@ -168,8 +163,7 @@ def run_test(
         train_func = jit.trace(
             train_func,
             symbolic=use_symbolic,
-            enable_sublinear=enable_sublinear,
-            sublinear_mem_config=sublinear_mem_config,
+            sublinear_memory_config=sublinear_memory_config,
         )
 
     opt.zero_grad()
@@ -199,12 +193,7 @@ def test_correctness():
     run_test(model_path, True, True)
 
     # sublinear
-    config = SublinearMemConfig(genetic_nr_iter=10)
+    config = SublinearMemoryConfig(genetic_nr_iter=10)
     run_test(
-        model_path,
-        True,
-        True,
-        enable_sublinear=True,
-        sublinear_mem_config=config,
-        max_err=1e-5,
+        model_path, True, True, sublinear_memory_config=config, max_err=1e-5,
     )
