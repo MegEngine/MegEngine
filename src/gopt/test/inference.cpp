@@ -693,6 +693,46 @@ TEST(TestGoptInference, Float16IOFloat32ComputeWarpPerspective) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, Float16IOFloat32ComputeRemap) {
+    auto cn = CompNode::load("cpu1");
+    constexpr size_t INP_H = 10, INP_W = 10, N = 2;
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    graph->options().graph_opt_level = 0;
+    auto a = mkvar("a", {N, 4, INP_H, INP_W});
+    auto gen_map = [&](HostTensorND& mat) {
+        auto ptr = mat.ptr<float>();
+        for(size_t n = 0; n < N; ++n){
+            for(int h = 0; h < 5; ++h){
+                for(int w = 0; w < 5; ++w){
+                    *ptr++ = (h * 5 * 2) + 5 * 2 + 0;
+                    *ptr++ = (h * 5 * 2) + 5 * 2 + 1;
+                }
+            }
+        }
+        mgb_assert(ptr == mat.ptr<float>() + mat.shape().total_nr_elems());
+    };
+    auto map_host = std::make_shared<HostTensorND>(
+            a.node()->comp_node(), TensorShape{N, 5, 5, 2}, dtype::Float32());
+    gen_map(*map_host);
+    auto map = opr::Host2DeviceCopy::make(*graph, map_host).rename("map");
+    auto y = opr::Remap::make(a, map);
+    SymbolVar y_opt;
+    unpack_vector(gopt::optimize_for_inference(
+                          {y}, gopt::OptimizeForInferenceOptions{}
+                                       .enable_f16_io_f32_comp()),
+                  y_opt);
+    ASSERT_EQ(y_opt.dtype(), dtype::Float32());
+    HostTensorND host_y, host_y_opt;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
 TEST(TestGoptInference, Uint8IOFloat16ComputeWarpPerspective) {
     constexpr size_t INP_H = 10, INP_W = 10, N = 2;
     HostTensorGenerator<dtype::Uint8> gen_uint8;
@@ -1987,7 +2027,7 @@ TEST(TestGoptInference, EnableCHWN4WarpPespective) {
 
     auto y = opr::ConvBiasForward::make(
             x, w, b, param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    
+
     opr::WarpPerspective::Param warp_param;
     warp_param.format = opr::WarpPerspective::Param::Format::NCHW4;
     auto y1 = opr::WarpPerspective::make(y, mat_var, TensorShape{16, 16}, warp_param);

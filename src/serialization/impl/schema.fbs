@@ -70,6 +70,7 @@ union OperatorParam {
     param.WarpAffine,
     param.GaussianBlur,
     param.Resize,
+    param.Remap,
     param.Convolution3D,
     param.Conv3DBias,
     param.SeparableConv3D,

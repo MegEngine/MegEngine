@@ -79,4 +79,15 @@ decl_opr(
     'for details on affine transformations.',
     version=1)
 
+decl_opr(
+    'Remap',
+    inputs=[
+        Doc('src', 'input image, in NCHW format or NHWC format'),
+        Doc('map_xy', 'map matrix with NHWC format. C must euqal to 2. '
+            'dst(x, y) = src(mapX(x, y), mapY(x, y)'
+            'col in channel 0, and row in channel 1')],
+    params='Remap',
+    desc='Remap transformation to batched 2D images; '
+    'see https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=remap'
+    'for details on remap transformations.')
 # vim: ft=python

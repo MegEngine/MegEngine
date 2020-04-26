@@ -50,6 +50,7 @@ namespace opr {
     MGB_SEREG_OPR(GaussianBlur, 1);
 
     MGB_SEREG_OPR(ResizeBackward, 2);
+    MGB_SEREG_OPR(Remap, 2);
 
     //! current warp affine version
     using WarpAffineV1 = opr::WarpAffine;

@@ -165,6 +165,21 @@ MGB_DEFINE_OPR_CLASS(ResizeBackward,
                 const OperatorNodeConfig &config = {});
 };
 
+MGB_DEFINE_OPR_CLASS(RemapForward,
+        intl::MegDNNOprWrapperFwd<megdnn::RemapForward>) // {
+    public:
+        RemapForward(
+                VarNode *in_tensor, VarNode* map,
+                const Param &param, const OperatorNodeConfig &config);
+
+        static SymbolVar make(SymbolVar in_tensor, SymbolVar map, const Param &param = {},
+                const OperatorNodeConfig &config = {});
+
+    private:
+        void init_output_dtype() override;
+};
+using Remap = RemapForward;
+
 /*!
  * \brief apply affine transformation to batched 2D images
  *

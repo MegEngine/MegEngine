@@ -636,4 +636,55 @@ TEST(TestOprImgproc, WarpAffineForward) {
         run({TensorShape{N, 10, 9, C}, {N, 2, 3}}, opt);
 }
 
+TEST(TestOprImgproc, Remap_NCHW) {
+    constexpr size_t N = 2, C = 8;
+
+    opr::Remap::Param param;
+    using Checker = AutoOprChecker<2, 1>;
+    TensorShape out_shp{N, C, 10, 10};
+    param.format = opr::Remap::Param::Format::NCHW;
+    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
+            Checker::SymOutArray {
+        return {opr::Remap::make(inputs[0], inputs[1], param)};
+    };
+    auto fwd = [&](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::Remap>();
+        opr->param() = param;
+        dest[0].resize(out_shp);
+        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(), {});
+    };
+
+    Checker::RunOptions opt;
+    Checker(make_graph, fwd, CompNode::load("cpu1"))
+            .disable_grad_check()
+            .run({TensorShape{N, C, 3, 20}, TensorShape{N, 10, 10, 2}}, opt)
+            .run({TensorShape{N, C, 6, 5}, TensorShape{N, 10, 10, 2}}, opt)
+            .run({TensorShape{N, C, 20, 20}, TensorShape{N, 10, 10, 2}}, opt);
+}
+
+TEST(TestOprImgproc, Remap_NHWC) {
+    constexpr size_t N = 2, C = 8;
+
+    opr::Remap::Param param;
+    using Checker = AutoOprChecker<2, 1>;
+    TensorShape out_shp{N, 10, 10, C};
+    param.format = opr::Remap::Param::Format::NHWC;
+    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
+            Checker::SymOutArray {
+        return {opr::Remap::make(inputs[0], inputs[1], param)};
+    };
+    auto fwd = [&](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::Remap>();
+        opr->param() = param;
+        dest[0].resize(out_shp);
+        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(), {});
+    };
+
+    Checker::RunOptions opt;
+    Checker(make_graph, fwd, CompNode::load("cpu1"))
+            .disable_grad_check()
+            .run({TensorShape{N, 3, 20, C}, TensorShape{N, 10, 10, 2}}, opt)
+            .run({TensorShape{N, 6, 5, C}, TensorShape{N, 10, 10, 2}}, opt)
+            .run({TensorShape{N, 20, 20, C}, TensorShape{N, 10, 10, 2}}, opt);
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -316,4 +316,13 @@ void WarpAffineForward::record_execute_deps(ExecDependencyArray &deps) {
     record_megdnn_opr(deps);
 }
 
+/* ======================= RemapForward ======================= */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemapForward);
+MEGDNN_OPR_INIT2(RemapForward, "remap")
+
+void RemapForward::init_output_dtype(){
+    output(0)->dtype(input(0)->dtype());
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

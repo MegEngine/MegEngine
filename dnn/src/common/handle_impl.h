@@ -188,6 +188,7 @@ private:
     cb(ROIAlignForward) \
     cb(ROIAlignBackward) \
     cb(BatchConvBiasForward) \
+    cb(Remap) \
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;

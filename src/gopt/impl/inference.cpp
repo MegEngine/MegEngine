@@ -842,6 +842,30 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
         return new_warp.node()->owner_opr();
     };
 
+    auto replace_remap_opr = [](OperatorNodeBase* opr,
+                                const VarNodeArray& new_inp) {
+        mgb_assert(opr->input().size() == new_inp.size() &&
+                   (new_inp.size() == 2));
+        auto& remap_opr = opr->cast_final<opr::Remap>();
+        // map tensor must be float32
+        auto new_map = new_inp[1];
+        if (new_inp[1]->dtype() != dtype::Float32()) {
+            if (try_cast_as_op<opr::TypeCvt>(new_map->owner_opr()) &&
+                new_map->owner_opr()->input(0)->dtype() == dtype::Float32())
+                new_map = new_map->owner_opr()->input(0);
+            else
+                new_map =
+                        opr::TypeCvt::make(new_inp[1], dtype::Float32(), {}).node();
+        }
+        SymbolVar new_remap;
+
+        new_remap = opr::Remap::make(new_inp[0], new_map,
+                                               remap_opr.param(),
+                                               remap_opr.config());
+        return new_remap.node()->owner_opr();
+    };
+
+
     auto ret = std::make_unique<ConvertF32ToF16Pass>();
     // don't check dtype
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_ALL ^
@@ -855,6 +879,7 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
     replace_func[opr::ImmutableTensor::typeinfo()] = replace_imt_opr;
     replace_func[opr::TypeCvt::typeinfo()] = replace_cvt_opr;
     replace_func[opr::WarpPerspective::typeinfo()] = replace_warp_opr;
+    replace_func[opr::Remap::typeinfo()] = replace_remap_opr;
     return ret;
 #endif
 }

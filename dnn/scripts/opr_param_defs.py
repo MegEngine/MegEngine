@@ -35,10 +35,10 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           ).
  add_enum(Doc('Format', 'convolution data/filter/output format; see '
               ':class:`RelayoutFormat` for more details'),
-          'NCHW', 'NHWC', 'NHWCD4', 'NCHW4', 'NCHW8', 'NCHW32', 'NCHW88', 'NCHW44', 
-          Doc('NCHW_WINOGRAD', 'NCHW layout with weights tranformed by winograd'), 
-          Doc('NCHW88_WINOGRAD', 'NCHW88 layout with weights tranformed by winograd'), 
-          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'), 
+          'NCHW', 'NHWC', 'NHWCD4', 'NCHW4', 'NCHW8', 'NCHW32', 'NCHW88', 'NCHW44',
+          Doc('NCHW_WINOGRAD', 'NCHW layout with weights tranformed by winograd'),
+          Doc('NCHW88_WINOGRAD', 'NCHW88 layout with weights tranformed by winograd'),
+          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'),
           Doc('CHWN4', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
               'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'))
  )
@@ -699,6 +699,12 @@ pdef('UniformRNG').add_fields('uint64', 'seed', 0)
  .add_enum_alias('InterpolationMode', 'WarpPerspective', name_field='imode')
  .add_enum_alias('Format', 'ConvolutionV0', default=1))
 
+(pdef('Remap', version=0)
+ .add_enum_alias('InterpolationMode', 'WarpPerspective', name_field='imode')
+ .add_enum_alias('BorderMode', 'WarpPerspective', name_field='border_type')
+ .add_enum_alias('Format', 'ConvolutionV0', default=1)
+ .add_fields('float32', 'scalar', '0.f'))
+
 (pdef('Convolution3D').
  add_enum('Mode', 'CROSS_CORRELATION', 'CONVOLUTION').
  add_fields(
@@ -840,8 +846,8 @@ when the ``I`` suffix is present.
      'INTER_WEIGHT_CHAN',
      'INTER_WEIGHT_CHANI',
      'INTER_WEIGHT_DENSEI_DOT',
-     'INTER_WEIGHT_GROUPI_DOT', 
-     'NCHW4_CHWN4', 
+     'INTER_WEIGHT_GROUPI_DOT',
+     'NCHW4_CHWN4',
      'CHWN4_NCHW4',
      'NCHW_NCHW88_CONV_DENSE_WEIGHT',
      'NCHW_NCHW88_CONV_CHAN_WEIGHT',
@@ -849,7 +855,7 @@ when the ``I`` suffix is present.
      'NCHW_NCHW88',
      'NCHW88_NCHW')
  )
- 
+
 
 (pdef('SeparableFilter').
  add_enum_alias('Format', 'ConvolutionV0').
@@ -882,10 +888,10 @@ when the ``I`` suffix is present.
  add_enum_alias('Format', 'ConvolutionV0').
  add_fields('float32', 'spatial_scale', '1.0').
  add_fields('float32', 'offset', '0.0').
- add_fields('uint32', 
-            'pooled_height', '1', 
+ add_fields('uint32',
+            'pooled_height', '1',
             'pooled_width', '1',
-            'sample_height', '2', 
+            'sample_height', '2',
             'sample_width', '2')
  )
 (pdef('DeformablePSROIPooling').
