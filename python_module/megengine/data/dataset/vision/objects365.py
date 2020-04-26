@@ -69,7 +69,9 @@ class Objects365(VisionDataset):
                 anno = self.img_to_anns[img_id]
                 # filter crowd annotations
                 anno = [obj for obj in anno if obj["iscrowd"] == 0]
-                anno = [obj for obj in anno if obj["bbox"][2] > 0 and obj["bbox"][3] > 0]
+                anno = [
+                    obj for obj in anno if obj["bbox"][2] > 0 and obj["bbox"][3] > 0
+                ]
                 if len(anno) > 0:
                     ids.append(img_id)
                     self.img_to_anns[img_id] = anno

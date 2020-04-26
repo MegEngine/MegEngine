@@ -14,7 +14,7 @@
 # ---------------------------------------------------------------------
 import json
 import os
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 import cv2
 import numpy as np
@@ -28,26 +28,21 @@ def _count_visible_keypoints(anno):
     return sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno)
 
 
-def _has_only_empty_bbox(anno):
-    return all(any(o <= 0 for o in obj["bbox"][2:]) for obj in anno)
-
-
-def has_valid_annotation(anno):
+def has_valid_annotation(anno, order):
     # if it"s empty, there is no annotation
     if len(anno) == 0:
         return False
-    # if all boxes have close to zero area, there is no annotation
-    if _has_only_empty_bbox(anno):
-        return False
-    # keypoints task have a slight different critera for considering
-    # if an annotation is valid
-    if "keypoints" not in anno[0]:
-        return True
-    # for keypoint detection tasks, only consider valid images those
-    # containing at least min_keypoints_per_image
-    if _count_visible_keypoints(anno) >= min_keypoints_per_image:
-        return True
-    return False
+    if "boxes" in order or "boxes_category" in order:
+        if "bbox" not in anno[0]:
+            return False
+    if "keypoints" in order:
+        if "keypoints" not in anno[0]:
+            return False
+        # for keypoint detection tasks, only consider valid images those
+        # containing at least min_keypoints_per_image
+        if _count_visible_keypoints(anno) < min_keypoints_per_image:
+            return False
+    return True
 
 
 class COCO(VisionDataset):
@@ -58,8 +53,8 @@ class COCO(VisionDataset):
         "image",
         "boxes",
         "boxes_category",
+        "keypoints",
         # TODO: need to check
-        # "keypoints",
         # "polygons",
         "info",
     )
@@ -72,7 +67,7 @@ class COCO(VisionDataset):
         with open(ann_file, "r") as f:
             dataset = json.load(f)
 
-        self.imgs = OrderedDict()
+        self.imgs = dict()
         for img in dataset["images"]:
             # for saving memory
             if "license" in img:
@@ -98,7 +93,7 @@ class COCO(VisionDataset):
                 del ann["segmentation"]
             self.img_to_anns[ann["image_id"]].append(ann)
 
-        self.cats = OrderedDict()
+        self.cats = dict()
         for cat in dataset["categories"]:
             self.cats[cat["id"]] = cat
 
@@ -109,8 +104,17 @@ class COCO(VisionDataset):
             ids = []
             for img_id in self.ids:
                 anno = self.img_to_anns[img_id]
-                if has_valid_annotation(anno):
+                # filter crowd annotations
+                anno = [obj for obj in anno if obj["iscrowd"] == 0]
+                anno = [
+                    obj for obj in anno if obj["bbox"][2] > 0 and obj["bbox"][3] > 0
+                ]
+                if has_valid_annotation(anno, order):
                     ids.append(img_id)
+                    self.img_to_anns[img_id] = anno
+                else:
+                    del self.imgs[img_id]
+                    del self.img_to_anns[img_id]
             self.ids = ids
 
         self.json_category_id_to_contiguous_id = {
@@ -124,11 +128,6 @@ class COCO(VisionDataset):
     def __getitem__(self, index):
         img_id = self.ids[index]
         anno = self.img_to_anns[img_id]
-
-        # filter crowd annotations
-        anno = [obj for obj in anno if obj["iscrowd"] == 0]
-        # filter empty annotations
-        anno = [obj for obj in anno if obj["area"] > 0]
 
         target = []
         for k in self.order:
@@ -181,7 +180,6 @@ class COCO(VisionDataset):
         return img_info
 
     class_names = (
-        "background",
         "person",
         "bicycle",
         "car",

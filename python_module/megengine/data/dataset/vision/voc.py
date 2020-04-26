@@ -37,7 +37,9 @@ class PascalVOC(VisionDataset):
 
     def __init__(self, root, image_set, *, order=None):
         if ("boxes" in order or "boxes_category" in order) and "mask" in order:
-            raise ValueError("PascalVOC only supports boxes & boxes_category or mask, not both.")
+            raise ValueError(
+                "PascalVOC only supports boxes & boxes_category or mask, not both."
+            )
 
         super().__init__(root, order=order, supported_order=self.supported_order)
 
@@ -48,13 +50,15 @@ class PascalVOC(VisionDataset):
         image_dir = os.path.join(self.root, "JPEGImages")
 
         if "boxes" in order or "boxes_category" in order:
-            annotation_dir = os.path.join(self.root, 'Annotations')
+            annotation_dir = os.path.join(self.root, "Annotations")
             splitdet_dir = os.path.join(self.root, "ImageSets/Main")
             split_f = os.path.join(splitdet_dir, image_set.rstrip("\n") + ".txt")
             with open(os.path.join(split_f), "r") as f:
                 self.file_names = [x.strip() for x in f.readlines()]
             self.images = [os.path.join(image_dir, x + ".jpg") for x in self.file_names]
-            self.annotations = [os.path.join(annotation_dir, x + ".xml") for x in self.file_names]
+            self.annotations = [
+                os.path.join(annotation_dir, x + ".xml") for x in self.file_names
+            ]
             assert len(self.images) == len(self.annotations)
         elif "mask" in order:
             if "aug" in image_set:
@@ -81,13 +85,17 @@ class PascalVOC(VisionDataset):
                 anno = self.parse_voc_xml(ET.parse(self.annotations[index]).getroot())
                 boxes = [obj["bndbox"] for obj in anno["annotation"]["object"]]
                 # boxes type xyxy
-                boxes = [(bb['xmin'], bb['ymin'], bb['xmax'], bb['ymax']) for bb in boxes]
+                boxes = [
+                    (bb["xmin"], bb["ymin"], bb["xmax"], bb["ymax"]) for bb in boxes
+                ]
                 boxes = np.array(boxes, dtype=np.float32).reshape(-1, 4)
                 target.append(boxes)
             elif k == "boxes_category":
                 anno = self.parse_voc_xml(ET.parse(self.annotations[index]).getroot())
                 boxes_category = [obj["name"] for obj in anno["annotation"]["object"]]
-                boxes_category = [self.class_names.index(bc)-1 for bc in boxes_category]
+                boxes_category = [
+                    self.class_names.index(bc) - 1 for bc in boxes_category
+                ]
                 boxes_category = np.array(boxes_category, dtype=np.int32)
                 target.append(boxes_category)
             elif k == "mask":
