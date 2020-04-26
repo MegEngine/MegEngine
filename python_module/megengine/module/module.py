@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -8,6 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from enum import Enum
 from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
 
 import numpy as np
@@ -442,3 +442,95 @@ class Module(metaclass=ABCMeta):
             loaded.append(k)
 
         return set(loaded), set(skipped)
+
+
+class QATModule(Module):
+    r"""
+    Base class of quantization related Module. Add extra forward methods
+    :meth:`~.QATModule.forward_qat` and :meth:`~.QATModule.forward_quantized` for
+    ``qat``(quantization aware training) mode and ``quantized`` mode respectively.
+
+    Use :meth:`~.QATModule.quant` to switch between ``QAT`` and ``NORMAL`` mode,
+    and use :meth:`~.QATModule.to_quantized` to switch to ``quantized`` mode,
+    which is irreversible.
+
+    If you want to recursively switch mode for all QATModule in network, use
+    functions in :mod:`~.quantization.quantize`.
+    """
+
+    class QATMode(Enum):
+        DISABLED = 1
+        QAT = 2
+        CALIBRATION = 3
+
+    def __init__(self):
+        from ..quantization import (
+            QConfig,
+            FakeQuantize,
+            Observer,
+        )  # pylint: disable=all
+
+        super().__init__()
+
+        self.quantizing = self.QATMode.DISABLED
+        self.scale = None
+
+        self.inp_observer = None  # type: Observer
+        self.weight_observer = None  # type: Observer
+        self.act_observer = None  # type: Observer
+
+        self.weight_fake_quant = None  # type: FakeQuantize
+        self.bias_fake_quant = None  # type: FakeQuantize
+        self.act_fake_quant = None  # type: FakeQuantize
+
+    def set_qconfig(self, qconfig: "QConfig"):
+        self.inp_observer = qconfig.inp_observer()
+        self.weight_observer = qconfig.weight_observer()
+        self.act_observer = qconfig.act_observer()
+
+        self.weight_fake_quant = qconfig.fake_quant(self.weight_observer.dtype)
+        self.bias_fake_quant = qconfig.bias_fake_quant()
+        self.act_fake_quant = qconfig.fake_quant(self.act_observer.dtype)
+
+    def apply_observer(self, target: Tensor, obs: "Observer"):
+        return obs(target)
+
+    def apply_fakequant_with_observer(
+        self, target: Tensor, fq: "FakeQuantize", obs: "Observer"
+    ):
+        oup = self.apply_observer(target, obs)
+        return fq(oup, obs.scale, obs.zero_point)
+
+    def set_qat_mode(self, mode: QATMode):
+        r"""
+        Change ``self.quantizing`` mode, available values: ``self.QATMode.DISABLED``,
+        ``QAT``,``CALIBRATION``.
+        """
+        if not isinstance(mode, self.QATMode):
+            raise TypeError("mode must be QATMode Enum type")
+        self.quantizing = mode
+
+    def to_quantized(self):
+        r"""
+        Return a new :class:`~.Module` with quantized parameters of ``self``
+        according to scale and zero_point in ``self.xxx_observer``.
+        """
+        raise NotImplementedError(
+            "Use megengine.quantization.quantize to register the method."
+        )
+
+    @abstractmethod
+    def forward_qat(self, *args, **kwargs):
+        r"""
+        Forward method for ``qat`` mode.
+        """
+
+    def __call__(self, *args, **kwargs):
+        if self.quantizing == self.QATMode.QAT:
+            return self.forward_qat(*args, **kwargs)
+        elif self.quantizing == self.QATMode.CALIBRATION:
+            # TODO implement the CALIBRATION
+            assert False
+            return None
+        else:
+            return self.forward(*args, **kwargs)

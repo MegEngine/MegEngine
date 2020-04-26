@@ -359,6 +359,41 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
     return out
 
 
+@wrap_io_tensor
+def cond_take(mask: Tensor, x: Tensor, val=1) -> Tensor:
+    r"""
+    Take elements from data if specific condition is satisfied on mask. This operator has two outputs: the first is the elements taken, and the second is the indices corresponding to those elements; they are both 1-dimensional. High-dimension input would first be flattened.
+
+    :param mask: condition param; must be the same shape with data
+    :param x: input tensor from which to take elements
+    :param val: value to be compared to by mode
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+        mask = tensor(np.array([[1, 0], [0, 1]], dtype=np.int32))
+        x = tensor(np.array([[1, np.inf], [np.nan, 4]],
+            dtype=np.float32))
+        v, index = F.cond_take(mask, x, 1)
+        print(v, index)
+
+    Outputs:
+
+    .. testoutput::
+
+        Tensor([1. 4.]) Tensor([0 3], dtype=int32)
+
+    """
+
+    v, index = mgb.opr.cond_take(
+        x, mask, mode=mgb.opr_param_defs.CondTake.Mode.EQ, val=val
+    )
+    return v, index
+
+
 def shapeof(x: Tensor, axis=None):
     r"""
     The shape of input tensor.

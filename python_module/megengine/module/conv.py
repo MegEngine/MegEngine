@@ -182,11 +182,11 @@ class Conv2d(_ConvNd):
         # Assume format is NCHW
         return (1, self.out_channels, 1, 1)
 
-    def forward(self, inp):
+    def calc_conv(self, inp, weight, bias):
         return conv2d(
             inp,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             self.stride,
             self.padding,
             self.dilation,
@@ -194,6 +194,9 @@ class Conv2d(_ConvNd):
             self.conv_mode,
             self.compute_mode,
         )
+
+    def forward(self, inp):
+        return self.calc_conv(inp, self.weight, self.bias)
 
 
 class ConvTranspose2d(_ConvNd):

@@ -74,12 +74,14 @@ from .nn import (
     softmax,
     warp_perspective,
 )
+from .quantized import conv_bias_activation
 from .sort import argsort, sort, top_k
 from .tensor import (
     add_axis,
     arange,
     broadcast_to,
     concat,
+    cond_take,
     dimshuffle,
     gather,
     linspace,
