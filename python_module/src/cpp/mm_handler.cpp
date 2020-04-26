@@ -214,11 +214,14 @@ public:
                 std::make_unique<ZmqRpc::ZmqRpcServer>("tcp://" + server_addr, port,
                                                        std::move(service));
         port = server->port();
+        if (port == -1) {
+            return -1;
+        }
+
         auto full_srv_addr = ssprintf("%s:%d", server_addr.c_str(), port);
         server->run();
         auto ins = m_addr2server.emplace(
                 full_srv_addr, ServerInfo{std::move(server)});
-        mgb_assert(ins.second);
 
         return port;
     }
