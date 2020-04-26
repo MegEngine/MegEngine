@@ -20,6 +20,7 @@ if(NOT ${MGE_ARCH} STREQUAL "naive")
     endif()
 endif()
 
+
 if(MGE_WITH_CUDA)
     file(GLOB_RECURSE SOURCES_ cuda/*.cpp)
     list(APPEND SOURCES ${SOURCES_})

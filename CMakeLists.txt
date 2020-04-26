@@ -397,6 +397,7 @@ endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 
+
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
