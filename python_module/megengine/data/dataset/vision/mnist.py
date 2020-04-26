@@ -75,7 +75,14 @@ class MNIST(VisionDataset):
         else:
             self.root = root
             if not os.path.exists(self.root):
-                raise ValueError("dir %s does not exist" % self.root)
+                if download:
+                    logger.debug(
+                        "dir %s does not exist, will be automatically created",
+                        self.root,
+                    )
+                    os.makedirs(self.root)
+                else:
+                    raise ValueError("dir %s does not exist" % self.root)
 
         if self._check_raw_files():
             self.process(train)
