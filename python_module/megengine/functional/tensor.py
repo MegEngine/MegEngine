@@ -353,8 +353,9 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         y, mask, mode=mgb.opr_param_defs.CondTake.Mode.EQ, val=0
     )
     out = x.flatten()
-    out = mgb.opr.set_advanced_indexing(out, v0)[index0]
-    out = mgb.opr.set_advanced_indexing(out, v1)[index1]
+    index = mgb.opr.concat(index0, index1, axis=0)
+    v = mgb.opr.concat(v0, v1, axis=0)
+    out = mgb.opr.set_advanced_indexing(out, v)[index]
     out = out.reshape(x.shape)
     return out
 
