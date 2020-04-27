@@ -88,6 +88,8 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           megdnn::PostprocessMode postprocess_mode, MatrixMulImpl::AlgoBase::PackMode pack_mode>
 class Conv1x1Strategy : public Conv1x1StrategyBase {
 public:
+    explicit Conv1x1Strategy(size_t pack_size = 1) : m_pack_size(pack_size) {}
+
     void packA(WorkspaceBundle& whole_bundle,
                WorkspaceBundle& matmul_bundle,
                size_t oc_tile_size,
@@ -133,6 +135,9 @@ public:
         src_ctype* a_panel = reinterpret_cast<src_ctype*>(
                 reinterpret_cast<int8_t*>(whole_bundle.get(0)) +
                 bytes_offset_of_a_panel);
+        
+        matmul_kern_param.LDA *= m_pack_size;
+        
         matmul_kern_param.A_ptr = const_cast<src_ctype*>(
                 ncb_param.filter<src_ctype>(group_id) +
                 numbers_offset_of_filter);
@@ -164,6 +169,8 @@ public:
             MatrixMulImpl::KernParam matmul_kern_param;
             static_cast<MatrixMulImpl::KernSizeParam&>(matmul_kern_param) =
                     get_matmul_kern_param(param, OH * OW, OC);
+
+            matmul_kern_param.LDB *= m_pack_size;
 
             rep(batch, BATCH) {
                 rep(g, GROUP) {
@@ -273,6 +280,8 @@ public:
 
         matmul_kern_param.C_ptr = matmul_dst;
 
+        matmul_kern_param.LDC *= m_pack_size;
+
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
             auto matmul_kern = matmul_algo->get_kern(matmul_kern_param);
             matmul_kern(matmul_kern_param);
@@ -291,11 +300,14 @@ public:
         else
             bias_ptr = static_cast<void*>(const_cast<bias_ctype*>(
                     ncb_param.bias<bias_ctype>(batch_id, group_id) + oc_start));
+        
         PostProcess<op_ctype, op_dtype, postprocess_mode>::run(
                 matmul_dst, bias_ptr, conv_bias_dst, param.bias_mode,
                 param.nonlineMode, param.bias_type, param.dst_type, 1_z,
-                oc_end - oc_start, OH, OW);
+                (oc_end - oc_start) / m_pack_size, OH, OW, m_pack_size);
     }
+private:
+    size_t m_pack_size = 1;
 };
 
 class Conv1x1Factory {

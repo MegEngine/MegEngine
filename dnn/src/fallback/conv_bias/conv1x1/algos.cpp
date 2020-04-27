@@ -40,7 +40,8 @@ size_t ConvBiasImpl::AlgoConv1x1::get_oc_tile_size_heuristic(
     size_t OC = param.filter_meta.ocpg;
     if (OH * OW >= 56 * 56 || OC >= 64)
         return m_oc_block_size;
-    return div_ceil(OC, param.nr_threads);
+    size_t oc_block_size_one_thread = div_ceil(OC, param.nr_threads);
+    return round_up<size_t>(oc_block_size_one_thread, 24);
 }
 
 size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
@@ -180,8 +181,8 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
                                        const NCBKernSizeParam& param,
                                        AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 2) {
-        //! only support nchw format
-        if (opr->param().format != param::ConvBias::Format::NCHW)
+        if (opr->param().format != param::ConvBias::Format::NCHW &&
+            opr->param().format != param::ConvBias::Format::NCHW44)
             return false;
 
         size_t FH = param.filter_meta.spatial[0],
@@ -218,8 +219,12 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
         MatrixMulImpl::KernSizeParam matmul_param =
                 get_matmul_kern_param(param, OH * OW, get_oc_tile_size_heuristic(param));
 
-        bool matmulusable = m_matmul_algo->usable(matmul_param);
-        return matmulusable &&
+        if(opr->param().format == param::ConvBias::Format::NCHW44)
+            matmul_param.format = param::MatrixMul::Format::MK4;
+            
+        bool matmul_usable = m_matmul_algo->usable(matmul_param);
+
+        return matmul_usable &&
                (param.filter_meta.dilation[0] ==
                         param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&
