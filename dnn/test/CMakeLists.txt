@@ -29,7 +29,7 @@ endif()
 
 add_executable(megdnn_test ${SOURCES})
 target_link_libraries(megdnn_test gtest)
-target_link_libraries(megdnn_test megdnn)
+target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS})
 
 if(UNIX)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
@@ -42,5 +42,3 @@ endif()
 if(UNIX)
     target_link_libraries(megdnn_test dl rt)
 endif()
-
-install(TARGETS megdnn_test RUNTIME DESTINATION test)

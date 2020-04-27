@@ -48,11 +48,18 @@ endif()
 
 
 add_definitions(${LIBMEGDNN_DEF})
-add_library(megdnn EXCLUDE_FROM_ALL STATIC ${SOURCES})
+add_library(megdnn EXCLUDE_FROM_ALL OBJECT ${SOURCES})
 
-target_link_libraries(megdnn opr_param_defs)
-target_include_directories(megdnn PUBLIC ${PROJECT_BINARY_DIR}/genfiles ${PROJECT_SOURCE_DIR}/dnn/include)
-target_include_directories(megdnn PRIVATE ${PROJECT_SOURCE_DIR}/dnn ${PROJECT_SOURCE_DIR}/third_party/midout/src)
+target_link_libraries(megdnn PUBLIC opr_param_defs)
+target_include_directories(megdnn
+    PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/genfiles>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/dnn/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/dnn
+        ${PROJECT_SOURCE_DIR}/third_party/midout/src
+)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/dnn/include DESTINATION . FILES_MATCHING PATTERN "*.h*")
 
@@ -67,10 +74,20 @@ endif()
 target_compile_definitions(megdnn INTERFACE ${LIBMEGDNN_DEF})
 
 if(MGE_WITH_MKLDNN AND ${MGE_ARCH} STREQUAL "x86_64")
-    target_link_libraries(megdnn dnnl)
+    if (BUILD_SHARED_LIBS)
+        target_link_libraries(megdnn PRIVATE $<BUILD_INTERFACE:dnnl>)
+    else()
+        target_link_libraries(megdnn PRIVATE dnnl)
+    endif()
 endif()
-target_link_libraries(megdnn ${MGE_CUDA_LIBS})
-target_link_libraries(megdnn ${MGE_BLAS_LIBS})
+target_link_libraries(megdnn PRIVATE ${MGE_CUDA_LIBS})
+if (BUILD_SHARED_LIBS)
+    target_link_libraries(megdnn PRIVATE $<BUILD_INTERFACE:${MGE_BLAS_LIBS}>)
+else()
+    target_link_libraries(megdnn PRIVATE ${MGE_BLAS_LIBS})
+endif()
 if(CMAKE_THREAD_LIBS_INIT)
-    target_link_libraries(megdnn Threads::Threads)
+    target_link_libraries(megdnn PRIVATE Threads::Threads)
 endif()
+
+install(TARGETS megdnn EXPORT ${MGE_EXPORT_TARGETS})

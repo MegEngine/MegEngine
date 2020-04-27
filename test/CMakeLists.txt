@@ -17,7 +17,7 @@ endif()
 
 add_executable(megbrain_test ${SOURCES})
 target_link_libraries(megbrain_test gtest)
-target_link_libraries(megbrain_test megbrain)
+target_link_libraries(megbrain_test megengine)
 if(CXX_SUPPORT_WCLASS_MEMACCESS)
     if(MGE_WITH_CUDA)
         target_compile_options(megbrain_test PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-class-memaccess>"
@@ -31,4 +31,6 @@ if(UNIX)
     target_link_libraries(megbrain_test dl rt)
 endif()
 
-install(TARGETS megbrain_test RUNTIME DESTINATION test)
+if (MGE_WITH_DISTRIBUTED)
+    target_link_libraries(megbrain_test megray)
+endif()

@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@
+includedir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: MegEngine
+Description: A deep learning framework
+Version: @MGB_VER_STRING@
+URL: https://github.com/MegEngine/MegEngine
+Cflags: -I${includedir}
+Libs: -L${libdir} -lmegengine -pthread
+Libs.private: @MGE_PKGCONFIG_LIBS_PRIVATE@

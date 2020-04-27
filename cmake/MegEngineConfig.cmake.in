@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+find_package(Flatbuffers REQUIRED)
+
+if (@MGE_WITH_MKLDNN@)
+    find_package(dnnl REQUIRED)
+endif()
+
+list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+if (NOT TARGET megengine)
+    include ("${CMAKE_CURRENT_LIST_DIR}/@MGE_EXPORT_TARGETS@.cmake")
+    check_required_components("megengine")
+endif ()

@@ -1,5 +1,7 @@
 if (MGE_USE_SYSTEM_LIB)
-    find_package(FlatBuffers REQUIRED)
+    find_package(Flatbuffers REQUIRED)
+    message("Using system provided Flatbuffers ${Flatbuffers_VERSION}")
+    include(cmake/BuildFlatBuffers.cmake)
     return()
 endif()
 if(MSVC OR WIN32)
@@ -21,5 +23,5 @@ endif()
 
 option(FLATBUFFERS_BUILD_TESTS "" OFF)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/flatbuffers
-                 ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers
-                 EXCLUDE_FROM_ALL)
+                 ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers)
+add_library(flatbuffers::flatbuffers ALIAS flatbuffers)

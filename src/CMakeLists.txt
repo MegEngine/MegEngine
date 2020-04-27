@@ -1,5 +1,3 @@
-
-
 file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
 
 if(MGE_WITH_JIT)
@@ -16,29 +14,36 @@ if(MGE_WITH_DISTRIBUTED)
     list(APPEND SOURCES ${GRPC_SRCS})
 endif()
 
-set(MGB_INC ${PROJECT_BINARY_DIR}/genfiles core/include gopt/include opr/include plugin/include serialization/include)
+set(MGB_INC ${PROJECT_BINARY_DIR}/genfiles ${CMAKE_CURRENT_LIST_DIR}/core/include ${CMAKE_CURRENT_LIST_DIR}/gopt/include ${CMAKE_CURRENT_LIST_DIR}/opr/include ${CMAKE_CURRENT_LIST_DIR}/plugin/include ${CMAKE_CURRENT_LIST_DIR}/serialization/include)
 
 if(MGE_WITH_JIT)
-    list(APPEND MGB_INC jit/include)
+    list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/jit/include)
     if(MGE_WITH_CUDA)
-        list(APPEND MGB_INC jit/impl/cuda)
+        list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/jit/impl/cuda)
     endif()
 endif()
 
 if(MGE_WITH_DISTRIBUTED)
-    list(APPEND MGB_INC opr-mm/include)
+    list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/opr-mm/include)
 endif()
 
 if(MGE_WITH_CUDA AND MGE_WITH_TRT)
-    list(APPEND MGB_INC tensorrt/include)
+    list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/tensorrt/include)
     file(GLOB_RECURSE SOURCES_ tensorrt/impl/*.cpp tensorrt/impl/*.inl)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
 
-add_library(megbrain STATIC EXCLUDE_FROM_ALL ${SOURCES})
-target_link_libraries(megbrain mgb_opr_param_defs)
-target_include_directories(megbrain PUBLIC ${MGB_INC})
+add_library(megbrain OBJECT EXCLUDE_FROM_ALL ${SOURCES})
+target_link_libraries(megbrain PUBLIC mgb_opr_param_defs)
+target_include_directories(megbrain
+    PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+foreach (INCPATH IN LISTS MGB_INC)
+    target_include_directories(megbrain
+        PUBLIC $<BUILD_INTERFACE:${INCPATH}>
+    )
+endforeach()
 
 if(MGE_WITH_CUDA)
     target_compile_options(megbrain PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-unused-parameter>"
@@ -54,19 +59,19 @@ if(CXX_SUPPORT_WCLASS_MEMACCESS)
         target_compile_options(megbrain PRIVATE "-Wno-class-memaccess")
     endif()
 endif()
-target_link_libraries(megbrain megdnn)
+target_link_libraries(megbrain PUBLIC megdnn)
 if(MGE_WITH_DISTRIBUTED)
     add_dependencies(megbrain mgb_proto_target)
-    target_link_libraries (megbrain libprotobuf libzmq)
+    target_link_libraries (megbrain PRIVATE libprotobuf libzmq)
     set(CPPZMQ_INC ${PROJECT_SOURCE_DIR}/third_party/cppzmq)
     # FIXME: add CMAKE_CURRENT_BINARY_DIR for including mm_handler.pb.h
     target_include_directories(megbrain PRIVATE ${CPPZMQ_INC} ${CMAKE_CURRENT_BINARY_DIR})
-    target_link_libraries (megbrain megray)
+    target_link_libraries (megbrain PRIVATE megray)
 endif()
-target_link_libraries(megbrain ${MGE_CUDA_LIBS})
+target_link_libraries(megbrain PRIVATE ${MGE_CUDA_LIBS})
 if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
-    target_link_libraries(megbrain libhalide)
-    target_link_libraries(megbrain ${HALIDE_LLVM_LIBS})
+    target_link_libraries(megbrain PRIVATE libhalide)
+    target_link_libraries(megbrain PRIVATE ${HALIDE_LLVM_LIBS})
 endif()
 if (MGB_WITH_FLATBUFFERS)
     set (GEN_FLATBUFFERS_SCHEMA_PY ${PROJECT_SOURCE_DIR}/dnn/scripts/gen_flatbuffers_schema.py)
@@ -113,7 +118,7 @@ if (MGB_WITH_FLATBUFFERS)
     add_dependencies(megbrain mgb_serialization_schema_fbs)
     target_include_directories(megbrain PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/serialization/include)
     target_compile_definitions(megbrain PUBLIC MGB_ENABLE_FBS_SERIALIZATION=1)
-    target_link_libraries(megbrain flatbuffers)
+    target_link_libraries(megbrain PUBLIC flatbuffers)
     
     set (GENERATED_FLATBUFFERS_CONVERTER_PATH ${CMAKE_CURRENT_BINARY_DIR}/genfiles)
     set (GEN_FLATBUFFERS_CONVERTER_PY ${PROJECT_SOURCE_DIR}/dnn/scripts/gen_flatbuffers_converter.py)
@@ -139,27 +144,34 @@ if (MGB_WITH_FLATBUFFERS)
     target_include_directories(megbrain PRIVATE ${GENERATED_FLATBUFFERS_CONVERTER_PATH})
 endif()
 if(UNIX AND NOT ANDROID AND NOT APPLE)
-    target_link_libraries(megbrain dl rt atomic)
+    target_link_libraries(megbrain PUBLIC dl rt atomic)
 endif()
 
 if(ANDROID)
-    target_link_libraries(megbrain log)
+    target_link_libraries(megbrain PUBLIC log)
 endif()
 
-add_library(megengine SHARED $<TARGET_PROPERTY:megbrain,SOURCES>)
-if(MGB_WITH_FLATBUFFERS)
-    add_dependencies(megengine mgb_serialization_schema_fbs)
-endif()
-target_include_directories(megengine PRIVATE $<TARGET_PROPERTY:megbrain,INCLUDE_DIRECTORIES>)
-target_compile_definitions(megengine PUBLIC $<TARGET_PROPERTY:megbrain,COMPILE_DEFINITIONS>)
-target_compile_options(megengine PUBLIC $<TARGET_PROPERTY:megbrain,COMPILE_OPTIONS>)
-if(APPLE)
-    target_link_libraries(megengine PRIVATE $<TARGET_PROPERTY:megbrain,LINK_LIBRARIES>)
-else()
-    target_link_libraries(megengine PRIVATE $<TARGET_PROPERTY:megbrain,LINK_LIBRARIES> -Wl,--no-undefined -Wl,--version-script=${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
+# Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
+add_library(megengine)
+target_link_libraries(megengine PUBLIC megbrain megdnn)
+if (UNIX AND NOT APPLE)
+    # TODO: Use target_link_options after upgrading to CMake 3.13
+    target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
 endif()
 set_target_properties(megengine PROPERTIES CXX_VISIBILITY_PRESET default)
-install(TARGETS megengine LIBRARY DESTINATION lib64)
+set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+if (MGE_WITH_DISTRIBUTED)
+    # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
+    # for this.
+    install(TARGETS megengine
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+else()
+    install(TARGETS megengine megbrain
+            EXPORT ${MGE_EXPORT_TARGETS}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 foreach(_PATH ${MGB_INC})
-    install(DIRECTORY ${_PATH}/megbrain DESTINATION include FILES_MATCHING PATTERN "*.h")
+    install(DIRECTORY ${_PATH}/megbrain DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN "*.h")
 endforeach()

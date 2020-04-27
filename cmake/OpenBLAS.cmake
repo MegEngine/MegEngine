@@ -1,3 +1,17 @@
+if (MGE_USE_SYSTEM_LIB)
+    find_package(OpenBLAS)
+    set (MGE_USE_SYSTEM_OPENBLAS ON)
+
+    message("Using system provided OpenBLAS ${OpenBLAS_VERSION}")
+    add_library(libopenblas IMPORTED GLOBAL)
+    set_target_properties(
+        libopenblas PROPERTIES
+        IMPORTED_LOCATION ${OpenBLAS_LIBRARIES}
+        INTERFACE_INCLUDE_DIRECTORIES ${OpenBLAS_INCLUDE_DIRS}
+    )
+    return()
+endif()
+
 include(ExternalProject)
 include(GNUInstallDirs)
 

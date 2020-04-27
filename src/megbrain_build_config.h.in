@@ -26,7 +26,8 @@
 #cmakedefine01 MGB_ENABLE_JSON
 #cmakedefine01 MGB_HAVE_THREAD
 #cmakedefine01 MGB_ENABLE_OPR_MM
-#cmakedefine01 MEGDNN_ENABLE_MANGLING
+#cmakedefine01 MGB_ENABLE_FBS_SERIALIZATION
+#cmakedefine01 MGB_IS_DEV
 
 // DNN related flags
 // Platform macro's
@@ -41,7 +42,7 @@
 #cmakedefine01 MEGDNN_X86_WITH_MKL_DNN
 #cmakedefine01 MEGDNN_ENABLE_RTTI
 #cmakedefine01 MEGDNN_ENABLE_LOGGING
-#cmakedefine01 MEGDNN_ENABLE_LOGGING
+#cmakedefine01 MEGDNN_ENABLE_MANGLING
 #cmakedefine01 MEGDNN_ENABLE_EXCEPTIONS
 #cmakedefine01 MEGDNN_NAIVE
 #cmakedefine01 MEGDNN_X86

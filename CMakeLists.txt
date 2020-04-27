@@ -1,11 +1,14 @@
-cmake_minimum_required(VERSION 3.9.0)
-project(MegEngine)
+cmake_minimum_required(VERSION 3.13.0)
+
+include (cmake/FetchMegBrainVersion.cmake)
+project(MegEngine LANGUAGES C CXX VERSION ${MGB_VER_STRING})
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 
 if(NOT MSVC AND NOT APPLE AND NOT WIN32)
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
@@ -13,6 +16,7 @@ if(NOT MSVC AND NOT APPLE AND NOT WIN32)
     set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
 endif()
 
+include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Wclass-memaccess CXX_SUPPORT_WCLASS_MEMACCESS)
 
@@ -22,6 +26,7 @@ set_property(CACHE MGE_ARCH PROPERTY STRINGS AUTO
     armv7 aarch64
     naive fallback
 )
+set (MGE_EXPORT_TARGETS MegEngine-targets)
 
 option(MGE_WITH_JIT "Build MegEngine with JIT." ON)
 option(MGE_WITH_HALIDE "Build MegEngine with Halide JIT" ON)
@@ -33,6 +38,15 @@ option(MGE_CUDA_USE_STATIC "Enable MegEngine CUDA static linking." ON)
 option(MGE_WITH_TRT "Build MegEngine with TensorRT." ON)
 option(MGE_USE_SYSTEM_LIB "Build MegEngine with system libraries." OFF)
 option(MGB_WITH_FLATBUFFERS "Build MegBrain with FlatBuffers serialization support." ON)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+if (MGE_USE_SYSTEM_LIB)
+    set (MGE_CUDA_USE_STATIC OFF)
+endif()
+
+if (MGB_WITH_FLATBUFFERS)
+    set(MGB_ENABLE_FBS_SERIALIZATION ON)
+endif()
 
 if(CMAKE_TOOLCHAIN_FILE)
     message("We are cross compiling.")
@@ -509,7 +523,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h DESTINATION include)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 add_subdirectory(dnn)
 
@@ -531,13 +545,18 @@ list(APPEND MGB_OPR_PARAM_DEFS_OUTS
     ${MGB_OPR_PARAM_DEFS_OUT_DIR}/megbrain/opr/param_defs.h
 )
 
-install(FILES ${MGB_OPR_PARAM_DEFS_OUTS} DESTINATION include/megbrain/opr/)
+install(FILES ${MGB_OPR_PARAM_DEFS_OUTS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/megbrain/opr/)
 
 list(APPEND MGB_OPR_PARAM_DEFS_INC ${MGB_OPR_PARAM_DEFS_OUT_DIR})
 add_custom_target(_mgb_opr_param_defs DEPENDS ${MGB_OPR_PARAM_DEFS_OUTS})
 add_library(mgb_opr_param_defs INTERFACE)
-target_include_directories(mgb_opr_param_defs INTERFACE ${MGB_OPR_PARAM_DEFS_INC})
+target_include_directories(mgb_opr_param_defs
+    INTERFACE
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<BUILD_INTERFACE:${MGB_OPR_PARAM_DEFS_INC}>
+)
 add_dependencies(mgb_opr_param_defs _mgb_opr_param_defs)
+install(TARGETS mgb_opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
 
 if(MGE_WITH_DISTRIBUTED)
     add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/MegRay)
@@ -554,12 +573,12 @@ if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)
     add_subdirectory(test)
 endif()
 
-if(TARGET _mgb)
+if(TARGET mgb)
     add_custom_target(
         develop
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/$<TARGET_FILE_NAME:_mgb>
-          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/$<TARGET_FILE_NAME:_mgb>
+          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/$<TARGET_FILE_NAME:mgb>
+          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/$<TARGET_FILE_NAME:mgb>
         COMMAND ${CMAKE_COMMAND} -E create_symlink
           ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/mgb.py
           ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/mgb.py
@@ -572,7 +591,7 @@ if(TARGET _mgb)
         COMMAND ${CMAKE_COMMAND} -E create_symlink
           ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/include
           ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/include
-        DEPENDS _mgb
+        DEPENDS mgb
         VERBATIM
     )
 endif()
@@ -584,3 +603,38 @@ IF(APPLE)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
 ENDIF()
+
+# Configure and install pkg-config.
+# Note that unlike the Config.cmake modules, this is not relocatable (and not
+# really portable) because we have two dependencies without pkg-config
+# descriptions: FlatBuffers and MKL-DNN
+if (MGE_USE_SYSTEM_MKLDNN)
+    set (MGE_PKGCONFIG_LIBS_PRIVATE "-ldnnl")
+endif()
+if (MGE_USE_SYSTEM_OPENBLAS)
+    set (MGE_PKGCONFIG_LIBS_PRIVATE "${MGE_PKGCONFIG_LIBS_PRIVATE} -lopenblas")
+endif()
+configure_file(cmake/megengine.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/megengine.pc
+               @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/megengine.pc 
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+# Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready.
+if (NOT MGE_WITH_DISTRIBUTED)
+    include(CMakePackageConfigHelpers)
+    set (MGE_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/MegEngine)
+    configure_package_config_file(cmake/MegEngineConfig.cmake.in 
+        ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfig.cmake
+        INSTALL_DESTINATION ${MGE_INSTALL_CMAKEDIR}
+    )
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfigVersion.cmake
+        VERSION ${MGB_VER_MAJOR}.${MGB_VER_MINOR}.${MGB_VER_PATCH}
+        COMPATIBILITY SameMajorVersion)
+
+    install(EXPORT ${MGE_EXPORT_TARGETS} DESTINATION ${MGE_INSTALL_CMAKEDIR})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfig.cmake
+                ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfigVersion.cmake
+            DESTINATION ${MGE_INSTALL_CMAKEDIR})
+endif()

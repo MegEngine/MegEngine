@@ -8,7 +8,9 @@ global:
         *mgb::*;
         *megdnn::*;
         *megcore::*;
+        megcore*;
     };
+    megcore*;
 
 local:
     *;

@@ -1,3 +1,5 @@
+cmake_policy(SET CMP0086 NEW)
+
 find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT REQUIRED)
 
 find_package(Git)
@@ -5,7 +7,7 @@ if(GIT_FOUND)
   message("git found: ${GIT_EXECUTABLE}")
 endif()
 
-find_package(Numpy REQUIRED)
+find_package(NumPy REQUIRED)
 
 find_package(SWIG REQUIRED)
 set(SWIG_SRC src/swig/mgb.i)
@@ -63,15 +65,19 @@ swig_add_library(mgb LANGUAGE python SOURCES ${SWIG_SRC} ${SRCS})
 set(VERSION_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/src/version.ld)
 add_custom_target(version_ld SOURCES ${VERSION_SCRIPT})
 
-set_target_properties(_mgb PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal)
-target_link_libraries(_mgb megbrain -Wl,--version-script=${VERSION_SCRIPT})
-target_include_directories(_mgb PRIVATE ${PYTHON_INCLUDE_DIRS} src/cpp ${CMAKE_CURRENT_BINARY_DIR} ${NUMPY_INCLUDE_DIR})
-target_link_libraries(_mgb ${PYTHON_LIBRARIES})
+set_target_properties(mgb PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal)
+target_link_libraries(mgb megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
+target_include_directories(mgb PRIVATE ${PYTHON_INCLUDE_DIRS} src/cpp ${CMAKE_CURRENT_BINARY_DIR} ${NUMPY_INCLUDE_DIR})
+target_link_libraries(mgb ${PYTHON_LIBRARIES})
 
-add_dependencies(_mgb mgb_opr_py version_ld)
+if (MGE_WITH_DISTRIBUTED)
+    target_link_libraries(mgb megray)
+endif()
+
+add_dependencies(mgb mgb_opr_py version_ld)
 
 add_custom_command(
-    TARGET _mgb POST_BUILD
+    TARGET mgb POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_SOURCE_DIR}/ACKNOWLEDGMENTS ${PROJECT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/megengine ${CMAKE_CURRENT_BINARY_DIR}/megengine
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test ${CMAKE_CURRENT_BINARY_DIR}/test

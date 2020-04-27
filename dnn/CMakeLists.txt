@@ -1,4 +1,3 @@
-
 list(APPEND OPR_PARAM_DEFS_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/opr_param_defs.py)
 set(OPR_PARAM_DEFS_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_param_defs.py)
 
@@ -40,14 +39,22 @@ list(APPEND OPR_PARAM_DEFS_OUTS
 list(APPEND OPR_PARAM_DEFS_INC ${OPR_PARAM_DEFS_OUT_DIR})
 
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/megdnn DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/megdnn DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN "*.h")
 
 add_custom_target(_opr_param_defs DEPENDS ${OPR_PARAM_DEFS_OUTS})
 add_library(opr_param_defs INTERFACE)
-target_include_directories(opr_param_defs INTERFACE ${OPR_PARAM_DEFS_INC})
+target_include_directories(opr_param_defs
+    INTERFACE
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+foreach (INCPATH IN LISTS OPR_PARAM_DEFS_INC)
+    target_include_directories(opr_param_defs
+        INTERFACE $<BUILD_INTERFACE:${INCPATH}>
+    )
+endforeach()
+
 add_dependencies(opr_param_defs _opr_param_defs)
-
-
+install(TARGETS opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
 
 
 
@@ -56,3 +63,5 @@ if(MGE_WITH_TEST)
 endif()
 
 add_subdirectory(src)
+
+# install(TARGETS megdnn opr_param_defs libmkl EXPORT ${MGE_EXPORT_TARGETS})

@@ -15,7 +15,9 @@
 #define MGB_MINOR   4
 #define MGB_PATCH   1
 //! whether it is development version
+#ifndef MGB_IS_DEV
 #define MGB_IS_DEV  0
+#endif  // MGB_IS_DEV
 
 namespace mgb {
     struct Version {
