@@ -174,11 +174,12 @@ void ElemwiseForward::deduce_shape(const TensorShapeArray& src,
                 if (cur_idx >= 0 && dst_idx >= 0) {
                     size_t v0 = dst.shape[dst_idx], v1 = cur.shape[cur_idx];
                     if (v0 != v1) {
-                        if (v0 != 1 && v1 != 1)
+                        if (v0 > 1 && v1 > 1)
                             err();
                     }
                     int final_idx = std::max(cur_idx, dst_idx);
-                    dst.shape[final_idx] = std::max(v0, v1);
+                    dst.shape[final_idx] =
+                            (v0 != 0 && v1 != 0) ? std::max(v0, v1) : 0;
                 } else {
                     if (dst_idx < 0) {
                         dst.shape[cur_idx] = cur.shape[cur_idx];

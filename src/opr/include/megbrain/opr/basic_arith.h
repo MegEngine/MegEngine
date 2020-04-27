@@ -163,6 +163,7 @@ MGB_DEFINE_OPR_CLASS(Elemwise, intl::ElemwiseBase) // {
 
         void record_execute_deps(ExecDependencyArray& deps) override;
         void add_input_layout_constraint() override;
+        NodeProp* do_make_node_prop() const override;
 };
 
 namespace intl {

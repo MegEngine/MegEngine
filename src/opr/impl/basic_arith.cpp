@@ -132,6 +132,7 @@ Elemwise::Elemwise(
     Super{inputs.at(0)->owner_graph(), config, mode_trait.name, inputs}
 {
     init_megdnn_opr(*this, param);
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     if (mode_trait.commutable) {
         mgb_assert(inputs.size() == 2);
         add_input({inputs[0], inputs[1]}, AddInputSortType::CUR_ADDED);
@@ -371,8 +372,14 @@ void Elemwise::scn_do_execute() {
     mgb_assert(megdnn_inp.capacity() >= inp.size(),
             "heap allocation in elemwise exec");
     megdnn_inp.resize(inp.size());
-    for (size_t i = 0; i < inp.size(); ++ i)
+    for (size_t i = 0; i < inp.size(); ++ i) {
+        if (inp[i]->dev_tensor().empty()) {
+            mgb_assert(output(0)->dev_tensor().empty());
+            return;
+        }
         megdnn_inp[i] = (inp[i]->dev_tensor().as_megdnn());
+    }
+    mgb_assert(!output(0)->dev_tensor().empty());
 
     megdnn_opr()->param() = param();
     call_megdnn_opr_exec(
@@ -745,6 +752,15 @@ VarNode* Elemwise::sum_grad_list(VarNode *wrt, VarNodeArray &grads) {
 
 void Elemwise::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
+}
+
+Elemwise::NodeProp* Elemwise::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    for (auto& inp : input()) {
+        ret->add_dep_type_existing_var(inp,
+                                       NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return ret;
 }
 
 /* =========================== TypeCvt =========================== */
