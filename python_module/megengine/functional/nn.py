@@ -546,7 +546,7 @@ def eye(
     comp_graph: Optional[CompGraph] = None
 ) -> Tensor:
     """
-    Fills the 2-dimensional input :class:`SymbolVar` with the identity matrix.
+    Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
     :param n: The number of rows
     :param m: The number of columns. Default: None

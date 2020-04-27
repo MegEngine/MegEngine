@@ -257,6 +257,7 @@ def isnan(inp: Tensor) -> Tensor:
     Examples:
 
     .. testcode::
+
         from megengine import tensor
         import megengine.functional as F
 
@@ -265,6 +266,7 @@ def isnan(inp: Tensor) -> Tensor:
         print(F.isnan(x))
 
     .. testoutput::
+
         Tensor([0 1 0], dtype=uint8)
 
     """
@@ -280,6 +282,7 @@ def isinf(inp: Tensor) -> Tensor:
     Examples:
 
     .. testcode::
+
         from megengine import tensor
         import megengine.functional as F
 
@@ -288,6 +291,7 @@ def isinf(inp: Tensor) -> Tensor:
         print(F.isinf(x))
 
     .. testoutput::
+
         Tensor([0 1 0], dtype=uint8)
 
     """
