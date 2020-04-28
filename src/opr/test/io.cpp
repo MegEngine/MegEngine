@@ -177,6 +177,17 @@ TEST(TestOprIO, ImmutableTensorLarge) {
     }
 }
 
+TEST(TestOprIO, ImmutableTensorEmpty) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto host_x = gen({1, 9, 1, 9, 8, 1, 0});
+    auto x = opr::ImmutableTensor::make(*graph, *host_x);
+    HostTensorND host_x2;
+    auto func = graph->compile({make_callback_copy(x, host_x2)});
+    func->execute();
+    ASSERT_TRUE(host_x2.shape().is_empty());
+}
+
 TEST(TestOprIO, SharedDeviceTensor) {
     HostTensorGenerator<> gen;
     auto hv = gen({123});

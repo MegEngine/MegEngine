@@ -761,7 +761,8 @@ ConstVarPropogateBase::AddOprResult ConstVarPropogateBase::add_opr(
 
     if (is_const_var(m_const_var_type, opr)) {
         auto sz = var_mem_size(opr->output(0));
-        mgb_assert(sz);
+        mgb_assert(sz || opr->output(0)->contain_flag(
+                                 VarNode::Flag::ALLOW_EMPTY_SHAPE));
         info.is_const = true;
         info.max_size = sz;
         return make_ret();
