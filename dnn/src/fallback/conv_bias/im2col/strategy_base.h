@@ -293,3 +293,5 @@ public:
                    WorkspaceBundle bundle_thread, const StrategyParam& sparam);
 };
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen
