@@ -15,7 +15,7 @@ from helpers import MLP
 
 import megengine as mge
 from megengine.core import Buffer, Parameter, tensor
-from megengine.module import BatchNorm1d, BatchNorm2d, Conv2d, Module
+from megengine.module import BatchNorm1d, BatchNorm2d, Conv2d, Module, Sequential
 from megengine.test import assertTensorClose
 
 
@@ -156,7 +156,7 @@ class MyModule2(Module):
         return x
 
 
-def test_mode_api_expand_structure():
+def test_expand_structure():
     m = MyModule2()
     assert list(m.named_modules()) == [
         ("", m),
@@ -168,6 +168,62 @@ def test_mode_api_expand_structure():
         ("a.2.0", m.a[2][0]),
         ("a.2.0.bn", m.a[2][0].bn),
         ("bn", m.bn),
+    ]
+
+
+def test_flatten_with_parent():
+    m = MyModule2()
+    assert list(m.named_modules(with_parent=True)) == [
+        ("", m, None),
+        ("a.0", m.a[0], m),
+        ("a.1.x", m.a[1]["x"], m),
+        ("a.1.y.0", m.a[1]["y"][0], m),
+        ("a.1.y.1", m.a[1]["y"][1], m),
+        ("a.1.y.1.bn", m.a[1]["y"][1].bn, m.a[1]["y"][1]),
+        ("a.2.0", m.a[2][0], m),
+        ("a.2.0.bn", m.a[2][0].bn, m.a[2][0]),
+        ("bn", m.bn, m),
+    ]
+    assert list(m.modules(with_parent=True)) == [
+        (m, None),
+        (m.a[0], m),
+        (m.a[1]["x"], m),
+        (m.a[1]["y"][0], m),
+        (m.a[1]["y"][1], m),
+        (m.a[1]["y"][1].bn, m.a[1]["y"][1]),
+        (m.a[2][0], m),
+        (m.a[2][0].bn, m.a[2][0]),
+        (m.bn, m),
+    ]
+
+
+class MyModule3(Module):
+    class InnerModule(Module):
+        def __init__(self):
+            super().__init__()
+            self.bn = BatchNorm2d(4)
+
+        def forward(self, x):
+            x = self.bn(x)
+
+    def __init__(self):
+        super().__init__()
+        self.bn = BatchNorm2d(4)
+        self.seq = Sequential(BatchNorm2d(4), self.InnerModule(),)
+
+    def forward(self, x):
+        return x
+
+
+def test_module_api_with_sequential():
+    m = MyModule3()
+    assert list(m.named_modules()) == [
+        ("", m),
+        ("bn", m.bn),
+        ("seq", m.seq),
+        ("seq.0", m.seq[0]),
+        ("seq.1", m.seq[1]),
+        ("seq.1.bn", m.seq[1].bn),
     ]
 
 
