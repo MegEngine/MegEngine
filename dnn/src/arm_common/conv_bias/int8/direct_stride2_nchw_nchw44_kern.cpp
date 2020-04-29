@@ -617,6 +617,7 @@ static void conv_direct_stride2_int8_nchw_nchw44(
         int32_t* temp, int8_t* dst, const size_t oc, const size_t ic,
         const size_t ih, const size_t iw, const size_t oh, const size_t ow,
         const Op& op) {
+    MEGDNN_MARK_USED_VAR(temp);
     constexpr size_t fh = filter_size;
     constexpr size_t fw = filter_size;
     constexpr size_t ic_step = 1;
@@ -740,6 +741,18 @@ void conv_bias::conv_direct_stride2_2x2_int8_nchw_nchw44(
         int32_t* temp, int8_t* dst, const size_t oc, const size_t ic,
         const size_t ih, const size_t iw, const size_t oh, const size_t ow,
         const Op& op) {
+    MEGDNN_MARK_USED_VAR(src);
+    MEGDNN_MARK_USED_VAR(filter);
+    MEGDNN_MARK_USED_VAR(bias);
+    MEGDNN_MARK_USED_VAR(temp);
+    MEGDNN_MARK_USED_VAR(dst);
+    MEGDNN_MARK_USED_VAR(oc);
+    MEGDNN_MARK_USED_VAR(ic);
+    MEGDNN_MARK_USED_VAR(ih);
+    MEGDNN_MARK_USED_VAR(iw);
+    MEGDNN_MARK_USED_VAR(oh);
+    MEGDNN_MARK_USED_VAR(ow);
+    MEGDNN_MARK_USED_VAR(op);
     megdnn_assert(0, "not imple nchw_nchw44 2x2s2 conv");
 }
 
