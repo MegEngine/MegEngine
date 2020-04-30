@@ -20,6 +20,11 @@ def name(self):
     return self._get_name()
 
 @property
+def params(self):
+    import json
+    return json.loads(self._get_params())
+
+@property
 def inputs(self):
     return tuple(self._get_inputs())
 

@@ -58,6 +58,10 @@ public:
             return $self->name();
         }
 
+        const std::string& _get_params() const {
+            return $self->params();
+        }
+
         SymbolVarArray _get_inputs() {
             return $self->inputs();
         }

@@ -17,6 +17,8 @@
 #include "megbrain/graph.h"
 #include "megbrain/opr/io.h"
 
+#include "megbrain/plugin/opr_footprint.h"
+
 #include <map>
 #include <string>
 
@@ -441,15 +443,23 @@ class SharedScalar {
  */
 class Operator {
     mgb::cg::OperatorNodeBase* m_operator_node;
+    std::string m_params;
+
+    static const std::unique_ptr<mgb::OprFootprint> sm_opr_footprint_ptr;
 
 public:
     Operator() : m_operator_node(nullptr){};
     Operator(mgb::cg::OperatorNodeBase* operator_node)
-            : m_operator_node(operator_node) {}
+            : m_operator_node(operator_node),
+            m_params(std::move(
+                        (sm_opr_footprint_ptr->calc_footprint(m_operator_node)).param->to_string()))
+            {}
 
     size_t id() const { return m_operator_node->id(); }
 
     const std::string& name() const { return m_operator_node->name(); }
+
+    const std::string& params() const { return m_params; }
 
     const std::shared_ptr<mgb::ComputingGraph> get_owner_graph() const {
         return m_operator_node->owner_graph()->shared_from_this();

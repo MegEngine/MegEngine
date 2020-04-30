@@ -880,6 +880,11 @@ SymbolVar SharedScalar::_as_sym_var(CompGraph &cg, mgb::CompNode &cn) {
             ssprintf("SharedScalar@%p", m_val.get()));
 }
 
+/* =============== Operator ===============  */
+
+const std::unique_ptr<mgb::OprFootprint> Operator::sm_opr_footprint_ptr{
+                                std::make_unique<mgb::OprFootprint>()};
+
 /* ================= misc =================  */
 
 SymbolVar fill_retain_dtype(SymbolVar var, PyObject *value) {
