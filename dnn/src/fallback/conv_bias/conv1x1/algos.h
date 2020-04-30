@@ -47,7 +47,7 @@ protected:
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
     mutable std::string m_name;
-    mutable size_t m_oc_block_size = 0;
+    const size_t m_oc_block_size = 0;
 };
 
 }  // namespace fallback
