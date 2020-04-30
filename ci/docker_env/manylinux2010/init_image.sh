@@ -17,7 +17,7 @@ do
     curl ${GET_PIP_URL} | /opt/python/cp${python_ver}-cp${ver}/bin/python - \
 	--no-cache-dir --only-binary :all:
     /opt/python/cp${python_ver}-cp${ver}/bin/pip install \
-	--no-cache-dir --only-binary :all: numpy==1.18.1
+	--no-cache-dir --only-binary :all: numpy==1.18.1 setuptools==46.1.3
 done
 
 pushd /home >/dev/null

@@ -105,7 +105,7 @@ setup_kwargs.update(dict(
     ],
     license='Apache 2.0',
     keywords='megengine deep learning',
-    data_files = [("", [
+    data_files = [("megengine", [
         "../LICENSE",
         "../ACKNOWLEDGMENTS",
     ])]
