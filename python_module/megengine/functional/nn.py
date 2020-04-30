@@ -443,7 +443,7 @@ def one_hot(inp: Tensor, num_classes: int) -> Tensor:
         import megengine.functional as F
 
         inp = tensor(np.arange(1, 4, dtype=np.int32))
-        out = F.one_hot(inp)
+        out = F.one_hot(inp, num_classes=4)
         print(out.numpy())
 
     Outputs:
