@@ -28,6 +28,12 @@ class CompNode {
         static CompNode load(const char* id);
 
         %extend {
+            static std::vector<int> _parse_locator(const std::string &id) const {
+                auto logi = CompNode::Locator::parse(id);
+                return {
+                    static_cast<int>(logi.type), logi.device, logi.stream,
+                };
+            }
             static void _set_device_map(const std::string &type,
                     int from, int to) {
                 CompNode::Locator::set_device_map(
@@ -86,7 +92,14 @@ class CompNode {
                 2: 'CPU'
             }
 
+            cn_thread_local = threading.local()
+            """used to save map location when calling :func:`mge.load()`"""
+
             def __setstate__(self, state):
+                """:func:`mge.load()` and :func:`deepcopy()` call this function,
+                The latter will not produce the map_location attribute"""
+                if "map_location" in CompNode.cn_thread_local.__dict__.keys():
+                    state = CompNode.cn_thread_local.map_location(state)
                 self.this = CompNode_load(state).this
 
             def __eq__(self, rhs):

@@ -35,6 +35,7 @@ void _init_bfloat16_types(PyObject *m); // implemented in bfloat16.cpp
 %pythoncode %{
 import numpy as np
 import os
+import threading
 intb1 = _mgb.intb1
 intb2 = _mgb.intb2
 intb4 = _mgb.intb4

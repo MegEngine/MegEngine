@@ -291,6 +291,16 @@ def current_grad_target(comp_graph):
     return _detail._current_grad_target(comp_graph)
 
 
+def add_device_map(map_location):
+    """add map location while loading models"""
+    _detail.CompNode.cn_thread_local.__setattr__("map_location", map_location)
+
+
+def del_device_map():
+    """delete map location"""
+    _detail.CompNode.cn_thread_local.__delattr__("map_location")
+
+
 def inter_graph_trans_var(dest_graph, src):
     """get the corresponding var of *src* in *dest_graph*; assuming
     *dest_graph* is a copy of owner graph of *src*; usually used in callback of

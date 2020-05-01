@@ -107,6 +107,17 @@ def get_device_count(device_type="xpu", warn=True):
     return _mgb.CompNode._get_device_count(device_type.upper(), warn)
 
 
+def parse_locator(device_name: str) -> tuple:
+    """get the tensor locator expression by device name.
+
+    :param device_name: device name, like 'cpu0', 'gpu1' and 'xpux'
+    :type device_name: str
+
+    :return: (device_type, dev_num, stream_num)
+    """
+    return _mgb.CompNode._parse_locator(device_name)
+
+
 def set_mem_reserve_size(size):
     """set memory reserve size:
 
