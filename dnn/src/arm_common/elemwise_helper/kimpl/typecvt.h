@@ -50,6 +50,10 @@ struct TypeCvtOp<dt_qint32, dt_qint8> : UnaryOpBase<dt_qint32, dt_qint8> {
         auto vitem0 = vmulq_f32(vcvtq_f32_s32(src), this->vscale);
         return QConverter::convert<int8x8_t, float32x4_t>(vitem0);
     }
+    int8x8_t operator()(const float32x4_t& src) const {
+        auto vitem0 = vmulq_f32(src, this->vscale);
+        return QConverter::convert<int8x8_t, float32x4_t>(vitem0);
+    }
 };
 #else
 template <>
@@ -90,6 +94,13 @@ struct TypeCvtOp<dt_qint32, dt_qint8> : UnaryOpBase<dt_qint32, dt_qint8>,
     }
     int8x8_t operator()(const int32x4_t& src) const {
         int32x4_t vitem0 = vqrdmulhq_s32(src, vmultiplier);
+        auto fixup0 = vshrq_n_s32(vitem0, 31);
+        vitem0 = vqaddq_s32(vitem0, fixup0);
+        int16x4_t vres0_int16 = vqmovn_s32(vrshlq_s32(vitem0, vshift));
+        return vqmovn_s16(vcombine_s16(vres0_int16, vres0_int16));
+    }
+    int8x8_t operator()(const float32x4_t& src) const {
+        int32x4_t vitem0 = vqrdmulhq_s32(vcvtq_s32_f32(src), vmultiplier);
         auto fixup0 = vshrq_n_s32(vitem0, 31);
         vitem0 = vqaddq_s32(vitem0, fixup0);
         int16x4_t vres0_int16 = vqmovn_s32(vrshlq_s32(vitem0, vshift));

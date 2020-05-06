@@ -189,6 +189,11 @@ struct ReluOp<dt_qint32, dt_qint8> : ReluOpBase<dt_qint32, dt_qint8> {
         vitem0 = vmaxq_f32(vitem0, QConverterBase::vfzero());
         return QConverter::convert<int8x8_t, float32x4_t>(vitem0);
     }
+    int8x8_t operator()(const float32x4_t& src) const {
+        auto vitem0 = vmulq_f32(src, this->vscale);
+        vitem0 = vmaxq_f32(vitem0, QConverterBase::vfzero());
+        return QConverter::convert<int8x8_t, float32x4_t>(vitem0);
+    }
 };
 #else
 template <>
@@ -215,8 +220,21 @@ struct ReluOp<dt_qint32, dt_qint8> : ReluOpBase<dt_qint32, dt_qint8>,
         return vqmovn_s16(vcombine_s16(vqmovn_s32(vrshlq_s32(vitem0, vshift)),
                                        vqmovn_s32(vrshlq_s32(vitem1, vshift))));
     }
+    int8x8_t operator()(const float32x4_t& vsrc) const {
+        int32x4_t vitem0 = vqrdmulhq_s32(vcvtq_s32_f32(vsrc), vmultiplier);
+        vitem0 = vmaxq_s32(vitem0, QConverterBase::vzero());
+        vitem0 = vrshlq_s32(vitem0, vshift);
+        int16x4_t vitem = vqmovn_s32(vitem0);
+        return vqmovn_s16(vcombine_s16(vitem, vitem));
+    }
     void operator()(const int32x4_t& src, dt_qint8* dst) const {
         auto vitem0 = vmulq_f32(vcvtq_f32_s32(src), this->vscale);
+        vitem0 = vmaxq_f32(vitem0, QConverterBase::vfzero());
+        auto result = QConverter::convert<int8x8_t, float32x4_t>(vitem0);
+        vst1_lane_s32(reinterpret_cast<int32_t*>(dst), (int32x2_t)result, 0);
+    }
+    void operator()(const float32x4_t& src, dt_qint8* dst) const {
+        auto vitem0 = vmulq_f32(src, this->vscale);
         vitem0 = vmaxq_f32(vitem0, QConverterBase::vfzero());
         auto result = QConverter::convert<int8x8_t, float32x4_t>(vitem0);
         vst1_lane_s32(reinterpret_cast<int32_t*>(dst), (int32x2_t)result, 0);

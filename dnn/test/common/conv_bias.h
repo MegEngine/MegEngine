@@ -36,7 +36,7 @@ std::vector<TestArg> get_chanwise_args();
 std::vector<TestArg> get_winograd_args(size_t kernel_size);
 std::vector<TestArg> get_winograd_mk_packed_args(size_t pack_size = 4);
 std::vector<TestArg> get_quantized_winograd_mk_packed_args(
-        size_t pack_size = 4);
+        size_t pack_size = 4, bool compute_float32 = false);
 std::vector<TestArg> get_quantized_args_with_nlmode(
         param::ConvBias::NonlineMode nlmode);
 std::vector<TestArg> get_quantized_args();
@@ -54,6 +54,10 @@ std::vector<TestArg> get_int8_chwn4_small_channel_args_check_bounds(
 std::vector<TestArg> get_int8_chwn4_args_small_batch(size_t kernel_size);
 std::vector<TestArg> get_int8_nchw4_tensorcore_args(size_t kernel_size);
 std::vector<TestArg> get_int8_chwn4_tensorcore_args(size_t kernel_size);
+
+std::vector<TestArg> get_int8_nchw44_args(size_t kernel_size, size_t pack_size,
+                                          bool compute_float32 = false,
+                                          bool group_mode = false);
 
 template <typename Opr>
 using ConvBiasAlgoChecker = AlgoChecker<Opr>;

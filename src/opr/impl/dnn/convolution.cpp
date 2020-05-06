@@ -1541,8 +1541,9 @@ void ConvBiasForward::check_winograd_param_valid(
                     dtype.enumv() == DTypeEnum::QuantizedS8 ||
                     dtype.enumv() == DTypeEnum::Quantized8Asymm) &&
                            (param.channel_block_size == 1 ||
+                            param.channel_block_size == 4 ||
                             param.channel_block_size == 8),
-                   "only support 1/8 for the channel_block_size of "
+                   "only support 1/4/8 for the channel_block_size of "
                    "winograd param, got %u",
                    param.channel_block_size);
     }

@@ -312,11 +312,14 @@ void make_canonized_filter_meta_nchwxx(
     size_t img_ndim = 2;
     size_t flt_start = 0;
     size_t flt_spatial_start = 2;
+    size_t pack_c_size = 0;
     if (param.sparse == Param::Sparse::DENSE) {
         if (filter.ndim == img_ndim + 4) {
             // oihw8i8o case
-            megdnn_assert(filter[filter.ndim - 2] == pack_size &&
-                                  filter[filter.ndim - 1] == pack_size,
+            megdnn_assert((filter[filter.ndim - 2] == pack_size &&
+                           filter[filter.ndim - 1] == pack_size) ||
+                                  (filter[filter.ndim - 2] == 2 * pack_size &&
+                                   filter[filter.ndim - 1] == 2 * pack_size),
                           "last 2 dim of filter must be %zu, but got %zu, %zu",
                           pack_size, filter[filter.ndim - 2],
                           filter[filter.ndim - 1]);
@@ -326,8 +329,14 @@ void make_canonized_filter_meta_nchwxx(
                 param.format == Param::Format::NCHW44_WINOGRAD) {
                 flt_start = 2;
             }
-            ret.ocpg = filter[flt_start] * pack_size;
-            ret.icpg = filter[flt_start + 1] * pack_size;
+            if (filter[filter.ndim - 2] == 2 * pack_size &&
+                filter[filter.ndim - 1] == 2 * pack_size) {
+                pack_c_size = 2 * pack_size;
+            } else {
+                pack_c_size = pack_size;
+            }
+            ret.ocpg = filter[flt_start] * pack_c_size;
+            ret.icpg = filter[flt_start + 1] * pack_c_size;
         } else if (filter.ndim == img_ndim + 3) {
             // ohwi8o
             megdnn_assert(param.format != Param::Format::NCHW88_WINOGRAD,
@@ -375,15 +384,23 @@ void make_canonized_filter_meta_nchwxx(
                           "bad filter ndim for group convolution: "
                           "spatial_ndim=%zu filter_ndim=%zu",
                           img_ndim, filter.ndim);
-            megdnn_assert(filter[filter.ndim - 1] == pack_size &&
-                                  filter[filter.ndim - 2] == pack_size,
+            megdnn_assert((filter[filter.ndim - 1] == pack_size &&
+                           filter[filter.ndim - 2] == pack_size) ||
+                           (filter[filter.ndim - 1] == 2 * pack_size &&
+                            filter[filter.ndim - 2] == 2 * pack_size),
                           "last 2 dim of filter must be %zu, but got %zu, %zu",
                           pack_size, filter[filter.ndim - 2],
                           filter[filter.ndim - 1]);
 
             ret.group = filter[0];
-            ret.ocpg = filter_oc * pack_size;
-            ret.icpg = filter_ic * pack_size;
+            if (filter[filter.ndim - 2] == 2 * pack_size &&
+                filter[filter.ndim - 1] == 2 * pack_size) {
+                ret.ocpg = filter_oc * 2 * pack_size;
+                ret.icpg = filter_ic * 2 * pack_size;
+            } else {
+                ret.ocpg = filter_oc * pack_size;
+                ret.icpg = filter_ic * pack_size;
+            }
         }
     }
     ret.spatial_ndim = 2;
@@ -596,8 +613,17 @@ void ConvolutionBase<Parameter>::check_or_deduce_dtype_fwd(DType src,
     } else if (src.enumv() == DTypeEnum::QuantizedS8 ||
                src.enumv() == DTypeEnum::Quantized8Asymm ||
                src.enumv() == DTypeEnum::Quantized4Asymm) {
-        supported_dst_dtype.push_back(
-                dtype::QuantizedS32(mul_scale(src, filter)));
+        //! Qint8 winograd compute with float, in order to bringing the filter
+        //! scale, here just use QuantizedS32 as filter type.
+        if (src.enumv() == DTypeEnum::QuantizedS8 &&
+            filter.enumv() == DTypeEnum::QuantizedS32) {
+            supported_dst_dtype.push_back(dtype::QuantizedS32(
+                    src.param<dtype::QuantizedS8>().scale *
+                    filter.param<dtype::QuantizedS32>().scale));
+        } else {
+            supported_dst_dtype.push_back(
+                    dtype::QuantizedS32(mul_scale(src, filter)));
+        }
         if (dst.valid() && dst.enumv() == src.enumv()) {
             supported_dst_dtype.push_back(dst);
         }
@@ -625,12 +651,13 @@ void ConvolutionBase<Parameter>::check_or_deduce_dtype_fwd(DType src,
         megdnn_assert(dst_supported, "unsupported Conv(%s, %s) -> %s",
                       src.name(), filter.name(), dst.name());
     }
-    megdnn_assert(param().compute_mode != Param::ComputeMode::FLOAT32
+    megdnn_assert((param().compute_mode == Param::ComputeMode::FLOAT32 ||
+                   param().compute_mode == Param::ComputeMode::DEFAULT)
 #if !MEGDNN_DISABLE_FLOAT16
-                          || src.enumv() == DTypeEnum::Float16
-                          || src.enumv() == DTypeEnum::BFloat16
+                          || src.enumv() == DTypeEnum::Float16 ||
+                          src.enumv() == DTypeEnum::BFloat16
 #endif
-                          ,
+                  ,
                   "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
                   "input / output.");
 }
@@ -645,10 +672,12 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(filter);
     megdnn_assert(src.ndim >= 3_z, "%s", errmsg().c_str());
-    if (param().format == Param::Format::NCHW_WINOGRAD &&
+    if ((param().format == Param::Format::NCHW_WINOGRAD ||
+         param().format == Param::Format::NCHW44_WINOGRAD) &&
         src.dtype.category() == DTypeCategory::QUANTIZED) {
-        megdnn_assert(filter.dtype.enumv() == DTypeEnum::QuantizedS16, "%s",
-                      errmsg().c_str());
+        megdnn_assert((filter.dtype.enumv() == DTypeEnum::QuantizedS16 ||
+                       filter.dtype.enumv() == DTypeEnum::QuantizedS32),
+                      "%s", errmsg().c_str());
         megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                               src.dtype.enumv() == DTypeEnum::Quantized8Asymm,
                       "%s", errmsg().c_str());
@@ -741,14 +770,18 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         if (param().format == Param::Format::NCHW44 ||
             param().format == Param::Format::NCHW44_DOT ||
             param().format == Param::Format::NCHW44_WINOGRAD) {
+            //!support nchw44 filter change to 88 for int8 winogradf23_88 using MK8 mamtul
             megdnn_assert((src.ndim == 4 && filter.ndim == 5 &&
                            filter[filter.ndim - 1] == 4) ||
                                   (src.ndim == 5 &&
                                    ((filter.ndim == 6 &&
-                                     filter[filter.ndim - 1] == 4) ||
+                                     (filter[filter.ndim - 1] == 4 ||
+                                      filter[filter.ndim - 1] == 8)) ||
                                     (filter.ndim == 7 &&
-                                     filter[filter.ndim - 1] == 4 &&
-                                     filter[filter.ndim - 2] == 4)) &&
+                                     (filter[filter.ndim - 1] == 4 ||
+                                      filter[filter.ndim - 1] == 8) &&
+                                     (filter[filter.ndim - 2] == 4 ||
+                                      filter[filter.ndim - 2] == 8))) &&
                                    src[src.ndim - 1] == 4),
                           "NCHW44 require src ndim is 5 and filter's ndim is 6 "
                           ", and last shape two is 4 but got src %s, filter %s",

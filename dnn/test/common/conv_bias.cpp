@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "test/common/conv_bias.h"
+#include "megdnn/opr_param_defs.h"
 #include "src/common/utils.h"
 #include "test/common/benchmarker.h"
 namespace megdnn {
@@ -242,7 +243,8 @@ std::vector<TestArg> get_winograd_mk_packed_args(size_t pack_size) {
     return args;
 }
 
-std::vector<TestArg> get_quantized_winograd_mk_packed_args(size_t pack_size) {
+std::vector<TestArg> get_quantized_winograd_mk_packed_args(
+        size_t pack_size, bool compute_float32) {
     std::vector<TestArg> args;
 
     param::ConvBias cur_param;
@@ -260,13 +262,16 @@ std::vector<TestArg> get_quantized_winograd_mk_packed_args(size_t pack_size) {
         cur_param.sparse = param::ConvBias::Sparse::DENSE;
         cur_param.pad_h = cur_param.pad_w = 1;
 
+        if(compute_float32){
+            cur_param.compute_mode = param::ConvBias::ComputeMode::FLOAT32;
+        }
+
         args.emplace_back(cur_param, TensorShape{1, pack_size, 3, 3},
                           TensorShape{pack_size, pack_size, 3, 3},
                           TensorShape{1, pack_size, 1, 1});
         //! no bias
         args.emplace_back(cur_param, TensorShape{2, ic, i, i},
                           TensorShape{oc, ic, 3, 3}, TensorShape{});
-
         //! bias
         args.emplace_back(cur_param, TensorShape{2, ic, i, i},
                           TensorShape{oc, ic, 3, 3}, TensorShape{2, oc, i, i});
@@ -372,7 +377,7 @@ std::vector<TestArg> get_int8_nchw4_args(size_t kernel_size) {
     for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
     for (size_t b : {64, 16}) {
     for (size_t ic : {16, 32}) {
-    for (size_t oc : {64, 32}) {
+    for (size_t oc : {16, 32}) {
     for (size_t h : {8}) {
     for (size_t w : {8, 11}) {
     for (int p : {0, static_cast<int>(kernel_size / 2)}) {
@@ -393,6 +398,95 @@ std::vector<TestArg> get_int8_nchw4_args(size_t kernel_size) {
         args.emplace_back(cur_param, TensorShape{b, ic / 4, h, w, 4},
                           TensorShape{oc, ic / 4, f, f, 4},
                           TensorShape{1, oc / 4, 1, 1, 4});
+    } } } } } } } } }
+    // clang-format on
+
+    return args;
+}
+
+std::vector<TestArg> get_int8_nchw44_args(size_t kernel_size, size_t pack_size,
+                                          bool compute_float32,
+                                          bool group_mode) {
+    std::vector<TestArg> args;
+    param::ConvBias cur_param;
+    megdnn_assert(pack_size > 0, "not support pack_size");
+    megdnn_assert(kernel_size > 0, "not support kernel_size");
+    using NLMode = param::ConvBias::NonlineMode;
+
+    //// clang-format off
+    for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU}) {
+    for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
+    for (size_t b : {1,2}) {
+    for (size_t ic : {8,16}) {
+    for (size_t oc : {8,16}) {
+    for (size_t h : {9,23}) {
+    for (size_t w : {9,23}) {
+    for (int p : {0, static_cast<int>(kernel_size / 2)}) {
+    for (size_t s : {1}) {
+        if (kernel_size == 7) {
+            b = std::min(b, 32_z);
+        }
+        size_t f = kernel_size;
+        cur_param.mode = mode;
+        cur_param.nonlineMode = nlmode;
+        if (pack_size == 4){
+            cur_param.format = param::ConvBias::Format::NCHW44;
+        } else if(pack_size == 8){
+            cur_param.format = param::ConvBias::Format::NCHW88;
+        }
+
+        if(compute_float32){
+            cur_param.compute_mode =
+                    param::ConvBias::ComputeMode::FLOAT32;
+        }
+
+        cur_param.sparse = param::ConvBias::Sparse::DENSE;
+        cur_param.pad_h = cur_param.pad_w = p;
+        cur_param.stride_h = cur_param.stride_w = s;
+        if (!group_mode) {
+            //! no bias
+            args.emplace_back(cur_param,
+                              TensorShape{b, ic / pack_size, h, w, pack_size},
+                              TensorShape{oc / pack_size, ic / pack_size, f, f,
+                                          pack_size, pack_size},
+                              TensorShape{});
+
+            //! bias channel
+            args.emplace_back(cur_param,
+                              TensorShape{b, ic / pack_size, h, w, pack_size},
+                              TensorShape{oc / pack_size, ic / pack_size, f, f,
+                                          pack_size, pack_size},
+                              TensorShape{1, oc / pack_size, 1, 1, pack_size});
+            //! bias
+            args.emplace_back(
+                    cur_param, TensorShape{b, ic / pack_size, h, w, pack_size},
+                    TensorShape{oc / pack_size, ic / pack_size, f, f, pack_size,
+                                pack_size},
+                    TensorShape{b, oc / pack_size, (h - f + 2 * p) / s + 1,
+                                (w - f + 2 * p) / s + 1, pack_size});
+        } else {
+            cur_param.sparse = param::ConvBias::Sparse::GROUP;
+            args.emplace_back(
+                    cur_param,
+                    TensorShape{2, 2 * ic / pack_size, h, w, pack_size},
+                    TensorShape{2, oc / pack_size, ic / pack_size, 3, 3,
+                                pack_size, pack_size},
+                    TensorShape{2, 2 * oc / pack_size, (h - f + 2 * p) / s + 1,
+                                (w - f + 2 * p) / s + 1, pack_size});
+
+            args.emplace_back(
+                    cur_param,
+                    TensorShape{2, 2 * ic / pack_size, h, w, pack_size},
+                    TensorShape{2, oc / pack_size, ic / pack_size, f, f,
+                                pack_size, pack_size},
+                    TensorShape{1, 2 * oc / pack_size, 1, 1, pack_size});
+            args.emplace_back(
+                    cur_param,
+                    TensorShape{2, 2 * ic / pack_size, h, w, pack_size},
+                    TensorShape{2, oc / pack_size, ic / pack_size, f, f,
+                                pack_size, pack_size},
+                    TensorShape{});
+        }
     } } } } } } } } }
     // clang-format on
 
@@ -990,11 +1084,14 @@ void checker_conv_bias_int8x8x16(std::vector<conv_bias::TestArg> args,
 void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
                               param::ConvBias param, Handle* handle,
                               param::MatrixMul::Format format) {
-    megdnn_assert(param.format == param::ConvBias::Format::NCHW);
+    megdnn_assert(param.format == param::ConvBias::Format::NCHW ||
+                  param.format == param::ConvBias::Format::NCHW44);
     auto winograd_preprocess_opr =
             handle->create_operator<WinogradFilterPreprocess>();
     winograd_preprocess_opr->param().output_block_size = m;
     winograd_preprocess_opr->param().format = format;
+    winograd_preprocess_opr->param().compute_mode =
+            param.compute_mode;
     TensorLayout filter_transform_layout;
     winograd_preprocess_opr->deduce_layout(tensors[1].layout,
                                            filter_transform_layout);
@@ -1004,7 +1101,12 @@ void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
 
     auto conv_bias_opr = handle->create_operator<ConvBias>();
     conv_bias_opr->param() = param;
-    conv_bias_opr->param().format = param::ConvBias::Format::NCHW_WINOGRAD;
+    if (param.format == param::ConvBias::Format::NCHW) {
+        conv_bias_opr->param().format = param::ConvBias::Format::NCHW_WINOGRAD;
+    } else {
+        conv_bias_opr->param().format =
+                param::ConvBias::Format::NCHW44_WINOGRAD;
+    }
     conv_bias_opr->param().output_block_size = m;
     size_t conv_bias_workspace_in_bytes = conv_bias_opr->get_workspace_in_bytes(
             tensors[0].layout, filter_transform_layout, tensors[2].layout,
@@ -1021,7 +1123,6 @@ void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
                                   wb.get_workspace(2));
     conv_bias_opr->exec(tensors[0], filter_transform_tensor, tensors[2],
                         tensors[3], tensors[4], nullptr, wb.get_workspace(1));
-
     free(wb.ptr());
 };
 

@@ -445,7 +445,8 @@ pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)
       'uint32',
       Doc('output_block_size', 'output block size, detail meaning see winograd '
           'in convbias, equals to the meaning of m in F(m, r)'), 0).
-  add_enum_alias('Format', 'MatrixMul')
+  add_enum_alias('Format', 'MatrixMul').
+  add_enum_alias('ComputeMode', 'Convolution', name_field='compute_mode')
  )
 
 (pdef('SVD').

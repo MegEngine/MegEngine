@@ -37,7 +37,9 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
          param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
          param().format == param::ConvBias::Format::NCHW44_WINOGRAD) &&
         src.dtype.category() == DTypeCategory::QUANTIZED) {
-        megdnn_assert(filter.dtype.enumv() == DTypeEnum::QuantizedS16);
+        megdnn_assert(filter.dtype.enumv() == DTypeEnum::QuantizedS16 ||
+                      //!int8 winogradf23_44 using float,QuantizedS32 take the scale
+                      filter.dtype.enumv() == DTypeEnum::QuantizedS32);
         megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                       src.dtype.enumv() == DTypeEnum::Quantized8Asymm);
     } else {
@@ -49,7 +51,12 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
             param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
             param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
-            scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
+            if (filter.dtype.enumv() == DTypeEnum::QuantizedS32) {
+                //!int8 winogradf23_44 using float,QuantizedS32 take the scale
+                scale_filter = filter.dtype.param<dtype::QuantizedS32>().scale;
+            } else {
+                scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
+            }
         } else {
             scale_filter = filter.dtype.param<dtype::QuantizedS8>().scale;
         }

@@ -37,6 +37,13 @@ struct InputGetter<const uint8_t*, uint16x4_t> {
         return vget_low_u16(vmovl_u8(vld1_u8(ptr))) - zp;
     }
 };
+
+template <>
+struct InputGetter<const int8_t*, float32x4_t> {
+    float32x4_t operator()(const int8_t* ptr) {
+        return vcvtq_f32_s32(vmovl_s16(vget_low_s16(vmovl_s8(vld1_s8(ptr)))));
+    }
+};
 }  // namespace
 }  // namespace arm_common
 }  // namespace megdnn

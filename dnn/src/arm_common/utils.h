@@ -370,6 +370,72 @@ struct Vector<int16_t, 8> {
 };
 
 template <>
+struct Vector<int16_t, 4> {
+    int16x4_t value;
+    Vector() {}
+    Vector(const int16_t v) { value = vdup_n_s16(v); }
+    Vector(const Vector& lr) { value = lr.value; }
+    Vector(const Vector&& lr) { value = std::move(lr.value); }
+    Vector(const int16x4_t& v) { value = v; }
+    static Vector load(const int16_t* addr) {
+        Vector v;
+        v.value = vld1_s16(addr);
+        return v;
+    }
+    static void save(int16_t* addr, const Vector& v) {
+        vst1_s16(addr, v.value);
+    }
+    void save(int16_t* addr) { save(addr, *this); }
+    Vector operator+(const Vector& lr) {
+        Vector dst;
+        dst.value = vadd_s16(value, lr.value);
+        return dst;
+    }
+    Vector& operator+=(const Vector& lr) {
+        value = vadd_s16(value, lr.value);
+        return *this;
+    }
+    Vector operator-(const Vector& lr) {
+        Vector dst;
+        dst.value = vsub_s16(value, lr.value);
+        return dst;
+    }
+    Vector& operator-=(const Vector& lr) {
+        value = vsub_s16(value, lr.value);
+        return *this;
+    }
+    Vector operator*(int16_t lr) {
+        Vector dst;
+        dst.value = vmul_n_s16(value, lr);
+        return dst;
+    }
+    Vector operator*(const Vector& lr) {
+        Vector dst;
+        dst.value = vmul_s16(value, lr.value);
+        return dst;
+    }
+    Vector& operator*=(const Vector& lr) {
+        value = vmul_s16(value, lr.value);
+        return *this;
+    }
+    Vector& operator=(const Vector& lr) {
+        value = lr.value;
+        return *this;
+    }
+    Vector& operator=(const Vector&& lr) {
+        value = std::move(lr.value);
+        return *this;
+    }
+    Vector operator-() {
+        Vector dst;
+        dst.value = -value;
+        return dst;
+    }
+};
+
+
+
+template <>
 struct Vector<int32_t, 8> {
     int32x4x2_t value;
     Vector() {}

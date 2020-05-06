@@ -989,7 +989,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_INT8) {
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ssprintf("WINOGRAD:%s:8:2:32", matmul_name).c_str()));
 
-    std::vector<TestArg> args = get_winograd_mk_packed_args(8);
     std::vector<TestArg> quantized_args =
             get_quantized_winograd_mk_packed_args(8);
     UniformIntRNG int_rng{-50, 50};
@@ -998,6 +997,174 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_INT8) {
         dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),
         dtype::QuantizedS8(60.25f), param::MatrixMul::Format::MK8, 1e-3);
 }
+
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
+    using namespace conv_bias;
+
+    Checker<ConvBiasForward> checker(handle());
+    auto run = [&checker](Handle* handle, const std::vector<TestArg>& args,
+                          const std::vector<size_t>& out_size, DType A_dtype,
+                          DType B_dtype, DType C_dtype, DType D_dtype,
+                          param::MatrixMul::Format format, float eps) {
+        for (auto&& arg : args) {
+            for (uint32_t m : out_size) {
+              checker.set_extra_opr_impl(std::bind(
+                      winograd_algo_extra_impl, std::placeholders::_1, m,
+                      arg.param, handle, format));
+              checker.set_dtype(0, A_dtype)
+                      .set_dtype(1, B_dtype)
+                      .set_dtype(2, C_dtype)
+                      .set_dtype(4, D_dtype)
+                      .set_epsilon(eps)
+                      .set_param(arg.param)
+                      .execs({arg.src, arg.filter, arg.bias, {}, {}});
+           }
+        }
+    };
+
+#if MEGDNN_AARCH64
+    const char* matmul_name = "AARCH64_INT16X16X32_MK8_8X8";
+#else
+    const char* matmul_name = "ARMV7_INT16X16X32_MK8_4X8";
+#endif
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ssprintf("WINOGRAD_NCHW44:%s:8:2:32", matmul_name).c_str()));
+
+    std::vector<TestArg> quantized_args = get_int8_nchw44_args (3,4);
+    UniformIntRNG int_rng{-50, 50};
+    checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
+    run(handle(), quantized_args, {2}, dtype::QuantizedS8(2.5f),
+        dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),
+        dtype::QuantizedS8(60.25f), param::MatrixMul::Format::MK8, 1e-3);
+}
+
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_GROUPMODE) {
+    using namespace conv_bias;
+
+    Checker<ConvBiasForward> checker(handle());
+    auto run = [&checker](Handle* handle, const std::vector<TestArg>& args,
+                          const std::vector<size_t>& out_size, DType A_dtype,
+                          DType B_dtype, DType C_dtype, DType D_dtype,
+                          param::MatrixMul::Format format, float eps) {
+        for (auto&& arg : args) {
+            for (uint32_t m : out_size) {
+              checker.set_extra_opr_impl(std::bind(
+                      winograd_algo_extra_impl, std::placeholders::_1, m,
+                      arg.param, handle, format));
+              checker.set_dtype(0, A_dtype)
+                      .set_dtype(1, B_dtype)
+                      .set_dtype(2, C_dtype)
+                      .set_dtype(4, D_dtype)
+                      .set_epsilon(eps)
+                      .set_param(arg.param)
+                      .execs({arg.src, arg.filter, arg.bias, {}, {}});
+           }
+        }
+    };
+
+#if MEGDNN_AARCH64
+    const char* matmul_name = "AARCH64_INT16X16X32_MK8_8X8";
+#else
+    const char* matmul_name = "ARMV7_INT16X16X32_MK8_4X8";
+#endif
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ssprintf("WINOGRAD_NCHW44:%s:8:2:32", matmul_name).c_str()));
+
+    std::vector<TestArg> quantized_args =
+            get_int8_nchw44_args(3, 4, false, true);
+    UniformIntRNG int_rng{-50, 50};
+    checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
+    run(handle(), quantized_args, {2}, dtype::QuantizedS8(2.5f),
+        dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),
+        dtype::QuantizedS8(60.25f), param::MatrixMul::Format::MK8, 1e-3);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F32) {
+    using namespace conv_bias;
+
+    Checker<ConvBiasForward> checker(handle());
+    auto run = [&checker](Handle* handle, const std::vector<TestArg>& args,
+                          const std::vector<size_t>& out_size, DType A_dtype,
+                          DType B_dtype, DType C_dtype, DType D_dtype,
+                          param::MatrixMul::Format format, float eps) {
+        for (auto&& arg : args) {
+            for (uint32_t m : out_size) {
+                checker.set_extra_opr_impl(std::bind(
+                        winograd_algo_extra_impl, std::placeholders::_1, m,
+                        arg.param, handle, format));
+                checker.set_dtype(0, A_dtype)
+                        .set_dtype(1, B_dtype)
+                        .set_dtype(2, C_dtype)
+                        .set_dtype(4, D_dtype)
+                        .set_epsilon(eps)
+                        .set_param(arg.param)
+                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
+            }
+        }
+    };
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    const char* matmul_name = "AARCH64_F32_MK4_4x16";
+#else
+    const char* matmul_name = "ARMV7_F32_MK4_4x8"; 
+#endif
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ssprintf("WINOGRAD_NCHW44:%s:4:2:32", matmul_name).c_str()));
+    std::vector<TestArg> quantized_args =
+            get_int8_nchw44_args(3, 4, true);
+    UniformIntRNG int_rng{-50, 50};
+    checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
+    run(handle(), quantized_args, {2}, dtype::QuantizedS8(0.41113496f),
+        dtype::QuantizedS8(0.01887994f),
+        dtype::QuantizedS32(0.41113496f * 0.01887994f),
+        dtype::QuantizedS8(0.49550694f), param::MatrixMul::Format::MK4, epsilon);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F32_GROUPMODE) {
+    using namespace conv_bias;
+
+    Checker<ConvBiasForward> checker(handle());
+    auto run = [&checker](Handle* handle, const std::vector<TestArg>& args,
+                          const std::vector<size_t>& out_size, DType A_dtype,
+                          DType B_dtype, DType C_dtype, DType D_dtype,
+                          param::MatrixMul::Format format, float eps) {
+        for (auto&& arg : args) {
+            for (uint32_t m : out_size) {
+                checker.set_extra_opr_impl(std::bind(
+                        winograd_algo_extra_impl, std::placeholders::_1, m,
+                        arg.param, handle, format));
+                checker.set_dtype(0, A_dtype)
+                        .set_dtype(1, B_dtype)
+                        .set_dtype(2, C_dtype)
+                        .set_dtype(4, D_dtype)
+                        .set_epsilon(eps)
+                        .set_param(arg.param)
+                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
+            }
+        }
+    };
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    const char* matmul_name = "AARCH64_F32_MK4_4x16";
+#else
+    const char* matmul_name = "ARMV7_F32_MK4_4x8"; 
+#endif
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ssprintf("WINOGRAD_NCHW44:%s:4:2:32", matmul_name).c_str()));
+    std::vector<TestArg> quantized_args =
+            get_int8_nchw44_args(3, 4, true, true);
+    UniformIntRNG int_rng{-50, 50};
+    checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
+    run(handle(), quantized_args, {2}, dtype::QuantizedS8(0.41113496f),
+        dtype::QuantizedS8(0.01887994f),
+        dtype::QuantizedS32(0.41113496f * 0.01887994f),
+        dtype::QuantizedS8(0.49550694f), param::MatrixMul::Format::MK4, epsilon);
+}
+
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F16_F23) {

@@ -102,12 +102,28 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
                     opr::ConvBiasForward::get_matmul_format(winograd_param);
             winograd_preprocess_param.output_block_size =
                     winograd_param.output_block_size;
+
+            size_t pack_c_size = 1;
+            if (new_inp[0]->shape().ndim == 5) {
+                pack_c_size = new_inp[0]->layout().shape[4];
+            }
+
+            if (conv_bias_opr.input(0)->dtype().enumv() ==
+                        DTypeEnum::QuantizedS8 &&
+                pack_c_size == 4 &&
+                winograd_preprocess_param.format ==
+                        megdnn::param::MatrixMul::Format::MK4) {
+                winograd_preprocess_param.compute_mode =
+                        megdnn::param::ConvBias::ComputeMode::FLOAT32;
+            }
+
             auto winograd_preprocess_opr = opr::WinogradFilterPreprocess::make(
                     new_inp[1], winograd_preprocess_param);
             mgb_assert(inputs.size() == 2 || inputs.size() == 3,
                        "input size need to be 2/3, but got: %zu",
                        inputs.size());
             SymbolVar new_conv_bias_opr;
+
             auto conv_bias_param = conv_bias_opr.param();
             if (new_inp[0]->shape().ndim == 4) {
                 conv_bias_param.format =
@@ -126,6 +142,7 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
                                algo_name.c_str());
                 }
             }
+
             conv_bias_param.output_block_size =
                     winograd_param.output_block_size;
             if (inputs.size() == 2) {

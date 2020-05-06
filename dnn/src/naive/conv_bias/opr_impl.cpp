@@ -118,6 +118,9 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         DISPATCH(QuantizedS8, QuantizedS32)
         DISPATCH(Quantized8Asymm, QuantizedS32)
         DISPATCH(Quantized4Asymm, QuantizedS32)
+        DISPATCH_RAW(QuantizedS8, QuantizedS32, QuantizedS32, FLOAT32,
+                     (convolution::forward_bias<dt_int8, dt_int8, dt_int32,
+                                                dt_int32>))
 #if !MEGDNN_DISABLE_FLOAT16
         DISPATCH(Float16, Float16)
         DISPATCH_RAW(Float16, Float16, Float16, FLOAT32,

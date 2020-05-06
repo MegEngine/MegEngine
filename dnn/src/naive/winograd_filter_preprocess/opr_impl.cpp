@@ -171,7 +171,6 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                 }
             }
 #undef cb
-#undef DISPATCH_FORMAT_MK8
 #undef DISPATCH_DTYPE
         }
         else if (pack_c_size == 4) {  //! NCHW44
@@ -195,6 +194,15 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
     if (src.layout.dtype.enumv() == DTypeEnum::Float32) {               \
         DISPATCH_KERNEL(dt_float32, dt_float32, dt_float32, dt_float32, \
                         DISPATCH_FORMAT_MK4, 1.0f, _midout_tag, 0);     \
+    }                                                                   \
+    if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {           \
+        if (param().format == param::Winograd::Format::MK4) {           \
+            DISPATCH_KERNEL(dt_int8, dt_int8, dt_float32, dt_float32,   \
+                            DISPATCH_FORMAT_MK4, 1.0f, _midout_tag, 0); \
+        } else if (param().format == param::Winograd::Format::MK8) {    \
+            DISPATCH_KERNEL(dt_int8, dt_int8, dt_int16, dt_int32,       \
+                            DISPATCH_FORMAT_MK8, 2.0f, _midout_tag, 0); \
+        }                                                               \
     }
             if (FW == 3) {
                 if (m == 2) {
@@ -208,6 +216,7 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
             }
 #undef cb
 #undef DISPATCH_FORMAT_MK8
+#undef DISPATCH_FORMAT_MK4
 #undef DISPATCH_KERNEL
 #undef DISPATCH_DTYPE
         }

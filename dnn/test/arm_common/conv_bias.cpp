@@ -98,7 +98,8 @@ CB_TEST(H_SWISH);
 
 #if MEGDNN_WITH_BENCHMARK
 
-static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
+static void benchmark_convbias(Handle* handle, std::string int_name,
+                               std::string float_name, bool is_fp32 = false) {
     constexpr size_t RUNS = 30;
 
     Benchmarker<ConvBias> benchmarker_int(handle);
@@ -109,12 +110,12 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
             .set_dtype(4, dtype::QuantizedS8(60.25))
             .set_display(false);
     benchmarker_int.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>("IM2COLMATMUL:.+"));
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(int_name.c_str()));
 
     Benchmarker<ConvBias> benchmarker_float(handle);
     benchmarker_float.set_display(false).set_times(RUNS);
     benchmarker_float.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>("IM2COLMATMUL:.+"));
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(float_name.c_str()));
 
     Benchmarker<ConvBias> benchmarker_nchw44(handle);
     if (is_fp32) {
@@ -233,13 +234,24 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
         }
     }
 }
+
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_NCHW44) {
-    benchmark_convbias(handle(), true);
-    benchmark_convbias(handle(), false);
+#if MEGDNN_AARCH64
+    benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
+                       "IM2COLMATMUL:AARCH64_F32K8X12X1:192", true);
+#else
+    benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
+                       "IM2COLMATMUL:ARMV7_F32:192", true);
+#endif
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_CONVBIAS_NCHW44) {
-    benchmark_convbias(handle(), true);
-    benchmark_convbias(handle(), false);
+#if MEGDNN_AARCH64
+    benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
+                       "IM2COLMATMUL:AARCH64_F32K8X12X1:192", true);
+#else
+    benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
+                       "IM2COLMATMUL:ARMV7_F32:192", true);
+#endif
 }
 
 #endif
@@ -506,7 +518,7 @@ void BENCHMARK_IM2COL_NCHW44_VS_NCHW(const char* algo_name,
                computations / used_im2col, used / used_im2col);
     }
 }
-
+#if MEGDNN_AARCH64
 TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x32) {
     printf("=========================compare "
            "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16, "
@@ -515,6 +527,7 @@ TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x32) {
                                     "IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16",
                                     handle(), 3, 4);
 }
+#endif
 
 TEST_F(ARM_COMMON, BENCHMARK_GROUP_CONVBIAS_QUANTIZED) {
     constexpr size_t RUNS = 50;

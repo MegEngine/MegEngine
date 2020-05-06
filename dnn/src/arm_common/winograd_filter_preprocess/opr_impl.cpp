@@ -109,12 +109,36 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
     }
     if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
         const dt_int8* src_ptr = src.compatible_ptr<dt_int8>();
-        dt_int16* dst_ptr = dst.compatible_ptr<dt_int16>();
-        dt_int16* workspace_ptr = workspace.ptr<dt_int16>();
-        if (FW == 3) {
-            if (m == 2) {
-                DISPATCH(winograd_2x3_8x8_s8, param::Winograd::Format::MK8, 1,
-                         0);
+        if (param().compute_mode == param::ConvBias::ComputeMode::DEFAULT) {
+            dt_int16* dst_ptr = dst.compatible_ptr<dt_int16>();
+            dt_int16* workspace_ptr = workspace.ptr<dt_int16>();
+            if (FW == 3) {
+                if (m == 2) {
+                    if (pack_c_size == 1) {
+                        DISPATCH(winograd_2x3_8x8_s8,
+                                 param::Winograd::Format::MK8, 1, 0);
+                    } else if (pack_c_size == 4) {
+                        DISPATCH(winograd_2x3_8x8_s8_nchw44,
+                                 param::Winograd::Format::MK8, 1, 0);
+                    }else{
+                        megdnn_throw("only support pack_c_size = 1 or 4");
+                    }
+                }
+            }
+        } else {
+            dt_int32* dst_ptr_tmp = dst.compatible_ptr<dt_int32>();
+            dt_int32* workspace_ptr_tmp = workspace.ptr<dt_int32>();
+            float* dst_ptr = reinterpret_cast<float*>(dst_ptr_tmp);
+            float* workspace_ptr = reinterpret_cast<float*>(workspace_ptr_tmp);
+            if (pack_c_size == 4) {
+                if (FW == 3) {
+                    if (m == 2) {
+                        DISPATCH(winograd_2x3_4x4_s8_f32_nchw44,
+                                 param::Winograd::Format::MK4, 1, 1);
+                    }
+                }
+            } else {
+                megdnn_throw("only support pack_c_size == 4");
             }
         }
     }

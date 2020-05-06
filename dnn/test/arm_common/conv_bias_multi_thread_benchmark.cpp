@@ -1185,6 +1185,197 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_WINOGRAD_F32) {
                    {1, {4}}, data_type);
 }
 
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_WINOGRAD_INT8) {
+    constexpr size_t RUNS = 50;
+
+    param::ConvBias param;
+    param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.sparse = param::ConvBias::Sparse::GROUP;
+
+    std::vector<std::pair<SmallVector<TensorShape>, float>>
+            shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS, size_t group) {
+        SmallVector<TensorShape> shapes{{N, IC, H, W},
+                                        {group, OC / group, IC / group, FS, FS},
+                                        {1, OC, 1, 1},
+                                        {},
+                                        {N, OC, H, W}};
+        TensorShape dst{N, OC, H, W};
+        float computations =
+                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 32, 32, 200, 200, 3, 4);
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 4);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 4);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 32, 80, 80, 3, 4);
+
+    bench_case(1, 512, 512, 14, 14, 3, 1);
+    bench_case(1, 512, 256, 14, 14, 3, 1);
+    bench_case(1, 512, 128, 14, 14, 3, 1);
+    bench_case(1, 512, 64, 14, 14, 3, 1);
+
+    bench_case(1, 512, 512, 7, 7, 3, 1);
+    bench_case(1, 512, 256, 7, 7, 3, 1);
+    bench_case(1, 512, 128, 7, 7, 3, 1);
+    bench_case(1, 512, 64, 7, 7, 3, 1);
+
+    std::string algo_name;
+#if MEGDNN_AARCH64
+    algo_name = "WINOGRAD:AARCH64_INT16X16X32_MK8_8X8:8:2:32";
+#else
+    algo_name = "WINOGRAD:ARMV7_INT16X16X32_MK8_4X8:8:2:32";
+#endif
+
+
+    std::vector<DType> data_type = {dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+                                   dtype::QuantizedS32(6.25f) ,dtype::QuantizedS8(60.25f) };
+    printf("Benchmark WINOGRAD_IN8_MK8 algo\n");
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
+                   {1, {4}}, data_type);
+}
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
+       BENCHMARK_CONVBIAS_WINOGRAD_NCHW44_INT8_MK8) {
+    constexpr size_t RUNS = 50;
+
+    param::ConvBias param;
+    param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.sparse = param::ConvBias::Sparse::DENSE;
+    param.format = param::ConvBias::Format::NCHW44;
+
+    std::vector<std::pair<SmallVector<TensorShape>, float>>
+            shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS, size_t group) {
+        SmallVector<TensorShape> shapes{{N, IC / 4, H, W, 4},
+                                        {OC / 4, IC / 4, FS, FS, 4, 4},
+                                        {1, OC / 4, 1, 1, 4},
+                                        {},
+                                        {N, OC / 4, H, W, 4}};
+        TensorShape dst{N, OC, H, W};
+        float computations =
+                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+
+    bench_case(1, 512, 512, 14, 14, 3, 1);
+    bench_case(1, 512, 256, 14, 14, 3, 1);
+    bench_case(1, 512, 128, 14, 14, 3, 1);
+    bench_case(1, 512, 64, 14, 14, 3, 1);
+
+    bench_case(1, 512, 512, 7, 7, 3, 1);
+    bench_case(1, 512, 256, 7, 7, 3, 1);
+    bench_case(1, 512, 128, 7, 7, 3, 1);
+    bench_case(1, 512, 64, 7, 7, 3, 1);
+
+    std::string algo_name;
+#if MEGDNN_AARCH64
+    algo_name = "WINOGRAD_NCHW44:AARCH64_INT16X16X32_MK8_8X8:8:2:32";
+#else
+    algo_name = "WINOGRAD_NCHW44:ARMV7_INT16X16X32_MK8_4X8:8:2:32";
+#endif
+
+    std::vector<DType> data_type = {
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+            dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f)};
+    printf("Benchmark WINOGRAD_INT8_MK8 algo\n");
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
+                   {1, {4}}, data_type);
+}
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
+       BENCHMARK_CONVBIAS_WINOGRAD_NCHW44_INT8_COMP_F32) {
+    constexpr size_t RUNS = 50;
+
+    param::ConvBias param;
+    param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.sparse = param::ConvBias::Sparse::DENSE;  // GROUP;
+    param.format = param::ConvBias::Format::NCHW44;
+
+    std::vector<std::pair<SmallVector<TensorShape>, float>>
+            shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS, size_t group) {
+        SmallVector<TensorShape> shapes{{N, IC / 4, H, W, 4},
+                                        {OC / 4, IC / 4, FS, FS, 4, 4},
+                                        {1, OC / 4, 1, 1, 4},
+                                        {},
+                                        {N, OC / 4, H, W, 4}};
+        TensorShape dst{N, OC, H, W};
+        float computations =
+                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+
+    bench_case(1, 512, 512, 14, 14, 3, 1);
+    bench_case(1, 512, 256, 14, 14, 3, 1);
+    bench_case(1, 512, 128, 14, 14, 3, 1);
+    bench_case(1, 512, 64, 14, 14, 3, 1);
+
+    bench_case(1, 512, 512, 7, 7, 3, 1);
+    bench_case(1, 512, 256, 7, 7, 3, 1);
+    bench_case(1, 512, 128, 7, 7, 3, 1);
+    bench_case(1, 512, 64, 7, 7, 3, 1);
+
+    std::string algo_name;
+#if MEGDNN_AARCH64
+    algo_name = "WINOGRAD_NCHW44:AARCH64_F32_MK4_4x16:4:2:32";
+#else
+    algo_name = "WINOGRAD_NCHW44:ARMV7_F32_MK4_4x8:4:2:32";
+#endif
+
+    std::vector<DType> data_type = {
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+            dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f)};
+    printf("Benchmark WINOGRAD_INT8_NCHW44_MK4_COMP_F32 algo\n");
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
+                   {1, {4}}, data_type);
+}
+
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_FP32) {
     constexpr size_t RUNS = 50;
 

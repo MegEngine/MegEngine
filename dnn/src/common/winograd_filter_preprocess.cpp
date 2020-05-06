@@ -56,8 +56,16 @@ void WinogradFilterPreprocess::deduce_layout(const TensorLayout& src,
     DType dst_type = src.dtype;
     if (src.dtype.category() == DTypeCategory::QUANTIZED) {
         megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS8);
-        dst_type = dtype::QuantizedS16(
-                src.dtype.param<dtype::QuantizedS8>().scale);
+        if (param().compute_mode ==
+            param::ConvBias::ComputeMode::DEFAULT) {
+            //! input int8 compute short
+            dst_type = dtype::QuantizedS16(
+                    src.dtype.param<dtype::QuantizedS8>().scale);
+        } else {
+            //! input int8 compute float32
+            dst_type = dtype::QuantizedS32(
+                    src.dtype.param<dtype::QuantizedS8>().scale);
+        }
     }
 
     if (src.ndim == 4 || src.ndim == 6) {
@@ -123,8 +131,16 @@ size_t WinogradFilterPreprocess::get_workspace_in_bytes(
     if (src.dtype.category() == DTypeCategory::QUANTIZED) {
         megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                       src.dtype.enumv() == DTypeEnum::Quantized8Asymm);
-        output_compute_dtype = dtype::QuantizedS16(
-                src.dtype.param<dtype::QuantizedS8>().scale);
+        if (param().compute_mode ==
+            param::ConvBias::ComputeMode::DEFAULT) {
+            //! input int8 compute short
+            output_compute_dtype = dtype::QuantizedS16(
+                    src.dtype.param<dtype::QuantizedS8>().scale);
+        } else {
+            //! input int8 compute float32
+            output_compute_dtype = dtype::QuantizedS32(
+                    src.dtype.param<dtype::QuantizedS8>().scale);
+        }
     }
 
     size_t FW = src[3];
