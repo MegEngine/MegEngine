@@ -6,7 +6,7 @@ LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz'
 CLANG_URL='https://github.com/llvm-mirror/clang/archive/release_60.tar.gz'
 
 yum erase -y cmake cmake28
-yum install -y python34-pip pcre-devel
+yum install -y python34-pip pcre-devel devtoolset-8-libatomic-devel.x86_64
 
 pip3 install --no-cache-dir --only-binary :all: -U pip==19.1
 pip3 install --no-cache-dir --only-binary :all: cmake==3.16.3
