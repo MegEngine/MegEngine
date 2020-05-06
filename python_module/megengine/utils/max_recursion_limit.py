@@ -55,6 +55,6 @@ _max_recursion_limit_context_manager = AlternativeRecursionLimit(2 ** 31 - 1)
 
 
 def max_recursion_limit():
-    r"""set recursion limit to max possible value
+    r"""Sets recursion limit to the max possible value
     """
     return _max_recursion_limit_context_manager
