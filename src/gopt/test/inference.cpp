@@ -27,6 +27,8 @@
 #include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/tensor_gen.h"
+#include "megbrain/opr/blas.h"
 
 #include "megbrain/comp_node_env.h"
 #include "./helper.h"
@@ -878,6 +880,67 @@ TEST(TestGoptInference, Float32TOFloat16EndpointElemwise) {
         y = opr::TypeCvt::make(y, dtype::Float32{});
 
         return y;
+    };
+
+    auto y_opt = make_f32_to_f16_graph();
+    auto y = make_f16_graph();
+    ASSERT_EQ(y_opt.dtype(), dtype::Float32{});
+    ASSERT_EQ(y.dtype(), dtype::Float32{});
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
+TEST(TestGoptInference, Float32TOFloat16Linspace) {
+    CompNode cn = CompNode::load("cpu0");
+    HostTensorGenerator<> gen(0, 1, 0);
+    auto host_x = gen({3, 1}, cn); 
+    auto graph = ComputingGraph::make();
+
+    auto make_f32_to_f16_graph = [&]() {
+        graph->options().graph_opt_level = 0;
+
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+        auto xshp = opr::GetVarShape::make(x);
+
+        auto cv = [&x](int v) { return x.make_scalar(v); };
+        auto sub = [&xshp, &cv](int idx) {
+            return opr::IndexAt::make(xshp, {{0, cv(idx)}});
+        };
+        auto lin = opr::Linspace::make(cv(0), sub(0) - 1, sub(0), {}, {});
+        auto shp = opr::Concat::make({sub(1), sub(0)}, 0);
+        auto y = opr::Reshape::make(lin, shp);
+        auto mm = opr::MatrixMul::make(x, y);
+
+        SymbolVar mm_opt;
+        unpack_vector(gopt::optimize_for_inference(
+                              {mm}, gopt::OptimizeForInferenceOptions{}
+                                            .enable_f16_io_comp()),
+                      mm_opt);
+        return mm_opt;
+    };
+
+    auto make_f16_graph = [&]() {
+        auto x = opr::TypeCvt::make(opr::Host2DeviceCopy::make(*graph, host_x),
+                                    dtype::Float16());
+        auto xshp = opr::GetVarShape::make(x);
+
+        auto cv = [&x](int v) { return x.make_scalar(v); };
+        auto sub = [&xshp, &cv](int idx) {
+            return opr::IndexAt::make(xshp, {{0, cv(idx)}});
+        };
+        auto lin = opr::Linspace::make(cv(0), sub(0) - 1, sub(0), {}, {});
+        lin = opr::TypeCvt::make(lin, dtype::Float16());
+        auto shp = opr::Concat::make({sub(1), sub(0)}, 0);
+        auto y = opr::Reshape::make(lin, shp);
+        auto mm = opr::MatrixMul::make(x, y);
+
+        mm = opr::TypeCvt::make(mm, dtype::Float32{});
+
+        return mm;
     };
 
     auto y_opt = make_f32_to_f16_graph();
