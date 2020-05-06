@@ -1770,7 +1770,7 @@ public:
             return reformat.node();
 
         };
-        
+
         m_reformat[std::make_pair(TensorFormat::CHWN4, TensorFormat::NCHW4)] =
                 [](VarNode* inp) -> VarNode* {
             megdnn::param::RelayoutFormat param;

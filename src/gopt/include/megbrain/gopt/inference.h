@@ -256,40 +256,7 @@ namespace gopt {
                 size_t pack_c_size);
     };
 
-    struct OptimizeForInferenceOptions {
-        //! whether to enable IO in float16 compute in float32
-        bool f16_io_f32_comp = false;
-        //! whether to enable tranform to pure float16 model
-        bool f16_io_comp = false;
-        //! whether to enable conv bias nonlinearity fusion
-        bool fuse_conv_bias_nonlinearity = false;
-        //! whether to compute using NHWCD4 tensor format
-        bool use_nhwcd4 = false;
-        //! whether to compute using NCHW88 tensor format
-        bool use_nchw88 = false;
-        //! whether to compute using NCHW44 tensor format
-        bool use_nchw44 = false;
-        //! whether to enable tensor core
-        bool use_tensor_core = false;
-        //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
-        //! + z -> conv_bias(x, w, b, z)
-        bool fuse_conv_bias_with_z = false;
-
-#define SET(n)                                  \
-    OptimizeForInferenceOptions& enable_##n() { \
-        n = true;                               \
-        return *this;                           \
-    }
-        SET(f16_io_f32_comp);
-        SET(f16_io_comp);
-        SET(fuse_conv_bias_nonlinearity);
-        SET(use_nhwcd4);
-        SET(use_tensor_core);
-        SET(fuse_conv_bias_with_z);
-        SET(use_nchw88);
-        SET(use_nchw44);
-#undef SET
-    };
+    struct OptimizeForInferenceOptions : OptimizeOptions {};
 
     /*!
      * \brief optimize a computing graph for inference

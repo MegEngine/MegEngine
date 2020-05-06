@@ -635,10 +635,9 @@ TEST(TestGoptInference, Float16IOFloat32Compute) {
     y = opr::Concat::make({y, -y}, 0);
     y = opr::Reduce::make(y, {}, y.make_scalar(1));
     SymbolVar y_opt;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_f16_io_f32_comp()),
-                  y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_f32_comp();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     ASSERT_EQ(y_opt.dtype(), dtype::Float32());
 
     HostTensorND host_y, host_y_opt;
@@ -683,10 +682,9 @@ TEST(TestGoptInference, Float16IOFloat32ComputeWarpPerspective) {
     TensorShape out_shp{20, 20};
     auto y = opr::WarpPerspective::make(a, mat, out_shp);
     SymbolVar y_opt;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_f16_io_f32_comp()),
-                  y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_f32_comp();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     ASSERT_EQ(y_opt.dtype(), dtype::Float32());
     HostTensorND host_y, host_y_opt;
     auto func = graph->compile({make_callback_copy(y, host_y),
@@ -723,10 +721,9 @@ TEST(TestGoptInference, Float16IOFloat32ComputeRemap) {
     auto map = opr::Host2DeviceCopy::make(*graph, map_host).rename("map");
     auto y = opr::Remap::make(a, map);
     SymbolVar y_opt;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_f16_io_f32_comp()),
-                  y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_f32_comp();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     ASSERT_EQ(y_opt.dtype(), dtype::Float32());
     HostTensorND host_y, host_y_opt;
     auto func = graph->compile({make_callback_copy(y, host_y),
@@ -770,10 +767,9 @@ TEST(TestGoptInference, Uint8IOFloat16ComputeWarpPerspective) {
     TensorShape out_shp{20, 20};
     auto y = opr::WarpPerspective::make(a, mat, out_shp);
     SymbolVar y_opt;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_f16_io_comp()),
-                  y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_comp();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     ASSERT_EQ(y_opt.dtype(), dtype::Uint8());
     HostTensorND host_y, host_y_opt;
     auto func = graph->compile({make_callback_copy(y, host_y),
@@ -801,10 +797,9 @@ TEST(TestGoptInference, Float32TOFloat16) {
         y = opr::Reduce::make(y, {}, y.make_scalar(1));
 
         SymbolVar y_opt;
-        unpack_vector(gopt::optimize_for_inference(
-                              {y}, gopt::OptimizeForInferenceOptions{}
-                                           .enable_f16_io_comp()),
-                      y_opt);
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_f16_io_comp();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
         return y_opt;
     };
 
@@ -857,10 +852,9 @@ TEST(TestGoptInference, Float32TOFloat16EndpointElemwise) {
         auto y = d0 + b;
 
         SymbolVar y_opt;
-        unpack_vector(gopt::optimize_for_inference(
-                              {y}, gopt::OptimizeForInferenceOptions{}
-                                           .enable_f16_io_comp()),
-                      y_opt);
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_f16_io_comp();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
         return y_opt;
     };
 
@@ -897,7 +891,7 @@ TEST(TestGoptInference, Float32TOFloat16EndpointElemwise) {
 TEST(TestGoptInference, Float32TOFloat16Linspace) {
     CompNode cn = CompNode::load("cpu0");
     HostTensorGenerator<> gen(0, 1, 0);
-    auto host_x = gen({3, 1}, cn); 
+    auto host_x = gen({3, 1}, cn);
     auto graph = ComputingGraph::make();
 
     auto make_f32_to_f16_graph = [&]() {
@@ -916,10 +910,9 @@ TEST(TestGoptInference, Float32TOFloat16Linspace) {
         auto mm = opr::MatrixMul::make(x, y);
 
         SymbolVar mm_opt;
-        unpack_vector(gopt::optimize_for_inference(
-                              {mm}, gopt::OptimizeForInferenceOptions{}
-                                            .enable_f16_io_comp()),
-                      mm_opt);
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_f16_io_comp();
+        unpack_vector(gopt::optimize_for_inference({mm}, options), mm_opt);
         return mm_opt;
     };
 
@@ -998,11 +991,9 @@ TEST(TestGoptInference, ConvertFormatNHWCD4) {
          y = opr::Convolution::make(elem, w2, param);
 
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
-            y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
     ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
               find_opr<opr::Convolution>(y_opt).param().format);
@@ -1059,11 +1050,9 @@ TEST(TestGoptInference, ConvertFormatNHWCD4LOCAL) {
          y = opr::Convolution::make(group_local, w5, param);
 
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
-            y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
     ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
               find_opr<opr::Convolution>(y_opt).param().format);
@@ -1112,11 +1101,9 @@ TEST(TestGoptInference, ConvertFormatNHWCD4Deconv) {
          y = opr::ConvolutionBackwardData::make(w1, conv, param, {}, {});
 
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
-            y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
               find_opr<opr::ConvolutionBackwardData>(y_opt).param().format);
@@ -1159,11 +1146,9 @@ TEST(TestGoptInference, ConvertFormatNHWCD4Qint8) {
                  OperatorNodeConfig{dtype::QuantizedS8(0.2f)});
 
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
-            y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
     ASSERT_EQ(opr::ConvBias::Param::Format::NHWCD4,
               find_opr<opr::ConvBias>(y_opt).param().format);
@@ -1213,11 +1198,9 @@ TEST(TestGoptInference, ConvertFormatPadIC) {
     auto w1 = mkcvar("w1", {12, 12, 3, 3});
     auto y = opr::Convolution::make(concat, w1, param);
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
-            y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
     HostTensorND host_y_opt, host_y;
     auto func = graph->compile({make_callback_copy(y, host_y),
@@ -1301,11 +1284,9 @@ TEST(TestGoptInference, ConvBiasNonlinearityFusePass) {
                  opr::Elemwise::make({y_cut}, opr::Elemwise::Param::Mode::RELU),
          y_y = opr::Convolution::make(y_expand, w3, param), y = y_y + y_tmp;
     SymbolVar y_opt;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_use_nhwcd4()
-                                       .enable_fuse_conv_bias_nonlinearity()),
-                  y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nhwcd4().enable_fuse_conv_bias_nonlinearity();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     ASSERT_EQ(3u, find_opr<opr::ConvBias>(y_opt).input().size());
     graph->compile({{y_opt, {}}})
             ->to_json()
@@ -1533,15 +1514,16 @@ TEST(TestEnableTensorCore, SmallInputShape) {
 
     SymbolVar y_opt;
     SymbolVar y_no_tc;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()
-                                        .enable_use_tensor_core()),
-                  y_opt);
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()),
-                  y_no_tc);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw2nchw32().enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_no_tc);
+    }
     auto nr_dimshuffle = find_opr_num<mgb::opr::Dimshuffle>(y_opt);
     ASSERT_EQ(2u, nr_dimshuffle);
     HostTensorND host_y, host_y_opt;
@@ -1597,15 +1579,16 @@ TEST(TestEnableTensorCore, ConvBiasWithZ) {
 
     SymbolVar y_opt;
     SymbolVar y_no_tc;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()
-                                        .enable_use_tensor_core()),
-                  y_opt);
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()),
-                  y_no_tc);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity().enable_nchw2nchw32();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_no_tc);
+    }
     HostTensorND host_y, host_y_opt;
     auto func = graph->compile({make_callback_copy(y_no_tc, host_y),
                                 make_callback_copy(y_opt, host_y_opt)});
@@ -1664,15 +1647,16 @@ TEST(TestGoptInference, EnableTensorCore) {
     y4 = opr::TypeCvt::make(y4, dtype::Float32());
     SymbolVar y_opt;
     SymbolVar y_no_tc;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y4}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()
-                                        .enable_use_tensor_core()),
-                  y_opt);
-    unpack_vector(gopt::optimize_for_inference(
-                          {y4}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()),
-                  y_no_tc);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity().enable_nchw2nchw32();
+        unpack_vector(gopt::optimize_for_inference({y4}, options), y_opt);
+    }
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity().enable_nchw2nchw32();
+        unpack_vector(gopt::optimize_for_inference({y4}, options), y_no_tc);
+    }
     auto nr_dimshuffle = find_opr_num<mgb::opr::Dimshuffle>(y_opt);
     ASSERT_EQ(3u, nr_dimshuffle);
     graph->compile({{y_opt, {}}})
@@ -1763,15 +1747,17 @@ TEST(FuseConvBiasZPass, BlockFuse) {
 
     SymbolVar z_fuse;
     SymbolVar z_nonfuse;
-    unpack_vector(gopt::optimize_for_inference(
-                          {z}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_fuse_conv_bias_nonlinearity()
-                                       .enable_fuse_conv_bias_with_z()),
-                  z_fuse);
-    unpack_vector(gopt::optimize_for_inference(
-                          {z4}, gopt::OptimizeForInferenceOptions{}
-                                       .enable_fuse_conv_bias_nonlinearity()),
-                  z_nonfuse);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity()
+                .enable_fuse_conv_bias_with_z();
+        unpack_vector(gopt::optimize_for_inference({z}, options), z_fuse);
+    }
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({z4}, options), z_nonfuse);
+    }
     auto nr_elem_multi_type = find_opr_num<mgb::opr::ElemwiseMultiType>(z_fuse);
     MGB_MARK_USED_VAR(nr_elem_multi_type);
     ASSERT_EQ(1u, nr_elem_multi_type);
@@ -1867,15 +1853,16 @@ TEST(TestEnableTensorCore, ShuffleMerge) {
 
     SymbolVar y_opt;
     SymbolVar y_no_tc;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()
-                                        .enable_use_tensor_core()),
-                  y_opt);
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}
-                                        .enable_fuse_conv_bias_nonlinearity()),
-                  y_no_tc);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity().enable_nchw2nchw32();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_no_tc);
+    }
     auto nr_dimshuffle = find_opr_num<mgb::opr::Dimshuffle>(y_opt);
     ASSERT_EQ(3u, nr_dimshuffle);
     HostTensorND host_y, host_y_opt;
@@ -1932,13 +1919,13 @@ TEST(FuseConvBiasZPass, Basic) {
                       opr::ElemwiseMultiType::Param::Mode::QFUSE_ADD_RELU}) {
         auto y1 = opr::ElemwiseMultiType::make(
                 {y, b1}, {mode}, OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
-        unpack_vector(
-                gopt::optimize_for_inference(
-                        {y1}, gopt::OptimizeForInferenceOptions{}
-                                      .enable_fuse_conv_bias_nonlinearity()
-                                      .enable_fuse_conv_bias_with_z()
-                                      .enable_use_tensor_core()),
-                y_opt);
+        {
+            auto options = gopt::OptimizeForInferenceOptions{};
+            options.enable_fuse_conv_bias_nonlinearity()
+                    .enable_fuse_conv_bias_with_z()
+                    .enable_nchw2nchw32();
+            unpack_vector(gopt::optimize_for_inference({y1}, options), y_opt);
+        }
         auto nr_elemwisemultitype = find_opr_num<opr::ElemwiseMultiType>(y_opt);
         if (mode == opr::ElemwiseMultiType::Param::Mode::QMUL) {
             ASSERT_NE(0u, nr_elemwisemultitype);
@@ -1949,13 +1936,14 @@ TEST(FuseConvBiasZPass, Basic) {
             auto y2 = opr::ElemwiseMultiType::make(
                     {y1, b2}, {mode},
                     OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
-            unpack_vector(
-                    gopt::optimize_for_inference(
-                            {y2}, gopt::OptimizeForInferenceOptions{}
-                                          .enable_fuse_conv_bias_nonlinearity()
-                                          .enable_fuse_conv_bias_with_z()
-                                          .enable_use_tensor_core()),
-                    y_opt);
+            {
+                auto options = gopt::OptimizeForInferenceOptions{};
+                options.enable_fuse_conv_bias_nonlinearity()
+                        .enable_fuse_conv_bias_with_z()
+                        .enable_nchw2nchw32();
+                unpack_vector(gopt::optimize_for_inference({y2}, options),
+                              y_opt);
+            }
             auto nr_elemwisemultitype =
                     find_opr_num<opr::ElemwiseMultiType>(y_opt);
             ASSERT_NE(0u, nr_elemwisemultitype);
@@ -2401,11 +2389,11 @@ TEST(TestGoptInference, ConvertFormatNCHW88) {
          y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
 
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nchw88()),
-            y_opt);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw2nchw88();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
 
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW88,
               find_opr<opr::ConvBias>(y_opt).param().format);
@@ -2483,11 +2471,9 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
          y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
 
     SymbolVar y_opt;
-    unpack_vector(
-            gopt::optimize_for_inference(
-                    {y},
-                    gopt::OptimizeForInferenceOptions{}.enable_use_nchw44()),
-            y_opt);
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw2nchw44();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
               find_opr<opr::ConvBias>(y_opt).param().format);

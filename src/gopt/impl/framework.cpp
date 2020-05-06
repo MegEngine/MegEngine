@@ -642,21 +642,6 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
     add_pass<ArithMulDistributePass>();
     add_pass<ReorderArithChainPass>(cv_type);
 
-    if (inference_opt) {
-        if (inference_opt->use_nhwcd4) {
-            add_pass(ConvertFormatPass::make_nhwcd4_converter());
-        }
-        if (inference_opt->f16_io_f32_comp) {
-            add_pass(ConvertF32ToF16Pass::make(true));
-        }
-        if (inference_opt->f16_io_comp) {
-            add_pass(ConvertF32ToF16Pass::make(false));
-        }
-
-        // fuse again after reordering
-        add_pass<ParamFusePass>();
-    }
-
     add_pass<ArithFusePass>();
     // reorder again because shapes of fused oprs might change
     add_pass<ReorderArithChainPass>(cv_type);
@@ -687,32 +672,7 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
     }
 #endif
 
-    if (inference_opt) {
-        if (inference_opt->fuse_conv_bias_nonlinearity)
-            add_pass<FuseConvBiasNonlinPass>();
-        if (inference_opt->fuse_conv_bias_with_z) {
-            mgb_assert(inference_opt->fuse_conv_bias_nonlinearity,
-                       "fuse conv bias with z input should fuse conv bias "
-                       "activation "
-                       "first");
-            add_pass<FuseConvBiasZPass>();
-        }
-        if (inference_opt->use_nchw88) {
-            add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
-        }
-        if (inference_opt->use_nchw44) {
-            add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
-        }
-        if (inference_opt->use_tensor_core) {
-            mgb_assert(inference_opt->fuse_conv_bias_nonlinearity,
-                       "enable tensor core should fuse conv bias activation "
-                       "first");
-            add_pass(EnableTensorCorePass::make_tensorcore_converter());
-            add_pass<ShuffleShuffleRemovePass>();
-            add_pass<RemoveRedundantTypeCvtPass>();
-        }
-        add_pass<ParamFusePass>();
-    }
+    apply_optimize_options(inference_opt);
 
     if (inference_opt) {
         // merge params to reduce loading time and graph overhead
@@ -737,6 +697,42 @@ VarNode* GraphOptimizer::var_replace_lookup(VarNode *var) {
             return var;
         var = iter->second;
     }
+}
+
+void GraphOptimizer::apply_optimize_options(
+        const OptimizeOptions* options) {
+    if (!options) return;
+    if (options->f16_io_comp) {
+        add_pass(ConvertF32ToF16Pass::make(false));
+    }
+    if (options->f16_io_f32_comp) {
+        add_pass(ConvertF32ToF16Pass::make(true));
+    }
+    if (options->transform_nchw2nhwcd4()) {
+        add_pass(ConvertFormatPass::make_nhwcd4_converter());
+        add_pass<FuseConvBiasNonlinPass>();
+    }
+    if (options->transform_nchw2nchw88()) {
+        add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
+    }
+    if (options->transform_nchw2nchw44()) {
+        add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
+    }
+    if (options->transform_nchw2nchw32()) {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass(EnableTensorCorePass::make_tensorcore_converter());
+        add_pass<ShuffleShuffleRemovePass>();
+        add_pass<RemoveRedundantTypeCvtPass>();
+    }
+
+    if (options->fuse_conv_bias_nonlinearity) {
+        add_pass<FuseConvBiasNonlinPass>();
+    }
+    if (options->fuse_conv_bias_with_z) {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass<FuseConvBiasZPass>();
+    }
+    add_pass<ParamFusePass>();
 }
 
 /* ================ ConstVarPropogateBase ================ */

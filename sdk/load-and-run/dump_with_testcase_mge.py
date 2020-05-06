@@ -255,7 +255,7 @@ def optimize_for_inference(args, outputs):
         'enable_nchw88': 'use_nchw88',
         'enable_nchw44': 'use_nchw44',
         'enable_fuse_conv_bias_nonlinearity': 'fuse_conv_bias_nonlinearity',
-        'enable_tensorcore': 'use_tensor_core',
+        'enable_nchw32': 'use_nchw32',
         'enable_fuse_conv_bias_with_z': 'fuse_conv_bias_with_z',
     }
     kwargs = {}
@@ -393,7 +393,7 @@ def main():
         'for inference'
     )
     parser.add_argument(
-        '--enable-tensorcore',
+        '--enable-nchw32',
         action='store_true',
         help='transform the model format from NCHW4 to NCHW32 '
         'for inference on nvidia TensoCore'

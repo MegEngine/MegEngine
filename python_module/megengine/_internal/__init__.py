@@ -539,7 +539,7 @@ def optimize_for_inference(
     f16_io_comp=False,
     use_nhwcd4=False,
     fuse_conv_bias_nonlinearity=False,
-    use_tensor_core=False,
+    use_nchw32=False,
     fuse_conv_bias_with_z=False,
     use_nchw88=False,
     use_nchw44=False
@@ -564,6 +564,8 @@ def optimize_for_inference(
         times.
     :param use_nchw44: whether to use NCHW44 tensor format. This maybe faster some
         times.
+    :param use_nchw32: whether to use NCHW32 tensor format. Mainly used for
+        nvidia tensorcore.
 
 
     :return: list of transformed vars corresponding to given output vars
@@ -575,15 +577,28 @@ def optimize_for_inference(
     for i in [
         "f16_io_f32_comp",
         "f16_io_comp",
-        "use_nhwcd4",
         "fuse_conv_bias_nonlinearity",
-        "use_tensor_core",
         "fuse_conv_bias_with_z",
-        "use_nchw88",
-        "use_nchw44",
     ]:
         if settings[i]:
             getattr(opt, "enable_{}".format(i))()
+
+    layout_tranform = None
+    for k, v in {
+        "use_nhwcd4": "nchw2nhwcd4",
+        "use_nchw32": "nchw2nchw32",
+        "use_nchw88": "nchw2nchw88",
+        "use_nchw44": "nchw2nchw44",
+    }.items():
+        if settings[k]:
+            assert (
+                not layout_tranform
+            ), "Only one layout transform supported, both {} and {}".format(
+                layout_tranform, k
+            )
+            getattr(opt, "enable_{}".format(v))()
+            layout_tranform = k
+
     vec = _detail._VectorSymbolVar()
     for i in output_vars:
         assert isinstance(i, _detail.SymbolVar), "bad var: {}".format(i)

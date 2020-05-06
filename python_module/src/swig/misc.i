@@ -71,15 +71,19 @@ class _PersistentCache {
 };
 
 struct _OptimizeForInferenceOptions {
-#define SET(n) void enable_##n()
-    SET(f16_io_f32_comp);
-    SET(f16_io_comp);
-    SET(fuse_conv_bias_nonlinearity);
-    SET(use_nhwcd4);
-    SET(use_tensor_core);
-    SET(fuse_conv_bias_with_z);
-    SET(use_nchw88);
-    SET(use_nchw44);
+#define SET(n)  void enable_##n();
+        SET(f16_io_f32_comp);
+        SET(f16_io_comp);
+        SET(fuse_conv_bias_nonlinearity);
+        SET(fuse_conv_bias_with_z);
+#undef SET
+#define SET(_trans, _trans_capital)   \
+        void enable_##_trans(); \
+
+        SET(nchw2nhwcd4, NCHW2NHWCD4);
+        SET(nchw2nchw88, NCHW2NCHW88);
+        SET(nchw2nchw44, NCHW2NCHW44);
+        SET(nchw2nchw32, NCHW2NCHW32);
 #undef SET
 };
 

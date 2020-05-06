@@ -377,6 +377,57 @@ namespace gopt {
             RecursiveSubGraphRewriteHelper(OptState &state);
     };
 
+    /**
+     * \brief common optimize options, it both can be used for optimize for
+     * inference in graph dump but also used in graph optimization in runtime.
+     */
+    struct OptimizeOptions {
+        //! whether to enable IO in float16 compute in float32
+        bool f16_io_f32_comp = false;
+        //! whether to enable tranform to pure float16 model
+        bool f16_io_comp = false;
+        //! whether to enable conv bias nonlinearity fusion
+        bool fuse_conv_bias_nonlinearity = false;
+        enum LayoutTransform : uint32_t {
+            DEFAULT,
+            NCHW2NHWCD4,  ///< compute using NHWCD4 tensor format
+            NCHW2NCHW88,  ///< compute using NCHW88 tensor format
+            NCHW2NCHW44,  ///< compute using NCHW44 tensor format
+            NCHW2NCHW32,  ///< compute using NCHW32 tensor format, used for
+                          ///< tensorcore
+        };
+        LayoutTransform layout_transform = LayoutTransform::DEFAULT;
+        //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
+        //! + z -> conv_bias(x, w, b, z)
+        bool fuse_conv_bias_with_z = false;
+
+#define SET(n)                      \
+    OptimizeOptions& enable_##n() { \
+        n = true;                   \
+        return *this;               \
+    }
+        SET(f16_io_f32_comp);
+        SET(f16_io_comp);
+        SET(fuse_conv_bias_nonlinearity);
+        SET(fuse_conv_bias_with_z);
+#undef SET
+#define SET(_trans, _trans_capital)                                 \
+    OptimizeOptions& enable_##_trans() {                            \
+        layout_transform = LayoutTransform::_trans_capital;         \
+        return *this;                                               \
+    }                                                               \
+    bool transform_##_trans() const {                               \
+        return layout_transform == LayoutTransform::_trans_capital; \
+    }
+
+        SET(nchw2nhwcd4, NCHW2NHWCD4);
+        SET(nchw2nchw88, NCHW2NCHW88);
+        SET(nchw2nchw44, NCHW2NCHW44);
+        SET(nchw2nchw32, NCHW2NCHW32);
+#undef SET
+    };
+
+
     /*!
      * \brief manage passes and their applying on graphs
      *
@@ -465,6 +516,11 @@ namespace gopt {
              *      var_replace_map(var->owner_graph()) corresponding to var
              */
             static VarNode* var_replace_lookup(VarNode *var);
+
+            /**
+             * \brief apply optimize options
+             */
+            void apply_optimize_options(const OptimizeOptions* options);
     };
 
     /*!

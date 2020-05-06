@@ -500,10 +500,10 @@ TEST(TestOprIO, MultipleDeviceTensorWithFormatHolderCpu) {
              conv2 = opr::Convolution::make(conv1, w2, param);
 
         auto y = opr::Elemwise::make({conv2}, opr::Elemwise::Param::Mode::RELU);
-        SymbolVar y_opt = gopt::optimize_for_inference(
-                                  {y}, gopt::OptimizeForInferenceOptions{}
-                                               .enable_use_nhwcd4())[0]
-                                  .rename("out");
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw2nhwcd4();
+        SymbolVar y_opt =
+                gopt::optimize_for_inference({y}, options)[0].rename("out");
 
         auto dumper = serialization::GraphDumper::make(
                 serialization::OutputFile::make_fs(fname.c_str()));

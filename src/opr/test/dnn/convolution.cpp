@@ -495,7 +495,7 @@ TEST(TestOprDNN, ConvolutionBackwardFilter) {
                            Param{Mode::CROSS_CORRELATION, PH, PW, SH, SW});
         dest[0] = *out;
     };
-     
+
 #define get_shp(N, P, S, F) ((N + 2 * P - F) / S + 1)
 #define inp_tensor(N, IC, OC, IH, IW, FH, FW) \
     { TensorShape{N, IC, IH, IW}, \
@@ -1282,9 +1282,10 @@ TEST(TestOprDNN, ConvBiasINT8x8xX_NCHW4) {
                     *graph, inp[i]);
         }
 
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
         auto y = gopt::optimize_for_inference({make_graph(inputs)[0]},
-                gopt::OptimizeForInferenceOptions{}.enable_fuse_conv_bias_nonlinearity())[0];
-                //gopt::OptimizeForInferenceOptions{})[0];
+                                              options)[0];
         auto func = graph->compile({make_callback_copy(y, dest[0])});
         func->execute();
         func->wait();
@@ -1720,7 +1721,7 @@ TEST(TestOprDNN, DeformableConvForward) {
                 }
             };
             //! generate offset to avoid value near integer
-	    /// because bilinear function is not derivable over there  
+	    /// because bilinear function is not derivable over there
 	    checker.set_input_generator(2, gen_off);
             checker.set_input_dtype(0, dtype::Float32());
             checker.set_input_dtype(1, dtype::Float32());
