@@ -94,7 +94,7 @@ def _init_hub(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ):
-    """Import hubmodule like python import
+    """Imports hubmodule like python import
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -137,7 +137,7 @@ def list(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ) -> List[str]:
-    """List all entrypoints available in repo hubconf
+    """Lists all entrypoints available in repo hubconf
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -175,7 +175,7 @@ def load(
     protocol: str = DEFAULT_PROTOCOL,
     **kwargs
 ) -> Any:
-    """Load model from github or gitlab repo, with pretrained weights.
+    """Loads model from github or gitlab repo, with pretrained weights.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -250,7 +250,7 @@ def help(
 
 
 def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
-    """Loads MegEngine serialized object at the given URL.
+    """Loads MegEngine serialized object from the given URL.
 
     If the object is already present in ``model_dir``, it's deserialized and
     returned. If no ``model_dir`` is specified, it will be ``MGE_HOME/serialized``.
@@ -291,7 +291,8 @@ def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
 
 
 class pretrained:
-    r"""Decorator helps quick link model function to existing pretrained weights.
+    r"""
+    Decorator which helps to download pretrained weights from the given url.
 
     For example, we can decorate a resnet18 function as follows
 

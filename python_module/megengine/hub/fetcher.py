@@ -102,17 +102,17 @@ class GitSSHFetcher(RepoFetcherBase):
         silent: bool = True,
     ) -> str:
         """
-        Fetch git repo by SSH protocol
+        Fetches git repo by SSH protocol
 
         :param git_host:
-            host address of git repo
-            dxample: github.com
+            host address of git repo.
+            example: github.com
         :param repo_info:
             a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
             tag/branch. The default branch is ``master`` if not specified.
-            dxample: ``"brain_sdk/MegBrain[:hub]"``
+            example: ``"brain_sdk/MegBrain[:hub]"``
         :param use_cache:
-            whether to use locally cached code or completely re-fetch
+            whether to use locally fetched code or completely re-fetch
         :param commit:
             commit id on github or gitlab
         :param silent:
@@ -215,7 +215,7 @@ class GitHTTPSFetcher(RepoFetcherBase):
         silent: bool = True,
     ) -> str:
         """
-        Fetch git repo by HTTPS protocol
+        Fetches git repo by HTTPS protocol
 
         :param git_host:
             host address of git repo
