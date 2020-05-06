@@ -83,18 +83,10 @@ public:
     void exec(const PoolingKernParam& param) const override;
 };
 
-class PoolingImpl::AlgoFilter3MaxStride2NCHW44 final : public AlgoBase {
+class PoolingImpl::AlgoFilter3MaxStridexNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_POOLING_FILTER3_MAX_STRIDE2_NCHW44"; }
-    bool usable(const PoolingKernSizeParam& param) const override;
-    void exec(const PoolingKernParam& param) const override;
-};
-
-class PoolingImpl::AlgoFilter3MaxStride1NCHW44 final : public AlgoBase {
-public:
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_POOLING_FILTER3_MAX_STRIDE1_NCHW44"; }
+    const char* name() const override { return "ARM_POOLING_FILTER3_MAX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
@@ -125,6 +117,12 @@ public:
 
 WorkspaceBundle get_bundle(const PoolingImpl::PoolingKernSizeParam& param);
 
+WorkspaceBundle get_bundle_nchw44(
+        const PoolingImpl::PoolingKernSizeParam& param);
+
+const int8_t* handle_padding(const int8_t* src, size_t IH, size_t IW,
+                             size_t& IH2, size_t& IW2, size_t PH, size_t PW,
+                             const WorkspaceBundle& ws);
 }  // namespace arm_common
 }  // namespace megdnn
 

@@ -9,7 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/arm_common/pooling/do_max_pooling_2x2_nchw44.h"
+#include "src/arm_common/pooling/do_pooling_2x2_nchw44.h"
+#include "src/arm_common/pooling/algo.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
 
@@ -19,12 +20,16 @@ namespace arm_common {
 void do_max_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
                                                  size_t IH, size_t IW,
                                                  size_t OH, size_t OW,
-                                                 size_t PH, size_t PW) {
+                                                 size_t PH, size_t PW,
+                                                 const WorkspaceBundle& ws) {
+    const int8_t* sptr = nullptr;
+    size_t IH2, IW2;
+    sptr = handle_padding(src, IH, IW, IH2, IW2, PH, PW, ws);
     size_t oh = 0;
     for (; oh < OH; ++oh) {
         size_t ih = oh;
-        const int8_t* __restrict sptr0 = src + (ih + 0) * IW * 4;
-        const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4;
+        const int8_t* __restrict sptr0 = sptr + (ih + 0) * IW2 * 4;
+        const int8_t* __restrict sptr1 = sptr + (ih + 1) * IW2 * 4;
         int8_t* __restrict dptr = dst + oh * OW * 4;
         size_t ow = 0;
         for (; ow + 3 < OW; ow += 4) {
@@ -46,15 +51,10 @@ void do_max_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
         }
         for (; ow < OW; ++ow) {
             int8x8_t src001 = vld1_s8(sptr0);
-            int8x8_t src012 = vld1_s8(sptr0 + 4);
-
             int8x8_t src101 = vld1_s8(sptr1);
-            int8x8_t src112 = vld1_s8(sptr1 + 4);
 
-            int8x8_t max01_tmp = vmax_s8(src001, src101);
-            int8x8_t max12_tmp = vmax_s8(src012, src112);
-            int8x8_t mat_out = vmax_s8(max01_tmp, max12_tmp);
-#define store(i) *(dptr + i) = mat_out[i];
+            int8x8_t max_out = vmax_s8(src001, src101);
+#define store(i) *(dptr + i) = std::max(max_out[i], max_out[i + 4]);
             UNROLL_CALL_NOWRAPPER(4, store)
 #undef store
             sptr0 += 4;
@@ -66,12 +66,16 @@ void do_max_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
 void do_max_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
                                                  size_t IH, size_t IW,
                                                  size_t OH, size_t OW,
-                                                 size_t PH, size_t PW) {
+                                                 size_t PH, size_t PW,
+                                                 const WorkspaceBundle& ws) {
+    const int8_t* sptr = nullptr;
+    size_t IH2, IW2;
+    sptr = handle_padding(src, IH, IW, IH2, IW2, PH, PW, ws);
     size_t oh = 0;
     for (; oh < OH; ++oh) {
         size_t ih = oh << 1;
-        const int8_t* __restrict sptr0 = src + (ih + 0) * IW * 4;
-        const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4;
+        const int8_t* __restrict sptr0 = sptr + (ih + 0) * IW2 * 4;
+        const int8_t* __restrict sptr1 = sptr + (ih + 1) * IW2 * 4;
         int8_t* __restrict dptr = dst + oh * OW * 4;
         size_t ow = 0;
         for (; ow + 3 < OW; ow += 4) {
@@ -103,15 +107,10 @@ void do_max_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
         }
         for (; ow < OW; ++ow) {
             int8x8_t src001 = vld1_s8(sptr0);
-            int8x8_t src012 = vld1_s8(sptr0 + 4);
-
             int8x8_t src101 = vld1_s8(sptr1);
-            int8x8_t src112 = vld1_s8(sptr1 + 4);
 
-            int8x8_t max01_tmp = vmax_s8(src001, src101);
-            int8x8_t max12_tmp = vmax_s8(src012, src112);
-            int8x8_t mat_out = vmax_s8(max01_tmp, max12_tmp);
-#define store(i) *(dptr + i) = mat_out[i];
+            int8x8_t max_out = vmax_s8(src001, src101);
+#define store(i) *(dptr + i) = std::max(max_out[i], max_out[i + 4]);
             UNROLL_CALL_NOWRAPPER(4, store)
 #undef store
             sptr0 += 8;

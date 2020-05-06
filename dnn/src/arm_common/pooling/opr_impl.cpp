@@ -26,8 +26,7 @@ class PoolingImpl::AlgoPack : NonCopyableObj {
     AlgoInt8Filter2MaxStride2 algo_int8_filter2_max_stride2;
     AlgoInt8Filter3MaxStride2 algo_int8_filter3_max_stride2;
     AlgoFilter2MaxStridexNCHW44 algo_filter2_max_stridex_nchw4;
-    AlgoFilter3MaxStride2NCHW44 algo_filter3_max_stride2_nchw4;
-    AlgoFilter3MaxStride1NCHW44 algo_filter3_max_stride1_nchw4;
+    AlgoFilter3MaxStridexNCHW44 algo_filter3_max_stridex_nchw4;
     AlgoFilter4MaxStridexNCHW44 algo_filter4_max_stridex_nchw4;
     AlgoFilter5MaxStridexNCHW44 algo_filter5_max_stridex_nchw4;
 
@@ -41,8 +40,7 @@ public:
         all_algos.emplace_back(&algo_filter5_max_stride2);
         all_algos.emplace_back(&algo_int8_filter2_max_stride2);
         all_algos.emplace_back(&algo_int8_filter3_max_stride2);
-        all_algos.emplace_back(&algo_filter3_max_stride2_nchw4);
-        all_algos.emplace_back(&algo_filter3_max_stride1_nchw4);
+        all_algos.emplace_back(&algo_filter3_max_stridex_nchw4);
         all_algos.emplace_back(&algo_filter2_max_stridex_nchw4);
         all_algos.emplace_back(&algo_filter4_max_stridex_nchw4);
         all_algos.emplace_back(&algo_filter5_max_stridex_nchw4);
@@ -116,6 +114,12 @@ size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
         param.stride[0] == 2 && param.stride[1] == 2 && param.isz[0] >= 2 &&
         param.isz[1] >= 2) {
         WorkspaceBundle ws = get_bundle(param);
+        arm_common_workspace = ws.total_size_in_bytes() * nr_threads;
+    }
+
+    if ((param.src_type.enumv() == DTypeEnum::QuantizedS8) &&
+        (param.format == param::Pooling::Format::NCHW44)) {
+        WorkspaceBundle ws = get_bundle_nchw44(param);
         arm_common_workspace = ws.total_size_in_bytes() * nr_threads;
     }
 

@@ -84,8 +84,7 @@ private:
     class AlgoInt8Filter2MaxStride2;
     class AlgoInt8Filter3MaxStride2;
     class AlgoFilter2MaxStridexNCHW44;
-    class AlgoFilter3MaxStride2NCHW44;
-    class AlgoFilter3MaxStride1NCHW44;
+    class AlgoFilter3MaxStridexNCHW44;
     class AlgoFilter4MaxStridexNCHW44;
     class AlgoFilter5MaxStridexNCHW44;
     class AlgoPack;

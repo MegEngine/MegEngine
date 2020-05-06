@@ -8,6 +8,8 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include <vector>
+#include "megdnn/dtype.h"
 #include "test/arm_common/fixture.h"
 
 #include "test/common/pooling.h"
@@ -53,38 +55,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING) {
             checker.set_param(param).exec({{2, 3, ih, iw}, {}});
     }
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W3x3_S2x2_NCHW44)
-{
-    // clang-format off
-    for (size_t ih: {3, 5, 10})
-    for (size_t iw: {3, 5, 7, 9, 15, 20})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
-    if (ih+2*ph >= 3 && iw+2*pw >= 3)
-    {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
 
-        param::Pooling param;
-        param.mode = param::Pooling::Mode::MAX;
-        param.format = param::Pooling::Format::NCHW44;
-        param.pad_h = ph;
-        param.pad_w = pw;
-        param.stride_h = param.stride_w = 2;
-        param.window_h = param.window_w = 3;
-        checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
-    }
-    // clang-format on
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W3x3_S1x1_NCHW44)
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W3x3_NCHW44)
 {
     // clang-format off
     for (size_t ih: {3, 5, 10})
     for (size_t iw: {3, 5, 7, 9, 15, 20})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
+    for (size_t ph: {0, 1, 2})
+    for (size_t pw: {0, 1, 2})
     if (ih+2*ph >= 3 && iw+2*pw >= 3)
     {
         UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
@@ -100,68 +78,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W3x3_S1x1_NCHW44)
         param.stride_h = param.stride_w = 1;
         param.window_h = param.window_w = 3;
         checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
-    }
-    // clang-format on
-}
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W2x2_S1x1_NCHW44)
-{
-    // clang-format off
-    for (size_t ih: {2, 5, 10, 17})
-    for (size_t iw: {2, 6, 8, 16, 26})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
-    if (ih+2*ph >= 3 && iw+2*pw >= 3)
-    {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
-
-        param::Pooling param;
-        param.mode = param::Pooling::Mode::MAX;
-        param.format = param::Pooling::Format::NCHW44;
-        param.pad_h = ph;
-        param.pad_w = pw;
-        param.stride_h = param.stride_w = 1;
-        param.window_h = param.window_w = 2;
-        checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
-    }
-    // clang-format on
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W2x2_S2x2_NCHW44)
-{
-    // clang-format off
-    for (size_t ih: {2, 5, 10, 17})
-    for (size_t iw: {2, 6, 8, 16, 26})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
-    if (ih+2*ph >= 3 && iw+2*pw >= 3)
-    {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
-
-        param::Pooling param;
-        param.mode = param::Pooling::Mode::MAX;
-        param.format = param::Pooling::Format::NCHW44;
-        param.pad_h = ph;
-        param.pad_w = pw;
         param.stride_h = param.stride_w = 2;
-        param.window_h = param.window_w = 2;
         checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
+
     }
     // clang-format on
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W4x4_S1x1_NCHW44)
+
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W2x2_NCHW44)
 {
     // clang-format off
-    for (size_t ih: {4, 7, 10, 17, 20})
-    for (size_t iw: {4, 8, 10, 21, 32})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
-    if (ih+2*ph >= 4 && iw+2*pw >= 4)
+   for (size_t ih: {2, 5, 10, 17})
+   for (size_t iw: {2, 6, 8, 16, 26})
+   for (size_t ph: {0, 1})
+   for (size_t pw: {0, 1})
+    if (ih+2*ph >= 2 && iw+2*pw >= 2)
     {
         UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
         Checker<Pooling> checker(handle());
@@ -174,18 +106,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W4x4_S1x1_NCHW44)
         param.pad_h = ph;
         param.pad_w = pw;
         param.stride_h = param.stride_w = 1;
-        param.window_h = param.window_w = 4;
+        param.window_h = param.window_w = 2;
+        checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
+
+        param.stride_h = param.stride_w = 2;
         checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
     }
     // clang-format on
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W4x4_S2x2_NCHW44)
+
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W4x4_NCHW44)
 {
     // clang-format off
     for (size_t ih: {4, 10, 18, 25, 30})
     for (size_t iw: {4, 12, 17, 20, 25})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
+    for (size_t ph: {0, 1, 2})
+    for (size_t pw: {0, 1, 2})
     if (ih+2*ph >= 4 && iw+2*pw >= 4)
     {
         UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
@@ -198,19 +134,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W4x4_S2x2_NCHW44)
         param.format = param::Pooling::Format::NCHW44;
         param.pad_h = ph;
         param.pad_w = pw;
-        param.stride_h = param.stride_w = 2;
+        param.stride_h = param.stride_w = 1;
         param.window_h = param.window_w = 4;
+        checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
+
+        param.stride_h = param.stride_w = 2;
         checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
     }
     // clang-format on
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W5x5_S1x1_NCHW44)
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W5x5_NCHW44)
 {
     // clang-format off
     for (size_t ih: {5, 9, 19, 20, 39})
     for (size_t iw: {5, 12, 23, 27, 39})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
+    for (size_t ph: {0, 1, 2})
+    for (size_t pw: {0, 1, 2})
     if (ih+2*ph >= 5 && iw+2*pw >= 5)
     {
         UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
@@ -226,31 +165,10 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W5x5_S1x1_NCHW44)
         param.stride_h = param.stride_w = 1;
         param.window_h = param.window_w = 5;
         checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
-    }
-    // clang-format on
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_MAX_W5x5_S2x2_NCHW44)
-{
-    // clang-format off
-    for (size_t ih: {5, 9, 19, 20, 39})
-    for (size_t iw: {5, 12, 23, 27, 39})
-    for (size_t ph: {0})
-    for (size_t pw: {0})
-    if (ih+2*ph >= 5 && iw+2*pw >= 5)
-    {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
 
-        param::Pooling param;
-        param.mode = param::Pooling::Mode::MAX;
-        param.format = param::Pooling::Format::NCHW44;
-        param.pad_h = ph;
-        param.pad_w = pw;
         param.stride_h = param.stride_w = 2;
-        param.window_h = param.window_w = 5;
         checker.set_param(param).exec(TensorShapeArray{{2, 2, ih, iw, 4}, {}});
+
     }
     // clang-format on
 }
@@ -473,13 +391,15 @@ template <typename Opr>
 void benchmark_impl(const typename Opr::Param& param,
                     std::vector<SmallVector<TensorShape>> shapes, size_t RUNS,
                     TaskExecutorConfig&& multi_thread_config,
-                    TaskExecutorConfig&& single_thread_config) {
+                    TaskExecutorConfig&& single_thread_config,
+                    DType data_type) {
     std::vector<float> multi_thread_times, single_thread_times;
     {
         auto multi_thread_hanle =
                 create_cpu_handle(0, true, &multi_thread_config);
         auto benchmarker = Benchmarker<Opr>(multi_thread_hanle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
+        benchmarker.set_dtype(0, data_type);
         for (auto shape : shapes) {
             multi_thread_times.push_back(benchmarker.exec(shape) / RUNS);
         }
@@ -489,6 +409,7 @@ void benchmark_impl(const typename Opr::Param& param,
                 create_cpu_handle(0, true, &single_thread_config);
         auto benchmarker = Benchmarker<Opr>(single_thread_handle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
+        benchmarker.set_dtype(0, data_type);
         for (auto shape : shapes) {
             single_thread_times.push_back(benchmarker.exec(shape) / RUNS);
         }
@@ -540,10 +461,47 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING) {
     param.stride_h = param.stride_w = 2;
     param.pad_h = param.pad_w = 1;
     printf("Benchmark POOLING kernel:%d*%d stride:%d,mode %d\n", param.window_h,
-           param.stride_h, param.pad_h, static_cast<int>(param.mode));
-    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {0, 1, 2, 3}}, {1, {0}});
-    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}});
-    benchmark_impl<Pooling>(param, shapes, RUNS, {2, {0, 1}}, {1, {0}});
+           param.window_w, param.stride_h, static_cast<int>(param.mode));
+    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {0, 1, 2, 3}}, {1, {0}}, dtype::Float32());
+    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}}, dtype::Float32());
+    benchmark_impl<Pooling>(param, shapes, RUNS, {2, {0, 1}}, {1, {0}}, dtype::Float32());
+}
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING_NCHW44) {
+    constexpr size_t RUNS = 50;
+
+    using Param = param::Pooling;
+    Param param;
+    param.pad_h = param.pad_w = 0;
+    param.mode = Param::Mode::MAX;
+    std::vector<SmallVector<TensorShape>> shapes;
+    std::vector<std::vector<size_t>> filter_and_stride = {
+            {2, 1}, {2, 2}, {3, 1}, {3, 2}, {4, 1}, {4, 2}, {5, 1}, {5, 2}};
+   for(auto filter:filter_and_stride){
+
+    shapes.push_back({{1, 32 * 4, 215, 215}, {}});
+    shapes.push_back({{1, 32 * 4, 128, 128}, {}});
+    shapes.push_back({{1, 16 * 4, 56, 56}, {}});
+
+    param.window_h = param.window_w = filter[0];
+    param.stride_h = param.stride_w = filter[1];
+    param.format = Param::Format::NCHW;
+    printf("NCHW Benchmark POOLING kernel:%d*%d stride:%d,mode %d\n", param.window_h,
+           param.window_h, param.stride_h, static_cast<int>(param.mode));
+    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+                            dtype::QuantizedS8(1.1f));
+    shapes.clear();
+    shapes.push_back({{1, 32, 215, 215,4}, {}});
+    shapes.push_back({{1, 32, 128, 128,4}, {}});
+    shapes.push_back({{1, 16, 56, 56, 4}, {}});
+
+    param.format = Param::Format::NCHW44;
+    printf("NCHW44 Benchmark POOLING kernel:%d*%d stride:%d,mode %d\n", param.window_h,
+           param.window_w, param.stride_h, static_cast<int>(param.mode));
+    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+                            dtype::QuantizedS8(1.1f));
+    shapes.clear();
+   }
 }
 #endif
 

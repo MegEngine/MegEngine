@@ -9,7 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/arm_common/pooling/do_max_pooling_4x4_nchw44.h"
+#include "src/arm_common/pooling/do_pooling_4x4_nchw44.h"
+#include "src/arm_common/pooling/algo.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
 
@@ -19,14 +20,18 @@ namespace arm_common {
 void do_max_pooling_4x4_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
                                                  size_t IH, size_t IW,
                                                  size_t OH, size_t OW,
-                                                 size_t PH, size_t PW) {
+                                                 size_t PH, size_t PW,
+                                                 const WorkspaceBundle& ws) {
+    const int8_t* sptr = nullptr;
+    size_t IH2, IW2;
+    sptr = handle_padding(src, IH, IW, IH2, IW2, PH, PW, ws);
     size_t oh = 0;
     for (; oh < OH; ++oh) {
         size_t ih = oh;
-        const int8_t* __restrict sptr0 = src + (ih + 0) * IW * 4;
-        const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4;
-        const int8_t* __restrict sptr2 = src + (ih + 2) * IW * 4;
-        const int8_t* __restrict sptr3 = src + (ih + 3) * IW * 4;
+        const int8_t* __restrict sptr0 = sptr + (ih + 0) * IW2 * 4;
+        const int8_t* __restrict sptr1 = sptr + (ih + 1) * IW2 * 4;
+        const int8_t* __restrict sptr2 = sptr + (ih + 2) * IW2 * 4;
+        const int8_t* __restrict sptr3 = sptr + (ih + 3) * IW2 * 4;
         int8_t* __restrict dptr = dst + oh * OW * 4;
         size_t ow = 0;
         for (; ow + 3 < OW; ow += 4) {
@@ -90,35 +95,38 @@ void do_max_pooling_4x4_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
 void do_max_pooling_4x4_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
                                                  size_t IH, size_t IW,
                                                  size_t OH, size_t OW,
-                                                 size_t PH, size_t PW) {
+                                                 size_t PH, size_t PW,
+                                                 const WorkspaceBundle& ws) {
+    const int8_t* sptr = nullptr;
+    size_t IH2, IW2;
+    sptr = handle_padding(src, IH, IW, IH2, IW2, PH, PW, ws);
     size_t oh = 0;
     for (; oh < OH; ++oh) {
         size_t ih = oh << 1;
-        const int8_t* __restrict sptr0 = src + (ih + 0) * IW * 4;
-        const int8_t* __restrict sptr1 = src + (ih + 1) * IW * 4;
-        const int8_t* __restrict sptr2 = src + (ih + 2) * IW * 4;
-        const int8_t* __restrict sptr3 = src + (ih + 3) * IW * 4;
+        const int8_t* __restrict sptr0 = sptr + (ih + 0) * IW2 * 4;
+        const int8_t* __restrict sptr1 = sptr + (ih + 1) * IW2 * 4;
+        const int8_t* __restrict sptr2 = sptr + (ih + 2) * IW2 * 4;
+        const int8_t* __restrict sptr3 = sptr + (ih + 3) * IW2 * 4;
         int8_t* __restrict dptr = dst + oh * OW * 4;
         size_t ow = 0;
         for (; ow + 3 < OW; ow += 4) {
-            int8x16_t src00, src04, src08, src09, max_tmp0, max_tmp1, max_tmp2,
-                    max_tmp3;
-            int32x4_t src0246, src1357, src2468, src3579;
+            int8x16_t src00, src04, max_tmp0, max_tmp1, max_tmp2, max_tmp3;
+            int32x4_t src0246, src1357, src2468, src3579, src08, src09;
             int32x4x2_t src_tmp;
-#define CACULATE_ROW(i)                                               \
-    src00 = vld1q_s8(sptr##i);                                        \
-    src04 = vld1q_s8(sptr##i + 4 * 4);                                \
-    src08 = vld1q_s8(sptr##i + 4 * 8);                                \
-    src09 = vld1q_s8(sptr##i + 4 * 9);                                \
-    src_tmp = vuzpq_s32(vreinterpretq_s32_s8(src00),                  \
-                        vreinterpretq_s32_s8(src04));                 \
-    src0246 = src_tmp.val[0];                                         \
-    src1357 = src_tmp.val[1];                                         \
-    src2468 = vextq_s32(src0246, vreinterpretq_s32_s8(src08), 1);     \
-    src3579 = vextq_s32(src1357, vreinterpretq_s32_s8(src09), 1);     \
-    max_tmp##i = vmaxq_s8(vreinterpretq_s8_s32(src0246),              \
-                          vreinterpretq_s8_s32(src1357));             \
-    max_tmp##i = vmaxq_s8(max_tmp##i, vreinterpretq_s8_s32(src2468)); \
+#define CACULATE_ROW(i)                                                       \
+    src00 = vld1q_s8(sptr##i);                                                \
+    src04 = vld1q_s8(sptr##i + 4 * 4);                                        \
+    src08 = vld1q_dup_s32(reinterpret_cast<const int32_t*>(sptr##i + 4 * 8)); \
+    src09 = vld1q_dup_s32(reinterpret_cast<const int32_t*>(sptr##i + 4 * 9)); \
+    src_tmp = vuzpq_s32(vreinterpretq_s32_s8(src00),                          \
+                        vreinterpretq_s32_s8(src04));                         \
+    src0246 = src_tmp.val[0];                                                 \
+    src1357 = src_tmp.val[1];                                                 \
+    src2468 = vextq_s32(src0246, src08, 1);                                   \
+    src3579 = vextq_s32(src1357, src09, 1);                                   \
+    max_tmp##i = vmaxq_s8(vreinterpretq_s8_s32(src0246),                      \
+                          vreinterpretq_s8_s32(src1357));                     \
+    max_tmp##i = vmaxq_s8(max_tmp##i, vreinterpretq_s8_s32(src2468));         \
     max_tmp##i = vmaxq_s8(max_tmp##i, vreinterpretq_s8_s32(src3579));
 
             UNROLL_CALL_NOWRAPPER(4, CACULATE_ROW)
