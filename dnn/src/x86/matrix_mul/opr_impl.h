@@ -9,8 +9,22 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
+#include "src/x86/utils.h"
+
+#if MEGDNN_X86_WITH_MKL
+#include <mkl.h>
+#include <mkl_cblas.h>
+#elif MEGDNN_X86_WITH_OPENBLAS
+#include <cblas.h>
+#else
+#endif
+
+#if MEGDNN_X86_WITH_MKL_DNN
+#include <mkldnn.h>
+#endif
 
 namespace megdnn {
 namespace x86 {
@@ -26,7 +40,7 @@ public:
 protected:
     static void* const sm_x86_algo_type;
     class AlgoF32Blas;
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
     class AlgoF32MKLPackA;
 #endif
 #if MEGDNN_X86_WITH_VNNI

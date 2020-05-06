@@ -14,6 +14,17 @@
 #include <vector>
 #include "src/common/utils.h"
 
+#if MEGDNN_X86_WITH_MKL
+#include <mkl.h>
+//! As INTEL_MKL_VERSION >= 20190001 support SUPPORT_MKL_PACKED_GEMM
+#if INTEL_MKL_VERSION >= 20190001
+#define SUPPORT_MKL_PACKED_GEMM 1
+#else
+#define SUPPORT_MKL_PACKED_GEMM 0
+#endif
+
+#endif
+
 namespace megdnn {
 namespace x86 {
 

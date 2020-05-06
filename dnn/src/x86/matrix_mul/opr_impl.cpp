@@ -12,7 +12,6 @@
 #include "src/x86/matrix_mul/opr_impl.h"
 #include "src/common/metahelper.h"
 #include "src/x86/matrix_mul/algos.h"
-#include "src/x86/utils.h"
 using namespace megdnn;
 using namespace x86;
 
@@ -25,7 +24,7 @@ void* const MatrixMulImpl::sm_x86_algo_type = &x86_algo_type_storage;
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32Blas f32blas;
 
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
     AlgoF32MKLPackA f32mkl_packa;
 #endif
 #if MEGDNN_X86_WITH_VNNI
@@ -57,7 +56,7 @@ public:
         all_algos.emplace_back(&algoint8x8x32mkldnn);
 #endif
         all_algos.emplace_back(&f32blas);
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
         all_algos.emplace_back(&f32mkl_packa);
 #endif
     }

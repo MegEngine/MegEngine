@@ -14,21 +14,9 @@
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"
 #include "src/x86/matrix_mul/int8/strategy.h"
-#include "src/x86/utils.h"
 
 #include "src/x86/matrix_mul/f32/strategy.h"
 
-#if MEGDNN_X86_WITH_MKL
-#include <mkl.h>
-#include <mkl_cblas.h>
-#elif MEGDNN_X86_WITH_OPENBLAS
-#include <cblas.h>
-#else
-#endif
-
-#if MEGDNN_X86_WITH_MKL_DNN
-#include <mkldnn.h>
-#endif
 
 MIDOUT_DECL(megdnn_x86_matmul_kern)
 MIDOUT_DECL(megdnn_x86_matmul_kern_mk8_8x8)
@@ -55,7 +43,7 @@ void f32_blas_kern(const MatrixMulImpl::KernParam& kern_param) {
 #endif
 }
 
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 void f32_blas_kern_only_packA(const MatrixMulImpl::KernParam& kern_param,
                                  const void* a_panel, const void* b_panel) {
   MEGDNN_MARK_USED_VAR(b_panel);
@@ -93,7 +81,7 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32Blas::get_kern(
 }
 
 /* ===================== AlgoF32BlasPackA====================== */
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 bool MatrixMulImpl::AlgoF32MKLPackA::usable(
         const KernSizeParam& kern_size_param) const {
     return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&

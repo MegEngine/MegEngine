@@ -28,7 +28,7 @@ public:
     PackMode packmode() const override { return PackMode::NO_PACK; }
 };
 
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 class MatrixMulImpl::AlgoF32MKLPackA : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }

@@ -52,7 +52,7 @@ TEST_F(X86, MATRIX_MUL_SSE_8X8X32) {
                                  handle(), "X86_INT8X8X32_SSE_4X8X2");
 }
 
-#if MEGDNN_X86_WITH_MKL
+#if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 TEST_F(X86, MATRIX_MUL_MKL_PACKA) {
     matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
                                  dtype::Float32{}, handle(),
