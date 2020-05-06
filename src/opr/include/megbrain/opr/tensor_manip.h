@@ -637,7 +637,16 @@ MGB_DEFINE_OPR_CLASS(RelayoutFormat,
  *
  * See docs of megdnn params for more details
  */
-MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(WinogradFilterPreprocess);
+MGB_DEFINE_OPR_CLASS(WinogradFilterPreprocess,
+                     intl::MegDNNOprWrapperFwd<megdnn::WinogradFilterPreprocess>)
+    public:
+        WinogradFilterPreprocess(VarNode* p0, const Param& param,
+                const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar p0, const Param& param = {},
+                const OperatorNodeConfig& config = {});
+        void init_output_dtype() override final;
+};
+
 } // opr
 } // mgb
 

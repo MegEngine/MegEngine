@@ -309,6 +309,7 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         return _dt(1.0f)
 
             cb(dtype::QuantizedS8);
+            cb(dtype::QuantizedS16);
             cb(dtype::QuantizedS32);
             default:
                 return DType::from_enum(enumv);

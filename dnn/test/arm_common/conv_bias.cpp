@@ -1745,6 +1745,62 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_1X1_S1_NCHW_VS_NCHW44_INT8x8x32) {
 }
 #endif
 
+TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_WINOGRAD_VS_IM2COL_INT8) {
+    auto&& args = get_winograd_benchmark_args(3, 8);
+    using namespace conv_bias;
+    constexpr size_t RUN = 10;
+
+    Benchmarker<ConvBias> benchmark_im2col(handle());
+    benchmark_im2col.set_display(false);
+    benchmark_im2col.set_times(RUN);
+    benchmark_im2col.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+
+    Benchmarker<ConvBias> benchmark_winograd(handle());
+    benchmark_winograd.set_display(false);
+    benchmark_winograd.set_times(RUN);
+    benchmark_winograd.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle()->create_operator<ConvBias>();
+        opr->param() = arg.param;
+        opr->deduce_layout({arg.src, dtype::Float32()},
+                        {arg.filter, dtype::Float32()},
+                        {arg.bias, dtype::Float32()}, {}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
+                            arg.filter[2] * arg.filter[3] * 2.0 /
+                            (1024 * 1024 * 1024) * 1e3;
+
+        benchmark_im2col.set_param(arg.param);
+        auto im2col_used =
+                algo_benchmark<ConvBias>(
+                        benchmark_im2col, {arg.src, arg.filter, {}, {}, {}},
+                        "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16") /
+                RUN;
+
+        benchmark_winograd.set_param(arg.param);
+        auto winograd_used =
+                algo_benchmark<ConvBias>(
+                        benchmark_winograd, {arg.src, arg.filter, {}, {}, {}},
+                        "WINOGRAD:AARCH64_INT16X16X32_MK8_8X8:8:2") /
+                RUN;
+
+        printf("%s %s: im2col: %f ms %f Gflops winograd: %f ms %f GFlops "
+            "speedup: "
+            "%f\n",
+            arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
+            im2col_used, computations / im2col_used, winograd_used,
+            computations / winograd_used, im2col_used / winograd_used);
+    }
+}
+
 #endif
 
 // vim: syntax=cpp.doxygen

@@ -736,6 +736,12 @@ std::vector<conv_bias::TestArg> get_winograd_benchmark_args(size_t kernel,
     pack(64, 64, 123, 123, kernel, kernel / 2);
     pack(64, 24, 123, 123, kernel, kernel / 2);
     pack(24, 24, 224, 224, kernel, kernel / 2);
+
+    //! conv in resnet18
+    pack(64, 64, 56, 56, kernel, kernel / 2);
+    pack(128, 128, 28, 28, kernel, kernel / 2);
+    pack(256, 256, 14, 14, kernel, kernel / 2);
+    pack(512, 512, 7, 7, kernel, kernel / 2);
     return args;
 }
 
