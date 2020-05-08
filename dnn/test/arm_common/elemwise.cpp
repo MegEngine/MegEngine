@@ -26,50 +26,53 @@ TYPED_TEST(ARM_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }
 
-#define TERNARY_COMPLATE_TEST_CASE(_optr)                               \
-    printf("Check binary optr %s by all cases.\n", #_optr);             \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});     \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});     \
-    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {1, 7}, {}}); \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 1}, {3, 4, 1}, {3, 4, 1}, {}});              \
-    checker.set_param(Mode::_optr).execs({{3, 4, 5}, {1}, {1}, {}});    \
-    checker.set_param(Mode::_optr).execs({{1}, {3, 4, 5}, {1}, {}});
-
-#define BUILD_TERNARY_COMPLATE_TEST_CASE \
-    TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
-
 TEST_F(ARM_COMMON, ELEMWISE_FORWARD_TERNARY) {
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle());
+    checker.set_param(Mode::FUSE_MUL_ADD3);
+
+    auto run = [&] {
+        //! nchw44
+        checker.execs({{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
+        checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.execs({{1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
+
+        //! nchw44
+        checker.execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {}});
+        checker.execs({{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {}});
+        checker.execs({{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {}});
+        checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {}});
+
+        checker.execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});
+        checker.execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});
+        checker.execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}});
+        checker.execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});
+        checker.execs({{1, 7}, {1, 7}, {1, 7}, {}});
+        checker.execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}});
+        checker.execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}});
+        checker.execs({{3, 4, 1}, {3, 4, 1}, {3, 4, 1}, {}});
+        checker.execs({{3, 4, 5}, {1}, {1}, {}});
+        checker.execs({{1}, {3, 4, 5}, {1}, {}});
+    };
+
     // case int
     checker.set_dtype(0, dtype::Int8());
     checker.set_dtype(1, dtype::Int8());
     checker.set_dtype(2, dtype::Int8());
-    // BUILD_TERNARY_TEST_CASE
-    BUILD_TERNARY_COMPLATE_TEST_CASE
+    run();
 
     checker.set_dtype(0, dtype::Int16());
     checker.set_dtype(1, dtype::Int16());
     checker.set_dtype(2, dtype::Int16());
-    // BUILD_TERNARY_TEST_CASE
-    BUILD_TERNARY_COMPLATE_TEST_CASE
+    run();
 
     checker.set_dtype(0, dtype::Int32());
     checker.set_dtype(1, dtype::Int32());
     checker.set_dtype(2, dtype::Int32());
-    // BUILD_TERNARY_TEST_CASE
-    BUILD_TERNARY_COMPLATE_TEST_CASE
+    run();
 
     // case float
     UniformFloatRNG rng(1e-5, 7e1);
@@ -78,9 +81,7 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_TERNARY) {
     checker.set_dtype(0, dtype::Float32());
     checker.set_dtype(1, dtype::Float32());
     checker.set_dtype(2, dtype::Float32());
-
-    // BUILD_TERNARY_TEST_CASE
-    BUILD_TERNARY_COMPLATE_TEST_CASE
+    run();
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     // case half
@@ -90,9 +91,7 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_TERNARY) {
     checker.set_dtype(0, dtype::Float16());
     checker.set_dtype(1, dtype::Float16());
     checker.set_dtype(2, dtype::Float16());
-
-    // BUILD_TERNARY_TEST_CASE
-    BUILD_TERNARY_COMPLATE_TEST_CASE
+    run();
 #endif
 }
 

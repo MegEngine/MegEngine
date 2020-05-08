@@ -105,7 +105,9 @@ enum BcastType {
     VEC_VEC_VEC,
     VEC_VEC_SCALAR,
     BCAST101_VEC_BCAST101,
+    BCAST101x4_VEC_BCAST101x4,
     VEC_BCAST101_VEC,
+    VEC_BCAST101x4_VEC,
     VEC_SCALAR_VEC,
     VEC_SCALAR_SCALAR,
     UNKNOWN_BCAST_TYPE
@@ -681,6 +683,54 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
     }
 };
 
+//! src0: CHW44, src1: vector, src2:  CHW44
+template <typename Op>
+struct OpCallerTernary<Op, BCAST101x4_VEC_BCAST101x4> {
+    static void run(const typename Op::src_ctype* src0,
+                    const typename Op::src_ctype* src1,
+                    const typename Op::src_ctype* src2,
+                    typename Op::dst_ctype* dst, DType src0_dtype,
+                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
+                    size_t batch, size_t nr_channel_blocks,
+                    size_t channel_stride, size_t channel_block_dim) {
+        megdnn_assert(channel_block_dim == 4, "only imp for nchw44");
+        Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
+        ParamElemVisitorBcast101x4<typename Op::src_ctype> vis0;
+        ParamElemVisitor<typename Op::src_ctype> vis1;
+        ParamElemVisitorBcast101x4<typename Op::src_ctype> vis2;
+        for (size_t b = 0; b < batch; b++) {
+            auto src0_ptr = src0;
+            auto src2_ptr = src2;
+            for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
+                auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
+                auto src2_block_ptr = src2_ptr + cb * channel_block_dim;
+                auto channel_block_vec0 = vis0(src0_block_ptr);
+                auto channel_block_vec2 = vis2(src2_block_ptr);
+                size_t img_index = 0;
+                auto src1_offset = Op::SIMD_WIDTH / channel_block_dim;
+                for (; img_index + 2 * src1_offset <= channel_stride;
+                     img_index += 2 * src1_offset) {
+                    op({{channel_block_vec0, channel_block_vec0}},
+                       {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
+                       {{channel_block_vec2, channel_block_vec2}}, dst);
+                    src1 += Op::SIMD_WIDTH * 2;
+                    dst += Op::SIMD_WIDTH * 2;
+                }
+                // TODO:all elemwise_multi_type op imp one simd mode
+                for (; img_index < channel_stride; img_index++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim;
+                         c_iter++) {
+                        op(*(src0_block_ptr + c_iter), *src1,
+                           *(src2_block_ptr + c_iter), dst);
+                        src1++;
+                        dst++;
+                    }
+                }
+            }
+        }
+    }
+};
+
 //! src1: 1C11, src0 and src2 are contig
 template <typename Op>
 struct OpCallerTernary<Op, VEC_BCAST101_VEC> {
@@ -720,6 +770,52 @@ struct OpCallerTernary<Op, VEC_BCAST101_VEC> {
                     dst++;
                 }
                 src1_ptr++;
+            }
+        }
+    }
+};
+
+//! src1: CHW44, src0 and src2 are contig
+template <typename Op>
+struct OpCallerTernary<Op, VEC_BCAST101x4_VEC> {
+    static void run(const typename Op::src_ctype* src0,
+                    const typename Op::src_ctype* src1,
+                    const typename Op::src_ctype* src2,
+                    typename Op::dst_ctype* dst, DType src0_dtype,
+                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
+                    size_t batch, size_t nr_channel_blocks,
+                    size_t channel_stride, size_t channel_block_dim) {
+        megdnn_assert(channel_block_dim == 4, "only imp for nchw44");
+        Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
+        ParamElemVisitor<typename Op::src_ctype> vis0;
+        ParamElemVisitorBcast101x4<typename Op::src_ctype> vis1;
+        ParamElemVisitor<typename Op::src_ctype> vis2;
+        for (size_t b = 0; b < batch; b++) {
+            auto src1_ptr = src1;
+            for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
+                auto src1_block_ptr = src1_ptr + cb * channel_block_dim;
+                auto channel_block_vec = vis1(src1_block_ptr);
+                size_t img_index = 0;
+                auto offset = Op::SIMD_WIDTH / channel_block_dim;
+                for (; img_index + 2 * offset <= channel_stride;
+                     img_index += 2 * offset) {
+                    op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
+                       {{channel_block_vec, channel_block_vec}},
+                       {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
+                    src0 += Op::SIMD_WIDTH * 2;
+                    src2 += Op::SIMD_WIDTH * 2;
+                    dst += Op::SIMD_WIDTH * 2;
+                }
+                // TODO:all elemwise_multi_type op imp one simd mode
+                for (; img_index < channel_stride; img_index++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim;
+                         c_iter++) {
+                        op(*src0, *(src1_block_ptr + c_iter), *src2, dst);
+                        src0++;
+                        src2++;
+                        dst++;
+                    }
+                }
             }
         }
     }

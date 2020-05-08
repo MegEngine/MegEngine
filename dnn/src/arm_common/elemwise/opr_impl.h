@@ -41,7 +41,9 @@ private:
     class AlgoTernaryFma3VecVecVec;
     class AlgoTernaryFma3VecVecScalar;
     class AlgoTernaryFma3Bcast101VecBcast101;
+    class AlgoTernaryFma3Bcast101x4VecBcast101x4;
     class AlgoTernaryFma3VecBcast101Vec;
+    class AlgoTernaryFma3VecBcast101x4Vec;
     class AlgoTernaryFma3VecScalarVec;
     class AlgoTernaryFma3VecScalarScalar;
     class AlgoPack;

@@ -214,6 +214,30 @@ TEST_F(ARM_COMMON, ELEMWISE_QUANTIZED_MODE_TERNARY) {
     using Mode = ElemwiseMultiType::Param::Mode;
     Checker<ElemwiseMultiType> checker(handle());
 
+    auto run = [&]() {
+        //! nchw44
+        checker.execs({{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
+        checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.execs({{1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
+
+        //! nchw44
+        checker.execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {}});
+        checker.execs({{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {}});
+        checker.execs({{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {}});
+        checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {}});
+
+        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {1, 1, 1, 1}, {}});
+        checker.execs({{1, 4, 1, 1}, {3, 4, 5, 6}, {1, 4, 1, 1}, {}});
+
+        checker.execs({{3}, {3}, {3}, {}});
+        checker.execs({{9}, {9}, {9}, {}});
+        checker.execs({{17}, {17}, {17}, {}});
+        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+    };
+
     for (auto mode : {Mode::QFUSE_MUL_ADD3}) {
         checker.set_param({mode});
 
@@ -226,14 +250,7 @@ TEST_F(ARM_COMMON, ELEMWISE_QUANTIZED_MODE_TERNARY) {
                 .set_dtype(1, dtype::QuantizedS8(1.15f))
                 .set_dtype(2, dtype::QuantizedS8(1.75f))
                 .set_dtype(3, dtype::QuantizedS8(1.35f));
-
-        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {1, 1, 1, 1}, {}});
-        checker.execs({{1, 4, 1, 1}, {3, 4, 5, 6}, {1, 4, 1, 1}, {}});
-
-        checker.execs({{3}, {3}, {3}, {}});
-        checker.execs({{9}, {9}, {9}, {}});
-        checker.execs({{17}, {17}, {17}, {}});
-        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+        run();
 
         // quint8 to quint8
         UniformIntRNG rng_uint8{0, 225};
@@ -248,14 +265,7 @@ TEST_F(ARM_COMMON, ELEMWISE_QUANTIZED_MODE_TERNARY) {
                                                      static_cast<uint8_t>(128)))
                 .set_dtype(3, dtype::Quantized8Asymm(
                                       1.45f, static_cast<uint8_t>(128)));
-
-        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {1, 1, 1, 1}, {}});
-        checker.execs({{1, 4, 1, 1}, {3, 4, 5, 6}, {1, 4, 1, 1}, {}});
-
-        checker.execs({{3}, {3}, {3}, {}});
-        checker.execs({{9}, {9}, {9}, {}});
-        checker.execs({{17}, {17}, {17}, {}});
-        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+        run();
     }
 }
 
