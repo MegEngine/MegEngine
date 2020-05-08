@@ -18,6 +18,7 @@ from .functional import (
 )
 from .util import (
     get_backend,
+    get_free_ports,
     get_master_ip,
     get_master_port,
     get_rank,
