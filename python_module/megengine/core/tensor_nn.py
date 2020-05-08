@@ -25,5 +25,18 @@ class Parameter(Tensor):
 
     def __init__(self, value, *, dtype=None, device=None, requires_grad=True):
         # pylint: disable=super-init-not-called
-        t = tensor(value, dtype=dtype, device=device, requires_grad=requires_grad)
+        if isinstance(value, Tensor):
+            t = value
+        else:
+            t = tensor(value, dtype=dtype, device=device, requires_grad=requires_grad)
         self.__dict__.update(t.__dict__)
+
+    @property
+    def shape(self):
+        r"""Return shape of parameter.
+        """
+        if self._Tensor__val is not None:
+            return self._Tensor__val.shape
+        elif self._Tensor__sym is not None:
+            return self._Tensor__sym.imm_shape
+        return None

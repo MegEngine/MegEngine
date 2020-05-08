@@ -76,6 +76,10 @@ std::vector<megdnn::test::conv_bias::TestArg> get_conv_bias_args(
         bool no_nonlinemode, bool quantized_nlmod = false,
         bool only_broadcast_bias = false);
 
+std::vector<megdnn::test::conv_bias::TestArg> get_conv_bias_1x1_args(
+        bool no_bias, bool no_nonlinemode, bool quantized_nlmod = false,
+        bool only_broadcast_bias = false);
+
 void check_conv_bias(std::vector<megdnn::test::conv_bias::TestArg> args,
                      megdnn::Handle* handle, const char* algo_name);
 

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -145,6 +146,7 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
     using Format = param::Convolution::Format;
     if (filter_meta.format == Format::NCHW ||
         filter_meta.format == Format::NCHW88 ||
+        filter_meta.format == Format::NCHW44 ||
         filter_meta.format == Format::NCHW4 ||
         filter_meta.format == Format::NCHW8 ||
         filter_meta.format == Format::NCHW32) {
@@ -171,7 +173,8 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
          OW = dst.layout.shape[spatial_start + 1];
 
     if (filter_meta.format == Format::NCHW4 ||
-        filter_meta.format == Format::CHWN4) {
+        filter_meta.format == Format::CHWN4 ||
+        filter_meta.format == Format::NCHW44) {
         OC *= 4;
     } else if (filter_meta.format == Format::NCHW8 ||
                filter_meta.format == Format::NCHW88) {
@@ -216,6 +219,26 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                 FS_G = FS_OC * filter_meta.ocpg / 8;
             }
         }
+    } else if (filter_meta.format == Format::NCHW44) {
+        if (filter_meta.group > 1 && filter_meta.icpg == 1 &&
+            src.layout.ndim == 5 && filter_meta.ocpg == 1) {
+            FS_SPATIAL = 4;
+            FS_IC = FH * FW * FS_SPATIAL;
+            FS_OC = FS_IC * filter_meta.icpg;
+            FS_G = FS_OC * filter_meta.ocpg;
+        } else {
+            if (src.layout.ndim == 4 && dst.layout.ndim == 5) {
+                FS_IC = 4;
+                FS_SPATIAL = filter_meta.icpg * FS_IC;
+                FS_OC = FH * FW * FS_SPATIAL;
+                FS_G = FS_OC * filter_meta.ocpg / 4;
+            } else {
+                FS_SPATIAL = 4 * 4;
+                FS_IC = FH * FW * FS_SPATIAL;
+                FS_OC = FS_IC * filter_meta.icpg / 4;
+                FS_G = FS_OC * filter_meta.ocpg / 4;
+            }
+        }
     } else {
         // g, oc, fh, fw, ic
         megdnn_assert(filter_meta.format == Format::NHWC);
@@ -258,6 +281,16 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
                 return n * layout.stride[0] + (c / 8) * layout.stride[1] +
                        h * layout.stride[2] + w * layout.stride[3] +
                        (c & 0b111) * layout.stride[4];
+            }
+        } else if (filter_meta.format == Format::NCHW44) {
+            if (filter_meta.format == Format::NCHW44 && !is_output &&
+                src.layout.ndim == 4) {
+                return n * layout.stride[0] + c * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3];
+            } else {
+                return n * layout.stride[0] + (c / 4) * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3] +
+                       (c % 4) * layout.stride[4];
             }
         } else if (filter_meta.format == Format::NCHW32) {
             return n * layout.stride[0] + (c >> 5) * layout.stride[1] +
@@ -314,6 +347,27 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
             } else {
                 megdnn_assert(
                         0, "nchw88 naive not support this input and output\n");
+            }
+        } else if (filter_meta.format == Format::NCHW44) {
+            if (src.layout.ndim == 4) {
+                // ic < 8, input is nchw
+                return gc_out.cur_grp * FS_G + gc_out.cur_off / 4 * FS_OC +
+                       (fh * FW + fw) * FS_SPATIAL + (ic - ic0) * FS_IC +
+                       gc_out.cur_off % 4;
+            } else if (filter_meta.group > 1 && filter_meta.icpg == 1 &&
+                       filter_meta.ocpg == 1 && src.layout.ndim == 5) {
+                // dw case
+                return gc_out.cur_grp / 4 * FS_G + gc_out.cur_off * FS_OC +
+                       (ic - ic0) * FS_IC + (fh * FW + fw) * FS_SPATIAL +
+                       gc_out.cur_grp % 4;
+            } else if (src.layout.ndim == 5) {
+                // normal case
+                return gc_out.cur_grp * FS_G + gc_out.cur_off / 4 * FS_OC +
+                       (ic - ic0) / 4 * FS_IC + (fh * FW + fw) * FS_SPATIAL +
+                       ((ic - ic0) % 4) * 4 + gc_out.cur_off % 4;
+            } else {
+                megdnn_assert(
+                        0, "nchw44 naive not support this input and output\n");
             }
         } else {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
@@ -504,6 +558,7 @@ void forward(_megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_out dst,
     megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW ||
                   filter_meta.format == param::Convolution::Format::NHWC ||
                   filter_meta.format == param::Convolution::Format::NCHW88 ||
+                  filter_meta.format == param::Convolution::Format::NCHW44 ||
                   filter_meta.format == param::Convolution::Format::NCHW4);
     compute2d<stype, ftype, dtype, comp_type, StrategyFwd>(
             src, const_cast<ftype*>(fptr), dst, filter_meta);
@@ -557,6 +612,7 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
     switch (filter_meta.format) {
         case param::Convolution::Format::NCHW:
         case param::Convolution::Format::NCHW88:
+        case param::Convolution::Format::NCHW44:
         case param::Convolution::Format::NHWC:
         case param::Convolution::Format::NCHW4:
         case param::Convolution::Format::NCHW8:
@@ -633,6 +689,7 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
             }                                                             \
         }                                                                 \
     } while (0)
+            case Format::NCHW44:
             case Format::NCHW4: {
                 BIAS_ADD_NCHWx(4);
                 break;

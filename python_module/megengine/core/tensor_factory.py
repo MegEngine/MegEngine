@@ -22,6 +22,9 @@ def scalar(
     device: Optional[mgb.CompNode] = None,
     comp_graph: Optional[mgb.CompGraph] = None,
 ) -> Tensor:
+    """
+    convert ``value`` to the type of :class:`~.Tensor`.
+    """
     device, comp_graph = _use_default_if_none(device, comp_graph)
     return Tensor(mgb.make_immutable(device, comp_graph, value, dtype=dtype, name=None))
 

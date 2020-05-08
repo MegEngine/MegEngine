@@ -69,6 +69,10 @@ class CompGraph {
                 return reinterpret_cast<size_t>(&$self->get());
             }
 
+            std::string get_mem_allocation_info() const {
+                return self->get().get_mem_allocation_info();
+            }
+
             std::string __repr__() const {
                 auto &&graph = $self->get();
                 return mgb::ssprintf("<CompGraph #%zu at %p>", graph.id(), &graph);

@@ -245,6 +245,25 @@ float megdnn::mul_scale(DType lhs, DType rhs) {
 }
 // clang-format on
 
+bool megdnn::dtype_almost_equal(DType lhs, DType rhs) {
+    if (lhs.enumv() != rhs.enumv())
+        return false;
+    if (lhs.category() != DTypeCategory::QUANTIZED)
+        return true;
+#define cb(dt)                                \
+    if (lhs.enumv() == DTypeTrait<dt>::enumv) \
+        return almost_equal(lhs.param<dt>().scale, rhs.param<dt>().scale);
+    MEGDNN_FOREACH_QUANTIZED_DTYPE_SYMM(cb)
+#undef cb
+#define cb(dt)                                                               \
+    if (lhs.enumv() == DTypeTrait<dt>::enumv)                                \
+        return almost_equal(lhs.param<dt>().scale, rhs.param<dt>().scale) && \
+               lhs.param<dt>().zero_point == rhs.param<dt>().zero_point;
+    MEGDNN_FOREACH_QUANTIZED_DTYPE_ASYMM(cb)
+#undef cb
+    megdnn_assert_internal(false);
+}
+
 template <>
 uint8_t megdnn::convert<dt_quint4, uint8_t>(dt_quint4 src, uint8_t dst,
                                             size_t offset) {

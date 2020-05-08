@@ -36,21 +36,21 @@ class ConvBiasImpl::AlgoIm2col final : public AlgoBase {
             const NCBKernSizeParam& param, size_t ohw_tile_size,
             size_t oc_tile_size) const;
     WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
-    WorkspaceBundle get_thread_bundle(const NCBKernSizeParam& param) const;
-    void choice_ohw_oc_block(const NCBKernSizeParam& param, size_t block_m,
-                             size_t block_n, bool pack_default) const;
+    void choice_ohw_oc_block(const NCBKernSizeParam& param,
+                             size_t& oc_tile_size, size_t& ohw_tile_size,
+                             size_t block_m, size_t block_n,
+                             bool pack_default) const;
 
 public:
     AlgoIm2col(MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size)
             : m_matmul_algo(matmul_algo),
-              m_ohw_tile_origin(ohw_tile_size),
               m_ohw_tile_size(ohw_tile_size) {}
 
     bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ssprintf("IM2COLMATMUL:%s:%zu", m_matmul_algo->name(),
-                              m_ohw_tile_origin);
+                              m_ohw_tile_size);
         }
         return m_name.c_str();
     }
@@ -67,16 +67,13 @@ public:
         }
         auto&& fm = param.filter_meta;
         auto OC = fm.ocpg, IC = fm.icpg;
-        return (fm.spatial[0] == fm.spatial[1] && fm.spatial[0] == 1) ||
-               OC >= 32 || IC >= 32;
+        return OC >= 32 || IC >= 32;
     }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
     mutable std::string m_name;
-    const size_t m_ohw_tile_origin;
-    mutable size_t m_ohw_tile_size;
-    mutable size_t m_oc_tile_size = DEFAULT_OC_TILE_SIZE;
+    const size_t m_ohw_tile_size;
 };
 
 }  // namespace fallback

@@ -100,10 +100,11 @@ class Function(metaclass=ABCMeta):
         Users can call :meth:`~.function.Function.save_for_backward` in this method to save tensors.
 
         :param input: Input tensors.
+        :return: A tuple of Tensor or a single Tensor.
 
         .. note::
 
-            This method should return a tuple of Tensor representing the output
+            This method should return a tuple of Tensor or a single Tensor representing the output
             of the function.
         """
         raise NotImplementedError
@@ -113,7 +114,7 @@ class Function(metaclass=ABCMeta):
         self, *output_grads: Iterable[Union[Tensor, None]]
     ) -> Union[Tuple[Tensor], Tensor]:
         """
-        Compute the gradient of the function. It must be overriden by all subclasses.
+        Compute the gradient of the forward function. It must be overriden by all subclasses.
 
         :param output_grads: gradients of outputs that are returned by :meth:`~.function.Function.forward`
 
@@ -124,17 +125,17 @@ class Function(metaclass=ABCMeta):
 
         .. note::
 
-            This method should return a tuple containing gradients of all
-            inputs, in the same order as the ``inputs`` argument of :meth:`~.function.Function.forward` . A
-            ``Tensor`` could be returned instead if there is only one input.
-            If users want to stop the propagation of some gradients, the corresponding returned values should be ``None`` .
+            This method should return a tuple which containing the gradients of all inputs, in the same order
+            as the ``inputs`` argument of :meth:`~.function.Function.forward` . A ``Tensor`` could be returned
+            instead if there is only one input. If users want to stop the propagation of some gradients,
+            the corresponding returned values should be set ``None`` .
 
         """
         raise NotImplementedError
 
     def save_for_backward(self, *tensors: Iterable[Tensor]):
         """
-        Saves tensors for gradient computation. This method should be called only
+        Saves tensors needed for gradient computation. This method should be called only
         once in :meth:`~.function.Function.forward`, additional calls will replace values saved previously.
 
         The saved tensors can be accessed through the ``saved_tensors`` attribute.

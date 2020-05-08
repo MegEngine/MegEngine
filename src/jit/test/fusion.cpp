@@ -540,7 +540,7 @@ void run<expand_jit_executor>(Backend backend, CompNode cn) {
 
     auto make_jit = [](SymbolVar target, const SymbolVarArray& inputs) {
         auto y = target.node();
-        auto ig_gen = std::make_unique<InternalGraphGenrator>(y->owner_opr());
+        auto ig_gen = std::make_unique<InternalGraphGenerator>(y->owner_opr());
         auto inputs_vptr = cg::to_var_node_array(inputs);
         for (auto i : get_rev_topo_order(
                      target, {inputs_vptr.begin(), inputs_vptr.end()})) {
@@ -830,9 +830,9 @@ TEST(TestJITFusionHalide, JITExecutor) {
          y = opr::reduce_sum(a + b, shape_of_b),
          z = opr::reduce_sum(a * b, shape_of_a);
     auto ig_gen_1 =
-            std::make_unique<InternalGraphGenrator>(y.node()->owner_opr());
+            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
     auto ig_gen_2 =
-            std::make_unique<InternalGraphGenrator>(z.node()->owner_opr());
+            std::make_unique<InternalGraphGenerator>(z.node()->owner_opr());
     {
         ThinHashSet<VarNode*> nd_set;
         nd_set.insert(a.node());

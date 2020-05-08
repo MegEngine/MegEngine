@@ -17,6 +17,7 @@ from .functional import (
     reduce_sum,
 )
 from .util import (
+    get_backend,
     get_master_ip,
     get_master_port,
     get_rank,
@@ -24,4 +25,5 @@ from .util import (
     group_barrier,
     init_process_group,
     is_distributed,
+    synchronized,
 )

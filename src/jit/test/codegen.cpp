@@ -54,7 +54,7 @@ void run<simple>(Backend backend, CompNode cn) {
 
     VarNodeArray inputs{a.node(), b.node(), c.node()}, outputs{y.node()};
     auto ig_gen =
-            std::make_unique<InternalGraphGenrator>(y.node()->owner_opr());
+            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->same_type<opr::Host2DeviceCopy>()) {
@@ -91,7 +91,7 @@ void run<grad>(Backend backend, CompNode cn) {
 
     VarNodeArray inputs{a.node(), b.node(), c.node()}, outputs{y.node()};
     auto ig_gen =
-            std::make_unique<InternalGraphGenrator>(y.node()->owner_opr());
+            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
 
     for (auto i : get_rev_topo_order(y)) {
         if (!i->same_type<opr::Host2DeviceCopy>()) {

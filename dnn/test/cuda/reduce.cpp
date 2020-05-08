@@ -80,6 +80,8 @@ TEST_F(CUDA, REDUCE) {
         }
         check(mode, dtype::Float16(), dtype::Float32(),
               Reduce::DataType::FLOAT_O32xC32);
+        check(mode, dtype::Int32(), dtype::Float32(),
+              Reduce::DataType::FLOAT_O32xC32);
         check(mode, dtype::Float16(), dtype::Float16(),
               Reduce::DataType::FLOAT_O16xC32);
         check(mode, dtype::Float32(), dtype::Float16(),

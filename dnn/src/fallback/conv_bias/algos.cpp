@@ -213,11 +213,17 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoNaive::dispatch_kerns(
                         const NCBKernParam& param,
                         const NCBKernIndex& ncb_index) {
         MIDOUT_BEGIN(megdnn_fallback_naive, 2) {
+            size_t group_id = ncb_index.ndrange_id[0];
+            size_t batch_id = ncb_index.ndrange_id[1];
             size_t thread_id = ncb_index.thread_id;
             auto thread_param = param;
             thread_param.workspace_ptr = reinterpret_cast<void*>(
                     reinterpret_cast<ptrdiff_t>(param.workspace_ptr) +
                     thread_id * workspace_per_thread);
+            thread_param.filter_ptr = param.filter<void>(group_id);
+            thread_param.dst_ptr = param.dst<void>(batch_id, group_id);
+            thread_param.src_ptr = param.src<void>(batch_id, group_id);
+            thread_param.bias_ptr = param.bias<void>(batch_id, group_id);
             kern_default(opr_param, thread_param);
         }
         MIDOUT_END();

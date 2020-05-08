@@ -325,7 +325,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_CHANWISE_SMALL) {
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_CHANWISE_8x8x32) {
-    require_compute_capability(6, 0);
+    require_compute_capability(6, 1);
     Checker<ConvBiasForward> checker(handle_cuda());
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ConvBiasForward::algo_name<ConvBias::DirectParam>(
@@ -472,7 +472,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL) {
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_8x8x32) {
-    require_compute_capability(6, 0);
+    require_compute_capability(6, 1);
     Checker<ConvBiasForward> checker(handle_cuda());
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
@@ -517,7 +517,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_8x8x32) {
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_NCHW4) {
-    require_compute_capability(6, 0);
+    require_compute_capability(6, 1);
     Checker<ConvBiasForward> checker(handle_cuda());
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
@@ -582,7 +582,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_1x1) {
 TEST_F(CUDA, CONV_BIAS_FORWARD_GROUP) {
     using NLMode = ConvBias::Param::NonlineMode;
     bool is_int_available = false;
-    if (megdnn::test::check_compute_capability((6), (0))) {
+    if (megdnn::test::check_compute_capability(6, 1)) {
         is_int_available = true;
     } else {
         is_int_available = false;

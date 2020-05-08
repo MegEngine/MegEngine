@@ -18,6 +18,12 @@ namespace megdnn {
 namespace cuda {
 namespace local {
 
+constexpr size_t Ns = 4, ICs = 4;
+
+size_t forward_proxy_default_share_mem_in_bytes(size_t IH, size_t IW) {
+    return Ns * ICs * sizeof(float) * IH * IW;
+}
+
 // blockIdx.y is OC*OH*OW/1024
 // blockIdx.x is N/4
 // threadIdx.x is [0, 1024)
@@ -96,7 +102,7 @@ __global__ void forward_kernel(const float * __restrict__ src,
     }
 }
 
-void forward_proxy_weiming(const float *src, const float *filter, float *dst,
+void forward_proxy_default(const float *src, const float *filter, float *dst,
         size_t N,
         size_t IC, size_t IH, size_t IW,
         size_t OC, size_t OH, size_t OW,
@@ -108,7 +114,6 @@ void forward_proxy_weiming(const float *src, const float *filter, float *dst,
         cudaStream_t stream)
 {
     size_t threads = 256;
-    const size_t Ns = 4, ICs = 4;
     dim3 blocks = dim3(DIVUP(N, Ns), DIVUP(OC*OH*OW, threads));
     if (is_xcorr) {
         forward_kernel<Ns, ICs, true><<<blocks, threads,

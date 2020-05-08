@@ -19,6 +19,7 @@ import os
 from typing import Dict, List, Tuple
 
 import cv2
+import numpy as np
 
 from .meta_vision import VisionDataset
 from .utils import is_img
@@ -78,7 +79,7 @@ class ImageFolder(VisionDataset):
     def collect_class(self) -> Dict:
         classes = [d.name for d in os.scandir(self.root) if d.is_dir()]
         classes.sort()
-        return {classes[i]: i for i in range(len(classes))}
+        return {classes[i]: np.int32(i) for i in range(len(classes))}
 
     def __getitem__(self, index: int) -> Tuple:
         path, label = self.samples[index]

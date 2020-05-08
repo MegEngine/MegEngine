@@ -106,8 +106,6 @@ def reduce_(src, mode, axis=None, keepdims=False, *,
         inputs.append(1)
         assert not keepdims, 'can not set axis=None and keepdims=True'
     else:
-        assert isinstance(axis, int) and axis >= 0, (
-            'bad axis: {!r}'.format(axis))
         remove_axis = not keepdims
         kwargs['axis'] = axis
 
@@ -159,11 +157,11 @@ def dimshuffle(src, pattern, ndim=0, *,
             pattern_mgb.push_back(i)
     return _mgb._Opr.dimshuffle(src, pattern_mgb, int(ndim), config)
 
-def param_pack_split(src, shapes, table=None, *,
+def param_pack_split(src, shapes, *,
                      name=None, comp_node=None, config=None):
     """
     split param into a list of tensor for given shape
-    ParamPackSplit operator has two inputs: ``src`` and ``tables`` and would
+    ParamPackSplit operator has a input: ``src`` and would
     have a ``output``. output[i] indicates the address of tensor which part of
     ``src`` would transfer its elements into.
 
@@ -172,24 +170,13 @@ def param_pack_split(src, shapes, table=None, *,
     output[0] indicates the address of tensor with shapes[0]:(1, 2, 4),
     output[1] indicates the address of tensor with shapes[1]:(4, 2, 2),
     output[2] indicates the address of tensor with shapes[2]:(4, 2, 1).
-    And table have the double size of input tensor.
-    For each element in the tensor input[i], we may have
-    output[outer_index[i]][inner_index[i]] = input[i].
-    Table would the concatation of outer_index and inner_index, so more
-    alternatively, output[table[i]][table[i+len(input)]] = input[i]
 
     :param src: The concatenated input tensor.
     :type src: :class:`SymbolVar`
     :param shapes: Shapes of output tensors
     :type shapes: list of list of int
-    :param table: Output element mapping table; it if it is None, a table would
-            be generated from ``shapes``
-    :type table: :class:`SymbolVar` with int32 type, or None
     """
     config = _helper.gen_config(name, comp_node, config)
-    if isinstance(table, (list, tuple)) and isinstance(shapes, _mgb.SymbolVar):
-        # compatible with old API
-        table, shapes = shapes, table
 
     if not isinstance(shapes, (list, tuple)):
         raise TypeError('could not convert {} to tensor shapes'.format(
@@ -202,10 +189,7 @@ def param_pack_split(src, shapes, table=None, *,
         assert min(s) > 0
         shapes_mgb.push_back(s)
 
-    if table is None:
-        table = _mgb.SymbolVar()
-
-    return _mgb._Opr.param_pack_split(src, table, shapes_mgb, config)
+    return _mgb._Opr.param_pack_split(src, shapes_mgb, config)
 
 class _modify_subtensor_helper:
     def __init__(self, dest, val, *, name=None, comp_node=None, config=None):

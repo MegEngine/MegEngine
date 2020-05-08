@@ -141,7 +141,6 @@ AlgoBwdFlt* BwdFlt::get_algorithm_heuristic(
 size_t BwdFlt::get_workspace_in_bytes(
         const TensorLayout& im, const TensorLayout& offset, const TensorLayout& mask,
         const TensorLayout& out_grad, const TensorLayout& filter_grad) {
-    AlgoBase::SizeArgs args();
     auto algo = get_algorithm(this, im, offset, mask, out_grad, filter_grad);
     return algo->get_workspace_in_bytes({this, im, offset, mask, out_grad, filter_grad});
 }
@@ -207,7 +206,6 @@ size_t BwdData::get_workspace_in_bytes(
         const TensorLayout& offset, const TensorLayout& mask,
         const TensorLayout& out_grad, const TensorLayout& im_grad,
         const TensorLayout& offset_grad, const TensorLayout& mask_grad) {
-    AlgoBase::SizeArgs args();
     auto algo = get_algorithm(this, im, filter, offset, mask, out_grad, 
                               im_grad, offset_grad, mask_grad);
     return algo->get_workspace_in_bytes({this, im, filter, offset, mask, out_grad, 

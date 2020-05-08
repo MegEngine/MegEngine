@@ -14,43 +14,7 @@
 #include "src/cuda/utils.h"
 #include "src/cuda/handle.h"
 
-namespace megdnn {
-namespace cuda {
-namespace local {
-
-void check_input(size_t N,
-        size_t IC, size_t IH, size_t IW,
-        size_t OC, size_t OH, size_t OW,
-        size_t FH, size_t FW,
-        size_t INs, size_t ONs,
-        size_t PH, size_t PW,
-        size_t SH, size_t SW,
-        bool is_xcorr)
-{
-    megdnn_ignore(N);
-    megdnn_ignore(IC);
-    megdnn_ignore(IH);
-    megdnn_ignore(IW);
-    megdnn_ignore(OC);
-    megdnn_ignore(OH);
-    megdnn_ignore(OW);
-    megdnn_ignore(FH);
-    megdnn_ignore(FW);
-    megdnn_ignore(INs);
-    megdnn_ignore(ONs);
-    megdnn_ignore(PH);
-    megdnn_ignore(PW);
-    megdnn_ignore(SH);
-    megdnn_ignore(SW);
-    megdnn_ignore(is_xcorr);
-    // shared memory constraint
-    megdnn_assert(IH*IW <= 768, "spatial size should not be larger than 768.");
-    // megdnn_assert(4 * 4 * 4 * IH * IW <= 49152);
-}
-
-} // namespace local
-} // namespace cuda
-} // namespace megdnn
+#include "src/common/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
@@ -78,6 +42,8 @@ void LocalForwardImpl::exec(_megdnn_tensor_in src,
     auto cublas = cublas_handle(this->handle());
     auto one = handle->one_device();
     auto zero = handle->zero_device();
+    size_t src_batch_strd = src.layout.stride[0];
+    size_t dst_batch_strd = dst.layout.stride[0];
     if (use_cuda_convnet(src.layout, filter.layout, dst.layout)) {
         local::forward_proxy_convnet(src.ptr<dt_float32>(),
                 filter.ptr<dt_float32>(),
@@ -87,29 +53,30 @@ void LocalForwardImpl::exec(_megdnn_tensor_in src,
                 IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
-                IC*IH*IW, OC*OH*OW,
+                src_batch_strd, dst_batch_strd,
                 param().pad_h, param().pad_w,
                 param().stride_h, param().stride_w,
                 cublas, stream,
                 one, zero);
-    } else {
-        local::check_input(N, IC, IH, IW, OC, OH, OW, FH, FW,
-                IC*IH*IW, OC*OH*OW,
-                param().pad_h, param().pad_w,
-                param().stride_h, param().stride_w,
-                is_xcorr);
-        local::forward_proxy_weiming(src.ptr<dt_float32>(),
+    } else if (local::forward_proxy_default_share_mem_in_bytes(IH, IW) <=
+               handle->device_prop().sharedMemPerBlock) {
+        local::forward_proxy_default(src.ptr<dt_float32>(),
                 filter.ptr<dt_float32>(),
                 dst.ptr<dt_float32>(),
                 N,
                 IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
-                IC*IH*IW, OC*OH*OW,
+                src_batch_strd, dst_batch_strd,
                 param().pad_h, param().pad_w,
                 param().stride_h, param().stride_w,
                 is_xcorr,
                 stream);
+    } else {
+        megdnn_throw(ssprintf(
+                "No usable kernel for local conv, src: %s filter: %s \n",
+                src.layout.to_string().c_str(),
+                filter.layout.to_string().c_str()));
     }
 }
 
@@ -124,12 +91,14 @@ size_t LocalForwardImpl::get_workspace_in_bytes(const TensorLayout &src,
          FH = filter.shape[3], FW = filter.shape[4];
     auto PH = param().pad_h, PW = param().pad_w,
          SH = param().stride_h, SW = param().stride_w;
+    size_t src_batch_strd = src.stride[0];
+    size_t dst_batch_strd = dst.stride[0];
     if (use_cuda_convnet(src, filter, dst)) {
         res = local::get_workspace_in_floats_forward_proxy_convnet(N,
                 IC, IH, IW,
                 OC, OH, OW,
                 FH, FW,
-                IC*IH*IW, OC*OH*OW,
+                src_batch_strd, dst_batch_strd,
                 PH, PW,
                 SH, SW) * sizeof(dt_float32);
     } else {

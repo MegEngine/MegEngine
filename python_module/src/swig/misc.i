@@ -79,6 +79,7 @@ struct _OptimizeForInferenceOptions {
     SET(use_tensor_core);
     SET(fuse_conv_bias_with_z);
     SET(use_nchw88);
+    SET(use_nchw44);
 #undef SET
 };
 

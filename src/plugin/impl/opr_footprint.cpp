@@ -99,13 +99,22 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
             group = filter_shape[0];
         }
         if (param.format == Param::Format::NCHW88) {
-            //! if channel wise weight layout is {group/8, 1, 1, FH, FW, 8}
+            //! if channel wise weight layout is {group/8, FH, FW, 1, 1, 8}
             if (filter_shape[1] == 1 && filter_shape[2] == 1) {
                 group *= 8;
             }
             size_t computation = dst_shape.total_nr_elems() * fh * fw *
                                  src_shape[1] / group * 2;
             return hybird_nchwx ? computation : computation * 8;
+        }
+        if (param.format == Param::Format::NCHW44) {
+            //! if channel wise weight layout is {group/4, FH, FW, 1, 1, 4}
+            if (filter_shape[1] == 1 && filter_shape[2] == 1) {
+                group *= 4;
+            }
+            size_t computation = dst_shape.total_nr_elems() * fh * fw *
+                                 src_shape[1] / group * 2;
+            return hybird_nchwx ? computation : computation * 4;
         }
         if (param.format == Param::Format::NCHW32) {
             return dst_shape.total_nr_elems() * fh * fw * src_shape[1] * 32 /
@@ -135,6 +144,7 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
     };
     if (param.format == Param::Format::NCHW4 ||
         param.format == Param::Format::NCHW88 ||
+        param.format == Param::Format::NCHW44 ||
         param.format == Param::Format::NCHW32) {
         return eval_conv_computation_nchwx();
     }

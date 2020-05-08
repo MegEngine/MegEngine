@@ -28,6 +28,7 @@ MEGDNN_REG_WINOGRAD_STRATEGY(int8_t, int8_t, int16_t, int, 2, 3, 1, 1,
 
 MEGDNN_REG_WINOGRAD_STRATEGY(int8_t, int8_t, int16_t, int, 2, 3, 8, 8,
                              winograd_2x3_8x8_qs8)
+
 }
 }  // namespace fallback
 }  // namespace megdnn

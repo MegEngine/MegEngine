@@ -38,8 +38,7 @@ SymbolVar _Opr::_axis_add_remove(SymbolVar src,
 }
 
 SymbolVarArray _Opr::param_pack_split(
-        SymbolVar src, SymbolVar table,
-        const std::vector<std::vector<size_t>>& shapes,
+        SymbolVar src, const std::vector<std::vector<size_t>>& shapes,
         const OperatorNodeConfig& config) {
     auto size = shapes.size();
     mgb::TensorShapeArray shapearr(size);
@@ -47,19 +46,11 @@ SymbolVarArray _Opr::param_pack_split(
         shapearr[i] = npy::vec2shape(shapes[i]);
     }
 
-    if (!table.node()) {
-        auto cn = src.node()->comp_node();
-        if (config.has_comp_node_set()) {
-            cn = config.get_single_comp_node();
-        }
-        auto table_val = megdnn::ParamPackSplit::gen_table(
-                shapearr, cn.get_mem_addr_alignment(), src.dtype().size());
-        HostTensorND hv{cn, TensorShape{table_val.size()}, dtype::Int32{}};
-        memcpy(hv.raw_ptr(), table_val.data(), table_val.size() * sizeof(int));
-        table = opr::ImmutableTensor::make(*src.node()->owner_graph(), hv);
-    }
+    auto cn = src.node()->comp_node();
+    auto offsets = megdnn::ParamPackConcat::gen_offsets(
+            shapearr, cn.get_mem_addr_alignment(), src.dtype().size());
 
-    return mgb::opr::ParamPackSplit::make(src, table, shapearr, config);
+    return mgb::opr::ParamPackSplit::make(src, offsets, shapearr, config);
 }
 
 #if MGB_ENABLE_OPR_MM
@@ -224,7 +215,7 @@ SymbolVarArray _Opr::extern_c_opr_placeholder(
         }
     }
 
-    auto opr = serialization::ExternCOprRunner::make_placeholder(
+    auto opr = opr::ExternCOprRunner::make_placeholder(
             inputs, cpp_output_shapes, dump_name, PyBytes_AsString(data_bytes),
             PyBytes_Size(data_bytes), config, cpp_output_dtypes);
     SymbolVarArray ret;

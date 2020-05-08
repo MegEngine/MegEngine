@@ -11,6 +11,7 @@
 
 #include "megbrain/test/helper.h"
 
+#include "megbrain/comp_node_env.h"
 #include "megbrain/tensor.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/utils/timer.h"
@@ -380,6 +381,41 @@ TEST(TestTensor, NegativeIndex) {
     run_negative_index_test<DeviceTensorND, DeviceTensorND>();
     run_negative_index_test<DeviceTensorND, HostTensorND>();
     run_negative_index_test<HostTensorND, DeviceTensorND>();
+}
+
+TEST(TestTensor, CpuCudaD2DCopy) {
+    REQUIRE_GPU(1);
+    auto cn_cpu = CompNode::load("cpu0"),
+         cn_gpu = CompNode::load("gpu0");
+
+    HostTensorGenerator<> gen;
+    constexpr size_t length = 233333;
+    auto a = gen({length});
+    for (auto config: {true, false}) {
+        DeviceTensorND dev_a{cn_cpu}, dev_b{cn_gpu, a->shape(), a->dtype()};
+        dev_a.copy_from(*a).sync();
+
+        if (!config) {
+            auto subspec = Slice(0, length, 3).apply(a->layout(), 0);
+            dev_a = dev_a.sub(subspec);
+            dev_b = dev_b.sub(subspec);
+        }
+
+        auto iadd = [ptr = dev_a.ptr<float>(), length = dev_a.shape()[0],
+                stride = dev_a.layout().stride[0]]() {
+            for (size_t i = 0; i < length; ++ i) {
+                ptr[i * stride] += 1;
+            }
+        };
+        CompNodeEnv::from_comp_node(cn_cpu).cpu_env().dispatch(iadd);
+        auto event = cn_cpu.create_event();
+        event->record();
+        cn_gpu.device_wait_event(*event);
+        dev_b.copy_from_fixlayout(dev_a);
+        HostTensorND res;
+        res.copy_from(dev_b).sync();
+        MGB_ASSERT_TENSOR_EQ(HostTensorND::make_proxy(dev_a), res);
+    }
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

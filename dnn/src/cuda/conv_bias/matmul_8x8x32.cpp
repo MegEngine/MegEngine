@@ -21,7 +21,7 @@ bool ConvBiasForwardImpl::AlgoMatmul8x8x32::is_available(
         const SizeArgs& args) const {
     if (args.z_layout->ndim > 0)
         return false;
-    if (cuda::current_device_prop().major < 6)
+    if (!is_compute_capability_required(6, 1))
         return false;
 
     auto dst_layout = *args.dst_layout;

@@ -11,7 +11,7 @@ import functools
 
 
 def get_ndtuple(value, *, n, allow_zero=True):
-    r""" convert possibly 1D tuple to nd tuple
+    r"""Converts possibly 1D tuple to nd tuple
 
     :type allow_zero: bool
     :param allow_zero: whether to allow zero tuple value"""

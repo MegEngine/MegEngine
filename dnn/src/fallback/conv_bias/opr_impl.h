@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -103,6 +104,32 @@ public:
             src_type.assert_is_compatible_ctype<T>();
             return static_cast<const T*>(src_ptr);
         }
+        //! when format is nchwxx, multi  channel will pack into one
+        //! chnannel_pack_id. pack_channel_size is the number of packed channel
+        //! when format is nchwxx and channel wise, multi group will pack into
+        //! one group_pack_id. group_pack_size is the number of packed group
+        //! together, like weight shape is {g/8, 1, 1, Fh, Fw, 8}
+        template <typename T>
+        const T* src(size_t batch_id, size_t group_pack_id,
+                     size_t channel_pack_id = 0, size_t group_pack_size = 1,
+                     size_t channel_pack_size = 1) const;
+
+        template <typename T>
+        const T* bias(size_t batch_id, size_t group_pack_id,
+                      size_t channel_pack_id = 0, size_t group_pack_size = 1,
+                      size_t channel_pack_size = 1) const;
+
+        template <typename T>
+        T* dst(size_t batch_id, size_t group_pack_id,
+               size_t channel_pack_id = 0, size_t group_pack_size = 1,
+               size_t channel_pack_size = 1) const;
+
+        //! when format is nchwxx and channel wise, multi group will pack into
+        //! one group_pack_id. group_pack_size is the number of packed group
+        //! together, like weight shape is {g/8, 1, 1, Fh, Fw, 8}
+        template <typename T>
+        const T* filter(size_t group_pack_id,
+                        size_t pack_group_size = 1_z) const;
 
         template <typename T>
         const T* filter() const {
@@ -222,6 +249,7 @@ protected:
 private:
     class AlgoNaive;
     class AlgoIm2col;
+    class AlgoConv1x1;
     class AlgoWinogradF32;
     class AlgoWinogradF32_4x4;
     class AlgoWinogradQS8;

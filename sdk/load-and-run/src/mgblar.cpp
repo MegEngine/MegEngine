@@ -603,11 +603,11 @@ Args Args::from_argv(int argc, char **argv) {
             ++ i;
             ret.multithread_number = std::stoi(argv[i]);
             ret.load_config.comp_node_mapper =
-                    [nr_thread =
+                    [nr_threads =
                              ret.multithread_number](CompNode::Locator& loc) {
                         loc.type = CompNode::DeviceType::MULTITHREAD;
                         loc.device = 0;
-                        loc.stream = nr_thread;
+                        loc.nr_threads = nr_threads;
                     };
             continue;
         }
@@ -615,11 +615,12 @@ Args Args::from_argv(int argc, char **argv) {
             mgb_log_warn("use multithread:default mode");
             ++i;
             ret.multithread_number = std::stoi(argv[i]);
-            ret.load_config.comp_node_mapper = [nr_thread =
-                             ret.multithread_number](CompNode::Locator& loc) {
+            ret.load_config.comp_node_mapper = [nr_threads =
+                                                        ret.multithread_number](
+                                                       CompNode::Locator& loc) {
                 loc.type = CompNode::DeviceType::MULTITHREAD;
                 loc.device = CompNode::Locator::DEVICE_MULTITHREAD_DEFAULT;
-                loc.stream = nr_thread;
+                loc.nr_threads = nr_threads;
             };
             continue;
         }

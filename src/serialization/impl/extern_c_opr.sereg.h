@@ -16,18 +16,19 @@ namespace mgb {
 
 namespace serialization {
 template <>
-struct OprLoadDumpImpl<ExternCOprRunner, 0> {
+struct OprLoadDumpImpl<opr::ExternCOprRunner, 0> {
     static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
-        ExternCOprRunner::dump(ctx, opr);
+        opr::ExternCOprRunner::dump(ctx, opr);
     }
 
     static cg::OperatorNodeBase* load(OprLoadContext& ctx,
                                       const cg::VarNodeArray& inputs,
                                       const OperatorNodeConfig& config) {
-        return ExternCOprRunner::load(ctx, inputs, config);
+        return opr::ExternCOprRunner::load(ctx, inputs, config);
     }
 };
 
+using ExternCOprRunner = opr::ExternCOprRunner;
 MGB_SEREG_OPR(ExternCOprRunner, 0);
 MGB_REG_OPR_SHALLOW_COPY(ExternCOprRunner, ExternCOprRunner::shallow_copy);
 }  // namespace serialization

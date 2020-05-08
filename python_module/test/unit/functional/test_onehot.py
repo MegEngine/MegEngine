@@ -8,7 +8,7 @@ from megengine.test import assertTensorClose
 
 def test_onehot_low_dimension():
     inp = tensor(np.arange(1, 4, dtype=np.int32))
-    out = F.one_hot(inp)
+    out = F.one_hot(inp, num_classes=4)
 
     assertTensorClose(
         out.numpy(), np.eye(4, dtype=np.int32)[np.arange(1, 4, dtype=np.int32)]

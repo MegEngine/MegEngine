@@ -700,6 +700,9 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
         if (inference_opt->use_nchw88) {
             add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
         }
+        if (inference_opt->use_nchw44) {
+            add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
+        }
         if (inference_opt->use_tensor_core) {
             mgb_assert(inference_opt->fuse_conv_bias_nonlinearity,
                        "enable tensor core should fuse conv bias activation "

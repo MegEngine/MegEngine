@@ -8,7 +8,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import gzip
 import os
-import pickle
 import struct
 from typing import Tuple
 
@@ -48,14 +47,6 @@ class MNIST(VisionDataset):
     """
     md5 for checking raw files
     """
-    train_file = "train.pkl"
-    """
-    default pickle file name of training set and its meta data
-    """
-    test_file = "test.pkl"
-    """
-    default pickle file name of test set and its meta data
-    """
 
     def __init__(
         self,
@@ -65,30 +56,11 @@ class MNIST(VisionDataset):
         timeout: int = 500,
     ):
         r"""
-        initialization:
-
-        1. check root path and target file (train or test)
-        2. check target file exists
-
-           * if exists:
-
-             * load pickle file as meta-data and data in MNIST dataset
-
-           * else:
-
-             * if download:
-
-               a. load all raw datas (both train and test set) by url
-               b. process raw data ( idx3/idx1 -> dict (meta-data) ,numpy.array (data) )
-               c. save meta-data and data as pickle file
-               d. load pickle file as meta-data and data in MNIST dataset
-
         :param root: path for mnist dataset downloading or loading, if ``None``,
             set ``root`` to the ``_default_root``
         :param train: if ``True``, loading trainingset, else loading test set
-        :param download: after checking the target files existence, if target files do not
-            exists and download sets to ``True``, download raw files and process,
-            then load, otherwise raise ValueError, default is True
+        :param download: if raw files do not exists and download sets to ``True``,
+            download raw files and process, otherwise raise ValueError, default is True
 
         """
         super().__init__(root, order=("image", "image_category"))
@@ -103,31 +75,24 @@ class MNIST(VisionDataset):
         else:
             self.root = root
             if not os.path.exists(self.root):
-                raise ValueError("dir %s does not exist" % self.root)
+                if download:
+                    logger.debug(
+                        "dir %s does not exist, will be automatically created",
+                        self.root,
+                    )
+                    os.makedirs(self.root)
+                else:
+                    raise ValueError("dir %s does not exist" % self.root)
 
-        # choose the target pickle file
-        if train:
-            self.target_file = os.path.join(self.root, self.train_file)
+        if self._check_raw_files():
+            self.process(train)
+        elif download:
+            self.download()
+            self.process(train)
         else:
-            self.target_file = os.path.join(self.root, self.test_file)
-
-        # check existence of target pickle file, if exists load the
-        # pickle file no matter what download is set
-        if os.path.exists(self.target_file):
-            self._meta_data, self.arrays = self._load_file(self.target_file)
-        elif self._check_raw_files():
-            self.process()
-            self._meta_data, self.arrays = self._load_file(self.target_file)
-        else:
-            if download:
-                self.download()
-                self._meta_data, self.arrays = self._load_file(self.target_file)
-            else:
-                raise ValueError(
-                    "dir does not contain target file\
-                        %s,please set download=True"
-                    % (self.target_file)
-                )
+            raise ValueError(
+                "root does not contain valid raw files, please set download=True"
+            )
 
     def __getitem__(self, index: int) -> Tuple:
         return tuple(array[index] for array in self.arrays)
@@ -143,10 +108,6 @@ class MNIST(VisionDataset):
     def meta(self):
         return self._meta_data
 
-    def _load_file(self, target_file):
-        with open(target_file, "rb") as f:
-            return pickle.load(f)
-
     def _check_raw_files(self):
         return all(
             [
@@ -159,45 +120,35 @@ class MNIST(VisionDataset):
         for file_name, md5 in zip(self.raw_file_name, self.raw_file_md5):
             url = self.url_path + file_name
             load_raw_data_from_url(url, file_name, md5, self.root, self.timeout)
-        self.process()
 
-    def process(self):
+    def process(self, train):
         # load raw files and transform them into meta data and datasets Tuple(np.array)
-        logger.info("process raw data ...")
-        meta_data_images_train, images_train = parse_idx3(
-            os.path.join(self.root, self.raw_file_name[0])
-        )
-        meta_data_labels_train, labels_train = parse_idx1(
-            os.path.join(self.root, self.raw_file_name[1])
-        )
-        meta_data_images_test, images_test = parse_idx3(
-            os.path.join(self.root, self.raw_file_name[2])
-        )
-        meta_data_labels_test, labels_test = parse_idx1(
-            os.path.join(self.root, self.raw_file_name[3])
-        )
+        logger.info("process the raw files of %s set...", "train" if train else "test")
+        if train:
+            meta_data_images, images = parse_idx3(
+                os.path.join(self.root, self.raw_file_name[0])
+            )
+            meta_data_labels, labels = parse_idx1(
+                os.path.join(self.root, self.raw_file_name[1])
+            )
+        else:
+            meta_data_images, images = parse_idx3(
+                os.path.join(self.root, self.raw_file_name[2])
+            )
+            meta_data_labels, labels = parse_idx1(
+                os.path.join(self.root, self.raw_file_name[3])
+            )
 
-        meta_data_train = {
-            "images": meta_data_images_train,
-            "labels": meta_data_labels_train,
+        self._meta_data = {
+            "images": meta_data_images,
+            "labels": meta_data_labels,
         }
-        meta_data_test = {
-            "images": meta_data_images_test,
-            "labels": meta_data_labels_test,
-        }
-        dataset_train = (images_train, labels_train)
-        dataset_test = (images_test, labels_test)
-
-        # save both training set and test set as pickle files
-        with open(os.path.join(self.root, self.train_file), "wb") as f:
-            pickle.dump((meta_data_train, dataset_train), f, pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(self.root, self.test_file), "wb") as f:
-            pickle.dump((meta_data_test, dataset_test), f, pickle.HIGHEST_PROTOCOL)
+        self.arrays = (images, labels.astype(np.int32))
 
 
 def parse_idx3(idx3_file):
     # parse idx3 file to meta data and data in numpy array (images)
-    logger.debug("parse idx3 file %s ..." % idx3_file)
+    logger.debug("parse idx3 file %s ...", idx3_file)
     assert idx3_file.endswith(".gz")
     with gzip.open(idx3_file, "rb") as f:
         bin_data = f.read()
@@ -223,7 +174,7 @@ def parse_idx3(idx3_file):
 
 def parse_idx1(idx1_file):
     # parse idx1 file to meta data and data in numpy array (labels)
-    logger.debug("parse idx1 file %s ..." % idx1_file)
+    logger.debug("parse idx1 file %s ...", idx1_file)
     assert idx1_file.endswith(".gz")
     with gzip.open(idx1_file, "rb") as f:
         bin_data = f.read()

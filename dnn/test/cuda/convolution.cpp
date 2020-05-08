@@ -17,6 +17,7 @@
 #include "test/common/convolution.h"
 #include "test/common/rng.h"
 #include "test/cuda/benchmark.h"
+#include "test/cuda/utils.h"
 
 #include "src/cuda/utils.h"
 
@@ -30,7 +31,7 @@ namespace test {
 
 TEST_F(CUDA, CONVOLUTION_8X8X32)
 {
-    if (cuda::current_device_prop().major < 6) {
+    if (!cuda::is_compute_capability_required(6, 1)) {
         printf("Skip CUDA.CONVOLUTION_8X8X32 test as current device"
                "doesn't support\n");
         return;
@@ -112,7 +113,7 @@ TEST_F(CUDA, CONVOLUTION_FORWARD)
 }
 
 TEST_F(CUDA, CONV_FORWARD_MATMUL_NCHW4) {
-    if (cuda::current_device_prop().major < 6)
+    if (!cuda::is_compute_capability_required(6, 1))
         return;
     using namespace convolution;
     Checker<Convolution> checker(handle_cuda());
@@ -203,18 +204,20 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
                 .set_epsilon(1e-3)
                 .set_param(arg.param)
                 .exec(TensorLayoutArray{filter, dst, src});
-        src.dtype = dst.dtype = filter.dtype = dtype::Float16();
-        checker.set_rng(0, &rng)
-                .set_rng(1, &rng)
-                .set_epsilon(1e-1)
-                .set_param(arg.param)
-                .exec(TensorLayoutArray{filter, dst, src});
-        arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
-        checker.set_rng(0, &rng)
-                .set_rng(1, &rng)
-                .set_epsilon(1e-1)
-                .set_param(arg.param)
-                .exec(TensorLayoutArray{filter, dst, src});
+        if (!megdnn::test::check_compute_capability(6, 0)) {
+            src.dtype = dst.dtype = filter.dtype = dtype::Float16();
+            checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-1)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+            arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+            checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-1)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+        }
     }
 }
 

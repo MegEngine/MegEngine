@@ -541,7 +541,8 @@ def optimize_for_inference(
     fuse_conv_bias_nonlinearity=False,
     use_tensor_core=False,
     fuse_conv_bias_with_z=False,
-    use_nchw88=False
+    use_nchw88=False,
+    use_nchw44=False
 ):
     """optimize computing graph for inference
 
@@ -559,7 +560,9 @@ def optimize_for_inference(
         OpenCL devices
     :param fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
         into one opr. This is supported only in NHWCD4 format.
-    :param use_nchw88: whether to use NCHW4 tensor format. This maybe faster some
+    :param use_nchw88: whether to use NCHW88 tensor format. This maybe faster some
+        times.
+    :param use_nchw44: whether to use NCHW44 tensor format. This maybe faster some
         times.
 
 
@@ -577,6 +580,7 @@ def optimize_for_inference(
         "use_tensor_core",
         "fuse_conv_bias_with_z",
         "use_nchw88",
+        "use_nchw44",
     ]:
         if settings[i]:
             getattr(opt, "enable_{}".format(i))()

@@ -40,6 +40,16 @@ namespace {
             return std::max<size_t>(300 * 1024 * 1024, available / 20);
         }
     }
+    using CudaHostFunc = megdnn::thin_function<void()>;
+    void CUDART_CB cuda_host_func_caller(void* ud) {
+        mgb_assert(ud);
+        CudaHostFunc* func_ptr = reinterpret_cast<CudaHostFunc*>(ud);
+        MGB_TRY {
+            (*func_ptr)();
+        } MGB_FINALLY(
+            delete func_ptr;
+        );
+    }
 } // anonymous namespace
 
 namespace mgb {
@@ -222,6 +232,18 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
 
         Locator locator_logical() override {
             return m_locator_logical;
+        }
+
+        void add_callback(CudaHostFunc&& cb) override {
+            activate();
+            CudaHostFunc* func_ptr = new CudaHostFunc(std::move(cb));
+            MGB_TRY {
+                MGB_CUDA_CHECK(cudaLaunchHostFunc(m_env.cuda_env().stream,
+                        cuda_host_func_caller, static_cast<void*>(func_ptr)));
+            } MGB_CATCH(..., {
+                delete func_ptr;
+                throw;
+            });
         }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CudaCompNode::CompNodeImpl);

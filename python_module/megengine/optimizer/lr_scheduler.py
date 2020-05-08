@@ -4,7 +4,7 @@ from .optimizer import Optimizer
 
 
 class LRScheduler(metaclass=ABCMeta):
-    r"""Base class for all lr_schedulers.
+    r"""Base class for all learning rate based schedulers.
 
     :param optimizer: Wrapped optimizer.
     :param current_epoch: The index of current epoch. Default: -1

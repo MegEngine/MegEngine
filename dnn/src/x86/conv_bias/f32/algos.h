@@ -22,10 +22,12 @@ class ConvBiasImpl::AlgoDirect final : public AlgoBase {
 
     static void copy_padding_kern(WorkspaceBundle bundle,
                                   const NCBKernParam& kern_param,
-                                  const NCBKernIndex& ncb_index);
+                                  const NCBKernIndex& ncb_index,
+                                  const CpuNDRange& workspace_ids);
     static void do_conv_kern(WorkspaceBundle bundle,
                              const NCBKernParam& kern_param,
-                             const NCBKernIndex& ncb_index);
+                             const NCBKernIndex& ncb_index,
+                             const CpuNDRange& workspace_ids);
     bool m_large_group;
 
 public:
@@ -57,10 +59,12 @@ class ConvBiasImpl::AlgoDirectStride2 final : public AlgoBase {
 
     static void copy_padding_kern(WorkspaceBundle bundle,
                                   const NCBKernParam& kern_param,
-                                  const NCBKernIndex& ncb_index);
+                                  const NCBKernIndex& ncb_index,
+                             const CpuNDRange& workspace_ids);
     static void do_conv_kern(WorkspaceBundle bundle,
                              const NCBKernParam& kern_param,
-                             const NCBKernIndex& ncb_index);
+                             const NCBKernIndex& ncb_index,
+                             const CpuNDRange& workspace_ids);
     bool m_large_group;
 
 public:
@@ -182,7 +186,7 @@ public:
     void* type() const override;
 };
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 class ConvBiasImpl::AlgoMkldnnConv final : public AlgoBase {
     static void kern_mkldnn_fp32(const NCBKernParam& param,
                                  const NCBKernIndex&);

@@ -875,6 +875,82 @@ std::vector<conv_bias::TestArg> get_conv_bias_args(
     return args;
 }
 
+std::vector<megdnn::test::conv_bias::TestArg> get_conv_bias_1x1_args(
+        bool no_bias, bool no_nonlinemode, bool quantized_nlmod,
+        bool only_broadcast_bias) {
+    using namespace conv_bias;
+    using Param = param::ConvBias;
+    using NLMode = param::ConvBias::NonlineMode;
+    using CONVMode = param::ConvBias::Mode;
+    std::vector<TestArg> args;
+
+    auto pack = [&](size_t n, size_t oc, size_t ic, size_t w, size_t h,
+                    size_t stride, NLMode nlmode, CONVMode convmode) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = 0;
+        param.pad_w = 0;
+
+        param.mode = convmode;
+        param.nonlineMode = nlmode;
+
+        args.emplace_back(param, TensorShape{n, ic, h, w},
+                          TensorShape{oc, ic, 1, 1}, TensorShape{});
+        if (!no_bias) {
+            args.emplace_back(param, TensorShape{n, ic, h, w},
+                              TensorShape{oc, ic, 1, 1},
+                              TensorShape{1, oc, 1, 1});
+
+            if (!only_broadcast_bias) {
+                args.emplace_back(param, TensorShape{n, ic, h, w},
+                                  TensorShape{oc, ic, 1, 1},
+                                  TensorShape{n, oc, (h - 1) / stride + 1,
+                                              (w - 1) / stride + 1});
+            }
+        }
+
+        param.sparse = param::ConvBias::Sparse::GROUP;
+
+        args.emplace_back(param, TensorShape{n, 2 * ic, h, w},
+                          TensorShape{2, oc, ic, 1, 1}, TensorShape{});
+        if (!no_bias) {
+            args.emplace_back(param, TensorShape{n, 2 * ic, h, w},
+                              TensorShape{2, oc, ic, 1, 1},
+                              TensorShape{1, 2 * oc, 1, 1});
+
+            if (!only_broadcast_bias) {
+                args.emplace_back(param, TensorShape{n, 2 * ic, h, w},
+                                  TensorShape{2, oc, ic, 1, 1},
+                                  TensorShape{n, 2 * oc, (h - 1) / stride + 1,
+                                              (w - 1) / stride + 1});
+            }
+        }
+    };
+
+    std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
+    if (!no_nonlinemode) {
+        nonlinemode.emplace_back(NLMode::RELU);
+        nonlinemode.emplace_back(NLMode::H_SWISH);
+        if (!quantized_nlmod) {
+            nonlinemode.emplace_back(NLMode::SIGMOID);
+        }
+    }
+
+    std::vector<CONVMode> convmodes{param::ConvBias::Mode::CONVOLUTION,
+                                    param::ConvBias::Mode::CROSS_CORRELATION};
+
+    for (size_t n : {1, 2})
+        for (size_t oc : {1, 9, 33})
+            for (size_t ic : {1, 16, 64})
+                for (size_t size : {7, 14, 28})
+                    for (auto nlmode : nonlinemode)
+                        for (auto convmode : convmodes) {
+                            pack(n, oc, ic, size, size, 1, nlmode, convmode);
+                        }
+    return args;
+}
+
 void check_conv_bias(std::vector<conv_bias::TestArg> args, Handle* handle,
                      const char* algo_name) {
     using namespace conv_bias;

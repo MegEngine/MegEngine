@@ -167,7 +167,6 @@ private:
     cb(Resize) \
     cb(ResizeBackward) \
     cb(ParamPackConcat) \
-    cb(ParamPackSplit) \
     cb(MaxTensorDiff) \
     cb(MaskConvForward) \
     cb(MaskPropagate) \

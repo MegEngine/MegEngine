@@ -4,7 +4,7 @@
 
 [English](README.md) | 中文
 
-MegEngine 是一个快速、可拓展、易于使用且支持自动求导的数值计算框架。
+MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深度学习框架。
 
 ------
 
@@ -123,6 +123,7 @@ cmake -LAH .. 2>/dev/null| grep -B 1 'MGE_' | less
 * 邮箱: [megengine-support@megvii.com](mailto:megengine-support@megvii.com)
 * 论坛: [discuss.megengine.org.cn](https://discuss.megengine.org.cn)
 * QQ: 1029741705
+* OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html) 
 
 ## 资源
 

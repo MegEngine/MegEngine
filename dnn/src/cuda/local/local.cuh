@@ -17,17 +17,10 @@ namespace megdnn {
 namespace cuda {
 namespace local {
 
-void check_input(size_t N, 
-        size_t IC, size_t IH, size_t IW,
-        size_t OC, size_t OH, size_t OW,
-        size_t FH, size_t FW,
-        size_t INs, size_t ONs,
-        size_t PH, size_t PW,
-        size_t SH, size_t SW,
-        bool is_xcorr);
+size_t forward_proxy_default_share_mem_in_bytes(size_t IH, size_t IW);
 
-void forward_proxy_weiming(const float *src, const float *filter, float *dst,
-        size_t N, 
+void forward_proxy_default(const float *src, const float *filter, float *dst,
+        size_t N,
         size_t IC, size_t IH, size_t IW,
         size_t OC, size_t OH, size_t OW,
         size_t FH, size_t FW,
@@ -39,7 +32,7 @@ void forward_proxy_weiming(const float *src, const float *filter, float *dst,
 
 /// forward
 
-bool can_forward_proxy_convnet(size_t N, 
+bool can_forward_proxy_convnet(size_t N,
         size_t IC, size_t IH, size_t IW,
         size_t OC, size_t OH, size_t OW,
         size_t FH, size_t FW,
@@ -70,7 +63,7 @@ size_t get_workspace_in_floats_forward_proxy_convnet(size_t N,
 
 /// bwd data
 
-bool can_backward_data_proxy_convnet(size_t N, 
+bool can_backward_data_proxy_convnet(size_t N,
         size_t IC, size_t IH, size_t IW,
         size_t OC, size_t OH, size_t OW,
         size_t FH, size_t FW,
@@ -78,7 +71,7 @@ bool can_backward_data_proxy_convnet(size_t N,
         size_t PH, size_t PW,
         size_t SH, size_t SW);
 
-void backward_data_proxy_convnet(const float *filter, 
+void backward_data_proxy_convnet(const float *filter,
         const float *diff,
         float *grad,
         float *workspace,
@@ -103,7 +96,7 @@ size_t get_workspace_in_floats_backward_data_proxy_convnet(size_t N,
 
 /// bwd filter
 
-bool can_backward_filter_proxy_convnet(size_t N, 
+bool can_backward_filter_proxy_convnet(size_t N,
         size_t IC, size_t IH, size_t IW,
         size_t OC, size_t OH, size_t OW,
         size_t FH, size_t FW,

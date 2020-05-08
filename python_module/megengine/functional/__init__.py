@@ -21,6 +21,8 @@ from .elemwise import (
     floor,
     greater,
     greater_equal,
+    isinf,
+    isnan,
     less,
     less_equal,
     log,
@@ -46,13 +48,14 @@ from .loss import (
     square_loss,
     triplet_margin_loss,
 )
-from .math import argmax, argmin, max, mean, min, norm, prod, sqrt, sum
+from .math import argmax, argmin, max, mean, min, norm, normalize, prod, sqrt, sum
 from .nn import (
     assert_equal,
     avg_pool2d,
     batch_norm2d,
     batched_matrix_mul,
     conv2d,
+    conv_transpose2d,
     dropout,
     embedding,
     eye,
@@ -71,11 +74,14 @@ from .nn import (
     softmax,
     warp_perspective,
 )
+from .quantized import conv_bias_activation
 from .sort import argsort, sort, top_k
 from .tensor import (
     add_axis,
+    arange,
     broadcast_to,
     concat,
+    cond_take,
     dimshuffle,
     gather,
     linspace,

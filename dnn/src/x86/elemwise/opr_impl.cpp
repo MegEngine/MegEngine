@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/x86/elemwise/opr_impl.h"
 #include "src/x86/elemwise_op.h"
@@ -360,13 +361,14 @@ bool ElemwiseImpl::exec_binary() {
         return true;                                                          \
     }
         {
-            bool normal_case = is_vector(src1.layout) &&
-                               is_broadcastedx_channel_like(src0.layout, binfo);
+            bool normal_case =
+                    is_vector(src1.layout) &&
+                    is_broadcastedx_channel_like<8>(src0.layout, binfo);
             bool swap_case = false;
             bool commutable = mode_trait().commutable;
             if (!normal_case && commutable) {
                 swap_case = is_vector(src0.layout) &&
-                            is_broadcastedx_channel_like(src1.layout, binfo);
+                            is_broadcastedx_channel_like<8>(src1.layout, binfo);
             }
 
             if ((swap_case || normal_case) &&

@@ -70,9 +70,9 @@ class GemmInterleaved<Strategy, true> {
 
 public:
     size_t get_workspace_size() const {
-        return get_a_workspace_size() + get_b_workspace_size() +
-               get_c_workspace_size();
+        return get_bundle().total_size_in_bytes();
     }
+
     WorkspaceBundle get_bundle() const {
         return {nullptr,
                 {get_a_workspace_size(), get_b_workspace_size(),

@@ -146,6 +146,8 @@ public:
         return m_var_receiver.at(var);
     }
 
+    std::string get_mem_allocation_info() const override;
+
     VarNode* find_var_by_id(size_t id) const override;
 
     TopoSorter& topo_sorter() { return components().topo_sorter; }

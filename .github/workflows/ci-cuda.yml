@@ -1,0 +1,29 @@
+name: CI GPU
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  gpu-test:
+    runs-on: self-hosted
+    container:
+      image: localhost:5000/megengine-ci:latest
+      volumes:
+        - /usr/local/cuda-10.1-libs:/usr/local/cuda-10.1-libs
+      options: --gpus all
+
+    steps:
+      - name: Checkout MegEngine
+        uses: actions/checkout@v2
+      - name: Checkout submodules
+        run: |
+          ./third_party/prepare.sh
+          ./third_party/install-mkl.sh
+      - name: Build MegEngine
+        run: ./ci/cmake.sh cuda
+      - name: Python test
+        run: ./ci/run_python_test.sh
+      - name: C++ test
+        run: ./ci/run_cpp_test.sh cuda

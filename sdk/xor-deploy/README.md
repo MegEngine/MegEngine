@@ -12,11 +12,11 @@
 
 * Step 3: run with dumped model
 
-     The dumped model can be obtained by running [xornet.py](../../python_module/examples/xor/xornet.py)
+     The dumped model can be obtained by running [xornet.py](xornet.py)
 
 
     ```
-    LD_LIBRARY_PATH=$MGE_INSTALL_PATH:$LD_LIBRARY_PATH ./xor_deploy xornet_deploy.mge 0.6 0.9
+    LD_LIBRARY_PATH=$MGE_INSTALL_PATH/lib64:$LD_LIBRARY_PATH ./xor_deploy xornet_deploy.mge 0.6 0.9
     ```
 
     Sample output:

@@ -17,6 +17,7 @@ from megengine._internal import CompGraph, CompNode
 from ..core import zeros
 from ..core.graph import _use_default_if_none
 from ..core.tensor import Tensor, wrap_io_tensor
+from .elemwise import ceil
 from .utils import _decide_comp_node_and_comp_graph
 
 
@@ -178,10 +179,9 @@ def concat(
     Concat some tensors
 
     :param inps: Input tensors to concat
-    :param axis: the dimension over which the tensors are concatenated,
-        default to 0
-    :param device: The comp node output on, default to None
-    :param comp_graph: The graph in which output is, default to None
+    :param axis: the dimension over which the tensors are concatenated. Default: 0
+    :param device: The comp node output on. Default: None
+    :param comp_graph: The graph in which output is. Default: None
     :return: The output tensor
 
     Examples:
@@ -249,6 +249,7 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
         import numpy as np
         import megengine.functional as F
         from megengine.core import tensor
+
         inp = tensor(np.zeros(shape=(3,5),dtype=np.float32))
         source = tensor([[0.9935,0.9465,0.2256,0.8926,0.4396],[0.7723,0.0718,0.5939,0.357,0.4576]])
         index = tensor([[0,2,0,2,1],[2,0,0,1,2]])
@@ -258,6 +259,7 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
     Outputs:
 
     .. testoutput::
+        :options: +SKIP
 
         [[0.9935 0.0718 0.5939 0.     0.    ]
          [0.     0.     0.     0.357  0.4396]
@@ -314,9 +316,9 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
 def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
     r"""
     Select elements either from Tensor x or Tensor y, according to mask.
-    
+
     .. math::
-        
+
         \textrm{out}_i = x_i \textrm{ if } \textrm{mask}_i \textrm{ is True else } y_i
 
     :param mask: a mask used for choosing x or y
@@ -350,10 +352,46 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         y, mask, mode=mgb.opr_param_defs.CondTake.Mode.EQ, val=0
     )
     out = x.flatten()
-    out = mgb.opr.set_advanced_indexing(out, v0)[index0]
-    out = mgb.opr.set_advanced_indexing(out, v1)[index1]
+    index = mgb.opr.concat(index0, index1, axis=0)
+    v = mgb.opr.concat(v0, v1, axis=0)
+    out = mgb.opr.set_advanced_indexing(out, v)[index]
     out = out.reshape(x.shape)
     return out
+
+
+@wrap_io_tensor
+def cond_take(mask: Tensor, x: Tensor, val=1) -> Tensor:
+    r"""
+    Take elements from data if specific condition is satisfied on mask. This operator has two outputs: the first is the elements taken, and the second is the indices corresponding to those elements; they are both 1-dimensional. High-dimension input would first be flattened.
+
+    :param mask: condition param; must be the same shape with data
+    :param x: input tensor from which to take elements
+    :param val: value to be compared to by mode
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+        mask = tensor(np.array([[1, 0], [0, 1]], dtype=np.int32))
+        x = tensor(np.array([[1, np.inf], [np.nan, 4]],
+            dtype=np.float32))
+        v, index = F.cond_take(mask, x, 1)
+        print(v, index)
+
+    Outputs:
+
+    .. testoutput::
+
+        Tensor([1. 4.]) Tensor([0 3], dtype=int32)
+
+    """
+
+    v, index = mgb.opr.cond_take(
+        x, mask, mode=mgb.opr_param_defs.CondTake.Mode.EQ, val=val
+    )
+    return v, index
 
 
 def shapeof(x: Tensor, axis=None):
@@ -365,8 +403,7 @@ def shapeof(x: Tensor, axis=None):
 
 @wrap_io_tensor
 def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
-    r
-    """
+    r"""
     Swap shapes and strides according to given pattern
 
     :param inp: Input tensor
@@ -408,8 +445,7 @@ def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
 
 @wrap_io_tensor
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
-    r
-    """
+    r"""
     Reshape a tensor to given target shape; total number of logical elements must
     remain unchanged
 
@@ -445,12 +481,10 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
     return mgb.opr.reshape(inp, target_shape)
 
 
-@functools.wraps(dimshuffle)
-def transpose(*args, **kwargs):
-    r
-    """See :func:`dimshuffle`
+def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
+    r"""Equivalent to :func:`dimshuffle`
     """
-    return dimshuffle(*args, **kwargs)
+    return dimshuffle(inp, pattern)
 
 
 @wrap_io_tensor
@@ -516,7 +550,7 @@ def remove_axis(inp: Tensor, axis: Union[int, Iterable[int]]) -> Tensor:
 def linspace(
     start: Union[int, float, Tensor],
     stop: Union[int, float, Tensor],
-    num: int = 100,
+    num: Union[int, Tensor],
     dtype=np.float32,
     device: Optional[CompNode] = None,
     comp_graph: Optional[CompGraph] = None,
@@ -553,6 +587,46 @@ def linspace(
         mgb.opr.linspace(start, stop, num, comp_node=device, comp_graph=comp_graph)
     )
     return ret.astype(dtype)
+
+
+def arange(
+    start: Union[int, float, Tensor],
+    end: Union[int, float, Tensor],
+    step: Union[int, float, Tensor] = 1,
+    dtype=np.float32,
+    device: Optional[CompNode] = None,
+    comp_graph: Optional[CompGraph] = None,
+) -> Tensor:
+    r"""
+    Returns a Tensor with values from `start` to `end` with adjacent interval `step`
+
+    :param start: starting value of the squence, shoule be scalar
+    :param end: ending value of the squence, shoule be scalar
+    :param step: the gap between each pair of adjacent values. Default 1
+    :param dtype: result data type
+    :return: The generated tensor
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+
+        a = F.arange(1, 5, 1)
+        print(a.numpy())
+
+    .. testoutput::
+
+        [1. 2. 3. 4.]
+
+    """
+    if dtype is not np.float32:
+        raise ValueError("arange is only implemented for float32")
+    num = ceil((end - start) / step)
+    stop = start + step * (num - 1)
+    ret = linspace(start, stop, num, device=device, comp_graph=comp_graph)
+    return ret
 
 
 def zeros_like(inp: Tensor) -> Tensor:

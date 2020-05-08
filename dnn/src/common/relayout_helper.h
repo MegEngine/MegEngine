@@ -38,6 +38,8 @@ namespace transpose_fallback {
 
 #if MEGDNN_X86
 constexpr size_t BLOCK_LINE_SIZE_BYTES = 64;
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7 
+constexpr size_t BLOCK_LINE_SIZE_BYTES = 32;
 #else
 #error "unknown megdnn arch"
 #endif

@@ -53,9 +53,6 @@ class Optimizer(metaclass=ABCMeta):
         if isinstance(params, (Parameter, dict)):
             params = [params]
         else:
-            assert isinstance(
-                params, Iterable
-            ), "params argument given to the optimizer should be Parameter or dict"
             if not isinstance(params, Iterable):
                 raise TypeError(
                     "params argument given to the optimizer should be "
@@ -65,13 +62,15 @@ class Optimizer(metaclass=ABCMeta):
         self.param_groups = []  # type: list
 
         param_groups = list(params)
-        assert len(param_groups) != 0, "optimizer got an empty parameter list"
+        if len(param_groups) == 0:
+            raise ValueError("optimizer got an empty parameter list")
 
         param_type = type(param_groups[0])
         for param in param_groups:
-            assert isinstance(
-                param, param_type
-            ), "types of params argument given to the optimizer shoud be same"
+            if not isinstance(param, param_type):
+                raise TypeError(
+                    "types of params argument given to the optimizer shoud be same"
+                )
 
         if not isinstance(param_groups[0], dict):
             param_groups = [{"params": param_groups}]
@@ -150,7 +149,7 @@ class Optimizer(metaclass=ABCMeta):
     def backward(self, loss: Tensor):
         """Computes the back-propagation of the network given loss.
 
-        :param loss: The obtained loss tensor 
+        :param loss: The obtained loss tensor
         """
         rst = []
         key = 0
@@ -168,6 +167,8 @@ class Optimizer(metaclass=ABCMeta):
 
         cg = get_default_graph()
         grads = grad_func(loss, params, use_virtual_grad=not cg.is_eager())
+        if not isinstance(grads, list):
+            grads = [grads]
         assert len(grads) == len(params)
 
         for param, grad in zip(params, grads):

@@ -122,6 +122,22 @@ using BiasMode = ConvBiasForward::BiasMode;
             break;                            \
     }
 
+#define DISPATCH_FILTER_CHANNEL_WISE(filter, kern, arg...) \
+    switch (filter) {                                      \
+        case 2:                                            \
+            kern(2, ##arg);                                \
+            break;                                         \
+        case 3:                                            \
+            kern(3, ##arg);                                \
+            break;                                         \
+        case 5:                                            \
+            kern(5, ##arg);                                \
+            break;                                         \
+        default:                                           \
+            megdnn_assert(0);                              \
+            break;                                         \
+    }
+
 enum class PostprocessMode : uint8_t {
     FLOAT = 0,  ///< support all biasmode and no_nonlinemode
     NO_PROCESS, ///<support  non bias and identity

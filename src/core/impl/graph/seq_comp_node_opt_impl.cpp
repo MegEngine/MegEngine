@@ -63,7 +63,83 @@ void SeqCompNodeOptimizerImpl::change_to_specific_stream(
     }
 
     ThinHashMap<VarNode*, StreamPropType> changed_vars;
-    auto cb = [this, &changed_vars](OperatorNodeBase *opr) {
+    std::pair<OperatorNodeBase*, StreamPropType> prop_type_storage;
+    std::pair<OperatorNodeBase*, SmallVector<StreamPropType>> input_props_storage;
+
+    // both `propagate_single_opr` and `get_input_props` might be called any number
+    // of times(>=0) with the same \p opr in a cb(opr) function call, so we cache
+    // the result of the first call.
+    auto propagate_single_opr = [&](OperatorNodeBase* opr) {
+        mgb_assert(opr);
+        if (prop_type_storage.first == opr) {
+            return prop_type_storage.second;
+        }
+        prop_type_storage.first = opr;
+
+        bool any_strong_changed = false, all_weak_changed = true,
+                all_weak_changed_valid = false;
+        auto &&dep_map = opr->node_prop().dep_map();
+
+        ThinHashSet<int> inp_streams;
+        for (auto i: opr->input()) {
+            if (!need_device_computing_on_var(i, dep_map.at(i))) {
+                // opr does not have dev comp dep on i, so do not consider it
+                // for comp node change
+                continue;
+            }
+
+            auto iter = changed_vars.find(i);
+            if (iter == changed_vars.end()) {
+                all_weak_changed = false;
+            } else {
+                mgb_assert(iter->second.prop_type != StreamPropType::NONE);
+                if (iter->second.prop_type == StreamPropType::STRONG) {
+                    any_strong_changed = true;
+                } else {
+                    all_weak_changed_valid = true;
+                }
+                inp_streams.insert(iter->second.stream);
+            }
+        }
+
+        auto type = StreamPropType::NONE;
+        int stream = 0;
+        if (any_strong_changed ||
+                (all_weak_changed && all_weak_changed_valid)) {
+            type = any_strong_changed ?
+                StreamPropType::STRONG : StreamPropType::WEAK;
+            int copy_stream = CompNode::Stream::COPY;
+            int nccl_stream = CompNode::Stream::NCCL;
+            if (inp_streams.count(copy_stream))
+                stream = copy_stream;
+            else if (inp_streams.count(nccl_stream))
+                stream = nccl_stream;
+            mgb_assert(type != StreamPropType::NONE && stream != 0);
+        }
+        return prop_type_storage.second = StreamPropType{stream, type};
+    };
+
+    auto get_input_props = [&](OperatorNodeBase *opr) {
+        mgb_assert(opr);
+        if (input_props_storage.first == opr) {
+            return input_props_storage.second;
+        }
+        input_props_storage.first = opr;
+
+        auto &&props = input_props_storage.second;
+        props.clear();
+        for (auto i : opr->input()) {
+            auto &&iter = changed_vars.find(i);
+            if (iter != changed_vars.end()) {
+                props.push_back(iter->second);
+            } else {
+                props.push_back(StreamPropType{0, StreamPropType::NONE});
+            }
+        }
+        return input_props_storage.second;
+    };
+
+    auto cb = [&](OperatorNodeBase *opr) {
         if (opr->node_prop().contain(
                     OperatorNodeBase::NodeProp::Flag::
                     DISALLOW_COMP_NODE_OPTIMIZE)) {
@@ -83,47 +159,18 @@ void SeqCompNodeOptimizerImpl::change_to_specific_stream(
         if (output_changed)
             return;
 
-        // check inputs
-        bool any_strong_changed = false, all_weak_changed = true,
-             all_weak_changed_valid = false;
-        auto &&dep_map = opr->node_prop().dep_map();
-
-        ThinHashSet<int> inp_streams;
-        for (auto i: opr->input()) {
-            if (!need_device_computing_on_var(i, dep_map.at(i))) {
-                // opr does not have dev comp dep on i, so do not consider it
-                // for comp node change
-                continue;
+        for (auto i: opr->output()) {
+            StreamPropType prop;
+            auto &&iter = m_var2prop_func.find(i);
+            if (iter != m_var2prop_func.end()) {
+                iter->second(prop, get_input_props(opr));
             }
-
-            auto iter = changed_vars.find(i);
-            if (iter == changed_vars.end()) {
-                all_weak_changed = false;
-            } else {
-                if (iter->second.prop_type == StreamPropType::STRONG) {
-                    any_strong_changed = true;
-                } else {
-                    all_weak_changed_valid = true;
-                }
-                inp_streams.insert(iter->second.stream);
+            else {
+                prop = propagate_single_opr(opr);
             }
-        }
-
-        if (any_strong_changed ||
-                (all_weak_changed && all_weak_changed_valid)) {
-            auto type = any_strong_changed ?
-                StreamPropType::STRONG : StreamPropType::WEAK;
-            int stream = 0;
-            int copy_stream = CompNode::Stream::COPY;
-            int nccl_stream = CompNode::Stream::NCCL;
-            if (inp_streams.count(copy_stream))
-                stream = copy_stream;
-            else if (inp_streams.count(nccl_stream))
-                stream = nccl_stream;
-            mgb_assert(stream != 0);
-            for (auto i: opr->output()) {
-                var_to_specific_stream(i, stream);
-                changed_vars[i] = StreamPropType{stream, type};
+            if (prop.prop_type != StreamPropType::NONE) {
+                var_to_specific_stream(i, prop.stream);
+                changed_vars[i] = prop;
             }
         }
     };
@@ -150,6 +197,12 @@ void SeqCompNodeOptimizerImpl::register_stream_var(
         ins.first->second.prop_type =
                 std::max(ins.first->second.prop_type, prop_type);
     }
+}
+
+void SeqCompNodeOptimizerImpl::register_propagate_function(
+        VarNode *var, PropFunction prop_func) {
+    mgb_assert(var->owner_graph() == m_owner_graph);
+    mgb_assert(m_var2prop_func.emplace(var, prop_func).second);
 }
 
 void SeqCompNodeOptimizerImpl::init_ready_event(

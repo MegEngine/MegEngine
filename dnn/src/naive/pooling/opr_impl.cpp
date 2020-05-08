@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/naive/pooling/opr_impl.h"
 
@@ -165,6 +166,13 @@ struct NCHW88IdxGetter {
                           size_t C, size_t H, size_t W) {
         size_t id =
                 (((n * (C >> 3) + (c >> 3)) * H + h) * W + w) * 8 + (c & 0b111);
+        return id;
+    }
+};
+struct NCHW44IdxGetter {
+    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t,
+                          size_t C, size_t H, size_t W) {
+        size_t id = (((n * (C >> 2) + (c >> 2)) * H + h) * W + w) * 4 + (c % 4);
         return id;
     }
 };
@@ -375,6 +383,7 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         if (param().format == Param::Format::NCHW ||
             param().format == Param::Format::NCHW4 ||
             param().format == Param::Format::NCHW88 ||
+            param().format == Param::Format::NCHW44 ||
             param().format == Param::Format::NCHW32) {
             c_pos = 1;
             spatial_pos = 2;
@@ -401,6 +410,7 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             OW = dst.layout.shape[spatial_pos + 2];
         }
         if (param().format == Param::Format::NCHW4 ||
+            param().format == Param::Format::NCHW44 ||
             param().format == Param::Format::CHWN4) {
             C *= 4;
         }
@@ -436,6 +446,9 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             break;                                                        \
         case Param::Format::NCHW88:                                       \
             DISPATCH_WITH_POOLER_AND_IDX_GETTER(Pooler, NCHW88IdxGetter); \
+            break;                                                        \
+        case Param::Format::NCHW44:                                       \
+            DISPATCH_WITH_POOLER_AND_IDX_GETTER(Pooler, NCHW44IdxGetter); \
             break;                                                        \
         case Param::Format::NCHW32:                                       \
             DISPATCH_WITH_POOLER_AND_IDX_GETTER(Pooler, NCHW32IdxGetter); \

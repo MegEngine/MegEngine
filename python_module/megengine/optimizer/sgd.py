@@ -17,7 +17,7 @@ class SGD(Optimizer):
     r"""Implements stochastic gradient descent.
 
     Nesterov momentum is based on the formula from
-    `On the importance of initialization and momentum in deep learning`.
+    `"On the importance of initialization and momentum in deep learning" <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_ .
 
     :param params: iterable of parameters to optimize or dicts defining
             parameter groups.

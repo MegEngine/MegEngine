@@ -26,14 +26,14 @@ public:
 protected:
     static void* const sm_x86_algo_type;
     class AlgoF32Blas;
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
     class AlgoF32MKLPackA;
 #endif
 #if MEGDNN_X86_WITH_VNNI
     class AlgoInt8x8x32Vnni;
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
     class AlgoInt8x8x32Mkldnn;
 #endif
 

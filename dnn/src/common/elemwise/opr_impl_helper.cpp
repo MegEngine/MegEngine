@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "./opr_impl_helper.h"
@@ -79,18 +80,19 @@ bool ElemwiseLayoutHelper::is_broadcasted_scalar(const TensorLayout& layout) {
     }
     return true;
 }
+template <size_t slice_size>
 bool ElemwiseLayoutHelper::is_broadcastedx_channel_like(
         const TensorLayout& layout, BroadcastChannelInfo& info) {
     if (layout.format.type() == TensorFormat::Type::DEFAULT &&
-        layout.ndim == 3 && layout.stride[0] == 8 && layout.stride[1] == 0 &&
-        layout.stride[2] == 1) {
+        layout.ndim == 3 && layout.stride[0] == slice_size &&
+        layout.stride[1] == 0 && layout.stride[2] == 1) {
         info.x = layout.shape[0];
         info.y = layout.shape[1];
         info.z = layout.shape[2];
         return true;
     } else if (layout.format.type() == TensorFormat::Type::DEFAULT &&
                layout.ndim == 4 && layout.stride[0] == 0 &&
-               layout.stride[1] == 8 && layout.stride[2] == 0 &&
+               layout.stride[1] == slice_size && layout.stride[2] == 0 &&
                layout.stride[3] == 1) {
         info.x = layout.shape[1];
         info.y = layout.shape[2];
@@ -99,6 +101,12 @@ bool ElemwiseLayoutHelper::is_broadcastedx_channel_like(
     }
     return false;
 }
+#define INST(n)                                                          \
+    template bool ElemwiseLayoutHelper::is_broadcastedx_channel_like<n>( \
+            const TensorLayout& layout, BroadcastChannelInfo& info)
+INST(4);
+INST(8);
+#undef INST
 
 bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
         const TensorLayout& layout, BroadcastChannelInfo& info) {

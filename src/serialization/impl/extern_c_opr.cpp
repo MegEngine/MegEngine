@@ -18,6 +18,7 @@
 
 using namespace mgb;
 using namespace serialization;
+using namespace opr;
 
 namespace {
 

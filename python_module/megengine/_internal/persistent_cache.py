@@ -15,6 +15,7 @@ import shelve
 
 from .logconf import get_logger
 from .mgb import _PersistentCache
+from .version import __version__
 
 
 class _FakeRedisConn:
@@ -85,7 +86,10 @@ class PersistentCacheOnServer(_PersistentCache):
         return conn
 
     def _make_key(self, category, key):
-        return b"@".join((self._prefix.encode("ascii"), category.encode("ascii"), key))
+        prefix_with_version = "{}:MGB{}".format(self._prefix, __version__)
+        return b"@".join(
+            (prefix_with_version.encode("ascii"), category.encode("ascii"), key)
+        )
 
     def put(self, category, key, value):
         conn = self._conn

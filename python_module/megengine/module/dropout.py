@@ -11,9 +11,9 @@ from .module import Module
 
 
 class Dropout(Module):
-    r"""Randomly set input elements to zeros. Commonly used in large networks to prevent overfitting.
+    r"""Randomly set input elements to zeros with the probability :math:`drop\_prob` during training. Commonly used in large networks to prevent overfitting.
     Note that we perform dropout only during training, we also rescale(multiply) the output tensor
-    by :math:`\frac{1}{1 - p}`. During inference :class:`~.Dropout` is equal to :class:`~.Identity`.
+    by :math:`\frac{1}{1 - drop\_prob}`. During inference :class:`~.Dropout` is equal to :class:`~.Identity`.
 
     :param drop_prob: The probability to drop (set to zero) each single element
     """

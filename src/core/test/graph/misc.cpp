@@ -38,6 +38,11 @@ class ComputingGraphImpl : public ComputingGraph {
 public:
     GraphExecutable::ExecEnv* current_exec_env();
 };
+class SeqCompNodeOptimizerImpl : public SeqCompNodeOptimizer {
+    ~SeqCompNodeOptimizerImpl() = default;
+public:
+    void optimize_comp_nodes(const VarNodeArray &endpoints);
+};
 }  // namespace cg
 }  // namespace mgb
 
@@ -1728,22 +1733,48 @@ TEST(TestGraph, UpdateStaticAllocPlan) {
 
 TEST(TestGraph, CPUGPUHybrid) {
     REQUIRE_GPU(1);
-    auto cn_cpu = CompNode::load("cpu:default"),
-         cn_gpu = CompNode::load("gpu0");
-    auto graph = ComputingGraph::make();
-    HostTensorGenerator<> gen;
-    auto host_x = gen({42});
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x, {cn_cpu}),
-         y = x * 2,
-         z = opr::Copy::make(y, cn_gpu) + 1;
-    HostTensorND host_z;
-    auto func = graph->compile({make_callback_copy(z, host_z)});
-    func->execute();
-    for (size_t i = 0; i < 42; ++ i) {
-        MGB_ASSERT_FLOAT_EQ(host_x->ptr<float>()[i] * 2 + 1,
-                            host_z.ptr<float>()[i]);
+    auto cn_gpu = CompNode::load("gpu0");
+    for (auto&& cn_cpu : {CompNode::load("cpu0"), CompNode::default_cpu()}) {
+        auto graph = ComputingGraph::make();
+        HostTensorGenerator<> gen;
+        constexpr size_t length = 23333;
+        auto host_x = gen({length});
+        graph->options().var_sanity_check_first_run = false;
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x, {cn_cpu}),
+            y = opr::Sleep::make(x, 0.5) * 2,
+            z_gpu = opr::Copy::make(y, cn_gpu) + 1,
+            z = opr::Copy::make(z_gpu, cn_cpu) * 2;
+        HostTensorND host_z;
+        auto func = graph->compile({make_callback_copy(z, host_z)});
+        func->execute();
+        for (size_t i = 0; i < length; ++ i) {
+            MGB_ASSERT_FLOAT_EQ((host_x->ptr<float>()[i] * 2 + 1) * 2,
+                                host_z.ptr<float>()[i]);
+        }
     }
+}
 
+TEST(TestGraph, In2OutOpStreamPropagate) {
+    REQUIRE_GPU(1); // seq_comp_node_opt works on comp_node with HAS_COPY_STREAM
+    HostTensorGenerator<> gen;
+    SmallVector<std::shared_ptr<HostTensorND>> host_v = {gen({233}), gen({23})};
+    using PropType = cg::SeqCompNodeOptimizer::StreamPropType;
+    for (auto type : {PropType::STRONG, PropType::WEAK})
+    for (size_t idx : {0, 1}) {
+        auto graph = ComputingGraph::make();
+        SymbolVarArray inp(2);
+        for (size_t i = 0 ; i < 2; ++ i) {
+            inp[i] = opr::Host2DeviceCopy::make(*graph, host_v[i]);
+        }
+        auto out = opr::VirtualDep::make(inp);
+        auto &&mgr = static_cast<cg::SeqCompNodeOptimizerImpl&>(graph->seq_comp_node_optimizer());
+        mgr.register_stream_var(inp[idx].node(), PropType{CompNode::Stream::COPY, type});
+        mgr.optimize_comp_nodes({out.node()});
+        ASSERT_EQ(inp[0].node()->comp_node(), out.node()->comp_node());
+        auto o_stream = out.node()->comp_node().locator().stream;
+        int expect = idx ? 0 : int(CompNode::Stream::COPY);
+        ASSERT_EQ(o_stream, expect);
+    }
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

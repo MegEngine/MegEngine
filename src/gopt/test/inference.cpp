@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/opr/dnn/local.h"
 #include "megbrain/test/helper.h"
 
 #include "megbrain/gopt/inference.h"
@@ -919,6 +920,69 @@ TEST(TestGoptInference, ConvertFormatNHWCD4) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, ConvertFormatNHWCD4LOCAL) {
+    // hwcd4 is only supported in naive handle
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x = gen({2, 8, 8, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 1;
+    auto w1 = mkcvar("w1", {4, 8, 3, 3}),
+         conv1 = opr::Convolution::make(x, w1, param);
+
+    auto w2 = mkcvar("w2", {8, 16, 4, 3, 3, 4}),
+         local = opr::Local::make(conv1, w2, param);
+
+    auto w3 = mkcvar("w3", {4, 4, 3, 3}),
+         conv2 = opr::Convolution::make(local, w3, param);
+
+    opr::GroupLocal::Param param_group_local;
+    param_group_local.pad_h = param_group_local.pad_w = 1;
+    auto w4 = mkcvar("w4", {2, 8, 16, 2, 3, 3, 2}),
+         group_local = opr::GroupLocal::make(conv2, w4, param_group_local);
+
+    auto w5 = mkcvar("w5", {4, 4, 3, 3}),
+         y = opr::Convolution::make(group_local, w5, param);
+
+    SymbolVar y_opt;
+    unpack_vector(
+            gopt::optimize_for_inference(
+                    {y},
+                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
+            y_opt);
+
+    ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
+              find_opr<opr::Convolution>(y_opt).param().format);
+
+    ASSERT_EQ(opr::Local::Param::Format::NCHW,
+              find_opr<opr::Local>(y_opt).param().format);
+
+    ASSERT_EQ(opr::GroupLocal::Param::Format::NCHW,
+              find_opr<opr::GroupLocal>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNHWCD4LOCAL.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
 TEST(TestGoptInference, ConvertFormatNHWCD4Deconv) {
     // hwcd4 is only supported in naive handle
     NaiveMegDNNHandleScope naive_megdnn_handle;
@@ -1045,13 +1109,18 @@ TEST(TestGoptInference, ConvertFormatPadIC) {
     param.sparse = opr::Convolution::Param::Sparse::DENSE;
     auto w1 = mkcvar("w1", {12, 12, 3, 3});
     auto y = opr::Convolution::make(concat, w1, param);
-    MGB_MARK_USED_VAR(y);
     SymbolVar y_opt;
-    ASSERT_THROW(unpack_vector(gopt::optimize_for_inference(
-                                       {y}, gopt::OptimizeForInferenceOptions{}
-                                                    .enable_use_nhwcd4()),
-                               y_opt),
-                 AssertionError);
+    unpack_vector(
+            gopt::optimize_for_inference(
+                    {y},
+                    gopt::OptimizeForInferenceOptions{}.enable_use_nhwcd4()),
+            y_opt);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
 TEST(TestGoptInference, ConvertBatchNormPass) {
@@ -2256,5 +2325,86 @@ TEST(TestGoptInference, ConvertFormatNCHW88) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
 }
 
+TEST(TestGoptInference, ConvertFormatNCHW44) {
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x = gen({2, 3, 16, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+    //!Hybrid nchw88 mode
+    opr::Convolution::Param param_conv;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    auto w1 = mkcvar("w1", {8, 3, 3, 3}),
+         conv1 = opr::Convolution::make(x, w1, param_conv);
+    //!channel wise
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    auto w2 = mkcvar("w2", {8, 1, 1, 3, 3}), b2 = mkcvar("b2", {1, 8, 1, 1}),
+         conv2 = opr::ConvBias::make(conv1, w2, b2, param_conv_bias);
+    //! group
+    auto w3 = mkcvar("w3", {2, 4, 4, 3, 3}), b3 = mkcvar("b3", {1, 8, 1, 1}),
+         conv3 = opr::ConvBias::make(conv2, w3, b3, param_conv_bias);
+
+    auto shape_of = opr::GetVarShape::make(conv3);
+    auto subtensor = opr::Subtensor::make(
+            shape_of, {opr::Subtensor::AxisIndexer::make_interval(
+                              0, x.make_scalar(2), None, x.make_scalar(1))});
+    opr::Resize::Param param_resize;
+    param_resize.format = opr::Resize::Param::Format::NCHW;
+    auto resize = opr::ResizeForward::make(conv3, subtensor * 2, param_resize);
+    auto mat = mkcvar("mat", {2, 3, 3}),
+         warp = opr::WarpPerspectiveForward::make(
+                 resize, mat, nullptr, cg::var_from_tensor_shape(x, {4, 4}));
+
+    auto b = mkvar("b", {1, 8, 1, 1}),
+         elem = opr::Elemwise::make({warp + b},
+                                    opr::Elemwise::Param::Mode::RELU);
+    //! Dense
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    auto w4 = mkcvar("w4", {4, 8, 3, 3}), b4 = mkcvar("b4", {1, 4, 1, 1}),
+         conv4 = opr::ConvBias::make(elem, w4, b4, param_conv_bias);
+    auto w5 = mkcvar("w5", {6, 4, 3, 3}), b5 = mkcvar("b5", {1, 6, 1, 1}),
+         conv5 = opr::ConvBias::make(conv4, w5, b5, param_conv_bias);
+    auto w6 = mkcvar("w6", {4, 6, 3, 3}), b6 = mkcvar("b6", {1, 4, 1, 1}),
+         y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
+
+    SymbolVar y_opt;
+    unpack_vector(
+            gopt::optimize_for_inference(
+                    {y},
+                    gopt::OptimizeForInferenceOptions{}.enable_use_nchw44()),
+            y_opt);
+
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(
+                    output_file("TestGoptInference.ConvertFormatNCHW44.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    //! meybe go to winograd in x86-32, so set error 1e-1
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
+
+    *host_x = *gen({2, 3, 32, 32}, cn);
+    func->execute();
+    //! meybe go to winograd in x86-32, so set error 1e-1
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
+}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

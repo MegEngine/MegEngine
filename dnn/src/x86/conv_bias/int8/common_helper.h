@@ -11,6 +11,7 @@
 #pragma once
 
 #include <immintrin.h>
+#include "src/common/unroll_macro.h"
 #include "megdnn/arch.h"
 #ifdef WIN32CMAKE
 #include <smmintrin.h>

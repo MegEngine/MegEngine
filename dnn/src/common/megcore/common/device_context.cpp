@@ -16,7 +16,6 @@
 #include "src/cuda/megcore/cuda_device_context.hpp"
 #endif
 
-
 using namespace megcore;
 using namespace megdnn;
 

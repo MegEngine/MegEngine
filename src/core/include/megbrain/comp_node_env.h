@@ -41,7 +41,7 @@
         }                                                               \
     } while (0)
 
-#endif //MGB_ENABLE_LOGGING
+#endif  // MGB_ENABLE_LOGGING
 
 #endif
 

@@ -200,7 +200,6 @@ class DevMemAlloc: virtual public MemAllocBase {
 #endif
 
 
-
         virtual ~DevMemAlloc() = default;
 
         /*!

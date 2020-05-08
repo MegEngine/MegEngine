@@ -25,13 +25,13 @@ void* const MatrixMulImpl::sm_x86_algo_type = &x86_algo_type_storage;
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32Blas f32blas;
 
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
     AlgoF32MKLPackA f32mkl_packa;
 #endif
 #if MEGDNN_X86_WITH_VNNI
     AlgoInt8x8x32Vnni algoint8x8x32vnni;
 #endif
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
     AlgoInt8x8x32Mkldnn algoint8x8x32mkldnn;
 #endif
     AlgoInt8x8x32AVX2M4N16K2 algoint8x8x32avx2_m4n16k2;
@@ -42,7 +42,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 public:
     AlgoPack() {
         if (is_supported(SIMDType::VNNI)) {
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
             all_algos.emplace_back(&algoint8x8x32mkldnn);
 #endif
 #if MEGDNN_X86_WITH_VNNI
@@ -53,11 +53,11 @@ public:
         all_algos.emplace_back(&algoint8x8x32avx2_m2n4k16);
         all_algos.emplace_back(&algoint8x8x32sse_m4n8k2);
         all_algos.emplace_back(&algof32mk8_8x8);
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
         all_algos.emplace_back(&algoint8x8x32mkldnn);
 #endif
         all_algos.emplace_back(&f32blas);
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
         all_algos.emplace_back(&f32mkl_packa);
 #endif
     }

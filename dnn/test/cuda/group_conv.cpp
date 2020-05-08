@@ -23,7 +23,7 @@ namespace test {
 
 TEST_F(CUDA, GROUP_CONV_FORWARD)
 {
-    bool is_int_available = (cuda::current_device_prop().major >= 6);
+    bool is_int_available = cuda::is_compute_capability_required(6, 1);
     auto run = [&](size_t N, size_t IC, size_t IH, size_t IW,
             size_t FH, size_t FW,
             size_t OC, size_t /* OH */, size_t /* OW */,

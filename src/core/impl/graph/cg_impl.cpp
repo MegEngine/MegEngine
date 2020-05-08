@@ -217,7 +217,8 @@ ComputingGraphImpl::Components::Components(ComputingGraphImpl* owner)
           static_infer_comp_seq_manager{owner},
           grad_manager{owner},
 #if MGB_ENABLE_SUBLINEAR
-          seq_modifier_for_sublinear_memory{owner},
+          seq_modifier_for_sublinear_memory{owner,
+              &(owner->options().sublinear_mem_cofig)},
 #endif
 #if MGB_ENABLE_MEMORY_SWAP
           memory_swap_support{owner},
@@ -724,6 +725,53 @@ std::string ComputingGraphImpl::VarReceiverInfo::to_string() const {
             "allow_empty_value=%zu)",
             nr_direct_comp_req, dev_value, host_value, shape,
             allow_empty_value);
+}
+
+std::string ComputingGraphImpl::get_mem_allocation_info() const {
+#if MGB_ENABLE_JSON
+    auto make_var_json = [](VarNode* single_var) {
+        auto &&cur_mem_plan = single_var->mem_plan();
+        if (cur_mem_plan.valid())
+            return json::Object::make({
+                {"name", json::String::make(single_var->name())},
+                {"memory", json::Number::make(cur_mem_plan.chunk().size())},
+                {"dev_ptr", json::NumberInt::make(
+                reinterpret_cast<size_t>(single_var->dev_tensor().raw_ptr()))}
+            });
+        else
+            return json::Object::make({
+                {"name", json::String::make(single_var->name())},
+                {"memory", json::Null::make()},
+                {"dev_ptr", json::Null::make()}
+            });
+    };
+
+    auto objlist = json::Array::make();
+
+    for(auto &opri: m_opr_refkeeper){
+        auto cur_opr = opri.get();
+
+        auto objptr = json::Object::make();
+        auto &&objbody = *objptr;
+
+        objbody["name"] = json::String::make(cur_opr->name());
+
+        auto jvars = json::Array::make();
+        for(auto &outputi: cur_opr->output()){
+            jvars->add(make_var_json(outputi));
+        }
+        objbody["output"] = jvars;
+
+        auto obj = json::Object::make({{std::to_string(cur_opr->id()), objptr}});
+
+        objlist->add(obj);
+    }
+
+    return objlist->to_string();
+#endif // MGB_ENABLE_JSON
+    mgb_log_warn("mgb is not configured with MGB_ENABLE_JSON on,"
+                 "get_mem_allocation_info returns null string");
+    return std::string();
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -400,6 +400,9 @@ bool check_gpu_available(size_t num);
 //! check whether given number of AMD GPUs is available
 bool check_amd_gpu_available(size_t num);
 
+//! check whether given number of cambricon devices is available
+bool check_cambricon_device_available(size_t num);
+
 //! check current capability >= major.minor
 bool check_compute_capability(int major, int minor);
 
@@ -435,6 +438,7 @@ public:
     if (!check_amd_gpu_available(n)) \
         return; \
 } while(0)
+
 
 #if MGB_HAVE_THREAD
 #define REQUIRE_THREAD()
