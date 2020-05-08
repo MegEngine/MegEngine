@@ -56,6 +56,13 @@ class Observer(Module):
     def disable(self):
         self.enabled = False
 
+    def train(self, mode: bool = True) -> None:
+        super().train(mode)
+        if mode:
+            self.enable()
+        else:
+            self.disable()
+
     @abstractmethod
     def forward(self, x):
         pass

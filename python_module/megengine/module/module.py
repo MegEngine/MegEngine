@@ -294,7 +294,8 @@ class Module(metaclass=ABCMeta):
         self.training = mode
 
         def fn(x) -> None:
-            x.training = mode
+            if x is not self:
+                x.train(mode=mode)
 
         self.apply(fn)
 
