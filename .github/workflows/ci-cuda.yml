@@ -12,7 +12,7 @@ jobs:
       image: localhost:5000/megengine-ci:latest
       volumes:
         - /usr/local/cuda-10.1-libs:/usr/local/cuda-10.1-libs
-      options: --gpus all
+      options: --gpus all --shm-size 1g
 
     steps:
       - name: Checkout MegEngine
