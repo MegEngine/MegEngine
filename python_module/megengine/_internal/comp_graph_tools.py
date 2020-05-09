@@ -25,7 +25,7 @@ def get_dep_vars(var, var_type=None):
     outputs = []
     memo = set()
 
-    if not isinstance(var, collections.Iterable):
+    if isinstance(var, _mgb.SymbolVar):
         var = [var]
 
     if isinstance(var_type, str):
