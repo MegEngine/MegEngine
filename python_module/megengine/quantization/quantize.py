@@ -34,6 +34,8 @@ def quantize(module: Module, inplace=True):
         else:
             setattr(parent, key.split(".")[-1], submodule.to_quantized())
 
+    return module
+
 
 def quantize_qat(module: Module, qconfig: QConfig = ema_fakequant_qconfig):
     r"""
@@ -51,6 +53,25 @@ def quantize_qat(module: Module, qconfig: QConfig = ema_fakequant_qconfig):
             mod.set_qconfig(qconfig)
 
     module.apply(fn)
+
+
+def quantize_calibration(module: Module, qconfig: QConfig = ema_fakequant_qconfig):
+    r"""
+    Recursively convert `module` to `calibration` mode through :meth:`~.Module.apply`
+    and set qconfig relatively.
+
+    :param module: root module to do convert recursively.
+    :param qconfig: a instance of :class:`~.QConfig` to be set as submodules' qconfig.
+        default is :any:`~.qconfig.ema_fakequant_qconfig`.
+    """
+
+    def fn(mod: Module):
+        if isinstance(mod, QATModule):
+            mod.set_qat_mode(QATModule.QATMode.CALIBRATION)
+            mod.set_qconfig(qconfig)
+
+    module.apply(fn)
+    enable_observer(module)
 
 
 def disable_fake_quant(module: Module):

@@ -14,5 +14,6 @@ from .quantize import (
     enable_fake_quant,
     enable_observer,
     quantize,
+    quantize_calibration,
     quantize_qat,
 )

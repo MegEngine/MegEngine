@@ -34,12 +34,10 @@ class Elemwise(Module):
 
     _elemwise_multi_type_mode = mgb.opr_param_defs.ElemwiseMultiType.Mode
 
-    def __init__(self, method):
+    def __init__(self, method, dtype=None):
         super().__init__()
         self.method = self._elemwise_multi_type_mode.convert("Q" + method)
-        self.scale = 1.0
-        self.zero_point = 0.0
-        self.output_dtype = mgb.dtype.qint8(self.scale)
+        self.output_dtype = dtype
 
     def forward(self, *inps):
         if self.training:
@@ -53,7 +51,4 @@ def to_quantized(float_module):
     Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
     implemented here to avoid circular import.
     """
-    qmod = Elemwise(float_module.method.name)
-    qmod.output_dtype = float_module.act_observer.get_dtype()
-    qmod.scale, qmod.zero_point = float_module.act_observer.get_qparams()
-    return qmod
+    return Elemwise(float_module.method.name, float_module.act_observer.get_dtype())

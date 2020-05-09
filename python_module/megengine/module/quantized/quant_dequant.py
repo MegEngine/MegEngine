@@ -16,11 +16,9 @@ class QuantStub(Module):
     A helper quantize operation on input and inference only.
     """
 
-    def __init__(self):
+    def __init__(self, dtype=None):
         super().__init__()
-        self.scale = 1.0
-        self.zero_point = 0.0
-        self.output_dtype = mgb.dtype.qint8(self.scale)
+        self.output_dtype = dtype
 
     def forward(self, inp):
         if self.training:
@@ -45,10 +43,7 @@ def to_quantized(float_module):
     Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
     implemented here to avoid circular import.
     """
-    qmod = QuantStub()
-    qmod.output_dtype = float_module.act_observer.get_dtype()
-    qmod.scale, qmod.zero_point = float_module.act_observer.get_qparams()
-    return qmod
+    return QuantStub(float_module.act_observer.get_dtype())
 
 
 @register_method_to_class(Float.DequantStub)
@@ -57,5 +52,4 @@ def to_quantized(float_module):
     Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
     implemented here to avoid circular import.
     """
-    qmod = DequantStub()
-    return qmod
+    return DequantStub()

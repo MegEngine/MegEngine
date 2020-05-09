@@ -496,8 +496,11 @@ class QATModule(Module):
         self, target: Tensor, fq: "FakeQuantize", obs: "Observer"
     ):
         oup = self.apply_observer(target, obs)
-        scale, zero_point = obs.get_qparams()
-        return fq(oup, scale, zero_point)
+        if self.quantizing == self.QATMode.CALIBRATION:
+            return oup
+        else:
+            scale, zero_point = obs.get_qparams()
+            return fq(oup, scale, zero_point)
 
     def set_qat_mode(self, mode: QATMode):
         r"""
@@ -524,11 +527,7 @@ class QATModule(Module):
         """
 
     def __call__(self, *args, **kwargs):
-        if self.quantizing == self.QATMode.QAT:
-            return self.forward_qat(*args, **kwargs)
-        elif self.quantizing == self.QATMode.CALIBRATION:
-            # TODO implement the CALIBRATION
-            assert False
-            return None
-        else:
+        if self.quantizing == self.QATMode.DISABLED:
             return self.forward(*args, **kwargs)
+        else:
+            return self.forward_qat(*args, **kwargs)
