@@ -137,6 +137,7 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
 #undef DISPATCH_FORMAT_MK8
 #undef DISPATCH_DTYPE
     } else {
+        megdnn_assert(src.layout.ndim == 6 || src.layout.ndim == 7);
 #define cb(_ctype, _dst_type, _input_filter_compute_type,                    \
            _output_compute_type, _format, rescale)                           \
     if (param().format == _format) {                                         \
@@ -158,20 +159,58 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
         DISPATCH_KERNEL(dt_float32, dt_float32, dt_float32, dt_float32, \
                         DISPATCH_FORMAT_MK8, 1.0f, _midout_tag, 0);     \
     }
-        megdnn_assert(src.layout.ndim == 6 || src.layout.ndim == 7);
-        if (FW == 3) {
-            if (m == 2) {
-                std::vector<float> interp_points = {0, 1, -1};
-                DISPATCH_DTYPE(4);
-            } else if (m == 6) {
-                std::vector<float> interp_points = {0, 1, -1, 2, -2, 0.5, -0.5};
-                DISPATCH_DTYPE(5);
+        if (pack_c_size == 8) {  //! NCHW88
+            if (FW == 3) {
+                if (m == 2) {
+                    std::vector<float> interp_points = {0, 1, -1};
+                    DISPATCH_DTYPE(4);
+                } else if (m == 6) {
+                    std::vector<float> interp_points = {0,  1,   -1,  2,
+                                                        -2, 0.5, -0.5};
+                    DISPATCH_DTYPE(5);
+                }
             }
+#undef cb
+#undef DISPATCH_FORMAT_MK8
+#undef DISPATCH_DTYPE
         }
+        else if (pack_c_size == 4) {  //! NCHW44
+#define cb(_ctype, _dst_type, _input_filter_compute_type,                    \
+           _output_compute_type, _format, rescale)                           \
+    if (param().format == _format) {                                         \
+        return winograd::StrategyHelper<                                     \
+                _ctype, _dst_type, _input_filter_compute_type,               \
+                _output_compute_type, param::ConvBias::Format::NCHW44,       \
+                _format>::filter(src_ptr, dst_ptr, workspace_ptr, OC, IC, 0, \
+                                 OC, m, FW, interp_points, src.layout.dtype, \
+                                 rescale);                                   \
+    }
+
+#define DISPATCH_FORMAT_MK4(_ctype, _dst_type, _input_filter_compute_type,  \
+                            _output_compute_type, _rescale)                 \
+    cb(_ctype, _dst_type, _input_filter_compute_type, _output_compute_type, \
+       param::Winograd::Format::MK4, _rescale);
+
+#define DISPATCH_DTYPE(_midout_tag)                                     \
+    if (src.layout.dtype.enumv() == DTypeEnum::Float32) {               \
+        DISPATCH_KERNEL(dt_float32, dt_float32, dt_float32, dt_float32, \
+                        DISPATCH_FORMAT_MK4, 1.0f, _midout_tag, 0);     \
+    }
+            if (FW == 3) {
+                if (m == 2) {
+                    std::vector<float> interp_points = {0, 1, -1};
+                    DISPATCH_DTYPE(6);
+                } else if (m == 6) {
+                    std::vector<float> interp_points = {0,  1,   -1,  2,
+                                                        -2, 0.5, -0.5};
+                    DISPATCH_DTYPE(7);
+                }
+            }
 #undef cb
 #undef DISPATCH_FORMAT_MK8
 #undef DISPATCH_KERNEL
 #undef DISPATCH_DTYPE
+        }
     }
     megdnn_assert(execed,
                   "Unsupport winograd filter preprocess. m: %zu src: %s", m,

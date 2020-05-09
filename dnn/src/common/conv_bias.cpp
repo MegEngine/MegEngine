@@ -158,7 +158,10 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
 }
 
 template <typename T>
-struct ParamTrait;
+struct NCHWParamTrait;
+
+template <typename T>
+struct NCHW44ParamTrait;
 
 std::string ConvBias::WinogradParam::to_string() const {
     return ssprintf("%u:%u:%u", channel_block_size, output_block_size,
@@ -166,32 +169,51 @@ std::string ConvBias::WinogradParam::to_string() const {
 }
 
 template <typename T>
-std::string ConvBias::algo_name(const std::string& base, const T& p) {
-    return ssprintf("%s:%s:%s", ParamTrait<T>::category.c_str(), base.c_str(),
-                    p.to_string().c_str());
+std::string ConvBias::algo_name(const std::string& base, const T& p,
+                                param::ConvBias::Format format) {
+    if (format == param::ConvBias::Format::NCHW) {
+        return ssprintf("%s:%s:%s", NCHWParamTrait<T>::category.c_str(),
+                        base.c_str(), p.to_string().c_str());
+    } else if (format == param::ConvBias::Format::NCHW44) {
+        return ssprintf("%s:%s:%s", NCHW44ParamTrait<T>::category.c_str(),
+                        base.c_str(), p.to_string().c_str());
+    }
+    megdnn_throw("Invalid format");
+    return "";
 }
 
 #define FOREACH_CONV_BIAS_PARAM(cb) \
     cb(WinogradParam) cb(DirectParam) cb(MatmulParam) cb(DefaultParam)
 
-#define cb(pt)                             \
-    template <>                            \
-    struct ParamTrait<ConvBias::pt> {      \
-        static const std::string category; \
+#define cb(pt)                              \
+    template <>                             \
+    struct NCHWParamTrait<ConvBias::pt> {   \
+        static const std::string category;  \
+    };                                      \
+    template <>                             \
+    struct NCHW44ParamTrait<ConvBias::pt> { \
+        static const std::string category;  \
     };
 FOREACH_CONV_BIAS_PARAM(cb)
 #undef cb
 
-#define cb(pt, ct) const std::string ParamTrait<ConvBias::pt>::category = ct
-cb(WinogradParam, "WINOGRAD");
+#define cb(pt, ct)                                                 \
+    const std::string NCHWParamTrait<ConvBias::pt>::category = ct; \
+    const std::string NCHW44ParamTrait<ConvBias::pt>::category = ct
 cb(DirectParam, "DIRECT");
 cb(MatmulParam, "MATMUL");
 cb(DefaultParam, "DEFAULT");
 #undef cb
 
+const std::string NCHWParamTrait<ConvBias::WinogradParam>::category =
+        "WINOGRAD";
+const std::string NCHW44ParamTrait<ConvBias::WinogradParam>::category =
+        "WINOGRAD_NCHW44";
+
 #define cb(t)                                              \
     template std::string ConvBias::algo_name<ConvBias::t>( \
-            const std::string& base, const ConvBias::t& p);
+            const std::string& base, const ConvBias::t& p, \
+            param::ConvBias::Format format);
 FOREACH_CONV_BIAS_PARAM(cb)
 #undef cb
 
@@ -199,17 +221,37 @@ ConvBias::WinogradParam ConvBias::parse_winograd_name(
         const std::string& algo_name) {
     ConvBias::WinogradParam ret = INVALID_WINOGRAD_PARAM;
     char base[128];
-    sscanf(algo_name.c_str(), "WINOGRAD:%[^:]:%u:%u:%u", base,
-           &(ret.channel_block_size), &(ret.output_block_size),
-           &(ret.tile_size));
-    if (ret.tile_size == 0 || ret.output_block_size == 0 ||
-        ret.channel_block_size == 0) {
-        megdnn_log_warn("the algo name %s is not suitable for winograd",
-                        algo_name.c_str());
-        return INVALID_WINOGRAD_PARAM;
+    char name[128];
+
+    auto parse = [&](const std::string& algo_name,
+                     const std::string& pre) -> auto {
+        memset(name, 0, 128);
+        sscanf(algo_name.c_str(), "%[^:]:%[^:]:%u:%u:%u", name, base,
+               &(ret.channel_block_size), &(ret.output_block_size),
+               &(ret.tile_size));
+        if (strcmp(name, pre.c_str())) {
+            megdnn_log_warn("algo %s is not %s algo", name, pre.c_str());
+            ret = INVALID_WINOGRAD_PARAM;
+            return false;
+        }
+        if (ret.tile_size == 0 || ret.output_block_size == 0 ||
+            ret.channel_block_size == 0) {
+            megdnn_log_warn("the algo name %s is not suitable for %s",
+                            algo_name.c_str(), pre.c_str());
+            ret = INVALID_WINOGRAD_PARAM;
+            return false;
+        }
+        return true;
+    };
+
+    if (parse(algo_name, "WINOGRAD_NCHW44")) {
+        return ret;
+    } else {
+        parse(algo_name, "WINOGRAD");
+        return ret;
     }
-    return ret;
 }
+
 constexpr ConvBias::WinogradParam ConvBias::INVALID_WINOGRAD_PARAM;
 
 void handle_bias_and_nonlinear(Handle* handle, param::ConvBias args,

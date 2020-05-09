@@ -157,6 +157,64 @@ private:
     uint32_t m_tile_size;
 };
 
+//===================== NCHW44 Winograd Support =====================//
+class ConvBiasImpl::AlgoFP32WinogradF23_4x4_NCHW44 final : public AlgoBase {
+public:
+    AlgoFP32WinogradF23_4x4_NCHW44(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
+            : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
+                    m_matmul_algo->name(), {4, 2, m_tile_size},
+                    param::ConvBias::Format::NCHW44);
+        }
+        return m_name.c_str();
+    }
+    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(fallback::ConvBiasImpl*,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+
+private:
+    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
+    mutable std::string m_name;
+    uint32_t m_tile_size;
+};
+
+class ConvBiasImpl::AlgoFP32WinogradF63_4x4_NCHW44 final : public AlgoBase {
+public:
+    AlgoFP32WinogradF63_4x4_NCHW44(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
+            : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
+                    m_matmul_algo->name(), {4, 6, m_tile_size},
+                    param::ConvBias::Format::NCHW44);
+        }
+        return m_name.c_str();
+    }
+    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(fallback::ConvBiasImpl*,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+
+private:
+    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
+    mutable std::string m_name;
+    uint32_t m_tile_size;
+};
+// ================================================================= //
+
 class ConvBiasImpl::AlgoF32Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     bool m_large_group;

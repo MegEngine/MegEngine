@@ -28,13 +28,22 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
     using namespace winograd;
     check_exec(src.layout, dst.layout, workspace.size);
 
+    //! NCHW44 group conv or NCHW group conv or both dense conv
     size_t flt_start = 0;
+    size_t pack_c_size = 1;
     size_t group = 1;
-    if (src.layout.ndim == 5) {
+    if (src.layout.ndim == 5) { //! {g, OC, IC, FH, FW}
         flt_start = 1;
         group = src.layout[0];
+    } else if (src.layout.ndim == 6) { //! {OC/4, IC/4, FH, FW, 4, 4}
+        pack_c_size = src.layout[5];
+    } else if (src.layout.ndim == 7) { //! {g, OC/4, IC/4, FH, FW, 4, 4}
+        flt_start = 1;
+        group = src.layout[0];
+        pack_c_size = src.layout[6];
     }
-    size_t OC = src.layout[flt_start], IC = src.layout[flt_start + 1],
+    size_t OC = src.layout[flt_start] * pack_c_size,
+           IC = src.layout[flt_start + 1] * pack_c_size,
            FW = src.layout[flt_start + 3];
     size_t m = param().output_block_size;
 
@@ -68,13 +77,23 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
         float* workspace_ptr = workspace.ptr<float>();
         if (FW == 3) {
             if (m == 2) {
-                DISPATCH(winograd_2x3_4x4_f, param::Winograd::Format::MK4, 0,
-                         0);
+                if (pack_c_size == 1) {
+                    DISPATCH(winograd_2x3_4x4_f, param::Winograd::Format::MK4,
+                             0, 0);
+                } else if (pack_c_size == 4) {
+                    DISPATCH(winograd_F23_mk4_f_nchw44,
+                             param::Winograd::Format::MK4, 0, 5);
+                }
             } else if (m == 6) {
                 DISPATCH(winograd_6x3_1x1_f, param::Winograd::Format::DEFAULT,
                          0, 1);
-                DISPATCH(winograd_6x3_4x4_f, param::Winograd::Format::MK4, 0,
-                         2);
+                if (pack_c_size == 1) {
+                    DISPATCH(winograd_6x3_4x4_f, param::Winograd::Format::MK4,
+                             0, 2);
+                } else if (pack_c_size == 4) {
+                    DISPATCH(winograd_F63_mk4_f_nchw44,
+                             param::Winograd::Format::MK4, 0, 6);
+                }
             }
         } else if (FW == 4) {
             if (m == 5) {

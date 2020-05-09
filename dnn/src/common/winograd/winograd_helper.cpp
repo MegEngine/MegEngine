@@ -68,6 +68,7 @@ constexpr size_t layout_pack_size(param::ConvBias::Format layout) {
         case param::ConvBias::Format::NHWCD4:
             return 4;
         case param::ConvBias::Format::NCHW4:
+        case param::ConvBias::Format::NCHW44:
             return 4;
         case param::ConvBias::Format::NCHW32:
             return 32;
@@ -363,6 +364,7 @@ INST(uint8_t, uint8_t, int16_t, int)
             _ctype, _dst_type, _input_filter_compute_type,  \
             _output_compute_type, layout, param::MatrixMul::Format::MK4>;
 INST(float, float, float, float, param::ConvBias::Format::NCHW)
+INST(float, float, float, float, param::ConvBias::Format::NCHW44)
 #undef INST
 
 #define INST(_ctype, _dst_type, _input_filter_compute_type, \

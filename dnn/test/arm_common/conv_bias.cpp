@@ -699,6 +699,135 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F16_F23_8x8) {
 }
 #endif
 
+void benchmark_winograd_nchw_vs_nchw44(const char* algo_name, Handle* handle) {
+    using namespace conv_bias;
+    using NLMode = param::ConvBias::NonlineMode;
+    std::vector<conv_bias::TestArg> args_nchw44;
+    std::vector<conv_bias::TestArg> args_nchw;
+
+    auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
+                    size_t group, NLMode nlmode) {
+        param::ConvBias param;
+        param.format = param::ConvBias::Format::NCHW44;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = 1;
+        param.pad_w = 1;
+        param.nonlineMode = nlmode;
+
+        if (group == 1) {
+            param.sparse = param::ConvBias::Sparse::DENSE;
+            args_nchw44.emplace_back(param, TensorShape{n, ic / 4, h, w, 4},
+                                     TensorShape{oc / 4, ic / 4, 3, 3, 4, 4},
+                                     TensorShape{});
+            param.format = param::ConvBias::Format::NCHW;
+            args_nchw.emplace_back(param, TensorShape{n, ic, h, w},
+                                   TensorShape{oc, ic, 3, 3}, TensorShape{});
+        } else {
+            auto oc_per_group = oc / group;
+            auto ic_per_group = ic / group;
+            param.sparse = param::ConvBias::Sparse::GROUP;
+            args_nchw44.emplace_back(param,
+                                     TensorShape{n, ic_per_group / 4, h, w, 4},
+                                     TensorShape{group, oc_per_group / 4,
+                                                 ic_per_group / 4, 3, 3, 4, 4},
+                                     TensorShape{});
+            param.format = param::ConvBias::Format::NCHW;
+            args_nchw.emplace_back(
+                    param, TensorShape{n, ic, h, w},
+                    TensorShape{group, oc_per_group, ic_per_group, 3, 3},
+                    TensorShape{});
+        }
+    };
+
+    std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
+    for (auto nlmode : nonlinemode)
+        for (size_t n : {1, 2})
+            for (size_t group = 1; group <= 2; ++group) {
+                pack(n, 512, 512, 15, 15, group, nlmode);
+                pack(n, 512, 256, 15, 15, group, nlmode);
+                pack(n, 256, 256, 29, 29, group, nlmode);
+                pack(n, 256, 128, 29, 29, group, nlmode);
+                pack(n, 128, 128, 57, 57, group, nlmode);
+                pack(n, 128, 64, 57, 57, group, nlmode);
+                pack(n, 24, 24, 224, 224, group, nlmode);
+                pack(n, 64, 24, 123, 123, group, nlmode);
+                pack(n, 64, 64, 56, 56, group, nlmode);
+                pack(n, 128, 128, 28, 28, group, nlmode);
+                pack(n, 256, 256, 14, 14, group, nlmode);
+                pack(n, 512, 512, 7, 7, group, nlmode);
+            }
+
+    using namespace conv_bias;
+    constexpr size_t RUN = 10;
+    Benchmarker<ConvBias> benchmark_winograd_nchw(handle);
+    benchmark_winograd_nchw.set_display(false);
+    benchmark_winograd_nchw.set_times(RUN);
+
+    Benchmarker<ConvBias> benchmark_winograd_nchw44(handle);
+    benchmark_winograd_nchw44.set_display(false);
+    benchmark_winograd_nchw44.set_times(RUN);
+
+    std::string winograd_nchw_algo_name = ssprintf("WINOGRAD:%s", algo_name);
+    std::string winograd_nchw44_algo_name =
+            ssprintf("WINOGRAD_NCHW44:%s", algo_name);
+
+    for (size_t i = 0; i < args_nchw.size(); ++i) {
+        auto arg_nchw = args_nchw[i];
+        auto arg_nchw44 = args_nchw44[i];
+
+        TensorLayout dst_layout;
+        auto opr = handle->create_operator<ConvBias>();
+        opr->param() = arg_nchw.param;
+        opr->deduce_layout({arg_nchw.src, dtype::Float32()},
+                           {arg_nchw.filter, dtype::Float32()},
+                           {arg_nchw.bias, dtype::Float32()}, {}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float computations = dst_layout.total_nr_elems() * arg_nchw.filter[1] *
+                             arg_nchw.filter[2] * arg_nchw.filter[3] * 2.0 /
+                             (1024 * 1024 * 1024) * 1e3;
+
+        benchmark_winograd_nchw.set_param(arg_nchw.param);
+        auto nchw_used = algo_benchmark<ConvBias>(
+                                 benchmark_winograd_nchw,
+                                 {arg_nchw.src, arg_nchw.filter, {}, {}, {}},
+                                 winograd_nchw_algo_name.c_str()) /
+                         RUN;
+
+        benchmark_winograd_nchw44.set_param(arg_nchw44.param);
+        auto nchw44_used =
+                algo_benchmark<ConvBias>(
+                        benchmark_winograd_nchw44,
+                        {arg_nchw44.src, arg_nchw44.filter, {}, {}, {}},
+                        winograd_nchw44_algo_name.c_str()) /
+                RUN;
+
+        printf("%s %s: nchw: %f ms %f Gflops nchw44: %f ms %f GFlops "
+               "speedup: "
+               "%f\n",
+               arg_nchw.src.to_string().c_str(),
+               arg_nchw.filter.to_string().c_str(), nchw_used,
+               computations / nchw_used, nchw44_used,
+               computations / nchw44_used, nchw_used / nchw44_used);
+    }
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23_MK4_NCHW_VS_NCHW44) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:2", handle());
+#else
+    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:2", handle());
+#endif
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63_MK4_NCHW_VS_NCHW44) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:6", handle());
+#else
+    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:6", handle());
+#endif
+}
+
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23_8x8) {
     auto benchmark_winograd_quantized = [](const char* algo_name_fp32,
                                            const char* algo_name_quantized,

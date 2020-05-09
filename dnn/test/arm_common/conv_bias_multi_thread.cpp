@@ -654,6 +654,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F23_4) {
 
     check_winograd("4:2:32", checker, args, param::MatrixMul::Format::MK4);
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F23_4_NCHW44) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_nchw44_conv_bias_args({3}, 1);
+    Checker<ConvBiasForward> checker(handle());
+    check_winograd("4:2:32", checker, args, param::MatrixMul::Format::MK4,
+                   param::ConvBias::Format::NCHW44);
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_winograd_args(3);
@@ -667,7 +676,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4) {
     std::vector<TestArg> args = get_winograd_mk_packed_args();
     Checker<ConvBiasForward> checker(handle());
 
-    check_winograd("4:6:32", checker, args, param::MatrixMul::Format::MK4);
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4_NCHW44) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_nchw44_conv_bias_args({3}, 1);
+    Checker<ConvBiasForward> checker(handle());
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4,
+                   param::ConvBias::Format::NCHW44);
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F54) {
@@ -759,6 +776,75 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD) {
     run(handle(), args, {6}, dtype::Float16(), dtype::Float16(),
         dtype::Float16(), dtype::Float16(), 0.35f);
 #endif
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_PREPROCESS_NCHW44) {
+    using namespace conv_bias;
+    std::vector<TestArg> nchw44_args = get_nchw44_conv_bias_args({3}, 1);
+
+    Checker<ConvBiasForward> checker(handle());
+
+    auto extra_impl = [](const TensorNDArray& tensors, uint32_t m,
+                         param::ConvBias param, Handle* handle) {
+        megdnn_assert(param.format == param::ConvBias::Format::NCHW44);
+        auto winograd_preprocess_opr =
+                handle->create_operator<WinogradFilterPreprocess>();
+        winograd_preprocess_opr->param().output_block_size = m;
+        winograd_preprocess_opr->param().format = param::MatrixMul::Format::MK4;
+        TensorLayout filter_transform_layout;
+        winograd_preprocess_opr->deduce_layout(tensors[1].layout,
+                                               filter_transform_layout);
+        size_t winograd_preprocess_workspace_in_bytes =
+                winograd_preprocess_opr->get_workspace_in_bytes(
+                        tensors[1].layout, filter_transform_layout);
+
+        auto conv_bias_opr = handle->create_operator<ConvBias>();
+        conv_bias_opr->param() = param;
+        conv_bias_opr->param().format = param::ConvBias::Format::NCHW44_WINOGRAD;
+        conv_bias_opr->param().output_block_size = m;
+        size_t conv_bias_workspace_in_bytes =
+                conv_bias_opr->get_workspace_in_bytes(
+                        tensors[0].layout, filter_transform_layout,
+                        tensors[2].layout, tensors[3].layout,
+                        tensors[4].layout, nullptr);
+
+        WorkspaceBundle wb(nullptr, {filter_transform_layout.span().dist_byte(),
+                                     conv_bias_workspace_in_bytes,
+                                     winograd_preprocess_workspace_in_bytes});
+        wb.set(malloc(wb.total_size_in_bytes()));
+
+        TensorND filter_transform_tensor(wb.get(0),
+                                         std::move(filter_transform_layout));
+        winograd_preprocess_opr->exec(tensors[1], filter_transform_tensor,
+                                      wb.get_workspace(2));
+        conv_bias_opr->exec(tensors[0], filter_transform_tensor, tensors[2],
+                            tensors[3], tensors[4], nullptr,
+                            wb.get_workspace(1));
+        free(wb.ptr());
+    };
+
+    auto run = [&checker, &extra_impl](
+                       Handle* handle, const std::vector<TestArg>& args,
+                       const std::vector<size_t>& out_size, DType A_dtype,
+                       DType B_dtype, DType C_dtype, DType D_dtype,
+                       const float eps) {
+        for (auto&& arg : args) {
+            for (uint32_t m : out_size) {
+                checker.set_extra_opr_impl(std::bind(extra_impl,
+                                                     std::placeholders::_1, m,
+                                                     arg.param, handle));
+                checker.set_dtype(0, A_dtype)
+                        .set_dtype(1, B_dtype)
+                        .set_dtype(2, C_dtype)
+                        .set_dtype(4, D_dtype)
+                        .set_epsilon(eps)
+                        .set_param(arg.param)
+                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
+            }
+        }
+    };
+    run(handle(), nchw44_args, {2, 6}, dtype::Float32(), dtype::Float32(),
+        dtype::Float32(), dtype::Float32(), 1e-3f);
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_F32_1) {

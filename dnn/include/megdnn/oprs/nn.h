@@ -387,7 +387,9 @@ public:
     //! get algo name, the format is ParamTrait<T>::category:base:p.to_string()
     //! \warning: base must not contain :.
     template <typename T>
-    static std::string algo_name(const std::string& base, const T& p);
+    static std::string algo_name(
+            const std::string& base, const T& p,
+            param::ConvBias::Format format = param::ConvBias::Format::NCHW);
     /*!
      * \brief parse algo_name and get WinogradParam from algo name.
      *

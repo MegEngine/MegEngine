@@ -425,6 +425,7 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
             break;
         }
         case ConvBiasImpl::Param::Format::NCHW_WINOGRAD:
+        case ConvBiasImpl::Param::Format::NCHW44_WINOGRAD:
         case ConvBiasImpl::Param::Format::NCHW88_WINOGRAD: {
             //! four format of weight layout
             //! 1. {g, alpha, alpha, ocpg/8, icpg/8, 8, 8}

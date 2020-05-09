@@ -49,6 +49,9 @@ private:
     class AlgoFP32WinogradF54;
     class AlgoFP32WinogradF45;
 
+    class AlgoFP32WinogradF23_4x4_NCHW44;
+    class AlgoFP32WinogradF63_4x4_NCHW44;
+
     class AlgoS8ChanWiseStride1NCHW44;
     class AlgoS8ChanWiseStride2NCHW44;
 

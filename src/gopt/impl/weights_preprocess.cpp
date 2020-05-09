@@ -72,7 +72,7 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
             auto&& inputs = conv_bias_opr.input();
             VarNodeArray new_inp;
             new_inp.reserve(inputs.size());
-            for (auto i: inputs) {
+            for (auto i : inputs) {
                 new_inp.push_back(rewriter.get_var(i));
             }
 
@@ -86,11 +86,15 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
                     megdnn::ConvBias::parse_winograd_name(algo_name);
             if (winograd_param == megdnn::ConvBias::INVALID_WINOGRAD_PARAM)
                 break;
-            mgb_assert(conv_bias_opr.param().format ==
-                                       megdnn::ConvBias::Param::Format::NCHW ||
-                               conv_bias_opr.param().format ==
-                                       megdnn::ConvBias::Param::Format::NCHW88,
-                       "currently winograd only suppport NCHW and nchw88");
+            mgb_assert(
+                    conv_bias_opr.param().format ==
+                                    megdnn::ConvBias::Param::Format::NCHW ||
+                            conv_bias_opr.param().format ==
+                                    megdnn::ConvBias::Param::Format::NCHW88 ||
+                            conv_bias_opr.param().format ==
+                                    megdnn::ConvBias::Param::Format::NCHW44,
+                    "currently winograd only suppport NCHW and NCHW44 and "
+                    "NCHW88");
             opr::ConvBiasForward::check_winograd_param_valid(
                     winograd_param, conv_bias_opr.input(0)->dtype());
             megdnn::param::Winograd winograd_preprocess_param;
@@ -110,8 +114,17 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
                         megdnn::ConvBias::Param::Format::NCHW_WINOGRAD;
             } else {
                 mgb_assert(new_inp[0]->shape().ndim == 5);
-                conv_bias_param.format =
-                        megdnn::ConvBias::Param::Format::NCHW88_WINOGRAD;
+                size_t pack_size = new_inp[0]->shape()[4];
+                if (pack_size == 8) {
+                    conv_bias_param.format =
+                            megdnn::ConvBias::Param::Format::NCHW88_WINOGRAD;
+                } else if (pack_size == 4) {
+                    conv_bias_param.format =
+                            megdnn::ConvBias::Param::Format::NCHW44_WINOGRAD;
+                } else {
+                    mgb_assert(0, "Invalid pack size %zu in algo %s", pack_size,
+                               algo_name.c_str());
+                }
             }
             conv_bias_param.output_block_size =
                     winograd_param.output_block_size;

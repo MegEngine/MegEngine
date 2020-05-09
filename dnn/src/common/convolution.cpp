@@ -299,6 +299,7 @@ void make_canonized_filter_meta_nchwxx(
 
     megdnn_assert(param.format == Param::Format::NCHW88 ||
                   param.format == Param::Format::NCHW44 ||
+                  param.format == Param::Format::NCHW44_WINOGRAD ||
                   param.format == Param::Format::NCHW88_WINOGRAD);
     size_t img_ndim = 2;
     size_t flt_start = 0;
@@ -663,6 +664,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                       param().format == Param::Format::NCHW32 ||
                       param().format == Param::Format::NCHW88 ||
                       param().format == Param::Format::NCHW88_WINOGRAD ||
+                      param().format == Param::Format::NCHW44_WINOGRAD ||
                       param().format == Param::Format::CHWN4);
         img_dim = src.ndim - 3;
         if ((param().format == Param::Format::NCHW88 ||

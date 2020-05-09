@@ -198,7 +198,8 @@ void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
     for (auto kernel : kerns) {
         megdnn_assert(param.filter_meta.format == Param::Format::NCHW ||
                               param.filter_meta.format == Param::Format::NHWC ||
-                              param.filter_meta.format == Param::Format::NCHW88,
+                              param.filter_meta.format == Param::Format::NCHW88 ||
+                              param.filter_meta.format == Param::Format::NCHW44,
                       "invalid conv format");
         auto run = [param, kernel](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
