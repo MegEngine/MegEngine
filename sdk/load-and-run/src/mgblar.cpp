@@ -194,9 +194,7 @@ R"__usage__(
 
 struct DataParser {
     struct Brace {
-        Brace() { parent = nullptr; }
-
-        std::shared_ptr<Brace> parent;
+        std::weak_ptr<Brace> parent;
         std::vector<std::shared_ptr<Brace>> chidren;
     };
 
@@ -397,7 +395,7 @@ private:
                 cur->chidren.emplace_back(child);
                 cur = child;
             } else if (c == ']') {
-                cur = cur->parent;
+                cur = cur->parent.lock();
             } else if (c == ',') {
                 number_cnt++;
             }
