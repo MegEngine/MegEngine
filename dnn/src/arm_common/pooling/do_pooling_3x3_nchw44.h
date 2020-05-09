@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/arm_common/pooling/do_max_pooling_3x3_s2x2_nchw44.h
+ * \file dnn/src/arm_common/pooling/do_pooling_3x3_nchw44.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -15,16 +15,15 @@
 namespace megdnn {
 namespace arm_common {
 
-void do_max_pooling_3x3_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
-                                                 size_t IH, size_t IW,
-                                                 size_t OH, size_t OW,
-                                                 size_t PH, size_t PW,
-                                                 const WorkspaceBundle& ws);
-
-void do_max_pooling_3x3_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
-                                              size_t IH, size_t IW, size_t OH,
-                                              size_t OW, size_t PH, size_t PW,
-                                              const WorkspaceBundle& ws);
+#define KERN(mode, stride, ctype)                                            \
+    void do_##mode##_pooling_3x3_##stride##_##ctype##_nchw44_NEON(           \
+            const int8_t* src, int8_t* dst, size_t IH, size_t IW, size_t OH, \
+            size_t OW, size_t PH, size_t PW, const WorkspaceBundle& ws);
+KERN(max, stride1, int8)
+KERN(max, stride2, int8)
+KERN(avg, stride1, int8)
+KERN(avg, stride2, int8)
+#undef KERN
 
 }  // namespace arm_common
 }  // namespace megdnn

@@ -73,14 +73,15 @@ WorkspaceBundle get_bundle_nchw44(
 
 const int8_t* handle_padding(const int8_t* src, size_t IH, size_t IW,
                              size_t& IH2, size_t& IW2, size_t PH, size_t PW,
-                             const WorkspaceBundle& ws) {
+                             const WorkspaceBundle& ws, bool is_max_mode) {
     int8_t* sptr_base = nullptr;
+    int8_t padding_value = is_max_mode ? INT8_MIN : 0;
     bool need_pad = ((PH != 0) || (PW != 0)) ? true : false;
     if (need_pad) {
         IH2 = IH + 2 * PH;
         IW2 = IW + 2 * PW;
         sptr_base = static_cast<int8_t*>(ws.get(0));
-        memset(sptr_base, -128, sizeof(int8_t) * IH2 * IW2 * 4);
+        memset(sptr_base, padding_value, sizeof(int8_t) * IH2 * IW2 * 4);
         rep(ih, IH) {
             std::memcpy(sptr_base + (ih + PH) * IW2 * 4 + PW * 4,
                         src + ih * IW * 4, sizeof(int8_t) * IW * 4);
@@ -597,7 +598,7 @@ void PoolingImpl::AlgoInt8Filter3MaxStride2::exec(
     MIDOUT_END();
 }
 
-bool PoolingImpl::AlgoFilter3MaxStridexNCHW44::usable(
+bool PoolingImpl::AlgoFilter3ModexStridexNCHW44::usable(
         const PoolingKernSizeParam& param) const {
     auto SH = param.stride[0];
     auto SW = param.stride[1];
@@ -606,12 +607,12 @@ bool PoolingImpl::AlgoFilter3MaxStridexNCHW44::usable(
 
     bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                    param.format == Param::Format::NCHW44 &&
-                   param.mode == Mode::MAX && FH == 3 && FW == 3 && SW == SH &&
-                   (SH == 1 || SW == 2);
+                   (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
+                   FH == 3 && FW == 3 && SW == SH && (SH == 1 || SW == 2);
     return avaible;
 }
 
-void PoolingImpl::AlgoFilter3MaxStridexNCHW44::exec(
+void PoolingImpl::AlgoFilter3ModexStridexNCHW44::exec(
         const PoolingKernParam& param) const {
     auto IH = param.isz[0], IW = param.isz[1];
     auto OH = param.osz[0], OW = param.osz[1];
@@ -623,8 +624,8 @@ void PoolingImpl::AlgoFilter3MaxStridexNCHW44::exec(
     void* src_ptr = param.src_ptr;
     void* dst_ptr = param.dst_ptr;
 
-#define DISPATCH_FUNC(type, func, i)                                           \
-    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2),                      \
+#define DISPATCH_FUNC(type, func, i, mode)                                     \
+    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(8),                      \
                  midout_iv(#type #i##_hash)) {                                 \
         WorkspaceBundle wbundle = get_bundle_nchw44(param);                    \
         auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,               \
@@ -635,7 +636,7 @@ void PoolingImpl::AlgoFilter3MaxStridexNCHW44::exec(
             ws.set(workspace_ptr + ws.total_size_in_bytes() * thread_id);      \
             size_t n = index / C;                                              \
             size_t c = index % C;                                              \
-            do_max_pooling_3x3_stride##i##_##func##_nchw44_NEON(               \
+            do_##mode##_pooling_3x3_stride##i##_##func##_nchw44_NEON(          \
                     static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +  \
                             c * IH * IW * 4,                                   \
                     static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +        \
@@ -648,27 +649,43 @@ void PoolingImpl::AlgoFilter3MaxStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_STRIDE(type, func)                    \
-    switch (SW) {                                      \
-        case 1: {                                      \
-            DISPATCH_FUNC(type, func, 1);              \
-            break;                                     \
-        }                                              \
-        case 2: {                                      \
-            DISPATCH_FUNC(type, func, 2);              \
-            break;                                     \
-        }                                              \
-        default:                                       \
-            megdnn_assert(0, "unsupport stride size"); \
+#define DISPATCH_MODE(type, func, stride)                                  \
+    switch (param.mode) {                                                  \
+        case Mode::MAX: {                                                  \
+            DISPATCH_FUNC(type, func, stride, max);                        \
+            break;                                                         \
+        }                                                                  \
+        case Mode::AVERAGE: {                                              \
+            DISPATCH_FUNC(type, func, stride, avg);                        \
+            break;                                                         \
+        }                                                                  \
+        default:                                                           \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
+                                 .c_str());                                \
+    }
+
+#define DISPATCH_STRIDE(type, func)                                         \
+    switch (SW) {                                                           \
+        case 1: {                                                           \
+            DISPATCH_MODE(type, func, 1);                                   \
+            break;                                                          \
+        }                                                                   \
+        case 2: {                                                           \
+            DISPATCH_MODE(type, func, 2);                                   \
+            break;                                                          \
+        }                                                                   \
+        default:                                                            \
+            megdnn_throw(ssprintf("Unsupport stride size %d", SW).c_str()); \
     }
 
     DISPATCH_STRIDE(int8_t, int8);
 
 #undef DISPATCH_STRIDE
+#undef DISPATCH_MODE
 #undef DISPATCH_FUNC
 }
 
-bool PoolingImpl::AlgoFilter2MaxStridexNCHW44::usable(
+bool PoolingImpl::AlgoFilter2ModexStridexNCHW44::usable(
         const PoolingKernSizeParam& param) const {
     auto SH = param.stride[0];
     auto SW = param.stride[1];
@@ -677,12 +694,12 @@ bool PoolingImpl::AlgoFilter2MaxStridexNCHW44::usable(
 
     bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                    param.format == Param::Format::NCHW44 &&
-                   param.mode == Mode::MAX && FH == 2 && FW == 2 && SH == SW &&
-                   (SW == 1 || SW == 2);
+                   (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
+                   FH == 2 && FW == 2 && SH == SW && (SW == 1 || SW == 2);
     return avaible;
 }
 
-void PoolingImpl::AlgoFilter2MaxStridexNCHW44::exec(
+void PoolingImpl::AlgoFilter2ModexStridexNCHW44::exec(
         const PoolingKernParam& param) const {
     auto IH = param.isz[0], IW = param.isz[1];
     auto OH = param.osz[0], OW = param.osz[1];
@@ -694,8 +711,8 @@ void PoolingImpl::AlgoFilter2MaxStridexNCHW44::exec(
     void* src_ptr = param.src_ptr;
     void* dst_ptr = param.dst_ptr;
 
-#define DISPATCH_FUNC(type, func, i)                                           \
-    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2),                      \
+#define DISPATCH_FUNC(type, func, i, mode)                                     \
+    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(9),                      \
                  midout_iv(#func #i##_hash)) {                                 \
         WorkspaceBundle wbundle = get_bundle_nchw44(param);                    \
         auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,               \
@@ -706,7 +723,7 @@ void PoolingImpl::AlgoFilter2MaxStridexNCHW44::exec(
             ws.set(workspace_ptr + ws.total_size_in_bytes() * thread_id);      \
             size_t n = index / C;                                              \
             size_t c = index % C;                                              \
-            do_max_pooling_2x2_stride##i##_##func##_nchw44_NEON(               \
+            do_##mode##_pooling_2x2_stride##i##_##func##_nchw44_NEON(          \
                     static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +  \
                             c * IH * IW * 4,                                   \
                     static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +        \
@@ -719,27 +736,43 @@ void PoolingImpl::AlgoFilter2MaxStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_STRIDE(type, func)                    \
-    switch (SW) {                                      \
-        case 1: {                                      \
-            DISPATCH_FUNC(type, func, 1);              \
-            break;                                     \
-        }                                              \
-        case 2: {                                      \
-            DISPATCH_FUNC(type, func, 2);              \
-            break;                                     \
-        }                                              \
-        default:                                       \
-            megdnn_assert(0, "unsupport stride size"); \
+#define DISPATCH_MODE(type, func, stride)                                  \
+    switch (param.mode) {                                                  \
+        case Mode::MAX: {                                                  \
+            DISPATCH_FUNC(type, func, stride, max);                        \
+            break;                                                         \
+        }                                                                  \
+        case Mode::AVERAGE: {                                              \
+            DISPATCH_FUNC(type, func, stride, avg);                        \
+            break;                                                         \
+        }                                                                  \
+        default:                                                           \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
+                                 .c_str());                                \
+    }
+
+#define DISPATCH_STRIDE(type, func)                                         \
+    switch (SW) {                                                           \
+        case 1: {                                                           \
+            DISPATCH_MODE(type, func, 1);                                   \
+            break;                                                          \
+        }                                                                   \
+        case 2: {                                                           \
+            DISPATCH_MODE(type, func, 2);                                   \
+            break;                                                          \
+        }                                                                   \
+        default:                                                            \
+            megdnn_throw(ssprintf("Unsupport stride size %d", SW).c_str()); \
     }
 
     DISPATCH_STRIDE(int8_t, int8);
 
 #undef DISPATCH_STRIDE
+#undef DISPATCH_MODE
 #undef DISPATCH_FUNC
 }
 
-bool PoolingImpl::AlgoFilter4MaxStridexNCHW44::usable(
+bool PoolingImpl::AlgoFilter4ModexStridexNCHW44::usable(
         const PoolingKernSizeParam& param) const {
     auto SH = param.stride[0];
     auto SW = param.stride[1];
@@ -748,12 +781,12 @@ bool PoolingImpl::AlgoFilter4MaxStridexNCHW44::usable(
 
     bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                    param.format == Param::Format::NCHW44 &&
-                   param.mode == Mode::MAX && FH == 4 && FW == 4 && SH == SW &&
-                   (SW == 1 || SW == 2);
+                   (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
+                   FH == 4 && FW == 4 && SH == SW && (SW == 1 || SW == 2);
     return avaible;
 }
 
-void PoolingImpl::AlgoFilter4MaxStridexNCHW44::exec(
+void PoolingImpl::AlgoFilter4ModexStridexNCHW44::exec(
         const PoolingKernParam& param) const {
     auto IH = param.isz[0], IW = param.isz[1];
     auto OH = param.osz[0], OW = param.osz[1];
@@ -765,8 +798,8 @@ void PoolingImpl::AlgoFilter4MaxStridexNCHW44::exec(
     void* src_ptr = param.src_ptr;
     void* dst_ptr = param.dst_ptr;
 
-#define DISPATCH_FUNC(type, func, i)                                           \
-    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2),                      \
+#define DISPATCH_FUNC(type, func, i, mode)                                     \
+    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(10),                     \
                  midout_iv(#func #i##_hash)) {                                 \
         WorkspaceBundle wbundle = get_bundle_nchw44(param);                    \
         auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,               \
@@ -777,7 +810,7 @@ void PoolingImpl::AlgoFilter4MaxStridexNCHW44::exec(
             ws.set(workspace_ptr + ws.total_size_in_bytes() * thread_id);      \
             size_t n = index / C;                                              \
             size_t c = index % C;                                              \
-            do_max_pooling_4x4_stride##i##_##func##_nchw44_NEON(               \
+            do_##mode##_pooling_4x4_stride##i##_##func##_nchw44_NEON(          \
                     static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +  \
                             c * IH * IW * 4,                                   \
                     static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +        \
@@ -790,27 +823,43 @@ void PoolingImpl::AlgoFilter4MaxStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_STRIDE(type, func)                    \
-    switch (SW) {                                      \
-        case 1: {                                      \
-            DISPATCH_FUNC(type, func, 1);              \
-            break;                                     \
-        }                                              \
-        case 2: {                                      \
-            DISPATCH_FUNC(type, func, 2);              \
-            break;                                     \
-        }                                              \
-        default:                                       \
-            megdnn_assert(0, "unsupport stride size"); \
+#define DISPATCH_MODE(type, func, stride)                                  \
+    switch (param.mode) {                                                  \
+        case Mode::MAX: {                                                  \
+            DISPATCH_FUNC(type, func, stride, max);                        \
+            break;                                                         \
+        }                                                                  \
+        case Mode::AVERAGE: {                                              \
+            DISPATCH_FUNC(type, func, stride, avg);                        \
+            break;                                                         \
+        }                                                                  \
+        default:                                                           \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
+                                 .c_str());                                \
+    }
+
+#define DISPATCH_STRIDE(type, func)                                         \
+    switch (SW) {                                                           \
+        case 1: {                                                           \
+            DISPATCH_MODE(type, func, 1);                                   \
+            break;                                                          \
+        }                                                                   \
+        case 2: {                                                           \
+            DISPATCH_MODE(type, func, 2);                                   \
+            break;                                                          \
+        }                                                                   \
+        default:                                                            \
+            megdnn_throw(ssprintf("Unsupport stride size %d", SW).c_str()); \
     }
 
     DISPATCH_STRIDE(int8_t, int8);
 
 #undef DISPATCH_STRIDE
+#undef DISPATCH_MODE
 #undef DISPATCH_FUNC
 }
 
-bool PoolingImpl::AlgoFilter5MaxStridexNCHW44::usable(
+bool PoolingImpl::AlgoFilter5ModexStridexNCHW44::usable(
         const PoolingKernSizeParam& param) const {
     auto SH = param.stride[0];
     auto SW = param.stride[1];
@@ -819,12 +868,12 @@ bool PoolingImpl::AlgoFilter5MaxStridexNCHW44::usable(
 
     bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                    param.format == Param::Format::NCHW44 &&
-                   param.mode == Mode::MAX && FH == 5 && FW == 5 && SH == SW &&
-                   (SW == 1 || SW == 2);
+                   (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
+                   FH == 5 && FW == 5 && SH == SW && (SW == 1 || SW == 2);
     return avaible;
 }
 
-void PoolingImpl::AlgoFilter5MaxStridexNCHW44::exec(
+void PoolingImpl::AlgoFilter5ModexStridexNCHW44::exec(
         const PoolingKernParam& param) const {
     auto IH = param.isz[0], IW = param.isz[1];
     auto OH = param.osz[0], OW = param.osz[1];
@@ -836,8 +885,8 @@ void PoolingImpl::AlgoFilter5MaxStridexNCHW44::exec(
     void* src_ptr = param.src_ptr;
     void* dst_ptr = param.dst_ptr;
 
-#define DISPATCH_FUNC(type, func, i)                                           \
-    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(2),                      \
+#define DISPATCH_FUNC(type, func, i, mode)                                     \
+    MIDOUT_BEGIN(megdnn_arm_common_pooling, midout_iv(11),                     \
                  midout_iv(#func #i##_hash)) {                                 \
         WorkspaceBundle wbundle = get_bundle_nchw44(param);                    \
         auto run = [C, IH, IW, OH, OW, PH, PW, src_ptr, dst_ptr,               \
@@ -848,7 +897,7 @@ void PoolingImpl::AlgoFilter5MaxStridexNCHW44::exec(
             ws.set(workspace_ptr + ws.total_size_in_bytes() * thread_id);      \
             size_t n = index / C;                                              \
             size_t c = index % C;                                              \
-            do_max_pooling_5x5_stride##i##_##func##_nchw44_NEON(               \
+            do_##mode##_pooling_5x5_stride##i##_##func##_nchw44_NEON(          \
                     static_cast<const type*>(src_ptr) + n * C * IH * IW * 4 +  \
                             c * IH * IW * 4,                                   \
                     static_cast<type*>(dst_ptr) + n * C * OH * OW * 4 +        \
@@ -861,23 +910,39 @@ void PoolingImpl::AlgoFilter5MaxStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_STRIDE(type, func)                    \
-    switch (SW) {                                      \
-        case 1: {                                      \
-            DISPATCH_FUNC(type, func, 1);              \
-            break;                                     \
-        }                                              \
-        case 2: {                                      \
-            DISPATCH_FUNC(type, func, 2);              \
-            break;                                     \
-        }                                              \
-        default:                                       \
-            megdnn_assert(0, "unsupport stride size"); \
+#define DISPATCH_MODE(type, func, stride)                                  \
+    switch (param.mode) {                                                  \
+        case Mode::MAX: {                                                  \
+            DISPATCH_FUNC(type, func, stride, max);                        \
+            break;                                                         \
+        }                                                                  \
+        case Mode::AVERAGE: {                                              \
+            DISPATCH_FUNC(type, func, stride, avg);                        \
+            break;                                                         \
+        }                                                                  \
+        default:                                                           \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
+                                 .c_str());                                \
+    }
+
+#define DISPATCH_STRIDE(type, func)                                         \
+    switch (SW) {                                                           \
+        case 1: {                                                           \
+            DISPATCH_MODE(type, func, 1);                                   \
+            break;                                                          \
+        }                                                                   \
+        case 2: {                                                           \
+            DISPATCH_MODE(type, func, 2);                                   \
+            break;                                                          \
+        }                                                                   \
+        default:                                                            \
+            megdnn_throw(ssprintf("Unsupport stride size %d", SW).c_str()); \
     }
 
     DISPATCH_STRIDE(int8_t, int8);
 
 #undef DISPATCH_STRIDE
+#undef DISPATCH_MODE
 #undef DISPATCH_FUNC
 }
 

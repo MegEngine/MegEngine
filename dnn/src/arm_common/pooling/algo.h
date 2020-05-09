@@ -83,34 +83,34 @@ public:
     void exec(const PoolingKernParam& param) const override;
 };
 
-class PoolingImpl::AlgoFilter3MaxStridexNCHW44 final : public AlgoBase {
+class PoolingImpl::AlgoFilter3ModexStridexNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_POOLING_FILTER3_MAX_STRIDEX_NCHW44"; }
+    const char* name() const override { return "ARM_POOLING_FILTER3_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
 
-class PoolingImpl::AlgoFilter2MaxStridexNCHW44 final : public AlgoBase {
+class PoolingImpl::AlgoFilter2ModexStridexNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_POOLING_FILTER2_MAX_STRIDEX_NCHW44"; }
+    const char* name() const override { return "ARM_POOLING_FILTER2_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
 
-class PoolingImpl::AlgoFilter4MaxStridexNCHW44 final : public AlgoBase {
+class PoolingImpl::AlgoFilter4ModexStridexNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_POOLING_FILTER4_MAX_STRIDEX_NCHW44"; }
+    const char* name() const override { return "ARM_POOLING_FILTER4_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
 
-class PoolingImpl::AlgoFilter5MaxStridexNCHW44 final : public AlgoBase {
+class PoolingImpl::AlgoFilter5ModexStridexNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_POOLING_FILTER5_MAX_STRIDEX_NCHW44"; }
+    const char* name() const override { return "ARM_POOLING_FILTER5_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
@@ -122,7 +122,7 @@ WorkspaceBundle get_bundle_nchw44(
 
 const int8_t* handle_padding(const int8_t* src, size_t IH, size_t IW,
                              size_t& IH2, size_t& IW2, size_t PH, size_t PW,
-                             const WorkspaceBundle& ws);
+                             const WorkspaceBundle& ws, bool is_max_mode);
 }  // namespace arm_common
 }  // namespace megdnn
 

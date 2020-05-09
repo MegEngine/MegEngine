@@ -25,10 +25,10 @@ class PoolingImpl::AlgoPack : NonCopyableObj {
     AlgoFilter5MaxStride2 algo_filter5_max_stride2;
     AlgoInt8Filter2MaxStride2 algo_int8_filter2_max_stride2;
     AlgoInt8Filter3MaxStride2 algo_int8_filter3_max_stride2;
-    AlgoFilter2MaxStridexNCHW44 algo_filter2_max_stridex_nchw4;
-    AlgoFilter3MaxStridexNCHW44 algo_filter3_max_stridex_nchw4;
-    AlgoFilter4MaxStridexNCHW44 algo_filter4_max_stridex_nchw4;
-    AlgoFilter5MaxStridexNCHW44 algo_filter5_max_stridex_nchw4;
+    AlgoFilter2ModexStridexNCHW44 algo_filter2_modex_stridex_nchw4;
+    AlgoFilter3ModexStridexNCHW44 algo_filter3_modex_stridex_nchw4;
+    AlgoFilter4ModexStridexNCHW44 algo_filter4_modex_stridex_nchw4;
+    AlgoFilter5ModexStridexNCHW44 algo_filter5_modex_stridex_nchw4;
 
 public:
     AlgoPack() {
@@ -40,10 +40,10 @@ public:
         all_algos.emplace_back(&algo_filter5_max_stride2);
         all_algos.emplace_back(&algo_int8_filter2_max_stride2);
         all_algos.emplace_back(&algo_int8_filter3_max_stride2);
-        all_algos.emplace_back(&algo_filter3_max_stridex_nchw4);
-        all_algos.emplace_back(&algo_filter2_max_stridex_nchw4);
-        all_algos.emplace_back(&algo_filter4_max_stridex_nchw4);
-        all_algos.emplace_back(&algo_filter5_max_stridex_nchw4);
+        all_algos.emplace_back(&algo_filter3_modex_stridex_nchw4);
+        all_algos.emplace_back(&algo_filter2_modex_stridex_nchw4);
+        all_algos.emplace_back(&algo_filter4_modex_stridex_nchw4);
+        all_algos.emplace_back(&algo_filter5_modex_stridex_nchw4);
     }
     SmallVector<AlgoBase*> all_algos;
 };
