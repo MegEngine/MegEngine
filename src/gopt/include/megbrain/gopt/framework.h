@@ -13,6 +13,7 @@
 
 #include "megbrain/graph.h"
 #include "megbrain/gopt/gtrans.h"
+#include "megbrain/graph/cg.h"
 
 namespace mgb {
 namespace gopt {
@@ -377,60 +378,6 @@ namespace gopt {
             RecursiveSubGraphRewriteHelper(OptState &state);
     };
 
-    /**
-     * \brief common optimize options, it both can be used for optimize for
-     * inference in graph dump but also used in graph optimization in runtime.
-     */
-    struct OptimizeOptions {
-        //! whether to enable IO in float16 compute in float32
-        bool f16_io_f32_comp = false;
-        //! whether to enable tranform to pure float16 model
-        bool f16_io_comp = false;
-        //! whether to enable conv bias nonlinearity fusion
-        bool fuse_conv_bias_nonlinearity = false;
-        enum LayoutTransform : uint32_t {
-            DEFAULT,
-            NHWCD4,  ///< compute using NHWCD4 tensor format
-            NCHW88,  ///< compute using NCHW88 tensor format
-            NCHW44,  ///< compute using NCHW44 tensor format
-            NCHW32,  ///< compute using NCHW32 tensor format, used for
-                     ///< tensorcore
-            CHWN4,   ///< compute using CHWN4 tensor format, transformed mainly
-                     ///< used for cuda
-        };
-        LayoutTransform layout_transform = LayoutTransform::DEFAULT;
-        //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
-        //! + z -> conv_bias(x, w, b, z)
-        bool fuse_conv_bias_with_z = false;
-
-#define SET(n)                      \
-    OptimizeOptions& enable_##n() { \
-        n = true;                   \
-        return *this;               \
-    }
-        SET(f16_io_f32_comp);
-        SET(f16_io_comp);
-        SET(fuse_conv_bias_nonlinearity);
-        SET(fuse_conv_bias_with_z);
-#undef SET
-#define SET(_trans, _trans_capital)                                 \
-    OptimizeOptions& enable_##_trans() {                            \
-        layout_transform = LayoutTransform::_trans_capital;         \
-        return *this;                                               \
-    }                                                               \
-    bool transform_##_trans() const {                               \
-        return layout_transform == LayoutTransform::_trans_capital; \
-    }
-
-        SET(nhwcd4, NHWCD4);
-        SET(nchw88, NCHW88);
-        SET(nchw44, NCHW44);
-        SET(nchw32, NCHW32);
-        SET(chwn4, CHWN4);
-#undef SET
-    };
-
-
     /*!
      * \brief manage passes and their applying on graphs
      *
@@ -523,7 +470,8 @@ namespace gopt {
             /**
              * \brief apply optimize options
              */
-            void apply_optimize_options(const OptimizeOptions* options);
+            const GraphOptimizer& apply_optimize_options(
+                    const cg::GraphCommonOptimizeOptions& options);
     };
 
     /*!

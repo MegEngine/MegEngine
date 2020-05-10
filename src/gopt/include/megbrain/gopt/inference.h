@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/gopt/framework.h"
+#include "megbrain/graph/cg.h"
 
 namespace mgb {
 namespace gopt {
@@ -256,7 +257,7 @@ namespace gopt {
                 size_t pack_c_size);
     };
 
-    struct OptimizeForInferenceOptions : OptimizeOptions {};
+    struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {};
 
     /*!
      * \brief optimize a computing graph for inference
@@ -324,13 +325,6 @@ namespace gopt {
             const char* name() const override;
             void apply(OptState& opt) const override;
     };
-
-    /*!
-     * \brief transform tensor format in a network to c/4hwn4 format, and
-     * accelerate the inference speed on Nvidia platform
-     */
-    void reformat_to_chwn4_transform_dest_vars_inplace(
-            mgb::cg::VarNodeArray& dest_vars);
 
 }  // namespace gopt
 } // namespace mgb

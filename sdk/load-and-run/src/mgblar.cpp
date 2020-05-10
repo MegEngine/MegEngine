@@ -83,7 +83,7 @@ R"__usage__(
         hard to profile host time. Use --profile-host to focus on host time
         profiling.
   --input [ filepath | string]
-    Set up inputs for megbrain model. for example: --data image.ppm --data 
+    Set up inputs for megbrain model. for example: --data image.ppm --data
     param.json --data bbox:bbox.npy@batchid:b.npy --data rect:[0,0,227,227];
     batchid:0,1,2,3. --io-dump or --bin-io-dump
     should be enabled at the same time.
@@ -974,7 +974,7 @@ Args Args::from_argv(int argc, char **argv) {
 #endif
         if (!strcmp(argv[i], "--enable-chwn4")) {
             mgb_log_warn("enable chwn4 optimization");
-            graph_opt.graph_opt.enable_chwn4 = true;
+            graph_opt.graph_opt.enable_chwn4();
             continue;
         }
 #if MGB_ENABLE_JSON

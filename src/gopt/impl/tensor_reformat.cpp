@@ -2215,16 +2215,4 @@ void ShuffleShuffleRemovePass::apply(OptState& opt) const {
     Impl{opt};
 }
 
-void gopt::reformat_to_chwn4_transform_dest_vars_inplace(
-        mgb::cg::VarNodeArray& dest_vars) {
-    gopt::GraphOptimizer optimizer;
-    optimizer.add_pass<FuseConvBiasNonlinPass>();
-    optimizer.add_pass<FuseConvBiasZPass>();
-    optimizer.add_pass(EnableCHWN4Pass::make_chwn4_converter());
-    optimizer.add_pass<ShuffleShuffleRemovePass>();
-    optimizer.add_pass<RemoveRedundantTypeCvtPass>();
-    optimizer.add_pass<ParamFusePass>();
-    optimizer.apply_inplace(dest_vars);
-}
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

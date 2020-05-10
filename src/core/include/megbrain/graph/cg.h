@@ -81,6 +81,59 @@ public:
     virtual size_t static_alloc_version(ComputingGraph* graph) const;
 };
 
+/**
+ * \brief common optimize options, it both can be used for optimize for
+ * inference in graph dump but also used in graph optimization in runtime.
+ */
+struct GraphCommonOptimizeOptions {
+    //! whether to enable IO in float16 compute in float32
+    bool f16_io_f32_comp = false;
+    //! whether to enable tranform to pure float16 model
+    bool f16_io_comp = false;
+    //! whether to enable conv bias nonlinearity fusion
+    bool fuse_conv_bias_nonlinearity = false;
+    enum LayoutTransform : uint32_t {
+        DEFAULT,
+        NHWCD4,  ///< compute using NHWCD4 tensor format
+        NCHW88,  ///< compute using NCHW88 tensor format
+        NCHW44,  ///< compute using NCHW44 tensor format
+        NCHW32,  ///< compute using NCHW32 tensor format, used for
+                 ///< tensorcore
+        CHWN4,   ///< compute using CHWN4 tensor format, transformed mainly
+                 ///< used for cuda
+    };
+    LayoutTransform layout_transform = LayoutTransform::DEFAULT;
+    //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
+    //! + z -> conv_bias(x, w, b, z)
+    bool fuse_conv_bias_with_z = false;
+
+#define SET(n)                                 \
+    GraphCommonOptimizeOptions& enable_##n() { \
+        n = true;                              \
+        return *this;                          \
+    }
+    SET(f16_io_f32_comp);
+    SET(f16_io_comp);
+    SET(fuse_conv_bias_nonlinearity);
+    SET(fuse_conv_bias_with_z);
+#undef SET
+#define SET(_trans, _trans_capital)                                 \
+    GraphCommonOptimizeOptions& enable_##_trans() {                 \
+        layout_transform = LayoutTransform::_trans_capital;         \
+        return *this;                                               \
+    }                                                               \
+    bool transform_##_trans() const {                               \
+        return layout_transform == LayoutTransform::_trans_capital; \
+    }
+
+    SET(nhwcd4, NHWCD4);
+    SET(nchw88, NCHW88);
+    SET(nchw44, NCHW44);
+    SET(nchw32, NCHW32);
+    SET(chwn4, CHWN4);
+#undef SET
+};
+
 /*!
  * \brief Computing graph.
  *
@@ -232,7 +285,7 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             } seq_opt;
 
             //! graph optimization options
-            struct GraphOpt {
+            struct GraphOpt : GraphCommonOptimizeOptions {
                 //! whether to enable JIT; JIT would also be enabled at O3
                 //! this value indicates JIT level: 1 for basic elemwise opr; 2
                 //! for including reduce oprs
@@ -241,8 +294,6 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                 bool tensorrt = false;
                 //! whether to enable fast-run profiled winograd opr replace
                 bool winograd_transform = false;
-                //! whether to enable nchw4->chwn4 opr replace
-                bool enable_chwn4 = false;
             } graph_opt;
 
             //! get attribute for an operator

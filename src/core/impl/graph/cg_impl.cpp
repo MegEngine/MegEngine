@@ -17,6 +17,7 @@
 #include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/misc.h"
+#include "megbrain/graph/cg.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/graph/exc_extra_info.h"
 #include "megbrain/graph/helper.h"
@@ -457,13 +458,16 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     }
 #endif
 
-    if (options().graph_opt.enable_chwn4) {
-        options().graph_opt.enable_chwn4 = false;
-        gopt::reformat_to_chwn4_transform_dest_vars_inplace(dest_vars);
-    }
     if (options().graph_opt.winograd_transform) {
         options().graph_opt.winograd_transform = false;
         gopt::transform_vars_inplace_with_winograd(dest_vars);
+    }
+    if (options().graph_opt.transform_chwn4()) {
+        gopt::GraphOptimizer optimizer;
+        optimizer.apply_optimize_options(options().graph_opt);
+        options().graph_opt.layout_transform =
+                cg::GraphCommonOptimizeOptions::LayoutTransform::DEFAULT;
+        optimizer.apply_inplace(dest_vars);
     }
 
 #if MGB_JIT
