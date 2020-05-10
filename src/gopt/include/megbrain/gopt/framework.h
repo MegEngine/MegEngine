@@ -390,13 +390,13 @@ namespace gopt {
         bool fuse_conv_bias_nonlinearity = false;
         enum LayoutTransform : uint32_t {
             DEFAULT,
-            NCHW2NHWCD4,  ///< compute using NHWCD4 tensor format
-            NCHW2NCHW88,  ///< compute using NCHW88 tensor format
-            NCHW2NCHW44,  ///< compute using NCHW44 tensor format
-            NCHW2NCHW32,  ///< compute using NCHW32 tensor format, used for
-                          ///< tensorcore
-            NCHW42CHWN4,  ///< compute using CHWN4 tensor format, transformed
-                          ///< from NCHW4, mainly used for cuda
+            NHWCD4,  ///< compute using NHWCD4 tensor format
+            NCHW88,  ///< compute using NCHW88 tensor format
+            NCHW44,  ///< compute using NCHW44 tensor format
+            NCHW32,  ///< compute using NCHW32 tensor format, used for
+                     ///< tensorcore
+            CHWN4,   ///< compute using CHWN4 tensor format, transformed mainly
+                     ///< used for cuda
         };
         LayoutTransform layout_transform = LayoutTransform::DEFAULT;
         //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
@@ -422,11 +422,11 @@ namespace gopt {
         return layout_transform == LayoutTransform::_trans_capital; \
     }
 
-        SET(nchw2nhwcd4, NCHW2NHWCD4);
-        SET(nchw2nchw88, NCHW2NCHW88);
-        SET(nchw2nchw44, NCHW2NCHW44);
-        SET(nchw2nchw32, NCHW2NCHW32);
-        SET(nchw42chwn4, NCHW42CHWN4);
+        SET(nhwcd4, NHWCD4);
+        SET(nchw88, NCHW88);
+        SET(nchw44, NCHW44);
+        SET(nchw32, NCHW32);
+        SET(chwn4, CHWN4);
 #undef SET
     };
 

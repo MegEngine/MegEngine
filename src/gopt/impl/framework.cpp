@@ -708,23 +708,23 @@ void GraphOptimizer::apply_optimize_options(
     if (options->f16_io_f32_comp) {
         add_pass(ConvertF32ToF16Pass::make(true));
     }
-    if (options->transform_nchw2nhwcd4()) {
+    if (options->transform_nhwcd4()) {
         add_pass(ConvertFormatPass::make_nhwcd4_converter());
         add_pass<FuseConvBiasNonlinPass>();
     }
-    if (options->transform_nchw2nchw88()) {
+    if (options->transform_nchw88()) {
         add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
     }
-    if (options->transform_nchw2nchw44()) {
+    if (options->transform_nchw44()) {
         add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
     }
-    if (options->transform_nchw2nchw32()) {
+    if (options->transform_nchw32()) {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass(EnableTensorCorePass::make_tensorcore_converter());
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
     }
-    if (options->transform_nchw42chwn4()) {
+    if (options->transform_chwn4()) {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
         add_pass(EnableCHWN4Pass::make_chwn4_converter());

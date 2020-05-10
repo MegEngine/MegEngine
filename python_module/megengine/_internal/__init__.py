@@ -588,11 +588,11 @@ def optimize_for_inference(
 
     layout_tranform = None
     for k, v in {
-        "use_nhwcd4": "nchw2nhwcd4",
-        "use_nchw32": "nchw2nchw32",
-        "use_nchw88": "nchw2nchw88",
-        "use_nchw44": "nchw2nchw44",
-        "use_chwn4":  "nchw42chwn4",
+        "use_nhwcd4": "nhwcd4",
+        "use_nchw32": "nchw32",
+        "use_nchw88": "nchw88",
+        "use_nchw44": "nchw44",
+        "use_chwn4": "chwn4",
     }.items():
         if settings[k]:
             assert (

@@ -501,7 +501,7 @@ TEST(TestOprIO, MultipleDeviceTensorWithFormatHolderCpu) {
 
         auto y = opr::Elemwise::make({conv2}, opr::Elemwise::Param::Mode::RELU);
         auto options = gopt::OptimizeForInferenceOptions{};
-        options.enable_nchw2nhwcd4();
+        options.enable_nhwcd4();
         SymbolVar y_opt =
                 gopt::optimize_for_inference({y}, options)[0].rename("out");
 
