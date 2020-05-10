@@ -395,6 +395,8 @@ namespace gopt {
             NCHW2NCHW44,  ///< compute using NCHW44 tensor format
             NCHW2NCHW32,  ///< compute using NCHW32 tensor format, used for
                           ///< tensorcore
+            NCHW42CHWN4,  ///< compute using CHWN4 tensor format, transformed
+                          ///< from NCHW4, mainly used for cuda
         };
         LayoutTransform layout_transform = LayoutTransform::DEFAULT;
         //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
@@ -424,6 +426,7 @@ namespace gopt {
         SET(nchw2nchw88, NCHW2NCHW88);
         SET(nchw2nchw44, NCHW2NCHW44);
         SET(nchw2nchw32, NCHW2NCHW32);
+        SET(nchw42chwn4, NCHW42CHWN4);
 #undef SET
     };
 

@@ -724,6 +724,13 @@ void GraphOptimizer::apply_optimize_options(
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
     }
+    if (options->transform_nchw42chwn4()) {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass<FuseConvBiasZPass>();
+        add_pass(EnableCHWN4Pass::make_chwn4_converter());
+        add_pass<ShuffleShuffleRemovePass>();
+        add_pass<RemoveRedundantTypeCvtPass>();
+    }
 
     if (options->fuse_conv_bias_nonlinearity) {
         add_pass<FuseConvBiasNonlinPass>();

@@ -254,8 +254,9 @@ def optimize_for_inference(args, outputs):
         'enable_hwcd4': 'use_nhwcd4',
         'enable_nchw88': 'use_nchw88',
         'enable_nchw44': 'use_nchw44',
-        'enable_fuse_conv_bias_nonlinearity': 'fuse_conv_bias_nonlinearity',
         'enable_nchw32': 'use_nchw32',
+        'enable_chwn4': 'use_chwn4',
+        'enable_fuse_conv_bias_nonlinearity': 'fuse_conv_bias_nonlinearity',
         'enable_fuse_conv_bias_with_z': 'fuse_conv_bias_with_z',
     }
     kwargs = {}
@@ -397,6 +398,12 @@ def main():
         action='store_true',
         help='transform the model format from NCHW4 to NCHW32 '
         'for inference on nvidia TensoCore'
+    )
+    parser.add_argument(
+        '--enable-chwn4',
+        action='store_true',
+        help='transform the model format to CHWN4 '
+        'for inference, mainly used for nvidia tensorcore'
     )
     parser.add_argument(
         '--enable-fuse-conv-bias-with-z',

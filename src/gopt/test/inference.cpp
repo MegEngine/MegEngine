@@ -2011,14 +2011,11 @@ TEST(TestGoptInference, EnableCHWN4) {
     y4 = opr::TypeCvt::make(y4, dtype::Float32());
     SymbolVar y_opt;
     SymbolVar y_cudnn;
-    unpack_vector(
-            gopt::GraphOptimizer{}
-                    .add_pass<gopt::FuseConvBiasNonlinPass>()
-                    .add_pass(gopt::EnableCHWN4Pass::make_chwn4_converter())
-                    .add_pass<gopt::FuseConvBiasZPass>()
-                    .apply({{y4}})
-                    .endpoint_vars(),
-            y_opt);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw42chwn4();
+        unpack_vector(gopt::optimize_for_inference({y4}, options), y_opt);
+    }
     unpack_vector(gopt::GraphOptimizer{}
                           .add_pass<gopt::FuseConvBiasNonlinPass>()
                           .add_pass<gopt::FuseConvBiasZPass>()
@@ -2100,13 +2097,11 @@ TEST(TestGoptInference, EnableCHWN4WarpPespective) {
     auto y2 = opr::WarpPerspective::make(y1, mat_var, TensorShape{16, 16}, warp_param);
     SymbolVar y_opt;
     SymbolVar y_cudnn;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::FuseConvBiasNonlinPass>()
-                          .add_pass<gopt::FuseConvBiasZPass>()
-                          .add_pass(gopt::EnableCHWN4Pass::make_chwn4_converter())
-                          .apply({{y2}})
-                          .endpoint_vars(),
-                  y_opt);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw42chwn4();
+        unpack_vector(gopt::optimize_for_inference({y2}, options), y_opt);
+    }
     unpack_vector(gopt::GraphOptimizer{}
                           .add_pass<gopt::FuseConvBiasNonlinPass>()
                           .add_pass<gopt::FuseConvBiasZPass>()

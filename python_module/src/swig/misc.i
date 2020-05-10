@@ -84,6 +84,7 @@ struct _OptimizeForInferenceOptions {
         SET(nchw2nchw88, NCHW2NCHW88);
         SET(nchw2nchw44, NCHW2NCHW44);
         SET(nchw2nchw32, NCHW2NCHW32);
+        SET(nchw42chwn4, NCHW42CHWN4);
 #undef SET
 };
 

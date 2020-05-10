@@ -542,7 +542,8 @@ def optimize_for_inference(
     use_nchw32=False,
     fuse_conv_bias_with_z=False,
     use_nchw88=False,
-    use_nchw44=False
+    use_nchw44=False,
+    use_chwn4=False
 ):
     """optimize computing graph for inference
 
@@ -565,6 +566,8 @@ def optimize_for_inference(
     :param use_nchw44: whether to use NCHW44 tensor format. This maybe faster some
         times.
     :param use_nchw32: whether to use NCHW32 tensor format. Mainly used for
+        nvidia tensorcore.
+    :param use_chwn4: whether to use CHWN4 tensor format. Mainly used for
         nvidia tensorcore.
 
 
@@ -589,6 +592,7 @@ def optimize_for_inference(
         "use_nchw32": "nchw2nchw32",
         "use_nchw88": "nchw2nchw88",
         "use_nchw44": "nchw2nchw44",
+        "use_chwn4":  "nchw42chwn4",
     }.items():
         if settings[k]:
             assert (
