@@ -18,6 +18,7 @@ using namespace aarch64;
 
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32K8x12x1 f32K8x12x1;
+    AlgoF32MK4_8x12x1 f32_mk4_8x12x1;
     AlgoF32K4x16x1 f32k4x16x1;
     AlgoF32MK4_4x16 f32mk4_4x16;
     AlgoF32Gemv f32_gemv;
@@ -53,6 +54,7 @@ public:
     AlgoPack() {
         all_algos.emplace_back(&f32_gemv);
         all_algos.emplace_back(&f32K8x12x1);
+        all_algos.emplace_back(&f32_mk4_8x12x1);
         all_algos.emplace_back(&f32k4x16x1);
         all_algos.emplace_back(&f32mk4_4x16);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

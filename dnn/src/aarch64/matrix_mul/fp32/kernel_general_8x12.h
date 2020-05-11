@@ -899,6 +899,10 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
            :
            : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "x1", "x2",
              "x3", "x10", "cc", "memory");
+#undef LOAD_LINE
+#undef LOAD_C
+#undef STORE_LINE
+#undef STORE_C
 }
 
 void sgemm_8x12_pack_A_n(float* outptr, const float* inptr, int ldin, int y0,

@@ -31,6 +31,12 @@ TEST_F(AARCH64, MATRIX_MUL_FP32K4X16) {
                                  "AARCH64_F32K4X16X1");
 }
 
+TEST_F(AARCH64, MATRIX_MUL_FP32_PACK_MK4) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
+            "AARCH64_F32_MK4_K8X12X1", param::MatrixMul::Format::MK4, 1);
+}
+
 TEST_F(AARCH64, MATRIX_MUL_FP32_MK4) {
     //! nbase should be 4 in order to test the last rest 4 in N dim
     matrix_mul::check_matrix_mul(
@@ -525,6 +531,15 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_FP32_MK4) {
             dtype::Float32{}, "AARCH64_F32_MK4_4x16",
             param::MatrixMul::Format::MK4, dtype::Float32{}, dtype::Float32{},
             dtype::Float32{});
+}
+
+TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_FP32_PACK_MK4) {
+    auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(16);
+    matrix_mul::benchmark_with_contrast(
+            handle(), args, dtype::Float32{}, dtype::Float32{},
+            dtype::Float32{}, "AARCH64_F32_MK4_K8X12X1",
+            param::MatrixMul::Format::MK4, dtype::Float32{}, dtype::Float32{},
+            dtype::Float32{}, "AARCH64_F32K8X12X1");
 }
 
 TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_INT16x16x32_MK8) {

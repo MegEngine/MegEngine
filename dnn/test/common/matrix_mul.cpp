@@ -40,8 +40,8 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_mk_packed_args(
         size_t nbase) {
     std::vector<TestArg> args;
     for (size_t m : {1, 2, 3, 4, 5})
-        for (size_t n : {1, 2, 3, 4, 5, 8, 16, 24})
-            for (size_t k : {1, 2, 3, 4, 5})
+        for (size_t n : {1, 2, 3, 4, 5, 8, 12, 16, 24})
+            for (size_t k : {1, 2, 3, 4, 5, 9, 10})
                 args.emplace_back(m, n * nbase, k, 0);
     return args;
 }

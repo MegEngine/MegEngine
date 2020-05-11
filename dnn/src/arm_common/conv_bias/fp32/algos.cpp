@@ -38,6 +38,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF23_4x4::usable(
         if (param.filter_meta.icpg % 4 != 0 || param.filter_meta.ocpg % 4 != 0)
             return false;
         using Strategy = winograd::winograd_2x3_4x4_f;
+        using PackMode = fallback::MatrixMulImpl::AlgoBase::PackMode;
         Strategy strategy(param.src_type, param.filter_type, param.dst_type);
         auto&& matmul_param =
                 megdnn::winograd::ConvBias<Strategy,
@@ -46,6 +47,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF23_4x4::usable(
                         param.osz[1], param.filter_meta.ocpg)
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
+               m_matmul_algo->packmode() == PackMode::NO_PACK &&
                (opr->param().format == param::ConvBias::Format::NCHW ||
                 (opr->param().format ==
                          param::ConvBias::Format::NCHW_WINOGRAD &&
@@ -319,6 +321,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF63_4x4::usable(
         if (param.filter_meta.icpg % 4 != 0 || param.filter_meta.ocpg % 4 != 0)
             return false;
         using Strategy = winograd::winograd_6x3_4x4_f;
+        using PackMode = fallback::MatrixMulImpl::AlgoBase::PackMode;
         Strategy strategy(param.src_type, param.filter_type, param.dst_type);
         auto&& matmul_param =
                 megdnn::winograd::ConvBias<Strategy,
@@ -327,6 +330,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF63_4x4::usable(
                         param.osz[1], param.filter_meta.ocpg)
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
+               m_matmul_algo->packmode() == PackMode::NO_PACK &&
                (opr->param().format == param::ConvBias::Format::NCHW ||
                 (opr->param().format ==
                          param::ConvBias::Format::NCHW_WINOGRAD &&

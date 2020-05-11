@@ -29,6 +29,17 @@ public:
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
+class MatrixMulImpl::AlgoF32MK4_8x12x1 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "AARCH64_F32_MK4_K8X12X1"; }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    void* type() const override { return sm_arm_common_algo_type; }
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+};
+
 class MatrixMulImpl::AlgoF32K4x16x1 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }

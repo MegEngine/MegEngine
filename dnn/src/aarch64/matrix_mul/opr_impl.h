@@ -22,6 +22,7 @@ public:
 
 private:
     class AlgoF32K8x12x1;   // Aarch64 F32 Kernel 8X12X1
+    class AlgoF32MK4_8x12x1; // Aarch64 F32 Kernel MK4 8x12x1
     class AlgoF32K4x16x1;   // Aarch64 F32 Kernel 4x16x1
     class AlgoF32MK4_4x16;  // Aarch64 F32 Format MK4 block 16x4
     class AlgoF32Gemv;      // Aarch64 F32 Gemv

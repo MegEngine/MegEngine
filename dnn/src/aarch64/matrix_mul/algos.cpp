@@ -86,6 +86,67 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32K8x12x1, megdnn_aarch64_matmul_kern,
                                      "AlgoF32K8x12x1Impl"_hash,
                                      aarch64::matmul::sgemm_8x12, float, float);
 
+/* ===================== F32_MK4_8X12X1 algo ===================== */
+bool MatrixMulImpl::AlgoF32MK4_8x12x1::usable(
+        const KernSizeParam& kern_size_param) const {
+    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.B_type == kern_size_param.A_type &&
+           kern_size_param.C_type == kern_size_param.A_type &&
+           kern_size_param.A_type == dtype::Float32() &&
+           kern_size_param.format == param::MatrixMul::Format::MK4 &&
+           !kern_size_param.trA && !kern_size_param.trB &&
+           kern_size_param.M % 4 == 0 && kern_size_param.K % 4 == 0;
+}
+
+size_t MatrixMulImpl::AlgoF32MK4_8x12x1::get_workspace(
+        const KernSizeParam& kern_size_param) const {
+    MIDOUT_BEGIN(megdnn_aarch64_matmul_kern,
+                 midout_iv("AlgoF32MK4_8x12x1::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N,
+             K = kern_size_param.K;
+        auto trA = kern_size_param.trA, trB = kern_size_param.trB;
+        auto A_type = kern_size_param.A_type, B_type = kern_size_param.B_type,
+             C_type = kern_size_param.C_type;
+        aarch64::matmul::sgemm_mk4_8x12 strategy(M, N, K, A_type, B_type,
+                                                 C_type);
+        return megdnn::matmul::GemmInterleaved<aarch64::matmul::sgemm_mk4_8x12>(
+                       M, N, K, trA, trB, strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32MK4_8x12x1::get_kern(
+        const KernSizeParam&) const {
+    auto f32_kern_mk4_8x12 = [](const MatrixMulImpl::KernParam& kern_param) {
+        MIDOUT_BEGIN(megdnn_aarch64_matmul_kern,
+                     midout_iv("AlgoF32MK4_8x12x1::get_kern"_hash)) {
+            auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+            auto trA = kern_param.trA, trB = kern_param.trB;
+            auto LDA = kern_param.LDA, LDB = kern_param.LDB,
+                 LDC = kern_param.LDC;
+            auto A_type = kern_param.A_type, B_type = kern_param.B_type,
+                 C_type = kern_param.C_type;
+            const auto Aptr = kern_param.A<float>(),
+                       Bptr = kern_param.B<float>();
+            auto Cptr = kern_param.C<float>();
+            aarch64::matmul::sgemm_mk4_8x12 strategy(M, N, K, A_type, B_type,
+                                                     C_type);
+            megdnn::matmul::GemmInterleaved<aarch64::matmul::sgemm_mk4_8x12>(
+                    M, N, K, trA, trB, strategy)
+                    .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC,
+                             kern_param.workspace_ptr);
+        }
+        MIDOUT_END();
+    };
+    return f32_kern_mk4_8x12;
+}
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32MK4_8x12x1,
+                                     megdnn_aarch64_matmul_kern,
+                                     "AlgoF32MK4_8x12x1Impl"_hash,
+                                     aarch64::matmul::sgemm_mk4_8x12, float,
+                                     float);
+
 /* ===================== F32K4X16X1 algo ===================== */
 
 bool MatrixMulImpl::AlgoF32K4x16x1::usable(

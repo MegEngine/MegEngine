@@ -1104,6 +1104,36 @@ static inline void interleave_4x4_1_s(const T*& inptr0, const T*& inptr1,
 }
 
 template <typename T>
+static inline void interleave_2x4_4_s(const T*& inptr0, const T*& inptr1,
+                                      T* outptr) {
+    static_assert(sizeof(T) == 4, "interleave_2x4_4_s only support size == 4");
+    asm volatile(
+            "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[inptr0]], #64\n"
+            "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[inptr1]], #64\n"
+            "stp q0, q4, [%[outptr]]\n"
+            "stp q1, q5, [%[outptr], #32]\n"
+            "stp q2, q6, [%[outptr], #64]\n"
+            "stp q3, q7, [%[outptr], #96]\n"
+
+            : [ inptr0 ] "+r"(inptr0), [ inptr1 ] "+r"(inptr1),
+              [ outptr ] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "memory");
+}
+
+template <typename T>
+static inline void interleave_1x4_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4, "interleave_1x4_4_s only support size == 4");
+    asm volatile(
+            "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[inptr0]], #64\n"
+            "st1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[outptr]]\n"
+
+            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "memory");
+}
+
+template <typename T>
 static inline void interleave_4x8_2_b(const T*& inptr0, const T*& inptr1,
                                       const T*& inptr2, const T*& inptr3,
                                       T*& outptr) {
@@ -1477,6 +1507,41 @@ static inline void transpose_4x4_1_s(const T*& inptr0, const T*& inptr1,
             :
             : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
               "v11", "memory");
+}
+
+template <typename T>
+static inline void transpose_1x12_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4,
+                  "transpose_1x12_4_s only support sizeof(T) == 4");
+
+    asm volatile(
+            "ld4 {v0.4s, v1.4s, v2.4s, v3.4s},  [%[inptr0]], #64\n"
+            "ld4 {v4.4s, v5.4s, v6.4s, v7.4s},  [%[inptr0]], #64\n"
+            "ld4 {v8.4s, v9.4s, v10.4s, v11.4s},[%[inptr0]], #64\n"
+
+            "stp q0, q4, [%[outptr]] \n"
+            "stp q8, q1, [%[outptr], #32] \n"
+            "stp q5, q9, [%[outptr], #64] \n"
+            "stp q2, q6, [%[outptr], #96] \n"
+            "stp q10, q3, [%[outptr], #128] \n"
+            "stp q7, q11, [%[outptr], #160] \n"
+            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+              "v11", "memory");
+}
+
+template <typename T>
+static inline void transpose_1x4_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4,
+                  "transpose_1x4_4_s only support sizeof(T) == 4");
+
+    asm volatile(
+            "ld4 {v0.4s, v1.4s, v2.4s, v3.4s},  [%[inptr0]], #64\n"
+            "st1 {v0.4s, v1.4s, v2.4s, v3.4s},  [%[outptr]]\n"
+            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "memory");
 }
 
 template <typename T>
