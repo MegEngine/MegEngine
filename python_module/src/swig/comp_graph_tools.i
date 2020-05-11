@@ -10,6 +10,10 @@
         return var.node()->owner_opr()->dyn_typeinfo()->name;
     }
 
+    std::string _get_opr_type(Operator opr) {
+        return opr.node()->dyn_typeinfo()->name;
+    }
+
     SymbolVarArray _replace_vars(const SymbolVarArray& repl_src,
                                  const SymbolVarArray& repl_dst,
                                  const SymbolVarArray& vars) {

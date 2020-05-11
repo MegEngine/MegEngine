@@ -15,6 +15,7 @@ import pytest
 
 import megengine as mge
 import megengine._internal as mgb
+import megengine.functional as F
 import megengine.module as M
 from megengine import functional as F
 from megengine import jit, tensor
@@ -146,6 +147,49 @@ def test_dump_volatile():
 
     (out,) = outputs
     assert mgb.cgtools.get_type(mgb.cgtools.get_inputs(out)[1]) == "SharedDeviceTensor"
+
+
+def test_graph_traversal():
+    net = M.Conv2d(3, 4, 3, 1, 1, groups=1, bias=False)
+    net.eval()
+
+    @jit.trace(symbolic=True)
+    def fun(data):
+        return net(data)
+
+    data = np.random.random([1, 3, 224, 224]).astype(np.float32)
+    fun.trace(data)
+
+    with mkstemp() as out:
+        fun.dump(out)
+        *_, outputs = mgb.load_comp_graph_from_file(out)
+
+    _, map_vars, var2oprs, *_ = mgb.cgtools.graph_traversal(outputs)
+    input_var = map_vars[1]
+    _, var_idx = var2oprs[input_var.id][0]
+
+    assert var_idx == 0
+
+
+def test_network_visitor():
+    @jit.trace(symbolic=True)
+    def f(x):
+        # this line will produce shape_of, subtensor and concat op
+        # after pruning, they will be deleted
+        target_shape = (x.shape[0], -1)
+
+        return x.reshape(*target_shape)
+
+    f.trace(tensor(np.random.random([2, 3, 4, 5]).astype(np.float32)))
+
+    with mkstemp() as out:
+        f.dump(out)
+        *_, outputs = mgb.load_comp_graph_from_file(out)
+
+    all_oprs = mgb.cgtools.get_oprs_seq(outputs)
+    pruned_oprs = mgb.cgtools.get_oprs_seq(outputs, prune_reshape=True)
+
+    assert len(all_oprs) == len(pruned_oprs) + 3
 
 
 def test_shape_tracing():
