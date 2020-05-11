@@ -41,6 +41,10 @@ public:
     SmallVector<NCBKern> dispatch_kerns(
             ConvBiasImpl* opr, const NCBKernSizeParam& param) const override;
 
+    bool is_preferred(ConvBiasImpl*, const NCBKernSizeParam&) const override{
+            return true;
+    }
+
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;
 

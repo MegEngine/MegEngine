@@ -64,8 +64,8 @@ public:
         all_algos.emplace_back(&int8x8x32_k8x12x4_dotprod);
 #else
         all_algos.emplace_back(&int8x8x32_gemv);
-        all_algos.emplace_back(&int8x8x32_k8x8x8);
         all_algos.emplace_back(&int8x8x32_k4x4x16);
+        all_algos.emplace_back(&int8x8x32_k8x8x8);
         all_algos.emplace_back(&int8x8x32_mk4_4x4x16);
 #endif
         all_algos.emplace_back(&int8x8x16_k4x4x16);

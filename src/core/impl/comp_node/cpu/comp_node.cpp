@@ -58,7 +58,9 @@ class CpuCompNode::WorkerQueue final
     void on_async_queue_worker_thread_start() override {
         mgb_assert(m_locator.device >= 0);
         if (enable_affinity) {
+#if !defined(ANDROID) && !defined(__ANDROID__)
             sys::set_cpu_affinity({m_locator.device});
+#endif
         }
         sys::set_thread_name(m_locator.to_string());
         if(m_thread_pool)

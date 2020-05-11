@@ -61,11 +61,11 @@ public:
         all_algos.emplace_back(&int8x8x32_gemv);
 #endif
         all_algos.emplace_back(&int8x8x32_mk4_4x2x16);
-        all_algos.emplace_back(&int8x8x32_k4x8x8);
         all_algos.emplace_back(&int8x8x32_k4x2x16);
+        all_algos.emplace_back(&int8x8x32_k4x8x8);
         all_algos.emplace_back(&quint8_k4x8x8);
-        all_algos.emplace_back(&int8x8x16_k4x8x8);
         all_algos.emplace_back(&int8x8x16_k4x2x16);
+        all_algos.emplace_back(&int8x8x16_k4x8x8);
         all_algos.emplace_back(&int16x16x32_k12x4x1);
         all_algos.emplace_back(&int16x16x32_mk8_4x8);
     }
