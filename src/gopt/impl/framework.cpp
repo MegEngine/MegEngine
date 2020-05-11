@@ -716,8 +716,8 @@ const GraphOptimizer& GraphOptimizer::apply_optimize_options(
         need_param_fuse = true;
     }
     if (options.transform_nhwcd4()) {
-        add_pass(ConvertFormatPass::make_nhwcd4_converter());
         add_pass<FuseConvBiasNonlinPass>();
+        add_pass(ConvertFormatPass::make_nhwcd4_converter());
         need_param_fuse = true;
     }
     if (options.transform_nchw88()) {
