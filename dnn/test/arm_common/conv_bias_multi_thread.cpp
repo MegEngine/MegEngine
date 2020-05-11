@@ -78,9 +78,10 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
     std::vector<TestArg> args;
 
     auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
-                    size_t kernel, size_t stride, size_t group, NLMode nlmode) {
+                    size_t kernel, size_t stride, size_t group, NLMode nlmode,
+                    int any_pad = -1) {
         constexpr int pack_c = 4;
-        const size_t pad = no_pad ? 0 : kernel / 2;
+        const size_t pad = any_pad >= 0 ? any_pad : kernel / 2;
         auto bias_mode = no_bias ? megdnn::BiasMode::NO_BIAS
                                  : megdnn::BiasMode::BROADCAST_CHANNEL_BIAS;
         auto oc_per_group = oc / group;
@@ -90,7 +91,8 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
                         ic_per_group > 0;
         bool nchw_disable = group > 1 || ic_per_group >= 4;
         bool nchw44_disable = ic_per_group % pack_c != 0;
-        if (!(ok_group)) {
+        bool invalid_pad = (w + 2 * pad < kernel) || (h + 2 * pad < kernel);
+        if (!(ok_group) || invalid_pad) {
             return;
         }
         if ((is_input_nchw && nchw_disable) ||
@@ -107,6 +109,7 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         param.pad_h = pad;
         param.pad_w = pad;
         param.nonlineMode = nlmode;
+
         auto src_tensor_shape = TensorShape{n, ic / pack_c, h, w, pack_c};
         auto weight_tensor_shape = TensorShape{
                 oc / pack_c, ic / pack_c, kernel_h, kernel_w, pack_c, pack_c};
@@ -337,6 +340,11 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_LARGE_GROUP) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_SMALL_GROUP) {
     check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
                     handle(), "F32STRD2_SMALL_GROUP");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32) {
+    check_conv_bias(
+            get_nchw44_conv_bias_args({3, 5, 7}, 2, false, false, false, true),
+            handle(), "F32_CONV_NCHW_NCHW44");
 }
 /**********************************F16 direct************************/
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

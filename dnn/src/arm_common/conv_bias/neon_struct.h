@@ -34,6 +34,9 @@ struct Vmlal_s16 {
 struct Vld1q_s8 {
     static int8x16_t impl(const int8_t* ptr) { return vld1q_s8(ptr); }
 };
+struct Vld1q_f32 {
+    static float32x4_t impl(const float32_t* ptr) { return vld1q_f32(ptr); }
+};
 struct Vld1_s8 {
     static int8x8_t impl(const int8_t* ptr) { return vld1_s8(ptr); }
 };
@@ -50,5 +53,13 @@ struct Vldq_tbl_low_s8 {
 struct Vld1_dup_s8_s16 {
     static int16x8_t impl(const int8_t* ptr) { return vld1_dup_s8_s16(ptr); }
 };
+
+struct Vfmaq_laneq_f32 {
+    template <const int lane>
+    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vfmaq_laneq_f32(a, b, v, lane);
+    }
+};
+
 }  // namespace
 }  // namespace megdnn

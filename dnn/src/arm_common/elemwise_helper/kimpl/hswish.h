@@ -45,13 +45,17 @@ struct HSwishOp;
             vst1q_##_func_suffix(dst, vitem.val[0]);                           \
             vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);              \
         }                                                                      \
+        void operator()(const _neon_type& src, _ctype* dst) const {            \
+            auto vitem = operator()(src);                                      \
+            vst1q_##_func_suffix(dst, vitem);                                  \
+        }                                                                      \
         _neon_type2 operator()(const _neon_type2& src) const {                 \
             auto val1 = src.val[0];                                            \
             auto val2 = src.val[1];                                            \
             H_SWISH_KERN(_func_suffix, val1, val2);                            \
             return {{val1, val2}};                                             \
         }                                                                      \
-        _neon_type operator()(const _neon_type& src) {                         \
+        _neon_type operator()(const _neon_type& src) const {                   \
             auto val_zero = vdupq_n_##_func_suffix(0.f);                       \
             auto val_six = vdupq_n_##_func_suffix(6.f);                        \
             auto val_three = vdupq_n_##_func_suffix(3.f);                      \
@@ -64,6 +68,7 @@ struct HSwishOp;
                                         val_rec_six);                          \
         }                                                                      \
     };
+
 OP(dt_float32, float32x4_t, float32x4x2_t, f32, 4)
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 OP(__fp16, float16x8_t, float16x8x2_t, f16, 8)

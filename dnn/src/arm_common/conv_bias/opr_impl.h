@@ -67,6 +67,7 @@ private:
     class AlgoF32Direct;
     class AlgoF32DirectStride1;
     class AlgoF32DirectStride2;
+    class AlgoF32DirectStride2NCHWNCHW44;
     class AlgoI8x8x16Direct;
     class AlgoI8x8x16Stride2;
     class AlgoI8x8x16Stride2Filter2;

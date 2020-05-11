@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -156,7 +157,6 @@ private:
     uint32_t m_tile_size;
 };
 
-
 class ConvBiasImpl::AlgoF32Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     bool m_large_group;
@@ -217,6 +217,24 @@ public:
             fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
+
+class ConvBiasImpl::AlgoF32DirectStride2NCHWNCHW44 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    AlgoF32DirectStride2NCHWNCHW44() {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "F32_CONV_NCHW_NCHW44"; }
+    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(fallback::ConvBiasImpl* opr,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+};
+
 }  // namespace arm_common
 }  // namespace megdnn
 

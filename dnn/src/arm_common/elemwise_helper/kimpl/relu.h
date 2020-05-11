@@ -47,11 +47,16 @@ struct ReluOp;
             auto vitem1 = vmaxq_##_func_suffix(src.val[1], vzero);     \
             return {{vitem0, vitem1}};                                 \
         }                                                              \
+        void operator()(const _neon_type& src, _ctype* dst) const {    \
+            auto vitem = operator()(src);                              \
+            vst1q_##_func_suffix(dst, vitem);                          \
+        }                                                              \
         _neon_type operator()(const _neon_type& src) const {           \
             auto vzero = vdupq_n_##_func_suffix(0);                    \
             return vmaxq_##_func_suffix(src, vzero);                   \
         }                                                              \
     };
+
 OP(dt_float32, float32x4_t, float32x4x2_t, f32, 4)
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 OP(__fp16, float16x8_t, float16x8x2_t, f16, 8)

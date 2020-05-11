@@ -85,7 +85,7 @@ TEST_F(ARM_COMMON, CONV_BIAS_MATMUL_QU8) {
 
 #if MEGDNN_WITH_BENCHMARK
 
-static void benchmark_convbias(Handle* handle) {
+static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
     constexpr size_t RUNS = 30;
 
     Benchmarker<ConvBias> benchmarker_int(handle);
@@ -102,15 +102,25 @@ static void benchmark_convbias(Handle* handle) {
     Benchmarker<ConvBias> benchmarker_float(handle);
     benchmarker_float.set_display(false).set_times(RUNS);
     benchmarker_float.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(".+"));
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(
+                    "IM2COLMATMUL:AARCH64_F32K8X12X1:192"));
 
     Benchmarker<ConvBias> benchmarker_int_nchw44(handle);
-    benchmarker_int_nchw44.set_times(RUNS)
-            .set_dtype(0, dtype::QuantizedS8(2.5))
-            .set_dtype(1, dtype::QuantizedS8(2.5))
-            .set_dtype(2, dtype::QuantizedS32(6.25))
-            .set_dtype(4, dtype::QuantizedS8(60.25))
-            .set_display(false);
+    if (is_fp32) {
+        benchmarker_int_nchw44.set_times(RUNS)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_dtype(4, dtype::Float32())
+                .set_display(false);
+    } else {
+        benchmarker_int_nchw44.set_times(RUNS)
+                .set_dtype(0, dtype::QuantizedS8(2.5))
+                .set_dtype(1, dtype::QuantizedS8(2.5))
+                .set_dtype(2, dtype::QuantizedS32(6.25))
+                .set_dtype(4, dtype::QuantizedS8(60.25))
+                .set_display(false);
+    }
     benchmarker_int_nchw44.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBias>(".+"));
 
@@ -151,7 +161,6 @@ static void benchmark_convbias(Handle* handle) {
         auto int_nchw44_used = benchmarker_int_nchw44.set_param(param).exec(
                                        {src, filter, bias, {}, dst}) /
                                RUNS;
-
         float computations = IC * (FS * FS) * dst.total_nr_elems() * 2 * 1e-6;
         printf("run: %s %s %s->%s \n", src.to_string().c_str(),
                filter.to_string().c_str(), bias.to_string().c_str(),
@@ -160,32 +169,42 @@ static void benchmark_convbias(Handle* handle) {
                computations / float_used);
         printf("int_nchw: %f ms %f Gflops, ", int_used,
                computations / int_used);
-        printf("int_nchw44: %f ms %f Gflops %f speedup, ", int_nchw44_used,
-               computations / int_nchw44_used, int_used / int_nchw44_used);
+        auto speed_up = int_used / int_nchw44_used;
+        if (is_fp32) {
+            speed_up = float_used / int_nchw44_used;
+            printf("fp32_nchw44: %f ms %f Gflops %f speedup, ", int_nchw44_used,
+                   computations / int_nchw44_used, speed_up);
+        } else {
+            printf("int_nchw44: %f ms %f Gflops %f speedup, ", int_nchw44_used,
+                   computations / int_nchw44_used, speed_up);
+        }
         printf("\n");
     };
-    run(1, 3, 32, 224, 224, 3, 2, true);
-    run(1, 3, 64, 224, 224, 5, 2, true);
-    run(1, 3, 64, 224, 224, 7, 2, true);
-    run(1, 3, 32, 224, 224, 7, 2, true);
-    for (size_t stride : {1, 2}) {
-        printf("stride %zu\n", stride);
-        for (size_t filter_size : {2, 3, 5, 7}) {
-            for (size_t img_size : {32}) {
-                for (size_t channel : {8, 16, 32, 64, 128, 256}) {
-                    run(1, channel, channel, img_size, img_size, filter_size,
-                        stride, false);
+
+    if (is_fp32) {
+        run(1, 3, 32, 224, 224, 3, 2, true);
+        run(1, 3, 64, 224, 224, 7, 2, true);
+    } else {
+        for (size_t stride : {1, 2}) {
+            printf("stride %zu\n", stride);
+            for (size_t filter_size : {2, 3, 5, 7}) {
+                for (size_t img_size : {32}) {
+                    for (size_t channel : {8, 16, 32, 64, 128, 256}) {
+                        run(1, channel, channel, img_size, img_size,
+                            filter_size, stride, false);
+                    }
                 }
             }
         }
     }
 }
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_NCHW44) {
-    benchmark_convbias(handle());
+    benchmark_convbias(handle(), true);
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_CONVBIAS_NCHW44) {
-    benchmark_convbias(handle());
+    benchmark_convbias(handle(), true);
 }
+
 #endif
 TEST_F(ARM_COMMON, CONV_BIAS_MATMUL_QS8) {
     using namespace conv_bias;
@@ -1464,7 +1483,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QUINT8_STRIDE2_WITHDOTPROD) {
 #if MEGDNN_WITH_BENCHMARK
 
 namespace {
-std::vector<conv_bias::TestArg> get_conv_bias_1x1_benchmark_args(size_t pack_size = 1) {
+std::vector<conv_bias::TestArg> get_conv_bias_1x1_benchmark_args(
+        size_t pack_size = 1) {
     using namespace conv_bias;
     std::vector<TestArg> args;
     param::ConvBias param;
@@ -1474,15 +1494,17 @@ std::vector<conv_bias::TestArg> get_conv_bias_1x1_benchmark_args(size_t pack_siz
     param.pad_w = 0;
     param.nonlineMode = param::ConvBias::NonlineMode::IDENTITY;
     auto bench_case = [&](size_t OC, size_t IC, size_t H, size_t W) {
-        if(pack_size == 1)
+        if (pack_size == 1)
             args.emplace_back(param, TensorShape{1, IC, H, W},
-                          TensorShape{OC, IC, 1, 1}, TensorShape{});
+                              TensorShape{OC, IC, 1, 1}, TensorShape{});
         else {
-            if(pack_size == 4)
+            if (pack_size == 4)
                 param.format = param::ConvBias::Format::NCHW44;
-            args.emplace_back(param, TensorShape{1, IC / pack_size, H, W, pack_size},
-                          TensorShape{OC / pack_size, IC / pack_size, 1, 1, pack_size, pack_size}, 
-                          TensorShape{});
+            args.emplace_back(param,
+                              TensorShape{1, IC / pack_size, H, W, pack_size},
+                              TensorShape{OC / pack_size, IC / pack_size, 1, 1,
+                                          pack_size, pack_size},
+                              TensorShape{});
         }
     };
 

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -30,6 +31,13 @@ struct NoneOp;
         using NoneOpBase::operator();                                        \
         constexpr static size_t SIMD_WIDTH = _simd_width;                    \
         _neon_type2 operator()(const _neon_type2& src) const { return src; } \
+        void operator()(const _neon_type2& src, _ctype* dst) const {         \
+            vst1q_##_func_suffix(dst, src.val[0]);                           \
+            vst1q_##_func_suffix(dst + SIMD_WIDTH, src.val[1]);              \
+        }                                                                    \
+        void operator()(const _neon_type& src, _ctype* dst) const {          \
+            vst1q_##_func_suffix(dst, src);                                  \
+        }                                                                    \
         _neon_type operator()(const _neon_type& src) const { return src; }   \
     };
 

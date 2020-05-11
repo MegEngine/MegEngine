@@ -479,6 +479,39 @@ UNROLL_CALL_RAW(4, cb);
 #undef cb
 }  // namespace
 #define vdup_laneq_s16(vec, lane) Vdup_laneq_s16_armv7<lane>::impl(vec)
+namespace {
+template <int lane>
+struct Vfmap_laneq_f32_armv7 {
+    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v);
+};
+
+template <>
+struct Vfmap_laneq_f32_armv7<0> {
+    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlaq_lane_f32(a, b, vget_low_f32(v), 0);
+    }
+};
+template <>
+struct Vfmap_laneq_f32_armv7<1> {
+    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlaq_lane_f32(a, b, vget_low_f32(v), 1);
+    }
+};
+template <>
+struct Vfmap_laneq_f32_armv7<2> {
+    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlaq_lane_f32(a, b, vget_high_f32(v), 0);
+    }
+};
+template <>
+struct Vfmap_laneq_f32_armv7<3> {
+    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlaq_lane_f32(a, b, vget_high_f32(v), 1);
+    }
+};
+}  // namespace
+#define vfmaq_laneq_f32(a, b, v, lane) \
+    Vfmap_laneq_f32_armv7<lane>::impl(a, b, v)
 
 #endif
 
