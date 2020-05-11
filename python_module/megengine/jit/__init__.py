@@ -464,8 +464,10 @@ class trace:
             "enable_ioc16": "f16_io_comp",
             "enable_hwcd4": "use_nhwcd4",
             "enable_nchw88": "use_nchw88",
+            "enable_nchw32": "use_nchw32",
+            "enable_nchw44": "use_nchw44",
+            "enable_chwn4": "use_chwn4",
             "enable_fuse_conv_bias_nonlinearity": "fuse_conv_bias_nonlinearity",
-            "enable_tensorcore": "use_tensor_core",
             "enable_fuse_conv_bias_with_z": "fuse_conv_bias_with_z",
         }
         if optimize_for_inference:
