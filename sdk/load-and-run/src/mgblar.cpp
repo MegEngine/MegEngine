@@ -972,9 +972,28 @@ Args Args::from_argv(int argc, char **argv) {
             continue;
         }
 #endif
-        if (!strcmp(argv[i], "--enable-chwn4")) {
-            mgb_log_warn("enable chwn4 optimization");
-            graph_opt.graph_opt.enable_chwn4();
+
+#define cb(_layout)                                       \
+    if (!strcmp(argv[i], "--enable-" #_layout)) {         \
+        mgb_log_warn("enable " #_layout " optimization"); \
+        graph_opt.graph_opt.enable_##_layout();           \
+        continue;                                         \
+    }
+
+        cb(chwn4);
+        cb(nchw44);
+        cb(nchw88);
+        cb(nchw32);
+        cb(nhwcd4);
+#undef cb
+        if (!strcmp(argv[i], "--enable-fuse-conv-bias-nonlinearity")) {
+            mgb_log_warn("enable fuse-conv-bias-nonlinearity optimization");
+            graph_opt.graph_opt.enable_fuse_conv_bias_nonlinearity();
+            continue;
+        }
+        if (!strcmp(argv[i], "--enable-fuse-conv-bias-with-z")) {
+            mgb_log_warn("enable fuse_conv_bias_with_z optimization");
+            graph_opt.graph_opt.enable_fuse_conv_bias_with_z();
             continue;
         }
 #if MGB_ENABLE_JSON

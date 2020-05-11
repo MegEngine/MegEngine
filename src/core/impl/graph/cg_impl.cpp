@@ -462,13 +462,6 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         options().graph_opt.winograd_transform = false;
         gopt::transform_vars_inplace_with_winograd(dest_vars);
     }
-    if (options().graph_opt.transform_chwn4()) {
-        gopt::GraphOptimizer optimizer;
-        optimizer.apply_optimize_options(options().graph_opt);
-        options().graph_opt.layout_transform =
-                cg::GraphCommonOptimizeOptions::LayoutTransform::DEFAULT;
-        optimizer.apply_inplace(dest_vars);
-    }
 
 #if MGB_JIT
     if (std::abs(options().graph_opt_level) == 0 && options().graph_opt.jit) {
@@ -480,6 +473,10 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         optimizer.apply_inplace(dest_vars);
     }
 #endif
+    gopt::GraphOptimizer optimizer;
+    optimizer.apply_optimize_options(options().graph_opt);
+    options().graph_opt.reset();
+    optimizer.apply_inplace(dest_vars);
 
     const OprNodeArray* opr_seq = nullptr;
     CompSeqExtraInfo extra_info;

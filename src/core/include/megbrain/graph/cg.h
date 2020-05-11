@@ -92,6 +92,9 @@ struct GraphCommonOptimizeOptions {
     bool f16_io_comp = false;
     //! whether to enable conv bias nonlinearity fusion
     bool fuse_conv_bias_nonlinearity = false;
+    //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
+    //! + z -> conv_bias(x, w, b, z)
+    bool fuse_conv_bias_with_z = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,
         NHWCD4,  ///< compute using NHWCD4 tensor format
@@ -103,9 +106,14 @@ struct GraphCommonOptimizeOptions {
                  ///< used for cuda
     };
     LayoutTransform layout_transform = LayoutTransform::DEFAULT;
-    //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
-    //! + z -> conv_bias(x, w, b, z)
-    bool fuse_conv_bias_with_z = false;
+
+    void reset() {
+        f16_io_f32_comp = false;
+        f16_io_comp = false;
+        fuse_conv_bias_nonlinearity = false;
+        fuse_conv_bias_with_z = false;
+        layout_transform = LayoutTransform::DEFAULT;
+    }
 
 #define SET(n)                                 \
     GraphCommonOptimizeOptions& enable_##n() { \
@@ -119,6 +127,7 @@ struct GraphCommonOptimizeOptions {
 #undef SET
 #define SET(_trans, _trans_capital)                                 \
     GraphCommonOptimizeOptions& enable_##_trans() {                 \
+        mgb_assert(layout_transform == LayoutTransform::DEFAULT);   \
         layout_transform = LayoutTransform::_trans_capital;         \
         return *this;                                               \
     }                                                               \

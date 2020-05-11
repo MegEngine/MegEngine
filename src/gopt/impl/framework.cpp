@@ -706,21 +706,27 @@ VarNode* GraphOptimizer::var_replace_lookup(VarNode *var) {
 
 const GraphOptimizer& GraphOptimizer::apply_optimize_options(
         const cg::GraphCommonOptimizeOptions& options) {
+    bool need_param_fuse = false;
     if (options.f16_io_comp) {
         add_pass(ConvertF32ToF16Pass::make(false));
+        need_param_fuse = true;
     }
     if (options.f16_io_f32_comp) {
         add_pass(ConvertF32ToF16Pass::make(true));
+        need_param_fuse = true;
     }
     if (options.transform_nhwcd4()) {
         add_pass(ConvertFormatPass::make_nhwcd4_converter());
         add_pass<FuseConvBiasNonlinPass>();
+        need_param_fuse = true;
     }
     if (options.transform_nchw88()) {
         add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
+        need_param_fuse = true;
     }
     if (options.transform_nchw44()) {
         add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
+        need_param_fuse = true;
     }
     if (options.transform_nchw32()) {
         add_pass<FuseConvBiasNonlinPass>();
@@ -728,6 +734,7 @@ const GraphOptimizer& GraphOptimizer::apply_optimize_options(
         add_pass(EnableTensorCorePass::make_tensorcore_converter());
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
+        need_param_fuse = true;
     }
     if (options.transform_chwn4()) {
         add_pass<FuseConvBiasNonlinPass>();
@@ -735,16 +742,21 @@ const GraphOptimizer& GraphOptimizer::apply_optimize_options(
         add_pass(EnableCHWN4Pass::make_chwn4_converter());
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
+        need_param_fuse = true;
     }
 
     if (options.fuse_conv_bias_nonlinearity) {
         add_pass<FuseConvBiasNonlinPass>();
+        need_param_fuse = true;
     }
     if (options.fuse_conv_bias_with_z) {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
+        need_param_fuse = true;
     }
-    add_pass<ParamFusePass>();
+    if (need_param_fuse) {
+        add_pass<ParamFusePass>();
+    }
     return *this;
 }
 
