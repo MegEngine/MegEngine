@@ -408,7 +408,6 @@ CollectiveComm::CollectiveComm(
             "CollectiveComm inputs should not contain duplicated input device");
 
     ModeTrait::from_mode(param.mode).add_output_var(this, inp_cn);
-    m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
 
     const char* c_debug = MGB_GETENV("MGE_MM_OPR_DEBUG");
     if (c_debug != nullptr and strcmp(c_debug, "1") == 0) {
@@ -468,6 +467,8 @@ void CollectiveComm::opr_register() {
     m_megray_comm = megray_comm_builder->get_megray_comm(
             hash, m_key, m_nr_devices, m_rank,
             get_megray_backend(m_backend), m_group_client);
+
+    m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
 
     m_init = true;
 }
