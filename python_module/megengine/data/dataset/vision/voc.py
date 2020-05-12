@@ -93,9 +93,7 @@ class PascalVOC(VisionDataset):
             elif k == "boxes_category":
                 anno = self.parse_voc_xml(ET.parse(self.annotations[index]).getroot())
                 boxes_category = [obj["name"] for obj in anno["annotation"]["object"]]
-                boxes_category = [
-                    self.class_names.index(bc) - 1 for bc in boxes_category
-                ]
+                boxes_category = [self.class_names.index(bc) for bc in boxes_category]
                 boxes_category = np.array(boxes_category, dtype=np.int32)
                 target.append(boxes_category)
             elif k == "mask":
