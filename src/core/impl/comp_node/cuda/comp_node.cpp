@@ -659,10 +659,10 @@ CompNode::Impl* CudaCompNode::load_cuda(
     if (!available_node) {
         mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE,
                 "too many CompNode allocated");
-        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE,
-                "device number too large");
         available_node = &sd.node[sd.nr_node ++];
     }
+    mgb_assert(locator.device < sd.MAX_NR_DEVICE,
+            "device number too large");
 
     mgb_assert(!available_node->m_initialized);
     available_node->init(locator, locator_logical);
