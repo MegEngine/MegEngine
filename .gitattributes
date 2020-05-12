@@ -3,3 +3,4 @@
 dnn/src/cuda/conv_bias/int8/kimpl/* binary
 dnn/src/cuda/conv_bias/int8_imma/kimpl/* binary
 dnn/src/cuda/batch_conv_bias/int8/kimpl/* binary
+dnn/src/cuda/sass/prebuilt/map_defs.cpp binary

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "../elemwise/opr_impl.h"
@@ -94,5 +95,5 @@ private:
 
 }  // namespace cuda
 }  // namespace megdnn
-   
+
 // vim: syntax=cpp.doxygen

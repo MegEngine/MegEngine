@@ -66,7 +66,7 @@ void check_conv_bias(
         DType src_dtype, DType filter_dtype, DType bias_dtype, DType dst_dtype,
         Handle* handle, const char* algo = nullptr,
         param::ConvBias::Format format = param::ConvBias::Format::NCHW4,
-        const std::vector<TestArg>& args = {});
+        const std::vector<TestArg>& args = {}, bool fuse_z = false);
 
 #if MEGDNN_WITH_BENCHMARK
 std::vector<conv_bias::TestArg> get_winograd_benchmark_args(

@@ -290,6 +290,26 @@ TEST_F(CUDA, POOLING_FORWARD_CHWN4) {
     }
 }
 
+TEST_F(CUDA, POOLING_FORWARD_INT8_NCHW4) {
+    require_compute_capability(6, 1);
+    using Param = param::Pooling;
+    Checker<Pooling> checker(handle_cuda());
+    Param param;
+    auto i8_min = std::numeric_limits<int8_t>().min();
+    auto i8_max = std::numeric_limits<int8_t>().max();
+    UniformIntRNG int_rng{i8_min, i8_max};
+    checker.set_dtype(0, dtype::QuantizedS8(0.1f));
+    param.format = Param::Format::NCHW4;
+    for (auto mode : {Param::Mode::MAX, Param::Mode::AVERAGE,
+                      Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING}) {
+        param.mode = mode;
+        checker.set_epsilon(1e-3).set_rng(0, &int_rng);
+        checker.set_param(param).exec({{64, 8, 28, 28, 4}, {}});
+        checker.set_param(param).exec({{15, 8, 28, 28, 4}, {}});
+        checker.set_param(param).exec({{30, 8, 28, 28, 4}, {}});
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_POOLING_CHWN4) {
     CUBenchmarker<Pooling> bencher(handle_cuda());

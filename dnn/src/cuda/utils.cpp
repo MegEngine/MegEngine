@@ -82,6 +82,11 @@ void cuda::__throw_cusolver_error__(cusolverStatus_t err, const char* msg) {
     megdnn_throw(s.c_str());
 }
 
+void cuda::__throw_cuda_driver_error__(CUresult err, const char* msg) {
+    auto s = ssprintf("cuda driver error %d occurred; expr: %s", int(err), msg);
+    megdnn_throw(s.c_str());
+}
+
 void cuda::report_error(const char *msg) {
     megdnn_throw(msg);
     MEGDNN_MARK_USED_VAR(msg);
@@ -118,8 +123,30 @@ bool cuda::is_compute_capability_required(int major, int minor) {
            (device_prop.major == major && device_prop.minor >= minor);
 }
 
+bool cuda::is_compute_capability_equalto(int major, int minor) {
+    auto&& device_prop = cuda::current_device_prop();
+    return device_prop.major == major && device_prop.minor == minor;
+}
+
 size_t cuda::max_batch_x_channel_size() {
     return current_device_prop().maxGridSize[2];
+}
+
+const char* cuda::current_device_arch_name() {
+    auto&& device_prop = current_device_prop();
+    int cap = 10 * device_prop.major + device_prop.minor;
+    if (cap >= 50 && cap < 60)
+        return "maxwell";
+    else if (cap >= 60 && cap < 70)
+        return "pascal";
+    else if (cap >= 70 && cap < 75)
+        return "volta";
+    else if (cap >= 75 && cap < 80)
+        return "turing";
+    else if (cap >= 80)
+        return "ampere";
+    megdnn_throw(
+            ssprintf("unsupported cuda compute capability %d", cap).c_str());
 }
 
 // vim: syntax=cpp.doxygen

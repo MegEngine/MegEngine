@@ -57,9 +57,14 @@ cudaDeviceProp current_device_prop();
 //! check compute capability satisfied with given sm version
 bool is_compute_capability_required(int major, int minor);
 
+//! check compute capability equal to the given sm version
+bool is_compute_capability_equalto(int major, int minor);
+
 //! get the CUDNN_MAX_BATCH_X_CHANNEL_SIZE, it's just return the max size of the
 //! third demension
 size_t max_batch_x_channel_size();
+
+const char* current_device_arch_name();
 
 } // namespace cuda
 } // namespace megdnn

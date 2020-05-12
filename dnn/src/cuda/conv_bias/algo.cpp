@@ -236,6 +236,7 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
 }
 #endif
 
+
 ConvBiasForwardImpl::AlgoBase*
 ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(
         cudnnConvolutionFwdAlgo_t algo) {

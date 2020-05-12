@@ -18,10 +18,14 @@
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
 
+#define V1(x) #x
+#define V(x) V1(x)
+
 namespace megdnn {
 namespace test {
-#if MEGDNN_WITH_BENCHMARK
 namespace {
+
+#if MEGDNN_WITH_BENCHMARK
 struct BenchArgs {
     size_t n, ci, hi, wi, co, f, s;
 };
@@ -29,9 +33,16 @@ struct BenchArgs {
 std::vector<BenchArgs> get_resnet50_bench_args(size_t batch = 64) {
     std::vector<BenchArgs> args;
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 256, 1, 1});
+
+    args.emplace_back(BenchArgs{batch, 256, 56, 56, 32, 3, 1});
+    args.emplace_back(BenchArgs{batch, 256, 56, 56, 32, 3, 2});
+    args.emplace_back(BenchArgs{batch, 4, 256, 256, 32, 7, 2});
+ 
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 64, 1, 1});
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 64, 1, 1});
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 64, 3, 1});
+    args.emplace_back(BenchArgs{batch, 64, 56, 56, 64, 3, 2});
+    args.emplace_back(BenchArgs{batch, 256, 56, 56, 64, 3, 2});
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 256, 1, 1});
 
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 512, 1, 2});
@@ -101,13 +112,12 @@ void benchmark_target_algo(
                 conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo));
     }
 
-#define V1(x) #x
-#define V(x) V1(x)
 #define CUDNN_VERSION_STRING \
     "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL)
     benchmarker_cudnn.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_"
+                    "DEFAULT:CUDNN:ConvBiasActivation:CUDNN_CONVOLUTION_FWD_"
+                    "ALGO_IMPLICIT_PRECOMP_"
                     "GEMM" CUDNN_VERSION_STRING));
 
     benchmarker.set_dtype(0, src_dtype)
@@ -141,6 +151,7 @@ void benchmark_target_algo(
                                        {},
                                        {}}) /
                     RUNS;
+            param.nonlineMode = Param::NonlineMode::IDENTITY;
             benchmarker_cudnn.set_param(param);
             auto time_in_ms_cudnn =
                     benchmarker_cudnn.execs(
@@ -148,6 +159,47 @@ void benchmark_target_algo(
                              {arg.co, arg.ci / 4, arg.f, arg.f, 4},
                              {1, arg.co / 4, 1, 1, 4},
                              {},
+                             {}}) /
+                    RUNS;
+            float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f *
+                        arg.f / (1e12);
+            TensorShape src{arg.n, arg.ci, arg.hi, arg.wi},
+                    filter{arg.co, arg.ci, arg.f, arg.f};
+            printf("src=%s, filter=%s, time(algo=%s)=%.2f %.2fTops, "
+                   "time(cudnn)=%.2f %.2fTops, "
+                   "perf(algo=%s)/perf(cudnn)=%.2f\n",
+                   src.to_string().c_str(), filter.to_string().c_str(), algo,
+                   time_in_ms, (flo / (time_in_ms * 1e-3)), time_in_ms_cudnn,
+                   (flo / (time_in_ms_cudnn * 1e-3)), algo,
+                   time_in_ms_cudnn / time_in_ms);
+        }
+        printf("bench with z tensor\n");
+        for (auto&& arg : args) {
+            Param param;
+            param.pad_h = param.pad_w = arg.f / 2;
+            param.stride_h = param.stride_w = arg.s;
+            param.format = Format::NCHW4;
+
+            size_t ho = infer_conv_shape(arg.hi, arg.f, arg.s, arg.f / 2);
+            size_t wo = infer_conv_shape(arg.wi, arg.f, arg.s, arg.f / 2);
+
+            benchmarker.set_param(param);
+            auto time_in_ms =
+                    benchmarker.execs({{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
+                                       {arg.co, arg.ci / 4, arg.f, arg.f, 4},
+                                       {1, arg.co / 4, 1, 1, 4},
+                                       {arg.n, arg.co / 4, ho, wo, 4},
+                                       {}}) /
+                    RUNS;
+            param.format = Format::NCHW4;
+            param.nonlineMode = Param::NonlineMode::IDENTITY;
+            benchmarker_cudnn.set_param(param);
+            auto time_in_ms_cudnn =
+                    benchmarker_cudnn.execs(
+                            {{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
+                             {arg.co, arg.ci / 4, arg.f, arg.f, 4},
+                             {1, arg.co / 4, 1, 1, 4},
+                             {arg.n, arg.co / 4, ho, wo, 4},
                              {}}) /
                     RUNS;
             float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f *
@@ -222,6 +274,7 @@ void benchmark_target_algo(
                     RUNS;
             param.format = Format::NCHW4;
             benchmarker_cudnn.set_param(param);
+            param.nonlineMode = Param::NonlineMode::IDENTITY;
             auto time_in_ms_cudnn =
                     benchmarker_cudnn.execs(
                             {{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
@@ -242,7 +295,6 @@ void benchmark_target_algo(
                    (flo / (time_in_ms_cudnn * 1e-3)), algo,
                    time_in_ms_cudnn / time_in_ms);
         }
- 
     }
 }
 
@@ -265,15 +317,14 @@ void benchmark_target_algo_with_cudnn_tsc(
         benchmarker.set_before_exec_callback(
                 conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo));
     } else {
-        benchmarker.set_proxy(proxy);    
+        benchmarker.set_proxy(proxy);
     }
 
     benchmarker_cudnn.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_"
+                    "DEFAULT:CUDNN:ConvBiasActivation:CUDNN_CONVOLUTION_FWD_"
+                    "ALGO_IMPLICIT_PRECOMP_"
                     "GEMM" CUDNN_VERSION_STRING));
-#undef V1
-#undef V
 #undef CUDNN_VERSION_STRING
 
     benchmarker.set_dtype(0, src_dtype)
@@ -446,12 +497,10 @@ void benchmark_target_algo_with_cudnn_tsc(
                    (flo / (time_in_ms_cudnn * 1e-3)), algo,
                    time_in_ms_cudnn / time_in_ms);
         }
- 
     }
 }
-
-}  // namespace
 #endif
+}  // namespace
 
 TEST_F(CUDA, CONV_BIAS_INT8_NCHW4_1x1) {
     require_compute_capability(6, 1);
@@ -1116,6 +1165,7 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
             conv_bias::get_int8_chwn4_args_small_batch(1));
 }
 
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_CHWN4) {
     require_compute_capability(6, 1);
@@ -1182,9 +1232,13 @@ TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_CHWN4_SMALL_CHANNEL) {
             dtype::QuantizedS8{1.0f}, "INT8_CHWN4_DOTPROD_IMPLICIT_GEMM",
             param::ConvBias::Format::CHWN4);
 }
+
 #endif
 
 }  // namespace test
 }  // namespace megdnn
+
+#undef V1
+#undef V
 
 // vim: syntax=cpp.doxygen

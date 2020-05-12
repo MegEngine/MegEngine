@@ -53,6 +53,14 @@
         }                                                        \
     } while (0)
 
+#define cucheck(_x)                                                 \
+    do {                                                            \
+        CUresult _err = (_x);                                       \
+        if (_err != CUDA_SUCCESS) {                                 \
+            ::megdnn::cuda::__throw_cuda_driver_error__(_err, #_x); \
+        }                                                           \
+    } while (0)
+
 #define after_kernel_launch()           \
     do {                                \
         cuda_check(cudaGetLastError()); \
@@ -84,6 +92,7 @@ MEGDNN_NORETURN void __throw_cublas_error__(cublasStatus_t err,
                                             const char* msg);
 MEGDNN_NORETURN void __throw_cusolver_error__(cusolverStatus_t err,
                                               const char* msg);
+MEGDNN_NORETURN void __throw_cuda_driver_error__(CUresult err, const char* msg);
 MEGDNN_NORETURN void report_error(const char* msg);
 
 template <typename T, size_t N>

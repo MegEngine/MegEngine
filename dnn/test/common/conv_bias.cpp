@@ -493,6 +493,7 @@ std::vector<TestArg> get_int8_nchw44_args(size_t kernel_size, size_t pack_size,
     return args;
 }
 
+
 std::vector<TestArg> get_int8_nchw4_args_check_bounds(size_t kernel_size) {
     std::vector<TestArg> args;
     param::ConvBias cur_param;
@@ -527,6 +528,7 @@ std::vector<TestArg> get_int8_nchw4_args_check_bounds(size_t kernel_size) {
 
     return args;
 }
+
 
 std::vector<TestArg> get_int8_nchw4_args_small_batch(size_t kernel_size) {
     std::vector<TestArg> args;
@@ -728,7 +730,7 @@ std::vector<TestArg> get_int8_chwn4_tensorcore_args(size_t kernel_size) {
 void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
                      DType dst_dtype, Handle* handle, const char* algo,
                      param::ConvBias::Format format,
-                     const std::vector<TestArg>& args) {
+                     const std::vector<TestArg>& args, bool fuse_z) {
     megdnn_assert(src_dtype.enumv() == filter_dtype.enumv());
     Checker<ConvBiasForward> checker(handle);
     if (algo) {
@@ -758,36 +760,72 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
         bias_rng = std::make_unique<NormalRNG>(2.f);
     }
 
+    using Param = param::ConvBias;
+    using Format = Param::Format;
+    auto get_z_shape = [&fuse_z, &format](TestArg arg) -> TensorShape {
+        TensorShape z{};
+        if (fuse_z) {
+            size_t hi, wi, sh, sw, ph, pw, fh, fw;
+            z = arg.src;
+            size_t spatial_idx = 2;
+            if (format == Format::NCHW4) {
+                hi = arg.src[2];
+                wi = arg.src[3];
+                fh = arg.filter[2];
+                fw = arg.filter[3];
+                z[1] = arg.filter[0] / 4;
+            } else {
+                megdnn_assert(format == Format::CHWN4);
+                hi = arg.src[1];
+                wi = arg.src[2];
+                fh = arg.filter[1];
+                fw = arg.filter[2];
+                z[0] = arg.filter[3] / 4;
+                spatial_idx = 1;
+            }
+            sh = arg.param.stride_h;
+            sw = arg.param.stride_w;
+            ph = arg.param.pad_h;
+            pw = arg.param.pad_w;
+            size_t ho = infer_conv_shape(hi, fh, sh, ph);
+            size_t wo = infer_conv_shape(wi, fw, sw, pw);
+            z[spatial_idx] = ho;
+            z[spatial_idx + 1] = wo;
+        }
+        return z;
+    };
     megdnn_assert(rng != nullptr && bias_rng != nullptr);
-    checker.set_rng(0, rng.get())
+    checker.set_rng(0,  rng.get())
             .set_rng(1, rng.get())
             .set_rng(2, rng.get())
             .set_rng(3, rng.get());
     if (args.empty()) {
         std::vector<TestArg> default_args;
-        using Param = param::ConvBias;
-        using Format = Param::Format;
         if (format == Format::NCHW4) {
             default_args = get_int8_nchw4_args(3);
         } else if (format == Format::CHWN4) {
             default_args = get_int8_chwn4_args(3);
         }
         for (auto&& arg : default_args) {
+            auto z = get_z_shape(arg);
             checker.set_dtype(0, src_dtype)
                     .set_dtype(1, filter_dtype)
                     .set_dtype(2, bias_dtype)
+                    .set_dtype(3, dst_dtype)
                     .set_dtype(4, dst_dtype)
                     .set_param(arg.param)
-                    .execs({arg.src, arg.filter, arg.bias, {}, {}});
+                    .execs({arg.src, arg.filter, arg.bias, z, {}});
         }
     } else {
         for (auto&& arg : args) {
+            auto z = get_z_shape(arg);
             checker.set_dtype(0, src_dtype)
                     .set_dtype(1, filter_dtype)
                     .set_dtype(2, bias_dtype)
+                    .set_dtype(3, dst_dtype)
                     .set_dtype(4, dst_dtype)
                     .set_param(arg.param)
-                    .execs({arg.src, arg.filter, arg.bias, {}, {}});
+                    .execs({arg.src, arg.filter, arg.bias, z, {}});
         }
     }
 }

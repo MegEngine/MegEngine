@@ -10,7 +10,7 @@
  */
 #include "src/cuda/pooling/opr_impl.h"
 
-#include "./pooling2d_int8_cdiv4hwn4.cuh"
+#include "./pooling2d_int8.cuh"
 #include "src/cuda/utils.h"
 
 namespace megdnn {
@@ -67,7 +67,24 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_out sdst,
             kern_param.window_h = window_h, kern_param.window_w = window_w,
             kern_param.sh = sh, kern_param.sw = sw;
             auto&& stream = cuda_stream(handle());
-            return pooling2d::_do_pooling2d_int8_cdiv4hwn4(
+            return pooling2d::do_pooling2d_int8_cdiv4hwn4(
+                    src.compatible_ptr<int8_t>(), dst.compatible_ptr<int8_t>(),
+                    kern_param, stream, static_cast<uint32_t>(param().mode));
+        } else if (param().format == Format::NCHW4) {
+            pooling2d::Param kern_param;
+            size_t n = src.layout[0], hi = src.layout[2], wi = src.layout[3],
+                   c = src.layout[1], ho = dst.layout[2], wo = dst.layout[3];
+            c = c * 4;
+            size_t ph = param().pad_h, pw = param().pad_w;
+            size_t window_h = param().window_h, window_w = param().window_w;
+            size_t sh = param().stride_h, sw = param().stride_w;
+            kern_param.n = n, kern_param.c = c, kern_param.hi = hi,
+            kern_param.wi = wi, kern_param.ho = ho, kern_param.wo = wo,
+            kern_param.ph = ph, kern_param.pw = pw,
+            kern_param.window_h = window_h, kern_param.window_w = window_w,
+            kern_param.sh = sh, kern_param.sw = sw;
+            auto&& stream = cuda_stream(handle());
+            return pooling2d::do_pooling2d_int8_ncdiv4hw4(
                     src.compatible_ptr<int8_t>(), dst.compatible_ptr<int8_t>(),
                     kern_param, stream, static_cast<uint32_t>(param().mode));
         }

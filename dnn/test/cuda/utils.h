@@ -26,13 +26,28 @@
 namespace megdnn {
 namespace test {
 bool check_compute_capability(int major, int minor);
+bool check_compute_capability_eq(int major, int minor);
 }  // namespace test
 }  // namespace megdnn
 
-#define require_compute_capability(x, y)                       \
-    do {                                                       \
-        if (!megdnn::test::check_compute_capability((x), (y))) \
-            return;                                            \
+#define require_compute_capability(x, y)                               \
+    do {                                                               \
+        if (!megdnn::test::check_compute_capability((x), (y))) {       \
+            printf("skip testcase due to cuda compute capability not " \
+                   "require.(expected:%d.%d)",                         \
+                   (x), (y));                                          \
+            return;                                                    \
+        }                                                              \
+    } while (0)
+
+#define require_compute_capability_eq(x, y)                            \
+    do {                                                               \
+        if (!megdnn::test::check_compute_capability_eq((x), (y))) {    \
+            printf("skip testcase due to cuda compute capability not " \
+                   "equal to %d.%d",                                   \
+                   (x), (y));                                          \
+            return;                                                    \
+        }                                                              \
     } while (0)
 
 // vim: syntax=cpp.doxygen

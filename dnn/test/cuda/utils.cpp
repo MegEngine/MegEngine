@@ -20,6 +20,14 @@ bool check_compute_capability(int major, int minor) {
     cuda_check(cudaGetDeviceProperties(&prop, dev));
     return prop.major > major || (prop.major == major && prop.minor >= minor);
 }
+
+bool check_compute_capability_eq(int major, int minor) {
+    int dev;
+    cuda_check(cudaGetDevice(&dev));
+    cudaDeviceProp prop;
+    cuda_check(cudaGetDeviceProperties(&prop, dev));
+    return (prop.major == major && prop.minor == minor);
+}
 }  // namespace test
 }  // namespace megdnn
 

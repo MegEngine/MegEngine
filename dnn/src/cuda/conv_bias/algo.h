@@ -14,11 +14,11 @@
 #include "megdnn/oprs.h"
 
 #include "src/common/utils.h"
+#include "src/cuda/conv_bias/conv_bias_int8.cuh"
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/conv_bias/opr_impl.h"
-#include "src/cuda/handle.h"
-#include "src/cuda/conv_bias/conv_bias_int8.cuh"
 #include "src/cuda/convolution_helper/parameter.cuh"
+#include "src/cuda/handle.h"
 
 #include <cuda.h>
 #include <memory>
@@ -520,6 +520,7 @@ private:
     AlgoBase* m_impl;
     std::string m_name;
 };
+
 
 class ConvBiasForwardImpl::AlgoPack {
     AlgoPack(const AlgoPack&) = delete;
