@@ -500,7 +500,8 @@ class QATModule(Module):
         self, target: Tensor, fq: "FakeQuantize", obs: "Observer"
     ):
         oup = self.apply_observer(target, obs)
-        return fq(oup, obs.scale, obs.zero_point)
+        scale, zero_point = obs.get_qparams()
+        return fq(oup, scale, zero_point)
 
     def set_qat_mode(self, mode: QATMode):
         r"""
