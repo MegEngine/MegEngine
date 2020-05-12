@@ -222,6 +222,7 @@ public:
         server->run();
         auto ins = m_addr2server.emplace(
                 full_srv_addr, ServerInfo{std::move(server)});
+        mgb_assert(ins.second);
 
         return port;
     }
