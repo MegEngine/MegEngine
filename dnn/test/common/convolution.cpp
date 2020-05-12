@@ -450,7 +450,8 @@ std::vector<TestArg> convolution::get_dilated_args() {
     return args;
 }
 
-void convolution::test_conv_config_combinations(Handle* handle, bool test_int8,
+void convolution::test_conv_config_combinations(int k_size,
+                                                Handle* handle, bool test_int8,
                                                 bool test_backward,
                                                 bool is_cuda,
                                                 ConvEPSGetter eps_getter,
@@ -484,7 +485,7 @@ void convolution::test_conv_config_combinations(Handle* handle, bool test_int8,
     CONF_BOOL(format)
     // dtype: 0: f32; 1: f16; 2: i8x8x16 3: i8x8x32
     for (int dtype = 0; dtype < (test_int8 ? 4 : 2); ++ dtype)
-    for (int ksize: {1, 2, 3, 5}) {
+    for (int ksize: {1, k_size}) {
         // When is_cuda is on, test cases where format is NHWC and
         // data type is not INT8x8x32 are disabled.
         if (is_cuda) {

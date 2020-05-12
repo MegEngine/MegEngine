@@ -340,8 +340,12 @@ TEST_F(CUDA, CONV_CONFIG_COMBINATIONS) {
             return 0.3;
         return 1e-3;
     };
-    convolution::test_conv_config_combinations(handle_cuda(), false, true, true,
-            eps_getter, true);
+    convolution::test_conv_config_combinations(2, handle_cuda(), false, true,
+                                               true, eps_getter, true);
+    convolution::test_conv_config_combinations(3, handle_cuda(), false, true,
+                                               true, eps_getter, true);
+    convolution::test_conv_config_combinations(5, handle_cuda(), false, true,
+                                               true, eps_getter, true);
 }
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_1) {

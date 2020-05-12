@@ -57,31 +57,44 @@ TEST_F(ARM_COMMON, CONV_BIAS_MATMUL) {
     }
 }
 
-TEST_F(ARM_COMMON, CONV_BIAS_MATMUL_QU8) {
-    using namespace conv_bias;
-    std::vector<TestArg> args = get_quantized_args();
-    Checker<ConvBiasForward> checker(handle());
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>("QU8MATMUL"));
-
-    UniformIntRNG rng{0, 127};
-    for (auto&& arg : args) {
-        if (arg.bias.ndim == 4 && arg.bias[2] != 1 && arg.bias[3] != 1)
-            continue;
-        checker.set_dtype(0, dtype::Quantized8Asymm(2.5f,
-                                                    static_cast<uint8_t>(127)))
-                .set_dtype(1, dtype::Quantized8Asymm(2.7f,
-                                                     static_cast<uint8_t>(126)))
-                .set_dtype(2, dtype::QuantizedS32(6.75f))
-                .set_dtype(4, dtype::Quantized8Asymm(60.25f,
-                                                     static_cast<uint8_t>(125)))
-                .set_rng(0, &rng)
-                .set_rng(1, &rng)
-                .set_rng(2, &rng)
-                .set_param(arg.param)
-                .execs({arg.src, arg.filter, arg.bias, {}, {}});
+#define CONV_BIAS_MATMUL_QU8_MODE(MODE)                                   \
+    using namespace conv_bias;                                            \
+    std::vector<TestArg> args = get_quantized_args_with_nlmode(MODE);     \
+    Checker<ConvBiasForward> checker(handle());                           \
+    checker.set_before_exec_callback(                                     \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("QU8MATMUL"));       \
+    UniformIntRNG rng{0, 127};                                            \
+    for (auto&& arg : args) {                                             \
+        if (arg.bias.ndim == 4 && arg.bias[2] != 1 && arg.bias[3] != 1)   \
+            continue;                                                     \
+        checker.set_dtype(0, dtype::Quantized8Asymm(                      \
+                                     2.5f, static_cast<uint8_t>(127)))    \
+                .set_dtype(1, dtype::Quantized8Asymm(                     \
+                                      2.7f, static_cast<uint8_t>(126)))   \
+                .set_dtype(2, dtype::QuantizedS32(6.75f))                 \
+                .set_dtype(4, dtype::Quantized8Asymm(                     \
+                                      60.25f, static_cast<uint8_t>(125))) \
+                .set_rng(0, &rng)                                         \
+                .set_rng(1, &rng)                                         \
+                .set_rng(2, &rng)                                         \
+                .set_param(arg.param)                                     \
+                .execs({arg.src, arg.filter, arg.bias, {}, {}});          \
     }
-}
+
+#define MODE_STR(mode) param::ConvBias::NonlineMode::mode
+
+#define CB_TEST(MODE)                                 \
+    TEST_F(ARM_COMMON, CONV_BIAS_MATMUL_QU8_##MODE) { \
+        CONV_BIAS_MATMUL_QU8_MODE(MODE_STR(MODE));    \
+    }
+
+CB_TEST(IDENTITY);
+CB_TEST(RELU);
+CB_TEST(H_SWISH);
+
+#undef MODE_STR
+#undef CB_TEST
+#undef CONV_BIAS_MATMUL_QU8_MODE
 
 #if MEGDNN_WITH_BENCHMARK
 

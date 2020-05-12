@@ -55,7 +55,8 @@ using ConvEPSGetter =
 //! check for various conv configurations (dilation, group, stride, padding)
 //! and run all usable algorithms
 void test_conv_config_combinations(
-        Handle* handle, bool test_int8, bool test_backward, bool is_cuda,
+        int k_size, Handle* handle, bool test_int8, bool test_backward,
+        bool is_cuda,
         ConvEPSGetter conv_eps_getter = [](bool f16, int, const char*)
                 -> float { return f16 ? 1e-1 : 1e-3; },
         bool use_io16xc32 = false);

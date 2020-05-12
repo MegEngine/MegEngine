@@ -26,19 +26,43 @@ Convolution::Param gconv_param(Convolution::Param p) {
 
 } // anonymous namespace
 
-TEST_F(CPU, CONVOLUTION)
-{
+#define CONVOLUTION_ARG_DIV_SIZE 230
+TEST_F(CPU, CONVOLUTION_0) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
+    auto loop_size = args.size();
+    ASSERT_GT(loop_size, CONVOLUTION_ARG_DIV_SIZE);
     Checker<Convolution> checker(handle());
-    for (auto &&arg: args) {
-        checker.set_param(arg.param).execs({arg.src, arg.filter, {}});
+    for (unsigned int i = 0; i < CONVOLUTION_ARG_DIV_SIZE; i++) {
+        checker.set_param(args[i].param)
+                .execs({args[i].src, args[i].filter, {}});
     }
 }
 
-TEST_F(CPU, CONV_CONFIG_COMBINATIONS) {
-    convolution::test_conv_config_combinations(handle(), true, false, false);
+TEST_F(CPU, CONVOLUTION_1) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_args();
+    auto loop_size = args.size();
+    ASSERT_GT(loop_size, CONVOLUTION_ARG_DIV_SIZE);
+    Checker<Convolution> checker(handle());
+    for (unsigned int i = CONVOLUTION_ARG_DIV_SIZE; i < loop_size; i++) {
+        checker.set_param(args[i].param)
+                .execs({args[i].src, args[i].filter, {}});
+    }
 }
+#undef CONVOLUTION_ARG_DIV_SIZE
+
+#define CB_CONV_CONFIG_COMBINATIONS(KSIZE)                                \
+    TEST_F(CPU, CONV_CONFIG_COMBINATIONS_KSIZE_1_KSIZE_##KSIZE) {         \
+        convolution::test_conv_config_combinations(KSIZE, handle(), true, \
+                                                   false, false);         \
+    }
+
+// FIXME: only test ksize=1, will crash on IOS, so we tmp test ksize_1##other_ksize
+CB_CONV_CONFIG_COMBINATIONS(2);
+CB_CONV_CONFIG_COMBINATIONS(3);
+CB_CONV_CONFIG_COMBINATIONS(5);
+#undef CB_CONV_CONFIG_COMBINATIONS
 
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CPU, BENCHMARK_CONVOLUTION)

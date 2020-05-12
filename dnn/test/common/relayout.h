@@ -23,6 +23,8 @@ namespace relayout {
 #define FIRST_RELAYOUT_CASE cv
 
 #define FOREACH_RELAYOUT_NONFIRST_CASE(cb) \
+    cb(cv_ch3) \
+    cb(cv_ch5) \
     cb(broadcast) \
     cb(negative) \
     cb(transpose) \

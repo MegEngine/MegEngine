@@ -404,71 +404,179 @@ void run_bgemm_trans_inp_test_case(bool trans_a, bool trans_b) {
 
 }  // anonymous namespace
 
-TEST(TestOprBlas, MatrixMul) {
+TEST(TestOprBlas, MatrixMul_NN) {
     run_sgemm_test(false, false);
+}
+
+TEST(TestOprBlas, MatrixMul_NT) {
     run_sgemm_test(false, true);
+}
+
+TEST(TestOprBlas, MatrixMul_TN) {
     run_sgemm_test(true, false);
+}
+
+TEST(TestOprBlas, MatrixMul_TT) {
     run_sgemm_test(true, true);
 }
 
-TEST(TestOprBlas, BatchedMatrixMulFp32) {
+TEST(TestOprBlas, BatchedMatrixMulFp32_NN) {
     run_batched_sgemm_test(false, false);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulFp32_NT) {
     run_batched_sgemm_test(false, true);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulFp32_TN) {
     run_batched_sgemm_test(true, false);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulFp32_TT) {
     run_batched_sgemm_test(true, true);
 }
 
-TEST(TestOprBlas, BatchedMatrixMulFp16) {
+TEST(TestOprBlas, BatchedMatrixMulFp16_NN) {
     run_batched_hgemm_test(false, false);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulFp16_NT) {
     run_batched_hgemm_test(false, true);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulFp16_TN) {
     run_batched_hgemm_test(true, false);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulFp16_TT) {
     run_batched_hgemm_test(true, true);
 }
 
-TEST(TestOprBlas, BatchedMatrixMulInt8) {
+TEST(TestOprBlas, BatchedMatrixMulInt8_NN) {
     if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
         !check_compute_capability(6, 1)) {
         return;
     }
     run_batched_igemm_test(false, false);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulInt8_NT) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_batched_igemm_test(false, true);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulInt8_TN) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_batched_igemm_test(true, false);
+}
+
+TEST(TestOprBlas, BatchedMatrixMulInt8_TT) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_batched_igemm_test(true, true);
 }
 
-TEST(TestOprBlas, TransBatchedMatrixMulFp32) {
+TEST(TestOprBlas, TransBatchedMatrixMulFp32_NN) {
     run_bgemm_trans_inp_test_case<float, float>(false, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulFp32_NT) {
     run_bgemm_trans_inp_test_case<float, float>(false, true);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulFp32_TN) {
     run_bgemm_trans_inp_test_case<float, float>(true, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulFp32_TT) {
     run_bgemm_trans_inp_test_case<float, float>(true, true);
 }
 
-TEST(TestOprBlas, TransBatchedMatrixMulInt8) {
+TEST(TestOprBlas, TransBatchedMatrixMulInt8_NN) {
     if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
         !check_compute_capability(6, 1)) {
         return;
     }
     run_bgemm_trans_inp_test_case<int8_t, int32_t>(false, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulInt8_NT) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_bgemm_trans_inp_test_case<int8_t, int32_t>(false, true);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulInt8_TN) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_bgemm_trans_inp_test_case<int8_t, int32_t>(true, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulInt8_TT) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_bgemm_trans_inp_test_case<int8_t, int32_t>(true, true);
 }
 
-TEST(TestOprBlas, TransBatchedMatrixMulFp16) {
+TEST(TestOprBlas, TransBatchedMatrixMulFp16_NN) {
     run_bgemm_trans_inp_test_case<dt_float16, dt_float16>(false, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulFp16_NT) {
     run_bgemm_trans_inp_test_case<dt_float16, dt_float16>(false, true);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulFp16_TN) {
     run_bgemm_trans_inp_test_case<dt_float16, dt_float16>(true, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulFp16_TT) {
     run_bgemm_trans_inp_test_case<dt_float16, dt_float16>(true, true);
 }
 
-TEST(TestOprBlas, TransBatchedMatrixMulQS8) {
+TEST(TestOprBlas, TransBatchedMatrixMulQS8_NN) {
     if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
         !check_compute_capability(6, 1)) {
         return;
     }
     run_bgemm_trans_inp_test_case<dt_qint8, dt_qint32>(false, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulQS8_NT) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_bgemm_trans_inp_test_case<dt_qint8, dt_qint32>(false, true);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulQS8_TN) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_bgemm_trans_inp_test_case<dt_qint8, dt_qint32>(true, false);
+}
+
+TEST(TestOprBlas, TransBatchedMatrixMulQS8_TT) {
+    if (CompNode::load("xpux").device_type() == CompNode::DeviceType::CUDA &&
+        !check_compute_capability(6, 1)) {
+        return;
+    }
     run_bgemm_trans_inp_test_case<dt_qint8, dt_qint32>(true, true);
 }
 

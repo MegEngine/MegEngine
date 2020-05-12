@@ -39,35 +39,44 @@ namespace megdnn {
 namespace test {
 namespace relayout {
 
-#define DEF_TEST(name) \
-template<> \
-void run_test<name>(Handle *handle)
-
-DEF_TEST(cv) {
+void run_test_cv(Handle* handle, size_t CH) {
     std::vector<TestArg> args;
 
     for (size_t M = 124; M <= 130; ++M) {
         for (size_t N = 124; N <= 130; ++N) {
-            for (size_t CH : {1, 3, 5}) {
-                args.push_back(
+            args.push_back(
                     generate_transpose_args(1, M, N, CH, dtype::Uint8()));
-                args.push_back(
+            args.push_back(
                     generate_transpose_args(1, M, N, CH, dtype::Int32()));
-                args.push_back(
+            args.push_back(
                     generate_transpose_args(1, M, N, CH, dtype::Float32()));
-                args.push_back(
+            args.push_back(
                     generate_transpose_args(3, M, N, CH, dtype::Float32()));
-            }
         }
     }
 
     Checker<Relayout> checker(handle);
 
-    for (auto &&arg : args) {
+    for (auto&& arg : args) {
         checker.execl({arg.src, arg.dst});
     }
 }
 
+#define DEF_TEST(name) \
+template<> \
+void run_test<name>(Handle *handle)
+
+DEF_TEST(cv) {
+    run_test_cv(handle, 1);
+}
+
+DEF_TEST(cv_ch3) {
+    run_test_cv(handle, 3);
+}
+
+DEF_TEST(cv_ch5) {
+    run_test_cv(handle, 5);
+}
 
 DEF_TEST(broadcast) {
     std::vector<TestArg> args;
