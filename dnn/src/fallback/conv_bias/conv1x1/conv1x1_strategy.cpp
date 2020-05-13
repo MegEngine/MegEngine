@@ -22,6 +22,20 @@ namespace conv1x1 {
 
 namespace {
 
+size_t get_format_pack_size(param::ConvBias::Format format) {
+    switch(format){
+        case param::ConvBias::Format::NCHW44:
+        case param::ConvBias::Format::NCHW4:
+            return 4_z;
+        case param::ConvBias::Format::NCHW88:
+            return 8_z;
+        case param::ConvBias::Format::NCHW:
+            return 1_z;
+        default:
+            megdnn_throw("unknow pack size of the format");
+    }
+}
+
 struct StrategyHashParam {
     ConvBiasImpl::NCBKernSizeParam param;
     param::ConvBias::Format format;
@@ -71,7 +85,7 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
         const ConvBiasImpl::NCBKernSizeParam& param,
         MatrixMulImpl::AlgoBase::PackMode pack_mode,
         param::ConvBias::Format format) {
-    size_t pack_size = format == param::ConvBias::Format::NCHW ? 1 : 4;
+    size_t pack_size = get_format_pack_size(format);
 #define cb1(_packmode, _dt, _post_ctype, _postprocess_mode, _midout_tag)       \
     MIDOUT_BEGIN(megdnn_fallback_conv1x1_factory_strategy,                     \
                  midout_iv(_midout_tag)) {                                     \

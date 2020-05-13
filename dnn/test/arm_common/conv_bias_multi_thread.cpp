@@ -1297,6 +1297,32 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
 #endif
 }
 
+#if MEGDNN_AARCH64
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({1}, 1, true, false, false);
+    check_conv_bias(args, handle(), "CONV1x1:AARCH64_F32_MK4_K8X12X1:24");
+}
+#endif
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_NO_PACK_F32) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({1}, 1, true, false, false);
+    std::vector<conv_bias::TestArg> args_of_4;
+    for (auto&& arg : args) {
+        if (arg.src.shape[2] * arg.src.shape[3] % 4 == 0) {
+            args_of_4.push_back(arg);
+        }
+    }
+#if MEGDNN_AARCH64
+    check_conv_bias(args_of_4, handle(), "CONV1x1:AARCH64_F32_MK4_4x16:24");
+#elif MEGDNN_ARMV7
+    check_conv_bias(args_of_4, handle(), "CONV1x1:ARMV7_F32_MK4_4x8:48");
+#endif
+}
+
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F16) {
     using namespace conv_bias;

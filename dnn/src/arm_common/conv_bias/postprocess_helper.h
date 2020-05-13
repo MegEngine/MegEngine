@@ -49,6 +49,14 @@ namespace {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,   \
                     dst_type, N, OC, OH* OW);
 
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW44(_op)                           \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>,                           \
+                                       megdnn::arm_common::VEC_BCAST101x4>:: \
+            run(static_cast<ctype*>(conv_dst_ptr),                           \
+                reinterpret_cast<const ctype*>(bias_ptr),                    \
+                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,     \
+                dst_type, N, OC, OH* OW, pack_oc_size);
+
 #define FOR_NONLINEAR_BINARY(_op)                                            \
     megdnn::arm_common::                                                     \
             OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run(    \
@@ -57,20 +65,26 @@ namespace {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
                     dst_type, N* OC* OH* OW);
 
-#define FOR_BIAS(_mode)                                        \
-    switch (_mode) {                                           \
-        case megdnn::BiasMode::NO_BIAS:                        \
-            FOR_NONLINEAR_NOBIAS(FOR_NONLINEAR_UNARY)          \
-            break;                                             \
-        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:         \
-            FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST)      \
-            break;                                             \
-        case megdnn::BiasMode::BIAS:                           \
-            FOR_NONLINEAR(FOR_NONLINEAR_BINARY)                \
-            break;                                             \
-        default:                                               \
-            megdnn_throw("no quantized unsupported biasmode"); \
-            break;                                             \
+#define FOR_BIAS(_mode)                                               \
+    switch (_mode) {                                                  \
+        case megdnn::BiasMode::NO_BIAS:                               \
+            FOR_NONLINEAR_NOBIAS(FOR_NONLINEAR_UNARY)                 \
+            break;                                                    \
+        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:                \
+            if (pack_oc_size == 1) {                                  \
+                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
+            } else {                                                  \
+                megdnn_assert(pack_oc_size == 4,                      \
+                              "Only support nchw44 in ARM");          \
+                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44); \
+            }                                                         \
+            break;                                                    \
+        case megdnn::BiasMode::BIAS:                                  \
+            FOR_NONLINEAR(FOR_NONLINEAR_BINARY)                       \
+            break;                                                    \
+        default:                                                      \
+            megdnn_throw("no quantized unsupported biasmode");        \
+            break;                                                    \
     }
 
 #define FOR_NONLINEAR(_caller)                                       \
@@ -129,6 +143,7 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
 
 #undef FOR_NONLINEAR_UNARY
 #undef FOR_NONLINEAR_BINARY_BROADCAST
+#undef FOR_NONLINEAR_BINARY_BROADCAST_NCHW44
 #undef FOR_NONLINEAR_BINARY
 #undef FOR_NONLINEAR_NOBIAS
 #undef FOR_NONLINEAR
@@ -187,6 +202,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
             if (pack_oc_size == 1) {                                  \
                 FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
             } else {                                                  \
+                megdnn_assert(pack_oc_size == 4,                      \
+                              "Only support nchw44 in ARM");          \
                 FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44); \
             }                                                         \
             break;                                                    \

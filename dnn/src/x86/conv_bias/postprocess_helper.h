@@ -126,6 +126,8 @@ struct PostProcess {
                     DType bias_type, DType dst_type, size_t N, size_t OC,
                     size_t OH, size_t OW, size_t pack_oc_size = 1) {
         MEGDNN_MARK_USED_VAR(pack_oc_size);
+        megdnn_assert(pack_oc_size == 1,
+                      "PostProcess only support nchw in x86");
         megdnn::param::Elemwise::Mode elem_mode =
                 megdnn::param::Elemwise::Mode::ADD;
         if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
@@ -145,38 +147,6 @@ struct PostProcess {
                 DEFAULT_CASE;
             }
         }
-        FOR_BIAS(bias_mode);
-    }
-};
-
-template <typename ctype, typename dtype>
-struct PostProcess<ctype, dtype, megdnn::PostprocessMode::FLOAT> {
-    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
-                    megdnn::ConvBiasForward::BiasMode bias_mode,
-                    megdnn::param::ConvBias::NonlineMode nonlineMode,
-                    DType bias_type, DType dst_type, size_t N, size_t OC,
-                    size_t OH, size_t OW, size_t pack_oc_size=1) {
-        MEGDNN_MARK_USED_VAR(pack_oc_size);
-        megdnn::param::Elemwise::Mode elem_mode =
-                megdnn::param::Elemwise::Mode::ADD;
-        if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
-            switch (nonlineMode) {
-                BIAS_CASE(RELU);
-                BIAS_CASE(SIGMOID);
-                BIAS_CASE(H_SWISH);
-                IDENTITY_CASE(IDENTITY);
-                DEFAULT_CASE;
-            }
-        } else {
-            switch (nonlineMode) {
-                NOBIAS_CASE(RELU);
-                NOBIAS_CASE(SIGMOID);
-                NOBIAS_CASE(H_SWISH);
-                IDENTITY_CASE(IDENTITY);
-                DEFAULT_CASE;
-            }
-        }
-
         FOR_BIAS(bias_mode);
     }
 };
@@ -297,6 +267,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::QUANTIZED> {
                     DType bias_type, DType dst_type, size_t N, size_t OC,
                     size_t OH, size_t OW, size_t pack_oc_size = 1) {
         MEGDNN_MARK_USED_VAR(pack_oc_size);
+        megdnn_assert(pack_oc_size == 1,
+                      "PostProcess only support nchw nchw in x86");
         megdnn::param::Elemwise::Mode elem_mode =
                 megdnn::param::Elemwise::Mode::ADD;
         if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {

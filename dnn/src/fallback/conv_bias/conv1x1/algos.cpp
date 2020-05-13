@@ -216,14 +216,18 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
             param.nonlineMode != megdnn::NonlineMode::IDENTITY)
             return false;
 
+        if (opr->param().format == param::ConvBias::Format::NCHW44) {
+            //! nchw44 hybird mode and channel wise is not support
+            if (param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
+                param.filter_meta.ocpg == 1) {
+                return false;
+            }
+        }
+
         size_t OH = param.osz[0];
         size_t OW = param.osz[1];
-        MatrixMulImpl::KernSizeParam matmul_param =
-                get_matmul_kern_param(param, OH * OW, get_oc_tile_size_heuristic(param));
-
-        if(opr->param().format == param::ConvBias::Format::NCHW44)
-            matmul_param.format = param::MatrixMul::Format::MK4;
-            
+        MatrixMulImpl::KernSizeParam matmul_param = get_matmul_kern_param(
+                param, OH * OW, get_oc_tile_size_heuristic(param));
         bool matmul_usable = m_matmul_algo->usable(matmul_param);
 
         return matmul_usable &&

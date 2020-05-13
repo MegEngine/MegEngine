@@ -137,8 +137,8 @@ class ConvBias {
                 sizeof(output_compute_type) *
                 std::max(Strategy::IC_BLOCK_SIZE, Strategy::OC_BLOCK_SIZE);
 
-        size_t matmul_workspace_size =
-                matmul_algo->get_workspace(get_matmul_kern_param(param));
+        size_t matmul_workspace_size = matmul_algo->get_workspace(
+                get_matmul_kern_param(param, m_unit_oc_size));
 
         //! compute workspace is independent and separated as far as possible
         //! in case of false cache line sharing
@@ -384,7 +384,7 @@ public:
                 get_wbundle_compute(param, matmul_algo);
         fallback::MatrixMulImpl::KernParam matmul_param;
         static_cast<fallback::MatrixMulImpl::KernSizeParam&>(matmul_param) =
-                get_matmul_kern_param(param);
+                get_matmul_kern_param(param, m_unit_oc_size);
 
         Strategy strategy = m_strategy;
         size_t unit_tile_size = m_unit_tile_size;
@@ -450,21 +450,24 @@ public:
     }
 
     fallback::MatrixMulImpl::KernSizeParam get_matmul_kern_param(
-            const NCBKernSizeParam& param) const {
+            const NCBKernSizeParam& param, size_t nr_oc_in_unit = 0) const {
         size_t M = 0;
         size_t N = 0;
         size_t K = 0;
         size_t LDA = 0, LDB = 0, LDC = 0;
+        if (nr_oc_in_unit == 0) {
+            nr_oc_in_unit = param.filter_meta.ocpg;
+        }
 
         if (format == param::MatrixMul::Format::DEFAULT) {
             M = m_unit_tile_size;
-            N = param.filter_meta.ocpg;
+            N = nr_oc_in_unit;
             K = param.filter_meta.icpg;
             LDA = K;
             LDB = N;
             LDC = N;
         } else {
-            M = param.filter_meta.ocpg;
+            M = nr_oc_in_unit;
             N = m_unit_tile_size;
             K = param.filter_meta.icpg;
             megdnn_assert(K % Strategy::IC_BLOCK_SIZE == 0, "invalid K: %zu",

@@ -41,19 +41,25 @@ MatrixMulImpl::KernSizeParam get_matmul_kern_param(
                         param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
                        (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
                         param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
+    size_t pack_c_size = 1_z;
+    auto format = param::MatrixMul::Format::DEFAULT;
+    if(param.filter_meta.format == param::ConvBias::Format::NCHW44){
+        pack_c_size = 4_z;
+        format = param::MatrixMul::Format::MK4;
+    }
     return {param.filter_type,
             param.src_type,
             is_dst_8bit ? param.bias_type : param.dst_type,
             M,
             N,
             K,
-            LDA,
-            LDB,
-            LDC,
+            LDA * pack_c_size,
+            LDB * pack_c_size,
+            LDC * pack_c_size,
             false,
             false,
             param::MatrixMul::ComputeMode::DEFAULT,
-            param::MatrixMul::Format::DEFAULT};
+            format};
 }
 }  // namespace
 
@@ -137,9 +143,7 @@ public:
         src_ctype* a_panel = reinterpret_cast<src_ctype*>(
                 reinterpret_cast<int8_t*>(whole_bundle.get(0)) +
                 bytes_offset_of_a_panel);
-        
-        matmul_kern_param.LDA *= m_pack_size;
-        
+
         matmul_kern_param.A_ptr = const_cast<src_ctype*>(
                 ncb_param.filter<src_ctype>(group_id) +
                 numbers_offset_of_filter);
@@ -172,7 +176,6 @@ public:
             static_cast<MatrixMulImpl::KernSizeParam&>(matmul_kern_param) =
                     get_matmul_kern_param(param, OH * OW, OC);
 
-            matmul_kern_param.LDB *= m_pack_size;
 
             rep(batch, BATCH) {
                 rep(g, GROUP) {
@@ -282,8 +285,6 @@ public:
 
         matmul_kern_param.C_ptr = matmul_dst;
 
-        matmul_kern_param.LDC *= m_pack_size;
-
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
             auto matmul_kern = matmul_algo->get_kern(matmul_kern_param);
             matmul_kern(matmul_kern_param);
@@ -295,14 +296,15 @@ public:
 
         //! do postprocess
         void* bias_ptr = nullptr;
-        if (param.bias_mode == megdnn::BiasMode::BIAS)
+        if (param.bias_mode == megdnn::BiasMode::BIAS) {
             bias_ptr = static_cast<void*>(const_cast<bias_ctype*>(
                     ncb_param.bias<bias_ctype>(batch_id, group_id) +
                     numbers_of_ncb_dst_offset));
-        else
+        } else {
             bias_ptr = static_cast<void*>(const_cast<bias_ctype*>(
                     ncb_param.bias<bias_ctype>(batch_id, group_id) + oc_start));
-        
+        }
+
         PostProcess<op_ctype, op_dtype, postprocess_mode>::run(
                 matmul_dst, bias_ptr, conv_bias_dst, param.bias_mode,
                 param.nonlineMode, param.bias_type, param.dst_type, 1_z,
