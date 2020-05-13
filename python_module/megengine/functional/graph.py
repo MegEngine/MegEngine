@@ -13,7 +13,7 @@ import megengine._internal as mgb
 
 from ..core.graph import get_default_graph
 from ..core.tensor import Tensor, wrap_io_tensor
-from ..jit import barrier, mark_impure
+from ..jit import barrier, mark_impure, trace
 
 
 @wrap_io_tensor
@@ -111,6 +111,9 @@ def add_update(
         _dest, barrier(_delta), _alpha, _beta, _bias, _dummy, config
     )
     mark_impure(u)
+
+    if trace._active_instance:
+        dest._override_symvar_during_trace(trace._active_instance, u)
 
     return Tensor(u)
 

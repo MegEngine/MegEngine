@@ -367,10 +367,12 @@ class trace:
             raise RuntimeError("nested trace is unsupported")
         self._status = self._STARTED
         type(self)._active_instance = self
+        self._user_cache = {}
         try:
             yield
         finally:
             self._status = self._FINISHED
+            self._user_cache = None
             type(self)._active_instance = None
 
     def _run_wrapped(self):

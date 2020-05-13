@@ -16,6 +16,7 @@ import pytest
 import megengine as mge
 import megengine._internal as mgb
 import megengine.module as M
+from megengine import functional as F
 from megengine import jit, tensor
 from megengine.core.tensor import Tensor
 from megengine.jit import SublinearMemoryConfig
@@ -55,6 +56,19 @@ def test_symbolic():
         return Tensor(mgb.opr.assert_equal(x._symvar, x._symvar + 1))
 
     f.trace(0)
+
+
+def test_add_update_semantic():
+    for symbolic in [False, True]:
+        x = tensor(0)
+
+        @jit.trace(symbolic=symbolic)
+        def f():
+            F.add_update(x, 1)
+            return x + 1
+
+        np.testing.assert_equal(f().numpy(), [2])
+        np.testing.assert_equal(f().numpy(), [3])
 
 
 def test_dump():
