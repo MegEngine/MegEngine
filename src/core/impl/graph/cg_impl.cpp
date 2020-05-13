@@ -474,6 +474,13 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     }
 #endif
     gopt::GraphOptimizer optimizer;
+    /**
+     * \note We should reset options when we add passes indicated by optimize
+     * options, As there exists `ParamFuse pass` will compile subgraph which may
+     * cause ring invoking, \see
+     * https://git-core.megvii-inc.com/brain-sdk/MegBrain/merge_requests/1717
+     * for detail
+     */
     optimizer.add_passes_for_optimize_options(options().graph_opt, true);
     optimizer.apply_inplace(dest_vars);
 
