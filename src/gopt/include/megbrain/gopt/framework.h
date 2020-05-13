@@ -468,9 +468,16 @@ namespace gopt {
             static VarNode* var_replace_lookup(VarNode *var);
 
             /**
-             * \brief apply optimize options
+             * \brief add pass indicated by optimize options.
+             *
+             * \param options common options
+             * \param reset if set true, it will reset options when add passes.
              */
-            const GraphOptimizer& apply_optimize_options(
+            const GraphOptimizer& add_passes_for_optimize_options(
+                    cg::GraphCommonOptimizeOptions& options,
+                    bool reset = false);
+
+            const GraphOptimizer& add_passes_for_optimize_options(
                     const cg::GraphCommonOptimizeOptions& options);
     };
 

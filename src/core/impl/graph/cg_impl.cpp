@@ -474,8 +474,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     }
 #endif
     gopt::GraphOptimizer optimizer;
-    optimizer.apply_optimize_options(options().graph_opt);
-    options().graph_opt.reset();
+    optimizer.add_passes_for_optimize_options(options().graph_opt, true);
     optimizer.apply_inplace(dest_vars);
 
     const OprNodeArray* opr_seq = nullptr;

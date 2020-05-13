@@ -107,19 +107,17 @@ struct GraphCommonOptimizeOptions {
     };
     LayoutTransform layout_transform = LayoutTransform::DEFAULT;
 
-    void reset() {
-        f16_io_f32_comp = false;
-        f16_io_comp = false;
-        fuse_conv_bias_nonlinearity = false;
-        fuse_conv_bias_with_z = false;
-        layout_transform = LayoutTransform::DEFAULT;
-    }
+#define SET(n)                                  \
+    GraphCommonOptimizeOptions& enable_##n() {  \
+        n = true;                               \
+        return *this;                           \
+    }                                           \
+    GraphCommonOptimizeOptions& disable_##n() { \
+        n = false;                              \
+        return *this;                           \
+    }                                           \
+    bool has_set_##n() { return n == true; }
 
-#define SET(n)                                 \
-    GraphCommonOptimizeOptions& enable_##n() { \
-        n = true;                              \
-        return *this;                          \
-    }
     SET(f16_io_f32_comp);
     SET(f16_io_comp);
     SET(fuse_conv_bias_nonlinearity);
@@ -131,7 +129,11 @@ struct GraphCommonOptimizeOptions {
         layout_transform = LayoutTransform::_trans_capital;         \
         return *this;                                               \
     }                                                               \
-    bool transform_##_trans() const {                               \
+    GraphCommonOptimizeOptions& disable_##_trans() {                \
+        layout_transform = LayoutTransform::DEFAULT;                \
+        return *this;                                               \
+    }                                                               \
+    bool has_set_##_trans() const {                                 \
         return layout_transform == LayoutTransform::_trans_capital; \
     }
 
