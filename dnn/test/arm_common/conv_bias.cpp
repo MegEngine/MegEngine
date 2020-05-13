@@ -195,6 +195,7 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
     };
 
     if (is_fp32) {
+        run(1, 1, 4, 112, 112, 2, 2, true);
         run(1, 3, 32, 224, 224, 3, 2, true);
         run(1, 3, 64, 224, 224, 7, 2, true);
     } else {
@@ -1806,12 +1807,12 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_WINOGRAD_VS_IM2COL_INT8) {
         auto opr = handle()->create_operator<ConvBias>();
         opr->param() = arg.param;
         opr->deduce_layout({arg.src, dtype::Float32()},
-                        {arg.filter, dtype::Float32()},
-                        {arg.bias, dtype::Float32()}, {}, dst_layout);
+                           {arg.filter, dtype::Float32()},
+                           {arg.bias, dtype::Float32()}, {}, dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
-                            arg.filter[2] * arg.filter[3] * 2.0 /
-                            (1024 * 1024 * 1024) * 1e3;
+                             arg.filter[2] * arg.filter[3] * 2.0 /
+                             (1024 * 1024 * 1024) * 1e3;
 
         benchmark_im2col.set_param(arg.param);
         auto im2col_used =
@@ -1828,11 +1829,11 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_WINOGRAD_VS_IM2COL_INT8) {
                 RUN;
 
         printf("%s %s: im2col: %f ms %f Gflops winograd: %f ms %f GFlops "
-            "speedup: "
-            "%f\n",
-            arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-            im2col_used, computations / im2col_used, winograd_used,
-            computations / winograd_used, im2col_used / winograd_used);
+               "speedup: "
+               "%f\n",
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
+               im2col_used, computations / im2col_used, winograd_used,
+               computations / winograd_used, im2col_used / winograd_used);
     }
 }
 

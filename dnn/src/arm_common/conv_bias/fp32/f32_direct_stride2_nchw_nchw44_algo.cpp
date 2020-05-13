@@ -207,7 +207,7 @@ bool ConvBiasImpl::AlgoF32DirectStride2NCHWNCHW44::usable(
                    (fm.format == param::Convolution::Format::NCHW44);
     bool ok_src_dst = fm.icpg < 4 && (oc % 4 == 0 && oc >= 4) && fm.group == 1;
     bool ok_filter = fm.spatial_ndim == 2 && fh == fm.spatial[1] &&
-                     (fh == 3 || fh == 5 || fh == 7);
+                     (fh == 2 || fh == 3 || fh == 5 || fh == 7);
     bool ok_slide = fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
                     fm.stride[0] == 2 && fm.stride[1] == 2;
     bool ok_conv = !fm.should_flip && param.bias_mode != BiasMode::BIAS;
@@ -267,6 +267,9 @@ ConvBiasImpl::AlgoF32DirectStride2NCHWNCHW44::dispatch_kerns(
 
 #define DISPATCH_CONV_KERN()                \
     switch (param.filter_meta.spatial[0]) { \
+        case 2:                             \
+            GET_BIAS_MODE_PARAM(2)          \
+            break;                          \
         case 3:                             \
             GET_BIAS_MODE_PARAM(3)          \
             break;                          \

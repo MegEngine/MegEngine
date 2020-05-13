@@ -342,9 +342,9 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_SMALL_GROUP) {
                     handle(), "F32STRD2_SMALL_GROUP");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32) {
-    check_conv_bias(
-            get_nchw44_conv_bias_args({3, 5, 7}, 2, false, false, false, true),
-            handle(), "F32_CONV_NCHW_NCHW44");
+    check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
+                                              false, true),
+                    handle(), "F32_CONV_NCHW_NCHW44");
 }
 /**********************************F16 direct************************/
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
