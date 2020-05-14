@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <mutex>
+
 #include "megbrain/utils/metahelper.h"
 #include "megbrain/opr/group_manager.h"
 #include "megray.h"
@@ -25,7 +27,11 @@ class MegRayCommunicatorBuilder final : public mgb::UserDataContainer::UserData 
     MGB_TYPEINFO_OBJ_DECL;
 
     private:
+        bool find(uint64_t hash, std::shared_ptr<MegRay::Communicator>& comm);
+        void emplace(uint64_t hash, std::shared_ptr<MegRay::Communicator> comm);
+
         std::unordered_map<uint64_t, std::shared_ptr<MegRay::Communicator>> m_megray_comms;
+        std::mutex m_mtx;
 
     public:
         std::shared_ptr<MegRay::Communicator> get_megray_comm(
