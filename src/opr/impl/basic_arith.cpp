@@ -947,6 +947,11 @@ void AddUpdate::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
+MGB_IMPL_OPR_GRAD(AddUpdate) {
+    // actually valid, just not implemented
+    return InvalidGrad::make(opr, wrt_idx);
+}
+
 /* =========================== Reduce =========================== */
 
 class Reduce::KernScheduler {
