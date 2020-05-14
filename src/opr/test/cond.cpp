@@ -14,6 +14,7 @@
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/cond.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/misc.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/utils/timer.h"
@@ -1285,6 +1286,80 @@ TEST(TestCondExec, MultiShape) {
     check(host_d2);
 }
 
+TEST(TestCondExec, EmptyShape) {
+    HostTensorGenerator<> gen;
+    auto host_pred = gen({1});
+    host_pred->ptr<float>()[0] = 0;
+    static auto empty_in_empty_out = [](SymbolVar x) {
+        return x;
+    };
+    static auto empty_in_scalar_out = [](SymbolVar x) {
+        return opr::Concat::make({x, x.make_scalar(1.f)}, 0);
+    };
+    static auto scalar_in_empty_out = [](SymbolVar x) {
+        return opr::CondTake::make(x, x, {})[0]; // whether eq 0
+    };
+    { // EXACT_ONE
+    auto graph = ComputingGraph::make();
+    auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
+         empty = opr::ImmutableTensor::make(*graph, *gen({0})),
+         scalar = pred.make_scalar(1.f),
+         y0 = empty_in_empty_out(make_one_cond(pred + 1, empty)),
+         y1 = empty_in_scalar_out(make_one_cond(pred, empty)),
+         y2 = scalar_in_empty_out(make_one_cond(pred - 1, scalar)),
+         z = merge_one_out({y0, y1, y2}, MergeMode::EXACT_ONE);
+
+    HostTensorND host_z;
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    func->execute();
+    ASSERT_TRUE(host_z.layout().is_empty());
+
+    host_pred->ptr<float>()[0] = 1;
+    func->execute();
+    ASSERT_EQ(1.f, host_z.ptr<float>()[0]);
+
+    host_pred->ptr<float>()[0] = 2;
+    func->execute();
+    ASSERT_TRUE(host_z.layout().is_empty());
+    }
+    { // SUM
+    auto graph = ComputingGraph::make();
+    host_pred->ptr<float>()[0] = 1;
+    auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
+         empty = opr::ImmutableTensor::make(*graph, *gen({0})),
+         scalar = pred.make_scalar(1.f),
+         y0 = empty_in_empty_out(make_one_cond(pred, empty)),
+         y1 = scalar_in_empty_out(make_one_cond(pred, scalar)),
+         z = merge_one_out({y0, y1}, MergeMode::SUM);
+
+    HostTensorND host_z;
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    func->execute();
+    ASSERT_TRUE(host_z.layout().is_empty());
+    }
+    { // TAKE GRAD
+    auto graph = ComputingGraph::make();
+    host_pred->ptr<float>()[0] = 0;
+    auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
+         x = pred.make_scalar(1.2f),
+         y0 = opr::CondTake::make(make_one_cond(pred + 1, x), pred, {})[0],
+         y1 = make_one_cond(pred, x.make_scalar(3.4f)),
+         z = merge_one_out({y0, y1}, MergeMode::EXACT_ONE),
+         g = cg::grad(z, x);
+
+    HostTensorND host_z, host_g;
+    auto func = graph->compile({
+        make_callback_copy(z, host_z), make_callback_copy(g, host_g)});
+    func->execute();
+    ASSERT_EQ(1.2f, host_z.ptr<float>()[0]);
+    ASSERT_EQ(1.f, host_g.ptr<float>()[0]);
+
+    host_pred->ptr<float>()[0] = 1;
+    func->execute();
+    ASSERT_EQ(3.4f, host_z.ptr<float>()[0]);
+    ASSERT_EQ(0.f, host_g.ptr<float>()[0]);
+    }
+}
 #endif  // MGB_ENABLE_COND_EXEC
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
