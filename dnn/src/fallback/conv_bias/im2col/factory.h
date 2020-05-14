@@ -221,8 +221,17 @@ public:
         param::ConvBias::Format format = param.filter_meta.format;
         switch (strategytype) {
             case StrategyType::FLOAT:
-                cb1(NCHW, DEFAULT, dt_float32, dt_float32,
-                    PostprocessMode::FLOAT, "DefaultStrategyType::FLOAT"_hash);
+                if (format == param::ConvBias::Format::NCHW) {
+                    cb1(NCHW, DEFAULT, dt_float32, dt_float32,
+                        PostprocessMode::FLOAT,
+                        "DefaultStrategyType::FLOAT"_hash);
+                } else if (format == param::ConvBias::Format::NCHW44) {
+                    cb1(NCHW44, DEFAULT, dt_float32, dt_float32,
+                        PostprocessMode::FLOAT,
+                        "DefaultStrategyTypeNCHW44::FLOAT"_hash);
+                } else {
+                    megdnn_throw("not support format except nchw44 and nchw\n");
+                }
                 break;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
             case StrategyType::FLOAT_FP16:

@@ -125,13 +125,10 @@ public:
             size_t oc_tile_size) {
         size_t IC = param.filter_meta.icpg, FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
-        size_t pack_oc_size = 1;
+        size_t pack_oc_size = get_format_pack_size(param.filter_meta.format);
         size_t im2col = 0, packb = 0, bias_temp = 0;
         bool default_pack = matmul_algo->packmode() == Pack_Mode::DEFAULT;
         megdnn_assert(default_pack, "only support default packa");
-        if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
-            pack_oc_size = 4;
-        }
         size_t im2col_dst_size =
                 IC * FH * FW * ohw_tile_size * sizeof(param.src_type);
         size_t matmul_dst_size = pack_oc_size * oc_tile_size * ohw_tile_size *
@@ -321,14 +318,17 @@ fallback::MatrixMulImpl::KernSizeParam
 ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
                                                  size_t ohw_tile_size,
                                                  size_t oc_tile_size) const {
-    bool is_nchw44 =
-            param.filter_meta.format == param::ConvBias::Format::NCHW44;
+    auto format = param::MatrixMul::Format::DEFAULT;
+    size_t pack_oc_size = get_format_pack_size(param.filter_meta.format);
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
+        format = param::MatrixMul::Format::MK4;
+    }
     size_t M = oc_tile_size;
     size_t N = ohw_tile_size;
     size_t K = param.filter_meta.icpg * param.filter_meta.spatial[0] *
                param.filter_meta.spatial[1];
-    size_t pack_oc_size = is_nchw44 ? 4 : 1;
-    size_t LDA = pack_oc_size * K, LDB = pack_oc_size * N, LDC = N;
+    size_t LDA = pack_oc_size * K, LDB = pack_oc_size * N,
+           LDC = N * pack_oc_size;
     bool is_dst_8bit = (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                         param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
                        (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
@@ -345,8 +345,7 @@ ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
             false,
             false,
             param::MatrixMul::ComputeMode::DEFAULT,
-            is_nchw44 ? param::MatrixMul::Format::MK4
-                      : param::MatrixMul::Format::DEFAULT};
+            format};
 }
 
 void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
@@ -356,11 +355,7 @@ void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
     size_t nr_threads = param.nr_threads;
     size_t OC = param.filter_meta.ocpg;
     size_t ohw = param.osz[0] * param.osz[1];
-    //! pay attention please, should not change the 2 line code,
-    //! the opr use the same im2col algo, via choice_ohw_oc_block may change the
-    //! m_ohw_tile_size and m_oc_tile_size， if the two value changed, the
-    //! workspace size may change, will ocur workspace not match problem, so
-    //! should use the original data init them to avoid the problem
+
     oc_tile_size = DEFAULT_OC_TILE_SIZE;
     ohw_tile_size = m_ohw_tile_size;
 
@@ -505,14 +500,13 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         size_t ohw_parallel_times = div_ceil(ohw, ohw_tile_size);
         size_t oc_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
         size_t packa_parallel_times = 0;
-        size_t pack_oc_size =
-                (param.filter_meta.format == param::ConvBias::Format::NCHW ? 1
-                                                                           : 4);
+        size_t pack_oc_size = get_format_pack_size(param.filter_meta.format);
+
         if (only_packA) {
             packa_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
         } else if (default_pack) {
             packa_parallel_times = div_ceil<size_t>(
-                    OC, m_matmul_algo->get_inner_block_size().m * pack_oc_size);
+                    OC, m_matmul_algo->get_inner_block_size().m);
         }
 
         auto matmul_param = get_matmul_kern_param(
@@ -659,12 +653,16 @@ bool ConvBiasImpl::AlgoIm2col::usable(
             param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
             return false;
         }
-        //! current now im2col only support int8 quantized s8 nchw44
-        if (opr->param().format == param::ConvBias::Format::NCHW44 &&
-            (param.src_type.enumv() == param.filter_type.enumv() &&
-             (param.src_type.enumv() != DTypeEnum::Int8) &&
-             (param.src_type.enumv() != DTypeEnum::QuantizedS8))) {
-            return false;
+        if (opr->param().format == param::ConvBias::Format::NCHW44) {
+            //! current NCHW44 im2col only support DEFAULT mode matmul
+            if(m_matmul_algo->packmode() != Pack_Mode::DEFAULT) {
+                return false;
+                //! nchw44 hybird mode and channel wise is not support
+            } else if (param.filter_meta.icpg < 4_z ||
+                       param.filter_meta.icpg == 1 ||
+                       param.filter_meta.ocpg == 1) {
+                return false;
+            }
         }
 
         size_t oc_tile_size = 0, ohw_tile_size = 0;

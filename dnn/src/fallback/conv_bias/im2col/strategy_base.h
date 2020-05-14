@@ -75,15 +75,14 @@ public:
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode, PackMode packmode,
-          FormatMode format>
+          FormatMode format = FormatMode::NCHW>
 class Strategy;
 
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::DEFAULT, FormatMode::NCHW>
-        : public StrategyBase {
+               postprocess_mode, PackMode::DEFAULT> : public StrategyBase {
 public:
     constexpr static size_t BUNDLE_PADDING_INDEX = 0;
     constexpr static size_t BUNDLE_PACKA_INDEX = 1;
@@ -142,8 +141,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                postprocess_mode, PackMode::DEFAULT, FormatMode::NCHW44>
         : public Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-                          postprocess_mode, PackMode::DEFAULT,
-                          FormatMode::NCHW> {
+                          postprocess_mode, PackMode::DEFAULT> {
 public:
     const size_t BUNDLE_PADDING_INDEX = 0;
     const size_t BUNDLE_PACKA_INDEX = 1;
@@ -164,8 +162,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::NO_PACK, FormatMode::NCHW>
-        : public StrategyBase {
+               postprocess_mode, PackMode::NO_PACK> : public StrategyBase {
 public:
     constexpr static size_t BUNDLE_PADDING_INDEX = 0;
     constexpr static size_t BUNDLE_PACKA_INDEX = 1;
@@ -231,8 +228,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 class Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>
-        : public StrategyBase {
+               postprocess_mode, PackMode::ONLY_PACKA> : public StrategyBase {
 public:
     constexpr static size_t BUNDLE_PADDING_INDEX = 0;
     constexpr static size_t BUNDLE_PACKA_INDEX = 1;

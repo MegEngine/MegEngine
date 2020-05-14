@@ -26,6 +26,18 @@
 using namespace megdnn;
 using namespace fallback;
 
+size_t megdnn::fallback::get_format_pack_size(param::ConvBias::Format format) {
+    switch(format){
+        case param::ConvBias::Format::NCHW44:
+        case param::ConvBias::Format::NCHW4:
+            return 4_z;
+        case param::ConvBias::Format::NCHW88:
+            return 8_z;
+        default:
+            return 1_z;
+    }
+}
+
 namespace {
 template <typename T>
 void incr_ptr(T*& dst, ptrdiff_t delta) {

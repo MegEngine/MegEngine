@@ -27,7 +27,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-              postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+              postprocess_mode, PackMode::ONLY_PACKA>::
         copy_padding_kern(WorkspaceBundle bundle,
                           const fallback::ConvBiasImpl::NCBKernParam& param,
                           const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
@@ -90,7 +90,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-              postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+              postprocess_mode, PackMode::ONLY_PACKA>::
         packA_kern(WorkspaceBundle bundle,
                    const fallback::ConvBiasImpl::NCBKernParam& param,
                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
@@ -124,7 +124,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void* Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-               postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+               postprocess_mode, PackMode::ONLY_PACKA>::
         get_matmul_dst_ptr(const fallback::ConvBiasImpl::NCBKernParam& param,
                            const WorkspaceBundle& bundle_thread,
                            const StrategyParam& sparam) {
@@ -143,7 +143,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-              postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+              postprocess_mode, PackMode::ONLY_PACKA>::
         exec_matmul(const fallback::ConvBiasImpl::NCBKernParam& param,
                     const StrategyParam& sparam, WorkspaceBundle bundle,
                     WorkspaceBundle bundle_thread,
@@ -181,7 +181,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-              postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+              postprocess_mode, PackMode::ONLY_PACKA>::
         exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
@@ -242,7 +242,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-              postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+              postprocess_mode, PackMode::ONLY_PACKA>::
         exec_postprocess(const fallback::ConvBiasImpl::NCBKernParam& param,
                          const StrategyParam& sparam,
                          WorkspaceBundle bundle_thread) {
@@ -283,7 +283,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
-              postprocess_mode, PackMode::ONLY_PACKA, FormatMode::NCHW>::
+              postprocess_mode, PackMode::ONLY_PACKA>::
         copy_dst(const fallback::ConvBiasImpl::NCBKernParam& param,
                  const void* matmul_dst, const StrategyParam& sparam) {
     if (!sparam.skip_copy_dst) {
@@ -305,7 +305,7 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                          _op_dtype, _postprocess_mode)                      \
     template class Strategy<_src_ctype, _bias_ctype, _dst_ctype, _op_ctype, \
                             _op_dtype, _postprocess_mode,                   \
-                            PackMode::ONLY_PACKA, FormatMode::NCHW>;
+                            PackMode::ONLY_PACKA>;
 
 INSTANTIAL_CLASS(dt_float32, dt_float32, dt_float32, dt_float32, dt_float32,
                  megdnn::PostprocessMode::FLOAT)

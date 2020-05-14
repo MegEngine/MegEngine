@@ -227,7 +227,7 @@ static void gemm_mk4_s8_4x2_pack_A(dt_int8* outptr, const dt_int8* inptr,
         const int8_t* inptr1 = inptr0 + ldin;
         const int8_t* inptr2 = inptr1 + ldin;
         const int8_t* inptr3 = inptr2 + ldin;
-        int8_t* output = outptr + start_y * out_offset;
+        int8_t* output = outptr + (y - y0) / 4 * out_offset;
         prefetch_2x(inptr0);
         prefetch_2x(inptr1);
         prefetch_2x(inptr2);
@@ -254,7 +254,7 @@ static void gemm_mk4_s8_4x2_pack_A(dt_int8* outptr, const dt_int8* inptr,
     }
     for (; y + 3 < ymax; y += 4, start_y++) {
         const int8_t* inptr0 = inptr + start_y * ldin + k0 * 4;
-        int8_t* output = outptr + start_y * out_offset;
+        int8_t* output = outptr + (y - y0) / 4 * out_offset;
         prefetch_2x(inptr0);
         int K = kmax - k0;
         for (; K > 15; K -= 16) {

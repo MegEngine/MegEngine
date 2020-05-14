@@ -1173,10 +1173,10 @@ void checker_conv_bias_mul_int8x8x32(std::vector<conv_bias::TestArg> args,
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 #if !__ARM_FEATURE_DOTPROD
-TEST_F(ARM_COMMON, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true);
+            get_nchw44_conv_bias_args({2, 5, 7}, 2, false, true, true);
 
 #define cb(name) checker_conv_bias_mul_int8x8x32(args, handle(), name);
 #if MEGDNN_AARCH64
@@ -1187,10 +1187,10 @@ TEST_F(ARM_COMMON, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_MULTI) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S1) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true);
+            get_nchw44_conv_bias_args({3, 4, 6}, 1, false, true, true);
 
 #define cb(name) checker_conv_bias_mul_int8x8x32(args, handle(), name);
 #if MEGDNN_AARCH64
@@ -1202,13 +1202,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_MULTI) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_NCHW44) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_NCHW44_S2) {
     UniformIntRNG rng{-50, 50};
 
-#define cb(name)                                                            \
-    checker_conv_bias(get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1),     \
-                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),    \
-                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), \
+#define cb(name)                                                               \
+    checker_conv_bias(get_nchw44_conv_bias_args({3, 4, 6}, 2), handle(), &rng, \
+                      epsilon, dtype::QuantizedS8(2.5f),                       \
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
                       dtype::QuantizedS8(60.25f), name);
     float epsilon = 0.001;
 #if MEGDNN_AARCH64
@@ -1220,13 +1221,13 @@ TEST_F(ARM_COMMON, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_NCHW44) {
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_NCHW44_MULTI) {
+       CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_NCHW44_S1) {
     UniformIntRNG rng{-50, 50};
 
-#define cb(name)                                                            \
-    checker_conv_bias(get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1),     \
-                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),    \
-                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), \
+#define cb(name)                                                               \
+    checker_conv_bias(get_nchw44_conv_bias_args({2, 5, 7}, 1), handle(), &rng, \
+                      epsilon, dtype::QuantizedS8(2.5f),                       \
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
                       dtype::QuantizedS8(60.25f), name);
     float epsilon = 0.001;
 #if MEGDNN_AARCH64
@@ -1285,6 +1286,24 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
 #endif
 #undef cb
 }
+
+#if MEGDNN_AARCH64
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({2, 4, 7}, 1);
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+}
+#endif
+
+#if MEGDNN_AARCH64
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({3, 5, 6}, 2);
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+}
+#endif
 
 /***************************** Conv1x1 Algo Test ***********************/
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {

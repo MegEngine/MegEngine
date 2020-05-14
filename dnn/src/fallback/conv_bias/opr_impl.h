@@ -22,6 +22,11 @@ namespace megdnn {
 namespace fallback {
 
 /*!
+ * \brief get the pack_size according to the format
+ * */
+size_t get_format_pack_size(param::ConvBias::Format format);
+
+/*!
  * \brief fallback conv bias forward impl
  *
  * Note: this operator class serves for multiple purposes:
