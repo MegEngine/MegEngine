@@ -649,19 +649,20 @@ void PoolingImpl::AlgoFilter3ModexStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_MODE(type, func, stride)                                  \
-    switch (param.mode) {                                                  \
-        case Mode::MAX: {                                                  \
-            DISPATCH_FUNC(type, func, stride, max);                        \
-            break;                                                         \
-        }                                                                  \
-        case Mode::AVERAGE: {                                              \
-            DISPATCH_FUNC(type, func, stride, avg);                        \
-            break;                                                         \
-        }                                                                  \
-        default:                                                           \
-            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
-                                 .c_str());                                \
+#define DISPATCH_MODE(type, func, stride)                       \
+    switch (param.mode) {                                       \
+        case Mode::MAX: {                                       \
+            DISPATCH_FUNC(type, func, stride, max);             \
+            break;                                              \
+        }                                                       \
+        case Mode::AVERAGE: {                                   \
+            DISPATCH_FUNC(type, func, stride, avg);             \
+            break;                                              \
+        }                                                       \
+        default:                                                \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d",  \
+                                  static_cast<int>(param.mode)) \
+                                 .c_str());                     \
     }
 
 #define DISPATCH_STRIDE(type, func)                                         \
@@ -736,19 +737,20 @@ void PoolingImpl::AlgoFilter2ModexStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_MODE(type, func, stride)                                  \
-    switch (param.mode) {                                                  \
-        case Mode::MAX: {                                                  \
-            DISPATCH_FUNC(type, func, stride, max);                        \
-            break;                                                         \
-        }                                                                  \
-        case Mode::AVERAGE: {                                              \
-            DISPATCH_FUNC(type, func, stride, avg);                        \
-            break;                                                         \
-        }                                                                  \
-        default:                                                           \
-            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
-                                 .c_str());                                \
+#define DISPATCH_MODE(type, func, stride)                       \
+    switch (param.mode) {                                       \
+        case Mode::MAX: {                                       \
+            DISPATCH_FUNC(type, func, stride, max);             \
+            break;                                              \
+        }                                                       \
+        case Mode::AVERAGE: {                                   \
+            DISPATCH_FUNC(type, func, stride, avg);             \
+            break;                                              \
+        }                                                       \
+        default:                                                \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d",  \
+                                  static_cast<int>(param.mode)) \
+                                 .c_str());                     \
     }
 
 #define DISPATCH_STRIDE(type, func)                                         \
@@ -823,19 +825,20 @@ void PoolingImpl::AlgoFilter4ModexStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_MODE(type, func, stride)                                  \
-    switch (param.mode) {                                                  \
-        case Mode::MAX: {                                                  \
-            DISPATCH_FUNC(type, func, stride, max);                        \
-            break;                                                         \
-        }                                                                  \
-        case Mode::AVERAGE: {                                              \
-            DISPATCH_FUNC(type, func, stride, avg);                        \
-            break;                                                         \
-        }                                                                  \
-        default:                                                           \
-            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
-                                 .c_str());                                \
+#define DISPATCH_MODE(type, func, stride)                       \
+    switch (param.mode) {                                       \
+        case Mode::MAX: {                                       \
+            DISPATCH_FUNC(type, func, stride, max);             \
+            break;                                              \
+        }                                                       \
+        case Mode::AVERAGE: {                                   \
+            DISPATCH_FUNC(type, func, stride, avg);             \
+            break;                                              \
+        }                                                       \
+        default:                                                \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d",  \
+                                  static_cast<int>(param.mode)) \
+                                 .c_str());                     \
     }
 
 #define DISPATCH_STRIDE(type, func)                                         \
@@ -910,19 +913,20 @@ void PoolingImpl::AlgoFilter5ModexStridexNCHW44::exec(
     }                                                                          \
     MIDOUT_END();
 
-#define DISPATCH_MODE(type, func, stride)                                  \
-    switch (param.mode) {                                                  \
-        case Mode::MAX: {                                                  \
-            DISPATCH_FUNC(type, func, stride, max);                        \
-            break;                                                         \
-        }                                                                  \
-        case Mode::AVERAGE: {                                              \
-            DISPATCH_FUNC(type, func, stride, avg);                        \
-            break;                                                         \
-        }                                                                  \
-        default:                                                           \
-            megdnn_throw(ssprintf("Unsupport pooling mode %d", param.mode) \
-                                 .c_str());                                \
+#define DISPATCH_MODE(type, func, stride)                       \
+    switch (param.mode) {                                       \
+        case Mode::MAX: {                                       \
+            DISPATCH_FUNC(type, func, stride, max);             \
+            break;                                              \
+        }                                                       \
+        case Mode::AVERAGE: {                                   \
+            DISPATCH_FUNC(type, func, stride, avg);             \
+            break;                                              \
+        }                                                       \
+        default:                                                \
+            megdnn_throw(ssprintf("Unsupport pooling mode %d",  \
+                                  static_cast<int>(param.mode)) \
+                                 .c_str());                     \
     }
 
 #define DISPATCH_STRIDE(type, func)                                         \
@@ -949,4 +953,3 @@ void PoolingImpl::AlgoFilter5ModexStridexNCHW44::exec(
 }  // namespace arm_common
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen
-
