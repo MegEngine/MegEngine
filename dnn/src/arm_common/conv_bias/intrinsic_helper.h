@@ -194,7 +194,20 @@ struct StoreOcxOw8Remain<2, 0, Op, T> {
         op({{c[1][6], c[1][7]}}, dst_ptr + ld_dst_oc + 24);
     }
 };
+template <typename Op, typename T>
+struct StoreOcxOw8Remain<2, 8, Op, T> {
+    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, dst_ptr);
+        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
+        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
+        op({{c[0][6], c[0][7]}}, dst_ptr + 24);
 
+        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
+        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
+        op({{c[1][4], c[1][5]}}, dst_ptr + ld_dst_oc + 16);
+        op({{c[1][6], c[1][7]}}, dst_ptr + ld_dst_oc + 24);
+    }
+};
 template <typename Op, typename T>
 struct StoreOcxOw8Remain<2, 7, Op, T> {
     static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
@@ -270,6 +283,15 @@ struct StoreOcxOw8Remain<2, 1, Op, T> {
 
 template <typename Op, typename T>
 struct StoreOcxOw8Remain<1, 0, Op, T> {
+    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, dst_ptr);
+        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
+        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
+        op({{c[0][6], c[0][7]}}, dst_ptr + 24);
+    }
+};
+template <typename Op, typename T>
+struct StoreOcxOw8Remain<1, 8, Op, T> {
     static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
         op({{c[0][0], c[0][1]}}, dst_ptr);
         op({{c[0][2], c[0][3]}}, dst_ptr + 8);
@@ -499,46 +521,127 @@ inline void init_oc8_ow8(int32x4_t c[2][8], const int32_t* bias_ptr,
     }
 }
 /////////////////////////init_ocx_ow8////////////////////
-template <int c_dim, BiasMode bias_mode, typename T, typename T2>
+template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
 struct InitOcxOw8 {
     static void impl(T& c, T2 bias_ptr, int oc_step);
 };
-template <BiasMode bias_mode, typename T, typename T2>
-struct InitOcxOw8<2, bias_mode, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
-        if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-#define BAIS_INIT(step)               \
-    c[0][step] = vld1q_f32(bias_ptr); \
-    c[1][step] = vld1q_f32(bias_ptr + oc_step);
-            UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-        } else {
+template <typename T, typename T2>
+struct InitOcxOw8<2, BiasMode::NO_BIAS, 8, T, T2> {
+    static void impl(T& c, const float32_t*, int) {
 #define BAIS_INIT(step)          \
     c[0][step] = vdupq_n_f32(0); \
     c[1][step] = vdupq_n_f32(0);
-            UNROLL_CALL_RAW(8, BAIS_INIT);
+        UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
-        }
     }
 };
-template <BiasMode bias_mode, typename T, typename T2>
-struct InitOcxOw8<1, bias_mode, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int) {
-        if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
-#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr);
-            UNROLL_CALL_RAW(8, BAIS_INIT);
+template <typename T, typename T2>
+struct InitOcxOw8<2, BiasMode::NO_BIAS, 4, T, T2> {
+    static void impl(T& c, const float32_t*, int) {
+#define BAIS_INIT(step)          \
+    c[0][step] = vdupq_n_f32(0); \
+    c[1][step] = vdupq_n_f32(0);
+        UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
-        } else {
-#define BAIS_INIT(step) c[0][step] = vdupq_n_f32(0);
-            UNROLL_CALL_RAW(8, BAIS_INIT);
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<2, BiasMode::BROADCAST_CHANNEL_BIAS, 8, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
+#define BAIS_INIT(step)               \
+    c[0][step] = vld1q_f32(bias_ptr); \
+    c[1][step] = vld1q_f32(bias_ptr + oc_step);
+        UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
-        }
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<2, BiasMode::BROADCAST_CHANNEL_BIAS, 4, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
+#define BAIS_INIT(step)               \
+    c[0][step] = vld1q_f32(bias_ptr); \
+    c[1][step] = vld1q_f32(bias_ptr + oc_step);
+        UNROLL_CALL_RAW(4, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<2, BiasMode::BIAS, 8, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
+        constexpr int simd_len = 4;
+#define BAIS_INIT(step)                                 \
+    c[0][step] = vld1q_f32(bias_ptr + step * simd_len); \
+    c[1][step] = vld1q_f32(bias_ptr + oc_step + step * simd_len);
+        UNROLL_CALL_RAW(8, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<2, BiasMode::BIAS, 4, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
+        constexpr int simd_len = 4;
+#define BAIS_INIT(step)                                 \
+    c[0][step] = vld1q_f32(bias_ptr + step * simd_len); \
+    c[1][step] = vld1q_f32(bias_ptr + oc_step + step * simd_len);
+        UNROLL_CALL_RAW(4, BAIS_INIT);
+#undef BAIS_INIT
     }
 };
 
-template <int c_dim, BiasMode bias_mode, typename T, typename T2>
+template <typename T, typename T2>
+struct InitOcxOw8<1, BiasMode::NO_BIAS, 8, T, T2> {
+    static void impl(T& c, const float32_t*, int) {
+#define BAIS_INIT(step) c[0][step] = vdupq_n_f32(0);
+        UNROLL_CALL_RAW(8, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<1, BiasMode::NO_BIAS, 4, T, T2> {
+    static void impl(T& c, const float32_t*, int) {
+#define BAIS_INIT(step) c[0][step] = vdupq_n_f32(0);
+        UNROLL_CALL_RAW(4, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<1, BiasMode::BROADCAST_CHANNEL_BIAS, 8, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int) {
+#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr);
+        UNROLL_CALL_RAW(8, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<1, BiasMode::BROADCAST_CHANNEL_BIAS, 4, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int) {
+#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr);
+        UNROLL_CALL_RAW(4, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<1, BiasMode::BIAS, 8, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int) {
+        constexpr int simd_len = 4;
+#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr + step * simd_len);
+        UNROLL_CALL_RAW(8, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+template <typename T, typename T2>
+struct InitOcxOw8<1, BiasMode::BIAS, 4, T, T2> {
+    static void impl(T& c, const float32_t* bias_ptr, int) {
+        constexpr int simd_len = 4;
+#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr + step * simd_len);
+        UNROLL_CALL_RAW(4, BAIS_INIT);
+#undef BAIS_INIT
+    }
+};
+
+template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
 inline void init_ocx_ow8(T& c, T2 bias_ptr, int oc_step) {
-    InitOcxOw8<c_dim, bias_mode, T, T2>::impl(c, bias_ptr, oc_step);
+    InitOcxOw8<c_dim, bias_mode, ow_block, T, T2>::impl(c, bias_ptr, oc_step);
 }
 /////////////////////init_ocx_ow4/////////////////////
 template <int c_dim, BiasMode bias_mode, typename T>
@@ -638,6 +741,20 @@ struct LoadHelper<6, base_offset, ptr_step, 0, Func, T, T2, XT...> {
         UNROLL_CALL_RAW(6, WEIGHT_CB);
     }
 };
+template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
+          typename... XT>
+struct LoadHelper<7, base_offset, ptr_step, 0, Func, T, T2, XT...> {
+    static void impl(T& src, T2 ptr, int, XT... args) {
+        UNROLL_CALL_RAW(7, WEIGHT_CB);
+    }
+};
+template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
+          typename... XT>
+struct LoadHelper<8, base_offset, ptr_step, 0, Func, T, T2, XT...> {
+    static void impl(T& src, T2 ptr, int, XT... args) {
+        UNROLL_CALL_RAW(8, WEIGHT_CB);
+    }
+};
 #undef WEIGHT_CB
 
 #define WEIGHT_CB(step) \
@@ -672,6 +789,11 @@ struct LoadHelper<6, base_offset, ptr_step, 1, Func, T, T2> {
 template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
 struct LoadHelper<7, base_offset, ptr_step, 1, Func, T, T2> {
     static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(7, WEIGHT_CB); }
+};
+
+template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
+struct LoadHelper<8, base_offset, ptr_step, 1, Func, T, T2> {
+    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(8, WEIGHT_CB); }
 };
 
 #undef WEIGHT_CB
@@ -721,6 +843,13 @@ template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
 struct LoadHelper<7, base_offset, ptr_step, 2, Func, T, T2> {
     static void impl(T& src, T2 ptr, int oc_offset) {
         UNROLL_CALL_RAW(7, WEIGHT_CB);
+    }
+};
+
+template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
+struct LoadHelper<8, base_offset, ptr_step, 2, Func, T, T2> {
+    static void impl(T& src, T2 ptr, int oc_offset) {
+        UNROLL_CALL_RAW(8, WEIGHT_CB);
     }
 };
 

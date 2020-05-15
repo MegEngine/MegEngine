@@ -72,18 +72,16 @@ std::vector<conv_bias::TestArg> get_int8_quint8_conv_bias_args(
 std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         std::vector<size_t> kernel_vec, size_t stride, bool no_pad = false,
         bool no_bias = false, bool no_nonlinemode = false,
-        bool is_input_nchw = false) {
+        bool is_input_nchw = false, bool support_full_bias = false) {
     using namespace conv_bias;
     using NLMode = param::ConvBias::NonlineMode;
     std::vector<TestArg> args;
 
     auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
                     size_t kernel, size_t stride, size_t group, NLMode nlmode,
-                    int any_pad = -1) {
+                    megdnn::BiasMode bias_mode, int any_pad = -1) {
         constexpr int pack_c = 4;
         const size_t pad = any_pad >= 0 ? any_pad : kernel / 2;
-        auto bias_mode = no_bias ? megdnn::BiasMode::NO_BIAS
-                                 : megdnn::BiasMode::BROADCAST_CHANNEL_BIAS;
         auto oc_per_group = oc / group;
         auto ic_per_group = ic / group;
         bool ok_group = (oc % group == 0 && ic % group == 0) &&
@@ -116,6 +114,10 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         auto bias_tensor_shape = TensorShape{};
         if (bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
             bias_tensor_shape = {1, oc / pack_c, 1, 1, pack_c};
+        } else if (bias_mode == megdnn::BiasMode::BIAS) {
+            bias_tensor_shape = {n, oc / pack_c,
+                                 (h + 2 * pad - kernel) / stride + 1,
+                                 (w + 2 * pad - kernel) / stride + 1, pack_c};
         }
         if (group == 1) {
             param.sparse = param::ConvBias::Sparse::DENSE;
@@ -149,19 +151,29 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         nonlinemode.emplace_back(NLMode::RELU);
         nonlinemode.emplace_back(NLMode::H_SWISH);
     }
-    for (auto nlmode : nonlinemode)
-        for (size_t n : {1, 2})
-            for (size_t kernel : kernel_vec)
-                for (size_t oc : {4, 12, 32})
-                    for (size_t ic : {1, 3, 4, 12, 32})
-                        for (size_t h : {3, 5, 12})
-                            for (size_t w : {7, 16, 23}) {
-                                for (size_t group = 1;
-                                     group <= std::min(oc, ic); ++group) {
-                                    pack(n, oc, ic, h, w, kernel, stride, group,
-                                         nlmode);
+
+    std::vector<megdnn::BiasMode> bias_mode = {
+            megdnn::BiasMode::BROADCAST_CHANNEL_BIAS};
+    if (no_bias) {
+        bias_mode.emplace_back(megdnn::BiasMode::NO_BIAS);
+    }
+    if (support_full_bias) {
+        bias_mode.emplace_back(megdnn::BiasMode::BIAS);
+    }
+    for (auto bias : bias_mode)
+        for (auto nlmode : nonlinemode)
+            for (size_t n : {1, 2})
+                for (size_t kernel : kernel_vec)
+                    for (size_t oc : {4, 12, 32})
+                        for (size_t ic : {1, 3, 4, 12, 32})
+                            for (size_t h : {3, 5, 12})
+                                for (size_t w : {7, 16, 23}) {
+                                    for (size_t group = 1;
+                                         group <= std::min(oc, ic); ++group) {
+                                        pack(n, oc, ic, h, w, kernel, stride,
+                                             group, nlmode, bias);
+                                    }
                                 }
-                            }
     return args;
 }
 
@@ -325,6 +337,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_SMALL_GROUP) {
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
             handle(), "F32DIRECT_SMALL_GROUP");
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S2) {
+    check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
+                                              false, false, true),
+                    handle(), "F32_CONV_NCHW44_DIRECT_S2");
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR1_LARGE_GROUP) {
     check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 1, false, false, false),
                     handle(), "F32STRD1_LARGE_GROUP");

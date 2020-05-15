@@ -111,7 +111,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 7, oc_block> {
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -157,7 +157,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 5, oc_block> {
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -201,7 +201,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 3, oc_block> {
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -258,7 +258,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 2, oc_block> {
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
