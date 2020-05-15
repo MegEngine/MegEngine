@@ -134,12 +134,6 @@ struct OprArityTrait;
                          megdnn::Workspace& workspace) {                      \
             opr->exec(TENSORS(cb_dnn), workspace);                            \
         }                                                                     \
-                                                                              \
-        static void modify_input_layouts(_Opr* opr,                           \
-                                         const TensorLayoutArray& layouts) {  \
-            intl::MegDNNOprInputsLayoutModifier<_Opr>::apply(                 \
-                    opr->param(), {LAYOUTS(cb_ref)});                         \
-        }                                                                     \
     }
 
 #define TENSORS(cb) cb(inp_val[0]), cb(inp_val[1]), cb(out_val[0])
@@ -443,7 +437,6 @@ class AlgoChooser {
                             std::tuple_size<ConvTensorLayouts>::value == 8,
                     "Convolution AlgoChooser assumes arity = 3 , 5 or 8 (for "
                     "deformable conv)");
-            OprArityTrait<Opr>::modify_input_layouts(megdnn_opr, m_layouts);
         }
 
         Opr* megdnn_opr() const { return m_megdnn_opr; }

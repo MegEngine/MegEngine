@@ -65,8 +65,6 @@ size_t MatrixMul::get_workspace_size_bytes(
     TensorLayout i0(input_shapes[0], input(0)->dtype()),
             i1(input_shapes[1], input(1)->dtype()),
             out(output_shapes[0], output(0)->dtype());
-    intl::MegDNNOprInputsLayoutModifier<megdnn::MatrixMul>::apply(
-            tparam, {&i0, &i1, &out});
 
     auto transpose = [](TensorLayout& dst, bool& param) {
         std::swap(dst.shape[0], dst.shape[1]);
@@ -102,8 +100,6 @@ void MatrixMul::scn_do_execute() {
     MGB_TRY {
         transpose(inp0.layout, tparam.transposeA);
         transpose(inp1.layout, tparam.transposeB);
-        intl::MegDNNOprInputsLayoutModifier<megdnn::MatrixMul>::apply(
-                tparam, {&inp0.layout, &inp1.layout, &out.layout});
         megdnn_opr()->exec(inp0, inp1, out,
                            intl::get_megdnn_workspace_from_var(output(1)));
     }
@@ -186,8 +182,6 @@ size_t BatchedMatrixMul::get_workspace_size_bytes(
     TensorLayout i0(input_shapes[0], input(0)->dtype()),
             i1(input_shapes[1], input(1)->dtype()),
             out(output_shapes[0], output(0)->dtype());
-    intl::MegDNNOprInputsLayoutModifier<megdnn::BatchedMatrixMul>::apply(
-            tparam, {&i0, &i1, &out});
 
     auto transpose = [](TensorLayout& dst, bool& param) {
         std::swap(dst.shape[1], dst.shape[2]);
@@ -224,8 +218,6 @@ void BatchedMatrixMul::scn_do_execute() {
     MGB_TRY {
         transpose(inp0.layout, tparam.transposeA);
         transpose(inp1.layout, tparam.transposeB);
-        intl::MegDNNOprInputsLayoutModifier<megdnn::BatchedMatrixMul>::apply(
-                tparam, {&inp0.layout, &inp1.layout, &out.layout});
         megdnn_opr()->exec(inp0, inp1, out,
                            intl::get_megdnn_workspace_from_var(output(1)));
     }
