@@ -1165,6 +1165,34 @@ TEST(TestOprIndexing, SetMeshIndexing) {
         checker.run({TensorShape{8, 20, 10, 7, 7}, {1}, {9}, {3, 9, 1, 7, 7}},
                     opt);
     }
+    { // only interval AxisIndexer given
+        using Checker = AutoOprChecker<2, 1>;
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+            SymbolVar x = inputs[0], val = inputs[1];
+            return {opr::SetMeshIndexing::make(
+                    x, val,
+                    {AIdx::make_interval(0, x.make_scalar(1),
+                        None, x.make_scalar(2))})};
+        };
+        auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+            dest[0].copy_from(*inp[0]);
+            auto value = *inp[1];
+            auto value_iter = megdnn::tensor_iter<float>(value.as_megdnn()).begin();
+            size_t n = dest[0].layout().stride[0];
+            float* raw_ptr = dest[0].ptr<float>();
+            for (size_t i = 0; i < value.shape().total_nr_elems(); ++i) {
+                ptrdiff_t offset = (i / n * 2 + 1) * n + i % n;
+                *(raw_ptr + offset) = *value_iter;
+                ++ value_iter;
+            }
+        };
+        Checker checker{make_graph, fwd};
+        checker.run({TensorShape{11}, {5}});
+        checker.run({TensorShape{6, 7}, {3, 7}});
+        checker.run({TensorShape{4, 7, 1}, {2, 7, 1}});
+        checker.run({TensorShape{7, 1, 1, 2}, {3, 1, 1, 2}});
+    }
 }
 
 #endif  // MGB_ENABLE_EXCEPTION
