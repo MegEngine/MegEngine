@@ -89,18 +89,26 @@ namespace intl {
             cg::OutshapePureByInshapeOpr<>,
             mixin::MegDNNOprHolderImpl<megdnn::BatchConvBiasForward>>;
     using BatchConvBiasForwardBase = WorkspaceSizeInfer<BatchConvBiasBase>;
+
+    using ConvolutionForwardBase = WorkspaceSizeInfer<
+            typename MegDNNOprWrapperFwdBase<megdnn::ConvolutionForward>::Base>;
 }  // namespace intl
 
 MGB_DEFINE_OPR_CLASS(ConvolutionForward,
-        intl::MegDNNOprWrapperFwd<megdnn::ConvolutionForward>,
-        public mixin::Convolution) // {
-
+        intl::ConvolutionForwardBase, public mixin::Convolution) // {
     void init_profile_cache() override;
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
             const TensorShapeArray &input_shapes,
             const TensorShapeArray &output_shapes) const override final;
     void init_output_format() override;
+    void scn_do_execute() override;
+    void add_input_layout_constraint() override;
+    void init_output_static_infer_desc() override;
+    void get_output_var_shape(const TensorShapeArray& inp_shape,
+                              TensorShapeArray& out_shape) const override final;
+    void record_execute_deps(
+            cg::GraphExecutable::ExecDependencyArray& deps) override;
 
     public:
         ConvolutionForward(VarNode *src, VarNode *filter,

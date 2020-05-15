@@ -532,11 +532,11 @@ TEST(TestOprDNN, DilatedConvolution) {
         TensorLayout dest_layout;
         opr->deduce_layout(inp[0]->layout(), inp[1]->layout(), dest_layout);
         std::vector<dt_byte> workspace(opr->get_workspace_in_bytes(
-                    inp[0]->layout(), inp[1]->layout(), dest_layout));
+                    inp[0]->layout(), inp[1]->layout(), dest_layout, nullptr));
         dest[0].dtype(dtype::Float32()).
             comp_node(inp[0]->comp_node()).resize(dest_layout);
-        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(),
-                dest[0].as_megdnn(), {workspace.data(), workspace.size()});
+        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(),
+                  nullptr, {workspace.data(), workspace.size()});
     };
     Checker::RunOptions option;
     option.numdiff_eps = 0.1;
