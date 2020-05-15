@@ -73,22 +73,32 @@ ConvolutionForwardImpl::get_all_algorithms(const TensorLayout& src,
 
 size_t ConvolutionForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& dst) {
+        const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter) {
     auto extra_data = conv_bias_extra_data(dst);
     return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
-            ->get_workspace_in_bytes(src, filter, extra_data.bias_layout,
-                                     extra_data.z_layout, dst);
+            ->get_workspace_in_bytes(
+                    src, filter, extra_data.bias_layout, extra_data.z_layout,
+                    dst,
+                    reinterpret_cast<const ConvolutionBase<
+                            param::ConvBias>::PreprocessedFilter*>(
+                            preprocessed_filter));
 }
 
 void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
                                   _megdnn_tensor_in filter,
                                   _megdnn_tensor_out dst,
+                                  const PreprocessedFilter* preprocessed_filter,
                                   _megdnn_workspace workspace) {
     auto extra_data = conv_bias_extra_data(dst.layout);
     TensorND bias(nullptr, extra_data.bias_layout);
     TensorND z(nullptr, extra_data.z_layout);
     return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
-            ->exec(src, filter, bias, z, dst, workspace);
+            ->exec(src, filter, bias, z, dst,
+                   reinterpret_cast<const ConvolutionBase<
+                           param::ConvBias>::PreprocessedFilter*>(
+                           preprocessed_filter),
+                   workspace);
 }
 
 const char* ConvolutionForwardImpl::get_algorithm_set_name() const {

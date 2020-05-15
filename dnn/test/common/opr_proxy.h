@@ -200,14 +200,69 @@ struct OprProxyProfilingTernary : public OprProxyProfilingBase<Opr, 3> {
         using OprProxyProfilingTernary<c>::OprProxyProfilingTernary; \
     }
 
-DEF_PROF3(ConvolutionForward);
 DEF_PROF3(ConvolutionBackwardData);
 DEF_PROF3(ConvolutionBackwardFilter);
 DEF_PROF3(LocalShareForward);
 DEF_PROF3(LocalShareBackwardData);
 DEF_PROF3(LocalShareBackwardFilter);
-
 #undef DEF_PROF3
+
+//! TODO: it should adapt weight preprocess later
+template <>
+struct OprProxy<ConvolutionForward>
+        : public OprProxyProfilingTernary<ConvolutionForward> {
+    using OprProxyProfilingTernary<ConvolutionForward>::OprProxyProfilingTernary;
+    void exec(ConvolutionForward* opr, const TensorNDArray& tensors) {
+        megdnn_assert(tensors.size() == 3);
+        if (!Base::W.valid()) {
+            Base::W = WorkspaceWrapper(opr->handle(), 0);
+        }
+        if (Base::m_profiling && !Base::target_algo) {
+            size_t min_time = std::numeric_limits<size_t>::max();
+            for (auto algo :
+                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
+                                         tensors[2].layout)) {
+                opr->execution_policy().algorithm = algo;
+                auto workspace_size = opr->get_workspace_in_bytes(
+                        tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                        nullptr);
+                Base::W.update(workspace_size);
+
+                for (size_t times = 0; times < Base::warmup_times; ++times)
+                    opr->exec(tensors[0], tensors[1], tensors[2], nullptr,
+                              Base::W.workspace());
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                Timer timer;
+                timer.start();
+                for (size_t times = 0; times < Base::exec_times; ++times) {
+                    opr->exec(tensors[0], tensors[1], tensors[2], nullptr,
+                              Base::W.workspace());
+                }
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                timer.stop();
+                printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
+                       algo->name());
+                if (min_time > timer.get_time_in_us()) {
+                    min_time = timer.get_time_in_us();
+                    Base::target_algo = algo;
+                }
+            }
+            opr->execution_policy().algorithm = Base::target_algo;
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout, nullptr);
+            Base::W.update(workspace_size);
+        }
+        if (!Base::target_algo) {
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    nullptr);
+            Base::W.update(workspace_size);
+        }
+        opr->exec(tensors[0], tensors[1], tensors[2], nullptr,
+                  Base::W.workspace());
+    }
+};
+
 
 template <class Opr>
 struct OprProxyProfiling5 : public OprProxyProfilingBase<Opr, 5> {
@@ -274,9 +329,66 @@ struct OprProxyProfiling5 : public OprProxyProfilingBase<Opr, 5> {
 
 DEF_PROF5(DeformableConvForward);
 DEF_PROF5(DeformableConvBackwardFilter);
-DEF_PROF5(ConvBiasForward);
+//DEF_PROF5(ConvBiasForward);
 DEF_PROF5(BatchConvBiasForward);
 #undef DEF_PROF5
+
+//! TODO: it should adapt weight preprocess later
+template <>
+struct OprProxy<ConvBiasForward> : public OprProxyProfiling5<ConvBiasForward> {
+    using OprProxyProfiling5<ConvBiasForward>::OprProxyProfiling5;
+    void exec(ConvBiasForward* opr, const TensorNDArray& tensors) {
+        megdnn_assert(tensors.size() == 5);
+        if (!Base::W.valid()) {
+            Base::W = WorkspaceWrapper(opr->handle(), 0);
+        }
+        if (Base::m_profiling && !Base::target_algo) {
+            size_t min_time = std::numeric_limits<size_t>::max();
+            for (auto algo :
+                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
+                                         tensors[2].layout, tensors[3].layout,
+                                         tensors[4].layout)) {
+                opr->execution_policy().algorithm = algo;
+                auto workspace_size = opr->get_workspace_in_bytes(
+                        tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                        tensors[3].layout, tensors[4].layout, nullptr);
+                Base::W.update(workspace_size);
+
+                for (size_t times = 0; times < Base::warmup_times; ++times)
+                    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3],
+                              tensors[4], nullptr, Base::W.workspace());
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                Timer timer;
+                timer.start();
+                for (size_t times = 0; times < Base::exec_times; ++times) {
+                    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3],
+                              tensors[4], nullptr, Base::W.workspace());
+                }
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                timer.stop();
+                printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
+                       algo->name());
+                if (min_time > timer.get_time_in_us()) {
+                    min_time = timer.get_time_in_us();
+                    Base::target_algo = algo;
+                }
+            }
+            opr->execution_policy().algorithm = Base::target_algo;
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    tensors[3].layout, tensors[4].layout, nullptr);
+            Base::W.update(workspace_size);
+        }
+        if (!Base::target_algo) {
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    tensors[3].layout, tensors[4].layout, nullptr);
+            Base::W.update(workspace_size);
+        }
+        opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], tensors[4],
+                  nullptr, Base::W.workspace());
+    }
+};
 
 template <class Opr>
 struct OprProxyProfiling8 : public OprProxyProfilingBase<Opr, 8> {

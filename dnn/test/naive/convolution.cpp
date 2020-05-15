@@ -209,7 +209,8 @@ TEST_F(NAIVE, CONVOLUTION_WITH_NCHW4) {
         }
 
         auto workspace_size = conv->get_workspace_in_bytes(
-                tensors[0].layout, tensors[1].layout, tensors[2].layout);
+                tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                nullptr);
         dt_byte* workspace_ptr = static_cast<dt_byte*>(malloc(workspace_size));
         Workspace workspace{workspace_ptr, workspace_size};
 
@@ -217,7 +218,7 @@ TEST_F(NAIVE, CONVOLUTION_WITH_NCHW4) {
         relayout->exec(nchw4_tensors[0], nchw_tensors[0]);
         relayout->exec(nchw4_tensors[1], nchw_tensors[1]);
 
-        conv->exec(nchw_tensors[0], nchw_tensors[1], nchw_tensors[2],
+        conv->exec(nchw_tensors[0], nchw_tensors[1], nchw_tensors[2], nullptr,
                    workspace);
 
         relayout->exec(nchw_tensors[2], nchw4_tensors[2]);

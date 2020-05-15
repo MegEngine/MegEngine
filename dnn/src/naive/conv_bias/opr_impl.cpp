@@ -54,7 +54,8 @@ size_t ConvBiasForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
                                                    const TensorLayout& flt,
                                                    const TensorLayout& bias,
                                                    const TensorLayout& z,
-                                                   const TensorLayout& dst) {
+                                                   const TensorLayout& dst,
+                                                   const PreprocessedFilter*) {
     size_t float_workspace_size = 0;
 
     if (z.ndim > 0 && z.dtype.category() != DTypeCategory::FLOAT) {
@@ -79,6 +80,7 @@ size_t ConvBiasForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
 void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                _megdnn_tensor_in bias, _megdnn_tensor_in z,
                                _megdnn_tensor_out dst,
+                               const PreprocessedFilter*,
                                _megdnn_workspace workspace) {
     MIDOUT_BEGIN(megdnn_naive_conv_bias_fwd) {
         dt_byte *workspace_ptr = workspace.raw_ptr;

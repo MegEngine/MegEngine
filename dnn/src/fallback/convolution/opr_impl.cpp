@@ -82,6 +82,7 @@ bool ConvolutionImpl::is_naive_algo(ConvolutionImpl::Algorithm* algo) {
 }
 void ConvolutionImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                            _megdnn_tensor_out dst,
+                           const PreprocessedFilter* preprocessed_filter,
                            _megdnn_workspace workspace) {
     auto fparam = make_ncb_kern_param(src, filter, dst, workspace);
     ConvolutionImpl::Algorithm* algo = get_algorithm(fparam, workspace.size);
@@ -89,18 +90,20 @@ void ConvolutionImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         ncb_algo_get_workspace(algo, fparam) <= workspace.size) {
         exec_with_ncb_kern(fparam, algo);
     } else {
-        naive::ConvolutionForwardImpl::exec(src, filter, dst, workspace);
+        naive::ConvolutionForwardImpl::exec(src, filter, dst,
+                                            preprocessed_filter, workspace);
     }
 }
 
-size_t ConvolutionImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                               const TensorLayout& filter,
-                                               const TensorLayout& dst) {
+size_t ConvolutionImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter) {
     auto fparam = make_ncb_kern_size_param(src, filter, dst);
     Algorithm* algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvolutionForwardImpl::get_workspace_in_bytes(
-                src, filter, dst);
+                src, filter, dst, preprocessed_filter);
     } else {
         return ncb_algo_get_workspace(algo, fparam);
     }

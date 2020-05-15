@@ -103,7 +103,7 @@ void SeparableConvForwardImpl::exec(_megdnn_tensor_in src,
 
     ConvolutionForwardImpl* convOptr  = new ConvolutionForwardImpl(this->handle());
     Workspace empty_wsp;
-    convOptr->exec(src, filter2d, dst, empty_wsp);
+    convOptr->exec(src, filter2d, dst, nullptr, empty_wsp);
     delete(convOptr);
 
     free(filter2d_buf);

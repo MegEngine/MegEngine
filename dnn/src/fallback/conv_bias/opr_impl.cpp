@@ -95,7 +95,9 @@ bool ConvBiasImpl::is_naive_algo(ConvBiasImpl::Algorithm* algo) {
 }
 void ConvBiasImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                         _megdnn_tensor_in bias, _megdnn_tensor_in z,
-                        _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+                        _megdnn_tensor_out dst,
+                        const PreprocessedFilter* preprocessed_filter,
+                        _megdnn_workspace workspace) {
     check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
                workspace.size);
     auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace);
@@ -104,20 +106,21 @@ void ConvBiasImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         ncb_algo_get_workspace(algo, fparam) <= workspace.size) {
         exec_with_ncb_kern(fparam, algo);
     } else {
-        naive::ConvBiasForwardImpl::exec(src, filter, bias, z, dst, workspace);
+        naive::ConvBiasForwardImpl::exec(src, filter, bias, z, dst,
+                                         preprocessed_filter, workspace);
     }
 }
 
-size_t ConvBiasImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                            const TensorLayout& filter,
-                                            const TensorLayout& bias,
-                                            const TensorLayout& z,
-                                            const TensorLayout& dst) {
+size_t ConvBiasImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter) {
     auto fparam = make_ncb_kern_size_param(src, filter, bias, dst);
     ConvBiasImpl::Algorithm* algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
-        return naive::ConvBiasForwardImpl::get_workspace_in_bytes(src, filter,
-                                                                  bias, z, dst);
+        return naive::ConvBiasForwardImpl::get_workspace_in_bytes(
+                src, filter, bias, z, dst, preprocessed_filter);
     } else {
         return ncb_algo_get_workspace(algo, fparam);
     }

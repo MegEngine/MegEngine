@@ -210,21 +210,25 @@ public:
                       _megdnn_tensor_out dst,
                       const PreprocessedFilter* preprocessed_filter,
                       _megdnn_workspace workspace) = 0;
+
     virtual void exec_preprocess(const TensorLayout& src_layout,
                                  _megdnn_tensor_in filter,
                                  const TensorLayout& dst_layout,
                                  PreprocessedFilter* preprocessed_filter,
                                  _megdnn_workspace workspace) = 0;
     void deduce_dtype(DType src, DType filter, DType& dst);
+
     void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
                        TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst,
-            PreprocessedFilter* preprocessed_filter) = 0;
+            const PreprocessedFilter* preprocessed_filter) = 0;
+
     virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) = 0;
+
     virtual size_t get_preprocess_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) = 0;
@@ -337,7 +341,7 @@ public:
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst,
-            PreprocessedFilter* preprocessed_filter) = 0;
+            const PreprocessedFilter* preprocessed_filter) = 0;
     virtual size_t get_preprocess_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,

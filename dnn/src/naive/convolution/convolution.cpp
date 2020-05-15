@@ -26,15 +26,14 @@ using namespace megdnn;
 using namespace naive;
 
 void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
-        _megdnn_tensor_in filter,
-        _megdnn_tensor_out dst,
-        _megdnn_workspace workspace)
-{
+                                  _megdnn_tensor_in filter,
+                                  _megdnn_tensor_out dst,
+                                  const PreprocessedFilter*,
+                                  _megdnn_workspace workspace) {
     MIDOUT_BEGIN(megdnn_naive_conv_fwd) {
-
-    auto filter_meta = check_exec(
-            src.layout, filter.layout, dst.layout, workspace.size);
-    using ComputeMode = Param::ComputeMode;
+        auto filter_meta = check_exec(src.layout, filter.layout, dst.layout,
+                                      workspace.size);
+        using ComputeMode = Param::ComputeMode;
 #define DISPATCH_CMODE(in_dt, out_dt, in_ct, out_ct, comp_ct, cmode)      \
     do {                                                                  \
         using namespace dtype;                                            \
@@ -52,24 +51,28 @@ void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
 #define cb(dt)                                                     \
     DISPATCH(dt, dt, DTypeTrait<dt>::ctype, DTypeTrait<dt>::ctype, \
              DTypeTrait<dt>::ctype)
-    MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
 #undef cb
-    DISPATCH(Int8, Int16, dt_int8, dt_int16, dt_int16);
-    DISPATCH(Int8, Int32, dt_int8, dt_int32, dt_int32);
-    DISPATCH(QuantizedS8, QuantizedS32, dt_int8, dt_int32, dt_int32);
-    MEGDNN_INC_FLOAT16(DISPATCH_CMODE(Float16, Float16, dt_float16, dt_float16,
-                                      dt_float32, ComputeMode::FLOAT32));
-    MEGDNN_INC_FLOAT16(DISPATCH_CMODE(BFloat16, BFloat16, dt_bfloat16,
-                                      dt_bfloat16, dt_float32,
-                                      ComputeMode::FLOAT32));
-    DISPATCH(Quantized8Asymm, QuantizedS32, dt_quint8, dt_qint32, dt_qint32);
-    DISPATCH(QuantizedS8, QuantizedS8, dt_int8, dt_int8, dt_int32);
+        DISPATCH(Int8, Int16, dt_int8, dt_int16, dt_int16);
+        DISPATCH(Int8, Int32, dt_int8, dt_int32, dt_int32);
+        DISPATCH(QuantizedS8, QuantizedS32, dt_int8, dt_int32, dt_int32);
+        MEGDNN_INC_FLOAT16(DISPATCH_CMODE(Float16, Float16, dt_float16,
+                                          dt_float16, dt_float32,
+                                          ComputeMode::FLOAT32));
+        MEGDNN_INC_FLOAT16(DISPATCH_CMODE(BFloat16, BFloat16, dt_bfloat16,
+                                          dt_bfloat16, dt_float32,
+                                          ComputeMode::FLOAT32));
+        DISPATCH(Quantized8Asymm, QuantizedS32, dt_quint8, dt_qint32,
+                 dt_qint32);
+        DISPATCH(QuantizedS8, QuantizedS8, dt_int8, dt_int8, dt_int32);
 #undef DISPATCH
-    megdnn_throw(ssprintf("unsupported Conv(%s, %s) -> %s with cmode = %d",
-                          src.layout.dtype.name(), filter.layout.dtype.name(),
-                          dst.layout.dtype.name(),
-                          static_cast<int>(param().compute_mode)));
-    } MIDOUT_END();
+        megdnn_throw(ssprintf("unsupported Conv(%s, %s) -> %s with cmode = %d",
+                              src.layout.dtype.name(),
+                              filter.layout.dtype.name(),
+                              dst.layout.dtype.name(),
+                              static_cast<int>(param().compute_mode)));
+    }
+    MIDOUT_END();
 }
 
 size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(const TensorLayout& filter,

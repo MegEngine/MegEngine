@@ -36,12 +36,14 @@ public:
 
     //! implemented by exec_with_ncb_kern()
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-              _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
+              _megdnn_tensor_out dst, const PreprocessedFilter*,
+              _megdnn_workspace workspace) override;
 
     //! implemented by get_workspace_with_ncb()
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& filter,
-                                  const TensorLayout& dst) override;
+                                  const TensorLayout& dst,
+                                  const PreprocessedFilter*) override;
 
     //! implemented by get_all_algorithms_with_ncb()
     std::vector<Algorithm*> get_all_algorithms(

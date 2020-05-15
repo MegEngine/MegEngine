@@ -20,7 +20,9 @@ public:
     using ConvBiasForward::ConvBiasForward;
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
               _megdnn_tensor_in bias, _megdnn_tensor_in z,
-              _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
+              _megdnn_tensor_out dst,
+              const PreprocessedFilter* preprocessed_filter,
+              _megdnn_workspace workspace) override;
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
@@ -34,7 +36,30 @@ public:
                                        bool reproducible) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override;
+                                  const TensorLayout&,
+                                  const PreprocessedFilter*) override;
+
+    size_t get_preprocess_workspace_in_bytes(const TensorLayout&,
+                                             const TensorLayout&,
+                                             const TensorLayout&,
+                                             const TensorLayout&,
+                                             const TensorLayout&) override {
+        return 0;
+    };
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&, const TensorLayout&) override {
+        return {};
+    }
+    void exec_preprocess(const TensorLayout& ,
+                         _megdnn_tensor_in ,
+                         const TensorLayout& ,
+                         const TensorLayout& ,
+                         const TensorLayout& ,
+                         PreprocessedFilter* ,
+                         _megdnn_workspace ) override {
+        megdnn_throw("cuda conv_bias exec_preprocess has not implemeted yet");
+    }
 
     const char* get_algorithm_set_name() const override;
 

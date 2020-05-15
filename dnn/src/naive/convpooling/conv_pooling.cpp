@@ -97,7 +97,7 @@ void ConvPoolingForwardImpl::exec(const _megdnn_in TensorND src,
     TensorND conv_dst((float*)(workspace.raw_ptr), conv_dst_layout);
     //convFwd->check_layout(src.layout, filter.layout, workspace.layout, empty_wsp.layout);
     check_layout(src.layout, filter.layout, bias.layout, dst.layout, workspace.size);
-    convFwd->exec(src, filter, conv_dst, empty_wsp);
+    convFwd->exec(src, filter, conv_dst, nullptr, empty_wsp);
 
     // calculate bias
     int conv_dst_batch = conv_dst.layout.shape[0];

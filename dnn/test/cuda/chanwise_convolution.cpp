@@ -176,6 +176,46 @@ public:
         }
     }
 
+    //! special for weight preprocess
+    void exec_convolution(ConvolutionForward* opr0, ConvolutionForward* opr1) {
+        opr0->param().pad_h = pad_h;
+        opr0->param().pad_w = pad_w;
+        opr1->param() = opr0->param();
+        opr1->param().sparse = param::Convolution::Sparse::GROUP;
+
+        TensorND a0, b0, c0, a1, b1, c1;
+        std::tie(a0, b0, c0) = shuffle(std::make_tuple(
+                    src0->tensornd(), flt0->tensornd(), dst0->tensornd()));
+        std::tie(a1, b1, c1) = shuffle(std::make_tuple(
+                    src1->tensornd(), flt1->tensornd(), dst1->tensornd()));
+        WorkspaceWrapper wk(
+                handle,
+                std::max(opr0->get_workspace_in_bytes(a0.layout, b0.layout,
+                                                      c0.layout, nullptr),
+                         opr1->get_workspace_in_bytes(a1.layout, b1.layout,
+                                                      c1.layout, nullptr)));
+        cudaProfilerStart();
+        cudaEventRecord(cuda_ev[0], cuda_stream);
+        opr0->exec(a0, b0, c0, nullptr, wk.workspace());
+        cudaEventRecord(cuda_ev[1], cuda_stream);
+        opr1->exec(a1, b1, c1, nullptr, wk.workspace());
+        cudaEventRecord(cuda_ev[2], cuda_stream);
+        cudaProfilerStop();
+
+        if (getenv("MEGDNN_CHANWISE_CONV_VERBOSE") ||
+                getenv("MEGDNN_CHANWISE_CONV_FULLBENCH")) {
+            cudaStreamSynchronize(cuda_stream);
+            float t0 = -1, t1 = -1;
+            cudaEventElapsedTime(&t0, cuda_ev[0], cuda_ev[1]);
+            cudaEventElapsedTime(&t1, cuda_ev[1], cuda_ev[2]);
+            printf("%s;%s;%s: cudnn/megdnn: %.3fms/%.3fms=%.3f\n",
+                    lsrc.TensorShape::to_string().c_str(),
+                    lflt1.TensorShape::to_string().c_str(),
+                    ldst.TensorShape::to_string().c_str(),
+                    t0, t1, t0 / t1);
+        }
+    }
+
     void cmp_dst() {
         Tensor<> dst0_cpu(handle_cpu, ldst), dst1_cpu(handle_cpu, ldst);
         megdnn_memcpy_D2H(handle,
@@ -399,7 +439,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_FORWARD_BENCH_CHECK) {
         benv.alloc(N, IC, IH, IW, CHL_MUL, FH, FW, PH, PW);
         benv.fill_src();
         benv.fill_flt();
-        benv.exec(conv0.get(), conv1.get());
+        benv.exec_convolution(conv0.get(), conv1.get());
         benv.cmp_dst();
     };
 

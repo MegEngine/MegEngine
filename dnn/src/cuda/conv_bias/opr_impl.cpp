@@ -25,6 +25,7 @@ namespace cuda {
 void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                _megdnn_tensor_in bias, _megdnn_tensor_in z,
                                _megdnn_tensor_out dst,
+                               const PreprocessedFilter*,
                                _megdnn_workspace workspace) {
     check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
                workspace.size);
@@ -208,7 +209,8 @@ size_t ConvBiasForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
                                                    const TensorLayout& filter,
                                                    const TensorLayout& bias,
                                                    const TensorLayout& z,
-                                                   const TensorLayout& dst) {
+                                                   const TensorLayout& dst,
+                                                   const PreprocessedFilter*) {
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
     return get_algorithm(this, src, filter, bias, z, dst)
             ->get_workspace_in_bytes(args);

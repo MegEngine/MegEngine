@@ -30,10 +30,10 @@ TEST(DISPATCHER, NULL_DISPATCHER)
 
     auto layout = TensorLayout({1, 1, 1, 1}, dtype::Float32());
     TensorND src(nullptr, layout), filter(nullptr, layout), dst(nullptr, layout);
-    auto wsize = opr->get_workspace_in_bytes(layout, layout, layout);
+    auto wsize = opr->get_workspace_in_bytes(layout, layout, layout, nullptr);
     Workspace workspace(nullptr, wsize);
 
-    opr->exec(src, filter, dst, workspace);
+    opr->exec(src, filter, dst, nullptr, workspace);
 }
 #endif
 

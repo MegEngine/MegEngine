@@ -75,8 +75,8 @@ TEST_F(CPU, MASK_PROPAGATE) {
         auto dst = TensorND{dst_ptr, dst_layout};
         WorkspaceWrapper workspace{
                 handle(), opr->get_workspace_in_bytes(src.layout, filter.layout,
-                                                      dst.layout)};
-        opr->exec(src, filter, dst, workspace.workspace());
+                                                      dst.layout, nullptr)};
+        opr->exec(src, filter, dst, nullptr, workspace.workspace());
         for (size_t i = 0; i < dst.layout.total_nr_elems(); ++i) {
             mask_dst.ptr<int>()[i] = dst_ptr[i] > 0;
         }

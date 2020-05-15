@@ -76,7 +76,7 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
     auto ret = check_layout_fwd(src, filter, dst);
     megdnn_assert_contiguous(bias);
     auto required_workspace_in_bytes =
-            get_workspace_in_bytes(src, filter, bias, z, dst);
+            get_workspace_in_bytes(src, filter, bias, z, dst, nullptr);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     if (bias.ndim != 0) {
         //! bias.layout == dst.layout failed, no assert information

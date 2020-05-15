@@ -30,7 +30,7 @@ public:
                                   const TensorLayout& dst) override {
         MEGDNN_MARK_USED_VAR(mask);
         m_conv_opr->param() = param();
-        return m_conv_opr->get_workspace_in_bytes(src, filter, dst);
+        return m_conv_opr->get_workspace_in_bytes(src, filter, dst, nullptr);
     }
 
 private:

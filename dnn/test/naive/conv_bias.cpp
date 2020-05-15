@@ -217,11 +217,11 @@ TEST_F(NAIVE, CONV_BIAS_QUANTIZED8x8x32_NCHW32) {
 
     size_t ws_size = conv_opr->get_workspace_in_bytes(
             src_layout_4, filter_layout_4, bias_layout_4, z_layout_4,
-            dst_layout_4);
+            dst_layout_4, nullptr);
     WorkspaceWrapper ws{handle(), ws_size};
     conv_opr->exec(src_ts_4.tensornd(), filter_ts_4.tensornd(),
                    bias_ts_4.tensornd(), z_ts_4.tensornd(), dst_ts_4.tensornd(),
-                   ws.workspace());
+                   nullptr, ws.workspace());
 
     TensorLayout src_layout_32{{N, IC / 32, IH, IW, 32},
                                dtype::QuantizedS8(0.1f)};

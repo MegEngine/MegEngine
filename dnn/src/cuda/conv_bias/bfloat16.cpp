@@ -112,7 +112,7 @@ void ConvBiasForwardImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
         convbias_opr->param().compute_mode = Param::ComputeMode::DEFAULT;
         convbias_opr->execution_policy() = {m_impl};
         convbias_opr->exec(fsrc_tensor, ffilter_tensor, fbias_tensor, fz_tensor,
-                           fdst_tensor, cvter.workspace());
+                           fdst_tensor, nullptr, cvter.workspace());
     }
     { cvter.comp_to_dst_type(fdst_tensor, *args.dst_tensor); }
 }

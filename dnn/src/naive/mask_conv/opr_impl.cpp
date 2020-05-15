@@ -80,7 +80,7 @@ void MaskConvForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(mask);
     m_conv_opr->param() = this->param();
-    m_conv_opr->exec(src, filter, dst, workspace);
+    m_conv_opr->exec(src, filter, dst, nullptr, workspace);
 #define cb(DType)                                                         \
     if (mask.layout.dtype == DType()) {                                   \
         using ctype = typename DTypeTrait<DType>::ctype;                  \
@@ -99,7 +99,7 @@ size_t MaskConvForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
                                                    const TensorLayout& dst) {
     MEGDNN_MARK_USED_VAR(mask);
     m_conv_opr->param() = this->param();
-    return m_conv_opr->get_workspace_in_bytes(src, filter, dst);
+    return m_conv_opr->get_workspace_in_bytes(src, filter, dst, nullptr);
 }
 
 void MaskPropagateImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,

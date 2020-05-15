@@ -664,7 +664,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD) {
                 conv_bias_opr->get_workspace_in_bytes(
                         tensors[0].layout, filter_transform_layout,
                         tensors[2].layout, tensors[3].layout,
-                        tensors[4].layout);
+                        tensors[4].layout, nullptr);
 
         WorkspaceBundle wb(nullptr, {filter_transform_layout.span().dist_byte(),
                                      conv_bias_workspace_in_bytes,
@@ -676,7 +676,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD) {
         winograd_preprocess_opr->exec(tensors[1], filter_transform_tensor,
                                       wb.get_workspace(2));
         conv_bias_opr->exec(tensors[0], filter_transform_tensor, tensors[2],
-                            tensors[3], tensors[4], wb.get_workspace(1));
+                            tensors[3], tensors[4], nullptr,
+                            wb.get_workspace(1));
 
         free(wb.ptr());
     };

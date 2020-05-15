@@ -981,7 +981,8 @@ ConvolutionForward::CanonizedFilterMeta ConvolutionForward::check_exec(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst, size_t workspace_in_bytes) {
     auto ret = check_layout_fwd(src, filter, dst);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(src, filter, dst);
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(src, filter, dst, nullptr);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     return ret;
 }
