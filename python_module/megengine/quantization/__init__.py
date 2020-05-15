@@ -8,4 +8,11 @@
 from .fake_quant import FakeQuantize
 from .observer import Observer
 from .qconfig import QConfig, ema_fakequant_qconfig, min_max_fakequant_qconfig
-from .quantize import quantize, quantize_qat
+from .quantize import (
+    disable_fake_quant,
+    disable_observer,
+    enable_fake_quant,
+    enable_observer,
+    quantize,
+    quantize_qat,
+)

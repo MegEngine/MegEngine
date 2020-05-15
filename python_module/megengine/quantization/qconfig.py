@@ -15,21 +15,18 @@ from .observer import ExponentialMovingAverageObserver, MinMaxObserver
 class QConfig:
     """
     A config class indicating how to do quantize toward :class:`~.QATModule`'s
-    ``activation``, ``weight`` and ``bias``.
+    ``activation`` and ``weight``.
 
     And ``fake_quant`` parameter to indicate
 
     See :meth:`~.QATModule.set_qconfig` for detail usage.
 
-    :param inp_observer: interface to instantiate an :class:`~.Observer` indicating
-        how to collect scales and zero_point of input.
-    :param weight_observer: similar to ``inp_observer`` but toward weight.
-    :param act_observer: similar to ``inp_observer`` but toward activation.
+    :param weight_observer: interface to instantiate an :class:`~.Observer` indicating
+-        how to collect scales and zero_point of wegiht.
+    :param act_observer: similar to ``weight_observer`` but toward activation.
     :param fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
         how to do fake_quant calculation. can be invoked multi times to get different
         instance for each target tensor, for better control on enable and disable.
-    :param bias_fake_quant: similar to ``fake_quant``, but usually need to set ``dtype``
-        in advance, for bias's dtype is unable to be inferred from observer.
 
     Examples:
 
@@ -37,21 +34,16 @@ class QConfig:
 
         # Default EMA QConfig for QAT.
         ema_fakequant_qconfig = QConfig(
-            inp_observer=ExponentialMovingAverageObserver,
-            weight_observer=ExponentialMovingAverageObserver,
+            weight_observer=MinMaxObserver,
             act_observer=ExponentialMovingAverageObserver,
             fake_quant=FakeQuantize,
         )
     """
 
     def __init__(
-        self, act_observer, weight_observer, inp_observer, fake_quant, bias_fake_quant,
+        self, act_observer, weight_observer, fake_quant,
     ):
-        if (
-            isinstance(act_observer, Module)
-            or isinstance(weight_observer, Module)
-            or isinstance(inp_observer, Module)
-        ):
+        if isinstance(act_observer, Module) or isinstance(weight_observer, Module):
             raise ValueError(
                 "QConfig must not receive observer instance, please pass observer"
                 " class generator using `partial(Observer, ...)` instead. Use"
@@ -59,24 +51,18 @@ class QConfig:
             )
         self.act_observer = act_observer
         self.weight_observer = weight_observer
-        self.inp_observer = inp_observer
         self.fake_quant = fake_quant
-        self.bias_fake_quant = bias_fake_quant
 
 
 # Default QAT QConfigs
 min_max_fakequant_qconfig = QConfig(
-    inp_observer=MinMaxObserver,
     weight_observer=MinMaxObserver,
     act_observer=MinMaxObserver,
     fake_quant=FakeQuantize,
-    bias_fake_quant=partial(FakeQuantize, dtype="qint32"),
 )
 
 ema_fakequant_qconfig = QConfig(
-    inp_observer=ExponentialMovingAverageObserver,
     weight_observer=MinMaxObserver,
     act_observer=ExponentialMovingAverageObserver,
     fake_quant=FakeQuantize,
-    bias_fake_quant=partial(FakeQuantize, dtype="qint32"),
 )

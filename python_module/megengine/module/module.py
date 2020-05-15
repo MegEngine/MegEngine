@@ -476,21 +476,17 @@ class QATModule(Module):
         self.quantizing = self.QATMode.DISABLED
         self.scale = None
 
-        self.inp_observer = None  # type: Observer
         self.weight_observer = None  # type: Observer
         self.act_observer = None  # type: Observer
 
         self.weight_fake_quant = None  # type: FakeQuantize
-        self.bias_fake_quant = None  # type: FakeQuantize
         self.act_fake_quant = None  # type: FakeQuantize
 
     def set_qconfig(self, qconfig: "QConfig"):
-        self.inp_observer = qconfig.inp_observer()
         self.weight_observer = qconfig.weight_observer()
         self.act_observer = qconfig.act_observer()
 
         self.weight_fake_quant = qconfig.fake_quant(self.weight_observer.dtype)
-        self.bias_fake_quant = qconfig.bias_fake_quant()
         self.act_fake_quant = qconfig.fake_quant(self.act_observer.dtype)
 
     def apply_observer(self, target: Tensor, obs: "Observer"):
