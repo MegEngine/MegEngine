@@ -707,7 +707,7 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
     "cmp %w[n_remain], #3\n"                              \
     "blt 22f\n"                                           \
     "st1 {v8.4s, v9.4s, v10.4s}, [%[output0]]\n"          \
-    "b 23f\n"                                             \
+    "b 24f\n"                                             \
     "22:\n"                                               \
     "cmp %w[n_remain], #2\n"                              \
     "blt 23f\n"                                           \

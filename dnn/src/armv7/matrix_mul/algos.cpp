@@ -85,6 +85,74 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32, megdnn_armv7_matmul_kern,
                                      "AlgoF32Impl"_hash,
                                      armv7::matmul::sgemm_4x12, float, float);
 
+/* ===================== F32 algo mk4 K4x12 ===================== */
+
+namespace {
+void f32_mk4_pack_4x12_kern(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_armv7_matmul_kern,
+                 midout_iv("f32_mk4_pack_4x12_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto trA = kern_param.trA, trB = kern_param.trB;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        auto A_type = kern_param.A_type, B_type = kern_param.B_type,
+             C_type = kern_param.C_type;
+        const auto Aptr = kern_param.A<float>(), Bptr = kern_param.B<float>();
+        auto Cptr = kern_param.C<float>();
+
+        armv7::matmul::sgemm_mk4_pack_4x12 strategy(M, N, K, A_type, B_type,
+                                                    C_type);
+        megdnn::matmul::GemmInterleaved<armv7::matmul::sgemm_mk4_pack_4x12>(
+                M, N, K, trA, trB, strategy)
+                .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC,
+                         kern_param.workspace_ptr);
+    }
+    MIDOUT_END();
+}
+
+}  // anonymous namespace
+
+bool MatrixMulImpl::AlgoF32MK4Pack4x12::usable(
+        const KernSizeParam& kern_size_param) const {
+    return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.format == param::MatrixMul::Format::MK4 &&
+           kern_size_param.B_type == kern_size_param.A_type &&
+           kern_size_param.C_type == kern_size_param.A_type &&
+           kern_size_param.A_type == dtype::Float32() && !kern_size_param.trA &&
+           !kern_size_param.trB && kern_size_param.M % 4 == 0 &&
+           kern_size_param.K % 4 == 0 && !kern_size_param.trA &&
+           !kern_size_param.trB;
+}
+
+size_t MatrixMulImpl::AlgoF32MK4Pack4x12::get_workspace(
+        const KernSizeParam& kern_size_param) const {
+    MIDOUT_BEGIN(megdnn_armv7_matmul_kern,
+                 midout_iv("AlgoF32MK4Pack4x12::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N,
+             K = kern_size_param.K;
+        auto trA = kern_size_param.trA, trB = kern_size_param.trB;
+        auto A_type = kern_size_param.A_type, B_type = kern_size_param.B_type,
+             C_type = kern_size_param.C_type;
+        armv7::matmul::sgemm_mk4_pack_4x12 strategy(M, N, K, A_type, B_type,
+                                                    C_type);
+        return megdnn::matmul::GemmInterleaved<
+                       armv7::matmul::sgemm_mk4_pack_4x12>(M, N, K, trA, trB,
+                                                           strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32MK4Pack4x12::get_kern(
+        const KernSizeParam&) const {
+    return f32_mk4_pack_4x12_kern;
+}
+
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32MK4Pack4x12,
+                                     megdnn_armv7_matmul_kern,
+                                     "AlgoF32MK4Pack4x12"_hash,
+                                     armv7::matmul::sgemm_mk4_pack_4x12, float,
+                                     float);
+
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 /* ===================== F16 K4x16x1 algo ===================== */
 namespace {

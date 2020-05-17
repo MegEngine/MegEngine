@@ -21,6 +21,7 @@ public:
     SmallVector<AlgoBase*> algo_pack() override;
 private:
     class AlgoF32;               // Armv7 F32
+    class AlgoF32MK4Pack4x12;    // Armv7 F32 Kernel 4x12 with pack
     class AlgoF32MK4_4x8;        // Armv7 F32 Kernel 4x8 nopack
     class AlgoF32Gemv;           // Armv7 F32 Gemv
     class AlgoInt8x8x32K4x8x8;   // Armv7 Int8x8x32 Kernel 4x8x8

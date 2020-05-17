@@ -20,6 +20,7 @@ using namespace armv7;
 
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32 f32;
+    AlgoF32MK4Pack4x12 f32_mk4_pack_4x12;
     AlgoF32MK4_4x8  f32_mk4_4x8;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     AlgoF16K4x16x1 f16_k4x16x1;
@@ -48,6 +49,7 @@ public:
     AlgoPack() {
         all_algos.emplace_back(&f32_gemv);
         all_algos.emplace_back(&f32);
+        all_algos.emplace_back(&f32_mk4_pack_4x12);
         all_algos.emplace_back(&f32_mk4_4x8);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         all_algos.emplace_back(&f16_k4x16x1);

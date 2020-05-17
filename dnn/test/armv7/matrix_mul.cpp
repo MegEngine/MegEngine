@@ -28,6 +28,12 @@ TEST_F(ARMV7, MATRIX_MUL_MK4) {
             "ARMV7_F32_MK4_4x8", param::MatrixMul::Format::MK4, 4);
 }
 
+TEST_F(ARMV7, MATRIX_MUL_PACK_MK4) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
+            "ARMV7_F32_MK4_PACK_4X12", param::MatrixMul::Format::MK4, 1);
+}
+
 TEST_F(ARMV7, MATRIX_MUL_MK4_INT8) {
     std::vector<matrix_mul::TestArg> args;
     for (size_t m : {1, 2, 3, 4, 5, 7, 10, 11})
@@ -345,6 +351,15 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_MK4) {
     matrix_mul::benchmark_with_contrast(
             handle(), args, dtype::Float32{}, dtype::Float32{},
             dtype::Float32{}, "ARMV7_F32_MK4_4x8",
+            param::MatrixMul::Format::MK4, dtype::Float32{}, dtype::Float32{},
+            dtype::Float32{});
+}
+
+TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_PACK_MK4) {
+    auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(8);
+    matrix_mul::benchmark_with_contrast(
+            handle(), args, dtype::Float32{}, dtype::Float32{},
+            dtype::Float32{}, "ARMV7_F32_MK4_PACK_4X12",
             param::MatrixMul::Format::MK4, dtype::Float32{}, dtype::Float32{},
             dtype::Float32{});
 }

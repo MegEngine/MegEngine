@@ -1287,23 +1287,27 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
 #undef cb
 }
 
-#if MEGDNN_AARCH64
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
             get_nchw44_conv_bias_args({2, 4, 7}, 1);
-    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
-}
-#endif
-
 #if MEGDNN_AARCH64
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+#elif MEGDNN_ARMV7
+    check_conv_bias(args, handle(), "IM2COLMATMUL:ARMV7_F32_MK4_PACK_4X12");
+#endif
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
             get_nchw44_conv_bias_args({3, 5, 6}, 2);
+#if MEGDNN_AARCH64
     check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
-}
+#elif MEGDNN_ARMV7
+    check_conv_bias(args, handle(), "IM2COLMATMUL:ARMV7_F32_MK4_PACK_4X12");
 #endif
+}
 
 /***************************** Conv1x1 Algo Test ***********************/
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
@@ -1316,14 +1320,16 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
 #endif
 }
 
-#if MEGDNN_AARCH64
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
             get_nchw44_conv_bias_args({1}, 1, true, false, false);
+#if MEGDNN_AARCH64
     check_conv_bias(args, handle(), "CONV1x1:AARCH64_F32_MK4_K8X12X1:24");
-}
+#elif MEGDNN_ARMV7
+    check_conv_bias(args, handle(), "CONV1x1:ARMV7_F32_MK4_PACK_4X12:24");
 #endif
+}
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_NO_PACK_F32) {
     using namespace conv_bias;

@@ -1121,6 +1121,62 @@ static inline void transpose_4x4_1_b(const T*& inptr0, const T*& inptr1,
 }
 
 template <typename T>
+static inline void transpose_1x12_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4,
+                  "transpose_1x12_4_s only support sizeof(T) == 4");
+
+    asm volatile(
+            "vld4.32 {d0-d3},  [%[inptr0]]!\n"
+            "vld4.32 {d4-d7},  [%[inptr0]]!\n"
+            "vld4.32 {d8-d11},  [%[inptr0]]!\n"
+            "vld4.32 {d12-d15},  [%[inptr0]]!\n"
+            "vld4.32 {d16-d19},  [%[inptr0]]!\n"
+            "vld4.32 {d20-d23},  [%[inptr0]]!\n"
+            "vswp d1, d4\n"
+            "vswp d3, d6\n"
+            "vswp d9, d12\n"
+            "vswp d11, d14\n"
+            "vswp d17, d20\n"
+            "vswp d19, d22\n"
+
+            "vst1.32 {d0-d1}, [%[outptr]]! \n"
+            "vst1.32 {d8-d9}, [%[outptr]]! \n"
+            "vst1.32 {d16-d17}, [%[outptr]]! \n"
+            "vst1.32 {d4-d5}, [%[outptr]]! \n"
+            "vst1.32 {d12-d13}, [%[outptr]]! \n"
+            "vst1.32 {d20-d21}, [%[outptr]]! \n"
+            "vst1.32 {d2-d3}, [%[outptr]]! \n"
+            "vst1.32 {d10-d11}, [%[outptr]]! \n"
+            "vst1.32 {d18-d19}, [%[outptr]]! \n"
+            "vst1.32 {d6-d7}, [%[outptr]]! \n"
+            "vst1.32 {d14-d15}, [%[outptr]]! \n"
+            "vst1.32 {d22-d23}, [%[outptr]]! \n"
+            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            :
+            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
+              "q11", "memory");
+}
+
+template <typename T>
+static inline void transpose_1x4_4_s(const T*& inptr0, T* outptr) {
+    static_assert(sizeof(T) == 4,
+                  "transpose_1x4_4_s only support sizeof(T) == 4");
+    asm volatile(
+            "vld4.32 {d0-d3},  [%[inptr0]]!\n"
+            "vld4.32 {d4-d7},  [%[inptr0]]!\n"
+            "vswp d1, d4\n"
+            "vswp d3, d6\n"
+            "vst1.32 {d0-d1}, [%[outptr]]! \n"
+            "vst1.32 {d4-d5}, [%[outptr]]! \n"
+            "vst1.32 {d2-d3}, [%[outptr]]! \n"
+            "vst1.32 {d6-d7}, [%[outptr]]! \n"
+            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            :
+            : "q0", "q1", "q2", "q3", "memory");
+}
+
+
+template <typename T>
 static inline void transpose_4(const T*& inptr0, const T*& inptr1,
                                const T*& inptr2, const T*& inptr3, T* outptr,
                                int interleave, int size, T val = 0) {
