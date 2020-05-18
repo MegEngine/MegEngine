@@ -43,6 +43,7 @@ from .loss import (
     binary_cross_entropy,
     cross_entropy,
     cross_entropy_with_softmax,
+    hinge_loss,
     l1_loss,
     nll_loss,
     square_loss,

@@ -336,6 +336,32 @@ def test_binary_cross_entropy():
     opr_test(cases, F.binary_cross_entropy, compare_fn=compare_fn)
 
 
+def test_hinge_loss():
+    np.random.seed(123)
+    # case with L1 norm
+    cases = []
+    for shape in [(2, 2), (2, 3)]:
+        data = np.random.uniform(size=shape).astype(np.float32)
+        label = 2 * np.random.randint(0, 1, size=shape).astype(np.int32) - 1
+        expect = np.clip(0, np.inf, 1 - data * label).sum(axis=1).mean()
+        cases.append({"input": [data, label], "output": tensor(expect)})
+
+    opr_test(cases, F.hinge_loss)
+
+    # cases with L2 norm
+    cases = []
+    for shape in [(2, 2), (2, 3)]:
+        data = np.random.uniform(size=shape).astype(np.float32)
+        label = 2 * np.random.randint(0, 1, size=shape).astype(np.int32) - 1
+        expect = ((np.clip(0, np.inf, 1 - data * label) ** 2).sum(axis=1)).mean()
+        cases.append({"input": [data, label], "output": tensor(expect)})
+
+    def hinge_loss_with_l2_norm(pred, label):
+        return F.hinge_loss(pred, label, "L2")
+
+    opr_test(cases, hinge_loss_with_l2_norm)
+
+
 @pytest.mark.skip
 def test_conv_bias():
     inp_scale = 0.01

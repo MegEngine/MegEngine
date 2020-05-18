@@ -9,8 +9,9 @@
 import megengine._internal as mgb
 
 from ..core.tensor import Tensor
-from .elemwise import abs, equal, log, maximum, power
+from .elemwise import abs, equal, log, maximum, power, relu
 from .nn import assert_equal, indexing_one_hot
+from .tensor import where
 from .utils import zero_grad
 
 
@@ -297,3 +298,45 @@ def nll_loss(
     loss = indexing_one_hot(pred, label, axis) * mask
 
     return -1.0 * loss.sum() / maximum(mask.sum(), 1.0)
+
+
+def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
+    r"""
+    Caculate the hinge loss which is often used in SVMs.
+
+    The hinge loss can be described as:
+
+    .. math:: loss(x, y) = \frac{1}{N}\sum_i\sum_j(max(0, 1 - x_i_j*y_i_j))
+
+    :param pred: The input tensor representing the predicted probability, shape is (N, C).
+    :param label: The input tensor representing the binary classification label, shape is (N, C).
+    :param norm: Specify the norm to caculate the loss, should be "L1" or "L2".
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+
+        pred = tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]])
+        label = tensor([[1, -1, -1], [-1, 1, 1]])
+
+        loss = F.hinge_loss(pred, label)
+
+        print(loss.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [1.5]
+
+    """
+    assert norm in ["L1", "L2"], "norm must be L1 or L2"
+    # Converts binary labels to -1/1 labels.
+    loss = relu(1.0 - pred * label)
+    if norm == "L1":
+        return loss.sum(axis=1).mean()
+    else:
+        return (loss ** 2).sum(axis=1).mean()
