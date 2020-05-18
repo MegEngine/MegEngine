@@ -252,6 +252,7 @@ def optimize_for_inference(args, outputs):
         'enable_io16xc32': 'f16_io_f32_comp',
         'enable_ioc16': 'f16_io_comp',
         'enable_hwcd4': 'use_nhwcd4',
+        'enable_nchw4': 'use_nchw4',
         'enable_nchw88': 'use_nchw88',
         'enable_nchw44': 'use_nchw44',
         'enable_nchw32': 'use_nchw32',
@@ -380,6 +381,12 @@ def main():
         help='transform the model format from NCHW to NHWCD4 '
         'for inference; you may need to disable CUDA and set '
         'MGB_USE_MEGDNN_DBG=2'
+    )
+    parser.add_argument(
+        '--enable-nchw4',
+        action='store_true',
+        help='transform the model format from NCHW to NCHW4 '
+        'for inference'
     )
     parser.add_argument(
         '--enable-nchw88',

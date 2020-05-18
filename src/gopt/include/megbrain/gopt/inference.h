@@ -230,6 +230,19 @@ namespace gopt {
     };
 
     /*!
+     * \brief convert tensor format to nchw4 to speed up inference on CUDA
+     */
+    class EnableNCHW4Pass final : public TensorReformatPass {
+        VarNode* on_graph_endpoint_var(VarNode* new_var,
+                                       VarNode* orig_var) const override;
+    public:
+        const char* name() const override { return mgb_cstr_log("tensor_format_nchw4"); }
+        
+        //! make nchw -> nchw4 converter opt pass
+        static std::unique_ptr<EnableNCHW4Pass> make_nchw4_converter();
+    };
+
+    /*!
      * \brief convert tensor format to nchwxx to speed up inference on certain
      * devices
      */

@@ -97,6 +97,7 @@ struct GraphCommonOptimizeOptions {
     bool fuse_conv_bias_with_z = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,
+        NCHW4,   ///< compute using NCHW4 tensor format
         NHWCD4,  ///< compute using NHWCD4 tensor format
         NCHW88,  ///< compute using NCHW88 tensor format
         NCHW44,  ///< compute using NCHW44 tensor format
@@ -137,6 +138,7 @@ struct GraphCommonOptimizeOptions {
         return layout_transform == LayoutTransform::_trans_capital; \
     }
 
+    SET(nchw4, NCHW4);
     SET(nhwcd4, NHWCD4);
     SET(nchw88, NCHW88);
     SET(nchw44, NCHW44);

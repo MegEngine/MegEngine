@@ -980,6 +980,7 @@ Args Args::from_argv(int argc, char **argv) {
         continue;                                         \
     }
 
+        cb(nchw4);
         cb(chwn4);
         cb(nchw44);
         cb(nchw88);

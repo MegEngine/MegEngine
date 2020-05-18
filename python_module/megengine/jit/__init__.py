@@ -463,6 +463,7 @@ class trace:
             "enable_io16xc32": "f16_io_f32_comp",
             "enable_ioc16": "f16_io_comp",
             "enable_hwcd4": "use_nhwcd4",
+            "enable_nchw4": "use_nchw4",
             "enable_nchw88": "use_nchw88",
             "enable_nchw32": "use_nchw32",
             "enable_nchw44": "use_nchw44",

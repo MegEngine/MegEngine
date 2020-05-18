@@ -725,6 +725,13 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     cb(f16_io_comp, { add_pass(ConvertF32ToF16Pass::make(false)); });
     cb(f16_io_f32_comp, { add_pass(ConvertF32ToF16Pass::make(true)); });
 
+    cb(nchw4, {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass<FuseConvBiasZPass>();
+        add_pass(EnableNCHW4Pass::make_nchw4_converter());
+        add_pass<ShuffleShuffleRemovePass>();
+        add_pass<RemoveRedundantTypeCvtPass>();
+    });
     cb(nhwcd4, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass(ConvertFormatPass::make_nhwcd4_converter());

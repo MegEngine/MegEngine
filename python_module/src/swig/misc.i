@@ -80,6 +80,7 @@ struct _OptimizeForInferenceOptions {
 #define SET(_trans, _trans_capital)   \
         void enable_##_trans(); \
 
+        SET(nchw4, NCHW4);
         SET(nhwcd4, NHWCD4);
         SET(nchw88, NCHW88);
         SET(nchw44, NCHW44);

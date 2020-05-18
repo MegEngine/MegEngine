@@ -541,6 +541,7 @@ def optimize_for_inference(
     fuse_conv_bias_nonlinearity=False,
     use_nchw32=False,
     fuse_conv_bias_with_z=False,
+    use_nchw4=False,
     use_nchw88=False,
     use_nchw44=False,
     use_chwn4=False
@@ -561,6 +562,7 @@ def optimize_for_inference(
         OpenCL devices
     :param fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
         into one opr. This is supported only in NHWCD4 format.
+    :param use_nchw4: whether to use NCHW4 tensor format.
     :param use_nchw88: whether to use NCHW88 tensor format. This maybe faster some
         times.
     :param use_nchw44: whether to use NCHW44 tensor format. This maybe faster some
@@ -588,6 +590,7 @@ def optimize_for_inference(
 
     layout_tranform = None
     for k, v in {
+        "use_nchw4": "nchw4",
         "use_nhwcd4": "nhwcd4",
         "use_nchw32": "nchw32",
         "use_nchw88": "nchw88",
