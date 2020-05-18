@@ -71,7 +71,6 @@ def quantize_calibration(module: Module, qconfig: QConfig = ema_fakequant_qconfi
             mod.set_qconfig(qconfig)
 
     module.apply(fn)
-    enable_observer(module)
 
 
 def disable_fake_quant(module: Module):

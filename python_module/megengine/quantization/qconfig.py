@@ -5,11 +5,13 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from functools import partial
-
 from ..module import Module
 from .fake_quant import FakeQuantize
-from .observer import ExponentialMovingAverageObserver, MinMaxObserver
+from .observer import (
+    ExponentialMovingAverageObserver,
+    HistogramObserver,
+    MinMaxObserver,
+)
 
 
 class QConfig:
@@ -65,4 +67,8 @@ ema_fakequant_qconfig = QConfig(
     weight_observer=MinMaxObserver,
     act_observer=ExponentialMovingAverageObserver,
     fake_quant=FakeQuantize,
+)
+
+calibration_qconfig = QConfig(
+    weight_observer=MinMaxObserver, act_observer=HistogramObserver, fake_quant=None,
 )

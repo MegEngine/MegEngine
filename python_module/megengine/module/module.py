@@ -486,8 +486,16 @@ class QATModule(Module):
         self.weight_observer = qconfig.weight_observer()
         self.act_observer = qconfig.act_observer()
 
-        self.weight_fake_quant = qconfig.fake_quant(self.weight_observer.dtype)
-        self.act_fake_quant = qconfig.fake_quant(self.act_observer.dtype)
+        self.weight_fake_quant = (
+            None
+            if qconfig.fake_quant is None
+            else qconfig.fake_quant(self.weight_observer.dtype)
+        )
+        self.act_fake_quant = (
+            None
+            if qconfig.fake_quant is None
+            else qconfig.fake_quant(self.act_observer.dtype)
+        )
 
     def apply_observer(self, target: Tensor, obs: "Observer"):
         return obs(target)
@@ -496,11 +504,10 @@ class QATModule(Module):
         self, target: Tensor, fq: "FakeQuantize", obs: "Observer"
     ):
         oup = self.apply_observer(target, obs)
-        if self.quantizing == self.QATMode.CALIBRATION:
-            return oup
-        else:
+        if fq is not None:
             scale, zero_point = obs.get_qparams()
-            return fq(oup, scale, zero_point)
+            oup = fq(oup, scale, zero_point)
+        return oup
 
     def set_qat_mode(self, mode: QATMode):
         r"""
