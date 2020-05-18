@@ -187,3 +187,74 @@ def test_adam():
     for case in cases:
         _test_optimizer("Adam", case, CheckValue)
         _test_optimizer("Adam", case, CheckValue, update_lr=True)
+
+
+def test_adam():
+    class CheckValue:
+        def __init__(self, net, **kwarg):
+            self.m_slots = TensorDict()
+            self.v_slots = TensorDict()
+            for param in net.parameters():
+                self.m_slots[param] = np.zeros(param.shape).astype(np.float32)
+                self.v_slots[param] = np.zeros(param.shape).astype(np.float32)
+            for k, v in kwarg.items():
+                setattr(self, k, v)
+
+        def __call__(self, ori_params, new_params, step):
+            for param in new_params:
+                grad = param.grad.numpy()
+                m = self.m_slots[param]
+                v = self.v_slots[param]
+                m *= self.betas[0]
+                m += (1 - self.betas[0]) * grad
+                v *= self.betas[1]
+                v += (1 - self.betas[1]) * grad * grad
+                delta = (m / (1 - self.betas[0] ** step)) / (
+                    np.sqrt(v / (1 - self.betas[1] ** step)) + self.eps
+                )
+                assertTensorClose(param.numpy(), ori_params[param] - self.lr * delta)
+
+    cases = [
+        {"betas": (0.8, 0.9), "eps": 1e-04, "lr": 0.01},
+        {
+            "betas": (0.8, 0.9),
+            "eps": 1e-04,
+            "lr": 0.01,
+            "weight_decay": 0.1,
+        },  # with weight_decay
+    ]
+    for case in cases:
+        _test_optimizer("Adam", case, CheckValue)
+        _test_optimizer("Adam", case, CheckValue, update_lr=True)
+
+
+def test_adagrad():
+    class CheckValue:
+        def __init__(self, net, **kwarg):
+            self.s_slots = TensorDict()
+            for param in net.parameters():
+                self.s_slots[param] = np.zeros(param.shape).astype(np.float32)
+            for k, v in kwarg.items():
+                setattr(self, k, v)
+
+        def __call__(self, ori_params, new_params, step):
+            for param in new_params:
+                grad = param.grad.numpy()
+                self.s_slots[param] += grad ** 2
+                delta = grad / (self.s_slots[param] + self.eps) ** 0.5
+                delta *= -(self.lr / (1 + (step - 1) * self.lr_decay))
+                assertTensorClose(param.numpy(), ori_params[param] + delta)
+
+    cases = [
+        {"lr": 0.01, "eps": 1e-06, "lr_decay": 0.01},
+        {"lr": 0.01, "eps": 1e-06, "lr_decay": 0.0},  # without lr_decay
+        {
+            "lr": 0.01,
+            "eps": 1e-06,
+            "lr_decay": 0.01,
+            "weight_decay": 0.1,
+        },  # with weight_decay
+    ]
+    for case in cases:
+        _test_optimizer("Adagrad", case, CheckValue)
+        _test_optimizer("Adagrad", case, CheckValue, update_lr=True)
