@@ -18,7 +18,7 @@
 #include "src/x86/avx_helper.h"
 
 #include <x86intrin.h>
-#ifdef WIN32CMAKE
+#ifdef WIN32
 #include <avxintrin.h>
 #include <smmintrin.h>
 #include <avx2intrin.h>

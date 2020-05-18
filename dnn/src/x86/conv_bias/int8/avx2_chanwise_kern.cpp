@@ -15,7 +15,7 @@
 #include "src/common/unroll_macro.h"
 #include "src/x86/conv_bias/int8/common_helper.h"
 #include "src/x86/elemwise_op.h"
-#ifdef WIN32CMAKE
+#ifdef WIN32
 #include <smmintrin.h>
 #endif
 

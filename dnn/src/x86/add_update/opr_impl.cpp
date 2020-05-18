@@ -17,7 +17,7 @@
 #include "src/x86/utils.h"
 
 #include <immintrin.h>
-#ifdef WIN32CMAKE
+#ifdef WIN32
 #include <avxintrin.h>
 #include <fmaintrin.h>
 #endif

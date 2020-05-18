@@ -17,7 +17,7 @@
 
 #include <iostream>
 
-#ifdef _WIN32
+#if defined(WIN32)
 static inline void unsetenv(std::string name) {
     name += "=";
     _putenv(name.c_str());

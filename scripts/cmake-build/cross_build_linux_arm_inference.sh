@@ -76,13 +76,19 @@ echo "ARCH: $ARCH"
 echo "----------------------------------------------------"
 
 READLINK=readlink
+MAKEFILE_TYPE="Unix"
 OS=$(uname -s)
 
 if [ $OS = "Darwin" ];then
     READLINK=greadlink
+elif [[ $OS =~ "NT" ]]; then
+    echo "BUILD in NT ..."
+    MAKEFILE_TYPE="Unix"
 fi
 
 SRC_DIR=$($READLINK -f "`dirname $0`/../../")
+source $SRC_DIR/scripts/cmake-build/utils/host_build_flatc.sh
+
 function cmake_build() {
     BUILD_DIR=$SRC_DIR/build_dir/gnu-linux/$1/$BUILD_TYPE/build
     INSTALL_DIR=$BUILD_DIR/../install
@@ -91,6 +97,7 @@ function cmake_build() {
     echo "install dir: $INSTALL_DIR"
     echo "build type: $BUILD_TYPE"
     echo "build toolchain: $TOOLCHAIN"
+    echo "BUILD MAKEFILE_TYPE: $MAKEFILE_TYPE"
     if [ -e $BUILD_DIR ];then
         echo "clean old dir: $BUILD_DIR"
         rm -rf $BUILD_DIR
@@ -104,7 +111,8 @@ function cmake_build() {
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
     cd $BUILD_DIR
-    cmake -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
+    cmake -G "$MAKEFILE_TYPE Makefiles" \
+        -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DMGE_INFERENCE_ONLY=ON \
         -DMGE_WITH_CUDA=OFF \
@@ -118,34 +126,7 @@ function cmake_build() {
     make install/strip
 }
 
-function build_flatc() {
-    BUILD_DIR=$SRC_DIR/build_dir/host_flatc/build
-    INSTALL_DIR=$BUILD_DIR/../install
-    if [ -e $BUILD_DIR ];then
-        echo "clean old dir: $BUILD_DIR"
-        rm -rf $BUILD_DIR
-    fi
-    if [ -e $INSTALL_DIR ];then
-        echo "clean old dir: $INSTALL_DIR"
-        rm -rf $INSTALL_DIR
-    fi
-
-    echo "create build dir"
-    mkdir -p $BUILD_DIR
-    mkdir -p $INSTALL_DIR
-    cd $BUILD_DIR
-    cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-        -DFLATBUFFERS_BUILD_TESTS=OFF \
-        -DFLATBUFFERS_BUILD_FLATHASH=OFF \
-        -DFLATBUFFERS_BUILD_FLATLIB=OFF \
-        -DFLATBUFFERS_LIBCXX_WITH_CLANG=OFF \
-        $SRC_DIR/third_party/flatbuffers
-
-    make -j$(nproc)
-    make install/strip
-}
-build_flatc
+build_flatc $SRC_DIR
 
 toolchain=null
 if [ "$ARCH" = "arm64-v8a" ]; then

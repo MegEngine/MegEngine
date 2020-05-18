@@ -106,7 +106,7 @@ if (MGB_WITH_FLATBUFFERS)
     target_compile_definitions(megbrain PUBLIC MGB_ENABLE_FBS_SERIALIZATION=1)
     target_link_libraries(megbrain flatbuffers)
     
-    set (GENERATED_FLATBUFFERS_CONVERTER_PATH ${CMAKE_CURRENT_BINARY_DIR}/genfiles/this/should/be/added/to/sereg_caller/target/only/but/hey/yolo/there/are/no/fine/grained/targets/let/us/just/make/this/path/unreasonably/long/to/avoid/collision)
+    set (GENERATED_FLATBUFFERS_CONVERTER_PATH ${CMAKE_CURRENT_BINARY_DIR}/genfiles)
     set (GEN_FLATBUFFERS_CONVERTER_PY ${PROJECT_SOURCE_DIR}/dnn/scripts/gen_flatbuffers_converter.py)
     file (MAKE_DIRECTORY ${GENERATED_FLATBUFFERS_CONVERTER_PATH})
     add_custom_command(

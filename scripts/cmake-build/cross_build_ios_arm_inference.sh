@@ -86,6 +86,7 @@ else
 fi
 
 SRC_DIR=$($READLINK -f "`dirname $0`/../../")
+source $SRC_DIR/scripts/cmake-build/utils/host_build_flatc.sh
 
 function cmake_build() {
     BUILD_DIR=$SRC_DIR/build_dir/apple/$3/$4/$1/$BUILD_TYPE/build
@@ -133,34 +134,7 @@ function cmake_build() {
     make install
 }
 
-function build_flatc() {
-    BUILD_DIR=$SRC_DIR/build_dir/host_flatc/build
-    INSTALL_DIR=$BUILD_DIR/../install
-    if [ -e $BUILD_DIR ];then
-        echo "clean old dir: $BUILD_DIR"
-        rm -rf $BUILD_DIR
-    fi
-    if [ -e $INSTALL_DIR ];then
-        echo "clean old dir: $INSTALL_DIR"
-        rm -rf $INSTALL_DIR
-    fi
-
-    echo "create build dir"
-    mkdir -p $BUILD_DIR
-    mkdir -p $INSTALL_DIR
-    cd $BUILD_DIR
-    cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-        -DFLATBUFFERS_BUILD_TESTS=OFF \
-        -DFLATBUFFERS_BUILD_FLATHASH=OFF \
-        -DFLATBUFFERS_BUILD_FLATLIB=OFF \
-        -DFLATBUFFERS_LIBCXX_WITH_CLANG=OFF \
-        $SRC_DIR/third_party/flatbuffers
-
-    make -j$(nproc)
-    make install/strip
-}
-build_flatc
+build_flatc $SRC_DIR
 
 # refs for ../../toolchains/ios.toolchain.cmake
 # to config this, if u want to build other,

@@ -11,7 +11,7 @@
 #pragma once
 
 #include <immintrin.h>
-#ifdef WIN32CMAKE
+#ifdef WIN32
 #include <avx2intrin.h>
 #include <avxintrin.h>
 #include <fmaintrin.h>

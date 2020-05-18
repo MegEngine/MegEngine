@@ -67,7 +67,7 @@ endif()
 target_compile_definitions(megdnn INTERFACE ${LIBMEGDNN_DEF})
 
 if(MGE_WITH_MKLDNN AND ${MGE_ARCH} STREQUAL "x86_64")
-    target_link_libraries(megdnn libmkl_dnn)
+    target_link_libraries(megdnn dnnl)
 endif()
 target_link_libraries(megdnn ${MGE_CUDA_LIBS})
 target_link_libraries(megdnn ${MGE_BLAS_LIBS})

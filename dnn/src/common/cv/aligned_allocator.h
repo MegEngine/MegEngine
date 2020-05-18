@@ -18,14 +18,15 @@
 
 #include "megdnn/arch.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #include "malloc.h"
 #endif
+
 
 #if defined(__ANDROID__) || defined(ANDROID)
 #include "malloc.h"
 #define HAS_MEMALIGN
-#elif !defined(_MSC_VER)
+#elif !defined(_MSC_VER) && !defined(__MINGW32__)
 #define HAS_POSIX_MEMALIGN
 #endif
 
@@ -77,7 +78,7 @@ public:
         return result;
 #elif defined(HAS_MEMALIGN)
         return (_Tp*)memalign(_align, __n * sizeof(_Tp));
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) || defined(__MINGW32__)
         return (_Tp*)_aligned_malloc(__n * sizeof(_Tp), _align);
 #else
 #warning \

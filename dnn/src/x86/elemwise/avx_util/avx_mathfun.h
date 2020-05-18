@@ -12,7 +12,7 @@
 #include "megdnn/arch.h"
 #include "megdnn/basic_types.h"
 #include <immintrin.h>
-#ifdef WIN32CMAKE
+#ifdef WIN32
 #include <avxintrin.h>
 #include <smmintrin.h>
 #include <avx2intrin.h>

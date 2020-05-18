@@ -189,6 +189,8 @@
 #include <climits>
 #include <cmath>
 #include <cstring>
+#include <ostream>
+#include <istream>
 #if HALF_ENABLE_CPP11_TYPE_TRAITS
 	#include <type_traits>
 #endif
