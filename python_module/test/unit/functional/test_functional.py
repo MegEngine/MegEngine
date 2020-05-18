@@ -362,6 +362,19 @@ def test_hinge_loss():
     opr_test(cases, hinge_loss_with_l2_norm)
 
 
+def test_smooth_l1_loss():
+    np.random.seed(123)
+    cases = []
+    for shape in [(2, 2), (2, 3)]:
+        data = np.random.uniform(size=shape).astype(np.float32)
+        label = np.random.uniform(size=shape).astype(np.float32)
+        diff = np.abs(data - label)
+        expect = np.where(diff < 1, 0.5 * diff ** 2, diff - 0.5).mean()
+        cases.append({"input": [data, label], "output": tensor(expect)})
+
+    opr_test(cases, F.smooth_l1_loss)
+
+
 @pytest.mark.skip
 def test_conv_bias():
     inp_scale = 0.01

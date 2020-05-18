@@ -340,3 +340,52 @@ def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
         return loss.sum(axis=1).mean()
     else:
         return (loss ** 2).sum(axis=1).mean()
+
+
+def smooth_l1_loss(pred: Tensor, label: Tensor) -> Tensor:
+    r"""
+    Caculate the smooth l1 loss proposed in `Fast R-CNN paper by Ross Girshick`.
+
+    The smooth l1 loss can be described as:
+
+    .. math::
+        \text{loss}(x, y) = \frac{1}{n} \sum_{i} l_{i}
+
+    where :math:`l_{i}` is given by:
+
+    .. math::
+        l_{i} =
+        \begin{cases}
+        0.5 (x_i - y_i)^2, & \text{if } |x_i - y_i| < 1 \\
+        |x_i - y_i| - 0.5, & \text{otherwise }
+        \end{cases}
+
+    :param pred: The predicted result from model.
+    :param label: The ground truth to compare.
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+
+        pred = tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]])
+        label = tensor([[0.4, 1.5, 1.2], [0., 0.1, 2.2]])
+
+        loss = F.smooth_l1_loss(pred, label)
+
+        print(loss.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [0.5608334]
+    """
+    diff = abs(pred - label)
+    l2_loss = 0.5 * (diff ** 2)
+    l1_loss = diff - 0.5
+    mask = diff < 1
+    loss = where(mask, l2_loss, l1_loss)
+    return loss.mean()

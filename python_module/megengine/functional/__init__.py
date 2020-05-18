@@ -46,6 +46,7 @@ from .loss import (
     hinge_loss,
     l1_loss,
     nll_loss,
+    smooth_l1_loss,
     square_loss,
     triplet_margin_loss,
 )
