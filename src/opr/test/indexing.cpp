@@ -14,6 +14,7 @@
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/misc.h"
+#include "megbrain/opr/utility.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
@@ -1193,6 +1194,92 @@ TEST(TestOprIndexing, SetMeshIndexing) {
         checker.run({TensorShape{4, 7, 1}, {2, 7, 1}});
         checker.run({TensorShape{7, 1, 1, 2}, {3, 1, 1, 2}});
     }
+}
+
+namespace {
+
+template<class Opr>
+void run_multi_axis_vec_empty_shape(
+        const TensorShape& ishp, const TensorShape& idx0,
+        const TensorShape& idx1, const TensorShape& tshp) {
+    mgb_assert(ishp.ndim >= 4);
+    mgb_assert(idx0.is_empty() || idx1.is_empty());
+    using AI = opr::indexing::AxisIndexer;
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<> gen;
+    HostTensorGenerator<dtype::Int32> gen_idx;
+    auto host_x = gen(ishp);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+        idx_dynamic_shape = opr::MarkDynamicVar::make(
+            opr::ImmutableTensor::make(*graph, *gen_idx(idx0))),
+        idx_static_shape =
+            opr::ImmutableTensor::make(*graph, *gen_idx(idx1)),
+        y = Opr::make(x, {
+                    AI::make_interval(-1, None, None, x.make_scalar(2)),
+                    AI::make_index(1, idx_dynamic_shape),
+                    AI::make_index(2, idx_static_shape)});
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    ASSERT_TRUE(host_y.shape().is_empty());
+    MGB_ASSERT_SHAPE_EQ(host_y.shape(), tshp);
+}
+
+template<class Opr>
+void run_modify_multi_axis_vec_empty_shape(
+        const TensorShape& ishp, const TensorShape& vshp,
+        const TensorShape& idx0, const TensorShape& idx1) {
+    mgb_assert(ishp.ndim >= 4);
+    mgb_assert(vshp.is_empty() && (idx0.is_empty() || idx1.is_empty()));
+    using AI = opr::indexing::AxisIndexer;
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<> gen;
+    HostTensorGenerator<dtype::Int32> gen_idx;
+    auto host_x = gen(ishp), host_v = gen(vshp);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+        v = opr::Host2DeviceCopy::make(*graph, host_v),
+        idx_dynamic_shape = opr::MarkDynamicVar::make(
+            opr::ImmutableTensor::make(*graph, *gen_idx(idx0))),
+        idx_static_shape =
+            opr::ImmutableTensor::make(*graph, *gen_idx(idx1)),
+        y = Opr::make(x, v, {
+                    AI::make_interval(-1, None, None, x.make_scalar(2)),
+                    AI::make_index(1, idx_dynamic_shape),
+                    AI::make_index(2, idx_static_shape)});
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    MGB_ASSERT_TENSOR_EQ(*host_x, host_y);
+}
+
+}
+
+TEST(TestOprIndexing, MultiAxisVecEmptyShape) {
+    TensorShape ishp{8, 2, 3, 4};
+    size_t n = ishp[0], last_ndim = ishp[ishp.ndim - 1] / 2;
+    run_multi_axis_vec_empty_shape<opr::IndexingMultiAxisVec>(
+            ishp, {0}, {0}, {n, 0, last_ndim});
+    run_multi_axis_vec_empty_shape<opr::MeshIndexing>(
+            ishp, {0}, {2}, {n, 0, 2, last_ndim});
+    run_multi_axis_vec_empty_shape<opr::MeshIndexing>(
+            ishp, {3}, {0}, {n, 3, 0, last_ndim});
+    run_multi_axis_vec_empty_shape<opr::BatchedMeshIndexing>(
+            ishp, {n, 0}, {n, 2}, {n, 0, 2, last_ndim});
+    run_multi_axis_vec_empty_shape<opr::BatchedMeshIndexing>(
+            ishp, {n, 4}, {n, 0}, {n, 4, 0, last_ndim});
+
+    run_modify_multi_axis_vec_empty_shape<opr::IndexingIncrMultiAxisVec>(
+            ishp, {n, 0, last_ndim}, {0}, {0});
+    run_modify_multi_axis_vec_empty_shape<opr::IndexingSetMultiAxisVec>(
+            ishp, {n, 0, last_ndim}, {0}, {0});
+    run_modify_multi_axis_vec_empty_shape<opr::IncrMeshIndexing>(
+            ishp, {n, 0, 2, last_ndim}, {0}, {2});
+    run_modify_multi_axis_vec_empty_shape<opr::SetMeshIndexing>(
+            ishp, {n, 3, 0, last_ndim}, {3}, {0});
+    run_modify_multi_axis_vec_empty_shape<opr::BatchedIncrMeshIndexing>(
+            ishp, {n, 4, 0, last_ndim}, {n, 4}, {n, 0});
+    run_modify_multi_axis_vec_empty_shape<opr::BatchedSetMeshIndexing>(
+            ishp, {n, 0, 5, last_ndim}, {n, 0}, {n, 5});
 }
 
 #endif  // MGB_ENABLE_EXCEPTION

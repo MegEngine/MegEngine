@@ -158,6 +158,16 @@ namespace mgb {
     return ::testing::AssertionSuccess();
 }
 
+::testing::AssertionResult mgb::__assert_shape_equal(const TensorShape& v0,
+                                                const TensorShape& v1) {
+    if (v0.eq_shape(v1))
+        return ::testing::AssertionSuccess()
+                << v0.to_string() << " == " << v1.to_string();
+    else
+        return ::testing::AssertionFailure()
+                << v0.to_string() << " != " << v1.to_string();
+}
+
 #if WIN32
 #include <io.h>
 #include <fcntl.h>

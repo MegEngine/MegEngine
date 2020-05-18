@@ -226,17 +226,19 @@ void mixin::IndexingMultiAxisVecMegDNNOprHolder<Opr>::record_megdnn_opr(
 }
 
 /* ==================== MultiAxisVecFancyIndexingHelper ==================== */
-const megdnn::IndexingMultiAxisVec::IndexDesc&
+std::pair<const megdnn::IndexingMultiAxisVec::IndexDesc&, bool>
 intl::MultiAxisVecFancyIndexingHelper::make_megdnn_index_desc(
         size_t inp_ndim, bool warn_all_scalar) {
 
     auto &&index = m_megdnn_index_cache;
     index.clear();
+    bool is_empty_shape = false;
     for (auto i: reverse_adaptor(m_input2idxonly_axis_indexer)) {
         if (i) {
             index.push_back({
                     i->axis.get(inp_ndim),
                     i->idx.node()->dev_tensor().as_megdnn()});
+            is_empty_shape |= index.back().vec.layout.is_empty();
         }
     }
 
@@ -264,7 +266,7 @@ intl::MultiAxisVecFancyIndexingHelper::make_megdnn_index_desc(
         m_scalar_idx_warn_printed = true;
     }
 
-    return index;
+    return {index, is_empty_shape};
 }
 
 /* ==================== IndexingMultiAxisVecBase ==================== */
@@ -272,6 +274,8 @@ template<class Opr>
 cg::OperatorNodeBase::NodeProp*
 IndexingMultiAxisVecBase<Opr>::do_make_node_prop() const {
     auto prop = Super::do_make_node_prop();
+    // TODO: should also allow input shape is empty if any
+    // indexer's shape is empty
     for (auto i: m_input2idxonly_axis_indexer) {
         if (i) {
             prop->add_dep_type_existing_var(
@@ -360,13 +364,13 @@ void IndexingMultiAxisVecBase<Opr>::scn_do_execute() {
     auto &&index_desc = make_megdnn_index_desc(
             inp.layout().ndim, ShouldWarnOnScalarIndexer<Opr>::val);
     auto &&odev = output(0)->dev_tensor();
-    if (index_desc.empty()) {
+    if (index_desc.first.empty()) {
         odev.copy_from_fixlayout(inp);
     } else {
-        if (index_desc[0].vec.layout[0]) {
+        if (!index_desc.second) {
             // only call megdnn exec if result is not empty
             this->megdnn_opr(*this).exec(
-                    inp.as_megdnn(), index_desc, odev.as_megdnn(),
+                    inp.as_megdnn(), index_desc.first, odev.as_megdnn(),
                     intl::get_megdnn_workspace_from_var(output(1)));
         } else {
             mgb_assert(odev.empty());
@@ -391,7 +395,11 @@ void intl::IndexingModifyMultiAxisVecHelper<Opr>::scn_do_execute() {
     auto inp = this->fancy_indexing_get_tensors_for_modify_in_scn_do_execute();
     auto index_desc = this->make_megdnn_index_desc(
             inp.first.layout().ndim, ShouldWarnOnScalarIndexer<Opr>::val);
-    if (index_desc.empty()) {
+    if (index_desc.second){
+        mgb_assert(inp.second.shape().is_empty());
+        return;
+    }
+    if (index_desc.first.empty()) {
         using IMT = IndexingModifyType;
         static constexpr auto modify_type =
                 IndexingModifyTypeGetter<Opr>::value;
@@ -410,9 +418,26 @@ void intl::IndexingModifyMultiAxisVecHelper<Opr>::scn_do_execute() {
     } else {
         this->megdnn_opr(*this).exec(
                 inp.first.as_megdnn(), inp.second.as_megdnn(),
-                index_desc,
+                index_desc.first,
                 intl::get_megdnn_workspace_from_var(output(1)));
     }
+}
+
+template<class Opr>
+cg::OperatorNodeBase::NodeProp*
+intl::IndexingModifyMultiAxisVecHelper<Opr>::do_make_node_prop() const {
+    auto prop = Super::do_make_node_prop();
+    using DT = NodeProp::DepType;
+    // TODO: should also allow input shape is empty if any
+    // indexer's shape is empty
+    prop->add_dep_type_existing_var(input(1), DT::VALUE_ALLOW_EMPTY);
+    for (auto i: m_input2idxonly_axis_indexer) {
+        if (i) {
+            prop->add_dep_type_existing_var(
+                    i->idx.node(), DT::VALUE_ALLOW_EMPTY);
+        }
+    }
+    return prop;
 }
 
 template<class Opr>
@@ -429,7 +454,6 @@ add_input_layout_constraint() {
 MGB_IMPL_FANCY_INDEXING_OPR_GET(
         IndexingMultiAxisVec, "indexing_multi_axis_vec", false,
         output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
-        output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
         );
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(
         IndexingSetMultiAxisVec, "indexing_set_multi_axis_vec", false);
@@ -469,12 +493,10 @@ MGB_IMPL_OPR_GRAD(IndexingIncrMultiAxisVec) {
 
 MGB_IMPL_FANCY_INDEXING_OPR_GET(
         MeshIndexing, "mesh_indexing", false,
-        output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
-        output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE););
+        output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE););
 MGB_IMPL_FANCY_INDEXING_OPR_GET(
         BatchedMeshIndexing, "batched_mesh_indexing", false,
-        output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
-        output(1)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE););
+        output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE););
 
 MGB_IMPL_OPR_GRAD(MeshIndexing) {
     if (wrt_idx != 0) {

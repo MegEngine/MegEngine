@@ -117,7 +117,9 @@ namespace intl {
         protected:
             using Super::Super;
 
-            const megdnn::IndexingMultiAxisVec::IndexDesc&
+            //! return IndexDesc and whether it has an AxisIndexer with
+            //! empty shape
+            std::pair<const megdnn::IndexingMultiAxisVec::IndexDesc&, bool>
                 make_megdnn_index_desc(
                         size_t inp_ndim, bool warn_all_scalar = true);
     };
@@ -130,6 +132,7 @@ namespace intl {
 
         void init_output_static_infer_desc() override final;
         void scn_do_execute() override final;
+        NodeProp* do_make_node_prop() const override;
         void add_input_layout_constraint() override final;
 
         protected:

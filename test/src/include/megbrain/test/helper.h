@@ -133,6 +133,11 @@ decltype(auto) container_to_vector(Container &&ct) {
 #define MGB_ASSERT_TENSOR_EQ(v0, v1) \
     MGB_ASSERT_TENSOR_NEAR(v0, v1, 1e-6)
 
+::testing::AssertionResult __assert_shape_equal(const TensorShape& v0,
+                                                const TensorShape& v1);
+
+#define MGB_ASSERT_SHAPE_EQ(v0, v1) \
+    ASSERT_TRUE(::mgb::__assert_shape_equal(v0, v1))
 
 /*!
  * \brief xorshift+ RNG, which is very fast
