@@ -172,6 +172,34 @@ def conv_transpose2d(
 
 
 @wrap_io_tensor
+def local_conv2d(
+    inp: Tensor,
+    weight: Tensor,
+    stride: Union[int, Tuple[int, int]] = 1,
+    padding: Union[int, Tuple[int, int]] = 0,
+    dilation: Union[int, Tuple[int, int]] = 1,
+    conv_mode="CROSS_CORRELATION",
+) -> Tensor:
+    """Applies spatial 2D convolution over an image with untied kernels.
+
+    Refer to :class:`~.LocalConv2d` for more information.
+    """
+    ret = mgb.opr.group_local(
+        inp,
+        weight,
+        pad_h=padding[0],
+        pad_w=padding[1],
+        stride_h=stride[0],
+        stride_w=stride[1],
+        dilate_h=dilation[0],
+        dilate_w=dilation[1],
+        format="NCHW",
+        mode=conv_mode,
+    )
+    return ret
+
+
+@wrap_io_tensor
 def max_pool2d(
     inp: Tensor,
     kernel_size: Union[int, Tuple[int, int]],

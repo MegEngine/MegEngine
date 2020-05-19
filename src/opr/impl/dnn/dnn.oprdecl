@@ -112,9 +112,10 @@ decl_opr('GroupLocal',
                      'convolution kernel in '
                      '(group, out row, out col, in channel / group, '
                      'kern row, kern col, out channel / group) format')],
-         params='ConvolutionV0',
+         params=[('param', 'Convolution')],
 		 desc='batched convolution on groupped channeled 2D images, but '
-         'kernels are not shared across different output positions')
+         'kernels are not shared across different output positions',
+         version=1)
 
 decl_opr('LRN',
          inputs=['src'],

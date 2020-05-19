@@ -67,6 +67,7 @@ from .nn import (
     interpolate,
     leaky_relu,
     linear,
+    local_conv2d,
     matrix_mul,
     max_pool2d,
     one_hot,
