@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/arm_common/conv_bias/fp32/f32_direct_stride2_nchw44_algo.cpp
+ * \file dnn/src/arm_common/conv_bias/fp32/f32_direct_nchw44_algo.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -12,10 +12,9 @@
 
 #include "megdnn/oprs.h"
 #include "src/arm_common/conv_bias/fp32/algos.h"
+#include "src/arm_common/conv_bias/fp32/f32_direct_stride1_nchw44_kern.h"
 #include "src/arm_common/conv_bias/fp32/f32_direct_stride2_nchw44_kern.h"
-#include "src/arm_common/conv_bias/fp32/strategy.h"
 #include "src/arm_common/elemwise_op.h"
-#include "src/common/opr_delegate.h"
 
 #include "midout.h"
 
@@ -25,7 +24,7 @@ using conv_fun = std::function<void(
         WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
-MIDOUT_DECL(megdnn_arm_common_conv_bias_fp32_nchw44_stride2)
+MIDOUT_DECL(megdnn_arm_common_conv_bias_fp32_nchw44_stride1)
 namespace {
 // block_helper is used to calculate oh block size
 static inline int block_helper(const int nthread, const int amount,
@@ -79,7 +78,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     return {nullptr, {src_size * param.nr_threads}};
 };
 
-template <size_t filter, BiasMode bias_mode, typename Op>
+template <size_t filter, BiasMode bias_mode, typename Op, int stride>
 static void do_conv_kern(WorkspaceBundle bundle,
                          const ConvBiasImpl::NCBKernParam& kern_param,
                          const ConvBiasImpl::NCBKernIndex& ncb_index,
@@ -125,11 +124,17 @@ static void do_conv_kern(WorkspaceBundle bundle,
     const size_t src_size = get_perthread_cache_bytes(ic, ih2, iw2);
     float* sptr = reinterpret_cast<float*>((int8_t*)bundle.get(0) +
                                            ncb_index.thread_id * src_size);
-
-    conv_bias::pack_src_fp32_nchw44_stride2(
-            sptr, origin_sptr, ph, pw, remain_right_pad,
-            ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
-            src_bottom_pad, ic, ih * iw);
+    if (stride == 1) {
+        conv_bias::pack_src_fp32_nchw44_stride1(
+                sptr, origin_sptr, ph, pw, remain_right_pad,
+                ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
+                src_bottom_pad, ic, ih * iw);
+    } else {
+        conv_bias::pack_src_fp32_nchw44_stride2(
+                sptr, origin_sptr, ph, pw, remain_right_pad,
+                ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
+                src_bottom_pad, ic, ih * iw);
+    }
 
     const float* fptr =
             kern_param.filter<dt_float32>(group_id) + oc_idx * fh * fw * ic;
@@ -142,46 +147,59 @@ static void do_conv_kern(WorkspaceBundle bundle,
             kern_param.bias<dt_float32>(batch_id, group_id) + bias_offset;
 
     Op op;
+    if (stride == 1) {
+#define KERN1_NCHW44_CONV(filter)                                        \
+    conv_bias::conv_direct_stride1_##filter##x##filter##_fp32_nchw44<    \
+                                                                         \
+            bias_mode, Op>(sptr, fptr, bptr, nullptr, dst, oc_block, ic, \
+                           ih_real, iw2, oh, oh_block_real, ow, op, ph, pw)
+
+        DISPATCH_FILTER(filter, KERN1_NCHW44_CONV);
+#undef KERN1_NCHW44_CONV
+    } else {
 #define KERN1_NCHW44_CONV(filter)                                        \
     conv_bias::conv_direct_stride2_##filter##x##filter##_fp32_nchw44<    \
                                                                          \
             bias_mode, Op>(sptr, fptr, bptr, nullptr, dst, oc_block, ic, \
                            ih_real, iw2, oh, oh_block_real, ow, op, ph, pw)
 
-    DISPATCH_FILTER(filter, KERN1_NCHW44_CONV);
+        DISPATCH_FILTER(filter, KERN1_NCHW44_CONV);
 #undef KERN1_NCHW44_CONV
+    }
 }
 
 }  // namespace
 
-/* ===================== stride2 algo ===================== */
-bool ConvBiasImpl::AlgoF32DirectStride2NCHW44::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
-        AlgoSelectionStrategy) const {
+/* ===================== stride1 algo ===================== */
+bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(fallback::ConvBiasImpl*,
+                                               const NCBKernSizeParam& param,
+                                               AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     auto fh = fm.spatial[0];
     int oc = fm.ocpg;
+    int ic = fm.icpg;
     bool ok_type = ((param.src_type.enumv() == DTypeEnum::Float32 &&
                      param.filter_type.enumv() == DTypeEnum::Float32 &&
                      (param.dst_type.enumv() == DTypeEnum::Float32))) &&
                    (fm.format == param::Convolution::Format::NCHW44);
-    bool ok_src_dst = (oc % 4 == 0 && oc >= 4);
+    bool ok_src_dst = (oc % 4 == 0 && oc >= 4 && ic % 4 == 0 && ic >= 4);
     bool ok_filter = fm.spatial_ndim == 2 && fh == fm.spatial[1] &&
                      (fh == 2 || fh == 3 || fh == 5 || fh == 7);
     bool ok_slide = fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                    fm.stride[0] == 2 && fm.stride[1] == 2;
+                    ((fm.stride[0] == 1 && fm.stride[1] == 1) ||
+                     (fm.stride[0] == 2 && fm.stride[1] == 2));
     bool ok_conv = !fm.should_flip;
     bool avaible = ok_type && ok_src_dst && ok_filter && ok_slide && ok_conv;
     return avaible;
 }
 
-size_t ConvBiasImpl::AlgoF32DirectStride2NCHW44::get_workspace(
+size_t ConvBiasImpl::AlgoF32DirectNCHW44::get_workspace(
         fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoF32DirectStride2NCHW44::dispatch_kerns(
+ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
         fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     const int batch = param.n;
@@ -190,27 +208,43 @@ ConvBiasImpl::AlgoF32DirectStride2NCHW44::dispatch_kerns(
     conv_fun do_conv_fun = nullptr;
     // NOTE: remain_w is not used to gen hash of midout for compatible with
 // shape runtime
-#define DO_CONV_KERN_FUN(filter, bias_mode, op)                   \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp32_nchw44_stride2, \
-                 midout_iv(#filter #bias_mode #op##_hash)) {      \
-        do_conv_fun = do_conv_kern<filter, bias_mode, op>;        \
-    }                                                             \
+#define DO_CONV_KERN_FUN(filter, bias_mode, op, stride)              \
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp32_nchw44_stride1,    \
+                 midout_iv(#filter #bias_mode #stride #op##_hash)) { \
+        do_conv_fun = do_conv_kern<filter, bias_mode, op, stride>;   \
+    }                                                                \
     MIDOUT_END();
 
-#define GET_OP_PARAM(filter, bias_mode)                               \
-    switch (param.nonlineMode) {                                      \
-        case param::ConvBias::NonlineMode::IDENTITY:                  \
-            DO_CONV_KERN_FUN(filter, bias_mode, NoneOp<dt_float32>)   \
-            break;                                                    \
-        case param::ConvBias::NonlineMode::RELU:                      \
-            DO_CONV_KERN_FUN(filter, bias_mode, ReluOp<dt_float32>)   \
-            break;                                                    \
-        case param::ConvBias::NonlineMode::H_SWISH:                   \
-            DO_CONV_KERN_FUN(filter, bias_mode, HSwishOp<dt_float32>) \
-            break;                                                    \
-        default:                                                      \
-            megdnn_assert(0);                                         \
-            break;                                                    \
+#define GET_STRIDE_PARAM(filter, bias_mode, op)         \
+    switch (fm.stride[0]) {                             \
+        case 1:                                         \
+            DO_CONV_KERN_FUN(filter, bias_mode, op, 1); \
+            break;                                      \
+        case 2:                                         \
+            DO_CONV_KERN_FUN(filter, bias_mode, op, 2); \
+            break;                                      \
+                                                        \
+        default:                                        \
+            megdnn_assert(0);                           \
+    }
+
+#define GET_OP_PARAM(filter, bias_mode)                                \
+    switch (param.nonlineMode) {                                       \
+        case param::ConvBias::NonlineMode::IDENTITY:                   \
+            GET_STRIDE_PARAM(filter, bias_mode, NoneOp<dt_float32>)    \
+            break;                                                     \
+        case param::ConvBias::NonlineMode::RELU:                       \
+            GET_STRIDE_PARAM(filter, bias_mode, ReluOp<dt_float32>)    \
+            break;                                                     \
+        case param::ConvBias::NonlineMode::H_SWISH:                    \
+            GET_STRIDE_PARAM(filter, bias_mode, HSwishOp<dt_float32>)  \
+            break;                                                     \
+        case param::ConvBias::NonlineMode::SIGMOID:                    \
+            GET_STRIDE_PARAM(filter, bias_mode, SigmoidOp<dt_float32>) \
+            break;                                                     \
+        default:                                                       \
+            megdnn_assert(0);                                          \
+            break;                                                     \
     }
 
 #define GET_BIAS_MODE_PARAM(filter)                                \

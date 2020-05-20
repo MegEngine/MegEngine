@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -42,6 +43,10 @@ struct SigmoidOp;
             auto vitem = operator()(src);                                      \
             vst1q_##_func_suffix(dst, vitem.val[0]);                           \
             vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);              \
+        }                                                                      \
+        void operator()(const _neon_type& src, _ctype* dst) const {            \
+            auto vitem = operator()(src);                                      \
+            vst1q_##_func_suffix(dst, vitem);                                  \
         }                                                                      \
         _neon_type2 operator()(const _neon_type2& src) const {                 \
             return {{operator()(src.val[0]), operator()(src.val[1])}};         \

@@ -72,7 +72,8 @@ std::vector<conv_bias::TestArg> get_int8_quint8_conv_bias_args(
 std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         std::vector<size_t> kernel_vec, size_t stride, bool no_pad = false,
         bool no_bias = false, bool no_nonlinemode = false,
-        bool is_input_nchw = false, bool support_full_bias = false) {
+        bool is_input_nchw = false, bool support_full_bias = false,
+        bool support_sigmoid = false) {
     using namespace conv_bias;
     using NLMode = param::ConvBias::NonlineMode;
     std::vector<TestArg> args;
@@ -150,6 +151,9 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
     if (!no_nonlinemode) {
         nonlinemode.emplace_back(NLMode::RELU);
         nonlinemode.emplace_back(NLMode::H_SWISH);
+    }
+    if (support_sigmoid) {
+        nonlinemode.emplace_back(NLMode::SIGMOID);
     }
 
     std::vector<megdnn::BiasMode> bias_mode = {
@@ -337,11 +341,16 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_SMALL_GROUP) {
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
             handle(), "F32DIRECT_SMALL_GROUP");
 }
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1) {
+    check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false,
+                                              false, false, true, true),
+                    handle(), "F32_CONV_NCHW44_DIRECT");
+}
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S2) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
-                                              false, false, true),
-                    handle(), "F32_CONV_NCHW44_DIRECT_S2");
+                                              false, false, true, true),
+                    handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR1_LARGE_GROUP) {
@@ -682,8 +691,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD) {
         size_t conv_bias_workspace_in_bytes =
                 conv_bias_opr->get_workspace_in_bytes(
                         tensors[0].layout, filter_transform_layout,
-                        tensors[2].layout, tensors[3].layout,
-                        tensors[4].layout, nullptr);
+                        tensors[2].layout, tensors[3].layout, tensors[4].layout,
+                        nullptr);
 
         WorkspaceBundle wb(nullptr, {filter_transform_layout.span().dist_byte(),
                                      conv_bias_workspace_in_bytes,

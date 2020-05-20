@@ -1,6 +1,6 @@
 /**
  * \file
- * dnn/src/arm_common/conv_bias/fp32/f32_direct_stride2_nchw44_kern.cpp
+ * dnn/src/arm_common/conv_bias/fp32/f32_direct_stride1_nchw44_kern.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -11,7 +11,7 @@
  * implied.
  */
 
-#include "src/arm_common/conv_bias/fp32/f32_direct_stride2_nchw44_kern.h"
+#include "src/arm_common/conv_bias/fp32/f32_direct_stride1_nchw44_kern.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
 #include "src/arm_common/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
@@ -118,26 +118,26 @@ public:
     static const int val = 2;
 };
 #endif
+
 /**
  *  oc8_ow8(m = 8, n = 8) and oc4_ow8(m = 4, n = 8) gemm like kernel
  * */
 template <BiasMode bias_mode, typename Op, int remain_w, int filter_size,
           int oc_block, int ow_block>
-struct KerNeonXXs2Nchw44FP32 {
+struct KerNeonXXs1Nchw44FP32 {
     static void impl(const float32_t* src_ptr, const float32_t* weight_ptr,
                      const float32_t* bias_ptr, float32_t* dst_ptr, int ic,
-                     int ih, int iw, int ld_dst_oc, const Op& op,
-                     const float32_t* src_ptr_odd);
+                     int ih, int iw, int ld_dst_oc, const Op& op);
 };
 
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
-struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
+struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
     static void impl(const float32_t* src_ptr_origin,
                      const float32_t* weight_ptr, const float32_t* bias_ptr,
                      float32_t* dst_ptr, int ic, int ih, int iw, int ld_dst_oc,
-                     const Op& op, const float32_t* src_ptr_odd_origin) {
-        constexpr int loop_ic_step = 4;
+                     const Op& op) {
+        constexpr int ic_step = 4;
         constexpr int filter_size = 2;
         constexpr int oc_step = 4;
         constexpr int simd_len = 4;
@@ -152,40 +152,25 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
         float32x4_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
 
-        for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
+        for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
-            const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
-
-            float32x4_t src[ow_block];
-            float32x4_t weight[c_dim][4];
-            /////////row 0/////////////
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr, 0);
-            load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                         ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr_odd,
-                                                             0);
-            load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src_ptr += ld_src_iw;
-            src_ptr_odd += ld_src_iw;
-            weight_ptr += ld_weight_fh;
-            /////////row 1/////////////
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr, 0);
-            load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                         ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr_odd,
-                                                             0);
-            load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src_ptr += ld_src_iw;
-            src_ptr_odd += ld_src_iw;
-            weight_ptr += ld_weight_fh;
+            for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
+                float32x4_t src[ow_block];
+                float32x4_t weight[c_dim][ic_step];
+                load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr,
+                                                                 0);
+                load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
+                src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
+                load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
+                src_ptr += ld_src_iw;
+                weight_ptr += ld_weight_fh;
+            }
         }
         store_ocx_ow8_remain_static<c_dim, remain_w, Op>(c, op, dst_ptr,
                                                          ld_dst_oc);
@@ -194,12 +179,12 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
 
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
-struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
+struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
     static void impl(const float32_t* src_ptr_origin,
                      const float32_t* weight_ptr, const float32_t* bias_ptr,
                      float32_t* dst_ptr, int ic, int ih, int iw, int ld_dst_oc,
-                     const Op& op, const float32_t* src_ptr_odd_origin) {
-        constexpr int loop_ic_step = 4;
+                     const Op& op) {
+        constexpr int ic_step = 4;
         constexpr int filter_size = 3;
         constexpr int oc_step = 4;
         constexpr int simd_len = 4;
@@ -213,82 +198,44 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
-        for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
+
+        for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
-            const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
-
-            float32x4_t src[ow_block];
-            float32x4_t weight[c_dim][4];
-            /////////row 0/////////////
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr, 0);
-            load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                         ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-
-            src[0] = vld1q_f32(src_ptr + ow_block * simd_len);
-            load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr_odd,
-                                                             0);
-            load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src_ptr += ld_src_iw;
-            src_ptr_odd += ld_src_iw;
-            weight_ptr += ld_weight_fh;
-            /////////row 1/////////////
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr, 0);
-            load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                         ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src[0] = vld1q_f32(src_ptr + ow_block * simd_len);
-            load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr_odd,
-                                                             0);
-            load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src_ptr += ld_src_iw;
-            src_ptr_odd += ld_src_iw;
-            weight_ptr += ld_weight_fh;
-            //////////row 2/////////////
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr, 0);
-            load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                         ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src[0] = vld1q_f32(src_ptr + ow_block * simd_len);
-
-            load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-
-            load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr_odd,
-                                                             0);
-            load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                    weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src, weight);
-            src_ptr += ld_src_iw;
-            src_ptr_odd += ld_src_iw;
-            weight_ptr += ld_weight_fh;
+            for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
+                float32x4_t src[ow_block];
+                float32x4_t weight[c_dim][ic_step];
+                load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr,
+                                                                 0);
+                load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
+                src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
+                load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
+                src[1] = vld1q_f32(src_ptr + (ow_block + 1) * ic_step);
+                load_helper<ic_step, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<2, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
+                src_ptr += ld_src_iw;
+                weight_ptr += ld_weight_fh;
+            }
         }
         store_ocx_ow8_remain_static<c_dim, remain_w, Op>(c, op, dst_ptr,
                                                          ld_dst_oc);
     }
 };
-
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
-struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
+struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
     static void impl(const float32_t* src_ptr_origin,
                      const float32_t* weight_ptr, const float32_t* bias_ptr,
                      float32_t* dst_ptr, int ic, int ih, int iw, int ld_dst_oc,
-                     const Op& op, const float32_t* src_ptr_odd_origin) {
-        constexpr int loop_ic_step = 4;
+                     const Op& op) {
+        constexpr int ic_step = 4;
         constexpr int filter_size = 5;
         constexpr int oc_step = 4;
         constexpr int simd_len = 4;
@@ -303,45 +250,42 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
         float32x4_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
 
-        for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
+        for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
-            const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
-
             for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
                 float32x4_t src[ow_block];
-                float32x4_t weight[c_dim][4];
-                // even element
+                float32x4_t weight[c_dim][ic_step];
                 load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr,
                                                                  0);
-                load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                             ld_weight_oc);
+                load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                src[0] = vld1q_f32(src_ptr + ow_block * simd_len);
-                load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
+                load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                src[1] = vld1q_f32(src_ptr + (ow_block + 1) * simd_len);
-                load_helper<4, 4 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[1] = vld1q_f32(src_ptr + (ow_block + 1) * ic_step);
+                load_helper<ic_step, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                // odd element
-                load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(
-                        src, src_ptr_odd, 0);
-                load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[2] = vld1q_f32(src_ptr + (ow_block + 2) * ic_step);
+                load_helper<ic_step, 3 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
-                                                                   weight);
-                src[0] = vld1q_f32(src_ptr_odd + ow_block * simd_len);
-                load_helper<4, 3 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                        weight, weight_ptr, ld_weight_oc);
-                cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                cal_helper<3, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
 
+                src[3] = vld1q_f32(src_ptr + (ow_block + 3) * ic_step);
+                load_helper<ic_step, 4 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<4, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
                 src_ptr += ld_src_iw;
-                src_ptr_odd += ld_src_iw;
                 weight_ptr += ld_weight_fh;
             }
         }
@@ -350,19 +294,14 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
     }
 };
 
-/**
- * for kernel[7], calculate sequence is kernel[0], kernel[2], kernel[4],
- * kernel[6], kernel[1], kernel[3], kernel[5]
- * src is packed like 0, 2, 4, 6, 8, 10, 1, 3, 5, 7, 9
- **/
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
-struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
+struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
     static void impl(const float32_t* src_ptr_origin,
                      const float32_t* weight_ptr, const float32_t* bias_ptr,
                      float32_t* dst_ptr, int ic, int ih, int iw, int ld_dst_oc,
-                     const Op& op, const float32_t* src_ptr_odd_origin) {
-        constexpr int loop_ic_step = 4;
+                     const Op& op) {
+        constexpr int ic_step = 4;
         constexpr int filter_size = 7;
         constexpr int oc_step = 4;
         constexpr int simd_len = 4;
@@ -377,55 +316,54 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
         float32x4_t c[c_dim][ow_block];
         init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
 
-        for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
+        for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
-            const float* src_ptr_odd = src_ptr_odd_origin + ic_idx * ld_src_ic;
-
             for (int fh_idx = 0; fh_idx < filter_size; ++fh_idx) {
                 float32x4_t src[ow_block];
-                float32x4_t weight[c_dim][4];
-                // even element
+                float32x4_t weight[c_dim][ic_step];
                 load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(src, src_ptr,
                                                                  0);
-                load_helper<4, 0, oc_step, c_dim, Vld1q_f32>(weight, weight_ptr,
-                                                             ld_weight_oc);
+                load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
                 cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                src[0] = vld1q_f32(src_ptr + ow_block * simd_len);
-                load_helper<4, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
+                load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                src[1] = vld1q_f32(src_ptr + (ow_block + 1) * simd_len);
-                load_helper<4, 4 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[1] = vld1q_f32(src_ptr + (ow_block + 1) * ic_step);
+                load_helper<ic_step, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<2, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                src[2] = vld1q_f32(src_ptr + (ow_block + 2) * simd_len);
-                load_helper<4, 6 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[2] = vld1q_f32(src_ptr + (ow_block + 2) * ic_step);
+                load_helper<ic_step, 3 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
                 cal_helper<3, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
-                // odd element
-                load_helper<ow_block, 0, simd_len, 0, Vld1q_f32>(
-                        src, src_ptr_odd, 0);
-                load_helper<4, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+
+                src[3] = vld1q_f32(src_ptr + (ow_block + 3) * ic_step);
+                load_helper<ic_step, 4 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<0, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
-                                                                   weight);
-                src[0] = vld1q_f32(src_ptr_odd + ow_block * simd_len);
-                load_helper<4, 3 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                        weight, weight_ptr, ld_weight_oc);
-                cal_helper<1, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
-                                                                   weight);
-                src[1] = vld1q_f32(src_ptr_odd + (ow_block + 1) * simd_len);
-                load_helper<4, 5 * ld_weight, oc_step, c_dim, Vld1q_f32>(
-                        weight, weight_ptr, ld_weight_oc);
-                cal_helper<2, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                cal_helper<4, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
                                                                    weight);
 
+                src[4] = vld1q_f32(src_ptr + (ow_block + 4) * ic_step);
+                load_helper<ic_step, 5 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<5, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
+
+                src[5] = vld1q_f32(src_ptr + (ow_block + 5) * ic_step);
+                load_helper<ic_step, 6 * ld_weight, oc_step, c_dim, Vld1q_f32>(
+                        weight, weight_ptr, ld_weight_oc);
+                cal_helper<6, 0, c_dim, Vfmaq_laneq_f32, ow_block>(c, src,
+                                                                   weight);
                 src_ptr += ld_src_iw;
-                src_ptr_odd += ld_src_iw;
                 weight_ptr += ld_weight_fh;
             }
         }
@@ -435,120 +373,25 @@ struct KerNeonXXs2Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
 };
 
 }  // namespace
-namespace {
 
-inline void odd_even_split_iw8_even(float* sptr_base, const float* sptr,
-                                    const int odd_start, const int src_idx,
-                                    const int iw_idx) {
-    constexpr int ic_step = 4;
-    const int src_offset = src_idx * ic_step;
-    const int even_offset = iw_idx / 2 * ic_step;
-    const int odd_offset = (odd_start + iw_idx / 2) * ic_step;
-    float32x4_t temp[8];
-    temp[0] = vld1q_f32(sptr + src_offset + 0 * ic_step);
-    temp[1] = vld1q_f32(sptr + src_offset + 1 * ic_step);
-    temp[2] = vld1q_f32(sptr + src_offset + 2 * ic_step);
-    temp[3] = vld1q_f32(sptr + src_offset + 3 * ic_step);
-    temp[4] = vld1q_f32(sptr + src_offset + 4 * ic_step);
-    temp[5] = vld1q_f32(sptr + src_offset + 5 * ic_step);
-    temp[6] = vld1q_f32(sptr + src_offset + 6 * ic_step);
-    temp[7] = vld1q_f32(sptr + src_offset + 7 * ic_step);
-    vst1q_f32(sptr_base + even_offset + 0 * ic_step, temp[0]);
-    vst1q_f32(sptr_base + even_offset + 1 * ic_step, temp[2]);
-    vst1q_f32(sptr_base + even_offset + 2 * ic_step, temp[4]);
-    vst1q_f32(sptr_base + even_offset + 3 * ic_step, temp[6]);
-    vst1q_f32(sptr_base + odd_offset + 0 * ic_step, temp[1]);
-    vst1q_f32(sptr_base + odd_offset + 1 * ic_step, temp[3]);
-    vst1q_f32(sptr_base + odd_offset + 2 * ic_step, temp[5]);
-    vst1q_f32(sptr_base + odd_offset + 3 * ic_step, temp[7]);
-}
-void odd_even_split_iw8_odd(float* sptr_base, const float* sptr,
-                            const int odd_start, const int src_idx,
-                            const int iw_idx) {
-    constexpr int ic_step = 4;
-    const int src_offset = src_idx * ic_step;
-    const int even_offset = (iw_idx + 1) / 2 * ic_step;
-    const int odd_offset = (odd_start + iw_idx / 2) * ic_step;
-    float32x4_t temp[8];
-    temp[0] = vld1q_f32(sptr + src_offset + 0 * ic_step);
-    temp[1] = vld1q_f32(sptr + src_offset + 1 * ic_step);
-    temp[2] = vld1q_f32(sptr + src_offset + 2 * ic_step);
-    temp[3] = vld1q_f32(sptr + src_offset + 3 * ic_step);
-    temp[4] = vld1q_f32(sptr + src_offset + 4 * ic_step);
-    temp[5] = vld1q_f32(sptr + src_offset + 5 * ic_step);
-    temp[6] = vld1q_f32(sptr + src_offset + 6 * ic_step);
-    temp[7] = vld1q_f32(sptr + src_offset + 7 * ic_step);
-    vst1q_f32(sptr_base + odd_offset + 0 * ic_step, temp[0]);
-    vst1q_f32(sptr_base + odd_offset + 1 * ic_step, temp[2]);
-    vst1q_f32(sptr_base + odd_offset + 2 * ic_step, temp[4]);
-    vst1q_f32(sptr_base + odd_offset + 3 * ic_step, temp[6]);
-    vst1q_f32(sptr_base + even_offset + 0 * ic_step, temp[1]);
-    vst1q_f32(sptr_base + even_offset + 1 * ic_step, temp[3]);
-    vst1q_f32(sptr_base + even_offset + 2 * ic_step, temp[5]);
-    vst1q_f32(sptr_base + even_offset + 3 * ic_step, temp[7]);
-}
-}  // namespace
-
-void conv_bias::pack_src_fp32_nchw44_stride2(
-        float* sptr_base, const float* sptr_origin, const int ph, const int pw,
+void conv_bias::pack_src_fp32_nchw44_stride1(
+        float* sptr_base, const float* sptr_origin, const int, const int pw,
         const int pad_right, const int ih, const int iw, const int iw2,
         const int pad_top, const int pad_bottom, const int ic,
         const int ic_stride) {
     constexpr int ic_step = 4;
-    int odd_start = megdnn::div_ceil(iw2, 2);
-    float32x4_t zero_v = vdupq_n_f32(0.f);
-    MEGDNN_MARK_USED_VAR(ph);
-    bool even_start = pw % 2 == 0;
     rep_step(ic_idx, ic, ic_step) {
         const float* sptr = sptr_origin + ic_idx * ic_stride;
         memset(sptr_base, 0, sizeof(float) * iw2 * pad_top * ic_step);
         sptr_base += iw2 * pad_top * ic_step;
         rep(ih_idx, ih) {
-            int iw_idx = 0;
-            rep(idx, pw) {
-                if (iw_idx % 2 == 0) {
-                    vst1q_f32(sptr_base + iw_idx / 2 * ic_step, zero_v);
-                } else {
-                    vst1q_f32(sptr_base + (odd_start + iw_idx / 2) * ic_step,
-                              zero_v);
-                }
-                ++iw_idx;
-            }
-            int src_idx = 0;
-            if (even_start) {
-                for (; src_idx + 7 < iw; src_idx += 8) {
-                    odd_even_split_iw8_even(sptr_base, sptr, odd_start, src_idx,
-                                            iw_idx);
-                    iw_idx += 8;
-                }
-            } else {
-                for (; src_idx + 7 < iw; src_idx += 8) {
-                    odd_even_split_iw8_odd(sptr_base, sptr, odd_start, src_idx,
-                                           iw_idx);
-                    iw_idx += 8;
-                }
-            }
-            for (; src_idx < iw; ++src_idx) {
-                if (iw_idx % 2 == 0) {
-                    vst1q_f32(sptr_base + iw_idx / 2 * ic_step,
-                              vld1q_f32(sptr + src_idx * ic_step));
-                } else {
-                    vst1q_f32(sptr_base + (odd_start + iw_idx / 2) * ic_step,
-                              vld1q_f32(sptr + src_idx * ic_step));
-                }
-                ++iw_idx;
-            }
-            rep(idx, pad_right) {
-                if (iw_idx % 2 == 0) {
-                    vst1q_f32(sptr_base + iw_idx / 2 * ic_step, zero_v);
-                } else {
-                    vst1q_f32(sptr_base + (odd_start + iw_idx / 2) * ic_step,
-                              zero_v);
-                }
-                ++iw_idx;
-            }
-            sptr_base += iw2 * ic_step;
+            memset(sptr_base, 0, sizeof(float) * pw * ic_step);
+            sptr_base += pw * ic_step;
+            memcpy(sptr_base, sptr, sizeof(float) * iw * ic_step);
+            sptr_base += iw * ic_step;
             sptr += iw * ic_step;
+            memset(sptr_base, 0, sizeof(float) * pad_right * ic_step);
+            sptr_base += pad_right * ic_step;
         }
         memset(sptr_base, 0, sizeof(float) * iw2 * pad_bottom * ic_step);
         sptr_base += iw2 * pad_bottom * ic_step;
@@ -556,7 +399,7 @@ void conv_bias::pack_src_fp32_nchw44_stride2(
 }
 
 template <BiasMode bias_mode, typename Op, int filter_size>
-static void conv_direct_stride2_fp32_nchw44(
+static void conv_direct_stride1_fp32_nchw44(
         const float32_t* src, const float32_t* filter, const float32_t* bias,
         float32_t*, float32_t* dst, const int oc, const int ic, const int ih,
         const int iw, const int oh, const int oh_block, const int ow,
@@ -573,8 +416,8 @@ static void conv_direct_stride2_fp32_nchw44(
     constexpr int ih_step = 1;
     constexpr int oh_step = 1;
     constexpr int ow_step = 8;
-    constexpr int stride_h = 2;
-    constexpr int stride_w = 2;
+    constexpr int stride_h = 1;
+    constexpr int stride_w = 1;
 
     const int img_stride = oh * ow;
     const int ow_end = ow / ow_step * ow_step;
@@ -582,13 +425,11 @@ static void conv_direct_stride2_fp32_nchw44(
     const int oc_end = oc / big_oc_step * big_oc_step;
     const int oc_remain = oc - oc_end;
     const int ld_dst_oc = oc_step * img_stride;
-    const int odd_start = div_ceil(iw, 2);
 
     using remain_fun = std::function<void(
             const float32_t* src_ptr, const float32_t* weight_ptr,
             const float32_t* bias_ptr, float32_t* dst_ptr, int ic, int ih,
-            int iw, int ld_dst_oc, const Op& op,
-            const float32_t* src_ptr_odd_origin)>;
+            int iw, int ld_dst_oc, const Op& op)>;
     remain_fun kern_big_oc_remain = nullptr;
     remain_fun kern_small_oc_remain = nullptr;
 
@@ -596,10 +437,10 @@ static void conv_direct_stride2_fp32_nchw44(
 #define cb(step)                                                        \
     case step:                                                          \
         kern_big_oc_remain =                                            \
-                KerNeonXXs2Nchw44FP32<bias_mode, Op, step, filter_size, \
+                KerNeonXXs1Nchw44FP32<bias_mode, Op, step, filter_size, \
                                       big_oc_step, ow_step>::impl;      \
         kern_small_oc_remain =                                          \
-                KerNeonXXs2Nchw44FP32<bias_mode, Op, step, filter_size, \
+                KerNeonXXs1Nchw44FP32<bias_mode, Op, step, filter_size, \
                                       oc_step, ow_step>::impl;          \
         break;
 
@@ -611,33 +452,24 @@ static void conv_direct_stride2_fp32_nchw44(
         const int weight_offset = oc_idx * ic * fh * fw;
         for (int oh_idx = 0; oh_idx < oh_block; oh_idx += oh_step) {
             for (int ow_idx = 0; ow_idx < ow_end; ow_idx += ow_step) {
-                const int src_offset = (oh_idx * stride_h * iw +
-                                        ow_idx / 2 * stride_w * ih_step) *
-                                       ic_step;
-                const int src_offset_odd =
-                        (oh_idx * stride_h * iw +
-                         ow_idx / 2 * stride_w * ih_step + odd_start) *
+                const int src_offset =
+                        (oh_idx * stride_h * iw + ow_idx * stride_w * ih_step) *
                         ic_step;
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
                 const int bias_offset =
                         bias_mode == BiasMode::BIAS ? dst_offset : oc_idx;
-                KerNeonXXs2Nchw44FP32<bias_mode, Op, ow_step, filter_size,
+                KerNeonXXs1Nchw44FP32<bias_mode, Op, ow_step, filter_size,
                                       big_oc_step,
                                       ow_step>::impl(src + src_offset,
                                                      filter + weight_offset,
                                                      bias + bias_offset,
                                                      dst + dst_offset, ic, ih,
-                                                     iw, ld_dst_oc, op,
-                                                     src + src_offset_odd);
+                                                     iw, ld_dst_oc, op);
             }
             if (ow_remain > 0) {
-                const int src_offset = (oh_idx * stride_h * iw +
-                                        ow_end / 2 * stride_w * ih_step) *
-                                       ic_step;
-                const int src_offset_odd =
-                        (oh_idx * stride_h * iw +
-                         ow_end / 2 * stride_w * ih_step + odd_start) *
+                const int src_offset =
+                        (oh_idx * stride_h * iw + ow_end * stride_w * ih_step) *
                         ic_step;
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
@@ -645,7 +477,7 @@ static void conv_direct_stride2_fp32_nchw44(
                         bias_mode == BiasMode::BIAS ? dst_offset : oc_idx;
                 kern_big_oc_remain(src + src_offset, filter + weight_offset,
                                    bias + bias_offset, dst + dst_offset, ic, ih,
-                                   iw, ld_dst_oc, op, src + src_offset_odd);
+                                   iw, ld_dst_oc, op);
             }
         }
     }
@@ -654,33 +486,24 @@ static void conv_direct_stride2_fp32_nchw44(
         const int weight_offset = oc_idx * ic * fh * fw;
         for (int oh_idx = 0; oh_idx < oh_block; oh_idx += oh_step) {
             for (int ow_idx = 0; ow_idx < ow_end; ow_idx += ow_step) {
-                const int src_offset = (oh_idx * stride_h * iw +
-                                        ow_idx / 2 * stride_w * ih_step) *
-                                       ic_step;
-                const int src_offset_odd =
-                        (oh_idx * stride_h * iw +
-                         ow_idx / 2 * stride_w * ih_step + odd_start) *
+                const int src_offset =
+                        (oh_idx * stride_h * iw + ow_idx * stride_w * ih_step) *
                         ic_step;
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
                 const int bias_offset =
                         bias_mode == BiasMode::BIAS ? dst_offset : oc_idx;
-                KerNeonXXs2Nchw44FP32<bias_mode, Op, ow_step, filter_size,
+                KerNeonXXs1Nchw44FP32<bias_mode, Op, ow_step, filter_size,
                                       oc_step,
                                       ow_step>::impl(src + src_offset,
                                                      filter + weight_offset,
                                                      bias + bias_offset,
                                                      dst + dst_offset, ic, ih,
-                                                     iw, ld_dst_oc, op,
-                                                     src + src_offset_odd);
+                                                     iw, ld_dst_oc, op);
             }
             if (ow_remain > 0) {
-                const int src_offset = (oh_idx * stride_h * iw +
-                                        ow_end / 2 * stride_w * ih_step) *
-                                       ic_step;
-                const int src_offset_odd =
-                        (oh_idx * stride_h * iw +
-                         ow_end / 2 * stride_w * ih_step + odd_start) *
+                const int src_offset =
+                        (oh_idx * stride_h * iw + ow_end * stride_w * ih_step) *
                         ic_step;
                 const int dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
@@ -688,8 +511,7 @@ static void conv_direct_stride2_fp32_nchw44(
                         bias_mode == BiasMode::BIAS ? dst_offset : oc_idx;
                 kern_small_oc_remain(src + src_offset, filter + weight_offset,
                                      bias + bias_offset, dst + dst_offset, ic,
-                                     ih, iw, ld_dst_oc, op,
-                                     src + src_offset_odd);
+                                     ih, iw, ld_dst_oc, op);
             }
         }
     }
@@ -698,13 +520,13 @@ static void conv_direct_stride2_fp32_nchw44(
 #define CONSTRUCT_FUNC(filter_size)                                          \
     template <BiasMode bias_mode, typename Op>                               \
     void conv_bias::                                                         \
-            conv_direct_stride2_##filter_size##x##filter_size##_fp32_nchw44( \
+            conv_direct_stride1_##filter_size##x##filter_size##_fp32_nchw44( \
                     const float32_t* src, const float32_t* filter,           \
                     const float32_t* bias, float32_t* temp, float32_t* dst,  \
                     const int oc, const int ic, const int ih, const int iw,  \
                     const int oh, const int oh_block, const int ow,          \
                     const Op& op, const int ph, const int pw) {              \
-        conv_direct_stride2_fp32_nchw44<bias_mode, Op, filter_size>(         \
+        conv_direct_stride1_fp32_nchw44<bias_mode, Op, filter_size>(         \
                 src, filter, bias, temp, dst, oc, ic, ih, iw, oh, oh_block,  \
                 ow, op, ph, pw);                                             \
     }
@@ -738,7 +560,7 @@ CONSTRUCT_FUNC(7);
     FOR_BIAS(stride, 5)    \
     FOR_BIAS(stride, 7)
 
-FOR_FILTER(stride2)
+FOR_FILTER(stride1)
 
 #undef FOR_STRIDE
 #undef FOR_FILTER

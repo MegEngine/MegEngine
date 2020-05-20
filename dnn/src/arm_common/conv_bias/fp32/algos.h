@@ -178,6 +178,22 @@ public:
             const NCBKernSizeParam& param) const override;
 };
 
+class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    AlgoF32DirectNCHW44() {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "F32_CONV_NCHW44_DIRECT"; }
+    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(fallback::ConvBiasImpl*,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+};
 class ConvBiasImpl::AlgoF32DirectStride2NCHW44 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
