@@ -178,39 +178,6 @@ public:
             const NCBKernSizeParam& param) const override;
 };
 
-class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
-    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-
-public:
-    AlgoF32DirectNCHW44() {}
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "F32_CONV_NCHW44_DIRECT"; }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-};
-class ConvBiasImpl::AlgoF32DirectStride2NCHW44 final : public AlgoBase {
-    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-
-public:
-    AlgoF32DirectStride2NCHW44() {}
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "F32_CONV_NCHW44_DIRECT_S2"; }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-};
-
 class ConvBiasImpl::AlgoF32DirectStride1 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     bool m_large_group;
@@ -251,6 +218,23 @@ public:
             const NCBKernSizeParam& param) const override;
 };
 
+class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    AlgoF32DirectNCHW44() {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "F32_CONV_NCHW44_DIRECT"; }
+    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(fallback::ConvBiasImpl*,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+};
+
 class ConvBiasImpl::AlgoF32DirectStride2NCHWNCHW44 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
@@ -258,6 +242,22 @@ public:
     AlgoF32DirectStride2NCHWNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "F32_CONV_NCHW_NCHW44"; }
+    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(fallback::ConvBiasImpl* opr,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+};
+
+class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "F32_CHANNEL_WISE_NCHW44"; }
     bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 

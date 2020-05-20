@@ -181,9 +181,9 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
     return args;
 }
 
-std::vector<conv_bias::TestArg> get_int8_quint8_nchw44_channel_wise_args(
+std::vector<conv_bias::TestArg> get_nchw44_channel_wise_args(
         std::vector<size_t> kernel, size_t stride, bool no_bias,
-        bool no_nonlinemode) {
+        bool no_nonlinemode, bool no_full_bias) {
     using namespace conv_bias;
     using Param = param::ConvBias;
     using NLMode = param::ConvBias::NonlineMode;
@@ -213,6 +213,15 @@ std::vector<conv_bias::TestArg> get_int8_quint8_nchw44_channel_wise_args(
                               TensorShape{group, 1, 1, kernel, kernel, 4},
                               TensorShape{1, group, 1, 1, 4});
         }
+        if (!no_full_bias) {
+            args.emplace_back(
+                    param, TensorShape{n, group, h, w, 4},
+                    TensorShape{group, 1, 1, kernel, kernel, 4},
+                    TensorShape{n, group,
+                                (h + 2 * param.pad_w - kernel) / stride + 1,
+                                (w + 2 * param.pad_w - kernel) / stride + 1,
+                                4});
+        }
     };
 
     std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
@@ -224,7 +233,7 @@ std::vector<conv_bias::TestArg> get_int8_quint8_nchw44_channel_wise_args(
         for (auto nlmode : nonlinemode) {
             for (bool pad : {true}) {
                 for (size_t group : {1, 2, 4, 7, 128}) {
-                    for (size_t size : {4, 5, 6, 7, 8, 9, 10, 15, 40}) {
+                    for (size_t size : {4, 6, 7, 9, 15, 40}) {
                         for (size_t kern : kernel) {
                             pack(n, group, size, size, kern, stride, nlmode,
                                  pad);
@@ -234,7 +243,7 @@ std::vector<conv_bias::TestArg> get_int8_quint8_nchw44_channel_wise_args(
             }
             for (bool pad : {false}) {
                 for (size_t group : {1, 2, 7, 128}) {
-                    for (size_t size : {7, 8, 9, 10, 15, 40}) {
+                    for (size_t size : {7, 9, 15, 40}) {
                         for (size_t kern : kernel) {
                             pack(n, group, size, size, kern, stride, nlmode,
                                  pad);
@@ -374,6 +383,18 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32) {
                                               false, true),
                     handle(), "F32_CONV_NCHW_NCHW44");
 }
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44) {
+    check_conv_bias(
+            get_nchw44_channel_wise_args({2, 3, 5}, 1, false, false, false),
+            handle(), "F32_CHANNEL_WISE_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE2_FP32_NCHW44) {
+    check_conv_bias(
+            get_nchw44_channel_wise_args({2, 3, 5}, 2, false, false, false),
+            handle(), "F32_CHANNEL_WISE_NCHW44");
+}
+
 /**********************************F16 direct************************/
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_LARGE_GROUP) {
@@ -447,14 +468,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE2_SMALL_GROUP) {
 TEST_F(ARM_COMMON_MULTI_THREADS,
        CONV_BIAS_INT8_INT8_INT32_CHANNEL_WISE_DIRECT1_NCHW44) {
     checker_conv_bias_int8x8x32_multi(
-            get_int8_quint8_nchw44_channel_wise_args({2, 3, 5}, 1, false, true),
+            get_nchw44_channel_wise_args({2, 3, 5}, 1, false, true, true),
             handle(), "S8_CHAN_WISE_STRD1_NCHW44");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS,
        CONV_BIAS_INT8_INT8_INT32_CHANNEL_WISE_DIRECT2_NCHW44) {
     checker_conv_bias_int8x8x32_multi(
-            get_int8_quint8_nchw44_channel_wise_args({2, 3, 5}, 2, false, true),
+            get_nchw44_channel_wise_args({2, 3, 5}, 2, false, true, true),
             handle(), "S8_CHAN_WISE_STRD2_NCHW44");
 }
 
@@ -490,15 +511,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_NCHW44) {
             handle(), "S8_NCHW44_DIRECT_STRD2");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QS8_CHANNEL_WISE_DIRECT1_NCHW44) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_nchw44_channel_wise_args(
-                                        {2, 3, 5}, 1, false, false),
-                                handle(), "S8_CHAN_WISE_STRD1_NCHW44");
+    checker_conv_bias_qint8x8x8(
+            get_nchw44_channel_wise_args({2, 3, 5}, 1, false, false, true),
+            handle(), "S8_CHAN_WISE_STRD1_NCHW44");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QS8_CHANNEL_WISE_DIRECT2_NCHW44) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_nchw44_channel_wise_args(
-                                        {2, 3, 5}, 2, false, false),
-                                handle(), "S8_CHAN_WISE_STRD2_NCHW44");
+    checker_conv_bias_qint8x8x8(
+            get_nchw44_channel_wise_args({2, 3, 5}, 2, false, false, true),
+            handle(), "S8_CHAN_WISE_STRD2_NCHW44");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44) {
