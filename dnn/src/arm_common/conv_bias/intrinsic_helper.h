@@ -536,6 +536,7 @@ inline void init_oc8_ow8(int32x4_t c[2][8], const int32_t* bias_ptr,
 #undef BAIS_INIT
     }
 }
+
 /////////////////////////init_ocx_ow8////////////////////
 
 inline float32x4_t neon_vdupq_n(float val) {

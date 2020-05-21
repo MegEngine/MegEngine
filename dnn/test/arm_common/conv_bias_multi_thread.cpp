@@ -155,7 +155,7 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
     if (support_sigmoid) {
         nonlinemode.emplace_back(NLMode::SIGMOID);
     }
-
+    
     std::vector<megdnn::BiasMode> bias_mode = {
             megdnn::BiasMode::BROADCAST_CHANNEL_BIAS};
     if (no_bias) {
@@ -672,6 +672,63 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE2_SMALL_GROUP) {
             get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
             "ARMDOTU8STRD2_SMALL_GROUP");
 }
+
+/******************************dot int8x8x8 nchw44 ***********************/
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S1_Q8x8x8) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_nchw44_conv_bias_args({2, 3, 5, 7}, 1);
+    for (auto&& arg : args)
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    checker_conv_bias_qint8x8x8(args, handle(), "ARMDOTS8DIRECT_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S1_Q8x8x32) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, true, true);
+    for (auto&& arg : args)
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    checker_conv_bias_qint8x8x32(args, handle(), "ARMDOTS8DIRECT_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S1_8x8x32) {
+    using namespace conv_bias;
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, true, true);
+    for (auto&& arg : args)
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    checker_conv_bias_int8x8x32_multi(args, handle(), "ARMDOTS8DIRECT_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S2_Q8x8x8) {
+    using namespace conv_bias;
+    //! test qint8x8x8
+    std::vector<TestArg> args = get_nchw44_conv_bias_args({2, 3, 5, 7}, 2);
+    for (auto&& arg : args)
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    checker_conv_bias_qint8x8x8(args, handle(), "ARMDOTS8DIRECT_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S2_Q8x8x32) {
+    using namespace conv_bias;
+    //! test qint8x8x8
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, true, true);
+    for (auto&& arg : args)
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    checker_conv_bias_qint8x8x32(args, handle(), "ARMDOTS8DIRECT_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S2_8x8x32) {
+    using namespace conv_bias;
+    //! test qint8x8x8
+    std::vector<TestArg> args =
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, true, true);
+    for (auto&& arg : args)
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    checker_conv_bias_int8x8x32_multi(args, handle(), "ARMDOTS8DIRECT_NCHW44");
+}
+
 #endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F23_4) {

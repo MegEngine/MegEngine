@@ -67,6 +67,8 @@ private:
     class AlgoDotS8DirectStride2;
     class AlgoDotU8DirectStride1;
     class AlgoDotU8DirectStride2;
+
+    class AlgoDotS8Direct_NCHW44;
 #endif
     class AlgoF32Direct;
     class AlgoF32DirectStride1;

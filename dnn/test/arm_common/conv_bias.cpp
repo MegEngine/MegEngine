@@ -1809,6 +1809,81 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QUINT8_STRIDE2_WITHDOTPROD) {
                used1 / used0);
     }
 }
+
+TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_NCHW44_DOT) {
+    using namespace conv_bias;
+
+    std::vector<TestArg> args;
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
+                   size_t p, size_t stride, NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+        param.format = param::ConvBias::Format::NCHW44_DOT;
+
+        //! channel bias
+        args.emplace_back(param, TensorShape{1, ic/4, h, w, 4},
+                          TensorShape{oc/4, ic/4, kernel, kernel, 4, 4},
+                          TensorShape{1, oc/4, 1, 1, 4});
+    };
+    for (size_t stride : {1, 2})
+        for (size_t kernel : {2, 3, 5, 7})
+            for(size_t oc : {64})
+                for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
+                    run(oc, oc, 56, 56, kernel, kernel / 2, stride, nonline_mode);
+                }
+
+    constexpr size_t RUN = 50;
+    Benchmarker<ConvBias> benchmark0(handle());
+    benchmark0.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+    benchmark0.set_display(false);
+    benchmark0.set_times(RUN);
+    benchmark0.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("ARMDOTS8DIRECT_NCHW44"));
+
+    Benchmarker<ConvBias> benchmark1(handle());
+    benchmark1.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(4, dtype::QuantizedS8(60.25f));
+    benchmark1.set_display(false);
+    benchmark1.set_times(RUN);
+
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle()->create_operator<ConvBias>();
+        opr->param() = arg.param;
+        opr->deduce_layout({arg.src, dtype::Int8()},
+                           {arg.filter, dtype::Int8()},
+                           {arg.bias, dtype::Int32()}, {}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
+                             arg.filter[2] * arg.filter[3] * 8.0 /
+                             (1024 * 1024 * 1024) * 1e3;
+
+        auto used0 = benchmark0.set_param(arg.param).exec(
+                             {arg.src, arg.filter, arg.bias, {}, {}}) /
+                     RUN;
+        auto used1 = benchmark1.set_param(arg.param).exec(
+                             {arg.src, arg.filter, arg.bias, {}, {}}) /
+                     RUN;
+
+        printf("%s %s: Direct use: %f ms %f Gflops normal: %f ms %f GFlops "
+               "speedup: %f\n",
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
+               used0, computations / used0, used1, computations / used1,
+               used1 / used0);
+    }
+}
+
 #endif
 #endif
 

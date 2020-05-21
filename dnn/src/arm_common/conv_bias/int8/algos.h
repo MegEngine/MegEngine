@@ -189,6 +189,28 @@ public:
             fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
+
+class ConvBiasImpl::AlgoDotS8Direct_NCHW44 final : public AlgoBase {
+public:
+    AlgoDotS8Direct_NCHW44() {}
+
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        return "ARMDOTS8DIRECT_NCHW44";
+    }
+    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam&,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(FallbackConvBiasImpl*,
+                         const NCBKernSizeParam&) const override;
+
+    SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+
+    bool is_preferred(megdnn::fallback::ConvBiasImpl*,
+                      const NCBKernSizeParam& param) const override;
+};
 #endif
 
 class ConvBiasImpl::AlgoS8WinogradF23_8x8 final : public AlgoBase {
