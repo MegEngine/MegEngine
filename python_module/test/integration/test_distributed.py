@@ -67,7 +67,7 @@ def start_workers(worker, world_size, trace=False):
         cmd += "worker('localhost', 3456, {}, {}, {}, {})".format(
             world_size, rank, rank, "True" if trace else "False"
         )
-        cmd = ["python3", "-c", cmd]
+        cmd = [sys.executable, "-c", cmd]
         ret = subprocess.run(
             cmd, stdout=sys.stdout, stderr=sys.stderr, universal_newlines=True
         )
