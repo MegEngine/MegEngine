@@ -87,10 +87,10 @@ private:
     class AlgoFilter3ModexStridexNCHW44;
     class AlgoFilter4ModexStridexNCHW44;
     class AlgoFilter5ModexStridexNCHW44;
+    class AlgoFp32ModexStridexNCHW44;
     class AlgoPack;
 };
 }  // namespace arm_common
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

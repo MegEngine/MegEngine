@@ -1,6 +1,5 @@
-#pragma once
 /**
- * \file dnn/src/arm_common/conv_bias/neon_struct.h
+ * \file dnn/src/arm_common/neon_struct.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -10,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#pragma once
 #include "src/arm_common/simd_macro/marm_neon.h"
 namespace megdnn {
 namespace {
@@ -63,3 +63,5 @@ struct Vfmaq_laneq_f32 {
 
 }  // namespace
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen

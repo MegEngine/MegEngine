@@ -114,7 +114,13 @@ public:
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
-
+class PoolingImpl::AlgoFp32ModexStridexNCHW44 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "ARM_POOLING_FP32_MODEX_STRIDEX_NCHW44"; }
+    bool usable(const PoolingKernSizeParam& param) const override;
+    void exec(const PoolingKernParam& param) const override;
+};
 WorkspaceBundle get_bundle(const PoolingImpl::PoolingKernSizeParam& param);
 
 WorkspaceBundle get_bundle_nchw44(

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -32,10 +33,33 @@
 #define UNROLL_RAW9(cb, v0, a...) \
     UNROLL_RAW8(cb, v0, ##a)      \
     cb(8, ##a)
+#define UNROLL_RAW10(cb, v0, a...) \
+    UNROLL_RAW9(cb, v0, ##a)       \
+    cb(9, ##a)
+#define UNROLL_RAW11(cb, v0, a...) \
+    UNROLL_RAW10(cb, v0, ##a)      \
+    cb(10, ##a)
+#define UNROLL_RAW12(cb, v0, a...) \
+    UNROLL_RAW11(cb, v0, ##a)      \
+    cb(11, ##a)
+#define UNROLL_RAW13(cb, v0, a...) \
+    UNROLL_RAW12(cb, v0, ##a)      \
+    cb(12, ##a)
+#define UNROLL_RAW14(cb, v0, a...) \
+    UNROLL_RAW13(cb, v0, ##a)      \
+    cb(13, ##a)
+#define UNROLL_RAW15(cb, v0, a...) \
+    UNROLL_RAW14(cb, v0, ##a)      \
+    cb(14, ##a)
+
+// clang-format off
 #define UNROLL_RAW16(cb, v0, a...)                                        \
     UNROLL_RAW8(cb, v0, ##a)                                              \
     cb(8, ##a) cb(9, ##a) cb(10, ##a) cb(11, ##a) cb(12, ##a) cb(13, ##a) \
             cb(14, ##a) cb(15, ##a)
+#define UNROLL_RAW17(cb, v0, a...) \
+    UNROLL_RAW16(cb, v0, ##a)      \
+    cb(16, ##a)
 #define UNROLL_RAW24(cb, v0, a...)                                          \
     UNROLL_RAW16(cb, v0, ##a)                                               \
     cb(16, ##a) cb(17, ##a) cb(18, ##a) cb(19, ##a) cb(20, ##a) cb(21, ##a) \
@@ -129,5 +153,7 @@
     UNROLL_CALL1_D2(step, step2, cb, ##v);
 #define UNROLL_CALL_NOWRAPPER_D2(step, step2, cb) \
     UNROLL_CALL_RAW_D2(step, step2, cb)
+
+// clang-format on
 
 // vim: syntax=cpp.doxygen

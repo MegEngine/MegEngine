@@ -57,6 +57,65 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING) {
     }
 }
 
+std::vector<std::pair<param::Pooling, TensorShapeArray>> get_nchw44_pool_args(
+        size_t filter, size_t stride) {
+    constexpr size_t ic_step = 4;
+    std::vector<std::pair<param::Pooling, TensorShapeArray>> args;
+
+    for (size_t n : {1, 2})
+        for (size_t c : {4, 8})
+            for (size_t ih : {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13})
+                for (size_t iw : {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13})
+                    for (size_t ph : {0, 1, 2})
+                        for (size_t pw : {0, 1, 2})
+                            for (auto mode : {param::Pooling::Mode::MAX,
+                                              param::Pooling::Mode::AVERAGE})
+                                if (ih + 2 * ph >= filter &&
+                                    iw + 2 * pw >= filter && filter > ph &&
+                                    filter > pw) {
+                                    param::Pooling param;
+                                    param.mode = mode;
+                                    param.format =
+                                            param::Pooling::Format::NCHW44;
+                                    param.pad_h = ph;
+                                    param.pad_w = pw;
+                                    param.stride_h = param.stride_w = stride;
+                                    param.window_h = param.window_w = filter;
+                                    args.emplace_back(std::make_pair(
+                                            param,
+                                            TensorShapeArray{{n, c / ic_step,
+                                                              ih, iw, ic_step},
+                                                             {}}));
+                                }
+    return args;
+}
+
+void run_pooling_check(
+        Handle* handle,
+        std::vector<std::pair<param::Pooling, TensorShapeArray>> args,
+        bool is_int8) {
+    Checker<Pooling> checker(handle);
+    UniformIntRNG rng_int8{INT8_MIN >> 1, INT8_MAX >> 1};
+    UniformIntRNG rng_fp32{-10, 10};
+    if (is_int8) {
+        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
+        checker.set_rng(0, &rng_int8);
+    } else {
+        checker.set_rng(0, &rng_fp32);
+    }
+    for (auto arg : args) {
+        checker.set_param(arg.first).exec(arg.second);
+    }
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_NCHW44_FP32) {
+    for (auto filter : {2, 3, 4, 5})
+        for (auto stride : {1, 2}) {
+            run_pooling_check(handle(), get_nchw44_pool_args(filter, stride),
+                              false);
+        }
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44)
 {
     // clang-format off

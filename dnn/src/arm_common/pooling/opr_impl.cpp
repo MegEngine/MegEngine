@@ -29,6 +29,7 @@ class PoolingImpl::AlgoPack : NonCopyableObj {
     AlgoFilter3ModexStridexNCHW44 algo_filter3_modex_stridex_nchw4;
     AlgoFilter4ModexStridexNCHW44 algo_filter4_modex_stridex_nchw4;
     AlgoFilter5ModexStridexNCHW44 algo_filter5_modex_stridex_nchw4;
+    AlgoFp32ModexStridexNCHW44 algo_fp32_modex_stridex_nchw44;
 
 public:
     AlgoPack() {
@@ -44,6 +45,7 @@ public:
         all_algos.emplace_back(&algo_filter2_modex_stridex_nchw4);
         all_algos.emplace_back(&algo_filter4_modex_stridex_nchw4);
         all_algos.emplace_back(&algo_filter5_modex_stridex_nchw4);
+        all_algos.emplace_back(&algo_fp32_modex_stridex_nchw44);
     }
     SmallVector<AlgoBase*> all_algos;
 };

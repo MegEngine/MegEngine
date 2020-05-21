@@ -256,6 +256,73 @@ TEST_F(ARM_COMMON, POOLING_QUANTIZED) {
 }
 
 #if MEGDNN_WITH_BENCHMARK
+
+void benchmark_nchw44_fp32(Handle *handle) {
+  using Param = param::Pooling;
+  auto run = [&](size_t n, size_t c, size_t h, size_t w, size_t filter,
+                 size_t stride, size_t pad, Param::Mode mode) {
+    Param param;
+    param.window_h = param.window_w = filter;
+    param.stride_h = param.stride_w = stride;
+    param.pad_h = param.pad_w = pad;
+    param.format = Param::Format::NCHW;
+    param.mode = mode;
+    TensorShape nchw_shape = {n, c, h, w};
+    TensorShape nchw44_shape = {n, c / 4, h, w, 4};
+    TensorLayout dst_layout;
+    auto opr = handle->create_operator<Pooling>();
+    opr->param() = param;
+    opr->deduce_layout({nchw_shape, dtype::Float32()}, dst_layout);
+    float calc_amount =
+        dst_layout.total_nr_elems() * param.window_h * param.window_w;
+
+    Benchmarker<Pooling> benchmarker_float_nchw(handle);
+    Benchmarker<Pooling> benchmarker_float_nchw44(handle);
+    Benchmarker<Pooling> benchmarker_int_nchw44(handle);
+    size_t RUN = 500;
+    auto t1 = benchmarker_float_nchw.set_display(false)
+                  .set_times(RUN)
+                  .set_param(param)
+                  .exec({nchw_shape, {}});
+
+    param.format = Param::Format::NCHW44;
+    auto t2 = benchmarker_int_nchw44.set_display(false)
+                  .set_times(RUN)
+                  .set_param(param)
+                  .execl({{nchw44_shape, dtype::QuantizedS8(1.0)},
+                          {{}, dtype::QuantizedS8(1.0)}});
+    auto t3 = benchmarker_float_nchw44.set_display(false)
+                  .set_times(RUN)
+                  .set_param(param)
+                  .exec({nchw44_shape, {}});
+
+    printf("{%zu %zu %zu %zu} filter = %zu, stride = %zu pad = %zu\n"
+           "nchw_fp32={%.3f ms, %.3f Mflops},  "
+           "nchw44_int={%.3f ms, %.3f Mflops},  "
+           "nchw44_fp32={%.3f ms, %.3f Mflops, speed_up %f}\n\n",
+           n, c, h, w, filter, stride, pad, t1 / RUN,
+           calc_amount / (t1 / RUN * 1000), t2 / RUN,
+           calc_amount / (t2 / RUN * 1000), t3 / RUN,
+           calc_amount / (t3 / RUN * 1000), t1 / t3);
+  };
+  // Resnet50
+  run(1, 64, 112, 112, 3, 2, 1, param::Pooling::Mode::MAX);
+  run(1, 2048, 7, 7, 7, 1, 0, param::Pooling::Mode::AVERAGE);
+
+  // VGG16
+  run(1, 64, 224, 224, 2, 2, 0, param::Pooling::Mode::MAX);
+  run(1, 128, 112, 112, 2, 2, 0, param::Pooling::Mode::MAX);
+  run(1, 256, 56, 56, 2, 2, 0, param::Pooling::Mode::MAX);
+  run(1, 512, 28, 28, 2, 2, 0, param::Pooling::Mode::MAX);
+  run(1, 512, 14, 14, 2, 2, 0, param::Pooling::Mode::MAX);
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_POOLING_NCHW44_FP32) { benchmark_nchw44_fp32(handle()); }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_POOLING_NCHW44_FP32) {
+  benchmark_nchw44_fp32(handle());
+}
+
 TEST_F(ARM_COMMON, BENCHMARK_POOLING_INT8_W3x3_S2x2)
 {
     using Param = param::Pooling;

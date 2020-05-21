@@ -1,4 +1,3 @@
-#pragma once
 /**
  * \file dnn/src/arm_common/conv_bias/intrinsic_helper.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
@@ -10,7 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/arm_common/conv_bias/neon_struct.h"
+#pragma once
+#include "src/arm_common/intrinsic_helper.h"
+#include "src/arm_common/neon_struct.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
 #include "src/fallback/conv_bias/common.h"
@@ -689,185 +690,8 @@ inline void init_ocx_ow4(T& c, const int32_t* bias_ptr, int oc_step) {
     InitOcxOw4<c_dim, bias_mode, T>::impl(c, bias_ptr, oc_step);
 }
 ///////////////////////////////////////
-template <int weight_number, int base_offset, int ptr_step, int oc_block,
-          typename Func, typename T, typename T2, typename... XT>
-struct LoadHelper {
-    static void impl(T& weight, T2 ptr, int oc_offset, XT... args);
-};
-
-#define WEIGHT_CB(step) \
-    src[step] = Func::impl(ptr + base_offset + step * ptr_step, args...);
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<1, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(1, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<2, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(2, WEIGHT_CB);
-    }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<3, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(3, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<4, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(4, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<5, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(5, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<6, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(6, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<7, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(7, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2,
-          typename... XT>
-struct LoadHelper<8, base_offset, ptr_step, 0, Func, T, T2, XT...> {
-    static void impl(T& src, T2 ptr, int, XT... args) {
-        UNROLL_CALL_RAW(8, WEIGHT_CB);
-    }
-};
-#undef WEIGHT_CB
-
-#define WEIGHT_CB(step) \
-    src[0][step] = Func::impl(ptr + base_offset + step * ptr_step);
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<1, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(1, WEIGHT_CB); }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<2, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(2, WEIGHT_CB); }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<3, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(3, WEIGHT_CB); }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<4, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(4, WEIGHT_CB); }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<5, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(5, WEIGHT_CB); }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<6, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(6, WEIGHT_CB); }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<7, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(7, WEIGHT_CB); }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<8, base_offset, ptr_step, 1, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int) { UNROLL_CALL_RAW(8, WEIGHT_CB); }
-};
-
-#undef WEIGHT_CB
-
-#define WEIGHT_CB(step)                                             \
-    src[0][step] = Func::impl(ptr + base_offset + step * ptr_step); \
-    src[1][step] = Func::impl(ptr + base_offset + step * ptr_step + oc_offset);
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<1, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(1, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<2, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(2, WEIGHT_CB);
-    }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<3, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(3, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<4, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(4, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<5, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(5, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<6, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(6, WEIGHT_CB);
-    }
-};
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<7, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(7, WEIGHT_CB);
-    }
-};
-
-template <int base_offset, int ptr_step, typename Func, typename T, typename T2>
-struct LoadHelper<8, base_offset, ptr_step, 2, Func, T, T2> {
-    static void impl(T& src, T2 ptr, int oc_offset) {
-        UNROLL_CALL_RAW(8, WEIGHT_CB);
-    }
-};
-
-#undef WEIGHT_CB
-
-template <int weight_number, int base_offset, int ptr_step, int c_dim,
-          typename Func, typename T, typename T2>
-inline void load_helper(T& weight, T2 ptr, int oc_offset) {
-    LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2>::impl(
-            weight, ptr, oc_offset);
-}
-
-template <int weight_number, int base_offset, int ptr_step, int c_dim,
-          typename Func, typename T, typename T2, typename... XT>
-inline void load_helper_x(T& weight, T2 ptr, int oc_offset, XT... args) {
-    LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2,
-               XT...>::impl(weight, ptr, oc_offset, args...);
-}
 
 }  // namespace
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen
