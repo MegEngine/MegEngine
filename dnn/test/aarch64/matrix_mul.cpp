@@ -64,6 +64,18 @@ TEST_F(AARCH64, MATRIX_MUL_INT8X8X32_K8X12X4_DOTPROD) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
                                  handle(), "AARCH64_INT8X8X32_K8X12X4_DOTPROD");
 }
+
+TEST_F(AARCH64, MATRIX_MUL_INT8X8X32_MK4_8X12X4_DOTPROD) {
+    std::vector<matrix_mul::TestArg> args;
+    for (size_t m : {1, 2, 3, 4, 5, 6, 7, 10, 11})
+        for (size_t n : {2, 3, 4, 5, 8, 12, 13, 14, 15, 16, 31})
+            for (size_t k : {1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 33, 34})
+                args.emplace_back(m, n, k, 0);
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int32{}, handle(),
+            "AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD",
+            param::MatrixMul::Format::MK4_DOT, 1, 1e-3, std::move(args));
+}
 #else
 TEST_F(AARCH64, MATRIX_MUL_INT8X8X32_K4X4X16) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
@@ -460,6 +472,54 @@ TEST_F(AARCH64, BENCHMARK_GEMV_INT_8X8X32) {
                 run(M, N, K);
 }
 
+TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_INT8X8X32_MK4_8X12X4) {
+    constexpr size_t RUNS = 50;
+    param::MatrixMul param;
+    param.transposeA = false;
+    param.transposeB = false;
+    Benchmarker<MatrixMul> benchmarker(handle());
+    Benchmarker<MatrixMul> benchmarker_mk4(handle());
+    benchmarker.set_times(RUNS)
+            .set_dtype(0, dtype::Int8{})
+            .set_dtype(1, dtype::Int8{})
+            .set_dtype(2, dtype::Int32{})
+            .set_param(param)
+            .set_display(false);
+    benchmarker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("AARCH64_INT8X8X32_K8X12X4"));
+
+    param.format = MatrixMul::Param::Format::MK4_DOT;
+    benchmarker_mk4.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD"));
+    benchmarker_mk4.set_times(RUNS)
+            .set_dtype(0, dtype::Int8{})
+            .set_dtype(1, dtype::Int8{})
+            .set_dtype(2, dtype::Int32{})
+            .set_param(param)
+            .set_display(false);
+
+    auto run = [&](size_t M, size_t N, size_t K) {
+        auto default_used = benchmarker.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto mk_used = benchmarker_mk4.exec(
+                               {{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) /
+                       RUNS;
+        float computations = 2.f * M * K * N * 1e-6;
+        printf("run: {%zu{M} %zu{K} %zu{N}} normal: %f ms %f Gflops mk4: %f ms "
+               "%f Gflops speedup_vs_normal: %f\n",
+               M, K, N, default_used, computations / default_used, mk_used,
+               computations / mk_used, default_used / mk_used);
+    };
+
+    run(256, 256, 128);
+    for (size_t k = 4; k <= 512; k *= 2) {
+        for (size_t m = 4; m <= 512; m *= 2) {
+            for (size_t n = 4; n <= 512; n *= 2) {
+                run(m, n, k);
+            }
+        }
+        std::cout << std::endl;
+    }
+}
 #endif  // __ARM_FEATURE_DOTPROD
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

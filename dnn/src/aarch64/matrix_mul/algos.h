@@ -118,6 +118,19 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
 };
+
+class MatrixMulImpl::AlgoInt8x8x32MK4_8x12x4DotProd final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        return "AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD";
+    }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    void* type() const override { return sm_arm_common_algo_type; }
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+};
 #else
 
 class MatrixMulImpl::AlgoInt8x8x32MK4_4x4x16 final : public AlgoBase {

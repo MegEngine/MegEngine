@@ -615,6 +615,20 @@ static inline void interleave_12x4_4_b(const T*& inptr0, const T*& inptr1,
                         reinterpret_cast<int32_t*&>(outptr));
 }
 
+static inline void interleave_2x1_4_s(const int32_t*& inptr0,
+                                      const int32_t*& inptr1,
+                                      int32_t*& outptr) {
+    asm volatile(
+            "ld1 {v0.4s}, [%[inptr0]], #16\n"  // d0 = A0A1A2A3
+            "ld1 {v1.4s}, [%[inptr1]], #16\n"  // d1 = B0B1B2B3
+            "st1 {v0.4s}, [%[outptr]], #16\n"
+            "st1 {v1.4s}, [%[outptr]], #16\n"
+            :
+            [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1), [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "cc", "memory");
+}
+
 static inline void interleave_8x1_4_s(
         const int32_t*& inptr0, const int32_t*& inptr1, const int32_t*& inptr2,
         const int32_t*& inptr3, const int32_t*& inptr4, const int32_t*& inptr5,
@@ -750,6 +764,17 @@ static inline void interleave_8x2_2_d(
             :
             : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
               "v11", "v12", "v13", "v14", "v15", "cc", "memory");
+}
+
+template <typename T>
+static inline void interleave_2x4_4_b(const T*& inptr0, const T*& inptr1,
+                                      T*& outptr) {
+    static_assert(
+            std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
+            "interleave_2x4_4_b only support uint8_t and int8_t");
+    interleave_2x1_4_s(reinterpret_cast<const int32_t*&>(inptr0),
+                       reinterpret_cast<const int32_t*&>(inptr1),
+                       reinterpret_cast<int32_t*&>(outptr));
 }
 
 template <typename T>
