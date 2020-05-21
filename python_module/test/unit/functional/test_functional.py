@@ -439,3 +439,19 @@ def test_conv_bias():
 
         run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
         run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
+
+
+def test_softplus():
+    x = np.arange(1000).astype(np.float32)
+    out = F.softplus(tensor(x))
+    mask = x <= 20
+    with np.errstate(over="ignore"):
+        expected = np.where(mask, np.log(1 + np.exp(x)), x)
+    assertTensorClose(out, expected)
+    beta = 2
+    out = F.softplus(tensor(x), beta=beta, threshold=30)
+    mask = beta * x <= 30
+    # ignore overflow
+    with np.errstate(over="ignore"):
+        expected = np.where(mask, np.log(1 + np.exp(x * beta)) / beta, x)
+    assertTensorClose(out, expected)

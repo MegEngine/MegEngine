@@ -18,7 +18,8 @@ from ..jit import barrier, mark_impure
 from ..random import uniform
 from ..utils.types import _pair, _pair_nonzero
 from .debug_param import get_conv_execution_strategy
-from .tensor import concat
+from .elemwise import exp, log
+from .tensor import concat, where
 from .utils import _decide_comp_node_and_comp_graph
 
 
@@ -265,6 +266,24 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
     return mgb.opr.elemwise(inp, 0, mode="MAX") + negative_slope * mgb.opr.elemwise(
         inp, 0, mode="MIN"
     )
+
+
+@wrap_io_tensor
+def softplus(inp: Tensor, beta: float = 1, threshold: float = 20) -> Tensor:
+    r"""
+    Performs the elementwise function:
+    
+    .. math::
+        
+        \mathsf{softplus}(x) = \log(1+\exp(\beta x)) / \beta.
+
+    For numerical stability the identity function is used when :math:`\beta x > \textrm{threshold}`.
+
+    """
+    mask = beta * inp <= threshold
+    out = log(1 + exp(beta * inp)) / beta
+    out = where(mask, out, inp)
+    return out
 
 
 @wrap_io_tensor
