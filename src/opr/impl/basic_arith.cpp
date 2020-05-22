@@ -1680,7 +1680,7 @@ void Reduce::create_megdnn_opr() {
 MGB_IMPL_OPR_GRAD(Reduce) {
     for (size_t i = 1; i < opr.output().size(); ++ i)
         mgb_assert(!out_grad[i]);
-    if (wrt_idx)
+    if (wrt_idx || opr.input(0)->dtype().category() != DTypeCategory::FLOAT)
         return InvalidGrad::make(opr, wrt_idx);
     SymbolVar og{out_grad[0]}, iv{opr.input(0)}, ov{opr.output(0)};
     constexpr auto cmv = Elemwise::Mode::COND_LEQ_MOV;
@@ -1700,8 +1700,9 @@ MGB_IMPL_OPR_GRAD(Reduce) {
             case Mode::MEAN: {
                 auto og_shape = opr::GetVarShape::make(og),
                     iv_shape = opr::GetVarShape::make(iv),
-                    scale = opr::reduce_prod(og_shape, og_shape.make_scalar(1)) /
-                            opr::reduce_prod(iv_shape, iv_shape.make_scalar(1));
+                    scale = div(
+                        opr::reduce_prod(og_shape, og_shape.make_scalar(1)),
+                        opr::reduce_prod(iv_shape, iv_shape.make_scalar(1)));
                 return scale * Broadcast::make(og, GetVarShape::make(iv));
             }
             default:

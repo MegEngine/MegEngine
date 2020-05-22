@@ -13,6 +13,9 @@
 #include "src/naive/handle.h"
 
 
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#include "src/arm_common/simd_macro/marm_neon.h"
+#endif
 
 #include <limits>
 
@@ -167,6 +170,10 @@ void pow_invoke(const T* src, T* dst, size_t size, ExpFunc expfunc) {
         dst[i + 2] = b2;
         dst[i + 3] = b3;
     }
+#if MEGDNN_FIX_AARCH32_BUG
+    // FIXME: as llvm may cause cannot select error if enable vectorize
+    #pragma clang loop vectorize(disable)
+#endif
     for (; i < size; ++i) {
         dst[i] = expfunc.apply(src[i]);
     }
@@ -254,8 +261,13 @@ void PowCImpl::do_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
 
 #if !MEGDNN_DISABLE_FLOAT16
         case DTypeTrait<dtype::Float16>::enumv:
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+            return MEGDNN_INC_FLOAT16(
+                    do_exec_ct<__fp16>(src, dst, exp_f, exp_i));
+#else
             return MEGDNN_INC_FLOAT16(
                     do_exec_ct<dt_float16>(src, dst, exp_f, exp_i));
+#endif
 #endif
         default:
             megdnn_throw("unsupported dtype for PowC");

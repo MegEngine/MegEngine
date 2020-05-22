@@ -3,9 +3,9 @@
 __lazy_initializer = None
 
 def __apply_lazy_initializer(self):
+    """ __lazy_initializer released by self.set_value()"""
     if self.__lazy_initializer is not None:
         self.set_value(self.__lazy_initializer.get_value())
-        # __lazy_initializer released by self.set_value()
 
 @property
 def shape(self):

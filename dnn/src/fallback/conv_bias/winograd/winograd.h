@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -87,7 +88,9 @@ class ConvBias {
         if (param.filter_meta.format !=
                     param::ConvBias::Format::NCHW_WINOGRAD &&
             param.filter_meta.format !=
-                    param::ConvBias::Format::NCHW88_WINOGRAD) {
+                    param::ConvBias::Format::NCHW88_WINOGRAD &&
+            param.filter_meta.format !=
+                    param::ConvBias::Format::NCHW44_WINOGRAD) {
             filter_transform_buf_size = Strategy::ALPHA * Strategy::ALPHA * OC *
                                         IC * sizeof(input_filter_compute_type);
         }
@@ -95,7 +98,8 @@ class ConvBias {
                 get_wbundle_compute(param, matmul_algo).total_size_in_bytes() *
                 nr_threads;
         if (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-            param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+            param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+            param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             return WorkspaceBundle(
                     nullptr,
                     {winograd_comput_size, filter_transform_buf_size * GROUP});
@@ -103,7 +107,9 @@ class ConvBias {
             megdnn_assert(param.filter_meta.format ==
                                   param::ConvBias::Format::NCHW_WINOGRAD ||
                           param.filter_meta.format ==
-                                  param::ConvBias::Format::NCHW88_WINOGRAD);
+                                  param::ConvBias::Format::NCHW88_WINOGRAD ||
+                          param.filter_meta.format ==
+                                  param::ConvBias::Format::NCHW44_WINOGRAD);
             return WorkspaceBundle(nullptr, {winograd_comput_size});
         }
     }
@@ -210,11 +216,17 @@ public:
                 reinterpret_cast<input_filter_compute_type*>(
                         reinterpret_cast<uintptr_t>(bundle_compute.get(2)) +
                         compute_workspace_size_per_thread * thread_id);
-        const stype* filter_ptr = kern_param.filter<stype>();
-        size_t oc_start = oc_id, oc_end = oc_id+1;
+
+        const stype* filter_ptr = kern_param.filter<stype>(group_id);
+        size_t oc_start = oc_id, oc_end = oc_id + 1;
+
         if (kern_param.filter_meta.format == param::ConvBias::Format::NCHW88) {
             oc_start = 8 * oc_id;
             oc_end = oc_start + 8;
+        } else if (kern_param.filter_meta.format ==
+                   param::ConvBias::Format::NCHW44) {
+            oc_start = 4 * oc_id;
+            oc_end = oc_start + 4;
         }
         strategy.filter(filter_ptr, filter_transform_buf, transform_mid_buf, OC,
                         IC, oc_start, oc_end);
@@ -246,16 +258,19 @@ public:
 
         size_t oc_block_id = ncb_index.ndrange_id[3];
         size_t tile_id = ncb_index.ndrange_id[2];
+        size_t batch_id = ncb_index.ndrange_id[1];
         size_t group_id = ncb_index.ndrange_id[0];
         size_t thread_id = ncb_index.thread_id;
 
         bundle_top.set(ncb_param.workspace_ptr);
         bundle_compute.set(bundle_top.get(0));
 
-        const stype* src_ptr = ncb_param.src<stype>();
-        dst_type* dst_ptr = ncb_param.dst<dst_type>();
+        const stype* src_ptr = ncb_param.src<stype>(batch_id, group_id);
+        dst_type* dst_ptr = ncb_param.dst<dst_type>(batch_id, group_id);
         const output_compute_type* bias_ptr =
-                static_cast<const output_compute_type*>(ncb_param.bias_ptr);
+                static_cast<const output_compute_type*>(
+                        ncb_param.bias<output_compute_type>(batch_id,
+                                                            group_id));
 
         input_filter_compute_type* input_transform_buf =
                 reinterpret_cast<input_filter_compute_type*>(
@@ -271,11 +286,13 @@ public:
                         reinterpret_cast<uintptr_t>(bundle_compute.get(2)) +
                         compute_workspace_size_per_thread * thread_id);
 
+        //! NCHW88_WINOGRAD and NCHW_WINOGRAD is the same offset
         const input_filter_compute_type* filter_transform_buf =
                 static_cast<const input_filter_compute_type*>(
-                        ncb_param.filter_ptr);
+                        ncb_param.filter<input_filter_compute_type>(group_id));
         if (ncb_param.filter_meta.format == param::ConvBias::Format::NCHW ||
-            ncb_param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+            ncb_param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+            ncb_param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             filter_transform_buf = reinterpret_cast<input_filter_compute_type*>(
                     reinterpret_cast<uintptr_t>(bundle_top.get(1)) +
                     group_id * filter_group_size);
@@ -304,17 +321,10 @@ public:
                           "nr_tiles_in_unit: %zu TILE_SIZE:%zu",
                           nr_tiles_in_unit, unit_tile_size);
         }
-        rep(unit_idx, nr_tiles_in_unit) {
-            size_t index = unit_start_idx + unit_idx;
-            size_t nh = index / units_w;
-            size_t nw = index % units_w;
-            int ih_start = nh * Strategy::OUTPUT_BLOCK_SIZE - PH;
-            int iw_start = nw * Strategy::OUTPUT_BLOCK_SIZE - PW;
+        //! BTdB
+        strategy.input(src_ptr, input_transform_buf, transform_mid_buf,
+                       IH, IW, IC, PH, PW, unit_start_idx, nr_tiles_in_unit);
 
-            strategy.input(src_ptr, input_transform_buf, transform_mid_buf,
-                           ih_start, iw_start, IH, IW, IC, unit_idx,
-                           nr_tiles_in_unit);
-        }
         rep(i, Strategy::ALPHA) rep(j, Strategy::ALPHA) {
             if (format == param::MatrixMul::Format::DEFAULT) {
                 matmul_param.A_ptr =
@@ -351,22 +361,14 @@ public:
             }
             matmul_kern(matmul_param);
         }
-        /* Y = ATmA */
-        rep(unit_idx, nr_tiles_in_unit) {
-            size_t index = unit_start_idx + unit_idx;
-            auto nh = index / units_w;
-            auto nw = index % units_w;
-            size_t oh_start = nh * Strategy::OUTPUT_BLOCK_SIZE;
-            size_t ow_start = nw * Strategy::OUTPUT_BLOCK_SIZE;
-            size_t oc_end_idx = oc_start_idx + nr_oc_in_unit;
 
-            strategy.output(
-                    output_transform_buf, bias_ptr, dst_ptr,
-                    reinterpret_cast<output_compute_type*>(transform_mid_buf),
-                    ncb_param.bias_mode, ncb_param.nonlineMode, oh_start,
-                    ow_start, OH, OW, oc_start_idx, oc_end_idx, unit_idx,
-                    nr_tiles_in_unit);
-        }
+        //! Y = ATmA
+        size_t oc_end_idx = oc_start_idx + nr_oc_in_unit;
+        strategy.output(
+                output_transform_buf, bias_ptr, dst_ptr,
+                reinterpret_cast<output_compute_type*>(transform_mid_buf),
+                ncb_param.bias_mode, ncb_param.nonlineMode, OH, OW,
+                oc_start_idx, oc_end_idx, unit_start_idx, nr_tiles_in_unit);
     };
 
     SmallVector<NCBKern> get_kerns(
@@ -400,14 +402,18 @@ public:
                 param.filter_meta.stride[1] == 1 &&
                 (param.filter_meta.format == param::ConvBias::Format::NCHW ||
                  param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+                 param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
                  param.filter_meta.format ==
                          param::ConvBias::Format::NCHW_WINOGRAD ||
                  param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW88_WINOGRAD));
+                         param::ConvBias::Format::NCHW88_WINOGRAD ||
+                 param.filter_meta.format ==
+                         param::ConvBias::Format::NCHW44_WINOGRAD));
 
         SmallVector<NCBKern> kerns;
         if (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-            param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+            param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
+            param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             //! probably a gcc bug, labmda require capturing 'this' to call
             //! static member function
             auto filter_process_kern = [this, strategy, bundle_top,
@@ -422,6 +428,10 @@ public:
             if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
                 megdnn_assert(OC % 8 == 0);
                 oc_parallelism = OC / 8;
+            } else if (param.filter_meta.format ==
+                       param::ConvBias::Format::NCHW44) {
+                megdnn_assert(OC % 4 == 0);
+                oc_parallelism = OC / 4;
             }
             kerns.push_back({filter_process_kern, {GROUP, 1, oc_parallelism}});
         }
@@ -517,15 +527,15 @@ public:
                     size_t IC, size_t oc_start, size_t oc_end);                \
         void input(const stype* input,                                         \
                    input_filter_compute_type* input_transform_buf,             \
-                   input_filter_compute_type* transform_mid_buf, int ih_start, \
-                   int iw_start, size_t IH, size_t IW, size_t IC,              \
-                   size_t unit_idx, size_t nr_tiles_in_unit);                  \
+                   input_filter_compute_type* transform_mid_buf,               \
+                   size_t IH, size_t IW, size_t IC, size_t PH, size_t PW,      \
+                   size_t unit_start_idx, size_t nr_tiles_in_unit);            \
         void output(const output_compute_type* output_transform_buf,           \
                     const output_compute_type* bias, dst_type* output,         \
                     output_compute_type* transform_mid_buf, BiasMode bmode,    \
-                    NonlineMode nonline_mode, size_t oh_start,                 \
-                    size_t ow_start, size_t OH, size_t OW, size_t oc_start,    \
-                    size_t oc_end, size_t unit_idx, size_t nr_tiles_in_unit);  \
+                    NonlineMode nonline_mode, size_t OH, size_t OW,            \
+                    size_t oc_start, size_t oc_end, size_t unit_start_idx,     \
+                    size_t nr_tiles_in_unit);                                  \
     };
 
 #define MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(_strategy_cls_name)     \

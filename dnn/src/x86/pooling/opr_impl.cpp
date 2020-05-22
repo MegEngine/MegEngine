@@ -17,7 +17,7 @@
 #include "src/x86/pooling/pooling_special_cases.h"
 #include "src/x86/utils.h"
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 #include "mkldnn.hpp"
 #endif
 
@@ -45,7 +45,7 @@ WorkspaceBundle get_bundle(const TensorLayout& src, const TensorLayout& dst,
     return ws;
 }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 template <dnnl::memory::format_tag format_tag, bool use_mkl_mem>
 dnnl::memory tensor_to_mkl_memory(_megdnn_tensor_in src,
                                   const dnnl::engine& mkldnn_eng,
@@ -164,7 +164,7 @@ void PoolingImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         return;
     }
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 
     // Mkldnn provide optimized code for nhwc int8 pooling now.
     // Mkldnn can not change the layout automatic.

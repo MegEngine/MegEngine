@@ -535,10 +535,15 @@ MGB_DEFINE_OPR_CLASS(Concat, cg::SingleCNOutshapePureByInshapeOprBase) // {
 /*!
  * \brief Opr used to pack parameter, all input node must in same device, dtype
  *      and shape is not needed to be same
+ * \param offsets: size of 2 * inputs.size()
+ *      offsets[i * 2] and offsets[i * 2 + 1] means
+ *      the begin and the end of inputs[i]'s offsets in output
+ * \param offsets_val: offsets value on cpu
  */
 MGB_DEFINE_OPR_CLASS(ParamPackConcat, cg::SingleCNOperatorNodeBase) // {
     //! input pointer buffer
     SmallVector<void*> m_inp_ptr;
+    std::vector<dt_int32> m_offsets;
     intl::UniqPtrWithCN<megdnn::ParamPackConcat> m_opr;
 
     void add_input_layout_constraint() override;
@@ -554,47 +559,58 @@ public:
         return {};
     }
 
-    ParamPackConcat(VarNodeArray &inp, VarNode *table,
-            const OperatorNodeConfig &config);
-    static SymbolVar make(const SmallVector<SymbolVar> &inp,
-            const SymbolVar &table, const OperatorNodeConfig &config = {});
+    ParamPackConcat(VarNodeArray& inp, VarNode* offsets,
+                    const std::vector<dt_int32> offsets_val,
+                    const OperatorNodeConfig& config);
+    static SymbolVar make(const SmallVector<SymbolVar>& inp,
+                          const SymbolVar& offsets,
+                          const std::vector<dt_int32> offsets_val,
+                          const OperatorNodeConfig& config = {});
 
-    static SymbolVar make(const SmallVector<SymbolVar> &inp,
-            const SymbolVar &table, const Param &,
-            const OperatorNodeConfig &config) {
-        return make(inp, table, config);
+    static SymbolVar make(const SmallVector<SymbolVar>& inp,
+                          const SymbolVar& offsets,
+                          const std::vector<dt_int32> offsets_val, const Param&,
+                          const OperatorNodeConfig& config) {
+        return make(inp, offsets, offsets_val, config);
+    }
+
+    const std::vector<dt_int32>& get_offsets() const {
+        return m_offsets;
     }
 };
 
 /*!
  * \brief Opr used to split parameter
+ * \param offsets: size of 2 * outputs.size()
+ *      offsets[i * 2] and offsets[i * 2 + 1] means
+ *      the begin and the end of output[i]'s offsets in input
+ * \param offsets_val: offsets value on cpu
+ * \param shapes: shape of each output
  */
 MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
-    //! input pointer buffer
-    SmallVector<void*> m_inp_ptr;
-
-    intl::UniqPtrWithCN<megdnn::ParamPackSplit> m_opr;
     TensorShapeArray m_shapes;
+    std::vector<dt_int32> m_offsets;
 
-    void scn_do_execute() override;
+    void scn_do_execute() override{};
     void init_output_static_infer_desc() override;
-    void on_output_comp_node_stream_changed() override;
-
     bool infer_shape(size_t index, TensorShape &dest,
             const cg::static_infer::InpVal &inp);
-
     void init_output_dtype() override;
-
+    void mem_plan_fwd_in2out_readonly() override;
     void add_input_layout_constraint() override;
 
-    void init_megdnn_opr();
-
 public:
-    ParamPackSplit(VarNode* src, VarNode* table, TensorShapeArray& shapes,
-            const OperatorNodeConfig &config);
+    ParamPackSplit(VarNode* src, const std::vector<dt_int32> offsets,
+                   TensorShapeArray& shapes, const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(const SymbolVar &src, const SymbolVar &table,
-            TensorShapeArray shapes, const OperatorNodeConfig &config = {});
+    static SymbolVarArray make(const SymbolVar& src,
+                               const std::vector<dt_int32> offsets,
+                               TensorShapeArray shapes,
+                               const OperatorNodeConfig& config = {});
+
+    const std::vector<dt_int32>& get_offsets() const {
+        return m_offsets;
+    }
 
     const TensorShapeArray& get_output_shapes() const {
         return m_shapes;

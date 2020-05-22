@@ -55,16 +55,18 @@ add_custom_command(
 
 add_custom_target(mgb_opr_py DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/opr.py)
 
-set(SRCS src/cpp/craniotome.cpp src/cpp/function_replace.cpp src/cpp/intbx.cpp src/cpp/megbrain_config.cpp src/cpp/megbrain_pubapi.cpp src/cpp/megbrain_serialize.cpp src/cpp/megbrain_wrap.cpp src/cpp/opr_defs.cpp src/cpp/opr_helper.cpp src/cpp/plugin.cpp src/cpp/python_helper.cpp)
+set(SRCS src/cpp/craniotome.cpp src/cpp/function_replace.cpp src/cpp/intbx.cpp src/cpp/megbrain_config.cpp src/cpp/megbrain_pubapi.cpp src/cpp/megbrain_serialize.cpp src/cpp/megbrain_wrap.cpp src/cpp/mm_handler.cpp src/cpp/opr_defs.cpp src/cpp/opr_helper.cpp src/cpp/plugin.cpp src/cpp/python_helper.cpp)
 
 if(MGE_WITH_DISTRIBUTED)
-    list(APPEND SRCS src/cpp/mm_handler.cpp src/cpp/zmq_rpc.cpp)
+    list(APPEND SRCS src/cpp/zmq_rpc.cpp)
 endif()
 
 include(UseSWIG)
 set_property(SOURCE ${SWIG_SRC} PROPERTY CPLUSPLUS ON)
+
 # cmake < 3.12 do not honor INCLUDE_DIRECTORIES property, just add include directory into SWIG_FLAGS
-set_property(SOURCE ${SWIG_SRC} PROPERTY SWIG_FLAGS ${MGB_DEF} -I${PROJECT_SOURCE_DIR}/src/serialization/include)
+# Add -I${PROJECT_BINARY_DIR}/genfiles in order to include megbrain_build_config.h so that we don't need to pass cmake flags by -D.
+set_property(SOURCE ${SWIG_SRC} PROPERTY SWIG_FLAGS -I${PROJECT_SOURCE_DIR}/src/serialization/include -I${PROJECT_BINARY_DIR}/genfiles)
 
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal)
@@ -92,6 +94,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/megengine ${CMAKE_CURRENT_BINARY_DIR}/megengine
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test ${CMAKE_CURRENT_BINARY_DIR}/test
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/setup.py ${CMAKE_CURRENT_BINARY_DIR}/setup.py
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/requires.txt ${CMAKE_CURRENT_BINARY_DIR}/requires.txt
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/requires-style.txt ${CMAKE_CURRENT_BINARY_DIR}/requires-style.txt
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/requires-test.txt ${CMAKE_CURRENT_BINARY_DIR}/requires-test.txt
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/megbrain_pubapi.h ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include/megbrain_pubapi.h
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/src/core/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
@@ -99,5 +104,6 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/src/serialization/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/src/plugin/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/dnn/include ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/genfiles/megbrain_build_config.h ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/include/megbrain_build_config.h
 )
 

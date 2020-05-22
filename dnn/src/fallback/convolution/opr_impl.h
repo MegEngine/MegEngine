@@ -100,6 +100,43 @@ public:
         T* workspace() const {
             return static_cast<T*>(workspace_ptr);
         }
+
+        //! when format is nchwxx and channel wise, multi group will pack into
+        //! one group_pack_id. group_pack_size is the number of packed group
+        //! together, like weight shape is {g/8, 1, 1, Fh, Fw, 8}
+        template <typename T>
+        T* dst(size_t batch_id, size_t group_pack_id,
+               size_t group_pack_size = 1_z) const{
+            size_t batch_offset = batch_id * out_bs * dst_type.size();
+            size_t group_offset = group_pack_size * group_pack_id *
+                                  filter_meta.ocpg * osz[0] * osz[1] *
+                                  dst_type.size();
+            return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(dst_ptr) +
+                                        batch_offset + group_offset);
+        }
+
+        template <typename T>
+        const T* src(size_t batch_id, size_t group_pack_id,
+                     size_t group_pack_size = 1_z) const {
+            size_t batch_offset = batch_id * inp_bs * src_type.size();
+            size_t group_offset = group_pack_size * group_pack_id *
+                                  filter_meta.icpg * isz[0] * isz[1] *
+                                  src_type.size();
+            return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(src_ptr) +
+                                        batch_offset + group_offset);
+
+        }
+
+        template <typename T>
+        const T* filter(size_t group_pack_id,
+                        size_t pack_group_size = 1_z) const {
+            size_t group_offset = pack_group_size * group_pack_id *
+                                  filter_meta.icpg * filter_meta.ocpg *
+                                  filter_meta.spatial[0] *
+                                  filter_meta.spatial[1] * filter_type.size();
+            return reinterpret_cast<T*>(
+                    reinterpret_cast<ptrdiff_t>(filter_ptr) + group_offset);
+        }
     };
 
     static void* const sm_fallback_conv_algo_type;

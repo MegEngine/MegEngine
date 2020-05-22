@@ -71,7 +71,7 @@ class Cityscapes(VisionDataset):
             elif k == "mask":
                 mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
                 mask = self._trans_mask(mask)
-                mask = mask[:, :, None]
+                mask = mask[:, :, np.newaxis]
                 target.append(mask)
             elif k == "info":
                 if image is None:
@@ -109,9 +109,9 @@ class Cityscapes(VisionDataset):
             33,
         ]
         label = np.ones(mask.shape) * 255
-        for i in range(len(trans_labels)):
-            label[mask == trans_labels[i]] = i
-        return label.astype("uint8")
+        for i, tl in enumerate(trans_labels):
+            label[mask == tl] = i
+        return label.astype(np.uint8)
 
     def _get_target_suffix(self, mode, target_type):
         if target_type == "instance":

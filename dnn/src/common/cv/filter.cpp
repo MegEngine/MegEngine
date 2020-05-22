@@ -106,10 +106,8 @@ FilterEngine<ST, FT>::FilterEngine(BaseRowFilter* row_filter,
 
 template <typename ST, typename FT>
 FilterEngine<ST, FT>::~FilterEngine() {
-    if (m_row_filter != NULL)
-        delete m_row_filter;
-    if (m_column_filter != NULL)
-        delete m_column_filter;
+    delete m_row_filter;
+    delete m_column_filter;
 }
 
 template <typename ST, typename FT>

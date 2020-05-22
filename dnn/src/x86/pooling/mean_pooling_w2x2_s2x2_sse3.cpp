@@ -33,11 +33,11 @@ void mean_pooling_w2x2_s2x2_sse3(const float *src, const int src_h, const int sr
         // brute-force with padding
         int idst_h, idst_w;
         size_t count;
-#define FUCK1 \
+#define CALCULATE1 \
         const int isrc_h = -pad_h + 2*idst_h; \
         const float *src_d = src + isrc_h * src_w; \
         float *dst_d = dst + idst_h * dst_w;
-#define FUCK2 \
+#define CALCULATE2 \
         const int isrc_w = -pad_w + 2*idst_w; \
         const float *src_dd = src_d + isrc_w; \
         float *dst_dd = dst_d + idst_w; \
@@ -66,34 +66,34 @@ void mean_pooling_w2x2_s2x2_sse3(const float *src, const int src_h, const int sr
         }
 
         for (idst_h = 0; idst_h < dst_h_beg; ++idst_h) {
-            FUCK1
+            CALCULATE1
             for (idst_w = 0; idst_w < dst_w; ++idst_w) {
-                FUCK2
+                CALCULATE2
             }
         }
 
         for (idst_h = dst_h_end; idst_h < dst_h; ++idst_h) {
-            FUCK1
+            CALCULATE1
             for (idst_w = 0; idst_w < dst_w; ++idst_w) {
-                FUCK2
+                CALCULATE2
             }
         }
 
         for (idst_h = dst_h_beg; idst_h < dst_h_end; ++idst_h) {
-            FUCK1
+            CALCULATE1
             for (idst_w = 0; idst_w < dst_w_beg; ++idst_w) {
-                FUCK2
+                CALCULATE2
             }
         }
 
         for (idst_h = dst_h_beg; idst_h < dst_h_end; ++idst_h) {
-            FUCK1
+            CALCULATE1
             for (idst_w = dst_w_end; idst_w < dst_w; ++idst_w) {
-                FUCK2
+                CALCULATE2
             }
         }
-#undef FUCK1
-#undef FUCK2
+#undef CALCULATE1
+#undef CALCULATE2
     }
     int idst_h;
     for (idst_h = dst_h_beg; idst_h + 4 <= dst_h_end; idst_h += 4) {

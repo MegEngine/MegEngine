@@ -20,7 +20,7 @@ class Softmax(Module):
     .. math::
             \text{Softmax}(x_{i}) = \frac{exp(x_i)}{\sum_j exp(x_j)}
 
-    It is applied to an n-dimensional input Tensor and rescaling them so that the elements of the 
+    It is applied to an n-dimensional input Tensor and rescaling them so that the elements of the
     n-dimensional output Tensor lie in the range of `[0, 1]` and sum to 1.
 
     :param axis: An axis along which softmax will be applied. By default,
@@ -137,8 +137,8 @@ class PReLU(Module):
         ax, & \text{ otherwise }
         \end{cases}
 
-    Here :math:`a` is a learnable parameter. When called without arguments, `PReLU()` uses 
-    a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`, 
+    Here :math:`a` is a learnable parameter. When called without arguments, `PReLU()` uses
+    a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`,
     a seperate :math:`a` is used for each input channle.
 
     :param num_parameters: number of :math:`a` to learn, there is only two
@@ -191,7 +191,7 @@ class LeakyReLU(Module):
     Applies the element-wise function:
 
     .. math::
-        \text{LeakyReLU}(x) = \max(0,x) + 0.01 * \min(0,x)
+        \text{LeakyReLU}(x) = \max(0,x) + negative\_slope \times \min(0,x)
 
     or
 
@@ -199,7 +199,7 @@ class LeakyReLU(Module):
         \text{LeakyReLU}(x) =
         \begin{cases}
         x, & \text{ if } x \geq 0 \\
-        0.01x, & \text{ otherwise }
+        negative\_slope \times x, & \text{ otherwise }
         \end{cases}
 
     Examples:
@@ -211,18 +211,21 @@ class LeakyReLU(Module):
         import megengine.module as M
         data = mge.tensor(np.array([-8, -12, 6, 10]).astype(np.float32))
 
-        leakyrelu = M.LeakyReLU()
+        leakyrelu = M.LeakyReLU(0.01)
         output = leakyrelu(data)
         print(output.numpy())
 
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [-0.08   -0.12  6.   10.  ]
 
     """
 
+    def __init__(self, negative_slope: float = 0.01):
+        super().__init__()
+        self.negative_slope = negative_slope
+
     def forward(self, inputs):
-        return leaky_relu(inputs)
+        return leaky_relu(inputs, self.negative_slope)

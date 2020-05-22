@@ -152,4 +152,77 @@ void LocalShareBackwardFilterImpl::exec(_megdnn_tensor_in src,
                         StrategyBwdFlt>(src, grad, diff, param())););
 }
 
+std::vector<LocalShareForward::Algorithm*>
+LocalShareForwardImpl::get_all_algorithms(const TensorLayout&,
+                                          const TensorLayout&,
+                                          const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_local_share_fwd_algo()};
+}
+
+LocalShareForward::Algorithm* LocalShareForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& /* src */, const TensorLayout& /* diff */,
+        const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
+        bool reproducible) {
+    auto algo =
+            static_cast<HandleImpl*>(handle())->default_local_share_fwd_algo();
+    if (reproducible) {
+        megdnn_assert(algo->is_reproducible(),
+                      "require reproducible algorithm, but heuristic "
+                      "algorithm(%s) is not "
+                      "reproducible",
+                      algo->name());
+    }
+    return algo;
+}
+
+std::vector<LocalShareBackwardData::Algorithm*>
+LocalShareBackwardDataImpl::get_all_algorithms(const TensorLayout&,
+                                               const TensorLayout&,
+                                               const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_local_share_bwd_data_algo()};
+}
+
+LocalShareBackwardData::Algorithm*
+LocalShareBackwardDataImpl::get_algorithm_heuristic(
+        const TensorLayout& /* filter */, const TensorLayout& /* diff */,
+        const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
+        bool reproducible) {
+    auto algo = static_cast<HandleImpl*>(handle())
+                        ->default_local_share_bwd_data_algo();
+    if (reproducible) {
+        megdnn_assert(algo->is_reproducible(),
+                      "require reproducible algorithm, but heuristic "
+                      "algorithm(%s) is not "
+                      "reproducible",
+                      algo->name());
+    }
+    return algo;
+}
+
+std::vector<LocalShareBackwardFilter::Algorithm*>
+LocalShareBackwardFilterImpl::get_all_algorithms(const TensorLayout&,
+                                                 const TensorLayout&,
+                                                 const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_local_share_bwd_filter_algo()};
+}
+
+LocalShareBackwardFilter::Algorithm*
+LocalShareBackwardFilterImpl::get_algorithm_heuristic(
+        const TensorLayout& /* src */, const TensorLayout& /* diff */,
+        const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
+        bool reproducible) {
+    auto algo = static_cast<HandleImpl*>(handle())
+                        ->default_local_share_bwd_filter_algo();
+    if (reproducible) {
+        megdnn_assert(algo->is_reproducible(),
+                      "require reproducible algorithm, but heuristic "
+                      "algorithm(%s) is not "
+                      "reproducible",
+                      algo->name());
+    }
+    return algo;
+}
+
 // vim: syntax=cpp.doxygen

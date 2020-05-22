@@ -23,10 +23,11 @@ def _decide_comp_node_and_comp_graph(*args: mgb.SymbolVar):
     return _use_default_if_none(None, None)
 
 
-def accuracy(logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1):
+def accuracy(
+    logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
+) -> Union[Tensor, Iterable[Tensor]]:
     r"""
-    Classification accuracy given model predictions and ground-truth labels,
-    result between 0. to 1.
+    Calculate the classification accuracy given predicted logits and ground-truth labels.
 
     :param logits: Model predictions of shape [batch_size, num_classes],
         representing the probability (likelyhood) of each class.
@@ -50,7 +51,6 @@ def accuracy(logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [0.] [0.375]
     """
@@ -70,4 +70,12 @@ def accuracy(logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
 
 @wrap_io_tensor
 def zero_grad(inp: Tensor) -> Tensor:
+    r"""
+    Returns a tensor which is treated as constant during backward gradient calcuation,
+    i.e. its gradient is zero.
+
+    :param inp: Input tensor.
+
+    See implementation of :func:`~.softmax` for example.
+    """
     return mgb.opr.zero_grad(inp)

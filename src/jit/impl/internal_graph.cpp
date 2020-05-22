@@ -81,12 +81,12 @@ InternalGraphPtr expand_executor_opr(const InternalGraphPtr& prev_igraph) {
 
 }  // namespace
 
-InternalGraphGenrator::InternalGraphGenrator(cg::OperatorNodeBase* opr)
+InternalGraphGenerator::InternalGraphGenerator(cg::OperatorNodeBase* opr)
         : m_output{opr->output(0)} {
     add_opr(opr);
 }
 
-VarNode* InternalGraphGenrator::replace_graph_by_placeholder() {
+VarNode* InternalGraphGenerator::replace_graph_by_placeholder() {
     ThinHashMap<VarNode*, VarNode*> old2new;
     auto cpu_default = CompNode::default_cpu();
     auto igraph_copy_opr_shallow = [cpu_default](OperatorNodeBase* opr,
@@ -163,7 +163,7 @@ VarNode* InternalGraphGenrator::replace_graph_by_placeholder() {
     return old2new.at(m_output);
 }
 
-InternalGraphPtr InternalGraphGenrator::generate() {
+InternalGraphPtr InternalGraphGenerator::generate() {
     m_input_idx = 0;
 
     auto new_nd = replace_graph_by_placeholder();
@@ -172,7 +172,7 @@ InternalGraphPtr InternalGraphGenrator::generate() {
     return expand_executor_opr(igraph);
 }
 
-size_t InternalGraphGenrator::get_cnt_input_if_add(
+size_t InternalGraphGenerator::get_cnt_input_if_add(
         cg::OperatorNodeBase* opr) const {
     // minus 1 first because this opr should be removed from subgraph's input
     size_t new_cnt_input = m_graph_input_set.size() - 1;
@@ -183,7 +183,7 @@ size_t InternalGraphGenrator::get_cnt_input_if_add(
     return new_cnt_input;
 }
 
-void InternalGraphGenrator::add_opr(cg::OperatorNodeBase* opr) {
+void InternalGraphGenerator::add_opr(cg::OperatorNodeBase* opr) {
     if (m_opr_set.count(opr)) {
         // ignore duplicated oprs (which occur in tests)
         return;
@@ -253,7 +253,7 @@ void InternalGraphGenrator::add_opr(cg::OperatorNodeBase* opr) {
     }
 }
 
-void InternalGraphGenrator::find_reduce_opr_deps(cg::OperatorNodeBase* opr) {
+void InternalGraphGenerator::find_reduce_opr_deps(cg::OperatorNodeBase* opr) {
     mgb_assert(opr->same_type<opr::Reduce>() ||
                (opr->same_type<jit::JITExecutor>() &&
                 try_cast_as_op<jit::JITExecutor>(opr)->has_reduce()));
@@ -264,7 +264,7 @@ void InternalGraphGenrator::find_reduce_opr_deps(cg::OperatorNodeBase* opr) {
     cg::DepOprIter{cb}.add(opr);
 }
 
-void InternalGraphGenrator::find_oprs_depended_by_dimshuffle(
+void InternalGraphGenerator::find_oprs_depended_by_dimshuffle(
         cg::OperatorNodeBase* dimshuffle) {
     mgb_assert(
             dimshuffle->same_type<opr::Dimshuffle>() ||
@@ -287,7 +287,7 @@ void InternalGraphGenrator::find_oprs_depended_by_dimshuffle(
     cg::DepOprIter{cb}.add(dimshuffle);
 }
 
-PlaceholderArray InternalGraphGenrator::to_placeholder_opr_arr(
+PlaceholderArray InternalGraphGenerator::to_placeholder_opr_arr(
         const VarNodeArray& vars) {
     PlaceholderArray ret(vars.size());
     for (size_t i = 0; i < vars.size(); ++i) {

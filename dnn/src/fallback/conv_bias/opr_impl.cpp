@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/fallback/convolution/opr_impl.h"
 #include "src/common/algo_chooser.h"
@@ -14,6 +15,7 @@
 #include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/algos.h"
+#include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/naive/convolution/algorithms.h"
@@ -44,7 +46,6 @@ public:
                 static_cast<fallback::MatrixMulImpl*>(matmul_opr)->algo_pack();
         for (auto&& algo : matmul_algos) {
             if (algo->algoset() ==
-                //! TODO: threre should filter MK matmul
                 MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
                 continue;
             }
@@ -52,6 +53,12 @@ public:
                 refhold.emplace_back(new AlgoIm2col(
                         static_cast<MatrixMulImpl::AlgoBase*>(algo),
                         ohw_tile_size));
+                all_algos.emplace_back(refhold.back().get());
+            }
+            for (size_t oc_tile_size : {24, 48}) {
+                refhold.emplace_back(new AlgoConv1x1(
+                        static_cast<MatrixMulImpl::AlgoBase*>(algo),
+                        oc_tile_size));
                 all_algos.emplace_back(refhold.back().get());
             }
 #if 0
@@ -157,9 +164,11 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
     if (param().format == Param::Format::NCHW88 ||
         param().format == Param::Format::NCHW8 ||
         param().format == Param::Format::NCHW4 ||
+        param().format == Param::Format::NCHW44 ||
         param().format == Param::Format::NCHW ||
         param().format == Param::Format::NCHW_WINOGRAD ||
-        param().format == Param::Format::NCHW88_WINOGRAD) {
+        param().format == Param::Format::NCHW88_WINOGRAD ||
+        param().format == Param::Format::NCHW44_WINOGRAD) {
         spatial_pos = 2;
     } else if (param().format == Param::Format::NHWC) {
         spatial_pos = 1;
@@ -188,7 +197,8 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
 
     param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT;
     if (param().format == Param::Format::NCHW_WINOGRAD ||
-        param().format == Param::Format::NCHW88_WINOGRAD) {
+        param().format == Param::Format::NCHW88_WINOGRAD ||
+        param().format == Param::Format::NCHW44_WINOGRAD) {
         size_t flt_start = 0;
         if (param().sparse == Param::Sparse::GROUP) {
             flt_start = 1;
@@ -245,66 +255,10 @@ ConvBiasImpl::NCBKernParam ConvBiasImpl::make_ncb_kern_param(
 void ConvBiasImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                       ConvBiasImpl::Algorithm* algo) {
     auto ncb_kerns = ncb_algo_dispatch_kerns(algo, param);
-    size_t src_batch_stride = param.inp_bs * param.src_type.size();
-    size_t dst_batch_stride = param.out_bs * param.dst_type.size();
-    size_t bias_batch_stride = 0;
-    if (param.bias_mode == BiasMode::BIAS) {
-        bias_batch_stride = param.bias_bs * param.bias_type.size();
-    }
     for (auto&& kernel : ncb_kerns) {
-        megdnn_assert(
-                param.filter_meta.format == Param::Format::NCHW ||
-                        param.filter_meta.format == Param::Format::NHWC ||
-                        param.filter_meta.format ==
-                                Param::Format::NCHW_WINOGRAD ||
-                        param.filter_meta.format == Param::Format::NCHW88 ||
-                        param.filter_meta.format ==
-                                Param::Format::NCHW88_WINOGRAD,
-                "invalid conv format");
-        ptrdiff_t istrd = 0, fstrd = 0, bstrd = 0, ostrd = 0;
-        if (param.filter_meta.format == Param::Format::NCHW_WINOGRAD ||
-            param.filter_meta.format == Param::Format::NCHW88_WINOGRAD) {
-            fstrd = param.filter_meta.icpg * param.filter_meta.ocpg *
-                    (param.filter_meta.spatial[0] + param.output_block_size -
-                     1) *
-                    (param.filter_meta.spatial[1] + param.output_block_size -
-                     1) *
-                    param.filter_type.size();
-        } else {
-            fstrd = param.filter_meta.icpg * param.filter_meta.ocpg *
-                    param.filter_meta.spatial[0] *
-                    param.filter_meta.spatial[1] * param.filter_type.size();
-        }
-        istrd = param.filter_meta.icpg * param.src_type.size();
-        ostrd = param.filter_meta.ocpg * param.dst_type.size();
-        if (param.bias_mode != BiasMode::NO_BIAS) {
-            bstrd = param.filter_meta.ocpg * param.bias_type.size();
-        }
-        if (param.filter_meta.format == Param::Format::NCHW ||
-            param.filter_meta.format == Param::Format::NCHW_WINOGRAD ||
-            param.filter_meta.format == Param::Format::NCHW88_WINOGRAD) {
-            istrd *= param.isz[0] * param.isz[1];
-            ostrd *= param.osz[0] * param.osz[1];
-            if (param.bias_mode == BiasMode::BIAS) {
-                bstrd *= param.osz[0] * param.osz[1];
-            }
-        } else {
-            // must be NHWC. No action performed.
-        }
-        auto run = [=](size_t index, size_t thread_id) {
-            auto copy_param = param;
+        auto run = [kernel, param](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
-            size_t group_id = ndrange_id[0];
-            size_t batch_id = ndrange_id[1];
-            //! The kernel ptr point to batch index
-            incr_ptr(copy_param.src_ptr,
-                     group_id * istrd + batch_id * src_batch_stride);
-            incr_ptr(copy_param.filter_ptr, group_id * fstrd);
-            incr_ptr(copy_param.bias_ptr,
-                     group_id * bstrd + batch_id * bias_batch_stride);
-            incr_ptr(copy_param.dst_ptr,
-                     group_id * ostrd + batch_id * dst_batch_stride);
-            kernel.kern(copy_param, {thread_id, ndrange_id});
+            kernel.kern(param, {thread_id, ndrange_id});
         };
         static_cast<naive::HandleImpl*>(handle())->dispatch_kern(
                 run, kernel.global_size.total_size());
@@ -380,5 +334,151 @@ const char* ConvBiasImpl::get_algorithm_set_name() const {
     // fallback version 0
     return "F0";
 }
+
+namespace megdnn {
+namespace fallback {
+
+template <typename T>
+const T* ConvBiasImpl::NCBKernParam::src(size_t batch_id, size_t group_pack_id,
+                                         size_t channel_pack_id,
+                                         size_t group_pack_size,
+                                         size_t channel_pack_size) const {
+    size_t batch_offset = batch_id * inp_bs * src_type.size();
+    size_t group_offset = group_pack_size * group_pack_id * filter_meta.icpg *
+                          isz[0] * isz[1] * src_type.size();
+    size_t channel_offset = channel_pack_size * channel_pack_id * isz[0] *
+                            isz[1] * src_type.size();
+    return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(src_ptr) +
+                                batch_offset + group_offset + channel_offset);
+}
+
+template <typename T>
+const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
+                                            size_t pack_group_size) const {
+    size_t group_offset = 0_z;
+    switch (filter_meta.format) {
+        case Param::Format::NCHW: {
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
+                           filter_meta.ocpg * filter_meta.spatial[0] *
+                           filter_meta.spatial[1] * filter_type.size();
+            break;
+        }
+        case Param::Format::NCHW88: {
+            size_t group = filter_meta.group;
+            size_t icpg = filter_meta.icpg;
+            size_t ocpg = filter_meta.ocpg;
+            //! four format of weight layout
+            //! 1. {oc/8, ic/8, fh, fw, 8, 8},
+            //! 2. {g, oc/8, ic/8, fh, fw, 8, 8},
+            //! 3. {g/8, fh, fw, 1, 1, 8}, 4. {oc/8, fh, fw, ic, 8}
+            megdnn_assert((icpg % 8 == 0 && ocpg % 8 == 0) ||
+                                  (group % 8 == 0 && icpg == 1 && ocpg == 1 &&
+                                   pack_group_size > 1) ||
+                                  (group == 1 && ocpg % 8 == 0),
+                          "The filter shepe is not right of nchw88");
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
+                           filter_meta.ocpg * filter_meta.spatial[0] *
+                           filter_meta.spatial[1] * filter_type.size();
+
+            break;
+        }
+        case Param::Format::NCHW44: {
+            size_t group = filter_meta.group;
+            size_t icpg = filter_meta.icpg;
+            size_t ocpg = filter_meta.ocpg;
+            //! four format of weight layout
+            //! 1. {oc/4, ic/4, fh, fw, 4, 4},
+            //! 2. {g, oc/4, ic/4, fh, fw, 4, 4},
+            //! 3. {g/4, fh, fw, 1, 1, 4}, 4. {oc/4, fh, fw, ic, 4}
+            megdnn_assert((icpg % 4 == 0 && ocpg % 4 == 0) ||
+                                  (group % 4 == 0 && icpg == 1 && ocpg == 1 &&
+                                   pack_group_size > 1) ||
+                                  (group == 1 && ocpg % 4 == 0),
+                          "The filter shepe is not right of nchw44");
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
+                           filter_meta.ocpg * filter_meta.spatial[0] *
+                           filter_meta.spatial[1] * filter_type.size();
+
+            break;
+        }
+        case ConvBiasImpl::Param::Format::NCHW_WINOGRAD:
+        case ConvBiasImpl::Param::Format::NCHW88_WINOGRAD: {
+            //! four format of weight layout
+            //! 1. {g, alpha, alpha, ocpg/8, icpg/8, 8, 8}
+            //! 2. {alpha, alpha, ocpg/8, icpg/8, 8, 8}
+            //! 3. {g, alpha, alpha, oc, ic, 8, 8}
+            //! 4. {alpha, alpha, oc, ic}
+            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
+                           filter_meta.ocpg *
+                           (filter_meta.spatial[0] + output_block_size - 1) *
+                           (filter_meta.spatial[1] + output_block_size - 1) *
+                           filter_type.size();
+            break;
+        }
+        default:
+            megdnn_assert(0, "other filter format is not support yet");
+    }
+    return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(filter_ptr) +
+                                group_offset);
+}
+
+template <typename T>
+const T* ConvBiasImpl::NCBKernParam::bias(size_t batch_id, size_t group_pack_id,
+                                          size_t channel_pack_id,
+                                          size_t group_pack_size,
+                                          size_t channel_pack_size) const {
+    size_t batch_offset = 0_z;
+    size_t group_offset = 0_z;
+    size_t channel_offset = 0_z;
+    if (bias_mode == BiasMode::BIAS) {
+        batch_offset = batch_id * bias_bs * bias_type.size();
+        group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
+                       osz[0] * osz[1] * bias_type.size();
+        channel_offset = channel_pack_size * channel_pack_id * osz[0] * osz[1] *
+                         bias_type.size();
+    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+        group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
+                       bias_type.size();
+        channel_offset = channel_pack_size * channel_pack_id * bias_type.size();
+    }
+    return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(bias_ptr) +
+                                batch_offset + group_offset + channel_offset);
+}
+
+template <typename T>
+T* ConvBiasImpl::NCBKernParam::dst(size_t batch_id, size_t group_pack_id,
+                                   size_t channel_pack_id,
+                                   size_t group_pack_size,
+                                   size_t channel_pack_size) const {
+    size_t batch_offset = batch_id * out_bs * dst_type.size();
+    size_t group_offset = group_pack_size * group_pack_id * filter_meta.ocpg *
+                          osz[0] * osz[1] * dst_type.size();
+    size_t channel_offset = channel_pack_size * channel_pack_id * osz[0] *
+                            osz[1] * dst_type.size();
+    return reinterpret_cast<T*>(reinterpret_cast<ptrdiff_t>(dst_ptr) +
+                                batch_offset + group_offset + channel_offset);
+}
+
+#define INST(T)                                                      \
+    template const T* ConvBiasImpl::NCBKernParam::src<T>(            \
+            size_t batch_id, size_t group_id, size_t channel_id,     \
+            size_t group_pack_size, size_t channel_pack_size) const; \
+    template const T* ConvBiasImpl::NCBKernParam::bias<T>(           \
+            size_t batch_id, size_t group_id, size_t channel_id,     \
+            size_t group_pack_size, size_t channel_pack_size) const; \
+    template const T* ConvBiasImpl::NCBKernParam::filter<T>(         \
+            size_t group_id, size_t group_pack_size) const;          \
+    template T* ConvBiasImpl::NCBKernParam::dst<T>(                  \
+            size_t batch_id, size_t group_id, size_t channel_id,     \
+            size_t group_pack_size, size_t channel_pack_size) const;
+
+#define INST_DT(d) INST(DTypeTrait<d>::ctype)
+
+MEGDNN_FOREACH_COMPUTING_DTYPE(INST_DT)
+INST(void)
+#undef INST
+#undef INST_DT
+}  // namespace fallback
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

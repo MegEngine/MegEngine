@@ -27,6 +27,11 @@ def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor
     """Applies a linear transformation to the input.
 
     Refer to :class:`~.Linear` for more information.
+
+    :param inp: the input tensor with shape `(N, in_features)`.
+    :param weight: the weight with shape `(out_features, in_features)`. 
+    :param bias: the bias with shape `(out_features,)`.
+        Default: ``None``
     """
     orig_shape = inp.shape
     inp = inp.reshape(-1, orig_shape[-1])
@@ -51,6 +56,8 @@ def conv2d(
 ) -> Tensor:
     """2D convolution operation.
 
+    Refer to :class:`~.Conv2d` for more information.
+
     :param inp: The feature map of the convolution operation
     :param weight: The convolution kernel
     :param bias: The bias added to the result of convolution (if given)
@@ -73,7 +80,6 @@ def conv2d(
         Float32 would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
 
-    Refer to :class:`~.Conv2d` for more information.
     """
     ph, pw = _pair(padding)
     sh, sw = _pair_nonzero(stride)
@@ -81,6 +87,70 @@ def conv2d(
     Sparse = mgb.opr_param_defs.Convolution.Sparse
     sparse_type = Sparse.DENSE if groups == 1 else Sparse.GROUP
     res = mgb.opr.convolution(
+        inp,
+        weight,
+        pad_h=ph,
+        pad_w=pw,
+        stride_h=sh,
+        stride_w=sw,
+        dilate_h=dh,
+        dilate_w=dw,
+        format="NCHW",
+        strategy=get_conv_execution_strategy(),
+        mode=conv_mode,
+        compute_mode=compute_mode,
+        sparse=sparse_type,
+    )
+    if bias is not None:
+        res += bias
+    return res
+
+
+@wrap_io_tensor
+def conv_transpose2d(
+    inp: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: Union[int, Tuple[int, int]] = 1,
+    padding: Union[int, Tuple[int, int]] = 0,
+    dilation: Union[int, Tuple[int, int]] = 1,
+    groups: int = 1,
+    conv_mode="CROSS_CORRELATION",
+    compute_mode="DEFAULT",
+) -> Tensor:
+    """2D transposed convolution operation.
+
+    Refer to :class:`~.ConvTranspose2d` for more information.
+
+    :param inp: The feature map of the convolution operation
+    :param weight: The convolution kernel
+    :param bias: The bias added to the result of convolution (if given)
+    :param stride: Stride of the 2D convolution operation. Default: 1
+    :param padding: Size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: Dilation of the 2D convolution operation. Default: 1
+    :param groups: number of groups to divide input and output channels into,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and the shape of weight should be ``(groups, out_channel // groups,
+        in_channels // groups, height, width)``. Default: 1
+    :type conv_mode: string or :class:`mgb.opr_param_defs.Convolution.Mode`
+    :param conv_mode: Supports 'CROSS_CORRELATION' or 'CONVOLUTION'. Default:
+        'CROSS_CORRELATION'.
+    :type compute_mode: string or
+        :class:`mgb.opr_param_defs.Convolution.ComputeMode`
+    :param compute_mode: When set to 'DEFAULT', no special requirements will be
+        placed on the precision of intermediate results. When set to 'FLOAT32',
+        Float32 would be used for accumulator and intermediate result, but only
+        effective when input and output are of Float16 dtype.
+
+    """
+    ph, pw = _pair(padding)
+    sh, sw = _pair_nonzero(stride)
+    dh, dw = _pair_nonzero(dilation)
+    Sparse = mgb.opr_param_defs.Convolution.Sparse
+    sparse_type = Sparse.DENSE if groups == 1 else Sparse.GROUP
+    res = mgb.opr.deconvolution(
         inp,
         weight,
         pad_h=ph,
@@ -109,13 +179,14 @@ def max_pool2d(
 ) -> Tensor:
     """Applies a 2D max pooling over an input.
 
+    Refer to :class:`~.MaxPool2d` for more information.
+
     :param inp: The input tensor.
     :param kernel_size: The size of the window.
     :param stride: The stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
     :param padding: Implicit zero padding to be added on both sides. Default: 0
-    
-    Refer to :class:`~.MaxPool2d` for more information.
+
     """
 
     kh, kw = _pair_nonzero(kernel_size)
@@ -144,13 +215,14 @@ def avg_pool2d(
 ) -> Tensor:
     """ Applies a 2D average pooling over an input.
 
+    Refer to :class:`~.AvgPool2d` for more information.
+
     :param inp: The input tensor.
     :param kernel_size: The size of the window.
     :param stride: The stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
     :param padding: Implicit zero padding to be added on both sides. Default: 0
 
-    Refer to :class:`~.AvgPool2d` for more information.
     """
     kh, kw = _pair_nonzero(kernel_size)
     sh, sw = _pair_nonzero(stride or kernel_size)
@@ -280,29 +352,23 @@ def batch_norm2d(
 ) -> Tensor:
     """Applies batch normalization to the input.
 
-    :type inp: Tensor
-    :param inp: The input tensor.
-    :type num_features: int
-    :param num_features: usually the :math:`C` from an input of size
-        :math:`(N, C, H, W)` or the highest ranked dimension of an input with
-        less than 4D.
-    :type eps: float
+    Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
+
+    :param inp: input tensor.
+    :param running_mean: tensor to store running mean.
+    :param running_var: tensor to store running variance.
+    :param weight: scaling tensor in the learnable affine parameters.
+        See :math:`\gamma` in :class:`~.BatchNorm2d`
+    :param bias: bias tensor in the learnable affine parameters.
+        See :math:`\beta` in :class:`~.BatchNorm2d`
+    :param training: a boolean value to indicate whether batch norm is performed
+        in traning mode. Default: ``False``
+    :param momentum: the value used for the ``running_mean`` and ``running_var``
+        computation.
+        Default: 0.9
     :param eps: a value added to the denominator for numerical stability.
         Default: 1e-5.
-    :type momentum: float
-    :param momentum: the value used for the `running_mean` and `running_var`
-        computation.
-        Default: 0.1
-    :type affine: bool
-    :param affine: a boolean value that when set to ``True``, this module has
-        learnable affine parameters. Default: ``True``
-    :type track_running_stats: bool
-    :param track_running_stats: when set to ``True``, this module tracks the
-        running mean and variance. When set to ``False``, this module does not
-        track such statistics and always uses batch statistics in both training
-        and eval modes. Default: ``True``.
 
-    Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
     """
 
     inp = mgb.opr.mark_no_broadcast_elemwise(inp)
@@ -361,7 +427,7 @@ def batch_norm2d(
     return output
 
 
-def one_hot(inp: Tensor, num_classes: int = -1) -> Tensor:
+def one_hot(inp: Tensor, num_classes: int) -> Tensor:
     r"""
     Perform one-hot encoding for the input tensor.
 
@@ -377,7 +443,7 @@ def one_hot(inp: Tensor, num_classes: int = -1) -> Tensor:
         import megengine.functional as F
 
         inp = tensor(np.arange(1, 4, dtype=np.int32))
-        out = F.one_hot(inp)
+        out = F.one_hot(inp, num_classes=4)
         print(out.numpy())
 
     Outputs:
@@ -391,8 +457,6 @@ def one_hot(inp: Tensor, num_classes: int = -1) -> Tensor:
     """
     comp_node, comp_graph = _decide_comp_node_and_comp_graph(inp)
 
-    if num_classes == -1:
-        num_classes = inp.max() + 1
     zeros = mgb.make_immutable(value=0, comp_node=comp_node, comp_graph=comp_graph)
     zeros_symvar = zeros.broadcast(inp.shapeof(), num_classes)
 
@@ -480,13 +544,13 @@ def eye(
     comp_graph: Optional[CompGraph] = None
 ) -> Tensor:
     """
-    Fills the 2-dimensional input :class:`SymbolVar` with the identity matrix.
+    Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
     :param n: The number of rows
-    :param m: The number of columns, default to None
-    :param dtype: The data type, default to None
-    :param device: Compute node of the matrix, defaults to None
-    :param comp_graph: Compute graph of the matrix, defaults to None
+    :param m: The number of columns. Default: None
+    :param dtype: The data type. Default: None
+    :param device: Compute node of the matrix. Default: None
+    :param comp_graph: Compute graph of the matrix. Default: None
     :return: The eye matrix
 
     Examples:
@@ -613,9 +677,7 @@ def interpolate(
     :param size: size of the output tensor. Default: ``None``
     :param scale_factor: scaling factor of the output tensor. Default: ``None``
     :param mode: interpolation methods, acceptable values are:
-        'bilinear'(default), 'linear', 'nearest' (todo), 'cubic' (todo), 'area' (todo)
-
-    
+        'BILINEAR', 'LINEAR'. Default: ``BILINEAR``
 
     Examples:
 
@@ -636,7 +698,6 @@ def interpolate(
     Outputs:
 
     .. testoutput::
-        :options: +NUMBER
 
         [[[[1.   1.25 1.75 2.  ]
            [1.5  1.75 2.25 2.5 ]
@@ -646,7 +707,7 @@ def interpolate(
     """
     mode = mode.upper()
     if mode not in ["BILINEAR", "LINEAR"]:
-        raise ValueError("interpolate only support bilinear mode")
+        raise ValueError("interpolate only support linear or bilinear mode")
     if mode not in ["BILINEAR", "LINEAR"]:
         if align_corners is not None:
             raise ValueError(
@@ -741,8 +802,10 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
     .. testcode::
 
         import numpy as np
-        from megengine import tensor
+        import megengine as mge
+
         import megengine.functional as F
+        from megengine import tensor
 
         data = tensor(np.ones(10, dtype=np.float32))
         out = F.dropout(data, 1./3.)
@@ -751,6 +814,7 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
     Outputs:
 
     .. testoutput::
+        :options: +SKIP
 
         [1.5 1.5 0.  1.5 1.5 1.5 1.5 1.5 1.5 1.5]
 
@@ -767,7 +831,7 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
 @wrap_io_tensor
 def identity(inp: Tensor) -> Tensor:
     """applies an identity transform to the input tensor.
-    
+
     :param inp: The input tensor
     """
     return mgb.opr.identity(inp)

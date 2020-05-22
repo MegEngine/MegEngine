@@ -68,6 +68,7 @@ class Sequential(Module):
 
     def __setitem__(self, idx, module):
         key = self.layer_keys[idx]
+        self.layer_values[idx] = module
         return setattr(self, key, module)
 
     def __delitem__(self, idx):

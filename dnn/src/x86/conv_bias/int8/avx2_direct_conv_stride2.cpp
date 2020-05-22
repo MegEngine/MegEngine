@@ -10,7 +10,6 @@
  */
 
 #include "src/x86/conv_bias/int8/avx2_direct_conv_stride2.h"
-#include "src/common/unroll_macro.h"
 #include "src/x86/conv_bias/int8/common_helper.h"
 #include "src/x86/conv_bias/postprocess_helper.h"
 
@@ -45,8 +44,8 @@ void pack_src_conv_avx2_stride2(WorkspaceBundle bundle,
            batch_id = ncb_index.ndrange_id[1],
            channel_id = ncb_index.ndrange_id[2];
 
-    const int8_t* src_ptr =
-            kern_param.src<int8_t>() + ic_step * channel_id * c_stride;
+    const int8_t* src_ptr = kern_param.src<int8_t>(batch_id, group_id) +
+                            ic_step * channel_id * c_stride;
     bundle.set(kern_param.workspace_ptr);
     int8_t* packed_src = static_cast<int8_t*>(bundle.get(0)) +
                          batch_id * group * packed_group_size +
@@ -187,7 +186,7 @@ static inline void pack_filter_conv_avx2_stride2(
     size_t group_id = ncb_index.ndrange_id[0],
            oc_index_id = ncb_index.ndrange_id[1];
 
-    const int8_t* pack_filter_ptr = kern_param.filter<int8_t>();
+    const int8_t* pack_filter_ptr = kern_param.filter<int8_t>(group_id);
     bundle.set(kern_param.workspace_ptr);
     int16_t* out_ptr = static_cast<int16_t*>(bundle.get(1)) +
                        group_id * round_up(oc, oc_step) * oc_out_stride;
@@ -705,18 +704,17 @@ void kernel_imp(WorkspaceBundle bundle,
     const uint32_t packed_group_size =
             div_ceil(ic, ic_step) * pack_ih * pack_iw;
 
-    size_t workspace_group_id = ncb_index.ndrange_id[0],
-           workspace_batch_id = ncb_index.ndrange_id[1],
-           workspace_channel_id = ncb_index.ndrange_id[2];
+    size_t group_id = ncb_index.ndrange_id[0],
+           batch_id = ncb_index.ndrange_id[1],
+           channel_id = ncb_index.ndrange_id[2];
 
     bundle.set(kern_param.workspace_ptr);
     int8_t* src_ptr = static_cast<int8_t*>(bundle.get(0)) +
-                      workspace_group_id * packed_group_size +
-                      workspace_batch_id * group * packed_group_size;
-    int16_t* filter_ptr =
-            static_cast<int16_t*>(bundle.get(1)) +
-            workspace_group_id * round_up(oc, oc_step) * filter_round_size +
-            oc_step * workspace_channel_id * filter_round_size;
+                      group_id * packed_group_size +
+                      batch_id * group * packed_group_size;
+    int16_t* filter_ptr = static_cast<int16_t*>(bundle.get(1)) +
+                          group_id * round_up(oc, oc_step) * filter_round_size +
+                          oc_step * channel_id * filter_round_size;
 
     bool need_post_process =
             kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
@@ -724,12 +722,11 @@ void kernel_imp(WorkspaceBundle bundle,
     int32_t* dst_tptr = nullptr;
     if (need_post_process) {
         dst_tptr = static_cast<int32_t*>(bundle.get(2)) +
-                   workspace_batch_id * group * oc * oc_stride +
-                   workspace_group_id * oc * oc_stride +
-                   oc_step * workspace_channel_id * oh * ow;
+                   batch_id * group * oc * oc_stride +
+                   group_id * oc * oc_stride + oc_step * channel_id * oh * ow;
     } else {
-        dst_tptr = kern_param.dst<int32_t>() +
-                   oc_step * workspace_channel_id * oh * ow;
+        dst_tptr = kern_param.dst<int32_t>(batch_id, group_id) +
+                   oc_step * channel_id * oh * ow;
     }
     const uint32_t oc_end = oc / oc_step * oc_step;
     const uint32_t oc_remain = oc - oc_end;
@@ -737,7 +734,7 @@ void kernel_imp(WorkspaceBundle bundle,
     const uint32_t oh_remain = oh - oh_end;
     const uint32_t ow_end = ow / ow_step * ow_step;
     const uint32_t ow_remain = ow - ow_end;
-    const uint32_t oc_index = oc_step * workspace_channel_id;
+    const uint32_t oc_index = oc_step * channel_id;
 
     kernel_handle_oh_remain<oc_step, ic_step, oh_step, ow_step>(
             oh_remain, oc_remain, ow_remain, filter_ptr, src_ptr, dst_tptr,
@@ -754,8 +751,8 @@ void do_post_process(WorkspaceBundle bundle,
     const uint32_t oh = kern_param.osz[0];
     const uint32_t ow = kern_param.osz[1];
 
-    size_t workspace_group_id = ncb_index.ndrange_id[0],
-           workspace_batch_id = ncb_index.ndrange_id[1];
+    size_t group_id = ncb_index.ndrange_id[0],
+           batch_id = ncb_index.ndrange_id[1];
 
     bundle.set(kern_param.workspace_ptr);
     bool need_post_process =
@@ -763,21 +760,22 @@ void do_post_process(WorkspaceBundle bundle,
     void* dst_tptr = nullptr;
     if (need_post_process) {
         dst_tptr = static_cast<int32_t*>(bundle.get(2)) +
-                   workspace_batch_id * group * oc * oh * ow +
-                   workspace_group_id * oc * oh * ow;
+                   batch_id * group * oc * oh * ow +
+                   group_id * oc * oh * ow;
     } else {
-        dst_tptr = kern_param.dst<dt_int32>();
+        dst_tptr = kern_param.dst<dt_int32>(batch_id, group_id);
     }
+    void* dst_ptr = kern_param.dst<void>(batch_id, group_id);
 
 #define cb(_bias_ctype, _dst_ctype, _postprocess_mode)                       \
     {                                                                        \
-        const dt_int32* bias_ptr = kern_param.bias<dt_int32>();              \
+        const dt_int32* bias_ptr =                                           \
+                kern_param.bias<dt_int32>(batch_id, group_id);               \
         PostProcess<DTypeTrait<_bias_ctype>::ctype,                          \
                     DTypeTrait<_dst_ctype>::ctype,                           \
                     _postprocess_mode>::run(dst_tptr,                        \
                                             const_cast<dt_int32*>(bias_ptr), \
-                                            kern_param.dst_ptr,              \
-                                            kern_param.bias_mode,            \
+                                            dst_ptr, kern_param.bias_mode,   \
                                             kern_param.nonlineMode,          \
                                             kern_param.bias_type,            \
                                             kern_param.dst_type, 1, oc, oh,  \

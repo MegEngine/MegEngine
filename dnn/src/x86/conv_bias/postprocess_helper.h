@@ -124,7 +124,8 @@ struct PostProcess {
                     megdnn::ConvBiasForward::BiasMode bias_mode,
                     megdnn::param::ConvBias::NonlineMode nonlineMode,
                     DType bias_type, DType dst_type, size_t N, size_t OC,
-                    size_t OH, size_t OW) {
+                    size_t OH, size_t OW, size_t pack_oc_size = 1) {
+        MEGDNN_MARK_USED_VAR(pack_oc_size);
         megdnn::param::Elemwise::Mode elem_mode =
                 megdnn::param::Elemwise::Mode::ADD;
         if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
@@ -154,7 +155,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::FLOAT> {
                     megdnn::ConvBiasForward::BiasMode bias_mode,
                     megdnn::param::ConvBias::NonlineMode nonlineMode,
                     DType bias_type, DType dst_type, size_t N, size_t OC,
-                    size_t OH, size_t OW) {
+                    size_t OH, size_t OW, size_t pack_oc_size=1) {
+        MEGDNN_MARK_USED_VAR(pack_oc_size);
         megdnn::param::Elemwise::Mode elem_mode =
                 megdnn::param::Elemwise::Mode::ADD;
         if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
@@ -185,7 +187,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
                     megdnn::ConvBiasForward::BiasMode bias_mode,
                     megdnn::param::ConvBias::NonlineMode nonlineMode,
                     DType bias_type, DType dst_type, size_t N, size_t OC,
-                    size_t OH, size_t OW) {
+                    size_t OH, size_t OW,size_t pack_oc_size = 1) {
+        MEGDNN_MARK_USED_VAR(pack_oc_size);
         MEGDNN_MARK_USED_VAR(conv_dst_ptr);
         MEGDNN_MARK_USED_VAR(bias_ptr);
         MEGDNN_MARK_USED_VAR(dst_ptr);
@@ -292,7 +295,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::QUANTIZED> {
                     megdnn::ConvBiasForward::BiasMode bias_mode,
                     megdnn::param::ConvBiasV0::NonlineMode nonlineMode,
                     DType bias_type, DType dst_type, size_t N, size_t OC,
-                    size_t OH, size_t OW) {
+                    size_t OH, size_t OW, size_t pack_oc_size = 1) {
+        MEGDNN_MARK_USED_VAR(pack_oc_size);
         megdnn::param::Elemwise::Mode elem_mode =
                 megdnn::param::Elemwise::Mode::ADD;
         if (bias_mode != megdnn::ConvBiasForward::BiasMode::NO_BIAS) {

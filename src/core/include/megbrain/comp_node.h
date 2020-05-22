@@ -153,8 +153,12 @@ class CompNode {
             int device = -1;
 
             //! multiple streams can execute on one computing device and share
-            //! memory
-            int stream = 0;
+            //! memory, when compnode type is multithread the field also stand
+            //! for nr_threads
+            union {
+                int stream = 0;
+                int nr_threads;
+            };
 
             /*!
              * \brief parse a string identifier
@@ -162,7 +166,7 @@ class CompNode {
              * currently supported ID format: (gpu|cpu)<n>[:m] where n is the
              * device number, possibly with m as the stream id.
              */
-            static Locator parse(const std::string &id);
+            static Locator parse(const std::string& id);
 
             /*!
              * \brief set mapping between device numbers of a device type

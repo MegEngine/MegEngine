@@ -196,7 +196,6 @@ def shape(self):
     return get_var_shape(self)
 
 def axis_shape(self, axis):
-    assert axis >= 0
     from .opr import get_var_shape
     return get_var_shape(self, axis=axis)
 

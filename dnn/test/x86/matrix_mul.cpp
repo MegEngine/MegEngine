@@ -26,7 +26,7 @@ TEST_F(X86, MATRIX_MUL_VNNI_8X8X32) {
 }
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, MATRIX_MUL_MKLDNN_8X8X32) {
     if (is_supported(SIMDType::VNNI)) {
         matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{},
@@ -52,7 +52,7 @@ TEST_F(X86, MATRIX_MUL_SSE_8X8X32) {
                                  handle(), "X86_INT8X8X32_SSE_4X8X2");
 }
 
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
 TEST_F(X86, MATRIX_MUL_MKL_PACKA) {
     matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
                                  dtype::Float32{}, handle(),
@@ -93,7 +93,7 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_8X8X32) {
             AlgoChecker<MatrixMul>("X86_INT8X8X32_VNNI"));
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
     Benchmarker<MatrixMul> benchmarker_mkldnn(handle());
     benchmarker_mkldnn.set_times(RUNS)
             .set_dtype(0, dtype::Int8{})
@@ -162,7 +162,7 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_8X8X32) {
         }
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
         if (is_supported(SIMDType::VNNI)) {
             auto mkldnn_used =
                     benchmarker_mkldnn.exec({{M, K}, {K, N}, {}}) / RUNS;

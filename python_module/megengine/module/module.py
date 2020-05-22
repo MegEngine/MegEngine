@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -8,6 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from enum import Enum
 from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
 
 import numpy as np
@@ -68,6 +68,7 @@ class Module(metaclass=ABCMeta):
         *,
         recursive: bool = True,
         with_key: bool = False,
+        with_parent: bool = False,
         prefix: Optional[str] = None,
         predicate: Callable[[Any], bool] = lambda _: True,
         seen: Optional[Set[int]] = None
@@ -80,6 +81,7 @@ class Module(metaclass=ABCMeta):
 
         :param recursive: Whether to recursively scan all the submodules.
         :param with_key: Whether to yield keys along with yielded objects.
+        :param with_parent: Whether to yield ``self`` along with yielded objects.
         :param prefix: The prefix appended to the yielded keys.
         :param predicate: The predicate function applied to scanned objects.
         :param seen: A dict that records whether a module has been traversed yet.
@@ -88,7 +90,7 @@ class Module(metaclass=ABCMeta):
             seen = set([id(self)])
 
         module_dict = vars(self)
-        _prefix = "" if not prefix else prefix + "."
+        _prefix = "" if prefix is None else prefix + "."
 
         for key in sorted(module_dict):
             for expanded_key, leaf in _expand_structure(key, module_dict[key]):
@@ -98,8 +100,12 @@ class Module(metaclass=ABCMeta):
                 seen.add(leaf_id)
 
                 if predicate(leaf):
-                    if with_key:
+                    if with_key and with_parent:
+                        yield _prefix + expanded_key, leaf, self
+                    elif with_key:
                         yield _prefix + expanded_key, leaf
+                    elif with_parent:
+                        yield leaf, self
                     else:
                         yield leaf
 
@@ -107,47 +113,22 @@ class Module(metaclass=ABCMeta):
                     yield from leaf._flatten(
                         recursive=recursive,
                         with_key=with_key,
-                        prefix=None if prefix is None else _prefix + expanded_key,
+                        with_parent=with_parent,
+                        prefix=_prefix + expanded_key if with_key else None,
                         predicate=predicate,
                         seen=seen,
                     )
 
     def parameters(
-        self, requires_grad: Optional[bool] = None, recursive: bool = True
+        self, requires_grad: Optional[bool] = None, recursive: bool = True, **kwargs
     ) -> Iterable[Parameter]:
         r"""Returns an iterable for the :class:`~.Parameter` of the module.
 
         :param requires_grad: Limitation over the :attr:`~.Parameter.requires_grad`
-                              attribute of returned :class:`.Parameter`. ``None`` for
-                              no limitation.
+            attribute of returned :class:`.Parameter`. ``None`` for no limitation.
         :param recursive: If ``True``, returns all :class:`~.Parameter` within this
-                        module, else only returns :class:`~.Parameter` that are direct
-                        attributes of this module.
-        """
-
-        def predicate(obj) -> bool:
-            return _is_parameter(obj) and (
-                requires_grad is None or obj.requires_grad == requires_grad
-            )
-
-        yield from self._flatten(predicate=predicate, recursive=recursive)
-
-    def named_parameters(
-        self,
-        requires_grad: Optional[bool] = None,
-        prefix: str = "",
-        recursive: bool = True,
-    ) -> Iterable[Tuple[str, Parameter]]:
-        """Returns an iterable for key :class:`~.Parameter` pairs of the module, where
-        ``key`` is the dotted path from this module to the :class:`~.Parameter` .
-
-        :param requires_grad: Limitation over the :attr:`~.Parameter.requires_grad`
-                              attribute of returned :class:`~.Parameter` . ``None`` for
-                              no limitation.
-        :param prefix: The prefix prepended to the keys.
-        :param recursive: If ``True``, returns all :class:`~.Parameter` within this
-                        module, else only returns :class:`~.Parameter` that are direct
-                        attributes of this module.
+            module, else only returns :class:`~.Parameter` that are direct attributes
+            of this module.
         """
 
         def predicate(obj) -> bool:
@@ -156,61 +137,135 @@ class Module(metaclass=ABCMeta):
             )
 
         yield from self._flatten(
-            with_key=True, prefix=prefix, predicate=predicate, recursive=recursive
+            with_key=False, predicate=predicate, recursive=recursive, **kwargs
         )
 
-    def buffers(self, recursive: bool = True) -> Iterable[Buffer]:
+    def named_parameters(
+        self,
+        requires_grad: Optional[bool] = None,
+        prefix: Optional[str] = None,
+        recursive: bool = True,
+        **kwargs
+    ) -> Iterable[Tuple[str, Parameter]]:
+        """Returns an iterable for key :class:`~.Parameter` pairs of the module, where
+        ``key`` is the dotted path from this module to the :class:`~.Parameter` .
+
+        :param requires_grad: Limitation over the :attr:`~.Parameter.requires_grad`
+            attribute of returned :class:`~.Parameter` . ``None`` for no limitation.
+        :param prefix: The prefix prepended to the keys.
+        :param recursive: If ``True``, returns all :class:`~.Parameter` within this
+            module, else only returns :class:`~.Parameter` that are direct attributes
+            of this module.
+        """
+
+        def predicate(obj) -> bool:
+            return _is_parameter(obj) and (
+                requires_grad is None or obj.requires_grad == requires_grad
+            )
+
+        yield from self._flatten(
+            with_key=True,
+            prefix=prefix,
+            predicate=predicate,
+            recursive=recursive,
+            **kwargs,
+        )
+
+    def buffers(self, recursive: bool = True, **kwargs) -> Iterable[Buffer]:
         """Returns an iterable for the :class:`~.Buffer` of the module.
 
         :param recursive: If ``True``, returns all :class:`~.Buffer` within this
-                        module, else only returns :class:`~.Buffer` that are direct
-                        attributes of this module.
+            module, else only returns :class:`~.Buffer` that are direct attributes
+            of this module.
         """
-        yield from self._flatten(predicate=_is_buffer, recursive=recursive)
+        yield from self._flatten(
+            with_key=False, predicate=_is_buffer, recursive=recursive, **kwargs
+        )
+
+    def replace_param(
+        self, params: dict, start_pos: int, seen: Optional[Set[int]] = None
+    ):
+        offset = 0
+        if seen is None:
+            seen = set([id(self)])
+        module_dict = vars(self)
+        for key in sorted(module_dict):
+            hash_id = id(module_dict[key])
+            if hash_id in seen:
+                continue
+            seen.add(hash_id)
+            if isinstance(module_dict[key], Parameter):
+                if start_pos + offset in params:
+                    assert module_dict[key].shape == params[start_pos + offset].shape
+                    module_dict[key] = params[start_pos + offset]
+                offset += 1
+            if isinstance(module_dict[key], Module):
+                offset += module_dict[key].replace_param(
+                    params, start_pos + offset, seen
+                )
+        return offset
 
     def named_buffers(
-        self, prefix: str = "", recursive: bool = True
+        self, prefix: Optional[str] = None, recursive: bool = True, **kwargs
     ) -> Iterable[Tuple[str, Buffer]]:
         """Returns an iterable for key :class:`~.Buffer` pairs of the module, where
         ``key`` is the dotted path from this module to the :class:`~.Buffer` .
 
         :param prefix: The prefix prepended to the keys.
         :param recursive: If ``True``, returns all :class:`~.Buffer` within this
-                        module, else only returns :class:`~.Buffer` that are direct
-                        attributes of this module.
+            module, else only returns :class:`~.Buffer` that are direct attributes
+            of this module.
         """
         yield from self._flatten(
-            with_key=True, prefix=prefix, predicate=_is_buffer, recursive=recursive
+            with_key=True,
+            prefix=prefix,
+            predicate=_is_buffer,
+            recursive=recursive,
+            **kwargs,
         )
 
-    def children(self) -> "Iterable[Module]":
+    def children(self, **kwargs) -> "Iterable[Module]":
         """Returns an iterable for all the submodules that are direct attributes of this
         module.
         """
-        yield from self._flatten(predicate=_is_module, recursive=False)
+        yield from self._flatten(
+            with_key=False, predicate=_is_module, recursive=False, **kwargs
+        )
 
-    def named_children(self) -> "Iterable[Tuple[str, Module]]":
+    def named_children(self, **kwargs) -> "Iterable[Tuple[str, Module]]":
         """Returns an iterable of key-submodule pairs for all the submodules that are
         direct attributes of this module, where 'key' is the attribute name of
         submodules.
         """
-        yield from self._flatten(with_key=True, predicate=_is_module, recursive=False)
+        yield from self._flatten(
+            with_key=True, predicate=_is_module, recursive=False, **kwargs
+        )
 
-    def modules(self) -> "Iterable[Module]":
+    def modules(self, **kwargs) -> "Iterable[Module]":
         """Returns an iterable for all the modules within this module, including itself.
         """
-        yield self
-        yield from self._flatten(predicate=_is_module)
+        if "with_parent" in kwargs and kwargs["with_parent"]:
+            yield self, None
+        else:
+            yield self
+        yield from self._flatten(with_key=False, predicate=_is_module, **kwargs)
 
-    def named_modules(self, prefix: str = "") -> "Iterable[Tuple[str, Module]]":
+    def named_modules(
+        self, prefix: Optional[str] = None, **kwargs
+    ) -> "Iterable[Tuple[str, Module]]":
         """Returns an iterable of key-module pairs for all the modules within this
         module, including itself, where 'key' is the dotted path from this module to the
         submodules.
 
         :param prefix: The prefix prepended to the path.
         """
-        yield prefix, self
-        yield from self._flatten(with_key=True, prefix=prefix, predicate=_is_module)
+        if "with_parent" in kwargs and kwargs["with_parent"]:
+            yield ("" if prefix is None else prefix), self, None
+        else:
+            yield ("" if prefix is None else prefix), self
+        yield from self._flatten(
+            with_key=True, prefix=prefix, predicate=_is_module, **kwargs
+        )
 
     def apply(self, fn: "Callable[[Module], Any]") -> None:
         """Apply function ``fn`` to all the modules within this module, including
@@ -337,14 +392,25 @@ class Module(metaclass=ABCMeta):
         loaded, skipped = self._load_state_dict_with_closure(closure)
         unused = set(unused) - loaded
 
-        if strict and len(unused) != 0:
-            raise KeyError(
-                "Unused params violate `strict=True`, unused={}".format(unused)
-            )
-        if strict and len(skipped) != 0:
-            raise KeyError(
-                "Missing params violate `strict=True`, missing={}".format(skipped)
-            )
+        if len(unused) != 0:
+            if strict:
+                raise KeyError(
+                    "Unused params violate `strict=True`, unused={}".format(unused)
+                )
+            else:
+                logger.warning(
+                    "Unused params in `strict=False` mode, unused={}".format(unused)
+                )
+
+        if len(skipped) != 0:
+            if strict:
+                raise KeyError(
+                    "Missing params violate `strict=True`, missing={}".format(skipped)
+                )
+            else:
+                logger.warning(
+                    "Missing params in `strict=False` mode, missing={}".format(skipped)
+                )
 
     def _load_state_dict_with_closure(self, closure):
         """Advance state_dict load through callable `closure` whose signature is
@@ -360,7 +426,6 @@ class Module(metaclass=ABCMeta):
         for k, var in local_state_dict.items():
             to_be_load = closure(k, var)
             if to_be_load is None:
-                logger.warning("skip loading param `%s`", k)
                 skipped.append(k)
                 continue
             assert isinstance(
@@ -377,3 +442,95 @@ class Module(metaclass=ABCMeta):
             loaded.append(k)
 
         return set(loaded), set(skipped)
+
+
+class QATModule(Module):
+    r"""
+    Base class of quantization related Module. Add extra forward methods
+    :meth:`~.QATModule.forward_qat` and :meth:`~.QATModule.forward_quantized` for
+    ``qat``(quantization aware training) mode and ``quantized`` mode respectively.
+
+    Use :meth:`~.QATModule.quant` to switch between ``QAT`` and ``NORMAL`` mode,
+    and use :meth:`~.QATModule.to_quantized` to switch to ``quantized`` mode,
+    which is irreversible.
+
+    If you want to recursively switch mode for all QATModule in network, use
+    functions in :mod:`~.quantization.quantize`.
+    """
+
+    class QATMode(Enum):
+        DISABLED = 1
+        QAT = 2
+        CALIBRATION = 3
+
+    def __init__(self):
+        from ..quantization import (
+            QConfig,
+            FakeQuantize,
+            Observer,
+        )  # pylint: disable=all
+
+        super().__init__()
+
+        self.quantizing = self.QATMode.DISABLED
+        self.scale = None
+
+        self.inp_observer = None  # type: Observer
+        self.weight_observer = None  # type: Observer
+        self.act_observer = None  # type: Observer
+
+        self.weight_fake_quant = None  # type: FakeQuantize
+        self.bias_fake_quant = None  # type: FakeQuantize
+        self.act_fake_quant = None  # type: FakeQuantize
+
+    def set_qconfig(self, qconfig: "QConfig"):
+        self.inp_observer = qconfig.inp_observer()
+        self.weight_observer = qconfig.weight_observer()
+        self.act_observer = qconfig.act_observer()
+
+        self.weight_fake_quant = qconfig.fake_quant(self.weight_observer.dtype)
+        self.bias_fake_quant = qconfig.bias_fake_quant()
+        self.act_fake_quant = qconfig.fake_quant(self.act_observer.dtype)
+
+    def apply_observer(self, target: Tensor, obs: "Observer"):
+        return obs(target)
+
+    def apply_fakequant_with_observer(
+        self, target: Tensor, fq: "FakeQuantize", obs: "Observer"
+    ):
+        oup = self.apply_observer(target, obs)
+        return fq(oup, obs.scale, obs.zero_point)
+
+    def set_qat_mode(self, mode: QATMode):
+        r"""
+        Change ``self.quantizing`` mode, available values: ``self.QATMode.DISABLED``,
+        ``QAT``,``CALIBRATION``.
+        """
+        if not isinstance(mode, self.QATMode):
+            raise TypeError("mode must be QATMode Enum type")
+        self.quantizing = mode
+
+    def to_quantized(self):
+        r"""
+        Return a new :class:`~.Module` with quantized parameters of ``self``
+        according to scale and zero_point in ``self.xxx_observer``.
+        """
+        raise NotImplementedError(
+            "Use megengine.quantization.quantize to register the method."
+        )
+
+    @abstractmethod
+    def forward_qat(self, *args, **kwargs):
+        r"""
+        Forward method for ``qat`` mode.
+        """
+
+    def __call__(self, *args, **kwargs):
+        if self.quantizing == self.QATMode.QAT:
+            return self.forward_qat(*args, **kwargs)
+        elif self.quantizing == self.QATMode.CALIBRATION:
+            # TODO implement the CALIBRATION
+            assert False
+            return None
+        else:
+            return self.forward(*args, **kwargs)

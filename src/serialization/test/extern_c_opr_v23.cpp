@@ -115,7 +115,7 @@ std::vector<uint8_t> create_graph_dump(float bias, float extra_scale,
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     if (sleep)
         x = opr::Sleep::make(x, sleep);
-    x = serialization::ExternCOprRunner::make_placeholder(
+    x = opr::ExternCOprRunner::make_placeholder(
                 {x}, {TensorShape{1}}, "bias_adder_dump_v23", &bias, sizeof(bias))
                 ->output(0);
     if (extra_scale)

@@ -21,12 +21,12 @@ def l1_loss(pred: Tensor, label: Tensor) -> Tensor:
 
     The mean absolute error can be described as:
 
-    .. math::
-        \ell(x,y) = mean\left(L \right)
+    .. math:: \ell(x,y) = mean\left(L \right)
 
     where
 
     .. math::
+
         L = \{l_1,\dots,l_N\}, \quad
         l_n = \left| x_n - y_n \right|,
 
@@ -35,11 +35,6 @@ def l1_loss(pred: Tensor, label: Tensor) -> Tensor:
 
     :param pred: The predicted result from model.
     :param label: The ground truth to compare.
-
-    Shape:
-        - pred: :math:`(N, *)` where :math:`*` means any number of additional
-          dimensions
-        - label: :math:`(N, *)`. Same shape as ``pred``
 
     Examples:
 
@@ -72,12 +67,12 @@ def square_loss(pred: Tensor, label: Tensor) -> Tensor:
 
     The mean squared error can be described as:
 
-    .. math::
-        \ell(x, y) = mean\left( L \right)
+    .. math:: \ell(x, y) = mean\left( L \right)
 
     where
 
     .. math::
+
         L = \{l_1,\dots,l_N\}, \quad
         l_n = \left( x_n - y_n \right)^2,
 
@@ -100,10 +95,10 @@ def square_loss(pred: Tensor, label: Tensor) -> Tensor:
 def cross_entropy(
     inp: Tensor, target: Tensor, axis: int = 1, ignore_index: int = -1
 ) -> Tensor:
-    r"""Returns the cross entropy loss in a classification problem.
+    r"""
+    Returns the cross entropy loss in a classification problem.
 
-    .. math::
-        \textrm{CrossEntropy}(x, y) = - \sum_{i} y_i\log(x_i)
+    .. math:: \textrm{CrossEntropy}(x, y) = - \sum_{i} y_i\log(x_i)
 
     :param inp: The input tensor representing the predicted probability.
     :param label: The input tensor representing the classification label.
@@ -117,18 +112,20 @@ def cross_entropy(
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
-        
-        
+
         data_shape = (1, 2)
         label_shape = (1, )
 
-        pred = tensor(
-            np.array([0.5, 0.5], dtype=np.float32).reshape(data_shape)
-        )
-        label = tensor(
-            np.ones(label_shape, dtype=np.int32)
-        )
+        pred = tensor(np.array([0.5, 0.5], dtype=np.float32).reshape(data_shape))
+        label = tensor(np.ones(label_shape, dtype=np.int32))
         loss = F.cross_entropy(pred, label)
+        print(loss.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [0.69]
 
     """
     n0 = inp.ndim
@@ -156,8 +153,9 @@ def cross_entropy_with_softmax(
     It has better numerical stability compared with sequential calls to :func:`~.softmax` and :func:`~.cross_entropy`.
 
     When using label smoothing, the label distribution is as follows:
-    .. math::
-        y^{LS}_{k}=y_{k}\left(1-\alpha\right)+\alpha/K
+
+    .. math:: y^{LS}_{k}=y_{k}\left(1-\alpha\right)+\alpha/K
+
     where :math:`y^{LS}` and :math:`y` are new label distribution and origin label distribution respectively.
     k is the index of label distribution. :math:`\alpha` is label_smooth and :math:`K` is the number of classes.
 
@@ -197,7 +195,8 @@ def triplet_margin_loss(
     Creates a criterion that measures the triplet loss given an input tensors.
 
     .. math::
-        L(a, p, n) = max\left\{d\left(a_{i},p_{i}\right)-d\left(a_{i}, n_{i}\right)+margin, 0\right\},\ 
+
+        L(a, p, n) = max\left\{d\left(a_{i},p_{i}\right)-d\left(a_{i}, n_{i}\right)+margin, 0\right\},\
         d\left(x_{i},y_{i}\right)=\left\|x_{i}-y_{i}\right\|_{p}
 
     :param anchor: The input tensor representing the anchor samples.
@@ -254,18 +253,16 @@ def nll_loss(
     r"""
     The negative log likelihood loss.
 
-    Shape:
-        - pred: :math:`(N, *)` where :math:`*` means any number of additional
-          dimensions
-        - label: :math:`(N, *)`. Same shape as ``pred``
+    :param pred: The predicted result from model.
+    :param label: The ground truth to compare.
 
     Examples:
 
     .. testcode::
+
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
-        from megengine.test.utils import assertTensorClose
         data_shape = (2, 2)
         label_shape = (2, )
 
@@ -278,7 +275,14 @@ def nll_loss(
         pred = F.log(F.softmax(data))
         loss1 = F.nll_loss(pred, label)
         loss2 = F.cross_entropy_with_softmax(data, label)
-        assertTensorClose(loss1.numpy(), loss2.numpy(), max_err=5e-6)
+        print(loss1.numpy(), loss2.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [0.6576154] [0.6576154]
+
     """
     n0 = pred.ndim
     n1 = label.ndim

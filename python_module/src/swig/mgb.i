@@ -49,6 +49,7 @@ intb4 = _mgb.intb4
 #include "plugin.h"
 %}
 
+%include "megbrain_build_config.h"
 %include "comp_node.i"
 %include "comp_graph.i"
 %include "symbol_var.i"

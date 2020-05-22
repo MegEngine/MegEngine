@@ -59,6 +59,50 @@ def test_random_dynamic_same_result():
     assert np.all(a.numpy() == b.numpy())
 
 
+def test_range_uniform_static_diff_result():
+    @jit.trace(symbolic=True)
+    def graph_a():
+        return R.uniform(5, low=-2, high=2)
+
+    @jit.trace(symbolic=True)
+    def graph_b():
+        return R.uniform(5, low=-2, high=2)
+
+    a = graph_a()
+    b = graph_b()
+    assert np.any(a.numpy() != b.numpy())
+
+
+def test_range_uniform_static_same_result():
+    @jit.trace(symbolic=True)
+    def graph_a():
+        R.manual_seed(731)
+        return R.uniform(5, low=-2, high=2)
+
+    @jit.trace(symbolic=True)
+    def graph_b():
+        R.manual_seed(731)
+        return R.uniform(5, low=-2, high=2)
+
+    a = graph_a()
+    b = graph_b()
+    assert np.all(a.numpy() == b.numpy())
+
+
+def test_range_uniform_dynamic_diff_result():
+    a = R.uniform(5, low=-2, high=2)
+    b = R.uniform(5, low=-2, high=2)
+    assert np.any(a.numpy() != b.numpy())
+
+
+def test_range_uniform_dynamic_same_result():
+    R.manual_seed(0)
+    a = R.uniform(5, low=-2, high=2)
+    R.manual_seed(0)
+    b = R.uniform(5, low=-2, high=2)
+    assert np.all(a.numpy() == b.numpy())
+
+
 def test_dropout_dynamic_diff_result():
     x = mge.ones(10)
     a = F.dropout(x, 0.5)

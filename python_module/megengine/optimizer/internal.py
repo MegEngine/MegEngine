@@ -21,7 +21,7 @@ def add_update_fastpath(
     beta: Union[Tensor, float, int] = 1.0,
     bias: Union[Tensor, float, int] = 0.0
 ):
-    """a fast-path ONLY used to update parameters in optimzier, since it
+    """a fast-path ONLY used to update parameters in optimizer, since it
     would bypass computing graph and launch dnn/add_update kernel directly,
     it is more efficient than functional/add_update.
     """

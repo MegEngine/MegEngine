@@ -27,7 +27,7 @@ def get_device_count(device_type: str) -> int:
 
 
 def is_cuda_available() -> bool:
-    """ Returns whether cuda is avaiable.
+    """Returns whether cuda device is available on this system.
 
     """
     return mgb.config.get_device_count("gpu", warn=False) > 0
@@ -38,8 +38,11 @@ def set_default_device(device: str = "xpux"):
 
     :param device: default device type. The type can be 'cpu0', 'cpu1', etc.,
         or 'gpu0', 'gpu1', etc., to specify the particular cpu or gpu to use.
-        To specify multiple devices, use cpu0:1 or gpu0:2.
         'cpux' and  'gupx' can also be used to specify any number of cpu or gpu devices.
+
+        'multithread' device type is avaliable when inference, which implements
+        multi-threading parallelism at the operator level. For example,
+        'multithread4' will compute with 4 threads. which implements
 
         The default value is 'xpux' to specify any device available.
 

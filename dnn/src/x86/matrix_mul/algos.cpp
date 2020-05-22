@@ -18,15 +18,15 @@
 
 #include "src/x86/matrix_mul/f32/strategy.h"
 
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
 #include <mkl.h>
 #include <mkl_cblas.h>
-#elif defined(MEGDNN_X86_WITH_OPENBLAS)
+#elif MEGDNN_X86_WITH_OPENBLAS
 #include <cblas.h>
 #else
 #endif
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 #include <mkldnn.h>
 #endif
 
@@ -39,7 +39,7 @@ using namespace x86;
 namespace {
 
 void f32_blas_kern(const MatrixMulImpl::KernParam& kern_param) {
-#if defined(MEGDNN_X86_WITH_MKL) || defined(MEGDNN_X86_WITH_OPENBLAS)
+#if MEGDNN_X86_WITH_MKL || MEGDNN_X86_WITH_OPENBLAS
     auto m = kern_param.M, n = kern_param.N, k = kern_param.K;
     bool trA = kern_param.trA, trB = kern_param.trB;
     const auto Aptr = kern_param.A<dt_float32>(),
@@ -55,7 +55,7 @@ void f32_blas_kern(const MatrixMulImpl::KernParam& kern_param) {
 #endif
 }
 
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
 void f32_blas_kern_only_packA(const MatrixMulImpl::KernParam& kern_param,
                                  const void* a_panel, const void* b_panel) {
   MEGDNN_MARK_USED_VAR(b_panel);
@@ -75,7 +75,7 @@ void f32_blas_kern_only_packA(const MatrixMulImpl::KernParam& kern_param,
 
 bool MatrixMulImpl::AlgoF32Blas::usable(
         const KernSizeParam& kern_size_param) const {
-#if defined(MEGDNN_X86_WITH_MKL) || defined(MEGDNN_X86_WITH_OPENBLAS)
+#if MEGDNN_X86_WITH_MKL || MEGDNN_X86_WITH_OPENBLAS
     return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
            kern_size_param.format == param::MatrixMul::Format::DEFAULT &&
            kern_size_param.B_type == kern_size_param.A_type &&
@@ -93,7 +93,7 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32Blas::get_kern(
 }
 
 /* ===================== AlgoF32BlasPackA====================== */
-#if defined(MEGDNN_X86_WITH_MKL)
+#if MEGDNN_X86_WITH_MKL
 bool MatrixMulImpl::AlgoF32MKLPackA::usable(
         const KernSizeParam& kern_size_param) const {
     return kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
@@ -195,14 +195,14 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32Vnni::get_kern(
     return int8x8x32_kern_vnni;
 }
 
-MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_PACKA(AlgoInt8x8x32Vnni,
-                                           megdnn_x86_matmul_kern, 5,
-                                           x86::matmul::gemm_int8_vnni_12x32x4,
-                                           dt_int8, dt_int32, dt_uint8);
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(AlgoInt8x8x32Vnni,
+                                            megdnn_x86_matmul_kern, 5,
+                                            x86::matmul::gemm_int8_vnni_12x32x4,
+                                            dt_int8, dt_int32, dt_uint8);
 #endif
 
 /* ===================== Int8 mkldnn algo ===================== */
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 namespace {
 void int8x8x32_kern_mkldnn(const MatrixMulImpl::KernParam& kern_param) {
     MEGDNN_MARK_USED_VAR(kern_param);
@@ -364,7 +364,9 @@ size_t MatrixMulImpl::AlgoInt8x8x32AVX2M4N16K2::get_workspace(
                    m, n, k, trans_a, trans_b, strategy, cacheline)
             .get_workspace_size();
 }
-
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(
+        AlgoInt8x8x32AVX2M4N16K2, megdnn_x86_matmul_kern, 8,
+        x86::matmul::gemm_avx2_s8s8s32_4x16x2, dt_int8, dt_int32, dt_int16);
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32AVX2M2N4K16::get_kern(
         const KernSizeParam&) const {
@@ -436,6 +438,9 @@ size_t MatrixMulImpl::AlgoInt8x8x32SSEM4N8K2::get_workspace(
                    m, n, k, trans_a, trans_b, strategy, cacheline)
             .get_workspace_size();
 }
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(
+        AlgoInt8x8x32SSEM4N8K2, megdnn_x86_matmul_kern, 9,
+        x86::matmul::gemm_sse_s8s8s32_4x8x2, dt_int8, dt_int32, dt_int16);
 
 /*************************AlgoF32MK8_8x8********************/
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32MK8_8x8::get_kern(

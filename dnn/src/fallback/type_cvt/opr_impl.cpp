@@ -36,6 +36,56 @@ struct TypeCvt {
     }
 };
 
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+
+//! As aarch32 __fp16 vectorize may cause llvm error, so if macro \c
+//! MEGDNN_FIX_AARCH32_BUG defined, we use dt_float16, otherwise __fp16
+#if MEGDNN_FIX_AARCH32_BUG
+#define FLOAT16 dt_float16
+#else
+#define FLOAT16 __fp16
+#endif
+template <typename stype>
+struct TypeCvt<stype, dtype::Float16> {
+    static void do_cvt(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+        using sctype = typename DTypeTrait<stype>::ctype;
+        auto n = src.layout.total_nr_elems();
+        const sctype* __restrict sptr = src.ptr<sctype>();
+        FLOAT16* __restrict dptr = static_cast<FLOAT16*>(dst.raw_ptr);
+        for (size_t i = 0; i < n; ++i) {
+            dptr[i] = static_cast<FLOAT16>(sptr[i]);
+        }
+    }
+};
+
+template <typename dst_type>
+struct TypeCvt<dtype::Float16, dst_type> {
+    static void do_cvt(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+        auto n = src.layout.total_nr_elems();
+        using dctype = typename DTypeTrait<dst_type>::ctype;
+        const FLOAT16* __restrict sptr = static_cast<FLOAT16*>(src.raw_ptr);
+        dctype* __restrict dptr = dst.ptr<dctype>();
+        for (size_t i = 0; i < n; ++i) {
+            dptr[i] = static_cast<FLOAT16>(sptr[i]);
+        }
+    }
+};
+
+template <>
+struct TypeCvt<dtype::Float16, dtype::Float16> {
+    static void do_cvt(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+        auto n = src.layout.total_nr_elems();
+        const FLOAT16* __restrict sptr = static_cast<FLOAT16*>(src.raw_ptr);
+        FLOAT16* __restrict dptr = static_cast<FLOAT16*>(dst.raw_ptr);
+        for (size_t i = 0; i < n; ++i) {
+            dptr[i] = static_cast<FLOAT16>(sptr[i]);
+        }
+    }
+};
+
+#undef FLOAT16
+
+#endif
 
 template <typename stype>
 void do_cvt_normal_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
@@ -451,7 +501,12 @@ namespace fallback {
 
 void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     check_exec(src.layout, dst.layout);
-    if (src.layout.is_contiguous() && dst.layout.is_contiguous()) {
+    auto is_quantize_lowbit = [](const DType& dt) {
+        return dt.category() == DTypeCategory::QUANTIZED && dt.is_low_bit();
+    };
+    if (src.layout.is_contiguous() && dst.layout.is_contiguous() &&
+        !is_quantize_lowbit(src.layout.dtype) &&
+        !is_quantize_lowbit(dst.layout.dtype)) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(run_contiguous(src, dst));
     } else {
         naive::TypeCvtImpl::exec(src, dst);

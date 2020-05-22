@@ -26,6 +26,7 @@ if(MGE_WITH_CUDA)
 endif()
 
 
+
 add_executable(megdnn_test ${SOURCES})
 target_link_libraries(megdnn_test gtest)
 target_link_libraries(megdnn_test megdnn)

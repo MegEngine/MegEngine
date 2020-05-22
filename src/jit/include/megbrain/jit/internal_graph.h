@@ -76,12 +76,12 @@ private:
  * This object stores intermediate state during visiting the computing graph in
  * JITFusionPass.
  *
- * The graph is iterated in reverse topological order. InternalGraphGenrator
+ * The graph is iterated in reverse topological order. InternalGraphGenerator
  * starts with a single operator (i.e. the output node of the fused opr), and
  * new oprs are gradually added into it. Thus the process is expanding a tree
  * rooted at the output node.
  */
-class InternalGraphGenrator {
+class InternalGraphGenerator {
     //! replace oprs in the graph of m_output and populate m_orig_inps,
     //! m_placeholders
     VarNode* replace_graph_by_placeholder();
@@ -95,7 +95,7 @@ class InternalGraphGenrator {
     void find_oprs_depended_by_dimshuffle(cg::OperatorNodeBase* opr);
 
 public:
-    explicit InternalGraphGenrator(cg::OperatorNodeBase* opr);
+    explicit InternalGraphGenerator(cg::OperatorNodeBase* opr);
 
     //! generate the graph; this method can be called multiple times
     InternalGraphPtr generate();

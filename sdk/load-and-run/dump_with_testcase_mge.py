@@ -253,6 +253,7 @@ def optimize_for_inference(args, outputs):
         'enable_ioc16': 'f16_io_comp',
         'enable_hwcd4': 'use_nhwcd4',
         'enable_nchw88': 'use_nchw88',
+        'enable_nchw44': 'use_nchw44',
         'enable_fuse_conv_bias_nonlinearity': 'fuse_conv_bias_nonlinearity',
         'enable_tensorcore': 'use_tensor_core',
         'enable_fuse_conv_bias_with_z': 'fuse_conv_bias_with_z',
@@ -383,6 +384,12 @@ def main():
         '--enable-nchw88',
         action='store_true',
         help='transform the model format from NCHW to NCHW88 '
+        'for inference'
+    )
+    parser.add_argument(
+        '--enable-nchw44',
+        action='store_true',
+        help='transform the model format from NCHW to NCHW44 '
         'for inference'
     )
     parser.add_argument(

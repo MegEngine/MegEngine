@@ -11,6 +11,7 @@ import functools
 
 import megengine._internal as mgb
 
+from ..core.graph import _use_default_if_none
 from ..core.tensor import Tensor, wrap_io_tensor
 
 __all__ = [
@@ -26,6 +27,8 @@ __all__ = [
     "greater",
     "greater_equal",
     "floor",
+    "isinf",
+    "isnan",
     "less",
     "less_equal",
     "log",
@@ -50,6 +53,12 @@ def _elemwise(mode):  # DONT export
         @functools.wraps(func)
         @wrap_io_tensor
         def elemwise_func(*inputs) -> Tensor:
+            if all(isinstance(i, (int, float)) for i in inputs):
+                device, comp_graph = _use_default_if_none(None, None)
+                ret = mgb.opr.elemwise(
+                    *inputs, mode=mode, comp_node=device, comp_graph=comp_graph
+                )
+                return ret.inferred_value[0]
             return mgb.opr.elemwise(*inputs, mode=mode)
 
         return elemwise_func
@@ -226,12 +235,64 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
         [0 1 2 3 3]
 
     """
-    assert lower or upper, "At least one of 'lower' or 'upper' must not be None"
-    if lower:
-        if upper:
+    assert (
+        lower is not None or upper is not None
+    ), "At least one of 'lower' or 'upper' must not be None"
+    if lower is not None:
+        if upper is not None:
             assert lower <= upper, "clamp lower bound is bigger that upper bound"
             return minimum(maximum(inp, lower), upper)
         else:
             return maximum(inp, lower)
     else:
         return minimum(inp, upper)
+
+
+def isnan(inp: Tensor) -> Tensor:
+    r"""Returns a new tensor representing if each element is NaN or not.
+
+    :param: inp
+    :return: a new tensor representing if each element in :attr:`inp` is NaN or not.
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, float("nan"), 0])
+
+        print(F.isnan(x))
+
+    .. testoutput::
+
+        Tensor([0 1 0], dtype=uint8)
+
+    """
+    return (inp != inp).astype("uint8")
+
+
+def isinf(inp: Tensor) -> Tensor:
+    r"""Returns a new tensor representing if each element is Inf or not.
+
+    :param: inp
+    :return: a new tensor representing if each element in :attr:`inp` is Inf or not.
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, float("inf"), 0])
+
+        print(F.isinf(x))
+
+    .. testoutput::
+
+        Tensor([0 1 0], dtype=uint8)
+
+    """
+    return (abs(inp) == float("inf")).astype("uint8")

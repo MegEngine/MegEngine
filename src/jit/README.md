@@ -33,7 +33,6 @@ elemwise expressions by JIT.
     |speed   |100%|122% | 124%          |
 
 
-
 ## What does JIT do
 Detection the subgraph can be fused and compiling the subgraph into a fusion
 kernel are the most two important parts in JIT.

@@ -1,0 +1,7 @@
+numpy>=1.17
+opencv-python
+pyarrow
+requests
+tabulate
+tqdm
+redispy

@@ -39,10 +39,17 @@ class SeqCompNodeOptimizer {
             int stream;  //!< stream to change
             PropType prop_type;
         };
+        using PropFunction = thin_function<void(
+                StreamPropType& /* dest */,
+                const SmallVector<StreamPropType>& /* srcs */)>;
 
         //! register a var that should be placed on the stream
         virtual void register_stream_var(
                 VarNode* var, StreamPropType prop_type) = 0;
+
+        //! register a propagate function on given var_node
+        virtual void register_propagate_function(
+                VarNode* var, PropFunction prop_func) = 0;
 
         //! check if a var has been registered in stream and get its
         //! propagation type

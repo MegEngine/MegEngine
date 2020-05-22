@@ -27,6 +27,7 @@ using namespace mgb;
 namespace {
 
     using Mode = opr::Reduce::Mode;
+    using DataType = opr::Reduce::Param::DataType;
 
     template<Mode mode, typename ctype>
     struct ImplTrait {
@@ -43,6 +44,10 @@ namespace {
         static ctype reduce(ctype accum, ctype v) {
             return accum + v;
         }
+
+        ctype finalize(ctype result) {
+            return result;
+        }
     };
 
     template<typename ctype>
@@ -55,6 +60,10 @@ namespace {
 
         static ctype reduce(ctype accum, ctype v) {
             return accum + v * v;
+        }
+
+        ctype finalize(ctype result) {
+            return result;
         }
     };
 
@@ -69,6 +78,10 @@ namespace {
         static ctype reduce(ctype accum, ctype v) {
             return accum * v;
         }
+
+        ctype finalize(ctype result) {
+            return result;
+        }
     };
 
     template<typename ctype>
@@ -81,6 +94,10 @@ namespace {
 
         static ctype reduce(ctype accum, ctype v) {
             return std::max(accum, v);
+        }
+
+        ctype finalize(ctype result) {
+            return result;
         }
     };
 
@@ -95,6 +112,30 @@ namespace {
         static ctype reduce(ctype accum, ctype v) {
             return std::min(accum, v);
         }
+
+        ctype finalize(ctype result) {
+            return result;
+        }
+    };
+
+    template<typename ctype>
+    struct ImplTrait<Mode::MEAN, ctype> {
+        static constexpr float GRAD_MAXERR = 1e-4, GRAD_EPS = 1e-2;
+        size_t nr_elems;
+
+        ctype init() {
+            nr_elems = 0;
+            return 0;
+        }
+
+        ctype reduce(ctype accum, ctype v) {
+            nr_elems ++;
+            return accum + v;
+        }
+
+        ctype finalize(ctype result) {
+            return result / static_cast<ctype>(nr_elems);
+        }
     };
 
     template<Mode mode, typename ctype>
@@ -108,10 +149,11 @@ namespace {
                 return;
             }
 
-            ctype val = Impl::init();
+            Impl impl;
+            ctype val = impl.init();
             for (auto i: megdnn::tensor_iter_valonly<ctype>(src.as_megdnn()))
-                val = Impl::reduce(val, i);
-            dest.ptr<ctype>()[0] = val;
+                val = impl.reduce(val, i);
+            dest.ptr<ctype>()[0] = impl.finalize(val);
             return;
         }
 
@@ -143,15 +185,16 @@ namespace {
             for (size_t i = 0; i < tshp.ndim; i ++)
                 offset += iter.idx()[i] * src.layout().stride[i];
 
-            ctype val = Impl::init();
+            Impl impl;
+            ctype val = impl.init();
             auto subspec = SubTensorSpec::make_from_offset_elem(
                     sub_layout, offset);
             HostTensorND subt = const_cast<HostTensorND&>(src).sub(subspec);
             for (ctype i:
                     megdnn::tensor_iter_valonly<ctype>(subt.as_megdnn())) {
-                val = Impl::reduce(val, i);
+                val = impl.reduce(val, i);
             }
-            *iter = val;
+            *iter = impl.finalize(val);
         }
     }
 
@@ -535,7 +578,7 @@ TEST(TestBasicArithReduction, DifferentNDim) {
 
         for (auto mode :
              {Reduce::Mode::PRODUCT, Reduce::Mode::MAX, Reduce::Mode::MIN,
-              Reduce::Mode::SUM, Reduce::Mode::SUM_SQR}) {
+              Reduce::Mode::SUM, Reduce::Mode::SUM_SQR, Reduce::Mode::MEAN}) {
             check_mode(mode);
         }
     }
@@ -606,7 +649,7 @@ TEST(TestBasicArithReduction, MultiType) {
     host_tshp->ptr<int>()[3] = 22;
     for (auto mode :
          {Reduce::Mode::PRODUCT, Reduce::Mode::MAX, Reduce::Mode::MIN,
-          Reduce::Mode::SUM, Reduce::Mode::SUM_SQR}) {
+          Reduce::Mode::SUM, Reduce::Mode::SUM_SQR, Reduce::Mode::MEAN}) {
         check_mode(mode);
     }
 }
@@ -682,18 +725,19 @@ TEST(TestBasicArithReduction, AutoCheck) {
 
     Param param;
 
-    auto make_graph = [&param](const Checker::SymInpArray& inputs)
+    auto make_graph = [&param](const Checker::SymInpArray& inputs, DType dtype)
             -> Checker::SymOutArray {
         auto inp = inputs[0];
         auto tshp = inputs[1].symshape();
-        inp = opr::TypeCvt::make(inp, dtype::Float16());
+        inp = opr::TypeCvt::make(inp, dtype);
         return {opr::Reduce::make(inp, param, tshp)};
     };
-    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp,
+                DType dtype) {
         auto cn = inp[0]->storage().comp_node();
         TensorShape out_shape = inp[1]->shape();
         dest[0] = HostTensorND{cn, out_shape, dtype::Float32()};
-        HostTensorND tmp_inp{cn, inp[0]->shape(), dtype::Float16()};
+        HostTensorND tmp_inp{cn, inp[0]->shape(), dtype};
         HostTensorND new_inp{cn, inp[0]->shape(), dtype::Float32()};
         auto typecvt =
                 megdnn_naive_handle()->create_operator<megdnn::TypeCvt>();
@@ -711,31 +755,38 @@ TEST(TestBasicArithReduction, AutoCheck) {
     dispatch_by_mode(ctype, Mode::MAX, in, out);     \
     dispatch_by_mode(ctype, Mode::SUM, in, out);     \
     dispatch_by_mode(ctype, Mode::PRODUCT, in, out); \
-    dispatch_by_mode(ctype, Mode::SUM_SQR, in, out);
+    dispatch_by_mode(ctype, Mode::SUM_SQR, in, out); \
+    dispatch_by_mode(ctype, Mode::MEAN, in, out);
 
-        mgb_assert(param.data_type == Param::DataType::FLOAT_O16xC32 ||
-                   param.data_type == Param::DataType::FLOAT_O32xC32);
+        mgb_assert(param.data_type == Param::DataType::FLOAT_O32xC32);
         dispatch_by_dtype(dtype::Float32, new_inp, dest[0]);
 #undef dispatch_by_mode
 #undef dispatch_by_dtype
     };
 
-    auto check = [&](Mode mode, Param::DataType data_type) {
+    auto check = [&](Mode mode, Param::DataType data_type, DType dtype) {
         param.mode = mode;
         param.data_type = data_type;
         Checker::RunOptions opts;
         opts.outputs_max_err = 1e-3;
         opts.numdiff_max_err = 5e-1;
-        Checker(make_graph, fwd)
-                .set_input_allow_grad(1, false)
-                .run({TensorShape{22, 21}, {22, 1}}, opts)
-                .run({TensorShape{22, 21}, {1, 1}}, opts)
-                .run({TensorShape{22, 21}, {22, 1}}, opts);
+        using namespace std::placeholders;
+        Checker checker(std::bind(make_graph, _1, dtype),
+                        std::bind(fwd, _1, _2, dtype));
+        if (dtype.category() == DTypeCategory::FLOAT) {
+            checker.set_input_allow_grad(1, false);
+        } else {
+            checker.disable_grad_check();
+        }
+        checker.run({TensorShape{22, 21}, {22, 1}}, opts)
+               .run({TensorShape{22, 21}, {1, 1}}, opts)
+               .run({TensorShape{22, 21}, {22, 1}}, opts);
     };
 
     for (auto mode :
-         {Mode::SUM, Mode::MAX, Mode::MIN, Mode::PRODUCT}) {
-        check(mode, Param::DataType::FLOAT_O32xC32);
+         {Mode::SUM, Mode::MAX, Mode::MIN, Mode::PRODUCT, Mode::MEAN}) {
+        check(mode, Param::DataType::FLOAT_O32xC32, dtype::Float16());
+        check(mode, Param::DataType::FLOAT_O32xC32, dtype::Int32());
     }
 }
 
@@ -747,6 +798,7 @@ OPR_TEST(SUM_SQR)
 OPR_TEST(PRODUCT)
 OPR_TEST(MAX)
 OPR_TEST(MIN)
+OPR_TEST(MEAN)
 
 TEST(TestBasicArithReduction, CompSeqRecordLevel2) {
     HostTensorGenerator<> gen;

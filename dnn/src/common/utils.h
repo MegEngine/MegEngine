@@ -17,6 +17,7 @@
 #include "megdnn/handle.h"
 #include "megdnn/thin/small_vector.h"
 
+#include "src/common/hash_ct.h"
 #include "src/common/utils.cuh"
 
 #include <cmath>
@@ -40,6 +41,7 @@
 #endif
 
 #define rep(i, n) for (auto i = decltype(n){0}; i < (n); ++i)
+#define rep_step(i, n, step) for (auto i = decltype(n){0}; i < (n); i += (step))
 
 #define megdnn_assert_contiguous(layout)                              \
     do {                                                              \
@@ -226,6 +228,10 @@ private:
 
 MEGDNN_CONSTEXPR std::size_t operator"" _z(unsigned long long n) {
     return n;
+}
+
+constexpr uint32_t operator"" _hash(char const* str, size_t count) {
+    return XXHash64CT::hash(str, count, 20160701);
 }
 
 template <typename Vec>
@@ -427,6 +433,20 @@ int8_t convert<dt_qint4, int8_t>(dt_qint4 src, int8_t dst, size_t offset);
 
 template <>
 dt_qint4 convert<int8_t, dt_qint4>(int8_t src, dt_qint4 dst, size_t offset);
+
+/*!
+ * \brief check float equal within given ULP(unit in the last place)
+ */
+template <class T>
+static inline
+        typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
+        almost_equal(T x, T y, int unit_last_place = 1) {
+    return std::abs(x - y) < (std::numeric_limits<T>::epsilon() *
+                              std::abs(x + y) * unit_last_place) ||
+           std::abs(x - y) < std::numeric_limits<T>::min();
+}
+
+bool dtype_almost_equal(DType lhs, DType rhs);
 
 /**
  * \brief N-dimensional index space

@@ -94,6 +94,11 @@ DefaultConvolution3DBackwardFilterAlgorithm
         HandleImpl::m_default_conv3d_bwd_filter_algo;
 DefaultBatchConvBiasForwardAlgorithm
         HandleImpl::m_default_batch_conv_bias_fwd_algo;
+DefaultLocalShareForwardAlgorithm HandleImpl::m_default_local_share_fwd_algo;
+DefaultLocalShareBackwardDataAlgorithm
+        HandleImpl::m_default_local_share_bwd_data_algo;
+DefaultLocalShareBackwardFilterAlgorithm
+        HandleImpl::m_default_local_share_bwd_filter_algo;
 
 HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle,
                        HandleType type)

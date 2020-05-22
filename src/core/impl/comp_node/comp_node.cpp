@@ -127,13 +127,19 @@ CompNode::Locator CompNode::Locator::parse(const std::string &id) {
     // current parsing location
     const char *ptr = id.data();
     if (id == "cpu:default") {
-        return {DeviceType::CPU, DEVICE_CPU_DEFAULT, 0};
+        return {DeviceType::CPU, DEVICE_CPU_DEFAULT, {0}};
     }
     if (!strncmp(ptr, "multithread:default", 19)) {
         //! the multithread default compnode string like "multithread:default:x"
-        ptr += 20;
-        int nr_thread =std::stoi(ptr);
-        return {DeviceType::MULTITHREAD, DEVICE_MULTITHREAD_DEFAULT, nr_thread};
+        if (id.size() > 20) {
+            ptr += 20;
+            int nr_thread = std::stoi(ptr);
+            return {DeviceType::MULTITHREAD,
+                    DEVICE_MULTITHREAD_DEFAULT,
+                    {nr_thread}};
+        } else {
+            err();
+        }
     }
 
     DeviceType dev_type;
@@ -192,8 +198,16 @@ CompNode::Locator CompNode::Locator::parse(const std::string &id) {
     int num_stream = parse_int();
     if (*ptr)
         err();
+    //! multi thread with thread number(num_stream) being zero is illegal
+    if (dev_type == DeviceType::MULTITHREAD) {
+        if (num_dev == 0) {
+            err();
+        }
+        //! num_steam store the nr_thread
+        std::swap(num_dev, num_stream);
+    }
 
-    return {dev_type, num_dev, num_stream};
+    return {dev_type, num_dev, {num_stream}};
 }
 
 void CompNode::Locator::set_device_map(DeviceType type, int from, int to) {
@@ -242,15 +256,21 @@ CompNode::Locator CompNode::Locator::to_physical() const {
             stream_physical = 1023;
         }
     }
-    return {type_physical, device_physical, stream_physical};
+    return {type_physical, device_physical, {stream_physical}};
 }
 
 std::string CompNode::Locator::to_string() const {
     if (device == DEVICE_CPU_DEFAULT) {
         return "cpu:default";
     } else if (device == DEVICE_MULTITHREAD_DEFAULT) {
-        std::string ret="multithread:default:";
+        std::string ret = "multithread:default:";
         ret.append(get_stream_str(stream));
+        return ret;
+    } else if (type == DeviceType::MULTITHREAD) {
+        std::string ret("multithread");
+        ret.append(get_stream_str(stream))
+                .append(":")
+                .append(get_stream_str(device));
         return ret;
     }
     char numstr[32];

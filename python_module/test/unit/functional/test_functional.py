@@ -7,10 +7,12 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
+import pytest
 from helpers import opr_test
 
+import megengine._internal as mgb
 import megengine.functional as F
-from megengine import Buffer, jit, tensor
+from megengine import Buffer, Parameter, is_cuda_available, jit, tensor
 from megengine.test import assertTensorClose
 
 
@@ -53,7 +55,24 @@ def test_where():
     xv1 = np.array([[1, np.inf, 2], [0, np.nan, 4], [1, 5, 7]], dtype=np.float32)
     yv1 = np.array([[5, 6, 9], [2, 7, 8], [2, 1, 9]], dtype=np.float32)
 
-    cases = [{"input": [maskv0, xv0, yv0]}, {"input": [maskv1, xv1, yv1]}]
+    cases = [
+        {"input": [maskv0, xv0, yv0]},
+        {"input": [maskv1, xv1, yv1]},
+    ]
+    opr_test(cases, F.where, ref_fn=np.where)
+
+    maskv2 = np.array([1, 1, 1], dtype=np.int32)
+    xv2 = np.array([1, 3, 2], dtype=np.float32)
+    yv2 = np.array([5, 6, 9], dtype=np.float32)
+
+    maskv3 = np.array([0, 0, 0], dtype=np.int32)
+    xv3 = np.array([1, 3, 2], dtype=np.float32)
+    yv3 = np.array([5, 6, 9], dtype=np.float32)
+
+    cases = [
+        {"input": [maskv2, xv2, yv2]},
+        {"input": [maskv3, xv3, yv3]},
+    ]
     opr_test(cases, F.where, ref_fn=np.where)
 
 
@@ -155,6 +174,60 @@ def test_broadcast_to():
         {"input": [data2, output2_shape], "output": output2_shape},
     ]
     opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
+
+
+def test_linspace():
+    cases = [
+        {"input": [1, 9, 9]},
+        {"input": [3, 10, 8]},
+    ]
+    opr_test(
+        cases,
+        F.linspace,
+        ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
+    )
+
+    cases = [
+        {"input": [9, 1, 9]},
+        {"input": [10, 3, 8]},
+    ]
+    opr_test(
+        cases,
+        F.linspace,
+        ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
+    )
+
+
+def test_arange():
+    cases = [
+        {"input": [1, 9, 1]},
+        {"input": [2, 10, 2]},
+    ]
+    opr_test(
+        cases,
+        F.arange,
+        ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+    )
+
+    cases = [
+        {"input": [9, 1, -1]},
+        {"input": [10, 2, -2]},
+    ]
+    opr_test(
+        cases,
+        F.arange,
+        ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+    )
+
+    cases = [
+        {"input": [9.3, 1.2, -0.5]},
+        {"input": [10.3, 2.1, -1.7]},
+    ]
+    opr_test(
+        cases,
+        F.arange,
+        ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+    )
 
 
 def test_add_update():
@@ -261,3 +334,108 @@ def test_binary_cross_entropy():
         {"input": [data2, label2], "output": expect2,},
     ]
     opr_test(cases, F.binary_cross_entropy, compare_fn=compare_fn)
+
+
+@pytest.mark.skip
+def test_conv_bias():
+    inp_scale = 0.01
+    w_scale = 0.02
+    outp_scale = 0.1
+    inp_dtype = mgb.dtype.qint8(inp_scale)
+    w_dtype = mgb.dtype.qint8(w_scale)
+    b_dtype = mgb.dtype.qint32(inp_scale * w_scale)
+    out_dtype = mgb.dtype.qint8(outp_scale)
+
+    def run(
+        N,
+        IC,
+        OC,
+        IH,
+        IW,
+        KH,
+        KW,
+        PH,
+        PW,
+        SH,
+        SW,
+        has_bias=True,
+        nonlinear_mode="IDENTITY",
+    ):
+        inp_v = np.random.normal(size=(N, IC, IH, IW))
+        w_v = np.random.normal(size=(OC, IC, KW, KW))
+        b_v = np.random.normal(size=(1, OC, 1, 1))
+        inp_scale = mgb.dtype.get_scale(inp_dtype)
+        w_scale = mgb.dtype.get_scale(w_dtype)
+        b_scale = mgb.dtype.get_scale(b_dtype)
+
+        inpv = mgb.dtype.convert_to_qint8(inp_v * inp_scale, inp_dtype)
+        wv = mgb.dtype.convert_to_qint8(w_v * w_scale, w_dtype)
+        bv = mgb.dtype.convert_to_qint32(b_v * b_scale, b_dtype)
+
+        inp_int8 = tensor(inpv, dtype=inp_dtype)
+        w_int8 = Parameter(wv, dtype=w_dtype)
+        b_int32 = Parameter(bv, dtype=b_dtype)
+
+        inp_fp32 = inp_int8.astype("float32")
+        w_fp32 = w_int8.astype("float32")
+        b_fp32 = b_int32.astype("float32")
+
+        jit.trace.enabled = True
+        b_symbolic = True
+
+        def convert_to_nchw4(var):
+            return var.reshape(
+                var.shapeof(0), var.shapeof(1) // 4, 4, var.shapeof(2), var.shapeof(3)
+            ).dimshuffle(0, 1, 3, 4, 2)
+
+        @jit.trace(symbolic=b_symbolic)
+        def run_conv2d(inp, w, b):
+            O = F.conv2d(
+                inp, w, b if has_bias else None, stride=(SH, SW), padding=(PH, PW),
+            )
+            if nonlinear_mode == "RELU":
+                return F.relu(O)
+            else:
+                return O
+
+        @jit.trace(symbolic=b_symbolic)
+        def run_conv_bias(inp, w, b, format="NCHW"):
+            b = b if has_bias else np.zeros_like(b)
+            if format == "NCHW4":
+                inp = convert_to_nchw4(inp)
+                w = convert_to_nchw4(w)
+                b = F.flatten(b)
+            return F.conv_bias_activation(
+                inp,
+                w,
+                b,
+                stride=(SH, SW),
+                padding=(PH, PW),
+                dtype=out_dtype,
+                nonlinear_mode=nonlinear_mode,
+            )
+
+        format = "NCHW4" if is_cuda_available() else "NCHW"
+
+        expected = run_conv2d(inp_fp32, w_fp32, b_fp32)
+        expected = expected.astype(out_dtype).astype("float32")
+        result = run_conv_bias(inp_int8, w_int8, b_int32, format=format).astype(
+            "float32"
+        )
+        if format == "NCHW4":
+            result = result.dimshuffle(0, 1, 4, 2, 3)
+        expected = F.flatten(expected)
+        result = F.flatten(result)
+        assertTensorClose(result.numpy(), expected.numpy())
+
+    if not is_cuda_available():
+        run(1, 4, 4, 24, 33, 1, 1, 2, 3, 1, 1, False)
+        run(10, 12, 24, 46, 46, 1, 1, 2, 1, 3, 1, False)
+        run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False)
+
+        run(1, 4, 4, 24, 33, 1, 1, 2, 3, 1, 1)
+        run(10, 12, 24, 46, 46, 1, 1, 2, 1, 3, 1)
+        run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2)
+
+        run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
+        run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")

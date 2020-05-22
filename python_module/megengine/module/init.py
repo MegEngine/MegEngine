@@ -12,7 +12,8 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 
-from ..core import Tensor
+from ..core import Graph, Tensor
+from ..random import gaussian, uniform
 
 
 def fill_(tensor: Tensor, val: Union[float, int]) -> None:
@@ -48,7 +49,8 @@ def uniform_(tensor: Tensor, a: float = 0.0, b: float = 1.0) -> None:
     :param a: Lower bound of the sampling interval
     :param b: Upper bound of the sampling interval
     """
-    tensor.set_value(np.random.uniform(a, b, tensor.shape).astype(tensor.dtype))
+    with Graph(eager_evaluation=True):
+        tensor.set_value((b - a) * uniform(tensor.shape) + a)
 
 
 def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
@@ -59,7 +61,8 @@ def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
     :param mean: The mean of the normal distribution
     :param std: The standard deviation of the normal distribution
     """
-    tensor.set_value(np.random.normal(mean, std, tensor.shape).astype(np.float32))
+    with Graph(eager_evaluation=True):
+        tensor.set_value(gaussian(tensor.shape, mean=mean, std=std))
 
 
 def calculate_gain(
@@ -173,8 +176,8 @@ def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
         a = \text{gain} \times \sqrt{\frac{6}{\text{fan_in} + \text{fan_out}}}
 
     Also known as Glorot initialization. Detailed information can be retrieved from
-    `Understanding the difficulty of training deep feedforward neural networks` -
-    Glorot, X. & Bengio, Y. (2010).
+    `"Understanding the difficulty of training deep feedforward neural networks" <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_.
+
 
     :param tensor: An n-dimentional tensor to be initialized
     :param gain: Scaling factor for :math:`a`.
@@ -193,8 +196,7 @@ def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
         \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_in} + \text{fan_out}}}
 
     Also known as Glorot initialization. Detailed information can be retrieved from
-    `Understanding the difficulty of training deep feedforward neural networks` -
-    Glorot, X. & Bengio, Y. (2010).
+    `"Understanding the difficulty of training deep feedforward neural networks" <http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf>`_.
 
     :param tensor: An n-dimentional tensor to be initialized
     :param gain: Scaling factor for :math:`std`.
@@ -214,8 +216,9 @@ def msra_uniform_(
         \text{bound} = \sqrt{\frac{6}{(1 + a^2) \times \text{fan_in}}}
 
     Detailed information can be retrieved from
-    `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
-    classification`
+    `"Delving deep into rectifiers: Surpassing human-level performance on ImageNet
+    classification" <https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_.
+
 
     :param tensor: An n-dimentional tensor to be initialized
     :param a: Optional parameter for calculating gain for leaky_relu. See
@@ -243,8 +246,8 @@ def msra_normal_(
         \text{std} = \sqrt{\frac{2}{(1 + a^2) \times \text{fan_in}}}
 
     Detailed information can be retrieved from
-    `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
-    classification`
+    `"Delving deep into rectifiers: Surpassing human-level performance on ImageNet
+    classification" <https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf>`_.
 
     :param tensor: An n-dimentional tensor to be initialized
     :param a: Optional parameter for calculating gain for leaky_relu. See

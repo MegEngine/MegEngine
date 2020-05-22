@@ -139,7 +139,7 @@ class Tensor:
         return tensor(data=obj, device=self.device)
 
     def numpy(self):
-        r"""Return the tensor value in ndarray format.
+        r"""Return the tensor value in numpy.ndarray format.
         """
         if self.__val is not None:
             assert self.__sym is None
@@ -235,6 +235,8 @@ class Tensor:
         self.__val.reset_zero()
 
     def to(self, device):
+        r"""Performs Tensor device conversion, returns Tensor with the specified device.
+        """
         return wrap_io_tensor(mgb.opr.copy)(self, comp_node=device)
 
     # https://docs.python.org/3/reference/datamodel.html#object.__hash__

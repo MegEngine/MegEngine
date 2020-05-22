@@ -16,6 +16,11 @@
 #include "megbrain/graph/static_infer.h"
 #include "megbrain/graph/seq_comp_node_opt.h"
 #include "megbrain/utils/event.h"
+#include "megbrain/system.h"
+
+#if MGB_ENABLE_JSON
+#include "megbrain/utils/json.h"
+#endif
 
 namespace mgb {
 namespace cg {
@@ -171,6 +176,8 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
         virtual const VarReceiverInfo& var_receiver_in_current_comp_seq(
                 const VarNode *var) const = 0;
 
+        virtual std::string get_mem_allocation_info() const = 0;
+
         /*!
          * \brief find var node by its ID
          *
@@ -293,6 +300,15 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
 
             //! whether to enable sublinear memory optimization
             bool enable_sublinear_memory_opt = false;
+
+            //! Control parameter for sublinear memory optimization
+            struct SublinearMemConfig {
+                int thresh_nr_try = 10;
+                int genetic_nr_iter = 0;
+                int genetic_pool_size = 20;
+                int lb_memory = 0;
+                int num_worker = sys::get_cpu_count() / 2;
+            } sublinear_mem_cofig;
 
             //! do not re-profile to select best impl algo when input shape
             //! changes (use previous algo)

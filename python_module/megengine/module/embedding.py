@@ -21,7 +21,7 @@ class Embedding(Module):
     A simple lookup table that stores embeddings of a fixed dictionary and size.
 
     This module is often used to store word embeddings and retrieve them using indices.
-    The input to the module is a list of indices, and the output is the corresponding word embeddings. 
+    The input to the module is a list of indices, and the output is the corresponding word embeddings.
     The indices should less than num_embeddings.
 
     :param num_embeddings: size of embedding dictionary.
@@ -138,7 +138,6 @@ class Embedding(Module):
         Outputs:
 
         .. testoutput::
-            :options: +NUMBER
 
             [[[1.2 2.3 3.4 4.5 5.6]
               [0.1 1.1 2.1 3.1 4.1]

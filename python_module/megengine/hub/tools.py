@@ -15,7 +15,7 @@ from typing import Iterator
 
 def load_module(name: str, path: str) -> types.ModuleType:
     """
-    Load module specified by name and path
+    Loads module specified by name and path
 
     :param name: module name
     :param path: module path
@@ -27,7 +27,7 @@ def load_module(name: str, path: str) -> types.ModuleType:
 
 
 def check_module_exists(module: str) -> bool:
-    """Check python module exist or not
+    """Checks whether python module exists or not
 
     :param module: name of module
     """
@@ -36,7 +36,7 @@ def check_module_exists(module: str) -> bool:
 
 @contextmanager
 def cd(target: str) -> Iterator[None]:
-    """Change current directory to target
+    """Changes current directory to target
 
     :param target: target directory
     """

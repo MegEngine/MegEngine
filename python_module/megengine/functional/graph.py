@@ -24,17 +24,19 @@ def grad(
     use_virtual_grad: bool = None,
     return_zero_for_nodep: bool = True,
 ) -> Union[Tensor, Iterable[Optional[Tensor]], None]:
-    r"""compute symbolic grad
+    r"""Compute the symbolic gradient of ``target`` with repect to ``wrt``.
 
-    :param target: grad target var
-    :param wrt: with respect to which to compute the grad
+    ``wrt`` can either be a single tensor or a sequence of tensors.
+
+    :param target: ``grad`` target tensor
+    :param wrt: with respect to which to compute the gradient
     :param warn_mid_wrt: whether to give warning if ``wrt`` is not endpoint
-    :param use_virtual_grad: whether to use virtual grad opr, so fwd graph can
-        be optimized before applying grad; if ``None`` is given, then virtual
-        grad would be used if ``graph_opt_level >= 2``
+    :param use_virtual_grad: whether to use virtual ``grad`` opr, so fwd graph can
+        be optimized before applying ``grad``; if ``None`` is given, then virtual
+        ``grad`` would be used if ``graph_opt_level >= 2``
     :param return_zero_for_nodep: if ``target`` does not depend on ``wrt``, set to True to return
         a zero-valued :class:`~.Tensor` rather than ``None``; can't be set to False when using
-        virtual grad opr.
+        virtual ``grad`` opr.
     :return: :math:`\partial\text{target} / \partial\text{wrt}`
     """
     if not isinstance(wrt, mgb.SymbolVar):

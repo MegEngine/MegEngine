@@ -12,31 +12,48 @@ import queue
 import subprocess
 from multiprocessing import Queue
 
+import pyarrow
 import pyarrow.plasma as plasma
 
 MGE_PLASMA_MEMORY = int(os.environ.get("MGE_PLASMA_MEMORY", 4000000000))  # 4GB
 
+# Each process only need to start one plasma store, so we set it as a global variable.
+# TODO: how to share between different processes?
+MGE_PLASMA_STORE_MANAGER = None
+
+
+def _clear_plasma_store():
+    # `_PlasmaStoreManager.__del__` will not be called automaticly in subprocess,
+    # so this function should be called explicitly
+    global MGE_PLASMA_STORE_MANAGER
+    if MGE_PLASMA_STORE_MANAGER is not None:
+        del MGE_PLASMA_STORE_MANAGER
+        MGE_PLASMA_STORE_MANAGER = None
+
 
 class _PlasmaStoreManager:
+    __initialized = False
+
     def __init__(self):
         self.socket_name = "/tmp/mge_plasma_{}".format(
             binascii.hexlify(os.urandom(8)).decode()
         )
         debug_flag = bool(os.environ.get("MGE_DATALOADER_PLASMA_DEBUG", 0))
+        # NOTE: this is a hack. Directly use `plasma_store` may make subprocess
+        # difficult to handle the exception happened in `plasma-store-server`.
+        # For `plasma_store` is just a wrapper of `plasma-store-server`, which use
+        # `os.execv` to call the executable `plasma-store-server`.
+        cmd_path = os.path.join(pyarrow.__path__[0], "plasma-store-server")
         self.plasma_store = subprocess.Popen(
-            ["plasma_store", "-s", self.socket_name, "-m", str(MGE_PLASMA_MEMORY),],
+            [cmd_path, "-s", self.socket_name, "-m", str(MGE_PLASMA_MEMORY),],
             stdout=None if debug_flag else subprocess.DEVNULL,
             stderr=None if debug_flag else subprocess.DEVNULL,
         )
+        self.__initialized = True
 
     def __del__(self):
-        if self.plasma_store and self.plasma_store.returncode is None:
+        if self.__initialized and self.plasma_store.returncode is None:
             self.plasma_store.kill()
-
-
-# Each process only need to start one plasma store, so we set it as a global variable.
-# TODO: how to share between different processes?
-MGE_PLASMA_STORE_MANAGER = _PlasmaStoreManager()
 
 
 class PlasmaShmQueue:
@@ -50,6 +67,22 @@ class PlasmaShmQueue:
         :type maxsize: int
         :param maxsize: maximum size of the queue, `None` means no limit. (default: ``None``)
         """
+
+        # Lazy start the plasma store manager
+        global MGE_PLASMA_STORE_MANAGER
+        if MGE_PLASMA_STORE_MANAGER is None:
+            try:
+                MGE_PLASMA_STORE_MANAGER = _PlasmaStoreManager()
+            except Exception as e:
+                err_info = (
+                    "Please make sure pyarrow installed correctly!\n"
+                    "You can try reinstall pyarrow and see if you can run "
+                    "`plasma_store -s /tmp/mge_plasma_xxx -m 1000` normally."
+                )
+                raise RuntimeError(
+                    "Exception happened in starting plasma_store: {}\n"
+                    "Tips: {}".format(str(e), err_info)
+                )
 
         self.socket_name = MGE_PLASMA_STORE_MANAGER.socket_name
 
@@ -100,6 +133,7 @@ class PlasmaShmQueue:
     def close(self):
         self.queue.close()
         self.disconnect_client()
+        _clear_plasma_store()
 
     def cancel_join_thread(self):
         self.queue.cancel_join_thread()

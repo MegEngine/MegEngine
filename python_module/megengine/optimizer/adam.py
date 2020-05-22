@@ -14,7 +14,7 @@ from .optimizer import Optimizer
 
 
 class Adam(Optimizer):
-    r"""Implements Adam algorithm.
+    r"""Implements Adam algorithm proposed in `"Adam: A Method for Stochastic Optimization" <https://arxiv.org/abs/1412.6980>`_.
 
     :param params: iterable of parameters to optimize or dicts defining
             parameter groups.

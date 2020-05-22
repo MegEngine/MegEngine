@@ -14,6 +14,7 @@
 #include "megbrain/exception.h"
 #include "megbrain/utils/metahelper.h"
 #include "megbrain/utils/arith_helper.h"
+#include "megdnn/dtype.h"
 
 #include <cmath>
 #include <cstring>
@@ -357,6 +358,52 @@ struct LowbitMemcpy<bits, true> {
         }
     }
 };
+
+template<typename DT>
+struct QuantizedLowbitTrait;
+
+template<>
+struct QuantizedLowbitTrait<dtype::Quantized4Asymm> {
+    static constexpr int8_t SHIFT = 0;
+};
+
+template<>
+struct QuantizedLowbitTrait<dtype::QuantizedS4> {
+    static constexpr int8_t SHIFT = 8;
+};
+
+template <typename DT, bool div_byte = (DTypeTrait<DT>::category ==
+                                        DTypeCategory::QUANTIZED) &&
+                                       (8 % DTypeTrait<DT>::low_bit == 0)>
+struct QuantizedLowbitMemcpy;
+
+template <typename DT>
+struct QuantizedLowbitMemcpy<DT, true> {
+    // cast with bits that 8 % bits == 0
+    static constexpr uint16_t bits = DTypeTrait<DT>::low_bit;
+    static constexpr uint8_t MASK = (1 << bits) - 1;
+    using Trait = QuantizedLowbitTrait<DT>;
+
+    static void byte2compact(void* dest_raw, const void* src_raw, size_t n) {
+        auto dest = static_cast<uint8_t*>(dest_raw);
+        auto src = static_cast<const int8_t*>(src_raw);
+        memset(dest, 0, divup<size_t>(n * bits, 8));
+        for (size_t i = 0; i < n; ++i) {
+            int8_t val = src[i] + Trait::SHIFT;
+            mgb_assert(val >= 0 && val < (1 << bits));
+            dest[i * bits / 8] |= val << (i * bits % 8);
+        }
+    }
+    static void compact2byte(void* dest_raw, const void* src_raw, size_t n) {
+        auto dest = static_cast<int8_t*>(dest_raw);
+        auto src = static_cast<const uint8_t*>(src_raw);
+        for (size_t i = 0; i < n; ++i) {
+            int8_t val = ((src[i * bits / 8] >> (i * bits % 8)) & MASK);
+            dest[i] = val - Trait::SHIFT;
+        }
+    }
+};
+
 } // anonymous namespace
 
 void mgb::lowbit_memcpy_byte2compact(
@@ -365,6 +412,11 @@ void mgb::lowbit_memcpy_byte2compact(
     if (dtype == mgb::dtype::name##bits()) \
         return LowbitMemcpy<bits>::byte2compact(dest, src, n);
     MEGDNN_FOREACH_LOWBIT_DTYPE(cb)
+#undef cb
+#define cb(dt) \
+    if (dtype.enumv() == DTypeTrait<dt>::enumv) \
+        return QuantizedLowbitMemcpy<dt>::byte2compact(dest, src, n);
+    MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
     mgb_throw(MegBrainError, "bad dtype for lowbit: %s", dtype.name());
 }
@@ -375,6 +427,11 @@ void mgb::lowbit_memcpy_compact2byte(
     if (dtype == mgb::dtype::name##bits()) \
         return LowbitMemcpy<bits>::compact2byte(dest, src, n);
     MEGDNN_FOREACH_LOWBIT_DTYPE(cb)
+#undef cb
+#define cb(dt) \
+    if (dtype.enumv() == DTypeTrait<dt>::enumv) \
+        return QuantizedLowbitMemcpy<dt>::compact2byte(dest, src, n);
+    MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
     mgb_throw(MegBrainError, "bad dtype for lowbit: %s", dtype.name());
 }

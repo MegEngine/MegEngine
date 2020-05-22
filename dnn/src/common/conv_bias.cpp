@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/common/conv_bias.h"
@@ -33,7 +34,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_in_bytes) {
     if ((param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
-         param().format == param::ConvBias::Format::NCHW88_WINOGRAD) &&
+         param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
+         param().format == param::ConvBias::Format::NCHW44_WINOGRAD) &&
         src.dtype.category() == DTypeCategory::QUANTIZED) {
         megdnn_assert(filter.dtype.enumv() == DTypeEnum::QuantizedS16);
         megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
@@ -45,7 +47,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         float scale_src = src.dtype.param<dtype::QuantizedS8>().scale;
         float scale_filter = 0.f;
         if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
-            param().format == param::ConvBias::Format::NCHW88_WINOGRAD) {
+            param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
+            param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
             scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
         } else {
             scale_filter = filter.dtype.param<dtype::QuantizedS8>().scale;
@@ -58,7 +61,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         float scale_src = src.dtype.param<dtype::Quantized8Asymm>().scale;
         float scale_filter = 0.f;
         if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
-            param().format == param::ConvBias::Format::NCHW88_WINOGRAD) {
+            param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
+            param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
             scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
         } else {
             scale_filter = filter.dtype.param<dtype::Quantized8Asymm>().scale;
@@ -98,7 +102,9 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
             megdnn_assert(bias.shape[2] == 1);
             megdnn_assert(bias.shape[3] == dst.shape[3], "bias:%s, dst:%s",
                           bias.to_string().c_str(), dst.to_string().c_str());
-        } else if (param().format == param::ConvBias::Format::NCHW4) {
+        } else if (param().format == param::ConvBias::Format::NCHW4 ||
+                   param().format == param::ConvBias::Format::NCHW44 ||
+                   param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
             megdnn_assert(bias.shape[0] == 1);
             megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
                           bias.to_string().c_str(), dst.to_string().c_str());
@@ -141,7 +147,10 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
 
     if (z.ndim != 0) {
         megdnn_assert(param().format != param::ConvBias::Format::NCHW_WINOGRAD);
-        megdnn_assert(param().format != param::ConvBias::Format::NCHW88_WINOGRAD);
+        megdnn_assert(param().format !=
+                      param::ConvBias::Format::NCHW88_WINOGRAD);
+        megdnn_assert(param().format !=
+                      param::ConvBias::Format::NCHW44_WINOGRAD);
         megdnn_assert(z.dtype.enumv() == dst.dtype.enumv());
         megdnn_assert(z.eq_shape(dst));
     }
@@ -163,10 +172,7 @@ std::string ConvBias::algo_name(const std::string& base, const T& p) {
 }
 
 #define FOREACH_CONV_BIAS_PARAM(cb) \
-    cb(WinogradParam)               \
-    cb(DirectParam)                 \
-    cb(MatmulParam)                 \
-    cb(DefaultParam)
+    cb(WinogradParam) cb(DirectParam) cb(MatmulParam) cb(DefaultParam)
 
 #define cb(pt)                             \
     template <>                            \

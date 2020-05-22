@@ -7,8 +7,8 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import hashlib
-import tarfile
 import os
+import tarfile
 
 from ....distributed.util import is_distributed
 from ....logger import get_logger
@@ -32,7 +32,7 @@ def load_raw_data_from_url(
 ):
     cached_file = os.path.join(raw_data_dir, filename)
     logger.debug(
-        "load_raw_data_from_url: downloading to or using cached %s ..." % cached_file
+        "load_raw_data_from_url: downloading to or using cached %s ...", cached_file
     )
     if not os.path.exists(cached_file):
         if is_distributed():
@@ -45,7 +45,7 @@ def load_raw_data_from_url(
     else:
         md5 = calculate_md5(cached_file)
     if target_md5 == md5:
-        logger.debug("%s exists with correct md5: %s" % (filename, target_md5))
+        logger.debug("%s exists with correct md5: %s", filename, target_md5)
     else:
         os.remove(cached_file)
         raise RuntimeError("{} exists but fail to match md5".format(filename))

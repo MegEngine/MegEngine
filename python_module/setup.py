@@ -55,6 +55,13 @@ package_data += [
     os.path.join('module', 'pytorch', 'torch_mem_fwd.cpp')
 ]
 
+with open('requires.txt') as f:
+    requires = f.read().splitlines()
+with open('requires-style.txt') as f:
+    requires_style = f.read().splitlines()
+with open('requires-test.txt') as f:
+    requires_test = f.read().splitlines()
+
 setup_kwargs = dict(
     name=package_name,
     version=__version__,
@@ -67,26 +74,10 @@ setup_kwargs = dict(
         'megengine': package_data,
     },
     ext_modules=[PrecompiledExtesion('megengine._internal._mgb')],
-    install_requires=[
-        'numpy>=1.17',
-        'opencv-python',
-        'pyarrow',
-        'requests',
-        'tabulate',
-        'tqdm',
-    ],
+    install_requires=requires,
     extras_require={
-        'dev': [
-            'black==19.10b0',
-            'isort==4.3.21',
-            'pylint==2.4.3',
-            'mypy==0.750',
-            'pytest==5.3.0',
-            'pytest-sphinx==0.2.2',
-        ],
-        'data': [
-            'scipy',
-        ],
+        'dev': requires_style + requires_test,
+        'ci': requires_test,
     },
     cmdclass={'build_ext': build_ext},
 )
@@ -114,7 +105,7 @@ setup_kwargs.update(dict(
     ],
     license='Apache 2.0',
     keywords='megengine deep learning',
-    data_files = [("", [
+    data_files = [("megengine", [
         "../LICENSE",
         "../ACKNOWLEDGMENTS",
     ])]

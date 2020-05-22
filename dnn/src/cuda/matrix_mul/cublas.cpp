@@ -42,7 +42,7 @@ bool MatrixMulForwardImpl::AlgoCuBlas::is_available(
          */
         return args.layout_a.stride[0] % 4 == 0 &&
                args.layout_b.stride[0] % 4 == 0 &&
-               current_device_prop().major > 5;
+               is_compute_capability_required(6, 1);
     }
     return false;
 }

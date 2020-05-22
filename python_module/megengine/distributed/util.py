@@ -63,9 +63,11 @@ def init_process_group(
     set_default_device(mgb.comp_node("gpu" + str(dev)))
 
     if rank == 0:
-        res = mgb.config.create_mm_server("0.0.0.0", master_port)
-        if res != master_port:
+        _master_port = mgb.config.create_mm_server("0.0.0.0", master_port)
+        if _master_port == -1:
             raise Exception("Failed to start server on port {}".format(master_port))
+    else:
+        assert master_port > 0, "master_port must be specified for non-zero rank"
 
 
 def is_distributed() -> bool:

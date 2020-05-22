@@ -85,7 +85,7 @@ void FusionChecker::ensure_init_graph() {
 
     SymbolVar jit_y;
     if (m_direct_build) {
-        auto ig_gen = std::make_unique<InternalGraphGenrator>(
+        auto ig_gen = std::make_unique<InternalGraphGenerator>(
                 m_truth_y.node()->owner_opr());
         ThinHashSet<VarNode*> endpoints_set;
         for (size_t i = 0; i < m_nr_input; ++i) {

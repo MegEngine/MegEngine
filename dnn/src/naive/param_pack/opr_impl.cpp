@@ -17,75 +17,40 @@ using namespace megdnn;
 using namespace naive;
 
 template <typename T>
-void ParamPackSplitImpl::exec_internal(_megdnn_tensor_in src, int32_t* table,
-                                       _megdnn_tensor_out dsts,
-                                       _megdnn_workspace) {
-    auto dsts_ptr = static_cast<T**>(dsts.raw_ptr);
-    auto src_ptr = src.ptr<T>();
-
-    auto inp_size = src.layout.total_nr_elems();
-    auto table_outer = table, table_inner = table_outer + inp_size;
-
-    for (size_t j = 0; j < inp_size; j++) {
-        int32_t i = table_outer[j];
-        int32_t idx = table_inner[j];
-        if (idx != -1) {
-            dsts_ptr[i][idx] = src_ptr[j];
-        }
-    }
-}
-
-void ParamPackSplitImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in table,
-                              _megdnn_tensor_out dsts,
-                              _megdnn_workspace workspace) {
-    check_exec(src.layout, table.layout, dsts.layout);
-    auto table_ptr = table.ptr<int32_t>();
-
-#define cb(DType)                                                       \
-    if (src.layout.dtype == DType()) {                                  \
-        using ctype = typename DTypeTrait<DType>::ctype;                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                   \
-                exec_internal<ctype>(src, table_ptr, dsts, workspace)); \
-        return;                                                         \
-    }
-    MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-    megdnn_throw("bad type");
-#undef cb
-}
-
-template <typename T>
-void ParamPackConcatImpl::exec_internal(_megdnn_tensor_in srcs, int32_t* table,
+void ParamPackConcatImpl::exec_internal(_megdnn_tensor_in srcs,
+                                        int32_t* offsets,
                                         _megdnn_tensor_out dst,
                                         _megdnn_workspace) {
-    size_t out_size = dst.layout.total_nr_elems();
-
     auto srcs_ptr = static_cast<const T**>(srcs.raw_ptr);
     auto dst_ptr = dst.ptr<T>();
 
-    auto table_outer = table, table_inner = table_outer + out_size;
-
-    for (size_t j = 0; j < out_size; j++) {
-        int32_t i = table_outer[j];
-        int32_t idx = table_inner[j];
-        if (idx != -1)
-            dst_ptr[j] = srcs_ptr[i][idx];
-        else
-            dst_ptr[j] = 0;
+    int32_t last_pos = 0;
+    for (size_t i = 0; i < srcs.layout[0]; i++) {
+        int32_t begin = offsets[i * 2], end = offsets[i * 2 + 1];
+        while (last_pos < begin) {
+            dst_ptr[last_pos] = 0;
+            last_pos++;
+        }
+        for (int32_t j = 0; j < end - begin; j++) {
+            dst_ptr[begin + j] = srcs_ptr[i][j];
+        }
+        last_pos = end;
     }
 }
 
-void ParamPackConcatImpl::exec(_megdnn_tensor_in srcs, _megdnn_tensor_in table,
+void ParamPackConcatImpl::exec(_megdnn_tensor_in srcs,
+                               _megdnn_tensor_in offsets,
                                _megdnn_tensor_out dst,
                                _megdnn_workspace workspace) {
-    check_exec(dst.layout, table.layout, srcs.layout);
-    auto table_ptr = table.ptr<int32_t>();
+    check_exec(dst.layout, offsets.layout, srcs.layout);
+    auto offsets_ptr = offsets.ptr<int32_t>();
 
-#define cb(DType)                                                       \
-    if (dst.layout.dtype == DType()) {                                  \
-        using ctype = typename DTypeTrait<DType>::ctype;                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                   \
-                exec_internal<ctype>(srcs, table_ptr, dst, workspace)); \
-        return;                                                         \
+#define cb(DType)                                                         \
+    if (dst.layout.dtype == DType()) {                                    \
+        using ctype = typename DTypeTrait<DType>::ctype;                  \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                     \
+                exec_internal<ctype>(srcs, offsets_ptr, dst, workspace)); \
+        return;                                                           \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     megdnn_throw("bad type");

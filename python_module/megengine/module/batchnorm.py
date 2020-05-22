@@ -126,7 +126,7 @@ class BatchNorm2d(_BatchNorm):
     By default, during training this layer keeps running estimates of its
     computed mean and variance, which are then used for normalization during
     evaluation. The running estimates are kept with a default :attr:`momentum`
-    of 0.1.
+    of 0.9.
 
     If :attr:`track_running_stats` is set to ``False``, this layer will not
     keep running estimates, and batch statistics are instead used during
@@ -136,7 +136,7 @@ class BatchNorm2d(_BatchNorm):
         This :attr:`momentum` argument is different from one used in optimizer
         classes and the conventional notion of momentum. Mathematically, the
         update rule for running statistics here is
-        :math:`\hat{x}_\text{new} = (1 - \text{momentum}) \times \hat{x} + \text{momentum} \times x_t`,
+        :math:`\hat{x}_\text{new} = \text{momentum} \times \hat{x} + (1 - \text{momentum}) \times x_t`,
         where :math:`\hat{x}` is the estimated statistic and :math:`x_t` is the
         new observed value.
 
@@ -154,7 +154,7 @@ class BatchNorm2d(_BatchNorm):
     :type momentum: float
     :param momentum: the value used for the `running_mean` and `running_var`
         computation.
-        Default: 0.1
+        Default: 0.9
     :type affine: bool
     :param affine: a boolean value that when set to ``True``, this module has
         learnable affine parameters. Default: ``True``
@@ -174,12 +174,18 @@ class BatchNorm2d(_BatchNorm):
 
         # With Learnable Parameters
         m = M.BatchNorm2d(4)
-        inp = mge.tensor(np.random.rand(64, 4, 32, 32))
+        inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
         oup = m(inp)
+        print(m.weight, m.bias)
         # Without Learnable Parameters
         m = M.BatchNorm2d(4, affine=False)
         oup = m(inp)
+        print(m.weight, m.bias)
 
+    .. testoutput::
+
+        Tensor([1. 1. 1. 1.]) Tensor([0. 0. 0. 0.])
+        None None
     """
 
     def _check_input_ndim(self, inp):

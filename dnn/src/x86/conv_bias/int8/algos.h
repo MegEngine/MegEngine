@@ -13,6 +13,29 @@
 
 namespace megdnn {
 namespace x86 {
+
+/* ===================== avx2 stride1 chanwise algo ===================== */
+class ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+    static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
+
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        return "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1";
+    }
+    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(FallbackConvBiasImpl* opr,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl*,
+            const NCBKernSizeParam& param) const override {
+        return get_kimpls(param);
+    }
+    void* type() const override;
+};
+
 /* ===================== avx2 stride1 direct algo ===================== */
 class ConvBiasImpl::AlgoDirectAvx2Stride1Int8 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
@@ -35,7 +58,7 @@ public:
     void* type() const override;
 };
 
-#if defined(MEGDNN_X86_WITH_MKL_DNN)
+#if MEGDNN_X86_WITH_MKL_DNN
 /* ===================== mkldnn qint8 algo ===================== */
 class ConvBiasImpl::AlgoMkldnnQint8 final : public AlgoBase {
     static void kern_mkldnn_s8x8x32(const NCBKernParam& param,

@@ -25,9 +25,7 @@ HalideExecutable::FunctionHandle::~FunctionHandle() {
             device_release(i.second);
         }
     }
-    if (uctx_map) {
-        delete uctx_map;
-    }
+    delete uctx_map;
     if (dl_handle) {
         ExecutableHelper::get().unload_lib(dl_handle);
     }

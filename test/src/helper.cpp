@@ -70,8 +70,8 @@ dtype, RandomDistribution::GAUSSIAN>::operator ()(
     auto ptr = ret->ptr<ctype>();
     auto mean = m_mean, std = m_std;
     for (size_t i = 0, it = shape.total_nr_elems(); i < it; i += 2) {
-        ctype u1 = (m_rng() + 1.0) / (m_rng.max() + 1.0),
-              u2 = (m_rng() + 1.0) / (m_rng.max() + 1.0),
+        ctype u1 = ctype((m_rng() + 1.0) / (m_rng.max() + 1.0)),
+              u2 = ctype((m_rng() + 1.0) / (m_rng.max() + 1.0)),
               r = ctype(std * std::sqrt(-2 * std::log(u1))),
               theta = ctype(2 * M_PI * u2),
               z0 = ctype(r * std::cos(theta) + mean),
@@ -104,6 +104,8 @@ namespace mgb {
         dtype::Float32, RandomDistribution::GAUSSIAN>;
     template class HostTensorGenerator<
         dtype::Float32, RandomDistribution::UNIFORM>;
+    template class HostTensorGenerator<
+        dtype::Float16, RandomDistribution::GAUSSIAN>;
     template class HostTensorGenerator<
         dtype::Int8, RandomDistribution::UNIFORM>;
     template class HostTensorGenerator<

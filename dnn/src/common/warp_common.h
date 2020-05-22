@@ -71,6 +71,8 @@
 
 #if MEGDNN_X86
 #include <xmmintrin.h>
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7
+#include "src/arm_common/simd_macro/marm_neon.h"
 #endif
 
 MIDOUT_DECL(megdnn_warp)
@@ -873,6 +875,12 @@ void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
                         d_data = _mm_and_si128(sA_data, v_INTER_TAB_SIZE2);
                         _mm_storeu_si128(dst, d_data);
                     }
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7
+                    uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2 - 1);
+                    for (; x1 <= bcols - 8; x1 += 8)
+                        vst1q_u16(A + x1,
+                                  vandq_u16(vld1q_u16(sA + x1), v_scale));
+
 #endif
                     for (; x1 < bcols; ++x1)
                         A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2 - 1));

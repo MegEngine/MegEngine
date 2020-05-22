@@ -26,7 +26,14 @@ class HTTPDownloadError(BaseException):
     """The class that represents http request error"""
 
 
-def download_from_url(url, dst, http_read_timeout=120):
+def download_from_url(url: str, dst: str, http_read_timeout=120):
+    """
+    Downloads file from given url to ``dst``
+
+    :param url: source URL
+    :param dst: saving path
+    :param http_read_timeout: how many seconds to wait for data before giving up
+    """
     dst = os.path.expanduser(dst)
     dst_dir = os.path.dirname(dst)
 

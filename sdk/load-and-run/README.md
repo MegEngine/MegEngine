@@ -3,60 +3,65 @@
 Load a model and run, for testing/debugging/profiling.
 
 ## Build
-*megvii3 build*
-```sh
-bazel build //brain/megbrain:load_and_run
+
+<!--
+-->
+
+### Build with cmake
+
+Build MegEngine from source following [README.md](../../README.md). It will also produce the executable, `load_and_run`, which loads a model and runs the test cases attached to the model.
+
+
+<!--
+-->
+
+## Dump Model with Test Cases Using [dump_with_testcase_mge.py](dump_with_testcase_mge.py)
+
+### Step 1
+
+Dump the model by calling the python API `megengine.jit.trace.dump()`.
+
+### Step 2
+
+Append the test cases to the dumped model using [dump_with_testcase_mge.py](dump_with_testcase_mge.py).
+
+The basic usage of [dump_with_testcase_mge.py](dump_with_testcase_mge.py) is
+
+```
+python3 dump_with_testcase_mge.py model -d input_description -o model_with_testcases
+
 ```
 
-See [mnist-example](../mnist-example) for detailed explanations on build.
+where `model` is the file dumped at step 1, `input_description` describes the input data of the test cases, and `model_with_testcases` is the saved model with test cases.
 
-## Dump Model
+`input_description` can be provided in the following ways:
 
-There are two methods to dump model:
+1. In the format `var0:file0;var1:file1...` meaning that `var0` should use
+   image file `file0`, `var1` should use image `file1` and so on. If there
+   is only one input var, the var name can be omitted. This can be combined
+   with `--resize-input` option.
+2. In the format `var0:#rand(min, max, shape...);var1:#rand(min, max)...`
+   meaning to fill the corresponding input vars with uniform random numbers
+   in the range `[min, max)`, optionally overriding its shape.
 
-1. Dump by `MegHair/utils/debug/load_network_and_run.py --dump-cpp-model
-   /path/to/output`, to test on random inputs. Useful for profiling.
-2. Pack model as specified by
-   [`dump_with_testcase.py`](dump_with_testcase.py), and use
-   that script to dump model. This is useful for checking correctness on
-   different platforms.
+For more usages, run
 
-### Input File for `dump_with_testcase.py`
+```
+python3 dump_with_testcase_mge.py --help
+```
 
-The input file must be a python pickle. It can be in one of the following two
-formats:
+### Example
 
-1. Contain a network that can be loaded by `meghair.utils.io.load_network`; in
-   such case, `--data` must be given and network output evaluated on a current
-   computing device is used as ground-truth. All output vars would be checked.
-   The input data can be one of the following:
-   1. In the format `var0:file0;var1:file1...` meaning that `var0` should use
-      image file `file0`, `var1` should use image `file1` and so on. If there
-      is only one input var, the var name can be omitted. This can be combined
-      with `--resize-input` option.
-   2. In the format `var0:#rand(min, max, shape...);var1:#rand(min, max)...` 
-      meaning to fill the corresponding input vars with uniform random numbers 
-      in the range `[min, max)`, optionally overriding its shape.
-2. Contain a dict in the format `{"outputs": [], "testcases": []}`, where
-   `outputs` is a list of output `VarNode`s and `testcases` is a list of test
-   cases. Each test case should be a dict that maps input var names to
-   corresponding values as `numpy.ndarray`. The expected outputs should also be
-   provided as inputs, and correctness should be checked by `AssertEqual`. You
-   can find more details in `dump_with_testcase.py`.
-
-### Input File for `dump_with_testcase_mge.py`
-
-The input file is obtained by calling `megengine.jit.trace.dump()`.
-`--data` must be given.
-
-## Example
-
-1. Obtain the model file by running [xornet.py](../../python_module/examples/xor/xornet.py)
+1. Obtain the model file by running [xornet.py](../xor-deploy/xornet.py).
 
 2. Dump the file with test cases attached to the model.
 
-    ```
-    python3 dump_with_testcase_mge.py xornet_deploy.mge -o xornet.mge -d "#rand(0.1, 0.8, 4, 2)"
-    ```
+   ```
+   python3 dump_with_testcase_mge.py xornet_deploy.mge -o xornet.mge -d "#rand(0.1, 0.8, 4, 2)"
+   ```
 
-    The dumped file `xornet.mge` can be loaded by `load_and_run`.
+3. Verify the correctness by running `load_and_run` at the target platform.
+
+   ```
+   load_and_run xornet.mge
+   ```
