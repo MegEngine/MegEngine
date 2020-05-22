@@ -84,6 +84,35 @@ void run_matrix_mul_mk4_tpl(const itype* A, const itype* B, otype* C, size_t M,
 
 template <typename itype, typename otype, bool transA, bool transB,
           typename comp_type = otype>
+void run_matrix_mul_mk4_dot_tpl(const itype* A, const itype* B, otype* C,
+                                size_t M, size_t N, size_t K, size_t LDA,
+                                size_t LDB, size_t LDC, const DType& A_type,
+                                const DType& B_type) {
+    Getter<itype, comp_type> getterA(A_type), getterB(B_type);
+    for (size_t m = 0; m < M; ++m) {
+        for (size_t n = 0; n < N; ++n) {
+            comp_type res[4] = {comp_type(0)};
+            for (size_t k = 0; k < K; ++k) {
+                for (size_t i = 0; i < 4; i++) {
+                    comp_type av, bv;
+                    for (size_t j = 0; j < 4; j++) {
+                        av = transA ? getterA(A[k * LDA + m * 16 + 4 * i + j])
+                                    : getterA(A[m * LDA + k * 16 + 4 * i + j]),
+                        bv = transB ? getterB(B[n * LDB + k * 4 + j])
+                                    : getterB(B[k * LDB + n * 4 + j]);
+                        res[i] += av * bv;
+                    }
+                }
+            }
+            for (size_t i = 0; i < 4; i++) {
+                C[m * LDC + n * 4 + i] = res[i];
+            }
+        }
+    }
+}
+
+template <typename itype, typename otype, bool transA, bool transB,
+          typename comp_type = otype>
 void run_matrix_mul_mk8_tpl(const itype* A, const itype* B, otype* C, size_t M,
                             size_t N, size_t K, size_t LDA, size_t LDB,
                             size_t LDC, const DType& A_type,

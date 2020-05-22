@@ -186,6 +186,8 @@ size_t MatrixMulForward::pack_size(const Param::Format format) {
             return 1;
         case Param::Format::MK4:
             return 4;
+        case Param::Format::MK4_DOT:
+            return 4;
         case Param::Format::MK8:
             return 8;
         default:
