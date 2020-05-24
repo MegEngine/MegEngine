@@ -16,6 +16,7 @@
 #include "src/armv7/matrix_mul/int8/kernel_4x8x8.h"
 #include "src/armv7/matrix_mul/int8/kernel_6x8x4.h"
 #include "src/armv7/matrix_mul/int8/kernel_mk4_4x2x16.h"
+#include "src/armv7/matrix_mul/int8/kernel_mk4_dot_8x6x4.h"
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/gemm_common.h"
 
@@ -252,6 +253,89 @@ void gemm_dots8_6x8::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
         }
     }
 }
+
+// ===========================gemm_mk4_dots8_8x6======================================
+MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_mk4_dots8_8x6);
+
+void gemm_mk4_dots8_8x6::pack_A(dt_int8* out, const dt_int8* in, int ldin,
+                                int y0, int ymax, int k0, int kmax,
+                                bool transpose) const {
+    megdnn_assert(!transpose,
+                  "matrix mul mk4 with transposed matrix A is not supported.");
+    megdnn_assert(ymax % 4 == 0 && y0 % 4 == 0,
+                  "mk4 format matmul with m is not times of 4.");
+    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0,
+                  "mk4 format matmul with k is not times of 4.");
+    matmul_mk4_dot_8x6x4::gemm_dots8_8x6_pack_A(out, in, ldin, y0, ymax, k0,
+                                                kmax);
+}
+
+void gemm_mk4_dots8_8x6::pack_B(dt_int8* out, const dt_int8* in, int ldin,
+                                int x0, int xmax, int k0, int kmax,
+                                bool transpose) const {
+    megdnn_assert(!transpose,
+                  "matrix mul mk4 with transposed matrix B is not supported");
+    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0,
+                  "mk4 format matmul with k is not times of 4.");
+    matmul_mk4_dot_8x6x4::gemm_dots8_8x6_pack_B(out, in, ldin, x0, xmax, k0,
+                                                kmax);
+}
+
+void gemm_mk4_dots8_8x6::kern(const dt_int8* packA, const dt_int8* packB,
+                              size_t M, size_t N, size_t K, dt_int32* C,
+                              size_t LDC, bool is_first_k, const dt_int32* bias,
+                              dt_int32* workspace) const {
+    MEGDNN_MARK_USED_VAR(bias);
+    constexpr size_t A_INTERLEAVE = 8;
+    constexpr size_t B_INTERLEAVE = 6;
+    //! K is packed to times of 4
+    K = round_up<size_t>(K, 4);
+    const int K4 = K * 4;
+    const int K6 = K * 6;
+    const int K8 = K * 8;
+
+    size_t m = 0;
+    for (; m + A_INTERLEAVE - 1 < M; m += A_INTERLEAVE) {
+        int32_t* output = C + ((m >> 2) * LDC);
+        const dt_int8* cur_packB = packB;
+        size_t n = 0;
+        for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
+            matmul_mk4_dot_8x6x4::kern_8x6(packA, cur_packB, K, output, LDC,
+                                           is_first_k);
+            output += 24;
+            cur_packB += K6;
+        }
+
+        for (; n < N; n += 4) {
+            size_t n_remain = std::min<size_t>(N - n, 4);
+            matmul_mk4_dot_8x6x4::kern_8x4(packA, cur_packB, K, output, LDC,
+                                           is_first_k, n_remain);
+            output += 16;
+            cur_packB += K4;
+        }
+        packA += K8;
+    }
+    for (; m < M; m += 4) {
+        int32_t* output = C + ((m >> 2) * LDC);
+        const dt_int8* cur_packB = packB;
+        size_t n = 0;
+        for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
+            matmul_mk4_dot_8x6x4::kern_4x6(packA, cur_packB, K, output, LDC,
+                                           is_first_k);
+            output += 24;
+            cur_packB += K6;
+        }
+        for (; n < N; n += 4) {
+            size_t n_remain = std::min<size_t>(N - n, 4);
+            matmul_mk4_dot_8x6x4::kern_4x4(packA, cur_packB, K, output, LDC,
+                                           is_first_k, n_remain);
+            output += 16;
+            cur_packB += K4;
+        }
+        packA += K4;
+    }
+}
+
 #endif
 
 // ===========================gemm_mk4_s8_4x2======================================

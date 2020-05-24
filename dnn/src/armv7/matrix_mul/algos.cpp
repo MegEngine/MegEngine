@@ -706,6 +706,73 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoQuint8DotK4x8x4,
                                      "AlgoQuint8DotK4x8x4"_hash,
                                      armv7::matmul::gemm_dot_quint8_4x8,
                                      uint8_t, int32_t);
+
+/* ======================== Int8 MK4 8x6x4 dot algo ======================== */
+namespace {
+void int8_mk4_8x6x4_dotprod_kern(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_armv7_matmul_kern,
+                 midout_iv("int8_mk4_8x6x4_dotprod_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto trA = kern_param.trA, trB = kern_param.trB;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        auto A_type = kern_param.A_type, B_type = kern_param.B_type,
+             C_type = kern_param.C_type;
+        const auto Aptr = kern_param.A<dt_int8>(),
+                   Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int32>();
+        armv7::matmul::gemm_mk4_dots8_8x6 strategy(M, N, K, A_type, B_type,
+                                                   C_type);
+        megdnn::matmul::GemmInterleaved<armv7::matmul::gemm_mk4_dots8_8x6>(
+                M, N, K, trA, trB, strategy)
+                .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC,
+                         kern_param.workspace_ptr);
+    }
+    MIDOUT_END();
+}
+}  // namespace
+
+bool MatrixMulImpl::AlgoInt8x8x32MK4_8x6x4DotProd::usable(
+        const KernSizeParam& kern_size_param) const {
+    return kern_size_param.A_type.enumv() == kern_size_param.B_type.enumv() &&
+           (kern_size_param.A_type.enumv() == DTypeEnum::Int8 ||
+            kern_size_param.A_type.enumv() == DTypeEnum::QuantizedS8) &&
+           (kern_size_param.C_type.enumv() == DTypeEnum::Int32 ||
+            kern_size_param.C_type.enumv() == DTypeEnum::QuantizedS32) &&
+           kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           kern_size_param.format == param::MatrixMul::Format::MK4_DOT &&
+           !kern_size_param.trA && !kern_size_param.trB;
+}
+
+size_t MatrixMulImpl::AlgoInt8x8x32MK4_8x6x4DotProd::get_workspace(
+        const KernSizeParam& kern_size_param) const {
+    MIDOUT_BEGIN(
+            megdnn_armv7_matmul_kern,
+            midout_iv("AlgoInt8x8x32MK4_8x6x4DotProd::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N,
+             K = kern_size_param.K;
+        auto trA = kern_size_param.trA, trB = kern_size_param.trB;
+        auto A_type = kern_size_param.A_type, B_type = kern_size_param.B_type,
+             C_type = kern_size_param.C_type;
+        armv7::matmul::gemm_mk4_dots8_8x6 strategy(M, N, K, A_type, B_type,
+                                                   C_type);
+        return megdnn::matmul::GemmInterleaved<
+                       armv7::matmul::gemm_mk4_dots8_8x6>(M, N, K, trA, trB,
+                                                          strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32MK4_8x6x4DotProd::get_kern(
+        const KernSizeParam&) const {
+    return int8_mk4_8x6x4_dotprod_kern;
+}
+
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32MK4_8x6x4DotProd,
+                                     megdnn_armv7_matmul_kern,
+                                     "AlgoInt8x8x32MK4_8x6x4DotProd"_hash,
+                                     armv7::matmul::gemm_mk4_dots8_8x6, int8_t,
+                                     int32_t);
 #endif
 
 /* ===================== F32 algo K4x8 ===================== */

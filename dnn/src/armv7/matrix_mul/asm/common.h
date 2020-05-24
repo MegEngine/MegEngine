@@ -125,6 +125,20 @@ static inline void interleave_4x1_2_d(const int64_t*& inptr0,
             : "q0", "q1", "q2", "q3", "cc", "memory");
 }
 
+static inline void interleave_2x1_4_s(const int32_t*& inptr0,
+                                      const int32_t*& inptr1,
+                                      int32_t*& outptr) {
+    asm volatile(
+            "vld1.32 {d0, d1},  [%[inptr0]]!\n"  // A0A1A2A3
+            "vld1.32 {d2, d3},  [%[inptr1]]!\n"  // A0A1A2A3
+            "vst1.32 {d0, d1},   [%[outptr]]!\n"
+            "vst1.32 {d2, d3},   [%[outptr]]!\n"
+            :
+            [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1), [outptr] "+r"(outptr)
+            :
+            : "d0", "d1", "d2", "d3", "cc", "memory");
+}
+
 template <typename T>
 static inline void interleave_8x8_1_b(const T*& inptr0, const T*& inptr1,
                                       const T*& inptr2, const T*& inptr3,
@@ -186,6 +200,17 @@ static inline void interleave_4x4_4_b(const T*& inptr0, const T*& inptr1,
               [outptr] "+r"(outptr)
             :
             : "q0", "q1", "q2", "q3", "memory");
+}
+
+template <typename T>
+static inline void interleave_2x4_4_b(const T*& inptr0, const T*& inptr1,
+                                      T*& outptr) {
+    static_assert(
+            std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
+            "interleave_2x4_4_b only support uint8_t and int8_t");
+    interleave_2x1_4_s(reinterpret_cast<const int32_t*&>(inptr0),
+                       reinterpret_cast<const int32_t*&>(inptr1),
+                       reinterpret_cast<int32_t*&>(outptr));
 }
 
 template <typename T>

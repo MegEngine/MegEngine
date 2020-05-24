@@ -86,6 +86,18 @@ TEST_F(ARMV7, MATRIX_MUL_UDOT) {
             dtype::Quantized8Asymm(4.0f, static_cast<uint8_t>(10)), dtype::Quantized8Asymm(3.0f, static_cast<uint8_t>(54)),
             dtype::QuantizedS32(12.0f), handle(), "AARCH32_QUINT8_K4X8X4");
 }
+
+TEST_F(ARMV7, MATRIX_MUL_MK4_DOT_INT8) {
+    std::vector<matrix_mul::TestArg> args;
+    for (size_t m : {1, 2, 3, 4, 5, 7, 10, 11})
+        for (size_t n : {1, 2, 3, 4, 5, 8, 16, 24, 25, 32})
+            for (size_t k : {1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 33, 34})
+                args.emplace_back(m, n, k, 0);
+    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
+                                 handle(), "AARCH32_INT8_MK4_8X6X4_DOTPROD",
+                                 param::MatrixMul::Format::MK4_DOT, 1, 1e-3,
+                                 std::move(args));
+}
 #endif
 
 #if MEGDNN_WITH_BENCHMARK
@@ -285,6 +297,53 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x32_K6x8x4) {
 }
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_QUINT8x8x32_K4x8x4) {
     run_8x8x32_quint_benchmark(handle());
+}
+
+TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x32_MK4_DOT) {
+    constexpr size_t RUNS = 50;
+    param::MatrixMul param;
+    Benchmarker<MatrixMul> benchmarker_default(handle());
+    benchmarker_default.set_times(RUNS)
+            .set_dtype(0, dtype::Int8())
+            .set_dtype(1, dtype::Int8())
+            .set_dtype(2, dtype::Int32())
+            .set_param(param)
+            .set_display(false);
+    benchmarker_default.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("AARCH32_INT8_K6X8X4"));
+
+    param.format = MatrixMul::Param::Format::MK4_DOT;
+    Benchmarker<MatrixMul> benchmarker_mk4_dot(handle());
+    benchmarker_mk4_dot.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("AARCH32_INT8_MK4_8X6X4_DOTPROD"));
+    benchmarker_mk4_dot.set_param(param)
+            .set_dtype(0, dtype::Int8())
+            .set_dtype(1, dtype::Int8())
+            .set_dtype(2, dtype::Int32())
+            .set_display(false)
+            .set_times(RUNS);
+
+    auto run = [&](size_t M, size_t N, size_t K) {
+        auto default_used =
+                benchmarker_default.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto mk4_dot_used = benchmarker_mk4_dot.exec(
+                                    {{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) /
+                            RUNS;
+        float computations = 2.f * M * K * N * 1e-6;
+        printf("run: {%zu{M} %zu{K} %zu{N}} default: %f ms %f Gflops mk4_dot: "
+               "%f ms "
+               "%f Gflops speedup: %f\n",
+               M, K, N, default_used, computations / default_used, mk4_dot_used,
+               computations / mk4_dot_used, default_used / mk4_dot_used);
+    };
+
+    for (size_t M = 4; M < 512; M *= 2) {
+        for (size_t K = 4; K < 512; K *= 2) {
+            for (size_t N : {4, 8, 33, 113, 128}) {
+                run(M, N, K);
+            }
+        }
+    }
 }
 #endif
 

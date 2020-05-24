@@ -93,6 +93,18 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
+
+class MatrixMulImpl::AlgoInt8x8x32MK4_8x6x4DotProd final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        return "AARCH32_INT8_MK4_8X6X4_DOTPROD";
+    }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+};
 #endif
 
 class MatrixMulImpl::AlgoF32Gemv final
