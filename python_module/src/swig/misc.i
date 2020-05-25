@@ -125,6 +125,7 @@ struct _OptimizeForInferenceOptions {
     }
 
     PyObject* _get_serialized_dtype(PyObject *dtype) {
+        PYTHON_GIL;
         std::string sdtype;
         auto write = [&sdtype](const void* data, size_t size) {
             auto pos = sdtype.size();
