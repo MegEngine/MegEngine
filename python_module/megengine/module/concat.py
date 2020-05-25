@@ -9,19 +9,14 @@ from typing import Iterable
 
 from .. import functional as F
 from ..core.tensor import Tensor
-from .module import QATModule
+from .module import Module
 
 
-class Concat(QATModule):
+class Concat(Module):
     r"""
-    A :class:`~.QATModule` to do functional concat, should replace concat with this module,
-    supporting ``qat`` mode and ``quantized`` mode.
+    A :class:`~.Module` to do functional concat. Could be replaced with :class:`~.QATModule`
+    version :class:`~.qat.concat.Concat` using :func:`~.quantize.quantize_qat`.
     """
 
     def forward(self, inps: Iterable[Tensor], axis: int = 0):
         return F.concat(inps, axis)
-
-    def forward_qat(self, inps: Iterable[Tensor], axis: int = 0):
-        return self.apply_fakequant_with_observer(
-            self.forward(inps, axis), self.act_fake_quant, self.act_observer
-        )

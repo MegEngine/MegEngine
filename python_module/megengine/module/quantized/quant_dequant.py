@@ -5,15 +5,14 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from ... import _internal as mgb
-from ... import module as Float
-from ...quantization.utils import register_method_to_class
-from ..module import Module
+from ..qat import quant_dequant as QAT
+from .module import QuantizedModule
 
 
-class QuantStub(Module):
+class QuantStub(QuantizedModule):
     r"""
-    A helper quantize operation on input and inference only.
+    quantized version of :class:`~.qat.quant_dequant.QuantStub`,
+    will convert input to quantized dtype.
     """
 
     def __init__(self, dtype=None):
@@ -21,35 +20,30 @@ class QuantStub(Module):
         self.output_dtype = dtype
 
     def forward(self, inp):
-        if self.training:
-            raise ValueError("quantized module only support inference.")
         return inp.astype(self.output_dtype)
 
+    @classmethod
+    def from_qat_module(cls, qat_module: QAT.QuantStub):
+        r"""
+        return a :class:`~.QuantizedModule` instance converted from a
+        :class:`~.QATModule` instance.
+        """
+        return cls(qat_module.get_activation_dtype())
 
-class DequantStub(Module):
+
+class DequantStub(QuantizedModule):
     r"""
-    A helper de-quantize operation and inference only.
+    quantized version of :class:`~.qat.quant_dequant.DequantStub`,
+    will restore quantized input to float32 dtype.
     """
 
     def forward(self, inp):
-        if self.training:
-            raise ValueError("quantized module only support inference.")
         return inp.astype("float32")
 
-
-@register_method_to_class(Float.QuantStub)
-def to_quantized(float_module):
-    r"""
-    Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
-    implemented here to avoid circular import.
-    """
-    return QuantStub(float_module.act_observer.get_dtype())
-
-
-@register_method_to_class(Float.DequantStub)
-def to_quantized(float_module):
-    r"""
-    Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
-    implemented here to avoid circular import.
-    """
-    return DequantStub()
+    @classmethod
+    def from_qat_module(cls, qat_module: QAT.DequantStub):
+        r"""
+        return a :class:`~.QuantizedModule` instance converted from a
+        :class:`~.QATModule` instance.
+        """
+        return cls()

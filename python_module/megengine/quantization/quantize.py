@@ -6,68 +6,125 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from copy import deepcopy
+from typing import Dict, Tuple
 
-from ..module import Module, QATModule, Sequential, quantized
+from .. import module as Float
+from ..module import Module
+from ..module import qat as QAT
+from ..module import quantized as Quantized
+from ..module.qat import QATModule
+from ..module.quantized import QuantizedModule
 from .qconfig import QConfig, ema_fakequant_qconfig
+
+
+def _get_quantable_module_names():
+    def is_quantable(key: str):
+        value = getattr(Quantized, key)
+        return (
+            isinstance(value, type)
+            and issubclass(value, QuantizedModule)
+            and value != QuantizedModule
+        )
+
+    # source should have all quantable modules' names
+    quantable_module_names = [key for key in dir(Quantized) if is_quantable(key)]
+    return quantable_module_names
+
+
+def _get_convert_dict() -> Tuple[
+    Dict[Module, QATModule], Dict[QATModule, QuantizedModule]
+]:
+    quantable_module_names = _get_quantable_module_names()
+
+    quantable_modules = [getattr(Float, key) for key in quantable_module_names]
+    qat_modules = [getattr(QAT, key) for key in quantable_module_names]
+    quantized_modules = [getattr(Quantized, key) for key in quantable_module_names]
+
+    float2qat_dict = dict(zip(quantable_modules, qat_modules))
+    qat2quantized_dict = dict(zip(qat_modules, quantized_modules))
+    return float2qat_dict, qat2quantized_dict
+
+
+_float2qat_dict, _qat2quantized_dict = _get_convert_dict()
 
 
 def quantize(module: Module, inplace=True):
     r"""
-    Recursively convert `module` to `quantized` mode through :meth:`~.Module.apply`.
+    Recursively convert :class:`~.QATModule` to :class:`~.QuantizedModule`
+    through :meth:`~.Module.apply`.
 
     :param module: root module to do convert recursively.
+    :param inplace: whether to convert submodules in-place.
     """
 
     if not inplace:
         module = deepcopy(module)
 
-    def is_qat_module(obj):
-        return isinstance(obj, QATModule)
+    qat_modules = tuple(_qat2quantized_dict.keys())
+
+    def is_qat(mod: Module):
+        return isinstance(mod, qat_modules)
 
     # no need to pass prefix and get pure key of parent Module.
     for key, submodule, parent in module._flatten(
-        with_key=True, with_parent=True, predicate=is_qat_module
+        with_key=True, with_parent=True, predicate=is_qat
     ):
-        if isinstance(parent, Sequential):
+        new_mod = _qat2quantized_dict[type(submodule)].from_qat_module(submodule)
+        if isinstance(parent, Float.Sequential):
             # cannnot use setattr to be compatible with Sequential's ``__setitem__``
-            parent[int(key.split(".")[-1])] = submodule.to_quantized()
+            parent[int(key.split(".")[-1])] = new_mod
         else:
-            setattr(parent, key.split(".")[-1], submodule.to_quantized())
+            setattr(parent, key.split(".")[-1], new_mod)
 
     return module
 
 
-def quantize_qat(module: Module, qconfig: QConfig = ema_fakequant_qconfig):
+def quantize_qat(
+    module: Module, inplace=True, qconfig: QConfig = ema_fakequant_qconfig
+):
     r"""
-    Recursively convert `module` to `qat` mode through :meth:`~.Module.apply`
-    and set qconfig relatively.
+    Recursively convert float :class:`~.Module` to :class:`~.QATModule`
+    through :meth:`~.Module.apply` and set qconfig relatively.
 
     :param module: root module to do convert recursively.
+    :param inplace: whether to convert submodules in-place.
+    :param qconfig: an instance of :class:`~.QConfig` to be set as submodules' qconfig.
+        default is ``ema_fakequant_qconfig``.
+    """
+
+    if not inplace:
+        module = deepcopy(module)
+
+    quantable_modules = tuple(_float2qat_dict.keys())
+
+    def is_quantable(mod: Module):
+        return isinstance(mod, quantable_modules)
+
+    # no need to pass prefix and get pure key of parent Module.
+    for key, submodule, parent in module._flatten(
+        with_key=True, with_parent=True, predicate=is_quantable
+    ):
+        new_mod = _float2qat_dict[type(submodule)].from_float_module(submodule)
+        if isinstance(parent, Float.Sequential):
+            # cannnot use setattr to be compatible with Sequential's ``__setitem__``
+            parent[int(key.split(".")[-1])] = new_mod
+        else:
+            setattr(parent, key.split(".")[-1], new_mod)
+
+    propagate_qconfig(module, qconfig)
+    return module
+
+
+def propagate_qconfig(module: QATModule, qconfig: QConfig):
+    r"""
+    Recursively set ``module``'s qconfig through :meth:`~.Module.apply`.
+
+    :param module: root module to traverse recursively.
     :param qconfig: a instance of :class:`~.QConfig` to be set as submodules' qconfig.
-        default is :any:`~.qconfig.ema_fakequant_qconfig`.
     """
 
     def fn(mod: Module):
         if isinstance(mod, QATModule):
-            mod.set_qat_mode(QATModule.QATMode.QAT)
-            mod.set_qconfig(qconfig)
-
-    module.apply(fn)
-
-
-def quantize_calibration(module: Module, qconfig: QConfig = ema_fakequant_qconfig):
-    r"""
-    Recursively convert `module` to `calibration` mode through :meth:`~.Module.apply`
-    and set qconfig relatively.
-
-    :param module: root module to do convert recursively.
-    :param qconfig: a instance of :class:`~.QConfig` to be set as submodules' qconfig.
-        default is :any:`~.qconfig.ema_fakequant_qconfig`.
-    """
-
-    def fn(mod: Module):
-        if isinstance(mod, QATModule):
-            mod.set_qat_mode(QATModule.QATMode.CALIBRATION)
             mod.set_qconfig(qconfig)
 
     module.apply(fn)

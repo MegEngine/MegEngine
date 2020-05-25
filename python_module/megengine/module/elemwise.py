@@ -8,7 +8,7 @@
 from .. import _internal as mgb
 from ..core import Tensor, wrap_io_tensor
 from ..core.graph import _use_default_if_none
-from .module import QATModule
+from .module import Module
 
 
 @wrap_io_tensor
@@ -22,10 +22,10 @@ def _elemwise_func(mode, *inputs, **kwargs) -> Tensor:
     return mgb.opr.elemwise(*inputs, mode=mode, **kwargs)
 
 
-class Elemwise(QATModule):
+class Elemwise(Module):
     r"""
-    A :class:`~.QATModule` to do elemwise operator, should functional operator with this module,
-    supporting ``qat`` mode and ``normal`` mode.
+    A :class:`~.Module` to do elemwise operator. Could be replaced with :class:`~.QATModule`
+    version :class:`~.qat.elemwise.Elemwise` using :func:`~.quantize.quantize_qat`.
 
     :param method: the elemwise method, support the following string.
         It will do the normal elemwise operator for float.
@@ -88,8 +88,3 @@ class Elemwise(QATModule):
 
     def forward(self, *inps):
         return _elemwise_func(self.method, *inps)
-
-    def forward_qat(self, *inps):
-        return self.apply_fakequant_with_observer(
-            self.forward(*inps), self.act_fake_quant, self.act_observer,
-        )

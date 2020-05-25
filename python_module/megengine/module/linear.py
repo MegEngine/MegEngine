@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -11,10 +10,10 @@ import numpy as np
 from .. import functional as F
 from ..core import Parameter
 from . import init
-from .module import QATModule
+from .module import Module
 
 
-class Linear(QATModule):
+class Linear(Module):
     r"""Applies a linear transformation to the input. For instance, if input
     is x, then output y is:
 
@@ -60,13 +59,3 @@ class Linear(QATModule):
 
     def forward(self, x):
         return self._calc_linear(x, self.weight, self.bias)
-
-    def forward_qat(self, x):
-        w_qat = self.apply_fakequant_with_observer(
-            self.weight, self.weight_fake_quant, self.weight_observer
-        )
-        return self.apply_fakequant_with_observer(
-            self._calc_linear(x, w_qat, self.bias),
-            self.act_fake_quant,
-            self.act_observer,
-        )

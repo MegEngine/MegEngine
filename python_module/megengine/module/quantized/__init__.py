@@ -9,4 +9,5 @@ from .concat import Concat
 from .conv_bn_relu import ConvBn2d, ConvBnRelu2d
 from .elemwise import Elemwise
 from .linear import Linear
+from .module import QuantizedModule
 from .quant_dequant import DequantStub, QuantStub

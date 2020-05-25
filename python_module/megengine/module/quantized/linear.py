@@ -10,19 +10,13 @@ import numpy as np
 import megengine._internal as mgb
 
 from ... import functional as F
-from ... import module as Float
 from ...core import Parameter
-from ...quantization.utils import register_method_to_class
-from ..module import Module
+from ..qat import linear as QAT
+from .module import QuantizedModule
 
 
-class Linear(Module):
-    r"""Applies a quantized linear transformation to the input. The module
-    usually convert from QAT module by to_quantized method.
-
-    :param dtype: output data type.
-
-    """
+class Linear(QuantizedModule):
+    r"""quantized version of :class:`~.qat.linear.Linear`."""
 
     def __init__(
         self, dtype: np.dtype = None,
@@ -44,17 +38,16 @@ class Linear(Module):
             None if self.bias is None else self.bias.astype(bias_dtype),
         ).astype(self.output_dtype)
 
-
-@register_method_to_class(Float.Linear)
-def to_quantized(float_module):
-    r"""
-    Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
-    implemented here to avoid circular import.
-    """
-    output_dtype = float_module.act_observer.get_dtype()
-    qmod = Linear(dtype=output_dtype,)
-    weight = float_module.weight.astype(float_module.weight_observer.get_dtype())
-    qmod.weight = Parameter(weight.numpy())
-    if float_module.bias is not None:
-        qmod.bias = Parameter(float_module.bias.numpy())
-    return qmod
+    @classmethod
+    def from_qat_module(cls, qat_module: QAT.Linear):
+        r"""
+        return a :class:`~.QuantizedModule` instance converted from a
+        :class:`~.QATModule` instance.
+        """
+        output_dtype = qat_module.get_activation_dtype()
+        qmod = cls(dtype=output_dtype)
+        weight = qat_module.weight.astype(qat_module.get_weight_dtype())
+        qmod.weight = Parameter(weight.numpy())
+        if qat_module.bias is not None:
+            qmod.bias = Parameter(qat_module.bias.numpy())
+        return qmod

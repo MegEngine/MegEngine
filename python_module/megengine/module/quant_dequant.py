@@ -5,30 +5,24 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from .module import QATModule
+from .module import Module
 
 
-class QuantStub(QATModule):
+class QuantStub(Module):
     r"""
-    A helper QATModule doing quantize operation on input.
+    A helper :class:`~.Module` simply returning input. Could be replaced with :class:`~.QATModule`
+    version :class:`~.qat.QuantStub` using :func:`~.quantize.quantize_qat`.
     """
 
     def forward(self, inp):
         return inp
 
-    def forward_qat(self, inp):
-        return self.apply_fakequant_with_observer(
-            inp, self.act_fake_quant, self.act_observer
-        )
 
-
-class DequantStub(QATModule):
+class DequantStub(Module):
     r"""
-    A helper QATModule doing de-quantize operation on input.
+    A helper :class:`~.Module` simply returning input. Could be replaced with :class:`~.QATModule`
+    version :class:`~.qat.DequantStub` using :func:`~.quantize.quantize_qat`.
     """
 
     def forward(self, inp):
-        return inp
-
-    def forward_qat(self, inp):
         return inp

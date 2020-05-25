@@ -5,7 +5,6 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from functools import partial
 from typing import Tuple, Union
 
 import megengine._internal as mgb
@@ -13,11 +12,11 @@ import megengine._internal as mgb
 from ... import module as Float
 from ...core import Parameter
 from ...functional import conv_bias_activation
-from ...module import Conv2d
-from ...quantization.utils import register_method_to_class
+from ..qat import conv_bn_relu as QAT
+from .module import QuantizedModule
 
 
-class _ConvBnActivation2d(Conv2d):
+class _ConvBnActivation2d(Float.Conv2d, QuantizedModule):
     r"""Applies a 2D convolution over an quantized input tensor, inference only.
 
     The parameter is same with :class: `~.Conv2d`
@@ -68,44 +67,41 @@ class _ConvBnActivation2d(Conv2d):
             nonlinear_mode=nonlinear_mode,
         )
 
+    @classmethod
+    def from_qat_module(cls, qat_module: QAT._ConvBnActivation2d):
+        r"""
+        return a :class:`~.QuantizedModule` instance converted from a
+        :class:`~.QATModule` instance.
+        """
+        output_dtype = qat_module.get_activation_dtype()
+        qconv = cls(
+            qat_module.conv.in_channels,
+            qat_module.conv.out_channels,
+            qat_module.conv.kernel_size,
+            qat_module.conv.stride,
+            qat_module.conv.padding,
+            qat_module.conv.dilation,
+            qat_module.conv.groups,
+            dtype=output_dtype,
+        )
+        w_fold, b_fold = qat_module.fold_weight_bias(
+            qat_module.bn.running_mean, qat_module.bn.running_var
+        )
+        weight = w_fold.astype(qat_module.get_weight_dtype())
+        qconv.weight = Parameter(weight.numpy())
+        qconv.bias = Parameter(b_fold.numpy())
+        return qconv
+
 
 class ConvBn2d(_ConvBnActivation2d):
+    r"""quantized version of :class:`~.qat.conv_bn_relu.ConvBn2d`."""
+
     def forward(self, inp):
-        if self.training:
-            raise ValueError("quantized module only support inference.")
         return self.calc_conv_quantized(inp, nonlinear_mode="IDENTITY")
 
 
 class ConvBnRelu2d(_ConvBnActivation2d):
+    r"""quantized version of :class:`~.qat.conv_bn_relu.ConvBnRelu2d`."""
+
     def forward(self, inp):
-        if self.training:
-            raise ValueError("quantized module only support inference.")
         return self.calc_conv_quantized(inp, nonlinear_mode="RELU")
-
-
-def to_quantized(quantized_class, float_module):
-    output_dtype = float_module.act_observer.get_dtype()
-    qconv = quantized_class(
-        float_module.conv.in_channels,
-        float_module.conv.out_channels,
-        float_module.conv.kernel_size,
-        float_module.conv.stride,
-        float_module.conv.padding,
-        float_module.conv.dilation,
-        float_module.conv.groups,
-        dtype=output_dtype,
-    )
-    w_fold, b_fold = float_module.fold_weight_bias(
-        float_module.bn.running_mean, float_module.bn.running_var
-    )
-    weight = w_fold.astype(float_module.weight_observer.get_dtype())
-    qconv.weight = Parameter(weight.numpy())
-    qconv.bias = Parameter(b_fold.numpy())
-
-    return qconv
-
-
-# replace :class:`~.module.QATModule`'s ``to_quantized`` method.
-# implemented here to avoid circular import.
-register_method_to_class(Float.ConvBn2d)(partial(to_quantized, ConvBn2d))
-register_method_to_class(Float.ConvBnRelu2d)(partial(to_quantized, ConvBnRelu2d))

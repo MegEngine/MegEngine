@@ -27,10 +27,10 @@ from .utils import _decide_comp_node_and_comp_graph
 def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
     """Applies a linear transformation to the input.
 
-    Refer to :class:`~.Linear` for more information.
+    Refer to :class:`~.module.linear.Linear` for more information.
 
     :param inp: the input tensor with shape `(N, in_features)`.
-    :param weight: the weight with shape `(out_features, in_features)`. 
+    :param weight: the weight with shape `(out_features, in_features)`.
     :param bias: the bias with shape `(out_features,)`.
         Default: ``None``
     """
@@ -300,9 +300,9 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
 def softplus(inp: Tensor, beta: float = 1, threshold: float = 20) -> Tensor:
     r"""
     Performs the elementwise function:
-    
+
     .. math::
-        
+
         \mathsf{softplus}(x) = \log(1+\exp(\beta x)) / \beta.
 
     For numerical stability the identity function is used when :math:`\beta x > \textrm{threshold}`.

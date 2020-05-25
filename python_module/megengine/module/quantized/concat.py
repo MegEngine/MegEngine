@@ -7,17 +7,15 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable
 
-from ... import _internal as mgb
 from ... import functional as F
-from ... import module as Float
 from ...core.tensor import Tensor
-from ...quantization.utils import register_method_to_class
-from ..module import Module
+from ..qat import concat as QAT
+from .module import QuantizedModule
 
 
-class Concat(Module):
+class Concat(QuantizedModule):
     r"""
-    A :class:`~.Module` to do quantized concat, inference only.
+    A :class:`~.QuantizedModule` to do quantized concat, inference only.
     """
 
     def __init__(self, dtype=None):
@@ -25,16 +23,13 @@ class Concat(Module):
         self.output_dtype = dtype
 
     def forward(self, inps: Iterable[Tensor], axis: int = 0):
-        if self.training:
-            raise ValueError("quantized module only support inference.")
         new_inps = (x.astype(self.output_dtype) for x in inps)
         return F.concat(new_inps, axis)
 
-
-@register_method_to_class(Float.Concat)
-def to_quantized(float_module):
-    r"""
-    Replace :class:`~.module.QATModule`'s ``to_quantized`` method.
-    implemented here to avoid circular import.
-    """
-    return Concat(float_module.act_observer.get_dtype())
+    @classmethod
+    def from_qat_module(cls, qat_module: QAT.Concat):
+        r"""
+        return a :class:`~.QuantizedModule` instance converted from a
+        :class:`~.QATModule` instance.
+        """
+        return cls(qat_module.get_activation_dtype())

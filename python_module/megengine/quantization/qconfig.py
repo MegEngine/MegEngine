@@ -15,16 +15,12 @@ from .observer import (
 
 
 class QConfig:
-    """
+    r"""
     A config class indicating how to do quantize toward :class:`~.QATModule`'s
-    ``activation`` and ``weight``.
-
-    And ``fake_quant`` parameter to indicate
-
-    See :meth:`~.QATModule.set_qconfig` for detail usage.
+    ``activation`` and ``weight``. See :meth:`~.QATModule.set_qconfig` for detail usage.
 
     :param weight_observer: interface to instantiate an :class:`~.Observer` indicating
--        how to collect scales and zero_point of wegiht.
+        how to collect scales and zero_point of wegiht.
     :param act_observer: similar to ``weight_observer`` but toward activation.
     :param fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
         how to do fake_quant calculation. can be invoked multi times to get different
