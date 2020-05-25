@@ -8,7 +8,7 @@
 from .. import functional as F
 from .._internal.dtype import _metadata_dict
 from ..module import Module
-from .observer import Round
+from .observer import ObserverMode, Round
 
 
 class FakeQuantize(Module):
@@ -35,14 +35,25 @@ class FakeQuantize(Module):
     def disable(self):
         self.enabled = False
 
-    def forward(self, inp, scale, zero_point):
+    def forward(self, inp, q_dict):
         if self.enabled:
-            # Quant
-            oup = Round()(inp / scale) + zero_point
-            # clip
-            oup = F.minimum(F.maximum(oup, self.qmin), self.qmax)
-            # DeQuant
-            oup = (oup - zero_point) * scale
-            return oup
-
+            if q_dict["mode"] == ObserverMode.SYMMERTIC:
+                scale = q_dict["scale"]
+                # Quant
+                oup = Round()(inp / scale)
+                # clip
+                oup = F.minimum(F.maximum(oup, self.qmin), self.qmax)
+                # DeQuant
+                oup = (oup) * scale
+                return oup
+            else:
+                scale = q_dict["scale"]
+                zero_point = q_dict["zero_point"]
+                # Quant
+                oup = Round()(inp / scale) + zero_point
+                # clip
+                oup = F.minimum(F.maximum(oup, self.qmin), self.qmax)
+                # DeQuant
+                oup = (oup - zero_point) * scale
+                return oup
         return inp

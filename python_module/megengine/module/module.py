@@ -505,8 +505,8 @@ class QATModule(Module):
     ):
         oup = self.apply_observer(target, obs)
         if fq is not None:
-            scale, zero_point = obs.get_qparams()
-            oup = fq(oup, scale, zero_point)
+            q_dict = obs.get_qparams()
+            oup = fq(oup, q_dict)
         return oup
 
     def set_qat_mode(self, mode: QATMode):
