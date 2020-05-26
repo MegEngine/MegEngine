@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import functools
 import socket
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import megengine._internal as mgb
 
@@ -122,9 +122,8 @@ def synchronized(func: Callable):
     return wrapper
 
 
-def get_free_ports(num: Optional[int] = 1) -> int:
+def get_free_ports(num: int) -> List[int]:
     """Get one or more free ports.
-       Return an integer if num is 1, otherwise return a list of integers
     """
     socks, ports = [], []
     for i in range(num):
@@ -134,4 +133,4 @@ def get_free_ports(num: Optional[int] = 1) -> int:
         ports.append(sock.getsockname()[1])
     for sock in socks:
         sock.close()
-    return ports[0] if num == 1 else ports
+    return ports
