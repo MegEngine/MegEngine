@@ -1,5 +1,5 @@
 /**
- * \file src/x86/conv_bias/int8/avx2_chanwsie_stride1.cpp
+ * \file src/x86/conv_bias/int8/avx2_chanwsie_stride2.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -10,13 +10,13 @@
  * implied.
  */
 
-#include "src/x86/conv_bias/int8/avx2_chanwise_stride1.h"
+#include "src/x86/conv_bias/int8/avx2_chanwise_stride2.h"
 #include "src/x86/conv_bias/int8/avx2_chanwise_kern.h"
 #include "src/x86/elemwise_op.h"
 
 namespace megdnn {
 namespace x86 {
-namespace avx2_chanwise_stride1 {
+namespace avx2_chanwise_stride2 {
 
 template <size_t filter, BiasMode bias_mode, bool is_quantized, typename Op>
 void conv_kimpl(WorkspaceBundle bundle, const NCBKernParam& kern_param,
@@ -64,13 +64,13 @@ void conv_kimpl(WorkspaceBundle bundle, const NCBKernParam& kern_param,
     }
 
 #define KERN_NEED_POST_PROCESS(filter)                                         \
-    avx2_chanwise_direct_stride1_##filter##x##filter##_int8<bias_mode, true,   \
+    avx2_chanwise_direct_stride2_##filter##x##filter##_int8<bias_mode, true,   \
                                                             Op>(               \
             sptr, fptr, bptr, tptr, static_cast<int8_t*>(dptr), IH2, IW2, OH2, \
             OW2, op)
 
 #define KERN_NO_POST_PROCESS(filter)                                          \
-    avx2_chanwise_direct_stride1_##filter##x##filter##_int8<bias_mode, false, \
+    avx2_chanwise_direct_stride2_##filter##x##filter##_int8<bias_mode, false, \
                                                             Op>(              \
             sptr, fptr, bptr, static_cast<int32_t*>(dptr), nullptr, IH2, IW2, \
             OH2, OW2, op)
@@ -128,7 +128,8 @@ SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
                                               MEGDNN_COMMA dt_qint8>)        \
             break;                                                           \
         default:                                                             \
-            megdnn_assert(0);                                                \
+            megdnn_assert(0, "do not support nonlineMode: %d",               \
+                          static_cast<int>(kern_param.nonlineMode));         \
             break;                                                           \
     }
 
@@ -141,43 +142,47 @@ SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
             GET_OP_PARAM(i, BiasMode::BROADCAST_CHANNEL_BIAS, is_quantized) \
             break;                                                          \
         default:                                                            \
-            megdnn_assert(0);                                               \
+            megdnn_assert(0, "do not support bias mode: %d",                \
+                          static_cast<int>(kern_param.bias_mode));          \
             break;                                                          \
     }
 
-#define GET_QUANTIZED(i)                   \
-    switch (kern_param.dst_type.enumv()) { \
-        case DTypeEnum::QuantizedS8:       \
-            GET_BIAS_MODE_PARAM(i, true)   \
-            break;                         \
-        case DTypeEnum::QuantizedS32:      \
-            GET_BIAS_MODE_PARAM(i, false)  \
-            break;                         \
-        case DTypeEnum::Int32:             \
-            GET_BIAS_MODE_PARAM(i, false)  \
-            break;                         \
-        default:                           \
-            megdnn_assert(0);              \
-            break;                         \
+#define GET_QUANTIZED(i)                                                  \
+    switch (kern_param.dst_type.enumv()) {                                \
+        case DTypeEnum::QuantizedS8:                                      \
+            GET_BIAS_MODE_PARAM(i, true)                                  \
+            break;                                                        \
+        case DTypeEnum::QuantizedS32:                                     \
+            GET_BIAS_MODE_PARAM(i, false)                                 \
+            break;                                                        \
+        case DTypeEnum::Int32:                                            \
+            GET_BIAS_MODE_PARAM(i, false)                                 \
+            break;                                                        \
+        default:                                                          \
+            megdnn_assert(0, "do not support dtype: %d",                  \
+                          static_cast<int>(kern_param.dst_type.enumv())); \
+            break;                                                        \
     }
 
-#define DISPATCH_CONV_KERN()                     \
-    switch (kern_param.filter_meta.spatial[0]) { \
-        case 2:                                  \
-            GET_QUANTIZED(2)                     \
-            break;                               \
-        case 3:                                  \
-            GET_QUANTIZED(3)                     \
-            break;                               \
-        case 5:                                  \
-            GET_QUANTIZED(5)                     \
-            break;                               \
-        case 7:                                  \
-            GET_QUANTIZED(7)                     \
-            break;                               \
-        default:                                 \
-            megdnn_assert(0);                    \
-            break;                               \
+#define DISPATCH_CONV_KERN()                                              \
+    switch (kern_param.filter_meta.spatial[0]) {                          \
+        case 2:                                                           \
+            GET_QUANTIZED(2)                                              \
+            break;                                                        \
+        case 3:                                                           \
+            GET_QUANTIZED(3)                                              \
+            break;                                                        \
+        case 5:                                                           \
+            GET_QUANTIZED(5)                                              \
+            break;                                                        \
+        case 7:                                                           \
+            GET_QUANTIZED(7)                                              \
+            break;                                                        \
+        default:                                                          \
+            megdnn_assert(                                                \
+                    0, "do not support kernel: %d",                       \
+                    static_cast<int>(kern_param.filter_meta.spatial[0])); \
+            break;                                                        \
     }
 
     DISPATCH_CONV_KERN();
@@ -192,7 +197,7 @@ SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
     return ncb_kerns;
 }
 
-}  // namespace avx2_chanwise_stride1
+}  // namespace avx2_chanwise_stride2
 }  // namespace x86
 }  // namespace megdnn
 

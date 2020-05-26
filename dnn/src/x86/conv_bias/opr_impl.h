@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -32,6 +33,7 @@ public:
     class AlgoDirectAvx2Stride1Int8;
     class AlgoAVX2DirectConvStride2;
     class AlgoChanWiseAvx2Stride1Qint8;
+    class AlgoChanWiseAvx2Stride2Qint8;
 #if MEGDNN_X86_WITH_MKL_DNN
     class AlgoMkldnnConv;
     class AlgoMkldnnQint8;

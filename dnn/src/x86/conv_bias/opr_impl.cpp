@@ -6,17 +6,18 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/x86/conv_bias/opr_impl.h"
 #include <algorithm>
 #include <memory>
-#include "src/x86/matrix_mul/opr_impl.h"
 #include "src/common/metahelper.h"
 #include "src/common/opr_delegate.h"
 #include "src/x86/conv_bias/f32/algos.h"
 #include "src/x86/conv_bias/int8/algos.h"
+#include "src/x86/matrix_mul/opr_impl.h"
 
 using namespace megdnn;
 using namespace x86;
@@ -69,6 +70,10 @@ void* ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::type() const {
     return x86_algo_type;
 }
 
+void* ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::type() const {
+    return x86_algo_type;
+}
+
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoDirect stride1_direct_large_group{true};
     AlgoDirect stride1_direct_small_group{false};
@@ -77,6 +82,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoDirectAvx2Stride1Int8 avx2_stride1_direct_int8;
     AlgoAVX2DirectConvStride2 avx2_stride2_direct;
     AlgoChanWiseAvx2Stride1Qint8 avx2_stride1_chanwsie_qint8;
+    AlgoChanWiseAvx2Stride2Qint8 avx2_stride2_chanwsie_qint8;
     AlgoMatrixMul matmul;
 #if MEGDNN_X86_WITH_MKL_DNN
     AlgoMkldnnMatmulQint8 mkldnn_matmul_qint8;
@@ -85,6 +91,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoMkldnnConv mkldnn_conv_fp32;
 #endif
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
+
 public:
     AlgoPack() {
 #if MEGDNN_X86_WITH_MKL_DNN
@@ -100,6 +107,7 @@ public:
         all_algos.emplace_back(&avx2_stride1_direct_int8);
         all_algos.emplace_back(&avx2_stride2_direct);
         all_algos.emplace_back(&avx2_stride1_chanwsie_qint8);
+        all_algos.emplace_back(&avx2_stride2_chanwsie_qint8);
         all_algos.emplace_back(&matmul);
 
         static CpuOprDelegationStorage<> storage;
@@ -107,7 +115,8 @@ public:
         auto&& matmul_algos =
                 static_cast<MatrixMulImpl*>(matmul_opr)->algo_pack();
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr) continue;
+            if (algo->type() == nullptr)
+                continue;
             for (uint32_t tile_size : {8, 16, 24}) {
                 refhold.emplace_back(new AlgoFP32WinogradF63_8x8(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),

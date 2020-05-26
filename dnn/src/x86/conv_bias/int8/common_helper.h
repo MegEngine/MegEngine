@@ -6,13 +6,15 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
 #include <immintrin.h>
-#include "src/common/unroll_macro.h"
 #include "megdnn/arch.h"
+#include "src/common/unroll_macro.h"
+#include "src/x86/conv_bias/int8/chanwise_helper.h"
 #ifdef WIN32
 #include <smmintrin.h>
 #endif

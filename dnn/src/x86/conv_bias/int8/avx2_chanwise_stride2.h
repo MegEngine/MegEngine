@@ -1,5 +1,5 @@
 /**
- * \file src/x86/conv_bias/int8/avx2_chanwsie_stride1.h
+ * \file src/x86/conv_bias/int8/avx2_chanwsie_stride2.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -16,14 +16,14 @@
 
 namespace megdnn {
 namespace x86 {
-namespace avx2_chanwise_stride1 {
+namespace avx2_chanwise_stride2 {
 using conv_fun = std::function<void(WorkspaceBundle bundle,
                                     const NCBKernParam& kern_param,
                                     const NCBKernIndex& ncb_index)>;
 SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param,
                                 WorkspaceBundle bundle);
 
-}  // namespace avx2_chanwise_stride1
+}  // namespace avx2_chanwise_stride2
 }  // namespace x86
 }  // namespace megdnn
 

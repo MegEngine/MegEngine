@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "src/x86/conv_bias/opr_impl.h"
@@ -23,6 +24,28 @@ public:
     bool is_reproducible() const override { return true; }
     const char* name() const override {
         return "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1";
+    }
+    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(FallbackConvBiasImpl* opr,
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl*,
+            const NCBKernSizeParam& param) const override {
+        return get_kimpls(param);
+    }
+    void* type() const override;
+};
+
+/* ===================== avx2 stride2 chanwise algo ===================== */
+class ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+    static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
+
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        return "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE2";
     }
     bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -125,7 +148,7 @@ public:
     void* type() const override;
 };
 #endif
-/* ===================== avx2 int8 direct conv stride2 algo ===================== */
+/* ================== avx2 int8 direct conv stride2 algo ================== */
 class ConvBiasImpl::AlgoAVX2DirectConvStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
