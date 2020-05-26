@@ -320,6 +320,11 @@ public:
             const ConvBiasImpl::NCBKernSizeParam& param,
             MatrixMulImpl::AlgoBase::PackMode pack_mode,
             param::ConvBias::Format format);
+
+    static bool can_make_conv1x1_strategy(
+            const ConvBiasImpl::NCBKernSizeParam& param,
+            MatrixMulImpl::AlgoBase::PackMode pack_mode,
+            param::ConvBias::Format format);
 };
 
 }  // namespace conv1x1

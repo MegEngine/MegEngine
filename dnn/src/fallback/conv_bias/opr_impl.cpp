@@ -27,7 +27,7 @@ using namespace megdnn;
 using namespace fallback;
 
 size_t megdnn::fallback::get_format_pack_size(param::ConvBias::Format format) {
-    switch(format){
+    switch (format) {
         case param::ConvBias::Format::NCHW44:
         case param::ConvBias::Format::NCHW4:
             return 4_z;
@@ -57,10 +57,18 @@ public:
         auto&& matmul_algos =
                 static_cast<fallback::MatrixMulImpl*>(matmul_opr)->algo_pack();
         for (auto&& algo : matmul_algos) {
+#if MEGDNN_X86
+//! As we haven't direct conv for int8x8x16 yet, if we disable gemv here, it may
+//! fallback to naive implementation, which may cause performance very low, so
+//! here we just enable im2col for gemv in x86 backend.
+//! FIXME: remove it when we add direct conv support for int8x8x16
+#else
             if (algo->algoset() ==
                 MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
                 continue;
             }
+#endif
+
             for (size_t ohw_tile_size : {192, 384, 96, 48, 24}) {
                 refhold.emplace_back(new AlgoIm2col(
                         static_cast<MatrixMulImpl::AlgoBase*>(algo),

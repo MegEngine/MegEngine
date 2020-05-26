@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/fallback/fixture.h"
 
@@ -73,24 +74,115 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL) {
     profile(3, 3, 112, 112, 3, 1);
 }
 
+TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL_8832) {
+    using Param = Convolution::Param;
+    auto run = [&](const TensorShapeArray& shapes, Param param) {
+        Benchmarker<Convolution> benchmarker_float(handle());
+        size_t RUN = 50;
+        auto tfloat = benchmarker_float.set_display(false)
+                              .set_dtype(0, dtype::Int8{})
+                              .set_dtype(1, dtype::Int8{})
+                              .set_dtype(2, dtype::Int32{})
+                              .set_times(RUN)
+                              .set_param(param)
+                              .exec(shapes);
+        size_t IC = shapes[1][1];
+        size_t FH = shapes[1][2];
+        size_t FW = shapes[1][3];
+        TensorLayout dst_layout;
+        auto opr = handle()->create_operator<Convolution>();
+        opr->param() = param;
+        opr->deduce_layout({shapes[0], dtype::Float32()},
+                           {shapes[1], dtype::Float32()}, dst_layout);
+        printf("fp32 flops: %.3f mflops\n",
+               (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
+                       (tfloat / RUN * 1000));
+    };
+    auto profile = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
+                       size_t stride) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = kernel / 2;
+        param.pad_w = kernel / 2;
+        param.pad_h = 0;
+        param.pad_w = 0;
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
+               oc, ic, w, h, stride, kernel);
+
+        run({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
+    };
+
+    profile(48, 128, 56, 88, 1, 1);
+    profile(56, 128, 64, 80, 3, 1);
+    profile(24, 3, 256, 320, 3, 2);
+}
+
+TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL_8816) {
+    using Param = Convolution::Param;
+    auto run = [&](const TensorShapeArray& shapes, Param param) {
+        Benchmarker<Convolution> benchmarker_float(handle());
+        size_t RUN = 50;
+        auto tfloat = benchmarker_float.set_display(false)
+                              .set_dtype(0, dtype::Int8{})
+                              .set_dtype(1, dtype::Int8{})
+                              .set_dtype(2, dtype::Int16{})
+                              .set_times(RUN)
+                              .set_param(param)
+                              .exec(shapes);
+        size_t IC = shapes[1][1];
+        size_t FH = shapes[1][2];
+        size_t FW = shapes[1][3];
+        TensorLayout dst_layout;
+        auto opr = handle()->create_operator<Convolution>();
+        opr->param() = param;
+        opr->deduce_layout({shapes[0], dtype::Float32()},
+                           {shapes[1], dtype::Float32()}, dst_layout);
+        printf("fp32 flops: %.3f mflops\n",
+               (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
+                       (tfloat / RUN * 1000));
+    };
+    auto profile = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
+                       size_t stride) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = kernel / 2;
+        param.pad_w = kernel / 2;
+        param.pad_h = 0;
+        param.pad_w = 0;
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
+               oc, ic, w, h, stride, kernel);
+
+        run({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
+    };
+
+    profile(48, 128, 56, 88, 1, 1);
+    profile(48, 128, 56, 88, 1, 2);
+    profile(56, 128, 64, 80, 3, 1);
+    profile(24, 3, 256, 320, 3, 2);
+}
+
 TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_BACKWARD_DATA) {
     using Param = ConvolutionBackwardData::Param;
     auto run = [&](const TensorLayoutArray& tensors, Param param) {
         Benchmarker<ConvolutionBackwardData> benchmarker_fallback(handle());
         size_t RUN = 500;
         benchmarker_fallback.set_display(false)
-            .set_dtype(0, dtype::Float32{})
-            .set_dtype(1, dtype::Float32{})
-            .set_times(RUN)
-            .set_param(param);
-        auto tmatmul = benchmarker_fallback.set_before_exec_callback(
-                AlgoChecker<ConvolutionBackwardData>(
-                "DeconvMatmul"))
-            .exec(tensors);
-        auto tdirect = benchmarker_fallback.set_before_exec_callback(
-                AlgoChecker<ConvolutionBackwardData>(
-                "DeconvDirect"))
-            .exec(tensors);
+                .set_dtype(0, dtype::Float32{})
+                .set_dtype(1, dtype::Float32{})
+                .set_times(RUN)
+                .set_param(param);
+        auto tmatmul = benchmarker_fallback
+                               .set_before_exec_callback(
+                                       AlgoChecker<ConvolutionBackwardData>(
+                                               "DeconvMatmul"))
+                               .exec(tensors);
+        auto tdirect = benchmarker_fallback
+                               .set_before_exec_callback(
+                                       AlgoChecker<ConvolutionBackwardData>(
+                                               "DeconvDirect"))
+                               .exec(tensors);
         size_t IC = tensors[0][1];
         size_t FH = tensors[0][2];
         size_t FW = tensors[0][3];
@@ -98,8 +190,8 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_BACKWARD_DATA) {
         printf("Direct_time: %.3f ms  Direct_flops: %.3f mflops\n", tdirect,
                total_flops / (tdirect / RUN * 1000));
         printf("Matmul_time: %.3f ms  Matmul_flops: %.3f mflops\n", tmatmul,
-               total_flops / (tmatmul/ RUN * 1000));
-        printf("speedup: %.3f\n", tdirect/tmatmul);
+               total_flops / (tmatmul / RUN * 1000));
+        printf("speedup: %.3f\n", tdirect / tmatmul);
     };
 
     auto profile = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
@@ -154,6 +246,51 @@ TEST_F(FALLBACK, CONVOLUTION_MATRIX_MUL) {
     run(1, 3, 3, 112, 112, 3, 1);
     run(1, 1, 1, 1, 1, 3, 3);
 }
+
+#if MEGDNN_X86
+TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_8816) {
+    Checker<Convolution> checker(handle());
+    using Param = Convolution::Param;
+    checker.set_before_exec_callback(AlgoChecker<Convolution>(".+FB_GEMV.+"));
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
+                   size_t fh, size_t fw, size_t pad, size_t stride,
+                   size_t group) {
+        Param param;
+        param.sparse = group > 1 ? param::Convolution::Sparse::GROUP
+                                 : param::Convolution::Sparse::DENSE;
+        param.pad_h = param.pad_w = pad;
+        param.stride_h = param.stride_w = stride;
+        checker.set_param(param);
+        if (group > 1) {
+            checker.execl(
+                    {{{n, ic, ih, iw}, dtype::Int8()},
+                     {{group, oc / group, ic / group, fh, fw}, dtype::Int8()},
+                     {{}, dtype::Int16()}});
+        } else {
+            checker.execl({{{n, ic, ih, iw}, dtype::Int8()},
+                           {{oc, ic, fh, fw}, dtype::Int8()},
+                           {{}, dtype::Int16()}});
+        }
+    };
+
+    for (auto n : {1, 2})
+        for (auto ic : {3, 4, 8, 12, 16})
+            for (auto oc : {4, 8, 16, 32})
+                for (auto ih : {7, 14, 15, 22})
+                    for (auto iw : {7, 13, 11, 32})
+                        for (auto filter : {1, 2, 3, 5, 7})
+                            for (auto stride : {1, 2})
+                                for (auto pad : {0, filter / 2}) {
+                                    run(n, ic, ih, iw, oc, filter, filter, pad,
+                                        stride, 1);
+                                    if (ic == oc) {
+                                        run(n, ic, ih, iw, oc, filter, filter,
+                                            pad, stride, ic);
+                                    }
+                                }
+}
+#endif
+
 TEST_F(FALLBACK, CONVOLUTION_NAIVE_ALGO_FP16) {
     Checker<Convolution> checker(handle());
     using Param = Convolution::Param;
@@ -222,7 +359,7 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_NAIVE_ALGO) {
         TensorShape src{n, ic, ih, iw},
                 filter{group, oc / group, ic / group, fh, fw};
         checker.set_param(param).set_dtype(2, {});
-        //!float32
+        //! float32
         checker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
         checker.execs({src, filter, {}});
         //! float16
@@ -257,10 +394,10 @@ TEST_F(FALLBACK, CONVOLUTION_MATRIX_MUL_SINT8) {
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
         checker.set_param(param)
-               .set_dtype(0, dtype::QuantizedS8(0.2f))
-               .set_dtype(1, dtype::QuantizedS8(0.2f))
+                .set_dtype(0, dtype::QuantizedS8(0.2f))
+                .set_dtype(1, dtype::QuantizedS8(0.2f))
                 // Use inferred output dtype.
-               .set_dtype(2, {});
+                .set_dtype(2, {});
         checker.execs({{n, ic, ih, iw}, {oc, ic, fh, fw}, {}});
     };
 

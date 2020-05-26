@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/fallback/conv_bias/conv1x1/algos.h"
@@ -67,7 +68,8 @@ size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
         MIDOUT_END();
     } else if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
         MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 0, 1) {
-            Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA> dispatcher;
+            Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>
+                    dispatcher;
             return dispatcher
                     .get_bundle(param, matmul_param, m_matmul_algo,
                                 compt_oc_block_size)
@@ -116,7 +118,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
         MIDOUT_END();
     } else if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
         MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 1, 1) {
-            Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA> dispatcher;
+            Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>
+                    dispatcher;
             whole_bundle = dispatcher.get_bundle(
                     param, matmul_param, m_matmul_algo, compt_oc_block_size);
             matmul_bundle = m_matmul_algo->get_bundle(matmul_param);
@@ -140,7 +143,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
 
     Conv1x1StrategyBase* conv1x1_strategy =
             Conv1x1Factory::make_conv1x1_strategy(param, pack_mode,
-                                                 opr->param().format);
+                                                  opr->param().format);
 
     auto kern_packA = [this, whole_bundle, matmul_bundle, param,
                        compt_oc_block_size, conv1x1_strategy](
@@ -171,8 +174,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
         pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
         ret_kern.push_back({kern_packA, {GROUP, oc_blocks_per_group}});
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
-                ret_kern.push_back({kern_packB, {1}});
-            }
+            ret_kern.push_back({kern_packB, {1}});
+        }
     }
     ret_kern.push_back({kern_compt, {BATCH, GROUP, oc_blocks_per_group}});
 
@@ -230,7 +233,11 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
                 param, OH * OW, get_oc_tile_size_heuristic(param));
         bool matmul_usable = m_matmul_algo->usable(matmul_param);
 
-        return matmul_usable &&
+        auto pack_mode = m_matmul_algo->packmode();
+        bool strategy_usable = Conv1x1Factory::can_make_conv1x1_strategy(
+                param, pack_mode, opr->param().format);
+
+        return matmul_usable && strategy_usable &&
                (param.filter_meta.dilation[0] ==
                         param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&

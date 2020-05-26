@@ -6,11 +6,12 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
-#include <unordered_map>
 #include "src/fallback/conv_bias/conv1x1/conv1x1_strategy.h"
+#include <unordered_map>
 
 #include "midout.h"
 
@@ -157,10 +158,9 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
                 dt_int32, dt_int8, dt_int32, dt_int32,
                 PostprocessMode::NO_PROCESS, "NoPack::INT8x8x32_INT32"_hash);
 
-            cb2(MatrixMulImpl::AlgoBase::PackMode::NO_PACK,
-                dtype::QuantizedS8, dtype::QuantizedS32,
-                dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
-                PostprocessMode::NO_PROCESS,
+            cb2(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dtype::QuantizedS8,
+                dtype::QuantizedS32, dtype::QuantizedS32, dt_int8, dt_int32,
+                dt_int32, PostprocessMode::NO_PROCESS,
                 "NoPack::QINT8x8x32_QINT32"_hash);
             break;
 
@@ -206,6 +206,19 @@ Conv1x1StrategyBase* Conv1x1Factory::make_conv1x1_strategy(
         param::ConvBias::Format format) {
     static StrategyDelegationStorage storage;
     return storage.get(param, pack_mode, format);
+}
+
+bool Conv1x1Factory::can_make_conv1x1_strategy(
+        const ConvBiasImpl::NCBKernSizeParam& param,
+        MatrixMulImpl::AlgoBase::PackMode pack_mode, param::ConvBias::Format) {
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC || !MEGDNN_DISABLE_FLOAT16
+    if ((pack_mode == MatrixMulImpl::AlgoBase::PackMode::NO_PACK ||
+         pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) &&
+        param.src_type.enumv() == DTypeTrait<dt_float16>::enumv) {
+        return false;
+    }
+#endif
+    return true;
 }
 
 }  // namespace conv1x1
