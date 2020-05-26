@@ -289,6 +289,17 @@ class CompNode {
         }
 
         /*!
+         * \brief get the size of the paddings which must be reserved at the
+         * end of memory chunk; guaranteed to be power of 2
+         */
+        size_t get_mem_padding() const {
+            size_t padding = m_impl->get_mem_padding();
+            mgb_assert(!(padding & (padding - 1)),
+                       "mem padding should be power of 2");
+            return padding;
+        }
+
+        /*!
          * \brief release consecutive free chunks on all devices to defragment;
          *      see DevMemAlloc::try_coalesce_free
          */
@@ -510,6 +521,7 @@ class CompNode {
                         const void *src, size_t size) = 0;
 
                 virtual size_t get_mem_addr_alignment() = 0;
+                virtual size_t get_mem_padding();
 
                 virtual std::unique_ptr<Event> create_event(size_t flags) = 0;
 

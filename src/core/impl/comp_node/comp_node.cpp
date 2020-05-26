@@ -552,6 +552,10 @@ std::unique_ptr<CompNodeSeqRecorder> CompNode::ImplBase::create_seq_recorder(
     return {};
 }
 
+size_t CompNode::ImplBase::get_mem_padding() {
+    return 0;
+}
+
 void CompNode::ImplBase::add_callback(megdnn::thin_function<void()>&&) {
     mgb_throw(MegBrainError,
               "Unsupported add callback to "

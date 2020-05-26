@@ -84,7 +84,7 @@ size_t StaticMemAllocImplHelper::add(size_t begin, size_t end, size_t size,
 
     mgb_assert(begin < end);
     auto id = m_interval_storage.size();
-    m_interval_storage.push_back({begin, end, size, key, id});
+    m_interval_storage.push_back({begin, end, size + m_padding, key, id});
     return id;
 }
 

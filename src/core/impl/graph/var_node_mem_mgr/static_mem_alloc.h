@@ -89,6 +89,15 @@ class StaticMemAlloc {
          */
         virtual StaticMemAlloc& alignment(size_t alignment) = 0;
 
+        /*!
+         * \brief set interval padding at the end(except for overwritters)
+         *
+         * Must be called before calling add()
+         *
+         * \param padding interval padding
+         */
+        virtual StaticMemAlloc& padding(size_t padding) = 0;
+
 #if MGB_ENABLE_DEBUG_UTIL
         //! set by the caller to convert key to VarNode* for debug logging
         VarNode* (*dbg_key2varnode)(UserKeyType) = nullptr;

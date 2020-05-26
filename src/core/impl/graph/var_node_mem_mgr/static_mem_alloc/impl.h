@@ -45,6 +45,11 @@ class StaticMemAllocImplHelper: public StaticMemAlloc {
             return *this;
         }
 
+        StaticMemAlloc& padding(size_t padding) override final {
+            m_padding = padding;
+            return *this;
+        }
+
         size_t tot_alloc_lower_bound() const override final {
             return m_peak_lower_bound;
         }
@@ -69,7 +74,7 @@ class StaticMemAllocImplHelper: public StaticMemAlloc {
         }
 
     private:
-        size_t m_alignment = 1, m_peak_lower_bound = 0;
+        size_t m_alignment = 1, m_padding = 0, m_peak_lower_bound = 0;
 
         //! original interval storage
         std::vector<Interval> m_interval_storage;

@@ -160,7 +160,9 @@ bool SeqMemOptimizer::plan_chunk_allocation() {
                 if (chunk->owner_var == var) {
                     size_t& usage = cn2usage[var->comp_node()];
                     size_t offset = usage;
-                    usage += chunk->size();
+                    usage += get_aligned_power2(
+                            chunk->size() + var->comp_node().get_mem_padding(),
+                            var->comp_node().get_mem_addr_alignment());
                     chunk->mem_alloc_status.set_static_offset(offset);
                 }
             }
@@ -299,6 +301,7 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
     auto allocator = StaticMemAlloc::make(
             StaticMemAlloc::AllocatorAlgo::PUSHDOWN);
     allocator->alignment(comp_node.get_mem_addr_alignment());
+    allocator->padding(comp_node.get_mem_padding());
 #if MGB_ENABLE_DEBUG_UTIL
     allocator->dbg_key2varnode = [](StaticMemAlloc::UserKeyType key) {
         return static_cast<const MemChunkLifeInterval*>(key)->chunk->owner_var;

@@ -34,10 +34,11 @@ struct TestParam {
     using Algo = StaticMemAlloc::AllocatorAlgo;
 
     Algo algo;
-    size_t align, nr_rand_opr, rng_seed;
+    size_t align, padding, nr_rand_opr, rng_seed;
 
     static decltype(auto) make_values(
             const std::vector<size_t> &aligns,
+            const std::vector<size_t> &paddings,
             const std::vector<size_t> &nr_rand_opr) {
         std::vector<TestParam> data;
         std::mt19937_64 rng(next_rand_seed());
@@ -46,9 +47,11 @@ struct TestParam {
         for (auto nr: nr_rand_opr) {
             size_t seed = rng();
             for (auto align: aligns) {
-#define itcb(algo) data.push_back({Algo::algo, align, nr, seed});
-                ITER_ALGO(itcb)
+                for (auto padding: paddings) {
+#define itcb(algo) data.push_back({Algo::algo, align, padding, nr, seed});
+                    ITER_ALGO(itcb)
 #undef itcb
+                }
             }
         }
         return ::testing::ValuesIn(data);
@@ -65,7 +68,7 @@ std::ostream& operator << (std::ostream &ostr, const TestParam &p) {
     ITER_ALGO(itcb);
 #undef itcb
 
-    ostr << "algo=" << algo << " align=" << p.align;
+    ostr << "algo=" << algo << " align=" << p.align << " padding=" << p.padding;
     if (p.nr_rand_opr != 1)
         ostr << " nr_rand_opr=" << p.nr_rand_opr << " rng_seed=" << p.rng_seed;
     return ostr;
@@ -74,6 +77,10 @@ std::ostream& operator << (std::ostream &ostr, const TestParam &p) {
 class BasicCorrectness: public ::testing::TestWithParam<TestParam> {
     protected:
         std::unique_ptr<cg::StaticMemAlloc> m_allocator;
+
+        size_t padding() const {
+            return GetParam().padding;
+        }
 
         size_t align(size_t addr) const {
             return get_aligned_power2(addr, GetParam().align);
@@ -84,6 +91,7 @@ class BasicCorrectness: public ::testing::TestWithParam<TestParam> {
         void SetUp() override {
             m_allocator = StaticMemAlloc::make(GetParam().algo);
             m_allocator->alignment(GetParam().align);
+            m_allocator->padding(GetParam().padding);
         }
 };
 
@@ -102,8 +110,9 @@ TEST_P(BasicCorrectness, Alloc) {
     allocator->add(0, 1, 1, makeuk(1));
     allocator->add(1, 2, 2, makeuk(2));
     allocator->solve();
-    ASSERT_EQ(std::max(align(2), 2 * align(1)), allocator->tot_alloc());
-    ASSERT_EQ(std::max(align(2), 2 * align(1)),
+    ASSERT_EQ(std::max(align(2 + padding()), 2 * align(1 + padding())),
+            allocator->tot_alloc());
+    ASSERT_EQ(std::max(align(2 + padding()), 2 * align(1 + padding())),
             allocator->tot_alloc_lower_bound());
 }
 
@@ -116,8 +125,8 @@ TEST_P(BasicCorrectness, Overwrite) {
     allocator->add_overwrite_spec(id2, id1, 0);
     allocator->solve();
 
-    ASSERT_EQ(align(3), allocator->tot_alloc());
-    ASSERT_EQ(align(3), allocator->tot_alloc_lower_bound());
+    ASSERT_EQ(align(3 + padding()), allocator->tot_alloc());
+    ASSERT_EQ(align(3 + padding()), allocator->tot_alloc_lower_bound());
 }
 
 TEST_P(BasicCorrectness, OverwriteSameEnd) {
@@ -127,12 +136,12 @@ TEST_P(BasicCorrectness, OverwriteSameEnd) {
     allocator->add_overwrite_spec(id1, id0, 0);
     allocator->solve();
 
-    ASSERT_EQ(align(1), allocator->tot_alloc());
-    ASSERT_EQ(align(1), allocator->tot_alloc_lower_bound());
+    ASSERT_EQ(align(1 + padding()), allocator->tot_alloc());
+    ASSERT_EQ(align(1 + padding()), allocator->tot_alloc_lower_bound());
 }
 
 INSTANTIATE_TEST_CASE_P(TestStaticMemAllocAlgo,
-        BasicCorrectness, TestParam::make_values({1, 2}, {1}));
+        BasicCorrectness, TestParam::make_values({1, 2}, {1, 2}, {1}));
 
 
 #ifdef  __OPTIMIZE__
@@ -220,7 +229,7 @@ TEST_P(RandomOpr, Main) {
 }
 
 INSTANTIATE_TEST_CASE_P(TestStaticMemAllocAlgo,
-        RandomOpr, TestParam::make_values({1, 256}, {
+        RandomOpr, TestParam::make_values({1, 256}, {1, 32}, {
             10, INTERVAL_MOVE_MAX_SIZE, 1000, 10000}));
 
 TEST(TestStaticMemAllocAlgo, PushdownChain) {
