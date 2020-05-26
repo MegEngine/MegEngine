@@ -14,7 +14,7 @@ import pytest
 from helpers import MLP
 
 import megengine as mge
-from megengine.core import Buffer, Parameter, tensor
+from megengine.core import Buffer, Parameter, Tensor, tensor
 from megengine.module import BatchNorm1d, BatchNorm2d, Conv2d, Module, Sequential
 from megengine.test import assertTensorClose
 
@@ -139,6 +139,7 @@ class MyModule2(Module):
         def __init__(self):
             super().__init__()
             self.bn = BatchNorm2d(4)
+            self.test_bool_key = {True: 1, False: 0}
 
         def forward(self, x):
             x = self.bn(x)
@@ -148,7 +149,7 @@ class MyModule2(Module):
         self.bn = BatchNorm2d(4)
         self.a = [
             BatchNorm2d(4),
-            {"x": BatchNorm2d(4), "y": [BatchNorm2d(4), self.InnerModule()]},
+            {"x": BatchNorm2d(4), "y": [BatchNorm2d(4), self.InnerModule()], "z": 0},
             (self.InnerModule(),),
         ]
 
@@ -169,6 +170,14 @@ def test_expand_structure():
         ("a.2.0.bn", m.a[2][0].bn),
         ("bn", m.bn),
     ]
+
+
+def test_flatten_others():
+    def be_others(obj):
+        return not isinstance(obj, (Tensor, Module))
+
+    m = MyModule2()
+    assert len(list(m._flatten(with_key=True, predicate=be_others))) == 0
 
 
 def test_flatten_with_parent():
@@ -249,6 +258,23 @@ def test_state_dict():
         del state_dict["dense0.bias"]
         with pytest.raises(KeyError):
             mlp1.load_state_dict(state_dict)
+
+
+class AssertModule(Module):
+    def __init__(self):
+        super().__init__()
+        self.error_tensor_key = {True: tensor(), False: 0}
+
+    def forward(self, x):
+        return x
+
+
+def test_assert_message():
+    m = AssertModule()
+    with pytest.raises(
+        AssertionError, match="keys for Tensor and Module must be str, error key: True"
+    ):
+        list(m._flatten())
 
 
 class Simple(Module):
