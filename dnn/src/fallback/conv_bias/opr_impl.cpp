@@ -29,6 +29,7 @@ using namespace fallback;
 size_t megdnn::fallback::get_format_pack_size(param::ConvBias::Format format) {
     switch (format) {
         case param::ConvBias::Format::NCHW44:
+        case param::ConvBias::Format::NCHW44_DOT:
         case param::ConvBias::Format::NCHW4:
             return 4_z;
         case param::ConvBias::Format::NCHW88:
@@ -188,6 +189,7 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
         param().format == Param::Format::NCHW8 ||
         param().format == Param::Format::NCHW4 ||
         param().format == Param::Format::NCHW44 ||
+        param().format == Param::Format::NCHW44_DOT ||
         param().format == Param::Format::NCHW ||
         param().format == Param::Format::NCHW_WINOGRAD ||
         param().format == Param::Format::NCHW88_WINOGRAD ||
@@ -405,6 +407,7 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
 
             break;
         }
+        case Param::Format::NCHW44_DOT:
         case Param::Format::NCHW44: {
             size_t group = filter_meta.group;
             size_t icpg = filter_meta.icpg;

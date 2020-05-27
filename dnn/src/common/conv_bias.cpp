@@ -104,6 +104,7 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
                           bias.to_string().c_str(), dst.to_string().c_str());
         } else if (param().format == param::ConvBias::Format::NCHW4 ||
                    param().format == param::ConvBias::Format::NCHW44 ||
+                   param().format == param::ConvBias::Format::NCHW44_DOT ||
                    param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
             megdnn_assert(bias.shape[0] == 1);
             megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",

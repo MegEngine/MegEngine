@@ -280,6 +280,13 @@ void make_canonized_filter_meta_nchwxx(
     /**
      * input: N IC/pack_size, H, W, pack_size
      *
+     ** NCHW44-DOT mode
+     * filter:
+     *        {OC/pack_size, IC/pack_size, FH, FW, pack_size(OC), pack_size(IC)}
+     * [dense]
+     *        {GROUP, OC_PER_GROUP/pack_size, IC_PER_GROUP/pack_size, \
+     *                  FH, FW, pack_size(OC), pack_size(IC)} [group]
+     *
      * NCHW88 and NCHW44 mode
      * filter:
      *        {OC/pack_size, IC/pack_size, FH, FW, pack_size(IC), pack_size(OC)}
@@ -300,6 +307,7 @@ void make_canonized_filter_meta_nchwxx(
     megdnn_assert(param.format == Param::Format::NCHW88 ||
                   param.format == Param::Format::NCHW44 ||
                   param.format == Param::Format::NCHW44_WINOGRAD ||
+                  param.format == Param::Format::NCHW44_DOT ||
                   param.format == Param::Format::NCHW88_WINOGRAD);
     size_t img_ndim = 2;
     size_t flt_start = 0;
@@ -554,6 +562,7 @@ ConvolutionBase<Parameter>::make_canonized_filter_meta(
         make_canonized_filter_meta_nchwxx<8, Parameter>(src_ndim, filter,
                                                         param(), ret);
     } else if (param().format == Param::Format::NCHW44 ||
+               param().format == Param::Format::NCHW44_DOT ||
                param().format == Param::Format::NCHW44_WINOGRAD) {
         make_canonized_filter_meta_nchwxx<4, Parameter>(src_ndim, filter,
                                                         param(), ret);
@@ -660,6 +669,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         megdnn_assert(param().format == Param::Format::NHWCD4 ||
                       param().format == Param::Format::NCHW4 ||
                       param().format == Param::Format::NCHW44 ||
+                      param().format == Param::Format::NCHW44_DOT ||
                       param().format == Param::Format::NCHW8 ||
                       param().format == Param::Format::NCHW32 ||
                       param().format == Param::Format::NCHW88 ||
@@ -668,6 +678,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                       param().format == Param::Format::CHWN4);
         img_dim = src.ndim - 3;
         if ((param().format == Param::Format::NCHW88 ||
+             param().format == Param::Format::NCHW44_DOT ||
              param().format == Param::Format::NCHW44) &&
             filter.ndim == 5) {
             img_dim = src.ndim - 2;
@@ -675,6 +686,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         megdnn_assert(filter.ndim == img_dim + 3 ||
                               (filter.ndim == img_dim + 2 &&
                                (param().format == Param::Format::NCHW88 ||
+                                param().format == Param::Format::NCHW44_DOT ||
                                 param().format == Param::Format::NCHW44)) ||
                               filter.ndim == img_dim + 4 ||
                               filter.ndim == img_dim + 5,
@@ -727,6 +739,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                           src.to_string().c_str(), filter.to_string().c_str());
         }
         if (param().format == Param::Format::NCHW44 ||
+            param().format == Param::Format::NCHW44_DOT ||
             param().format == Param::Format::NCHW44_WINOGRAD) {
             megdnn_assert((src.ndim == 4 && filter.ndim == 5 &&
                            filter[filter.ndim - 1] == 4) ||
@@ -859,8 +872,9 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         }
 
     } else if (param().format == Param::Format::NCHW44 ||
+               param().format == Param::Format::NCHW44_DOT ||
                param().format == Param::Format::NCHW44_WINOGRAD) {
-        megdnn_assert(src.ndim == 5 || (src.ndim == 4 && src[1] <= 8),
+        megdnn_assert(src.ndim == 5 || (src.ndim == 4 && src[1] <= 4),
                       "invalid src ndim for NCHW44, expected=5 or 4, got=%zu",
                       src.ndim);
         dst.ndim = 5;

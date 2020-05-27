@@ -147,6 +147,7 @@ ConvolutionImpl::NCBKernSizeParam ConvolutionImpl::make_ncb_kern_size_param(
     if (param().format == Param::Format::NCHW88 ||
         param().format == Param::Format::NCHW8 ||
         param().format == Param::Format::NCHW4 ||
+        param().format == Param::Format::NCHW44_DOT ||
         param().format == Param::Format::NCHW44) {
         spatial_pos = 2;
     } else if (param().format == Param::Format::NCHW ||

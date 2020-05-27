@@ -350,9 +350,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_SMALL_GROUP) {
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
             handle(), "F32DIRECT_SMALL_GROUP");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1) {
-    check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false,
-                                              false, false, true, true),
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_1) {
+    check_conv_bias(get_nchw44_conv_bias_args({2, 7}, 1, false, false, false,
+                                              false, true, true),
+                    handle(), "F32_CONV_NCHW44_DIRECT");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_2) {
+    check_conv_bias(get_nchw44_conv_bias_args({3, 5}, 1, false, false, false,
+                                              false, true, true),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
