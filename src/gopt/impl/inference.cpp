@@ -442,50 +442,6 @@ void ParamRedistributePass::apply(OptState &state) const {
 
 /* ================ ParamFusePass ================ */
 
-class ParamFusePass::ConstVarPropogateWithSizeCheck final:
-    public ConstVarPropogateBase
-{
-    public:
-        //! rewrite a var; reader == nullptr means needed by endpoint
-        using VarRewriter = std::function<
-            void(VarNode *var, OperatorNodeBase *reader)>;
-
-        ConstVarPropogateWithSizeCheck(
-                const ParamFusePass &pf, OptState &opt_state,
-                const VarRewriter &rewriter):
-            ConstVarPropogateBase{ConstVarType::IMMUTABLE_AND_PARAM},
-            m_owner{pf}, m_opt_state{opt_state}, m_rewriter{rewriter}
-        {
-        }
-
-    private:
-
-        const ParamFusePass &m_owner;
-        OptState &m_opt_state;
-        VarRewriter m_rewriter;
-
-        void on_midconst_opr(
-                OperatorNodeBase *opr, size_t max_src_size) override {
-            for (auto var: opr->output()) {
-                if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT))
-                    continue;
-
-                auto osize = var_mem_size(var);
-                if (osize >= max_src_size &&
-                        osize - max_src_size > m_owner.m_param_grow_limit) {
-                    return;
-                }
-
-                // const oprs should be evaluated when output is used by another
-                // non-const opr or output is needed by the user
-                if (m_opt_state.graph().endpoint_contain(var)) {
-                    m_rewriter(var, nullptr);
-                }
-
-            }
-        }
-};
-
 /*!
  * \brief get name for new param
  */
@@ -565,9 +521,15 @@ const char* ParamFusePass::name() const {
 void ParamFusePass::apply(OptState &state) const {
     auto rewriter = state.graph().make_rewriter();
     auto cg = state.graph().comp_graph();
+
+    ConstVarPropogate cvprop{ConstVarType::IMMUTABLE_AND_PARAM};
+    state.graph().iter([&cvprop](OperatorNodeBase *opr) {
+        cvprop.add_opr(opr);
+    });
+
+
     ThinHashSet<VarNode*> processed_var;
     VarNamer var_namer;
-
     // reader: null if used as endvar
     auto replace_single_var = [&](VarNode *var, OperatorNodeBase *reader) {
         if (!processed_var.insert(var).second)
@@ -619,9 +581,8 @@ void ParamFusePass::apply(OptState &state) const {
         rewriter.replace_var(var, new_var.node(), log.c_str());
     };
 
-    ConstVarPropogateWithSizeCheck cvprop{*this, state, replace_single_var};
-    auto on_opr = [&](OperatorNodeBase *opr) {
-        auto add_ret = cvprop.add_opr(opr);
+    auto replace_opr = [&](OperatorNodeBase* opr) {
+        auto add_ret = cvprop.opr_rst(opr);
         if (!add_ret.all_const_inp && add_ret.has_midconst_inp) {
             for (auto i: opr->input()) {
                 if (cvprop.is_midconst(i)) {
@@ -631,9 +592,33 @@ void ParamFusePass::apply(OptState &state) const {
             }
         }
         rewriter.auto_replace_outputs(opr);
+
+        //! we should deal with midconst var after auto_replace_outputs, as
+        //! on_midconst_opr will replace the endpoint output which may cause
+        //! double replace.
+        if (add_ret.all_const_inp) {
+            for (auto var : opr->output()) {
+                if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT))
+                    continue;
+
+                auto osize = ConstVarPropogate::var_mem_size(var);
+                if (osize >= cvprop.max_size(opr) &&
+                    osize - cvprop.max_size(opr) > m_param_grow_limit) {
+                    return;
+                }
+
+                // const oprs should be evaluated when output is used by another
+                // non-const opr or output is needed by the user
+                if (state.graph().endpoint_contain(var)) {
+                    replace_single_var(var, nullptr);
+                }
+
+            }
+
+        }
     };
 
-    state.graph().iter(on_opr);
+    state.graph().iter(replace_opr);
     rewriter.apply_inplace();
 }
 

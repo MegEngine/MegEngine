@@ -112,6 +112,52 @@ void warp_perspective_mat_gen(HostTensorND& mat, size_t N, size_t INP_H,
 #endif
 }  // namespace
 
+TEST(TestGoptInference, ParamFuseConstEndPoint) {
+    constexpr size_t SIZE = 23;
+    HostTensorGenerator<> gen;
+    auto host_x = gen({SIZE}), host_y = gen({1}), host_p = gen({1});
+
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto x = opr::SharedDeviceTensor::make(*graph, *host_x),
+         y = opr::SharedDeviceTensor::make(*graph, *host_y),
+         p = opr::Host2DeviceCopy::make(*graph, host_p),
+         q = p + x,
+         a = y + 3,
+         z0 = a + q,
+         z1 = a + 4;
+
+    HostTensorND host_z0, host_z1;
+
+    SymbolVar z0_1, z1_1;
+    unpack_vector(
+            gopt::GraphOptimizer{}.
+            add_pass<gopt::ParamFusePass>().
+            apply({{z1, z0}}).endpoint_vars(),
+            z1_1, z0_1);
+
+    auto func = graph->compile({make_callback_copy(z0_1, host_z0),
+                                make_callback_copy(z1_1, host_z1)});
+    func->to_json()->writeto_fpath(
+            output_file("TestGoptInference.ParamFuseEndPoint.json"));
+    func->execute();
+
+    int nr_opr = 0;
+    func->iter_opr_seq([&](cg::OperatorNodeBase*) {++ nr_opr; return true; });
+    ASSERT_EQ(8, nr_opr);
+
+    auto px = host_x->ptr<float>(), pz0 = host_z0.ptr<float>();
+
+    auto yv = host_y->ptr<float>()[0], pv = host_p->ptr<float>()[0],
+         pz1 = host_z1.ptr<float>()[0];
+
+    for (size_t i = 0; i < SIZE; ++ i) {
+        MGB_ASSERT_FLOAT_EQ(px[i] + yv + 3 + pv, pz0[i]);
+    }
+    MGB_ASSERT_FLOAT_EQ(yv + 7, pz1);
+}
+
+
 TEST(TestGoptInference, ParamFuse) {
     constexpr size_t SIZE = 23;
     HostTensorGenerator<> gen;
@@ -144,7 +190,7 @@ TEST(TestGoptInference, ParamFuse) {
     func->execute();
 
     int nr_opr = 0;
-    func->iter_opr_seq([&](cg::OperatorNodeBase*op) {++ nr_opr; return true; });
+    func->iter_opr_seq([&](cg::OperatorNodeBase*) {++ nr_opr; return true; });
     ASSERT_EQ(6, nr_opr);
 
     auto px = host_x->ptr<float>(), pz = host_z.ptr<float>(),

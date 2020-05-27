@@ -74,7 +74,7 @@ OperatorNodeBase* SubGraph::Rewriter::auto_replace_outputs(
 
             auto &&ins = m_varmap.insert({out0[i], {true, nullptr}});
             mgb_assert(ins.second || ins.first->second.first,
-                    "opr output already replaced");
+                       "opr output already replaced");
             // handle repeated call on the same opr
             ins.first->second.second = out1[i];
             on_var_replaced(out0[i], out1[i], nullptr);
@@ -771,7 +771,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
 
 /* ================ ConstVarPropogateBase ================ */
 
-ConstVarPropogateBase::AddOprResult ConstVarPropogateBase::add_opr(
+ConstVarPropogate::AddOprResult ConstVarPropogate::add_opr(
         OperatorNodeBase *opr) {
     using ProfFlag = OperatorNodeBase::NodeProp::Flag;
     auto &&info = m_oprinfo[opr];
@@ -834,7 +834,6 @@ ConstVarPropogateBase::AddOprResult ConstVarPropogateBase::add_opr(
 #endif
         info.max_size = max_input_size;
         info.is_const = true;
-        on_midconst_opr(opr, max_input_size);
     }
     return make_ret();
 }
