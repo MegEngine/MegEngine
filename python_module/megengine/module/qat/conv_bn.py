@@ -7,7 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from ...core import ones, zeros
 from ...functional import add_update, relu, sqrt, sum, zero_grad
-from .. import conv_bn_relu as Float
+from .. import conv_bn as Float
 from .module import QATModule
 
 
@@ -163,7 +163,7 @@ class _ConvBnActivation2d(Float._ConvBnActivation2d, QATModule):
             float_module.conv.padding,
             float_module.conv.dilation,
             float_module.conv.groups,
-            bool(float_module.conv.bias),
+            float_module.conv.bias is not None,
             float_module.conv.conv_mode.name,
             float_module.conv.compute_mode.name,
         )

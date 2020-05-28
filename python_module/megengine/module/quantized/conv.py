@@ -7,16 +7,19 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Tuple, Union
 
+import numpy as np
+
 import megengine._internal as mgb
 
 from ... import module as Float
 from ...core import Parameter
 from ...functional import conv_bias_activation
-from ..qat import conv_bn_relu as QAT
+from ..qat import conv as QAT
 from .module import QuantizedModule
 
 
-class _ConvBnActivation2d(Float.Conv2d, QuantizedModule):
+class Conv2d(Float.Conv2d, QuantizedModule):
+    r"""quantized version of :class:`~.qat.conv.Conv2d`."""
     r"""Applies a 2D convolution over an quantized input tensor, inference only.
 
     The parameter is same with :class: `~.Conv2d`
@@ -68,40 +71,38 @@ class _ConvBnActivation2d(Float.Conv2d, QuantizedModule):
         )
 
     @classmethod
-    def from_qat_module(cls, qat_module: QAT._ConvBnActivation2d):
+    def from_qat_module(cls, qat_module: QAT.Conv2d):
         r"""
         return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
         output_dtype = qat_module.get_activation_dtype()
         qconv = cls(
-            qat_module.conv.in_channels,
-            qat_module.conv.out_channels,
-            qat_module.conv.kernel_size,
-            qat_module.conv.stride,
-            qat_module.conv.padding,
-            qat_module.conv.dilation,
-            qat_module.conv.groups,
+            qat_module.in_channels,
+            qat_module.out_channels,
+            qat_module.kernel_size,
+            qat_module.stride,
+            qat_module.padding,
+            qat_module.dilation,
+            qat_module.groups,
             dtype=output_dtype,
         )
-        w_fold, b_fold = qat_module.fold_weight_bias(
-            qat_module.bn.running_mean, qat_module.bn.running_var
-        )
-        weight = w_fold.astype(qat_module.get_weight_dtype())
+        weight = qat_module.weight.astype(qat_module.get_weight_dtype())
         qconv.weight = Parameter(weight.numpy())
-        qconv.bias = Parameter(b_fold.numpy())
+        if qat_module.bias is not None:
+            qconv.bias = Parameter(qat_module.bias.numpy())
+        else:
+            qconv.bias = Parameter(
+                np.zeros(qat_module._infer_bias_shape(), dtype=np.float32)
+            )
         return qconv
-
-
-class ConvBn2d(_ConvBnActivation2d):
-    r"""quantized version of :class:`~.qat.conv_bn_relu.ConvBn2d`."""
 
     def forward(self, inp):
         return self.calc_conv_quantized(inp, nonlinear_mode="IDENTITY")
 
 
-class ConvBnRelu2d(_ConvBnActivation2d):
-    r"""quantized version of :class:`~.qat.conv_bn_relu.ConvBnRelu2d`."""
+class ConvRelu2d(Conv2d):
+    r"""quantized version of :class:`~.qat.conv.ConvRelu2d`."""
 
     def forward(self, inp):
         return self.calc_conv_quantized(inp, nonlinear_mode="RELU")

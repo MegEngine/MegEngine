@@ -104,6 +104,10 @@ def quantize_qat(
     for key, submodule, parent in module._flatten(
         with_key=True, with_parent=True, predicate=is_quantable
     ):
+        # only convert top quantable module.
+        if is_quantable(parent):
+            continue
+
         new_mod = _float2qat_dict[type(submodule)].from_float_module(submodule)
         if isinstance(parent, Float.Sequential):
             # cannnot use setattr to be compatible with Sequential's ``__setitem__``

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -13,8 +12,8 @@ import numpy as np
 
 import megengine._internal as mgb
 
+from .. import functional as F
 from ..core import Parameter
-from ..functional import conv2d, conv_transpose2d, local_conv2d
 from ..utils.types import _pair, _pair_nonzero
 from . import init
 from .module import Module
@@ -183,7 +182,7 @@ class Conv2d(_ConvNd):
         return (1, self.out_channels, 1, 1)
 
     def calc_conv(self, inp, weight, bias):
-        return conv2d(
+        return F.conv2d(
             inp,
             weight,
             bias,
@@ -295,7 +294,7 @@ class ConvTranspose2d(_ConvNd):
         return (1, self.out_channels, 1, 1)
 
     def forward(self, inp):
-        return conv_transpose2d(
+        return F.conv_transpose2d(
             inp,
             self.weight,
             self.bias,
@@ -324,7 +323,7 @@ class LocalConv2d(Conv2d):
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param groups: number of groups to divide input and output channels into,
         so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``. 
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``.
         The shape of weight is ``(groups, output_height, output_width,
         in_channels // groups, *kernel_size, out_channels // groups)``.
     """
@@ -377,6 +376,17 @@ class LocalConv2d(Conv2d):
         )
 
     def forward(self, inp):
-        return local_conv2d(
+        return F.local_conv2d(
             inp, self.weight, self.stride, self.padding, self.dilation, self.conv_mode
         )
+
+
+class ConvRelu2d(Conv2d):
+    r"""
+    A fused :class:`~.Module` including Conv2d and relu. Could be replaced
+    with :class:`~.QATModule` version :class:`~.qat.conv.ConvRelu2d` using
+    :func:`~.quantize.quantize_qat`.
+    """
+
+    def forward(self, inp):
+        return F.relu(self.calc_conv(inp, self.weight, self.bias))

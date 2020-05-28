@@ -9,8 +9,8 @@
 from .activation import LeakyReLU, PReLU, ReLU, Sigmoid, Softmax
 from .batchnorm import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 from .concat import Concat
-from .conv import Conv2d, ConvTranspose2d, LocalConv2d
-from .conv_bn_relu import ConvBn2d, ConvBnRelu2d
+from .conv import Conv2d, ConvRelu2d, ConvTranspose2d, LocalConv2d
+from .conv_bn import ConvBn2d, ConvBnRelu2d
 from .dropout import Dropout
 from .elemwise import Elemwise
 from .embedding import Embedding
