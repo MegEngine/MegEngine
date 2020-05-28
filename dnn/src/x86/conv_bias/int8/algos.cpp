@@ -14,6 +14,7 @@
 #include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/fallback/convolution/img2col_helper.h"
+#include "src/x86/conv_bias/int8/algo_usable_preferred.h"
 #include "src/x86/conv_bias/int8/avx2_chanwise_stride1.h"
 #include "src/x86/conv_bias/int8/avx2_chanwise_stride2.h"
 #include "src/x86/conv_bias/int8/avx2_direct_conv_stride1.h"
@@ -37,25 +38,7 @@ using namespace x86;
 bool ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::usable(
         FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0];
-    bool aviliable =
-            (param.bias_mode != BiasMode::BIAS) &&
-            ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-             (((param.src_type.enumv() == DTypeEnum::Int8 &&
-                param.filter_type.enumv() == DTypeEnum::Int8 &&
-                param.dst_type.enumv() == DTypeEnum::Int32) ||
-               (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.dst_type.enumv() == DTypeEnum::QuantizedS32)))) &&
-            fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
-            fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-            (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.stride[0] == 1 &&
-            fm.stride[1] == 1 && (fm.icpg == 1) && (fm.ocpg == 1) &&
-            is_supported(SIMDType::AVX2);
-    return aviliable;
+    return chanwise_avx2_stride1_qint8_usable(param);
 }
 
 WorkspaceBundle ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::get_bundle(
@@ -94,28 +77,15 @@ ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::get_kimpls(
     return avx2_chanwise_stride1::get_kimpls(param, bundle);
 }
 
+bool ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::is_preferred(
+        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+    return chanwise_avx2_stride1_qint8_preferred(param);
+}
+
 bool ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::usable(
         FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0];
-    bool aviliable =
-            (param.bias_mode != BiasMode::BIAS) &&
-            ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-             (((param.src_type.enumv() == DTypeEnum::Int8 &&
-                param.filter_type.enumv() == DTypeEnum::Int8 &&
-                param.dst_type.enumv() == DTypeEnum::Int32) ||
-               (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.dst_type.enumv() == DTypeEnum::QuantizedS32)))) &&
-            fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
-            fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-            (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.stride[0] == 2 &&
-            fm.stride[1] == 2 && (fm.icpg == 1) && (fm.ocpg == 1) &&
-            is_supported(SIMDType::AVX2);
-    return aviliable;
+    return chanwise_avx2_stride2_qint8_usable(param);
 }
 
 WorkspaceBundle ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::get_bundle(
@@ -154,28 +124,15 @@ ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::get_kimpls(
     return avx2_chanwise_stride2::get_kimpls(param, bundle);
 }
 
+bool ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::is_preferred(
+        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+    return chanwise_avx2_stride2_qint8_preferred(param);
+}
+
 bool ConvBiasImpl::AlgoDirectAvx2Stride1Int8::usable(
         FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0];
-    bool aviliable = ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                       param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                       param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-                      (((param.src_type.enumv() == DTypeEnum::Int8 &&
-                         param.filter_type.enumv() == DTypeEnum::Int8 &&
-                         param.dst_type.enumv() == DTypeEnum::Int32) ||
-                        (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                         param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                         param.dst_type.enumv() == DTypeEnum::QuantizedS32)) &&
-                       param.bias_mode == BiasMode::NO_BIAS &&
-                       param.nonlineMode == NonlineMode::IDENTITY)) &&
-                     fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
-                     fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
-                     fm.stride[0] == 1 && fm.stride[1] == 1 &&
-                     is_supported(SIMDType::AVX2);
-    return aviliable;
+    return direct_avx2_stride1_int8_usable(param);
 }
 
 WorkspaceBundle ConvBiasImpl::AlgoDirectAvx2Stride1Int8::get_bundle(
@@ -224,19 +181,75 @@ ConvBiasImpl::AlgoDirectAvx2Stride1Int8::get_kimpls(
     return direct_conv_avx2_stride1::get_kimpls(param, bundle);
 }
 
+bool ConvBiasImpl::AlgoDirectAvx2Stride1Int8::is_preferred(
+        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+    return direct_avx2_stride1_int8_preferred(param);
+}
+
+/* ===================== avx2 int8 stride 2 ===================== */
+bool ConvBiasImpl::AlgoAVX2DirectConvStride2::usable(
+        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
+        AlgoSelectionStrategy) const {
+    return direct_avx2_stride2_int8_usable(param);
+}
+
+WorkspaceBundle ConvBiasImpl::AlgoAVX2DirectConvStride2::get_bundle(
+        const NCBKernSizeParam& param) {
+    auto&& fm = param.filter_meta;
+    size_t N = param.n;
+    size_t IC = fm.icpg;
+    size_t OC = fm.ocpg;
+    size_t IH = param.isz[0];
+    size_t IW = param.isz[1];
+    size_t OH = param.osz[0];
+    size_t OW = param.osz[1];
+    size_t FH = fm.spatial[0];
+    size_t FW = fm.spatial[1];
+    size_t GROUP = fm.group;
+    size_t IC_STEP = 2, OC_STEP = 4;
+
+    size_t pad_h = fm.padding[0];
+    size_t pad_w = fm.padding[1];
+    size_t src_size = 0, filter_size = 0;
+
+    //! pack filter, pack src
+    filter_size = GROUP * round_up(OC, OC_STEP) * round_up(IC, IC_STEP) * FH *
+                  FW * sizeof(int16_t);
+    //! avx256 iw max offset 32, caused by w_remain < 16
+    src_size = N * GROUP * div_ceil(IC, IC_STEP) * (IH + 2 * pad_h) *
+                       (IW + 2 * pad_w) * 2 * sizeof(int8_t) +
+               32;
+    bool need_post_process = param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    if (need_post_process) {
+        size_t dst_tmp = N * GROUP * OC * OW * OH * sizeof(int32_t);
+        return WorkspaceBundle(nullptr, {src_size, filter_size, dst_tmp});
+    } else {
+        return WorkspaceBundle(nullptr, {src_size, filter_size});
+    }
+}
+
+size_t ConvBiasImpl::AlgoAVX2DirectConvStride2::get_workspace(
+        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+    return get_bundle(param).total_size_in_bytes();
+}
+
+SmallVector<fallback::ConvBiasImpl::NCBKern>
+ConvBiasImpl::AlgoAVX2DirectConvStride2::get_kimpls(
+        const NCBKernSizeParam& param) const {
+    auto bundle = get_bundle(param);
+    return direct_conv_avx2_stride2::get_kimpls(param, bundle);
+}
+
+bool ConvBiasImpl::AlgoAVX2DirectConvStride2::is_preferred(
+        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+    return direct_avx2_stride2_int8_preferred(param);
+}
+
 #if MEGDNN_X86_WITH_MKL_DNN
 bool ConvBiasImpl::AlgoMkldnnQint8::usable(FallbackConvBiasImpl*,
                                            const NCBKernSizeParam& param,
                                            AlgoSelectionStrategy) const {
-    auto&& fm = param.filter_meta;
-    return (param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
-            param.src_type.enumv() == DTypeEnum::Int8) &&
-           (param.dst_type.enumv() == DTypeEnum::QuantizedS32 ||
-            param.dst_type.enumv() == DTypeEnum::Int32) &&
-           fm.format == param::ConvBias::Format::NCHW && fm.spatial_ndim == 2 &&
-           fm.dilation[0] == 1 && fm.dilation[1] == 1 && !fm.should_flip &&
-           param.bias_mode == BiasMode::NO_BIAS &&
-           param.nonlineMode == NonlineMode::IDENTITY;
+    return mkldnn_qint8_usable(param);
 }
 
 WorkspaceBundle ConvBiasImpl::AlgoMkldnnQint8::get_bundle(
@@ -412,39 +425,25 @@ void ConvBiasImpl::AlgoMkldnnQint8::kern_mkldnn_s8x8x32(
         stream_mkldnn.wait();
     }
 }
-
 #undef REORDER_MEMORY
-#endif
 
-#if MEGDNN_X86_WITH_MKL_DNN
+bool ConvBiasImpl::AlgoMkldnnQint8::is_preferred(
+        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+    return mkldnn_qint8_preferred(param);
+}
+
 /* ===================== mkldnn qint8 matmul algo ===================== */
 bool ConvBiasImpl::AlgoMkldnnMatmulQint8::usable(FallbackConvBiasImpl*,
                                                  const NCBKernSizeParam& param,
                                                  AlgoSelectionStrategy) const {
-    auto&& fm = param.filter_meta;
-    return (param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
-            param.src_type.enumv() == DTypeEnum::Int8) &&
-           (param.dst_type.enumv() == DTypeEnum::QuantizedS32 ||
-            param.dst_type.enumv() == DTypeEnum::Int32) &&
-           fm.format == param::ConvBias::Format::NCHW && fm.spatial_ndim == 2 &&
-           fm.group == 1 && fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-           param.bias_mode == BiasMode::NO_BIAS &&
-           param.nonlineMode == NonlineMode::IDENTITY &&
-           //! The matmul opr is only used in single thread
-           //! TODO:support the no pack matmul algo in fallback im2col + matmul
-           param.nr_threads == 1_z;
+    return mkldnn_matmul_qint8_usable(param);
 }
+
 bool ConvBiasImpl::AlgoMkldnnMatmulQint8::is_preferred(
         FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
-    auto&& fm = param.filter_meta;
-    megdnn_assert_internal(fm.group == 1 && fm.dilation[0] == 1 &&
-                           fm.dilation[1] == 1);
-
-    // single channel conv should never use matrix mul
-    if (fm.ocpg == 1 || fm.icpg == 1)
-        return false;
-    return true;
+    return mkldnn_matmul_qint8_preferred(param);
 }
+
 WorkspaceBundle ConvBiasImpl::AlgoMkldnnMatmulQint8::get_bundle(
         const NCBKernSizeParam& param) {
     UNPACK_CONV_F32_NCB_KERN_SIZES(param);
@@ -473,6 +472,7 @@ WorkspaceBundle ConvBiasImpl::AlgoMkldnnMatmulQint8::get_bundle(
     }
     return {nullptr, {part0, part1, part2}};
 }
+
 MatrixMul* ConvBiasImpl::AlgoMkldnnMatmulQint8::get_matmul_opr() {
     static CpuOprDelegationStorage<> storage;
     return storage.get<MatrixMul>();
@@ -553,76 +553,5 @@ void ConvBiasImpl::AlgoMkldnnMatmulQint8::kern_mkldnn_matmul_s8x8x32(
 }
 
 #endif
-/* ===================== avx2 int8 stride 2 ===================== */
-bool ConvBiasImpl::AlgoAVX2DirectConvStride2::usable(
-        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
-        AlgoSelectionStrategy) const {
-    auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0];
-    bool aviliable = ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                       param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                       param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-                      (((param.src_type.enumv() == DTypeEnum::Int8 &&
-                         param.filter_type.enumv() == DTypeEnum::Int8 &&
-                         param.dst_type.enumv() == DTypeEnum::Int32) ||
-                        (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                         param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                         param.dst_type.enumv() == DTypeEnum::QuantizedS32)) &&
-                       param.bias_mode == BiasMode::NO_BIAS &&
-                       param.nonlineMode == NonlineMode::IDENTITY)) &&
-                     fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
-                     fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
-                     fm.stride[0] == 2 && fm.stride[1] == 2 &&
-                     is_supported(SIMDType::AVX2);
-    return aviliable;
-}
-
-WorkspaceBundle ConvBiasImpl::AlgoAVX2DirectConvStride2::get_bundle(
-        const NCBKernSizeParam& param) {
-    auto&& fm = param.filter_meta;
-    size_t N = param.n;
-    size_t IC = fm.icpg;
-    size_t OC = fm.ocpg;
-    size_t IH = param.isz[0];
-    size_t IW = param.isz[1];
-    size_t OH = param.osz[0];
-    size_t OW = param.osz[1];
-    size_t FH = fm.spatial[0];
-    size_t FW = fm.spatial[1];
-    size_t GROUP = fm.group;
-    size_t IC_STEP = 2, OC_STEP = 4;
-
-    size_t pad_h = fm.padding[0];
-    size_t pad_w = fm.padding[1];
-    size_t src_size = 0, filter_size = 0;
-
-    //! pack filter, pack src
-    filter_size = GROUP * round_up(OC, OC_STEP) * round_up(IC, IC_STEP) * FH *
-                  FW * sizeof(int16_t);
-    //! avx256 iw max offset 32, caused by w_remain < 16
-    src_size = N * GROUP * div_ceil(IC, IC_STEP) * (IH + 2 * pad_h) *
-                       (IW + 2 * pad_w) * 2 * sizeof(int8_t) +
-               32;
-    bool need_post_process = param.dst_type.enumv() == DTypeEnum::QuantizedS8;
-    if (need_post_process) {
-        size_t dst_tmp = N * GROUP * OC * OW * OH * sizeof(int32_t);
-        return WorkspaceBundle(nullptr, {src_size, filter_size, dst_tmp});
-    } else {
-        return WorkspaceBundle(nullptr, {src_size, filter_size});
-    }
-}
-
-size_t ConvBiasImpl::AlgoAVX2DirectConvStride2::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
-    return get_bundle(param).total_size_in_bytes();
-}
-
-SmallVector<fallback::ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoAVX2DirectConvStride2::get_kimpls(
-        const NCBKernSizeParam& param) const {
-    auto bundle = get_bundle(param);
-    return direct_conv_avx2_stride2::get_kimpls(param, bundle);
-}
 
 // vim: syntax=cpp.doxygen

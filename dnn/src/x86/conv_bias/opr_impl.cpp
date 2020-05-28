@@ -16,6 +16,7 @@
 #include "src/common/metahelper.h"
 #include "src/common/opr_delegate.h"
 #include "src/x86/conv_bias/f32/algos.h"
+#include "src/x86/conv_bias/int8/algo_usable_preferred.h"
 #include "src/x86/conv_bias/int8/algos.h"
 #include "src/x86/matrix_mul/opr_impl.h"
 
@@ -94,12 +95,6 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
-#if MEGDNN_X86_WITH_MKL_DNN
-        //! Create the mkldnn algo
-        all_algos.emplace_back(&mkldnn_conv_fp32);
-        all_algos.emplace_back(&mkldnn_matmul_qint8);
-        all_algos.emplace_back(&mkldnn_qint8);
-#endif
         all_algos.emplace_back(&stride1_direct_large_group);
         all_algos.emplace_back(&stride1_direct_small_group);
         all_algos.emplace_back(&stride2_direct_large_group);
@@ -109,6 +104,14 @@ public:
         all_algos.emplace_back(&avx2_stride1_chanwsie_qint8);
         all_algos.emplace_back(&avx2_stride2_chanwsie_qint8);
         all_algos.emplace_back(&matmul);
+
+        //! preference to use mkldnn algo on VNNI devices
+#if MEGDNN_X86_WITH_MKL_DNN
+        //! Create the mkldnn algo
+        all_algos.emplace_back(&mkldnn_conv_fp32);
+        all_algos.emplace_back(&mkldnn_matmul_qint8);
+        all_algos.emplace_back(&mkldnn_qint8);
+#endif
 
         static CpuOprDelegationStorage<> storage;
         auto matmul_opr = storage.get<MatrixMul>();
@@ -157,6 +160,27 @@ void ConvBiasImpl::get_rectified_img_size(size_t IH, size_t IW, size_t FH,
 const char* ConvBiasImpl::get_algorithm_set_name() const {
     // x86 version 0
     return "X0";
+}
+
+bool ConvBiasImpl::is_matmul_quantized_prefer(
+        const ConvBiasImpl::NCBKernSizeParam& param) {
+    bool conv_direct_chanwise_mkldnn_usable = true;
+    if (param.dst_type.enumv() == DTypeEnum::QuantizedS8 ||
+        param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
+        conv_direct_chanwise_mkldnn_usable =
+                chanwise_avx2_stride1_qint8_usable_preferred(param) ||
+                chanwise_avx2_stride2_qint8_usable_preferred(param) ||
+                direct_avx2_stride1_int8_usable_preferred(param) ||
+                direct_avx2_stride2_int8_usable_preferred(param);
+    }
+#if MEGDNN_X86_WITH_MKL_DNN
+    conv_direct_chanwise_mkldnn_usable =
+            conv_direct_chanwise_mkldnn_usable ||
+            mkldnn_qint8_usable_preferred(param) ||
+            mkldnn_matmul_qint8_usable_preferred(param);
+#endif
+
+    return !conv_direct_chanwise_mkldnn_usable;
 }
 
 // vim: syntax=cpp.doxygen

@@ -53,6 +53,9 @@ public:
                                        size_t& IW2, size_t& OH2, size_t& OW2);
 
     const char* get_algorithm_set_name() const override;
+
+    bool is_matmul_quantized_prefer(
+            const ConvBiasImpl::NCBKernSizeParam& ncb_param) override;
 };
 
 }  // namespace x86

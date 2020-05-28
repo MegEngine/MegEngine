@@ -35,6 +35,8 @@ public:
         return get_kimpls(param);
     }
     void* type() const override;
+    bool is_preferred(FallbackConvBiasImpl*,
+                      const NCBKernSizeParam& param) const override;
 };
 
 /* ===================== avx2 stride2 chanwise algo ===================== */
@@ -57,6 +59,8 @@ public:
         return get_kimpls(param);
     }
     void* type() const override;
+    bool is_preferred(FallbackConvBiasImpl*,
+                      const NCBKernSizeParam& param) const override;
 };
 
 /* ===================== avx2 stride1 direct algo ===================== */
@@ -79,6 +83,32 @@ public:
         return get_kimpls(param);
     }
     void* type() const override;
+    bool is_preferred(FallbackConvBiasImpl*,
+                      const NCBKernSizeParam& param) const override;
+};
+
+/* ================== avx2 int8 direct conv stride2 algo ================== */
+class ConvBiasImpl::AlgoAVX2DirectConvStride2 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+    static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
+
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override {
+        return "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2";
+    }
+    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(FallbackConvBiasImpl* opr,
+                         const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl*,
+            const NCBKernSizeParam& param) const override {
+        return get_kimpls(param);
+    }
+    void* type() const override;
+    bool is_preferred(FallbackConvBiasImpl*,
+                      const NCBKernSizeParam& param) const override;
 };
 
 #if MEGDNN_X86_WITH_MKL_DNN
@@ -117,6 +147,8 @@ public:
         return {{kern, {group, n, 1_z}}};
     }
     void* type() const override;
+    bool is_preferred(FallbackConvBiasImpl*,
+                      const NCBKernSizeParam& param) const override;
 };
 /* ===================== mkldnn qint8 matmul algo ===================== */
 class ConvBiasImpl::AlgoMkldnnMatmulQint8 final : public AlgoBase {
@@ -148,27 +180,7 @@ public:
     void* type() const override;
 };
 #endif
-/* ================== avx2 int8 direct conv stride2 algo ================== */
-class ConvBiasImpl::AlgoAVX2DirectConvStride2 final : public AlgoBase {
-    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
-public:
-    bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2";
-    }
-    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(FallbackConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl*,
-            const NCBKernSizeParam& param) const override {
-        return get_kimpls(param);
-    }
-    void* type() const override;
-};
 }  // namespace x86
 }  // namespace megdnn
 
