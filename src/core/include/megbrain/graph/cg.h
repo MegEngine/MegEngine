@@ -97,14 +97,15 @@ struct GraphCommonOptimizeOptions {
     bool fuse_conv_bias_with_z = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,
-        NCHW4,   ///< compute using NCHW4 tensor format
-        NHWCD4,  ///< compute using NHWCD4 tensor format
-        NCHW88,  ///< compute using NCHW88 tensor format
-        NCHW44,  ///< compute using NCHW44 tensor format
-        NCHW32,  ///< compute using NCHW32 tensor format, used for
-                 ///< tensorcore
-        CHWN4,   ///< compute using CHWN4 tensor format, transformed mainly
-                 ///< used for cuda
+        NCHW4,       ///< compute using NCHW4 tensor format
+        NHWCD4,      ///< compute using NHWCD4 tensor format
+        NCHW88,      ///< compute using NCHW88 tensor format
+        NCHW44,      ///< compute using NCHW44 tensor format
+        NCHW44_DOT,  ///< compute using NCHW44_DOT tensor format
+        NCHW32,      ///< compute using NCHW32 tensor format, used for
+                     ///< tensorcore
+        CHWN4,       ///< compute using CHWN4 tensor format, transformed mainly
+                     ///< used for cuda
     };
     LayoutTransform layout_transform = LayoutTransform::DEFAULT;
 
@@ -142,6 +143,7 @@ struct GraphCommonOptimizeOptions {
     SET(nhwcd4, NHWCD4);
     SET(nchw88, NCHW88);
     SET(nchw44, NCHW44);
+    SET(nchw44_dot, NCHW44_DOT);
     SET(nchw32, NCHW32);
     SET(chwn4, CHWN4);
 #undef SET

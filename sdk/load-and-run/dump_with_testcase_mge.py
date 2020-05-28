@@ -255,6 +255,7 @@ def optimize_for_inference(args, outputs):
         'enable_nchw4': 'use_nchw4',
         'enable_nchw88': 'use_nchw88',
         'enable_nchw44': 'use_nchw44',
+        'enable_nchw44_dot': 'use_nchw44_dot',
         'enable_nchw32': 'use_nchw32',
         'enable_chwn4': 'use_chwn4',
         'enable_fuse_conv_bias_nonlinearity': 'fuse_conv_bias_nonlinearity',
@@ -399,6 +400,12 @@ def main():
         action='store_true',
         help='transform the model format from NCHW to NCHW44 '
         'for inference'
+    )
+    parser.add_argument(
+        '--enable-nchw44-dot',
+        action='store_true',
+        help='transform the model format from NCHW to NCHW44_DOT '
+        'for optimizing armv8.2 dot in inference'
     )
     parser.add_argument(
         '--enable-nchw32',

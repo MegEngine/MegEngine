@@ -738,6 +738,8 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     });
     cb(nchw88, { add_pass(EnableNchwxxPass::make_nchwxx_converter(8)); });
     cb(nchw44, { add_pass(EnableNchwxxPass::make_nchwxx_converter(4)); });
+    cb(nchw44_dot,
+       { add_pass(EnableNchw44DotPass::make_nchw44_dot_converter()); });
     cb(nchw32, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();

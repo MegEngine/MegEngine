@@ -554,6 +554,7 @@ def optimize_for_inference(
     use_nchw4=False,
     use_nchw88=False,
     use_nchw44=False,
+    use_nchw44_dot=False,
     use_chwn4=False
 ):
     """optimize computing graph for inference
@@ -577,6 +578,8 @@ def optimize_for_inference(
         times.
     :param use_nchw44: whether to use NCHW44 tensor format. This maybe faster some
         times.
+    :param use_nchw44_dot: whether to use NCHW44_DOT tensor format. This format is
+        optimized for inference in armv8.2
     :param use_nchw32: whether to use NCHW32 tensor format. Mainly used for
         nvidia tensorcore.
     :param use_chwn4: whether to use CHWN4 tensor format. Mainly used for
@@ -605,6 +608,7 @@ def optimize_for_inference(
         "use_nchw32": "nchw32",
         "use_nchw88": "nchw88",
         "use_nchw44": "nchw44",
+        "use_nchw44_dot": "nchw44_dot",
         "use_chwn4": "chwn4",
     }.items():
         if settings[k]:

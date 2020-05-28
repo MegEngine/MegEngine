@@ -236,8 +236,10 @@ namespace gopt {
         VarNode* on_graph_endpoint_var(VarNode* new_var,
                                        VarNode* orig_var) const override;
     public:
-        const char* name() const override { return mgb_cstr_log("tensor_format_nchw4"); }
-        
+        const char* name() const override {
+            return mgb_cstr_log("tensor_format_nchw4");
+        }
+
         //! make nchw -> nchw4 converter opt pass
         static std::unique_ptr<EnableNCHW4Pass> make_nchw4_converter();
     };
@@ -246,28 +248,46 @@ namespace gopt {
      * \brief convert tensor format to nchwxx to speed up inference on certain
      * devices
      */
-    class EnableNchwxxPass final : public TensorReformatPass {
+    class EnableNchwxxPass : public TensorReformatPass {
         std::string m_name = "tensor_format_nchwxx";
         size_t m_pack_c_size;
         VarNode* on_graph_endpoint_var(VarNode* new_var,
                                        VarNode* orig_var) const override;
+    public:
+        EnableNchwxxPass(size_t pack_c_size) : m_pack_c_size(pack_c_size) {}
+
         //! the flag for conv to transform to nchwxx
         enum class TransType {
             TRANS_PURE_NCHWXX,    //!< weight and src all trans to nchwxx
             TRANS_HYBIRD_NCHWXX,  //!< input is nchw, output is nchwxx
             TRANS_NONE,           //!< no need trans
         };
-
-    public:
-        EnableNchwxxPass(size_t pack_c_size) : m_pack_c_size(pack_c_size) {}
         const char* name() const override {
             return mgb_cstr_log(m_name.c_str());
         }
         void set_name(std::string in_name) { m_name = in_name; }
+
+        void fill_opr_convert_fun(size_t pack_c_size);
+
         //! make nchw -> nchwxx converter opt pass, pack_c_size is the x, like
         //! 4,8,16
         static std::unique_ptr<EnableNchwxxPass> make_nchwxx_converter(
                 size_t pack_c_size);
+    };
+
+    /*!
+     * \brief convert tensor format from nchw44 to nchw44_dot to speed up
+     * inference on armv8.2
+     */
+    class EnableNchw44DotPass final : public EnableNchwxxPass {
+        std::string m_name = "tensor_format_nchw44_dot";
+        VarNode* on_graph_endpoint_var(VarNode* new_var,
+                                       VarNode* orig_var) const override;
+
+    public:
+        EnableNchw44DotPass() : EnableNchwxxPass(4) {}
+        //! make nchw44 -> nchw44_dot converter opt pass
+        static std::unique_ptr<EnableNchw44DotPass> make_nchw44_dot_converter();
     };
 
     struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {};

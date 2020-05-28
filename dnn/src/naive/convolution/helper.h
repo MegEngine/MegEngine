@@ -287,8 +287,7 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
             }
         } else if (filter_meta.format == Format::NCHW44 ||
                    filter_meta.format == Format::NCHW44_DOT) {
-            if (filter_meta.format == Format::NCHW44 && !is_output &&
-                src.layout.ndim == 4) {
+            if (!is_output && src.layout.ndim == 4) {
                 return n * layout.stride[0] + c * layout.stride[1] +
                        h * layout.stride[2] + w * layout.stride[3];
             } else {
