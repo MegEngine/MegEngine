@@ -19,6 +19,7 @@ _master_port = 0
 _world_size = 0
 _rank = 0
 _backend = None
+_group_id = 0
 
 
 def init_process_group(
@@ -43,6 +44,7 @@ def init_process_group(
     global _world_size  # pylint: disable=global-statement
     global _rank  # pylint: disable=global-statement
     global _backend  # pylint: disable=global-statement
+    global _group_id  # pylint: disable=global-statement
 
     if not isinstance(master_ip, str):
         raise TypeError("Expect type str but got {}".format(type(master_ip)))
@@ -60,6 +62,7 @@ def init_process_group(
     _world_size = world_size
     _rank = rank
     _backend = backend
+    _group_id = 0
 
     set_default_device(mgb.comp_node("gpu" + str(dev)))
 
@@ -99,6 +102,13 @@ def get_rank() -> int:
 def get_backend() -> str:
     """Get the backend str"""
     return str(_backend)
+
+
+def get_group_id() -> int:
+    """Get group id for collective communication"""
+    global _group_id
+    _group_id += 1
+    return _group_id
 
 
 def group_barrier() -> None:

@@ -9,7 +9,7 @@
 import numpy as np
 
 from ..core import Buffer, Parameter
-from ..functional import batch_norm2d
+from ..functional import batch_norm2d, sync_batch_norm
 from . import init
 from .module import Module
 
@@ -74,13 +74,60 @@ class _BatchNorm(Module):
 
             inp = inp.reshape(new_shape)
 
-        _iter_update = None
         if self.training and self.track_running_stats:
             exponential_average_factor = self.momentum
         else:
             exponential_average_factor = 0.0  # useless
 
         output = batch_norm2d(
+            inp,
+            self.running_mean,
+            self.running_var,
+            self.weight,
+            self.bias,
+            self.training or not self.track_running_stats,
+            exponential_average_factor,
+            self.eps,
+        )
+
+        if _ndims != 4:
+            output = output.reshape(origin_shape)
+
+        return output
+
+
+class SyncBatchNorm(_BatchNorm):
+    r"""
+    Applies Synchronization Batch Normalization.
+    """
+
+    def _check_input_ndim(self, inp):
+        if len(inp.shape) not in {2, 3, 4}:
+            raise ValueError(
+                "expected 2D, 3D or 4D input (got {}D input)".format(len(inp.shape))
+            )
+
+    def forward(self, inp):
+        self._check_input_ndim(inp)
+
+        _ndims = len(inp.shape)
+        if _ndims != 4:
+            origin_shape = inp.shapeof()
+            if _ndims == 2:
+                n, c = inp.shapeof(0), inp.shapeof(1)
+                new_shape = (n, c, 1, 1)
+            elif _ndims == 3:
+                n, c, h = inp.shapeof(0), inp.shapeof(1), inp.shapeof(2)
+                new_shape = (n, c, h, 1)
+
+            inp = inp.reshape(new_shape)
+
+        if self.training and self.track_running_stats:
+            exponential_average_factor = self.momentum
+        else:
+            exponential_average_factor = 0.0  # useless
+
+        output = sync_batch_norm(
             inp,
             self.running_mean,
             self.running_var,

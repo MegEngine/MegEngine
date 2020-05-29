@@ -76,6 +76,7 @@ from .nn import (
     roi_pooling,
     softmax,
     softplus,
+    sync_batch_norm,
     warp_perspective,
 )
 from .quantized import conv_bias_activation

@@ -18,6 +18,7 @@ from .._internal.config import opr_priority_scope
 from ..core import Buffer, Parameter, Tensor, TensorDict
 from ..core.graph import get_default_graph
 from ..distributed import all_reduce_sum, bcast_param, get_world_size, is_distributed
+from ..distributed.util import get_group_id
 from ..functional import add_update
 from ..functional import grad as grad_func
 from ..jit import sideeffect
@@ -152,7 +153,7 @@ class Optimizer(metaclass=ABCMeta):
         :param loss: The obtained loss tensor
         """
         rst = []
-        key = 0
+        priority = 0
         params = []
         for group in self.param_groups:
             for param in group["params"]:
@@ -173,11 +174,14 @@ class Optimizer(metaclass=ABCMeta):
 
         for param, grad in zip(params, grads):
             if is_distributed():
-                key += 1
-                with opr_priority_scope(cg, -key):
+                priority += 1
+                with opr_priority_scope(cg, -priority):
                     # all_reduce_mean
-                    grad = all_reduce_sum(grad, key) / get_world_size()
-                with opr_priority_scope(cg, (1 << 30) - key):
+                    grad = (
+                        all_reduce_sum(grad, "grad_" + str(get_group_id()))
+                        / get_world_size()
+                    )
+                with opr_priority_scope(cg, (1 << 30) - priority):
                     grad_update = add_update(param.grad, grad)
             else:
                 grad_update = add_update(param.grad, grad)
@@ -216,11 +220,9 @@ class Optimizer(metaclass=ABCMeta):
                     param.grad.reset_zero()
 
     def bcast_param(self):
-        key = 0
         for group in self.param_groups:
             for param in group["params"]:
-                bcast_param(param, key)
-                key += 1
+                bcast_param(param, "bcast_param_" + str(get_group_id()))
 
     def state_dict(self) -> Dict:
         r"""Export the optimizer state.

@@ -7,7 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from .activation import LeakyReLU, PReLU, ReLU, Sigmoid, Softmax
-from .batchnorm import BatchNorm1d, BatchNorm2d
+from .batchnorm import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 from .concat import Concat
 from .conv import Conv2d, ConvTranspose2d, LocalConv2d
 from .conv_bn_relu import ConvBn2d, ConvBnRelu2d

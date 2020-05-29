@@ -11,15 +11,20 @@ from typing import Optional, Tuple, Union
 
 import megengine._internal as mgb
 from megengine._internal import CompGraph, CompNode
+from megengine._internal.config import add_extra_vardep
+from megengine._internal.opr import add_update
+from megengine._internal.opr_param_defs import CollectiveComm as CollParam
 
+from .. import distributed as dist
 from ..core import Tensor, wrap_io_tensor
 from ..core.graph import _use_default_if_none
+from ..distributed.util import get_group_id
 from ..jit import barrier, mark_impure
 from ..random import uniform
 from ..utils.types import _pair, _pair_nonzero
 from .debug_param import get_conv_execution_strategy
 from .elemwise import exp, log
-from .tensor import concat, where
+from .tensor import where
 from .utils import _decide_comp_node_and_comp_graph
 
 
@@ -472,6 +477,125 @@ def batch_norm2d(
         )[-1]
 
     return output
+
+
+@wrap_io_tensor
+def sync_batch_norm(
+    input: Tensor,
+    running_mean: Tensor,
+    running_var: Tensor,
+    weight: Optional[Tensor] = None,
+    bias: Optional[Tensor] = None,
+    training: bool = False,
+    momentum: Union[float, Tensor] = 0.9,
+    eps: float = 1e-5,
+    eps_mode="ADDITIVE",
+) -> Tensor:
+    """ Applies synchronized batch normalization to the input.
+
+    Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
+
+    :param inp: input tensor.
+    :param running_mean: tensor to store running mean.
+    :param running_var: tensor to store running variance.
+    :param weight: scaling tensor in the learnable affine parameters.
+        See :math:`\gamma` in :class:`~.BatchNorm2d`
+    :param bias: bias tensor in the learnable affine parameters.
+        See :math:`\beta` in :class:`~.BatchNorm2d`
+    :param training: a boolean value to indicate whether batch norm is performed
+        in traning mode. Default: ``False``
+    :param momentum: the value used for the ``running_mean`` and ``running_var``
+        computation.
+        Default: 0.9
+    :param eps: a value added to the denominator for numerical stability.
+        Default: 1e-5.
+    """
+
+    assert eps_mode in {"MAX", "ADDITIVE"}, "unknown eps_mode: {}".format(eps_mode)
+    input = mgb.opr.mark_no_broadcast_elemwise(input)
+    _channels = input.imm_shape[1]
+    _ndim = len(input.imm_shape)
+    _param_shape = (1, _channels) + (1,) * (_ndim - 2)
+
+    if training:
+
+        def _sum_on_channel(input):
+            return mgb.opr.reduce_general([input, _param_shape], mode="sum")
+
+        def _allreduce(stat, key):
+            return dist.helper.collective_comm_symvar(
+                stat, key, CollParam.Mode.ALL_REDUCE_SUM
+            )
+
+        reduce_size = input.shape[0]
+        for i in range(2, _ndim):
+            reduce_size = reduce_size * input.shape[i]
+        channel_x1s = _sum_on_channel(input)
+        channel_x2s = _sum_on_channel(input ** 2)
+
+        if dist.is_distributed():
+            # reduce all nodes' data to calculate mean and variance
+            reduce_size = reduce_size.reshape(*(1,) * _ndim)
+            stat = mgb.opr.concat([reduce_size, channel_x1s, channel_x2s], axis=1)
+            stat = _allreduce(stat, key="sync_bn_" + str(get_group_id()))
+            reduce_size = stat[:, :1].reshape(1)
+            channel_x1s = stat[:, 1 : 1 + _channels]
+            channel_x2s = stat[:, 1 + _channels :]
+
+        channel_mean = channel_x1s / reduce_size
+        channel_variance = (
+            channel_x1s ** 2 / (-reduce_size * reduce_size) + channel_x2s / reduce_size
+        )
+    else:
+        assert running_var is not None and running_mean is not None
+        channel_variance = running_var.reshape(*_param_shape)
+        channel_mean = running_mean.reshape(*_param_shape)
+
+    invsqrt_channel_variance = (
+        mgb.opr.elem.max(channel_variance, eps)
+        if eps_mode == "MAX"
+        else mgb.opr.elem.add(channel_variance, eps)
+    ) ** -0.5
+
+    if weight is not None:
+        weight = weight.reshape(*_param_shape)
+    if bias is not None:
+        bias = bias.reshape(*_param_shape)
+
+    # outvar = output * weight + bias
+    # where output = input * invsqrt_channel_variance + (
+    #    -channel_mean * invsqrt_channel_variance
+    # )
+    # Manually expand output for gopt
+
+    if weight is not None:
+        inv_var_wt = invsqrt_channel_variance * weight
+        neg_channel_mean = -channel_mean
+        if bias is not None:
+            outvar = input * inv_var_wt + (neg_channel_mean * inv_var_wt + bias)
+        else:
+            outvar = input * inv_var_wt + neg_channel_mean * inv_var_wt
+    else:
+        outvar = input * invsqrt_channel_variance + (
+            -channel_mean * invsqrt_channel_variance
+        )
+        if bias is not None:
+            outvar = outvar + bias
+
+    if training and running_var is not None and running_mean is not None:
+        _mean_update = add_update(
+            running_mean, channel_mean, alpha=momentum, beta=1 - momentum,
+        )
+        channel_variance_unbiased = channel_x1s ** 2 / (
+            -reduce_size * (reduce_size - 1)
+        ) + channel_x2s / (reduce_size - 1)
+        _variance_update = add_update(
+            running_var, channel_variance_unbiased, alpha=momentum, beta=1 - momentum
+        )
+        for dep in (_mean_update, _variance_update):
+            add_extra_vardep(outvar, dep)
+
+    return outvar
 
 
 def one_hot(inp: Tensor, num_classes: int) -> Tensor:
