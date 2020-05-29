@@ -913,10 +913,10 @@ static void gemm_mk4_s8_8x12_pack_B(dt_int8* out, const dt_int8* in, int ldin,
                 *outptr++ = *inptr++;
             }
             for (; i < 4; i++) {
-                *outptr++ = *inptr++;
-                *outptr++ = *inptr++;
-                *outptr++ = *inptr++;
-                *outptr++ = *inptr++;
+                *outptr++ = 0;
+                *outptr++ = 0;
+                *outptr++ = 0;
+                *outptr++ = 0;
             }
         }
 

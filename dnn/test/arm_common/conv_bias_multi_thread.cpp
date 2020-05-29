@@ -72,10 +72,12 @@ std::vector<conv_bias::TestArg> get_int8_quint8_conv_bias_args(
 std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         std::vector<size_t> kernel_vec, size_t stride, bool no_pad = false,
         bool no_bias = false, bool no_nonlinemode = false,
-        bool is_input_nchw = false, bool support_full_bias = false,
-        bool support_sigmoid = false) {
+        bool is_input_nchw = false, bool is_nchw44_dot = false,
+        bool support_full_bias = false, bool support_sigmoid = false,
+        bool only_no_bias = false) {
     using namespace conv_bias;
     using NLMode = param::ConvBias::NonlineMode;
+    
     std::vector<TestArg> args;
 
     auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
@@ -102,7 +104,11 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         size_t kernel_h = kernel;
         size_t kernel_w = kernel;
         param::ConvBias param;
-        param.format = param::ConvBias::Format::NCHW44;
+        if (!is_nchw44_dot) {
+            param.format = param::ConvBias::Format::NCHW44;
+        } else {
+            param.format = param::ConvBias::Format::NCHW44_DOT;
+        }
         param.stride_h = stride;
         param.stride_w = stride;
         param.pad_h = pad;
@@ -155,18 +161,22 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
     if (support_sigmoid) {
         nonlinemode.emplace_back(NLMode::SIGMOID);
     }
-    
-    std::vector<megdnn::BiasMode> bias_mode = {
-            megdnn::BiasMode::BROADCAST_CHANNEL_BIAS};
-    if (no_bias) {
+
+    std::vector<megdnn::BiasMode> bias_mode;
+    if (!only_no_bias) {
+        bias_mode.emplace_back(megdnn::BiasMode::BROADCAST_CHANNEL_BIAS);
+        if (no_bias) {
+            bias_mode.emplace_back(megdnn::BiasMode::NO_BIAS);
+        }
+    } else {
         bias_mode.emplace_back(megdnn::BiasMode::NO_BIAS);
     }
     if (support_full_bias) {
-        bias_mode.emplace_back(megdnn::BiasMode::BIAS);
+      bias_mode.emplace_back(megdnn::BiasMode::BIAS);
     }
     for (auto bias : bias_mode)
         for (auto nlmode : nonlinemode)
-            for (size_t n : {1, 2})
+            for (size_t n : {1,2})
                 for (size_t kernel : kernel_vec)
                     for (size_t oc : {4, 12})
                         for (size_t ic : {1, 3, 4, 12})
@@ -361,19 +371,19 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K7) {
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K2K3) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3}, 1, false, false, false,
-                                              false, true, true),
+                                              false, false, true, true),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K5) {
     check_conv_bias(get_nchw44_conv_bias_args({5}, 1, false, false, false,
-                                              false, true, true),
+                                              false, false, true, true),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S2) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
-                                              false, false, true, true),
+                                              false, false, false, true, true),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
@@ -1420,6 +1430,111 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM) {
 #endif
 #undef cb
 }
+
+#if __ARM_FEATURE_DOTPROD
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_MK4_DOT) {
+    UniformIntRNG rng{-50, 50};
+
+#define cb(name)                                                               \
+    checker_conv_bias(get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false,  \
+                                                false, false, false, true),    \
+                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),       \
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
+                      dtype::QuantizedS8(60.25f), name);                       \
+    checker_conv_bias(                                                         \
+            get_nchw44_conv_bias_args({1}, 2, false, true, true, false, true), \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                 \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),              \
+            dtype::QuantizedS8(60.25f), name);
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    cb("IM2COLMATMUL:AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD:96");
+#elif MEGDNN_ARMV7
+    cb("IM2COLMATMUL:AARCH32_INT8_MK4_8X6X4_DOTPROD:96");
+#endif
+#undef cb
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_S8x8x32_MK4_DOT) {
+    UniformIntRNG rng{-50, 50};
+
+#define cb(name)                                                              \
+    checker_conv_bias(                                                        \
+            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false,    \
+                                      true, false, true, false, false, true), \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);  \
+    checker_conv_bias(                                                        \
+            get_nchw44_conv_bias_args({1}, 2, false, true, true, false, true, \
+                                      false, false, true),                    \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    cb("IM2COLMATMUL:AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD:96");
+#elif MEGDNN_ARMV7
+    cb("IM2COLMATMUL:AARCH32_INT8_MK4_8X6X4_DOTPROD:96");
+#endif
+#undef cb
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32_MK4_DOT) {
+    UniformIntRNG rng{-50, 50};
+
+#define cb(name)                                                              \
+    checker_conv_bias(                                                        \
+            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false,    \
+                                      true, false, true, false, false, true), \
+            handle(), &rng, epsilon, dtype::Int8(), dtype::Int8(),            \
+            dtype::Int32(), {}, name);                                        \
+    checker_conv_bias(                                                        \
+            get_nchw44_conv_bias_args({1}, 2, false, true, true, false, true, \
+                                      false, false, true),                    \
+            handle(), &rng, epsilon, dtype::Int8(), dtype::Int8(),            \
+            dtype::Int32(), {}, name);
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    cb("IM2COLMATMUL:AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD:96");
+#elif MEGDNN_ARMV7
+    cb("IM2COLMATMUL:AARCH32_INT8_MK4_8X6X4_DOTPROD:96");
+#endif
+#undef cb
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CONV1x1_QUANTIZEDSYM_MK4_DOT) {
+    UniformIntRNG rng{-50, 50};
+
+#define cb(name)                                                               \
+    checker_conv_bias(                                                         \
+            get_nchw44_conv_bias_args({1}, 1, true, true, false, false, true), \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                 \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),              \
+            dtype::QuantizedS8(60.25f), name);                                 \
+    checker_conv_bias(                                                         \
+            get_nchw44_conv_bias_args({1}, 1, true, true, true, false, true,   \
+                                      false, false, true),                     \
+            handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                 \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);   \
+    checker_conv_bias(                                                         \
+            get_nchw44_conv_bias_args({1}, 1, true, true, true, false, true,   \
+                                      false, false, true),                     \
+            handle(), &rng, epsilon, dtype::Int8(), dtype::Int8(),             \
+            dtype::Int32(), {}, name);
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    cb("CONV1x1:AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD");
+#elif MEGDNN_ARMV7
+    cb("CONV1x1:AARCH32_INT8_MK4_8X6X4_DOTPROD");
+#endif
+#undef cb
+}
+#endif
+
 // clang-format on
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDASYM) {
@@ -1685,8 +1800,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32) {
     using namespace conv_bias;
-    std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({2, 4, 7}, 1);
+    std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
+            {2, 4, 7}, 1, false, false, false, false, false, true,true);
 #if MEGDNN_AARCH64
     check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
 #elif MEGDNN_ARMV7
@@ -1696,8 +1811,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32) {
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32) {
     using namespace conv_bias;
-    std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({3, 5, 6}, 2);
+    std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
+            {3, 5, 6}, 2, false, false, false, false, false, true, true);
 #if MEGDNN_AARCH64
     check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
 #elif MEGDNN_ARMV7

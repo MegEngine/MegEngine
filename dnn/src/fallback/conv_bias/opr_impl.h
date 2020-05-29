@@ -23,8 +23,10 @@ namespace fallback {
 
 /*!
  * \brief get the pack_size according to the format
+ * Note  TODO: when remove format from param,
+ *       may using like this "opr::param::format specify"
  * */
-size_t get_format_pack_size(param::ConvBias::Format format);
+size_t pack_size(param::ConvBias::Format format);
 
 /*!
  * \brief fallback conv bias forward impl

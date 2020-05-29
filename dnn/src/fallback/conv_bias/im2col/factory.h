@@ -230,7 +230,11 @@ public:
                         PostprocessMode::FLOAT,
                         "DefaultStrategyTypeNCHW44::FLOAT"_hash);
                 } else {
-                    megdnn_throw("not support format except nchw44 and nchw\n");
+                    megdnn_throw(
+                            ssprintf("Current only support layout "
+                                     "NCHW44/NCHW for im2col "
+                                     "algo, but got %d\n",
+                                     uint32_t(format)));
                 }
                 break;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -252,12 +256,17 @@ public:
                     cb2(NCHW, DEFAULT, dt_int8, dt_int32, dt_int32, dt_int8,
                         dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
                         "DefaultStrategyType::INT8x8x32"_hash);
-                } else if (format == param::ConvBias::Format::NCHW44) {
+                } else if (format == param::ConvBias::Format::NCHW44 ||
+                           format == param::ConvBias::Format::NCHW44_DOT) {
                     cb2(NCHW44, DEFAULT, dt_int8, dt_int32, dt_int32, dt_int8,
                         dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
                         "DefaultStrategyType::INT8x8x32"_hash);
                 } else {
-                    megdnn_throw("not support format except nchw44 and nchw\n");
+                    megdnn_throw(
+                            ssprintf("Current only support layout "
+                                     "NCHW44/NCHW/NCHW_DOT for im2col "
+                                     "algo, but got %d\n",
+                                     uint32_t(format)));
                 }
 
                 break;
@@ -288,13 +297,18 @@ public:
                         dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
                         PostprocessMode::NO_PROCESS,
                         "DefaultStrategyTypeNCHW::QINT8x8x32"_hash);
-                } else if (format == param::ConvBias::Format::NCHW44) {
+                } else if (format == param::ConvBias::Format::NCHW44 ||
+                           format == param::ConvBias::Format::NCHW44_DOT) {
                     cb2(NCHW44, DEFAULT, dtype::QuantizedS8,
                         dtype::QuantizedS32, dtype::QuantizedS32, dt_int8,
                         dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
                         "DefaultStrategyTypeHCHW44::QINT8x8x32"_hash);
                 } else {
-                    megdnn_throw("not support format except nchw44 and nchw\n");
+                    megdnn_throw(
+                            ssprintf("Current only support layout "
+                                     "NCHW44/NCHW/NCHW_DOT for im2col "
+                                     "algo, but got %d\n",
+                                     uint32_t(format)));
                 }
                 break;
 
@@ -304,17 +318,22 @@ public:
                         dtype::QuantizedS8, dt_int8, dt_int32, dt_int8,
                         PostprocessMode::QUANTIZED,
                         "DefaultStrategyType::QINT8x8x32x8"_hash);
-                } else if (format == param::ConvBias::Format::NCHW44) {
+                } else if (format == param::ConvBias::Format::NCHW44 ||
+                           format == param::ConvBias::Format::NCHW44_DOT) {
                     cb2(NCHW44, DEFAULT, dtype::QuantizedS8,
                         dtype::QuantizedS32, dtype::QuantizedS8, dt_int8,
                         dt_int32, dt_int8, PostprocessMode::QUANTIZED,
                         "DefaultStrategyTypeNCHW44::QINT8x8x32x8"_hash);
                 } else {
-                    megdnn_throw("not support format except nchw44 and nchw\n");
+                    megdnn_throw(ssprintf("Current only support layout "
+                                          "NCHW44/NCHW/NCHW_DOT for im2col "
+                                          "algo, but got %d\n",
+                                          uint32_t(format)));
                 }
                 break;
         }
-        megdnn_throw("error not support strategy type ");
+        megdnn_throw(ssprintf("Unsupported strategy type %u in default mode",
+                              uint32_t(strategytype)));
     }
 
     static std::unique_ptr<StrategyBase> make_nopack_strategy(
@@ -328,10 +347,6 @@ public:
                     PostprocessMode::FLOAT, "NoPackStrategyType::FLOAT"_hash);
                 break;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-            case StrategyType::FLOAT_FP16:
-                cb1(NCHW, NO_PACK, dt_float16, __fp16, PostprocessMode::FLOAT,
-                    "NoPackStrategyType::FLOAT_FP16"_hash);
-                break;
 #else
 #if !MEGDNN_DISABLE_FLOAT16
             case StrategyType::FLOAT16_FLOAT16:
@@ -341,48 +356,24 @@ public:
                 break;
 #endif
 #endif
-            case StrategyType::INT8x8x32:
-                cb2(NCHW, NO_PACK, dt_int8, dt_int32, dt_int32, dt_int8,
-                    dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
-                    "NoPackStrategyType::INT8x8x32"_hash);
-                break;
-
             case StrategyType::INT8x8x16:
                 cb2(NCHW, NO_PACK, dt_int8, dt_int16, dt_int16, dt_int8,
                     dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
                     "NoPackStrategyType::INT8x8x16"_hash);
                 break;
-
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
-            case StrategyType::QUINT8x8x32:
-                cb2(NCHW, NO_PACK, dtype::Quantized8Asymm, dtype::QuantizedS32,
-                    dtype::QuantizedS32, dt_uint8, dt_int32, dt_int32,
-                    PostprocessMode::NO_PROCESS,
-                    "NoPackStrategyType::QUINT8x8x32"_hash);
+            case StrategyType::INT8x8x32:
+                cb2(NCHW, NO_PACK, dt_int8, dt_int32, dt_int32, dt_int8,
+                    dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+                    "NoPackStrategyType::INT8x8x32"_hash);
                 break;
-
-            case StrategyType::QUINT8x8x32x8:
-                cb2(NCHW, NO_PACK, dtype::Quantized8Asymm, dtype::QuantizedS32,
-                    dtype::Quantized8Asymm, dt_uint8, dt_int32, dt_uint8,
-                    PostprocessMode::QUANTIZED,
-                    "NoPackStrategyType::QUINT8x8x32x8"_hash);
-                break;
-#endif
-            case StrategyType::QINT8x8x32:
-                cb2(NCHW, NO_PACK, dtype::QuantizedS8, dtype::QuantizedS32,
-                    dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
-                    PostprocessMode::NO_PROCESS,
-                    "NoPackStrategyType::QINT8x8x32"_hash);
-                break;
-
-            case StrategyType::QINT8x8x32x8:
-                cb2(NCHW, NO_PACK, dtype::QuantizedS8, dtype::QuantizedS32,
-                    dtype::QuantizedS8, dt_int8, dt_int32, dt_int8,
-                    PostprocessMode::QUANTIZED,
-                    "NoPackStrategyType::QINT8x8x32x8"_hash);
+            default:
+                megdnn_throw(
+                        ssprintf("Unsupported strategy type %u in no_pack mode",
+                                 uint32_t(strategytype)));
                 break;
         }
-        megdnn_throw("error not support strategy type ");
+        megdnn_throw(ssprintf("Unsupported strategy type %u in no_pack mode",
+                              uint32_t(strategytype)));
     }
 
     static std::unique_ptr<StrategyBase> make_onlypacka_strategy(
@@ -396,63 +387,14 @@ public:
                     PostprocessMode::FLOAT,
                     "OnlyPackaStrategyType::FLOAT"_hash);
                 break;
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-            case StrategyType::FLOAT_FP16:
-                cb1(NCHW, ONLY_PACKA, dt_float16, __fp16,
-                    PostprocessMode::FLOAT,
-                    "OnlyPackaStrategyType::FLOAT_FP16"_hash);
-                break;
-#else
-#if !MEGDNN_DISABLE_FLOAT16
-            case StrategyType::FLOAT16_FLOAT16:
-                cb1(NCHW, ONLY_PACKA, dt_float16, dt_float16,
-                    PostprocessMode::NO_PROCESS,
-                    "OnlyPackaStrategyType::FLOAT16_FLOAT16"_hash);
-                break;
-#endif
-#endif
-            case StrategyType::INT8x8x32:
-                cb2(NCHW, ONLY_PACKA, dt_int8, dt_int32, dt_int32, dt_int8,
-                    dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
-                    "OnlyPackaStrategyType::INT8x8x32"_hash);
-                break;
-
-            case StrategyType::INT8x8x16:
-                cb2(NCHW, ONLY_PACKA, dt_int8, dt_int16, dt_int16, dt_int8,
-                    dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
-                    "OnlyPackaStrategyType::INT8x8x16"_hash);
-                break;
-
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
-            case StrategyType::QUINT8x8x32:
-                cb2(NCHW, ONLY_PACKA, dtype::Quantized8Asymm,
-                    dtype::QuantizedS32, dtype::QuantizedS32, dt_uint8,
-                    dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
-                    "OnlyPackaStrategyType::QUINT8x8x32"_hash);
-                break;
-
-            case StrategyType::QUINT8x8x32x8:
-                cb2(NCHW, ONLY_PACKA, dtype::Quantized8Asymm,
-                    dtype::QuantizedS32, dtype::Quantized8Asymm, dt_uint8,
-                    dt_int32, dt_uint8, PostprocessMode::QUANTIZED,
-                    "OnlyPackaStrategyType::QUINT8x8x32x8"_hash);
-                break;
-#endif
-            case StrategyType::QINT8x8x32:
-                cb2(NCHW, ONLY_PACKA, dtype::QuantizedS8, dtype::QuantizedS32,
-                    dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
-                    PostprocessMode::NO_PROCESS,
-                    "OnlyPackaStrategyType::QINT8x8x32"_hash);
-                break;
-
-            case StrategyType::QINT8x8x32x8:
-                cb2(NCHW, ONLY_PACKA, dtype::QuantizedS8, dtype::QuantizedS32,
-                    dtype::QuantizedS8, dt_int8, dt_int32, dt_int8,
-                    PostprocessMode::QUANTIZED,
-                    "OnlyPackaStrategyType::QINT8x8x32x8"_hash);
+            default:
+                megdnn_throw(ssprintf(
+                        "Unsupported strategy type %u in onlypacka mode",
+                        uint32_t(strategytype)));
                 break;
         }
-        megdnn_throw("error not support strategy type ");
+        megdnn_throw(ssprintf("Unsupported strategy type %u in onlypacka mode",
+                              uint32_t(strategytype)));
     }
 
 #undef cb1

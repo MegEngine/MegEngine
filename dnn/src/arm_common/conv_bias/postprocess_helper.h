@@ -39,7 +39,7 @@ namespace {
     megdnn::arm_common::OpCallerUnary<_op<ctype>, megdnn::arm_common::VEC>:: \
             run(static_cast<ctype*>(conv_dst_ptr),                           \
                 reinterpret_cast<ctype*>(dst_ptr), bias_type, dst_type,      \
-                N* OC* OH* OW);
+                N* OC* OH* OW* pack_oc_size);
 
 #define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                    \
     megdnn::arm_common::                                                       \
@@ -63,7 +63,7 @@ namespace {
                     static_cast<ctype*>(conv_dst_ptr),                       \
                     reinterpret_cast<const ctype*>(bias_ptr),                \
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
-                    dst_type, N* OC* OH* OW);
+                    dst_type, N* OC* OH* OW* pack_oc_size);
 
 #define FOR_BIAS(_mode)                                               \
     switch (_mode) {                                                  \
@@ -113,7 +113,6 @@ struct PostProcess {
                     megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
                     megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
                     size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
-        MEGDNN_MARK_USED_VAR(pack_oc_size);
         FOR_BIAS(bias_mode)
     }
 };
@@ -155,7 +154,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
             _op<opctype, opdtype>,                                             \
             megdnn::arm_common::VEC>::run(static_cast<opctype*>(conv_dst_ptr), \
                                           reinterpret_cast<opdtype*>(dst_ptr), \
-                                          bias_type, dst_type, N* OC* OH* OW);
+                                          bias_type, dst_type,                 \
+                                          N* OC* OH* OW* pack_oc_size);
 
 #define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                \
     megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>,              \
@@ -173,8 +173,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
                 reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,   \
                 dst_type, N, OC, OH* OW, pack_oc_size);
 
-#define HANDLE_IDENTITY(_caller, _op)   \
-    case megdnn::NonlineMode::IDENTITY: \
+#define HANDLE_IDENTITY(_caller, _op)              \
+    case megdnn::NonlineMode::IDENTITY:            \
         _caller(_op) break;
 
 #define FOR_NONLINEAR(_caller)                                      \

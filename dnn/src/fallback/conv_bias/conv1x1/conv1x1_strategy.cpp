@@ -73,32 +73,34 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
         const ConvBiasImpl::NCBKernSizeParam& param,
         MatrixMulImpl::AlgoBase::PackMode pack_mode,
         param::ConvBias::Format format) {
-    size_t pack_size = get_format_pack_size(format);
-#define cb1(_packmode, _dt, _post_ctype, _postprocess_mode, _midout_tag)       \
-    MIDOUT_BEGIN(megdnn_fallback_conv1x1_factory_strategy,                     \
-                 midout_iv(_midout_tag)) {                                     \
-        if (param.filter_type.enumv() == DTypeTrait<_dt>::enumv) {             \
-            return std::make_unique<                                           \
-                    Conv1x1Strategy<_dt, _dt, _dt, _post_ctype, _post_ctype,   \
-                                    _postprocess_mode, _packmode>>(pack_size); \
-        }                                                                      \
-    }                                                                          \
+    size_t pack_c_size = pack_size(format);
+#define cb1(_packmode, _dt, _post_ctype, _postprocess_mode, _midout_tag)     \
+    MIDOUT_BEGIN(megdnn_fallback_conv1x1_factory_strategy,                   \
+                 midout_iv(_midout_tag)) {                                   \
+        if (param.filter_type.enumv() == DTypeTrait<_dt>::enumv) {           \
+            return std::make_unique<                                         \
+                    Conv1x1Strategy<_dt, _dt, _dt, _post_ctype, _post_ctype, \
+                                    _postprocess_mode, _packmode>>(          \
+                    pack_c_size);                                            \
+        }                                                                    \
+    }                                                                        \
     MIDOUT_END()
 
-#define cb2(_packmode, _i_src_type, _i_bias_type, _i_dst_type, _src_ctype,     \
-            _bias_ctype, _dst_ctype, _postprocess_mode, _midout_tag)           \
-    MIDOUT_BEGIN(megdnn_fallback_conv1x1_factory_strategy,                     \
-                 midout_iv(_midout_tag)) {                                     \
-        if (param.filter_type.enumv() == param.src_type.enumv() &&             \
-            param.src_type.enumv() == DTypeTrait<_i_src_type>::enumv &&        \
-            param.dst_type.enumv() == DTypeTrait<_i_dst_type>::enumv) {        \
-            return std::make_unique<                                           \
-                    Conv1x1Strategy<_src_ctype, _bias_ctype, _dst_ctype,       \
-                                    DTypeTrait<_i_bias_type>::ctype,           \
-                                    DTypeTrait<_i_dst_type>::ctype,            \
-                                    _postprocess_mode, _packmode>>(pack_size); \
-        }                                                                      \
-    }                                                                          \
+#define cb2(_packmode, _i_src_type, _i_bias_type, _i_dst_type, _src_ctype, \
+            _bias_ctype, _dst_ctype, _postprocess_mode, _midout_tag)       \
+    MIDOUT_BEGIN(megdnn_fallback_conv1x1_factory_strategy,                 \
+                 midout_iv(_midout_tag)) {                                 \
+        if (param.filter_type.enumv() == param.src_type.enumv() &&         \
+            param.src_type.enumv() == DTypeTrait<_i_src_type>::enumv &&    \
+            param.dst_type.enumv() == DTypeTrait<_i_dst_type>::enumv) {    \
+            return std::make_unique<                                       \
+                    Conv1x1Strategy<_src_ctype, _bias_ctype, _dst_ctype,   \
+                                    DTypeTrait<_i_bias_type>::ctype,       \
+                                    DTypeTrait<_i_dst_type>::ctype,        \
+                                    _postprocess_mode, _packmode>>(        \
+                    pack_c_size);                                          \
+        }                                                                  \
+    }                                                                      \
     MIDOUT_END()
 
     switch (pack_mode) {

@@ -26,7 +26,7 @@
 using namespace megdnn;
 using namespace fallback;
 
-size_t megdnn::fallback::get_format_pack_size(param::ConvBias::Format format) {
+size_t megdnn::fallback::pack_size(param::ConvBias::Format format) {
     switch (format) {
         case param::ConvBias::Format::NCHW44:
         case param::ConvBias::Format::NCHW44_DOT:

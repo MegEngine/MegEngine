@@ -187,7 +187,8 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
                                        AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 2) {
         if (opr->param().format != param::ConvBias::Format::NCHW &&
-            opr->param().format != param::ConvBias::Format::NCHW44)
+            opr->param().format != param::ConvBias::Format::NCHW44 &&
+            opr->param().format != param::ConvBias::Format::NCHW44_DOT)
             return false;
 
         size_t FH = param.filter_meta.spatial[0],
@@ -219,8 +220,8 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
             param.nonlineMode != megdnn::NonlineMode::IDENTITY)
             return false;
 
-        if (opr->param().format == param::ConvBias::Format::NCHW44) {
-            //! nchw44 hybird mode and channel wise is not support
+        if (opr->param().format == param::ConvBias::Format::NCHW44 ||
+            opr->param().format == param::ConvBias::Format::NCHW44_DOT) {
             if (param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
                 param.filter_meta.ocpg == 1) {
                 return false;

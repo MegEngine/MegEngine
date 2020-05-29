@@ -897,6 +897,62 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
 #undef cb
 }
 
+#if MEGDNN_X86_WITH_MKL || MEGDNN_X86_WITH_OPENBLAS
+TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
+                   size_t p, NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        //! no bias
+        args.emplace_back(param, TensorShape{1, ic, h, w},
+                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(param, TensorShape{1, ic, h, w},
+                          TensorShape{oc, ic, kernel, kernel},
+                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w},
+                TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                            (w + 2 * p - kernel) / param.stride_w + 1});
+    };
+
+    for (size_t kernel : {2, 3, 4, 5, 6, 7})
+        for (size_t ic : {1, 4, 8, 16})
+            for (size_t oc : {1, 4, 8, 16, 300})
+                for (size_t p : {0, 2})
+                    for (size_t size : {8, 24})
+                        for (NonlineMode nonline_mode :
+                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                            run(oc, ic, size, size, kernel, p, nonline_mode);
+                        }
+
+    run(2046, 8, 20, 20, 3, 1, NonlineMode::IDENTITY);
+    Checker<ConvBias> checker(handle());
+#define cb(algo_name)                                             \
+    checker.set_before_exec_callback(                             \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name)); \
+    for (auto&& arg : args) {                                     \
+        checker.set_param(arg.param).execs(                       \
+                {arg.src, arg.filter, arg.bias, {}, {}});         \
+    }
+
+    cb("IM2COLMATMUL:X86_F32_BLAS");
+
+#undef cb
+}
+#endif
+
+
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
     using namespace conv_bias;

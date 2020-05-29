@@ -15,7 +15,6 @@
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
 #include "src/fallback/conv_bias/opr_impl.h"
-#include "src/fallback/conv_bias/winograd/strategy.h"
 #include "src/naive/convolution/helper.h"
 
 #include "midout.h"
@@ -125,7 +124,7 @@ public:
             size_t oc_tile_size) {
         size_t IC = param.filter_meta.icpg, FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
-        size_t pack_oc_size = get_format_pack_size(param.filter_meta.format);
+        size_t pack_oc_size = pack_size(param.filter_meta.format);
         size_t im2col = 0, packb = 0, bias_temp = 0;
         bool default_pack = matmul_algo->packmode() == Pack_Mode::DEFAULT;
         megdnn_assert(default_pack, "only support default packa");
@@ -319,9 +318,11 @@ ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
                                                  size_t ohw_tile_size,
                                                  size_t oc_tile_size) const {
     auto format = param::MatrixMul::Format::DEFAULT;
-    size_t pack_oc_size = get_format_pack_size(param.filter_meta.format);
+    size_t pack_oc_size = pack_size(param.filter_meta.format);
     if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
         format = param::MatrixMul::Format::MK4;
+    } else if(param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT){
+        format = param::MatrixMul::Format::MK4_DOT;
     }
     size_t M = oc_tile_size;
     size_t N = ohw_tile_size;
@@ -351,11 +352,10 @@ ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
 void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
         const NCBKernSizeParam& param, size_t& oc_tile_size,
         size_t& ohw_tile_size, size_t block_m, size_t block_n,
-        bool need_pack) const {
+        fallback::MatrixMulImpl::AlgoBase::PackMode pack_mode) const {
     size_t nr_threads = param.nr_threads;
     size_t OC = param.filter_meta.ocpg;
     size_t ohw = param.osz[0] * param.osz[1];
-
     oc_tile_size = DEFAULT_OC_TILE_SIZE;
     ohw_tile_size = m_ohw_tile_size;
 
@@ -376,7 +376,8 @@ void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
             }
         }
     } else {
-        if (!need_pack) {  //! no pack ,usually in x86 save memroy
+        //! in no_pack mode don't do block operation when using single thread
+        if (pack_mode == fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
             ohw_tile_size = ohw;
             oc_tile_size = OC;
         }
@@ -406,7 +407,7 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
     if (need_pack || only_packA) {
         auto inner_block = m_matmul_algo->get_inner_block_size();
         choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size, inner_block.m,
-                            inner_block.n, need_pack);
+                            inner_block.n, m_matmul_algo->packmode());
         auto im2col_kern_param = get_matmul_kern_param(
                 param, ohw_tile_size, only_packA ? oc_tile_size : OC);
         size_t oc_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
@@ -418,7 +419,7 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
         size_t nopack_default_blockn = 16;
         choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
                             nopack_default_blockm, nopack_default_blockn,
-                            need_pack);
+                            m_matmul_algo->packmode());
         packa_group_size = 0;
     }
 
@@ -488,19 +489,20 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         if (default_pack || only_packA) {
             auto inner_block = m_matmul_algo->get_inner_block_size();
             choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
-                                inner_block.m, inner_block.n, default_pack);
-        } else {  //! not support pack,not need pack
+                                inner_block.m, inner_block.n,
+                                m_matmul_algo->packmode());
+        } else {  //! nopack_mode
             size_t nopack_default_blockm = 8;
             size_t nopack_default_blockn = 16;
             choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
                                 nopack_default_blockm, nopack_default_blockn,
-                                no_pack);
+                                m_matmul_algo->packmode());
         }
 
         size_t ohw_parallel_times = div_ceil(ohw, ohw_tile_size);
         size_t oc_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
         size_t packa_parallel_times = 0;
-        size_t pack_oc_size = get_format_pack_size(param.filter_meta.format);
+        size_t pack_oc_size = pack_size(param.filter_meta.format);
 
         if (only_packA) {
             packa_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
@@ -639,9 +641,15 @@ bool ConvBiasImpl::AlgoIm2col::usable(
         ConvBiasImpl* opr, const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 2) {
+        if (opr->param().format != param::ConvBias::Format::NCHW &&
+            opr->param().format != param::ConvBias::Format::NCHW44_DOT &&
+            opr->param().format != param::ConvBias::Format::NCHW44) {
+            return false;
+        }
+
         //! make sure 8x8x16 and 8x8x32 biasmode is  nobias and nonlineMode is
-        //! identity otherwise return false mean that 8x8x32 and 8x8x16 not support
-        //! PostProcess
+        //! identity otherwise return false mean that 8x8x32 and 8x8x16 not
+        //! support PostProcess
         if (param.src_type.enumv() == param.filter_type.enumv() &&
             ((param.src_type.enumv() == DTypeEnum::Int8 &&
               (param.dst_type.enumv() == DTypeEnum::Int16 ||
@@ -653,9 +661,10 @@ bool ConvBiasImpl::AlgoIm2col::usable(
             param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
             return false;
         }
-        if (opr->param().format == param::ConvBias::Format::NCHW44) {
+        if (opr->param().format == param::ConvBias::Format::NCHW44 ||
+            opr->param().format == param::ConvBias::Format::NCHW44_DOT) {
             //! current NCHW44 im2col only support DEFAULT mode matmul
-            if(m_matmul_algo->packmode() != Pack_Mode::DEFAULT) {
+            if (m_matmul_algo->packmode() != Pack_Mode::DEFAULT) {
                 return false;
                 //! nchw44 hybird mode and channel wise is not support
             } else if (param.filter_meta.icpg < 4_z ||
@@ -668,29 +677,27 @@ bool ConvBiasImpl::AlgoIm2col::usable(
         size_t oc_tile_size = 0, ohw_tile_size = 0;
         Pack_Mode packmode = m_matmul_algo->packmode();
         bool default_pack = packmode == Pack_Mode::DEFAULT;
-        bool no_pack = packmode == Pack_Mode::NO_PACK;
         bool only_packA = packmode == Pack_Mode::ONLY_PACKA;
 
         if (default_pack || only_packA) {
             auto inner_block = m_matmul_algo->get_inner_block_size();
             choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
-                                inner_block.m, inner_block.n, default_pack);
+                                inner_block.m, inner_block.n,
+                                m_matmul_algo->packmode());
         } else {  //! not support pack,not need pack
             size_t nopack_default_blockm = 8;
             size_t nopack_default_blockn = 16;
             choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
                                 nopack_default_blockm, nopack_default_blockn,
-                                no_pack);
+                                m_matmul_algo->packmode());
         }
         fallback::MatrixMulImpl::KernSizeParam matmul_param =
                 get_matmul_kern_param(param, ohw_tile_size, oc_tile_size);
         bool matmulusable = m_matmul_algo->usable(matmul_param);
         return matmulusable &&
-               (opr->param().format == param::ConvBias::Format::NCHW ||
-                opr->param().format == param::ConvBias::Format::NCHW44) &&
                (!(param.filter_meta.spatial[0] ==
                           param.filter_meta.spatial[1] &&
-                  (param.filter_meta.spatial[0] == 1) &&
+                  param.filter_meta.spatial[0] == 1 &&
                   param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
                   param.filter_meta.stride[0] == 1)) &&
                (param.filter_meta.dilation[0] ==

@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include "megdnn/opr_param_defs.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #if MEGDNN_X86
 #include "src/x86/conv_bias/postprocess_helper.h"
@@ -41,12 +40,15 @@ MatrixMulImpl::KernSizeParam get_matmul_kern_param(
                         param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
                        (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
                         param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
-    size_t pack_c_size = 1_z;
+    size_t pack_c_size = pack_size(param.filter_meta.format);
     auto format = param::MatrixMul::Format::DEFAULT;
-    if(param.filter_meta.format == param::ConvBias::Format::NCHW44){
-        pack_c_size = 4_z;
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
         format = param::MatrixMul::Format::MK4;
+    } else if (param.filter_meta.format ==
+               param::ConvBias::Format::NCHW44_DOT) {
+        format = param::MatrixMul::Format::MK4_DOT;
     }
+
     return {param.filter_type,
             param.src_type,
             is_dst_8bit ? param.bias_type : param.dst_type,
