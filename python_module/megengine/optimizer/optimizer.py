@@ -17,7 +17,13 @@ import numpy as np
 from .._internal.config import opr_priority_scope
 from ..core import Buffer, Parameter, Tensor, TensorDict
 from ..core.graph import get_default_graph
-from ..distributed import all_reduce_sum, bcast_param, get_world_size, is_distributed
+from ..distributed import (
+    all_reduce_sum,
+    bcast_param,
+    get_rank,
+    get_world_size,
+    is_distributed,
+)
 from ..distributed.util import get_group_id
 from ..functional import add_update
 from ..functional import grad as grad_func
@@ -222,7 +228,11 @@ class Optimizer(metaclass=ABCMeta):
     def bcast_param(self):
         for group in self.param_groups:
             for param in group["params"]:
-                bcast_param(param, "bcast_param_" + str(get_group_id()))
+                bcast_param(
+                    param,
+                    "bcast_param_" + str(get_group_id()),
+                    is_root=(get_rank() == 0),
+                )
 
     def state_dict(self) -> Dict:
         r"""Export the optimizer state.

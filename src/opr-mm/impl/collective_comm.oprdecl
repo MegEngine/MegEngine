@@ -6,8 +6,8 @@ decl_raw_opr(
             'to the same NCCL operation.', 'str'),
         Doc('nr_devices', 'Total number of devices involved in the NCCL '
             'operation to which this operator belongs.', 'int'),
-        Doc('rank', 'Rank of this operator', 'int'),
-        Doc('root', 'root rank of broadcast or reduce operation'),
+        Doc('is_root', 'whether this node is root node', 'bool'),
+        Doc('rank', 'rank of this node, if is -1, generate one', 'int'),
         Doc('server_addr', 'rpc server ip address'),
         Doc('port', 'server rpc listening port'),
         Doc('param', 'The only component of *param* is *mode*, which refers to '
@@ -28,12 +28,12 @@ decl_raw_opr(
     body = [
          'if isinstance(input, _mgb.SymbolVar):',
         ('    output = _mgb._Opr.collective_comm_with_input(input, key, '
-         'nr_devices, rank, root, server_addr, port, '
+         'nr_devices, is_root, rank, server_addr, port, '
          '[param.serialize()], dtype, backend, output_buffer, config, disable)'),
          'else:',
          '    assert isinstance(input, _mgb.CompGraph)',
         ('    output = _mgb._Opr.collective_comm_without_input(input, key, '
-         'nr_devices, rank, root, server_addr, port, '
+         'nr_devices, is_root, rank, server_addr, port, '
          '[param.serialize()], dtype, backend, output_buffer, config, disable)')
     ],
     desc = ('collective communication between multiple CompNodes on multiple '

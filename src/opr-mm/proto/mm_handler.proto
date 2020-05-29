@@ -4,13 +4,16 @@ package mm_handler;
 
 message OprRegisterRequest {
     string key = 1;
-    uint32 rank = 2;
-    uint64 stream = 3;
-    uint32 nr_expected_devices = 4;
+    bool is_root = 2;
+    int32 rank = 3;
+    uint64 comp_node_hash = 4;
+    uint32 nr_expected_devices = 5;
 }
 
 message OprRegisterResponse {
-    uint64 hash = 1; 
+    uint64 hash = 1;
+    int32 rank = 2;
+    int32 root_rank = 3;
 }
 
 message GatherUidRequest {

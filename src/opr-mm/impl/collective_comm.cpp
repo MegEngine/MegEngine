@@ -368,8 +368,8 @@ CollectiveComm::ModeTrait& CollectiveComm::ModeTrait::from_mode(Mode mode) {
 
 CollectiveComm::CollectiveComm(
         VarNodeArray inputs, ComputingGraph* const graph,
-        const std::string& key, const size_t nr_devices, const uint32_t rank,
-        const uint32_t root, std::shared_ptr<GroupClient> group_client,
+        const std::string& key, const size_t nr_devices, const bool is_root,
+        const int rank, std::shared_ptr<GroupClient> group_client,
         const Param& param, const DType& dtype, const std::string& backend,
         const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
         const OperatorNodeConfig& config,
@@ -380,9 +380,9 @@ CollectiveComm::CollectiveComm(
           m_backend(backend),
           m_group_client{std::move(group_client)},
           m_nr_devices(nr_devices),
+          m_is_root(is_root),
           m_rank(rank),
           m_key(key),
-          m_root(root),
           m_dev_buffers(dev_buffer_arr),
           m_disable{disable} {
     for (auto i : inputs) {
@@ -422,28 +422,28 @@ CollectiveComm::CollectiveComm(
 
 SymbolVarArray CollectiveComm::make(
         const SymbolVarArray& inputs, ComputingGraph* const graph,
-        const std::string& key, const size_t nr_devices, const uint32_t rank,
-               const uint32_t root, std::shared_ptr<GroupClient> group_client,
-               const Param& param, const DType& dtype, const std::string& backend,
-               const OperatorNodeConfig& config,
+        const std::string& key, const size_t nr_devices, const bool is_root,
+        const int rank, std::shared_ptr<GroupClient> group_client,
+        const Param& param, const DType& dtype, const std::string& backend,
+        const OperatorNodeConfig& config,
         const std::shared_ptr<DTypeScalar>& disable) {
     SmallVector<std::shared_ptr<DeviceTensorND>> dev_buffer_arr(nr_devices,
                                                                 nullptr);
-    return make(inputs, graph, key, nr_devices, rank, root, group_client,
+    return make(inputs, graph, key, nr_devices, is_root, rank, group_client,
                 dev_buffer_arr, param, dtype, backend, config);
 }
 
 SymbolVarArray CollectiveComm::make(
         const SymbolVarArray& inputs, ComputingGraph* const graph,
-        const std::string& key, const size_t nr_devices, const uint32_t rank,
-               const uint32_t root, std::shared_ptr<GroupClient> group_client,
+        const std::string& key, const size_t nr_devices, const bool is_root,
+        const int rank, std::shared_ptr<GroupClient> group_client,
         const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
         const Param& param, const DType& dtype, const std::string& backend,
         const OperatorNodeConfig& config,
         const std::shared_ptr<DTypeScalar>& disable) {
     auto inpvars = cg::to_var_node_array(inputs);
     auto opr = graph->insert_opr(std::make_unique<CollectiveComm>(
-            inpvars, graph, key, nr_devices, rank, root, std::move(group_client),
+            inpvars, graph, key, nr_devices, is_root, rank, std::move(group_client),
             param, dtype, backend, dev_buffer_arr, config, disable));
     mgb_assert(!opr->output().empty());
     return cg::to_symbol_var_array(opr->output());
@@ -452,11 +452,14 @@ SymbolVarArray CollectiveComm::make(
 void CollectiveComm::opr_register() {
     if (m_init)
         return;
-    auto&& cuda_env = CompNodeEnv::from_comp_node(output(0)->comp_node())
-                                          .cuda_env();
+    auto&& comp_node = output(0)->comp_node();
 
-    auto hash = m_group_client->opr_register(m_key, m_nr_devices, m_rank,
-            reinterpret_cast<uintptr_t>(cuda_env.stream));
+    auto reg_info = m_group_client->opr_register(
+            m_key, m_nr_devices, m_is_root, m_rank,
+            comp_node.get_uid());
+
+    m_rank = reg_info.rank;
+    m_root = reg_info.root_rank;
 
     MegRayCommunicatorBuilder* builder;
 
@@ -468,7 +471,7 @@ void CollectiveComm::opr_register() {
     }
 
     m_megray_comm = builder->get_megray_comm(
-            hash, m_key, m_nr_devices, m_rank,
+            reg_info.hash, m_key, m_nr_devices, m_rank,
             get_megray_backend(m_backend), m_group_client);
 
     m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
@@ -606,8 +609,8 @@ VarNodeArray CollectiveComm::grad(const VarNodeArray& out_grads) const {
     }
 
     auto gvar = CollectiveComm::make(
-            og_syms, owner_graph(), m_key + ":grad", m_nr_devices, m_rank, m_root,
-            m_group_client, mode, m_dtype, m_backend,
+            og_syms, owner_graph(), m_key + ":grad", m_nr_devices, m_is_root,
+            m_rank, m_group_client, mode, m_dtype, m_backend,
             OperatorNodeConfig{}.comp_node_arr(cn_arr));
 
     if (m_param.mode == Param::Mode::ALL_REDUCE_MAX) {
@@ -733,11 +736,11 @@ cg::OperatorNodeBase* opr_shallow_copy_collective_mm(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<opr::CollectiveComm>();
-    return opr::CollectiveComm::make(to_symbol_var_array(inputs),
-                                     ctx.owner_graph(opr_, inputs), opr.key(),
-                                     opr.nr_devices(), opr.rank(), opr.root(),
-                                     opr.group_client(), opr.dev_buffers(),
-                                     opr.param(), opr.dtype(), opr.backend(), config)[0]
+    return opr::CollectiveComm::make(
+                   to_symbol_var_array(inputs), ctx.owner_graph(opr_, inputs),
+                   opr.key(), opr.nr_devices(), opr.is_root(), opr.rank(),
+                   opr.group_client(), opr.dev_buffers(), opr.param(),
+                   opr.dtype(), opr.backend(), config)[0]
             .node()
             ->owner_opr();
 }

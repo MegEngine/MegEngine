@@ -26,11 +26,13 @@ class MockGroupClient final : public opr::GroupClient {
     public:
         ~MockGroupClient() override = default;
 
-        uint64_t opr_register(const std::string& key, size_t nr_devices, uint32_t rank,
-                uintptr_t stream) {
-            return m_mgr.opr_register(key, nr_devices, rank, stream);
+        opr::GroupManager::RegisterInfo opr_register(const std::string& key,
+                                                     size_t nr_devices,
+                                                     bool is_root, int rank,
+                                                     uint64_t comp_node_hash) {
+            return m_mgr.opr_register(key, nr_devices, is_root, rank, comp_node_hash);
         }
-        
+
         std::vector<std::string> gather_uid(const std::string& uid,
                 const std::string& key, uint32_t size, uint32_t rank) {
             return m_mgr.gather_uid(uid, key, size, rank);

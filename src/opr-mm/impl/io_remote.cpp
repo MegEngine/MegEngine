@@ -48,12 +48,11 @@ SymbolVar RemoteSend::make(const PeerDesc& peer, SymbolVar var,
 
 void RemoteSend::scn_do_execute() {
     if (!m_init) {
-        auto&& cuda_env = CompNodeEnv::from_comp_node(output(0)->comp_node())
-                .cuda_env();
+        auto&& comp_node = output(0)->comp_node();
 
         // rank 0 for RemoteSend
-        auto hash = m_group_client->opr_register(m_peer.key, 2, 0,
-                reinterpret_cast<uintptr_t>(cuda_env.stream));
+        auto reg_info = m_group_client->opr_register(m_peer.key, 2, 0, false,
+                comp_node.get_uid());
 
         auto megray_comm_builder =
                 owner_graph()
@@ -62,7 +61,7 @@ void RemoteSend::scn_do_execute() {
                         .get_user_data_or_create<MegRayCommunicatorBuilder>();
 
         m_megray_comm = megray_comm_builder->get_megray_comm(
-                hash, m_peer.key, 2, 0, MegRay::MEGRAY_UCX, m_group_client);
+                reg_info.hash, m_peer.key, 2, 0, MegRay::MEGRAY_UCX, m_group_client);
         m_init = true;
     }
 
@@ -152,12 +151,12 @@ SymbolVar RemoteRecv::make(const PeerDesc& peer, cg::ComputingGraph& graph,
 
 void RemoteRecv::scn_do_execute() {
     if (!m_init) {
-        auto&& cuda_env = CompNodeEnv::from_comp_node(output(0)->comp_node())
-                .cuda_env();
+        auto&& comp_node = output(0)->comp_node();
 
         // rank 1 for RemoteRecv
-        auto hash = m_group_client->opr_register(m_peer.key, 2, 1,
-                reinterpret_cast<uintptr_t>(cuda_env.stream));
+        auto reg_info = m_group_client->opr_register(
+                m_peer.key, 2, false, 1,
+                comp_node.get_uid());
 
         auto megray_comm_builder =
                 owner_graph()
@@ -166,7 +165,7 @@ void RemoteRecv::scn_do_execute() {
                         .get_user_data_or_create<MegRayCommunicatorBuilder>();
 
         m_megray_comm = megray_comm_builder->get_megray_comm(
-                hash, m_peer.key, 2, 1, MegRay::MEGRAY_UCX, m_group_client);
+                reg_info.hash, m_peer.key, 2, 1, MegRay::MEGRAY_UCX, m_group_client);
         m_init = true;
     }
 

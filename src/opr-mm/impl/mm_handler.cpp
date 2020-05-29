@@ -68,9 +68,11 @@ private:
 void GroupServerProxy::opr_register(void* input_ptr, size_t input_len,
         std::string *output) {
     INFO_INIT(mm_handler, OprRegister);
-    uint64_t hash = m_mgr.opr_register(req.key(), req.nr_expected_devices(),
-        req.rank(), req.stream());
-    rsp.set_hash(hash);
+    auto ret = m_mgr.opr_register(req.key(), req.nr_expected_devices(),
+                                  req.is_root(), req.rank(), req.comp_node_hash());
+    rsp.set_hash(ret.hash);
+    rsp.set_rank(ret.rank);
+    rsp.set_root_rank(ret.root_rank);
     rsp.SerializeToString(output);
 }
 
@@ -122,11 +124,11 @@ void GroupServerProxy::group_barrier(void* input_ptr, size_t input_len,
 
 /* ======================== GroupClientProxy ========================== */
 
-#define INFO_INIT(space, f_name, name)                       \
+#define INFO_INIT(space, f_name, name)      \
     using Request = space::name##Request;   \
     using Response = space::name##Response; \
-    std::string func_name = #f_name;                  \
-    Request req;                                      \
+    std::string func_name = #f_name;        \
+    Request req;                            \
     Response rsp;
 
 #define SOLVE_REQUEST(name, req, rsp)                                \
@@ -145,15 +147,18 @@ GroupClientProxy::GroupClientProxy(const std::string& server_addr)
               m_stub{ZmqRpc::ZmqRpcClient::get_client("tcp://" + server_addr)} {
     }
 
-uint64_t GroupClientProxy::opr_register(const std::string& key, size_t nr_devices,
-    uint32_t rank, uintptr_t stream) {
+GroupManager::RegisterInfo GroupClientProxy::opr_register(
+        const std::string& key, size_t nr_devices, bool is_root, int rank,
+        uint64_t comp_node_hash) {
     INFO_INIT(mm_handler, opr_register, OprRegister)
     req.set_key(key);
+    req.set_is_root(is_root);
     req.set_rank(rank);
-    req.set_stream(stream);
+    req.set_comp_node_hash(comp_node_hash);
     req.set_nr_expected_devices(nr_devices);
     SOLVE_REQUEST(func_name, req, rsp);
-    return rsp.hash();
+    GroupManager::RegisterInfo ret{rsp.hash(), rsp.rank(), rsp.root_rank()};
+    return ret;
 }
 
 void GroupClientProxy::set_output_shape(const std::string& key,

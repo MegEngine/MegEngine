@@ -19,8 +19,8 @@ def collective_comm_symvar(
     key: str,
     op: CollParam.Mode,
     nr_ranks: Optional[int] = None,
+    is_root: Optional[bool] = None,
     rank: Optional[int] = None,
-    root: Optional[int] = 0,
     dtype: Optional[type] = None,
     device: Optional[mgb.CompNode] = None,
     comp_graph: Optional[mgb.CompGraph] = None,
@@ -31,8 +31,7 @@ def collective_comm_symvar(
     :param key: unique identifier for collective communication
     :param op: mode of collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
-    :param rank: rank of the current process, use util.get_rank() as default
-    :param root: rank of root node, use 0 as default
+    :param is_root: whether this node is root node
     :param dtype: output data type, use dtype of inp as default
     :param device: output comp node, use comp node of inp as default
     :param comp_graph: output comp graph, use comp graph of inp as default
@@ -41,8 +40,8 @@ def collective_comm_symvar(
         inp,
         key=str(key),
         nr_devices=nr_ranks if nr_ranks is not None else get_world_size(),
-        rank=rank if rank is not None else get_rank(),
-        root=root,
+        is_root=is_root if is_root is not None else (get_rank() == 0),
+        rank=rank if rank is not None else -1,
         server_addr=get_master_ip(),
         port=get_master_port(),
         param=CollParam(mode=op),

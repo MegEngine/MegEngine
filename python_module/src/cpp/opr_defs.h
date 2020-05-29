@@ -94,17 +94,17 @@ static SymbolVar remote_recv(const std::string& server_addr, const int port,
 
 static SymbolVar collective_comm_with_input(
         SymbolVar inpvar, const std::string& key, const size_t nr_devices,
-        const uint32_t rank, const uint32_t root, const std::string& server_addr,
-        const int port, PyObject* params, PyObject* dtype,
-        const std::string& backend, SharedND* output_buf,
-        const OperatorNodeConfig& config, const SharedScalar& disable);
+        const bool is_root, const int rank, const std::string& server_addr, const int port,
+        PyObject* params, PyObject* dtype, const std::string& backend,
+        SharedND* output_buf, const OperatorNodeConfig& config,
+        const SharedScalar& disable);
 
 static SymbolVar collective_comm_without_input(
         CompGraph& graph, const std::string& key, const size_t nr_devices,
-        const uint32_t rank, const uint32_t root, const std::string& server_addr,
-        const int port, PyObject* params, PyObject* dtype,
-        const std::string& backend, SharedND* output_buf,
-        const OperatorNodeConfig& config, const SharedScalar& disable);
+        const bool is_root, const int rank, const std::string& server_addr, const int port,
+        PyObject* params, PyObject* dtype, const std::string& backend,
+        SharedND* output_buf, const OperatorNodeConfig& config,
+        const SharedScalar& disable);
 
 // misc
 static SymbolVarArray extern_c_opr_placeholder(

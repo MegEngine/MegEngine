@@ -14,6 +14,7 @@
 #if MGB_ENABLE_OPR_MM
 
 #include "megbrain/opr/collective_comm.h"
+#include "megbrain/opr/group_manager.h"
 
 using namespace mgb;
 using namespace opr;
@@ -31,8 +32,10 @@ public:
     GroupClientProxy(const std::string& server_addr);
 
     //! graph registration, assign graph_id to worker.
-    uint64_t opr_register(const std::string& key, size_t nr_devices, uint32_t rank,
-        uintptr_t stream) override;
+    GroupManager::RegisterInfo opr_register(const std::string& key,
+                                            size_t nr_devices, bool is_root,
+                                            int rank,
+                                            uint64_t comp_node_hash) override;
 
     std::vector<std::string> gather_uid(const std::string& uid,
             const std::string& key, uint32_t size, uint32_t rank) override;

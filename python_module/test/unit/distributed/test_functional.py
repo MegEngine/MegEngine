@@ -102,7 +102,7 @@ def test_all_gather():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.all_gather(inp, "x")
+        output = dist.functional.all_gather(inp, "x", rank=rank)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -135,7 +135,7 @@ def test_reduce_scatter_sum():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.reduce_scatter_sum(inp, "x")
+        output = dist.functional.reduce_scatter_sum(inp, "x", rank=rank)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):

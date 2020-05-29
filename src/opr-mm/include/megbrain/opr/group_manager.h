@@ -24,12 +24,13 @@ namespace opr {
 class GroupInfo {
     public:
         struct OprInfo {
-            uint32_t rank;
-            uintptr_t stream; 
+            uint64_t comp_node_hash;
+            bool is_root;
+            int rank;
         };
 
         void add_opr(const std::string& key, size_t nr_expected_devices,
-                uint32_t graph_id, uintptr_t stream);
+                bool is_root, int rank, uint64_t comp_node_hash);
 
         void set_output_shape(const std::string& key, const TensorShape& shape);
 
@@ -37,15 +38,25 @@ class GroupInfo {
 
         void clear();
 
-        const std::vector<OprInfo>& opr_infos() const {return m_opr_infos; }
+        const std::vector<OprInfo>& opr_infos() const { return m_opr_infos; }
+
+        int get_root_rank() const { return m_root_rank; }
+        int get_rank(uint64_t hash) const { return m_rank_map.at(hash); }
+        uint64_t get_group_hash() const { return m_hash; }
 
     private:
+        void sort_opr_infos();
+        void gen_infos_from_opr_infos();
+
         std::vector<OprInfo> m_opr_infos;
+        std::unordered_map<uint64_t, int> m_rank_map;
+        uint64_t m_hash;
         uint32_t m_nr_registered_devs;
         uint32_t m_nr_expected_devs;
         Maybe<TensorShape> m_output_shape;
 
         uint32_t m_count = 0;
+        int m_root_rank = -1;
         std::mutex m_group_mtx;
         std::condition_variable m_register_cv;
         std::condition_variable m_clear_cv;
@@ -61,10 +72,16 @@ class GroupManager {
     public:
         ~GroupManager() = default;
 
+        struct RegisterInfo
+        {
+            uint64_t hash;
+            int rank, root_rank;
+        };
+
         //! register oprs' info to server, return deduplicated hash
-        uint64_t opr_register(const std::string& key, size_t nr_devices, uint32_t rank,
-                uintptr_t stream);
-    
+        RegisterInfo opr_register(const std::string& key, size_t nr_devices,
+                                  bool is_root, int rank, uint64_t comp_node_hash);
+
         //! gather uids from all ranks
         std::vector<std::string> gather_uid(const std::string& uid,
                 const std::string& key, uint32_t size, uint32_t rank);
@@ -80,9 +97,6 @@ class GroupManager {
 
     private:
         GroupInfo& get_group(const std::string& key);
-
-        uint64_t get_hash_key(const std::vector<GroupInfo::OprInfo>& _infos,
-                uint32_t rank);
     
         //! key -> group info.
         std::unordered_map<std::string, GroupInfo> m_key2group_info;
@@ -112,9 +126,11 @@ class GroupClient {
         virtual ~GroupClient() = default;
     
     public:
-        virtual uint64_t opr_register(const std::string& key, size_t nr_devices,
-                uint32_t rank, uintptr_t stream) = 0;
-    
+        virtual GroupManager::RegisterInfo opr_register(const std::string& key,
+                                                        size_t nr_devices,
+                                                        bool is_root, int rank,
+                                                        uint64_t comp_node_hash) = 0;
+
         virtual std::vector<std::string> gather_uid(const std::string& uid,
                 const std::string& key, uint32_t size, uint32_t rank) = 0;
     
