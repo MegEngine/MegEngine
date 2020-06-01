@@ -328,6 +328,18 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             int16_t graph_opt_level = 2;
 
             /*!
+             * max size of allreduce packs in MB
+             * set this option to zero to disable PackAllReducePass
+             */
+            int16_t allreduce_pack_max_size = 0;
+
+            /*!
+             * do not pack the first n allreduces
+             * PackAllReducePass disabled if allreduce_pack_max_size is zero
+             */
+            int16_t allreduce_pack_ignore_first = 2;
+
+            /*!
              * set logging level, larger number means more verbose
              * 0: no log info
              * 1: static memory allocation status

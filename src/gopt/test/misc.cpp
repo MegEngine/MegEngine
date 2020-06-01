@@ -14,6 +14,7 @@
 #include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/misc.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/blas.h"
 #include "megbrain/opr/cond.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
@@ -409,5 +410,323 @@ TEST_PASS(RemoveRedundantTypeCvtPass, Basic) {
     check(x_q8, x_q8_fp32_q8);
     check(x_q8_q8, x_q8_fp32_q8_);
 }
+
+#if MGB_ENABLE_OPR_MM
+#include "megbrain/opr/collective_comm.h"
+#include "../../opr-mm/test/mock_client.h"
+
+TEST_PASS(PackAllReduceScanPass, Basic) {
+    auto graph = ComputingGraph::make();
+    graph->options().allreduce_pack_max_size = 5000;
+
+    auto client = std::make_shared<test::MockGroupClient>();
+    auto cn = CompNode::load("gpux");
+
+    auto dev_x0 = std::make_shared<DeviceTensorND>(cn, TensorShape{3, 5});
+    auto dev_x1 = std::make_shared<DeviceTensorND>(cn, TensorShape{4, 6});
+    auto dev_y0 = std::make_shared<DeviceTensorND>(cn, TensorShape{1});
+    auto dev_y1 = std::make_shared<DeviceTensorND>(cn, TensorShape{1});
+
+    auto x0 = opr::SharedDeviceTensor::make(*graph, dev_x0);
+    auto x1 = opr::VolatileSharedDeviceTensor::make(*graph, dev_x1);
+    auto y0 = opr::SharedDeviceTensor::make(*graph, dev_y0);
+    auto y1 = opr::VolatileSharedDeviceTensor::make(*graph, dev_y1);
+
+    auto grad0 = opr::VirtualGrad::make(y0, x0);
+    auto grad1 = opr::VirtualGrad::make(y0, x1);
+    auto grad2 = opr::VirtualGrad::make(y1, x0);
+    auto grad3 = opr::VirtualGrad::make(y1, x1);
+
+    auto mode = opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM;
+    auto comm0 = opr::CollectiveComm::make({grad0}, graph.get(),
+        "grad0", 2, 0, 0, client, mode)[0];
+    auto comm1 = opr::CollectiveComm::make({grad1}, graph.get(),
+        "grad1", 2, 0, 0, client, mode)[0];
+    auto comm2 = opr::CollectiveComm::make({grad2}, graph.get(),
+        "grad2", 2, 0, 0, client, mode)[0];
+    auto comm3 = opr::CollectiveComm::make({grad3}, graph.get(),
+        "grad3", 2, 0, 0, client, mode)[0];
+
+    gopt::GraphOptimizer()
+        .add_pass<gopt::PackAllReduceScanPass>()
+        .apply({{comm0, comm1, comm2, comm3}});
+
+    auto get_hash = [] (const SymbolVar& symvar) {
+        cg::OperatorNodeBase* opr = symvar.node()->owner_opr();
+        return opr->cast_final_safe<opr::CollectiveComm>().pack_hash();
+    };
+    uint64_t hash0 = get_hash(comm0);
+    uint64_t hash1 = get_hash(comm1);
+    uint64_t hash2 = get_hash(comm2);
+    uint64_t hash3 = get_hash(comm3);
+
+    ASSERT_EQ(hash0, hash1);
+    ASSERT_EQ(hash2, hash3);
+    ASSERT_NE(hash0, hash2);
+}
+
+TEST_PASS(PackAllReduceReplacePass, CollectGroups) {
+    REQUIRE_GPU(2);
+    auto cns = load_multiple_xpus(2);
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 2;
+
+    auto cli0 = std::make_shared<test::MockGroupClient>("mock_addr0");
+    auto cli1 = std::make_shared<test::MockGroupClient>("mock_addr1");
+
+    using GroupInfo = gopt::PackAllReduceReplacePass::GroupInfo;
+    ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>> group_info;
+    ThinHashMap<uint64_t, cg::OprNodeArray> groups;
+
+    auto add_opr = [&] (const CompNode& cn, TensorShape shape, const DType& dt,
+        std::shared_ptr<test::MockGroupClient> client, uint64_t extra_hash) {
+        auto dev0 = std::make_shared<DeviceTensorND>(cn, shape, dt);
+        auto wrt = opr::SharedDeviceTensor::make(*graph, dev0);
+
+        auto dev1 = std::make_shared<DeviceTensorND>(cn, TensorShape{1}, dt);
+        auto target = opr::SharedDeviceTensor::make(*graph, dev1);
+
+        auto grad = opr::VirtualGrad::make(target, wrt);
+
+        auto comm = opr::CollectiveComm::make(
+            {grad}, graph.get(), "key", 2, 0, 0, client,
+            opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM)[0]
+            .node()->owner_opr();
+
+        comm->cast_final_safe<opr::CollectiveComm>().set_pack_hash(extra_hash);
+
+        return gopt::PackAllReduceReplacePass::collect_groups(comm, group_info, groups);
+    };
+
+    uint64_t hash0 = add_opr(cns[0], TensorShape{1, 3}, dtype::Float32{}, cli0, 1);
+    uint64_t hash1 = add_opr(cns[0], TensorShape{2, 4}, dtype::Float32{}, cli0, 1);  // same
+    uint64_t hash2 = add_opr(cns[1], TensorShape{3, 5}, dtype::Float32{}, cli0, 1);  // comp_node
+    uint64_t hash3 = add_opr(cns[0], TensorShape{4, 6}, dtype::Float16{}, cli0, 1);  // dtype
+    uint64_t hash4 = add_opr(cns[0], TensorShape{5, 7}, dtype::Float32{}, cli1, 1);  // client
+    uint64_t hash5 = add_opr(cns[0], TensorShape{6, 8}, dtype::Float32{}, cli0, 2);  // extra_hash
+
+    ASSERT_EQ(hash0, hash1);
+
+    std::set<uint64_t> s;
+    s.insert(hash0);
+    s.insert(hash1);
+    s.insert(hash2);
+    s.insert(hash3);
+    s.insert(hash4);
+    s.insert(hash5);
+    ASSERT_EQ(5, s.size());
+
+    ASSERT_EQ(1, group_info.count(hash0));
+    ASSERT_EQ(1, group_info.count(hash1));
+    ASSERT_EQ(1, group_info.count(hash2));
+    ASSERT_EQ(1, group_info.count(hash3));
+    ASSERT_EQ(1, group_info.count(hash4));
+    ASSERT_EQ(1, group_info.count(hash5));
+
+    ASSERT_EQ(2, groups[hash0].size());
+    ASSERT_EQ(2, groups[hash1].size());
+    ASSERT_EQ(1, groups[hash2].size());
+    ASSERT_EQ(1, groups[hash3].size());
+    ASSERT_EQ(1, groups[hash4].size());
+    ASSERT_EQ(1, groups[hash5].size());
+}
+
+TEST_PASS(PackAllReduceReplacePass, DividePacks) {
+    auto cn = CompNode::load("gpux");
+    auto graph = ComputingGraph::make();
+    auto client = std::make_shared<test::MockGroupClient>();
+    auto mode = opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM;
+
+    ThinHashMap<uint64_t, cg::OprNodeArray> groups;
+    ThinHashMap<uint64_t, std::vector<cg::OprNodeArray>> packs;
+
+    auto insert_opr = [&] (size_t size) {
+        auto dev = std::make_shared<DeviceTensorND>(cn, TensorShape{size / sizeof(float)});
+        auto sd = opr::SharedDeviceTensor::make(*graph, dev);
+        auto symvar = opr::CollectiveComm::make({sd}, graph.get(),
+            "key", 2, 0, 0, client, mode)[0];
+        auto opr = symvar.node()->owner_opr();
+        auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
+        comm.set_pack_hash(1);
+        return opr;
+    };
+
+    auto pack_size = [&] (cg::OprNodeArray& pack) {
+        size_t sum = 0;
+        for (size_t i = 0; i < pack.size(); i++) {
+            auto var = pack[i]->input(0);
+            sum += var->dtype().size(var->shape().total_nr_elems());
+        }
+        return sum;
+    };
+
+    groups[0].push_back(insert_opr(100));  // group0, pack0, size=1100
+    groups[0].push_back(insert_opr(300));  // group0, pack0, size=1100
+    groups[0].push_back(insert_opr(400));  // group0, pack0, size=1100
+    groups[0].push_back(insert_opr(300));  // group0, pack0, size=1100
+    groups[0].push_back(insert_opr(500));  // group0, pack1, size=800
+    groups[0].push_back(insert_opr(200));  // group0, pack1, size=800
+    groups[0].push_back(insert_opr(100));  // group0, pack1, size=800
+
+    groups[1].push_back(insert_opr(100));  // group1, pack0, size=900
+    groups[1].push_back(insert_opr(400));  // group1, pack0, size=900
+    groups[1].push_back(insert_opr(300));  // group1, pack0, size=900
+    groups[1].push_back(insert_opr(100));  // group1, pack0, size=900
+
+    gopt::PackAllReduceReplacePass::divide_packs(groups, packs, 1000);
+
+    ASSERT_EQ(2, packs.size());
+
+    ASSERT_EQ(2, packs[0].size());
+    ASSERT_EQ(4, packs[0][0].size());
+    ASSERT_EQ(1100, pack_size(packs[0][0]));
+    ASSERT_EQ(3, packs[0][1].size());
+    ASSERT_EQ(800, pack_size(packs[0][1]));
+
+    ASSERT_EQ(1, packs[1].size());
+    ASSERT_EQ(4, packs[1][0].size());
+    ASSERT_EQ(900, pack_size(packs[1][0]));
+}
+
+TEST_PASS(PackAllReduceReplacePass, InsertPackedOprs) {
+    auto cn = CompNode::load("gpux");
+    auto graph = ComputingGraph::make();
+    auto client = std::make_shared<test::MockGroupClient>();
+    auto mode = opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM;
+
+    size_t nr_devices = 2;
+    uint32_t rank = 0;
+    uint32_t root = 0;
+
+    using GroupInfo = gopt::PackAllReduceReplacePass::GroupInfo;
+    ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>> group_info;
+    ThinHashMap<uint64_t, cg::OprNodeArray> groups;
+
+    auto insert_opr = [&] (const TensorShape& shape) {
+        auto dev = std::make_shared<DeviceTensorND>(cn, shape);
+        auto sd = opr::SharedDeviceTensor::make(*graph, dev);
+        auto symvar = opr::CollectiveComm::make({sd}, graph.get(),
+            "key", nr_devices, rank, root, client, mode)[0];
+        auto opr = symvar.node()->owner_opr();
+        auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
+        comm.set_pack_hash(1);
+        gopt::PackAllReduceReplacePass::collect_groups(opr, group_info, groups);
+        return symvar;
+    };
+
+    auto shape_x = TensorShape{100, 200};
+    auto shape_y = TensorShape{200, 400};
+
+    auto x = insert_opr(shape_x);
+    auto y = insert_opr(shape_y);
+
+    ASSERT_EQ(1, group_info.size());
+    ASSERT_EQ(1, groups.size());
+    auto info = group_info.begin()->second;
+    auto pack = groups.begin()->second;
+    size_t pack_id = 0;
+    ThinHashMap<VarNode*, VarNode*> replace_map;
+    gopt::PackAllReduceReplacePass::insert_packed_oprs(pack_id, pack, info, replace_map, -1);
+
+    auto grad_x = SymbolVar(x.node()->owner_opr()->input(0));
+    auto grad_y = SymbolVar(y.node()->owner_opr()->input(0));
+
+    auto concat = opr::Concat::make({grad_x.flatten(), grad_y.flatten()}, 0);
+
+    std::string key = ssprintf("grad_pack_%zu", pack_id);
+    auto allreduce = opr::CollectiveComm::make({concat}, graph.get(),
+        key, nr_devices, rank, root, client, mode)[0];
+
+    std::vector<size_t> partition;
+    partition.push_back(shape_x.total_nr_elems());
+    partition.push_back(shape_y.total_nr_elems());
+    auto splits = opr::Split::make(allreduce,
+        opr::Split::Options::make_partition(allreduce, 0, partition));
+
+    ASSERT_EQ(2, splits.size());
+    auto dest_x = splits[0].reshape(shape_x);
+    auto dest_y = splits[1].reshape(shape_y);
+
+    ASSERT_EQ(2, replace_map.size());
+
+    ASSERT_TRUE(replace_map.count(x.node()) > 0);
+    ASSERT_EQ(replace_map.at(x.node()), dest_x.node());
+
+    ASSERT_TRUE(replace_map.count(y.node()) > 0);
+    ASSERT_EQ(replace_map.at(y.node()), dest_y.node());
+}
+
+TEST_PASS(PackAllReduceReplacePass, Equivalence) {
+    REQUIRE_GPU(2);
+    auto cns = load_multiple_xpus(2);
+    auto client = std::make_shared<test::MockGroupClient>();
+
+    auto build_graph = [&] (uint32_t rank, std::shared_ptr<ComputingGraph> graph,
+                            SymbolVarArray& array) {
+        HostTensorGenerator<> gen;
+        auto cn = cns[rank];
+        auto host_x = gen({1, 1000});
+        auto host_y = gen({1000, 1});
+
+        auto dev_x = std::make_shared<DeviceTensorND>(cn);
+        auto dev_y = std::make_shared<DeviceTensorND>(cn);
+
+        dev_x->copy_from(*host_x).sync();
+        dev_y->copy_from(*host_y).sync();
+
+        auto x = opr::SharedDeviceTensor::make(*graph, dev_x);
+        auto y = opr::VolatileSharedDeviceTensor::make(*graph, dev_y);
+        auto loss = opr::MatrixMul::make(x, y).flatten();
+
+        auto grad_x = opr::VirtualGrad::make(loss, x);
+        auto grad_y = opr::VirtualGrad::make(loss, y);
+
+        using Mode = opr::CollectiveComm::Param::Mode;
+        bool is_root = (rank == 0);
+        auto reduced_x = opr::CollectiveComm::make({grad_x}, graph.get(),
+            "x", 2, is_root, rank, client, Mode::ALL_REDUCE_SUM)[0] / 2;
+        auto reduced_y = opr::CollectiveComm::make({grad_y}, graph.get(),
+            "y", 2, is_root, rank, client, Mode::ALL_REDUCE_SUM)[0] / 2;
+
+        graph->options().allreduce_pack_max_size = 5000;
+        graph->options().allreduce_pack_ignore_first = 0;
+
+        auto dest_vars = gopt::GraphOptimizer{}
+            .add_pass<gopt::PackAllReduceScanPass>()
+            .add_pass<gopt::PackAllReduceReplacePass>()
+            .apply({{reduced_x, reduced_y}}).endpoint_vars();
+
+        array.emplace_back(reduced_x);
+        array.emplace_back(reduced_y);
+        array.emplace_back(dest_vars[0]);
+        array.emplace_back(dest_vars[1]);
+    };
+
+    auto run = [&] (uint32_t rank) {
+        auto graph = ComputingGraph::make();
+        SymbolVarArray array;
+        build_graph(rank, graph, array);
+
+        HostTensorND host_reduced_x, host_reduced_y, host_dest_0, host_dest_1;
+
+        graph->options().allreduce_pack_max_size = 0;
+        auto func = graph->compile({make_callback_copy(array[0], host_reduced_x),
+                                    make_callback_copy(array[1], host_reduced_y),
+                                    make_callback_copy(array[2], host_dest_0),
+                                    make_callback_copy(array[3], host_dest_1)});
+        func->execute();
+
+        MGB_ASSERT_TENSOR_EQ(host_reduced_x, host_dest_0);
+        MGB_ASSERT_TENSOR_EQ(host_reduced_y, host_dest_1);
+    };
+
+    std::thread t0(run, 0);
+    std::thread t1(run, 1);
+
+    t0.join();
+    t1.join();
+}
+
+#endif  // MGB_ENABLE_OPR_MM
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

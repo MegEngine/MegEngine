@@ -47,7 +47,7 @@ public:
 
     uint32_t group_barrier(uint32_t size, uint32_t rank) override;
 
-    const std::string& get_addr() const {
+    const std::string& get_addr() const override {
         return m_addr;
     }
 

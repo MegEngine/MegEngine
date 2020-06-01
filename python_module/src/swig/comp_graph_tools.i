@@ -1,3 +1,7 @@
+%{
+#include "megbrain/gopt/framework.h"
+%}
+
 %inline {
 
     SymbolVarArray _get_owner_opr_inputs(SymbolVar var) {
@@ -34,6 +38,18 @@
             oprmap[repl_src[i].node()] = repl_dst[i].node();
         }
         return mgb::cg::replace_oprs(vars, oprmap);
+    }
+
+    void _set_priority_to_id(const SymbolVarArray& dest_vars) {
+        auto on_opr = [](mgb::cg::OperatorNodeBase* opr) {
+            if (opr->node_prop().attribute().priority == 0) {
+                opr->node_prop().attribute().priority = opr->id();
+            }
+        };
+        mgb::cg::DepOprIter dep_iter{on_opr};
+        for (const SymbolVar& var : dest_vars) {
+            dep_iter.add(var);
+        }
     }
 }
 // vim: ft=swig foldmethod=marker foldmarker=f{{{,f}}}

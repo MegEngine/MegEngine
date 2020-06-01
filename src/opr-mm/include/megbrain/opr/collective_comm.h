@@ -81,6 +81,10 @@ public:
         return m_group_client;
     }
 
+    void set_pack_hash(uint64_t hash) { m_pack_hash = hash; }
+
+    uint64_t pack_hash() const { return m_pack_hash; }
+
     std::shared_ptr<MegRay::Context> megray_ctx() const {
         return m_megray_ctx;
     }
@@ -122,6 +126,9 @@ private:
     // Whether shape infer is enabled. This is only used by BROADCAST operation,
     // whose shape infer should be disabled *during* static infer phase.
     bool m_enable_shape_infer = false;
+
+    //! set in PackAllReduceScanPass and used in PackAllReduceReplacePass
+    uint64_t m_pack_hash = 0;
 
     std::shared_ptr<MegRay::Context> m_megray_ctx;
     std::shared_ptr<MegRay::Communicator> m_megray_comm;

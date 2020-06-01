@@ -461,16 +461,7 @@ void CollectiveComm::opr_register() {
     m_rank = reg_info.rank;
     m_root = reg_info.root_rank;
 
-    MegRayCommunicatorBuilder* builder;
-
-    {
-        static std::mutex user_data_mtx;
-        std::unique_lock<std::mutex> lk(user_data_mtx);
-        builder = owner_graph()->options().user_data
-                .get_user_data_or_create<MegRayCommunicatorBuilder>();
-    }
-
-    m_megray_comm = builder->get_megray_comm(
+    m_megray_comm = MegRayCommBuilder::get_megray_comm(
             reg_info.hash, m_key, m_nr_devices, m_rank,
             get_megray_backend(m_backend), m_group_client);
 
@@ -736,13 +727,15 @@ cg::OperatorNodeBase* opr_shallow_copy_collective_mm(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<opr::CollectiveComm>();
-    return opr::CollectiveComm::make(
+    auto new_opr = CollectiveComm::make(
                    to_symbol_var_array(inputs), ctx.owner_graph(opr_, inputs),
                    opr.key(), opr.nr_devices(), opr.is_root(), opr.rank(),
                    opr.group_client(), opr.dev_buffers(), opr.param(),
                    opr.dtype(), opr.backend(), config)[0]
             .node()
             ->owner_opr();
+    new_opr->cast_final_safe<opr::CollectiveComm>().set_pack_hash(opr.pack_hash());
+    return new_opr;
 }
 MGB_REG_OPR_SHALLOW_COPY(CollectiveComm, opr_shallow_copy_collective_mm);
 

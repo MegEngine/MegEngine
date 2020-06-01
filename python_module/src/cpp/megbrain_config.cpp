@@ -66,6 +66,8 @@ bool _config::set_comp_graph_option(
     SET_CG_OPTION(graph_opt.jit);
     SET_CG_OPTION(graph_opt.tensorrt);
     SET_CG_OPTION(graph_opt_level);
+    SET_CG_OPTION(allreduce_pack_max_size);
+    SET_CG_OPTION(allreduce_pack_ignore_first);
     SET_CG_OPTION(var_sanity_check_first_run);
     SET_CG_OPTION(no_profiling_on_shape_change);
     SET_CG_OPTION(allocate_static_mem_after_graph_compile);

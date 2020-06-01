@@ -159,7 +159,6 @@ class Optimizer(metaclass=ABCMeta):
         :param loss: The obtained loss tensor
         """
         rst = []
-        priority = 0
         params = []
         for group in self.param_groups:
             for param in group["params"]:
@@ -180,14 +179,14 @@ class Optimizer(metaclass=ABCMeta):
 
         for param, grad in zip(params, grads):
             if is_distributed():
-                priority += 1
-                with opr_priority_scope(cg, -priority):
-                    # all_reduce_mean
+                with opr_priority_scope(cg, -(2 ** 30)):
+                    # always run all_reduce_mean first except add_update
                     grad = (
                         all_reduce_sum(grad, "grad_" + str(get_group_id()))
                         / get_world_size()
                     )
-                with opr_priority_scope(cg, (1 << 30) - priority):
+                with opr_priority_scope(cg, -(2 ** 31)):
+                    # always run add_update first
                     grad_update = add_update(param.grad, grad)
             else:
                 grad_update = add_update(param.grad, grad)

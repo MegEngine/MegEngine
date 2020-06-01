@@ -17,10 +17,9 @@
 #include "megbrain/opr/utility.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/graph.h"
+#include "mock_client.h"
 
 using namespace mgb;
-
-namespace {
 
 using Mode = opr::CollectiveComm::Param::Mode;
 
@@ -41,41 +40,6 @@ SymbolVarArray make_reduce_scatter_sum_output(const SymbolVarArray& inputs) {
             rdc, opr::Split::Options::make_average(0, inputs.size()));
 }
 
-class MockGroupClient final : public opr::GroupClient {
-    public:
-        ~MockGroupClient() override = default;
-
-        opr::GroupManager::RegisterInfo opr_register(const std::string& key,
-                                                     size_t nr_devices,
-                                                     bool is_root, int rank,
-                                                     uintptr_t stream) {
-            return m_mgr.opr_register(key, nr_devices, is_root, rank, stream);
-        }
-
-        std::vector<std::string> gather_uid(const std::string& uid,
-                const std::string& key, uint32_t size, uint32_t rank) {
-            return m_mgr.gather_uid(uid, key, size, rank);
-        }
-
-        void set_output_shape(const std::string& key,
-                              const TensorShape& shape) override {
-            m_mgr.set_output_shape(key, shape);
-        }
-    
-        TensorShape get_output_shape(const std::string& key) override {
-            return m_mgr.get_output_shape(key);
-        }
-
-        uint32_t group_barrier(uint32_t size, uint32_t rank) override {
-            return m_mgr.group_barrier(size, rank);
-        }
-    
-    private:
-        opr::GroupManager m_mgr;
-};
-
-}  // namespace
-
 TEST(TestOprCollectiveComm, AllReduce) {
     REQUIRE_GPU(2);
 
@@ -88,7 +52,7 @@ TEST(TestOprCollectiveComm, AllReduce) {
         auto host_x1 = gen({28, 28});
         HostTensorND host_y0, host_y1, host_y_expect;
     
-        auto client = std::make_shared<MockGroupClient>();
+        auto client = std::make_shared<test::MockGroupClient>();
         auto graph = ComputingGraph::make();
     
         auto x0 = opr::Host2DeviceCopy::make(*graph, host_x0, cn0);
@@ -126,7 +90,7 @@ TEST(TestOprCollectiveComm, AllReduceMultiThread) {
         auto host_x1 = gen({28, 28});
         HostTensorND host_y0, host_y1, host_y_expect;
 
-        auto client = std::make_shared<MockGroupClient>();
+        auto client = std::make_shared<test::MockGroupClient>();
 
         auto run_0 = [&]() {
             auto graph0 = ComputingGraph::make();
@@ -187,7 +151,7 @@ TEST(TestOprCollectiveComm, AllReduceWithGrad) {
     HostTensorND host_y0, host_y1, host_y_expect;
     HostTensorND host_out_grad0, host_out_grad1, host_out_grad_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -268,7 +232,7 @@ TEST(TestOprCollectiveComm, AllGather) {
     auto host_x1 = gen({28, 28});
     HostTensorND host_y0, host_y1, host_y_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
     auto graph = ComputingGraph::make();
 
     auto x0 = opr::Host2DeviceCopy::make(*graph, host_x0, cn0);
@@ -300,7 +264,7 @@ TEST(TestOprCollectiveComm, AllGatherMultiThread) {
     auto host_x1 = gen({28, 28});
     HostTensorND host_y0, host_y1, host_y_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -356,7 +320,7 @@ TEST(TestOprCollectiveComm, AllGatherWithGrad) {
     HostTensorND host_out_grad0, host_out_grad1;
     HostTensorND host_out_grad0_expect, host_out_grad1_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -438,7 +402,7 @@ TEST(TestOprCollectiveComm, ReduceScatterSum) {
     auto host_x1 = gen({28, 28});
     HostTensorND host_y0, host_y1, host_y0_expect, host_y1_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
     auto graph = ComputingGraph::make();
 
     auto x0 = opr::Host2DeviceCopy::make(*graph, host_x0, cn0);
@@ -471,7 +435,7 @@ TEST(TestOprCollectiveComm, ReduceScatterSumMultiThread) {
     auto host_x1 = gen({8});
     HostTensorND host_y0, host_y1, host_y0_expect, host_y1_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -528,7 +492,7 @@ TEST(TestOprCollectiveComm, ReduceScatterSumWithGrad) {
     HostTensorND host_y0, host_y1, host_y0_expect, host_y1_expect;
     HostTensorND host_out_grad0, host_out_grad1, host_out_grad_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -610,7 +574,7 @@ TEST(TestOprCollectiveComm, ReduceSum) {
     auto host_x1 = gen({28, 28});
     HostTensorND host_y0, host_y1, host_y_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
     auto graph = ComputingGraph::make();
 
     auto x0 = opr::Host2DeviceCopy::make(*graph, host_x0, cn0);
@@ -641,7 +605,7 @@ TEST(TestOprCollectiveComm, ReduceSumMultiThread) {
     auto host_x1 = gen({28, 28});
     HostTensorND host_y0, host_y_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -694,7 +658,7 @@ TEST(TestOprCollectiveComm, ReduceSumWithGrad) {
 
     HostTensorND host_y0, host_y0_expect, host_out_grad0, host_out_grad1;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -764,7 +728,7 @@ TEST(TestOprCollectiveComm, Broadcast) {
     auto host_x0 = gen({28, 28});
     HostTensorND host_y0, host_y1, host_y_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
     auto graph = ComputingGraph::make();
 
     auto x0 = opr::Host2DeviceCopy::make(*graph, host_x0, cn0);
@@ -794,7 +758,7 @@ TEST(TestOprCollectiveComm, BroadcastMultiThread) {
     auto host_x0 = gen({28, 28});
     HostTensorND host_y0, host_y1;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();
@@ -840,7 +804,7 @@ TEST(TestOprCollectiveComm, BroadcastWithGrad) {
 
     HostTensorND host_y0, host_y1, host_out_grad, host_out_grad_expect;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto run_0 = [&]() { // rank 0
         auto graph0 = ComputingGraph::make();

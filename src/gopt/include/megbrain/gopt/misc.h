@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "megbrain/gopt/framework.h"
 
 namespace mgb {
@@ -88,6 +90,45 @@ namespace gopt {
     public:
         const char* name() const override;
         void apply(OptState& opt) const override;
+    };
+
+    //! scan allreduces of param grads
+    class PackAllReduceScanPass final : public Pass {
+    public:
+        const char* name() const override;
+        void apply(OptState& opt) const override;
+
+    private:
+        // check pattern param -> grad -> allreduce
+        static bool check_pattern(OperatorNodeBase* opr);
+    };
+
+    //! pack allreduces of param grads
+    class PackAllReduceReplacePass final : public Pass {
+    public:
+        class GroupInfo;
+
+        const char* name() const override;
+        void apply(OptState& opt) const override;
+
+        // collect allreduces and divide into groups
+        static uint64_t collect_groups(
+                OperatorNodeBase* opr,
+                ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>>& group_info,
+                ThinHashMap<uint64_t, cg::OprNodeArray>& groups);
+
+        // divide groups into packs, max_size in MB
+        static void divide_packs(
+                const ThinHashMap<uint64_t, cg::OprNodeArray>& groups,
+                ThinHashMap<uint64_t, std::vector<cg::OprNodeArray>>& packs,
+                size_t max_size);
+
+        // insert packed operators and update replace_map
+        static void insert_packed_oprs(
+                size_t pack_id,
+                const cg::OprNodeArray& pack,
+                std::shared_ptr<GroupInfo> info,
+                ThinHashMap<VarNode*, VarNode*>& replace_map, int priority);
     };
 
 } // namespace gopt

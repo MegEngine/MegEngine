@@ -260,3 +260,15 @@ def replace_oprs(dst, oprmap):
         repl_dst_vec.push_back(j)
 
     return _mgb._replace_oprs(repl_src_vec, repl_dst_vec, dst_vec)
+
+
+def set_priority_to_id(dest_vars):
+    """For all oprs in the subgraph constructed by dest_vars
+       set its priority to id if its original priority is zero
+    :param dest_vars: target vars representing the graph
+    """
+    dest_vec = _mgb._VectorSymbolVar()
+    for i in dest_vars:
+        assert isinstance(i, _mgb.SymbolVar)
+        dest_vec.push_back(i)
+    _mgb._set_priority_to_id(dest_vec)

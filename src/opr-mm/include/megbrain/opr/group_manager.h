@@ -126,6 +126,8 @@ class GroupClient {
         virtual ~GroupClient() = default;
     
     public:
+        virtual const std::string& get_addr() const = 0;
+
         virtual GroupManager::RegisterInfo opr_register(const std::string& key,
                                                         size_t nr_devices,
                                                         bool is_root, int rank,

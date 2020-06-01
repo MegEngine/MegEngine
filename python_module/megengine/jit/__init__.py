@@ -84,6 +84,8 @@ class trace:
     :param log_level: Log level.
     :param sublinear_memory_config: Configuration for sublinear memory optimization.
         If not None, it enables sublinear memory optimization with given setting.
+    :param allreduce_pack_max_size: Maximum size of an allreduce pack in MB.
+        If not None, multiple gradients will be packed and synchronized together
     :param profiling: Whether to profile compiled trace. Default: False
     """
 
@@ -107,6 +109,7 @@ class trace:
         opt_level: int = None,
         log_level: int = None,
         sublinear_memory_config: SublinearMemoryConfig = None,
+        allreduce_pack_max_size: int = None,
         profiling: bool = False
     ):
         self.__wrapped__ = func
@@ -114,6 +117,7 @@ class trace:
         self._graph_opt_level = opt_level
         self._log_level = log_level
         self._sublinear_memory_config = sublinear_memory_config
+        self._allreduce_pack_max_size = allreduce_pack_max_size
         self._status = self._UNSTARTED
         self._args = None
         self._kwargs = None
@@ -313,6 +317,9 @@ class trace:
                 "sublinear_mem_cofig.num_worker",
                 self._sublinear_memory_config.num_worker,
             )
+        # pack allreduce
+        if self._allreduce_pack_max_size is not None:
+            cg.set_option("allreduce_pack_max_size", self._allreduce_pack_max_size)
         # profile
         if self._profiling:
             self._profiler = CompGraphProfiler(cg)
@@ -391,6 +398,7 @@ class trace:
                     outputs = [outputs]
                 # _run_wrapped has checked validity of outputs
                 self._sym_outputs = tuple(i._symvar for i in outputs)
+            mgb.comp_graph_tools.set_priority_to_id(self._outspec)
             self._compiled_func = graph.get_default_graph().compile(None, self._outspec)
 
     def trace(self, *args: Tensor, **kwargs):

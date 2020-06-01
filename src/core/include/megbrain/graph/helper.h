@@ -183,7 +183,6 @@ SymbolVarArray replace_oprs(
 SymbolVarArray replace_vars_comp_graph(
     const SymbolVarArray &dest, ComputingGraph* new_graph);
 
-
 SymbolVarArray find_h2d(const SymbolVarArray& dest);
 
 /*!

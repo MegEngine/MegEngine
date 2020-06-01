@@ -14,51 +14,14 @@
 #include "megbrain/opr/utility.h"
 #include "megbrain/system.h"
 #include "megbrain/test/helper.h"
+#include "mock_client.h"
 
 #include <thread>
 
 using namespace mgb;
-using namespace opr;
 
-namespace {
-
-class MockGroupClient final : public opr::GroupClient {
-    public:
-        ~MockGroupClient() override = default;
-
-        opr::GroupManager::RegisterInfo opr_register(const std::string& key,
-                                                     size_t nr_devices,
-                                                     bool is_root, int rank,
-                                                     uint64_t comp_node_hash) {
-            return m_mgr.opr_register(key, nr_devices, is_root, rank, comp_node_hash);
-        }
-
-        std::vector<std::string> gather_uid(const std::string& uid,
-                const std::string& key, uint32_t size, uint32_t rank) {
-            return m_mgr.gather_uid(uid, key, size, rank);
-        }
-
-        void set_output_shape(const std::string& key,
-                              const TensorShape& shape) override {
-            m_mgr.set_output_shape(key, shape);
-        }
-
-        TensorShape get_output_shape(const std::string& key) override {
-            return m_mgr.get_output_shape(key);
-        }
-
-        uint32_t group_barrier(uint32_t size, uint32_t rank) override {
-            return m_mgr.group_barrier(size, rank);
-        }
-
-    private:
-        opr::GroupManager m_mgr;
-};
-
-const auto send_tag = RemoteIOBase::Type::SEND;
-const auto recv_tag = RemoteIOBase::Type::RECV;
-
-}  // anonymous namespace
+const auto send_tag = opr::RemoteIOBase::Type::SEND;
+const auto recv_tag = opr::RemoteIOBase::Type::RECV;
 
 TEST(TestOprIORemote, Identity) {
     REQUIRE_GPU(2);
@@ -69,7 +32,7 @@ TEST(TestOprIORemote, Identity) {
     auto host_x = gen({28, 28});
     HostTensorND host_y;
 
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
     auto graph = ComputingGraph::make();
 
     auto x = opr::Host2DeviceCopy::make(*graph, host_x, cn0);
@@ -90,7 +53,7 @@ TEST(TestOprIORemote, IdentityMultiThread) {
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3}, cns[1]);
     HostTensorND host_x_get;
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto sender = [&]() {
         auto graph = ComputingGraph::make();
@@ -123,7 +86,7 @@ TEST(TestOprIORemote, IdentityWithGopt) {
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3}, cns[0]);
     HostTensorND host_x_get;
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto sender = [&]() {
         sys::set_thread_name("sender");
@@ -157,7 +120,7 @@ TEST(TestOprIORemote, APlusB) {
     HostTensorGenerator<> gen;
     auto host_x = gen({5, 7}, cns[0]), host_y = gen({5, 1}, cns[0]);
     HostTensorND host_z;
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto sender = [&]() {
         auto graph = ComputingGraph::make();
@@ -208,7 +171,7 @@ TEST(TestOprIORemote, SendGrad) {
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3}, cns[0]);
     HostTensorND host_gx, host_loss;
-    auto client = std::make_shared<MockGroupClient>();
+    auto client = std::make_shared<test::MockGroupClient>();
 
     auto sender = [&]() {
         sys::set_thread_name("sender");

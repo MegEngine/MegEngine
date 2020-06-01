@@ -23,18 +23,19 @@ namespace opr {
 /*!
  * gather MegRay unique ids and build communicator, use hash for deduplication
  */
-class MegRayCommunicatorBuilder final : public mgb::UserDataContainer::UserData {
-    MGB_TYPEINFO_OBJ_DECL;
-
+class MegRayCommBuilder {
     private:
         bool find(uint64_t hash, std::shared_ptr<MegRay::Communicator>& comm);
         void emplace(uint64_t hash, std::shared_ptr<MegRay::Communicator> comm);
 
         std::unordered_map<uint64_t, std::shared_ptr<MegRay::Communicator>> m_megray_comms;
-        std::mutex m_mtx;
+        std::mutex m_map_mtx;
+
+        static MegRayCommBuilder* sm_instance;
+        static std::mutex sm_instance_mtx;
 
     public:
-        std::shared_ptr<MegRay::Communicator> get_megray_comm(
+        static std::shared_ptr<MegRay::Communicator> get_megray_comm(
                 uint64_t hash, std::string key, uint32_t size, uint32_t rank,
                 MegRay::Backend backend,
                 std::shared_ptr<mgb::opr::GroupClient> group_client);

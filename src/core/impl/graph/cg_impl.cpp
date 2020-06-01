@@ -441,12 +441,22 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         optimizer.verbosity(options().log_level);
         optimizer.enable_check_result(options().graph_opt_level < 0);
         if (sopr_stat.has_virtual_grad) {
-            if (need_opt)
+            if (need_opt) {
+#if MGB_ENABLE_OPR_MM
+                optimizer.add_pass<gopt::PackAllReduceScanPass>();
+#endif
                 optimizer.add_preset_passes(false, nullptr, &options());
+            }
             optimizer.add_pass<gopt::ExpandVirtualGradPass>();
         }
-        if (need_opt)
+        if (need_opt) {
             optimizer.add_preset_passes(true, nullptr, &options());
+#if MGB_ENABLE_OPR_MM
+            if (sopr_stat.has_virtual_grad) {
+                optimizer.add_pass<gopt::PackAllReduceReplacePass>();
+            }
+#endif
+        }
         optimizer.apply_inplace(dest_vars);
     }
 #endif

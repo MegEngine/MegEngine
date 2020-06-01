@@ -17,6 +17,7 @@
 #include "megbrain/opr/utility.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
+#include "../../core/impl/graph/cg_impl.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -656,5 +657,310 @@ void RemoveRedundantTypeCvtPass::apply(OptState& opt) const {
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
 }
+
+#if MGB_ENABLE_OPR_MM
+#include "megbrain/opr/collective_comm.h"
+
+/* ======================= PackAllReduceScanPass ====================== */
+
+const char* PackAllReduceScanPass::name() const {
+    return "pack_allreduce_scan";
+}
+
+void PackAllReduceScanPass::apply(OptState& opt) const {
+    auto comp_graph = opt.graph().comp_graph();
+    if (comp_graph->options().allreduce_pack_max_size == 0) return;
+    auto cb_scan = [this] (OperatorNodeBase* opr) {
+        if (check_pattern(opr)) {
+            auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
+            VarNode* target = comm.input(0)->owner_opr()->input(0);
+            // only pack allreduces of grads of the same target
+            // in case two allreduces depend on each other
+            size_t id = target->id();
+            uint64_t hash = XXHash().update(&id, sizeof(size_t)).digest();
+            comm.set_pack_hash(hash);
+        }
+    };
+    opt.graph().iter(cb_scan);
+}
+
+bool PackAllReduceScanPass::check_pattern(OperatorNodeBase* opr) {
+    if (!opr->same_type<opr::CollectiveComm>()) return false;
+    auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
+    if (comm.param().mode != opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM) return false;
+    if (comm.input().size() != 1) return false;
+
+    auto grad = comm.input(0)->owner_opr();
+    if (!grad->same_type<opr::VirtualGrad>()) return false;
+    if (grad->input().size() != 2 or grad->output().size() != 1) return false;
+
+    auto param = grad->input(1)->owner_opr();
+    if (!param->same_type<opr::SharedDeviceTensor>() and
+        !param->same_type<opr::VolatileSharedDeviceTensor>()) return false;
+    if (param->input().size() != 0) return false;
+
+    return true;
+}
+
+/* ======================= PackAllReduceReplacePass ====================== */
+
+const char* PackAllReduceReplacePass::name() const {
+    return "pack_allreduce_replace";
+}
+
+class PackAllReduceReplacePass::GroupInfo {
+public:
+    GroupInfo(int _device, DType _dtype,
+            size_t _nr_devices, bool _is_root, int _rank,
+            std::shared_ptr<opr::GroupClient> _group_client,
+            const std::string& _backend);
+
+    uint64_t hash(uint64_t extra) const;
+
+    int device;
+    DType dtype;
+    size_t nr_devices;
+    bool is_root;
+    int rank;
+    std::shared_ptr<opr::GroupClient> group_client;
+    std::string backend;
+};
+
+PackAllReduceReplacePass::GroupInfo::GroupInfo(
+        int _device, DType _dtype,
+        size_t _nr_devices, bool _is_root, int _rank,
+        std::shared_ptr<opr::GroupClient> _group_client,
+        const std::string& _backend) :
+    device(_device), dtype(_dtype),
+    nr_devices(_nr_devices), is_root(_is_root), rank(_rank),
+    group_client(_group_client), backend(_backend) {
+}
+
+uint64_t PackAllReduceReplacePass::GroupInfo::hash(uint64_t extra) const {
+    DTypeEnum ev = dtype.enumv();
+    const std::string& server_addr = group_client->get_addr();
+    return XXHash()
+        .update(&extra, sizeof(uint64_t))
+        .update(&device, sizeof(int))
+        .update(&ev, sizeof(DTypeEnum))
+        .update(&nr_devices, sizeof(size_t))
+        .update(&is_root, sizeof(bool))
+        .update(&rank, sizeof(int))
+        .update(server_addr.c_str(), server_addr.size())
+        .update(backend.c_str(), backend.size())
+        .digest();
+}
+
+uint64_t PackAllReduceReplacePass::collect_groups(OperatorNodeBase* opr,
+        ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>>& group_info,
+        ThinHashMap<uint64_t, cg::OprNodeArray>& groups) {
+    // check CollectiveComm oprs that have been marked in PackAllReduceScanPass
+    if (!opr->same_type<opr::CollectiveComm>()) return 0;
+    opr::CollectiveComm& comm = opr->cast_final_safe<opr::CollectiveComm>();
+    if (comm.pack_hash() == 0) return 0;  // pack_hash not set
+
+    VarNode* var = comm.input(0);
+    auto info = std::make_shared<GroupInfo>(
+        var->comp_node().locator().device,
+        var->dtype(),
+        comm.nr_devices(),
+        comm.is_root(),
+        comm.rank(),
+        comm.group_client(),
+        comm.backend()
+    );
+    uint64_t hash = info->hash(comm.pack_hash());
+    if (group_info.find(hash) == group_info.end()) {
+        group_info.emplace(hash, info);
+    }
+    groups[hash].push_back(opr);
+    return hash;
+}
+
+void PackAllReduceReplacePass::divide_packs(
+        const ThinHashMap<uint64_t, cg::OprNodeArray>& groups,
+        ThinHashMap<uint64_t, std::vector<cg::OprNodeArray>>& packs,
+        size_t max_size) {
+    cg::OprNodeArray pack;
+    size_t sum = 0;
+    for (auto it : groups) {
+        uint64_t hash = it.first;
+        const cg::OprNodeArray& group = it.second;
+        for (size_t i = 0; i < group.size(); i++) {
+            OperatorNodeBase* opr = group[i];
+            VarNode* var = opr->input(0);
+            const TensorShape* shape = var->owner_graph()
+                    ->static_infer_manager().infer_shape_fallible(var);
+            if (shape == nullptr) continue;
+            pack.push_back(opr);
+            sum += var->dtype().size(shape->total_nr_elems());
+            if (sum >= max_size) {
+                if (pack.size() > 1) packs[hash].push_back(pack);
+                pack.clear();
+                sum = 0;
+            }
+        }
+        if (pack.size() > 1) packs[hash].push_back(pack);
+        pack.clear();
+        sum = 0;
+    }
+}
+
+void PackAllReduceReplacePass::insert_packed_oprs(
+        size_t pack_id,
+        const cg::OprNodeArray& pack,
+        std::shared_ptr<GroupInfo> info,
+        ThinHashMap<VarNode*, VarNode*>& replace_map, int priority) {
+    // set priority
+    mgb_assert(pack.size() > 0);
+    auto graph = pack[0]->owner_graph();
+    auto on_opr_inserted = [priority] (const cg::event::OprInserted& event) {
+        event.opr->node_prop().attribute().priority = priority;
+    };
+    auto handler = graph->event().register_receiver<cg::event::OprInserted>(on_opr_inserted);
+
+    // flatten inputs and record shapes and partition
+    std::vector<SymbolVar> shapes;
+    SymbolVarArray flattens;
+    SymbolVarArray partition;
+    for (size_t i = 0; i < pack.size(); i++) {
+        VarNode* var = pack[i]->input(0);
+        auto shape = opr::GetVarShape::make(SymbolVar(var));
+        shapes.push_back(shape);
+        SymbolVar flatten = SymbolVar(var).flatten();
+        flattens.push_back(flatten);
+        partition.push_back(opr::Reduce::make(shape, {opr::Reduce::Mode::PRODUCT, 0}));
+    }
+
+    // concat
+    SymbolVar concat = opr::Concat::make(flattens, 0);
+
+    // allreduce
+    std::string key = ssprintf("grad_pack_%zu", pack_id);
+    auto param = opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM;
+    SymbolVar allreduce = opr::CollectiveComm::make({concat}, graph,
+        key, info->nr_devices, info->is_root, info->rank,
+        info->group_client, param, info->dtype, info->backend)[0];
+
+    // split according to recorded partition
+    SymbolVarArray splits = opr::Split::make(allreduce,
+        opr::Split::Options::make_partition(0, partition));
+
+    // reshape and insert results into replace_map
+    mgb_assert(pack.size() == splits.size());
+    for (size_t i = 0; i < pack.size(); i++) {
+        VarNode* reshape = splits[i].reshape(shapes[i]).node();
+        replace_map[pack[i]->output(0)] = reshape;
+    }
+}
+
+void PackAllReduceReplacePass::apply(OptState& opt) const {
+    // get graph options
+    auto comp_graph = opt.graph().comp_graph();
+    size_t max_size = comp_graph->options().allreduce_pack_max_size * 1024 * 1024;
+    size_t ignore_first = comp_graph->options().allreduce_pack_ignore_first;
+    if (max_size == 0) return;
+
+    // get topo order
+    auto& topo_sorter = static_cast<cg::ComputingGraphImpl*>(comp_graph)->topo_sorter();
+    cg::CompSeqExtraInfo extra_info;
+    VarNodeArray endpoints = to_var_node_array(opt.graph().endpoint_vars());
+    const cg::OprNodeArray* seq = topo_sorter.get_comp_seq(extra_info, endpoints);
+    topo_sorter.restore_opr_prop();
+
+    // collect allreduce groups from topo sequence
+    ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>> group_info;
+    ThinHashMap<uint64_t, cg::OprNodeArray> groups;
+    for (size_t i = 0; i < seq->size(); i++) {
+        if (seq->at(i)->same_type<opr::CollectiveComm>()) {
+            // ignore the first several allreduces
+            if (ignore_first > 0) {
+                --ignore_first;
+            } else {
+                collect_groups(seq->at(i), group_info, groups);
+            }
+        }
+    }
+
+    // divide groups into packs
+    ThinHashMap<uint64_t, std::vector<cg::OprNodeArray>> packs;
+    divide_packs(groups, packs, max_size);
+
+    // make sure that oprs inserted in this pass (reshape, concat, allreduce,
+    // split, reshape) have higher priority than existing operators
+    int priority = -seq->size() - 100;
+
+    // insert packed operators and generate replace_map
+    ThinHashMap<VarNode*, VarNode*> replace_map;
+    size_t pack_id = 0;
+    for (auto it : packs) {
+        uint64_t hash = it.first;
+        for (auto pack : it.second) {
+            opt.call_with_opr(pack[0], [&]() {
+                insert_packed_oprs(pack_id, pack, group_info[hash], replace_map, priority);
+            }, OprPropertyFlag::NONE);
+            pack_id += 1;
+        }
+    }
+
+    // replace vars
+    auto rewriter = opt.graph().make_rewriter();
+    auto cb_replace = [&](OperatorNodeBase* opr) {
+        for (auto i : opr->input()) {
+            auto iter = replace_map.find(i);
+            if (iter != replace_map.end()) {
+                rewriter.replace_var(i, iter->second, nullptr);
+            }
+        }
+        rewriter.auto_replace_outputs(opr);
+    };
+    opt.graph().iter(cb_replace);
+    rewriter.apply_inplace();
+}
+
+#else
+
+/* ======================= PackAllReduceScanPass ====================== */
+
+const char* PackAllReduceScanPass::name() const {
+    return "pack_allreduce_scan";
+}
+
+void PackAllReduceScanPass::apply(OptState& opt) const {
+}
+
+bool PackAllReduceScanPass::check_pattern(OperatorNodeBase* opr) {
+    return true;
+}
+
+/* ======================= PackAllReduceReplacePass ====================== */
+
+const char* PackAllReduceReplacePass::name() const {
+    return "pack_allreduce_replace";
+}
+
+void PackAllReduceReplacePass::apply(OptState& opt) const {}
+
+uint64_t PackAllReduceReplacePass::collect_groups(
+        OperatorNodeBase* opr,
+        ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>>& group_info,
+        ThinHashMap<uint64_t, cg::OprNodeArray>& groups) {
+    return 0;
+}
+
+void PackAllReduceReplacePass::divide_packs(
+        const ThinHashMap<uint64_t, cg::OprNodeArray>& groups,
+        ThinHashMap<uint64_t, std::vector<cg::OprNodeArray>>& packs,
+        size_t max_size) {
+}
+
+void PackAllReduceReplacePass::insert_packed_oprs(
+        size_t pack_id,
+        const cg::OprNodeArray& pack,
+        std::shared_ptr<GroupInfo> info,
+        ThinHashMap<VarNode*, VarNode*>& replace_map, int priority) {
+}
+
+#endif  // MGB_ENABLE_OPR_MM
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
