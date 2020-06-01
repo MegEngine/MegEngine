@@ -6,7 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from .fake_quant import FakeQuantize
-from .observer import HistogramObserver, Observer
+from .observer import HistogramObserver, Observer, ObserverMode
 from .qconfig import (
     QConfig,
     calibration_qconfig,
