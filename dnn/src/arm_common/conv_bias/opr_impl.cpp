@@ -154,7 +154,7 @@ public:
         for (auto&& algo : matmul_algos) {
             if (algo->type() == nullptr)
                 continue;
-            for (uint32_t tile_size : {8, 16, 24, 32, 40, 48, 64, 80}) {
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP32WinogradF23_4x4(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));

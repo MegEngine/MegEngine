@@ -707,7 +707,9 @@ template <>
 void AlgoChooser<megdnn::ConvBias>::ExeContext::
         modify_param_with_weights_preprocessed(
                 typename TimedProfiler<megdnn::ConvBias>::Param& param) const {
-    if (param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW) {
+    if (param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW ||
+        param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW44 ||
+        param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW88) {
         auto winograd_param =
                 megdnn::ConvBias::parse_winograd_name(param.algo_name);
         if (winograd_param == megdnn::ConvBias::INVALID_WINOGRAD_PARAM) {
@@ -727,8 +729,18 @@ void AlgoChooser<megdnn::ConvBias>::ExeContext::
                                                filter_transform_layout);
         param.shapes[1] = filter_transform_layout;
         param.dtypes[1] = filter_transform_layout.dtype.enumv();
-
-        param.opr_param.format = megdnn::ConvBias::Param::Format::NCHW_WINOGRAD;
+        if (param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW) {
+            param.opr_param.format =
+                    megdnn::ConvBias::Param::Format::NCHW_WINOGRAD;
+        } else if (param.opr_param.format ==
+                   megdnn::ConvBias::Param::Format::NCHW44) {
+            param.opr_param.format =
+                    megdnn::ConvBias::Param::Format::NCHW44_WINOGRAD;
+        } else if (param.opr_param.format ==
+                   megdnn::ConvBias::Param::Format::NCHW) {
+            param.opr_param.format =
+                    megdnn::ConvBias::Param::Format::NCHW88_WINOGRAD;
+        }
         param.opr_param.output_block_size = winograd_param.output_block_size;
     }
 }

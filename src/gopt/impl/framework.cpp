@@ -725,6 +725,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     cb(f16_io_comp, { add_pass(ConvertF32ToF16Pass::make(false)); });
     cb(f16_io_f32_comp, { add_pass(ConvertF32ToF16Pass::make(true)); });
 
+
     cb(nchw4, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
@@ -736,10 +737,21 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<FuseConvBiasNonlinPass>();
         add_pass(ConvertFormatPass::make_nhwcd4_converter());
     });
-    cb(nchw88, { add_pass(EnableNchwxxPass::make_nchwxx_converter(8)); });
-    cb(nchw44, { add_pass(EnableNchwxxPass::make_nchwxx_converter(4)); });
-    cb(nchw44_dot,
-       { add_pass(EnableNchw44DotPass::make_nchw44_dot_converter()); });
+    cb(nchw88, {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass(EnableNchwxxPass::make_nchwxx_converter(8));
+        add_pass<ShuffleShuffleRemovePass>();
+    });
+    cb(nchw44, {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass(EnableNchwxxPass::make_nchwxx_converter(4));
+        add_pass<ShuffleShuffleRemovePass>();
+    });
+    cb(nchw44_dot, {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass(EnableNchw44DotPass::make_nchw44_dot_converter());
+        add_pass<ShuffleShuffleRemovePass>();
+    });
     cb(nchw32, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
