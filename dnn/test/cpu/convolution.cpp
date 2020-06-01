@@ -26,7 +26,7 @@ Convolution::Param gconv_param(Convolution::Param p) {
 
 } // anonymous namespace
 
-#define CONVOLUTION_ARG_DIV_SIZE 230
+#define CONVOLUTION_ARG_DIV_SIZE 100
 TEST_F(CPU, CONVOLUTION_0) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
@@ -39,18 +39,51 @@ TEST_F(CPU, CONVOLUTION_0) {
     }
 }
 
+#define CONVOLUTION1_ARG_LOOP_END_TIME (CONVOLUTION_ARG_DIV_SIZE + 205)
+
 TEST_F(CPU, CONVOLUTION_1) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
     auto loop_size = args.size();
     ASSERT_GT(loop_size, CONVOLUTION_ARG_DIV_SIZE);
+    ASSERT_GT(loop_size, CONVOLUTION1_ARG_LOOP_END_TIME);
     Checker<Convolution> checker(handle());
-    for (unsigned int i = CONVOLUTION_ARG_DIV_SIZE; i < loop_size; i++) {
+    for (unsigned int i = CONVOLUTION_ARG_DIV_SIZE;
+         i < CONVOLUTION1_ARG_LOOP_END_TIME; i++) {
         checker.set_param(args[i].param)
                 .execs({args[i].src, args[i].filter, {}});
     }
 }
+
+#define CONVOLUTION2_ARG_LOOP_END_TIME (CONVOLUTION1_ARG_LOOP_END_TIME + 200)
+TEST_F(CPU, CONVOLUTION_2) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_args();
+    auto loop_size = args.size();
+    ASSERT_GT(loop_size, CONVOLUTION2_ARG_LOOP_END_TIME);
+    Checker<Convolution> checker(handle());
+    for (unsigned int i = CONVOLUTION1_ARG_LOOP_END_TIME;
+         i < CONVOLUTION2_ARG_LOOP_END_TIME; i++) {
+        checker.set_param(args[i].param)
+                .execs({args[i].src, args[i].filter, {}});
+    }
+}
+
+TEST_F(CPU, CONVOLUTION_3) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_args();
+    auto loop_size = args.size();
+    ASSERT_GT(loop_size, CONVOLUTION2_ARG_LOOP_END_TIME);
+    Checker<Convolution> checker(handle());
+    for (unsigned int i = CONVOLUTION2_ARG_LOOP_END_TIME; i < loop_size; i++) {
+        checker.set_param(args[i].param)
+                .execs({args[i].src, args[i].filter, {}});
+    }
+}
+
 #undef CONVOLUTION_ARG_DIV_SIZE
+#undef CONVOLUTION1_ARG_LOOP_END_TIME
+#undef CONVOLUTION2_ARG_LOOP_END_TIME
 
 #define CB_CONV_CONFIG_COMBINATIONS(KSIZE)                                \
     TEST_F(CPU, CONV_CONFIG_COMBINATIONS_KSIZE_1_KSIZE_##KSIZE) {         \
