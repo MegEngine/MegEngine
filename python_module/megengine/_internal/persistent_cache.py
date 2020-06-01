@@ -60,14 +60,7 @@ class PersistentCacheOnServer(_PersistentCache):
     def _conn(self):
         """get redis connection"""
         if self._cached_conn is None:
-            try:
-                self._cached_conn = self.make_redis_conn()
-            except Exception as exc:
-                get_logger().error(
-                    "failed to connect to cache server: {!r}; fallback to "
-                    "in-memory cache".format(exc)
-                )
-                self._cached_conn = _FakeRedisConn()
+            self._cached_conn = _FakeRedisConn()
             self._prefix = self.make_user_prefix()
 
         return self._cached_conn
@@ -76,14 +69,6 @@ class PersistentCacheOnServer(_PersistentCache):
     def make_user_prefix(cls):
         return "mgbcache:{}".format(getpass.getuser())
 
-    @classmethod
-    def make_redis_conn(cls):
-        import redis
-
-        conn = redis.StrictRedis(
-            'localhost', 6381,
-            socket_connect_timeout=2, socket_timeout=1)
-        return conn
 
     def _make_key(self, category, key):
         prefix_with_version = "{}:MGB{}".format(self._prefix, __version__)
@@ -103,31 +88,3 @@ class PersistentCacheOnServer(_PersistentCache):
         return self._prev_get_refkeep
 
 
-def _clean():
-    match = PersistentCacheOnServer.make_user_prefix() + "*"
-    conn = PersistentCacheOnServer.make_redis_conn()
-    cursor = 0
-    nr_del = 0
-    while True:
-        cursor, values = conn.scan(cursor, match)
-        if values:
-            conn.delete(*values)
-            nr_del += len(values)
-        if not cursor:
-            break
-
-    print("{} cache entries deleted".format(nr_del))
-
-
-def main():
-    parser = argparse.ArgumentParser(description="manage persistent cache")
-    subp = parser.add_subparsers(description="action to be performed", dest="cmd")
-    subp.required = True
-    subp_clean = subp.add_parser("clean", help="clean all the cache of current user")
-    subp_clean.set_defaults(action=_clean)
-    args = parser.parse_args()
-    args.action()
-
-
-if __name__ == "__main__":
-    main()
