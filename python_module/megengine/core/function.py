@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import copy
 from abc import ABCMeta, abstractmethod
 from typing import Iterable, Tuple, Union
 
@@ -141,6 +142,20 @@ class Function(metaclass=ABCMeta):
         The saved tensors can be accessed through the ``saved_tensors`` attribute.
         """
         self.saved_tensors = tensors
+
+    def __deepcopy__(self, memo):
+        """
+        Defines how the operator is deeply copied
+        """
+        cls = self.__class__
+        result = cls.__new__(cls)
+        tmp = self.saved_tensors
+        self.saved_tensors = None
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        self.saved_tensors = tmp
+        return result
 
     def __call__(self, *inputs):
         assert (

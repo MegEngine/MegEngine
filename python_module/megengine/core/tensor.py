@@ -495,7 +495,12 @@ class Tensor:
         )
 
     def __getstate__(self):
-        assert (self.__val is not None) and (self.__sym is None)
+        r""" __getstate__ will be called for pickle serialization or deep copy
+        """
+
+        assert (self.__val is not None) and (
+            self.__sym is None
+        ), "Only SharedND initialized Tensor can be serialized or deep copied"
         metadata = {"requires_grad": self.requires_grad}
         state = {
             "data": self.numpy(),

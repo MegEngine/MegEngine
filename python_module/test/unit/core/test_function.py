@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -6,10 +5,13 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import copy
+
 import numpy as np
 
 import megengine.functional as F
 from megengine.core import Function, tensor
+from megengine.jit import trace
 from megengine.test import assertTensorClose
 
 
@@ -76,6 +78,27 @@ def test_ste():
     )
 
 
+def test_deepcopy():
+    class Sigmoid(Function):
+        def __init__(self, param):
+            super().__init__()
+            self.param = param
+
+        def forward(self, x):
+            y = 1 / (1 + F.exp(-x))
+            self.save_for_backward(y)
+            return y
+
+        def backward(self, grad_y):
+            (y,) = self.saved_tensors
+            return grad_y * y * (1 - y)
+
+    origin = Sigmoid(0)
+    new = copy.deepcopy(Sigmoid(0))
+    assert new.param == origin.param
+    assert new.saved_tensors == None
+
+
 def test_save_context():
     class Sigmoid(Function):
         def forward(self, x):
@@ -87,14 +110,26 @@ def test_save_context():
             (y,) = self.saved_tensors
             return grad_y * y * (1 - y)
 
-    a = tensor(np.array([1926.0817], dtype=np.float32))
-    s = Sigmoid()(a)
-    s2 = F.sigmoid(a)
-    assertTensorClose(s.numpy(), s2.numpy())
-    assertTensorClose(
-        F.grad(s, a, use_virtual_grad=False).numpy(),
-        F.grad(s2, a, use_virtual_grad=False).numpy(),
-    )
+    def run_saved_context(a, net=None):
+        return net(a)
+
+    def run(use_trace, symbolic):
+        a = tensor(np.array([1926.0817], dtype=np.float32))
+        net = Sigmoid()
+        func_run = run_saved_context
+        if use_trace:
+            func_run = trace(run_saved_context, symbolic=symbolic)
+        s = func_run(a, net=net)
+        s2 = F.sigmoid(a)
+        assertTensorClose(s.numpy(), s2.numpy())
+        assertTensorClose(
+            F.grad(s, a, use_virtual_grad=False).numpy(),
+            F.grad(s2, a, use_virtual_grad=False).numpy(),
+        )
+
+    run(False, False)
+    run(True, False)
+    run(True, True)
 
 
 def test_none_in_out_grad():
