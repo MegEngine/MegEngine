@@ -12,7 +12,7 @@
 #include "./python_helper.h"
 
 #if MGB_ENABLE_OPR_MM
-#include "mm_handler.h"
+#include "megbrain/opr/mm_handler.h"
 #endif
 
 #include "megbrain/opr/io.h"

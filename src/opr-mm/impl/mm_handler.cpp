@@ -7,13 +7,14 @@
  *
  */
 
-#include "mm_handler.h"
+#include "megbrain/opr/mm_handler.h"
 
 #include "megbrain/exception.h"
-#include "megbrain_config.h"
+#include "megbrain_build_config.h"
 
 #if MGB_ENABLE_OPR_MM
-#include "zmq_rpc.h"
+#include "megbrain/opr/zmq_rpc.h"
+#include "mm_handler.pb.h"
 #include <future>
 
 /* ======================== GroupServerProxy ========================== */
@@ -128,16 +129,21 @@ void GroupServerProxy::group_barrier(void* input_ptr, size_t input_len,
     Request req;                                      \
     Response rsp;
 
-#define SOLVE_REQUEST(name, req, rsp)                              \
-    std::string req_str;                                           \
-    mgb_assert(req.SerializeToString(&req_str));                   \
-    zmq::message_t send(req_str.length() + name.length() + 1);     \
-    zmq::message_t recv;                                           \
-    memcpy(send.data(), name.data(), name.length() + 1);           \
-    memcpy((char*)send.data() + name.length() + 1, req_str.data(), \
-           req_str.length());                                      \
-    m_stub->request(send, recv);                                   \
+#define SOLVE_REQUEST(name, req, rsp)                                \
+    std::string req_str;                                             \
+    mgb_assert(req.SerializeToString(&req_str));                     \
+    zmq::message_t send(req_str.length() + name.length() + 1);       \
+    zmq::message_t recv;                                             \
+    memcpy(send.data(), name.data(), name.length() + 1);             \
+    memcpy((char*)send.data() + name.length() + 1, req_str.data(),   \
+           req_str.length());                                        \
+    static_cast<ZmqRpc::ZmqRpcClient*>(m_stub)->request(send, recv); \
     mgb_assert(rsp.ParseFromArray(recv.data(), recv.size()));
+
+GroupClientProxy::GroupClientProxy(const std::string& server_addr)
+            : m_addr(server_addr),
+              m_stub{ZmqRpc::ZmqRpcClient::get_client("tcp://" + server_addr)} {
+    }
 
 uint64_t GroupClientProxy::opr_register(const std::string& key, size_t nr_devices,
     uint32_t rank, uintptr_t stream) {
@@ -199,78 +205,26 @@ uint32_t GroupClientProxy::group_barrier(uint32_t size, uint32_t rank) {
 #undef INFO_INIT
 #undef SOLVE_REQUEST
 
-/* ======================== ZmqRpcServerMgr ========================== */
-
-class ZmqRpcServerMgr {
-    struct ServerInfo {
-        std::unique_ptr<ZmqRpc::ZmqRpcServer> server;
-    };
-
-public:
-    int create_zmqrpc_server(const std::string& server_addr, int port,
-                           std::unique_ptr<ZmqRpc::ZmqRpcServerImpl> service) {
-        MGB_LOCK_GUARD(m_mtx);
-        auto server =
-                std::make_unique<ZmqRpc::ZmqRpcServer>("tcp://" + server_addr, port,
-                                                       std::move(service));
-        port = server->port();
-        if (port == -1) {
-            return -1;
-        }
-
-        auto full_srv_addr = ssprintf("%s:%d", server_addr.c_str(), port);
-        server->run();
-        auto ins = m_addr2server.emplace(
-                full_srv_addr, ServerInfo{std::move(server)});
-        mgb_assert(ins.second);
-
-        return port;
-    }
-
-    static ZmqRpcServerMgr* get_zmqrpc_server_mgr() {
-        static ZmqRpcServerMgr mgr;
-        return &mgr;
-    }
-
-private:
-    std::unordered_map<std::string, ServerInfo> m_addr2server;
-    std::mutex m_mtx;
+struct ServerInfo {
+    std::unique_ptr<ZmqRpc::ZmqRpcServer> server;
 };
 
-/*! see definition : src/cpp/megbrain_config.h.
- * Create mm server. port 0 is permitted, leave zmqrpc to decide which port
- * should be used.
- */
-int _config::create_mm_server(const std::string& server_addr, int port) {
-    return ZmqRpcServerMgr::get_zmqrpc_server_mgr()->create_zmqrpc_server(
-            server_addr, port, std::make_unique<GroupServerProxy>());
-}
+int create_zmqrpc_server(const std::string& server_addr, int port) {
+    static std::unordered_map<std::string, ServerInfo> addr2server;
+    static std::mutex mtx;
+    MGB_LOCK_GUARD(mtx);
+    auto service = std::make_unique<GroupServerProxy>();
+    auto server =
+            std::make_unique<ZmqRpc::ZmqRpcServer>("tcp://" + server_addr, port,
+                                                    std::move(service));
+    port = server->port();
+    auto full_srv_addr = ssprintf("%s:%d", server_addr.c_str(), port);
+    server->run();
+    auto ins = addr2server.emplace(
+            full_srv_addr, ServerInfo{std::move(server)});
+    mgb_assert(ins.second);
 
-/* ======================== Group Barrier ========================== */
-
-/*! see definition : src/cpp/megbrain_config.h.
- * Block until all ranks in the group reach this barrier
- */
-void _config::group_barrier(const std::string& server_addr,
-        int port, uint32_t size, uint32_t rank) {
-    mgb_assert(rank < size, "invalid rank %d", rank);
-    auto group_mgr = std::make_shared<GroupClientProxy>(
-            ssprintf("%s:%d", server_addr.c_str(), port));
-    uint32_t rsp = group_mgr->group_barrier(size, rank);
-    mgb_assert(rsp != 0, "rank already registered: %d", rank);
-    mgb_assert(size == rsp, "inconsistent size: %d, expect %d", size, rsp);
-}
-
-#else
-
-int _config::create_mm_server(const std::string& server_addr, int port) {
-    mgb_throw(mgb::MegBrainError, "distributed mode disabled at compile time");
-    return 0;
-}
-
-void _config::group_barrier(const std::string& server_addr,
-        int port, uint32_t size, uint32_t rank) {
-    mgb_throw(mgb::MegBrainError, "distributed mode disabled at compile time");
+    return port;
 }
 
 #endif

@@ -1,6 +1,6 @@
-#include "zmq_rpc.h"
+#include "megbrain/opr/zmq_rpc.h"
 #include "megbrain/exception.h"
-#include "megbrain_config.h"
+#include "megbrain_build_config.h"
 
 #if MGB_CUDA
 #include <unistd.h>

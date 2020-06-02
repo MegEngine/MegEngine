@@ -13,10 +13,7 @@
 
 #if MGB_ENABLE_OPR_MM
 
-#include "zmq_rpc.h"
-
 #include "megbrain/opr/collective_comm.h"
-#include "mm_handler.pb.h"
 
 using namespace mgb;
 using namespace opr;
@@ -31,10 +28,7 @@ class GroupClientProxy
 public:
     virtual ~GroupClientProxy() = default;
 
-    GroupClientProxy(const std::string& server_addr)
-            : m_addr(server_addr),
-              m_stub{ZmqRpc::ZmqRpcClient::get_client("tcp://" + server_addr)} {
-    }
+    GroupClientProxy(const std::string& server_addr);
 
     //! graph registration, assign graph_id to worker.
     uint64_t opr_register(const std::string& key, size_t nr_devices, uint32_t rank,
@@ -50,33 +44,20 @@ public:
 
     uint32_t group_barrier(uint32_t size, uint32_t rank) override;
 
-    //! thread safe to create handler with address
-    static GroupClientProxy* get_handler(const std::string& addr) {
-        static std::unordered_map<std::string,
-                                  std::unique_ptr<GroupClientProxy>>
-                addr2handler;
-        static std::mutex mtx;
-        MGB_LOCK_GUARD(mtx);
-        auto it = addr2handler.emplace(addr, nullptr);
-        if (!it.second) {
-            mgb_assert(it.first->second->m_addr == addr);
-            return it.first->second.get();
-        } else {
-            auto handler = std::make_unique<GroupClientProxy>(addr);
-            auto handler_ptr = handler.get();
-            it.first->second = std::move(handler);
-            return handler_ptr;
-        }
-    }
-
     const std::string& get_addr() const {
         return m_addr;
     }
 
 private:
     const std::string m_addr;
-    ZmqRpc::ZmqRpcClient* m_stub;
+    void* m_stub;
 };
+
+
+/* ======================== ZmqRpcServerMgr ========================== */
+
+int create_zmqrpc_server(const std::string& server_addr, int port);
+
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

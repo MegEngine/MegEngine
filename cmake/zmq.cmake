@@ -14,6 +14,7 @@ ExternalProject_add(
 )
 
 set(ZMQ_INC ${ZMQ_BUILD_DIR}/include)
+include_directories(${ZMQ_INC})
 file(MAKE_DIRECTORY ${ZMQ_INC})
 
 add_library(libzmq STATIC IMPORTED GLOBAL)

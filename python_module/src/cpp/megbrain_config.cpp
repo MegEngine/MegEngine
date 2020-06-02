@@ -19,6 +19,10 @@
 
 #include <dlfcn.h>
 
+#if MGB_ENABLE_OPR_MM
+#include "megbrain/opr/mm_handler.h"
+#endif
+
 #if MGB_CUDA
 #include <cuda.h>
 #endif
@@ -275,5 +279,38 @@ std::vector<std::pair<uint64_t, std::string>> _config::dump_registered_oprs() {
     return {};
 #endif
 }
+
+#if MGB_ENABLE_OPR_MM
+/*! see definition : src/cpp/megbrain_config.h.
+ * Create mm server. port 0 is permitted, leave zmqrpc to decide which port
+ * should be used.
+ */
+int _config::create_mm_server(const std::string& server_addr, int port) {
+    return create_zmqrpc_server(server_addr, port);
+}
+
+void _config::group_barrier(const std::string& server_addr,
+        int port, uint32_t size, uint32_t rank) {
+    mgb_assert(rank < size, "invalid rank %d", rank);
+    auto group_mgr = std::make_shared<GroupClientProxy>(
+            ssprintf("%s:%d", server_addr.c_str(), port));
+    uint32_t rsp = group_mgr->group_barrier(size, rank);
+    mgb_assert(rsp != 0, "rank already registered: %d", rank);
+    mgb_assert(size == rsp, "inconsistent size: %d, expect %d", size, rsp);
+}
+
+#else
+
+int _config::create_mm_server(const std::string& server_addr, int port) {
+    mgb_throw(mgb::MegBrainError, "OPR_MM suppport disable at compile time");
+    return 0;
+}
+
+void _config::group_barrier(const std::string& server_addr,
+        int port, uint32_t size, uint32_t rank) {
+    mgb_throw(mgb::MegBrainError, "OPR_MM suppport disable at compile time");
+}
+
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

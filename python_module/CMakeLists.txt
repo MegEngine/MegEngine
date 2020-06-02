@@ -12,14 +12,6 @@ set(SWIG_SRC src/swig/mgb.i)
 set(CMAKE_SWIG_FLAGS -Wall -threads -py3 -modern -DSWIGWORDSIZE64)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 
-if(MGE_WITH_DISTRIBUTED)
-	file(GLOB_RECURSE PROTO_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/proto/*.proto")
-
-    PROTOBUF_GENERATE_CPP_WITH_ROOT(GRPC_SRCS GRPC_HDRS ${CMAKE_CURRENT_SOURCE_DIR} ${PROTO_FILES})
-    add_custom_target(mgb_proto_target DEPENDS ${GRPC_SRCS} ${GRPC_HDRS} ${PROTOBUF_PROTOC_EXECUTABLE})
-endif()
-
-
 file(GLOB_RECURSE OPR_DECL_SRCS "${PROJECT_SOURCE_DIR}/src/**/*.oprdecl")
 file(GLOB_RECURSE PYTHON_SRCS setup.py
     src/python/*.py
@@ -55,11 +47,7 @@ add_custom_command(
 
 add_custom_target(mgb_opr_py DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal/opr.py)
 
-set(SRCS src/cpp/craniotome.cpp src/cpp/function_replace.cpp src/cpp/intbx.cpp src/cpp/bfloat16.cpp src/cpp/megbrain_config.cpp src/cpp/megbrain_pubapi.cpp src/cpp/megbrain_serialize.cpp src/cpp/megbrain_wrap.cpp src/cpp/mm_handler.cpp src/cpp/opr_defs.cpp src/cpp/opr_helper.cpp src/cpp/plugin.cpp src/cpp/python_helper.cpp)
-
-if(MGE_WITH_DISTRIBUTED)
-    list(APPEND SRCS src/cpp/zmq_rpc.cpp)
-endif()
+set(SRCS src/cpp/craniotome.cpp src/cpp/function_replace.cpp src/cpp/intbx.cpp src/cpp/bfloat16.cpp src/cpp/megbrain_config.cpp src/cpp/megbrain_pubapi.cpp src/cpp/megbrain_serialize.cpp src/cpp/megbrain_wrap.cpp src/cpp/opr_defs.cpp src/cpp/opr_helper.cpp src/cpp/plugin.cpp src/cpp/python_helper.cpp)
 
 include(UseSWIG)
 set_property(SOURCE ${SWIG_SRC} PROPERTY CPLUSPLUS ON)
@@ -70,7 +58,7 @@ set_property(SOURCE ${SWIG_SRC} PROPERTY SWIG_FLAGS -I${PROJECT_SOURCE_DIR}/src/
 
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/megengine/_internal)
-swig_add_library(mgb LANGUAGE python SOURCES ${SWIG_SRC} ${GRPC_SRCS} ${SRCS})
+swig_add_library(mgb LANGUAGE python SOURCES ${SWIG_SRC} ${SRCS})
 
 set(VERSION_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/src/version.ld)
 add_custom_target(version_ld SOURCES ${VERSION_SCRIPT})
@@ -81,12 +69,6 @@ target_include_directories(_mgb PRIVATE ${PYTHON_INCLUDE_DIRS} src/cpp ${CMAKE_C
 target_link_libraries(_mgb ${PYTHON_LIBRARIES})
 
 add_dependencies(_mgb mgb_opr_py version_ld)
-if(MGE_WITH_DISTRIBUTED)
-    add_dependencies(_mgb mgb_proto_target)
-    target_link_libraries (_mgb libprotobuf libzmq)
-    set(CPPZMQ_INC ${PROJECT_SOURCE_DIR}/third_party/cppzmq)
-    target_include_directories(_mgb PRIVATE ${CPPZMQ_INC})
-endif()
 
 add_custom_command(
     TARGET _mgb POST_BUILD
