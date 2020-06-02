@@ -129,7 +129,7 @@ class Objects365(VisionDataset):
         img_info = self.imgs[img_id]
         return img_info
 
-    class_name = (
+    class_names = (
         "person",
         "sneakers",
         "chair",
