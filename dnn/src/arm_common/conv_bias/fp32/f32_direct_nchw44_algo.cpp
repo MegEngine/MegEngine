@@ -107,7 +107,7 @@ static void do_conv_kern(WorkspaceBundle bundle,
     constexpr int oc_idx = 0;
     int oc_block = oc;
     int oh_block = block_helper(kern_param.nr_threads, oh2,
-                                ic * iw * sizeof(float) * 2);
+                                ic * iw * sizeof(float) * stride_h);
     const int oh_idx = ncb_index.ndrange_id[2];
     const int oh_block_real = std::min(oh - oh_idx * oh_block, oh_block);
     const int ih_real = oh_block_real * stride_h + fh - stride_h;
@@ -297,8 +297,9 @@ ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
     int oh = param.osz[0];
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
-    int oh_block =
-            block_helper(param.nr_threads, oh, ic * iw * sizeof(float) * 2);
+    int stride_h = param.filter_meta.stride[0];
+    int oh_block = block_helper(param.nr_threads, oh,
+                                ic * iw * sizeof(float) * stride_h);
     CpuNDRange ncb_range = {static_cast<size_t>(batch),
                             static_cast<size_t>(group),
                             static_cast<size_t>(div_ceil(oh, oh_block))};

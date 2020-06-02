@@ -118,24 +118,30 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
             conv_bias::ConvBiasAlgoChecker<ConvBias>(
                     "IM2COLMATMUL:AARCH64_F32K8X12X1:192"));
 
-    Benchmarker<ConvBias> benchmarker_int_nchw44(handle);
+    Benchmarker<ConvBias> benchmarker_nchw44(handle);
     if (is_fp32) {
-        benchmarker_int_nchw44.set_times(RUNS)
+        benchmarker_nchw44.set_times(RUNS)
                 .set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Float32())
                 .set_dtype(4, dtype::Float32())
                 .set_display(false);
     } else {
-        benchmarker_int_nchw44.set_times(RUNS)
+        benchmarker_nchw44.set_times(RUNS)
                 .set_dtype(0, dtype::QuantizedS8(2.5))
                 .set_dtype(1, dtype::QuantizedS8(2.5))
                 .set_dtype(2, dtype::QuantizedS32(6.25))
                 .set_dtype(4, dtype::QuantizedS8(60.25))
                 .set_display(false);
     }
-    benchmarker_int_nchw44.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(".+"));
+    auto nchw44_algo_regx = ".*(DIRECT|NCHW_NCHW44).*";
+#if __ARM_FEATURE_DOTPROD
+    if (!is_fp32) {
+        nchw44_algo_regx = ".*DOT.*";
+    }
+#endif
+    benchmarker_nchw44.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(nchw44_algo_regx));
 
     auto run = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
                    size_t FS, size_t stride, bool input_nchw = false) {
@@ -171,7 +177,7 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
 
         bias = {1, OC / 4, 1, 1, 4};
         dst = {N, OC / 4, OH, OW, 4};
-        auto int_nchw44_used = benchmarker_int_nchw44.set_param(param).exec(
+        auto int_nchw44_used = benchmarker_nchw44.set_param(param).exec(
                                        {src, filter, bias, {}, dst}) /
                                RUNS;
         float computations = IC * (FS * FS) * dst.total_nr_elems() * 2 * 1e-6;
