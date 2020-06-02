@@ -176,187 +176,202 @@ inline void store_ocx_ow4_remain_static(T& c, const Op& op, int8_t* dst_ptr,
     StoreOcxOw4Remain<c_dim, ow_remain, Op, T>::impl(c, op, dst_ptr, ld_dst_oc);
 }
 ////////////////////Store_OCX_OW8_Remain/////////////////////////
-template <int c_dim, int ow_remain, typename Op, typename T>
+template <int c_dim, int ow_remain, typename Op, typename T, typename T2,
+          typename T3>
 struct StoreOcxOw8Remain {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc);
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc);
 };
 
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 0, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-        op({{c[0][6], c[0][7]}}, dst_ptr + 24);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 0, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
-        op({{c[1][4], c[1][5]}}, dst_ptr + ld_dst_oc + 16);
-        op({{c[1][6], c[1][7]}}, dst_ptr + ld_dst_oc + 24);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][6], c[1][7]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 8, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-        op({{c[0][6], c[0][7]}}, dst_ptr + 24);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 8, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
-        op({{c[1][4], c[1][5]}}, dst_ptr + ld_dst_oc + 16);
-        op({{c[1][6], c[1][7]}}, dst_ptr + ld_dst_oc + 24);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op({{c[1][6], c[1][7]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 7, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-        op(c[0][6], dst_ptr + 24);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 7, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op(c[0][6], reinterpret_cast<T3>(dst_ptr + 24));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
-        op({{c[1][4], c[1][5]}}, dst_ptr + ld_dst_oc + 16);
-        op(c[1][6], dst_ptr + ld_dst_oc + 24);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
+        op(c[1][6], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 24));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 6, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 6, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
-        op({{c[1][4], c[1][5]}}, dst_ptr + ld_dst_oc + 16);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op({{c[1][4], c[1][5]}},
+           reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 5, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op(c[0][4], dst_ptr + 16);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 5, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op(c[0][4], reinterpret_cast<T3>(dst_ptr + 16));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
-        op(c[1][4], dst_ptr + ld_dst_oc + 16);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
+        op(c[1][4], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 16));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 4, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 4, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op({{c[1][2], c[1][3]}}, dst_ptr + ld_dst_oc + 8);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op({{c[1][2], c[1][3]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 3, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op(c[0][2], dst_ptr + 8);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 3, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op(c[0][2], reinterpret_cast<T3>(dst_ptr + 8));
 
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
-        op(c[1][2], dst_ptr + ld_dst_oc + 8);
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
+        op(c[1][2], reinterpret_cast<T3>(dst_ptr + ld_dst_oc + 8));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 2, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[1][0], c[1][1]}}, dst_ptr + ld_dst_oc);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 2, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[1][0], c[1][1]}}, reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<2, 1, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int ld_dst_oc) {
-        op(c[0][0], dst_ptr);
-        op(c[1][0], dst_ptr + ld_dst_oc);
-    }
-};
-
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 0, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-        op({{c[0][6], c[0][7]}}, dst_ptr + 24);
-    }
-};
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 8, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-        op({{c[0][6], c[0][7]}}, dst_ptr + 24);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<2, 1, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int ld_dst_oc) {
+        op(c[0][0], reinterpret_cast<T3>(dst_ptr));
+        op(c[1][0], reinterpret_cast<T3>(dst_ptr + ld_dst_oc));
     }
 };
 
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 7, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-        op(c[0][6], dst_ptr + 24);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 0, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
     }
 };
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 6, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op({{c[0][4], c[0][5]}}, dst_ptr + 16);
-    }
-};
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 5, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-        op(c[0][4], dst_ptr + 16);
-    }
-};
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 4, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op({{c[0][2], c[0][3]}}, dst_ptr + 8);
-    }
-};
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 3, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-        op(c[0][2], dst_ptr + 8);
-    }
-};
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 2, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op({{c[0][0], c[0][1]}}, dst_ptr);
-    }
-};
-template <typename Op, typename T>
-struct StoreOcxOw8Remain<1, 1, Op, T> {
-    static void impl(T& c, const Op& op, float32_t* dst_ptr, int) {
-        op(c[0][0], dst_ptr);
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 8, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op({{c[0][6], c[0][7]}}, reinterpret_cast<T3>(dst_ptr + 24));
     }
 };
 
-template <int c_dim, int ow_remain, typename Op, typename T>
-inline void store_ocx_ow8_remain_static(T& c, const Op& op, float32_t* dst_ptr,
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 7, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+        op(c[0][6], reinterpret_cast<T3>(dst_ptr + 24));
+    }
+};
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 6, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op({{c[0][4], c[0][5]}}, reinterpret_cast<T3>(dst_ptr + 16));
+    }
+};
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 5, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+        op(c[0][4], reinterpret_cast<T3>(dst_ptr + 16));
+    }
+};
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 4, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op({{c[0][2], c[0][3]}}, reinterpret_cast<T3>(dst_ptr + 8));
+    }
+};
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 3, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+        op(c[0][2], reinterpret_cast<T3>(dst_ptr + 8));
+    }
+};
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 2, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op({{c[0][0], c[0][1]}}, reinterpret_cast<T3>(dst_ptr));
+    }
+};
+template <typename Op, typename T, typename T2, typename T3>
+struct StoreOcxOw8Remain<1, 1, Op, T, T2, T3> {
+    static void impl(T& c, const Op& op, T2 dst_ptr, int) {
+        op(c[0][0], reinterpret_cast<T3>(dst_ptr));
+    }
+};
+
+template <int c_dim, int ow_remain, typename Op, typename T, typename T2>
+inline void store_ocx_ow8_remain_static(T& c, const Op& op, T2 dst_ptr,
                                         int ld_dst_oc) {
-    StoreOcxOw8Remain<c_dim, ow_remain, Op, T>::impl(c, op, dst_ptr, ld_dst_oc);
+    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T2>::impl(c, op, dst_ptr,
+                                                             ld_dst_oc);
+}
+template <int c_dim, int ow_remain, typename Op, typename T3, typename T,
+          typename T2>
+inline void store_ocx_ow8_remain_static_dt(T& c, const Op& op, T2 dst_ptr,
+                                           int ld_dst_oc) {
+    StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T3>::impl(c, op, dst_ptr,
+                                                             ld_dst_oc);
 }
 ////////////////////Store_OC8_OW8_Remain/////////////////////////
 
@@ -522,68 +537,84 @@ inline void init_oc8_ow8(int32x4_t c[2][8], const int32_t* bias_ptr,
     }
 }
 /////////////////////////init_ocx_ow8////////////////////
+
+inline float32x4_t neon_vdupq_n(float val) {
+    return vdupq_n_f32(val);
+}
+
+inline int32x4_t neon_vdupq_n(int val) {
+    return vdupq_n_s32(val);
+}
+inline float32x4_t neon_vld1q(const float* ptr) {
+    return vld1q_f32(ptr);
+}
+
+inline int32x4_t neon_vld1q(const int* ptr) {
+    return vld1q_s32(ptr);
+}
+
 template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
 struct InitOcxOw8 {
-    static void impl(T& c, T2 bias_ptr, int oc_step);
+    static void impl(T& c, const T2* bias_ptr, int oc_step);
 };
 template <typename T, typename T2>
 struct InitOcxOw8<2, BiasMode::NO_BIAS, 8, T, T2> {
-    static void impl(T& c, const float32_t*, int) {
-#define BAIS_INIT(step)          \
-    c[0][step] = vdupq_n_f32(0); \
-    c[1][step] = vdupq_n_f32(0);
+    static void impl(T& c, const T2*, int) {
+#define BAIS_INIT(step)                            \
+    c[0][step] = neon_vdupq_n(static_cast<T2>(0)); \
+    c[1][step] = neon_vdupq_n(static_cast<T2>(0));
         UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<2, BiasMode::NO_BIAS, 4, T, T2> {
-    static void impl(T& c, const float32_t*, int) {
-#define BAIS_INIT(step)          \
-    c[0][step] = vdupq_n_f32(0); \
-    c[1][step] = vdupq_n_f32(0);
+    static void impl(T& c, const T2*, int) {
+#define BAIS_INIT(step)                            \
+    c[0][step] = neon_vdupq_n(static_cast<T2>(0)); \
+    c[1][step] = neon_vdupq_n(static_cast<T2>(0));
         UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<2, BiasMode::BROADCAST_CHANNEL_BIAS, 8, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
-#define BAIS_INIT(step)               \
-    c[0][step] = vld1q_f32(bias_ptr); \
-    c[1][step] = vld1q_f32(bias_ptr + oc_step);
+    static void impl(T& c, const T2* bias_ptr, int oc_step) {
+#define BAIS_INIT(step)                \
+    c[0][step] = neon_vld1q(bias_ptr); \
+    c[1][step] = neon_vld1q(bias_ptr + oc_step);
         UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<2, BiasMode::BROADCAST_CHANNEL_BIAS, 4, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
-#define BAIS_INIT(step)               \
-    c[0][step] = vld1q_f32(bias_ptr); \
-    c[1][step] = vld1q_f32(bias_ptr + oc_step);
+    static void impl(T& c, const T2* bias_ptr, int oc_step) {
+#define BAIS_INIT(step)                \
+    c[0][step] = neon_vld1q(bias_ptr); \
+    c[1][step] = neon_vld1q(bias_ptr + oc_step);
         UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<2, BiasMode::BIAS, 8, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
+    static void impl(T& c, const T2* bias_ptr, int oc_step) {
         constexpr int simd_len = 4;
-#define BAIS_INIT(step)                                 \
-    c[0][step] = vld1q_f32(bias_ptr + step * simd_len); \
-    c[1][step] = vld1q_f32(bias_ptr + oc_step + step * simd_len);
+#define BAIS_INIT(step)                                  \
+    c[0][step] = neon_vld1q(bias_ptr + step * simd_len); \
+    c[1][step] = neon_vld1q(bias_ptr + oc_step + step * simd_len);
         UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<2, BiasMode::BIAS, 4, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int oc_step) {
+    static void impl(T& c, const T2* bias_ptr, int oc_step) {
         constexpr int simd_len = 4;
-#define BAIS_INIT(step)                                 \
-    c[0][step] = vld1q_f32(bias_ptr + step * simd_len); \
-    c[1][step] = vld1q_f32(bias_ptr + oc_step + step * simd_len);
+#define BAIS_INIT(step)                                  \
+    c[0][step] = neon_vld1q(bias_ptr + step * simd_len); \
+    c[1][step] = neon_vld1q(bias_ptr + oc_step + step * simd_len);
         UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
     }
@@ -591,57 +622,57 @@ struct InitOcxOw8<2, BiasMode::BIAS, 4, T, T2> {
 
 template <typename T, typename T2>
 struct InitOcxOw8<1, BiasMode::NO_BIAS, 8, T, T2> {
-    static void impl(T& c, const float32_t*, int) {
-#define BAIS_INIT(step) c[0][step] = vdupq_n_f32(0);
+    static void impl(T& c, const T2*, int) {
+#define BAIS_INIT(step) c[0][step] = neon_vdupq_n(static_cast<T2>(0));
         UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<1, BiasMode::NO_BIAS, 4, T, T2> {
-    static void impl(T& c, const float32_t*, int) {
-#define BAIS_INIT(step) c[0][step] = vdupq_n_f32(0);
+    static void impl(T& c, const T2*, int) {
+#define BAIS_INIT(step) c[0][step] = neon_vdupq_n(static_cast<T2>(0));
         UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<1, BiasMode::BROADCAST_CHANNEL_BIAS, 8, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int) {
-#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr);
+    static void impl(T& c, const T2* bias_ptr, int) {
+#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr);
         UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<1, BiasMode::BROADCAST_CHANNEL_BIAS, 4, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int) {
-#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr);
+    static void impl(T& c, const T2* bias_ptr, int) {
+#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr);
         UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<1, BiasMode::BIAS, 8, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int) {
+    static void impl(T& c, const T2* bias_ptr, int) {
         constexpr int simd_len = 4;
-#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr + step * simd_len);
+#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
         UNROLL_CALL_RAW(8, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 template <typename T, typename T2>
 struct InitOcxOw8<1, BiasMode::BIAS, 4, T, T2> {
-    static void impl(T& c, const float32_t* bias_ptr, int) {
+    static void impl(T& c, const T2* bias_ptr, int) {
         constexpr int simd_len = 4;
-#define BAIS_INIT(step) c[0][step] = vld1q_f32(bias_ptr + step * simd_len);
+#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
         UNROLL_CALL_RAW(4, BAIS_INIT);
 #undef BAIS_INIT
     }
 };
 
 template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
-inline void init_ocx_ow8(T& c, T2 bias_ptr, int oc_step) {
+inline void init_ocx_ow8(T& c, const T2* bias_ptr, int oc_step) {
     InitOcxOw8<c_dim, bias_mode, ow_block, T, T2>::impl(c, bias_ptr, oc_step);
 }
 /////////////////////init_ocx_ow4/////////////////////

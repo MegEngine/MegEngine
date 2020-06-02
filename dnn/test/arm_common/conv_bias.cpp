@@ -109,14 +109,12 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
             .set_dtype(4, dtype::QuantizedS8(60.25))
             .set_display(false);
     benchmarker_int.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                    "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384"));
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("IM2COLMATMUL:.+"));
 
     Benchmarker<ConvBias> benchmarker_float(handle);
     benchmarker_float.set_display(false).set_times(RUNS);
     benchmarker_float.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                    "IM2COLMATMUL:AARCH64_F32K8X12X1:192"));
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("IM2COLMATMUL:.+"));
 
     Benchmarker<ConvBias> benchmarker_nchw44(handle);
     if (is_fp32) {
@@ -213,6 +211,15 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
         run(1, 256, 256, 14, 14, 3, 1, false);
         run(1, 512, 512, 7, 7, 3, 1, false);
     } else {
+        run(1, 1, 4, 112, 112, 2, 2, true);
+        run(1, 3, 32, 224, 224, 3, 2, true);
+        run(1, 3, 32, 224, 224, 5, 2, true);
+        run(1, 3, 64, 224, 224, 7, 2, true);
+        run(1, 1, 4, 112, 112, 2, 1, true);
+        run(1, 3, 32, 224, 224, 3, 1, true);
+        run(1, 3, 32, 224, 224, 5, 1, true);
+        run(1, 3, 64, 224, 224, 7, 1, true);
+
         for (size_t stride : {1, 2}) {
             printf("stride %zu\n", stride);
             for (size_t filter_size : {2, 3, 5, 7}) {
@@ -228,9 +235,11 @@ static void benchmark_convbias(Handle* handle, bool is_fp32 = false) {
 }
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_NCHW44) {
     benchmark_convbias(handle(), true);
+    benchmark_convbias(handle(), false);
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_CONVBIAS_NCHW44) {
     benchmark_convbias(handle(), true);
+    benchmark_convbias(handle(), false);
 }
 
 #endif

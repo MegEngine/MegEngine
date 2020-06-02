@@ -11,6 +11,7 @@
  */
 
 #include "megdnn/oprs.h"
+#include "src/arm_common/conv_bias/block_helper.h"
 #include "src/arm_common/conv_bias/fp32/algos.h"
 #include "src/arm_common/conv_bias/fp32/f32_direct_stride1_nchw44_kern.h"
 #include "src/arm_common/conv_bias/fp32/f32_direct_stride2_nchw44_kern.h"
@@ -26,22 +27,7 @@ using conv_fun = std::function<void(
         const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp32_nchw44_stride1)
 namespace {
-// block_helper is used to calculate oh block size
-static inline int block_helper(const int nthread, const int amount,
-                               const int size_per_unit) {
-    constexpr int l2_cache_size = 256 * 1024;
-    const int block_per_thread = div_ceil(amount, nthread);
-    const int best_block = std::min(
-            amount, (l2_cache_size + size_per_unit / 2) / size_per_unit);
-    const int max_block_num = div_ceil(block_per_thread, best_block);
-    const int min_block_num = std::max(max_block_num - 1, 1);
-    const int max_block = div_ceil(block_per_thread, max_block_num);
-    const int min_block = div_ceil(block_per_thread, min_block_num);
-    const int max_loss = std::abs(max_block_num * max_block - block_per_thread);
-    const int min_loss = std::abs(min_block_num * min_block - block_per_thread);
-    int block = max_loss > min_loss ? min_block : max_block;
-    return block;
-}
+
 static inline size_t get_perthread_cache_bytes(const int ic, const int ih2,
                                                const int iw2) {
     // border_size is used to avoid read illegal memory
@@ -60,7 +46,7 @@ static void get_rectified_size(
     ow2 = ow;
     constexpr int cacheline = 64 / sizeof(float);
     int block_oh =
-            block_helper(param.nr_threads, oh, ic * iw * sizeof(float) * 2);
+            l2_block_helper(param.nr_threads, oh, ic * iw * sizeof(float) * 2);
     auto&& fm = param.filter_meta;
     const int stride_h = static_cast<int>(fm.stride[0]);
     const int filter_h = static_cast<int>(fm.spatial[0]);
@@ -106,8 +92,8 @@ static void do_conv_kern(WorkspaceBundle bundle,
     const int group_id = ncb_index.ndrange_id[1];
     constexpr int oc_idx = 0;
     int oc_block = oc;
-    int oh_block = block_helper(kern_param.nr_threads, oh2,
-                                ic * iw * sizeof(float) * stride_h);
+    int oh_block = l2_block_helper(kern_param.nr_threads, oh2,
+                                   ic * iw * sizeof(float) * stride_h);
     const int oh_idx = ncb_index.ndrange_id[2];
     const int oh_block_real = std::min(oh - oh_idx * oh_block, oh_block);
     const int ih_real = oh_block_real * stride_h + fh - stride_h;
@@ -298,8 +284,8 @@ ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
     int stride_h = param.filter_meta.stride[0];
-    int oh_block = block_helper(param.nr_threads, oh,
-                                ic * iw * sizeof(float) * stride_h);
+    int oh_block = l2_block_helper(param.nr_threads, oh,
+                                   ic * iw * sizeof(float) * stride_h);
     CpuNDRange ncb_range = {static_cast<size_t>(batch),
                             static_cast<size_t>(group),
                             static_cast<size_t>(div_ceil(oh, oh_block))};

@@ -60,6 +60,14 @@ struct Vfmaq_laneq_f32 {
         return vfmaq_laneq_f32(a, b, v, lane);
     }
 };
+#if __ARM_FEATURE_DOTPROD
+struct Vdotq_laneq_s32 {
+    template <const int lane>
+    static int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
+        return vdotq_laneq_s32(a, b, v, lane);
+    }
+};
+#endif
 
 }  // namespace
 }  // namespace megdnn

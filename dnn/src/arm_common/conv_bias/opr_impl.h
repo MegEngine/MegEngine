@@ -62,6 +62,7 @@ private:
     class AlgoFP16WinogradF23_8x8;
 #endif
 #if __ARM_FEATURE_DOTPROD
+    class AlgoDotS8DirectNCHWNCHW44;
     class AlgoDotS8DirectStride1;
     class AlgoDotS8DirectStride2;
     class AlgoDotU8DirectStride1;

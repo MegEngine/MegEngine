@@ -133,6 +133,21 @@ public:
 };
 
 #if __ARM_FEATURE_DOTPROD
+
+class ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "ARMDOTS8_NCHW_NCHW44"; }
+    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam&,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(FallbackConvBiasImpl*,
+                         const NCBKernSizeParam&) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+};
+
 class ConvBiasImpl::AlgoDotS8DirectStride1 final : public AlgoBase {
     bool m_large_group;
 
