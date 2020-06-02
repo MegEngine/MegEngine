@@ -95,6 +95,14 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
+        //! FIXME: preference to use mkldnn algo on VNNI devices
+        //! But now mkldnn algo preference issue with NCHW->NHWC->NCHW
+#if MEGDNN_X86_WITH_MKL_DNN
+        //! Create the mkldnn algo
+        all_algos.emplace_back(&mkldnn_conv_fp32);
+        all_algos.emplace_back(&mkldnn_matmul_qint8);
+        all_algos.emplace_back(&mkldnn_qint8);
+#endif
         all_algos.emplace_back(&stride1_direct_large_group);
         all_algos.emplace_back(&stride1_direct_small_group);
         all_algos.emplace_back(&stride2_direct_large_group);
@@ -104,14 +112,6 @@ public:
         all_algos.emplace_back(&avx2_stride1_chanwsie_qint8);
         all_algos.emplace_back(&avx2_stride2_chanwsie_qint8);
         all_algos.emplace_back(&matmul);
-
-        //! preference to use mkldnn algo on VNNI devices
-#if MEGDNN_X86_WITH_MKL_DNN
-        //! Create the mkldnn algo
-        all_algos.emplace_back(&mkldnn_conv_fp32);
-        all_algos.emplace_back(&mkldnn_matmul_qint8);
-        all_algos.emplace_back(&mkldnn_qint8);
-#endif
 
         static CpuOprDelegationStorage<> storage;
         auto matmul_opr = storage.get<MatrixMul>();
@@ -172,15 +172,18 @@ bool ConvBiasImpl::is_matmul_quantized_prefer(
                 chanwise_avx2_stride2_qint8_usable_preferred(param) ||
                 direct_avx2_stride1_int8_usable_preferred(param) ||
                 direct_avx2_stride2_int8_usable_preferred(param);
-    }
 #if MEGDNN_X86_WITH_MKL_DNN
-    conv_direct_chanwise_mkldnn_usable =
-            conv_direct_chanwise_mkldnn_usable ||
-            mkldnn_qint8_usable_preferred(param) ||
-            mkldnn_matmul_qint8_usable_preferred(param);
+        conv_direct_chanwise_mkldnn_usable =
+                conv_direct_chanwise_mkldnn_usable ||
+                mkldnn_qint8_usable_preferred(param) ||
+                mkldnn_matmul_qint8_usable_preferred(param);
 #endif
+    }
 
-    return !conv_direct_chanwise_mkldnn_usable;
+    return !conv_direct_chanwise_mkldnn_usable ||
+           (is_supported(SIMDType::VNNI) &&
+            !chanwise_avx2_stride1_qint8_usable_preferred(param) &&
+            !chanwise_avx2_stride2_qint8_usable_preferred(param));
 }
 
 // vim: syntax=cpp.doxygen

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/x86/matrix_mul/opr_impl.h"
@@ -41,9 +42,6 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 public:
     AlgoPack() {
         if (is_supported(SIMDType::VNNI)) {
-#if MEGDNN_X86_WITH_MKL_DNN
-            all_algos.emplace_back(&algoint8x8x32mkldnn);
-#endif
 #if MEGDNN_X86_WITH_VNNI
             all_algos.emplace_back(&algoint8x8x32vnni);
 #endif
