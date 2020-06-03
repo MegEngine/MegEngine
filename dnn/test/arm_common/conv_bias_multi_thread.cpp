@@ -541,7 +541,12 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QS8_CHANNEL_WISE_DIRECT2_NCHW44) {
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44) {
     checker_conv_bias_qint8x8x8(
-            get_nchw44_conv_bias_args({3, 5, 7}, 2, false, false, false, true),
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, false,
+                                      true),
+            handle(), "S8_CONV_NCHW_NCHW44");
+    checker_conv_bias_qint8x8x8(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, false,
+                                      true),
             handle(), "S8_CONV_NCHW_NCHW44");
 }
 

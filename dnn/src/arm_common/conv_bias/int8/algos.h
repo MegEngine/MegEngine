@@ -90,9 +90,9 @@ public:
                       const NCBKernSizeParam& param) const override;
 };
 
-class ConvBiasImpl::AlgoS8DirectStride2NCHWNCHW44 final : public AlgoBase {
+class ConvBiasImpl::AlgoS8DirectNCHWNCHW44 final : public AlgoBase {
 public:
-    AlgoS8DirectStride2NCHWNCHW44() {}
+    AlgoS8DirectNCHWNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "S8_CONV_NCHW_NCHW44"; }
     bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,

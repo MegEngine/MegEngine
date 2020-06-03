@@ -37,7 +37,7 @@ static inline size_t get_perthread_cache_bytes(const int ic, const int ih2,
 static void get_rectified_size(
         const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param, int& ih2,
         int& iw2, int& oh2, int& ow2) {
-    constexpr int cacheline = 64 / sizeof(float);
+    constexpr int nr_elements_in_cacheline = 64 / sizeof(float);
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
     int oh = param.osz[0];
@@ -52,7 +52,8 @@ static void get_rectified_size(
     int block_oh = l2_block_helper(param.nr_threads, oh,
                                    ic * iw * sizeof(float) * stride_h);
     ih2 = block_oh * stride_h + filter_h - stride_h;
-    iw2 = round_up(iw + 2 * static_cast<int>(fm.padding[1]), cacheline);
+    iw2 = round_up(iw + 2 * static_cast<int>(fm.padding[1]),
+                   nr_elements_in_cacheline);
 }
 
 static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {

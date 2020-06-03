@@ -47,7 +47,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoS8DirectStride2 s8_direct_stride2_large_group{true};
     AlgoS8DirectStride2 s8_direct_stride2_small_group{false};
     AlgoS8DirectStride2NCHW44 s8_direct_stride2_nchw44;
-    AlgoS8DirectStride2NCHWNCHW44 s8_direct_stride2_nchw_nchw44;
+    AlgoS8DirectNCHWNCHW44 s8_direct_nchw_nchw44;
     AlgoS8DirectStride1 s8_direct_stride1_large_group{true};
     AlgoS8DirectStride1 s8_direct_stride1_small_group{false};
     AlgoS8DirectStride1NCHW44 s8_direct_stride1_nchw44;
@@ -115,7 +115,7 @@ public:
         direct_algos.emplace_back(&s8_direct_stride2_large_group);
         direct_algos.emplace_back(&s8_direct_stride2_small_group);
         direct_algos.emplace_back(&s8_direct_stride2_nchw44);
-        direct_algos.emplace_back(&s8_direct_stride2_nchw_nchw44);
+        direct_algos.emplace_back(&s8_direct_nchw_nchw44);
         direct_algos.emplace_back(&s8_direct_stride1_large_group);
         direct_algos.emplace_back(&s8_direct_stride1_small_group);
         direct_algos.emplace_back(&s8_direct_stride1_nchw44);
