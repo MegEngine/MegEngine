@@ -392,6 +392,9 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
                                               false, true),
                     handle(), "F32_CONV_NCHW_NCHW44");
+    check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false,
+                                              false, true),
+                    handle(), "F32_CONV_NCHW_NCHW44");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44_1) {
     check_conv_bias(
@@ -824,13 +827,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_PREPROCESS_NCHW44) {
 
         auto conv_bias_opr = handle->create_operator<ConvBias>();
         conv_bias_opr->param() = param;
-        conv_bias_opr->param().format = param::ConvBias::Format::NCHW44_WINOGRAD;
+        conv_bias_opr->param().format =
+                param::ConvBias::Format::NCHW44_WINOGRAD;
         conv_bias_opr->param().output_block_size = m;
         size_t conv_bias_workspace_in_bytes =
                 conv_bias_opr->get_workspace_in_bytes(
                         tensors[0].layout, filter_transform_layout,
-                        tensors[2].layout, tensors[3].layout,
-                        tensors[4].layout, nullptr);
+                        tensors[2].layout, tensors[3].layout, tensors[4].layout,
+                        nullptr);
 
         WorkspaceBundle wb(nullptr, {filter_transform_layout.span().dist_byte(),
                                      conv_bias_workspace_in_bytes,

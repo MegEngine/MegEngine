@@ -204,6 +204,11 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
         run(1, 3, 32, 224, 224, 3, 2, true);
         run(1, 3, 64, 224, 224, 7, 2, true);
 
+        run(1, 1, 4, 112, 112, 2, 1, true);
+        run(1, 3, 32, 224, 224, 3, 1, true);
+        run(1, 3, 64, 224, 224, 3, 1, true);
+        run(1, 3, 64, 224, 224, 7, 1, true);
+
         run(1, 64, 128, 56, 56, 3, 2, false);
         run(1, 128, 256, 28, 28, 3, 2, false);
         run(1, 256, 512, 14, 14, 3, 2, false);

@@ -71,7 +71,7 @@ private:
     class AlgoF32Direct;
     class AlgoF32DirectStride1;
     class AlgoF32DirectStride2;
-    class AlgoF32DirectStride2NCHWNCHW44;
+    class AlgoF32DirectNCHWNCHW44;
     class AlgoF32ChannelWiseNCHW44;
     class AlgoF32DirectNCHW44;
 

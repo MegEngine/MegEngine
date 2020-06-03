@@ -66,7 +66,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoDotU8DirectStride2 du8_direct_stride2_small_group{false};
 #endif
 
-    AlgoF32DirectStride2NCHWNCHW44 f32_direct_stride2_nchw_nchw44;
+    AlgoF32DirectNCHWNCHW44 f32_direct_stride2_nchw_nchw44;
     AlgoF32ChannelWiseNCHW44 f32_chanel_wise_nchw44;
     AlgoF32DirectNCHW44 f32_direct_nchw44;
 

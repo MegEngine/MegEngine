@@ -293,11 +293,11 @@ public:
             const NCBKernSizeParam& param) const override;
 };
 
-class ConvBiasImpl::AlgoF32DirectStride2NCHWNCHW44 final : public AlgoBase {
+class ConvBiasImpl::AlgoF32DirectNCHWNCHW44 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    AlgoF32DirectStride2NCHWNCHW44() {}
+    AlgoF32DirectNCHWNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "F32_CONV_NCHW_NCHW44"; }
     bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
