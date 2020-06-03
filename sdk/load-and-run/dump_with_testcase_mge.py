@@ -232,9 +232,8 @@ def make_feeds(args):
         outputs_new = []
         for i in outputs:
             get = mgb.make_arg(
-                mge.core.graph.get_default_device(),
+                i.comp_node,
                 cg,
-                shape=expect_shp(i),
                 dtype=i.dtype,
                 name=expect_name(i)
             )
@@ -463,7 +462,7 @@ def main():
     for testcase in feeds['testcases']:
         assert isinstance(testcase, dict)
         cg = mgb.comp_graph()
-        cn = mgb.comp_node('cpux')
+        cn = mgb.comp_node('xpux')
         output_mgbvars = []
         for name, dtype in inputs:
             output_mgbvars.append(

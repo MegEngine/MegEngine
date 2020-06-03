@@ -172,6 +172,7 @@ def make_arg(
         infer would be deferred to first graph execution
     :param enable_static_infer: whether to enable static inference for this var
     """
+    comp_node = _detail.as_comp_node(comp_node)
     host_val = mgb._HostSharedND(comp_node, dtype)
 
     if value is not None:
