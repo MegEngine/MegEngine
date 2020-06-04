@@ -1875,6 +1875,8 @@ void FuseConvBiasZPass::apply(OptState& state) const {
             auto elem = try_cast_as_op<opr::ElemwiseMultiType>(opr);
             if (elem->param().mode == MultiMode::QFUSE_ADD_RELU)
                 return NonlineMode::RELU;
+            else if (elem->param().mode == MultiMode::QFUSE_ADD_H_SWISH)
+                return NonlineMode::H_SWISH;
         }
         return NonlineMode::IDENTITY;
     };
@@ -1941,7 +1943,8 @@ void FuseConvBiasZPass::apply(OptState& state) const {
         if (elem->input().size() != 2)
             return false;
         if (elem->param().mode != MultiMode::QADD &&
-            elem->param().mode != MultiMode::QFUSE_ADD_RELU)
+            elem->param().mode != MultiMode::QFUSE_ADD_RELU &&
+            elem->param().mode != MultiMode::QFUSE_ADD_H_SWISH)
             return false;
         return try_replace_var_node(opr);
     };
