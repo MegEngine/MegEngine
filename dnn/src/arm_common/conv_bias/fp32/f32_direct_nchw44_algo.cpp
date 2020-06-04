@@ -37,19 +37,20 @@ static inline size_t get_perthread_cache_bytes(const int ic, const int ih2,
 static void get_rectified_size(
         const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param, int& ih2,
         int& iw2, int& oh2, int& ow2) {
+    constexpr int cacheline = 64 / sizeof(float);
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
     int oh = param.osz[0];
     int ow = param.osz[1];
-
-    oh2 = oh;
-    ow2 = ow;
-    constexpr int cacheline = 64 / sizeof(float);
-    int block_oh =
-            l2_block_helper(param.nr_threads, oh, ic * iw * sizeof(float) * 2);
     auto&& fm = param.filter_meta;
     const int stride_h = static_cast<int>(fm.stride[0]);
     const int filter_h = static_cast<int>(fm.spatial[0]);
+
+    oh2 = oh;
+    ow2 = ow;
+
+    int block_oh = l2_block_helper(param.nr_threads, oh,
+                                   ic * iw * sizeof(float) * stride_h);
     ih2 = block_oh * stride_h + filter_h - stride_h;
     iw2 = round_up(iw + 2 * static_cast<int>(fm.padding[1]), cacheline);
 }
