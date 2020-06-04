@@ -96,7 +96,6 @@ def test_deepcopy():
     origin = Sigmoid(0)
     new = copy.deepcopy(Sigmoid(0))
     assert new.param == origin.param
-    assert new.saved_tensors == None
 
 
 def test_save_context():

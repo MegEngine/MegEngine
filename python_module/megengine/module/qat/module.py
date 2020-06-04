@@ -77,13 +77,19 @@ class QATModule(Module):
         r"""
         Get weight's quantization dtype as the method from ``qconfig``.
         """
-        return self.weight_observer.get_dtype()
+        if hasattr(self.act_fake_quant, "get_dtype"):
+            return self.weight_fake_quant.get_dtype()
+        else:
+            return self.weight_observer.get_dtype()
 
     def get_activation_dtype(self):
         r"""
         Get activation's quantization dtype as the method from ``qconfig``.
         """
-        return self.act_observer.get_dtype()
+        if hasattr(self.act_fake_quant, "get_dtype"):
+            return self.act_fake_quant.get_dtype()
+        else:
+            return self.act_observer.get_dtype()
 
     @classmethod
     @abstractmethod

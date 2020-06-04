@@ -1,12 +1,12 @@
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
-#
+#'
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from ..module import Module
-from .fake_quant import FakeQuantize
+from .fake_quant import TQT, FakeQuantize
 from .observer import (
     ExponentialMovingAverageObserver,
     HistogramObserver,
@@ -51,6 +51,12 @@ class QConfig:
         self.weight_observer = weight_observer
         self.fake_quant = fake_quant
 
+
+tqt_quant_qconfig = QConfig(
+    weight_observer=ExponentialMovingAverageObserver,
+    act_observer=ExponentialMovingAverageObserver,
+    fake_quant=TQT,
+)
 
 # Default QAT QConfigs
 min_max_fakequant_qconfig = QConfig(
