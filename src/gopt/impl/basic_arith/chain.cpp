@@ -617,6 +617,16 @@ VarNode* ReorderArithChainPass::Impl::reduce_shp2terms(Mode mode) {
         }
     }
 
+    {
+        // sorted by id(), so the same set of input terms would get the
+        // same reduced var
+        auto cmp = [](const ShapedVars::value_type &a,
+                const ShapedVars::value_type &b) {
+            return a.second->id() < b.second->id();
+        };
+        small_sort(m_const_terms.begin(), m_const_terms.end(), cmp);
+        small_sort(m_nonconst_terms.begin(), m_nonconst_terms.end(), cmp);
+    }
     merge_shaped_terms(mode, m_const_terms, true);
 
     auto &&all_terms = m_const_terms;
