@@ -189,6 +189,193 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
     }
 }
 
+TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
+    //! not support NonlineMode::SIGMOID and NonlineMode::H_SWISH
+    require_compute_capability(6, 1);
+    Checker<ConvBiasForward> checker(handle_cuda());
+    UniformIntRNG int_rng{-128, 127};
+    using NonlineMode = ConvBias::Param::NonlineMode;
+
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW;
+
+    checker.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(3, dtype::QuantizedS8(0.25f))
+            .set_dtype(4, dtype::QuantizedS8(0.25f))
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_rng(2, &int_rng)
+            .set_rng(3, &int_rng);
+
+    for (NonlineMode mode : {NonlineMode::RELU,
+                             NonlineMode::IDENTITY, NonlineMode::H_SWISH}) {
+        for (size_t g : {1, 2}) {
+           for (size_t b : {2}) {
+               for (size_t ic : {6, 16}) {
+                   for (size_t oc : {4}) {
+                       for (size_t fh : {1, 3}) {
+                           for (int ph : {static_cast<int>(fh / 2)}) {
+                               for (int sh : {1, 2}) {
+                                    size_t ih = 16, iw = 16;
+                                    param.nonlineMode = mode;
+                                    param.stride_h = param.stride_w = sh;
+                                    param.pad_h = param.pad_w = ph;
+                                    param.sparse =
+                                        ConvBias::Param::Sparse::DENSE;
+                                    checker.set_param(param)
+                                            .execs({{b, ic / 2, ih, iw},
+                                                    {oc, ic / 2, fh, fh},
+                                                    {1, oc, 1, 1},
+                                                    {},
+                                                    {}});
+                                    param.sparse =
+                                        ConvBias::Param::Sparse::GROUP;
+                                    checker.set_param(param)
+                                            .execs({{b, ic, ih, iw},
+                                                    {g, oc/g, ic/g, fh, fh},
+                                                    {1, oc, 1, 1},
+                                                    {},
+                                                    {}});
+                               }
+                           }
+                       }
+                   }
+               }
+           }
+        }
+    }
+}
+
+#if MEGDNN_WITH_BENCHMARK
+TEST_F(CUDA, BENCHMARK_CONV_BIAS_NCHW4_INT8) {
+    require_compute_capability(6, 1);
+    Benchmarker<ConvBiasForward> bencher(handle_cuda());
+    bencher.set_display(false);
+    ConvBias::Param param_nchw;
+    param_nchw.format = ConvBias::Param::Format::NCHW;
+    ConvBias::Param param_nchw4;
+    param_nchw4.format = ConvBias::Param::Format::NCHW4;
+
+    auto i8_min = std::numeric_limits<int8_t>().min();
+    auto i8_max = std::numeric_limits<int8_t>().max();
+    UniformIntRNG int_rng{i8_min, i8_max};
+
+    param_nchw.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+    auto run_bench = [&](size_t b, size_t ci, size_t hi, size_t wi,
+                         size_t co, size_t fh, size_t fw, size_t sh,
+                         size_t sw, size_t nr_times) {
+        param_nchw.pad_h = fh / 2;
+        param_nchw.pad_w = fw / 2;
+        param_nchw.stride_h = sh;
+        param_nchw.stride_w = sw;
+        param_nchw4.pad_h = fh / 2;
+        param_nchw4.pad_w = fh / 2;
+        param_nchw4.stride_h = sh;
+        param_nchw4.stride_w = sw;
+        bencher.set_times(nr_times)
+                .set_dtype(0, dtype::QuantizedS8(2.5f))
+                .set_dtype(1, dtype::QuantizedS8(2.5f))
+                .set_dtype(2, dtype::QuantizedS32(6.25f))
+                .set_dtype(4, dtype::QuantizedS8(0.35f))
+                .set_rng(0, &int_rng)
+                .set_rng(1, &int_rng)
+                .set_rng(2, &int_rng);
+        bencher.set_param(param_nchw);
+        size_t ho = infer_conv_shape(hi, fh, sh, param_nchw.pad_h);
+        size_t wo = infer_conv_shape(wi, fw, sw, param_nchw.pad_w);
+        TensorShape inp{b, ci, hi, wi}, kern{co, ci, fh, fw},
+                    out{b, co, ho, wo};
+        auto time_in_ms = bencher.execs(
+                {inp, kern, {1, co, 1, 1}, {}, out}) / nr_times;
+        auto ops_nchw = 2.0 * b * co * ho * wo * ci * fh * fw /
+                    (time_in_ms * 1e-3) * 1e-12;
+        printf("inp=%s, kern=%s, out=%s, time: %.2fms, perf: %.2f Tops "
+               "(NCHW)\n",
+                inp.to_string().c_str(), kern.to_string().c_str(),
+                out.to_string().c_str(), time_in_ms, ops_nchw);
+        bencher.set_param(param_nchw4);
+        decltype(ops_nchw) ops_nchw4;
+        {
+            TensorShape inp{b, ci / 4, hi, wi, 4},
+                kern{co, ci / 4, fh, fw, 4}, out{b, co / 4, ho, wo, 4};
+            auto time_in_ms = bencher.execs(
+                    {inp, kern, {1, co / 4, 1, 1, 4}, {}, out}) / nr_times;
+            ops_nchw4 = 2.0 * b * co * ho * wo * ci * fh * fw /
+                        (time_in_ms * 1e-3) * 1e-12;
+            printf("inp=%s, kern=%s, out=%s, time: %.2fms, perf: %.2f Tops "
+                   "(NCHW4)\n",
+                    inp.to_string().c_str(), kern.to_string().c_str(),
+                    out.to_string().c_str(), time_in_ms, ops_nchw4);
+        }
+        printf("speedup: %.2fx\n", ops_nchw4 / ops_nchw);
+    };
+    // resnet-50
+    // bottleneck-1
+    // proj
+    run_bench(1, 64, 56, 56, 256, 1, 1, 1, 1, 1000);
+    run_bench(1, 64, 56, 56, 64, 1, 1, 1, 1, 1000);
+    run_bench(1, 64, 56, 56, 64, 3, 3, 1, 1, 1000);
+    run_bench(1, 64, 56, 56, 256, 1, 1, 1, 1, 1000);
+
+    // bottleneck-2
+    // proj
+    run_bench(1, 256, 56, 56, 512, 1, 1, 2, 2, 1000);
+    run_bench(1, 256, 56, 56, 128, 1, 1, 2, 2, 1000);
+    run_bench(1, 128, 28, 28, 128, 3, 3, 1, 1, 1000);
+    run_bench(1, 128, 28, 28, 512, 1, 1, 1, 1, 1000);
+
+    // bottleneck-3
+    // proj
+    run_bench(1, 512, 28, 28, 1024, 1, 1, 2, 2, 1000);
+    run_bench(1, 512, 28, 28, 256, 1, 1, 2, 2, 1000);
+    run_bench(1, 256, 14, 14, 256, 3, 3, 1, 1, 1000);
+    run_bench(1, 256, 14, 14, 1024, 1, 1, 1, 1, 1000);
+
+    // bottleneck-4
+    // proj
+    run_bench(1, 1024, 14, 14, 2048, 1, 1, 2, 2, 1000);
+    run_bench(1, 1024, 14, 14, 512, 1, 1, 2, 2, 1000);
+    run_bench(1, 512, 7, 7, 512, 3, 3, 1, 1, 1000);
+    run_bench(1, 512, 7, 7, 2048, 1, 1, 1, 1, 1000);
+
+    run_bench(32, 64, 56, 56, 256, 1, 1, 1, 1, 1000);
+    run_bench(32, 64, 56, 56, 64, 1, 1, 1, 1, 1000);
+    run_bench(32, 64, 56, 56, 64, 3, 3, 1, 1, 1000);
+    run_bench(32, 64, 56, 56, 256, 1, 1, 1, 1, 1000);
+    run_bench(32, 256, 56, 56, 512, 1, 1, 2, 2, 1000);
+    run_bench(32, 256, 56, 56, 128, 1, 1, 2, 2, 1000);
+    run_bench(32, 128, 28, 28, 128, 3, 3, 1, 1, 1000);
+    run_bench(32, 128, 28, 28, 512, 1, 1, 1, 1, 1000);
+    run_bench(32, 512, 28, 28, 1024, 1, 1, 2, 2, 1000);
+    run_bench(32, 512, 28, 28, 256, 1, 1, 2, 2, 1000);
+    run_bench(32, 256, 14, 14, 256, 3, 3, 1, 1, 1000);
+    run_bench(32, 256, 14, 14, 1024, 1, 1, 1, 1, 1000);
+    run_bench(32, 1024, 14, 14, 2048, 1, 1, 2, 2, 1000);
+    run_bench(32, 1024, 14, 14, 512, 1, 1, 2, 2, 1000);
+    run_bench(32, 512, 7, 7, 512, 3, 3, 1, 1, 1000);
+    run_bench(32, 512, 7, 7, 2048, 1, 1, 1, 1, 1000);
+
+    run_bench(256, 64, 56, 56, 256, 1, 1, 1, 1, 1000);
+    run_bench(256, 64, 56, 56, 64, 1, 1, 1, 1, 1000);
+    run_bench(256, 64, 56, 56, 64, 3, 3, 1, 1, 1000);
+    run_bench(256, 64, 56, 56, 256, 1, 1, 1, 1, 1000);
+    run_bench(256, 256, 56, 56, 512, 1, 1, 2, 2, 1000);
+    run_bench(256, 256, 56, 56, 128, 1, 1, 2, 2, 1000);
+    run_bench(256, 128, 28, 28, 128, 3, 3, 1, 1, 1000);
+    run_bench(256, 128, 28, 28, 512, 1, 1, 1, 1, 1000);
+    run_bench(256, 512, 28, 28, 1024, 1, 1, 2, 2, 1000);
+    run_bench(256, 512, 28, 28, 256, 1, 1, 2, 2, 1000);
+    run_bench(256, 256, 14, 14, 256, 3, 3, 1, 1, 1000);
+    run_bench(256, 256, 14, 14, 1024, 1, 1, 1, 1, 1000);
+    run_bench(256, 1024, 14, 14, 2048, 1, 1, 2, 2, 1000);
+    run_bench(256, 1024, 14, 14, 512, 1, 1, 2, 2, 1000);
+    run_bench(256, 512, 7, 7, 512, 3, 3, 1, 1, 1000);
+    run_bench(256, 512, 7, 7, 2048, 1, 1, 1, 1, 1000);
+}
+#endif
+
 TEST_F(CUDA, CONV_BIAS_FORWARD_NCHW4) {
     require_compute_capability(6, 1);
     using namespace conv_bias;

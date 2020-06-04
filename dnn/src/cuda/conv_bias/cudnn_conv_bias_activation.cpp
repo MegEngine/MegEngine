@@ -79,9 +79,11 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
             if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED)
                 return false;
             MEGDNN_FALLTHRU  // XXX: why?
-                    case param::ConvBias::NonlineMode::IDENTITY
-                    : if (m_cudnn_enum !=
-                          CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM) {
+        case param::ConvBias::NonlineMode::IDENTITY:
+            if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED)
+                break;
+            if (m_cudnn_enum !=
+                    CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM) {
                 // cudnn require algo to
                 // CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
                 // when activation if IDENTITY
@@ -89,6 +91,8 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
             }
             break;
         case param::ConvBias::NonlineMode::H_SWISH:
+            if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED)
+                break;
             return false;
         default:
             megdnn_throw(megdnn_mangle("unsupported NonlineMode"));
@@ -226,6 +230,14 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         }
         case param::ConvBias::NonlineMode::IDENTITY:
             break;
+        case param::ConvBias::NonlineMode::H_SWISH: {
+            megdnn_assert(args.dst_layout->dtype.category() ==
+                          DTypeCategory::QUANTIZED);
+            auto&& elem_opr = args.handle->create_operator<ElemwiseMultiType>();
+            elem_opr->param().mode = ElemwiseMultiType::Param::Mode::QH_SWISH;
+            elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
+            break;
+        }
         default:
             megdnn_throw(megdnn_mangle("unsupported NonlineMode"));
     }
