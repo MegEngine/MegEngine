@@ -27,9 +27,9 @@ namespace arm_common {
                           vreinterpret_s32_s8(vres), idx / 4); \
             break;                                             \
         case 3:                                                \
-            vst1_lane_s8(C + 2, vres, idx + 2);                \
+            vst1_lane_s8(C + 2, vres, idx + 2); MEGDNN_FALLTHRU\
         case 2:                                                \
-            vst1_lane_s8(C + 1, vres, idx + 1);                \
+            vst1_lane_s8(C + 1, vres, idx + 1); MEGDNN_FALLTHRU\
         case 1:                                                \
             vst1_lane_s8(C + 0, vres, idx + 0);                \
             break;                                             \
@@ -44,9 +44,9 @@ namespace arm_common {
                           vreinterpret_s32_u8(vres), idx / 4); \
             break;                                             \
         case 3:                                                \
-            vst1_lane_u8(C + 2, vres, idx + 2);                \
+            vst1_lane_u8(C + 2, vres, idx + 2); MEGDNN_FALLTHRU\
         case 2:                                                \
-            vst1_lane_u8(C + 1, vres, idx + 1);                \
+            vst1_lane_u8(C + 1, vres, idx + 1); MEGDNN_FALLTHRU\
         case 1:                                                \
             vst1_lane_u8(C + 0, vres, idx + 0);                \
             break;                                             \

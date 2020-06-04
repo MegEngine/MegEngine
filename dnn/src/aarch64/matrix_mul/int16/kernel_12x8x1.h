@@ -975,9 +975,9 @@ static void gemm_s16_12x8x1_pack_A_n(int16_t* outptr, const int16_t* inptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -992,9 +992,9 @@ static void gemm_s16_12x8x1_pack_A_n(int16_t* outptr, const int16_t* inptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -1136,9 +1136,9 @@ static void gemm_s16_12x8x1_transpose_pack_B_n(int16_t* outptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -1153,9 +1153,9 @@ static void gemm_s16_12x8x1_transpose_pack_B_n(int16_t* outptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;

@@ -992,9 +992,9 @@ static void gemm_s8_8x8_pack_A_n(int8_t* outptr, const int8_t* inptr, int ldin,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -1010,9 +1010,9 @@ static void gemm_s8_8x8_pack_A_n(int8_t* outptr, const int8_t* inptr, int ldin,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -1064,17 +1064,17 @@ static void gemm_s8_8x8_transpose_pack_A_n(int8_t* out, const int8_t* in,
             if (k + 7 >= kmax) {
                 switch (k + 7 - kmax) {
                     case 6:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff;
+                        inptr3 = zerobuff; MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff;
+                        inptr4 = zerobuff; MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff;
+                        inptr5 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff;
+                        inptr6 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -1092,17 +1092,17 @@ static void gemm_s8_8x8_transpose_pack_A_n(int8_t* out, const int8_t* in,
             if (k + 7 >= kmax) {
                 switch (k + 7 - kmax) {
                     case 6:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff;
+                        inptr3 = zerobuff; MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff;
+                        inptr4 = zerobuff; MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff;
+                        inptr5 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff;
+                        inptr6 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -1120,17 +1120,17 @@ static void gemm_s8_8x8_transpose_pack_A_n(int8_t* out, const int8_t* in,
             if (k + 7 >= kmax) {
                 switch (k + 7 - kmax) {
                     case 6:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff;
+                        inptr3 = zerobuff; MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff;
+                        inptr4 = zerobuff; MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff;
+                        inptr5 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff;
+                        inptr6 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -1187,17 +1187,17 @@ static void gemm_s8_8x8_pack_B_n(int8_t* out, const int8_t* in, int ldin,
             if (k + 7 >= kmax) {
                 switch (k + 7 - kmax) {
                     case 6:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff;
+                        inptr3 = zerobuff; MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff;
+                        inptr4 = zerobuff; MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff;
+                        inptr5 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff;
+                        inptr6 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -1216,17 +1216,17 @@ static void gemm_s8_8x8_pack_B_n(int8_t* out, const int8_t* in, int ldin,
             if (k + 7 >= kmax) {
                 switch (k + 7 - kmax) {
                     case 6:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff;
+                        inptr3 = zerobuff; MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff;
+                        inptr4 = zerobuff; MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff;
+                        inptr5 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff;
+                        inptr6 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -1245,17 +1245,17 @@ static void gemm_s8_8x8_pack_B_n(int8_t* out, const int8_t* in, int ldin,
             if (k + 7 >= kmax) {
                 switch (k + 7 - kmax) {
                     case 6:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff;
+                        inptr3 = zerobuff; MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff;
+                        inptr4 = zerobuff; MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff;
+                        inptr5 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff;
+                        inptr6 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -1332,9 +1332,9 @@ static void gemm_s8_8x8_transpose_pack_B_n(int8_t* outptr, const int8_t* inptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -1351,9 +1351,9 @@ static void gemm_s8_8x8_transpose_pack_B_n(int8_t* outptr, const int8_t* inptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;

@@ -459,9 +459,9 @@ void sgemm_4x16_pack_A_n(float * outptr, const float * inptr, int ldin, int y0,
                 switch ((y + 3) - ymax) {
                     /* Everything falls through in here */
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -478,9 +478,9 @@ void sgemm_4x16_pack_A_n(float * outptr, const float * inptr, int ldin, int y0,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -676,9 +676,9 @@ void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
                 switch ((y + 3) - ymax) {
                     /* Everything falls through in here */
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -696,9 +696,9 @@ void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
                 switch ((y + 3) - ymax) {
                     /* Everything falls through in here */
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;

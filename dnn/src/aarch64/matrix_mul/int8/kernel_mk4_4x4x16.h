@@ -846,9 +846,9 @@ static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
             if (k + 3 >= ICB) {
                 switch (k + 3 - ICB) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -863,9 +863,9 @@ static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
             if (k + 3 >= ICB) {
                 switch (k + 3 - ICB) {
                     case 2:
-                        inptr1 = zerobuff;
+                        inptr1 = zerobuff; MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff;
+                        inptr2 = zerobuff; MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
