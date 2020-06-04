@@ -2694,7 +2694,7 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
 
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44_DOT,
               find_opr<opr::Convolution>(y_opt).param().format);
-    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
               find_opr<opr::ConvBias>(y_opt).param().format);
 
     graph->compile({{y_opt, {}}})

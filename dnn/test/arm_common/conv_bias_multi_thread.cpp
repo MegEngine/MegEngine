@@ -168,10 +168,10 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         for (auto nlmode : nonlinemode)
             for (size_t n : {1, 2})
                 for (size_t kernel : kernel_vec)
-                    for (size_t oc : {4, 12, 32})
+                    for (size_t oc : {4, 32})
                         for (size_t ic : {1, 3, 4, 12, 32})
                             for (size_t h : {3, 5, 12})
-                                for (size_t w : {7, 16, 23}) {
+                                for (size_t w : {7, 23}) {
                                     for (size_t group = 1;
                                          group <= std::min(oc, ic); ++group) {
                                         pack(n, oc, ic, h, w, kernel, stride,
@@ -350,13 +350,18 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_SMALL_GROUP) {
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
             handle(), "F32DIRECT_SMALL_GROUP");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_1) {
-    check_conv_bias(get_nchw44_conv_bias_args({2, 7}, 1, false, false, false,
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K7) {
+    check_conv_bias(get_nchw44_conv_bias_args({7}, 1, false, false, false,
+                                              false, false, false),
+                    handle(), "F32_CONV_NCHW44_DIRECT");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K2K3) {
+    check_conv_bias(get_nchw44_conv_bias_args({2, 3}, 1, false, false, false,
                                               false, true, true),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_2) {
-    check_conv_bias(get_nchw44_conv_bias_args({3, 5}, 1, false, false, false,
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K5) {
+    check_conv_bias(get_nchw44_conv_bias_args({5}, 1, false, false, false,
                                               false, true, true),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
@@ -388,10 +393,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32) {
                                               false, true),
                     handle(), "F32_CONV_NCHW_NCHW44");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44_1) {
     check_conv_bias(
-            get_nchw44_channel_wise_args({2, 3, 5}, 1, false, false, false),
+            get_nchw44_channel_wise_args({2, 3}, 1, false, false, false),
             handle(), "F32_CHANNEL_WISE_NCHW44");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP32_NCHW44_2) {
+    check_conv_bias(get_nchw44_channel_wise_args({5}, 1, false, false, false),
+                    handle(), "F32_CHANNEL_WISE_NCHW44");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE2_FP32_NCHW44) {
