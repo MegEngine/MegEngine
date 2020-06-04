@@ -12,4 +12,5 @@ from .qconfig import (
     calibration_qconfig,
     ema_fakequant_qconfig,
     min_max_fakequant_qconfig,
+    tqt_quant_qconfig,
 )
