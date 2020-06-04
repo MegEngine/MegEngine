@@ -49,6 +49,10 @@ class CompNode {
                     str2device_type(type, false));
             }
 
+            static void _try_coalesce_all_free_memory() {
+                CompNode::try_coalesce_all_free_memory();
+            }
+
             bool _check_eq(const CompNode &rhs) const {
                 return (*$self) == rhs;
             }
@@ -82,6 +86,10 @@ class CompNode {
 
             size_t __hash__() {
                 return mgb::hash(*$self);
+            }
+
+            std::pair<size_t, size_t> _get_mem_status_bytes() {
+                return $self->get_mem_status_bytes();
             }
         }
 
@@ -121,6 +129,16 @@ class CompNode {
                 """physical locator: a tuple containing (type, device, stream)"""
                 t, d, s = self._get_locator()[3:]
                 return self.DEVICE_TYPE_MAP[t], d, s
+
+            @property
+            def mem_status_bytes(self) -> [int, int]:
+                """get (total, free) memory on the computing device in bytes.
+
+                Free memory includes memory chunks that buffered by the memory manager.
+
+                Please note that the results are the same for different CompNode within same device.
+                """
+                return self._get_mem_status_bytes()
         }
 };
 %template(_VectorCompNode) std::vector<CompNode>;

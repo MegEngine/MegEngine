@@ -654,3 +654,14 @@ def to_mgb_supported_dtype(dtype_):
     ):
         return dtype_
     return _detail._to_mgb_supported_dtype(dtype_)
+
+
+def return_free_memory():
+    """return free memory chunks on all devices.
+
+    This function will try it best to free all consecutive free chunks back to 
+    operating system, small pieces may not be returned.
+
+    Please notice that this function will not move any memory in-use.
+    """
+    _detail.CompNode._try_coalesce_all_free_memory()

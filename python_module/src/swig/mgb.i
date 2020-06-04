@@ -30,6 +30,7 @@ void _init_bfloat16_types(PyObject *m); // implemented in bfloat16.cpp
 %template(_VectorInt) std::vector<int>;
 %template(_VectorString) std::vector<std::string>;
 %template(_PairStringSizeT) std::pair<std::string, size_t>;
+%template(_PairSizeTSizeT) std::pair<size_t, size_t>;
 %template(_VectorPairUint64String) std::vector<std::pair<uint64_t, std::string>>;
 
 %pythoncode %{
