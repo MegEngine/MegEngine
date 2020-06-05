@@ -49,6 +49,11 @@ SymbolVar SymbolVar::flatten() const {
     return opr::Reshape::make(*this, make_scalar(1), 0);
 }
 
+SymbolVar SymbolVar::add_axis(size_t idx) const {
+    return opr::AxisAddRemove::make(*this,
+        {opr::AxisAddRemove::AxisDesc::make_add(idx)});
+}
+
 Maybe<DTypeScalar> SymbolVar::as_immutable_scalar() const {
     using IT = static_infer::InferType;
     auto &&mgr = node()->owner_graph()->static_infer_manager();

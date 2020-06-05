@@ -294,6 +294,14 @@ VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl *graph):
             on_comp_seq_finish);
     graph->event().register_receiver_permanent<event::CompSeqExecError>(
             on_comp_seq_error);
+
+#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER
+    auto on_mem_defrag_start = [this](const event::BeforeMemDefrag&) {
+        m_cuda_asyn_var_releaser->wait_release_finish();
+    };
+    graph->event().register_receiver_permanent<event::BeforeMemDefrag>(
+            on_mem_defrag_start);
+#endif
 }
 
 VarNodeMemManager::~VarNodeMemManager() noexcept = default;

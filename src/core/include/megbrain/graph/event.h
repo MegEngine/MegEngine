@@ -224,6 +224,15 @@ struct SubgraphAssociated {
     MGB_TYPEINFO_OBJ_DECL;
 };
 
+#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER
+/*!
+ * \brief signaled before graph memory defragementation
+ */
+struct BeforeMemDefrag {
+    MGB_TYPEINFO_OBJ_DECL;
+};
+#endif
+
 }  // namespace event
 }  // namespace cg
 }  // namespace mgb

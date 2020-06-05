@@ -66,6 +66,7 @@ class SymbolVar {
         SymbolVar broadcast(SymbolVar tshape) const;
         SymbolVar symshape() const;
         SymbolVar flatten() const;
+        SymbolVar add_axis(size_t idx) const;
 
         const TensorShape& shape() const {
             return m_node->shape();

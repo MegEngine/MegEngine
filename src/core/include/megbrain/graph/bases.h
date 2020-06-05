@@ -40,6 +40,12 @@
 #define MGB_IF_COND_EXEC(x...)
 #endif
 
+#if MGB_CUDA && MGB_ENABLE_EXCEPTION
+#define MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER 1
+#else
+#define MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER 0
+#endif // whether enable memory defragment
+
 namespace mgb {
 
 //! computing graph

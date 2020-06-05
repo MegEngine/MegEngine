@@ -28,6 +28,9 @@ MGB_TYPEINFO_OBJ_IMPL(CompSeqExecBeforeStart);
 MGB_TYPEINFO_OBJ_IMPL(CompSeqExecFinished);
 MGB_TYPEINFO_OBJ_IMPL(CompSeqExecError);
 MGB_TYPEINFO_OBJ_IMPL(SubgraphAssociated);
+#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER
+MGB_TYPEINFO_OBJ_IMPL(BeforeMemDefrag);
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
 

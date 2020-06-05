@@ -13,12 +13,6 @@
 
 #include "../impl_common.h"
 
-#if MGB_CUDA && MGB_ENABLE_EXCEPTION
-#define MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER 1
-#else
-#define MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER 0
-#endif
-
 namespace mgb {
 namespace cg {
 

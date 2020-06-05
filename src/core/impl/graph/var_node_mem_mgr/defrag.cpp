@@ -77,6 +77,7 @@ void VarDevMemDefragmenter::defrag(VarNode* req_var,
                             ->current_exec_env();
     mgb_assert(exec_env);
     exec_env->pause_exec();
+    m_mem_mgr->owner_graph()->event().signal_inplace<event::BeforeMemDefrag>();
     MGB_TRY { defrag_impl(req_var, cn_info, extra_size); }
     MGB_FINALLY(exec_env->resume_exec(););
 }
@@ -123,7 +124,8 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
         if (refcnt == iter->second.readers.size()) {
             tot_size += get_aligned_power2(iter->first->size(), alignment);
             nr_var += iter->second.readers.size();
-            auto&& tensor = iter->first->owner_var->dev_tensor();
+            auto owner_var = iter->first->owner_var;
+            auto&& tensor = owner_var->m_dev_tensor;
             iter->second.value.comp_node(cn)
                     .ensure_size(iter->first->size())
                     .copy_from(tensor.storage(), iter->first->size());
@@ -131,6 +133,17 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
             // release memory of all readers
             for (auto var : iter->second.readers) {
                 const_cast<DeviceTensorND&>(var->dev_tensor()).storage({});
+            }
+            // release memory of owner_var
+            auto&& mem_plan = owner_var->mem_plan();
+            if (!mem_plan.valid()) {
+                // mem_plan of owner_var was invalid here if all reader oprs
+                // of owner_var have already been executed, but its tensor
+                // storage should not be released until the refcnt of chunk
+                // decreasing to zero (see release_chunk() for more details)
+                mgb_assert(tensor.storage().comp_node_valid() &&
+                    tensor.layout().eq_layout(mem_plan.layout()));
+                tensor.storage({});
             }
         } else {
             mgb_assert(refcnt > iter->second.readers.size());
@@ -169,6 +182,11 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
                 var->m_dev_tensor.reset(storage, mplan.layout());
             }
             mgb_assert(var->dev_tensor_valid());
+        }
+        auto owner_var = i.first->owner_var;
+        if (!owner_var->mem_plan().valid()) {
+            owner_var->m_dev_tensor.reset(
+                storage, owner_var->mem_plan().layout());
         }
     }
     mgb_assert(offset + extra_size == tot_size);
