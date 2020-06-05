@@ -32,9 +32,11 @@ void IndexingRemapBase::check_layout_fwd(const TensorLayout &src,
     }
     megdnn_assert(map.shape[dst.ndim] == src.ndim, "%s", errmsg_c);
 
-    megdnn_assert(src.dtype == dtype::Float32());
+    megdnn_assert(dst.dtype == src.dtype);
+    megdnn_assert(src.dtype == dtype::Float32() || src.dtype == dtype::Int32(),
+                  "indexing remap only support float32/int32, got %s",
+                  src.dtype.name());
     megdnn_assert(map.dtype == dtype::Int32());
-    megdnn_assert(dst.dtype == dtype::Float32());
 }
 
 void IndexingRemapForward::deduce_layout(const TensorLayout &src,

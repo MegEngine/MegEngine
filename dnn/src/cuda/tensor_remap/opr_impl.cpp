@@ -36,13 +36,23 @@ void IndexingRemapForwardImpl::exec(_megdnn_tensor_in src,
     for (size_t i = 0_z; i < dst.layout.ndim; ++i) {
         dshape.data[i] = dst.layout.shape[i];
     }
-    // Invoke kernel
-    tensor_remap::forward(src.ptr<dt_float32>(),
-            map.ptr<dt_int32>(),
-            dst.ptr<dt_float32>(),
-            src.layout.ndim, dst.layout.ndim,
-            sstride, dstride, dshape,
-            cuda_stream(handle()));
+        // Invoke kernel
+#define cb(dt)                                                              \
+    if (src.layout.dtype.enumv() == DTypeTrait<dt>::enumv) {                \
+        using ctype = DTypeTrait<dt>::ctype;                                \
+        tensor_remap::forward<ctype>(src.ptr<ctype>(), map.ptr<dt_int32>(), \
+                                     dst.ptr<ctype>(), src.layout.ndim,     \
+                                     dst.layout.ndim, sstride, dstride,     \
+                                     dshape, cuda_stream(handle()));        \
+        return;                                                             \
+    }
+    cb(dtype::Float32)
+    cb(dtype::Int32)
+#undef cb
+    megdnn_throw(
+            ssprintf("cuda indexing remap forward only support "
+                     "float32/int32 dtype, got %s",
+                     src.layout.dtype.name()));
 }
 
 void IndexingRemapBackwardImpl::exec(_megdnn_tensor_in diff,
@@ -69,18 +79,27 @@ void IndexingRemapBackwardImpl::exec(_megdnn_tensor_in diff,
     for (size_t i = 0_z; i < diff.layout.ndim; ++i) {
         dshape.data[i] = diff.layout.shape[i];
     }
-    // Invoke kernel
-    tensor_remap::backward(diff.ptr<dt_float32>(),
-            map.ptr<dt_int32>(),
-            grad.ptr<dt_float32>(),
-            grad.layout.ndim, diff.layout.ndim,
-            sstride, dstride, sshape, dshape,
-            param().is_non_overlapping,
-            cuda_stream(handle()));
+
+        // Invoke kernel
+#define cb(dt)                                                                \
+    if (diff.layout.dtype.enumv() == DTypeTrait<dt>::enumv) {                 \
+        using ctype = DTypeTrait<dt>::ctype;                                  \
+        tensor_remap::backward<ctype>(                                        \
+                diff.ptr<ctype>(), map.ptr<dt_int32>(), grad.ptr<ctype>(),    \
+                grad.layout.ndim, diff.layout.ndim, sstride, dstride, sshape, \
+                dshape, param().is_non_overlapping, cuda_stream(handle()));   \
+        return;                                                               \
+    }
+    cb(dtype::Float32)
+    cb(dtype::Int32)
+
+    megdnn_throw(
+            ssprintf("cuda indexing remap forward only support "
+                     "float32/int32 dtype, got %s",
+                     diff.layout.dtype.name()));
 }
 
 } // namespace cuda
 } // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-
