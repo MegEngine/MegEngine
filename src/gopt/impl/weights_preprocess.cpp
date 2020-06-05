@@ -103,17 +103,16 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
             winograd_preprocess_param.output_block_size =
                     winograd_param.output_block_size;
 
-            size_t pack_c_size = 1;
-            if (new_inp[0]->shape().ndim == 5) {
-                pack_c_size = new_inp[0]->layout().shape[4];
-            }
-
+            auto conv_bias_param = conv_bias_opr.param();
+            //! If input dtype is Qint8 and matmul format is MK4, The winograd
+            //! compute type is float.
             if (conv_bias_opr.input(0)->dtype().enumv() ==
                         DTypeEnum::QuantizedS8 &&
-                pack_c_size == 4 &&
                 winograd_preprocess_param.format ==
                         megdnn::param::MatrixMul::Format::MK4) {
                 winograd_preprocess_param.compute_mode =
+                        megdnn::param::ConvBias::ComputeMode::FLOAT32;
+                conv_bias_param.compute_mode =
                         megdnn::param::ConvBias::ComputeMode::FLOAT32;
             }
 
@@ -124,7 +123,6 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
                        inputs.size());
             SymbolVar new_conv_bias_opr;
 
-            auto conv_bias_param = conv_bias_opr.param();
             if (new_inp[0]->shape().ndim == 4) {
                 conv_bias_param.format =
                         megdnn::ConvBias::Param::Format::NCHW_WINOGRAD;

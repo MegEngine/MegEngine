@@ -164,6 +164,105 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
     }
     return ret;
 }
+/*!
+ * \brief deduce the origin filter layout and param after winograd transformed
+ */
+void ConvBiasForward::deduce_winograd_origin_layout_and_param(
+        const Param::Format format, const size_t output_block_size,
+        const TensorLayout& src_layout,
+        const TensorLayout& winograd_filter_layout, TensorLayout& origin_layout,
+        Param& origin_param) {
+    if (format == megdnn::param::ConvBias::Format::NCHW88_WINOGRAD ||
+        format == megdnn::param::ConvBias::Format::NCHW44_WINOGRAD ||
+        format == megdnn::param::ConvBias::Format::NCHW_WINOGRAD) {
+        //! change NCHWxx_WINOGRAD to NCHWxx
+        size_t OC = 0;
+        size_t IC = 0;
+        size_t GROUP = 1;
+        size_t FH = winograd_filter_layout[1] - output_block_size + 1;
+
+        //! {alpha, alpha, IC, OC}
+        if (winograd_filter_layout.ndim == 4) {
+            OC = winograd_filter_layout[3];
+            IC = winograd_filter_layout[2];
+        }
+        //! {group, alpha, alpha, IC, OC}
+        else if (winograd_filter_layout.ndim == 5) {
+            OC = winograd_filter_layout[4];
+            IC = winograd_filter_layout[3];
+            GROUP = winograd_filter_layout[0];
+        }
+        //! {alpha, alpha, OC/f, IC/f, f, f}
+        else if (winograd_filter_layout.ndim == 6) {
+            OC = winograd_filter_layout[2] * winograd_filter_layout[5];
+            IC = winograd_filter_layout[3] * winograd_filter_layout[4];
+        }
+        //! {group, alpha, alpha, OC/f, IC/f, f, f}
+        else if (winograd_filter_layout.ndim == 7) {
+            OC = winograd_filter_layout[3] * winograd_filter_layout[6];
+            IC = winograd_filter_layout[4] * winograd_filter_layout[5];
+            GROUP = winograd_filter_layout[0];
+        }
+        auto origin_data_type = winograd_filter_layout.dtype;
+        if (src_layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+            if (origin_data_type.enumv() == DTypeEnum::QuantizedS16) {
+                float scale =
+                        origin_data_type.param<dtype::QuantizedS16>().scale;
+                origin_data_type = megdnn::dtype::QuantizedS8(scale);
+            } else {
+                //! In order to braing the sacle of filter, the transformed
+                //! qint8 winograd filter computing with float dtype is Qint32
+                megdnn_assert(origin_data_type.enumv() ==
+                              DTypeEnum::QuantizedS32);
+                float scale =
+                        origin_data_type.param<dtype::QuantizedS32>().scale;
+                origin_data_type = megdnn::dtype::QuantizedS8(scale);
+            }
+        }
+
+        if (GROUP == 1) {
+            if (format == megdnn::param::ConvBias::Format::NCHW_WINOGRAD) {
+                origin_layout =
+                        TensorLayout({OC, IC, FH, FH}, origin_data_type);
+            } else if (format ==
+                       megdnn::param::ConvBias::Format::NCHW44_WINOGRAD) {
+                origin_layout = TensorLayout({OC / 4, IC / 4, FH, FH, 4, 4},
+                                             origin_data_type);
+            } else {
+                megdnn_assert(format ==
+                              megdnn::param::ConvBias::Format::NCHW88_WINOGRAD);
+                origin_layout = TensorLayout({OC / 8, IC / 8, FH, FH, 8, 8},
+                                             origin_data_type);
+            }
+        } else {
+            if (format == megdnn::param::ConvBias::Format::NCHW_WINOGRAD) {
+                origin_layout =
+                        TensorLayout({GROUP, OC, IC, FH, FH}, origin_data_type);
+            } else if (format ==
+                       megdnn::param::ConvBias::Format::NCHW44_WINOGRAD) {
+                origin_layout =
+                        TensorLayout({GROUP, OC / 4, IC / 4, FH, FH, 4, 4},
+                                     origin_data_type);
+            } else {
+                megdnn_assert(format ==
+                              megdnn::param::ConvBias::Format::NCHW88_WINOGRAD);
+                origin_layout =
+                        TensorLayout({GROUP, OC / 8, IC / 8, FH, FH, 8, 8},
+                                     origin_data_type);
+            }
+        }
+        origin_param.output_block_size = 0;
+        if (format == megdnn::param::ConvBias::Format::NCHW_WINOGRAD) {
+            origin_param.format = megdnn::param::ConvBias::Format::NCHW;
+        } else if (format == megdnn::param::ConvBias::Format::NCHW44_WINOGRAD) {
+            origin_param.format = megdnn::param::ConvBias::Format::NCHW44;
+        } else {
+            megdnn_assert(format ==
+                          megdnn::param::ConvBias::Format::NCHW88_WINOGRAD);
+            origin_param.format = megdnn::param::ConvBias::Format::NCHW88;
+        }
+    }
+}
 
 template <typename T>
 struct NCHWParamTrait;

@@ -285,6 +285,7 @@ bool ConvBiasImpl::AlgoS8CF32WinogradF23_4x4_NCHW44::usable(
         bool is_matmul_usable = false;
 
         using Strategy = winograd::winograd_2x3_4x4_s8_f32_nchw44;
+        using PackMode = fallback::MatrixMulImpl::AlgoBase::PackMode;
         Strategy strategy(param.src_type, param.filter_type, param.dst_type);
         is_matmul_usable = m_matmul_algo->usable(
                 megdnn::winograd::ConvBias<Strategy,
@@ -293,6 +294,7 @@ bool ConvBiasImpl::AlgoS8CF32WinogradF23_4x4_NCHW44::usable(
                         param.osz[1], param.filter_meta.ocpg)
                         .get_matmul_kern_param(param));
         return is_matmul_usable &&
+               m_matmul_algo->packmode() == PackMode::NO_PACK &&
                ((opr->param().format == param::ConvBias::Format::NCHW44 &&
                  param.filter_type.enumv() == DTypeEnum::QuantizedS8) ||
                 ((opr->param().format ==
@@ -308,8 +310,7 @@ bool ConvBiasImpl::AlgoS8CF32WinogradF23_4x4_NCHW44::usable(
                (param.filter_meta.dilation[0] ==
                         param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&
-               (param.compute_mode == param::ConvBias::ComputeMode::FLOAT32 ||
-                param.compute_mode == param::ConvBias::ComputeMode::DEFAULT) &&
+               param.compute_mode == param::ConvBias::ComputeMode::FLOAT32 &&
                param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                param.bias_type.enumv() == DTypeEnum::QuantizedS32 &&
                param.dst_type.enumv() == DTypeEnum::QuantizedS8;

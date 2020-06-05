@@ -562,6 +562,10 @@ class AlgoChooser {
         }
     }
 
+    static void get_origin_param_and_layouts(const ExeContext&,
+                                             ConvTensorLayouts&,
+                                             typename Opr::Param&) {}
+
     //! get all profile result, either by retrieving cache or profiling
     static AlgoChooserProfileCache::Result get_profile_result(
             ExeContext& ctx, bool enable_update);
@@ -600,10 +604,14 @@ template <typename Opr>
 AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
         ExeContext& ctx, bool enable_update) {
     AlgoChooserProfileCache& cache = ctx.mgb_opr()->profile_cache();
-    auto param_blob = ctx.mgb_opr()->param_blob();
-    AlgoChooserProfileCache::Key cache_key{ctx.layouts().data(),
-                                           ctx.layouts().size(),
-                                           param_blob.first, param_blob.second};
+
+    ConvTensorLayouts origin_layouts = ctx.layouts();
+    typename Opr::Param origin_param = ctx.mgb_opr()->param();
+    get_origin_param_and_layouts(ctx, origin_layouts, origin_param);
+    AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
+                                           origin_layouts.size(), &origin_param,
+                                           sizeof(origin_param)};
+
     {
         auto&& rst = cache.get(cache_key);
         if (rst.valid())
@@ -656,6 +664,23 @@ AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
 
     cache.put(cache_key, prof_rst);
     return prof_rst;
+}
+
+template <>
+void AlgoChooser<megdnn::ConvBias>::get_origin_param_and_layouts(
+        const ExeContext& ctx, ConvTensorLayouts& layouts,
+        megdnn::ConvBias::Param& param) {
+    auto format = static_cast<megdnn::param::ConvBias::Format>(
+            ctx.megdnn_opr()->param().format);
+    size_t output_block_size = ctx.megdnn_opr()->param().output_block_size;
+    TensorLayout origin_layout;
+    megdnn::ConvBias::deduce_winograd_origin_layout_and_param(
+            format, output_block_size, ctx.layouts()[0], ctx.layouts()[1],
+            origin_layout, param);
+    for (size_t i = 0; i < ctx.layouts().size(); i++) {
+        layouts[i] = ctx.layouts()[i];
+    }
+    layouts[1] = origin_layout;
 }
 
 template <typename Opr>
@@ -724,6 +749,18 @@ void AlgoChooser<megdnn::ConvBias>::ExeContext::
                 ConvBiasForward::get_matmul_format(winograd_param);
         winograd_preprocess_opr->param().output_block_size =
                 winograd_param.output_block_size;
+        //! When filter input is qint8 and Matmul format is MK4, the winograd
+        //! compute type is float
+        if (m_layouts[1].dtype.enumv() == DTypeEnum::QuantizedS8 &&
+            param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW44) {
+            if (winograd_preprocess_opr->param().format ==
+                megdnn::param::MatrixMul::Format::MK4){
+                winograd_preprocess_opr->param().compute_mode =
+                        ConvBias::Param::ComputeMode::FLOAT32;
+                param.opr_param.compute_mode =
+                        ConvBias::Param::ComputeMode::FLOAT32;
+            }
+        }
         TensorLayout filter_transform_layout;
         winograd_preprocess_opr->deduce_layout(m_layouts[1],
                                                filter_transform_layout);
