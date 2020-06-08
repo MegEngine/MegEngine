@@ -527,12 +527,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_SMALL_GROUP) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_NCHW44) {
     checker_conv_bias_qint8x8x8(
             get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, false),
-            handle(), "S8_NCHW44_DIRECT_STRD1");
+            handle(), "S8_NCHW44_DIRECT");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_NCHW44_8832) {
+    checker_conv_bias_qint8x8x32(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, true),
+            handle(), "S8_NCHW44_DIRECT");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_NCHW44_8832) {
+    checker_conv_bias_qint8x8x32(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, true),
+            handle(), "S8_NCHW44_DIRECT");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_NCHW44) {
     checker_conv_bias_qint8x8x8(
             get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
-            handle(), "S8_NCHW44_DIRECT_STRD2");
+            handle(), "S8_NCHW44_DIRECT");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QS8_CHANNEL_WISE_DIRECT1_NCHW44) {
     checker_conv_bias_qint8x8x8(
@@ -1085,7 +1095,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_INT8) {
         dtype::QuantizedS8(60.25f), param::MatrixMul::Format::MK8, 1e-3);
 }
 
-
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
     using namespace conv_bias;
 
@@ -1096,17 +1105,17 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
                           param::MatrixMul::Format format, float eps) {
         for (auto&& arg : args) {
             for (uint32_t m : out_size) {
-              checker.set_extra_opr_impl(std::bind(
-                      winograd_algo_extra_impl, std::placeholders::_1, m,
-                      arg.param, handle, format));
-              checker.set_dtype(0, A_dtype)
-                      .set_dtype(1, B_dtype)
-                      .set_dtype(2, C_dtype)
-                      .set_dtype(4, D_dtype)
-                      .set_epsilon(eps)
-                      .set_param(arg.param)
-                      .execs({arg.src, arg.filter, arg.bias, {}, {}});
-           }
+                checker.set_extra_opr_impl(std::bind(
+                        winograd_algo_extra_impl, std::placeholders::_1, m,
+                        arg.param, handle, format));
+                checker.set_dtype(0, A_dtype)
+                        .set_dtype(1, B_dtype)
+                        .set_dtype(2, C_dtype)
+                        .set_dtype(4, D_dtype)
+                        .set_epsilon(eps)
+                        .set_param(arg.param)
+                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
+            }
         }
     };
 
@@ -1118,7 +1127,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ssprintf("WINOGRAD_NCHW44:%s:8:2:32", matmul_name).c_str()));
 
-    std::vector<TestArg> quantized_args = get_int8_nchw44_args (3,4);
+    std::vector<TestArg> quantized_args = get_int8_nchw44_args(3, 4);
     UniformIntRNG int_rng{-50, 50};
     checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
     run(handle(), quantized_args, {2}, dtype::QuantizedS8(2.5f),
@@ -1126,8 +1135,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
         dtype::QuantizedS8(60.25f), param::MatrixMul::Format::MK8, 1e-3);
 }
 
-
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_GROUPMODE) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_GROUPMODE) {
     using namespace conv_bias;
 
     Checker<ConvBiasForward> checker(handle());
@@ -1137,17 +1146,17 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_GROUPM
                           param::MatrixMul::Format format, float eps) {
         for (auto&& arg : args) {
             for (uint32_t m : out_size) {
-              checker.set_extra_opr_impl(std::bind(
-                      winograd_algo_extra_impl, std::placeholders::_1, m,
-                      arg.param, handle, format));
-              checker.set_dtype(0, A_dtype)
-                      .set_dtype(1, B_dtype)
-                      .set_dtype(2, C_dtype)
-                      .set_dtype(4, D_dtype)
-                      .set_epsilon(eps)
-                      .set_param(arg.param)
-                      .execs({arg.src, arg.filter, arg.bias, {}, {}});
-           }
+                checker.set_extra_opr_impl(std::bind(
+                        winograd_algo_extra_impl, std::placeholders::_1, m,
+                        arg.param, handle, format));
+                checker.set_dtype(0, A_dtype)
+                        .set_dtype(1, B_dtype)
+                        .set_dtype(2, C_dtype)
+                        .set_dtype(4, D_dtype)
+                        .set_epsilon(eps)
+                        .set_param(arg.param)
+                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
+            }
         }
     };
 
@@ -1168,7 +1177,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_GROUPM
         dtype::QuantizedS8(60.25f), param::MatrixMul::Format::MK8, 1e-3);
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F32) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F32) {
     using namespace conv_bias;
 
     Checker<ConvBiasForward> checker(handle());
@@ -1196,21 +1206,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F
 #if MEGDNN_AARCH64
     const char* matmul_name = "AARCH64_F32_MK4_4x16";
 #else
-    const char* matmul_name = "ARMV7_F32_MK4_4x8"; 
+    const char* matmul_name = "ARMV7_F32_MK4_4x8";
 #endif
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ssprintf("WINOGRAD_NCHW44:%s:4:2:32", matmul_name).c_str()));
-    std::vector<TestArg> quantized_args =
-            get_int8_nchw44_args(3, 4, true);
+    std::vector<TestArg> quantized_args = get_int8_nchw44_args(3, 4, true);
     UniformIntRNG int_rng{-50, 50};
     checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
     run(handle(), quantized_args, {2}, dtype::QuantizedS8(0.41113496f),
         dtype::QuantizedS8(0.01887994f),
         dtype::QuantizedS32(0.41113496f * 0.01887994f),
-        dtype::QuantizedS8(0.49550694f), param::MatrixMul::Format::MK4, epsilon);
+        dtype::QuantizedS8(0.49550694f), param::MatrixMul::Format::MK4,
+        epsilon);
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F32_GROUPMODE) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F32_GROUPMODE) {
     using namespace conv_bias;
 
     Checker<ConvBiasForward> checker(handle());
@@ -1238,7 +1249,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F
 #if MEGDNN_AARCH64
     const char* matmul_name = "AARCH64_F32_MK4_4x16";
 #else
-    const char* matmul_name = "ARMV7_F32_MK4_4x8"; 
+    const char* matmul_name = "ARMV7_F32_MK4_4x8";
 #endif
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ssprintf("WINOGRAD_NCHW44:%s:4:2:32", matmul_name).c_str()));
@@ -1249,9 +1260,9 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_COMP_F
     run(handle(), quantized_args, {2}, dtype::QuantizedS8(0.41113496f),
         dtype::QuantizedS8(0.01887994f),
         dtype::QuantizedS32(0.41113496f * 0.01887994f),
-        dtype::QuantizedS8(0.49550694f), param::MatrixMul::Format::MK4, epsilon);
+        dtype::QuantizedS8(0.49550694f), param::MatrixMul::Format::MK4,
+        epsilon);
 }
-
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F16_F23) {

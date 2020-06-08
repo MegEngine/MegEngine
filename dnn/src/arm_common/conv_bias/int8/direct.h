@@ -36,26 +36,6 @@ KERN(stride2, 7, nchw)
 
 #undef KERN
 
-#define KERN(stride, i, layout)                                           \
-    template <BiasMode bias_mode, typename Op, int remain_w>              \
-    void conv_direct_##stride##_##i##x##i##_int8_##layout(                \
-            const int8_t* src, const int8_t* filter, const int32_t* bias, \
-            int32_t* temp, int8_t* dst, const size_t OC, const size_t IC, \
-            const size_t IH, const size_t IW, const size_t OH,            \
-            const size_t OW, const Op& op);
-KERN(stride1, 2, nchw44)
-KERN(stride1, 3, nchw44)
-KERN(stride1, 5, nchw44)
-KERN(stride1, 7, nchw44)
-
-KERN(stride2, 2, nchw44)
-KERN(stride2, 3, nchw44)
-KERN(stride2, 5, nchw44)
-KERN(stride2, 7, nchw44)
-#undef KERN
-void nchw44_pack_filter(const int8_t* src, int8_t* dst, int filter);
-void nchw44_pack_src(const int8_t* src, int8_t* dst, int length);
-
 }  // namespace conv_bias
 }  // namespace arm_common
 }  // namespace megdnn

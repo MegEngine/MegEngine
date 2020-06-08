@@ -226,7 +226,15 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
         run(1, 3, 32, 224, 224, 5, 1, true);
         run(1, 3, 64, 224, 224, 7, 1, true);
 
-        for (size_t stride : {1, 2}) {
+        run(1, 64, 128, 56, 56, 3, 2, false);
+        run(1, 128, 256, 28, 28, 3, 2, false);
+        run(1, 256, 512, 14, 14, 3, 2, false);
+
+        run(1, 128, 128, 28, 28, 3, 1, false);
+        run(1, 256, 256, 14, 14, 3, 1, false);
+        run(1, 512, 512, 7, 7, 3, 1, false);
+
+        for (size_t stride : {1}) {
             printf("stride %zu\n", stride);
             for (size_t filter_size : {2, 3, 5, 7}) {
                 for (size_t img_size : {32}) {

@@ -38,23 +38,6 @@ public:
                       const NCBKernSizeParam& param) const override;
 };
 
-class ConvBiasImpl::AlgoS8DirectStride1NCHW44 final : public AlgoBase {
-public:
-    AlgoS8DirectStride1NCHW44() {}
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "S8_NCHW44_DIRECT_STRD1"; }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-    bool is_preferred(megdnn::fallback::ConvBiasImpl*,
-                      const NCBKernSizeParam& param) const override;
-};
-
 class ConvBiasImpl::AlgoS8DirectStride2 final : public AlgoBase {
     bool m_large_group;
 
@@ -74,11 +57,11 @@ public:
             const NCBKernSizeParam& param) const override;
 };
 
-class ConvBiasImpl::AlgoS8DirectStride2NCHW44 final : public AlgoBase {
+class ConvBiasImpl::AlgoS8DirectNCHW44 final : public AlgoBase {
 public:
-    AlgoS8DirectStride2NCHW44() {}
+    AlgoS8DirectNCHW44() {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "S8_NCHW44_DIRECT_STRD2"; }
+    const char* name() const override { return "S8_NCHW44_DIRECT"; }
     bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(fallback::ConvBiasImpl*,
@@ -245,8 +228,8 @@ private:
 //=======================input int8 compute fp32 output int8============
 class ConvBiasImpl::AlgoS8CF32WinogradF23_4x4_NCHW44 final : public AlgoBase {
 public:
-    AlgoS8CF32WinogradF23_4x4_NCHW44(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                          uint32_t tile_size)
+    AlgoS8CF32WinogradF23_4x4_NCHW44(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     bool is_reproducible() const override { return true; }
     const char* name() const override {
@@ -277,7 +260,7 @@ private:
 class ConvBiasImpl::AlgoS8WinogradF23_8x8_NCHW44 final : public AlgoBase {
 public:
     AlgoS8WinogradF23_8x8_NCHW44(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                          uint32_t tile_size)
+                                 uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     bool is_reproducible() const override { return true; }
     const char* name() const override {

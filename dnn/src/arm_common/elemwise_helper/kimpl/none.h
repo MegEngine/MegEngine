@@ -27,6 +27,8 @@ struct NoneOp;
 #define OP(_ctype, _neon_type, _neon_type2, _func_suffix, _simd_width)       \
     template <>                                                              \
     struct NoneOp<_ctype> : NoneOpBase<_ctype> {                             \
+        NoneOp(){};                                                          \
+        NoneOp(float, float){};                                              \
         using NoneOpBase::NoneOpBase;                                        \
         using NoneOpBase::operator();                                        \
         constexpr static size_t SIMD_WIDTH = _simd_width;                    \
