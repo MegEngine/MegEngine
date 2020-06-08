@@ -264,6 +264,19 @@ TEST(TestCompNodeCuda, MemNode) {
     ASSERT_NE(cn00.mem_node(), cn1.mem_node());
 }
 
+TEST(TestCompNodeCuda, Uid) {
+    REQUIRE_GPU(2);
+
+    auto cn00 = CompNode::load("gpu0"),
+         cn1 = CompNode::load("gpu1"),
+         cn01 = CompNode::load("gpu0:0"),
+         cn02 = CompNode::load("gpu0:2");
+    ASSERT_EQ(cn00, CompNode::load("gpu0"));
+    ASSERT_EQ(cn00.get_uid(), cn01.get_uid());
+    ASSERT_NE(cn00.get_uid(), cn02.get_uid());
+    ASSERT_NE(cn00.get_uid(), cn1.get_uid());
+}
+
 
 TEST(TestCompNodeCPU, PhysicalDispatch) {
     constexpr int ID = 0x2a6453e0;

@@ -359,6 +359,10 @@ class CompNode {
             return m_impl ? m_impl->locator_logical().to_string() : "invalid";
         }
 
+        uint64_t get_uid() {
+            return m_impl->get_uid();
+        }
+
         //! get the physical locator that created this comp node
         Locator locator() const {
             return m_impl->locator();
@@ -521,6 +525,10 @@ class CompNode {
                     create_seq_recorder(cg::ComputingGraph* cg);
 
                 virtual void add_callback(megdnn::thin_function<void()>&&);
+
+                virtual uint64_t get_uid() {
+                    mgb_throw(MegBrainError, "get_uid is not impl yet");
+                };
 
             protected:
                 ImplBase(free_func_t fd, free_func_t fh)
