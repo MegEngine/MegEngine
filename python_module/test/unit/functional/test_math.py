@@ -6,10 +6,14 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+from functools import partial
+
 import numpy as np
 from helpers import opr_test
 
 import megengine.functional as F
+from megengine.test import assertTensorClose
 
 
 def common_test_reduce(opr, ref_opr):
@@ -86,7 +90,6 @@ def test_sqrt():
 
 
 def test_normalize():
-    from functools import partial
 
     cases = [
         {"input": np.random.random((2, 3, 12, 12)).astype(np.float32)} for i in range(2)
@@ -112,3 +115,54 @@ def test_normalize():
     cases[0]["input"][0, 0, 0, :] = 0
     cases[1]["input"][0, 0, 0, :] = 0
     opr_test(cases, partial(F.normalize, axis=3), ref_fn=partial(np_normalize, axis=3))
+
+
+def test_logsumexp():
+    x = np.arange(10).astype(np.float32)
+    expected = np.log(np.sum(np.exp(x)))
+    cases = [{"input": x, "output": expected}]
+    compare_fn = partial(assertTensorClose, allow_special_values=True)
+    # large value check
+    n = 100
+    x = np.full(n, 10000, dtype=np.float32)
+    expected = 10000 + np.log(n)
+    cases.append({"input": x, "output": expected.astype(np.float32)})
+    opr_test(cases, F.logsumexp, axis=0, compare_fn=compare_fn)
+
+    # special value check
+    x = np.array([np.inf], dtype=np.float32)
+    expected = x
+    cases = [{"input": x, "output": expected}]
+
+    x = np.array([-np.inf, 0.0], dtype=np.float32)
+    expected = np.zeros(1).astype(np.float32)
+    cases.append({"input": x, "output": expected})
+    opr_test(cases, F.logsumexp, axis=0, compare_fn=compare_fn)
+
+    x = np.array([np.nan], dtype=np.float32)
+    expected = x
+    cases = [{"input": x, "output": expected}]
+
+    x = np.array([-np.inf, 1], dtype=np.float32)
+    expected = np.array([1.0], dtype=np.float32)
+    cases.append({"input": x, "output": expected})
+
+    opr_test(cases, F.logsumexp, axis=0, compare_fn=compare_fn)
+
+    # keepdims check
+    x = np.array([[1e10, 1e-10], [-1e10, -np.inf]], dtype=np.float32)
+    expected = np.array([[1e10], [-1e10]], dtype=np.float32)
+    cases = [{"input": x, "output": expected}]
+    x = np.array([[1e10, -1e-10, 1e-10], [1e10, 1e-10, np.inf]], dtype=np.float32)
+    expected = np.array([[1e10], [np.inf]], dtype=np.float32)
+    cases.append({"input": x, "output": expected})
+    opr_test(cases, F.logsumexp, axis=1, keepdims=True, compare_fn=compare_fn)
+
+    # multiple axes check
+    x = np.array([[1e10, 1e-10], [-1e10, -np.inf]], dtype=np.float32)
+    expected = np.array([1e10], dtype=np.float32)
+    cases = [{"input": x, "output": expected}]
+    x = np.array([[1e10, -1e-10, 1e-10], [1e10, 1e-10, np.inf]], dtype=np.float32)
+    expected = np.array([np.inf], dtype=np.float32)
+    cases.append({"input": x, "output": expected})
+    opr_test(cases, F.logsumexp, axis=(0, 1), keepdims=False, compare_fn=compare_fn)

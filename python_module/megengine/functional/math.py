@@ -6,12 +6,15 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from typing import Optional
+import math
+import numbers
+from typing import Optional, Sequence, Union
 
 import megengine._internal as mgb
 
 from ..core import Tensor, wrap_io_tensor
-from .elemwise import clamp
+from .elemwise import clamp, exp, isinf, log
+from .tensor import remove_axis, where, zeros_like
 
 
 @wrap_io_tensor
@@ -296,3 +299,35 @@ def normalize(
         return inp / clamp(norm(inp, p), lower=eps)
     else:
         return inp / clamp(norm(inp, p, axis, keepdims=True), lower=eps)
+
+
+def logsumexp(inp: Tensor, axis: Union[int, Sequence[int]], keepdims: bool = False):
+    r"""
+    Compute the log of the sum of exponentials of inputs along the given :attr:`axis`. The computation is numerically stabilized.
+    
+    .. math::
+        
+        \mathsf{logsumexp}(x_1, \dots, x_n) = \log(\exp(x_1) + \cdots + \exp(x_n))
+
+    :param inp: The input tensor.
+    :param axis: Axis over which the sum is taken. It can be a single axis or a list of axes.
+    :param keepdims: whether to retain :attr:`axis` or not for the output tensor.
+
+    """
+    if isinstance(axis, numbers.Integral):
+        axis = (axis,)
+    max_value = inp
+    for dim in axis:
+        max_value = max_value.max(axis=dim, keepdims=True)
+    max_value = where(
+        isinf(max_value).astype("int32"), zeros_like(max_value), max_value
+    )
+    x = exp(inp - max_value)
+    for dim in axis:
+        x = x.sum(axis=dim, keepdims=True)
+    x = max_value + log(x)
+    if not keepdims:
+        axis = sorted(axis, reverse=True)
+        for i in axis:
+            x = remove_axis(x, axis=i)
+    return x
