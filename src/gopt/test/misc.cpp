@@ -261,7 +261,7 @@ TEST_PASS(RecompTypeCvtPass, Basic) {
     }
     auto for_pass = f + x_fp32;
     OperatorNodeConfig config = x_fp32.node()->owner_opr()->config();
-    config.instance_id(for_pass.node()->owner_opr());
+    config.update_instance_id(for_pass.node()->owner_opr());
     auto expected = f + opr::TypeCvt::make(sin_x, dtype::Float32(),
             config);
 

@@ -92,8 +92,8 @@ VarNode* InternalGraphGenerator::replace_graph_by_placeholder() {
     auto igraph_copy_opr_shallow = [cpu_default](OperatorNodeBase* opr,
                                                  const VarNodeArray& inputs) {
         OperatorNodeConfig config = opr->config();
-        // remove instance_id.
-        config.instance_id(nullptr);
+        // reset instance_id.
+        config.reset_instance_id();
         if (auto imm = gopt::try_cast_as_op<opr::ImmutableTensor>(opr)) {
             HostTensorND hval{cpu_default};
             hval.copy_from(imm->value()).sync();

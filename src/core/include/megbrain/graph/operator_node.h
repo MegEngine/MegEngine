@@ -70,24 +70,36 @@ class OperatorNodeConfig final: public Hashable {
         }
 
         /*!
-         * \brief set instance id
+         * \brief update instance ID
          *
-         * Instance id is used to differentiate multiple instances of the same
-         * operator (with same inputs, params and config), so the deduplication
-         * system can be bypassed.
+         * Instance ID is a hashed value used to differentiate multiple
+         * instances of the same operator (with same inputs, params and
+         * config), so the deduplication system can be bypassed.
          *
-         * Currently only used for sublinear memory optimization.
+         * This method always updates underlying instance_id.
          */
-        OperatorNodeConfig& instance_id(const void *id) {
-            m_instance_id = id;
+        template<typename T>
+        OperatorNodeConfig& update_instance_id(const T& p) {
+            static_assert(std::is_pointer<T>::value,
+                "update_instance_id can only accept a pointer");
+            m_instance_id_hashed = hash_pair_combine(
+                m_instance_id_hashed, mgb::hash(p));
             return *this;
         }
 
         /*!
-         * \brief get current instance ID
+         * \brief reset instance ID to the initial value
          */
-        const void* instance_id() const {
-            return m_instance_id;
+        OperatorNodeConfig& reset_instance_id() {
+            m_instance_id_hashed = sm_initial_instance_id;
+            return *this;
+        }
+
+        /*!
+         * \brief get current hashed instance ID
+         */
+        size_t instance_id() const {
+            return m_instance_id_hashed;
         }
 
         /*!
@@ -133,9 +145,10 @@ class OperatorNodeConfig final: public Hashable {
         bool is_same_st(const Hashable &rhs) const override;
 
     private:
+        static constexpr size_t sm_initial_instance_id = 1333331;
         Maybe<std::string> m_name;
         CompNodeArray m_comp_node;
-        const void *m_instance_id = nullptr;
+        size_t m_instance_id_hashed = sm_initial_instance_id;
         DType m_output_dtype;
 };
 

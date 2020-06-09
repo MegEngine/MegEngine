@@ -361,7 +361,7 @@ void RecompTypeCvtPass::apply(OptState& opt) const {
                     size_t prev_step = iter->second;
                     if (step - prev_step > m_threshold) {
                         OperatorNodeConfig config = opr->config();
-                        config.instance_id(opr);
+                        config.update_instance_id(opr);
                         opt.call_with_opr(typecvt, [&]{
                             auto new_typecvt =
                                     opr::TypeCvt::make(

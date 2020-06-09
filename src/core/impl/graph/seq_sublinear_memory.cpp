@@ -1225,14 +1225,17 @@ bool SeqModifierForSublinearMemory::replace_vars(const VarNodeArray& inputs) {
 OperatorNodeBase* SeqModifierForSublinearMemory::copy_opr_from_new_inputs(
         OperatorNodeBase* opr, bool recomp) {
     auto config = opr->config();
-    // set operator instance id to bybass the shallow copy's cache if
+    // update operator instance id to bybass the shallow copy's cache if
     // it's a dup-opr-copying due to discarding.
-    // Don't set instance id(nullptr) if it's a recomp-opr-copying, because:
+    // Don't update instance id by `this` pointer if it's a recomp-opr-copying
+    // because:
     // 0) recomp-opr would be copied iff its input vars is changed
     // 1) some pair of recomp-opr and dup-opr have the same inputs, params
     //    and config, we use instance id to differentiate them.
-    config.name(opr->name() + (recomp ? ":recomp" : ":dup"))
-          .instance_id(recomp ? nullptr : this);
+    config.name(opr->name() + (recomp ? ":recomp" : ":dup"));
+    if (!recomp) {
+       config.update_instance_id(this);
+    }
 
     // Note: if all outputs of op were placed on the same comp_node, since its
     // stream maybe changed during seq_comp_node_opt, output's comp_node has

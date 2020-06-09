@@ -485,14 +485,14 @@ OperatorNodeConfig& OperatorNodeConfig::comp_node_arr(
 
 size_t OperatorNodeConfig::hash() const {
     return hash_pair_combine(
-            hash_pair_combine(mgb::hash(m_instance_id), mgb::hash(m_comp_node)),
+            hash_pair_combine(m_instance_id_hashed, mgb::hash(m_comp_node)),
             mgb::hash(m_output_dtype.handle()));
 }
 
 bool OperatorNodeConfig::is_same_st(const Hashable &rhs_) const {
     auto &&rhs = static_cast<const OperatorNodeConfig&>(rhs_);
     return m_comp_node == rhs.m_comp_node &&
-           m_instance_id == rhs.m_instance_id &&
+           m_instance_id_hashed == rhs.m_instance_id_hashed &&
            m_output_dtype == rhs.m_output_dtype;
 }
 

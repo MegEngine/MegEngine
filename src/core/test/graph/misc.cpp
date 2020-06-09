@@ -1777,4 +1777,41 @@ TEST(TestGraph, In2OutOpStreamPropagate) {
     }
 }
 
+TEST(TestGraph, OperatorNodeConfigInstanceID) {
+    OperatorNodeConfig config0, config1;
+    void *p0 = &config0, *p1 = &config1;
+    { // set and reset
+        ASSERT_EQ(config0.instance_id(), config1.instance_id());
+        config0.update_instance_id(p0);
+        ASSERT_NE(config0.instance_id(), config1.instance_id());
+        config0.reset_instance_id();
+        ASSERT_EQ(config0.instance_id(), config1.instance_id());
+    }
+    { // set to the same pointer
+        config0.reset_instance_id();
+        config0.update_instance_id(p1);
+        config1.reset_instance_id();
+        config1.update_instance_id(p1);
+        ASSERT_EQ(config0.instance_id(), config1.instance_id());
+    }
+    { // check update semantics
+        config0.reset_instance_id();
+        config0.update_instance_id(p0);
+        config1.reset_instance_id();
+        config1.update_instance_id(p1);
+        ASSERT_NE(config0.instance_id(), config1.instance_id());
+        config0.update_instance_id(p1);
+        ASSERT_NE(config0.instance_id(), config1.instance_id());
+    }
+    { // set in different order
+        config0.reset_instance_id();
+        config0.update_instance_id(p1);
+        config0.update_instance_id(p0);
+        config1.reset_instance_id();
+        config1.update_instance_id(p0);
+        config1.update_instance_id(p1);
+        ASSERT_NE(config0.instance_id(), config1.instance_id());
+    }
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
