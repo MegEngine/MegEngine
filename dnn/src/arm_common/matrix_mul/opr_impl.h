@@ -25,9 +25,7 @@ public:
 
 protected:
     static void* const sm_arm_common_algo_type;
-#if !__ARM_FEATURE_DOTPROD
     class AlgoInt8x8x32Gemv;  // Arm_common Int 8x8x32 Gemv
-#endif
     class AlgoF32Gemv;        // Arm_common F32 Gemv
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     class AlgoF16Gemv;

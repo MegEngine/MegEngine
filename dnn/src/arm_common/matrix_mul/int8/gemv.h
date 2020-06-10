@@ -13,7 +13,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#if !__ARM_FEATURE_DOTPROD
 namespace megdnn {
 namespace arm_common {
 namespace matmul {
@@ -28,6 +27,6 @@ void gemv_like_int8(const int8_t* __restrict A, const int8_t* __restrict B,
 }  // namespace matmul
 }  // namespace arm_common
 }  // namespace megdnn
-#endif
+
 
 // vim: syntax=cpp.doxygen

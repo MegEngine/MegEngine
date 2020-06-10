@@ -34,14 +34,12 @@ private:
 #if __ARM_FEATURE_DOTPROD
     class AlgoInt8x8x32K8x12x4DotProd;  // Aarch64 Int8x8x32 Kernel
                                         // 8x12x4 DotProduct
-    class AlgoInt8x8x32GemvDotProd;     // Aarch64 Int8x8x32 Gemv DotProduct
     class AlgoInt8x8x32MK4_8x12x4DotProd; // Aarch64 nchw44 Int8x8x32 Kernel
                                           // 8x12x4 DotProduct
 #else
     class AlgoInt8x8x32MK4_4x4x16;  // Aarch64 nchw44 Int8x8x32 Kernel 4x4x16
     class AlgoInt8x8x32K4x4x16;  // Aarch64 Int8x8x32 Kernel 4x4x16
     class AlgoInt8x8x32K8x8x8;   // Aarch64 Int8x8x32 Kernel 8x8x8
-    class AlgoInt8x8x32Gemv;     // Aarch64 Int8x8x32 Gemv
 #endif
     class AlgoInt8x8x16K8x8x8;   // Aarch64 Int8x8x16 Kernel 8x8x8
     class AlgoInt8x8x16K4x4x16;  // Aarch64 Int8x8x16 Kernel 4x4x16

@@ -72,7 +72,6 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16::get_kern(
     return exec_int_8x8x16;
 }
 
-#if !__ARM_FEATURE_DOTPROD
 /* ===================== Int8x8x32 Gemv algo ===================== */
 namespace {
 void int8x8x32_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
@@ -102,7 +101,6 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32Gemv::get_kern(
         const KernSizeParam&) const {
     return int8x8x32_gemv_kern;
 }
-#endif
 
 /* ===================== F32 Gemv algo ===================== */
 namespace {
@@ -112,7 +110,6 @@ void f32_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
     const auto Aptr = kern_param.A<dt_float32>(),
                Bptr = kern_param.B<dt_float32>();
     auto Cptr = kern_param.C<dt_float32>();
-
     arm_common::sgemm_sgemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
 }
 }  // anonymous namespace

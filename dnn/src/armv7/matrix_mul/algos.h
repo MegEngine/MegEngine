@@ -134,11 +134,6 @@ public:
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
-#if !__ARM_FEATURE_DOTPROD
-class MatrixMulImpl::AlgoInt8x8x32Gemv final
-        : public arm_common::MatrixMulImpl::AlgoInt8x8x32Gemv {};
-#endif
-
 class MatrixMulImpl::AlgoQuint8K4x8x8 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }

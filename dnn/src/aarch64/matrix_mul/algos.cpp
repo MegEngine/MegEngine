@@ -14,7 +14,6 @@
 #include "src/aarch64/matrix_mul/fp32/strategy.h"
 #include "src/aarch64/matrix_mul/int16/strategy.h"
 #include "src/aarch64/matrix_mul/int8/strategy.h"
-#include "src/aarch64/matrix_mul/int8_dot/gemv.h"
 #include "src/aarch64/matrix_mul/int8_dot/strategy.h"
 #include "src/aarch64/matrix_mul/int8x8x16/strategy.h"
 #include "src/aarch64/matrix_mul/quint8/strategy.h"
@@ -441,39 +440,6 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32K8x12x4DotProd,
                                      "AlgoInt8x8x32K8x12x4DotProdImpl"_hash,
                                      aarch64::matmul::gemm_s8_8x12, int8_t,
                                      int32_t);
-/* ===================== Int8x8x32 Gemv DotProd algo ===================== */
-namespace {
-void int8x8x32_gemv_dotprod_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-    const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
-    auto Cptr = kern_param.C<dt_int32>();
-    aarch64::matmul::gemv_like_int8(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
-}
-}  // anonymous namespace
-
-bool MatrixMulImpl::AlgoInt8x8x32GemvDotProd::usable(
-        const KernSizeParam& kern_size_param) const {
-    return can_be_treated_as_int8x8x32(kern_size_param) &&
-           !kern_size_param.trA && !kern_size_param.trB &&
-           kern_size_param.N == 1 && kern_size_param.LDB == 1;
-}
-
-bool MatrixMulImpl::AlgoInt8x8x32GemvDotProd::preferred(
-        const KernSizeParam& kern_size_param) const {
-    auto N = kern_size_param.N, LDB = kern_size_param.LDB;
-    return (N == 1 && LDB == 1);
-}
-
-MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GemvDotProd::get_kern(
-        const KernSizeParam&) const {
-    MIDOUT_BEGIN(megdnn_aarch64_matmul_kern,
-                 midout_iv("AlgoInt8x8x32GemvDotProd::get_kern"_hash)) {
-        return int8x8x32_gemv_dotprod_kern;
-    }
-    MIDOUT_END();
-    return nullptr;
-}
 
 /* =================== Int8x8x32 MK4 8X12X4 Dotprod algo =================== */
 namespace {

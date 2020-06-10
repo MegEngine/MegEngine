@@ -388,6 +388,19 @@ __ai int64x2_t vmovl_high_s32(int32x4_t __p0) {
 __ai uint64x2_t vmovl_high_u32(uint32x4_t __p0) {
     return vmovl_u32(vget_high_u32(__p0));
 }
+
+__ai int64x2_t vzip1q_s64(int64x2_t& a, int64x2_t& b) {
+    return vcombine_s64(vget_low_s64(a), vget_low_s64(b));
+}
+
+__ai int64x2_t vzip2q_s64(int64x2_t& a, int64x2_t& b) {
+    return vcombine_s64(vget_high_s64(a), vget_high_s64(b));
+}
+
+__ai int32_t vaddv_s32(int32x2_t a) {
+    return vget_lane_s32(a, 0) + vget_lane_s32(a, 1);
+}
+
 #endif  // MEGDNN_ARMV7
 
 //! pack vmovl_low_xx() on armv7 and armv8

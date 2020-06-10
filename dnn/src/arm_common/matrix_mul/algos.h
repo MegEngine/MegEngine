@@ -27,11 +27,7 @@ public:
     PackMode packmode() const override { return PackMode::NO_PACK; }
 };
 
-#if !__ARM_FEATURE_DOTPROD
 class MatrixMulImpl::AlgoInt8x8x32Gemv : public AlgoBase {
-protected:
-    ~AlgoInt8x8x32Gemv() = default;
-
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV"; }
@@ -43,7 +39,6 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
 };
-#endif
 
 class MatrixMulImpl::AlgoF32Gemv : public AlgoBase {
 protected:

@@ -28,13 +28,11 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 #endif
 #if __ARM_FEATURE_DOTPROD
     AlgoInt8x8x32K8x12x4DotProd int8x8x32_k8x12x4_dotprod;
-    AlgoInt8x8x32GemvDotProd int8x8x32_gemv_dotprod;
     AlgoInt8x8x32MK4_8x12x4DotProd int8x8x32_mk4_8x12x4_dotprod;
 #else
     AlgoInt8x8x32MK4_4x4x16 int8x8x32_mk4_4x4x16;
     AlgoInt8x8x32K4x4x16 int8x8x32_k4x4x16;
     AlgoInt8x8x32K8x8x8 int8x8x32_k8x8x8;
-    AlgoInt8x8x32Gemv int8x8x32_gemv;
 #endif
     AlgoInt8x8x16K8x8x8 int8x8x16_k8x8x8;
     AlgoInt8x8x16K4x4x16 int8x8x16_k4x4x16;
@@ -63,11 +61,9 @@ public:
         all_algos.emplace_back(&f16_mk8_8x8);
 #endif
 #if __ARM_FEATURE_DOTPROD
-        all_algos.emplace_back(&int8x8x32_gemv_dotprod);
         all_algos.emplace_back(&int8x8x32_k8x12x4_dotprod);
         all_algos.emplace_back(&int8x8x32_mk4_8x12x4_dotprod);
 #else
-        all_algos.emplace_back(&int8x8x32_gemv);
         all_algos.emplace_back(&int8x8x32_k4x4x16);
         all_algos.emplace_back(&int8x8x32_k8x8x8);
         all_algos.emplace_back(&int8x8x32_mk4_4x4x16);

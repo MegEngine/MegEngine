@@ -27,9 +27,6 @@ private:
     class AlgoInt8x8x32K4x8x8;   // Armv7 Int8x8x32 Kernel 4x8x8
     class AlgoInt8x8x32K4x2x16;  // Armv7 Int8x8x32 Kernel 4x2x16
     class AlgoInt8x8x32MK4_4x2x16;  // Armv7 Int8x8x32 Kernel MK4 4x2x16
-#if !__ARM_FEATURE_DOTPROD
-    class AlgoInt8x8x32Gemv;     // Armv7 Int8x8x32 Gemv
-#endif
     class AlgoQuint8K4x8x8;      // Armv7 Quint8 Kernel 4x8x8
     class AlgoInt8x8x16K4x2x16;  // Armv7 Int8x8x16 Kernel 4x2x16
     class AlgoInt8x8x16K4x8x8;  // Armv7 Int8x8x16 Kernel 4x8x8
