@@ -14,6 +14,7 @@
 #include "./json_loader.h"
 #include "./npy.h"
 
+#include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/utils/debug.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/serialization/extern_c_opr.h"
@@ -144,6 +145,10 @@ R"__usage__(
 R"__usage__(
   --fast-run-algo-policy <path>
     It will read the cache file before profile, and save new fastrun in cache file.
+  --reproducible
+    Enable choose algo which is reproducible. It mainly used for cudnn algos.
+    See https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html#reproducibility
+    for more details.
   --wait-gdb
     Print PID and wait for a line from stdin before starting execution. Useful
     for waiting for gdb attach.
@@ -467,6 +472,7 @@ struct Args {
 #if MGB_ENABLE_FASTRUN
     bool use_fast_run = false;
 #endif
+    bool reproducible = false;
     std::string fast_run_cache_path;
     bool copy_to_host = false;
     int nr_run = 10;
@@ -647,10 +653,24 @@ void run_test_st(Args &env) {
     }
 
     mgb::gopt::set_opr_algo_workspace_limit_inplace(vars, env.workspace_limit);
+    using S = opr::mixin::Convolution::ExecutionPolicy::Strategy;
+    S strategy = S::HEURISTIC;
 #if MGB_ENABLE_FASTRUN
-    if (env.use_fast_run)
-        mgb::gopt::enable_opr_algo_profiling_inplace(vars);
+    if (env.use_fast_run) {
+        if (env.reproducible) {
+            strategy = S::PROFILE_REPRODUCIBLE;
+        } else {
+            strategy = S::PROFILE;
+        }
+    } else if (env.reproducible) {
+        strategy = S::HEURISTIC_REPRODUCIBLE;
+    }
+#else
+    if (env.reproducible) {
+        strategy = S::HEURISTIC_REPRODUCIBLE;
+    }
 #endif
+    mgb::gopt::modify_opr_algo_strategy_inplace(vars, strategy);
     if (!env.fast_run_cache_path.empty()) {
 #if MGB_ENABLE_FASTRUN
         if (!access(env.fast_run_cache_path.c_str(), F_OK)) {
@@ -1147,6 +1167,10 @@ Args Args::from_argv(int argc, char **argv) {
         if (!strcmp(argv[i], "--fast-run-algo-policy")) {
             ++i;
             ret.fast_run_cache_path = argv[i];
+            continue;
+        }
+        if (!strcmp(argv[i], "--reproducible")) {
+            ret.reproducible = true;
             continue;
         }
         if (!strcmp(argv[i], "--const-shape")) {

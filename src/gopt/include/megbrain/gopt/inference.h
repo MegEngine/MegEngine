@@ -13,6 +13,7 @@
 
 #include "megbrain/gopt/framework.h"
 #include "megbrain/graph/cg.h"
+#include "megbrain/opr/dnn/convolution.h"
 
 namespace mgb {
 namespace gopt {
@@ -303,6 +304,17 @@ namespace gopt {
             const OptimizeForInferenceOptions& opt = {});
 
     /*!
+     * \brief modify execution strategy for oprs with multiple
+     *      algorithms
+     *
+     * This would modify the operators inplace. It can be used for implement
+     * the fast-run mode.
+     */
+    void modify_opr_algo_strategy_inplace(
+            const VarNodeArrayView& dest_vars,
+            opr::mixin::Convolution::ExecutionPolicy::Strategy strategy);
+
+    /*!
      * \brief enable PROFILE execution strategy for oprs with multiple
      *      algorithms
      *
@@ -315,7 +327,7 @@ namespace gopt {
     void enable_opr_algo_profiling_inplace(const VarNodeArrayView& dest_vars);
 
     /*!
-     * \brief enable opr try profiling cache first, if failed, then try
+     * \brief enable opr try profiling cache first, if failed, fallback to
      * heuristic
      *
      * This would modify the operators inplace. It is usually used to enable
@@ -324,7 +336,8 @@ namespace gopt {
      * You may want to implement TimedFuncInvoker::ForkExecImpl and/or
      * PersistentCache for better performance in an SDK.
      */
-    void enable_opr_use_profiling_cache_inplace(const VarNodeArrayView& dest_vars);
+    void enable_opr_use_profiling_cache_inplace(
+            const VarNodeArrayView& dest_vars);
 
     /*!
      * \brief set workspace_limit for execution strategy for oprs with multiple
