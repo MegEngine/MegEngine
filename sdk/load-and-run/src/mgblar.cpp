@@ -992,7 +992,6 @@ Args Args::from_argv(int argc, char **argv) {
             graph_opt.graph_opt.enable_nchw44_dot();
             continue;
         }
-
         if (!strcmp(argv[i], "--enable-fuse-conv-bias-nonlinearity")) {
             mgb_log_warn("enable fuse-conv-bias-nonlinearity optimization");
             graph_opt.graph_opt.enable_fuse_conv_bias_nonlinearity();
@@ -1202,7 +1201,7 @@ Args Args::from_argv(int argc, char **argv) {
         }
         if (!strcmp(argv[i], "--winograd-transform")) {
             mgb_log_warn("enable winograd transform");
-            graph_opt.graph_opt.winograd_transform = true;
+            graph_opt.graph_opt.weight_winograd_transform = true;
             continue;
         }
 

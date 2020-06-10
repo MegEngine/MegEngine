@@ -24,6 +24,10 @@ const char* WinogradTransformReplacePass::name() const {
 
 void WinogradTransformReplacePass::apply(OptState& opt) const {
     auto rewriter = opt.graph().make_rewriter();
+    ConstVarPropogate cvprop{ConstVarType::IMMUTABLE_AND_PARAM};
+    opt.graph().iter([&cvprop](OperatorNodeBase *opr) {
+        cvprop.add_opr(opr);
+    });
 
     auto get_algo = [](const opr::ConvBias& opr) -> std::string {
         auto&& inputs = opr.input();
@@ -75,12 +79,10 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
             for (auto i : inputs) {
                 new_inp.push_back(rewriter.get_var(i));
             }
-
-            if (!inputs[1]->contain_flag(
-                        VarNode::Flag::PERSISTENT_DEVICE_VALUE)) {
+            if (!(cvprop.is_midconst(inputs[1]) ||
+                  cvprop.is_const(inputs[1]))) {
                 break;
             }
-
             auto algo_name = get_algo(conv_bias_opr);
             auto winograd_param =
                     megdnn::ConvBias::parse_winograd_name(algo_name);

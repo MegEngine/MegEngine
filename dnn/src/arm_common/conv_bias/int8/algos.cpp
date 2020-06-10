@@ -310,7 +310,8 @@ bool ConvBiasImpl::AlgoS8CF32WinogradF23_4x4_NCHW44::usable(
                (param.filter_meta.dilation[0] ==
                         param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&
-               param.compute_mode == param::ConvBias::ComputeMode::FLOAT32 &&
+               (param.compute_mode == param::ConvBias::ComputeMode::FLOAT32 ||
+                param.compute_mode == param::ConvBias::ComputeMode::DEFAULT) &&
                param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                param.bias_type.enumv() == DTypeEnum::QuantizedS32 &&
                param.dst_type.enumv() == DTypeEnum::QuantizedS8;

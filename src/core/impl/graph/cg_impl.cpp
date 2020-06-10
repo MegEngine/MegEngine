@@ -468,10 +468,6 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     }
 #endif
 
-    if (options().graph_opt.winograd_transform) {
-        options().graph_opt.winograd_transform = false;
-        gopt::transform_vars_inplace_with_winograd(dest_vars);
-    }
 
 #if MGB_JIT
     if (std::abs(options().graph_opt_level) == 0 && options().graph_opt.jit) {

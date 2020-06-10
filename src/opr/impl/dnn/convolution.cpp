@@ -672,14 +672,9 @@ void AlgoChooser<megdnn::ConvBias>::get_origin_param_and_layouts(
     auto format = static_cast<megdnn::param::ConvBias::Format>(
             ctx.megdnn_opr()->param().format);
     size_t output_block_size = ctx.megdnn_opr()->param().output_block_size;
-    TensorLayout origin_layout;
     megdnn::ConvBias::deduce_winograd_origin_layout_and_param(
             format, output_block_size, ctx.layouts()[0], ctx.layouts()[1],
-            origin_layout, param);
-    for (size_t i = 0; i < ctx.layouts().size(); i++) {
-        layouts[i] = ctx.layouts()[i];
-    }
-    layouts[1] = origin_layout;
+            layouts[1], param);
 }
 
 template <typename Opr>

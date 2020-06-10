@@ -95,6 +95,8 @@ struct GraphCommonOptimizeOptions {
     //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
     //! + z -> conv_bias(x, w, b, z)
     bool fuse_conv_bias_with_z = false;
+    //! whether to enable fast-run profiled winograd opr replace
+    bool weight_winograd_transform = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,
         NCHW4,       ///< compute using NCHW4 tensor format
@@ -124,6 +126,7 @@ struct GraphCommonOptimizeOptions {
     SET(f16_io_comp);
     SET(fuse_conv_bias_nonlinearity);
     SET(fuse_conv_bias_with_z);
+    SET(weight_winograd_transform);
 #undef SET
 #define SET(_trans, _trans_capital)                                 \
     GraphCommonOptimizeOptions& enable_##_trans() {                 \
@@ -307,8 +310,6 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                 uint8_t jit = 0;
                 //! whether to enable fine-grained TensorRT opr replace
                 bool tensorrt = false;
-                //! whether to enable fast-run profiled winograd opr replace
-                bool winograd_transform = false;
             } graph_opt;
 
             //! get attribute for an operator
