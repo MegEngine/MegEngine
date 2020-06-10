@@ -21,6 +21,7 @@ do
 done
 
 pushd /home >/dev/null
+    echo "Install swig"
     curl -sSL ${SWIG_URL} | tar xz
     pushd swig-3.0.12 >/dev/null
         mkdir build
@@ -32,6 +33,7 @@ pushd /home >/dev/null
     popd >/dev/null
     rm -rf swig-3.0.12
     
+    echo "Install llvm"
     curl -sSL ${LLVM_URL} | tar xz
     pushd llvm-release_60 >/dev/null
         mkdir build
@@ -44,6 +46,7 @@ pushd /home >/dev/null
     popd >/dev/null
     rm -rf llvm-release_60
 
+    echo "Install clang"
     curl -sSL ${CLANG_URL} | tar xz
     pushd clang-release_60 >/dev/null
         mkdir build
