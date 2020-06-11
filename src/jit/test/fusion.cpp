@@ -1435,6 +1435,16 @@ TEST(TestJITNvrtc, DimshuffleGrad) {
         funcs.second->execute();
         MGB_ASSERT_TENSOR_NEAR(host_y1, host_y2, 1e-3);
     }
+    {
+        FusionChecker checker{2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var = opr::Dimshuffle::make(inp[0], {1, 2, 3, 0});
+                return inp[1] * var;
+            },
+            CompNode::load("gpu0")};
+        checker.set_jit_level(1)
+               .run({TensorShape{1, 2, 3, 4}, {2, 3, 4, 1}});
+    }
 }
 
 #endif  // MGB_JIT

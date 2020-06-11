@@ -61,8 +61,6 @@ public:
 
     const PlaceholderArray& placeholders() const { return m_placeholders; }
 
-    static InternalGraphPtr expand_excutor_op(const InternalGraphPtr&);
-
 private:
     // For compilation cache, if the output_for_cache is same means the
     // expression tree is same.

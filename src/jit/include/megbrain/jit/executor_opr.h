@@ -35,6 +35,7 @@ MGB_DEFINE_OPR_CLASS(JITExecutor, cg::SingleCNOperatorNodeBase) // {
     using ModeTrait = megdnn::Elemwise::ModeTrait;
 
     InternalGraphPtr m_internal_graph;
+    using DimshuffleParam = std::pair<std::vector<int>, uint32_t>;
 
 public:
     using Mode = opr::Elemwise::Mode;
@@ -112,6 +113,11 @@ public:
         return static_cast<bool>(m_feature_bits & JITFeatureBits::DIMSHUFFLE);
     }
 
+    const ThinHashMap<jit::JITPlaceholder*, DimshuffleParam>&
+    dimshuffle_params() const {
+        return m_jitph2dimshuffle;
+    }
+
     //! get broadcasted shape of inputs
     megdnn::TensorShape broadcasted_input_shape() const;
 
@@ -124,8 +130,14 @@ private:
     Compiler* const m_compiler = nullptr;
     Executable* m_executable = nullptr;
     std::vector<bool> m_input_broadcastable;
+    // JITPlaceHolder -> pair of (dimshuffle pattern, ndim)
+    // do DFS on internal graph only once in prepare_dimshuffle(), so we can
+    // easily get the dimshuffle param which should be applied on given
+    // JITPlaceholder
+    ThinHashMap<jit::JITPlaceholder*, DimshuffleParam> m_jitph2dimshuffle;
     void update_args();
     void do_dimshuffle();
+    void prepare_dimshuffle();
 
     NodeProp* do_make_node_prop() const override;
 };

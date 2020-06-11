@@ -98,7 +98,7 @@ void FusionChecker::ensure_init_graph() {
     } else {
         ComputingGraph::Options opt;
         opt.graph_opt_level = 3;
-        opt.graph_opt.jit = 2;
+        opt.graph_opt.jit = m_jit_level;
         unpack_vector(gopt::GraphOptimizer{}
                               .add_preset_passes(true, nullptr, &opt)
                               .apply({{m_truth_y}})
