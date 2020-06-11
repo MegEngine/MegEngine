@@ -55,7 +55,6 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoS8ChanWiseStride2NCHW44 s8_channel_wise_stride2_nchw44;
 
 #if __ARM_FEATURE_DOTPROD
-    AlgoDotS8DirectNCHWNCHW44 ds8_direct_stride2_nchw_nchw44;
     AlgoDotS8DirectStride1 ds8_direct_stride1_large_group{true};
     AlgoDotS8DirectStride1 ds8_direct_stride1_small_group{false};
     AlgoDotS8DirectStride2 ds8_direct_stride2_large_group{true};
@@ -66,6 +65,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoDotU8DirectStride2 du8_direct_stride2_small_group{false};
 
     AlgoDotS8Direct_NCHW44 ds8_direct_nchw44;
+    AlgoDotS8DirectNCHWNCHW44 ds8_direct_nchw_nchw44;
 #endif
 
     AlgoF32DirectNCHWNCHW44 f32_direct_stride2_nchw_nchw44;
@@ -96,7 +96,6 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 public:
     AlgoPack() {
 #if __ARM_FEATURE_DOTPROD
-        direct_algos.emplace_back(&ds8_direct_stride2_nchw_nchw44);
         direct_algos.emplace_back(&ds8_direct_stride1_large_group);
         direct_algos.emplace_back(&ds8_direct_stride1_small_group);
         direct_algos.emplace_back(&ds8_direct_stride2_large_group);
@@ -107,6 +106,7 @@ public:
         direct_algos.emplace_back(&du8_direct_stride2_small_group);
 
         direct_algos.emplace_back(&ds8_direct_nchw44);
+        direct_algos.emplace_back(&ds8_direct_nchw_nchw44);
 #endif
         direct_algos.emplace_back(&qu8_direct_stride2_large_group);
         direct_algos.emplace_back(&qu8_direct_stride2_small_group);

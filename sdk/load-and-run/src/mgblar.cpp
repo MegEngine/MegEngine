@@ -987,6 +987,12 @@ Args Args::from_argv(int argc, char **argv) {
         cb(nchw32);
         cb(nhwcd4);
 #undef cb
+        if (!strcmp(argv[i], "--enable-nchw44-dot")) {
+            mgb_log_warn("enable-nchw44-dot optimization");
+            graph_opt.graph_opt.enable_nchw44_dot();
+            continue;
+        }
+
         if (!strcmp(argv[i], "--enable-fuse-conv-bias-nonlinearity")) {
             mgb_log_warn("enable fuse-conv-bias-nonlinearity optimization");
             graph_opt.graph_opt.enable_fuse_conv_bias_nonlinearity();

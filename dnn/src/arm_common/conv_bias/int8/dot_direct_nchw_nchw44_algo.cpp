@@ -182,7 +182,7 @@ bool ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44::usable(
     bool ok_type = ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
                      param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
                      (param.dst_type.enumv() == DTypeEnum::QuantizedS8))) &&
-                   (fm.format == param::Convolution::Format::NCHW44);
+                   (fm.format == param::Convolution::Format::NCHW44_DOT);
     bool ok_src_dst = (oc % 4 == 0 && oc >= 4 && ic < 4);
     bool ok_filter = fm.spatial_ndim == 2 && fh == fm.spatial[1] &&
                      (fh == 2 || fh == 3 || fh == 5 || fh == 7);

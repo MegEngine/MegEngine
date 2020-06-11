@@ -94,7 +94,6 @@ namespace mgb {
                         m_param{param}, m_param_size{param_size}
                     {
                     }
-
                     //! build a blob representation to be used as cache key
                     PersistentCache::Blob build_blob() const;
             };

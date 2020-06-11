@@ -107,7 +107,8 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
                                  src_shape[1] / group * 2;
             return hybird_nchwx ? computation : computation * 8;
         }
-        if (param.format == Param::Format::NCHW44) {
+        if (param.format == Param::Format::NCHW44 ||
+            param.format == Param::Format::NCHW44_DOT) {
             //! if channel wise weight layout is {group/4, FH, FW, 1, 1, 4}
             if (filter_shape[1] == 1 && filter_shape[2] == 1) {
                 group *= 4;
@@ -145,6 +146,7 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
     if (param.format == Param::Format::NCHW4 ||
         param.format == Param::Format::NCHW88 ||
         param.format == Param::Format::NCHW44 ||
+        param.format == Param::Format::NCHW44_DOT ||
         param.format == Param::Format::NCHW32) {
         return eval_conv_computation_nchwx();
     }

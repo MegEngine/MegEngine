@@ -611,7 +611,6 @@ AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
     AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
                                            origin_layouts.size(), &origin_param,
                                            sizeof(origin_param)};
-
     {
         auto&& rst = cache.get(cache_key);
         if (rst.valid())

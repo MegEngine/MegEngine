@@ -582,14 +582,19 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2_SMALL_GROUP) {
 /****************************dot qint8 direct*************************/
 #if __ARM_FEATURE_DOTPROD
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_NCHW_NCHW44) {
-    checker_conv_bias_qint8x8x8(
-            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, false,
-                                      true),
-            handle(), "ARMDOTS8_NCHW_NCHW44");
-    checker_conv_bias_qint8x8x8(
-            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, false,
-                                      true),
-            handle(), "ARMDOTS8_NCHW_NCHW44");
+    auto args = get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, false,
+                                          true);
+    for (auto&& arg : args) {
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    }
+    checker_conv_bias_qint8x8x8(args, handle(), "ARMDOTS8_NCHW_NCHW44");
+
+    args = get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, false,
+                                     true);
+    for (auto&& arg : args) {
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    }
+    checker_conv_bias_qint8x8x8(args, handle(), "ARMDOTS8_NCHW_NCHW44");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS,
        CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_LARGE_GROUP) {
