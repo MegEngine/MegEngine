@@ -164,6 +164,62 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEMV) {
                 run(M, K, N);
 }
 
+TEST_F(ARM_COMMON, QINT8x8x32_GEVM) {
+    Checker<MatrixMul> checker(handle());
+    using Param = MatrixMul::Param;
+
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_GEVM"));
+
+    std::unique_ptr<RNG> rng = std::make_unique<UniformIntRNG>(-127, 127);
+    checker.set_rng(0, rng.get()).set_rng(1, rng.get());
+
+    auto run = [&](size_t M, size_t K, size_t N) {
+        Param param;
+        param.transposeA = false;
+        param.transposeB = true;
+        TensorShape A, B;
+        A = TensorShape{M, K};
+        B = TensorShape{N, K};
+        checker.set_param(param)
+                .set_dtype(0, dtype::QuantizedS8(2.5f))
+                .set_dtype(1, dtype::QuantizedS8(2.5f))
+                .set_dtype(2, dtype::QuantizedS32(6.25f))
+                .execs({A, B, {}});
+    };
+    
+    // M = 1
+    for (size_t N : {1, 10, 16, 33, 64})
+        for (size_t K : {7, 512, 1024})
+            for (size_t M : {1})
+                run(M, K, N);
+}
+
+TEST_F(ARM_COMMON, FP32_GEVM) {
+    Checker<MatrixMul> checker(handle());
+    using Param = MatrixMul::Param;
+
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_GEVM"));
+
+    checker.set_epsilon(1e-2);
+    auto run = [&](size_t M, size_t K, size_t N) {
+        Param param;
+        param.transposeA = false;
+        param.transposeB = true;
+        TensorShape A, B;
+        A = TensorShape{M, K};
+        B = TensorShape{N, K};
+        checker.set_param(param).execs({A, B, {}});
+    };
+    
+    // M = 1
+    for (size_t M : {1})
+        for (size_t K : {1000, 4096, 25088})
+            for (size_t N : {1000, 4096})
+                run(M, K, N);
+}
+
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {

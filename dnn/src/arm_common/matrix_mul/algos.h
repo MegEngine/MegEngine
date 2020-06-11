@@ -70,6 +70,21 @@ public:
     PackMode packmode() const override { return PackMode::NO_PACK; }
 };
 #endif
+
+class MatrixMulImpl::AlgoGevm : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "ARM_COMMON_GEVM"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override { return 0; }
+    kern_t get_kern(const KernSizeParam&) const override;
+    void* type() const override { return sm_arm_common_algo_type; }
+    AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+};
+
+
 }  // namespace arm_common
 }  // namespace megdnn
 

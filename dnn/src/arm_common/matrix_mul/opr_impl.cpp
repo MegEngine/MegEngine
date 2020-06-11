@@ -27,7 +27,8 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 	AlgoF16Gemv f16gemv;
 #endif
-    AlgoInt8x8x32Gemv int8x8x32_gemv; 
+    AlgoInt8x8x32Gemv int8x8x32_gemv;
+    AlgoGevm gevm;
 public:
     AlgoPack() {
         all_algos.emplace_back(&int8x8x16);
@@ -35,6 +36,7 @@ public:
         all_algos.emplace_back(&f16gemv);
 #endif
         all_algos.emplace_back(&int8x8x32_gemv);
+        all_algos.emplace_back(&gevm);
  }
     SmallVector<AlgoBase*> all_algos;
 };

@@ -138,6 +138,63 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32Gemv::get_kern(
     return f32_gemv_kern;
 }
 
+/* ===================== F32 Gevm algo ===================== */
+namespace {
+
+void gevm_fp32_kern(const MatrixMulImpl::KernParam& kern_param) {
+    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+    auto LDB = kern_param.LDB;
+    const auto Aptr = kern_param.A<dt_float32>(),
+               Bptr = kern_param.B<dt_float32>();
+    auto Cptr = kern_param.C<dt_float32>();
+    arm_common::sgemm_sgemv_like(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
+}
+
+void gevm_int8_kern(const MatrixMulImpl::KernParam& kern_param) {
+    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+    auto LDB = kern_param.LDB;
+    const auto Aptr = kern_param.A<dt_int8>(),
+               Bptr = kern_param.B<dt_int8>();
+    auto Cptr = kern_param.C<dt_int32>();
+    arm_common::matmul::gemv_like_int8(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
+}
+
+}  // anonymous namespace
+
+bool MatrixMulImpl::AlgoGevm::usable(
+        const KernSizeParam& kern_size_param) const {
+    // enumerate the M, N, K, only usable when preferred
+    bool fp32_ok =
+            kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+            kern_size_param.format == param::MatrixMul::Format::DEFAULT &&
+            kern_size_param.B_type == kern_size_param.A_type &&
+            kern_size_param.C_type == kern_size_param.A_type &&
+            kern_size_param.A_type == dtype::Float32();
+    return (fp32_ok || can_be_treated_as_int8x8x32(kern_size_param)) &&
+           preferred(kern_size_param);
+}
+
+bool MatrixMulImpl::AlgoGevm::preferred(
+        const KernSizeParam& kern_size_param) const {
+    auto M = kern_size_param.M;
+    return kern_size_param.trB && M == 1;
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoGevm::get_kern(
+        const KernSizeParam& kern_size_param) const {
+    if (kern_size_param.A_type == dtype::Float32()) {
+        return gevm_fp32_kern;
+    } else if (kern_size_param.A_type.enumv() == DTypeEnum::Int8 ||
+               kern_size_param.A_type.enumv() == DTypeEnum::QuantizedS8) {
+        return gevm_int8_kern;
+    } else {
+        megdnn_assert(
+                false, "no avaliable kern got A_type: %s B_type: %s C_type: %s",
+                kern_size_param.A_type.name(), kern_size_param.B_type.name(),
+                kern_size_param.C_type.name());
+    }
+}
+
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 /* ===================== F16 Gemv algo ===================== */
 namespace {
