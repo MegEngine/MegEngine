@@ -57,6 +57,7 @@ class Module(metaclass=ABCMeta):
 
     def __init__(self):
         self.training = True
+        self.quantize_diabled = False
 
     @abstractmethod
     def forward(self, inputs):
@@ -311,6 +312,16 @@ class Module(metaclass=ABCMeta):
         ``False``. See :meth:`~.Module.train` for details.
         """
         self.train(False)
+
+    def disable_quantize(self, value=True):
+        r"""
+        Set ``module``'s ``quantize_diabled`` attribute and return ``module``.
+        Could be used as a decorator.
+        """
+        def fn(module: Module) -> None:
+            module.quantize_diabled = value
+
+        self.apply(fn)
 
     def state_dict(self, rst=None, prefix="", keep_var=False):
         r"""Returns a dictionary containing whole states of the module.

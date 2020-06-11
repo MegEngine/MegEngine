@@ -26,8 +26,6 @@ class QATModule(Module):
     def __init__(self):
         super().__init__()
 
-        self.scale = None
-
         self.weight_observer = None  # type: Observer
         self.act_observer = None  # type: Observer
 
