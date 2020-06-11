@@ -226,6 +226,31 @@ public:
                         PostprocessMode::FLOAT,
                         "DefaultStrategyType::FLOAT"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44) {
+
+#if MEGDNN_AARCH64
+                    auto matmul_block = matmul_algo->get_inner_block_size();
+                        //! Optimize NCHW44 3x3s2 8X12X1 im2col+pack fuse
+                        if (matmul_block.m == 8 && matmul_block.n == 12 &&
+                            matmul_block.k == 1 &&
+                            param.filter_meta.spatial[0] == 3 &&
+                            param.filter_meta.spatial[1] == 3 &&
+                            param.filter_meta.stride[0] == 2 &&
+                            param.filter_meta.stride[1] == 2 &&
+                            !param.filter_meta.should_flip) {
+                            MIDOUT_BEGIN(
+                                    megdnn_fallback_im2col_factory_make_strategy,
+                                    midout_iv(
+                                            "DefaultStrategyType::8x12x1_fuse_packb_s2_nchw44"_hash)) {
+                                return std::make_unique<
+                                        StrategyFuse8x12x1Nchw44K3x3S2<
+                                                float, float,
+                                                PostprocessMode::FLOAT>>();
+                            }
+                            MIDOUT_END();
+                            return {};
+                        }
+#endif
+
                     cb1(NCHW44, DEFAULT, dt_float32, dt_float32,
                         PostprocessMode::FLOAT,
                         "DefaultStrategyTypeNCHW44::FLOAT"_hash);
@@ -320,6 +345,52 @@ public:
                         "DefaultStrategyType::QINT8x8x32x8"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44 ||
                            format == param::ConvBias::Format::NCHW44_DOT) {
+#if MEGDNN_AARCH64
+                    auto matmul_block = matmul_algo->get_inner_block_size();
+                    if (format == param::ConvBias::Format::NCHW44) {
+                        //! Optimize NCHW44 3x3s1 4X4X16 im2col+pack fuse
+                        if (matmul_block.m == 4 && matmul_block.n == 4 &&
+                            matmul_block.k == 16 &&
+                            param.filter_meta.spatial[0] == 3 &&
+                            param.filter_meta.spatial[1] == 3 &&
+                            param.filter_meta.stride[0] == 1 &&
+                            param.filter_meta.stride[1] == 1 &&
+                            !param.filter_meta.should_flip) {
+                            MIDOUT_BEGIN(
+                                    megdnn_fallback_im2col_factory_make_strategy,
+                                    midout_iv(
+                                            "DefaultStrategyType::INT8x8x32_4x4x16"_hash)) {
+                                return std::make_unique<
+                                        StrategyFuse4x4x16Nchw44<
+                                                dt_qint32, dt_qint8,
+                                                PostprocessMode::QUANTIZED>>();
+                            }
+                            MIDOUT_END();
+                            return {};
+                        }
+                    } else {
+                        //! Optimize NCHW44_DOT 3x3s1 8X12X4 im2col+pack fuse
+                        if (matmul_block.m == 8 && matmul_block.n == 12 &&
+                            matmul_block.k == 4 &&
+                            param.filter_meta.spatial[0] == 3 &&
+                            param.filter_meta.spatial[1] == 3 &&
+                            param.filter_meta.stride[0] == 1 &&
+                            param.filter_meta.stride[1] == 1 &&
+                            !param.filter_meta.should_flip) {
+                            MIDOUT_BEGIN(
+                                    megdnn_fallback_im2col_factory_make_strategy,
+                                    midout_iv(
+                                            "DefaultStrategyType::INT8x8x32_8x12x4"_hash)) {
+                                return std::make_unique<
+                                        StrategyFuse8x12x4Nchw44Dot<
+                                                dt_qint32, dt_qint8,
+                                                PostprocessMode::QUANTIZED>>();
+                            }
+                            MIDOUT_END();
+                            return {};
+                        }
+                    }
+#endif
                     cb2(NCHW44, DEFAULT, dtype::QuantizedS8,
                         dtype::QuantizedS32, dtype::QuantizedS8, dt_int8,
                         dt_int32, dt_int8, PostprocessMode::QUANTIZED,

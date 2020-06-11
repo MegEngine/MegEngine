@@ -445,6 +445,75 @@ public:
                                          THREAD_BUNDLE_BIAS_INDEX);
     }
 };
+#if MEGDNN_AARCH64
+template <typename op_ctype, typename op_dtype,
+          megdnn::PostprocessMode postprocess_mode>
+class StrategyFuse4x4x16Nchw44
+        : public Strategy<dt_int8, dt_int32, dt_int8, op_ctype, op_dtype,
+                          postprocess_mode, PackMode::DEFAULT,
+                          FormatMode::NCHW44> {
+public:
+    StrategyFuse4x4x16Nchw44() = default;
+
+    constexpr static size_t BUNDLE_PADDING_INDEX = 0;
+    constexpr static size_t BUNDLE_PACKA_INDEX = 1;
+    constexpr static size_t THREAD_BUNDLE_PACKB_INDEX = 0;
+    constexpr static size_t THREAD_BUNDLE_IM2COL_INDEX = 1;
+    constexpr static size_t THREAD_BUNDLE_BIAS_INDEX = 2;
+
+    void exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+                     const StrategyParam& sparam,
+                     const fallback::ConvBiasImpl::NCBKernParam& param,
+                     fallback::MatrixMulImpl::KernParam matmul_param,
+                     fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
+};
+
+template <typename op_ctype, typename op_dtype,
+          megdnn::PostprocessMode postprocess_mode>
+class StrategyFuse8x12x1Nchw44K3x3S2
+        : public Strategy<float, float, float, op_ctype, op_dtype,
+                          postprocess_mode, PackMode::DEFAULT,
+                          FormatMode::NCHW44> {
+public:
+    StrategyFuse8x12x1Nchw44K3x3S2() = default;
+
+    constexpr static size_t BUNDLE_PADDING_INDEX = 0;
+    constexpr static size_t BUNDLE_PACKA_INDEX = 1;
+    constexpr static size_t THREAD_BUNDLE_PACKB_INDEX = 0;
+    constexpr static size_t THREAD_BUNDLE_IM2COL_INDEX = 1;
+    constexpr static size_t THREAD_BUNDLE_BIAS_INDEX = 2;
+
+    void exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+                     const StrategyParam& sparam,
+                     const fallback::ConvBiasImpl::NCBKernParam& param,
+                     fallback::MatrixMulImpl::KernParam matmul_param,
+                     fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
+};
+
+
+template <typename op_ctype, typename op_dtype,
+          megdnn::PostprocessMode postprocess_mode>
+class StrategyFuse8x12x4Nchw44Dot
+        : public Strategy<dt_int8, dt_int32, dt_int8, op_ctype, op_dtype,
+                          postprocess_mode, PackMode::DEFAULT,
+                          FormatMode::NCHW44> {
+public:
+    StrategyFuse8x12x4Nchw44Dot() = default;
+
+    constexpr static size_t BUNDLE_PADDING_INDEX = 0;
+    constexpr static size_t BUNDLE_PACKA_INDEX = 1;
+    constexpr static size_t THREAD_BUNDLE_PACKB_INDEX = 0;
+    constexpr static size_t THREAD_BUNDLE_IM2COL_INDEX = 1;
+    constexpr static size_t THREAD_BUNDLE_BIAS_INDEX = 2;
+
+    void exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+                     const StrategyParam& sparam,
+                     const fallback::ConvBiasImpl::NCBKernParam& param,
+                     fallback::MatrixMulImpl::KernParam matmul_param,
+                     fallback::MatrixMulImpl::AlgoBase* matmul_algo) override;
+};
+#endif
+
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

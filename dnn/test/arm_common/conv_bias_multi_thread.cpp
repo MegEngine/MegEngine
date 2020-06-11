@@ -1838,7 +1838,16 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32) {
     check_conv_bias(args, handle(), "IM2COLMATMUL:ARMV7_F32_MK4_PACK_4X12");
 #endif
 }
-
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32_FUSE) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
+            {3}, 2, false, false, false, false, false, true, true,false);
+#if MEGDNN_AARCH64
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+#elif MEGDNN_ARMV7
+    check_conv_bias(args, handle(), "IM2COLMATMUL:ARMV7_F32_MK4_PACK_4X12");
+#endif
+}
 /***************************** Conv1x1 Algo Test ***********************/
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
     using namespace conv_bias;
