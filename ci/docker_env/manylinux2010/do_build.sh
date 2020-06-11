@@ -54,3 +54,6 @@ do
 done
 
 
+pushd /home/code/dnn/scripts >/dev/null
+rm -rf __pycache__
+popd >/dev/null
