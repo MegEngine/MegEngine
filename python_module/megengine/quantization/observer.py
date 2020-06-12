@@ -60,8 +60,8 @@ class Observer(Module):
     def disable(self):
         self.enabled = False
 
-    def train(self, mode: bool = True) -> None:
-        super().train(mode)
+    def train(self, mode: bool = True, recursive: bool = True) -> None:
+        super().train(mode, recursive)
         if mode:
             self.enable()
         else:
