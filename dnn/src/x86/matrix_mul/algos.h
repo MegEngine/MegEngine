@@ -76,11 +76,26 @@ class MatrixMulImpl::AlgoInt8x8x16AVX2 : public AlgoBase {
 private:
     static void gemm_s8s8s16_avx2_4x16x2(
             const MatrixMulImpl::KernParam& kern_param);
-    static MatrixMulImpl::AlgoInt8x8x32AVX2M4N16K2 m_algo;
 
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "X86_INT8X8X16_AVX2"; }
+    bool usable(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    void* type() const override { return sm_x86_algo_type; }
+    bool preferred(const KernSizeParam&) const override;
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+};
+
+class MatrixMulImpl::AlgoInt8x8x16SSE : public AlgoBase {
+private:
+    static void gemm_s8s8s16_sse_4x8x2(
+            const MatrixMulImpl::KernParam& kern_param);
+
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "X86_INT8X8X16_SSE"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;

@@ -403,6 +403,7 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x16) {
     benchmark.set_dtype(0, dtype::Int8())
             .set_dtype(1, dtype::Int8())
             .set_dtype(2, dtype::Int16());
+    benchmark.set_before_exec_callback(AlgoChecker<Convolution>(".*"));
     benchmark.set_display(false);
     benchmark.set_times(RUN);
 

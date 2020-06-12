@@ -835,6 +835,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X) {
     }
     if (::megdnn::x86::is_supported(::megdnn::x86::SIMDType::SSE4_2)) {
         cb("IM2COLMATMUL:X86_INT8X8X32_SSE_4X8X2");
+        cb2("IM2COLMATMUL:X86_INT8X8X16_SSE");
     }
 
 #undef cb
@@ -1002,7 +1003,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_BLAS) {
 }
 #endif
 
-TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32) {
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X) {
     using namespace conv_bias;
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
@@ -1028,10 +1029,16 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32) {
         checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
                           dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
                           "CONV1x1:X86_INT8X8X32_AVX2_2X4X16:24");
+        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                          dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
+                          "CONV1x1:X86_INT8X8X16_AVX2");
     }
     checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
                       dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
                       "CONV1x1:X86_INT8X8X32_SSE_4X8X2:48");
+    checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
+                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
+                      "CONV1x1:X86_INT8X8X16_SSE");
 }
 /************************* End Conv1x1 PackA ************************/
 

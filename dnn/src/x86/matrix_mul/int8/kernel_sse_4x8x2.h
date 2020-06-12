@@ -6,10 +6,17 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include <immintrin.h>
+#ifdef WIN32
+#include <avx2intrin.h>
+#include <avxintrin.h>
+#include <fmaintrin.h>
+#include <smmintrin.h>
+#endif
 #include <cmath>
 #include <cstdint>
 #include <type_traits>
@@ -21,10 +28,44 @@ namespace x86 {
 
 namespace matmul_sse_4x8x2 {
 
+template <typename CType>
+MEGDNN_ATTRIBUTE_TARGET("sse4.1")
+void store_overflow(void* ptr, __m128i a);
+
+template <>
+void store_overflow<int16_t>(void* ptr, __m128i a) {
+    a = _mm_shufflelo_epi16(a, 0x08);
+    a = _mm_shufflehi_epi16(a, 0x08);
+    a = _mm_shuffle_epi32(a, 0x08);
+    _mm_storel_epi64((__m128i*)ptr, a);
+}
+template <>
+void store_overflow<int32_t>(void* ptr, __m128i a) {
+    _mm_storeu_si128((__m128i*)(ptr), a);
+}
+template <typename CType>
+MEGDNN_ATTRIBUTE_TARGET("sse4.1")
+void store_overflow(void* ptr, __m128i a, int remain);
+
+template <>
+void store_overflow<int16_t>(void* ptr, __m128i a, int remain) {
+    __m128i mask = _mm_continue_mask(remain * sizeof(int16_t));
+    a = _mm_shufflelo_epi16(a, 0x08);
+    a = _mm_shufflehi_epi16(a, 0x08);
+    a = _mm_shuffle_epi32(a, 0x08);
+    _mm_maskmoveu_si128(a, mask, reinterpret_cast<char*>(ptr));
+}
+template <>
+void store_overflow<int32_t>(void* ptr, __m128i a, int remain) {
+    __m128i mask = _mm_continue_mask(remain * sizeof(int32_t));
+    _mm_maskmoveu_si128(a, mask, reinterpret_cast<char*>(ptr));
+}
+
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
 static inline void kern_gemm_s8s8s32_sse_4x8x2(const int16_t* pack_a_ptr,
                                                const int8_t* pack_b_ptr,
-                                               int32_t* c_ptr, const int ldc,
+                                               CType* c_ptr, const int ldc,
                                                const int k) {
     constexpr int k_step = 2;
 
@@ -102,20 +143,20 @@ static inline void kern_gemm_s8s8s32_sse_4x8x2(const int16_t* pack_a_ptr,
         pack_a_ptr += 8;
         pack_b_ptr += 16;
     }
-
-    _mm_storeu_si128((__m128i*)(c_ptr), c_vec[0]);
-    _mm_storeu_si128((__m128i*)(c_ptr + 4), c_vec[1]);
-    _mm_storeu_si128((__m128i*)(c_ptr + ldc), c_vec[2]);
-    _mm_storeu_si128((__m128i*)(c_ptr + ldc + 4), c_vec[3]);
-    _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc), c_vec[4]);
-    _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc + 4), c_vec[5]);
-    _mm_storeu_si128((__m128i*)(c_ptr + 3 * ldc), c_vec[6]);
-    _mm_storeu_si128((__m128i*)(c_ptr + 3 * ldc + 4), c_vec[7]);
+    store_overflow<CType>(c_ptr, c_vec[0]);
+    store_overflow<CType>(c_ptr + 4, c_vec[1]);
+    store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+    store_overflow<CType>(c_ptr + ldc + 4, c_vec[3]);
+    store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+    store_overflow<CType>(c_ptr + 2 * ldc + 4, c_vec[5]);
+    store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
+    store_overflow<CType>(c_ptr + 3 * ldc + 4, c_vec[7]);
 }
 
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
 static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_m(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const int ldc, const int k, const int remain_m) {
     constexpr int k_step = 2;
 
@@ -194,34 +235,35 @@ static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_m(
         pack_b_ptr += 16;
     }
 
-    _mm_storeu_si128((__m128i*)(c_ptr), c_vec[0]);
-    _mm_storeu_si128((__m128i*)(c_ptr + 4), c_vec[1]);
+    store_overflow<CType>(c_ptr, c_vec[0]);
+    store_overflow<CType>(c_ptr + 4, c_vec[1]);
     switch (remain_m) {
         case 2:
-            _mm_storeu_si128((__m128i*)(c_ptr + ldc), c_vec[2]);
-            _mm_storeu_si128((__m128i*)(c_ptr + ldc + 4), c_vec[3]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc + 4, c_vec[3]);
             break;
         case 3:
-            _mm_storeu_si128((__m128i*)(c_ptr + ldc), c_vec[2]);
-            _mm_storeu_si128((__m128i*)(c_ptr + ldc + 4), c_vec[3]);
-            _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc), c_vec[4]);
-            _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc + 4), c_vec[5]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc + 4, c_vec[3]);
+            store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+            store_overflow<CType>(c_ptr + 2 * ldc + 4, c_vec[5]);
             break;
         case 4:
-            _mm_storeu_si128((__m128i*)(c_ptr + ldc), c_vec[2]);
-            _mm_storeu_si128((__m128i*)(c_ptr + ldc + 4), c_vec[3]);
-            _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc), c_vec[4]);
-            _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc + 4), c_vec[5]);
-            _mm_storeu_si128((__m128i*)(c_ptr + 3 * ldc), c_vec[6]);
-            _mm_storeu_si128((__m128i*)(c_ptr + 3 * ldc + 4), c_vec[7]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc + 4, c_vec[3]);
+            store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+            store_overflow<CType>(c_ptr + 2 * ldc + 4, c_vec[5]);
+            store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
+            store_overflow<CType>(c_ptr + 3 * ldc + 4, c_vec[7]);
         default:
             break;
     }
 }
 
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
 static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_n(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const int ldc, const int k, int remain_n) {
     constexpr int k_step = 2;
 
@@ -301,10 +343,10 @@ static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_n(
     }
 
     if (remain_n >= 4) {
-        _mm_storeu_si128((__m128i*)(c_ptr), c_vec[0]);
-        _mm_storeu_si128((__m128i*)(c_ptr + ldc), c_vec[2]);
-        _mm_storeu_si128((__m128i*)(c_ptr + 2 * ldc), c_vec[4]);
-        _mm_storeu_si128((__m128i*)(c_ptr + 3 * ldc), c_vec[6]);
+        store_overflow<CType>(c_ptr, c_vec[0]);
+        store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+        store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+        store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
         c_ptr += 4;
         remain_n -= 4;
         c_vec[0] = c_vec[1];
@@ -312,35 +354,16 @@ static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_n(
         c_vec[4] = c_vec[5];
         c_vec[6] = c_vec[7];
     }
-
-    switch (remain_n) {
-        case 0:
-            break;
-        case 1:
-            *(c_ptr) = _mm_extract_epi32(c_vec[0], 0);
-            *(c_ptr + ldc) = _mm_extract_epi32(c_vec[2], 0);
-            *(c_ptr + 2 * ldc) = _mm_extract_epi32(c_vec[4], 0);
-            *(c_ptr + 3 * ldc) = _mm_extract_epi32(c_vec[6], 0);
-            break;
-        case 2:
-        case 3:
-            _mm_storel_epi64((__m128i*)(c_ptr), c_vec[0]);
-            _mm_storel_epi64((__m128i*)(c_ptr + ldc), c_vec[2]);
-            _mm_storel_epi64((__m128i*)(c_ptr + 2 * ldc), c_vec[4]);
-            _mm_storel_epi64((__m128i*)(c_ptr + 3 * ldc), c_vec[6]);
-            break;
-    }
-    if (remain_n == 3) {
-        *(c_ptr + 2) = _mm_extract_epi32(c_vec[0], 2);
-        *(c_ptr + ldc + 2) = _mm_extract_epi32(c_vec[2], 2);
-        *(c_ptr + 2 * ldc + 2) = _mm_extract_epi32(c_vec[4], 2);
-        *(c_ptr + 3 * ldc + 2) = _mm_extract_epi32(c_vec[6], 2);
-    }
+    store_overflow<CType>(c_ptr, c_vec[0], remain_n);
+    store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+    store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
+    store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6], remain_n);
 }
 
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
 static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_m_n(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const int ldc, const int k, int remain_m, int remain_n) {
     constexpr int k_step = 2;
 
@@ -421,8 +444,7 @@ static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_m_n(
     int index_array[4]{0, 2, 4, 6};
     if (remain_n >= 4) {
         for (int m = 0; m < remain_m; ++m) {
-            _mm_storeu_si128((__m128i*)(c_ptr + m * ldc),
-                             c_vec[index_array[m]]);
+            store_overflow<CType>(c_ptr + m * ldc, c_vec[index_array[m]]);
         }
         c_ptr += 4;
         remain_n -= 4;
@@ -431,29 +453,8 @@ static inline void kern_gemm_s8s8s32_sse_4x8x2_remain_m_n(
         c_vec[4] = c_vec[5];
         c_vec[6] = c_vec[7];
     }
-
-    switch (remain_n) {
-        case 0:
-            break;
-        case 1:
-            for (int m = 0; m < remain_m; ++m) {
-                *(c_ptr + m * ldc) =
-                        _mm_extract_epi32(c_vec[index_array[m]], 0);
-            }
-            break;
-        case 2:
-        case 3:
-            for (int m = 0; m < remain_m; ++m) {
-                _mm_storel_epi64((__m128i*)(c_ptr + m * ldc),
-                                 c_vec[index_array[m]]);
-            }
-            break;
-    }
-    if (remain_n == 3) {
-        for (int m = 0; m < remain_m; ++m) {
-            *(c_ptr + m * ldc + 2) =
-                    _mm_extract_epi32(c_vec[index_array[m]], 2);
-        }
+    for (int m = 0; m < remain_m; ++m) {
+        store_overflow<CType>(c_ptr + m * ldc, c_vec[index_array[m]], remain_n);
     }
 }
 

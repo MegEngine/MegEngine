@@ -38,6 +38,10 @@ MEGDNN_REG_GEMM_STRATEGY_WITH_PACK_A_TYPE(dt_int8, dt_int16, dt_int32, dt_int32,
                                           4, 8, 2, false, false,
                                           gemm_sse_s8s8s32_4x8x2);
 
+MEGDNN_REG_GEMM_STRATEGY_WITH_PACK_A_TYPE(dt_int8, dt_int16, dt_int16, dt_int32,
+                                          4, 8, 2, false, false,
+                                          gemm_sse_s8s8s16_4x8x2);
+
 }  // namespace matmul
 }  // namespace x86
 }  // namespace megdnn

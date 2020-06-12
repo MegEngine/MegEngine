@@ -52,6 +52,10 @@ TEST_F(X86, MATRIX_MUL_AVX2_8X8X16) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
                                  handle(), "X86_INT8X8X16_AVX2");
 }
+TEST_F(X86, MATRIX_MUL_SSE_8X8X16) {
+    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
+                                 handle(), "X86_INT8X8X16_SSE");
+}
 TEST_F(X86, MATRIX_MUL_SSE_8X8X32) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
                                  handle(), "X86_INT8X8X32_SSE_4X8X2");
@@ -131,6 +135,17 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_8X8X32) {
             .set_rng(1, rng.get());
     benchmarker_avx2_4x16x2_8816.set_before_exec_callback(
             AlgoChecker<MatrixMul>("X86_INT8X8X16_AVX2"));
+
+    Benchmarker<MatrixMul> benchmarker_sse_4x8x2_8816(handle());
+    benchmarker_sse_4x8x2_8816.set_display(false)
+            .set_times(RUNS)
+            .set_dtype(0, dtype::Int8{})
+            .set_dtype(1, dtype::Int8{})
+            .set_dtype(2, dtype::Int16{})
+            .set_rng(0, rng.get())
+            .set_rng(1, rng.get());
+    benchmarker_sse_4x8x2_8816.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("X86_INT8X8X16_SSE"));
 
     Benchmarker<MatrixMul> benchmarker_avx2_2x4x16(handle());
     benchmarker_avx2_2x4x16.set_display(false)
@@ -212,9 +227,15 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_8X8X32) {
             std::cout << "sse: " << sse_used << " ms, "
                       << computations / sse_used << " Gflops, "
                       << "speed_up " << float_used / sse_used << ", ";
+            auto sse_used_8816 =
+                    benchmarker_sse_4x8x2_8816.exec({{M, K}, {K, N}, {}}) /
+                    RUNS;
+            std::cout << "sse_8816: " << sse_used_8816 << " ms, "
+                      << computations / sse_used_8816 << " Gflops, ";
         }
         std::cout << std::endl;
     };
+    run(256, 256, 256);
 
     for (size_t M : {8, 64, 112, 256, 512}) {
         for (size_t K : {8, 16, 32, 64, 112, 256, 512}) {

@@ -56,6 +56,7 @@ protected:
     class AlgoInt8x8x32AVX2M4N16K2;
     class AlgoInt8x8x32SSEM4N8K2;
     class AlgoInt8x8x16AVX2;
+    class AlgoInt8x8x16SSE;
     class AlgoPack;
     class AlgoF32MK8_8x8;
 };
