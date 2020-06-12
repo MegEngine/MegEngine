@@ -52,21 +52,9 @@ class GemmInterleaved<Strategy, true> {
     }
 
     size_t get_b_workspace_size() const {
-#if __ARM_FEATURE_DOTPROD
-        size_t new_blockn = m_strategy.block_n;
-        if (m_strategy.KERNEL_W == 6 && m_strategy.UNROLL_K == 4 &&
-            m_strategy.KERNEL_H == 8) {
-                new_blockn = round_up<size_t>((m_strategy.block_n-1) % 6, 4) +
-                             m_strategy.block_n / 6 * 6;
-        }
-        size_t N = round_up(new_blockn, m_strategy.KERNEL_W);
-        size_t K = round_up(m_strategy.block_k, m_strategy.UNROLL_K);
-        return round_up(sizeof(stype) * N * K, CACHELINE_SIZE) + m_align_size;
-#else
         size_t N = round_up(m_strategy.block_n, m_strategy.KERNEL_W);
         size_t K = round_up(m_strategy.block_k, m_strategy.UNROLL_K);
         return round_up(sizeof(stype) * N * K, CACHELINE_SIZE) + m_align_size;
-#endif
     }
 
     //! temporary storage for output, post process such as add bias or relu will
