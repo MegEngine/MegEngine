@@ -655,6 +655,59 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44) {
     bench_case(1, 512, 256, 28, 28, 3, 4, 1, 2);
 }
 
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44_DOT) {
+    constexpr size_t RUNS = 40;
+    std::vector<DType> data_type = {
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+            dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f)};
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS, size_t group, size_t P, size_t S,
+                          bool is_nchw = false) {
+        param::ConvBias param;
+        param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        param.pad_h = P;
+        param.pad_w = P;
+        param.stride_h = S;
+        param.stride_w = S;
+        param.sparse = param::ConvBias::Sparse::DENSE;
+        param.format = param::ConvBias::Format::NCHW44_DOT;
+        auto OH = (H + 2 * P - FS) / static_cast<size_t>(S) + 1;
+        auto OW = (W + 2 * P - FS) / static_cast<size_t>(S) + 1;
+        TensorShape src = {N, IC / 4, H, W, 4};
+        TensorShape filter = {OC / 4, IC / 4, FS, FS, 4, 4};
+        if (group > 1) {
+            filter = {group, OC / group / 4, IC / group / 4, FS, FS, 4, 4};
+            param.sparse = param::ConvBias::Sparse::GROUP;
+        }
+        if (is_nchw) {
+            src = {N, IC, H, W};
+            filter = {OC / 4, FS, FS, IC, 4};
+        }
+        TensorShape bias = {1, OC / 4, 1, 1, 4};
+        TensorShape dst = {N, OC / 4, OH, OW, 4};
+
+        SmallVector<TensorShape> shapes{src, filter, bias, {}, dst};
+        float computations =
+                (((IC / group) * FS * FS + 1) * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        std::vector<std::pair<SmallVector<TensorShape>, float>> shape_arg = {
+                std::make_pair(shapes, computations)};
+        benchmark_impl(param, shape_arg, ".+", RUNS, {4, {4, 5, 6, 7}},
+                       {1, {7}}, data_type);
+    };
+    bench_case(1, 64, 64, 56, 56, 3, 1, 1, 1);
+    bench_case(1, 128, 128, 28, 28, 3, 1, 1, 1);
+    bench_case(1, 256, 256, 14, 14, 3, 1, 1, 1);
+    bench_case(1, 512, 512, 7, 7, 3, 1, 1, 1);
+
+    bench_case(1, 64, 64, 56, 56, 3, 4, 1, 1);
+    bench_case(1, 128, 128, 28, 28, 3, 4, 1, 1);
+    bench_case(1, 256, 256, 14, 14, 3, 4, 1, 1);
+    bench_case(1, 512, 512, 7, 7, 3, 4, 1, 1);
+
+}
+
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CONVBIAS_INT8_INT8_INT8_STRIDE2) {
     constexpr size_t RUNS = 50;

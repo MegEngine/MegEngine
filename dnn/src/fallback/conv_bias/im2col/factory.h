@@ -450,7 +450,7 @@ Strategy* StrategyDelegationStorage::get(
     sparam.kernel = param.filter_meta.spatial[0];
     sparam.stride = param.filter_meta.stride[0];
     sparam.is_square =
-            param.filter_meta.spatial[0] == param.filter_meta.spatial[0];
+            param.filter_meta.spatial[0] == param.filter_meta.spatial[1];
     sparam.is_xcorr = param.filter_meta.should_flip;
     MEGDNN_LOCK_GUARD(m_mtx);
     if (map_strategys.find(sparam) == map_strategys.end()) {
