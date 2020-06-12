@@ -194,7 +194,7 @@ class HistogramObserver(MinMaxObserver):
         self.bins = bins
         self.upsample_rate = upsample_rate
         self.dst_nbins = _metadata_dict[dtype].qmax - _metadata_dict[dtype].qmin + 1
-        self.histogram = Buffer([0.0] * bins)
+        self.histogram = Buffer([-1] + [0.0] * (bins - 1))
 
     def _non_linear_param_search(self):
         r"""Non-linear parameter search.
@@ -393,8 +393,7 @@ class HistogramObserver(MinMaxObserver):
         histogram = self.histogram.numpy()
         new_min = x.min()
         new_max = x.max()
-
-        if min_val == 0 or max_val == 0:
+        if histogram[0] == -1:
             new_histogram, _ = np.histogram(x, self.bins, (new_min, new_max))
         else:
             new_min = min(new_min, min_val)
