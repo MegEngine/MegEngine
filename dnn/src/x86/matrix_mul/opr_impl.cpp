@@ -37,6 +37,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt8x8x32AVX2M4N16K2 algoint8x8x32avx2_m4n16k2;
     AlgoInt8x8x32AVX2M2N4K16 algoint8x8x32avx2_m2n4k16;
     AlgoInt8x8x32SSEM4N8K2 algoint8x8x32sse_m4n8k2;
+    AlgoInt8x8x16AVX2 algoint8x8x16avx2_m4n16k2;
     AlgoF32MK8_8x8 algof32mk8_8x8;
 
 public:
@@ -47,6 +48,7 @@ public:
 #endif
         }
         all_algos.emplace_back(&algoint8x8x32avx2_m4n16k2);
+        all_algos.emplace_back(&algoint8x8x16avx2_m4n16k2);
         all_algos.emplace_back(&algoint8x8x32avx2_m2n4k16);
         all_algos.emplace_back(&algoint8x8x32sse_m4n8k2);
         all_algos.emplace_back(&algof32mk8_8x8);

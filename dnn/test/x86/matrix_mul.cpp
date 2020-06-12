@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/x86/fixture.h"
 
@@ -46,6 +47,10 @@ TEST_F(X86, MATRIX_MUL_AVX2_8X8X32) {
                                  handle(), "X86_INT8X8X32_AVX2_2X4X16");
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
                                  handle(), "X86_INT8X8X32_AVX2_4X16X2");
+}
+TEST_F(X86, MATRIX_MUL_AVX2_8X8X16) {
+    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
+                                 handle(), "X86_INT8X8X16_AVX2");
 }
 TEST_F(X86, MATRIX_MUL_SSE_8X8X32) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
@@ -116,6 +121,17 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_8X8X32) {
     benchmarker_avx2_4x16x2.set_before_exec_callback(
             AlgoChecker<MatrixMul>("X86_INT8X8X32_AVX2_4X16X2"));
 
+    Benchmarker<MatrixMul> benchmarker_avx2_4x16x2_8816(handle());
+    benchmarker_avx2_4x16x2_8816.set_display(false)
+            .set_times(RUNS)
+            .set_dtype(0, dtype::Int8{})
+            .set_dtype(1, dtype::Int8{})
+            .set_dtype(2, dtype::Int16{})
+            .set_rng(0, rng.get())
+            .set_rng(1, rng.get());
+    benchmarker_avx2_4x16x2_8816.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("X86_INT8X8X16_AVX2"));
+
     Benchmarker<MatrixMul> benchmarker_avx2_2x4x16(handle());
     benchmarker_avx2_2x4x16.set_display(false)
             .set_times(RUNS)
@@ -183,6 +199,12 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_8X8X32) {
                       << "k2_speed_up " << float_used / avx2_used_4x16x2
                       << ", k16_speed_up " << float_used / avx2_used_2x4x16
                       << ",";
+            auto avx2_used_4x16x2_8816 =
+                    benchmarker_avx2_4x16x2_8816.exec({{M, K}, {K, N}, {}}) /
+                    RUNS;
+            std::cout << "avx2_8816: " << avx2_used_4x16x2_8816
+                      << " ms, 8816 throughput "
+                      << computations / avx2_used_4x16x2_8816 << " Gflops,";
         }
         if (is_supported(SIMDType::SSE4_1)) {
             auto sse_used =

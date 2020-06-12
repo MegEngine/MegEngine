@@ -6,16 +6,17 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include <x86intrin.h>
 
 #ifdef WIN32
-#include <avxintrin.h>
-#include <smmintrin.h>
 #include <avx2intrin.h>
+#include <avxintrin.h>
 #include <fmaintrin.h>
+#include <smmintrin.h>
 #endif
 #include <cmath>
 #include <cstdint>
@@ -787,17 +788,47 @@ static inline void transpose_4x8_k2_int8_to_int16(const int8_t* inptr0,
 
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline __v8si _m256_continue_mask_v8si(const int& x) {
+    // clang-format off
     static __v8si map[9] = {
-            {0, 0, 0, 0, 0, 0, 0, 0},        {-1, 0, 0, 0, 0, 0, 0, 0},
-            {-1, -1, 0, 0, 0, 0, 0, 0},      {-1, -1, -1, 0, 0, 0, 0, 0},
-            {-1, -1, -1, -1, 0, 0, 0, 0},    {-1, -1, -1, -1, -1, 0, 0, 0},
-            {-1, -1, -1, -1, -1, -1, 0, 0},  {-1, -1, -1, -1, -1, -1, -1, 0},
+            {00, 00, 00, 00, 00, 00, 00, 00}, 
+            {-1, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, 00, 00, 00, 00}, 
+            {-1, -1, -1, -1, -1, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, 00, 00}, 
+            {-1, -1, -1, -1, -1, -1, -1, 00},
             {-1, -1, -1, -1, -1, -1, -1, -1}};
     return map[x];
+    // clang-format on
 }
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline __m256i _m256_continue_mask(const int& x) {
     return (__m256i)_m256_continue_mask_v8si(x);
+}
+
+MEGDNN_ATTRIBUTE_TARGET("sse2")
+static inline __m128i _mm_continue_mask(const int& x) {
+    static __v16qi map[17] = {
+            {00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, 00, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, 00, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, 00, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 00, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 00, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 00, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 00, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 00, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 00},
+            {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+    };
+    return (__m128i)map[x];
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse2")

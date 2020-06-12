@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/x86/fixture.h"
 
@@ -369,6 +370,63 @@ TEST_F(X86, CONVOLUTION_DIRECT_MKLDNN_C8) {
 #endif
 
 #if MEGDNN_WITH_BENCHMARK
+TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x16) {
+    using namespace convolution;
+    using Param = param::Convolution;
+
+    std::vector<TestArg> args;
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
+                   size_t stride, size_t group = 1) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = kernel / 2;
+        param.pad_w = kernel / 2;
+        if (group > 1) {
+            param.sparse = param::Convolution::Sparse::GROUP;
+            args.emplace_back(
+                    param, TensorShape{1, ic, h, w},
+                    TensorShape{group, oc / group, ic / group, kernel, kernel});
+        } else {
+            param.sparse = param::Convolution::Sparse::DENSE;
+            args.emplace_back(param, TensorShape{1, ic, h, w},
+                              TensorShape{oc, ic, kernel, kernel});
+        }
+    };
+
+    run(48, 96, 15, 15, 1, 1);
+    run(64, 64, 60, 60, 3, 1);
+    run(64, 64, 60, 60, 3, 1, 64);
+
+    constexpr size_t RUN = 30;
+    Benchmarker<Convolution> benchmark(handle());
+    benchmark.set_dtype(0, dtype::Int8())
+            .set_dtype(1, dtype::Int8())
+            .set_dtype(2, dtype::Int16());
+    benchmark.set_display(false);
+    benchmark.set_times(RUN);
+
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle()->create_operator<Convolution>();
+        opr->param() = arg.param;
+        opr->deduce_layout({arg.src, dtype::Float32()},
+                           {arg.filter, dtype::Float32()}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float icpg = arg.filter.ndim == 4 ? arg.filter[1] : arg.filter[2];
+        float filter = arg.filter.ndim == 4 ? arg.filter[2] : arg.filter[3];
+        float computations = dst_layout.total_nr_elems() * icpg * filter *
+                             filter * 2.0 / (1024 * 1024 * 1024) * 1e3;
+
+        auto used_int =
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
+
+        printf("%s %s: int: %f ms %f Gflops \n", arg.src.to_string().c_str(),
+               arg.filter.to_string().c_str(), used_int,
+               computations / used_int);
+    }
+}
 #if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
     using namespace convolution;
@@ -419,7 +477,6 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
-
         auto used_int =
                 benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include <immintrin.h>
@@ -20,11 +21,47 @@ namespace megdnn {
 namespace x86 {
 
 namespace matmul_avx2_4x16x2 {
+template <typename CType>
+MEGDNN_ATTRIBUTE_TARGET("avx2")
+void store_overflow(void* ptr, __m256i a);
 
+template <>
+void store_overflow<int16_t>(void* ptr, __m256i a) {
+    static __m256i idx = _mm256_setr_epi32(0, 2, 4, 6, 0, 0, 0, 0);
+    a = _mm256_shufflelo_epi16(a, 0x08);
+    a = _mm256_shufflehi_epi16(a, 0x08);
+    a = _mm256_permutevar8x32_epi32(a, idx);
+    _mm_storeu_si128((__m128i*)ptr, _mm256_extractf128_si256(a, 0));
+}
+template <>
+void store_overflow<int32_t>(void* ptr, __m256i a) {
+    _mm256_storeu_si256((__m256i*)(ptr), a);
+}
+template <typename CType>
+MEGDNN_ATTRIBUTE_TARGET("avx2")
+void store_overflow(void* ptr, __m256i a, int remain);
+
+template <>
+void store_overflow<int16_t>(void* ptr, __m256i a, int remain) {
+    __m128i mask = _mm_continue_mask(remain * sizeof(int16_t));
+    static __m256i idx = _mm256_setr_epi32(0, 2, 4, 6, 0, 0, 0, 0);
+    a = _mm256_shufflelo_epi16(a, 0x08);
+    a = _mm256_shufflehi_epi16(a, 0x08);
+    a = _mm256_permutevar8x32_epi32(a, idx);
+    _mm_maskmoveu_si128(_mm256_extractf128_si256(a, 0), mask,
+                        reinterpret_cast<char*>(ptr));
+}
+template <>
+void store_overflow<int32_t>(void* ptr, __m256i a, int remain) {
+    __m256i mask = _m256_continue_mask(remain);
+    _mm256_maskstore_epi32(reinterpret_cast<int32_t*>(ptr), mask, a);
+}
+
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_gemm_s8s8s32_avx2_4x16x2(const int16_t* pack_a_ptr,
                                                  const int8_t* pack_b_ptr,
-                                                 int32_t* c_ptr,
+                                                 CType* c_ptr,
                                                  const uint32_t ldc,
                                                  const uint32_t k) {
     constexpr uint32_t k_step = 2;
@@ -104,19 +141,19 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2(const int16_t* pack_a_ptr,
         pack_b_ptr += 32;
     }
 
-    _mm256_storeu_si256((__m256i*)(c_ptr), c_vec[0]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + 8), c_vec[1]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + ldc + 8), c_vec[3]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc), c_vec[4]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc + 8), c_vec[5]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + 3 * ldc), c_vec[6]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + 3 * ldc + 8), c_vec[7]);
+    store_overflow<CType>(c_ptr, c_vec[0]);
+    store_overflow<CType>(c_ptr + 8, c_vec[1]);
+    store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+    store_overflow<CType>(c_ptr + ldc + 8, c_vec[3]);
+    store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+    store_overflow<CType>(c_ptr + 2 * ldc + 8, c_vec[5]);
+    store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
+    store_overflow<CType>(c_ptr + 3 * ldc + 8, c_vec[7]);
 }
-
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_gemm_s8s8s32_avx2_4x16x2_n8_remain_n(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const uint32_t ldc, const uint32_t k, const uint32_t remain_n) {
     constexpr uint32_t k_step = 2;
 
@@ -173,15 +210,15 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2_n8_remain_n(
         pack_b_ptr += 32;
     }
 
-    __m256i mask = _m256_continue_mask(remain_n);
-    _mm256_maskstore_epi32((c_ptr), mask, c_vec[0]);
-    _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
-    _mm256_maskstore_epi32((c_ptr + 2 * ldc), mask, c_vec[4]);
-    _mm256_maskstore_epi32((c_ptr + 3 * ldc), mask, c_vec[6]);
+    store_overflow<CType>(c_ptr, c_vec[0], remain_n);
+    store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+    store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
+    store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6], remain_n);
 }
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_gemm_s8s8s32_avx2_4x16x2_n8_remain_m_n(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const uint32_t ldc, const uint32_t k, const uint32_t remain_m,
         uint32_t remain_n) {
     constexpr uint32_t k_step = 2;
@@ -239,29 +276,29 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2_n8_remain_m_n(
         pack_b_ptr += 32;
     }
 
-    __m256i mask = _m256_continue_mask(remain_n);
-    _mm256_maskstore_epi32((c_ptr), mask, c_vec[0]);
+    store_overflow<CType>(c_ptr, c_vec[0], remain_n);
     switch (remain_m) {
         case 2:
-            _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+
             break;
         case 3:
-            _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
-            _mm256_maskstore_epi32((c_ptr + 2 * ldc), mask, c_vec[4]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+            store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
             break;
         case 4:
-            _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
-            _mm256_maskstore_epi32((c_ptr + 2 * ldc), mask, c_vec[4]);
-            _mm256_maskstore_epi32((c_ptr + 3 * ldc), mask, c_vec[6]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+            store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
+            store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6], remain_n);
             break;
         default:
             break;
     }
 }
-
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_m(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const uint32_t ldc, const uint32_t k, const uint32_t remain_m) {
     constexpr uint32_t k_step = 2;
 
@@ -339,34 +376,36 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_m(
         pack_a_ptr += 8;
         pack_b_ptr += 32;
     }
-    _mm256_storeu_si256((__m256i*)(c_ptr), c_vec[0]);
-    _mm256_storeu_si256((__m256i*)(c_ptr + 8), c_vec[1]);
+
+    store_overflow<CType>(c_ptr, c_vec[0]);
+    store_overflow<CType>(c_ptr + 8, c_vec[1]);
+
     switch (remain_m) {
         case 2:
-            _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + ldc + 8), c_vec[3]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc + 8, c_vec[3]);
             break;
         case 3:
-            _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + ldc + 8), c_vec[3]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc), c_vec[4]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc + 8), c_vec[5]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc + 8, c_vec[3]);
+            store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+            store_overflow<CType>(c_ptr + 2 * ldc + 8, c_vec[5]);
             break;
         case 4:
-            _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + ldc + 8), c_vec[3]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc), c_vec[4]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc + 8), c_vec[5]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + 3 * ldc), c_vec[6]);
-            _mm256_storeu_si256((__m256i*)(c_ptr + 3 * ldc + 8), c_vec[7]);
+            store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+            store_overflow<CType>(c_ptr + ldc + 8, c_vec[3]);
+            store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+            store_overflow<CType>(c_ptr + 2 * ldc + 8, c_vec[5]);
+            store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
+            store_overflow<CType>(c_ptr + 3 * ldc + 8, c_vec[7]);
         default:
             break;
     }
 }
-
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_n(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const uint32_t ldc, const uint32_t k, uint32_t remain_n) {
     constexpr uint32_t k_step = 2;
 
@@ -446,29 +485,28 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_n(
     }
 
     if (remain_n >= 8) {
-        _mm256_storeu_si256((__m256i*)(c_ptr), c_vec[0]);
-        _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-        _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc), c_vec[4]);
-        _mm256_storeu_si256((__m256i*)(c_ptr + 3 * ldc), c_vec[6]);
+        store_overflow<CType>(c_ptr, c_vec[0]);
+        store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+        store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+        store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
         remain_n -= 8;
         if (remain_n > 0) {
-            __m256i mask = _m256_continue_mask(remain_n);
-            _mm256_maskstore_epi32((c_ptr + 8), mask, c_vec[1]);
-            _mm256_maskstore_epi32((c_ptr + ldc + 8), mask, c_vec[3]);
-            _mm256_maskstore_epi32((c_ptr + 2 * ldc + 8), mask, c_vec[5]);
-            _mm256_maskstore_epi32((c_ptr + 3 * ldc + 8), mask, c_vec[7]);
+            store_overflow<CType>(c_ptr + 8, c_vec[1], remain_n);
+            store_overflow<CType>(c_ptr + ldc + 8, c_vec[3], remain_n);
+            store_overflow<CType>(c_ptr + 2 * ldc + 8, c_vec[5], remain_n);
+            store_overflow<CType>(c_ptr + 3 * ldc + 8, c_vec[7], remain_n);
         }
     } else {
-        __m256i mask = _m256_continue_mask(remain_n);
-        _mm256_maskstore_epi32((c_ptr), mask, c_vec[0]);
-        _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
-        _mm256_maskstore_epi32((c_ptr + 2 * ldc), mask, c_vec[4]);
-        _mm256_maskstore_epi32((c_ptr + 3 * ldc), mask, c_vec[6]);
+        store_overflow<CType>(c_ptr, c_vec[0], remain_n);
+        store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+        store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
+        store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6], remain_n);
     }
 }
+template <typename CType>
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_m_n(
-        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, int32_t* c_ptr,
+        const int16_t* pack_a_ptr, const int8_t* pack_b_ptr, CType* c_ptr,
         const uint32_t ldc, const uint32_t k, const uint32_t remain_m,
         uint32_t remain_n) {
     constexpr uint32_t k_step = 2;
@@ -549,19 +587,19 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_m_n(
     }
 
     if (remain_n >= 8) {
-        _mm256_storeu_si256((__m256i*)(c_ptr), c_vec[0]);
+        store_overflow<CType>(c_ptr, c_vec[0]);
         switch (remain_m) {
             case 2:
-                _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
+                store_overflow<CType>(c_ptr + ldc, c_vec[2]);
                 break;
             case 3:
-                _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-                _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc), c_vec[4]);
+                store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+                store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
                 break;
             case 4:
-                _mm256_storeu_si256((__m256i*)(c_ptr + ldc), c_vec[2]);
-                _mm256_storeu_si256((__m256i*)(c_ptr + 2 * ldc), c_vec[4]);
-                _mm256_storeu_si256((__m256i*)(c_ptr + 3 * ldc), c_vec[6]);
+                store_overflow<CType>(c_ptr + ldc, c_vec[2]);
+                store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4]);
+                store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6]);
                 break;
             default:
                 break;
@@ -569,43 +607,41 @@ static inline void kern_gemm_s8s8s32_avx2_4x16x2_remain_m_n(
 
         remain_n -= 8;
         if (remain_n > 0) {
-            __m256i mask = _m256_continue_mask(remain_n);
-            _mm256_maskstore_epi32((c_ptr + 8), mask, c_vec[1]);
+            store_overflow<CType>(c_ptr + 8, c_vec[1], remain_n);
             switch (remain_m) {
                 case 2:
-                    _mm256_maskstore_epi32((c_ptr + ldc + 8), mask, c_vec[3]);
+                    store_overflow<CType>(c_ptr + ldc + 8, c_vec[3], remain_n);
                     break;
                 case 3:
-                    _mm256_maskstore_epi32((c_ptr + ldc + 8), mask, c_vec[3]);
-                    _mm256_maskstore_epi32((c_ptr + 2 * ldc + 8), mask,
-                                           c_vec[5]);
+                    store_overflow<CType>(c_ptr + ldc + 8, c_vec[3], remain_n);
+                    store_overflow<CType>(c_ptr + 2 * ldc + 8, c_vec[5],
+                                          remain_n);
                     break;
                 case 4:
-                    _mm256_maskstore_epi32((c_ptr + ldc + 8), mask, c_vec[3]);
-                    _mm256_maskstore_epi32((c_ptr + 2 * ldc + 8), mask,
-                                           c_vec[5]);
-                    _mm256_maskstore_epi32((c_ptr + 3 * ldc + 8), mask,
-                                           c_vec[7]);
+                    store_overflow<CType>(c_ptr + ldc + 8, c_vec[3], remain_n);
+                    store_overflow<CType>(c_ptr + 2 * ldc + 8, c_vec[5],
+                                          remain_n);
+                    store_overflow<CType>(c_ptr + 3 * ldc + 8, c_vec[7],
+                                          remain_n);
                     break;
                 default:
                     break;
             }
         }
     } else {
-        __m256i mask = _m256_continue_mask(remain_n);
-        _mm256_maskstore_epi32((c_ptr), mask, c_vec[0]);
+        store_overflow<CType>(c_ptr, c_vec[0], remain_n);
         switch (remain_m) {
             case 2:
-                _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
+                store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
                 break;
             case 3:
-                _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
-                _mm256_maskstore_epi32((c_ptr + 2 * ldc), mask, c_vec[4]);
+                store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+                store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
                 break;
             case 4:
-                _mm256_maskstore_epi32((c_ptr + ldc), mask, c_vec[2]);
-                _mm256_maskstore_epi32((c_ptr + 2 * ldc), mask, c_vec[4]);
-                _mm256_maskstore_epi32((c_ptr + 3 * ldc), mask, c_vec[6]);
+                store_overflow<CType>(c_ptr + ldc, c_vec[2], remain_n);
+                store_overflow<CType>(c_ptr + 2 * ldc, c_vec[4], remain_n);
+                store_overflow<CType>(c_ptr + 3 * ldc, c_vec[6], remain_n);
                 break;
             default:
                 break;
@@ -833,4 +869,5 @@ static inline void gemm_s8s8s32_avx2_4x16x2_pack_at(dt_int16* out,
 
 }  // namespace x86
 }  // namespace megdnn
-   // vim: syntax=cpp.doxygen
+
+// vim: syntax=cpp.doxygen

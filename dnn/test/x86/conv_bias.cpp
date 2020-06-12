@@ -752,7 +752,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2) {
     }
 }
 
-TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
@@ -807,6 +807,16 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
                 .set_param(arg.param)                                          \
                 .execs({arg.src, arg.filter, {}, {}, {}});                     \
     }
+#define cb2(algo_name)                                                         \
+    checker.set_before_exec_callback(                                          \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));              \
+    checker.set_dtype(0, dtype::Int8());                                       \
+    checker.set_dtype(1, dtype::Int8());                                       \
+    checker.set_dtype(2, dtype::Int16());                                      \
+    checker.set_dtype(4, dtype::Int16());                                      \
+    for (auto&& arg : args) {                                                  \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, {}, {}, {}}); \
+    }
 
 #if MEGDNN_X86_WITH_MKL_DNN
     if (megdnn::x86::is_supported(x86::SIMDType::VNNI)) {
@@ -821,12 +831,14 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
     if (megdnn::x86::is_supported(x86::SIMDType::AVX2)) {
         cb("IM2COLMATMUL:X86_INT8X8X32_AVX2_2X4X16");
         cb("IM2COLMATMUL:X86_INT8X8X32_AVX2_4X16X2");
+        cb2("IM2COLMATMUL:X86_INT8X8X16_AVX2");
     }
     if (::megdnn::x86::is_supported(::megdnn::x86::SIMDType::SSE4_2)) {
         cb("IM2COLMATMUL:X86_INT8X8X32_SSE_4X8X2");
     }
 
 #undef cb
+#undef cb2
 }
 
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
@@ -1964,6 +1976,39 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8) {
     shapes_and_computation.clear();
 }
 
+TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_8816) {
+    constexpr size_t RUNS = 30;
+    param::ConvBias param;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.sparse = param::ConvBias::Sparse::DENSE;
+
+    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
+                                    dtype::Int16(), dtype::Int16()};
+
+    std::vector<std::pair<SmallVector<TensorShape>, float>>
+            shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS) {
+        param.pad_h = FS / 2;
+        param.pad_w = FS / 2;
+
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
+        TensorShape dst{N, OC, (H + 2 * param.pad_h - FS) / param.stride_h + 1,
+                        (W + 2 * param.pad_w - FS) / param.stride_w + 1};
+        float computations = (IC * FS * FS * dst.total_nr_elems() * 2) * 1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 48, 192, 15, 15, 1);
+
+    std::string algo_name = "IM2COLMATMUL:X86_INT8X8X16_AVX2";
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    shapes_and_computation.clear();
+}
+
 TEST_F(X86_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8_STRIDE2) {
     constexpr size_t RUNS = 50;
@@ -1985,7 +2030,7 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS,
         SmallVector<TensorShape> shapes{
                 {N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
         TensorShape dst{N, OC, (H + 2 * param.pad_h - FS) / param.stride_h + 1,
-                        (W + 2 * param.pad_w - FS) / param.pad_w + 1};
+                        (W + 2 * param.pad_w - FS) / param.stride_w + 1};
         float computations = (IC * FS * FS * dst.total_nr_elems() * 2) * 1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
