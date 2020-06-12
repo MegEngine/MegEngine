@@ -42,7 +42,7 @@ private:
 #if __ARM_FEATURE_DOTPROD
     class AlgoInt8x8x32K6x8x4;  // Armv7 Int8 Kernel 6x8x4
     class AlgoQuint8DotK4x8x4;  // Armv7 Quint8 Kernel 6x8x4
-    class AlgoInt8x8x32MK4_8x6x4DotProd;  // Armv7 nchw44 Int8x8x32 Kernel 8x6x4
+    class AlgoInt8x8x32MK4_8x4x4DotProd;  // Armv7 nchw44 Int8x8x32 Kernel 8x4x4
                                           // DotProduct
 #endif
     class AlgoPack;

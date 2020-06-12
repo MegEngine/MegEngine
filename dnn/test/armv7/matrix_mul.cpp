@@ -94,7 +94,7 @@ TEST_F(ARMV7, MATRIX_MUL_MK4_DOT_INT8) {
             for (size_t k : {1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 33, 34})
                 args.emplace_back(m, n, k, 0);
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle(), "AARCH32_INT8_MK4_8X6X4_DOTPROD",
+                                 handle(), "AARCH32_INT8_MK4_8X4X4_DOTPROD",
                                  param::MatrixMul::Format::MK4_DOT, 1, 1e-3,
                                  std::move(args));
 }
@@ -315,7 +315,7 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x32_MK4_DOT) {
     param.format = MatrixMul::Param::Format::MK4_DOT;
     Benchmarker<MatrixMul> benchmarker_mk4_dot(handle());
     benchmarker_mk4_dot.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("AARCH32_INT8_MK4_8X6X4_DOTPROD"));
+            AlgoChecker<MatrixMul>("AARCH32_INT8_MK4_8X4X4_DOTPROD"));
     benchmarker_mk4_dot.set_param(param)
             .set_dtype(0, dtype::Int8())
             .set_dtype(1, dtype::Int8())

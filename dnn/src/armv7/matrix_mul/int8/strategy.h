@@ -27,8 +27,8 @@ MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 4, 2, 16, false, false,
 MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 6, 8, 4, false, false,
                          gemm_dots8_6x8);
 
-MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 8, 6, 4, false, false,
-                         gemm_mk4_dots8_8x6);
+MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 8, 4, 4, false, false,
+                         gemm_mk4_dots8_8x4);
 #endif
 }  // namespace matmul
 }  // namespace armv7
