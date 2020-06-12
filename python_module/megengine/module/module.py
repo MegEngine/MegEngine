@@ -318,6 +318,7 @@ class Module(metaclass=ABCMeta):
         Set ``module``'s ``quantize_diabled`` attribute and return ``module``.
         Could be used as a decorator.
         """
+
         def fn(module: Module) -> None:
             module.quantize_diabled = value
 

@@ -80,9 +80,7 @@ def quantize(module: Module, inplace: bool = True):
 
 
 def quantize_qat(
-    module: Module,
-    inplace: bool = True,
-    qconfig: QConfig = ema_fakequant_qconfig,
+    module: Module, inplace: bool = True, qconfig: QConfig = ema_fakequant_qconfig,
 ):
     r"""
     Recursively convert float :class:`~.Module` to :class:`~.QATModule`
