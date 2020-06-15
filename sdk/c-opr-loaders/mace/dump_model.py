@@ -8,9 +8,10 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import argparse
 
-import megengine._internal as mgb
 import numpy as np
 import yaml
+from megengine import jit
+from megengine.module.external import ExternOprSubgraph
 
 
 # "1,3,224,224" -> (1,3,224,224)
@@ -89,26 +90,19 @@ def main():
             + raw_param
         )
 
-        # cn not ensured
-        cn = mgb.comp_node("xpux")
-        cg = mgb.comp_graph()
+        net = ExternOprSubgraph(wk_raw_content, "mace", osizes)
+        net.eval()
 
-        inp = [
-            mgb.make_shared(
-                comp_node=cn,
-                comp_graph=cg,
-                shape=isizes[i],
-                name=input_names[i],
-                dtype=np.float32,
-            )
-            for i in range(len(isizes))
+        @jit.trace(symbolic=True)
+        def inference(inputs):
+            return net(inputs)
+
+        inputs = [
+            np.random.random(isizes[i]).astype(np.float32) for i in range(len(isizes))
         ]
 
-        oup = mgb.opr.extern_c_opr_placeholder(
-            inp, osizes, dump_name="mace", dump_data=wk_raw_content,
-        )
-
-        mgb.serialize_comp_graph_to_file(args.output, oup)
+        inference.trace(inputs)
+        inference.dump(args.output)
 
 
 if __name__ == "__main__":
