@@ -549,8 +549,8 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
         rewriter.auto_replace_outputs(opr);
     });
 
-    static auto expand_into_origin_graph = [](cg::OperatorNodeBase* opr,
-        InternalGraphRewriter& rewriter, const VarNodeArray& grad_inputs) {
+    auto expand_into_origin_graph = [&rewriter](
+        cg::OperatorNodeBase* opr, const VarNodeArray& grad_inputs) {
         if (auto ph = gopt::try_cast_as_op<JITPlaceholder>(opr)) {
             rewriter.replace_var(
                 opr->output(0), grad_inputs.at(ph->input_id()));
@@ -571,7 +571,7 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
         // oprs
         using namespace std::placeholders;
         rewriter.iter(std::bind(expand_into_origin_graph, _1,
-                std::ref(rewriter), std::cref(grad_inputs)));
+                std::cref(grad_inputs)));
         return rewriter.dest_var();
     } else {
         VarNodeArray new_grad_inputs;
@@ -602,7 +602,7 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
             // infer and const folding mechanism
             using namespace std::placeholders;
             rewriter.iter(std::bind(expand_into_origin_graph, _1,
-                    std::ref(rewriter), std::cref(new_grad_inputs)));
+                    std::cref(new_grad_inputs)));
             return rewriter.dest_var();
         }
         gx = rewriter.dest_var();
