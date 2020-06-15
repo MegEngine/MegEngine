@@ -106,8 +106,8 @@ if(MSVC OR WIN32)
     if (${CMAKE_C_COMPILER_ID} STREQUAL "Clang-cl")
         message(FATAL_ERROR "only support clang-cl for windows build, pls check detail: scripts/cmake-build/BUILD_README.md")
     endif()
-    # add flags for sse/avx for X86
-    set(WIN_FLAGS "-msse4.2 -mavx -mavx2")
+    # add flags for enable sse instruction optimize for X86, enable avx header to compile avx code
+    set(WIN_FLAGS "-msse4.2 -O2 -D_AVX_ -D_AVX2_ -D__AVX__ -D__AVX2__ -D__FMA__")
     # if u CPU is cascadelake series, u can enable for performance
     # set(WIN_FLAGS "{WIN_FLAGS} -march=cascadelake -mtune=cascadelake")
     # set(WIN_FLAGS "{WIN_FLAGS} -mavx512cd -mavx512vl -mavx512dq -mavx512bw -mavx512vbmi -mavx512vnni")

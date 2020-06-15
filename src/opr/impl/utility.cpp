@@ -476,7 +476,9 @@ void AssertEqual::scn_do_execute_finish(const DeviceTensorND &) {
     auto err = DTypeScalar::make_from_raw(
             m_hv.dtype(), m_hv.raw_ptr()).get_cast<float>();
     if (m_param.verbose) {
-        fprintf(stderr,
+        //! FIXME: stderr will be slow when build windows with VS clang-cl (test in VM),
+        //! but I can`t find the root case. fix it when you figure out
+        fprintf(stdout,
                 "AssertEqual: err=%g (name=%s id=%zu)\n", err, cname(), id());
     }
     if (!(err >= 0 && err <= m_param.maxerr)) {
