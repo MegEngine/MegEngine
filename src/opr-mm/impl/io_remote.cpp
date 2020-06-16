@@ -18,6 +18,10 @@
 using namespace mgb;
 using namespace opr;
 
+cudaStream_t get_stream(VarNode* var) {
+    return CompNodeEnv::from_comp_node(var->comp_node()).cuda_env().stream;
+}
+
 /* ===================== RemoteSend ===================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteSend);
@@ -35,7 +39,6 @@ RemoteSend::RemoteSend(const PeerDesc& peer, VarNode* var,
         ovar->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
                 .add_flag(VarNode::Flag::VOLATILE_CONTENT);
     }
-    m_megray_ctx = MegRay::Context::make();
     add_equivalence_component<ScalarHash<void*>>(this);
 }
 
@@ -56,6 +59,9 @@ void RemoteSend::scn_do_execute() {
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
                 reg_info.hash, m_peer.key, 2, 0, MegRay::MEGRAY_UCX, m_group_client);
+
+        m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
+
         m_init = true;
     }
 
@@ -130,7 +136,6 @@ RemoteRecv::RemoteRecv(const PeerDesc& peer, cg::ComputingGraph& graph,
             ->dtype(dtype)
             .add_flag(VarNode::Flag::NO_MEM_RECLAIM)
             .add_flag(VarNode::Flag::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC);
-    m_megray_ctx = MegRay::Context::make();
     add_equivalence_component<ScalarHash<void*>>(this);
 }
 
@@ -154,6 +159,9 @@ void RemoteRecv::scn_do_execute() {
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
                 reg_info.hash, m_peer.key, 2, 1, MegRay::MEGRAY_UCX, m_group_client);
+
+        m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
+
         m_init = true;
     }
 

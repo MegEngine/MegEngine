@@ -25,9 +25,10 @@ using namespace opr;
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CollectiveComm);
 
-#define FOREACH_MODE(cb)                                                   \
-    cb(ALL_REDUCE_SUM) cb(ALL_REDUCE_MAX) cb(ALL_REDUCE_MIN) cb(BROADCAST) \
-            cb(REDUCE_SUM) cb(ALL_GATHER) cb(REDUCE_SCATTER_SUM)
+#define FOREACH_MODE(cb)                                                    \
+    cb(ALL_REDUCE_SUM) cb(ALL_REDUCE_MAX) cb(ALL_REDUCE_MIN) cb(BROADCAST)  \
+            cb(REDUCE_SUM) cb(ALL_GATHER) cb(REDUCE_SCATTER_SUM) cb(GATHER) \
+            cb(SCATTER) cb(ALL_TO_ALL)
 
 namespace {
 
@@ -84,6 +85,9 @@ class CollectiveComm::ModeTrait {
     class ALL_REDUCE_SUM;
     class ALL_REDUCE_MAX;
     class ALL_REDUCE_MIN;
+    class GATHER;
+    class SCATTER;
+    class ALL_TO_ALL;
 
     class ReducedBasedTrait;
     class AllReduceBase;
@@ -348,6 +352,102 @@ class CollectiveComm::ModeTrait::BROADCAST : public ModeTrait {
     }
 
     Mode grad_mode() override { return Mode::REDUCE_SUM; }
+};
+
+class CollectiveComm::ModeTrait::GATHER : public ModeTrait {
+    void add_output_var(CollectiveComm* opr,
+                        const CompNode::UnorderedSet&) override {
+        add_output_var_all2all(opr);
+    }
+
+    void get_output_var_shape(const CollectiveComm* opr,
+                              const TensorShapeArray& ishp,
+                              TensorShapeArray& oshp) override {
+        MGB_MARK_USED_VAR(opr);
+        chk_shape_equal(ishp);
+        if (opr->is_root()) {
+            oshp[0] = ishp[0];
+            oshp[0][0] *= opr->nr_devices();
+        } else {
+            oshp[0] = TensorShape{1};
+        }
+    }
+
+    void exec(CollectiveComm* opr) override {
+        auto&& iv = opr->input(0)->dev_tensor();
+        void* recvbuf = nullptr;
+        if (opr->is_root()) {
+            recvbuf = opr->output(0)->dev_tensor().raw_ptr();
+        }
+        auto status = opr->m_megray_comm->gather(
+                (void*)iv.raw_ptr(), recvbuf, iv.shape().total_nr_elems(),
+                get_megray_dtype(iv.dtype()), opr->m_root, opr->megray_ctx());
+        mgb_assert(status == MegRay::MEGRAY_OK, "MegRay gather failed");
+    }
+
+    Mode grad_mode() override { return Mode::SCATTER; }
+};
+
+class CollectiveComm::ModeTrait::SCATTER : public ModeTrait {
+    void add_output_var(CollectiveComm* opr,
+                        const CompNode::UnorderedSet&) override {
+        if (opr->input().size() > 0) {
+            add_output_var_all2all(opr);
+            return;
+        }
+
+        const auto& cns = opr->config().comp_node();
+        mgb_assert(cns.size() == 1, "exactly one comp_node expected, got %zu", cns.size());
+        auto pname = get_param_name(opr->param());
+        opr->add_output(ssprintf("%s:%s", pname, opr->key().c_str()))->comp_node(cns[0]);
+    }
+
+    void get_output_var_shape(const CollectiveComm* opr,
+                              const TensorShapeArray& ishp,
+                              TensorShapeArray& oshp) override {
+        mgb_throw(MegBrainError, "SCATTER should not use get_output_var_shape");
+    }
+
+    void exec(CollectiveComm* opr) override {
+        auto&& ov = opr->output(0)->dev_tensor();
+        void* sendbuf = nullptr;
+        void* recvbuf = ov.raw_ptr();
+        if (opr->is_root()) {
+            sendbuf = opr->input(0)->dev_tensor().raw_ptr();
+        }
+        auto status = opr->m_megray_comm->scatter(
+                sendbuf, recvbuf, ov.shape().total_nr_elems(),
+                get_megray_dtype(ov.dtype()), opr->m_root, opr->megray_ctx());
+        mgb_assert(status == MegRay::MEGRAY_OK, "MegRay scatter failed");
+    }
+
+    Mode grad_mode() override { return Mode::GATHER; }
+};
+
+class CollectiveComm::ModeTrait::ALL_TO_ALL : public ModeTrait {
+    void add_output_var(CollectiveComm* opr,
+                        const CompNode::UnorderedSet&) override {
+        add_output_var_all2all(opr);
+    }
+
+    void get_output_var_shape(const CollectiveComm* opr,
+                              const TensorShapeArray& ishp,
+                              TensorShapeArray& oshp) override {
+        chk_shape_equal(ishp);
+        oshp = ishp;
+    }
+
+    void exec(CollectiveComm* opr) override {
+        auto&& iv = opr->input(0)->dev_tensor();
+        auto&& ov = opr->output(0)->dev_tensor();
+        auto status = opr->m_megray_comm->all_to_all(
+                (void*)iv.raw_ptr(), (void*)ov.raw_ptr(),
+                iv.shape().total_nr_elems() / opr->nr_devices(),
+                get_megray_dtype(iv.dtype()), opr->megray_ctx());
+        mgb_assert(status == MegRay::MEGRAY_OK, "MegRay all_to_all failed");
+    }
+
+    Mode grad_mode() override { return Mode::ALL_TO_ALL; }
 };
 
 CollectiveComm::ModeTrait& CollectiveComm::ModeTrait::from_mode(Mode mode) {
@@ -651,41 +751,20 @@ void CollectiveComm::init_output_dtype() {
 }
 
 void CollectiveComm::init_output_static_infer_desc() {
-    if (m_param.mode == Param::Mode::REDUCE_SUM) {
-        using namespace cg::static_infer;
-        auto&& mgr = owner_graph()->static_infer_manager();
-
-        auto infer_shape_from_input = [](TensorShape& dest, const InpVal& inp_val) {
-            dest = inp_val.val[0].shape();
-            return true;
-        };
-
-        auto infer_shape_constant = [](TensorShape& dest, const InpVal&) {
-            dest = TensorShape{1};
-            return true;
-        };
-
-        mgb_assert(input().size() == 1);
-        mgb_assert(output().size() == 1);
-
-        if (is_root()) {
-            mgr.register_shape_infer(output(0),
-                {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape_from_input});
-        } else {
-            mgr.register_shape_infer(output(0),
-                {SourceType::CONSTANT, {}, infer_shape_constant});
-        }
-
-    } else if (m_param.mode == Param::Mode::BROADCAST) {
+    if (m_param.mode == Param::Mode::BROADCAST ||
+        m_param.mode == Param::Mode::SCATTER) {
         using namespace cg::static_infer;
         auto&& mgr = owner_graph()->static_infer_manager();
 
         auto infer_shape_from_input = [this](TensorShape& dest, const InpVal& inp_val) {
-            if (!m_broadcast_output_shape.valid()) {
-                m_broadcast_output_shape = inp_val.val[0].shape();
-                m_group_client->set_output_shape(m_key, m_broadcast_output_shape.val());
-            }
             dest = inp_val.val[0].shape();
+            if (m_param.mode == Param::Mode::SCATTER) {
+                dest[0] /= nr_devices();
+            }
+            if (!m_output_shape.valid()) {
+                m_output_shape = dest;
+                m_group_client->set_output_shape(m_key, dest);
+            }
             return true;
         };
 
@@ -694,10 +773,11 @@ void CollectiveComm::init_output_static_infer_desc() {
                 return false;
             }
 
-            if (!m_broadcast_output_shape.valid()) {
-                m_broadcast_output_shape = m_group_client->get_output_shape(m_key);
+            if (!m_output_shape.valid()) {
+                m_output_shape = m_group_client->get_output_shape(m_key);
             }
-            dest = m_broadcast_output_shape.val();
+
+            dest = m_output_shape.val();
             return true;
         };
 

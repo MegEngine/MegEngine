@@ -122,8 +122,9 @@ private:
     //! root of BROADCAST and REDUCE operation
     int m_root;
     //! rank of root of BROADCAST and REDUCE operation
-    Maybe<TensorShape> m_broadcast_output_shape = None;
-    // Whether shape infer is enabled. This is only used by BROADCAST operation,
+    Maybe<TensorShape> m_output_shape = None;
+    // Whether shape infer is enabled.
+    // This is only used by BROADCAST and SCATTER operation,
     // whose shape infer should be disabled *during* static infer phase.
     bool m_enable_shape_infer = false;
 

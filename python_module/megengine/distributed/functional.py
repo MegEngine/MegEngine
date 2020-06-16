@@ -40,6 +40,32 @@ def reduce_sum(
     )
 
 
+def gather(
+    tensor: Tensor,
+    key: str,
+    nr_ranks: Optional[int] = None,
+    is_root: Optional[bool] = None,
+    rank: Optional[int] = None,
+) -> Tensor:
+    """Create gather operator for collective communication
+
+    :param tensor: input tensor
+    :param key: unique identifier for collective communication
+    :param nr_ranks: number of ranks, use util.get_world_size() as default
+    :param is_root: whether this is a root node
+    :param rank: rank of this node
+    """
+    return _collective_comm(
+        tensor,
+        key,
+        CollParam.Mode.GATHER,
+        nr_ranks,
+        is_root,
+        rank,
+        device=tensor.device,
+    )
+
+
 def broadcast(
     tensor: Tensor,
     key: str,
@@ -72,6 +98,56 @@ def broadcast(
         dtype=tensor.dtype,
         device=tensor.device,
     )
+
+
+def scatter(
+    tensor: Tensor,
+    key: str,
+    nr_ranks: Optional[int] = None,
+    is_root: Optional[bool] = None,
+    rank: Optional[int] = None,
+) -> Tensor:
+    """Create scatter operator for collective communication
+
+    :param tensor: input tensor
+    :param key: unique identifier for collective communication
+    :param nr_ranks: number of ranks, use util.get_world_size() as default
+    :param is_root: whether this is a root node
+    :param rank: rank of this node
+    """
+    if key is None:
+        key = tensor._symvar.name
+    if is_root is None:
+        is_root = get_rank() == 0
+
+    if is_root:
+        inp = tensor
+    else:
+        inp = tensor._symvar.owner_graph
+
+    return _collective_comm(
+        inp,
+        key,
+        CollParam.Mode.SCATTER,
+        nr_ranks,
+        is_root,
+        rank,
+        dtype=tensor.dtype,
+        device=tensor.device,
+    )
+
+
+def all_to_all(
+    tensor: Tensor, key: str, nr_ranks: Optional[int] = None, rank: Optional[int] = None
+) -> Tensor:
+    """Create all_to_all operator for collective communication
+
+    :param tensor: input tensor
+    :param key: unique identifier for collective communication
+    :param nr_ranks: number of ranks, use util.get_world_size() as default
+    :param rank: rank of this node
+    """
+    return _collective_comm(tensor, key, CollParam.Mode.ALL_TO_ALL, nr_ranks, rank=rank)
 
 
 def all_gather(

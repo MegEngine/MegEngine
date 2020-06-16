@@ -56,7 +56,10 @@ pdef('PersistentOutputStorage').add_fields(
            Doc('ALL_REDUCE_SUM', 'every output gets the sum of all inputs'),
            Doc('ALL_REDUCE_MAX', 'every output gets the max of all inputs'),
            Doc('ALL_REDUCE_MIN', 'every output gets the min of all inputs'),
-           Doc('ALL_REDUCE_PROD', 'every output gets the prod of all inputs')))
+           Doc('ALL_REDUCE_PROD', 'every output gets the prod of all inputs'),
+           Doc('GATHER', 'concat inputs to one node'),
+           Doc('SCATTER', 'scatter input to each output computing node'),
+           Doc('ALL_TO_ALL', 'scatter inputs and gather them on each computing node')))
 
 (pdef('FakeSerializedDType',
       'HACK: The tag of this param def is actually used for another '
