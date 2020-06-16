@@ -14,6 +14,10 @@
 #include "megdnn/tensor_iter.h"
 #include "src/naive/handle.h"
 
+#include "midout.h"
+
+MIDOUT_DECL(naive_relayout)
+
 using namespace megdnn;
 using namespace naive;
 
@@ -48,22 +52,24 @@ void RelayoutForwardImpl::exec(
     do_exec(src, dst);
 }
 
-void RelayoutForwardImpl::do_exec(
-        _megdnn_tensor_in src, _megdnn_tensor_out dst) {
-    switch(src.layout.dtype.enumv()) {
-#define cb(_dt) \
-        case DTypeEnum::_dt: \
-        { \
-            MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                    do_copy<DTypeTrait<dtype::_dt>::ctype>(dst, src)); \
-            return; \
-        }
-        MEGDNN_FOREACH_DTYPE_NAME(cb)
-        MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
-#undef cb
-        default:
-            megdnn_throw("bad dtype");
+void RelayoutForwardImpl::do_exec(_megdnn_tensor_in src,
+                                  _megdnn_tensor_out dst) {
+    MIDOUT_BEGIN(naive_relayout, midout_iv(0)) {
+        switch (src.layout.dtype.enumv()) {
+#define cb(_dt)                                                    \
+    case DTypeEnum::_dt: {                                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                              \
+                do_copy<DTypeTrait<dtype::_dt>::ctype>(dst, src)); \
+        return;                                                    \
     }
+            MEGDNN_FOREACH_DTYPE_NAME(cb)
+            MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)
+#undef cb
+            default:
+                megdnn_throw("bad dtype");
+        }
+    }
+    MIDOUT_END();
 }
 
 void RelayoutForwardImpl::check_cpu_handle(Handle *handle) {

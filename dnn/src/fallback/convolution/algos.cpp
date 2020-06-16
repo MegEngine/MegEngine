@@ -250,8 +250,11 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoNaive::dispatch_kern(
             param.compute_mode == param::ConvBias::ComputeMode::cmode) { \
             using ctype = DTypeTrait<dt>::ctype;                         \
             using comp_type = DTypeTrait<compute_type>::ctype;           \
-            return {{kern_naive_forward<ctype, ctype, comp_type>,        \
-                     {group, N, 1_z}}};                                  \
+            MIDOUT_BEGIN(megdnn_fallback_conv, midout_iv(1)) {           \
+                return {{kern_naive_forward<ctype, ctype, comp_type>,    \
+                         {group, N, 1_z}}};                              \
+            }                                                            \
+            MIDOUT_END();                                                \
         }                                                                \
     } while (0)
 
@@ -262,16 +265,19 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoNaive::dispatch_kern(
 #endif
 #undef cb
 
-#define cb(dt_src, dt_dst)                                            \
-    do {                                                              \
-        if (param.src_type.enumv() == DTypeTrait<dt_src>::enumv &&    \
-            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv && \
-            param.dst_type.enumv() == DTypeTrait<dt_dst>::enumv) {    \
-            return {{kern_naive_forward<DTypeTrait<dt_src>::ctype,    \
-                                        DTypeTrait<dt_dst>::ctype,    \
-                                        DTypeTrait<dt_dst>::ctype>,   \
-                     {group, N, 1_z}}};                               \
-        }                                                             \
+#define cb(dt_src, dt_dst)                                              \
+    do {                                                                \
+        if (param.src_type.enumv() == DTypeTrait<dt_src>::enumv &&      \
+            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv &&   \
+            param.dst_type.enumv() == DTypeTrait<dt_dst>::enumv) {      \
+            MIDOUT_BEGIN(megdnn_fallback_conv, midout_iv(2)) {          \
+                return {{kern_naive_forward<DTypeTrait<dt_src>::ctype,  \
+                                            DTypeTrait<dt_dst>::ctype,  \
+                                            DTypeTrait<dt_dst>::ctype>, \
+                         {group, N, 1_z}}};                             \
+            }                                                           \
+            MIDOUT_END();                                               \
+        }                                                               \
     } while (0)
     cb(dtype::Int8, dtype::Int16);
     cb(dtype::Int8, dtype::Int32);

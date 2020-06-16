@@ -27,9 +27,15 @@ endif()
 
 
 
+
 add_executable(megdnn_test ${SOURCES})
 target_link_libraries(megdnn_test gtest)
 target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS})
+
+target_include_directories(megdnn_test
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/third_party/midout/src
+)
 
 if(UNIX)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")

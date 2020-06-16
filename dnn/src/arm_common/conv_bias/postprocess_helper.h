@@ -15,15 +15,23 @@
 #include "src/arm_common/elemwise_helper/kimpl/op_base.h"
 #include "src/arm_common/elemwise_op.h"
 #include "src/fallback/conv_bias/opr_impl.h"
+
+#include "midout.h"
+
+MIDOUT_DECL(arm_common_conv_bias_postprocess_helper)
+
 namespace {
 
 
 #define CONCAT_OP(_name) megdnn::arm_common::_name
 #define CONCAT_NL(_name) megdnn::NonlineMode::_name
 
-#define CB(_caller, _op, _mode) \
-    case _mode:                 \
-        _caller(_op);           \
+#define CB(_caller, _op, _mode, midout_tag)                                    \
+    case _mode:                                                                \
+        MIDOUT_BEGIN(arm_common_conv_bias_postprocess_helper, 1, midout_tag) { \
+            _caller(_op);                                                      \
+        }                                                                      \
+        MIDOUT_END();                                                          \
         break;
 
 #define DEFAULT                                 \
@@ -65,44 +73,53 @@ namespace {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
                     dst_type, N* OC* OH* OW* pack_oc_size);
 
-#define FOR_BIAS(_mode)                                               \
-    switch (_mode) {                                                  \
-        case megdnn::BiasMode::NO_BIAS:                               \
-            FOR_NONLINEAR_NOBIAS(FOR_NONLINEAR_UNARY)                 \
-            break;                                                    \
-        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:                \
-            if (pack_oc_size == 1) {                                  \
-                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
-            } else {                                                  \
-                megdnn_assert(pack_oc_size == 4,                      \
-                              "Only support nchw44 in ARM");          \
-                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44); \
-            }                                                         \
-            break;                                                    \
-        case megdnn::BiasMode::BIAS:                                  \
-            FOR_NONLINEAR(FOR_NONLINEAR_BINARY)                       \
-            break;                                                    \
-        default:                                                      \
-            megdnn_throw("no quantized unsupported biasmode");        \
-            break;                                                    \
+#define FOR_BIAS(_mode)                                                   \
+    switch (_mode) {                                                      \
+        case megdnn::BiasMode::NO_BIAS:                                   \
+            MIDOUT_BEGIN(arm_common_conv_bias_postprocess_helper, 0, 0) { \
+                FOR_NONLINEAR_NOBIAS(FOR_NONLINEAR_UNARY);                \
+            }                                                             \
+            MIDOUT_END();                                                 \
+            break;                                                        \
+        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:                    \
+            MIDOUT_BEGIN(arm_common_conv_bias_postprocess_helper, 0, 1) { \
+                if (pack_oc_size == 1) {                                  \
+                    FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
+                } else {                                                  \
+                    megdnn_assert(pack_oc_size == 4,                      \
+                                  "Only support nchw44 in ARM");          \
+                    FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44); \
+                }                                                         \
+            }                                                             \
+            MIDOUT_END();                                                 \
+            break;                                                        \
+        case megdnn::BiasMode::BIAS:                                      \
+            MIDOUT_BEGIN(arm_common_conv_bias_postprocess_helper, 0, 2) { \
+                FOR_NONLINEAR(FOR_NONLINEAR_BINARY);                      \
+            }                                                             \
+            MIDOUT_END();                                                 \
+            break;                                                        \
+        default:                                                          \
+            megdnn_throw("no quantized unsupported biasmode");            \
+            break;                                                        \
     }
 
-#define FOR_NONLINEAR(_caller)                                       \
-    switch (nonlineMode) {                                           \
-        CB(_caller, CONCAT_OP(AddOp), CONCAT_NL(IDENTITY))           \
-        CB(_caller, CONCAT_OP(FuseAddReluOp), CONCAT_NL(RELU))       \
-        CB(_caller, CONCAT_OP(FuseAddSigmoidOp), CONCAT_NL(SIGMOID)) \
-        CB(_caller, CONCAT_OP(FuseAddHSwishOp), CONCAT_NL(H_SWISH))  \
-        DEFAULT                                                      \
+#define FOR_NONLINEAR(_caller)                                          \
+    switch (nonlineMode) {                                              \
+        CB(_caller, CONCAT_OP(AddOp), CONCAT_NL(IDENTITY), 3)           \
+        CB(_caller, CONCAT_OP(FuseAddReluOp), CONCAT_NL(RELU), 4)       \
+        CB(_caller, CONCAT_OP(FuseAddSigmoidOp), CONCAT_NL(SIGMOID), 5) \
+        CB(_caller, CONCAT_OP(FuseAddHSwishOp), CONCAT_NL(H_SWISH), 6)  \
+        DEFAULT                                                         \
     }
 
-#define FOR_NONLINEAR_NOBIAS(_caller)                         \
-    switch (nonlineMode) {                                    \
-        HANDLE_IDENTITY()                                     \
-        CB(_caller, CONCAT_OP(ReluOp), CONCAT_NL(RELU))       \
-        CB(_caller, CONCAT_OP(SigmoidOp), CONCAT_NL(SIGMOID)) \
-        CB(_caller, CONCAT_OP(HSwishOp), CONCAT_NL(H_SWISH))  \
-        DEFAULT                                               \
+#define FOR_NONLINEAR_NOBIAS(_caller)                             \
+    switch (nonlineMode) {                                        \
+        HANDLE_IDENTITY()                                         \
+        CB(_caller, CONCAT_OP(ReluOp), CONCAT_NL(RELU), 7);       \
+        CB(_caller, CONCAT_OP(SigmoidOp), CONCAT_NL(SIGMOID), 8); \
+        CB(_caller, CONCAT_OP(HSwishOp), CONCAT_NL(H_SWISH), 9);  \
+        DEFAULT                                                   \
     }
 
 template <typename ctype, typename dtype = ctype,
@@ -177,20 +194,20 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
     case megdnn::NonlineMode::IDENTITY:            \
         _caller(_op) break;
 
-#define FOR_NONLINEAR(_caller)                                      \
-    switch (nonlineMode) {                                          \
-        HANDLE_IDENTITY(_caller, CONCAT_OP(AddOp))                  \
-        CB(_caller, CONCAT_OP(FuseAddReluOp), CONCAT_NL(RELU))      \
-        CB(_caller, CONCAT_OP(FuseAddHSwishOp), CONCAT_NL(H_SWISH)) \
-        DEFAULT                                                     \
+#define FOR_NONLINEAR(_caller)                                          \
+    switch (nonlineMode) {                                              \
+        HANDLE_IDENTITY(_caller, CONCAT_OP(AddOp))                      \
+        CB(_caller, CONCAT_OP(FuseAddReluOp), CONCAT_NL(RELU), 10)      \
+        CB(_caller, CONCAT_OP(FuseAddHSwishOp), CONCAT_NL(H_SWISH), 11) \
+        DEFAULT                                                         \
     }
 
-#define FOR_NONLINEAR_NOBIAS(_caller)                        \
-    switch (nonlineMode) {                                   \
-        HANDLE_IDENTITY(_caller, CONCAT_OP(TypeCvtOp))       \
-        CB(_caller, CONCAT_OP(ReluOp), CONCAT_NL(RELU))      \
-        CB(_caller, CONCAT_OP(HSwishOp), CONCAT_NL(H_SWISH)) \
-        DEFAULT                                              \
+#define FOR_NONLINEAR_NOBIAS(_caller)                            \
+    switch (nonlineMode) {                                       \
+        HANDLE_IDENTITY(_caller, CONCAT_OP(TypeCvtOp))           \
+        CB(_caller, CONCAT_OP(ReluOp), CONCAT_NL(RELU), 12)      \
+        CB(_caller, CONCAT_OP(HSwishOp), CONCAT_NL(H_SWISH), 13) \
+        DEFAULT                                                  \
     }
 
 #define FOR_BIAS(_bias_mode, OH, OW)                                  \

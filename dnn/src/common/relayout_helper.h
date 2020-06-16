@@ -13,6 +13,10 @@
 #include "megdnn/oprs.h"
 #include "src/common/utils.h"
 
+#include "midout.h"
+
+MIDOUT_DECL(transpose_fallback)
+
 namespace megdnn {
 namespace relayout {
 
@@ -107,13 +111,15 @@ void transpose(size_t batch, size_t m, size_t n, T* src, T* dst) {
     auto work_block = [m, n, &batch_src, &batch_dst](
                               const size_t i, const size_t j, const size_t h,
                               const size_t w) {
-
         auto src = batch_src + i * n + j, dst = batch_dst + j * m + i;
-        if (h == B && w == B) {
-            transpose_block(src, dst, n, m);
-        } else {
-            transpose_block(src, dst, n, m, h, w);
+        MIDOUT_BEGIN(transpose_fallback, midout_iv(0)) {
+            if (h == B && w == B) {
+                transpose_block(src, dst, n, m);
+            } else {
+                transpose_block(src, dst, n, m, h, w);
+            }
         }
+        MIDOUT_END();
     };
     auto work_row = [&work_block, n](size_t i, size_t h) {
         size_t j = 0;

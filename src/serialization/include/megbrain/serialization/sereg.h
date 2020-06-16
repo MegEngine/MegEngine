@@ -135,7 +135,7 @@ MGB_OPR_REGISTRY_CALLER_SPECIALIZE
  */
 #define MGB_SEREG_OPR_INTL_CALL_ENTRY(_cls, _impl) \
 namespace {  \
-    ::mgb::serialization::OprRegistryCaller<_cls, _impl> \
+    [[gnu::unused]] ::mgb::serialization::OprRegistryCaller<_cls, _impl> \
             __caller_OprReg##_cls##_ins; \
 }
 
@@ -244,7 +244,7 @@ struct IsComplete<T, decltype(void(sizeof(T)))> : std::true_type {};
                 MGB_REG_OPR_SHALLOW_COPY_IMPL(_cls, _copy); \
             } \
         };  \
-        ::mgb::serialization::OprRegistryCaller< \
+        [[gnu::unused]] ::mgb::serialization::OprRegistryCaller< \
             _cls, _OprRegShallowCopy##_cls> \
         __caller_OprRegShallowCopy##_cls##_ins; \
     }

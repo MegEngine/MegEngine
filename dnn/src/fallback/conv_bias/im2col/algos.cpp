@@ -442,20 +442,35 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
             get_matmul_kern_param(param, ohw_tile_size, oc_tile_size);
 
     if (m_matmul_algo->packmode() == Pack_Mode::DEFAULT) {
-        Im2colKerns<Pack_Mode::DEFAULT> defaultkern;
-        ws = defaultkern.get_thread_bundle(param, im2col_kern_param,
-                                           m_matmul_algo, ohw_tile_size,
-                                           oc_tile_size);
+        MIDOUT_BEGIN(
+                megdnn_fallback_im2col,
+                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_dft"_hash)) {
+            Im2colKerns<Pack_Mode::DEFAULT> defaultkern;
+            ws = defaultkern.get_thread_bundle(param, im2col_kern_param,
+                                               m_matmul_algo, ohw_tile_size,
+                                               oc_tile_size);
+        }
+        MIDOUT_END();
     } else if (m_matmul_algo->packmode() == Pack_Mode::ONLY_PACKA) {
-        Im2colKerns<Pack_Mode::ONLY_PACKA> onlypackakern;
-        ws = onlypackakern.get_thread_bundle(param, im2col_kern_param,
-                                             m_matmul_algo, ohw_tile_size,
-                                             oc_tile_size);
+        MIDOUT_BEGIN(
+                megdnn_fallback_im2col,
+                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_packa"_hash)) {
+            Im2colKerns<Pack_Mode::ONLY_PACKA> onlypackakern;
+            ws = onlypackakern.get_thread_bundle(param, im2col_kern_param,
+                                                 m_matmul_algo, ohw_tile_size,
+                                                 oc_tile_size);
+        }
+        MIDOUT_END();
     } else {
-        Im2colKerns<Pack_Mode::NO_PACK> nopackkern;
-        ws = nopackkern.get_thread_bundle(param, im2col_kern_param,
-                                          m_matmul_algo, ohw_tile_size,
-                                          oc_tile_size);
+        MIDOUT_BEGIN(
+                megdnn_fallback_im2col,
+                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_other"_hash)) {
+            Im2colKerns<Pack_Mode::NO_PACK> nopackkern;
+            ws = nopackkern.get_thread_bundle(param, im2col_kern_param,
+                                              m_matmul_algo, ohw_tile_size,
+                                              oc_tile_size);
+        }
+        MIDOUT_END();
     }
 
     return {nullptr,

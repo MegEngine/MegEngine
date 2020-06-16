@@ -19,6 +19,9 @@
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
 
+#include "midout.h"
+MIDOUT_DECL(megdnn_fallback_conv_bias_winograd_common)
+
 namespace megdnn {
 namespace winograd {
 
@@ -440,9 +443,12 @@ public:
                                       unit_oc_size](
                                              const NCBKernParam& ncb_param,
                                              const NCBKernIndex& ncb_index) {
-            winograd_compute(strategy, bundle_top, bundle_compute, matmul_algo,
-                             matmul_param, unit_tile_size, unit_oc_size,
-                             ncb_param, std::move(ncb_index));
+            MIDOUT_BEGIN(megdnn_fallback_conv_bias_winograd_common, 0, 0) {
+                winograd_compute(strategy, bundle_top, bundle_compute,
+                                 matmul_algo, matmul_param, unit_tile_size,
+                                 unit_oc_size, ncb_param, std::move(ncb_index));
+            }
+            MIDOUT_END();
         };
         kerns.push_back(
                 {winograd_compute_kern, {GROUP, N, nr_hw_tiles, nr_oc_tiles}});
