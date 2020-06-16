@@ -33,7 +33,7 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam matmul_param,
-                    fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
+                    const fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
     size_t sh = param.filter_meta.stride[0];
     size_t sw = param.filter_meta.stride[1];
     size_t oc = param.filter_meta.ocpg;

@@ -173,7 +173,7 @@ void StrategyFuse4x4x16Nchw44<op_ctype, op_dtype, postprocess_mode>::
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam,
-                    fallback::MatrixMulImpl::AlgoBase*) {
+                    const fallback::MatrixMulImpl::AlgoBase*) {
     size_t ow = param.osz[1];
     size_t ic = param.filter_meta.icpg;
     size_t ih = param.isz[0] + param.filter_meta.padding[0] * 2;

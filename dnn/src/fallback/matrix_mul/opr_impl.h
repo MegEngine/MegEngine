@@ -104,6 +104,12 @@ public:
             size_t m, n, k;
         };
 
+        struct MatmulDescription {
+            PackMode packmode;
+            InnerBlockSize innerblocksize;
+            size_t packa_type_size;
+        };
+
         virtual bool usable(const KernSizeParam&) const = 0;
         virtual bool preferred(const KernSizeParam&) const { return true; }
         virtual size_t get_workspace(const KernSizeParam&) const = 0;
@@ -125,11 +131,11 @@ public:
         virtual InnerBlockSize get_inner_block_size() const {
             megdnn_assert(0);
         };
-        virtual size_t get_packA_type_size() const { megdnn_assert(0); };
         bool preferred_reproducible(const KernSizeParam& param,
                                     bool reproducible = true) {
             return (!reproducible || is_reproducible()) && preferred(param);
         };
+        virtual MatmulDescription matmul_description() const = 0;
     };
 
     /**

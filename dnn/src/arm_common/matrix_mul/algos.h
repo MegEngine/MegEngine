@@ -12,6 +12,7 @@
 #pragma once
 
 #include "src/arm_common/matrix_mul/opr_impl.h"
+#include "src/fallback/matrix_mul/gemm_common.h"
 
 namespace megdnn {
 namespace arm_common {
@@ -25,6 +26,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32Gemv : public AlgoBase {
@@ -38,6 +40,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
 };
 
 class MatrixMulImpl::AlgoF32Gemv : public AlgoBase {
@@ -54,6 +57,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -68,6 +72,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
 };
 #endif
 
@@ -82,6 +87,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
 };
 
 

@@ -37,6 +37,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
 };
 
 }  // namespace fallback

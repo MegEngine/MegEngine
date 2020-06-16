@@ -21,8 +21,10 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
         packA_kern(WorkspaceBundle bundle,
                    const fallback::ConvBiasImpl::NCBKernParam& param,
                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
-                   fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                   const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                   const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
+                           matmul_desc,
                    size_t) {
     bundle.set(param.workspace_ptr);
     fallback::MatrixMulImpl::KernParam matmul_param;
@@ -31,16 +33,16 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
             matmulparam;
     size_t packA_group_size = matmul_algo->get_bundle(matmul_param).get_size(0);
     size_t packed_per_oc_block_size =
-            round_up(matmul_param.K, matmul_algo->get_inner_block_size().k) *
-            matmul_algo->get_inner_block_size().m *
-            matmul_algo->get_packA_type_size();
+            round_up(matmul_param.K, matmul_desc.innerblocksize.k) *
+            matmul_desc.innerblocksize.m * matmul_desc.packa_type_size;
+
     size_t a_panel_offset = ncb_index.ndrange_id[1] * packed_per_oc_block_size;
     int8_t* a_panel = static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX)) +
                       group_id * packA_group_size + a_panel_offset;
     matmul_param.A_ptr =
             const_cast<src_ctype*>(param.filter<src_ctype>(group_id));
     matmul_algo->pack_A(matmul_param, a_panel, ncb_index.ndrange_id[1],
-                        matmul_algo->get_inner_block_size().m);
+                        matmul_desc.innerblocksize.m);
 }
 
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
@@ -52,7 +54,7 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam matmul_param,
-                    fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
+                    const fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
     size_t sh = param.filter_meta.stride[0];
     size_t sw = param.filter_meta.stride[1];
     size_t oc = param.filter_meta.ocpg;
@@ -140,11 +142,13 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                     const StrategyParam& sparam, WorkspaceBundle bundle,
                     WorkspaceBundle bundle_thread,
                     fallback::MatrixMulImpl::KernParam matmul_param,
-                    fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) {
+                    const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                    const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
+                            matmul_desc) {
     size_t packA_per_oc_block_size =
-            round_up(matmul_param.K, matmul_algo->get_inner_block_size().k) *
-            sparam.oc_tile_size * matmul_algo->get_packA_type_size();
+            round_up(matmul_param.K, matmul_desc.innerblocksize.k) *
+            sparam.oc_tile_size * matmul_desc.packa_type_size;
     size_t packA_group_size = matmul_algo->get_bundle(matmul_param).get_size(0);
     size_t a_panel_offset = ncb_index.ndrange_id[1] * packA_group_size +
                             ncb_index.ndrange_id[3] * packA_per_oc_block_size;

@@ -22,8 +22,10 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
         packA_kern(WorkspaceBundle bundle,
                    const fallback::ConvBiasImpl::NCBKernParam& param,
                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
-                   fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                   const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                   const fallback::MatrixMulImpl::AlgoBase::
+                           MatmulDescription& /*matmul_desc*/,
                    size_t) {
     bundle.set(param.workspace_ptr);
     fallback::MatrixMulImpl::KernParam matmul_param;
@@ -57,8 +59,11 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                     const StrategyParam& sparam, WorkspaceBundle bundle,
                     WorkspaceBundle bundle_thread,
                     fallback::MatrixMulImpl::KernParam matmul_param,
-                    fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index) {
+                    const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
+                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
+                    const fallback::MatrixMulImpl::AlgoBase::
+                            MatmulDescription& /*matmul_desc*/
+        ) {
     size_t packA_group_size =
             bundle.get_size(BUNDLE_PACKA_INDEX) / param.filter_meta.group;
     size_t a_panel_offset = ncb_index.ndrange_id[3] *
@@ -95,7 +100,7 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam matmul_param,
-                    fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
+                    const fallback::MatrixMulImpl::AlgoBase* matmul_algo) {
     MEGDNN_MARK_USED_VAR(matmul_param);
     MEGDNN_MARK_USED_VAR(matmul_algo);
     size_t sh = param.filter_meta.stride[0];

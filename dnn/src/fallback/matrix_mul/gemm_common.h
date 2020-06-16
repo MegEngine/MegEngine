@@ -352,6 +352,15 @@ void gemm_kern(const Tin* packA, const Tin* packB, size_t M, size_t N, size_t K,
                                            DType dtype_c)                \
             : A_dtype(dtype_a), B_dtype(dtype_b), C_dtype(dtype_c) {}
 
+#define MEGDNN_OVERRIDE_MATMUL_DESC(_m, _n, _k, _packa_type_size) \
+    MatmulDescription matmul_description() const override {       \
+        MatmulDescription mdesc;                                  \
+        mdesc.packmode = packmode();                              \
+        mdesc.innerblocksize = {_m, _n, _k};                      \
+        mdesc.packa_type_size = _packa_type_size;                 \
+        return mdesc;                                             \
+    }
+
 #define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL()                             \
     WorkspaceBundle get_bundle(const KernSizeParam&) const override;  \
     kern_naked_t get_kern_naked(const KernSizeParam&) const override; \
@@ -360,7 +369,7 @@ void gemm_kern(const Tin* packA, const Tin* packB, size_t M, size_t N, size_t K,
     void pack_B(const KernParam& kern_param, void* out, size_t x0,    \
                 size_t xmax) const override;                          \
     InnerBlockSize get_inner_block_size() const override;             \
-    size_t get_packA_type_size() const override;
+    MatmulDescription matmul_description() const override;
 
 #define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(                          \
         _algo_name, _midout_name, _mid_index, _strategy, _i_type, _c_type,    \
@@ -458,8 +467,14 @@ void gemm_kern(const Tin* packA, const Tin* packB, size_t M, size_t N, size_t K,
                 _strategy::UNROLL_K};                                         \
     }                                                                         \
                                                                               \
-    size_t MatrixMulImpl::_algo_name::get_packA_type_size() const {           \
-        return sizeof(_packa_type);                                           \
+    MatrixMulImpl::_algo_name::MatmulDescription                              \
+    MatrixMulImpl::_algo_name::matmul_description() const {                   \
+        MatmulDescription mdesc;                                              \
+        mdesc.packmode = PackMode();                                          \
+        mdesc.innerblocksize = {_strategy::KERNEL_H, _strategy::KERNEL_W,     \
+                                _strategy::UNROLL_K};                         \
+        mdesc.packa_type_size = sizeof(_packa_type);                          \
+        return mdesc;                                                         \
     }
 
 #define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(                              \

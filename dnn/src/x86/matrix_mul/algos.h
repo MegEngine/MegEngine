@@ -27,6 +27,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
 };
 
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
@@ -46,7 +47,9 @@ public:
         megdnn_assert(0);
     };
     WorkspaceBundle get_bundle(const KernSizeParam& param) const override;
-    InnerBlockSize get_inner_block_size() const override { return {8, 16, 1}; };
+    InnerBlockSize get_inner_block_size() const override{ return {8, 16, 1}; };
+
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
 };
 #endif
 
@@ -124,6 +127,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 4)
 };
 
 #if MEGDNN_X86_WITH_VNNI
@@ -149,6 +153,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
 };
 #endif
 }  // namespace x86
