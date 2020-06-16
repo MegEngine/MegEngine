@@ -188,6 +188,24 @@ void checker_conv_bias(std::vector<conv_bias::TestArg> args, Handle* handle,
     }
 }
 
+TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_FORWARD_IM2COL_8X8X16) {
+    using namespace conv_bias;
+    param::ConvBias cur_param;
+    using NLMode = param::ConvBias::NonlineMode;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_args(
+            {1, 3}, {0}, {NLMode::IDENTITY, NLMode::RELU}, {1}, false, true);
+    NormalRNG default_rng;
+    Checker<ConvBias> checker(handle());
+    checker.set_dtype(0, dtype::Int8{});
+    checker.set_dtype(1, dtype::Int8{});
+    checker.set_dtype(2, dtype::Int16{});
+    checker.set_dtype(4, dtype::Int16{});
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
 TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_FORWARD) {
     using namespace conv_bias;
     param::ConvBias cur_param;

@@ -1671,7 +1671,9 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
                 rewriter.get_var(typecvt->input(0))->owner_opr());
         if (!conv_bias || m_deps.count(typecvt->input(0)) != 1 ||
             typecvt->output(0)->dtype().enumv() !=
-                    DTypeTrait<dtype::QuantizedS8>::enumv)
+                    DTypeTrait<dtype::QuantizedS8>::enumv ||
+            typecvt->input(0)->dtype().enumv() !=
+                    DTypeTrait<dtype::QuantizedS32>::enumv)
             return nullptr;
 
         auto config = conv_bias->config();

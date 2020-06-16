@@ -201,24 +201,27 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
         if (FH != 1 || FW != 1 || PH || PW || SH != 1 || SW != 1)
             return false;
 
+        if (param.src_type.enumv() != param.filter_type.enumv() &&
+            param.src_type.enumv() != DTypeEnum::Int8 &&
+            param.src_type.enumv() != DTypeEnum::QuantizedS8 &&
+            param.src_type.enumv() != DTypeEnum::Quantized8Asymm &&
+#if !MEGDNN_DISABLE_FLOAT16
+            param.src_type.enumv() != DTypeEnum::Float16 &&
+#endif
+            param.src_type.enumv() != DTypeEnum::Float32) {
+            return false;
+        }
         //! make sure 8x8x16 and 8x8x32 biasmode is nobias and nonlineMode
         //! is identity otherwise return false mean that 8x8x32 and 8x8x16
         //! not support PostProcess
-        if (param.src_type.enumv() == param.filter_type.enumv() &&
-            (param.src_type.enumv() == DTypeEnum::Int8 &&
-             (param.dst_type.enumv() == DTypeEnum::Int16 ||
-              param.dst_type.enumv() == DTypeEnum::Int32)) &&
-            param.bias_mode != megdnn::BiasMode::NO_BIAS &&
-            param.nonlineMode != megdnn::NonlineMode::IDENTITY)
-            return false;
-
-        if (param.src_type.enumv() == param.filter_type.enumv() &&
-            ((param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
-              param.src_type.enumv() == DTypeEnum::Quantized8Asymm) &&
-             param.dst_type.enumv() == DTypeEnum::QuantizedS32) &&
-            param.bias_mode != megdnn::BiasMode::NO_BIAS &&
-            param.nonlineMode != megdnn::NonlineMode::IDENTITY)
-            return false;
+        if (param.dst_type.enumv() == DTypeEnum::Int16 ||
+            param.dst_type.enumv() == DTypeEnum::Int32 ||
+            param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
+            if (param.bias_mode != megdnn::BiasMode::NO_BIAS ||
+                param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
+                return false;
+            }
+        }
 
         if (opr->param().format == param::ConvBias::Format::NCHW44 ||
             opr->param().format == param::ConvBias::Format::NCHW44_DOT) {
