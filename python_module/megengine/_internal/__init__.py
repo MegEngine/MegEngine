@@ -25,7 +25,7 @@ from . import config, craniotome, dtype
 from . import global_init as _global_init
 from . import helper as _helper
 from . import mgb as _detail
-from . import opr, opr_param_defs, plugin
+from . import opr, opr_extra, opr_param_defs, plugin
 from .exc import MegBrainError
 from .logconf import get_logger
 from .mgb import (

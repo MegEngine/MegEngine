@@ -98,6 +98,7 @@ union OperatorParam {
     param.IndexDescMaskDump = 66,
     DType = 67,
     param.Remap = 68,
+    param.NMSKeep = 69,
 }
 
 table Operator {
