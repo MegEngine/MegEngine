@@ -34,6 +34,11 @@ if(MGE_WITH_CUDA AND MGE_WITH_TRT)
 endif()
 
 
+if(MGE_WITH_CUDA)
+    file(GLOB_RECURSE SOURCES_ opr/impl/standalone/*.cu)
+    list(APPEND SOURCES ${SOURCES_})
+endif()
+
 add_library(megbrain OBJECT EXCLUDE_FROM_ALL ${SOURCES})
 target_link_libraries(megbrain PUBLIC mgb_opr_param_defs)
 target_include_directories(megbrain

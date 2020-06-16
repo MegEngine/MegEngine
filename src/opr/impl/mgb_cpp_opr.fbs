@@ -55,3 +55,8 @@ struct IndexDescMaskItem {
 table IndexDescMaskDump {
     items:[IndexDescMaskItem];
 }
+
+table NMSKeep {
+    iou_thresh:float;
+    max_output:uint;
+}
