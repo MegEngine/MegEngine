@@ -1,5 +1,6 @@
 @PACKAGE_INIT@
 
+find_package(Threads)
 find_package(Flatbuffers REQUIRED)
 
 if (@MGE_WITH_MKLDNN@)
