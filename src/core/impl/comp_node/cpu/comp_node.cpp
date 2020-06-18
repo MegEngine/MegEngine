@@ -795,7 +795,7 @@ bool CpuCompNode::CompNodeImpl::check_global_finalized(const char* reason) {
 /* ======================== CompNode methods ========================  */
 
 CompNode CompNode::default_cpu() {
-    static Locator locator{DeviceType::CPU, Locator::DEVICE_CPU_DEFAULT, -1};
+    static Locator locator{DeviceType::CPU, Locator::DEVICE_CPU_DEFAULT, {-1}};
     static auto empty_queue =
         std::make_shared<CpuCompNode::WorkerQueue>(locator);
     static CpuCompNodeImpl impl{locator, locator, empty_queue};

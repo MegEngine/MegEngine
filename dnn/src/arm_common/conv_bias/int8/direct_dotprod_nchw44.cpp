@@ -29,6 +29,7 @@ void copy_packed_src_int8_nchw44<1>(int8_t* dst, const int dst_step,
                                     const int ih, const int pad_left,
                                     const int pad_right, const int pad_top,
                                     const int pad_bottom) {
+    MEGDNN_MARK_USED_VAR(pad_right);
     constexpr int IC_PACK_SIZE = 4;
     rep_step(ic_idx, ic, IC_PACK_SIZE) {
         const int8_t* i_src = src + ic_idx * ic_step;
@@ -66,6 +67,7 @@ void copy_packed_src_int8_nchw44<2>(int8_t* dst, const int dst_step,
                                     const int ih, const int pad_left,
                                     const int pad_right, const int pad_top,
                                     const int pad_bottom) {
+    MEGDNN_MARK_USED_VAR(pad_right);
     constexpr int IC_PACK_SIZE = 4;
     int odd_start = megdnn::div_ceil(dst_step, 2);
     bool nochange = pad_left % 2 == 0;
