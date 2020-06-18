@@ -98,6 +98,7 @@ template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<1, ow_remain, Op, T> {
     static void impl(int32x4_t res[][8], const Op& op, T* dst_ptr,
                      const int ld_dst_oc) {
+        MEGDNN_MARK_USED_VAR(ld_dst_oc);
         switch (ow_remain) {
             case 8:
                 UNROLL_CALL_RAW(4, cb12);

@@ -337,14 +337,11 @@ ConvBias::WinogradParam ConvBias::parse_winograd_name(
                &(ret.channel_block_size), &(ret.output_block_size),
                &(ret.tile_size));
         if (strcmp(name, pre.c_str())) {
-            megdnn_log_warn("algo %s is not %s algo", name, pre.c_str());
             ret = INVALID_WINOGRAD_PARAM;
             return false;
         }
         if (ret.tile_size == 0 || ret.output_block_size == 0 ||
             ret.channel_block_size == 0) {
-            megdnn_log_warn("the algo name %s is not suitable for %s",
-                            algo_name.c_str(), pre.c_str());
             ret = INVALID_WINOGRAD_PARAM;
             return false;
         }

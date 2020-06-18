@@ -163,6 +163,7 @@ static void conv_kern(WorkspaceBundle bundle,
 bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
         FallbackConvBiasImpl*, const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
+    MEGDNN_MARK_USED_VAR(algo_selection_strategy);
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
     auto FW = fm.spatial[1];
@@ -199,6 +200,7 @@ bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
 
 bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::is_preferred(
         megdnn::fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+    MEGDNN_MARK_USED_VAR(param);
     return true;
 }
 
