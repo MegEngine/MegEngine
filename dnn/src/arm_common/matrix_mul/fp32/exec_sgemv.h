@@ -24,6 +24,9 @@ void gemv_like(const float* __restrict A, const float* __restrict B,
                float* __restrict C, size_t M, size_t N, size_t K,
                size_t Astride, size_t Bstride, size_t Cstride);
 
+void gemv_like_mk4(const float* __restrict A, const float* __restrict B,
+                   float* __restrict C, size_t M, size_t N, size_t K,
+                   size_t Astride, size_t Bstride, size_t Cstride);
 
 }  // namespace arm_common
 }  // namespace megdnn

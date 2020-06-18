@@ -2036,7 +2036,6 @@ void benchmark_conv1x1(const char* matmul_algo_name, Handle* handle,
                             RUNS;
         auto matmul_used = benchmark_matmul.exec({A, B, {}}) / RUNS;
 
-        printf("\n%s: ", matmul_algo_name);
         printf("%s %s:\n matmul: %f ms %f Gflops\nconv1x1: %f ms %f GFlops "
                "speedup: "
                "%f\n",
@@ -2118,6 +2117,82 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_S1_INT8x8x16) {
     benchmark_conv1x1("ARMV7_INT8X8X16_K4X2X16", handle(), dtype::Int8{},
                       dtype::Int16{}, dtype::Int16{}, dtype::Int16{});
 #endif
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_GEMV_FP32) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args;
+    param::ConvBias conv_param;
+    conv_param.stride_h = 1;
+    conv_param.stride_w = 1;
+    conv_param.pad_h = 0;
+    conv_param.pad_w = 0;
+    conv_param.nonlineMode = param::ConvBias::NonlineMode::IDENTITY;
+    auto run = [&](size_t M, size_t K){
+        args.emplace_back(conv_param, TensorShape{1, K, 1, 1},
+                          TensorShape{M, K, 1, 1}, TensorShape{});
+    };
+    for (size_t M : {4, 64, 1024, 4096})
+        for (size_t K : {128, 256, 1024, 4096})
+                run(M, K);
+
+    constexpr size_t RUNS = 50;
+    param::MatrixMul param;
+    param.transposeA = false;
+    param.transposeB = false;
+    Benchmarker<MatrixMul> benchmark_matmul(handle());
+    benchmark_matmul.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
+    benchmark_matmul.set_times(RUNS)
+            .set_dtype(0, dtype::Float32{})
+            .set_dtype(1, dtype::Float32{})
+            .set_dtype(2, dtype::Float32{})
+            .set_param(param)
+            .set_display(false);
+
+    Benchmarker<ConvBias> benchmark_conv1x1(handle());
+    benchmark_conv1x1.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("CONV1x1_GEMV"));
+    benchmark_conv1x1.set_times(RUNS)
+            .set_dtype(0, dtype::Float32{})
+            .set_dtype(1, dtype::Float32{})
+            .set_dtype(2, dtype::Float32{})
+            .set_dtype(4, dtype::Float32{})
+            .set_display(false);
+
+    std::cout << "warm up:\n";
+    for (int i = 0; i < 50; i++) {
+        benchmark_matmul.exec({{1, 1024}, {1024, 512}, {}});
+        benchmark_matmul.set_display(true);
+    }
+
+    for (auto&& arg : args) {
+        size_t IC = arg.src[1];
+        size_t OH = arg.src[2];
+        size_t OW = arg.src[3];
+        size_t OC = arg.filter[0];
+        size_t M = OC;
+        size_t K = IC;
+        size_t N = OH * OW;
+
+        float computations = M * N * K * 2.f / (1024 * 1024 * 1024) * 1e3;
+
+        TensorShape A, B;
+        A = TensorShape{M, K};
+        B = TensorShape{K, N};
+
+        auto conv1x1_used = benchmark_conv1x1.set_param(arg.param).exec(
+                                    {arg.src, arg.filter, arg.bias, {}, {}}) /
+                            RUNS;
+        auto matmul_used = benchmark_matmul.exec({A, B, {}}) / RUNS;
+
+        printf("%s %s:\n gemv: %f ms %f Gflops\nconv1x1: %f ms %f GFlops "
+               "speedup: "
+               "%f\n",
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
+               matmul_used, computations / matmul_used, conv1x1_used,
+               computations / conv1x1_used, matmul_used / conv1x1_used);
+    }
 }
 
 #ifndef __ARM_FEATURE_DOTPROD

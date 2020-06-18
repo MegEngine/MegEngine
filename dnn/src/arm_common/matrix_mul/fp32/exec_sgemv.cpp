@@ -13,11 +13,11 @@
 #include "src/arm_common/matrix_mul/fp32/exec_sgemv.h"
 #include <cstddef>
 #include "include/megdnn/oprs.h"
-#include "midout.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
 
+#include "midout.h"
 MIDOUT_DECL(megdnn_fp32_sgemv)
 
 using namespace megdnn;
@@ -68,18 +68,10 @@ void sgemv_naive_n(const float* __restrict A, const float* __restrict B,
 #if !defined(__aarch64__)
 #undef vaddvq_f32
 #endif
-}  // namespace
 
-namespace megdnn {
-namespace arm_common {
-
-void gemv_like(const float* __restrict A, const float* __restrict B,
-               float* __restrict C, size_t M, size_t N, size_t K,
-               size_t Astride, size_t Bstride, size_t Cstride) {
-    megdnn_assert(M < 8 || (M == 8 && K <= 2) || (N == 1 && Bstride == 1));
-    if (N == 1) {
-        return sgemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
-    }
+void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
+                   float* __restrict C, size_t M, size_t N, size_t K,
+                   size_t Astride, size_t Bstride, size_t Cstride) {
     size_t m = 0;
     for (; m + 4 <= M; m += 4) {
         size_t k = 0;
@@ -762,6 +754,85 @@ void gemv_like(const float* __restrict A, const float* __restrict B,
         }
     }
 }
+
+void sgemv_naive_n_mk4(const float* __restrict A, const float* __restrict B,
+                       float* __restrict C, size_t M, size_t N, size_t K,
+                       size_t Astride, size_t Bstride, size_t Cstride) {
+    constexpr size_t PACK_SIZE = 4;
+    megdnn_assert(N == 1 && Bstride == PACK_SIZE && M % PACK_SIZE == 0 &&
+                  K % PACK_SIZE == 0);
+    auto Aptr = A;
+    auto Cptr = C;
+    size_t m = 0;
+    while (m < M) {
+        auto Aptr0 = Aptr;
+        auto Cptr0 = Cptr;
+        float32x4_t c[4];
+#define INIT(step) c[step] = vdupq_n_f32(0.0f);
+        UNROLL_CALL_RAW(4, INIT)
+#undef INIT
+        auto Bptr = B;
+        size_t k = 0;
+        while (k < K) {
+            float32x4_t b = vld1q_f32(Bptr);
+            float32x4x2_t a[2];
+#define LOAD_A(step) a[step] = vld1q_f32_x2(Aptr0 + step * 8);
+            UNROLL_CALL_RAW(2, LOAD_A)
+#undef LOAD_A
+
+#define COMPT(step) \
+    c[step] = vfmaq_laneq_f32(c[step], a[step / 2].val[step % 2], b, step % 4);
+            UNROLL_CALL_RAW(4, COMPT)
+#undef COMPT
+            Bptr += Bstride;
+            Aptr0 += PACK_SIZE * PACK_SIZE;
+            k += PACK_SIZE;
+        }
+
+#define ADD_C(step, stride) c[step] = vaddq_f32(c[step], c[step + stride]);
+        UNROLL_CALL_RAW(2, ADD_C, 2)
+        UNROLL_CALL_RAW(1, ADD_C, 1)
+#undef ADD_C
+        vst1q_f32(Cptr0, c[0]);
+
+        Aptr += Astride;
+        Cptr += Cstride;
+        m += PACK_SIZE;
+    }
+}
+
+}  // namespace
+
+namespace megdnn {
+namespace arm_common {
+
+void gemv_like(const float* __restrict A, const float* __restrict B,
+               float* __restrict C, size_t M, size_t N, size_t K,
+               size_t Astride, size_t Bstride, size_t Cstride) {
+    megdnn_assert(M < 8 || (M == 8 && K <= 2) || (N == 1 && Bstride == 1));
+    if (N == 1) {
+        MIDOUT_BEGIN(megdnn_fp32_sgemv, midout_iv("F32_GEMV_NCHW_N"_hash)) {
+            return sgemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
+        }
+        MIDOUT_END();
+    } else {
+        MIDOUT_BEGIN(megdnn_fp32_sgemv, midout_iv("F32_GEMV_NCHW_M"_hash)) {
+            return sgemv_naive_m(A, B, C, M, N, K, Astride, Bstride, Cstride);
+        }
+        MIDOUT_END();
+    }
+}
+
+void gemv_like_mk4(const float* __restrict A, const float* __restrict B,
+                   float* __restrict C, size_t M, size_t N, size_t K,
+                   size_t Astride, size_t Bstride, size_t Cstride) {
+    megdnn_assert(N == 1 && Bstride == 4);
+    MIDOUT_BEGIN(megdnn_fp32_sgemv, midout_iv("F32_GEMV_NCHW44_N"_hash)) {
+        return sgemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride, Cstride);
+    }
+    MIDOUT_END();
+}
+
 }  // namespace arm_common
 }  // namespace megdnn
 

@@ -407,6 +407,16 @@ __ai int32_t vaddv_s32(int32x2_t a) {
     return vget_lane_s32(a, 0) + vget_lane_s32(a, 1);
 }
 
+__ai int32_t vaddvq_s32(int32x4_t a) {
+    return vgetq_lane_s32(a, 0) + vgetq_lane_s32(a, 1) +
+           vgetq_lane_s32(a, 2) + vgetq_lane_s32(a, 3);
+}
+
+__ai float32_t vaddvq_f32(float32x4_t a) {
+    return vgetq_lane_f32(a, 0) + vgetq_lane_f32(a, 1) +
+           vgetq_lane_f32(a, 2) + vgetq_lane_f32(a, 3);
+}
+
 #endif  // MEGDNN_ARMV7
 
 //! pack vmovl_low_xx() on armv7 and armv8

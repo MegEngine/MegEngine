@@ -156,13 +156,77 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEMV) {
                 .set_dtype(2, dtype::QuantizedS32(6.25f))
                 .execs({A, B, {}});
     };
-    
+
     // N = 1
     for (size_t M : {1, 10, 16, 33, 64})
         for (size_t K : {7, 512, 1024})
             for (size_t N : {1})
                 run(M, K, N);
 }
+
+TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4) {
+    Checker<MatrixMul> checker(handle());
+    using Param = MatrixMul::Param;
+
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_INT8X8X32_GEMV_MK4"));
+
+    std::unique_ptr<RNG> rng = std::make_unique<UniformIntRNG>(-127, 127);
+    checker.set_rng(0, rng.get()).set_rng(1, rng.get());
+
+    auto run = [&](size_t M, size_t K, size_t N) {
+        Param param;
+        param.format = param::MatrixMul::Format::MK4;
+        param.transposeA = false;
+        param.transposeB = false;
+        TensorShape A, B;
+        A = TensorShape{M / 4, K / 4, 4, 4};
+        B = TensorShape{K / 4, 1, 4};
+        checker.set_param(param)
+                .set_dtype(0, dtype::QuantizedS8(2.5f))
+                .set_dtype(1, dtype::QuantizedS8(2.5f))
+                .set_dtype(2, dtype::QuantizedS32(6.25f))
+                .execs({A, B, {}});
+    };
+
+    // N = 1
+    for (size_t M : {4, 16, 128, 1024})
+        for (size_t K : {4, 8, 12, 16, 20, 24, 256, 1024})
+            run(M, K, 1);
+}
+
+#if __ARM_FEATURE_DOTPROD
+TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4_DOT) {
+    Checker<MatrixMul> checker(handle());
+    using Param = MatrixMul::Param;
+
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_INT8X8X32_GEMV_MK4_DOT"));
+
+    std::unique_ptr<RNG> rng = std::make_unique<UniformIntRNG>(-127, 127);
+    checker.set_rng(0, rng.get()).set_rng(1, rng.get());
+
+    auto run = [&](size_t M, size_t K, size_t N) {
+        Param param;
+        param.format = param::MatrixMul::Format::MK4_DOT;
+        param.transposeA = false;
+        param.transposeB = false;
+        TensorShape A, B;
+        A = TensorShape{M / 4, K / 4, 4, 4};
+        B = TensorShape{K / 4, 1, 4};
+        checker.set_param(param)
+                .set_dtype(0, dtype::QuantizedS8(2.5f))
+                .set_dtype(1, dtype::QuantizedS8(2.5f))
+                .set_dtype(2, dtype::QuantizedS32(6.25f))
+                .execs({A, B, {}});
+    };
+
+    // N = 1
+    for (size_t M : {4, 16, 128, 1024})
+        for (size_t K : {4, 8, 12, 16, 20, 24, 256, 1024})
+            run(M, K, 1);
+}
+#endif
 
 TEST_F(ARM_COMMON, QINT8x8x32_GEVM) {
     Checker<MatrixMul> checker(handle());
@@ -220,6 +284,31 @@ TEST_F(ARM_COMMON, FP32_GEVM) {
                 run(M, K, N);
 }
 
+TEST_F(ARM_COMMON, FP32_GEMV_MK4) {
+    Checker<MatrixMul> checker(handle());
+    using Param = MatrixMul::Param;
+
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV_MK4"));
+
+    checker.set_epsilon(1e-2);
+    auto run = [&](size_t M, size_t K) {
+        Param param;
+        param.format = param::MatrixMul::Format::MK4;
+        param.transposeA = false;
+        param.transposeB = false;
+        TensorShape A, B;
+        A = TensorShape{M/4, K/4, 4, 4};
+        B = TensorShape{K/4, 1, 4};
+        checker.set_param(param).execs({A, B, {}});
+    };
+    
+    // N = 1
+    for (size_t M : {4, 16, 128, 1024})
+        for (size_t K : {4, 8, 12, 128, 256, 4096})
+                run(M, K);
+}
+
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {
@@ -228,18 +317,16 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {
     benchmarker.set_times(exec_times);
 
     auto run = [&](size_t M, size_t K, size_t N) {
-        std::cout << "SGEMV: (" << M << ", " << K << ", " << N << ")"
-                  << std::endl;
+        printf("SGEMV: (%zu, %zu, %zu)\n", M, K, N);
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32());
         auto time = benchmarker.exec({{M, K}, {K, N}, {}}) / exec_times;
         auto computations = 2.f * M * K * N * 1e-6;
         auto perf = computations / time;
-        std::cout << "gemv fp32, Performance is " << perf << " Gflops"
-                  << std::endl;
+        printf("gemv fp32, Performance is %f Gflops\n", perf);
     };
 
-    std::cout << "warm up:\n";
+    printf("warm up:\n");
     for (int i = 0; i < 50; i++) {
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -253,6 +340,10 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {
         for (size_t K : {1024, 1536, 2048})
             for (size_t N : {512, 1024})
                 run(M, K, N);
+
+    for (size_t M : {4, 64, 1024, 4096})
+        for (size_t K : {128, 256, 1024, 4096})
+                run(M, K, 1);
 }
 
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
@@ -263,28 +354,25 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
             AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
 
     auto run = [&](size_t M, size_t K, size_t N) {
-        std::cout << "SGEMV: (" << M << ", " << K << ", " << N << ")"
-                  << std::endl;
+        printf("SGEMV: (%zu, %zu, %zu)\n", M, K, N);
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Float32());
         auto time = benchmarker.exec({{M, K}, {K, N}, {}}) / exec_times;
         auto computations = 2 * M * K * N * 1e-6;
         auto perf = computations / time;
-        std::cout << "gemv fp32, Performance is " << perf << " Gflops"
-                  << std::endl;
+        printf("gemv fp32, Performance is %f Gflops\n", perf);
     };
 
-    std::cout << "warm up:\n";
+    printf("warm up:\n");
     for (int i = 0; i < 50; i++) {
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Float32())
                 .set_display(false)
                 .exec({{2, 1024}, {1024, 512}, {}});
         benchmarker.set_display(true);
     }
-
+    
     // run gemv
     run(12, 48, 1);
     run(48, 12, 1);
@@ -298,6 +386,45 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
     run(1024, 256, 1);
 }
 
+TEST_F(ARM_COMMON, BENCHMARK_SGEMV_MK4) {
+    int exec_times = 10;
+    using Param = MatrixMul::Param;
+    Param param;
+    param.format = param::MatrixMul::Format::MK4;
+    param.transposeA = false;
+    param.transposeB = false;
+    Benchmarker<MatrixMul> benchmarker(handle());
+    benchmarker.set_times(exec_times);
+    benchmarker.set_dtype(0, dtype::Float32())
+               .set_dtype(1, dtype::Float32())
+               .set_param(param);
+
+    auto run = [&](size_t M, size_t K) {
+        printf("SGEMV_MK4: (%zu, %zu, %zu)\n", M, K, N);
+        TensorShape A, B;
+        A = TensorShape{M/4, K/4, 4, 4};
+        B = TensorShape{K/4, 1, 4};
+        auto time = benchmarker.exec({A, B, {}}) / exec_times;
+        auto computations = 2.f * M * K * 1e-6;
+        auto perf = computations / time;
+        printf("gemv mk4 fp32, Performance is %f Gflops\n", perf);
+    };
+
+    printf("warm up:\n");
+    for (int i = 0; i < 50; i++) {
+        benchmarker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_display(false)
+                .exec({{4, 256, 4, 4}, {256, 1, 4}, {}});
+    }
+
+    // run gemv mk4
+    for (size_t M : {4, 64, 1024, 4096})
+        for (size_t K : {128, 1024, 4096})
+                run(M, K);
+}
+
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP16) {
     int exec_times = 50;
     Benchmarker<MatrixMul> benchmarker(handle());
@@ -306,19 +433,17 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP16) {
             AlgoChecker<MatrixMul>("ARM_COMMON_F16_GEMV"));
 
     auto run = [&](size_t M, size_t K, size_t N) {
-        std::cout << "SGEMV: (" << M << ", " << K << ", " << N << ")"
-                  << std::endl;
+        printf("SGEMV_FP16: (%zu, %zu, %zu)\n", M, K, N);
         benchmarker.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16());
         auto time = benchmarker.exec({{M, K}, {K, N}, {}}) / exec_times;
         auto computations = 2 * M * K * N * 1e-6;
         auto perf = computations / time;
-        std::cout << "gemv fp16, Performance is " << perf << " Gflops"
-                  << std::endl;
+        printf("gemv fp16, Performance is %f Gflops\n", perf);
     };
 
-    std::cout << "warm up:\n";
+    printf("warm up:\n");
     for (int i = 0; i < 50; i++) {
         benchmarker.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
@@ -343,17 +468,15 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMM) {
     float mod = 1000 * exec_times / 1e9;
     auto run = [&](size_t M, size_t K, size_t N) {
         float time = 1.f, perf = 1.f;
-        std::cout << "SGEMM: (" << M << ", " << K << ", " << N << ")"
-                  << std::endl;
+        printf("SGEMM: (%zu, %zu, %zu)\n", M, K, N);
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32());
         time = benchmarker.exec({{M, K}, {K, N}, {}});
         perf = 2.f * M * K * N / time * mod;
-        std::cout << "gemm fp32, Performance is " << perf << " Gflops"
-                  << std::endl;
+        printf("gemm, Performance is %f Gflops\n", perf);
     };
 
-    std::cout << "warm up:\n";
+    printf("warm up:\n");
     for (int i = 0; i < 50; i++) {
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())

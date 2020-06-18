@@ -25,11 +25,16 @@ public:
 
 protected:
     static void* const sm_arm_common_algo_type;
-    class AlgoInt8x8x32Gemv;  // Arm_common Int 8x8x32 Gemv
-    class AlgoF32Gemv;        // Arm_common F32 Gemv
-    class AlgoGevm;        // Arm_common Gemv(support int8 and fp32)
+    class AlgoF32Gemv;               // Arm_common F32 Gemv
+    class AlgoF32GemvMK4;         // Arm_common F32 Gemv NCHW44
+    class AlgoInt8x8x32Gemv;         // Arm_common Int8x8x32 Gemv
+    class AlgoInt8x8x32GemvMK4;   // Arm_common Int8x8x32 Gemv NCHW44
+    class AlgoGevm;                  // Arm_common Gevm(support int8 and fp32)
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     class AlgoF16Gemv;
+#endif
+#if __ARM_FEATURE_DOTPROD
+    class AlgoInt8x8x32GemvMK4Dot;// Arm_common Int8x8x32 Gemv NCHW44_DOT
 #endif
     class AlgoInt8x8x16;  // Arm_common Int 8x8x16
     class AlgoPack;
