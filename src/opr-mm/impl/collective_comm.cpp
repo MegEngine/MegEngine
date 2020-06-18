@@ -14,6 +14,8 @@
 #include "megbrain/comp_node_env.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/graph/grad_impl.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/megray_helper.h"
 #include "megbrain/opr/group_manager.h"
@@ -77,6 +79,8 @@ cudaStream_t get_stream(VarNode* var) {
 }
 }  // anonymous namespace
 
+/* ================= ModeTrait ================= */
+
 class CollectiveComm::ModeTrait {
     class BROADCAST;
     class REDUCE_SUM;
@@ -132,6 +136,42 @@ public:
         return None;
     }
 
+    VarNode* full_grad(VarNode* out_grad, const CollectiveComm* opr) const {
+        auto mode = ModeTrait::from_mode(opr->param().mode).grad_mode();
+        SymbolVarArray og_syms;
+        og_syms.push_back(out_grad);
+
+        auto&& cn = opr->output(0)->comp_node();
+
+        auto gvar = CollectiveComm::make(
+                og_syms, opr->owner_graph(), opr->key() + ":grad",
+                opr->nr_devices(), opr->is_root(), opr->rank(), false,
+                opr->group_client(), mode, opr->dtype(), opr->backend(), {cn});
+
+        return gvar[0].node();
+    }
+
+    virtual VarNode* local_grad(VarNode* out_grad, const CollectiveComm* opr) const {
+        mgb_throw(MegBrainError,
+                  "only all_reduce all_to_all all_gather reduce_scatter "
+                  "support local_grad");
+    }
+
+    virtual VarNode* grad(VarNode* out_grad, const CollectiveComm* opr) const {
+        if (opr->local_grad()){
+            return local_grad(out_grad, opr);
+        } else {
+            return full_grad(out_grad, opr);
+        }
+    }
+
+    VarNode* zeros(mgb::cg::ComputingGraph &graph, CompNode node, const SymbolVar& shape,
+                 DType dtype) const {
+        auto zero = SymbolVar::make_scalar(0, graph, node);
+        auto zero_tensor = opr::TypeCvt::make(zero, dtype).broadcast(shape);
+        return zero_tensor.node();
+    }
+
     virtual void get_output_var_shape(const CollectiveComm* opr,
                                       const TensorShapeArray& ishp,
                                       TensorShapeArray& oshp) = 0;
@@ -174,6 +214,17 @@ class CollectiveComm::ModeTrait::ALL_GATHER : public ModeTrait {
     }
 
     Mode grad_mode() override { return Mode::REDUCE_SCATTER_SUM; }
+
+    VarNode* local_grad(VarNode* out_grad, const CollectiveComm* opr) const override {
+        auto nr_devices = opr->nr_devices();
+        auto rank = opr->rank();
+        opr::Subtensor::IndexDesc axis;
+        auto shape0 = opr::GetVarShape::make(out_grad, 0);
+        axis.push_back({0, shape0 * rank / (int)nr_devices,
+                        shape0 * (rank + 1) / (int)nr_devices});
+        auto grad = opr::Subtensor::make(out_grad, axis);
+        return grad.node();
+    }
 };
 
 class CollectiveComm::ModeTrait::REDUCE_SCATTER_SUM : public ModeTrait {
@@ -211,9 +262,23 @@ class CollectiveComm::ModeTrait::REDUCE_SCATTER_SUM : public ModeTrait {
     }
 
     Mode grad_mode() override { return Mode::ALL_GATHER; }
-};
 
-/* ================= ModeTrait impls ================= */
+    VarNode* local_grad(VarNode* out_grad, const CollectiveComm* opr) const override {
+        VarNodeArray grads;
+        auto zeros_tensor =
+                zeros(*out_grad->owner_graph(), out_grad->comp_node(),
+                      opr::GetVarShape::make(out_grad), out_grad->dtype());
+        for (size_t i = 0;i < opr->nr_devices();i++) {
+            if (i == opr->rank()) {
+                grads.push_back(out_grad);
+            } else {
+                grads.push_back(zeros_tensor);
+            }
+        }
+        auto grad = opr::Concat::make(grads, 0);
+        return grad.node();
+    }
+};
 
 class CollectiveComm::ModeTrait::ReducedBasedTrait {
 protected:
@@ -250,6 +315,12 @@ class CollectiveComm::ModeTrait::AllReduceBase : public ReducedBasedTrait,
     }
 
     Mode grad_mode() override { return Mode::ALL_REDUCE_SUM; }
+
+public:
+    VarNode* local_grad(VarNode* out_grad,
+                        const CollectiveComm* opr) const override {
+        return out_grad;
+    }
 };
 
 class CollectiveComm::ModeTrait::ALL_REDUCE_SUM final : public AllReduceBase {
@@ -258,10 +329,38 @@ class CollectiveComm::ModeTrait::ALL_REDUCE_SUM final : public AllReduceBase {
 
 class CollectiveComm::ModeTrait::ALL_REDUCE_MAX final : public AllReduceBase {
     MegRay::ReduceOp op() const override { return MegRay::ReduceOp::MEGRAY_MAX; }
+
+    VarNode* grad(VarNode* out_grad, const CollectiveComm* opr) const override {
+        VarNode* grad;
+        if (opr->local_grad()) {
+            grad = local_grad(out_grad, opr);
+        } else {
+            grad = full_grad(out_grad, opr);
+        }
+
+        grad = opr::Elemwise::make({opr->output(0), opr->input(0), grad},
+                                   Elemwise::Mode::COND_LEQ_MOV)
+                       .node();
+        return grad;
+    }
 };
 
 class CollectiveComm::ModeTrait::ALL_REDUCE_MIN final : public AllReduceBase {
     MegRay::ReduceOp op() const override { return MegRay::ReduceOp::MEGRAY_MIN; }
+
+    VarNode* grad(VarNode* out_grad, const CollectiveComm* opr) const override {
+        VarNode* grad;
+        if (opr->local_grad()) {
+            grad = local_grad(out_grad, opr);
+        } else {
+            grad = full_grad(out_grad, opr);
+        }
+
+        grad = opr::Elemwise::make({opr->input(0), opr->output(0), grad},
+                                   Elemwise::Mode::COND_LEQ_MOV)
+                       .node();
+        return grad;
+    }
 };
 
 class CollectiveComm::ModeTrait::ReduceBase : public ReducedBasedTrait,
@@ -448,6 +547,24 @@ class CollectiveComm::ModeTrait::ALL_TO_ALL : public ModeTrait {
     }
 
     Mode grad_mode() override { return Mode::ALL_TO_ALL; }
+
+    VarNode* local_grad(VarNode* out_grad, const CollectiveComm* opr) const override {
+        VarNodeArray grads;
+        auto grad_shape = opr::GetVarShape::make(out_grad);
+        auto zeros_tensor =
+                zeros(*out_grad->owner_graph(), out_grad->comp_node(),
+                      grad_shape, out_grad->dtype());
+
+        auto nr_devices = opr->nr_devices();
+        auto rank = opr->rank();
+        opr::Subtensor::IndexDesc axis;
+        auto shape0 = opr::GetVarShape::make(out_grad, 0);
+        axis.push_back({0, shape0 * rank / (int)nr_devices,
+                        shape0 * (rank + 1) / (int)nr_devices});
+        auto sub_grad = opr::Subtensor::make(out_grad, axis);
+
+        return opr::SetSubtensor::make(zeros_tensor, sub_grad, axis).node();
+    }
 };
 
 CollectiveComm::ModeTrait& CollectiveComm::ModeTrait::from_mode(Mode mode) {
@@ -469,8 +586,9 @@ CollectiveComm::ModeTrait& CollectiveComm::ModeTrait::from_mode(Mode mode) {
 CollectiveComm::CollectiveComm(
         VarNodeArray inputs, ComputingGraph* const graph,
         const std::string& key, const size_t nr_devices, const bool is_root,
-        const int rank, std::shared_ptr<GroupClient> group_client,
-        const Param& param, const DType& dtype, const std::string& backend,
+        const int rank, const bool local_grad,
+        std::shared_ptr<GroupClient> group_client, const Param& param,
+        const DType& dtype, const std::string& backend,
         const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
         const OperatorNodeConfig& config,
         const std::shared_ptr<DTypeScalar>& disable)
@@ -482,6 +600,7 @@ CollectiveComm::CollectiveComm(
           m_nr_devices(nr_devices),
           m_is_root(is_root),
           m_rank(rank),
+          m_local_grad(local_grad),
           m_key(key),
           m_dev_buffers(dev_buffer_arr),
           m_disable{disable} {
@@ -523,28 +642,31 @@ CollectiveComm::CollectiveComm(
 SymbolVarArray CollectiveComm::make(
         const SymbolVarArray& inputs, ComputingGraph* const graph,
         const std::string& key, const size_t nr_devices, const bool is_root,
-        const int rank, std::shared_ptr<GroupClient> group_client,
-        const Param& param, const DType& dtype, const std::string& backend,
+        const int rank, const bool local_grad,
+        std::shared_ptr<GroupClient> group_client, const Param& param,
+        const DType& dtype, const std::string& backend,
         const OperatorNodeConfig& config,
         const std::shared_ptr<DTypeScalar>& disable) {
     SmallVector<std::shared_ptr<DeviceTensorND>> dev_buffer_arr(nr_devices,
                                                                 nullptr);
-    return make(inputs, graph, key, nr_devices, is_root, rank, group_client,
-                dev_buffer_arr, param, dtype, backend, config);
+    return make(inputs, graph, key, nr_devices, is_root, rank, local_grad,
+                group_client, dev_buffer_arr, param, dtype, backend, config);
 }
 
 SymbolVarArray CollectiveComm::make(
         const SymbolVarArray& inputs, ComputingGraph* const graph,
         const std::string& key, const size_t nr_devices, const bool is_root,
-        const int rank, std::shared_ptr<GroupClient> group_client,
+        const int rank, const bool local_grad,
+        std::shared_ptr<GroupClient> group_client,
         const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
         const Param& param, const DType& dtype, const std::string& backend,
         const OperatorNodeConfig& config,
         const std::shared_ptr<DTypeScalar>& disable) {
     auto inpvars = cg::to_var_node_array(inputs);
     auto opr = graph->insert_opr(std::make_unique<CollectiveComm>(
-            inpvars, graph, key, nr_devices, is_root, rank, std::move(group_client),
-            param, dtype, backend, dev_buffer_arr, config, disable));
+            inpvars, graph, key, nr_devices, is_root, rank, local_grad,
+            std::move(group_client), param, dtype, backend, dev_buffer_arr,
+            config, disable));
     mgb_assert(!opr->output().empty());
     return cg::to_symbol_var_array(opr->output());
 }
@@ -647,92 +769,11 @@ void CollectiveComm::do_execute(ExecEnv& env) {
         owner_graph()->event().signal_inplace<cg::event::BeforeKernel>(this, cn);
         trait.exec(this);
         owner_graph()->event().signal_inplace<cg::event::AfterKernel>(this, cn);
-
-#if CUDART_VERSION < 9000
-#pragma message "legacy CUDA; use sync to avoid blocking"
-        // nccl hangs occasionally without this sync()
-        cn.sync();
-#endif
     };
     env.dispatch_on_comp_node(cn, runner);
 }
 
 void CollectiveComm::on_output_comp_node_stream_changed() {}
-
-VarNodeArray CollectiveComm::grad(const VarNodeArray& out_grads) const {
-    auto mode = ModeTrait::from_mode(m_param.mode).grad_mode();
-    SymbolVarArray og_syms;
-    if (m_param.mode == Param::Mode::REDUCE_SUM) {
-        for (size_t i = 0; i < output().size(); i++) {
-            if (out_grads[i])
-                og_syms.push_back(out_grads[i]);
-        }
-        mgb_assert(og_syms.size() == 1);
-    } else {
-        for (size_t i = 0; i < output().size(); i++) {
-            if (!out_grads[i]) {
-                mgb_assert(m_param.mode != Param::Mode::REDUCE_SCATTER_SUM,
-                           "null out grad in CollctiveCommMM currently "
-                           "unsupported when the forward mode is "
-                           "Reduce_Scatter_Sum.");
-                DTypeScalar dval{output(i)->dtype()};
-                dval.set_retain_dtype(0);
-                auto zeros =
-                        SymbolVar::make_scalar(dval, *output(i)->owner_graph(),
-                                               output(i)->comp_node())
-                                .broadcast(SymbolVar(output(i)).symshape());
-                og_syms.push_back(zeros);
-            } else {
-                og_syms.push_back(out_grads[i]);
-            }
-        }
-    }
-
-    OperatorNodeConfig::CompNodeArray cn_arr;
-    if (m_param.mode == Param::Mode::REDUCE_SUM) {
-        for (auto i : input()) {
-            cn_arr.push_back(i->comp_node());
-        }
-    } else if (m_param.mode == Param::Mode::BROADCAST) {
-        if (!input().empty()) {
-            cn_arr.push_back(input(0)->comp_node());
-        }
-    }
-
-    auto gvar = CollectiveComm::make(
-            og_syms, owner_graph(), m_key + ":grad", m_nr_devices, m_is_root,
-            m_rank, m_group_client, mode, m_dtype, m_backend,
-            OperatorNodeConfig{}.comp_node_arr(cn_arr));
-
-    if (m_param.mode == Param::Mode::ALL_REDUCE_MAX) {
-        for (size_t i = 0; i < input().size(); ++i) {
-            gvar[i] = Elemwise::make({output(i), input(i), gvar[i]},
-                                     Elemwise::Mode::COND_LEQ_MOV);
-        }
-    } else if (m_param.mode == Param::Mode::ALL_REDUCE_MIN) {
-        for (size_t i = 0; i < input().size(); ++i) {
-            gvar[i] = Elemwise::make({input(i), output(i), gvar[i]},
-                                     Elemwise::Mode::COND_LEQ_MOV);
-        }
-    } else if (m_param.mode == Param::Mode::BROADCAST) {
-        if (!input().empty()) {
-            CompNode&& master_out_cn = input(0)->comp_node();
-            SymbolVarArray rst;
-            for (auto i : gvar) {
-                if (i.node()->comp_node() == master_out_cn) {
-                    mgb_assert(rst.empty());
-                    rst.push_back(i);
-                }
-            }
-            gvar = rst;
-        }
-    }
-    return cg::to_var_node_array(gvar);
-}
-
-MGB_IMPL_OPR_GRAD(CollectiveComm) {
-    return opr.grad(out_grad);
-}
 
 void CollectiveComm::init_output_dtype() {
     if (m_dtype.valid()) {
@@ -797,6 +838,15 @@ void CollectiveComm::init_output_static_infer_desc() {
     }
 }
 
+VarNode* CollectiveComm::grad(VarNode* out_grad) const {
+    return ModeTrait::from_mode(m_param.mode).grad(out_grad, this);
+}
+
+MGB_IMPL_OPR_GRAD(CollectiveComm) {
+    mgb_assert(out_grad.size() == 1, "CollectiveComm should only have one grad");
+    return opr.grad(out_grad[0]);
+}
+
 /* ===================== shallow copy ===================== */
 
 namespace mgb {
@@ -807,13 +857,14 @@ cg::OperatorNodeBase* opr_shallow_copy_collective_mm(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<opr::CollectiveComm>();
-    auto new_opr = CollectiveComm::make(
-                   to_symbol_var_array(inputs), ctx.owner_graph(opr_, inputs),
-                   opr.key(), opr.nr_devices(), opr.is_root(), opr.rank(),
-                   opr.group_client(), opr.dev_buffers(), opr.param(),
-                   opr.dtype(), opr.backend(), config)[0]
-            .node()
-            ->owner_opr();
+    auto new_opr =
+            CollectiveComm::make(
+                    to_symbol_var_array(inputs), ctx.owner_graph(opr_, inputs),
+                    opr.key(), opr.nr_devices(), opr.is_root(), opr.rank(),
+                    opr.local_grad(), opr.group_client(), opr.dev_buffers(),
+                    opr.param(), opr.dtype(), opr.backend(), config)[0]
+                    .node()
+                    ->owner_opr();
     new_opr->cast_final_safe<opr::CollectiveComm>().set_pack_hash(opr.pack_hash());
     return new_opr;
 }

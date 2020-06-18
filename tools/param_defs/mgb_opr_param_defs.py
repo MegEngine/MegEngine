@@ -46,7 +46,7 @@ pdef('PersistentOutputStorage').add_fields(
 
 (pdef('CollectiveComm', 'collective communication between multiple computing '
       'nodes on localhost')
- .add_enum('Mode',
+ .add_enum(Doc('Mode', 'mode of collective communication'),
            Doc('REDUCE_SUM', 'reduce by sum to output computing node'),
            Doc('BROADCAST', 'copy input value to each output computing node'),
            Doc('ALL_GATHER', 'each output comp node gets the concatenated '
@@ -59,7 +59,8 @@ pdef('PersistentOutputStorage').add_fields(
            Doc('ALL_REDUCE_PROD', 'every output gets the prod of all inputs'),
            Doc('GATHER', 'concat inputs to one node'),
            Doc('SCATTER', 'scatter input to each output computing node'),
-           Doc('ALL_TO_ALL', 'scatter inputs and gather them on each computing node')))
+           Doc('ALL_TO_ALL', 'scatter inputs and gather them on each computing node'),
+           name_field='mode'))
 
 (pdef('FakeSerializedDType',
       'HACK: The tag of this param def is actually used for another '

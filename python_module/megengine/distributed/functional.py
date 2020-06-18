@@ -9,7 +9,7 @@
 from typing import Optional, Union
 
 import megengine._internal as mgb
-from megengine._internal.opr_param_defs import CollectiveComm as CollParam
+from megengine._internal.opr_param_defs import CollectiveComm as Param
 
 from ..core import Buffer, Parameter, Tensor, wrap_io_tensor
 from ..functional import add_update
@@ -22,9 +22,16 @@ def _collective_comm(*args, **kargs):
     return collective_comm_symvar(*args, **kargs)
 
 
+def _group_check(*args):
+    """Return True when arguments are all None or all not None
+    """
+    l = [val is None for val in args]
+    return len(set(l)) <= 1
+
+
 def reduce_sum(
     tensor: Tensor,
-    key: str,
+    key: Optional[str] = None,
     nr_ranks: Optional[int] = None,
     is_root: Optional[bool] = None,
 ) -> Tensor:
@@ -35,14 +42,17 @@ def reduce_sum(
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param is_root: whether this is a root node
     """
+    assert _group_check(
+        key, nr_ranks, is_root
+    ), "key, nr_ranks, is_root should be set at the same time"
     return _collective_comm(
-        tensor, key, CollParam.Mode.REDUCE_SUM, nr_ranks, is_root, device=tensor.device,
+        tensor, key, Param.Mode.REDUCE_SUM, nr_ranks, is_root, device=tensor.device,
     )
 
 
 def gather(
     tensor: Tensor,
-    key: str,
+    key: Optional[str] = None,
     nr_ranks: Optional[int] = None,
     is_root: Optional[bool] = None,
     rank: Optional[int] = None,
@@ -55,20 +65,17 @@ def gather(
     :param is_root: whether this is a root node
     :param rank: rank of this node
     """
+    assert _group_check(
+        key, nr_ranks, is_root, rank
+    ), "key, nr_ranks, is_root, rank should be set at the same time"
     return _collective_comm(
-        tensor,
-        key,
-        CollParam.Mode.GATHER,
-        nr_ranks,
-        is_root,
-        rank,
-        device=tensor.device,
+        tensor, key, Param.Mode.GATHER, nr_ranks, is_root, rank, device=tensor.device,
     )
 
 
 def broadcast(
     tensor: Tensor,
-    key: str,
+    key: Optional[str] = None,
     nr_ranks: Optional[int] = None,
     is_root: Optional[bool] = None,
 ) -> Tensor:
@@ -79,11 +86,12 @@ def broadcast(
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param is_root: whether this is a root node
     """
-    if key is None:
-        key = tensor._symvar.name
+    assert _group_check(
+        key, nr_ranks, is_root
+    ), "key, nr_ranks, is_root should be set at the same time"
+
     if is_root is None:
         is_root = get_rank() == 0
-
     if is_root:
         inp = tensor
     else:
@@ -92,7 +100,7 @@ def broadcast(
     return _collective_comm(
         inp,
         key,
-        CollParam.Mode.BROADCAST,
+        Param.Mode.BROADCAST,
         nr_ranks,
         is_root,
         dtype=tensor.dtype,
@@ -102,7 +110,7 @@ def broadcast(
 
 def scatter(
     tensor: Tensor,
-    key: str,
+    key: Optional[str] = None,
     nr_ranks: Optional[int] = None,
     is_root: Optional[bool] = None,
     rank: Optional[int] = None,
@@ -115,6 +123,9 @@ def scatter(
     :param is_root: whether this is a root node
     :param rank: rank of this node
     """
+    assert _group_check(
+        key, nr_ranks, is_root, rank
+    ), "key, nr_ranks, is_root, rank should be set at the same time"
     if key is None:
         key = tensor._symvar.name
     if is_root is None:
@@ -128,7 +139,7 @@ def scatter(
     return _collective_comm(
         inp,
         key,
-        CollParam.Mode.SCATTER,
+        Param.Mode.SCATTER,
         nr_ranks,
         is_root,
         rank,
@@ -138,7 +149,11 @@ def scatter(
 
 
 def all_to_all(
-    tensor: Tensor, key: str, nr_ranks: Optional[int] = None, rank: Optional[int] = None
+    tensor: Tensor,
+    key: Optional[str] = None,
+    nr_ranks: Optional[int] = None,
+    rank: Optional[int] = None,
+    local_grad: Optional[bool] = False,
 ) -> Tensor:
     """Create all_to_all operator for collective communication
 
@@ -146,12 +161,22 @@ def all_to_all(
     :param key: unique identifier for collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param rank: rank of this node
+    :param local_grad: whether use local grad
     """
-    return _collective_comm(tensor, key, CollParam.Mode.ALL_TO_ALL, nr_ranks, rank=rank)
+    assert _group_check(
+        key, nr_ranks, rank
+    ), "key, nr_ranks, rank should be set at the same time"
+    return _collective_comm(
+        tensor, key, Param.Mode.ALL_TO_ALL, nr_ranks, rank=rank, local_grad=local_grad,
+    )
 
 
 def all_gather(
-    tensor: Tensor, key: str, nr_ranks: Optional[int] = None, rank: Optional[int] = None
+    tensor: Tensor,
+    key: Optional[str] = None,
+    nr_ranks: Optional[int] = None,
+    rank: Optional[int] = None,
+    local_grad: Optional[bool] = False,
 ) -> Tensor:
     """Create all_gather operator for collective communication
 
@@ -159,12 +184,22 @@ def all_gather(
     :param key: unique identifier for collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param rank: rank of this node
+    :param local_grad: whether use local grad
     """
-    return _collective_comm(tensor, key, CollParam.Mode.ALL_GATHER, nr_ranks, rank=rank)
+    assert _group_check(
+        key, nr_ranks, rank
+    ), "key, nr_ranks, rank should be set at the same time"
+    return _collective_comm(
+        tensor, key, Param.Mode.ALL_GATHER, nr_ranks, rank=rank, local_grad=local_grad
+    )
 
 
 def reduce_scatter_sum(
-    tensor: Tensor, key: str, nr_ranks: Optional[int] = None, rank: Optional[int] = None
+    tensor: Tensor,
+    key: Optional[str] = None,
+    nr_ranks: Optional[int] = None,
+    rank: Optional[int] = None,
+    local_grad: Optional[bool] = False,
 ) -> Tensor:
     """Create reduce_scatter_sum operator for collective communication
 
@@ -172,45 +207,81 @@ def reduce_scatter_sum(
     :param key: unique identifier for collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param rank: rank of this node
+    :param local_grad: whether use local grad
     """
+    assert _group_check(
+        key, nr_ranks, rank
+    ), "key, nr_ranks, rank should be set at the same time"
     return _collective_comm(
-        tensor, key, CollParam.Mode.REDUCE_SCATTER_SUM, nr_ranks, rank=rank,
+        tensor,
+        key,
+        Param.Mode.REDUCE_SCATTER_SUM,
+        nr_ranks,
+        rank=rank,
+        local_grad=local_grad,
     )
 
 
-def all_reduce_sum(tensor: Tensor, key: str, nr_ranks: Optional[int] = None) -> Tensor:
+def all_reduce_sum(
+    tensor: Tensor,
+    key: Optional[str] = None,
+    nr_ranks: Optional[int] = None,
+    local_grad: Optional[bool] = False,
+) -> Tensor:
     """Create all_reduce_sum operator for collective communication
 
     :param tensor: input tensor
     :param key: unique identifier for collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
+    :param local_grad: whether use local grad
     """
-    return _collective_comm(tensor, key, CollParam.Mode.ALL_REDUCE_SUM, nr_ranks)
+    assert _group_check(key, nr_ranks), "key, nr_ranks should be set at the same time"
+    return _collective_comm(
+        tensor, key, Param.Mode.ALL_REDUCE_SUM, nr_ranks, local_grad=local_grad
+    )
 
 
-def all_reduce_max(tensor: Tensor, key: str, nr_ranks: Optional[int] = None) -> Tensor:
+def all_reduce_max(
+    tensor: Tensor,
+    key: Optional[str] = None,
+    nr_ranks: Optional[int] = None,
+    local_grad: Optional[bool] = False,
+) -> Tensor:
     """Create all_reduce_max operator for collective communication
 
     :param tensor: input tensor
     :param key: unique identifier for collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
+    :param local_grad: whether use local grad
     """
-    return _collective_comm(tensor, key, CollParam.Mode.ALL_REDUCE_MAX, nr_ranks)
+    assert _group_check(key, nr_ranks), "key, nr_ranks should be set at the same time"
+    return _collective_comm(
+        tensor, key, Param.Mode.ALL_REDUCE_MAX, nr_ranks, local_grad=local_grad
+    )
 
 
-def all_reduce_min(tensor: Tensor, key: str, nr_ranks: Optional[int] = None) -> Tensor:
+def all_reduce_min(
+    tensor: Tensor,
+    key: Optional[str] = None,
+    nr_ranks: Optional[int] = None,
+    local_grad: Optional[bool] = False,
+) -> Tensor:
     """Create all_reduce_min operator for collective communication
 
     :param tensor: input tensor
     :param key: unique identifier for collective communication
     :param nr_ranks: number of ranks, use util.get_world_size() as default
+    :param local_grad: whether use local grad
     """
-    return _collective_comm(tensor, key, CollParam.Mode.ALL_REDUCE_MIN, nr_ranks)
+    assert _group_check(key, nr_ranks), "key, nr_ranks should be set at the same time"
+    return _collective_comm(
+        tensor, key, Param.Mode.ALL_REDUCE_MIN, nr_ranks, local_grad=local_grad
+    )
 
 
 def bcast_param(
     inp: Union[Buffer, Parameter],
-    key: str,
+    key: Optional[str] = None,
     nr_ranks: Optional[int] = None,
     is_root: Optional[bool] = None,
 ) -> None:
@@ -223,6 +294,9 @@ def bcast_param(
     """
     if not is_distributed():
         return
+    assert _group_check(
+        key, nr_ranks, is_root
+    ), "key, nr_ranks, is_root should be set at the same time"
     assert isinstance(inp, (Buffer, Parameter))
     bcast_res = broadcast(inp, key, nr_ranks, is_root)
     add_update(inp, bcast_res, alpha=0)

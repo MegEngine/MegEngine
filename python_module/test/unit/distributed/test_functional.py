@@ -34,7 +34,7 @@ def test_reduce_sum():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.reduce_sum(inp, "x")
+        output = dist.functional.reduce_sum(inp)
         if rank == 0:
             assert np.allclose(output.numpy(), expect)
         else:
@@ -70,7 +70,7 @@ def test_gather():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.gather(inp, "x", is_root=(rank == 0), rank=rank)
+        output = dist.functional.gather(inp)
         if rank == 0:
             assert np.allclose(output.numpy(), expect)
         else:
@@ -106,7 +106,7 @@ def test_broadcast():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.broadcast(inp, "x")
+        output = dist.functional.broadcast(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -138,7 +138,7 @@ def test_scatter():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.scatter(inp, "x", is_root=(rank == 0), rank=rank)
+        output = dist.functional.scatter(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -174,7 +174,7 @@ def test_all_to_all():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.all_to_all(inp, "x", rank=rank)
+        output = dist.functional.all_to_all(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -208,7 +208,7 @@ def test_all_gather():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.all_gather(inp, "x", rank=rank)
+        output = dist.functional.all_gather(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -241,7 +241,7 @@ def test_reduce_scatter_sum():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.reduce_scatter_sum(inp, "x", rank=rank)
+        output = dist.functional.reduce_scatter_sum(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -278,7 +278,7 @@ def test_all_reduce_sum():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.all_reduce_sum(inp, "x")
+        output = dist.functional.all_reduce_sum(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -311,7 +311,7 @@ def test_all_reduce_max():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.all_reduce_max(inp, "x")
+        output = dist.functional.all_reduce_max(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -344,7 +344,7 @@ def test_all_reduce_min():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
-        output = dist.functional.all_reduce_min(inp, "x")
+        output = dist.functional.all_reduce_min(inp)
         assert np.allclose(output.numpy(), expect)
 
     def check(shape, backend):
@@ -377,7 +377,7 @@ def test_bcast_param():
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = Parameter(data)
-        dist.functional.bcast_param(inp, "x")
+        dist.functional.bcast_param(inp)
         assert np.allclose(inp.numpy(), expect)
 
     def check(shape, backend):

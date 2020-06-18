@@ -438,14 +438,14 @@ TEST_PASS(PackAllReduceScanPass, Basic) {
     auto grad3 = opr::VirtualGrad::make(y1, x1);
 
     auto mode = opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM;
-    auto comm0 = opr::CollectiveComm::make({grad0}, graph.get(),
-        "grad0", 2, 0, 0, client, mode)[0];
-    auto comm1 = opr::CollectiveComm::make({grad1}, graph.get(),
-        "grad1", 2, 0, 0, client, mode)[0];
-    auto comm2 = opr::CollectiveComm::make({grad2}, graph.get(),
-        "grad2", 2, 0, 0, client, mode)[0];
-    auto comm3 = opr::CollectiveComm::make({grad3}, graph.get(),
-        "grad3", 2, 0, 0, client, mode)[0];
+    auto comm0 = opr::CollectiveComm::make({grad0}, graph.get(), "grad0", 2,
+                                           false, 0, false, client, mode)[0];
+    auto comm1 = opr::CollectiveComm::make({grad1}, graph.get(), "grad1", 2,
+                                           false, 0, false, client, mode)[0];
+    auto comm2 = opr::CollectiveComm::make({grad2}, graph.get(), "grad2", 2,
+                                           false, 0, false, client, mode)[0];
+    auto comm3 = opr::CollectiveComm::make({grad3}, graph.get(), "grad3", 2,
+                                           false, 0, false, client, mode)[0];
 
     gopt::GraphOptimizer()
         .add_pass<gopt::PackAllReduceScanPass>()
@@ -488,10 +488,12 @@ TEST_PASS(PackAllReduceReplacePass, CollectGroups) {
 
         auto grad = opr::VirtualGrad::make(target, wrt);
 
-        auto comm = opr::CollectiveComm::make(
-            {grad}, graph.get(), "key", 2, 0, 0, client,
-            opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM)[0]
-            .node()->owner_opr();
+        auto comm =
+                opr::CollectiveComm::make(
+                        {grad}, graph.get(), "key", 2, false, 0, false, client,
+                        opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM)[0]
+                        .node()
+                        ->owner_opr();
 
         comm->cast_final_safe<opr::CollectiveComm>().set_pack_hash(extra_hash);
 
@@ -543,8 +545,8 @@ TEST_PASS(PackAllReduceReplacePass, DividePacks) {
     auto insert_opr = [&] (size_t size) {
         auto dev = std::make_shared<DeviceTensorND>(cn, TensorShape{size / sizeof(float)});
         auto sd = opr::SharedDeviceTensor::make(*graph, dev);
-        auto symvar = opr::CollectiveComm::make({sd}, graph.get(),
-            "key", 2, 0, 0, client, mode)[0];
+        auto symvar = opr::CollectiveComm::make(
+                {sd}, graph.get(), "key", 2, false, 0, false, client, mode)[0];
         auto opr = symvar.node()->owner_opr();
         auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
         comm.set_pack_hash(1);
@@ -596,7 +598,6 @@ TEST_PASS(PackAllReduceReplacePass, InsertPackedOprs) {
 
     size_t nr_devices = 2;
     uint32_t rank = 0;
-    uint32_t root = 0;
 
     using GroupInfo = gopt::PackAllReduceReplacePass::GroupInfo;
     ThinHashMap<uint64_t, std::shared_ptr<GroupInfo>> group_info;
@@ -605,8 +606,9 @@ TEST_PASS(PackAllReduceReplacePass, InsertPackedOprs) {
     auto insert_opr = [&] (const TensorShape& shape) {
         auto dev = std::make_shared<DeviceTensorND>(cn, shape);
         auto sd = opr::SharedDeviceTensor::make(*graph, dev);
-        auto symvar = opr::CollectiveComm::make({sd}, graph.get(),
-            "key", nr_devices, rank, root, client, mode)[0];
+        auto symvar =
+                opr::CollectiveComm::make({sd}, graph.get(), "key", nr_devices,
+                                          false, rank, false, client, mode)[0];
         auto opr = symvar.node()->owner_opr();
         auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
         comm.set_pack_hash(1);
@@ -634,8 +636,9 @@ TEST_PASS(PackAllReduceReplacePass, InsertPackedOprs) {
     auto concat = opr::Concat::make({grad_x.flatten(), grad_y.flatten()}, 0);
 
     std::string key = ssprintf("grad_pack_%zu", pack_id);
-    auto allreduce = opr::CollectiveComm::make({concat}, graph.get(),
-        key, nr_devices, rank, root, client, mode)[0];
+    auto allreduce =
+            opr::CollectiveComm::make({concat}, graph.get(), key, nr_devices,
+                                      false, rank, false, client, mode)[0];
 
     std::vector<size_t> partition;
     partition.push_back(shape_x.total_nr_elems());
@@ -683,10 +686,14 @@ TEST_PASS(PackAllReduceReplacePass, Equivalence) {
 
         using Mode = opr::CollectiveComm::Param::Mode;
         bool is_root = (rank == 0);
-        auto reduced_x = opr::CollectiveComm::make({grad_x}, graph.get(),
-            "x", 2, is_root, rank, client, Mode::ALL_REDUCE_SUM)[0] / 2;
-        auto reduced_y = opr::CollectiveComm::make({grad_y}, graph.get(),
-            "y", 2, is_root, rank, client, Mode::ALL_REDUCE_SUM)[0] / 2;
+        auto reduced_x = opr::CollectiveComm::make(
+                                 {grad_x}, graph.get(), "x", 2, is_root, rank,
+                                 false, client, Mode::ALL_REDUCE_SUM)[0] /
+                         2;
+        auto reduced_y = opr::CollectiveComm::make(
+                                 {grad_y}, graph.get(), "y", 2, is_root, rank,
+                                 false, client, Mode::ALL_REDUCE_SUM)[0] /
+                         2;
 
         graph->options().allreduce_pack_max_size = 5000;
         graph->options().allreduce_pack_ignore_first = 0;

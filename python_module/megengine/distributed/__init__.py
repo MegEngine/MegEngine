@@ -11,10 +11,13 @@ from .functional import (
     all_reduce_max,
     all_reduce_min,
     all_reduce_sum,
+    all_to_all,
     bcast_param,
     broadcast,
+    gather,
     reduce_scatter_sum,
     reduce_sum,
+    scatter,
 )
 from .util import (
     get_backend,

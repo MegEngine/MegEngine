@@ -29,8 +29,9 @@ public:
     CollectiveComm(
             VarNodeArray inputs, ComputingGraph* const graph,
             const std::string& key, const size_t nr_devices, const bool is_root,
-            const int rank, std::shared_ptr<GroupClient> group_client,
-            const Param& param, const DType& dtype, const std::string& backend,
+            const int rank, const bool local_grad,
+            std::shared_ptr<GroupClient> group_client, const Param& param,
+            const DType& dtype, const std::string& backend,
             const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
             const OperatorNodeConfig& config,
             const std::shared_ptr<DTypeScalar>& disable);
@@ -38,7 +39,8 @@ public:
     static SymbolVarArray make(
             const SymbolVarArray& inputs, ComputingGraph* const graph,
             const std::string& key, const size_t nr_devices, const bool is_root,
-            const int rank, std::shared_ptr<GroupClient> group_client,
+            const int rank, const bool local_grad,
+            std::shared_ptr<GroupClient> group_client,
             const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
             const Param& param, const DType& dtype = {},
             const std::string& backend = "nccl",
@@ -50,6 +52,7 @@ public:
                                ComputingGraph* const graph,
                                const std::string& key, const size_t nr_devices,
                                const bool is_root, const int rank,
+                               const bool local_grad,
                                std::shared_ptr<GroupClient> group_client,
                                const Param& param, const DType& dtype = {},
                                const std::string& backend = "nccl",
@@ -72,6 +75,7 @@ public:
     int rank() const { return m_rank; }
     int root() const { return m_root; }
     bool is_root() const { return m_is_root; }
+    bool local_grad() const { return m_local_grad; }
 
     //! The key that identifies an NCCL clique.
     //! Operators with same keys belong to the same clique.
@@ -89,7 +93,7 @@ public:
         return m_megray_ctx;
     }
 
-    VarNodeArray grad(const VarNodeArray& out_grad) const;
+    VarNode* grad(VarNode* out_grad) const;
 
 private:
     Barrier m_exec_barrier;
@@ -116,6 +120,7 @@ private:
     size_t m_nr_devices = 0;
     bool m_is_root;
     int m_rank;
+    bool m_local_grad;
     std::string m_key;
     //! XXHash generated from m_key
     size_t m_hash;

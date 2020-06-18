@@ -94,9 +94,9 @@ SymbolVar _Opr::remote_recv(const std::string& server_addr, const int port,
 
 SymbolVar _Opr::collective_comm_with_input(
         SymbolVar inpvar, const std::string& key, const size_t nr_devices,
-        const bool is_root, const int rank, const std::string& server_addr,
-        const int port, PyObject* params, PyObject* dtype,
-        const std::string& backend, SharedND* output_buf,
+        const bool is_root, const int rank, const bool local_grad,
+        const std::string& server_addr, const int port, PyObject* params,
+        PyObject* dtype, const std::string& backend, SharedND* output_buf,
         const OperatorNodeConfig& config, const SharedScalar& disable) {
     SymbolVarArray inputs(1, inpvar);
     ComputingGraph* graph = inpvar.node()->owner_graph();
@@ -111,15 +111,15 @@ SymbolVar _Opr::collective_comm_with_input(
         _dtype = npy::dtype_np2mgb(dtype);
     }
     return CollectiveComm::make(inputs, graph, key, nr_devices, is_root, rank,
-                                group_mgr, dev_buffer_arr, param, _dtype,
-                                backend, config, disable.get_val())[0];
+                                local_grad, group_mgr, dev_buffer_arr, param,
+                                _dtype, backend, config, disable.get_val())[0];
 }
 
 SymbolVar _Opr::collective_comm_without_input(
         CompGraph& cg, const std::string& key, const size_t nr_devices,
-        const bool is_root, const int rank, const std::string& server_addr,
-        const int port, PyObject* params, PyObject* dtype,
-        const std::string& backend, SharedND* output_buf,
+        const bool is_root, const int rank, const bool local_grad,
+        const std::string& server_addr, const int port, PyObject* params,
+        PyObject* dtype, const std::string& backend, SharedND* output_buf,
         const OperatorNodeConfig& config, const SharedScalar& disable) {
     SymbolVarArray inputs;
     auto& graph = cg.get();
@@ -134,8 +134,8 @@ SymbolVar _Opr::collective_comm_without_input(
         _dtype = npy::dtype_np2mgb(dtype);
     }
     return CollectiveComm::make(inputs, &graph, key, nr_devices, is_root, rank,
-                                group_mgr, dev_buffer_arr, param, _dtype,
-                                backend, config, disable.get_val())[0];
+                                local_grad, group_mgr, dev_buffer_arr, param,
+                                _dtype, backend, config, disable.get_val())[0];
 }
 
 #else
@@ -171,8 +171,8 @@ SymbolVar _Opr::remote_recv(const std::string& server_addr, const int port,
 }
 
 SymbolVar _Opr::collective_comm_with_input(
-        SymbolVar inpvar, const std::string& key,
-        const size_t nr_devices, const bool is_root, const int rank,
+        SymbolVar inpvar, const std::string& key, const size_t nr_devices,
+        const bool is_root, const int rank, const bool local_grad,
         const std::string& server_addr, const int port, PyObject* params,
         PyObject* dtype, const std::string& backend, SharedND* output_buf,
         const OperatorNodeConfig& config, const SharedScalar& disable) {
@@ -180,8 +180,8 @@ SymbolVar _Opr::collective_comm_with_input(
 }
 
 SymbolVar _Opr::collective_comm_without_input(
-        CompGraph& cg, const std::string& key,
-        const size_t nr_devices, const bool is_root, const int rank,
+        CompGraph& cg, const std::string& key, const size_t nr_devices,
+        const bool is_root, const int rank, const bool local_grad,
         const std::string& server_addr, const int port, PyObject* params,
         PyObject* dtype, const std::string& backend, SharedND* output_buf,
         const OperatorNodeConfig& config, const SharedScalar& disable) {

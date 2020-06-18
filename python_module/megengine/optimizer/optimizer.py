@@ -182,7 +182,9 @@ class Optimizer(metaclass=ABCMeta):
                 with opr_priority_scope(cg, -(2 ** 30)):
                     # always run all_reduce_mean first except add_update
                     grad = (
-                        all_reduce_sum(grad, "grad_" + str(get_group_id()))
+                        all_reduce_sum(
+                            grad, "grad_" + str(get_group_id()), get_world_size()
+                        )
                         / get_world_size()
                     )
                 with opr_priority_scope(cg, -(2 ** 31)):
@@ -229,7 +231,7 @@ class Optimizer(metaclass=ABCMeta):
         for group in self.param_groups:
             for param in group["params"]:
                 bcast_param(
-                    param, "bcast_param_" + str(key), is_root=(get_rank() == 0),
+                    param, "bcast_param_" + str(key), get_world_size(), get_rank() == 0,
                 )
                 key += 1
 

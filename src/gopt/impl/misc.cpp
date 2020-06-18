@@ -688,6 +688,7 @@ bool PackAllReduceScanPass::check_pattern(OperatorNodeBase* opr) {
     if (!opr->same_type<opr::CollectiveComm>()) return false;
     auto& comm = opr->cast_final_safe<opr::CollectiveComm>();
     if (comm.param().mode != opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM) return false;
+    if (comm.local_grad()) return false;
     if (comm.input().size() != 1) return false;
 
     auto grad = comm.input(0)->owner_opr();
@@ -839,7 +840,7 @@ void PackAllReduceReplacePass::insert_packed_oprs(
     std::string key = ssprintf("grad_pack_%zu", pack_id);
     auto param = opr::CollectiveComm::Param::Mode::ALL_REDUCE_SUM;
     SymbolVar allreduce = opr::CollectiveComm::make({concat}, graph,
-        key, info->nr_devices, info->is_root, info->rank,
+        key, info->nr_devices, info->is_root, info->rank, false,
         info->group_client, param, info->dtype, info->backend)[0];
 
     // split according to recorded partition
