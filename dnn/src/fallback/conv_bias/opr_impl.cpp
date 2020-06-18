@@ -16,6 +16,7 @@
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/algos.h"
 #include "src/fallback/conv_bias/conv1x1/algos.h"
+#include "src/fallback/conv_bias/conv1x1/algos_conv1x1_gemv.h"
 #include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/naive/convolution/algorithms.h"
@@ -53,6 +54,10 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
+        
+        refhold.emplace_back(new AlgoConv1x1Gemv());
+        all_algos.emplace_back(refhold.back().get());
+
         static CpuOprDelegationStorage<> storage;
         auto matmul_opr = storage.get<MatrixMul>();
         auto&& matmul_algos =

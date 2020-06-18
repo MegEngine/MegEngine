@@ -11,6 +11,7 @@
 
 #include "src/fallback/matrix_mul/algos.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"
+#include "src/fallback/matrix_mul/gemv.h"
 #include "src/fallback/matrix_mul/generic_strategy.h"
 #include "midout.h"
 
@@ -71,39 +72,6 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32K8x12x1, megdnn_fb_matmul_f32_kern,
                                      float);
 
 /* ===================== gemv algo ===================== */
-
-namespace {
-template <typename itype, typename otype, bool have_zp = false>
-void gemm_gemv_like(const MatrixMulImpl::KernParam& kern_param) {
-    const itype* A = kern_param.A<itype>();
-    const itype* B = kern_param.B<itype>();
-    uint8_t zp0, zp1;
-    if (have_zp) {
-        zp0 = kern_param.A_type.param<dtype::Quantized8Asymm>().zero_point;
-        zp1 = kern_param.B_type.param<dtype::Quantized8Asymm>().zero_point;
-    }
-
-    otype* C = kern_param.C<otype>();
-    for (size_t m = 0; m < kern_param.M; ++m) {
-        memset(C + m * kern_param.LDC, 0, sizeof(otype) * kern_param.N);
-        for (size_t k = 0; k < kern_param.K; ++k)
-            for (size_t n = 0; n < kern_param.N; ++n) {
-                if (!have_zp)
-                    C[m * kern_param.LDC + n] +=
-                            static_cast<otype>(A[m * kern_param.LDA + k]) *
-                            static_cast<otype>(B[k * kern_param.LDB + n]);
-                else {
-                    C[m * kern_param.LDC + n] +=
-                            (static_cast<otype>(A[m * kern_param.LDA + k]) -
-                             static_cast<otype>(zp0)) *
-                            (static_cast<otype>(B[k * kern_param.LDB + n]) -
-                             static_cast<otype>(zp1));
-                }
-            }
-    }
-}
-}  // anonymous namespace
-
 bool MatrixMulImpl::AlgoGemv::usable(
         const KernSizeParam& kern_size_param) const {
     return !kern_size_param.trA && !kern_size_param.trB &&

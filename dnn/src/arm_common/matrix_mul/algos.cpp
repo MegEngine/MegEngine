@@ -43,9 +43,9 @@ void exec_int_8x8x16(const MatrixMulImpl::KernParam& kern_param) {
         size_t N = kern_param.N;
         size_t K = kern_param.K;
         size_t LDB = kern_param.LDB;
-        exec_gemm_int8_int8_int16(kern_param.A<dt_int8>(),
-                                  kern_param.B<dt_int8>(),
-                                  kern_param.C<dt_int16>(), M, K, N, LDB, w0, w1);
+        exec_gemm_int8_int8_int16(
+                kern_param.A<dt_int8>(), kern_param.B<dt_int8>(),
+                kern_param.C<dt_int16>(), M, K, N, LDB, w0, w1);
     }
     MIDOUT_END();
 }
@@ -79,8 +79,7 @@ void int8x8x32_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
     auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
     const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
     auto Cptr = kern_param.C<dt_int32>();
-    arm_common::matmul::gemv_like_int8(Aptr, Bptr, Cptr, M, N, K, LDA, LDB,
-                                       LDC);
+    gemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
 }
 }  // anonymous namespace
 
@@ -110,7 +109,7 @@ void f32_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
     const auto Aptr = kern_param.A<dt_float32>(),
                Bptr = kern_param.B<dt_float32>();
     auto Cptr = kern_param.C<dt_float32>();
-    arm_common::sgemm_sgemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    gemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
 }
 }  // anonymous namespace
 
@@ -140,25 +139,14 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32Gemv::get_kern(
 
 /* ===================== F32 Gevm algo ===================== */
 namespace {
-
-void gevm_fp32_kern(const MatrixMulImpl::KernParam& kern_param) {
+template <typename stype, typename dtype>
+void gevm_like_kern(const MatrixMulImpl::KernParam& kern_param) {
     auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
     auto LDB = kern_param.LDB;
-    const auto Aptr = kern_param.A<dt_float32>(),
-               Bptr = kern_param.B<dt_float32>();
-    auto Cptr = kern_param.C<dt_float32>();
-    arm_common::sgemm_sgemv_like(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
+    const auto Aptr = kern_param.A<stype>(), Bptr = kern_param.B<stype>();
+    auto Cptr = kern_param.C<dtype>();
+    megdnn::arm_common::gemv_like(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
 }
-
-void gevm_int8_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDB = kern_param.LDB;
-    const auto Aptr = kern_param.A<dt_int8>(),
-               Bptr = kern_param.B<dt_int8>();
-    auto Cptr = kern_param.C<dt_int32>();
-    arm_common::matmul::gemv_like_int8(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
-}
-
 }  // anonymous namespace
 
 bool MatrixMulImpl::AlgoGevm::usable(
@@ -170,8 +158,16 @@ bool MatrixMulImpl::AlgoGevm::usable(
             kern_size_param.B_type == kern_size_param.A_type &&
             kern_size_param.C_type == kern_size_param.A_type &&
             kern_size_param.A_type == dtype::Float32();
-    return (fp32_ok || can_be_treated_as_int8x8x32(kern_size_param)) &&
-           preferred(kern_size_param);
+    bool fp16_ok = false;
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    fp16_ok = kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+              kern_size_param.format == param::MatrixMul::Format::DEFAULT &&
+              kern_size_param.B_type == kern_size_param.A_type &&
+              kern_size_param.C_type == kern_size_param.A_type &&
+              kern_size_param.A_type == dtype::Float16();
+#endif
+    bool int8_ok = can_be_treated_as_int8x8x32(kern_size_param);
+    return (fp32_ok || fp16_ok || int8_ok) && preferred(kern_size_param);
 }
 
 bool MatrixMulImpl::AlgoGevm::preferred(
@@ -183,11 +179,17 @@ bool MatrixMulImpl::AlgoGevm::preferred(
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoGevm::get_kern(
         const KernSizeParam& kern_size_param) const {
     if (kern_size_param.A_type == dtype::Float32()) {
-        return gevm_fp32_kern;
+        return gevm_like_kern<dt_float32, dt_float32>;
     } else if (kern_size_param.A_type.enumv() == DTypeEnum::Int8 ||
                kern_size_param.A_type.enumv() == DTypeEnum::QuantizedS8) {
-        return gevm_int8_kern;
-    } else {
+        return gevm_like_kern<dt_int8, dt_int32>;
+    }
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    else if (kern_size_param.A_type == dtype::Float16()) {
+        return gevm_like_kern<__fp16, __fp16>;
+    }
+#endif
+    else {
         megdnn_assert(
                 false, "no avaliable kern got A_type: %s B_type: %s C_type: %s",
                 kern_size_param.A_type.name(), kern_size_param.B_type.name(),
@@ -205,10 +207,10 @@ void f16_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
                Bptr = kern_param.B<dt_float16>();
     auto Cptr = kern_param.C<dt_float16>();
     MIDOUT_BEGIN(megdnn_arm_hgemv, void) {
-        arm_common::hgemv_exec(reinterpret_cast<const __fp16*>(Aptr),
-                               reinterpret_cast<const __fp16*>(Bptr),
-                               reinterpret_cast<__fp16*>(Cptr), M, N, K, LDA,
-                               LDB, LDC);
+        arm_common::gemv_like(reinterpret_cast<const __fp16*>(Aptr),
+                              reinterpret_cast<const __fp16*>(Bptr),
+                              reinterpret_cast<__fp16*>(Cptr), M, N, K, LDA,
+                              LDB, LDC);
     }
     MIDOUT_END();
 }

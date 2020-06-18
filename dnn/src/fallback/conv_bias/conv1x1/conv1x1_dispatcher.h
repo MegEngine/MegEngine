@@ -11,29 +11,11 @@
 
 #pragma once
 
-#include "src/fallback/conv_bias/conv1x1/conv1x1_strategy.h"
+#include "src/fallback/conv_bias/conv1x1/conv1x1_utils.h"
 
 namespace megdnn {
 namespace fallback {
 namespace conv1x1 {
-
-namespace {
-//! get_thread_bundle
-WorkspaceBundle get_thread_bundle(const ConvBiasImpl::NCBKernSizeParam& param,
-                                  size_t matmul_c_size, size_t oc_tile_size) {
-    //! for some cases, matmul result need temp space to store
-    size_t OH = param.osz[0];
-    size_t OW = param.osz[1];
-    bool is_dst_8bit = (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                        param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-                       (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
-                        param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
-    size_t matmul_dst_bytes_per_thread =
-            is_dst_8bit ? oc_tile_size * OH * OW * sizeof(param.bias_type) : 0;
-    return WorkspaceBundle{nullptr,
-                           {matmul_c_size, matmul_dst_bytes_per_thread}};
-}
-} // anonymous namespace
 
 template <MatrixMulImpl::AlgoBase::PackMode pack_mode>
 class Conv1x1Kerns {
@@ -51,7 +33,7 @@ public:
         //! matmul_param records a matmul with M = oc_tile_size, K = IC, N = OH
         //! * OW this does not bother packb bytes
         auto matmul_bundle = matmul_algo->get_bundle(matmul_param);
-        auto thread_bundle = get_thread_bundle(param, matmul_bundle.get_size(2),
+        auto thread_bundle = utils::get_thread_bundle(param, matmul_bundle.get_size(2),
                                                oc_tile_size);
 
         //! size per thread
@@ -86,7 +68,7 @@ public:
                                const MatrixMulImpl::AlgoBase* matmul_algo,
                                size_t oc_tile_size) {
         size_t matmul_size = matmul_algo->get_workspace(matmul_param);
-        auto thread_bundle = get_thread_bundle(param, matmul_size, oc_tile_size);
+        auto thread_bundle = utils::get_thread_bundle(param, matmul_size, oc_tile_size);
         //! size per thread
         size_t all_threads_bytes =
                 thread_bundle.total_size_in_bytes() * param.nr_threads;

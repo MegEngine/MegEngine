@@ -172,9 +172,10 @@ void gemv_naive_n(const int8_t* __restrict A, const int8_t* __restrict B,
 }  // namespace
 #endif
 
-bool matmul::is_gemv_like_preferred_int8(bool transposeA, bool transposeB,
-                                         size_t M, size_t N, size_t K,
-                                         size_t LDA, size_t LDB, size_t LDC) {
+bool arm_common::is_gemv_like_preferred_int8(bool transposeA, bool transposeB,
+                                             size_t M, size_t N, size_t K,
+                                             size_t LDA, size_t LDB,
+                                             size_t LDC) {
     MEGDNN_MARK_USED_VAR(LDA);
     MEGDNN_MARK_USED_VAR(LDB);
     MEGDNN_MARK_USED_VAR(LDC);
@@ -188,15 +189,16 @@ bool matmul::is_gemv_like_preferred_int8(bool transposeA, bool transposeB,
     return N == 1 && LDB == 1;
 }
 
-void matmul::gemv_like_int8(const int8_t* __restrict A,
-                            const int8_t* __restrict B, int32_t* __restrict C,
-                            size_t M, size_t N, size_t K, size_t Astride,
-                            size_t Bstride, size_t Cstride) {
+void arm_common::gemv_like(const int8_t* __restrict A,
+                           const int8_t* __restrict B, int32_t* __restrict C,
+                           size_t M, size_t N, size_t K, size_t Astride,
+                           size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1);
-    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv) {
+    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv,
+                 midout_iv("INT8_gemv_like"_hash)) {
         return gemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
-    } MIDOUT_END();
+    }
+    MIDOUT_END();
 }
-
 
 // vim: syntax=cpp.doxygen

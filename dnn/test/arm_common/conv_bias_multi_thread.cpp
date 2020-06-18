@@ -1861,6 +1861,12 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
 #elif MEGDNN_ARMV7
     check_conv_bias(args, handle(), "CONV1x1:ARMV7_F32:48");
 #endif
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if(arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+    check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32) {
@@ -1905,16 +1911,23 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F16) {
                       dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
                       "CONV1x1:AARCH32_F16_K4X16X1:24");
 #endif
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if(arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+    check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");
 }
 #endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-#define cb(name)                                                            \
-    checker_conv_bias(get_conv_bias_1x1_args(false, false, true, true),     \
-                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),    \
-                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), \
+    std::vector<conv_bias::TestArg> args =
+            get_conv_bias_1x1_args(false, false, true, true);
+#define cb(name)                                                               \
+    checker_conv_bias(args, handle(), &rng, epsilon, dtype::QuantizedS8(2.5f), \
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
                       dtype::QuantizedS8(60.25f), name);
 #if MEGDNN_AARCH64
 #if __ARM_FEATURE_DOTPROD
@@ -1928,17 +1941,27 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM) {
     cb("CONV1x1:ARMV7_INT8X8X32_K4X8X8:48");
 #endif
 #undef cb
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+    checker_conv_bias(gemv_args, handle(), &rng, epsilon,
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+                      dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f),
+                      "CONV1x1_GEMV");
 }
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM) {
-    NormalRNG rng(128.f);
-#define cb(name)                                                        \
-    checker_conv_bias(get_conv_bias_1x1_args(false, false, true, true), \
-                      handle(), &rng, epsilon,                          \
-                      dtype::Quantized8Asymm(1.2f, (uint8_t)125),       \
-                      dtype::Quantized8Asymm(1.3f, (uint8_t)129),       \
-                      dtype::QuantizedS32(1.2 * 1.3),                   \
+    UniformIntRNG rng{-50, 50};
+    std::vector<conv_bias::TestArg> args =
+            get_conv_bias_1x1_args(false, false, true, true);
+#define cb(name)                                                  \
+    checker_conv_bias(args, handle(), &rng, epsilon,              \
+                      dtype::Quantized8Asymm(1.2f, (uint8_t)125), \
+                      dtype::Quantized8Asymm(1.3f, (uint8_t)129), \
+                      dtype::QuantizedS32(1.2 * 1.3),             \
                       dtype::Quantized8Asymm(50.3f, (uint8_t)120), name);
     float epsilon = 0.001;
 #if MEGDNN_AARCH64
@@ -1952,17 +1975,29 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM) {
     cb("CONV1x1:ARMV7_QUINT8_K4X8X8:48");
 #endif
 #undef cb
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+    checker_conv_bias(gemv_args, handle(), &rng, epsilon,
+                      dtype::Quantized8Asymm(1.2f, (uint8_t)125),
+                      dtype::Quantized8Asymm(1.3f, (uint8_t)129),
+                      dtype::QuantizedS32(1.2 * 1.3),
+                      dtype::Quantized8Asymm(50.3f, (uint8_t)120),
+                      "CONV1x1_GEMV");
 }
 #endif
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32) {
-    UniformIntRNG rng{-50, 50};
+    NormalRNG rng(128.f);
     float epsilon = 0.001;
-#define cb(name)                                                           \
-    checker_conv_bias(get_conv_bias_1x1_args(true, true), handle(), &rng,  \
-                      epsilon, dtype::Quantized8Asymm(1.2f, (uint8_t)125), \
-                      dtype::Quantized8Asymm(1.3f, (uint8_t)129),          \
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+#define cb(name)                                                  \
+    checker_conv_bias(args, handle(), &rng, epsilon,              \
+                      dtype::Quantized8Asymm(1.2f, (uint8_t)125), \
+                      dtype::Quantized8Asymm(1.3f, (uint8_t)129), \
                       dtype::QuantizedS32(1.2 * 1.3), {}, name);
 
 #if MEGDNN_AARCH64
@@ -1978,15 +2013,25 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32) {
     cb("CONV1x1:ARMV7_QUINT8_K4X8X8:24");
 #endif
 #undef cb
+
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+    checker_conv_bias(gemv_args, handle(), &rng, epsilon,
+                      dtype::Quantized8Asymm(1.2f, (uint8_t)125),
+                      dtype::Quantized8Asymm(1.3f, (uint8_t)129),
+                      dtype::QuantizedS32(1.2 * 1.3), {}, "CONV1x1_GEMV");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-#define cb(name)                                                             \
-    checker_conv_bias(get_conv_bias_1x1_args(true, true), handle(), &rng,    \
-                      epsilon, dtype::Int8{}, dtype::Int8{}, dtype::Int16{}, \
-                      dtype::Int16{}, name);
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+#define cb(name)                                                    \
+    checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{}, \
+                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, name);
 
 #if MEGDNN_AARCH64
     cb("CONV1x1:AARCH64_INT8X8X16_K8X8X8:24");
@@ -1997,6 +2042,16 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
 #endif
     cb("CONV1x1:ARM_COMMON_INT8X8X16:48");
 #undef cb
+
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+
+    checker_conv_bias(gemv_args, handle(), &rng, epsilon, dtype::Int8{},
+                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
+                      "CONV1x1_GEMV");
 }
 #endif
 
@@ -2024,6 +2079,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32) {
     cb("CONV1x1:ARMV7_INT8X8X32_K4X2X16:48");
 #endif
 #undef cb
+
+    std::vector<conv_bias::TestArg> gemv_args;
+    for (auto&& arg : args)
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+            gemv_args.emplace_back(arg);
+        }
+    checker_conv_bias_mul_int8x8x32(gemv_args, handle(), "CONV1x1_GEMV");
 }
 
 #ifndef __ARM_FEATURE_DOTPROD

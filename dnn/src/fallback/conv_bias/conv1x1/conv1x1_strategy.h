@@ -13,6 +13,8 @@
 #pragma once
 
 #include "src/fallback/conv_bias/opr_impl.h"
+#include "src/fallback/conv_bias/conv1x1/conv1x1_utils.h"
+
 #if MEGDNN_X86
 #include "src/x86/conv_bias/postprocess_helper.h"
 #elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
@@ -26,44 +28,6 @@ namespace conv1x1 {
 #if MEGDNN_X86
 using namespace x86;
 #endif
-
-namespace {
-
-//! get_matmul_kern_param
-MatrixMulImpl::KernSizeParam get_matmul_kern_param(
-        const ConvBiasImpl::NCBKernSizeParam& param, size_t n, size_t m) {
-    size_t M = m;
-    size_t N = n;
-    size_t K = param.filter_meta.icpg;  //! K = IC
-    size_t LDA = K, LDB = N, LDC = N;
-    bool is_dst_8bit = (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                        param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-                       (param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
-                        param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
-    size_t pack_c_size = pack_size(param.filter_meta.format);
-    auto format = param::MatrixMul::Format::DEFAULT;
-    if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
-        format = param::MatrixMul::Format::MK4;
-    } else if (param.filter_meta.format ==
-               param::ConvBias::Format::NCHW44_DOT) {
-        format = param::MatrixMul::Format::MK4_DOT;
-    }
-
-    return {param.filter_type,
-            param.src_type,
-            is_dst_8bit ? param.bias_type : param.dst_type,
-            M,
-            N,
-            K,
-            LDA * pack_c_size,
-            LDB * pack_c_size,
-            LDC * pack_c_size,
-            false,
-            false,
-            param::MatrixMul::ComputeMode::DEFAULT,
-            format};
-}
-}  // namespace
 
 class Conv1x1StrategyBase {
 public:
@@ -134,7 +98,7 @@ public:
         size_t IC = param.filter_meta.icpg;
         MatrixMulImpl::KernParam matmul_kern_param;
         static_cast<MatrixMulImpl::KernSizeParam&>(matmul_kern_param) =
-                get_matmul_kern_param(param, OH * OW, oc_end - oc_start);
+                utils::get_matmul_kern_param(param, OH * OW, oc_end - oc_start);
 
         size_t bytes_offset_of_a_panel =
                 group_id * packa_bytes_per_group +
@@ -176,8 +140,7 @@ public:
 
             MatrixMulImpl::KernParam matmul_kern_param;
             static_cast<MatrixMulImpl::KernSizeParam&>(matmul_kern_param) =
-                    get_matmul_kern_param(param, OH * OW, OC);
-
+                    utils::get_matmul_kern_param(param, OH * OW, OC);
 
             rep(batch, BATCH) {
                 rep(g, GROUP) {
@@ -238,7 +201,7 @@ public:
 
         MatrixMulImpl::KernParam matmul_kern_param;
         static_cast<MatrixMulImpl::KernSizeParam&>(matmul_kern_param) =
-                get_matmul_kern_param(param, OH * OW, oc_end - oc_start);
+                utils::get_matmul_kern_param(param, OH * OW, oc_end - oc_start);
 
         size_t bytes_offset_of_a_panel =
                 group_id * packa_bytes_per_group +
@@ -328,7 +291,6 @@ public:
             MatrixMulImpl::AlgoBase::PackMode pack_mode,
             param::ConvBias::Format format);
 };
-
 }  // namespace conv1x1
 }  // namespace fallback
 }  // namespace megdnn

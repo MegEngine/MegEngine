@@ -15,16 +15,15 @@
 
 namespace megdnn {
 namespace arm_common {
-namespace matmul {
 
 bool is_gemv_like_preferred_int8(bool transposeA, bool transposeB, size_t M,
                                  size_t N, size_t K, size_t LDA, size_t LDB,
                                  size_t LDC);
 
-void gemv_like_int8(const int8_t* __restrict A, const int8_t* __restrict B,
-                    int32_t* __restrict C, size_t M, size_t N, size_t K,
-                    size_t Astride, size_t Bstride, size_t Cstride);
-}  // namespace matmul
+void gemv_like(const int8_t* __restrict A, const int8_t* __restrict B,
+               int32_t* __restrict C, size_t M, size_t N, size_t K,
+               size_t Astride, size_t Bstride, size_t Cstride);
+
 }  // namespace arm_common
 }  // namespace megdnn
 

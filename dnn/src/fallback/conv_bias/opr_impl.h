@@ -259,6 +259,7 @@ private:
     class AlgoNaive;
     class AlgoIm2col;
     class AlgoConv1x1;
+    class AlgoConv1x1Gemv;
     class AlgoWinogradF32;
     class AlgoWinogradF32_4x4;
     class AlgoWinogradQS8;

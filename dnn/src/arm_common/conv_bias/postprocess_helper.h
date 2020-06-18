@@ -193,7 +193,7 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
         DEFAULT                                              \
     }
 
-#define FOR_BIAS(_bias_mode)                                          \
+#define FOR_BIAS(_bias_mode, OH, OW)                                  \
     switch (_bias_mode) {                                             \
         case megdnn::BiasMode::NO_BIAS:                               \
             FOR_NONLINEAR_NOBIAS(FOR_NONLINEAR_UNARY);                \
@@ -208,6 +208,10 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
             }                                                         \
             break;                                                    \
         default:                                                      \
+            if (OH * OW == 1) {                                       \
+                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
+                break;                                                \
+            }                                                         \
             megdnn_throw("quantized unsupported biasmode");           \
             break;                                                    \
     }
@@ -218,7 +222,9 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
                     megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
                     megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
                     size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
-        FOR_BIAS(bias_mode);
+        //! when OH * OW = 1, the bias_mode will be BiasMode::BIAS. It is wrong,
+        //! we deal this case at default branch.
+        FOR_BIAS(bias_mode, OH, OW);
     }
 };
 

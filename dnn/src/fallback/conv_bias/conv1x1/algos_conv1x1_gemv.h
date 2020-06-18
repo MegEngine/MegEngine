@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/fallback/conv_bias/conv1x1/algos.h
+ * \file dnn/src/fallback/conv_bias/conv1x1/algos_conv1x1_gemv.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -14,24 +14,18 @@
 #include "megdnn/thin/small_vector.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/opr_impl.h"
-#include "src/fallback/matrix_mul/opr_impl.h"
 
 namespace megdnn {
 namespace fallback {
 
-class ConvBiasImpl::AlgoConv1x1 final : public AlgoBase {
+class ConvBiasImpl::AlgoConv1x1Gemv final : public AlgoBase {
 public:
-    AlgoConv1x1(MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size)
-            : m_matmul_algo(matmul_algo), m_oc_block_size(oc_block_size) {}
+    AlgoConv1x1Gemv() = default;
 
     bool is_reproducible() const override { return true; }
 
     const char* name() const override {
-        if (m_name.empty()) {
-            m_name = ssprintf("CONV1x1:%s:%zu", m_matmul_algo->name(),
-                              m_oc_block_size);
-        }
-        return m_name.c_str();
+        return "CONV1x1_GEMV";
     }
 
     bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
@@ -45,11 +39,6 @@ public:
 
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;
-
-private:
-    MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-    const size_t m_oc_block_size = 0;
 };
 
 }  // namespace fallback

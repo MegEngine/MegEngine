@@ -1081,7 +1081,7 @@ std::vector<megdnn::test::conv_bias::TestArg> get_conv_bias_1x1_args(
     for (size_t n : {1, 2})
         for (size_t oc : {1, 9, 33})
             for (size_t ic : {1, 16, 64})
-                for (size_t size : {7, 14, 28})
+                for (size_t size : {1, 7, 14, 28})
                     for (auto nlmode : nonlinemode)
                         for (auto convmode : convmodes) {
                             pack(n, oc, ic, size, size, 1, nlmode, convmode);

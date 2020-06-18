@@ -254,6 +254,50 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {
             for (size_t N : {512, 1024})
                 run(M, K, N);
 }
+
+TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
+    int exec_times = 50;
+    Benchmarker<MatrixMul> benchmarker(handle());
+    benchmarker.set_times(exec_times);
+    benchmarker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
+
+    auto run = [&](size_t M, size_t K, size_t N) {
+        std::cout << "SGEMV: (" << M << ", " << K << ", " << N << ")"
+                  << std::endl;
+        benchmarker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32());
+        auto time = benchmarker.exec({{M, K}, {K, N}, {}}) / exec_times;
+        auto computations = 2 * M * K * N * 1e-6;
+        auto perf = computations / time;
+        std::cout << "gemv fp32, Performance is " << perf << " Gflops"
+                  << std::endl;
+    };
+
+    std::cout << "warm up:\n";
+    for (int i = 0; i < 50; i++) {
+        benchmarker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_display(false)
+                .exec({{2, 1024}, {1024, 512}, {}});
+        benchmarker.set_display(true);
+    }
+
+    // run gemv
+    run(12, 48, 1);
+    run(48, 12, 1);
+    run(32, 128, 1);
+    run(128, 32, 1);
+    run(64, 256, 1);
+    run(256, 64, 1);
+    run(128, 512, 1);
+    run(512, 128, 1);
+    run(256, 1024, 1);
+    run(1024, 256, 1);
+}
+
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP16) {
     int exec_times = 50;
     Benchmarker<MatrixMul> benchmarker(handle());
@@ -290,6 +334,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP16) {
             for (size_t N : {512, 1024})
                 run(M, K, N);
 }
+
 TEST_F(ARM_COMMON, BENCHMARK_SGEMM) {
     int exec_times = 10;
     Benchmarker<MatrixMul> benchmarker(handle());

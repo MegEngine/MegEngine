@@ -54,7 +54,7 @@ size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
     size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
 
     auto matmul_param =
-            get_matmul_kern_param(param, OH * OW, compt_oc_block_size);
+            utils::get_matmul_kern_param(param, OH * OW, compt_oc_block_size);
 
     auto pack_mode = m_matmul_algo->packmode();
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
@@ -92,7 +92,6 @@ size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
         ConvBiasImpl* opr, const NCBKernSizeParam& param) const {
     SmallVector<ConvBiasImpl::NCBKern> ret_kern;
-
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
     size_t OC = param.filter_meta.ocpg;
@@ -102,7 +101,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
     size_t oc_blocks_per_group = div_ceil(OC, compt_oc_block_size);
 
     auto matmul_param =
-            get_matmul_kern_param(param, OH * OW, compt_oc_block_size);
+            utils::get_matmul_kern_param(param, OH * OW, compt_oc_block_size);
     WorkspaceBundle whole_bundle = {nullptr, {}};
     WorkspaceBundle thread_bundle = {nullptr, {}};
     WorkspaceBundle matmul_bundle = {nullptr, {}};
@@ -138,7 +137,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
     }
 
     //! get thread bundle
-    thread_bundle = get_thread_bundle(param, matmul_bundle.get_size(2),
+    thread_bundle = utils::get_thread_bundle(param, matmul_bundle.get_size(2),
                                       compt_oc_block_size);
 
     Conv1x1StrategyBase* conv1x1_strategy =
@@ -178,7 +177,6 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
         }
     }
     ret_kern.push_back({kern_compt, {BATCH, GROUP, oc_blocks_per_group}});
-
     return ret_kern;
 }
 
@@ -201,8 +199,11 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
         if (FH != 1 || FW != 1 || PH || PW || SH != 1 || SW != 1)
             return false;
 
-        if (param.src_type.enumv() != param.filter_type.enumv() &&
-            param.src_type.enumv() != DTypeEnum::Int8 &&
+        if(param.src_type.enumv() != param.filter_type.enumv()) {
+            return false;
+        }
+
+        if (param.src_type.enumv() != DTypeEnum::Int8 &&
             param.src_type.enumv() != DTypeEnum::QuantizedS8 &&
             param.src_type.enumv() != DTypeEnum::Quantized8Asymm &&
 #if !MEGDNN_DISABLE_FLOAT16
@@ -211,6 +212,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
             param.src_type.enumv() != DTypeEnum::Float32) {
             return false;
         }
+
         //! make sure 8x8x16 and 8x8x32 biasmode is nobias and nonlineMode
         //! is identity otherwise return false mean that 8x8x32 and 8x8x16
         //! not support PostProcess
@@ -233,7 +235,8 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
 
         size_t OH = param.osz[0];
         size_t OW = param.osz[1];
-        MatrixMulImpl::KernSizeParam matmul_param = get_matmul_kern_param(
+
+        MatrixMulImpl::KernSizeParam matmul_param = utils::get_matmul_kern_param(
                 param, OH * OW, get_oc_tile_size_heuristic(param));
         bool matmul_usable = m_matmul_algo->usable(matmul_param);
 
@@ -250,3 +253,27 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
     MIDOUT_END();
     return false;
 }
+
+bool ConvBiasImpl::AlgoConv1x1::is_preferred(
+        ConvBiasImpl*, const NCBKernSizeParam& param) const {
+    size_t OH = param.osz[0];
+    size_t OW = param.osz[1];
+    if (OH * OW != 1) {
+        return true;
+    } else {
+#if (MEGDNN_ARMV7 || MEGDNN_AARCH64)
+        if (param.src_type.enumv() == DTypeEnum::Int8 &&
+            param.filter_type.enumv() == DTypeEnum::Int8 &&
+            param.dst_type.enumv() == DTypeEnum::Int16) {
+                return true;
+            }
+#elif MEGDNN_X86
+        size_t OC = param.filter_meta.ocpg;
+        if (OC > 2 || param.src_type.enumv() == DTypeEnum::Float32)
+            return true;
+#endif
+        return false;
+    }
+}
+
+// vim: syntax=cpp.doxygen

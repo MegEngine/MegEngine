@@ -96,11 +96,11 @@ void hgemv_naive_n(const __fp16* __restrict A, const __fp16* __restrict B,
 }
 }  // namespace
 
-void megdnn::arm_common::hgemv_exec(const __fp16* __restrict A,
-                                    const __fp16* __restrict B,
-                                    __fp16* __restrict C, size_t M, size_t N,
-                                    size_t K, size_t Astride, size_t Bstride,
-                                    size_t Cstride) {
+void megdnn::arm_common::gemv_like(const __fp16* __restrict A,
+                                   const __fp16* __restrict B,
+                                   __fp16* __restrict C, size_t M, size_t N,
+                                   size_t K, size_t Astride, size_t Bstride,
+                                   size_t Cstride) {
     megdnn_assert((M <= 4) || (M == 8 && K <= 2) || (N == 1 && Bstride == 1));
     if (N == 1) {
         return hgemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);

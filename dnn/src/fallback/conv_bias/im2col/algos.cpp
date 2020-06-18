@@ -647,8 +647,11 @@ bool ConvBiasImpl::AlgoIm2col::usable(
             return false;
         }
 
-        if (param.src_type.enumv() != param.filter_type.enumv() &&
-            param.src_type.enumv() != DTypeEnum::Int8 &&
+        if(param.src_type.enumv() != param.filter_type.enumv()) {
+            return false;
+        }
+
+        if (param.src_type.enumv() != DTypeEnum::Int8 &&
             param.src_type.enumv() != DTypeEnum::QuantizedS8 &&
             param.src_type.enumv() != DTypeEnum::Quantized8Asymm &&
 #if !MEGDNN_DISABLE_FLOAT16

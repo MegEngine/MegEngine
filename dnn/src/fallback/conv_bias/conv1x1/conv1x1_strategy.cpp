@@ -10,8 +10,8 @@
  * implied.
  */
 
+#include "src/fallback/conv_bias/conv1x1/conv1x1_utils.h"
 #include "src/fallback/conv_bias/conv1x1/conv1x1_strategy.h"
-#include <unordered_map>
 
 #include "midout.h"
 
@@ -20,53 +20,7 @@ MIDOUT_DECL(megdnn_fallback_conv1x1_factory_strategy)
 namespace megdnn {
 namespace fallback {
 namespace conv1x1 {
-
 namespace {
-
-struct StrategyHashParam {
-    ConvBiasImpl::NCBKernSizeParam param;
-    param::ConvBias::Format format;
-    MatrixMulImpl::AlgoBase::PackMode packmode;
-};
-
-struct StrategyHashParamHash {
-    std::size_t operator()(const StrategyHashParam& sparam) const {
-        constexpr size_t base = 1;  //! avoid hashkey is zero
-        std::size_t result =
-                static_cast<std::size_t>(sparam.param.src_type.enumv()) + base;
-        result = result ^
-                 ((static_cast<std::size_t>(sparam.param.dst_type.enumv()) +
-                   base)
-                  << 3);
-        result = result ^
-                 ((static_cast<std::size_t>(sparam.param.filter_type.enumv()) +
-                   base)
-                  << 6);
-        result = result ^
-                 ((static_cast<std::size_t>(sparam.param.bias_type.enumv()) +
-                   base)
-                  << 9);
-        result = result ^
-                 ((static_cast<std::size_t>(sparam.format) + base) << 12);
-        result = result ^
-                 ((static_cast<std::size_t>(sparam.packmode) + base) << 15);
-        return result;
-    };
-};
-
-struct StrategyHashParamEqual {
-    bool operator()(const StrategyHashParam& param1,
-                    const StrategyHashParam& param2) const {
-        bool flags = true;
-        flags = param1.param.src_type == param2.param.src_type && flags;
-        flags = param1.param.filter_type == param2.param.filter_type && flags;
-        flags = param1.param.bias_type == param2.param.bias_type && flags;
-        flags = param1.param.dst_type == param2.param.dst_type && flags;
-        flags = param1.format == param2.format && flags;
-        flags = param1.packmode == param2.packmode && flags;
-        return flags;
-    };
-};
 //! NOTE: must keep consistence with can_make_conv1x1_strategy when you modify
 //! this function
 std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
@@ -176,39 +130,14 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
     megdnn_throw("Invalid Data Type");
     return nullptr;
 }
-
-class StrategyDelegationStorage {
-public:
-    Conv1x1StrategyBase* get(const ConvBiasImpl::NCBKernSizeParam& param,
-                             MatrixMulImpl::AlgoBase::PackMode pack_mode,
-                             param::ConvBias::Format format) {
-        MEGDNN_LOCK_GUARD(m_mtx);
-        StrategyHashParam sparam;
-        sparam.param = param;
-        sparam.format = format;
-        sparam.packmode = pack_mode;
-        if (m_map_strategies.find(sparam) == m_map_strategies.end()) {
-            auto strategy = create_conv1x1_strategy(param, pack_mode, format);
-            m_map_strategies[sparam] = std::move(strategy);
-        }
-        return m_map_strategies[sparam].get();
-    }
-
-private:
-    std::mutex m_mtx;
-    std::unordered_map<StrategyHashParam, std::unique_ptr<Conv1x1StrategyBase>,
-                       StrategyHashParamHash, StrategyHashParamEqual>
-            m_map_strategies;
-};
-
 }  // anonymous namespace
 
 Conv1x1StrategyBase* Conv1x1Factory::make_conv1x1_strategy(
         const ConvBiasImpl::NCBKernSizeParam& param,
         MatrixMulImpl::AlgoBase::PackMode pack_mode,
         param::ConvBias::Format format) {
-    static StrategyDelegationStorage storage;
-    return storage.get(param, pack_mode, format);
+    static utils::StrategyDelegationStorage<Conv1x1StrategyBase> storage;
+    return storage.get(param, pack_mode, format, create_conv1x1_strategy);
 }
 
 bool Conv1x1Factory::can_make_conv1x1_strategy(
@@ -277,3 +206,5 @@ bool Conv1x1Factory::can_make_conv1x1_strategy(
 }  // namespace conv1x1
 }  // namespace fallback
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen

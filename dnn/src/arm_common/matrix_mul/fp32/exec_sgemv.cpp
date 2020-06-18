@@ -42,40 +42,6 @@ void sgemv_naive_n(const float* __restrict A, const float* __restrict B,
 #define calculate(i) sum##i = vmlaq_f32(sum##i, a##i, b0);
 #define vstore(i) C[(m + i) * Cstride] = vaddvq_f32(sum##i) + acc##i;
     size_t m = 0;
-    for (; m + 4 <= M; m += 4) {
-        float acc0, acc1, acc2, acc3;
-        float32x4_t a0, a1, a2, a3, b0;
-        float32x4_t sum0, sum1, sum2, sum3;
-        UNROLL_OUT(vdupq_sum, 4)
-        size_t k = 0;
-        for (; k + 4 <= K; k += 4) {
-            UNROLL_OUT(loadA, 4)
-            UNROLL_OUT(loadB, 1)
-            UNROLL_OUT(calculate, 4)
-        }
-        UNROLL_OUT(reset_acc, 4)
-        for (; k < K; ++k) {
-            UNROLL_OUT(acc_calu, 4)
-        }
-        UNROLL_OUT(vstore, 4)
-    }
-    for (; m + 2 <= M; m += 2) {
-        float acc0, acc1;
-        float32x4_t a0, a1, b0;
-        float32x4_t sum0, sum1;
-        UNROLL_OUT(vdupq_sum, 2)
-        size_t k = 0;
-        for (; k + 4 <= K; k += 4) {
-            UNROLL_OUT(loadA, 2)
-            UNROLL_OUT(loadB, 1)
-            UNROLL_OUT(calculate, 2)
-        }
-        UNROLL_OUT(reset_acc, 2)
-        for (; k < K; ++k) {
-            UNROLL_OUT(acc_calu, 2)
-        }
-        UNROLL_OUT(vstore, 2)
-    }
     for (; m < M; m += 1) {
         float acc0;
         float32x4_t a0, b0;
@@ -107,9 +73,9 @@ void sgemv_naive_n(const float* __restrict A, const float* __restrict B,
 namespace megdnn {
 namespace arm_common {
 
-void sgemm_sgemv_like(const float* __restrict A, const float* __restrict B,
-                      float* __restrict C, size_t M, size_t N, size_t K,
-                      size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_like(const float* __restrict A, const float* __restrict B,
+               float* __restrict C, size_t M, size_t N, size_t K,
+               size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(M < 8 || (M == 8 && K <= 2) || (N == 1 && Bstride == 1));
     if (N == 1) {
         return sgemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
