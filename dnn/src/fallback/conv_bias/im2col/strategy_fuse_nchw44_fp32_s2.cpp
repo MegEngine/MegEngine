@@ -10,9 +10,8 @@
  */
 
 #include "src/fallback/conv_bias/im2col/strategy_base.h"
-#include "src/fallback/convolution/img2col_helper.h"
 
-#if MEGDNN_AARCH64
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
 #include <arm_neon.h>
 
 using namespace megdnn;
@@ -163,7 +162,7 @@ void fuse_packb(const float* __restrict src, float* __restrict dst,
 
 template <typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
-void StrategyFuse8x12x1Nchw44K3x3S2<op_ctype, op_dtype, postprocess_mode>::
+void StrategyFuseXx12x1Nchw44K3x3S2<op_ctype, op_dtype, postprocess_mode>::
         exec_im2col(const WorkspaceBundle& bundle,
                     const WorkspaceBundle& bundle_thread,
                     const StrategyParam& sparam,
@@ -194,14 +193,13 @@ void StrategyFuse8x12x1Nchw44K3x3S2<op_ctype, op_dtype, postprocess_mode>::
 
     float* im2col_dst =
             static_cast<float*>(bundle_thread.get(THREAD_BUNDLE_IM2COL_INDEX));
-
     fuse_packb(src2, im2col_dst, b_panel, ow, ic, ih, iw, sparam.ohw_cur_index,
                sparam.output_block_size);
 }
 
 namespace megdnn {
 
-template class StrategyFuse8x12x1Nchw44K3x3S2<float, float,
+template class StrategyFuseXx12x1Nchw44K3x3S2<float, float,
                                         megdnn::PostprocessMode::FLOAT>;
 }  // namespace megdnn
 

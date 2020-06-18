@@ -1461,6 +1461,25 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_MK4_DOT) {
 #undef cb
 }
 
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_MK4_DOT_S2_FUSE) {
+    UniformIntRNG rng{-50, 50};
+
+#define cb(name)                                                               \
+    checker_conv_bias(get_nchw44_conv_bias_args({3}, 2, false,  \
+                                                false, false, false, true),    \
+                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),       \
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
+                      dtype::QuantizedS8(60.25f), name);                       \
+
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+    cb("IM2COLMATMUL:AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD:96");
+#elif MEGDNN_ARMV7
+    cb("IM2COLMATMUL:AARCH32_INT8_MK4_8X4X4_DOTPROD:96");
+#endif
+#undef cb
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_S8x8x32_MK4_DOT) {
     UniformIntRNG rng{-50, 50};
 
