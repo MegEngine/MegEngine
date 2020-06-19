@@ -128,8 +128,11 @@ else()
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
     if(ANDROID)
         set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
+        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -g")
+        
     else()
         set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+        set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g")
     endif()
 endif()
 

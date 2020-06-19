@@ -77,7 +77,7 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         bool only_no_bias = false) {
     using namespace conv_bias;
     using NLMode = param::ConvBias::NonlineMode;
-    
+
     std::vector<TestArg> args;
 
     auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
@@ -172,11 +172,11 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
         bias_mode.emplace_back(megdnn::BiasMode::NO_BIAS);
     }
     if (support_full_bias) {
-      bias_mode.emplace_back(megdnn::BiasMode::BIAS);
+        bias_mode.emplace_back(megdnn::BiasMode::BIAS);
     }
     for (auto bias : bias_mode)
         for (auto nlmode : nonlinemode)
-            for (size_t n : {1,2})
+            for (size_t n : {1, 2})
                 for (size_t kernel : kernel_vec)
                     for (size_t oc : {4, 12})
                         for (size_t ic : {1, 3, 4, 12})
@@ -364,8 +364,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_SMALL_GROUP) {
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K7) {
-    check_conv_bias(get_nchw44_conv_bias_args({7}, 1, false, true, true,
-                                              false, false, false),
+    check_conv_bias(get_nchw44_conv_bias_args({7}, 1, false, true, true, false,
+                                              false, false),
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
@@ -403,10 +403,12 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_SMALL_GROUP) {
     check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
                     handle(), "F32STRD2_SMALL_GROUP");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32_S2) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
                                               false, true),
                     handle(), "F32_CONV_NCHW_NCHW44");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32_S1) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false,
                                               false, true),
                     handle(), "F32_CONV_NCHW_NCHW44");
@@ -566,13 +568,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QS8_CHANNEL_WISE_DIRECT2_NCHW44) {
             handle(), "S8_CHAN_WISE_STRD2_NCHW44");
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44) {
-    checker_conv_bias_qint8x8x8(
-            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, false,
-                                      true),
-            handle(), "S8_CONV_NCHW_NCHW44");
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44_S1) {
     checker_conv_bias_qint8x8x8(
             get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, false,
+                                      true),
+            handle(), "S8_CONV_NCHW_NCHW44");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44_S2) {
+    checker_conv_bias_qint8x8x8(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, false,
                                       true),
             handle(), "S8_CONV_NCHW_NCHW44");
 }
@@ -1820,7 +1824,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
-            {2, 4, 7}, 1, false, false, false, false, false, true,true);
+            {2, 4, 7}, 1, false, false, false, false, false, true, true);
 #if MEGDNN_AARCH64
     check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
 #elif MEGDNN_ARMV7
@@ -1841,7 +1845,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32_FUSE) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
-            {3}, 2, false, false, false, false, false, true, true,false);
+            {3}, 2, false, false, false, false, false, true, true, false);
 #if MEGDNN_AARCH64
     check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
 #elif MEGDNN_ARMV7

@@ -13,13 +13,14 @@
 #include "src/arm_common/neon_struct.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
+#define __ai inline __attribute__((__always_inline__))
 namespace megdnn {
 namespace {
 
 template <int weight_number, int base_offset, int ptr_step, int oc_block,
           typename Func, typename T, typename T2, typename... XT>
 struct LoadHelper {
-    static void impl(T& weight, T2 ptr, int oc_offset, XT... args);
+    static __ai void impl(T& weight, T2 ptr, int oc_offset, XT... args);
 };
 
 #define WEIGHT_CB(step) \
@@ -29,7 +30,7 @@ struct LoadHelper {
     template <int base_offset, int ptr_step, typename Func, typename T,     \
               typename T2, typename... XT>                                  \
     struct LoadHelper<step, base_offset, ptr_step, 0, Func, T, T2, XT...> { \
-        static void impl(T& src, T2 ptr, int, XT... args) {                 \
+        static __ai void impl(T& src, T2 ptr, int, XT... args) {            \
             UNROLL_CALL_RAW(step, WEIGHT_CB);                               \
         }                                                                   \
     }
@@ -62,7 +63,7 @@ LOAD_HELPER(16);
     template <int base_offset, int ptr_step, typename Func, typename T, \
               typename T2>                                              \
     struct LoadHelper<step, base_offset, ptr_step, 1, Func, T, T2> {    \
-        static void impl(T& src, T2 ptr, int) {                         \
+        static __ai void impl(T& src, T2 ptr, int) {                    \
             UNROLL_CALL_RAW(step, WEIGHT_CB);                           \
         }                                                               \
     }
@@ -89,7 +90,7 @@ LOAD_HELPER(9);
     template <int base_offset, int ptr_step, typename Func, typename T, \
               typename T2>                                              \
     struct LoadHelper<step, base_offset, ptr_step, 2, Func, T, T2> {    \
-        static void impl(T& src, T2 ptr, int oc_offset) {               \
+        static __ai void impl(T& src, T2 ptr, int oc_offset) {          \
             UNROLL_CALL_RAW(step, WEIGHT_CB);                           \
         }                                                               \
     }
@@ -108,19 +109,19 @@ LOAD_HELPER(8);
 
 template <int weight_number, int base_offset, int ptr_step, int c_dim,
           typename Func, typename T, typename T2>
-inline void load_helper(T& weight, T2 ptr, int oc_offset) {
+__ai void load_helper(T& weight, T2 ptr, int oc_offset) {
     LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2>::impl(
             weight, ptr, oc_offset);
 }
 
 template <int weight_number, int base_offset, int ptr_step, int c_dim,
           typename Func, typename T, typename T2, typename... XT>
-inline void load_helper_x(T& weight, T2 ptr, int oc_offset, XT... args) {
+__ai void load_helper_x(T& weight, T2 ptr, int oc_offset, XT... args) {
     LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2,
                XT...>::impl(weight, ptr, oc_offset, args...);
 }
 
 }  // namespace
 }  // namespace megdnn
-
+#undef __ai
 // vim: syntax=cpp.doxygen

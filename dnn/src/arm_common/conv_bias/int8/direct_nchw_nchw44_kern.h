@@ -10,6 +10,7 @@
  * implied.
  */
 #pragma once
+#include "megdnn/arch.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
 #include "src/arm_common/conv_bias/opr_impl.h"
 #include "src/arm_common/elemwise_op.h"
@@ -37,13 +38,13 @@ namespace {
 template <int src_idx, int weight_idx, int c_dim, typename Func, int stride,
           typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper {
-    static void impl(T& c, T2& src, T3& weight, T4& temp);
-    static void impl(T& c, T2& src, T3& weight);
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight, T4& temp);
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight);
 };
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 2, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight, T4& temp) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight, T4& temp) {
         c[0][0] = Func::impl(src[0 + src_idx], weight[0][weight_idx], c[0][0],
                              temp[0]);
         c[1][0] = Func::impl(src[0 + src_idx], weight[1][weight_idx], c[1][0],
@@ -61,7 +62,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 2, T, T2, T3, T4> {
         c[1][3] = Func::impl(src[3 + src_idx], weight[1][weight_idx], c[1][3],
                              temp[3]);
     }
-    static void impl(T& c, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
         c[0][0] = Func::impl(src[0 + src_idx], weight[0][weight_idx], c[0][0]);
         c[1][0] = Func::impl(src[0 + src_idx], weight[1][weight_idx], c[1][0]);
         c[0][1] = Func::impl(src[1 + src_idx], weight[0][weight_idx], c[0][1]);
@@ -75,7 +76,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 2, T, T2, T3, T4> {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 2, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight, T4& temp) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight, T4& temp) {
         c[0][0] = Func::impl(src[0 + src_idx], weight[0][weight_idx], c[0][0],
                              temp[0]);
         c[0][1] = Func::impl(src[1 + src_idx], weight[0][weight_idx], c[0][1],
@@ -85,7 +86,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 2, T, T2, T3, T4> {
         c[0][3] = Func::impl(src[3 + src_idx], weight[0][weight_idx], c[0][3],
                              temp[2]);
     }
-    static void impl(T& c, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
         c[0][0] = Func::impl(src[0 + src_idx], weight[0][weight_idx], c[0][0]);
         c[0][1] = Func::impl(src[1 + src_idx], weight[0][weight_idx], c[0][1]);
         c[0][2] = Func::impl(src[2 + src_idx], weight[0][weight_idx], c[0][2]);
@@ -96,7 +97,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 2, T, T2, T3, T4> {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 1, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight, T4& temp) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight, T4& temp) {
         c[0][0] = Func::impl(src[(0 + src_idx) % 8], weight[0][weight_idx],
                              c[0][0], temp[0]);
         c[1][0] = Func::impl(src[(0 + src_idx) % 8], weight[1][weight_idx],
@@ -131,12 +132,12 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 1, T, T2, T3, T4> {
         c[1][7] = Func::impl(src[(7 + src_idx) % 8], weight[1][weight_idx],
                              c[1][7], temp[3]);
     }
-    static void impl(T&, T2&, T3&);
+    static MEGDNN_ALWAYS_INLINE void impl(T&, T2&, T3&);
 };
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 1, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight, T4& temp) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight, T4& temp) {
         c[0][0] = Func::impl(src[(0 + src_idx) % 8], weight[0][weight_idx],
                              c[0][0], temp[0]);
         c[0][1] = Func::impl(src[(1 + src_idx) % 8], weight[0][weight_idx],
@@ -154,18 +155,18 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 1, T, T2, T3, T4> {
         c[0][7] = Func::impl(src[(7 + src_idx) % 8], weight[0][weight_idx],
                              c[0][7], temp[3]);
     }
-    static void impl(T&, T2&, T3&);
+    static MEGDNN_ALWAYS_INLINE void impl(T&, T2&, T3&);
 };
 
 template <int src_idx, int weight_idx, int c_dim, typename FUNC, int stride,
           typename T, typename T2, typename T3, typename T4>
-inline void cal_helper(T& c, T2& src, T3& weight, T4& temp) {
+MEGDNN_ALWAYS_INLINE void cal_helper(T& c, T2& src, T3& weight, T4& temp) {
     ShiftCalHelper<src_idx, weight_idx, c_dim, FUNC, stride, T, T2, T3,
                    T4>::impl(c, src, weight, temp);
 }
 template <int src_idx, int weight_idx, int c_dim, typename FUNC, int stride,
           typename T, typename T2, typename T3>
-inline void cal_helper(T& c, T2& src, T3& weight) {
+MEGDNN_ALWAYS_INLINE void cal_helper(T& c, T2& src, T3& weight) {
     ShiftCalHelper<src_idx, weight_idx, c_dim, FUNC, stride, T, T2, T3,
                    int>::impl(c, src, weight);
 };
@@ -703,8 +704,9 @@ struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 7, oc_block, 1> {
 
 enum PACK_MODE { NO_PAD = 0, FIRST_PAD = 1, LAST_PAD = 2 };
 template <PACK_MODE mode>
-inline void pack_src_one_line(const int8_t* inptr, int8_t* outptr, int left_pad,
-                              int right_pad, const int iw) {
+MEGDNN_ALWAYS_INLINE void pack_src_one_line(const int8_t* inptr, int8_t* outptr,
+                                            int left_pad, int right_pad,
+                                            const int iw) {
     const int8_t* src_row_0 = inptr;
     const int8_t* src_row_1 = inptr + iw;
     constexpr int combine_row = 2;
@@ -1235,6 +1237,7 @@ struct ConvDiectStrideInt8NchwNchw44<bias_mode, Op, filter_size, 1> {
                 }
             }
         }
+
         if (oc_remain > 0) {
             size_t oc_idx = oc_end;
             const size_t weight_offset = oc_idx * ic * fh * fw;
@@ -1284,4 +1287,5 @@ static void conv_direct_int8_nchw_nchw44(const int8_t* src,
 }  // namespace
 }  // namespace arm_common
 }  // namespace megdnn
-   // vim: syntax=cpp.doxygen
+
+// vim: syntax=cpp.doxygen

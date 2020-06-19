@@ -11,6 +11,7 @@
  * implied.
  */
 
+#include "megdnn/arch.h"
 #include "src/arm_common/conv_bias/fp32/f32_direct_stride1_nchw44_kern.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
 #include "src/arm_common/elemwise_op.h"
@@ -26,13 +27,13 @@ namespace {
 template <int src_idx, int weight_idx, int c_dim, typename Func, int ow_block,
           typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper {
-    static void impl(T& c, T2& src, T3& weight);
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight);
 };
 
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 8, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
 #define cb(step, lane)                                                  \
     c[0][step] = Func::template impl<lane>(c[0][step], weight[0][lane], \
                                            src[(step + src_idx) % 8]);  \
@@ -49,7 +50,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 8, T, T2, T3, T4> {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 4, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
 #define cb(step, lane)                                                  \
     c[0][step] = Func::template impl<lane>(c[0][step], weight[0][lane], \
                                            src[(step + src_idx) % 4]);  \
@@ -66,7 +67,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 4, T, T2, T3, T4> {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 8, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
 #define cb(step, lane)                                                  \
     c[0][step] = Func::template impl<lane>(c[0][step], weight[0][lane], \
                                            src[(step + src_idx) % 8]);
@@ -81,7 +82,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 8, T, T2, T3, T4> {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 4, T, T2, T3, T4> {
-    static void impl(T& c, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
 #define cb(step, lane)                                                  \
     c[0][step] = Func::template impl<lane>(c[0][step], weight[0][lane], \
                                            src[(step + src_idx) % 4]);
@@ -96,7 +97,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 4, T, T2, T3, T4> {
 
 template <int src_idx, int weight_idx, int c_dim, typename FUNC, int ow_block,
           typename T, typename T2, typename T3>
-inline void cal_helper(T& c, T2& src, T3& weight) {
+MEGDNN_ALWAYS_INLINE void cal_helper(T& c, T2& src, T3& weight) {
     ShiftCalHelper<src_idx, weight_idx, c_dim, FUNC, ow_block, T, T2, T3,
                    int>::impl(c, src, weight);
 };

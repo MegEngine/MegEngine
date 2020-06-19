@@ -5,11 +5,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-
+#pragma once
 #ifdef __ARM_FEATURE_DOTPROD
 
+#include "megdnn/arch.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
 #include "src/arm_common/elemwise_op.h"
 #include "src/arm_common/intrinsic_helper.h"
@@ -27,8 +29,8 @@ constexpr int filter_next_col =
         IC_PACK_SIZE * OC_PACK_SIZE;  //! [OC/4, IC/4, FH, FW, 4OC, 4IC]
 
 template <int row, BiasMode bias_mode>
-inline void init_ocx_ow8(int32x4_t c[][8], const int32_t* bias_ptr,
-                         int oc_step) {
+MEGDNN_ALWAYS_INLINE void init_ocx_ow8(int32x4_t c[][8],
+                                       const int32_t* bias_ptr, int oc_step) {
     static_assert(row == 1 || row == 2 || row == 3, "Invalid OC number.");
     if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
 #define BIAS_INIT(step, i) c[i][step] = vld1q_s32(bias_ptr + i * oc_step);
@@ -90,12 +92,13 @@ inline void init_ocx_ow8(int32x4_t c[][8], const int32_t* bias_ptr,
 
 template <int row, int ow_remain, typename Op, typename T>
 struct StoreOCxOWx {
-    static void impl(int32x4_t res[][8], const Op& op, T* dst_ptr,
-                     const int ld_dst_oc);
+    static MEGDNN_ALWAYS_INLINE void impl(int32x4_t res[][8], const Op& op,
+                                          T* dst_ptr, const int ld_dst_oc);
 };
 
 template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<1, ow_remain, Op, T> {
+
     static void impl(int32x4_t res[][8], const Op& op, T* dst_ptr,
                      const int ld_dst_oc) {
         MEGDNN_MARK_USED_VAR(ld_dst_oc);
@@ -128,8 +131,8 @@ struct StoreOCxOWx<1, ow_remain, Op, T> {
 
 template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<2, ow_remain, Op, T> {
-    static void impl(int32x4_t res[][8], const Op& op, T* dst_ptr,
-                     const int ld_dst_oc) {
+    static MEGDNN_ALWAYS_INLINE void impl(int32x4_t res[][8], const Op& op,
+                                          T* dst_ptr, const int ld_dst_oc) {
         switch (ow_remain) {
             case 8:
                 UNROLL_CALL_RAW(4, cb22);
@@ -159,8 +162,8 @@ struct StoreOCxOWx<2, ow_remain, Op, T> {
 
 template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<3, ow_remain, Op, T> {
-    static void impl(int32x4_t res[][8], const Op& op, T* dst_ptr,
-                     const int ld_dst_oc) {
+    static MEGDNN_ALWAYS_INLINE void impl(int32x4_t res[][8], const Op& op,
+                                          T* dst_ptr, const int ld_dst_oc) {
         switch (ow_remain) {
             case 8:
                 UNROLL_CALL_RAW(4, cb32);
@@ -196,15 +199,16 @@ struct StoreOCxOWx<3, ow_remain, Op, T> {
 #undef cb32
 
 template <int row, int ow_remain, typename Op, typename T>
-inline void store_ocx_owx_remain_static(int32x4_t res[][8], const Op& op,
-                                        T* dst_ptr, const int ld_dst_oc) {
+MEGDNN_ALWAYS_INLINE void store_ocx_owx_remain_static(int32x4_t res[][8],
+                                                      const Op& op, T* dst_ptr,
+                                                      const int ld_dst_oc) {
     StoreOCxOWx<row, ow_remain, Op, T>::impl(res, op, dst_ptr, ld_dst_oc);
 }
 
 template <int res_row, int src_row, int src_start_idx, int weight_idx,
           typename FUNC, typename T, typename T2, typename T3>
 struct ShiftCalHelper {
-    static void impl(T& res, T2& src, T3& weight) {
+    static MEGDNN_ALWAYS_INLINE void impl(T& res, T2& src, T3& weight) {
 #define cb(step)                                                            \
     res[res_row][step] = FUNC::template impl<((src_start_idx + step) % 4)>( \
             res[res_row][step], weight[weight_idx],                         \
@@ -216,7 +220,7 @@ struct ShiftCalHelper {
 
 template <int res_row, int src_row, int src_start_idx, int weight_idx,
           typename FUNC, typename T, typename T2, typename T3>
-inline void cal_helper(T& res, T2& src, T3& weight) {
+MEGDNN_ALWAYS_INLINE void cal_helper(T& res, T2& src, T3& weight) {
     ShiftCalHelper<res_row, src_row, src_start_idx, weight_idx, FUNC, T, T2,
                    T3>::impl(res, src, weight);
 };
@@ -428,4 +432,4 @@ struct KernNeonSdotNCHW44<dst_type, 2, bias_mode, Op, ow_remain, filter_size,
 
 #endif
 
-//vim: syntax=cpp.doxygen
+// vim: syntax=cpp.doxygen

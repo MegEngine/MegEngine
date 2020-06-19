@@ -20,7 +20,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wattributes"
-#define __ai static inline __attribute__((__always_inline__, __nodebug__))
+#define __ai      \
+    static inline \
+            __attribute__((__gnu_inline__, __always_inline__, __nodebug__))
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC && !MEGDNN_DISABLE_FLOAT16
 #define MEGDNN_INC_ARM_FP16(_x) _x
@@ -299,16 +301,20 @@ __ai uint32x2_t vdot2_u8(uint8x8_t a, uint8x8_t b) {
 
 #endif  // __ARM_FEATURE_DOTPROD
 
+#if __GNUC__ < 8
 #undef vld1q_f32_x2
 __ai float32x4x2_t vld1q_f32_x2(const float* p) {
     return {{vld1q_f32(p), vld1q_f32(p + 4)}};
 }
+#endif
 
+#if __GNUC__ < 9
 #undef vst1q_f32_x2
 __ai void vst1q_f32_x2(const float* p, float32x4x2_t v) {
     vst1q_f32(const_cast<float*>(p), v.val[0]);
     vst1q_f32(const_cast<float*>(p) + 4, v.val[1]);
 }
+#endif
 
 __ai int8x16_t vtranslq_s8(int8x8_t a) {
     int8x16_t ret;
@@ -472,18 +478,18 @@ __ai int8x16_t vqtbl1q_s8(int8x16_t& a, uint8x16_t& idx) {
 namespace {
 template <int lane>
 struct Vdup_laneq_s16_armv7 {
-    static int16x4_t impl(int16x8_t vec);
+    __ai int16x4_t impl(int16x8_t vec);
 };
 #define cb(step)                                            \
     template <>                                             \
     struct Vdup_laneq_s16_armv7<step + 4> {                 \
-        static int16x4_t impl(int16x8_t vec) {              \
+        __ai int16x4_t impl(int16x8_t vec) {                \
             return vdup_lane_s16(vget_high_s16(vec), step); \
         }                                                   \
     };                                                      \
     template <>                                             \
     struct Vdup_laneq_s16_armv7<step> {                     \
-        static int16x4_t impl(int16x8_t vec) {              \
+        __ai int16x4_t impl(int16x8_t vec) {                \
             return vdup_lane_s16(vget_low_s16(vec), step);  \
         }                                                   \
     };
@@ -495,30 +501,30 @@ UNROLL_CALL_RAW(4, cb);
 namespace {
 template <int lane>
 struct Vfmaq_laneq_f32_armv7 {
-    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v);
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v);
 };
 
 template <>
 struct Vfmaq_laneq_f32_armv7<0> {
-    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
         return vmlaq_lane_f32(a, b, vget_low_f32(v), 0);
     }
 };
 template <>
 struct Vfmaq_laneq_f32_armv7<1> {
-    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
         return vmlaq_lane_f32(a, b, vget_low_f32(v), 1);
     }
 };
 template <>
 struct Vfmaq_laneq_f32_armv7<2> {
-    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
         return vmlaq_lane_f32(a, b, vget_high_f32(v), 0);
     }
 };
 template <>
 struct Vfmaq_laneq_f32_armv7<3> {
-    static float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
         return vmlaq_lane_f32(a, b, vget_high_f32(v), 1);
     }
 };
@@ -527,36 +533,97 @@ struct Vfmaq_laneq_f32_armv7<3> {
     Vfmaq_laneq_f32_armv7<lane>::impl(a, b, v)
 
 #if __ARM_FEATURE_DOTPROD
+namespace {
 template <int lane>
 struct Vdotq_laneq_s32_armv7 {
-    static int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v);
+    __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v);
 };
 template <>
 struct Vdotq_laneq_s32_armv7<0> {
-    static int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
+    __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_low_s32(v), 0);
     }
 };
 template <>
 struct Vdotq_laneq_s32_armv7<1> {
-    static int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
+    __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_low_s32(v), 1);
     }
 };
 template <>
 struct Vdotq_laneq_s32_armv7<2> {
-    static int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
+    __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_high_s32(v), 0);
     }
 };
 template <>
 struct Vdotq_laneq_s32_armv7<3> {
-    static int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
+    __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_high_f32(v), 1);
     }
 };
 #define vdotq_laneq_s32(a, b, v, lane) \
     Vdotq_laneq_s32_armv7<lane>::impl(a, b, v)
+
+}  // namespace
+#endif
+
+#endif
+
+//! GCC split fmla with lane to dup+fmla when version < 9
+//! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89101
+#if !defined(__clang__) && __GNUC__ < 9
+#if MEGDNN_AARCH64
+namespace {
+
+template <int lane>
+struct Vfmaq_laneq_f32_armv8 {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v);
+};
+template <>
+struct Vfmaq_laneq_f32_armv8<0> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmla %0.4s, %1.4s, %2.s[0]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+template <>
+struct Vfmaq_laneq_f32_armv8<1> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmla %0.4s, %1.4s, %2.s[1]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+template <>
+struct Vfmaq_laneq_f32_armv8<2> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmla %0.4s, %1.4s, %2.s[2]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+template <>
+struct Vfmaq_laneq_f32_armv8<3> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmla %0.4s, %1.4s, %2.s[3]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+}  // namespace
+#undef vfmaq_laneq_f32
+#define vfmaq_laneq_f32(a, b, v, lane) \
+    Vfmaq_laneq_f32_armv8<lane>::impl(a, b, v)
 
 #endif
 

@@ -29,6 +29,13 @@
  #define megdnn_likely(v) __builtin_expect(bool(v), 1)
  #define megdnn_unlikely(v) __builtin_expect(bool(v), 0)
 
+#if !defined(__clang__) && MEGDNN_ARMV7 && !defined(NDEBUG)
+//! Thumb2 limit code length
+#define MEGDNN_ALWAYS_INLINE
+#else
+#define MEGDNN_ALWAYS_INLINE inline __attribute__((__always_inline__))
+#endif
+
  #define MEGDNN_DEPRECATED __attribute__((deprecated))
  #define MEGDNN_PACKED __attribute__((packed))
  #define MEGDNN_CONSTEXPR constexpr
