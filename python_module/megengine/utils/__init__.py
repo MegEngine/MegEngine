@@ -6,6 +6,10 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+from megengine._internal.plugin import load_tensor_binary
+
+
 def prod(iterable):
     result = 1
     for i in iterable:
