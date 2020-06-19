@@ -14,7 +14,7 @@ import struct
 import cv2
 import numpy as np
 
-import megbrain as mgb
+import megengine._internal as mgb
 import megengine as mge
 
 logger = mge.get_logger(__name__)
