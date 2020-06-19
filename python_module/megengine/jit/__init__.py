@@ -442,17 +442,38 @@ class trace:
         Serialize trace to file system.
 
         :param fpath: positional only argument. Path of output file.
-        :param arg_names: names of the input tensors in the traced function
-        :param append: whether output is appended to ``fpath``
-        :param f16_io_f32_comp: whether to use float16 for I/O between oprs and use
+        :param arg_names: names of the input tensors in the traced function.
+        :param append: whether output is appended to ``fpath``.
+        :param optimize_for_inference: whether to enable optimize_for_inference
+            pass before dump.
+
+        :param enable_io16xc32: whether to use float16 for I/O between oprs and use
             float32 as internal computation precision. Note the output var would be
-            changed to float16
-        :param f16_io_comp: whether to use float16 for both I/O and computation
-            precision
-        :param use_nhwcd4: whether to use NHWCD4 data format. This is faster on some
-            OpenCL devices
-        :param fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
-            into one opr. This is supported only in NHWCD4 format.
+            changed to float16.
+        :param enable_ioc16: whether to use float16 for both I/O and computation
+            precision.
+
+        :param enable_hwcd4: whether to use NHWCD4 data layout. This is faster on some
+            OpenCL backend.
+        :param enable_nchw88: whether to use NCHW4 data layout. it currently
+            used in X86 AVX backend.
+        :param enable_nchw44: whether to use NCHW4 data layout. it currently
+            used in arm backend.
+        :param enable_nchw44_dot: whether to use NCHW4 data layout. it currently
+            used in armv8.2+dotprod backend.
+        :param enable_nchw4: whether to use NCHW4 data layout. it currently
+            used in nvidia backend(based on cudnn).
+        :param enable_nchw32 whether to use NCHW32 data layout. it currently
+            used in nvidia backend with tensorcore(based on cudnn).
+        :param enable_chwn4 whether to use CHWN4 data layout. it currently
+            used in nvidia backend with tensorcore.
+
+        :param enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+            into one opr.
+        :param enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+            input for inference on nvidia backend(this optimization pass will
+            result in mismatch of the precision of output of training and
+            inference)
         """
         if self._status != self._FINISHED:
             raise ValueError("not traced")
@@ -475,6 +496,7 @@ class trace:
             "enable_nchw88": "use_nchw88",
             "enable_nchw32": "use_nchw32",
             "enable_nchw44": "use_nchw44",
+            "enable_nchw44_dot": "use_nchw44_dot",
             "enable_chwn4": "use_chwn4",
             "enable_fuse_conv_bias_nonlinearity": "fuse_conv_bias_nonlinearity",
             "enable_fuse_conv_bias_with_z": "fuse_conv_bias_with_z",
