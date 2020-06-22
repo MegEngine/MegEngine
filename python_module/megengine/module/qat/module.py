@@ -37,15 +37,14 @@ class QATModule(Module):
         Set quantization related configs with ``qconfig``, including
         observer and fake_quant for weight and activation.
         """
-        self.weight_observer = qconfig.weight_observer()
-        self.act_observer = qconfig.act_observer()
 
-        if qconfig.fake_quant is None:
-            self.weight_fake_quant = None
-            self.act_fake_quant = None
-        else:
-            self.weight_fake_quant = qconfig.fake_quant(self.weight_observer.dtype)
-            self.act_fake_quant = qconfig.fake_quant(self.act_observer.dtype)
+        def safe_call(func):
+            return func() if func is not None else None
+
+        self.weight_observer = safe_call(qconfig.weight_observer)
+        self.act_observer = safe_call(qconfig.act_observer)
+        self.weight_fake_quant = safe_call(qconfig.weight_fake_quant)
+        self.act_fake_quant = safe_call(qconfig.act_fake_quant)
 
     def _apply_fakequant_with_observer(
         self, target: Tensor, fake_quant: FakeQuantize, observer: Observer

@@ -31,9 +31,11 @@ class Observer(Module):
     A base class for Observer Module.
 
     :param dtype: a string indicating to collect scale and zero_point of which dtype
+    :param narrow_range: Whether the absolute value of ``qmin`` is the same as ``qmax``,
+        instead of 1 greater. Usually True for weight and False for activation.
     """
 
-    def __init__(self, dtype="qint8"):
+    def __init__(self, dtype: str, narrow_range: bool = False):
         super().__init__()
         if dtype not in _metadata_dict.keys():
             raise ValueError(
@@ -42,7 +44,10 @@ class Observer(Module):
                 )
             )
         self.dtype = dtype
-        self.qmin = _metadata_dict[dtype].qmin
+        self.narrow_range = narrow_range
+        self.qmin = (
+            -_metadata_dict[dtype].qmax if narrow_range else _metadata_dict[dtype].qmin
+        )
         self.qmax = _metadata_dict[dtype].qmax
         self.enabled = True
 
@@ -96,8 +101,14 @@ def create_observer_dict(mode):
 
 
 class MinMaxObserver(Observer):
-    def __init__(self, mode=ObserverMode.SYMMERTIC, eps=0.00001, dtype="qint8"):
-        super().__init__(dtype)
+    def __init__(
+        self,
+        mode=ObserverMode.SYMMERTIC,
+        eps=0.00001,
+        dtype="qint8",
+        narrow_range: bool = False,
+    ):
+        super().__init__(dtype, narrow_range)
         self.mode = mode
         self.min_val = Buffer(np.finfo(np.float32).max, dtype=np.float32)
         self.max_val = Buffer(np.finfo(np.float32).min, dtype=np.float32)
@@ -153,9 +164,14 @@ class MinMaxObserver(Observer):
 
 class ExponentialMovingAverageObserver(MinMaxObserver):
     def __init__(
-        self, momentum=0.9, mode=ObserverMode.SYMMERTIC, eps=0.00001, dtype="qint8"
+        self,
+        momentum=0.9,
+        mode=ObserverMode.SYMMERTIC,
+        eps=0.00001,
+        dtype="qint8",
+        narrow_range: bool = False,
     ):
-        super().__init__(mode, eps, dtype)
+        super().__init__(mode, eps, dtype, narrow_range)
         self.momentum = Buffer(momentum)
         self.runtime_momentum = Buffer(0.0)
 
@@ -188,11 +204,12 @@ class HistogramObserver(MinMaxObserver):
         self,
         bins=2048,
         upsample_rate=128,
-        dtype="qint8",
         mode=ObserverMode.SYMMERTIC,
         eps=0.00001,
+        dtype="qint8",
+        narrow_range: bool = False,
     ):
-        super().__init__(mode, eps, dtype)
+        super().__init__(mode, eps, dtype, narrow_range)
         self.bins = bins
         self.upsample_rate = upsample_rate
         self.dst_nbins = _metadata_dict[dtype].qmax - _metadata_dict[dtype].qmin + 1
