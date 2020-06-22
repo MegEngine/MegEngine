@@ -5,6 +5,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+from functools import partial
+
 from ..module import Module
 from .fake_quant import TQT, FakeQuantize
 from .observer import (
@@ -22,9 +24,9 @@ class QConfig:
     :param weight_observer: interface to instantiate an :class:`~.Observer` indicating
         how to collect scales and zero_point of wegiht.
     :param act_observer: similar to ``weight_observer`` but toward activation.
-    :param fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
-        how to do fake_quant calculation. can be invoked multi times to get different
-        instance for each target tensor, for better control on enable and disable.
+    :param weight_fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
+        how to do fake_quant calculation.
+    :param act_observer: similar to ``weight_fake_quant`` but toward activation.
 
     Examples:
 
@@ -32,14 +34,24 @@ class QConfig:
 
         # Default EMA QConfig for QAT.
         ema_fakequant_qconfig = QConfig(
-            weight_observer=MinMaxObserver,
-            act_observer=ExponentialMovingAverageObserver,
-            fake_quant=FakeQuantize,
+            weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
+            act_observer=partial(ExponentialMovingAverageObserver, dtype="qint8", narrow_range=False),
+            weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
+            act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
         )
+
+    Each parameter is a ``class`` rather than an instance. And we recommand using ``functools.partial``
+    to add initialization parameters of the ``class``, so that don't need to provide parameters in
+    :meth:`~.QATModule.set_qconfig`.
+
+    Usually we set ``narrow_range`` of weight related paramters to ``True`` and of activation related
+    parameters to ``False``. For the result of multiplication and addition as ``a * b + c * d``, if
+    four variables are all -128 of dtype ``qint8``, then the result will be ``2^15`` and cause overflow.
+    Weights are commonly calculated in this way, so needed to narrow the range.
     """
 
     def __init__(
-        self, act_observer, weight_observer, fake_quant,
+        self, weight_observer, act_observer, weight_fake_quant, act_fake_quant
     ):
         if isinstance(act_observer, Module) or isinstance(weight_observer, Module):
             raise ValueError(
@@ -47,30 +59,42 @@ class QConfig:
                 " class generator using `partial(Observer, ...)` instead. Use"
                 " partial(MyObserver, x=1) to override arguments to constructor if needed"
             )
-        self.act_observer = act_observer
         self.weight_observer = weight_observer
-        self.fake_quant = fake_quant
+        self.act_observer = act_observer
+        self.weight_fake_quant = weight_fake_quant
+        self.act_fake_quant = act_fake_quant
 
 
 tqt_quant_qconfig = QConfig(
-    weight_observer=ExponentialMovingAverageObserver,
-    act_observer=ExponentialMovingAverageObserver,
-    fake_quant=TQT,
+    weight_observer=partial(
+        ExponentialMovingAverageObserver, dtype="qint8", narrow_range=True
+    ),
+    act_observer=partial(
+        ExponentialMovingAverageObserver, dtype="qint8", narrow_range=False
+    ),
+    weight_fake_quant=partial(TQT, dtype="qint8", narrow_range=True),
+    act_fake_quant=partial(TQT, dtype="qint8", narrow_range=False),
 )
 
-# Default QAT QConfigs
 min_max_fakequant_qconfig = QConfig(
-    weight_observer=MinMaxObserver,
-    act_observer=MinMaxObserver,
-    fake_quant=FakeQuantize,
+    weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
+    act_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=False),
+    weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
+    act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
 )
 
 ema_fakequant_qconfig = QConfig(
-    weight_observer=MinMaxObserver,
-    act_observer=ExponentialMovingAverageObserver,
-    fake_quant=FakeQuantize,
+    weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
+    act_observer=partial(
+        ExponentialMovingAverageObserver, dtype="qint8", narrow_range=False
+    ),
+    weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
+    act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
 )
 
 calibration_qconfig = QConfig(
-    weight_observer=MinMaxObserver, act_observer=HistogramObserver, fake_quant=None,
+    weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
+    act_observer=partial(HistogramObserver, dtype="qint8", narrow_range=False),
+    weight_fake_quant=None,
+    act_fake_quant=None,
 )
