@@ -57,10 +57,11 @@ struct TestArg {
     param::WarpPerspective param;
     TensorShape src;
     TensorShape trans;
+	TensorShape mat_idx;
     TensorShape dst;
-    TestArg(param::WarpPerspective param_, TensorShape src_, TensorShape trans_,
+    TestArg(param::WarpPerspective param_, TensorShape src_, TensorShape trans_, TensorShape mat_idx_,
             TensorShape dst_)
-            : param(param_), src(src_), trans(trans_), dst(dst_) {}
+            : param(param_), src(src_), trans(trans_), mat_idx(mat_idx_), dst(dst_) {}
 };
 
 //! Test args for the WarpPerspective with format NHWC

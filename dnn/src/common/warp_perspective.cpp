@@ -236,10 +236,6 @@ void WarpPerspectiveForward::check_exec(const TensorLayout &src,
         size_t workspace_in_bytes)
 {
     check_exec_allow_nhwc_mat_idx(src, mat, mat_idx, dst, workspace_in_bytes);
-    if (param().format == Param::Format::NHWC) {
-        megdnn_assert(!mat_idx.ndim,
-                "mat_idx not supported for current format");
-    }
 }
 
 void WarpPerspectiveForward::check_exec_allow_nhwc_mat_idx(

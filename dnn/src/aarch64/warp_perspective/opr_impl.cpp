@@ -28,8 +28,8 @@ void WarpPerspectiveImpl::exec(_megdnn_tensor_in src,
     check_exec(src.layout, mat.layout, mat_idx.layout, dst.layout,
             workspace.size);
     if (warp::is_cv_available(src.layout, mat.layout, dst.layout, param().imode,
-                              param().format) && !mat_idx.layout.ndim) {
-        warp_perspective_cv_exec(src, mat, dst, param().border_val,
+                              param().format)) {
+        warp_perspective_cv_exec(src, mat, mat_idx, dst, param().border_val,
                                  param().bmode, param().imode, handle());
     } else {
         //! Use arm_common implementation

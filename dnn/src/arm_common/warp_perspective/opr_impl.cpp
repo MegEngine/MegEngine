@@ -28,10 +28,9 @@ void WarpPerspectiveImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
     check_exec_allow_nhwc_mat_idx(src.layout, mat.layout, mat_idx.layout,
                                   dst.layout, workspace.size);
     if (warp::is_cv_available(src.layout, mat.layout, dst.layout, param().imode,
-                              param().format) &&
-        !mat_idx.layout.ndim) {
+                              param().format)) {
         MIDOUT_BEGIN(megdnn_arm_warpperspective, void) {
-            warp_perspective_cv_exec(src, mat, dst, param().border_val,
+            warp_perspective_cv_exec(src, mat, mat_idx, dst, param().border_val,
                                      param().bmode, param().imode, handle());
         }
         MIDOUT_END();

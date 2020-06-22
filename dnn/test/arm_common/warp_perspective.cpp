@@ -25,7 +25,7 @@ namespace test {
 
 TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
     //! Just for the format NHWC
-    Checker<WarpPerspective> checker(handle());
+    Checker<WarpPerspective, WarpPerspectiveMatIdxProxy> checker(handle());
     param::WarpPerspective param;
     class ResizeMatRNG : public RNG {
         void gen(const TensorND& tensor_) override {
@@ -82,7 +82,10 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{10, 128, 108, 3}, {10, 3, 3}, {10, 56, 128, 3}});
+        UniformIntRNG rng(0, 9);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec({{10, 128, 108, 3}, {20, 3, 3}, {20}, {20, 56, 128, 3}});
     }
     // resize nan case
     UniformFloatRNG rng_zero(0, 0);
@@ -91,7 +94,11 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
         param.bmode = BMode::CONSTANT;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{1000, 2, 10, 3}, {1000, 3, 3}, {1000, 2, 12, 3}});
+        UniformIntRNG rng(0, 999);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec(
+                {{1000, 2, 10, 3}, {1000, 3, 3}, {1000}, {1000, 2, 12, 3}});
     }
 
     // add linear test
@@ -101,7 +108,10 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{10, 128, 108, 3}, {10, 3, 3}, {10, 56, 128, 3}});
+        UniformIntRNG rng(0, 9);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec({{10, 128, 108, 3}, {20, 3, 3}, {20}, {20, 56, 128, 3}});
     }
     // resize nan case
     checker.set_rng(1, &rng_zero);
@@ -109,30 +119,40 @@ TEST_F(ARM_COMMON, WARP_PERSPECTIVE_CV) {
         param.bmode = BMode::CONSTANT;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{1000, 2, 10, 3}, {1000, 3, 3}, {1000, 2, 12, 3}});
+        UniformIntRNG rng(0, 999);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec(
+                {{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
     }
 
     auto args = warp_perspective::get_cv_args();
     for (auto&& arg : args) {
+        ConstValue rng(0.f);
         checker.set_param(arg.param)
+                .set_rng(2, &rng)
                 .set_dtype(0, dtype::Uint8())
                 .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Uint8())
-                .execs({arg.src, arg.trans, arg.dst});
+                .set_dtype(2, dtype::Int32())
+                .set_dtype(3, dtype::Uint8())
+                .execs({arg.src, arg.trans, arg.mat_idx, arg.dst});
     }
 
     for (auto&& arg : args) {
+        ConstValue rng(0.f);
         checker.set_param(arg.param)
+                .set_rng(2, &rng)
                 .set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Float32())
-                .execs({arg.src, arg.trans, arg.dst});
+                .set_dtype(2, dtype::Int32())
+                .set_dtype(3, dtype::Float32())
+                .execs({arg.src, arg.trans, arg.mat_idx, arg.dst});
     }
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
     //! Just for the format NHWC
-    Checker<WarpPerspective> checker(handle());
+    Checker<WarpPerspective, WarpPerspectiveMatIdxProxy> checker(handle());
     param::WarpPerspective param;
     class ResizeMatRNG : public RNG {
         void gen(const TensorND& tensor_) override {
@@ -189,7 +209,10 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{10, 128, 108, 3}, {10, 3, 3}, {10, 56, 128, 3}});
+        UniformIntRNG rng(0, 9);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec({{10, 128, 108, 3}, {10, 3, 3}, {10}, {10, 56, 128, 3}});
     }
     // resize nan case
     UniformFloatRNG rng_zero(0, 0);
@@ -198,7 +221,11 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
         param.bmode = BMode::CONSTANT;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{1000, 2, 10, 3}, {1000, 3, 3}, {1000, 2, 12, 3}});
+        UniformIntRNG rng(0, 999);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec(
+                {{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
     }
 
     // add linear test
@@ -208,7 +235,10 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{10, 128, 108, 3}, {10, 3, 3}, {10, 56, 128, 3}});
+        UniformIntRNG rng(0, 9);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec({{10, 128, 108, 3}, {10, 3, 3}, {10}, {10, 56, 128, 3}});
     }
     // resize nan case
     checker.set_rng(1, &rng_zero);
@@ -216,24 +246,34 @@ TEST_F(ARM_COMMON_MULTI_THREADS, WARP_PERSPECTIVE_CV) {
         param.bmode = BMode::CONSTANT;
         param.border_val = 1.737;
         checker.set_param(param);
-        checker.exec({{1000, 2, 10, 3}, {1000, 3, 3}, {1000, 2, 12, 3}});
+        UniformIntRNG rng(0, 999);
+        checker.set_rng(2, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.exec(
+                {{1000, 2, 10, 3}, {1000, 3, 3}, {1000}, {1000, 2, 12, 3}});
     }
 
     auto args = warp_perspective::get_cv_args();
     for (auto&& arg : args) {
+        ConstValue rng(0.f);
         checker.set_param(arg.param)
+			    .set_rng(2, &rng)
                 .set_dtype(0, dtype::Uint8())
                 .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Uint8())
-                .execs({arg.src, arg.trans, arg.dst});
+                .set_dtype(2, dtype::Int32())
+                .set_dtype(3, dtype::Uint8())
+                .execs({arg.src, arg.trans, arg.mat_idx, arg.dst});
     }
 
     for (auto&& arg : args) {
+        ConstValue rng(0.f);
         checker.set_param(arg.param)
+			    .set_rng(2, &rng)
                 .set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
-                .set_dtype(2, dtype::Float32())
-                .execs({arg.src, arg.trans, arg.dst});
+                .set_dtype(2, dtype::Int32())
+                .set_dtype(3, dtype::Float32())
+                .execs({arg.src, arg.trans, arg.mat_idx, arg.dst});
     }
 }
 

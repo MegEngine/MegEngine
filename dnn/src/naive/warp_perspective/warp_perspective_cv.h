@@ -21,7 +21,8 @@ namespace naive {
  * \brief Used if the format is NHWC, transfer from megcv
  */
 void warp_perspective_cv_exec(_megdnn_tensor_in src, _megdnn_tensor_in trans,
-                              _megdnn_tensor_in dst, float border_value,
+                              _megdnn_tensor_in mat_idx, _megdnn_tensor_in dst,
+                              float border_value,
                               param::WarpPerspective::BorderMode border_mode,
                               param::WarpPerspective::InterpolationMode imode,
                               Handle* handle);

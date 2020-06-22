@@ -27,8 +27,8 @@ void WarpPerspectiveImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
                                   dst.layout, workspace.size);
     if (warp::is_cv_available(src.layout, mat.layout, dst.layout, param().imode,
                               param().format) &&
-        !mat_idx.layout.ndim && is_supported(SIMDType::SSE4_2)) {
-        warp_perspective_cv_exec(src, mat, dst, param().border_val,
+        is_supported(SIMDType::SSE4_2)) {
+        warp_perspective_cv_exec(src, mat, mat_idx, dst, param().border_val,
                                  param().bmode, param().imode, handle());
     } else {
         //! Use fallback implementation

@@ -56,24 +56,24 @@ std::vector<TestArg> warp_perspective::get_cv_args() {
 
                     cur_param.imode = imode;
                     args.emplace_back(cur_param, TensorShape{1, i, i, ic},
-                                      TensorShape{1, 3, 3},
+                                      TensorShape{1, 3, 3}, TensorShape{1},
                                       TensorShape{1, i, i, ic});
                     args.emplace_back(cur_param, TensorShape{1, i, i * 2, ic},
-                                      TensorShape{1, 3, 3},
+                                      TensorShape{1, 3, 3}, TensorShape{1},
                                       TensorShape{1, i, i * 2, ic});
                     args.emplace_back(cur_param, TensorShape{1, i * 3, i, ic},
-                                      TensorShape{1, 3, 3},
+                                      TensorShape{1, 3, 3}, TensorShape{1},
                                       TensorShape{1, i * 3, i, ic});
 
                     cur_param.border_val = 0.78f;
                     args.emplace_back(cur_param, TensorShape{1, i, i, ic},
-                                      TensorShape{1, 3, 3},
+                                      TensorShape{1, 3, 3}, TensorShape{1},
                                       TensorShape{1, 8, 8, ic});
                     args.emplace_back(cur_param, TensorShape{1, i, i * 2, ic},
-                                      TensorShape{1, 3, 3},
+                                      TensorShape{1, 3, 3}, TensorShape{1},
                                       TensorShape{1, 8, 8, ic});
                     args.emplace_back(cur_param, TensorShape{1, i * 3, i, ic},
-                                      TensorShape{1, 3, 3},
+                                      TensorShape{1, 3, 3}, TensorShape{1},
                                       TensorShape{1, 8, 8, ic});
                 }
             }
@@ -101,7 +101,10 @@ void warp_perspective::run_mat_idx_test(Handle* handle) {
 
     // test NHWC
     param.format = WarpPerspective::Param::Format::NHWC;
-    checker.set_param(param);
+	checker.set_param(param)
+	       .set_rng(2, &mat_idx_rng)
+		   .set_epsilon(1e-1)
+		   .set_dtype(2, dtype::Int32());
     checker.execs({{N_SRC, 10, 11, 3}, {2, 3, 3}, {2}, {2, 11, 12, 3}});
 }
 

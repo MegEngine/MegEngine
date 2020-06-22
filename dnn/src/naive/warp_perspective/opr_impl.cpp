@@ -320,10 +320,9 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in src,
                              .c_str());
     }
     if (warp::is_cv_available(src.layout, mat.layout, dst.layout, param().imode,
-                              param().format) &&
-        !mat_idx.layout.ndim) {
+                              param().format)) {
         MIDOUT_BEGIN(megdnn_naive_warpperspective, void) {
-            warp_perspective_cv_exec(src, mat, dst, param().border_val,
+            warp_perspective_cv_exec(src, mat, mat_idx, dst, param().border_val,
                                      param().bmode, param().imode, handle());
         }
         MIDOUT_END();
