@@ -18,6 +18,9 @@
 #include "test/common/workspace_wrapper.h"
 
 #include <algorithm>
+#include <memory>
+
+
 
 namespace megdnn {
 namespace test {
@@ -31,6 +34,9 @@ struct OprProxyDefaultImpl
 
 template <typename Opr>
 struct OprProxy : public OprProxyDefaultImpl<Opr> {};
+
+template <typename Opr>
+struct OprWeightPreprocessProxy : public OprProxyDefaultImpl<Opr> {};
 
 template <typename Opr>
 struct OprProxyVectorToSingle {};
@@ -139,6 +145,28 @@ struct OprProxyProfilingBase
     typename Opr::Algorithm* target_algo = nullptr;
 
     OprProxyProfilingBase(bool profile = false) { m_profiling = profile; }
+
+    //! used for alloc tensor for weight preprocess
+    static std::shared_ptr<TensorNDArray> alloc_tensors(
+            Handle* handle, const TensorLayoutArray& layouts) {
+        auto deleter = [handle](TensorNDArray* ptr) {
+            for (auto&& i : *ptr) {
+                auto pdata = static_cast<dt_byte*>(i.raw_ptr) +
+                             i.layout.span().low_byte;
+                megdnn_free(handle, pdata);
+            }
+            delete ptr;
+        };
+        std::shared_ptr<TensorNDArray> ret{new TensorNDArray, deleter};
+        for (size_t i = 0; i < layouts.size(); ++i) {
+            auto span = layouts[i].span();
+            ret->emplace_back(static_cast<dt_byte*>(
+                                      megdnn_malloc(handle, span.dist_byte())) -
+                                      span.low_byte,
+                              layouts[i]);
+        }
+        return ret;
+    }
 };
 
 template <class Opr>
@@ -207,7 +235,6 @@ DEF_PROF3(LocalShareBackwardData);
 DEF_PROF3(LocalShareBackwardFilter);
 #undef DEF_PROF3
 
-//! TODO: it should adapt weight preprocess later
 template <>
 struct OprProxy<ConvolutionForward>
         : public OprProxyProfilingTernary<ConvolutionForward> {
@@ -260,6 +287,100 @@ struct OprProxy<ConvolutionForward>
         }
         opr->exec(tensors[0], tensors[1], tensors[2], nullptr,
                   Base::W.workspace());
+    }
+};
+
+template <>
+struct OprWeightPreprocessProxy<ConvolutionForward>
+        : public OprProxyProfilingTernary<ConvolutionForward> {
+    using OprProxyProfilingTernary<ConvolutionForward>::OprProxyProfilingTernary;
+    void exec(ConvolutionForward* opr, const TensorNDArray& tensors) {
+        megdnn_assert(tensors.size() == 3);
+        if (!Base::W.valid()) {
+            Base::W = WorkspaceWrapper(opr->handle(), 0);
+        }
+        if (Base::m_profiling && !Base::target_algo) {
+            size_t min_time = std::numeric_limits<size_t>::max();
+            for (auto algo :
+                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
+                                         tensors[2].layout)) {
+                opr->execution_policy().algorithm = algo;
+
+                auto preprocess_tensors = weight_prerocess(opr, tensors, algo);
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                ConvolutionForward::PreprocessedFilter preprocessed_filter{
+                        algo, *preprocess_tensors};
+
+                auto workspace_size = opr->get_workspace_in_bytes(
+                        tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                        &preprocessed_filter);
+                Base::W.update(workspace_size);
+
+                for (size_t times = 0; times < Base::warmup_times; ++times)
+                    opr->exec(tensors[0], tensors[1], tensors[2],
+                              &preprocessed_filter, Base::W.workspace());
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                Timer timer;
+                timer.start();
+                for (size_t times = 0; times < Base::exec_times; ++times) {
+                    opr->exec(tensors[0], tensors[1], tensors[2],
+                              &preprocessed_filter, Base::W.workspace());
+                }
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                timer.stop();
+                printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
+                       algo->name());
+                if (min_time > timer.get_time_in_us()) {
+                    min_time = timer.get_time_in_us();
+                    Base::target_algo = algo;
+                }
+            }
+            opr->execution_policy().algorithm = Base::target_algo;
+            auto preprocess_tensors =
+                    weight_prerocess(opr, tensors, Base::target_algo);
+            megcoreSynchronize(opr->handle()->megcore_computing_handle());
+            ConvolutionForward::PreprocessedFilter preprocessed_filter{
+                    Base::target_algo, *preprocess_tensors};
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    &preprocessed_filter);
+            Base::W.update(workspace_size);
+        }
+        auto preprocess_tensors =
+                weight_prerocess(opr, tensors, Base::target_algo);
+        megcoreSynchronize(opr->handle()->megcore_computing_handle());
+        ConvolutionForward::PreprocessedFilter preprocessed_filter{
+                Base::target_algo, *preprocess_tensors};
+        if (!Base::target_algo) {
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    &preprocessed_filter);
+            Base::W.update(workspace_size);
+        }
+        opr->exec(tensors[0], tensors[1], tensors[2], &preprocessed_filter,
+                  Base::W.workspace());
+    }
+
+    //! handle weight preprocess
+    std::shared_ptr<TensorNDArray> weight_prerocess(
+            ConvolutionForward* opr, const TensorNDArray& tensors,
+            ConvolutionForward::Algorithm* algo) {
+        auto weight_perprocess_layouts = opr->deduce_preprocessed_filter_layout(
+                tensors[0].layout, tensors[1].layout, tensors[2].layout);
+        auto preprocessed_filter_tensors_ptr =
+                alloc_tensors(opr->handle(), weight_perprocess_layouts);
+        ConvolutionForward::PreprocessedFilter preprocessed_filter{
+                algo, *preprocessed_filter_tensors_ptr};
+        size_t preprocess_workspace_size =
+                opr->get_preprocess_workspace_in_bytes(tensors[0].layout,
+                                                       tensors[1].layout,
+                                                       tensors[2].layout);
+        WorkspaceWrapper preprocess_workspace(opr->handle(),
+                                              preprocess_workspace_size);
+        opr->exec_preprocess(tensors[0].layout, tensors[1], tensors[2].layout,
+                             &preprocessed_filter,
+                             preprocess_workspace.workspace());
+        return preprocessed_filter_tensors_ptr;
     }
 };
 
@@ -329,11 +450,9 @@ struct OprProxyProfiling5 : public OprProxyProfilingBase<Opr, 5> {
 
 DEF_PROF5(DeformableConvForward);
 DEF_PROF5(DeformableConvBackwardFilter);
-//DEF_PROF5(ConvBiasForward);
 DEF_PROF5(BatchConvBiasForward);
 #undef DEF_PROF5
 
-//! TODO: it should adapt weight preprocess later
 template <>
 struct OprProxy<ConvBiasForward> : public OprProxyProfiling5<ConvBiasForward> {
     using OprProxyProfiling5<ConvBiasForward>::OprProxyProfiling5;
@@ -387,6 +506,106 @@ struct OprProxy<ConvBiasForward> : public OprProxyProfiling5<ConvBiasForward> {
         }
         opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], tensors[4],
                   nullptr, Base::W.workspace());
+    }
+};
+
+template <>
+struct OprWeightPreprocessProxy<ConvBiasForward>
+        : public OprProxyProfiling5<ConvBiasForward> {
+    using OprProxyProfiling5<ConvBiasForward>::OprProxyProfiling5;
+    void exec(ConvBiasForward* opr, const TensorNDArray& tensors) {
+        megdnn_assert(tensors.size() == 5);
+        if (!Base::W.valid()) {
+            Base::W = WorkspaceWrapper(opr->handle(), 0);
+        }
+        if (Base::m_profiling && !Base::target_algo) {
+            size_t min_time = std::numeric_limits<size_t>::max();
+            for (auto algo :
+                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
+                                         tensors[2].layout, tensors[3].layout,
+                                         tensors[4].layout)) {
+                opr->execution_policy().algorithm = algo;
+
+                auto preprocess_tensors = weight_prerocess(opr, tensors, algo);
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                ConvBiasForward::PreprocessedFilter preprocessed_filter{
+                        algo, *preprocess_tensors};
+
+                auto workspace_size = opr->get_workspace_in_bytes(
+                        tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                        tensors[3].layout, tensors[4].layout,
+                        &preprocessed_filter);
+                Base::W.update(workspace_size);
+
+                for (size_t times = 0; times < Base::warmup_times; ++times)
+                    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3],
+                              tensors[4], &preprocessed_filter,
+                              Base::W.workspace());
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                Timer timer;
+                timer.start();
+                for (size_t times = 0; times < Base::exec_times; ++times) {
+                    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3],
+                              tensors[4], &preprocessed_filter,
+                              Base::W.workspace());
+                }
+                megcoreSynchronize(opr->handle()->megcore_computing_handle());
+                timer.stop();
+                printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
+                       algo->name());
+                if (min_time > timer.get_time_in_us()) {
+                    min_time = timer.get_time_in_us();
+                    Base::target_algo = algo;
+                }
+            }
+            opr->execution_policy().algorithm = Base::target_algo;
+            auto preprocess_tensors =
+                    weight_prerocess(opr, tensors, Base::target_algo);
+            megcoreSynchronize(opr->handle()->megcore_computing_handle());
+            ConvBiasForward::PreprocessedFilter preprocessed_filter{
+                    Base::target_algo, *preprocess_tensors};
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    tensors[3].layout, tensors[4].layout, &preprocessed_filter);
+            Base::W.update(workspace_size);
+        }
+        auto preprocess_tensors =
+                    weight_prerocess(opr, tensors, Base::target_algo);
+        megcoreSynchronize(opr->handle()->megcore_computing_handle());
+        ConvBiasForward::PreprocessedFilter preprocessed_filter{
+                Base::target_algo, *preprocess_tensors};
+        if (!Base::target_algo) {
+            auto workspace_size = opr->get_workspace_in_bytes(
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    tensors[3].layout, tensors[4].layout, &preprocessed_filter);
+            Base::W.update(workspace_size);
+        }
+        opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], tensors[4],
+                  &preprocessed_filter, Base::W.workspace());
+    }
+
+    //! handle weight preprocess
+    std::shared_ptr<TensorNDArray> weight_prerocess(
+            ConvBiasForward* opr, const TensorNDArray& tensors,
+            ConvBiasForward::Algorithm* algo) {
+        auto weight_perprocess_layouts = opr->deduce_preprocessed_filter_layout(
+                tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                tensors[3].layout, tensors[4].layout);
+        auto preprocessed_filter_tensors_ptr =
+                alloc_tensors(opr->handle(), weight_perprocess_layouts);
+        ConvBiasForward::PreprocessedFilter preprocessed_filter{
+                algo, *preprocessed_filter_tensors_ptr};
+        size_t preprocess_workspace_size =
+                opr->get_preprocess_workspace_in_bytes(
+                        tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                        tensors[3].layout, tensors[4].layout);
+        WorkspaceWrapper preprocess_workspace(opr->handle(),
+                                              preprocess_workspace_size);
+        opr->exec_preprocess(tensors[0].layout, tensors[1], tensors[2].layout,
+                             tensors[3].layout, tensors[4].layout,
+                             &preprocessed_filter,
+                             preprocess_workspace.workspace());
+        return preprocessed_filter_tensors_ptr;
     }
 };
 

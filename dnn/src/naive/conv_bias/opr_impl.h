@@ -61,9 +61,7 @@ public:
     void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
                          const TensorLayout&, const TensorLayout&,
                          const TensorLayout&, PreprocessedFilter*,
-                         _megdnn_workspace) override{
-        megdnn_throw("conv_bias exec_preprocess is not impl yet");
-    }
+                         _megdnn_workspace) override {}
 
     const char* get_algorithm_set_name() const override;
 };

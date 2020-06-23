@@ -25,10 +25,10 @@ namespace cuda {
 void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                _megdnn_tensor_in bias, _megdnn_tensor_in z,
                                _megdnn_tensor_out dst,
-                               const PreprocessedFilter*,
+                               const PreprocessedFilter* preprocessed_filter,
                                _megdnn_workspace workspace) {
     check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
-               workspace.size);
+               workspace.size, preprocessed_filter);
     AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace);
     auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
                               z.layout, dst.layout);

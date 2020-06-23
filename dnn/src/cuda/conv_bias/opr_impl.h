@@ -52,13 +52,10 @@ public:
             const TensorLayout&, const TensorLayout&) override {
         return {};
     }
-    void exec_preprocess(const TensorLayout& ,
-                         _megdnn_tensor_in ,
-                         const TensorLayout& ,
-                         const TensorLayout& ,
-                         const TensorLayout& ,
-                         PreprocessedFilter* ,
-                         _megdnn_workspace ) override {
+    void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
+                         const TensorLayout&, const TensorLayout&,
+                         const TensorLayout&, PreprocessedFilter*,
+                         _megdnn_workspace) override {
         megdnn_throw("cuda conv_bias exec_preprocess has not implemeted yet");
     }
 

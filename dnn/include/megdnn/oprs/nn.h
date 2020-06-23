@@ -234,10 +234,10 @@ public:
             const TensorLayout& dst) = 0;
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& filter,
-                                   const TensorLayout& dst,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_in_bytes,
+            const PreprocessedFilter* preprocessed_filter);
 };
 using Convolution = ConvolutionForward;
 
@@ -408,12 +408,11 @@ public:
     static WinogradParam parse_winograd_name(const std::string& algo_name);
 
 protected:
-    CanonizedFilterMeta check_exec(const TensorLayout& src,
-                                   const TensorLayout& filter,
-                                   const TensorLayout& bias,
-                                   const TensorLayout& z,
-                                   const TensorLayout& dst,
-                                   size_t workspace_in_bytes);
+    CanonizedFilterMeta check_exec(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst, size_t workspace_in_bytes,
+            const PreprocessedFilter* preprocessed_filter);
 };
 using ConvBias = ConvBiasForward;
 

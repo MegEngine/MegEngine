@@ -32,7 +32,8 @@ void ConvBiasForward::deduce_layout(const TensorLayout& src,
 ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst, size_t workspace_in_bytes) {
+        const TensorLayout& dst, size_t workspace_in_bytes,
+        const PreprocessedFilter* preprocessed_filter) {
     if ((param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
          param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
          param().format == param::ConvBias::Format::NCHW44_WINOGRAD) &&
@@ -82,9 +83,11 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
 
     auto ret = check_layout_fwd(src, filter, dst);
     megdnn_assert_contiguous(bias);
-    auto required_workspace_in_bytes =
-            get_workspace_in_bytes(src, filter, bias, z, dst, nullptr);
-    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(
+            src, filter, bias, z, dst, preprocessed_filter);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes,
+                  "worksapce have size of %zu, but need %zu",
+                  workspace_in_bytes, required_workspace_in_bytes);
     if (bias.ndim != 0) {
         //! bias.layout == dst.layout failed, no assert information
         auto check_eq = [](const TensorLayout& bias, const TensorLayout& dst) {

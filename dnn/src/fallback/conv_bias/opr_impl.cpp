@@ -119,21 +119,50 @@ SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
 bool ConvBiasImpl::is_naive_algo(ConvBiasImpl::Algorithm* algo) {
     return algo == nullptr || strcmp(algo->name(), "DEFAULT") == 0;
 }
+
+#define NCB_ALGO_FUNC(name, algo, param) \
+    static_cast<AlgoBase*>(algo)->name(this, param)
+
 void ConvBiasImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                         _megdnn_tensor_in bias, _megdnn_tensor_in z,
                         _megdnn_tensor_out dst,
                         const PreprocessedFilter* preprocessed_filter,
                         _megdnn_workspace workspace) {
     check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
-               workspace.size);
-    auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace);
+               workspace.size, preprocessed_filter);
+    auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace,
+                                      preprocessed_filter);
     ConvBiasImpl::Algorithm* algo = get_algorithm(fparam, workspace.size);
     if (!is_naive_algo(algo) &&
-        ncb_algo_get_workspace(algo, fparam) <= workspace.size) {
+        NCB_ALGO_FUNC(get_workspace, algo, fparam) <= workspace.size) {
         exec_with_ncb_kern(fparam, algo);
     } else {
         naive::ConvBiasForwardImpl::exec(src, filter, bias, z, dst,
                                          preprocessed_filter, workspace);
+    }
+}
+
+void ConvBiasImpl::exec_preprocess(const TensorLayout& src_layout,
+                                   _megdnn_tensor_in filter,
+                                   const TensorLayout& bias_layout,
+                                   const TensorLayout& z_layout,
+                                   const TensorLayout& dst_layout,
+                                   PreprocessedFilter* preprocessed_filter,
+                                   _megdnn_workspace workspace) {
+    //! exec_preprocess currently only support preprocess weights before exec,
+    //! src/dst/bias/z will be ignored, just set to nullptr
+    TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout},
+            bias{nullptr, bias_layout};
+    auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace,
+                                      preprocessed_filter);
+    ConvolutionImpl::Algorithm* algo = get_algorithm(fparam, workspace.size);
+    if (!is_naive_algo(algo) && NCB_ALGO_FUNC(get_preprocess_workspace, algo,
+                                              fparam) <= workspace.size) {
+        exec_preprocess_with_ncb_kern(fparam, algo);
+    } else {
+        naive::ConvBiasForwardImpl::exec_preprocess(
+                src_layout, filter, bias_layout, z_layout, dst_layout,
+                preprocessed_filter, workspace);
     }
 }
 
@@ -142,13 +171,42 @@ size_t ConvBiasImpl::get_workspace_in_bytes(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
-    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst);
+    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst,
+                                           preprocessed_filter);
     ConvBiasImpl::Algorithm* algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvBiasForwardImpl::get_workspace_in_bytes(
                 src, filter, bias, z, dst, preprocessed_filter);
     } else {
-        return ncb_algo_get_workspace(algo, fparam);
+        return NCB_ALGO_FUNC(get_workspace, algo, fparam);
+    }
+}
+
+size_t ConvBiasImpl::get_preprocess_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst) {
+    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
+    Algorithm* algo = get_algorithm(fparam);
+    if (is_naive_algo(algo)) {
+        return naive::ConvBiasForwardImpl::get_preprocess_workspace_in_bytes(
+                src, filter, bias, z, dst);
+    } else {
+        return NCB_ALGO_FUNC(get_preprocess_workspace, algo, fparam);
+    }
+}
+
+SmallVector<TensorLayout> ConvBiasImpl::deduce_preprocessed_filter_layout(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst) {
+    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
+    Algorithm* algo = get_algorithm(fparam);
+    if (is_naive_algo(algo)) {
+        return naive::ConvBiasForwardImpl::deduce_preprocessed_filter_layout(
+                src, filter, bias, z, dst);
+    } else {
+        return NCB_ALGO_FUNC(deduce_preprocessed_filter_layout, algo, fparam);
     }
 }
 
@@ -156,7 +214,7 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst) {
-    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst);
+    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
     auto ret = get_all_algorithms_with_ncb(fparam);
     if (ret.empty()) {
         return naive::ConvBiasForwardImpl::get_all_algorithms(src, filter, bias,
@@ -170,7 +228,7 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
         bool reproducible) {
-    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst);
+    auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
     auto result = get_algorithm_heuristic_with_ncb(
             fparam, workspace_limit_in_bytes, reproducible);
     if (result == nullptr) {
@@ -181,9 +239,25 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic(
     return result;
 }
 
+ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic_with_ncb(
+        const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
+        bool reproducible) {
+    for (auto i : get_all_algorithms_with_ncb(param)) {
+        size_t need_workspace = NCB_ALGO_FUNC(get_workspace, i, param);
+        if (static_cast<AlgoBase*>(i)->usable_reproducible(
+                    this, param, AlgoSelectionStrategy::HEURISTIC,
+                    reproducible) &&
+            need_workspace <= workspace_limit_in_bytes) {
+            return i;
+        }
+    }
+    return nullptr;
+}
+
 ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
         const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& bias, const TensorLayout& dst) {
+        const TensorLayout& bias, const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter) {
     auto safe_u32 = [](size_t v) -> uint32_t {
         megdnn_assert(v <= std::numeric_limits<uint32_t>::max(),
                       "value too large: %zu", v);
@@ -258,7 +332,9 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
              {src.stride[0], src.stride[1], src.stride[2], src.stride[3]},
              {dst.stride[0], dst.stride[1], dst.stride[2], dst.stride[3]},
              param().compute_mode,
-             nr_threads},
+             nr_threads,
+             reinterpret_cast<const ConvolutionForward::PreprocessedFilter*>(
+                     preprocessed_filter)},
             param().output_block_size,
             format,
             bias.dtype,
@@ -269,10 +345,12 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
 
 ConvBiasImpl::NCBKernParam ConvBiasImpl::make_ncb_kern_param(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
-        _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+        _megdnn_tensor_out dst, _megdnn_workspace workspace,
+        const PreprocessedFilter* preprocessed_filter) {
     NCBKernParam ret;
-    static_cast<NCBKernSizeParam&>(ret) = make_ncb_kern_size_param(
-            src.layout, filter.layout, bias.layout, dst.layout);
+    static_cast<NCBKernSizeParam&>(ret) =
+            make_ncb_kern_size_param(src.layout, filter.layout, bias.layout,
+                                     dst.layout, preprocessed_filter);
     ret.src_ptr = src.raw_ptr;
     ret.filter_ptr = filter.raw_ptr;
     ret.bias_ptr = bias.raw_ptr;
@@ -284,7 +362,7 @@ ConvBiasImpl::NCBKernParam ConvBiasImpl::make_ncb_kern_param(
 
 void ConvBiasImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                       ConvBiasImpl::Algorithm* algo) {
-    auto ncb_kerns = ncb_algo_dispatch_kerns(algo, param);
+    auto ncb_kerns = NCB_ALGO_FUNC(dispatch_kerns, algo, param);
     for (auto&& kernel : ncb_kerns) {
         auto run = [kernel, param](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
@@ -295,21 +373,17 @@ void ConvBiasImpl::exec_with_ncb_kern(const NCBKernParam& param,
     }
 }
 
-ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic_with_ncb(
-        const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-        bool reproducible) {
-    return ncb_algo_get_algorithm_heuristic(param, workspace_limit_in_bytes,
-                                            reproducible);
-}
-
-size_t ConvBiasImpl::ncb_algo_get_workspace(Algorithm* algo,
-                                            const NCBKernSizeParam& param) {
-    return static_cast<AlgoBase*>(algo)->get_workspace(this, param);
-}
-
-SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::ncb_algo_dispatch_kerns(
-        Algorithm* algo, const NCBKernSizeParam& param) {
-    return static_cast<AlgoBase*>(algo)->dispatch_kerns(this, param);
+void ConvBiasImpl::exec_preprocess_with_ncb_kern(
+        const NCBKernParam& param, ConvBiasImpl::Algorithm* algo) {
+    auto ncb_kerns = NCB_ALGO_FUNC(dispatch_preprocess_kerns, algo, param);
+    for (auto&& kernel : ncb_kerns) {
+        auto run = [kernel, param](size_t index, size_t thread_id) {
+            CpuNDRange ndrange_id(kernel.global_size, index);
+            kernel.kern(param, {thread_id, ndrange_id});
+        };
+        static_cast<naive::HandleImpl*>(handle())->dispatch_kern(
+                run, kernel.global_size.total_size());
+    }
 }
 
 std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
@@ -330,20 +404,6 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
     //! Prefer algo inserted from begin
     algos.insert(algos.begin(), prefer_algos.begin(), prefer_algos.end());
     return algos;
-}
-
-ConvBiasImpl::Algorithm* ConvBiasImpl::ncb_algo_get_algorithm_heuristic(
-        const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-        bool reproducible) {
-    for (auto i : get_all_algorithms_with_ncb(param)) {
-        if (static_cast<AlgoBase*>(i)->usable_reproducible(
-                    this, param, AlgoSelectionStrategy::HEURISTIC,
-                    reproducible) &&
-            ncb_algo_get_workspace(i, param) <= workspace_limit_in_bytes) {
-            return i;
-        }
-    }
-    return nullptr;
 }
 
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm(

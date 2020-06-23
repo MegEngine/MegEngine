@@ -39,11 +39,25 @@ public:
               _megdnn_tensor_out dst, const PreprocessedFilter*,
               _megdnn_workspace workspace) override;
 
+    void exec_preprocess(const TensorLayout& src_layout,
+                         _megdnn_tensor_in filter,
+                         const TensorLayout& dst_layout,
+                         PreprocessedFilter* preprocessed_filter,
+                         _megdnn_workspace workspace) override;
+
     //! implemented by get_workspace_with_ncb()
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& filter,
                                   const TensorLayout& dst,
                                   const PreprocessedFilter*) override;
+
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+
+    size_t get_preprocess_workspace_in_bytes(const TensorLayout& src,
+                                             const TensorLayout& filter,
+                                             const TensorLayout& dst) override;
 
     //! implemented by get_all_algorithms_with_ncb()
     std::vector<Algorithm*> get_all_algorithms(
@@ -70,6 +84,8 @@ public:
         ptrdiff_t inp_s[4], out_s[4];
         Param::ComputeMode compute_mode;
         size_t nr_threads;
+        //! weight_preprocess info
+        const PreprocessedFilter* preprocessed_filter;
     };
 
     //! memory param for kernels with non-contiguous batch
@@ -169,6 +185,23 @@ public:
         virtual SmallVector<NCBKern> dispatch_kern(
                 ConvolutionImpl* opr, const NCBKernSizeParam& param) const = 0;
 
+        virtual SmallVector<NCBKern> dispatch_preprocess_kern(
+                ConvolutionImpl*, const NCBKernSizeParam&) const {
+            return {};
+        };
+
+        //! get the layouts of weight_prerocess dst
+        virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+                ConvolutionImpl*, const NCBKernSizeParam&) const {
+            return {};
+        };
+
+        //! get the workspace when weight_prerocess
+        virtual size_t get_preprocess_workspace(ConvolutionImpl*,
+                                                const NCBKernSizeParam&) const {
+            return 0_z;
+        };
+
         //! Temporarily used to identify whether the matmul algorithm is
         //! is_preferred.
         virtual bool is_preferred(ConvolutionImpl*,
@@ -192,27 +225,15 @@ public:
 protected:
     virtual void exec_with_ncb_kern(const NCBKernParam& param, Algorithm* algo);
 
+    virtual void exec_preprocess_with_ncb_kern(const NCBKernParam& param,
+                                               Algorithm* algo);
+
     virtual std::vector<Algorithm*> get_all_algorithms_with_ncb(
             const NCBKernSizeParam& param);
 
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
             bool reproducible = false);
-
-    //! get kernel pointer
-    virtual SmallVector<NCBKern> ncb_algo_dispatch_kern(
-            Algorithm* algo, const NCBKernSizeParam& param) {
-        return static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
-    }
-    //! get algo workspace
-    virtual size_t ncb_algo_get_workspace(Algorithm* algo,
-                                          const NCBKernSizeParam& param) {
-        return static_cast<AlgoBase*>(algo)->get_workspace(this, param);
-    }
-    /*!
-     * the default impl iterates over all ncb_1g_get_all_algorithms()
-     * and return the first one whose workspace does not exceed the limit.
-     */
 
     const char* get_algorithm_set_name() const override;
 
@@ -231,14 +252,16 @@ private:
             const NCBKernSizeParam& param,
             size_t workspace_size = std::numeric_limits<size_t>::max());
 
-    NCBKernSizeParam make_ncb_kern_size_param(const TensorLayout& src,
-                                              const TensorLayout& filter,
-                                              const TensorLayout& dst);
+    NCBKernSizeParam make_ncb_kern_size_param(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst,
+            const PreprocessedFilter* preprocessed_filter);
 
-    NCBKernParam make_ncb_kern_param(_megdnn_tensor_in src,
-                                     _megdnn_tensor_in filter,
-                                     _megdnn_tensor_out dst,
-                                     _megdnn_workspace workspace);
+    NCBKernParam make_ncb_kern_param(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter,
+            _megdnn_tensor_out dst,
+            const PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace);
 };
 
 class ConvolutionBackwardDataImpl : public naive::ConvolutionBackwardDataImpl {

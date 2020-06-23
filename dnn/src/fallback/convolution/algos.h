@@ -110,6 +110,9 @@ class ConvolutionImpl::AlgoDefault final : public AlgoBase {
     static SmallVector<NCBKern> get_kimpl(ConvBiasImpl* conv_bias_opr,
                                           ConvBiasImpl::AlgoBase* algo,
                                           const NCBKernSizeParam& param);
+    static SmallVector<NCBKern> get_preprocess_kimpl(
+            ConvBiasImpl* conv_bias_opr, ConvBiasImpl::AlgoBase* algo,
+            const NCBKernSizeParam& param);
 
 public:
     AlgoDefault(fallback::ConvBiasImpl* conv_bias_opr, ConvBiasImpl::AlgoBase*);
@@ -120,6 +123,17 @@ public:
 
     size_t get_workspace(ConvolutionImpl* opr,
                          const NCBKernSizeParam& param) const override;
+
+    size_t get_preprocess_workspace(ConvolutionImpl*,
+                                    const NCBKernSizeParam&) const override;
+
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            ConvolutionImpl*, const NCBKernSizeParam&) const override;
+
+    SmallVector<NCBKern> dispatch_preprocess_kern(
+            ConvolutionImpl*, const NCBKernSizeParam& param) const override {
+        return get_preprocess_kimpl(m_conv_bias_opr, m_algorithm, param);
+    }
 
     SmallVector<NCBKern> dispatch_kern(
             ConvolutionImpl* /*opr*/,

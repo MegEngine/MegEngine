@@ -51,6 +51,25 @@ public:
               _megdnn_tensor_out dst, const PreprocessedFilter*,
               _megdnn_workspace workspace) override;
 
+    void exec_preprocess(const TensorLayout& src_layout,
+                         _megdnn_tensor_in filter,
+                         const TensorLayout& bias_layout,
+                         const TensorLayout& z_layout,
+                         const TensorLayout& dst_layout,
+                         PreprocessedFilter* preprocessed_filter,
+                         _megdnn_workspace workspace) override;
+
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst) override;
+
+    size_t get_preprocess_workspace_in_bytes(const TensorLayout& src,
+                                             const TensorLayout& filter,
+                                             const TensorLayout& bias,
+                                             const TensorLayout& z,
+                                             const TensorLayout& dst) override;
+
     //! implemented by get_workspace_with_ncb()
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& filter,
@@ -198,6 +217,23 @@ public:
         virtual SmallVector<NCBKern> dispatch_kerns(
                 ConvBiasImpl* opr, const NCBKernSizeParam& param) const = 0;
 
+        virtual SmallVector<NCBKern> dispatch_preprocess_kerns(
+                ConvBiasImpl*, const NCBKernSizeParam&) const {
+            return {};
+        };
+
+        //! get the layouts of weight_prerocess dst
+        virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+                ConvBiasImpl*, const NCBKernSizeParam&) const {
+            return {};
+        };
+
+        //! get the workspace when weight_prerocess
+        virtual size_t get_preprocess_workspace(ConvBiasImpl*,
+                                                const NCBKernSizeParam&) const {
+            return 0_z;
+        };
+
         //! Temporarily used to identify whether the matmul algorithm is
         //! is_preferred.
         virtual bool is_preferred(ConvBiasImpl*,
@@ -219,37 +255,16 @@ public:
     virtual SmallVector<AlgoBase*> algo_pack();
 
 protected:
-    //! default impl calls ncb_algo_dispatch_kern()
     virtual void exec_with_ncb_kern(const NCBKernParam& param,
                                     ConvBiasImpl::Algorithm* algo);
 
-    //! default impl calls ncb_algo_get_all_algorithms()
+    virtual void exec_preprocess_with_ncb_kern(const NCBKernParam& param,
+                                               Algorithm* algo);
+
     virtual std::vector<Algorithm*> get_all_algorithms_with_ncb(
             const NCBKernSizeParam& param);
 
-    //! default impl calls ncb_algo_get_algorithm_heuristic()
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
-            const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            bool reproducible = false);
-
-    /**
-     * \brief get kernel pointer for non-contiguous batch  kernel or
-     *     simply conv bias kernel.
-     *
-     *  whether the kernel processing batch 1-group is decided by the
-     *  algo.
-     */
-
-    virtual SmallVector<NCBKern> ncb_algo_dispatch_kerns(
-            Algorithm* algo, const NCBKernSizeParam& param);
-
-    virtual size_t ncb_algo_get_workspace(Algorithm* algo,
-                                          const NCBKernSizeParam& param);
-    /*!
-     * the default impl iterates over all ncb_algo_get_all_algorithms()
-     * and return the first one whose workspace does not exceed the limit.
-     */
-    virtual Algorithm* ncb_algo_get_algorithm_heuristic(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
             bool reproducible = false);
 
@@ -276,16 +291,16 @@ private:
             const NCBKernSizeParam& param,
             size_t workspace_size = std::numeric_limits<size_t>::max());
 
-    NCBKernSizeParam make_ncb_kern_size_param(const TensorLayout& src,
-                                              const TensorLayout& filter,
-                                              const TensorLayout& bias,
-                                              const TensorLayout& dst);
+    NCBKernSizeParam make_ncb_kern_size_param(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& dst,
+            const PreprocessedFilter* preprocessed_filter);
 
-    NCBKernParam make_ncb_kern_param(_megdnn_tensor_in src,
-                                     _megdnn_tensor_in filter,
-                                     _megdnn_tensor_in bias,
-                                     _megdnn_tensor_out dst,
-                                     _megdnn_workspace workspace);
+    NCBKernParam make_ncb_kern_param(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter,
+            _megdnn_tensor_in bias, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace,
+            const PreprocessedFilter* preprocessed_filter);
 };
 
 }  // namespace fallback

@@ -28,11 +28,11 @@ using namespace naive;
 void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
                                   _megdnn_tensor_in filter,
                                   _megdnn_tensor_out dst,
-                                  const PreprocessedFilter*,
+                                  const PreprocessedFilter* preprocessed_filter,
                                   _megdnn_workspace workspace) {
     MIDOUT_BEGIN(megdnn_naive_conv_fwd) {
         auto filter_meta = check_exec(src.layout, filter.layout, dst.layout,
-                                      workspace.size);
+                                      workspace.size, preprocessed_filter);
         using ComputeMode = Param::ComputeMode;
 #define DISPATCH_CMODE(in_dt, out_dt, in_ct, out_ct, comp_ct, cmode)      \
     do {                                                                  \

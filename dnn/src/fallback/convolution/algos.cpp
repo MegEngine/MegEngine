@@ -376,7 +376,67 @@ size_t ConvolutionImpl::AlgoDefault::get_workspace(
     return get_bundle(param).total_size_in_bytes();
 }
 
-//! Return the implment kernel
+size_t ConvolutionImpl::AlgoDefault::get_preprocess_workspace(
+        ConvolutionImpl*, const NCBKernSizeParam& param) const {
+    ::ConvBiasImpl::NCBKernSizeParam conv_bias_param =
+            init_convbias_opr_and_param(m_conv_bias_opr, param);
+    m_conv_bias_opr->execution_policy() = {m_algorithm};
+    return m_algorithm->get_preprocess_workspace(m_conv_bias_opr,
+                                                 conv_bias_param);
+}
+
+SmallVector<TensorLayout>
+ConvolutionImpl::AlgoDefault::deduce_preprocessed_filter_layout(
+        ConvolutionImpl*, const NCBKernSizeParam& param) const {
+    ::ConvBiasImpl::NCBKernSizeParam conv_bias_param =
+            init_convbias_opr_and_param(m_conv_bias_opr, param);
+    m_conv_bias_opr->execution_policy() = {m_algorithm};
+    return m_algorithm->deduce_preprocessed_filter_layout(m_conv_bias_opr,
+                                                          conv_bias_param);
+}
+
+//! Return the implement preprocess kernel
+SmallVector<ConvolutionImpl::NCBKern>
+ConvolutionImpl::AlgoDefault::get_preprocess_kimpl(
+        ::ConvBiasImpl* conv_bias_opr, ConvBiasImpl::AlgoBase* algo,
+        const NCBKernSizeParam& param) {
+    MIDOUT_BEGIN(megdnn_fallback_conv, midout_iv("get_preprocess_kimpl"_hash)) {
+        // construct the conv_bias kern param
+        ::ConvBiasImpl::NCBKernParam conv_bias_param;
+        ::ConvBiasImpl::NCBKernSizeParam conv_bias_size_param =
+                init_convbias_opr_and_param(conv_bias_opr, param);
+        static_cast<::ConvBiasImpl::NCBKernSizeParam&>(conv_bias_param) =
+                conv_bias_size_param;
+        auto conv_bias_preprocess_kerns =
+                algo->dispatch_preprocess_kerns(conv_bias_opr, conv_bias_param);
+        SmallVector<ConvolutionImpl::NCBKern> convolution_preprocess_kerns;
+
+        //! Set the conv_bias param using convolution param
+        auto set_copy_param_filter_workspace_ptr =
+                [](const NCBKernParam& conv_param,
+                   ::ConvBiasImpl::NCBKernParam& copied_param) {
+                    copied_param.filter_ptr = conv_param.filter_ptr;
+                    copied_param.workspace_ptr = conv_param.workspace_ptr;
+                    copied_param.workspace_size = conv_param.workspace_size;
+                };
+        for (size_t i = 0; i < conv_bias_preprocess_kerns.size(); i++) {
+            auto kernel = conv_bias_preprocess_kerns[i];
+            //! If the kerenl batch parallel
+            auto run = [=](const NCBKernParam& p,
+                           const NCBKernIndex& ncb_index) {
+                auto copy_param = conv_bias_param;
+                set_copy_param_filter_workspace_ptr(p, copy_param);
+                kernel.kern(copy_param,
+                            {ncb_index.thread_id, ncb_index.ndrange_id});
+            };
+            convolution_preprocess_kerns.push_back({run, kernel.global_size});
+        }
+        return convolution_preprocess_kerns;
+    }
+    MIDOUT_END();
+}
+
+//! Return the implement kernel
 SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::get_kimpl(
         ::ConvBiasImpl* conv_bias_opr, ConvBiasImpl::AlgoBase* algo,
         const NCBKernSizeParam& param) {
@@ -392,7 +452,7 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::get_kimpl(
         SmallVector<ConvolutionImpl::NCBKern> convolution_kerns;
 
         //! Set the conv_bias param using convolution param
-        auto set_copy_param_run_time_address =
+        auto set_copy_param_compute_address =
                 [](const NCBKernParam& conv_param,
                    ::ConvBiasImpl::NCBKernParam& copied_param) {
                     copied_param.src_ptr = conv_param.src_ptr;
@@ -407,7 +467,7 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::get_kimpl(
             auto run = [=](const NCBKernParam& p,
                            const NCBKernIndex& ncb_index) {
                 auto copy_param = conv_bias_param;
-                set_copy_param_run_time_address(p, copy_param);
+                set_copy_param_compute_address(p, copy_param);
                 kernel.kern(copy_param,
                             {ncb_index.thread_id, ncb_index.ndrange_id});
             };

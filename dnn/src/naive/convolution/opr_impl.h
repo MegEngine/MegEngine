@@ -44,9 +44,7 @@ class ConvolutionForwardImpl: public ConvolutionForward {
 
         void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
                              const TensorLayout&, PreprocessedFilter*,
-                             _megdnn_workspace) override {
-            megdnn_throw("convolution exec_preprocess in not impl yet");
-        }
+                             _megdnn_workspace) override {}
 
         SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
                 const TensorLayout& , const TensorLayout& ,
