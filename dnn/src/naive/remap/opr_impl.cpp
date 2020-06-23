@@ -37,41 +37,28 @@ inline int get_offset<param::Remap::Format::NHWC>(int height, int width,
 }
 
 template <typename DataType, param::Remap::Format format,
-          param::Remap::BorderMode bodertype>
+          param::Remap::BorderMode bordertype>
 struct GetSrcData {
-    static inline DataType get(const DataType*, int, int, int, int, int, int,
-                               int);
+    static inline DataType get(const DataType* src, int height, int width,
+                               int channel, int h, int w, int c, float,
+                               std::function<DataType(float)>) {
+        height = megcv::border_interpolate<bordertype>(height, h);
+        width = megcv::border_interpolate<bordertype>(width, w);
+        return src[get_offset<format>(height, width, channel, h, w, c)];
+    }
 };
 
 template <typename DataType, param::Remap::Format format>
 struct GetSrcData<DataType, format, param::Remap::BorderMode::CONSTANT> {
     static inline DataType get(const DataType* src, int height, int width,
-                               int channel, int h, int w, int c, float scalar) {
+                               int channel, int h, int w, int c, float scalar,
+                               std::function<DataType(float)> round) {
         return (height >= 0 && height < h && width >= 0 && width < w)
                        ? src[get_offset<format>(height, width, channel, h, w,
                                                 c)]
-                       : static_cast<DataType>(std::round(scalar));
+                       : static_cast<DataType>(round(scalar));
     }
 };
-
-#define cb(bmode)                                                              \
-    template <typename DataType, param::Remap::Format format>                  \
-    struct GetSrcData<DataType, format, param::Remap::BorderMode::bmode> {     \
-        static inline DataType get(const DataType* src, int height, int width, \
-                                   int channel, int h, int w, int c, float) {  \
-            height = megcv::border_interpolate<                                \
-                    param::Remap::BorderMode::bmode>(height, h);               \
-            width = megcv::border_interpolate<                                 \
-                    param::Remap::BorderMode::bmode>(width, w);                \
-            return src[get_offset<format>(height, width, channel, h, w, c)];   \
-        }                                                                      \
-    };
-
-cb(REPLICATE);
-cb(REFLECT);
-cb(REFLECT_101);
-cb(WRAP);
-#undef cb
 
 template <typename DataType, param::Remap::Format format,
           param::Remap::BorderMode bordertype>
@@ -92,20 +79,20 @@ void remap_LINEAR(const DataType* src, const float* map_xy, DataType* dst,
                 for (int c = 0; c < C; ++c) {
                     DataType a00 =
                             GetSrcData<DataType, format, bordertype>::get(
-                                    src, row + 0, col + 0, c, IH, IW, C,
-                                    scalar);
+                                    src, row + 0, col + 0, c, IH, IW, C, scalar,
+                                    round);
                     DataType a01 =
                             GetSrcData<DataType, format, bordertype>::get(
-                                    src, row + 0, col + 1, c, IH, IW, C,
-                                    scalar);
+                                    src, row + 0, col + 1, c, IH, IW, C, scalar,
+                                    round);
                     DataType a10 =
                             GetSrcData<DataType, format, bordertype>::get(
-                                    src, row + 1, col + 0, c, IH, IW, C,
-                                    scalar);
+                                    src, row + 1, col + 0, c, IH, IW, C, scalar,
+                                    round);
                     DataType a11 =
                             GetSrcData<DataType, format, bordertype>::get(
-                                    src, row + 1, col + 1, c, IH, IW, C,
-                                    scalar);
+                                    src, row + 1, col + 1, c, IH, IW, C, scalar,
+                                    round);
 
                     dst[get_offset<format>(h, w, c, OH, OW, C)] =
                             static_cast<DataType>(
@@ -139,11 +126,13 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
         C = src.layout.shape[1];
         IH = src.layout.shape[2];
         IW = src.layout.shape[3];
-    } else {
+    } else if (param().format == param::Remap::Format::NHWC) {
         N = src.layout.shape[0];
         C = src.layout.shape[3];
         IH = src.layout.shape[1];
         IW = src.layout.shape[2];
+    } else {
+        megdnn_throw("unsupported format");
     }
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
