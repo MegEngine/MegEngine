@@ -31,6 +31,9 @@ class Parameter(Tensor):
             t = tensor(value, dtype=dtype, device=device, requires_grad=requires_grad)
         self.__dict__.update(t.__dict__)
 
+        # broadcast and allreduce will not be performed in optimizer if replica_mode is False
+        self.replica_mode = True
+
     @property
     def shape(self):
         r"""Return shape of parameter.
