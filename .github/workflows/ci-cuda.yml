@@ -13,6 +13,8 @@ jobs:
       volumes:
         - /usr/local/cuda-10.1-libs:/usr/local/cuda-10.1-libs
       options: --gpus all --shm-size 1g
+      env:
+        NCCL_LAUNCH_MODE: PARALLEL
 
     steps:
       - name: Checkout MegEngine
