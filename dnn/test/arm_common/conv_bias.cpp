@@ -57,6 +57,23 @@ TEST_F(ARM_COMMON, CONV_BIAS_MATMUL) {
     }
 }
 
+TEST_F(ARM_COMMON, CONV_BIAS_WINOGRAD_F63_4) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward> checker(handle());
+
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
+TEST_F(ARM_COMMON, CONV_BIAS_WINOGRAD_F63_4_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_packed_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+
+    check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
+}
+
 #define CONV_BIAS_MATMUL_QU8_MODE(MODE)                                   \
     using namespace conv_bias;                                            \
     std::vector<TestArg> args = get_quantized_args_with_nlmode(MODE);     \

@@ -57,8 +57,8 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                 auto run = [=]() {                                           \
                     _strategy strategy(src.layout.dtype, src.layout.dtype,   \
                                        src.layout.dtype);                    \
-                    megdnn::winograd::ConvBias<_strategy, _format>(          \
-                            strategy, 1, 1, 1, 1, 1)                         \
+                    megdnn::winograd::ConvBias<_strategy, _format>(strategy, \
+                                                                   1_z)      \
                             .filter_process(src_ptr, dst_ptr, workspace_ptr, \
                                             OC, IC);                         \
                 };                                                           \

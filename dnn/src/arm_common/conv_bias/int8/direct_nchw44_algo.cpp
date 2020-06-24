@@ -14,7 +14,6 @@
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8/direct.h"
 #include "src/arm_common/conv_bias/int8/direct_nchw44_kern.h"
-#include "src/arm_common/conv_bias/int8/strategy.h"
 #include "src/arm_common/elemwise_op.h"
 #include "src/common/opr_delegate.h"
 

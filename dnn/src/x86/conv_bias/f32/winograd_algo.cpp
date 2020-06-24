@@ -41,8 +41,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF63_8x8::usable(
         auto&& matmul_param =
                 megdnn::winograd::ConvBias<Strategy,
                                            param::MatrixMul::Format::MK8>(
-                        strategy, m_tile_size, param.nr_threads, param.osz[0],
-                        param.osz[1], param.filter_meta.ocpg)
+                        strategy, m_tile_size, param)
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
                (opr->param().format == param::ConvBias::Format::NCHW88 ||
@@ -67,39 +66,10 @@ bool ConvBiasImpl::AlgoFP32WinogradF63_8x8::usable(
     return false;
 }
 
-size_t ConvBiasImpl::AlgoFP32WinogradF63_8x8::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
-    MEGDNN_MARK_USED_VAR(param);
-    MIDOUT_BEGIN(megdnn_x86_winograd_fp32, 1, 1) {
-        winograd::winograd_nchw88_6x3_8x8_f strategy(
-                param.src_type, param.filter_type, param.dst_type);
-        return megdnn::winograd::ConvBias<winograd::winograd_nchw88_6x3_8x8_f,
-                                          param::MatrixMul::Format::MK8>(
-                       strategy, m_tile_size, param.nr_threads, param.osz[0],
-                       param.osz[1], param.filter_meta.ocpg)
-                .get_workspace_size(param, m_matmul_algo);
-    }
-    MIDOUT_END();
-    return 0;
-}
-
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoFP32WinogradF63_8x8::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
-    MEGDNN_MARK_USED_VAR(param);
-    MIDOUT_BEGIN(megdnn_arm_common_winograd_fp32, 1, 2) {
-        winograd::winograd_nchw88_6x3_8x8_f strategy(
-                param.src_type, param.filter_type, param.dst_type);
-        auto winograd_impl =
-                megdnn::winograd::ConvBias<winograd::winograd_nchw88_6x3_8x8_f,
-                                           param::MatrixMul::Format::MK8>(
-                        strategy, m_tile_size, param.nr_threads, param.osz[0],
-                        param.osz[1], param.filter_meta.ocpg);
-        return winograd_impl.get_kerns(param, m_matmul_algo);
-    }
-    MIDOUT_END();
-    return {};
-}
+MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP32WinogradF63_8x8,
+                                    winograd::winograd_nchw88_6x3_8x8_f,
+                                    megdnn_x86_winograd_fp32,
+                                    param::MatrixMul::Format::MK8);
 
 /* ======================= AlgoFP32WinogradF23_8*8 ======================== */
 
@@ -118,8 +88,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF23_8x8::usable(
         auto&& matmul_param =
                 megdnn::winograd::ConvBias<Strategy,
                                            param::MatrixMul::Format::MK8>(
-                        strategy, m_tile_size, param.nr_threads, param.osz[0],
-                        param.osz[1], param.filter_meta.ocpg)
+                        strategy, m_tile_size, param)
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
                (opr->param().format == param::ConvBias::Format::NCHW88 ||
@@ -144,37 +113,9 @@ bool ConvBiasImpl::AlgoFP32WinogradF23_8x8::usable(
     return false;
 }
 
-size_t ConvBiasImpl::AlgoFP32WinogradF23_8x8::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
-    MEGDNN_MARK_USED_VAR(param);
-    MIDOUT_BEGIN(megdnn_x86_winograd_fp32, 2, 1) {
-        winograd::winograd_nchw88_2x3_8x8_f strategy(
-                param.src_type, param.filter_type, param.dst_type);
-        return megdnn::winograd::ConvBias<winograd::winograd_nchw88_2x3_8x8_f,
-                                          param::MatrixMul::Format::MK8>(
-                       strategy, m_tile_size, param.nr_threads, param.osz[0],
-                       param.osz[1], param.filter_meta.ocpg)
-                .get_workspace_size(param, m_matmul_algo);
-    }
-    MIDOUT_END();
-    return 0;
-}
+MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP32WinogradF23_8x8,
+                                    winograd::winograd_nchw88_2x3_8x8_f,
+                                    megdnn_x86_winograd_fp32,
+                                    param::MatrixMul::Format::MK8);
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoFP32WinogradF23_8x8::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
-    MEGDNN_MARK_USED_VAR(param);
-    MIDOUT_BEGIN(megdnn_arm_common_winograd_fp32, 2, 2) {
-        winograd::winograd_nchw88_2x3_8x8_f strategy(
-                param.src_type, param.filter_type, param.dst_type);
-        auto winograd_impl =
-                megdnn::winograd::ConvBias<winograd::winograd_nchw88_2x3_8x8_f,
-                                           param::MatrixMul::Format::MK8>(
-                        strategy, m_tile_size, param.nr_threads, param.osz[0],
-                        param.osz[1], param.filter_meta.ocpg);
-        return winograd_impl.get_kerns(param, m_matmul_algo);
-    }
-    MIDOUT_END();
-    return {};
-}
 // vim: syntax=cpp.doxygen

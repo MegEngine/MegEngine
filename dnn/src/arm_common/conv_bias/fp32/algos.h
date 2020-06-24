@@ -17,13 +17,11 @@
 
 namespace megdnn {
 namespace arm_common {
-
 class ConvBiasImpl::AlgoFP32WinogradF23_4x4 final : public AlgoBase {
 public:
     AlgoFP32WinogradF23_4x4(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                             uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -31,18 +29,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63 final : public AlgoBase {
@@ -50,7 +37,6 @@ public:
     AlgoFP32WinogradF63(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                         uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -58,19 +44,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4 final : public AlgoBase {
@@ -78,7 +52,6 @@ public:
     AlgoFP32WinogradF63_4x4(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                             uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -86,19 +59,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF54 final : public AlgoBase {
@@ -106,7 +67,6 @@ public:
     AlgoFP32WinogradF54(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                         uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -114,19 +74,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF45 final : public AlgoBase {
@@ -134,7 +82,6 @@ public:
     AlgoFP32WinogradF45(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                         uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -142,19 +89,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 
 //===================== NCHW44 Winograd Support =====================//
@@ -163,7 +98,6 @@ public:
     AlgoFP32WinogradF23_4x4_NCHW44(
             fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -172,18 +106,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4_NCHW44 final : public AlgoBase {
@@ -191,7 +114,6 @@ public:
     AlgoFP32WinogradF63_4x4_NCHW44(
             fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
-    bool is_reproducible() const override { return true; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -200,18 +122,7 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
-            const NCBKernSizeParam& param) const override;
-
-private:
-    fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;
-    mutable std::string m_name;
-    uint32_t m_tile_size;
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
 // ================================================================= //
 
@@ -328,5 +239,7 @@ public:
 
 }  // namespace arm_common
 }  // namespace megdnn
+
+#undef MEGDNN_WINOGRAD_ALGO_FUN_DECLARE
 
 // vim: syntax=cpp.doxygen

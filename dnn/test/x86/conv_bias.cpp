@@ -1364,7 +1364,8 @@ std::vector<conv_bias::TestArg> get_winograd_mk_nchw88_args() {
                           TensorShape{oc, ic, 3, 3, 8, 8},TensorShape{});
         //! bias
         args.emplace_back(cur_param, TensorShape{2, ic, i, i, 8},
-                          TensorShape{oc, ic, 3, 3, 8, 8}, TensorShape{2, oc, i, i, 8});
+                          TensorShape{oc, ic, 3, 3, 8, 8},
+                          TensorShape{2, oc, i, i, 8});
 
         /*cur_param.sparse = param::ConvBias::Sparse::GROUP;
         args.emplace_back(cur_param, TensorShape{2, 2 * ic, i, i, 8},
@@ -1401,10 +1402,40 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F63) {
     }
 }
 
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F63_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_nchw88_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ssprintf("WINOGRAD:X86_F32MK8_8X8:8:6").c_str()));
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F23) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_winograd_mk_nchw88_args();
     Checker<ConvBiasForward> checker(handle());
+
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            ssprintf("WINOGRAD:X86_F32MK8_8X8:8:2").c_str()));
+
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F23_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_winograd_mk_nchw88_args();
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
 
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
             ssprintf("WINOGRAD:X86_F32MK8_8X8:8:2").c_str()));
