@@ -22,6 +22,10 @@
 #include <mutex>
 
 namespace mgb {
+namespace imperative {
+    class ProxyGraph;
+} // namespace imperative
+
 namespace cg {
 namespace static_infer {
     class StaticInferManagerImpl;
@@ -576,6 +580,7 @@ class VarNode final: public GraphNodeBase {
         friend class VarDevMemDefragmenter;
         friend class EagerEvalManager;
         friend class MemAllocPlan;
+        friend class imperative::ProxyGraph;
 };
 
 enum class VarNode::Flag: uint32_t {

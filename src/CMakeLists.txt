@@ -151,27 +151,31 @@ if(ANDROID)
     target_link_libraries(megbrain PUBLIC log)
 endif()
 
-# Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
-add_library(megengine)
-target_link_libraries(megengine PUBLIC megbrain megdnn)
-if (UNIX AND NOT APPLE)
-    # TODO: Use target_link_options after upgrading to CMake 3.13
-    target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
-endif()
-set_target_properties(megengine PROPERTIES CXX_VISIBILITY_PRESET default)
-set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-if (MGE_WITH_DISTRIBUTED)
+if(NOT MGE_BUILD_XXX)
+    # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
+    add_library(megengine)
+    target_link_libraries(megengine PUBLIC megbrain megdnn)
+    if (UNIX AND NOT APPLE)
+        # TODO: Use target_link_options after upgrading to CMake 3.13
+        # FIXME; Please use right directory for mgb or imperative
+        target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
+    endif()
+    set_target_properties(megengine PROPERTIES CXX_VISIBILITY_PRESET default)
+    set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
     # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
     # for this.
     install(TARGETS megengine
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-else()
-    install(TARGETS megengine megbrain
+endif()
+
+if (NOT MGE_WITH_DISTRIBUTED)
+    install(TARGETS megbrain
             EXPORT ${MGE_EXPORT_TARGETS}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
+
 foreach(_PATH ${MGB_INC})
     install(DIRECTORY ${_PATH}/megbrain DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN "*.h")
 endforeach()

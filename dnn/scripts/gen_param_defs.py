@@ -298,6 +298,9 @@ class PyWriter(IndentWriterBase):
 
     _enum_member2num = None
 
+    def __init__(self, for_imperative=False):
+        self._imperative = for_imperative
+
     def __call__(self, fout, defs):
         super().__call__(fout)
         self._enum_member2num = []
@@ -339,19 +342,35 @@ class PyWriter(IndentWriterBase):
             '       return super()._missing_(value)\n'
             '\n'
         )
-        self._write(
-            'def _as_dtype_num(dtype):\n'
-            '   import megengine._internal.mgb as m\n'
-            '   return m._get_dtype_num(dtype)\n'
-            '\n'
-        )
-        self._write(
-            '''
-def _as_serialized_dtype(dtype):
-    import megengine._internal.mgb as m
-    return m._get_serialized_dtype(dtype)
-'''
-        )
+        if not self._imperative:
+            self._write(
+                'def _as_dtype_num(dtype):\n'
+                '    import megengine._internal.mgb as m\n'
+                '    return m._get_dtype_num(dtype)\n'
+                '\n'
+            )
+
+            self._write(
+                'def _as_serialized_dtype(dtype):\n'
+                '    import megengine._internal.mgb as m\n'
+                '    return m._get_serialized_dtype(dtype)\n'
+                '\n'
+            )
+        else:
+            self._write(
+                'def _as_dtype_num(dtype):\n'
+                '    import xxx._xxx.utils as m\n'
+                '    return m._get_dtype_num(dtype)\n'
+                '\n'
+            )
+
+            self._write(
+                'def _as_serialized_dtype(dtype):\n'
+                '    import xxx._xxx.utils as m\n'
+                '    return m._get_serialized_dtype(dtype)\n'
+                '\n'
+            )
+
         self._process(defs)
         self._write(
             '''
@@ -777,7 +796,11 @@ def main():
                         'cpp file')
     parser.add_argument('input')
     parser.add_argument('output')
+    parser.add_argument('--imperative', action='store_true',
+                        help='generate files for imperatvie ')
     args = parser.parse_args()
+
+    for_imperative = args.imperative
 
     with open(args.input) as fin:
         inputs = fin.read()
@@ -787,7 +810,7 @@ def main():
         input_hash = input_hash.hexdigest()
 
     if args.type == 'py':
-        writer = PyWriter()
+        writer = PyWriter(for_imperative=for_imperative)
     else:
         assert args.type == 'c++'
         if args.enumv:

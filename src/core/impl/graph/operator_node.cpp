@@ -101,6 +101,11 @@ OperatorNodeBase::~OperatorNodeBase() noexcept {
 }
 
 void OperatorNodeBase::execute(ExecEnv &env) {
+    if (owner_graph()->options().imperative_proxy_graph) {
+        do_execute(env);
+        return;
+    }
+
     owner_graph()->event().signal_inplace<event::OprExecStart>(this, &env);
 
     // dispatch waiting commands

@@ -40,29 +40,37 @@ BatchNormForward::BatchNormForward(VarNode *x,
     Super{x->owner_graph(), config, "batch_norm",
           {x, scale, bias, mean, variance}}
 {
-    auto check_dest = [&](VarNode* dest) {
-        auto dest_opr = dest->owner_opr();
-        mgb_throw_if(!(dest_opr->same_type<SharedDeviceTensor>() ||
-                       dest_opr->same_type<VolatileSharedDeviceTensor>()),
-                     GraphError,
-                     "mean&variance in BatchNorm must be SharedDeviceTensor/VolatileSharedDeviceTensor; "
-                     "got %s{%s} actually",
-                     dest_opr->cname(), dest_opr->dyn_typeinfo()->name);
-    };
-    check_dest(mean);
-    check_dest(variance);
+    if(owner_graph()->options().imperative_proxy_graph) {
+        m_force_inplace = false;
+    }
+
+    if (m_force_inplace) {
+        auto check_dest = [&](VarNode* dest) {
+            auto dest_opr = dest->owner_opr();
+            mgb_throw_if(!(dest_opr->same_type<SharedDeviceTensor>() ||
+                    dest_opr->same_type<VolatileSharedDeviceTensor>()),
+                    GraphError,
+                    "mean and variance in BatchNorm must be SharedDeviceTensor "
+                    "or VolatileSharedDeviceTensor; got %s{%s} actually",
+                    dest_opr->cname(), dest_opr->dyn_typeinfo()->name);
+        };
+        check_dest(mean);
+        check_dest(variance);
+    }
 
     init_megdnn_opr(*this, param);
 
     add_input({x, scale, bias, mean, variance});
 
-    output(0)->
-        set_fwd_in2out_writable_force(input(3)).
-        add_flag(VarNode::Flag::NO_MEM_RECLAIM);
+    if (m_force_inplace) {
+        output(0)->
+            set_fwd_in2out_writable_force(input(3)).
+            add_flag(VarNode::Flag::NO_MEM_RECLAIM);
 
-    output(1)->
-        set_fwd_in2out_writable_force(input(4)).
-        add_flag(VarNode::Flag::NO_MEM_RECLAIM);
+        output(1)->
+            set_fwd_in2out_writable_force(input(4)).
+            add_flag(VarNode::Flag::NO_MEM_RECLAIM);
+    }
 }
 
 BatchNormForward::BatchNormForward(VarNode *x,
@@ -129,17 +137,40 @@ BatchNormForward::do_make_node_prop() const {
 
 void BatchNormForward::scn_do_execute() {
     auto &&x = input(0)->dev_tensor();
+    auto &&y = output(4)->dev_tensor();
+    mgb_assert(x.layout().is_contiguous() &&
+               y.layout().is_contiguous());
+#if MGB_ENABLE_IMPERATIVE
+    if (input().size() == 5) { // need running mean/variance
+        auto &&o0 = output(0)->dev_tensor(),
+             &&o1 = output(1)->dev_tensor(),
+             &&i0 = input(3)->dev_tensor(),
+             &&i1 = input(4)->dev_tensor();
+        mgb_assert(o0.raw_ptr() && o1.raw_ptr()); // non-empty tensor
+        mgb_assert(o0.comp_node() == i0.comp_node() &&
+                   o1.comp_node() == i1.comp_node() &&
+                   o0.layout().eq_layout(i0.layout()) &&
+                   o1.layout().eq_layout(i1.layout()));
+        if (!m_force_inplace) {
+            if (o0.raw_ptr() != i0.raw_ptr()) {
+                o0.copy_from_fixlayout(i0);
+            }
+            if (o1.raw_ptr() != i1.raw_ptr()) {
+                o1.copy_from_fixlayout(i1);
+            }
+        } else {
+            mgb_assert(o0.raw_ptr() == i0.raw_ptr()
+                    && o1.raw_ptr() == i1.raw_ptr());
+        }
+    }
+#endif
     auto scale = input(1)->dev_tensor().as_megdnn();
     auto bias = input(2)->dev_tensor().as_megdnn();
     auto mean = output(0)->dev_tensor().as_megdnn();
     auto variance = output(1)->dev_tensor().as_megdnn();
     auto save_mean = output(2)->dev_tensor().as_megdnn();
     auto save_variance = output(3)->dev_tensor().as_megdnn();
-    auto &&y = output(4)->dev_tensor();
-    auto workspace = intl::get_megdnn_workspace_from_var(
-        output().back());
-    mgb_assert(x.layout().is_contiguous() &&
-               y.layout().is_contiguous());
+    auto workspace = intl::get_megdnn_workspace_from_var(output().back());
     megdnn_opr()->exec(x.as_megdnn(), scale, bias, mean, variance,
         save_mean, save_variance, y.as_megdnn(), workspace);
 }
@@ -188,6 +219,14 @@ void BatchNormForward::init_output_dtype() {
     output(4)->dtype(input(0)->dtype());
     for (size_t i = 0; i < 4; ++ i) {
         output(i)->dtype(input(1)->dtype());
+    }
+}
+
+void BatchNormForward::mem_plan_fwd_in2out_writable() {
+    if (!m_force_inplace && input().size() == 5) {
+        // TODO: testing
+        output(0)->set_fwd_in2out_writable(input(3));
+        output(1)->set_fwd_in2out_writable(input(4));
     }
 }
 

@@ -133,6 +133,15 @@ void cg::register_grad_func(Typeinfo *opr_type, OprGradFunc grad) {
             opr_type->name);
 }
 
+OprGradFunc* cg::lookup_grad_func(Typeinfo *opr_type) {
+    auto giter = static_data().grad_func_registry.find(opr_type);
+    if (giter != static_data().grad_func_registry.end()) {
+        return &giter->second;
+    } else {
+        return nullptr;
+    }
+}
+
 class GradManager::StreamStrongPropInfer {
     DepOprIter m_opr_iter;
     ThinHashSet<OperatorNodeBase*> m_strong_oprs;

@@ -74,6 +74,11 @@ namespace cg {
     void register_grad_func(Typeinfo *opr_type, OprGradFunc grad);
 
     /*!
+     * \brief lookup grad func for an operator type
+     */
+    OprGradFunc* lookup_grad_func(Typeinfo *opr_type);
+
+    /*!
      * \brief add a callback to be invoked when grad of given var is computed
      *
      * All transformers would be chained in their added order, and the last

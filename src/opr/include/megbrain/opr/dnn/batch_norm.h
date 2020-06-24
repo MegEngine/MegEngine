@@ -75,6 +75,10 @@ MGB_DEFINE_OPR_CLASS(BatchNormForward,
             const TensorShapeArray &output_shapes) const override;
         void init_output_static_infer_desc() override;
         void init_output_dtype() override;
+        void mem_plan_fwd_in2out_writable() override;
+
+        // if set to True, running mean/variance will be updated inplace
+        bool m_force_inplace = true;
 };
 
 using BatchNorm = BatchNormForward;

@@ -440,6 +440,8 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             bool eager_evaluation = false;
 #endif
 
+            bool imperative_proxy_graph = false;
+
             //! add extra deps for the comp seq if a specific var is dependent
             ThinHashMap<VarNode*, VarNodeArray> extra_vardeps;
 

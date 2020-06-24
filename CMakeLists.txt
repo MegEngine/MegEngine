@@ -213,6 +213,15 @@ if(MGE_WITH_TEST)
 endif()
 
 option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
+option(MGE_BUILD_XXX "Build _xxx.so instead of mgb.so " OFF)
+if(MGE_BUILD_XXX)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
+
+option(MGE_BUILD_SDK "Build load_and_run" ON)
+if(MGE_BUILD_XXX)
+    set(MGE_BUILD_SDK OFF)
+endif()
 
 if(NOT MGE_WITH_CUDA)
     message("-- Disable distributed support, as CUDA is not enabled.")
@@ -522,7 +531,7 @@ endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 
-
+set(MGB_ENABLE_IMPERATIVE, ${MGE_BUILD_XXX})
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
@@ -566,14 +575,23 @@ if(MGE_WITH_DISTRIBUTED)
 endif()
 
 add_subdirectory(src)
-add_subdirectory(sdk/load-and-run)
+
+if(MGE_BUILD_SDK)
+    add_subdirectory(sdk/load-and-run)
+endif()
 
 if(MGE_WITH_PYTHON_MODULE)
-    add_subdirectory(python_module)
+    if(MGE_BUILD_XXX)
+        add_subdirectory(imperative)
+    else()
+        add_subdirectory(python_module)
+    endif()
 endif()
 
 if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)
-    add_subdirectory(test)
+    if(NOT MGE_BUILD_XXX)
+        add_subdirectory(test)
+    endif()
 endif()
 
 if(TARGET mgb)
@@ -595,6 +613,21 @@ if(TARGET mgb)
           ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/include
           ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/include
         DEPENDS mgb
+        VERBATIM
+    )
+elseif(TARGET _xxx)
+    add_custom_target(
+        develop
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/$<TARGET_FILE_NAME:${MODULE_NAME}>
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/$<TARGET_FILE_NAME:${MODULE_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/generated_ops.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/generated_ops.py
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/param_defs.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/param_defs.py
+        DEPENDS _xxx
         VERBATIM
     )
 endif()

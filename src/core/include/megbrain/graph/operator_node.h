@@ -69,6 +69,10 @@ class OperatorNodeConfig final: public Hashable {
             return *this;
         }
 
+        const Maybe<std::string>& name() const {
+            return m_name;
+        }
+
         /*!
          * \brief update instance ID
          *

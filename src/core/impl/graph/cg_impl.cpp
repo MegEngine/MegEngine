@@ -271,6 +271,23 @@ OperatorNodeBase* ComputingGraphImpl::insert_opr(
         std::unique_ptr<OperatorNodeBase> opr_uniqp) {
     auto opr = opr_uniqp.get();
 
+    if (options().imperative_proxy_graph) {
+        if (!opr->inserted_in_graph()) {
+            m_opr_refkeeper.emplace_back(std::move(opr_uniqp));
+            opr->set_inserted_in_graph();
+            opr->init_output_comp_node();
+            opr->init_output_dtype();
+            opr->init_output_format();
+            // register static infer
+            {
+                auto&& mgr = static_infer_manager_impl();
+                auto old = mgr.set_register_allowed_opr(opr);
+                opr->init_output_static_infer_desc();
+                mgr.set_register_allowed_opr(old);
+            }
+        }
+        return opr;
+    }
     if (opr->inserted_in_graph()) {
         // FIXME: it's just a trick used for re-evaluation in eager evaluation
         // mode. Since comp_graph has already taken an ownership of the opr,

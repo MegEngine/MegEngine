@@ -230,6 +230,9 @@ VarNode& VarNode::format(TensorFormat format) {
 
 bool VarNode::set_fwd_in2out_readonly(
         VarNode *input, const SubTensorSpec &sub) {
+    if (owner_graph()->options().imperative_proxy_graph) {
+        return false;
+    }
     return static_cast<ComputingGraphImpl*>(owner_graph())
         ->var_node_mem_manager().fwd_in2out_readonly(input, sub, this);
 }
@@ -242,6 +245,7 @@ VarNode& VarNode::set_fwd_in2out_writable(VarNode *input) {
 
 
 VarNode& VarNode::set_fwd_in2out_writable_force(VarNode *input) {
+    mgb_assert(!owner_graph()->options().imperative_proxy_graph);
     static_cast<ComputingGraphImpl*>(owner_graph())
         ->var_node_mem_manager().fwd_in2out_writable_force(input, this);
     return *this;
