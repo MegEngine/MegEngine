@@ -59,6 +59,8 @@ MGBDType dtype_cpp2c(DType dtype) {
             return MGB_DTYPE_FLOAT32;
         case DTypeEnum::Int32:
             return MGB_DTYPE_INT32;
+        case DTypeEnum::Int16:
+            return MGB_DTYPE_INT16;
         case DTypeEnum::Uint8:
             return MGB_DTYPE_UINT8;
 #if !MEGDNN_DISABLE_FLOAT16
@@ -75,6 +77,8 @@ DType dtype_c2cpp(MGBDType dtype) {
     switch (dtype) {
         case MGB_DTYPE_UINT8:
             return dtype::Uint8{};
+        case MGB_DTYPE_INT16:
+            return dtype::Int16{};
         case MGB_DTYPE_INT32:
             return dtype::Int32{};
         case MGB_DTYPE_FLOAT32:

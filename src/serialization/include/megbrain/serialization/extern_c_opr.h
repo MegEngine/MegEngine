@@ -36,6 +36,7 @@ typedef enum MGBDType {
     MGB_DTYPE_UINT8,
     //! IEEE 754-based half-precision floating
     MGB_DTYPE_FLOAT16,
+    MGB_DTYPE_INT16,
 } MGBDType;
 
 typedef struct MGBTensorShape {
