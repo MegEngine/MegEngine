@@ -1599,18 +1599,103 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
         }
         return serialization::copy_opr_shallow(*opr, temp_inp, opr->config());
     };
+    auto replace_pooling_opr = [](OperatorNodeBase* opr,
+                                  const VarNodeArray& new_inp) {
+        using Param = opr::PoolingForward::Param;
+        using Format = Param::Format;
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& pooling = opr->cast_final_safe<opr::PoolingForward>();
+        mgb_assert(pooling.param().format == Format::NCHW,
+                   "ConvertFormat Pass only support converting NCHW to NCHW4.");
+        if (new_inp[0]->shape().ndim == 5) {
+            mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
+            auto new_param = pooling.param();
+            new_param.format = Format::NCHW4;
+            auto new_pooling =
+                    opr::PoolingForward::make(new_inp[0], new_param, opr->config());
+            mgb_assert(new_pooling.shape().ndim == 5,
+                       "out var of Pooling opr after transform must be 5 (got: "
+                       "%zu).",
+                       new_pooling.shape().ndim);
+            return new_pooling.node()->owner_opr();
+        }
+        auto new_opr =
+                serialization::copy_opr_shallow(*opr, new_inp, opr->config());
+        return new_opr;
+    };
+    auto replace_resize_opr = [](OperatorNodeBase* opr,
+                                 const VarNodeArray& new_inp) {
+        using Param = opr::ResizeForward::Param;
+        using Format = Param::Format;
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& resize = opr->cast_final_safe<opr::ResizeForward>();
+        mgb_assert(resize.param().format == Format::NCHW,
+                   "ConvertFormat Pass only support converting NCHW to NCHW4.");
+        if (new_inp[0]->shape().ndim == 5) {
+            mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
+            auto new_param = resize.param();
+            new_param.format = Format::NCHW4;
+            auto new_resize = opr::ResizeForward::make(
+                    new_inp[0], new_inp[1], new_param, opr->config());
+            mgb_assert(new_resize.shape().ndim == 5,
+                       "out var of Resize opr after transform must be 5 (got: "
+                       "%zu).",
+                       new_resize.shape().ndim);
+            return new_resize.node()->owner_opr();
+        }
+        auto new_opr =
+                serialization::copy_opr_shallow(*opr, new_inp, opr->config());
+        return new_opr;
+    };
+    auto replace_warp_perspective_opr = [](OperatorNodeBase* opr,
+                                           const VarNodeArray& new_inp) {
+        using Param = opr::WarpPerspective::Param;
+        using Format = Param::Format;
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& warp = opr->cast_final_safe<opr::WarpPerspectiveForward>();
+        mgb_assert(warp.param().format == Format::NCHW,
+                   "ConvertFormat Pass only support converting NCHW to NCHW4.");
+        if (new_inp[0]->shape().ndim == 5) {
+            mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
+            auto new_param = warp.param();
+            new_param.format = Format::NCHW4;
+            SymbolVar new_warp;
+            if (new_inp.size() == 3) {
+                new_warp = opr::WarpPerspectiveForward::make(
+                        new_inp[0], new_inp[1], nullptr, new_inp[2], new_param,
+                        opr->config());
+            } else {
+                mgb_assert(new_inp.size() == 4);
+                new_warp = opr::WarpPerspectiveForward::make(
+                        new_inp[0], new_inp[1], new_inp[2], new_inp[3],
+                        new_param, opr->config());
+            }
+            mgb_assert(new_warp.shape().ndim == 5,
+                       "out var of WarpPerspective opr after transform must be "
+                       "5 (got: "
+                       "%zu).",
+                       new_warp.shape().ndim);
+            return new_warp.node()->owner_opr();
+        }
+        auto new_opr =
+                serialization::copy_opr_shallow(*opr, new_inp, opr->config());
+        return new_opr;
+    };
     auto&& replace_func = ret->m_opr_replace_func;
     //! supportted nchw4
     replace_func[opr::Convolution::typeinfo()] = replace_conv_opr;
     replace_func[opr::ConvBias::typeinfo()] = replace_conv_bias_opr;
     replace_func[opr::BatchConvBias::typeinfo()] =
             replace_batch_conv_bias_opr;
+    replace_func[opr::PoolingForward::typeinfo()] = replace_pooling_opr;
+    replace_func[opr::ResizeForward::typeinfo()] = replace_resize_opr;
+    replace_func[opr::WarpPerspectiveForward::typeinfo()] =
+            replace_warp_perspective_opr;
     replace_func[opr::Elemwise::typeinfo()] = replace_elemwise_opr;
     replace_func[opr::TypeCvt::typeinfo()] = replace_elemwise_opr;
     replace_func[opr::ElemwiseMultiType::typeinfo()] = replace_elemwise_opr;
     replace_func[opr::PowC::typeinfo()] = replace_elemwise_opr;
     //! not supported nchw4
-    replace_func[opr::PoolingForward::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::Concat::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::ConvolutionBackwardData::typeinfo()] =
             relayout_inp_to_nchw;
@@ -1620,9 +1705,6 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
     replace_func[opr::Reduce::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::AssertEqual::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::IncrSubtensor::typeinfo()] = relayout_inp_to_nchw;
-    replace_func[opr::ResizeForward::typeinfo()] = relayout_inp_to_nchw;
-    replace_func[opr::WarpPerspectiveForward::typeinfo()] =
-            relayout_inp_to_nchw;
     replace_func[opr::WarpAffineForward::typeinfo()] = relayout_inp_to_nchw;
     return ret;
 }

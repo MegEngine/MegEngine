@@ -2430,14 +2430,16 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     auto w1 = mkcvar("w1", {8, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
          b1 = mkcvar("b1", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
     auto conv1 = opr::ConvBiasForward::make(
-            x, w1, b1, param_conv_bias, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+            x, w1, b1, param_conv_bias, {},
+            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
     // group
     // icpg != 1 && ocpg != 1
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
     auto w2 = mkcvar("w2", {2, 4, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
          b2 = mkcvar("b2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
-    auto conv2 = opr::ConvBiasForward::make(conv1, w2, b2,
-            param_conv_bias, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto conv2 = opr::ConvBiasForward::make(
+            conv1, w2, b2, param_conv_bias, {},
+            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
     auto y = opr::TypeCvt::make(conv2, dtype::Float32());
 
@@ -2453,8 +2455,8 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
 
     graph->compile({{y_opt, {}}})
             ->to_json()
-            ->writeto_fpath(
-                    output_file("TestGoptInference.ConvertFormatNCHW4GPU.json"));
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNCHW4GPU.json"));
 
     HostTensorND host_y, host_y_opt;
     auto func = graph->compile({make_callback_copy(y, host_y),
@@ -2464,6 +2466,90 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
 }
 
 #endif
+
+TEST(TestGoptInference, ConvertFormatNCHW4NonConvOpr) {
+    auto cn = CompNode::load("xpu0");
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+    auto mkcvarf32 = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto x = mkvar("x", {2, 4, 16, 16}, dtype::QuantizedS8(2.5f));
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.format = opr::ConvBias::Param::Format::NCHW;
+    param_conv_bias.stride_h = param_conv_bias.stride_w = 1;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    param_conv_bias.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    // dense
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    auto w1 = mkcvar("w1", {8, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto conv1 = opr::ConvBiasForward::make(
+            x, w1, b1, param_conv_bias, {},
+            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    // test Resize
+    auto shape_of = opr::GetVarShape::make(x);
+    auto subtensor = opr::Subtensor::make(
+            shape_of, {opr::Subtensor::AxisIndexer::make_interval(
+                              0, x.make_scalar(2), None, x.make_scalar(1))});
+    opr::Resize::Param param_resize;
+    param_resize.format = opr::Resize::Param::Format::NCHW;
+    auto resize = opr::ResizeForward::make(conv1, subtensor * 2, param_resize);
+    // test WarpPerspective
+    auto mat = mkcvarf32("mat", {2, 3, 3}),
+         warp = opr::WarpPerspectiveForward::make(
+                 resize, mat, nullptr, cg::var_from_tensor_shape(x, {32, 32}));
+    opr::Pooling::Param pool_param;
+    pool_param.format = opr::Pooling::Param::Format::NCHW;
+    // test Pooling
+    auto pool = opr::Pooling::make(warp, pool_param);
+    // group
+    // icpg != 1 && ocpg != 1
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    auto w2 = mkcvar("w2", {2, 4, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b2 = mkcvar("b2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto conv2 = opr::ConvBiasForward::make(
+            pool, w2, b2, param_conv_bias, {},
+            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+
+    auto add = opr::ElemwiseMultiType::make(
+            {conv1, conv2}, {opr::ElemwiseMultiType::Param::Mode::QADD},
+            OperatorNodeConfig{dtype::QuantizedS8{1.2f}});
+    auto y = opr::TypeCvt::make(add, dtype::Float32());
+
+    SymbolVar y_opt;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw4();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+    auto nr_dimshuffle = find_opr_num<mgb::opr::Dimshuffle>(y_opt);
+    ASSERT_EQ(2u, nr_dimshuffle);
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4,
+              find_opr<opr::ConvBias>(y_opt).param().format);
+    ASSERT_EQ(opr::ResizeForward::Param::Format::NCHW4,
+              find_opr<opr::ResizeForward>(y_opt).param().format);
+    ASSERT_EQ(opr::WarpPerspectiveForward::Param::Format::NCHW4,
+              find_opr<opr::WarpPerspectiveForward>(y_opt).param().format);
+    ASSERT_EQ(opr::PoolingForward::Param::Format::NCHW4,
+              find_opr<opr::PoolingForward>(y_opt).param().format);
+}
 
 TEST(TestGoptInference, ConvertFormatNCHW4) {
     HostTensorGenerator<> gen;
@@ -2479,7 +2565,7 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
     };
 
     auto x = mkvar("x", {2, 4, 16, 16});
-    // ConvBias
+    // ConvBias test dense
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
