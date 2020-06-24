@@ -27,11 +27,12 @@ def test_syncbn():
     running_mean = np.zeros((1, nr_chan, 1, 1), dtype=np.float32)
     running_var = np.ones((1, nr_chan, 1, 1), dtype=np.float32)
     steps = 4
+    nr_ranks = 2
 
     def worker(rank, data, yv_expect, running_mean, running_var):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < nr_ranks:
             return
-        dist.init_process_group("localhost", 2333, 4, rank, rank)
+        dist.init_process_group("localhost", 2333, nr_ranks, rank, rank)
         bn = SyncBatchNorm(nr_chan, momentum=momentum, eps=eps)
         data_tensor = tensor()
         for i in range(steps):
@@ -61,19 +62,19 @@ def test_syncbn():
         yv_expect = (xv[i] - mean) / sd
 
     data = []
-    for i in range(4):
+    for i in range(nr_ranks):
         data.append([])
         for j in range(steps):
-            data[i].append(xv[j][:, :, :, i * 4 : i * 4 + 4])
+            data[i].append(xv[j][:, :, :, i * 8 : i * 8 + 8])
 
     procs = []
-    for rank in range(4):
+    for rank in range(nr_ranks):
         p = mp.Process(
             target=worker,
             args=(
                 rank,
                 data[rank],
-                yv_expect[:, :, :, rank * 4 : rank * 4 + 4],
+                yv_expect[:, :, :, rank * 8 : rank * 8 + 8],
                 running_mean,
                 running_var,
             ),
@@ -82,7 +83,7 @@ def test_syncbn():
         procs.append(p)
 
     for p in procs:
-        p.join()
+        p.join(10)
         assert p.exitcode == 0
 
 

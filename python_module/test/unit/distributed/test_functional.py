@@ -30,7 +30,7 @@ def test_reduce_sum():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -66,7 +66,7 @@ def test_gather():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -102,7 +102,7 @@ def test_broadcast():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -134,7 +134,7 @@ def test_scatter():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -170,7 +170,7 @@ def test_all_to_all():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -204,7 +204,7 @@ def test_all_gather():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -237,7 +237,7 @@ def test_reduce_scatter_sum():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -274,7 +274,7 @@ def test_all_reduce_sum():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -307,7 +307,7 @@ def test_all_reduce_max():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -340,7 +340,7 @@ def test_all_reduce_min():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = tensor(data)
@@ -373,7 +373,7 @@ def test_bcast_param():
     world_size = 2
 
     def worker(rank, data, backend, expect, port_queue):
-        if not mge.is_cuda_available():
+        if mge.get_device_count("gpu") < world_size:
             return
         _init_process_group_wrapper(world_size, rank, rank, backend, port_queue)
         inp = Parameter(data)
