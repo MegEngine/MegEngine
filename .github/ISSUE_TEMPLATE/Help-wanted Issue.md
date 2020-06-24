@@ -1,3 +1,12 @@
+---
+name: Help-wanted Issue
+about: 请使用此模板提出help-wanted任务
+title: Help-wanted Issue
+labels: ''
+assignees: ''
+
+---
+
 ## 背景
 <!-- 请简要描述此需求的背景 -->
 <!-- 示例：Googlenet是ImageNet挑战赛(ILSVRC14)第一名的高性能网络结构，常用分类模型之一。MegEngine已经提供相关的OPR支持 -->
