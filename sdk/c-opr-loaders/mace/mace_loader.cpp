@@ -11,9 +11,56 @@
 
 #include <numeric>
 #include <iostream>
+#include <sys/stat.h>
 
 #include "mace/public/mace.h"
 #include "extern_c_opr.h"
+
+#if defined(__APPLE__) || defined(__MACOSX)
+static const char* default_so_paths[] = {
+        "/System/Library/Frameworks/OpenCL.framework/OpenCL", "libOpenCL.so"};
+#elif defined(__ANDROID__)
+static const char* default_so_paths[] = {
+#if defined(__aarch64__)
+        "/system/lib64/libOpenCL.so",
+        "/system/lib64/libOpenCL_system.so",
+        "/system/lib64/egl/libGLES_mali.so",
+        "/system/vendor/lib64/libOpenCL.so",
+        "/system/vendor/lib64/egl/libGLES_mali.so",
+        "/system/vendor/lib64/libPVROCL.so",
+        "/vendor/lib64/libOpenCL.so",
+        "/data/data/org.pocl.libs/files/lib64/libpocl.so",
+#else
+        "/system/lib/libOpenCL.so",
+        "/system/lib/libOpenCL_system.so",
+        "/system/lib/egl/libGLES_mali.so",
+        "/system/vendor/lib/libOpenCL.so",
+        "/system/vendor/lib/egl/libGLES_mali.so",
+        "/system/vendor/lib/libPVROCL.so",
+        "/vendor/lib/libOpenCL.so",
+        "/data/data/org.pocl.libs/files/lib/libpocl.so",
+#endif
+        "libOpenCL.so"};
+#elif defined(_WIN32)
+static const char* default_so_paths[] = {"OpenCL.dll"};
+#elif defined(__linux__)
+static const char* default_so_paths[] = {
+#if defined(__x86_64__) || defined(__amd64__)
+        "/usr/lib64/libOpenCL.so", "/usr/local/lib64/libOpenCL.so",
+        "/usr/local/cuda/lib64/libOpenCL.so",
+        "/opt/intel/opencl/libOpenCL.so",
+        //! As in some system like apex, the driver exists here
+        "/usr/lib/libOpenCL.so",
+#else
+        "/usr/lib/libOpenCL.so",
+        "/usr/lib32/libOpenCL.so",
+        "/usr/local/lib/libOpenCL.so",
+        "/usr/local/lib/libpocl.so",
+        "/usr/local/cuda/lib/libOpenCL.so",
+#endif
+        "libOpenCL.so"};
+#endif
+
 
 #define ASSERT(x, msg)                                                       \
     do {                                                                     \
@@ -24,6 +71,10 @@
         }                                                                    \
     } while (0)
 
+inline bool file_exists (const char* name) {
+    struct stat buffer;
+    return (stat (name, &buffer) == 0);
+}
 
 class MGBOprDescImpl {
     struct UserData {
@@ -78,8 +129,8 @@ class MGBOprDescImpl {
         std::map<std::string, mace::MaceTensor> mace_outputs;
 
         auto mace_data_format = mace::DataFormat::NCHW;
-        char *data_format = getenv("DATAFORMAT");
-        if (!strcmp(data_format, "NHWC")) {
+        char *data_format = getenv("MGB_MACE_LOADER_FROAMT");
+        if (data_format != nullptr && !strcmp(data_format, "NHWC")) {
             mace_data_format = mace::DataFormat::NHWC;
         }
 
@@ -132,21 +183,41 @@ public:
         auto ud = std::make_unique<UserData>();
 
         std::shared_ptr<mace::MaceEngine> engine;
-        mace::DeviceType device_type;
 
-        char *runtime_mode = getenv("RUNTIME");
-        if (!strcmp(runtime_mode, "GPU")) {
+        mace::DeviceType device_type = mace::DeviceType::CPU;
+        char *runtime_mode = getenv("MGB_MACE_RUNTIME");
+        if (runtime_mode != nullptr && !strcmp(runtime_mode, "GPU")) {
             device_type = mace::DeviceType::GPU;
-        } else {
-            device_type = mace::DeviceType::CPU;
         }
         mace::MaceEngineConfig config(device_type);
+
+        // set number of threads for cpu, default 1
+        if (device_type == mace::DeviceType::CPU) {
+            int nthread = 1;
+            char *str_nthread = getenv("MGB_MACE_NR_THREADS");
+            if (str_nthread != nullptr) {
+                nthread = atoi(str_nthread);
+            }
+
+            config.SetCPUThreadPolicy(nthread, mace::CPUAffinityPolicy::AFFINITY_NONE);
+        }
 
         // set gpu context, mainly opencl path
         if (device_type == mace::DeviceType::GPU) {
             std::shared_ptr<mace::GPUContext> gpu_context;
 
-            char *opencl_path = getenv("OPENCLPATH");
+            char *opencl_path = getenv("MGB_MACE_OPENCL_PATH");
+
+            // check default opencl paths
+            if (opencl_path == nullptr) {
+                for (size_t i = 0; i < (sizeof(default_so_paths) / sizeof(char*)); i++) {
+                    if (file_exists(default_so_paths[i])) {
+                        opencl_path = const_cast<char *>(default_so_paths[i]);
+                        break;
+                    }
+                }
+            }
+
             ASSERT(opencl_path, "Please set opencl library path");
             std::string storage_path(opencl_path);
             gpu_context = mace::GPUContextBuilder()

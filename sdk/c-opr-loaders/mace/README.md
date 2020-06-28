@@ -48,7 +48,7 @@ First of all, send all files to the executed device:
 - opencl library(something like libOpenCL.so, libmali.so or libEGL.so ...) if you want to run it on GPU
 
 ```
-RUNTIME=GPU OPENCPATH=/path/to/opencl DATAFORMAT=NCHW /path/to/load_and_run /path/to/resnet_50.mdl --c-opr-lib /path/to/libmace_loader.so
+MGB_MACE_RUNTIME=GPU MGB_MACE_OPENCL_PATH=/path/to/opencl MGB_MACE_LOADER_FORMAT=NCHW /path/to/load_and_run /path/to/resnet_50.mdl --c-opr-lib /path/to/libmace_loader.so
 ```
 
 RUNTIME candidates:
@@ -56,8 +56,10 @@ RUNTIME candidates:
 - CPU
 - GPU
 
-Running with GPU runtime on android needs opencl library, one can set `OPENCLPATH` by using environment variable
+Running with GPU runtime on android needs opencl library, one can set `MGB_MACE_OPENCL_PATH` by using environment variable
 
-We mainly use NCHW data format, if you have NHWC model, use environment `DATAFORMAT=NHWC`
+We mainly use NCHW data format, if you have NHWC model, use environment `MGB_MACE_LOADER_FORMAT=NHWC`
+
+For CPU runtime, default running thread is 1, could be specified with `MGB_MACE_NR_THREADS=n`
 
 if you want to run with HEXAGON runtime, more efforts should be made, please check [here](https://mace.readthedocs.io/en/latest/faq.html#why-is-mace-not-working-on-dsp).
