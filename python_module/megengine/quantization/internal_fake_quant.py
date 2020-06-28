@@ -5,14 +5,15 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import copy
+import math
+from functools import partial
 
-from .fake_quant import FakeQuantize
-from .internal_fake_quant import *
-from .observer import HistogramObserver, Observer, ObserverMode
-from .qconfig import (
-    QConfig,
-    calibration_qconfig,
-    ema_fakequant_qconfig,
-    min_max_fakequant_qconfig,
-    tqt_quant_qconfig,
-)
+import numpy as np
+
+from .. import functional as F
+from ..core import Function
+from .fake_quant import _FakeQuantize
+from .observer import MinMaxObserver
+from .qconfig import QConfig
+

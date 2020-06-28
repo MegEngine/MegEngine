@@ -49,6 +49,8 @@ class QATModule(Module):
     def _apply_fakequant_with_observer(
         self, target: Tensor, fake_quant: FakeQuantize, observer: Observer
     ):
+        if observer is None:
+            return target
         oup = observer(target)
         if fake_quant is None:
             return oup
@@ -76,7 +78,7 @@ class QATModule(Module):
         r"""
         Get weight's quantization dtype as the method from ``qconfig``.
         """
-        if hasattr(self.act_fake_quant, "get_dtype"):
+        if hasattr(self.weight_fake_quant, "get_dtype"):
             return self.weight_fake_quant.get_dtype()
         else:
             return self.weight_observer.get_dtype()

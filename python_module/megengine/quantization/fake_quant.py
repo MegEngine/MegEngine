@@ -19,6 +19,15 @@ from .observer import ObserverMode, Round
 
 
 class _FakeQuantize(Module):
+    r"""
+    A Basic Fake Quant module.
+
+    :param dtype: A string indicating the target quantization type of input.
+    :param narrow_range: Whether the absolute value of ``qmin`` is the same as ``qmax``,
+        instead of 1 greater. Usually True for weight and False for activation.
+    :param enable: Whether do ``normal_forward`` or ``fake_quant_forward``.
+    """
+
     def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):
         super().__init__()
         if not dtype in _metadata_dict.keys():
@@ -92,9 +101,9 @@ class TQT_Function(Function):
 
 
 class TQT(_FakeQuantize):
-    """
+    r"""
     TQT: https://arxiv.org/abs/1903.08066 Trained Quantization Thresholds
-    for Accurate and Efficient Fixed-Point Inference of Deep Neural Networks
+    for Accurate and Efficient Fixed-Point Inference of Deep Neural Networks.
     """
 
     def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):
@@ -119,11 +128,6 @@ class TQT(_FakeQuantize):
 class FakeQuantize(_FakeQuantize):
     r"""
     A module to do quant and dequant according to observer's scale and zero_point.
-
-    :param dtype: A string indicating the target quantization type of input.
-    :param narrow_range: Whether the absolute value of ``qmin`` is the same as ``qmax``,
-        instead of 1 greater. Usually True for weight and False for activation.
-    :param enable: Whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
     def fake_quant_forward(self, inp, q_dict):

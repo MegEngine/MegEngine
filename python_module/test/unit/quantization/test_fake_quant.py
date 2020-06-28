@@ -13,6 +13,7 @@ import megengine as mge
 import megengine._internal as mgb
 from megengine.core import tensor
 from megengine.quantization.fake_quant import TQT_Function
+from megengine.quantization.internal_fake_quant import *
 from megengine.test import assertTensorClose
 
 
@@ -75,3 +76,5 @@ def test_TQT():
     a.set_value(a_np)
     b.set_value(b_np)
     check_inp(a, b, b, a_np, b_np, b_np)
+
+
