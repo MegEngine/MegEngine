@@ -1512,6 +1512,7 @@ TEST_PASS(FuseConvBiasNonlinPass, Basic) {
 
 
 #if MGB_CUDA
+
 TEST(TestEnableTensorCore, SmallInputShape) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -1577,6 +1578,104 @@ TEST(TestEnableTensorCore, SmallInputShape) {
                                 make_callback_copy(y_opt, host_y_opt)});
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
+}
+
+
+TEST(TestEnableTensorCore, Nchw4Nchw) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto mkshape = [](opr::ConvBias::Param::Format format, size_t N, size_t C,
+                      size_t H, size_t W) -> TensorShape {
+        mgb_assert(C % 4 == 0);
+        if (format == opr::ConvBias::Param::Format::NCHW4) {
+            return {N, C / 4, H, W, 4};
+        } else {
+            mgb_assert(format == opr::ConvBias::Param::Format::NCHW);
+            return {N, C, H, W};
+        }
+    };
+
+    for (auto format : {opr::ConvBias::Param::Format::NCHW,
+                        opr::ConvBias::Param::Format::NCHW4}) {
+        auto x = mkvar("x", mkshape(format, 32, 64, 16, 16),
+                       dtype::QuantizedS8(2.5f)),
+             w = mkcvar("w1", mkshape(format, 64, 64, 3, 3),
+                        dtype::QuantizedS8(2.5f)),
+             b = mkcvar("b", mkshape(format, 1, 64, 1, 1),
+                        dtype::QuantizedS32(6.25f)),
+             z = mkcvar("b1", mkshape(format, 32, 64, 8, 8),
+                        dtype::QuantizedS8(2.5f));
+        opr::ConvBias::Param param;
+        param.format = format;
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+        param.stride_h = param.stride_w = 2;
+        param.pad_h = param.pad_w = 1;
+
+        auto y = opr::ConvBias::make(
+                x, w, b, z, param, {},
+                OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+        y = opr::ConvBias::make(y, w, b, param, {},
+                                OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+        y = opr::TypeCvt::make(y, dtype::Float32());
+
+        SymbolVar y_opt;
+        SymbolVar y_no_tc;
+        {
+            auto options = gopt::OptimizeForInferenceOptions{};
+            options.enable_nchw32().enable_fuse_conv_bias_nonlinearity();
+            unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+        }
+        {
+            auto options = gopt::OptimizeForInferenceOptions{};
+            options.enable_fuse_conv_bias_nonlinearity();
+            unpack_vector(gopt::optimize_for_inference({y}, options), y_no_tc);
+        }
+        auto nr_dimshuffle = find_opr_num<mgb::opr::Dimshuffle>(y_opt);
+        std::string json_name;
+        ASSERT_EQ(2u, nr_dimshuffle);
+        if (format == opr::ConvBias::Param::Format::NCHW4) {
+            json_name = "TestGoptInference.Nchw4Nchw.NCHW4.json";
+        } else {
+            mgb_assert(format == opr::ConvBias::Param::Format::NCHW);
+            json_name = "TestGoptInference.Nchw4Nchw.NCHW.json";
+        }
+
+        graph->compile({{y_opt, {}}})
+                ->to_json()
+                ->writeto_fpath(output_file(json_name.c_str()));
+        HostTensorND host_y, host_y_opt;
+        auto func = graph->compile({make_callback_copy(y_no_tc, host_y),
+                                    make_callback_copy(y_opt, host_y_opt)});
+        func->execute();
+        MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
+    }
 }
 
 TEST(TestEnableTensorCore, ConvBiasWithZ) {
@@ -2043,53 +2142,74 @@ TEST(TestGoptInference, EnableCHWN4) {
                         .rename(name),
                 dtype);
     };
+    auto mkshape = [](opr::ConvBias::Param::Format format, size_t N, size_t C,
+                      size_t H, size_t W) -> TensorShape {
+        mgb_assert(C % 4 == 0);
+        if (format == opr::ConvBias::Param::Format::NCHW4) {
+            return {N, C / 4, H, W, 4};
+        } else {
+            mgb_assert(format == opr::ConvBias::Param::Format::NCHW);
+            return {N, C, H, W};
+        }
+    };
 
-    auto x = mkvar("x", {32, 16, 16, 16, 4}, dtype::QuantizedS8(2.5f)),
-         w = mkcvar("w1", {64, 16, 3, 3, 4}, dtype::QuantizedS8(2.5f)),
-         b = mkcvar("b", {1, 16, 1, 1, 4}, dtype::QuantizedS32(6.25f)),
-         b1 = mkvar("b1", {32, 16, 16, 16, 4}, dtype::QuantizedS8(2.5f));
-    opr::ConvBias::Param param;
-    param.format = opr::ConvBias::Param::Format::NCHW4;
-    param.stride_h = param.stride_w = 1;
-    param.pad_h = param.pad_w = 1;
-    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    for (auto format : {opr::ConvBias::Param::Format::NCHW,
+                        opr::ConvBias::Param::Format::NCHW4}) {
+        auto x = mkvar("x", mkshape(format, 32, 64, 16, 16),
+                       dtype::QuantizedS8(2.5f)),
+             w = mkcvar("w1", mkshape(format, 64, 64, 3, 3),
+                        dtype::QuantizedS8(2.5f)),
+             b = mkcvar("b", mkshape(format, 1, 64, 1, 1),
+                        dtype::QuantizedS32(6.25f)),
+             b1 = mkvar("b1", mkshape(format, 32, 64, 16, 16),
+                        dtype::QuantizedS8(2.5f));
+        opr::ConvBias::Param param;
+        param.format = format;
+        param.stride_h = param.stride_w = 1;
+        param.pad_h = param.pad_w = 1;
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
 
-    auto y = opr::ConvBiasForward::make(
-            x, w, b, param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    auto y1 = opr::ElemwiseMultiType::make(
-            {y, b1}, opr::ElemwiseMultiType::Mode::QFUSE_ADD_RELU,
-            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    auto y2 = opr::ConvBiasForward::make(
-            y, w, b, param, {}, OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    auto y3 = opr::ElemwiseMultiType::make(
-            {y, b1}, opr::ElemwiseMultiType::Param::Mode::QSUB,
-            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    auto y4 = opr::ElemwiseMultiType::make(
-            {y1, y2}, opr::ElemwiseMultiType::Param::Mode::QADD,
-            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    y4 = opr::ElemwiseMultiType::make(
-            {y3, y4}, opr::ElemwiseMultiType::Param::Mode::QADD,
-            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
-    y4 = opr::TypeCvt::make(y4, dtype::Float32());
-    SymbolVar y_opt;
-    SymbolVar y_cudnn;
-    {
-        auto options = gopt::OptimizeForInferenceOptions{};
-        options.enable_chwn4();
-        unpack_vector(gopt::optimize_for_inference({y4}, options), y_opt);
+        auto y = opr::ConvBiasForward::make(
+                x, w, b, param, {},
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        auto y1 = opr::ElemwiseMultiType::make(
+                {y, b1}, opr::ElemwiseMultiType::Mode::QFUSE_ADD_RELU,
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        auto y2 = opr::ConvBiasForward::make(
+                y, w, b, param, {},
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        auto y3 = opr::ElemwiseMultiType::make(
+                {y, b1}, opr::ElemwiseMultiType::Param::Mode::QSUB,
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        auto y4 = opr::ElemwiseMultiType::make(
+                {y1, y2}, opr::ElemwiseMultiType::Param::Mode::QADD,
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        y4 = opr::ElemwiseMultiType::make(
+                {y3, y4}, opr::ElemwiseMultiType::Param::Mode::QADD,
+                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+        y4 = opr::TypeCvt::make(y4, dtype::Float32());
+        SymbolVar y_opt;
+        SymbolVar y_cudnn;
+        {
+            auto options = gopt::OptimizeForInferenceOptions{};
+            options.enable_chwn4();
+            unpack_vector(gopt::optimize_for_inference({y4}, options), y_opt);
+        }
+        unpack_vector(gopt::GraphOptimizer{}
+                              .add_pass<gopt::FuseConvBiasNonlinPass>()
+                              .add_pass<gopt::FuseConvBiasZPass>()
+                              .apply({{y4}})
+                              .endpoint_vars(),
+                      y_cudnn);
+
+        ASSERT_EQ(opr::ConvBias::Param::Format::CHWN4,
+                  find_opr<opr::ConvBias>(y_opt).param().format);
+        HostTensorND host_y, host_y_opt;
+        auto func = graph->compile({make_callback_copy(y_cudnn, host_y),
+                                    make_callback_copy(y_opt, host_y_opt)});
+        func->execute();
+        MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
     }
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::FuseConvBiasNonlinPass>()
-                          .add_pass<gopt::FuseConvBiasZPass>()
-                          .apply({{y4}})
-                          .endpoint_vars(),
-                  y_cudnn);
-
-    HostTensorND host_y, host_y_opt;
-    auto func = graph->compile({make_callback_copy(y_cudnn, host_y),
-                                make_callback_copy(y_opt, host_y_opt)});
-    func->execute();
-    MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
 
 TEST(TestGoptInference, EnableCHWN4WarpPespective) {
