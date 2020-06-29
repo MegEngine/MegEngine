@@ -2450,6 +2450,8 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
 
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4,
               find_opr<opr::ConvBias>(y_opt).param().format);
+    auto nr_reshape = find_opr_num<mgb::opr::Reshape>(y_opt);
+    ASSERT_EQ(2u, nr_reshape);
 
     graph->compile({{y_opt, {}}})
             ->to_json()
