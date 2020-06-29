@@ -11,7 +11,6 @@
 
 #include "megdnn/basic_types.h"
 #include "megdnn/tensor_format.h"
-#include "src/common/utils.h"
 
 // clang-format off
 #include "test/common/utils.h"
@@ -277,23 +276,6 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_COLLAPSE_W) {
         ASSERT_EQ(1u, impl.align_axis());
         ASSERT_EQ(64u, impl.align_size_in_byte());
     }
-}
-
-TEST(MISC, WORKSPACE_BUNDLE) {
-    WorkspaceBundle bundle{
-            {{100, 200}, {435, 234, 143}, {422, 1325, 728}}, nullptr, 64};
-    bundle.set(reinterpret_cast<void*>(82l));
-    ASSERT_EQ(bundle.get(0), reinterpret_cast<void*>(128l));
-    void* dst = reinterpret_cast<void*>(128 + round_up(100, 64));
-    ASSERT_EQ(bundle.get(0, 1), dst);
-    dst = reinterpret_cast<void*>(128 + round_up(100, 64) + round_up(200, 64) +
-                                  round_up(435, 64));
-    ASSERT_EQ(bundle.get(1, 1), dst);
-    dst = reinterpret_cast<void*>(128l + round_up(100, 64) + round_up(200, 64) +
-                                  round_up(435, 64) + round_up(234, 64) +
-                                  round_up(143, 64) + round_up(422, 64) +
-                                  round_up(1325, 64));
-    ASSERT_EQ(bundle.get(2, 2), dst);
 }
 
 // vim: syntax=cpp.doxygen

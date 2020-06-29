@@ -194,15 +194,8 @@ std::unique_ptr<T> make_unique(Args&&... args) {
  */
 class WorkspaceBundle {
 public:
-    WorkspaceBundle(void* ptr = nullptr,
-                    SmallVector<size_t> sizes_in_bytes = {},
+    WorkspaceBundle(void* ptr, SmallVector<size_t> sizes_in_bytes,
                     size_t align_in_bytes = 512);
-
-    /**
-     * construct 2D workspace buldle
-     */
-    WorkspaceBundle(SmallVector<SmallVector<size_t>> vector_sizes_in_bytes,
-                    void* ptr, size_t align_in_bytes = 512);
     /**
      * \returns raw workspace ptr.
      *
@@ -211,45 +204,26 @@ public:
      */
     void* ptr() const;
     /**
-     * \returns the 2D [dim1, dim0] workspace ptr (aligned)
+     * \returns the i-th workspace ptr (aligned)
      */
-    void* get(size_t dim1, size_t dim0) const;
-    /**
-     * \returns the 1D [dim0] workspace ptr (aligned)
-     */
-    void* get(size_t dim0) const;
+    void* get(size_t i) const;
     /**
      * \returns total size taking into account paddings to solve alignment
      * issue.
      */
     size_t total_size_in_bytes() const;
-    /**
-     * \return the 2D [dim1, dim0] workspace size
-     */
-    size_t get_size(size_t dim1, size_t dim0) const;
-
-    /**
-     * \return the 1D [dim0] workspace size
-     */
-    size_t get_size(size_t dim0) const;
+    size_t get_size(size_t i) const;
     size_t nr_workspace() const;
     void set(void* ptr);
 
-    Workspace get_workspace(size_t dim1, size_t dim0) const {
-        return {static_cast<dt_byte*>(get(dim1, dim0)), get_size(dim1, dim0)};
-    }
-    Workspace get_workspace(size_t dim0) const {
-        return {static_cast<dt_byte*>(get(dim0)), get_size(dim0)};
+    Workspace get_workspace(size_t i) const {
+        return {static_cast<dt_byte*>(get(i)), get_size(i)};
     }
 
 private:
     void* m_ptr;
-    SmallVector<SmallVector<size_t>> m_sizes;
+    SmallVector<size_t> m_sizes;
     SmallVector<size_t> m_aligned_sizes;
-    //! all workspace size prefix sum
-    SmallVector<size_t> m_reduce_sizes;
-    //! dim1 workspace number prefix sum
-    SmallVector<size_t> m_reduce_num;
     size_t m_align_in_bytes;
 };
 
