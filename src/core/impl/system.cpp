@@ -127,7 +127,7 @@ std::pair<size_t, size_t> sys::get_ram_status_bytes() {
     mgb_assert(!err);
     std::pair<size_t, size_t> ret;
     ret.first = info.totalram * info.mem_unit;
-    ret.second = (info.totalram + info.bufferram) * info.mem_unit;
+    ret.second = (info.freeram + info.bufferram) * info.mem_unit;
     return ret;
 #endif
 }
