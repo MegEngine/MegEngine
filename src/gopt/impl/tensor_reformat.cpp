@@ -1356,16 +1356,17 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
     using RelayoutMode = RelayoutPlaceholder::LayoutType;
     megdnn::param::Convolution::Format conv_format =
             megdnn::param::Convolution::Format::NCHW4;
-    megdnn::param::ConvBias::Format conv_bias_format = 
+    megdnn::param::ConvBias::Format conv_bias_format =
             megdnn::param::ConvBias::Format::NCHW4;
     megdnn::param::BatchConvBias::Format batch_conv_bias_format =
             megdnn::param::BatchConvBias::Format::NCHW4;
     RelayoutMode src_to_nchw4_mode = RelayoutMode::NCHW_TO_NCHW4;
     RelayoutMode src_to_nchw_mode = RelayoutMode::NCHW4_TO_NCHW;
-    RelayoutMode weight_to_nchw4_mode_dense = 
+    RelayoutMode weight_to_nchw4_mode_dense =
             RelayoutMode::WEIGHT_NCHW_TO_NCHW4_DENSE;
-    RelayoutMode weight_to_nchw4_mode_group = 
+    RelayoutMode weight_to_nchw4_mode_group =
             RelayoutMode::WEIGHT_NCHW_TO_NCHW4_GROUP;
+
     auto trans_nchw4 = [weight_to_nchw4_mode_dense,
                              weight_to_nchw4_mode_group](
                     const megdnn::param::Convolution::Sparse conv_mode,
@@ -1391,9 +1392,11 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
                     OperatorNodeBase* opr, const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_opr = opr->cast_final_safe<opr::ConvolutionForward>();
-        mgb_assert(conv_opr.param().format ==
-                            megdnn::param::Convolution::Format::NCHW,
-                "ConvertFormat Pass only support converting NCHW to NCHW4");
+        if (conv_opr.param().format !=
+            megdnn::param::Convolution::Format::NCHW) {
+            return serialization::copy_opr_shallow(*opr, new_inp,
+                                                   opr->config());
+        }
         VarNode *conv_src = new_inp[0], *conv_filter = new_inp[1];
         // src: NCHW --> NCWH4
         if (new_inp[0]->shape().ndim != 5) {
@@ -1427,7 +1430,13 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
         mgb_assert(opr->input().size() == new_inp.size());
         auto& batch_conv_bias_opr =
                     opr->cast_final_safe<opr::BatchConvBiasForward>();
-        mgb_assert(batch_conv_bias_opr.param().format == 
+        if (batch_conv_bias_opr.param().format !=
+            megdnn::param::BatchConvBias::Format::NCHW) {
+            return serialization::copy_opr_shallow(*opr, new_inp,
+                                                   opr->config());
+        }
+
+        mgb_assert(batch_conv_bias_opr.param().format ==
                            megdnn::param::BatchConvBias::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHW4");
         // what should be converted: src, weight
@@ -1494,9 +1503,12 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
                                       const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_bias_opr = opr->cast_final_safe<opr::ConvBiasForward>();
-        mgb_assert(conv_bias_opr.param().format == 
-                           megdnn::param::ConvBias::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHW4");
+        if (conv_bias_opr.param().format !=
+            megdnn::param::Convolution::Format::NCHW) {
+            return serialization::copy_opr_shallow(*opr, new_inp,
+                                                   opr->config());
+        }
+
         // what should be converted: src, weight
         VarNode *conv_bias_src = new_inp[0], *conv_bias_filter = new_inp[1];
         // src: NCHW --> NCHW4
@@ -1604,8 +1616,9 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
         using Format = Param::Format;
         mgb_assert(opr->input().size() == new_inp.size());
         auto& pooling = opr->cast_final_safe<opr::PoolingForward>();
-        mgb_assert(pooling.param().format == Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHW4.");
+        if (pooling.param().format != Format::NCHW) {
+            return opr;
+        }
         if (new_inp[0]->shape().ndim == 5) {
             mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
             auto new_param = pooling.param();
@@ -1628,8 +1641,6 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
         using Format = Param::Format;
         mgb_assert(opr->input().size() == new_inp.size());
         auto& resize = opr->cast_final_safe<opr::ResizeForward>();
-        mgb_assert(resize.param().format == Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHW4.");
         if (new_inp[0]->shape().ndim == 5) {
             mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
             auto new_param = resize.param();
@@ -1652,8 +1663,6 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
         using Format = Param::Format;
         mgb_assert(opr->input().size() == new_inp.size());
         auto& warp = opr->cast_final_safe<opr::WarpPerspectiveForward>();
-        mgb_assert(warp.param().format == Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHW4.");
         if (new_inp[0]->shape().ndim == 5) {
             mgb_assert(new_inp[0]->dtype().enumv() == DTypeEnum::QuantizedS8);
             auto new_param = warp.param();

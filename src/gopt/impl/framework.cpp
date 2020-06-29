@@ -756,6 +756,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     cb(nchw32, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
+        add_pass(EnableNCHW4Pass::make_nchw4_converter());
         add_pass(EnableTensorCorePass::make_tensorcore_converter());
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
@@ -763,6 +764,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
     cb(chwn4, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
+        add_pass(EnableNCHW4Pass::make_nchw4_converter());
         add_pass(EnableCHWN4Pass::make_chwn4_converter());
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
