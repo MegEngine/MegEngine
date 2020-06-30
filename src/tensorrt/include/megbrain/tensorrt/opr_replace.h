@@ -32,7 +32,8 @@ public:
 
 namespace tensorrt {
 
-void transform_dest_vars_inplace(mgb::cg::VarNodeArray& dest_vars);
+void transform_dest_vars_inplace(mgb::cg::VarNodeArray& dest_vars,
+                                 cg::GraphCommonOptimizeOptions& options);
 }
 
 }  // namespace mgb

@@ -481,7 +481,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 #if MGB_ENABLE_TENSOR_RT
     if (options().graph_opt.tensorrt) {
         options().graph_opt.tensorrt = false;
-        tensorrt::transform_dest_vars_inplace(dest_vars);
+        tensorrt::transform_dest_vars_inplace(dest_vars, options().graph_opt);
     }
 #endif
 
