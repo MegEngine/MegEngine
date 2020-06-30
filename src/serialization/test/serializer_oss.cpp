@@ -64,6 +64,34 @@ TEST(TestSerializer2, GraphDumpLoad) {
     load();
 }
 
+TEST(TestSerializer2, MultiGraphDumpLoad) {
+    auto fname = GET_OUTPUT_FILE();
+
+    auto dump = [&]() {
+        auto cn = CompNode::load("cpu0");
+        auto graph = ComputingGraph::make();
+        auto x = opr::ImmutableTensor::make(*graph, 1926.0817f, {cn});
+        x.rename("varz");
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        // dump twice
+        dumper->dump({x});
+        dumper->dump({x});
+    };
+    auto load = [&]() {
+        GraphLoader::LoadConfig load_config = {};
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        // load twice
+        loader->load(load_config, false);
+        loader = GraphLoader::make(loader->reset_file(), loader->format());
+        loader->load(load_config, false);
+    };
+
+    dump();
+    load();
+}
+
 TEST(TestSerializer2, APlusB) {
     auto fname = GET_OUTPUT_FILE();
     TensorShape shape{2, 3};
