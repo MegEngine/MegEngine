@@ -846,7 +846,7 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     OprLoadContextImpl ctx{this, m_graph->mgb_version()};
     auto result = ctx.load_oprs();
 
-    auto fbs_end = tensor_begin + offset_to_fbs + size;
+    auto fbs_end = tensor_begin + offset_to_fbs + sizeof(size) + size;
     auto cur = m_file->tell();
     mgb_assert(fbs_end > cur);
     // Skip to Graph end
