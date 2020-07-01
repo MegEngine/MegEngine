@@ -23,7 +23,8 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8_nchw44)
@@ -64,7 +65,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     }
 };
 
-static void copy_padding_kern(WorkspaceBundle bundle,
+static void copy_padding_kern(const WorkspaceBundle& bundle,
                               const ConvBiasImpl::NCBKernParam& kern_param,
                               const ConvBiasImpl::NCBKernIndex& ncb_index,
                               const CpuNDRange& workspace_ids) {
@@ -78,7 +79,6 @@ static void copy_padding_kern(WorkspaceBundle bundle,
     int IH2, IW2;
     get_rectified_size(kern_param, IH2, IW2);
     int padding_group_size = IH2 * IW2 * IC;
-    bundle.set(kern_param.workspace_ptr);
     //! Used for get the workspace offset
     constexpr int pack_ic = 4;
     constexpr int expend_element = 4;
@@ -128,7 +128,7 @@ static void copy_padding_kern(WorkspaceBundle bundle,
 
 template <size_t filter, BiasMode bias_mode, typename Op, int ow_remain,
           typename DstType, int stride>
-static void do_conv_kern(WorkspaceBundle bundle,
+static void do_conv_kern(const WorkspaceBundle& bundle,
                          const ConvBiasImpl::NCBKernParam& kern_param,
                          const ConvBiasImpl::NCBKernIndex& ncb_index,
                          const CpuNDRange& workspace_ids,
@@ -153,7 +153,6 @@ static void do_conv_kern(WorkspaceBundle bundle,
         op = Op(scale_bias, scale_dst);
     }
     size_t padding_group_size = IH2 * IW2 * IC;
-    bundle.set(kern_param.workspace_ptr);
 
     constexpr size_t pack_c = 4;
     constexpr size_t src_expand_size = 4;
@@ -375,7 +374,6 @@ ConvBiasImpl::AlgoS8DirectNCHW44::dispatch_kerns(
     megdnn_assert(do_conv_fun);
 
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
-    WorkspaceBundle bundle = wbundle;
 
     constexpr size_t pack_oc = 4;
     size_t oc_step = pack_oc;
@@ -384,28 +382,31 @@ ConvBiasImpl::AlgoS8DirectNCHW44::dispatch_kerns(
     }
     if (group == 1) {
         CpuNDRange ncb_range = {N, group, div_ceil(OC, oc_step)};
-        auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) {
-            copy_padding_kern(bundle, kern_param, ncb_index,
+        auto copy_padding = [wbundle](const NCBKernParam& kern_param,
+                                      const NCBKernIndex& ncb_index) mutable {
+            wbundle.set(kern_param.workspace_ptr);
+            copy_padding_kern(wbundle, kern_param, ncb_index,
                               ncb_index.ndrange_id);
         };
         constexpr size_t pack_ic = 4;
         ret_kerns.push_back({copy_padding, {N, group, div_ceil(IC, pack_ic)}});
-        auto do_conv = [bundle, do_conv_fun, ncb_range](
+        auto do_conv = [wbundle, do_conv_fun, ncb_range](
                                const NCBKernParam& kern_param,
-                               const NCBKernIndex& ncb_index) {
-            do_conv_fun(bundle, kern_param, ncb_index, ncb_index.ndrange_id,
+                               const NCBKernIndex& ncb_index) mutable {
+            wbundle.set(kern_param.workspace_ptr);
+            do_conv_fun(wbundle, kern_param, ncb_index, ncb_index.ndrange_id,
                         ncb_range);
         };
         ret_kerns.push_back({do_conv, ncb_range});
     } else {
         CpuNDRange ncb_range = {N, group, 1};
-        auto do_conv = [bundle, do_conv_fun, ncb_range](
+        auto do_conv = [wbundle, do_conv_fun, ncb_range](
                                const NCBKernParam& kern_param,
-                               const NCBKernIndex& ncb_index) {
-            copy_padding_kern(bundle, kern_param, ncb_index,
+                               const NCBKernIndex& ncb_index) mutable {
+            wbundle.set(kern_param.workspace_ptr);
+            copy_padding_kern(wbundle, kern_param, ncb_index,
                               {0, ncb_index.thread_id, 0});
-            do_conv_fun(bundle, kern_param, ncb_index,
+            do_conv_fun(wbundle, kern_param, ncb_index,
                         {0, ncb_index.thread_id, 0}, ncb_range);
         };
         ret_kerns.push_back({do_conv, ncb_range});

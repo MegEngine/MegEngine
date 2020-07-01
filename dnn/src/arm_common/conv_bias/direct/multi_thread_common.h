@@ -35,24 +35,24 @@ public:
                                       bool m_large_group);
     static WorkspaceBundle get_bundle_stride(const NCBKernSizeParam& param,
                                              bool m_large_group);
-    static void weight_flip_kern(WorkspaceBundle bundle,
+    static void weight_flip_kern(const WorkspaceBundle& bundle,
                                  const NCBKernParam& kern_param,
                                  const NCBKernIndex& ncb_index,
                                  const CpuNDRange& workspace_ids);
-    static void copy_padding_kern(WorkspaceBundle bundle,
+    static void copy_padding_kern(const WorkspaceBundle& bundle,
                                   const NCBKernParam& kern_param,
                                   const NCBKernIndex& ncb_index,
                                   const CpuNDRange& workspace_ids);
-    static void copy_padding_kern_stride(WorkspaceBundle bundle,
+    static void copy_padding_kern_stride(const WorkspaceBundle& bundle,
                                          const NCBKernParam& kern_param,
                                          const NCBKernIndex& ncb_index,
                                          const CpuNDRange& workspace_ids);
-    static void do_conv_kern(WorkspaceBundle bundle,
+    static void do_conv_kern(const WorkspaceBundle& bundle,
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const kern_direct_conv_f32& fun,
                              const CpuNDRange& workspace_ids);
-    static void do_conv_kern_stride(WorkspaceBundle bundle,
+    static void do_conv_kern_stride(const WorkspaceBundle& bundle,
                                     const NCBKernParam& kern_param,
                                     const NCBKernIndex& ncb_index,
                                     const kern_direct_conv_f32_stride& fun,

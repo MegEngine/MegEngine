@@ -48,7 +48,7 @@ static inline void get_rectified_size(const NCBKernSizeParam& param,
 }
 
 static inline void copy_padding_kern(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index) {
     size_t IW = kern_param.isz[1];
     size_t IH = kern_param.isz[0];
@@ -59,7 +59,6 @@ static inline void copy_padding_kern(
     get_rectified_size(kern_param, IH2, IW2, OH2, OW2);
     bool need_src_copy_var = need_src_copy(kern_param);
     size_t padding_group_size = IH2 * IW2;
-    bundle.set(kern_param.workspace_ptr);
 
     size_t group_id = ncb_index.ndrange_id[0],
            batch_id = ncb_index.ndrange_id[1],

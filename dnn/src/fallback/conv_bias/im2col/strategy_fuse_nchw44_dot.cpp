@@ -172,7 +172,8 @@ void fuse_packb(const dt_int8* __restrict src, dt_int8* __restrict dst,
 template <typename op_ctype, typename op_dtype,
           megdnn::PostprocessMode postprocess_mode>
 void StrategyFuse8x12x4Nchw44Dot<op_ctype, op_dtype, postprocess_mode>::
-        exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+        exec_im2col(const WorkspaceBundle& bundle,
+                    const WorkspaceBundle& bundle_thread,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam /*matmul_param*/,
@@ -206,7 +207,6 @@ void StrategyFuse8x12x4Nchw44Dot<op_ctype, op_dtype, postprocess_mode>::
     fuse_packb(src2, im2col_dst, b_panel, ow, ic, ih, iw, sparam.ohw_cur_index,
                sparam.output_block_size);
 }
-
 
 namespace megdnn {
 

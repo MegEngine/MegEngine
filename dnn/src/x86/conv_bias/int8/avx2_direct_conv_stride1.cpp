@@ -19,7 +19,7 @@ namespace direct_conv_avx2_stride1 {
 
 //! layout:(N,IC,IH,IW)-->(N,IC/2,H,W,2)
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-void pack_src_conv_avx2_stride1(WorkspaceBundle bundle,
+void pack_src_conv_avx2_stride1(const WorkspaceBundle& bundle,
                                 const ConvBiasImpl::NCBKernParam& kern_param,
                                 const ConvBiasImpl::NCBKernIndex& ncb_index) {
     int32_t ih = kern_param.isz[0];
@@ -48,7 +48,6 @@ void pack_src_conv_avx2_stride1(WorkspaceBundle bundle,
 
     const int8_t* src_ptr = kern_param.src<int8_t>(batch_id, group_id) +
                             ic_step * channel_id * c_stride;
-    bundle.set(kern_param.workspace_ptr);
     int8_t* packed_src = static_cast<int8_t*>(bundle.get(0)) +
                          batch_id * group * packed_group_size +
                          group_id * packed_group_size +
@@ -103,7 +102,7 @@ void pack_src_conv_avx2_stride1(WorkspaceBundle bundle,
 
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
 static inline void pack_filter_conv_avx2_stride1(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index) {
     MEGDNN_MARK_USED_VAR(ncb_index);
     int32_t oc = kern_param.filter_meta.ocpg;
@@ -129,7 +128,6 @@ static inline void pack_filter_conv_avx2_stride1(
            oc_index_id = ncb_index.ndrange_id[1];
 
     const int8_t* pack_filter_ptr = kern_param.filter<int8_t>(group_id);
-    bundle.set(kern_param.workspace_ptr);
     int16_t* out_ptr = static_cast<int16_t*>(bundle.get(1)) +
                        group_id * round_up(oc, oc_step) * oc_out_stride;
 
@@ -602,7 +600,7 @@ inline void AlgoAVX2DirectConvStride1S8S8S32_forward(
 #undef cb_switch
 #undef cb
 }
-void do_conv_kern(WorkspaceBundle bundle,
+void do_conv_kern(const WorkspaceBundle& bundle,
                   const ConvBiasImpl::NCBKernParam& kern_param,
                   const ConvBiasImpl::NCBKernIndex& ncb_index) {
     auto&& fm = kern_param.filter_meta;
@@ -634,8 +632,6 @@ void do_conv_kern(WorkspaceBundle bundle,
     size_t group_id = ncb_index.ndrange_id[0],
            batch_id = ncb_index.ndrange_id[1],
            channel_id = ncb_index.ndrange_id[2];
-
-    bundle.set(kern_param.workspace_ptr);
 
     int8_t* src_ptr = static_cast<int8_t*>(bundle.get(0)) +
                       group_id * packed_group_size +
@@ -672,7 +668,7 @@ void do_conv_kern(WorkspaceBundle bundle,
             oc_stride, kern_param);
 }
 
-void do_post_process(WorkspaceBundle bundle,
+void do_post_process(const WorkspaceBundle& bundle,
                      const ConvBiasImpl::NCBKernParam& kern_param,
                      const ConvBiasImpl::NCBKernIndex& ncb_index) {
     auto&& fm = kern_param.filter_meta;
@@ -683,7 +679,6 @@ void do_post_process(WorkspaceBundle bundle,
 
     size_t group_id = ncb_index.ndrange_id[0],
            batch_id = ncb_index.ndrange_id[1];
-    bundle.set(kern_param.workspace_ptr);
     bool need_post_process =
             kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
     void* dst_tptr = nullptr;
@@ -729,21 +724,22 @@ void do_post_process(WorkspaceBundle bundle,
 }
 
 SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
-                                WorkspaceBundle bundle) {
+                                const WorkspaceBundle& bundle) {
     SmallVector<NCBKern> ncb_kerns;
     auto fm = kern_param.filter_meta;
     size_t N = kern_param.n;
     size_t IC = kern_param.filter_meta.icpg;
     size_t OC = kern_param.filter_meta.ocpg;
     size_t group = fm.group;
-#define cb(task)                                                       \
-    auto task = [bundle, tmp_func](                                    \
-                        const ConvBiasImpl::NCBKernParam& kern_param,  \
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) { \
-        tmp_func(bundle, kern_param,                                   \
-                 {ncb_index.thread_id,                                 \
-                  {ncb_index.ndrange_id[0], ncb_index.ndrange_id[1],   \
-                   ncb_index.ndrange_id[2]}});                         \
+#define cb(task)                                                               \
+    auto task = [bundle = bundle, tmp_func](                                   \
+                        const ConvBiasImpl::NCBKernParam& kern_param,          \
+                        const ConvBiasImpl::NCBKernIndex& ncb_index) mutable { \
+        bundle.set(kern_param.workspace_ptr);                                  \
+        tmp_func(bundle, kern_param,                                           \
+                 {ncb_index.thread_id,                                         \
+                  {ncb_index.ndrange_id[0], ncb_index.ndrange_id[1],           \
+                   ncb_index.ndrange_id[2]}});                                 \
     };
     auto tmp_func = pack_src_conv_avx2_stride1;
     cb(pack_src_task);

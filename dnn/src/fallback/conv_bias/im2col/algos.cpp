@@ -39,7 +39,7 @@ struct Im2colBundelIndex {
 using Pack_Mode=fallback::MatrixMulImpl::AlgoBase::PackMode;
 
 //! Process one input channel copy padding
-static void copy_padding_kern(WorkspaceBundle bundle,
+static void copy_padding_kern(WorkspaceBundle& bundle,
                               const ConvBiasImpl::NCBKernParam& param,
                               const ConvBiasImpl::NCBKernIndex& ncb_index,
                               StrategyBase* im2colstrategy, size_t pack_oc_size) {
@@ -48,7 +48,7 @@ static void copy_padding_kern(WorkspaceBundle bundle,
 
 //! packA_kern
 static void packA_kern(
-        WorkspaceBundle bundle,
+        WorkspaceBundle& bundle,
         const fallback::ConvBiasImpl::NCBKernParam& param,
         fallback::MatrixMulImpl::KernSizeParam matmulparam,
         fallback::MatrixMulImpl::AlgoBase* matmul_algo,
@@ -72,11 +72,12 @@ class Im2colKerns<Pack_Mode::DEFAULT> {
 public:
     //! conv kernel
     static void kerns(
-            WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+            const WorkspaceBundle& bundle, WorkspaceBundle bundle_thread,
             const ConvBiasImpl::NCBKernParam& param,
             fallback::MatrixMulImpl::KernSizeParam matmul_kernsize_param,
             const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& matmul_desc,
+            const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
+                    matmul_desc,
             StrategyParam strategyparam,
             fallback::ConvBiasImpl::NCBKernIndex ncb_index,
             size_t ohw_tile_size, StrategyBase* im2colstrategy) {
@@ -100,7 +101,6 @@ public:
         strategyparam.output_block_oc_size = output_block_oc_size;
         strategyparam.output_block_size = output_block_size;
 
-        bundle.set(param.workspace_ptr);
         bundle_thread.set(
                 static_cast<int8_t*>(
                         bundle.get(Im2colBundelIndex::BUNDLE_THREAD_INDEX)) +
@@ -153,11 +153,12 @@ class Im2colKerns<Pack_Mode::ONLY_PACKA> {
 public:
     //! conv kernel
     static void kerns(
-            WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+            const WorkspaceBundle& bundle, WorkspaceBundle bundle_thread,
             const ConvBiasImpl::NCBKernParam& param,
             fallback::MatrixMulImpl::KernSizeParam matmul_kernsize_param,
             const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& matmul_desc,
+            const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
+                    matmul_desc,
             StrategyParam strategyparam,
             fallback::ConvBiasImpl::NCBKernIndex ncb_index,
             size_t ohw_tile_size, StrategyBase* im2colstrategy) {
@@ -169,7 +170,6 @@ public:
                 strategyparam.oc_tile_size,
                 OC - ncb_index.ndrange_id[3] * strategyparam.oc_tile_size);
 
-        bundle.set(param.workspace_ptr);
         bundle_thread.set(
                 static_cast<int8_t*>(
                         bundle.get(Im2colBundelIndex::BUNDLE_THREAD_INDEX)) +
@@ -236,11 +236,12 @@ class Im2colKerns<Pack_Mode::NO_PACK> {
 public:
     //! conv kernel
     static void kerns(
-            WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+            const WorkspaceBundle& bundle, WorkspaceBundle bundle_thread,
             const ConvBiasImpl::NCBKernParam& param,
             fallback::MatrixMulImpl::KernSizeParam matmul_kernsize_param,
             const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-            const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& matmul_desc,
+            const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
+                    matmul_desc,
             StrategyParam strategyparam,
             fallback::ConvBiasImpl::NCBKernIndex ncb_index,
             size_t ohw_tile_size, StrategyBase* im2colstrategy) {
@@ -264,7 +265,6 @@ public:
         strategyparam.output_block_oc_size = output_block_oc_size;
         strategyparam.output_block_size = output_block_size;
 
-        bundle.set(param.workspace_ptr);
         bundle_thread.set(
                 static_cast<int8_t*>(
                         bundle.get(Im2colBundelIndex::BUNDLE_THREAD_INDEX)) +
@@ -567,16 +567,18 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
             auto kern_padding = [bundle, im2colstrategy,
                                  pack_oc_size = pack_oc_size](
                                         const NCBKernParam& param,
-                                        const NCBKernIndex& ncb_index) {
+                                        const NCBKernIndex& ncb_index) mutable {
+                bundle.set(param.workspace_ptr);
                 copy_padding_kern(bundle, param, ncb_index, im2colstrategy,
                                   pack_oc_size);
             };
 
             auto kern_packA = [bundle, matmul_algo = m_matmul_algo,
                                matmul_param, im2colstrategy,
-                               pack_oc_size = pack_oc_size,
-                               mdesc = mdesc](const NCBKernParam& param,
-                                              const NCBKernIndex& ncb_index) {
+                               pack_oc_size = pack_oc_size, mdesc = mdesc](
+                                      const NCBKernParam& param,
+                                      const NCBKernIndex& ncb_index) mutable {
+                bundle.set(param.workspace_ptr);
                 packA_kern(bundle, param, matmul_param, matmul_algo, ncb_index,
                            im2colstrategy, mdesc, pack_oc_size);
             };
@@ -586,8 +588,10 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
                          matmul_algo = m_matmul_algo,
                          ohw_tile_size = ohw_tile_size,
                          strategyparam = strategyparam, matmul_desc = mdesc,
-                         im2colstrategy](const NCBKernParam& param,
-                                         const NCBKernIndex& ncb_index) {
+                         im2colstrategy](
+                                const NCBKernParam& param,
+                                const NCBKernIndex& ncb_index) mutable {
+                            bundle.set(param.workspace_ptr);
                             Im2colKerns<Pack_Mode::DEFAULT>::kerns(
                                     bundle, bundle_thread, param, matmul_param,
                                     matmul_algo, matmul_desc, strategyparam,
@@ -608,8 +612,10 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
                          matmul_algo = m_matmul_algo,
                          strategyparam = strategyparam,
                          ohw_tile_size = ohw_tile_size, matmul_desc = mdesc,
-                         im2colstrategy](const NCBKernParam& param,
-                                         const NCBKernIndex& ncb_index) {
+                         im2colstrategy](
+                                const NCBKernParam& param,
+                                const NCBKernIndex& ncb_index) mutable {
+                            bundle.set(param.workspace_ptr);
                             Im2colKerns<Pack_Mode::ONLY_PACKA>::kerns(
                                     bundle, bundle_thread, param, matmul_param,
                                     matmul_algo, matmul_desc, strategyparam,
@@ -628,14 +634,15 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
                          matmul_algo = m_matmul_algo,
                          strategyparam = strategyparam,
                          ohw_tile_size = ohw_tile_size, matmul_desc = mdesc,
-                         im2colstrategy](const NCBKernParam& param,
-                                         const NCBKernIndex& ncb_index) {
+                         im2colstrategy](
+                                const NCBKernParam& param,
+                                const NCBKernIndex& ncb_index) mutable {
+                            bundle.set(param.workspace_ptr);
                             Im2colKerns<Pack_Mode::NO_PACK>::kerns(
                                     bundle, bundle_thread, param, matmul_param,
                                     matmul_algo, matmul_desc, strategyparam,
                                     ncb_index, ohw_tile_size, im2colstrategy);
                         };
-
                 if (need_padding) {
                     ret_kern.push_back({kern_padding, {param.n, GROUP, IC}});
                 }

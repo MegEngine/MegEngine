@@ -21,19 +21,19 @@ using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
 using NCBKernIndex = fallback::ConvBiasImpl::NCBKernIndex;
 
 using conv_fun = std::function<void(
-        WorkspaceBundle bundle, const NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
         const NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids)>;
 
 bool can_conv_direct_stride1_int8(const NCBKernSizeParam& param);
 
 WorkspaceBundle get_bundle(const NCBKernSizeParam& param, bool m_large_group);
 
-void copy_padding_kern(WorkspaceBundle bundle, const NCBKernParam& kern_param,
+void copy_padding_kern(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
                        const NCBKernIndex& ncb_index,
                        const CpuNDRange& workspace_ids);
 
 template <size_t filter, BiasMode bias_mode, typename Op>
-void do_conv_kern(WorkspaceBundle bundle, const NCBKernParam& kern_param,
+void do_conv_kern(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
                   const NCBKernIndex& ncb_index,
                   const CpuNDRange& workspace_ids);
 

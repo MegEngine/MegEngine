@@ -22,7 +22,8 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp32_nchw44_stride1)
@@ -67,7 +68,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
 };
 
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
-static void do_conv_kern(WorkspaceBundle bundle,
+static void do_conv_kern(const WorkspaceBundle& bundle,
                          const ConvBiasImpl::NCBKernParam& kern_param,
                          const ConvBiasImpl::NCBKernIndex& ncb_index,
                          const CpuNDRange&, const CpuNDRange&) {
@@ -87,7 +88,6 @@ static void do_conv_kern(WorkspaceBundle bundle,
     int oh2 = 0;
     int ow2 = 0;
     get_rectified_size(kern_param, ih2, iw2, oh2, ow2);
-    bundle.set(kern_param.workspace_ptr);
 
     constexpr int pack_c = 4;
     const int batch_id = ncb_index.ndrange_id[0];
@@ -281,7 +281,6 @@ ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
     megdnn_assert(do_conv_fun);
 
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
-    WorkspaceBundle bundle = wbundle;
     int oh = param.osz[0];
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
@@ -291,10 +290,11 @@ ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
     CpuNDRange ncb_range = {static_cast<size_t>(batch),
                             static_cast<size_t>(group),
                             static_cast<size_t>(div_ceil(oh, oh_block))};
-    auto do_conv = [bundle, do_conv_fun, ncb_range](
+    auto do_conv = [wbundle, do_conv_fun, ncb_range](
                            const NCBKernParam& kern_param,
-                           const NCBKernIndex& ncb_index) {
-        do_conv_fun(bundle, kern_param, ncb_index, ncb_index.ndrange_id,
+                           const NCBKernIndex& ncb_index) mutable {
+        wbundle.set(kern_param.workspace_ptr);
+        do_conv_fun(wbundle, kern_param, ncb_index, ncb_index.ndrange_id,
                     ncb_range);
     };
     ret_kerns.push_back({do_conv, ncb_range});

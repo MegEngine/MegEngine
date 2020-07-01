@@ -22,7 +22,8 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8_nchw44_dot)
@@ -82,7 +83,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
              temp_size * param.nr_threads}};
 };
 
-void do_weight_trans(WorkspaceBundle bundle,
+void do_weight_trans(const WorkspaceBundle& bundle,
                      const ConvBiasImpl::NCBKernParam& kern_param,
                      const ConvBiasImpl::NCBKernIndex&, const CpuNDRange&) {
     const int ic = kern_param.filter_meta.icpg;
@@ -90,7 +91,6 @@ void do_weight_trans(WorkspaceBundle bundle,
     const int fh = kern_param.filter_meta.spatial[0];
     const int fw = kern_param.filter_meta.spatial[1];
     const int fw2 = round_up(fw, 4);
-    bundle.set(kern_param.workspace_ptr);
     auto packed_weight = reinterpret_cast<int8_t*>(bundle.get(1));
     auto origin_weight = kern_param.filter<dt_int8>();
     pack_weight_int8_nchw_nchw44_dot(packed_weight, origin_weight, oc, ic, fh,
@@ -98,7 +98,7 @@ void do_weight_trans(WorkspaceBundle bundle,
 }
 
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
-static void do_conv_kern(WorkspaceBundle bundle,
+static void do_conv_kern(const WorkspaceBundle& bundle,
                          const ConvBiasImpl::NCBKernParam& kern_param,
                          const ConvBiasImpl::NCBKernIndex& ncb_index,
                          const CpuNDRange&, const CpuNDRange&) {
@@ -117,7 +117,6 @@ static void do_conv_kern(WorkspaceBundle bundle,
     int ih2 = 0;
     int iw2 = 0;
     get_rectified_size(kern_param, ih2, iw2);
-    bundle.set(kern_param.workspace_ptr);
 
     constexpr int pack_c = 4;
     const int batch_id = ncb_index.ndrange_id[0];
@@ -205,7 +204,7 @@ ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44::dispatch_kerns(
     auto fm = param.filter_meta;
     const int batch = param.n;
     const int group = fm.group;
-    WorkspaceBundle wbundle = get_bundle(param);
+    WorkspaceBundle bundle = get_bundle(param);
     conv_fun do_conv_fun = nullptr;
     // NOTE: remain_w is not used to gen hash of midout for compatible with
 // shape runtime
@@ -288,7 +287,6 @@ ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44::dispatch_kerns(
     megdnn_assert(do_conv_fun);
 
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
-    WorkspaceBundle bundle = wbundle;
     int oh = param.osz[0];
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
@@ -302,14 +300,16 @@ ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44::dispatch_kerns(
                             static_cast<size_t>(div_ceil(oh, oh_block))};
 
     auto do_trans_weight = [bundle](const NCBKernParam& kern_param,
-                                    const NCBKernIndex& ncb_index) {
+                                    const NCBKernIndex& ncb_index) mutable {
+        bundle.set(kern_param.workspace_ptr);
         do_weight_trans(bundle, kern_param, ncb_index, ncb_index.ndrange_id);
     };
     ret_kerns.push_back({do_trans_weight, {1}});
 
     auto do_conv = [bundle, do_conv_fun, ncb_range](
                            const NCBKernParam& kern_param,
-                           const NCBKernIndex& ncb_index) {
+                           const NCBKernIndex& ncb_index) mutable {
+        bundle.set(kern_param.workspace_ptr);
         do_conv_fun(bundle, kern_param, ncb_index, ncb_index.ndrange_id,
                     ncb_range);
     };

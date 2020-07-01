@@ -22,7 +22,8 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8_nchw_nchw44)
@@ -77,7 +78,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     return {nullptr, {src_size, weight_size, tmp_size * param.nr_threads}};
 };
 
-static void copy_padding_kern(WorkspaceBundle bundle,
+static void copy_padding_kern(const WorkspaceBundle& bundle,
                               const ConvBiasImpl::NCBKernParam& kern_param,
                               const ConvBiasImpl::NCBKernIndex& ncb_index,
                               const CpuNDRange& workspace_ids) {
@@ -92,7 +93,6 @@ static void copy_padding_kern(WorkspaceBundle bundle,
     int ih2, iw2, oh2, ow2;
     get_rectified_size(kern_param, ih2, iw2, oh2, ow2);
     int padding_group_size = ih2 * iw2 * ic;
-    bundle.set(kern_param.workspace_ptr);
     //! Used for get the workspace offset
     const int src_expand = stride_h == 2 ? 4 : 16;
 
@@ -124,10 +124,9 @@ static void copy_padding_kern(WorkspaceBundle bundle,
                                          iw, iw2, pw, nullptr);
     }
 }
-static void pack_weight(WorkspaceBundle bundle,
+static void pack_weight(const WorkspaceBundle& bundle,
                         const ConvBiasImpl::NCBKernParam& kern_param,
                         const ConvBiasImpl::NCBKernIndex& ncb_index) {
-    bundle.set(kern_param.workspace_ptr);
     const int group_id = ncb_index.ndrange_id[0];
     int fh = kern_param.filter_meta.spatial[0];
     int fw = kern_param.filter_meta.spatial[1];
@@ -151,7 +150,7 @@ static void pack_weight(WorkspaceBundle bundle,
     }
 }
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
-static void do_conv_kern(WorkspaceBundle bundle,
+static void do_conv_kern(const WorkspaceBundle& bundle,
                          const ConvBiasImpl::NCBKernParam& kern_param,
                          const ConvBiasImpl::NCBKernIndex& ncb_index,
                          const CpuNDRange& workspace_ids,
@@ -177,7 +176,6 @@ static void do_conv_kern(WorkspaceBundle bundle,
         op = Op(scale_bias, scale_dst);
     }
     int padding_group_size = ih2 * iw2 * ic;
-    bundle.set(kern_param.workspace_ptr);
 
     constexpr int pack_c = 4;
     constexpr int src_expand_size = stride == 2 ? 4 : 16;
@@ -258,7 +256,7 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
     size_t N = param.n;
     size_t OC = fm.ocpg;
     size_t group = fm.group;
-    WorkspaceBundle wbundle = get_bundle(param);
+    WorkspaceBundle bundle = get_bundle(param);
     conv_fun do_conv_fun = nullptr;
 // NOTE: remain_w is not used to gen hash of midout for compatible with changing
 // shape runtime
@@ -342,18 +340,19 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
     megdnn_assert(do_conv_fun);
 
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
-    WorkspaceBundle bundle = wbundle;
 
     constexpr size_t pack_oc = 8;
     size_t oc_step = pack_oc;
     auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                 const NCBKernIndex& ncb_index) {
+                                 const NCBKernIndex& ncb_index) mutable {
+        bundle.set(kern_param.workspace_ptr);
         copy_padding_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id);
     };
     ret_kerns.push_back({copy_padding, {N, group, fm.icpg}});
 
     auto do_pack_weight = [bundle](const NCBKernParam& kern_param,
-                                   const NCBKernIndex& ncb_index) {
+                                   const NCBKernIndex& ncb_index) mutable {
+        bundle.set(kern_param.workspace_ptr);
         pack_weight(bundle, kern_param, ncb_index);
     };
     ret_kerns.push_back({do_pack_weight, {static_cast<size_t>(group)}});
@@ -361,7 +360,8 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
     CpuNDRange ncb_range = {N, group, div_ceil(OC, oc_step)};
     auto do_conv = [bundle, do_conv_fun, ncb_range](
                            const NCBKernParam& kern_param,
-                           const NCBKernIndex& ncb_index) {
+                           const NCBKernIndex& ncb_index) mutable {
+        bundle.set(kern_param.workspace_ptr);
         do_conv_fun(bundle, kern_param, ncb_index, ncb_index.ndrange_id,
                     ncb_range);
     };

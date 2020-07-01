@@ -20,7 +20,7 @@ using NCBKern = fallback::ConvBiasImpl::NCBKern;
 using NCBKernSizeParam = fallback::ConvBiasImpl::NCBKernSizeParam;
 
 SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param,
-                                WorkspaceBundle bundle);
+                                const WorkspaceBundle& bundle);
 
 }  // namespace direct_conv_avx2_stride2
 }  // namespace x86

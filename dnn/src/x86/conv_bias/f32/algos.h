@@ -20,11 +20,11 @@ class ConvBiasImpl::AlgoDirect final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
 
-    static void copy_padding_kern(WorkspaceBundle bundle,
+    static void copy_padding_kern(const WorkspaceBundle& bundle,
                                   const NCBKernParam& kern_param,
                                   const NCBKernIndex& ncb_index,
                                   const CpuNDRange& workspace_ids);
-    static void do_conv_kern(WorkspaceBundle bundle,
+    static void do_conv_kern(const WorkspaceBundle& bundle,
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);
@@ -57,11 +57,11 @@ class ConvBiasImpl::AlgoDirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
 
-    static void copy_padding_kern(WorkspaceBundle bundle,
+    static void copy_padding_kern(const WorkspaceBundle& bundle,
                                   const NCBKernParam& kern_param,
                                   const NCBKernIndex& ncb_index,
-                             const CpuNDRange& workspace_ids);
-    static void do_conv_kern(WorkspaceBundle bundle,
+                                  const CpuNDRange& workspace_ids);
+    static void do_conv_kern(const WorkspaceBundle& bundle,
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);

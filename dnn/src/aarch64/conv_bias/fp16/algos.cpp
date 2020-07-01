@@ -89,19 +89,20 @@ ConvBiasImpl::AlgoF16DirectStride2::get_kimpls(
         conv = fp16::conv_stride2::do_conv_7x7_stride2;
     }
 
-    WorkspaceBundle wbundle = arm_common::MultithreadDirectConvCommon<
+    WorkspaceBundle bundle = arm_common::MultithreadDirectConvCommon<
             dt_float16, __fp16>::get_bundle_stride(param, m_large_group);
     SmallVector<NCBKern> ret_kerns;
 
     //! Dense conv and small group
     if (m_large_group) {
         //! Channel wise conv and big groups
-        auto exec_one_group = [wbundle, conv](const NCBKernParam& kern_param,
-                                              const NCBKernIndex& ncb_index) {
+        auto exec_one_group = [bundle, conv](
+                                      const NCBKernParam& kern_param,
+                                      const NCBKernIndex& ncb_index) mutable {
             auto fm = kern_param.filter_meta;
             size_t IC = fm.icpg;
             size_t OC = fm.ocpg;
-            WorkspaceBundle bundle = wbundle;
+            bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
                 arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
                         copy_padding_kern_stride(bundle, kern_param, ncb_index,
@@ -115,16 +116,17 @@ ConvBiasImpl::AlgoF16DirectStride2::get_kimpls(
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
     } else {
-        WorkspaceBundle bundle = wbundle;
         auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) {
+                                     const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
                     copy_padding_kern_stride(bundle, kern_param, ncb_index,
                                              ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle, conv](const NCBKernParam& kern_param,
-                                      const NCBKernIndex& ncb_index) {
+                                      const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             arm_common::MultithreadDirectConvCommon<dt_float16, __fp16>::
                     do_conv_kern_stride(bundle, kern_param, ncb_index, conv,
                                         ncb_index.ndrange_id);

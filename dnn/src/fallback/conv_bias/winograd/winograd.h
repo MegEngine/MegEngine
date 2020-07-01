@@ -194,12 +194,12 @@ public:
                 IC, 0, OC);
     }
 
-    static void filter_process(Strategy strategy, WorkspaceBundle bundle_top,
-                               WorkspaceBundle bundle_compute,
+    static void filter_process(Strategy strategy,
+                               const WorkspaceBundle& bundle_top,
+                               const WorkspaceBundle& bundle_compute,
                                const NCBKernParam& kern_param,
                                const NCBKernIndex& ncb_index) {
-        bundle_top.set(kern_param.workspace_ptr);
-        bundle_compute.set(bundle_top.get(0));
+        
         size_t compute_workspace_size_per_thread =
                 bundle_compute.total_size_in_bytes();
         size_t thread_id = ncb_index.thread_id;
@@ -236,8 +236,8 @@ public:
     }
 
     static void winograd_compute(
-            Strategy strategy, WorkspaceBundle bundle_top,
-            WorkspaceBundle bundle_compute,
+            Strategy strategy, const WorkspaceBundle& bundle_top,
+            const WorkspaceBundle& bundle_compute,
             fallback::MatrixMulImpl::AlgoBase* matmul_algo,
             fallback::MatrixMulImpl::KernParam matmul_param,
             size_t unit_tile_size, size_t unit_oc_size,
@@ -264,9 +264,6 @@ public:
         size_t batch_id = ncb_index.ndrange_id[1];
         size_t group_id = ncb_index.ndrange_id[0];
         size_t thread_id = ncb_index.thread_id;
-
-        bundle_top.set(ncb_param.workspace_ptr);
-        bundle_compute.set(bundle_top.get(0));
 
         const stype* src_ptr = ncb_param.src<stype>(batch_id, group_id);
         dst_type* dst_ptr = ncb_param.dst<dst_type>(batch_id, group_id);
@@ -419,14 +416,16 @@ public:
             param.filter_meta.format == param::ConvBias::Format::NCHW44) {
             //! probably a gcc bug, labmda require capturing 'this' to call
             //! static member function
-            auto filter_process_kern = [this, strategy, bundle_top,
-                                        bundle_compute](
-                                               const NCBKernParam& ncb_param,
-                                               const NCBKernIndex& ncb_index) {
-                MEGDNN_MARK_USED_VAR(this);
-                filter_process(strategy, bundle_top, bundle_compute, ncb_param,
-                               std::move(ncb_index));
-            };
+            auto filter_process_kern =
+                    [this, strategy, bundle_top, bundle_compute](
+                            const NCBKernParam& ncb_param,
+                            const NCBKernIndex& ncb_index) mutable {
+                        MEGDNN_MARK_USED_VAR(this);
+                        bundle_top.set(ncb_param.workspace_ptr);
+                        bundle_compute.set(bundle_top.get(0));
+                        filter_process(strategy, bundle_top, bundle_compute,
+                                       ncb_param, std::move(ncb_index));
+                    };
             size_t oc_parallelism = OC;
             if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
                 megdnn_assert(OC % 8 == 0);
@@ -438,18 +437,22 @@ public:
             }
             kerns.push_back({filter_process_kern, {GROUP, 1, oc_parallelism}});
         }
-        auto winograd_compute_kern = [strategy, bundle_top, bundle_compute,
-                                      matmul_algo, matmul_param, unit_tile_size,
-                                      unit_oc_size](
-                                             const NCBKernParam& ncb_param,
-                                             const NCBKernIndex& ncb_index) {
-            MIDOUT_BEGIN(megdnn_fallback_conv_bias_winograd_common, 0, 0) {
-                winograd_compute(strategy, bundle_top, bundle_compute,
-                                 matmul_algo, matmul_param, unit_tile_size,
-                                 unit_oc_size, ncb_param, std::move(ncb_index));
-            }
-            MIDOUT_END();
-        };
+        auto winograd_compute_kern =
+                [strategy, bundle_top, bundle_compute, matmul_algo,
+                 matmul_param, unit_tile_size,
+                 unit_oc_size](const NCBKernParam& ncb_param,
+                               const NCBKernIndex& ncb_index) mutable {
+                    MIDOUT_BEGIN(megdnn_fallback_conv_bias_winograd_common, 0,
+                                 0) {
+                        bundle_top.set(ncb_param.workspace_ptr);
+                        bundle_compute.set(bundle_top.get(0));
+                        winograd_compute(strategy, bundle_top, bundle_compute,
+                                         matmul_algo, matmul_param,
+                                         unit_tile_size, unit_oc_size,
+                                         ncb_param, std::move(ncb_index));
+                    }
+                    MIDOUT_END();
+                };
         kerns.push_back(
                 {winograd_compute_kern, {GROUP, N, nr_hw_tiles, nr_oc_tiles}});
         return kerns;

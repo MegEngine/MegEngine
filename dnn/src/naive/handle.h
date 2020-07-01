@@ -186,10 +186,7 @@ public:
  */
 #define MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(_handle, _parallelism, _stmt) \
     do {                                                                    \
-        auto _kern = [=](size_t index, size_t thread_id) {                  \
-            _stmt(index, thread_id);                                        \
-        };                                                                  \
-        _handle->dispatch_kern(_kern, _parallelism);                        \
+        _handle->dispatch_kern(_stmt, _parallelism);                        \
     } while (0)
 
 //! disptch kern on current opr

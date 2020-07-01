@@ -19,7 +19,7 @@ namespace x86 {
 namespace avx2_chanwise_stride2 {
 
 template <size_t filter, BiasMode bias_mode, bool is_quantized, typename Op>
-void conv_kimpl(WorkspaceBundle bundle, const NCBKernParam& kern_param,
+void conv_kimpl(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
                 const NCBKernIndex& ncb_index) {
     size_t OH = kern_param.osz[0];
     size_t OW = kern_param.osz[1];
@@ -38,9 +38,6 @@ void conv_kimpl(WorkspaceBundle bundle, const NCBKernParam& kern_param,
         op = Op(scale_bias, scale_dst);
     }
     size_t padding_group_size = IH2 * IW2;
-
-    bundle.set(kern_param.workspace_ptr);
-
     size_t workspace_group_id = ncb_index.thread_id;
     size_t group_id = ncb_index.ndrange_id[0],
            batch_id = ncb_index.ndrange_id[1];
@@ -98,7 +95,7 @@ void conv_kimpl(WorkspaceBundle bundle, const NCBKernParam& kern_param,
     }
 };
 SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
-                                WorkspaceBundle bundle) {
+                                const WorkspaceBundle& bundle) {
     MEGDNN_MARK_USED_VAR(kern_param);
     auto fm = kern_param.filter_meta;
     size_t group = fm.group;
@@ -187,8 +184,10 @@ SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
 
     DISPATCH_CONV_KERN();
 
-    auto exec_one_group = [bundle, do_conv_fun](const NCBKernParam& kern_param,
-                                                const NCBKernIndex& ncb_index) {
+    auto exec_one_group = [bundle = bundle, do_conv_fun](
+                                  const NCBKernParam& kern_param,
+                                  const NCBKernIndex& ncb_index) mutable {
+        bundle.set(kern_param.workspace_ptr);
         copy_padding_kern(bundle, kern_param, ncb_index);
         do_conv_fun(bundle, kern_param, ncb_index);
     };

@@ -597,7 +597,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
     size_t IC = param.filter_meta.icpg;
     size_t OC = param.filter_meta.ocpg;
     size_t group = fm.group;
-    WorkspaceBundle wbundle =
+    WorkspaceBundle bundle =
             MultithreadDirectConvCommon<float, float>::get_bundle(
                     param, m_large_group);
     SmallVector<NCBKern> ret_kerns;
@@ -605,12 +605,12 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
     //! one group for better performance
     if (m_large_group) {
         //! Channel wise conv and big groups
-        auto exec_one_group = [wbundle](const NCBKernParam& kern_param,
-                                        const NCBKernIndex& ncb_index) {
+        auto exec_one_group = [bundle](const NCBKernParam& kern_param,
+                                       const NCBKernIndex& ncb_index) mutable {
             auto fm = kern_param.filter_meta;
             size_t IC = fm.icpg;
             size_t OC = fm.ocpg;
-            WorkspaceBundle bundle = wbundle;
+            bundle.set(kern_param.workspace_ptr);
             if (fm.should_flip) {
                 for (size_t oc = 0; oc < OC; oc++) {
                     MultithreadDirectConvCommon<float, float>::weight_flip_kern(
@@ -631,23 +631,25 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32Direct::get_kimpls(
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
     } else {
-        WorkspaceBundle bundle = wbundle;
         if (fm.should_flip) {
             auto weight_flip = [bundle](const NCBKernParam& kern_param,
-                                        const NCBKernIndex& ncb_index) {
+                                        const NCBKernIndex& ncb_index) mutable {
+                bundle.set(kern_param.workspace_ptr);
                 MultithreadDirectConvCommon<float, float>::weight_flip_kern(
                         bundle, kern_param, ncb_index, ncb_index.ndrange_id);
             };
             ret_kerns.push_back({weight_flip, {group, 1_z, OC}});
         }
         auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) {
+                                     const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             MultithreadDirectConvCommon<float, float>::copy_padding_kern(
                     bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle](const NCBKernParam& kern_param,
-                                const NCBKernIndex& ncb_index) {
+                                const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             MultithreadDirectConvCommon<float, float>::do_conv_kern(
                     bundle, kern_param, ncb_index, fp32::conv_bias::kern_direct,
                     ncb_index.ndrange_id);
@@ -734,7 +736,7 @@ ConvBiasImpl::AlgoF32DirectStride1::get_kimpls(
     }
     SWITCH_KERN_STR1();
 
-    WorkspaceBundle wbundle =
+    WorkspaceBundle bundle =
             MultithreadDirectConvCommon<float, float>::get_bundle_stride(
                     param, m_large_group);
     SmallVector<NCBKern> ret_kerns;
@@ -742,13 +744,13 @@ ConvBiasImpl::AlgoF32DirectStride1::get_kimpls(
     //! one group for better performance
     if (m_large_group) {
         //! Channel wise conv and big groups
-        auto exec_one_group = [wbundle, conv_kern_function](
+        auto exec_one_group = [bundle, conv_kern_function](
                                       const NCBKernParam& kern_param,
-                                      const NCBKernIndex& ncb_index) {
+                                      const NCBKernIndex& ncb_index) mutable {
             auto fm = kern_param.filter_meta;
             size_t IC = fm.icpg;
             size_t OC = fm.ocpg;
-            WorkspaceBundle bundle = wbundle;
+            bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
                 MultithreadDirectConvCommon<float, float>::
                         copy_padding_kern_stride(bundle, kern_param, ncb_index,
@@ -762,16 +764,17 @@ ConvBiasImpl::AlgoF32DirectStride1::get_kimpls(
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
     } else {
-        WorkspaceBundle bundle = wbundle;
         auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) {
+                                     const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             MultithreadDirectConvCommon<float, float>::copy_padding_kern_stride(
                     bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle, conv_kern_function](
                                const NCBKernParam& kern_param,
-                               const NCBKernIndex& ncb_index) {
+                               const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
                     bundle, kern_param, ncb_index, conv_kern_function,
                     ncb_index.ndrange_id);
@@ -859,7 +862,7 @@ ConvBiasImpl::AlgoF32DirectStride2::get_kimpls(
     }
     SWITCH_KERN_STR2();
 
-    WorkspaceBundle wbundle =
+    WorkspaceBundle bundle =
             MultithreadDirectConvCommon<float, float>::get_bundle_stride(
                     param, m_large_group);
     SmallVector<NCBKern> ret_kerns;
@@ -867,13 +870,13 @@ ConvBiasImpl::AlgoF32DirectStride2::get_kimpls(
     //! one group for better performance
     if (m_large_group) {
         //! Channel wise conv and big groups
-        auto exec_one_group = [wbundle, conv_kern_function](
+        auto exec_one_group = [bundle, conv_kern_function](
                                       const NCBKernParam& kern_param,
-                                      const NCBKernIndex& ncb_index) {
+                                      const NCBKernIndex& ncb_index) mutable {
             auto fm = kern_param.filter_meta;
             size_t IC = fm.icpg;
             size_t OC = fm.ocpg;
-            WorkspaceBundle bundle = wbundle;
+            bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
                 MultithreadDirectConvCommon<float, float>::
                         copy_padding_kern_stride(bundle, kern_param, ncb_index,
@@ -887,16 +890,17 @@ ConvBiasImpl::AlgoF32DirectStride2::get_kimpls(
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
     } else {
-        WorkspaceBundle bundle = wbundle;
         auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) {
+                                     const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             MultithreadDirectConvCommon<float, float>::copy_padding_kern_stride(
                     bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle, conv_kern_function](
                                const NCBKernParam& kern_param,
-                               const NCBKernIndex& ncb_index) {
+                               const NCBKernIndex& ncb_index) mutable {
+            bundle.set(kern_param.workspace_ptr);
             MultithreadDirectConvCommon<float, float>::do_conv_kern_stride(
                     bundle, kern_param, ncb_index, conv_kern_function,
                     ncb_index.ndrange_id);

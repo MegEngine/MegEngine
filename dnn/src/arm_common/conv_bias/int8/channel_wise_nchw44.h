@@ -21,7 +21,7 @@ using NCBKernSizeParam = fallback::ConvBiasImpl::NCBKernSizeParam;
 using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
 using NCBKernIndex = fallback::ConvBiasImpl::NCBKernIndex;
 
-using conv_fun = std::function<void(WorkspaceBundle bundle,
+using conv_fun = std::function<void(const WorkspaceBundle& bundle,
                                     const NCBKernParam& kern_param,
                                     const NCBKernIndex& ncb_index)>;
 
@@ -32,7 +32,7 @@ bool is_available(const NCBKernSizeParam& param);
 WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 template <bool quantized, size_t filter, BiasMode bias_mode, typename Op>
-void do_conv_kern(WorkspaceBundle bundle, const NCBKernParam& kern_param,
+void do_conv_kern(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
                   const NCBKernIndex& ncb_index);
 
 SmallVector<ConvBiasImpl::NCBKern> get_kimpls(const NCBKernSizeParam& param);
@@ -44,7 +44,7 @@ bool is_available(const NCBKernSizeParam& param);
 WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 template <bool quantized, size_t filter, BiasMode bias_mode, typename Op>
-void do_conv_kern(WorkspaceBundle bundle, const NCBKernParam& kern_param,
+void do_conv_kern(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
                   const NCBKernIndex& ncb_index);
 
 SmallVector<ConvBiasImpl::NCBKern> get_kimpls(const NCBKernSizeParam& param);

@@ -24,9 +24,10 @@ using namespace arm_common;
 
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8)
 
-using direct_fun = std::function<void(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& ncb_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index)>;
+using direct_fun =
+        std::function<void(const WorkspaceBundle& bundle,
+                           const ConvBiasImpl::NCBKernParam& ncb_param,
+                           const ConvBiasImpl::NCBKernIndex& ncb_index)>;
 
 namespace {
 
@@ -71,7 +72,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
 
 template <typename dst_type, size_t filter_size, BiasMode bias_mode,
           typename Op, int stride>
-static void conv_kern(WorkspaceBundle bundle,
+static void conv_kern(const WorkspaceBundle& bundle,
                       const ConvBiasImpl::NCBKernParam& ncb_param,
                       const ConvBiasImpl::NCBKernIndex& ncb_index) {
     const int OH = ncb_param.osz[0];
@@ -93,7 +94,6 @@ static void conv_kern(WorkspaceBundle bundle,
 
     constexpr int IC_PACK_SIZE = 4;
     constexpr int OC_PACK_SIZE = 4;
-    bundle.set(ncb_param.workspace_ptr);
 
     const int batch_id = ncb_index.ndrange_id[0];
     const int group_id = ncb_index.ndrange_id[1];
@@ -326,8 +326,10 @@ ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
                                            IC * IW * sizeof(int8_t) * 2);
         size_t oh_tiles = static_cast<size_t>(div_ceil(OH, oh_tile_size));
 
-        auto do_conv = [wbundle, kernel](const NCBKernParam& ncb_param,
-                                         const NCBKernIndex& ncb_index) {
+        auto do_conv = [wbundle, kernel](
+                               const NCBKernParam& ncb_param,
+                               const NCBKernIndex& ncb_index) mutable {
+            wbundle.set(ncb_param.workspace_ptr);
             kernel(wbundle, ncb_param, std::move(ncb_index));
         };
 

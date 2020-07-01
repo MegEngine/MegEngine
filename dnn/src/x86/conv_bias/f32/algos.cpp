@@ -58,45 +58,47 @@ void get_rectified_size(size_t IH, size_t IW, size_t OH, size_t OW, size_t FH,
 }
 }  // namespace
 
-#define GET_KERN                                                         \
-    auto fm = param.filter_meta;                                         \
-    size_t N = param.n;                                                  \
-    size_t IC = param.filter_meta.icpg;                                  \
-    size_t OC = param.filter_meta.ocpg;                                  \
-    size_t group = fm.group;                                             \
-    WorkspaceBundle wbundle = get_bundle(param);                         \
-    SmallVector<NCBKern> ret_kerns;                                      \
-    if (m_large_group) {                                                 \
-        auto exec_one_group = [wbundle](const NCBKernParam& kern_param,  \
-                                        const NCBKernIndex& ncb_index) { \
-            auto fm = kern_param.filter_meta;                            \
-            size_t IC = fm.icpg;                                         \
-            size_t OC = fm.ocpg;                                         \
-            WorkspaceBundle bundle = wbundle;                            \
-            for (size_t ic = 0; ic < IC; ic++) {                         \
-                copy_padding_kern(bundle, kern_param, ncb_index,         \
-                                  {ncb_index.thread_id, 0, ic});         \
-            }                                                            \
-            for (size_t oc = 0; oc < OC; oc++) {                         \
-                do_conv_kern(bundle, kern_param, ncb_index,              \
-                             {ncb_index.thread_id, 0, oc});              \
-            }                                                            \
-        };                                                               \
-        ret_kerns.push_back({exec_one_group, {group, N, 1_z}});          \
-    } else {                                                             \
-        auto copy_padding = [wbundle](const NCBKernParam& kern_param,    \
-                                      const NCBKernIndex& ncb_index) {   \
-            copy_padding_kern(wbundle, kern_param, ncb_index,            \
-                              ncb_index.ndrange_id);                     \
-        };                                                               \
-        ret_kerns.push_back({copy_padding, {group, N, IC}});             \
-        auto do_conv = [wbundle](const NCBKernParam& kern_param,         \
-                                 const NCBKernIndex& ncb_index) {        \
-            do_conv_kern(wbundle, kern_param, ncb_index,                 \
-                         ncb_index.ndrange_id);                          \
-        };                                                               \
-        ret_kerns.push_back({do_conv, {group, N, OC}});                  \
-    }                                                                    \
+#define GET_KERN                                                               \
+    auto fm = param.filter_meta;                                               \
+    size_t N = param.n;                                                        \
+    size_t IC = param.filter_meta.icpg;                                        \
+    size_t OC = param.filter_meta.ocpg;                                        \
+    size_t group = fm.group;                                                   \
+    WorkspaceBundle bundle = get_bundle(param);                                \
+    SmallVector<NCBKern> ret_kerns;                                            \
+    if (m_large_group) {                                                       \
+        auto exec_one_group = [bundle](                                        \
+                                      const NCBKernParam& kern_param,          \
+                                      const NCBKernIndex& ncb_index) mutable { \
+            bundle.set(kern_param.workspace_ptr);                              \
+            auto fm = kern_param.filter_meta;                                  \
+            size_t IC = fm.icpg;                                               \
+            size_t OC = fm.ocpg;                                               \
+            for (size_t ic = 0; ic < IC; ic++) {                               \
+                copy_padding_kern(bundle, kern_param, ncb_index,               \
+                                  {ncb_index.thread_id, 0, ic});               \
+            }                                                                  \
+            for (size_t oc = 0; oc < OC; oc++) {                               \
+                do_conv_kern(bundle, kern_param, ncb_index,                    \
+                             {ncb_index.thread_id, 0, oc});                    \
+            }                                                                  \
+        };                                                                     \
+        ret_kerns.push_back({exec_one_group, {group, N, 1_z}});                \
+    } else {                                                                   \
+        auto copy_padding = [bundle](const NCBKernParam& kern_param,           \
+                                     const NCBKernIndex& ncb_index) mutable {  \
+            bundle.set(kern_param.workspace_ptr);                              \
+            copy_padding_kern(bundle, kern_param, ncb_index,                   \
+                              ncb_index.ndrange_id);                           \
+        };                                                                     \
+        ret_kerns.push_back({copy_padding, {group, N, IC}});                   \
+        auto do_conv = [bundle](const NCBKernParam& kern_param,                \
+                                const NCBKernIndex& ncb_index) mutable {       \
+            bundle.set(kern_param.workspace_ptr);                              \
+            do_conv_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id); \
+        };                                                                     \
+        ret_kerns.push_back({do_conv, {group, N, OC}});                        \
+    }                                                                          \
     return ret_kerns;
 
 /* ===================== direct algo ===================== */
@@ -146,7 +148,8 @@ size_t ConvBiasImpl::AlgoDirect::get_workspace(
 
 //! Process one input channel copy padding
 void ConvBiasImpl::AlgoDirect::copy_padding_kern(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids) {
     size_t IH = kern_param.isz[0];
@@ -169,7 +172,6 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
     const float* sptr = static_cast<const float*>(
                                 kern_param.src<float>(batch_id, group_id)) +
                         channel_id * IH * IW;
-    bundle.set(kern_param.workspace_ptr);
 
     //! Used for get the workspace offset
     size_t workspace_group_id = workspace_ids[0],
@@ -239,7 +241,7 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
     func = detail::convolution_##mode##_fh##fsize##_##simd;
 
 //! compute one output channel
-void ConvBiasImpl::AlgoDirect::do_conv_kern(WorkspaceBundle bundle,
+void ConvBiasImpl::AlgoDirect::do_conv_kern(const WorkspaceBundle& bundle,
                                             const NCBKernParam& kern_param,
                                             const NCBKernIndex& ncb_index,
                                             const CpuNDRange& workspace_ids) {
@@ -265,7 +267,6 @@ void ConvBiasImpl::AlgoDirect::do_conv_kern(WorkspaceBundle bundle,
             func = nullptr;
     DISPATCH;
 
-    bundle.set(kern_param.workspace_ptr);
     size_t bias_offset = 0;
     if (kern_param.bias_mode == megdnn::BiasMode::BIAS) {
         bias_offset = OH * OW;
@@ -367,7 +368,8 @@ size_t ConvBiasImpl::AlgoDirectStride2::get_workspace(
 }
 //! Process one input channel copy padding
 void ConvBiasImpl::AlgoDirectStride2::copy_padding_kern(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids) {
     size_t IH = kern_param.isz[0];
@@ -390,7 +392,6 @@ void ConvBiasImpl::AlgoDirectStride2::copy_padding_kern(
     const float* sptr = static_cast<const float*>(
                                 kern_param.src<float>(batch_id, group_id)) +
                         channel_id * IH * IW;
-    bundle.set(kern_param.workspace_ptr);
     //! Used for get the workspace offset
     size_t workspace_group_id = workspace_ids[0],
            workspace_batch_id = workspace_ids[1],
@@ -411,7 +412,7 @@ void ConvBiasImpl::AlgoDirectStride2::copy_padding_kern(
 
 //! compute one output channel
 void ConvBiasImpl::AlgoDirectStride2::do_conv_kern(
-        WorkspaceBundle bundle, const NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
         const NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     size_t OH = kern_param.osz[0];
     size_t OW = kern_param.osz[1];
@@ -446,7 +447,6 @@ void ConvBiasImpl::AlgoDirectStride2::do_conv_kern(
         func_add_dst = conv_general_simd::do_conv_7x7_stride2<true>;
     }
 
-    bundle.set(kern_param.workspace_ptr);
     size_t bias_offset = 0;
     if (kern_param.bias_mode == megdnn::BiasMode::BIAS) {
         bias_offset = OH * OW;

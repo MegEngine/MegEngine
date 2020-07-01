@@ -76,7 +76,7 @@ WorkspaceBundle stride1::get_bundle(
 
 //! compute one output channel
 template <bool quantized, size_t filter, BiasMode bias_mode, typename Op>
-void stride1::do_conv_kern(WorkspaceBundle bundle,
+void stride1::do_conv_kern(const WorkspaceBundle& bundle,
                            const NCBKernParam& kern_param,
                            const NCBKernIndex& ncb_index) {
     size_t PH = kern_param.filter_meta.padding[0];
@@ -100,7 +100,6 @@ void stride1::do_conv_kern(WorkspaceBundle bundle,
 
     size_t thread_id = ncb_index.thread_id, batch_id = ncb_index.ndrange_id[0];
     size_t group_id = ncb_index.ndrange_id[1];
-    bundle.set(kern_param.workspace_ptr);
     int8_t* padding_src = static_cast<int8_t*>(bundle.get(thread_id));
     const int8_t* sptr =
             kern_param.src<dt_int8>(batch_id, group_id, 0, pack_group_size);
@@ -210,7 +209,8 @@ SmallVector<ConvBiasImpl::NCBKern> stride1::get_kimpls(
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
     auto exec_one_group = [wbundle, do_conv_fun](
                                   const NCBKernParam& kern_param,
-                                  const NCBKernIndex& ncb_index) {
+                                  const NCBKernIndex& ncb_index) mutable {
+        wbundle.set(kern_param.workspace_ptr);
         do_conv_fun(wbundle, kern_param, ncb_index);
     };
     ret_kerns.push_back({exec_one_group, {N, group}});
@@ -253,7 +253,7 @@ WorkspaceBundle stride2::get_bundle(
 
 //! compute one output channel
 template <bool quantized, size_t filter, BiasMode bias_mode, typename Op>
-void stride2::do_conv_kern(WorkspaceBundle bundle,
+void stride2::do_conv_kern(const WorkspaceBundle& bundle,
                            const NCBKernParam& kern_param,
                            const NCBKernIndex& ncb_index) {
     size_t PH = kern_param.filter_meta.padding[0];
@@ -277,7 +277,6 @@ void stride2::do_conv_kern(WorkspaceBundle bundle,
 
     size_t thread_id = ncb_index.thread_id, batch_id = ncb_index.ndrange_id[0];
     size_t group_id = ncb_index.ndrange_id[1];
-    bundle.set(kern_param.workspace_ptr);
     int8_t* padding_src = static_cast<int8_t*>(bundle.get(thread_id));
     const int8_t* sptr =
             kern_param.src<dt_int8>(batch_id, group_id, 0, pack_group_size);
@@ -325,7 +324,8 @@ SmallVector<ConvBiasImpl::NCBKern> stride2::get_kimpls(
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
     auto exec_one_group = [wbundle, do_conv_fun](
                                   const NCBKernParam& kern_param,
-                                  const NCBKernIndex& ncb_index) {
+                                  const NCBKernIndex& ncb_index) mutable {
+        wbundle.set(kern_param.workspace_ptr);
         do_conv_fun(wbundle, kern_param, ncb_index);
     };
     ret_kerns.push_back({exec_one_group, {N, group}});

@@ -119,7 +119,8 @@ MultithreadDirectConvCommon<io_ctype, compute_ctype>::get_bundle_stride(
 //! Process one output channel weight flip
 template <typename io_ctype, typename compute_ctype>
 void MultithreadDirectConvCommon<io_ctype, compute_ctype>::weight_flip_kern(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids) {
     size_t FH = kern_param.filter_meta.spatial[0];
@@ -131,7 +132,6 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::weight_flip_kern(
            group_id = ncb_index.ndrange_id[0];
     const io_ctype* filter =
             kern_param.filter<io_ctype>(group_id) + channel_id * FH * FW * IC;
-    bundle.set(kern_param.workspace_ptr);
     io_ctype* filter_flip =
             static_cast<io_ctype*>(bundle.get(1)) +
             (workspace_group_id * IC * OC + channel_id * IC) * FH * FW;
@@ -148,7 +148,8 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::weight_flip_kern(
 //! Process one input channel copy padding
 template <typename io_ctype, typename compute_ctype>
 void MultithreadDirectConvCommon<io_ctype, compute_ctype>::copy_padding_kern(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const CpuNDRange& workspace_ids) {
     size_t IH = kern_param.isz[0];
@@ -161,7 +162,6 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::copy_padding_kern(
     size_t padding_group_size = IH2 * IW2 * IC;
     size_t N = kern_param.n;
     size_t GROUP = kern_param.filter_meta.group;
-    bundle.set(kern_param.workspace_ptr);
 
     //! Used for get the workspace offset
     size_t workspace_group_id = workspace_ids[0],
@@ -191,7 +191,7 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::copy_padding_kern(
 //! Process one input channel copy padding
 template <typename io_ctype, typename compute_ctype>
 void MultithreadDirectConvCommon<io_ctype, compute_ctype>::
-        copy_padding_kern_stride(WorkspaceBundle bundle,
+        copy_padding_kern_stride(const WorkspaceBundle& bundle,
                                  const ConvBiasImpl::NCBKernParam& kern_param,
                                  const ConvBiasImpl::NCBKernIndex& ncb_index,
                                  const CpuNDRange& workspace_ids) {
@@ -208,7 +208,6 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::
     size_t GROUP = kern_param.filter_meta.group;
     get_rectified_size(kern_param, IH, IW, OH, OW, FH, FW, PH, PW, IH2, IW2, OW2);
     size_t padding_group_size = IH2 * IW2 * IC;
-    bundle.set(kern_param.workspace_ptr);
 
     //! Used for get the workspace offset
     size_t workspace_group_id = workspace_ids[0],
@@ -235,7 +234,8 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::
 //! compute one output channel
 template <typename io_ctype, typename compute_ctype>
 void MultithreadDirectConvCommon<io_ctype, compute_ctype>::do_conv_kern(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const kern_direct_conv_f32& fun, const CpuNDRange& workspace_ids) {
     size_t OH = kern_param.osz[0];
@@ -251,7 +251,6 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::do_conv_kern(
     size_t padding_group_size = IH2 * IW2 * IC;
     size_t N = kern_param.n;
     size_t GROUP = kern_param.filter_meta.group;
-    bundle.set(kern_param.workspace_ptr);
 
     size_t group_id = ncb_index.ndrange_id[0],
            batch_id = ncb_index.ndrange_id[1];
@@ -305,7 +304,8 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::do_conv_kern(
 //! compute one output channel
 template <typename io_ctype, typename compute_ctype>
 void MultithreadDirectConvCommon<io_ctype, compute_ctype>::do_conv_kern_stride(
-        WorkspaceBundle bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const WorkspaceBundle& bundle,
+        const ConvBiasImpl::NCBKernParam& kern_param,
         const ConvBiasImpl::NCBKernIndex& ncb_index,
         const kern_direct_conv_f32_stride& fun,
         const CpuNDRange& workspace_ids) {
@@ -323,7 +323,6 @@ void MultithreadDirectConvCommon<io_ctype, compute_ctype>::do_conv_kern_stride(
 
     size_t padding_group_size = IH2 * IW2 * IC;
     size_t GROUP = kern_param.filter_meta.group;
-    bundle.set(kern_param.workspace_ptr);
 
     //! Used for get the workspace offset
     size_t group_id = ncb_index.ndrange_id[0],

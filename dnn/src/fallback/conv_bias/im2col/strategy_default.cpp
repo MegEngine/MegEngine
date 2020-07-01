@@ -18,7 +18,7 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
               postprocess_mode, PackMode::DEFAULT>::
-        packA_kern(WorkspaceBundle bundle,
+        packA_kern(const WorkspaceBundle& bundle,
                    const fallback::ConvBiasImpl::NCBKernParam& param,
                    fallback::MatrixMulImpl::KernSizeParam matmulparam,
                    const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
@@ -26,7 +26,6 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                    const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
                            matmul_desc,
                    size_t) {
-    bundle.set(param.workspace_ptr);
     fallback::MatrixMulImpl::KernParam matmul_param;
     size_t group_id = ncb_index.ndrange_id[0];
     static_cast<fallback::MatrixMulImpl::KernSizeParam&>(matmul_param) =
@@ -50,7 +49,8 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
               postprocess_mode, PackMode::DEFAULT>::
-        exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+        exec_im2col(const WorkspaceBundle& bundle,
+                    const WorkspaceBundle& bundle_thread,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam matmul_param,
@@ -139,8 +139,8 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
               postprocess_mode, PackMode::DEFAULT>::
         exec_matmul(const fallback::ConvBiasImpl::NCBKernParam& param,
-                    const StrategyParam& sparam, WorkspaceBundle bundle,
-                    WorkspaceBundle bundle_thread,
+                    const StrategyParam& sparam, const WorkspaceBundle& bundle,
+                    const WorkspaceBundle& bundle_thread,
                     fallback::MatrixMulImpl::KernParam matmul_param,
                     const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                     const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,

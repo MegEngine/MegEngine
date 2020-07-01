@@ -29,7 +29,8 @@ template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           megdnn::PostprocessMode postprocess_mode>
 void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
               postprocess_mode, PackMode::DEFAULT, FormatMode::NCHW44>::
-        exec_im2col(WorkspaceBundle bundle, WorkspaceBundle bundle_thread,
+        exec_im2col(const WorkspaceBundle& bundle,
+                    const WorkspaceBundle& bundle_thread,
                     const StrategyParam& sparam,
                     const fallback::ConvBiasImpl::NCBKernParam& param,
                     fallback::MatrixMulImpl::KernParam matmul_param,
