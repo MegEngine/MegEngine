@@ -79,6 +79,7 @@ void padding_to_workspace(_megdnn_tensor_out dst, _megdnn_tensor_in src,
     }
 
         cb(Float32, dt_float32);
+        cb(QuantizedS8, dt_qint8);
         default:
             megdnn_assert(0);
 #undef cb
@@ -138,7 +139,7 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
             return n * c * h * w * src.dtype.size();
         }
         case Param::Mode::NCHW_NCHW88_CONV_DENSE_WEIGHT: {
-            megdnn_assert(src.ndim == 4, "src must be oihw ,nmdim == 5");
+            megdnn_assert(src.ndim == 4, "src must be oihw, ndim == 5");
             megdnn_assert(src[0] % 8 == 0,
                           "NCHW_NCHW88_CONV_DENSE_WEIGHT oc must align to 8");
             if (src[1] % 8 == 0)
@@ -150,7 +151,7 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
             return oc * ic * h * w * src.dtype.size();
         }
         case Param::Mode::NCHW_NCHW88_CONV_GROUP_WEIGHT: {
-            megdnn_assert(src.ndim == 5, "src must be goihw ,nmdim == 5");
+            megdnn_assert(src.ndim == 5, "src must be goihw, ndim == 5");
             megdnn_assert(src[1] % 8 == 0,
                           "NCHW_NCHW88_CONV_CHAN_WEIGHT oc per group must "
                           "align to 8");
@@ -164,7 +165,7 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
             return group * ocpg * icpg * h * w * src.dtype.size();
         }
         case Param::Mode::NCHW_NCHW88_CONV_CHAN_WEIGHT: {
-            megdnn_assert(src.ndim == 5, "src must be goihw ,nmdim == 5");
+            megdnn_assert(src.ndim == 5, "src must be goihw, ndim == 5");
             if (src[0] % 8 == 0)
                 return 0;
             size_t group = round_up(src[0], 8_z);
@@ -174,6 +175,27 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
             size_t w = src[4];
             return group * ocpg * icpg * h * w * src.dtype.size();
         }
+
+        case Param::Mode::NCHW_NCHW4_IC_SMALL: {
+            if (src[1] % 4 == 0)
+                return 0;
+            size_t n = src[0];
+            size_t c = round_up(src[1], 4_z);
+            size_t h = src[2];
+            size_t w = src[3];
+            return n * c * h * w * src.dtype.size();
+        }
+        case Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT: {
+            megdnn_assert(src.ndim == 4, "src must be oihw, ndim == 5");
+            if (src[1] % 4 == 0)
+                return 0;
+            size_t oc = src[0];
+            size_t ic = round_up(src[1], 4_z);
+            size_t h = src[2];
+            size_t w = src[3];
+            return oc * ic * h * w * src.dtype.size();
+        }
+
         default:
             return 0;
     }
@@ -244,31 +266,28 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             exec_src_nd.raw_ptr = workspace.raw_ptr;
         }
     } else if (param().mode == Param::Mode::NCHW_NCHW88) {
-        size_t ic = src.layout[1];
-        if (ic % 8 != 0) {
-            padding_to_workspace({workspace.raw_ptr, exec_src}, src, 1, 8);
-            exec_src_nd.raw_ptr = workspace.raw_ptr;
-        }
+#define cb(_idx, _pack_size)                                           \
+    size_t val = src.layout[_idx];                                     \
+    if (val % _pack_size != 0) {                                       \
+        padding_to_workspace({workspace.raw_ptr, exec_src}, src, _idx, \
+                             _pack_size);                              \
+        exec_src_nd.raw_ptr = workspace.raw_ptr;                       \
+    }
+        cb(1, 8);
+
     } else if (param().mode == Param::Mode::NCHW_NCHW88_CONV_DENSE_WEIGHT) {
         megdnn_assert(src.layout[0] % 8 == 0);
-        size_t ic = src.layout[1];
-        if (ic % 8 != 0) {
-            padding_to_workspace({workspace.raw_ptr, exec_src}, src, 1, 8_z);
-            exec_src_nd.raw_ptr = workspace.raw_ptr;
-        }
+        cb(1, 8);
     } else if (param().mode == Param::Mode::NCHW_NCHW88_CONV_CHAN_WEIGHT) {
-        size_t group = src.layout[0];
-        if (group % 8 != 0) {
-            padding_to_workspace({workspace.raw_ptr, exec_src}, src, 0, 8_z);
-            exec_src_nd.raw_ptr = workspace.raw_ptr;
-        }
+        cb(0, 8);
     } else if (param().mode == Param::Mode::NCHW_NCHW88_CONV_GROUP_WEIGHT) {
         megdnn_assert(src.layout[1] % 8 == 0);
-        size_t ic = src.layout[2];
-        if (ic % 8 != 0) {
-            padding_to_workspace({workspace.raw_ptr, exec_src}, src, 2, 8_z);
-            exec_src_nd.raw_ptr = workspace.raw_ptr;
-        }
+        cb(2, 8);
+    } else if (param().mode == Param::Mode::NCHW_NCHW4_IC_SMALL) {
+        cb(1, 4);
+    } else if (param().mode ==
+               Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT) {
+        cb(1, 4);
     }
     m_handle->relayout_opr()->exec(exec_src_nd, exec_dst_nd, handle());
 }
