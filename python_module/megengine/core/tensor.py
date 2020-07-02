@@ -235,6 +235,14 @@ class Tensor:
             return self.__val.dtype
         return self._symvar.dtype
 
+    def set_dtype(self, dtype: str = None):
+        r"""Set the data type of the tensor.
+        """
+        if self.__val is not None:
+            self.__val = mgb.make_shared(self.device, value=self.astype(dtype).numpy())
+        elif self.__sym is not None:
+            self.__sym = self.__sym.astype(dtype)
+
     @property
     def _comp_node(self):
         if self.__val is not None:

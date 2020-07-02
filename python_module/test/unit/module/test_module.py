@@ -14,8 +14,10 @@ import pytest
 from helpers import MLP
 
 import megengine as mge
+import megengine._internal as mgb
 from megengine.core import Buffer, Parameter, Tensor, tensor
 from megengine.module import BatchNorm1d, BatchNorm2d, Conv2d, Module, Sequential
+from megengine.quantization.quantize import quantize, quantize_qat
 from megengine.test import assertTensorClose
 
 
@@ -347,3 +349,38 @@ def test_dump_model():
     pred = mlp(data)
     with tempfile.NamedTemporaryFile() as f:
         mge.dump(pred, f.name)
+
+
+def test_load_quantized():
+    data_shape = (2, 28)
+    data = tensor(np.random.random(data_shape), dtype="float32")
+    data = data.astype(mgb.dtype.qint8(0.1))
+    mlp = MLP()
+    quantize_qat(mlp)
+    quantize(mlp)
+    mlp.dense0.weight = Parameter(
+        mlp.dense0.weight.astype(mgb.dtype.qint8(0.001)).numpy()
+    )
+    mlp.dense1.weight = Parameter(
+        mlp.dense1.weight.astype(mgb.dtype.qint8(0.0002)).numpy()
+    )
+    mlp.eval()
+    pred0 = mlp(data)
+
+    with BytesIO() as fout:
+        mge.save(mlp.state_dict(), fout)
+        fout.seek(0)
+        checkpoint = mge.load(fout)
+        # change mlp weight.
+        mlp.dense0.weight = Parameter(
+            mlp.dense0.weight.astype(mgb.dtype.qint8(0.00001)).numpy()
+        )
+        mlp.dense1.weight = Parameter(
+            mlp.dense1.weight.astype(mgb.dtype.qint8(0.2)).numpy()
+        )
+        mlp.load_state_dict(checkpoint)
+        pred1 = mlp(data)
+
+    assertTensorClose(
+        pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), max_err=5e-6
+    )
