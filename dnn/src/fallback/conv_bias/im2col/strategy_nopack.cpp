@@ -26,7 +26,7 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
                    const fallback::MatrixMulImpl::AlgoBase::
                            MatmulDescription& /*matmul_dsec*/,
-                   size_t) {
+                   const StrategyParam&) {
     MEGDNN_MARK_USED_VAR(bundle);
     MEGDNN_MARK_USED_VAR(param);
     MEGDNN_MARK_USED_VAR(matmulparam);

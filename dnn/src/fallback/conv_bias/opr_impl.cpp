@@ -154,7 +154,8 @@ void ConvBiasImpl::exec_preprocess(const TensorLayout& src_layout,
             bias{nullptr, bias_layout};
     auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace,
                                       preprocessed_filter);
-    ConvolutionImpl::Algorithm* algo = get_algorithm(fparam, workspace.size);
+    //! should not pass workspace_size limit otherwise can not find match algo
+    ConvBiasImpl::Algorithm* algo = get_algorithm(fparam);
     if (!is_naive_algo(algo) && NCB_ALGO_FUNC(get_preprocess_workspace, algo,
                                               fparam) <= workspace.size) {
         exec_preprocess_with_ncb_kern(fparam, algo);

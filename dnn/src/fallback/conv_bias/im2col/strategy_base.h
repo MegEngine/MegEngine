@@ -40,9 +40,11 @@ struct StrategyParam {
     size_t block_n;
     size_t block_k;
     size_t pack_oc_size;
+    size_t packA_group_size;
     bool skip_copy_dst;
     bool is_dst_8bit;
     bool is_ohw_size_bigger;
+    bool enable_filter_preprocess;
 };
 
 class StrategyBase {
@@ -62,7 +64,7 @@ public:
             const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
             const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
                     matmul_desec,
-            size_t pack_size) = 0;
+            const StrategyParam& sparam) = 0;
 
     virtual void exec_im2col(
             const WorkspaceBundle& bundle, const WorkspaceBundle& bundle_thread,
@@ -296,7 +298,7 @@ public:
             const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
             const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
                     matmul_desc,
-            size_t pack_size) override;
+            const StrategyParam& sparam) override;
     virtual void exec_im2col(
             const WorkspaceBundle& bundle, const WorkspaceBundle& bundle_thread,
             const StrategyParam& sparam,
@@ -375,7 +377,7 @@ public:
             const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
             const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
             const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& MDsec,
-            size_t pack_size) override;
+            const StrategyParam& sparam) override;
 
     void exec_matmul(const fallback::ConvBiasImpl::NCBKernParam& param,
                      const StrategyParam& sparam, const WorkspaceBundle& bundle,
@@ -431,7 +433,7 @@ public:
             const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
             const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
             const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& MDsec,
-            size_t pack_size) override;
+            const StrategyParam& sparam) override;
 
     void exec_im2col(
             const WorkspaceBundle& bundle, const WorkspaceBundle& bundle_thread,

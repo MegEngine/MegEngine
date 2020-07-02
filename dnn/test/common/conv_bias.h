@@ -58,7 +58,10 @@ std::vector<TestArg> get_int8_chwn4_tensorcore_args(size_t kernel_size);
 std::vector<TestArg> get_int8_nchw44_args(size_t kernel_size, size_t pack_size,
                                           bool compute_float32 = false,
                                           bool group_mode = false);
-
+void check_conv_bias_preprocess(std::vector<conv_bias::TestArg> args,
+                                Handle* handle, RNG* rng, float epsilon,
+                                DType type0, DType type1, DType type2,
+                                DType type3, const char* algo_name);
 template <typename Opr>
 using ConvBiasAlgoChecker = AlgoChecker<Opr>;
 

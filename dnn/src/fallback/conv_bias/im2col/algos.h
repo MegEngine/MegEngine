@@ -22,27 +22,6 @@ namespace megdnn {
 namespace fallback {
 
 class ConvBiasImpl::AlgoIm2col final : public AlgoBase {
-    //! calculate m_oc_tile_size in choice_ohw_oc_block() fucntion,
-    //! when m_oc_tile_size < this value m_oc_tile_size = ohw
-    static constexpr size_t DEFAULT_OHW_MIN_TILE_SIZE = 32;
-    //! when nr_threads > 1 and round(ohw,nr_threads)>nr_threads,
-    //! m_oc_tile_size = DEFAULT_OC_TILE_SIZE
-    static constexpr size_t DEFAULT_OC_TILE_SIZE = 512;
-    //! when m_oc_tile_size > this value m_oc_tile_size =
-    //! DEFAULT_OC_MAX_TILE_SIZE
-    static constexpr size_t DEFAULT_OC_MAX_TILE_SIZE = 1024;
-    //! when m_oc_tile_size < this value m_oc_tile_size =
-    //! DEFAULT_OC_MIN_TILE_SIZE the purpose is aligning the calculation
-    static constexpr size_t DEFAULT_OC_MIN_TILE_SIZE = 128;
-    fallback::MatrixMulImpl::KernSizeParam get_matmul_kern_param(
-            const NCBKernSizeParam& param, size_t ohw_tile_size,
-            size_t oc_tile_size) const;
-    WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
-    void choice_ohw_oc_block(
-            const NCBKernSizeParam& param, size_t& oc_tile_size,
-            size_t& ohw_tile_size, size_t block_m, size_t block_n,
-            fallback::MatrixMulImpl::AlgoBase::PackMode pack_mode) const;
-
 public:
     AlgoIm2col(MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size)
             : m_matmul_algo(matmul_algo),
@@ -59,10 +38,16 @@ public:
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam& param) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const NCBKernSizeParam& param) const override;
-    bool is_preferred(
-                      const NCBKernSizeParam& param) const override {
+    size_t get_preprocess_workspace(
+            const NCBKernSizeParam& /*param*/) const override {
+        return 0;
+    }
+    SmallVector<NCBKern> dispatch_preprocess_kerns(
+            const NCBKernSizeParam& param) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override {
         if (param.src_type.category() == DTypeCategory::QUANTIZED) {
             static CpuOprDelegationStorage<1> storage;
             auto conv_bias_opr = storage.get<ConvBias, 0>();
