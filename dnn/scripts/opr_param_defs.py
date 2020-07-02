@@ -434,7 +434,7 @@ pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)
               'layout is (K/4, M/4, 4(k), 4(m)) x (K/4, N, 4(k))'),
           Doc('MK8', 'Split 8 from M and K, better for neon compute:'
               '(M/8, K/8, 8(k), 8(m)) x (K/8, N, 8(k)). if transposeA the '
-              'layout is (K/8, M/8, 8(k), 8(m)) x (K/8, N, 8(k))'), 
+              'layout is (K/8, M/8, 8(k), 8(m)) x (K/8, N, 8(k))'),
           Doc('MK4_DOT', 'Split 4 from M and K, better for neon dotprod:'
               'M/4, K/4, 4(m), 4(k)) x (K/4, N, 4(k)). if transposeA the '
               'layout is (K/4, M/4, 4(m), 4(k)) x (K/4, N, 4(k))'))
@@ -858,7 +858,10 @@ when the ``I`` suffix is present.
      'NCHW_NCHW88_CONV_CHAN_WEIGHT',
      'NCHW_NCHW88_CONV_GROUP_WEIGHT',
      'NCHW_NCHW88',
-     'NCHW88_NCHW')
+     'NCHW88_NCHW',
+     'NCHW_NCHW4_IC_SMALL',
+     'NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT',
+     )
  )
 
 

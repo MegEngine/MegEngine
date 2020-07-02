@@ -28,6 +28,26 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src,
             dst[3] = src[3];
             dst[4] = 4;
             break;
+        case Param::Mode::NCHW_NCHW4_IC_SMALL:
+            dst.ndim = 5;
+            megdnn_assert(src[1] <= 4_z, "ic should be less equal 4");
+            dst[0] = src[0];
+            dst[1] = div_ceil(src[1], 4_z);
+            dst[2] = src[2];
+            dst[3] = src[3];
+            dst[4] = 4;
+            break;
+        case Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT:
+            megdnn_assert(src.ndim == 4, "src must be oihw, ndim == 4");
+            megdnn_assert(src[1] <= 4_z, "ic should be less equal 4");
+            dst.ndim = 5;
+            dst[0] = src[0];
+            dst[1] = div_ceil(src[1], 4_z);
+            dst[2] = src[2];
+            dst[3] = src[3];
+            dst[4] = 4;
+            break;
+
         case Param::Mode::NCHW_NCHW88:
             dst.ndim = 5;
             dst[0] = src[0];
@@ -276,6 +296,8 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
         case Param::Mode::NCHW_NCHW88_CONV_DENSE_WEIGHT:
         case Param::Mode::NCHW_NCHW88_CONV_CHAN_WEIGHT:
         case Param::Mode::NCHW_NCHW88_CONV_GROUP_WEIGHT:
+        case Param::Mode::NCHW_NCHW4_IC_SMALL:
+        case Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT:
             CHECK_SRC(DefaultTensorFormat::make());
             dst = src;
             break;
@@ -374,6 +396,23 @@ void RelayoutFormat::deduce_exec_layout(const TensorLayout& src,
                 exec_dst = dst;
             }
             break;
+
+        case Param::Mode::NCHW_NCHW4_IC_SMALL:
+        case Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT:
+            // nchw to nchw4c or oihw to oihw4i
+            {
+                TensorLayout work_space_layout(
+                        {src[0], round_up(src[1], 4_z), src[2], src[3]},
+                        src.dtype, src.format);
+                exec_src = work_space_layout
+                                   .reshape({src[0], div_ceil(src[1], 4_z), 4,
+                                             src[2], src[3]})
+                                   .dimshuffle({0, 1, 3, 4, 2});
+                exec_dst = dst;
+            }
+            break;
+
+
         case Param::Mode::NCHW_NHWCD4:
         case Param::Mode::NCHW_NHWCD4I:
             // src is {N, C, H, W}
