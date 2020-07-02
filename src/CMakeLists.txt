@@ -170,6 +170,7 @@ if(NOT MGE_BUILD_XXX)
     # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
     # for this.
     install(TARGETS megengine
+            EXPORT ${MGE_EXPORT_TARGETS}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
