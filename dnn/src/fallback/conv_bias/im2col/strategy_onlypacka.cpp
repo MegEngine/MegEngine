@@ -26,7 +26,7 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                    const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
                    const fallback::MatrixMulImpl::AlgoBase::
                            MatmulDescription& /*matmul_desc*/,
-                   size_t) {
+                   const StrategyParam& sparam) {
     fallback::MatrixMulImpl::KernParam matmul_param;
     static_cast<fallback::MatrixMulImpl::KernSizeParam&>(matmul_param) =
             matmulparam;
@@ -36,12 +36,17 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
     size_t output_block_oc_size =
             std::min(oc_tile_size, OC - ncb_index.ndrange_id[1] * oc_tile_size);
     size_t oc_cur_index = ncb_index.ndrange_id[1] * oc_tile_size;
-    size_t packA_group_size =
-            bundle.get_size(BUNDLE_PACKA_INDEX) / param.filter_meta.group;
     size_t a_panel_offset = ncb_index.ndrange_id[1] *
                             matmul_algo->get_bundle(matmul_param).get_size(0);
-    int8_t* a_panel = static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX)) +
-                      group_id * packA_group_size + a_panel_offset;
+
+    int8_t* tmp_ptr =
+           sparam.enable_filter_preprocess
+                    ? static_cast<int8_t*>(
+                              param.preprocessed_filter->tensors[0].raw_ptr)
+                    : static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX));
+
+    int8_t* a_panel = tmp_ptr +
+                      group_id * sparam.packA_group_size + a_panel_offset;
     matmul_param.A_ptr =
             const_cast<src_ctype*>(param.filter<src_ctype>(group_id)) +
             oc_cur_index * matmul_param.K;
@@ -60,20 +65,22 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
                     fallback::MatrixMulImpl::KernParam matmul_param,
                     const fallback::MatrixMulImpl::AlgoBase* matmul_algo,
                     const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
-                    const fallback::MatrixMulImpl::AlgoBase::
-                            MatmulDescription& /*matmul_desc*/
-        ) {
-    size_t packA_group_size =
-            bundle.get_size(BUNDLE_PACKA_INDEX) / param.filter_meta.group;
+                    const fallback::MatrixMulImpl::AlgoBase::MatmulDescription&
+                            /*matmul_desc*/) {
     size_t a_panel_offset = ncb_index.ndrange_id[3] *
                             matmul_algo->get_bundle(matmul_param).get_size(0);
-    a_panel_offset = sparam.group_id * packA_group_size + a_panel_offset;
+    a_panel_offset =
+            sparam.group_id * sparam.packA_group_size + a_panel_offset;
 
     void* matmul_dst = get_matmul_dst_ptr(param, bundle_thread, sparam);
 
-    src_ctype* a_panel = reinterpret_cast<src_ctype*>(
-            reinterpret_cast<uintptr_t>(bundle.get(BUNDLE_PACKA_INDEX)) +
-            a_panel_offset);
+    int8_t* tmp_ptr =
+            sparam.enable_filter_preprocess
+                    ? static_cast<int8_t*>(
+                              param.preprocessed_filter->tensors[0].raw_ptr)
+                    : static_cast<int8_t*>(bundle.get(BUNDLE_PACKA_INDEX));
+
+    src_ctype* a_panel = reinterpret_cast<src_ctype*>(tmp_ptr + a_panel_offset);
     src_ctype* b_panel = nullptr;
 
     src_ctype* im2col_dst = static_cast<src_ctype*>(

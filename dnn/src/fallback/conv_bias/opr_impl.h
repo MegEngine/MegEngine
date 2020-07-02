@@ -299,6 +299,11 @@ private:
             const PreprocessedFilter* preprocessed_filter);
 };
 
+inline bool is_enable_filter_preprocess(
+        const ConvBiasImpl::NCBKernSizeParam& param) {
+    return param.preprocessed_filter &&
+           param.preprocessed_filter->tensors.size() >= 1;
+}
 }  // namespace fallback
 }  // namespace megdnn
 

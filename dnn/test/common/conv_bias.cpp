@@ -1118,6 +1118,30 @@ void checker_conv_bias_int8x8x16(std::vector<conv_bias::TestArg> args,
     }
 }
 
+void check_conv_bias_preprocess(std::vector<conv_bias::TestArg> args,
+                                Handle* handle, RNG* rng, float epsilon,
+                                DType type0, DType type1, DType type2,
+                                DType type3, const char* algo_name) {
+    using namespace conv_bias;
+
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle);
+    checker.set_dtype(0, type0);
+    checker.set_dtype(1, type1);
+    checker.set_dtype(2, type2);
+    checker.set_dtype(4, type3);
+    checker.set_epsilon(epsilon);
+    if (NULL != rng) {
+        checker.set_rng(0, rng).set_rng(1, rng).set_rng(2, rng).set_rng(3, rng);
+    }
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
 
 void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
                               param::ConvBias param, Handle* handle,

@@ -31,35 +31,10 @@ using namespace im2col;
  *  *Through witch can convenient get the needed ptr
  */
 struct Im2colBundelIndex {
-    static constexpr size_t BUNDLE_PADDING_INDEX = 0_z;
-    static constexpr size_t BUNDLE_PACKA_INDEX = 1_z;
     static constexpr size_t BUNDLE_THREAD_INDEX = 2_z;
 };
 
 using Pack_Mode=fallback::MatrixMulImpl::AlgoBase::PackMode;
-
-//! Process one input channel copy padding
-static void copy_padding_kern(WorkspaceBundle& bundle,
-                              const ConvBiasImpl::NCBKernParam& param,
-                              const ConvBiasImpl::NCBKernIndex& ncb_index,
-                              StrategyBase* im2colstrategy, size_t pack_oc_size) {
-    im2colstrategy->copy_padding_kern(bundle, param, ncb_index, pack_oc_size);
-}
-
-//! packA_kern
-static void packA_kern(
-        WorkspaceBundle& bundle,
-        const fallback::ConvBiasImpl::NCBKernParam& param,
-        fallback::MatrixMulImpl::KernSizeParam matmulparam,
-        fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-        const fallback::ConvBiasImpl::NCBKernIndex& ncb_index,
-        StrategyBase* im2colstrategy,
-        const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& matmul_desc,
-        size_t pack_oc_size) {
-    im2colstrategy->packA_kern(bundle, param, matmulparam, matmul_algo,
-                               ncb_index, matmul_desc, pack_oc_size);
-}
-
 /*!
  * *\brief Im2colKerns collects all the im2col kerns in it
  */
@@ -124,8 +99,8 @@ public:
 
     WorkspaceBundle get_thread_bundle(
             const fallback::ConvBiasImpl::NCBKernSizeParam& param,
-            fallback::MatrixMulImpl::KernSizeParam im2col_kern_param,
-            MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size,
+            const fallback::MatrixMulImpl::KernSizeParam& im2col_kern_param,
+            const MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size,
             size_t oc_tile_size) {
         size_t IC = param.filter_meta.icpg, FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
@@ -205,8 +180,8 @@ public:
     }
     WorkspaceBundle get_thread_bundle(
             const fallback::ConvBiasImpl::NCBKernSizeParam& param,
-            fallback::MatrixMulImpl::KernSizeParam im2col_kern_param,
-            MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size,
+            const fallback::MatrixMulImpl::KernSizeParam& im2col_kern_param,
+            const MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size,
             size_t oc_tile_size) {
         size_t IC = param.filter_meta.icpg, FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
@@ -288,8 +263,8 @@ public:
     }
     WorkspaceBundle get_thread_bundle(
             const fallback::ConvBiasImpl::NCBKernSizeParam& param,
-            fallback::MatrixMulImpl::KernSizeParam im2col_kern_param,
-            MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size,
+            const fallback::MatrixMulImpl::KernSizeParam& im2col_kern_param,
+            const MatrixMulImpl::AlgoBase* matmul_algo, size_t ohw_tile_size,
             size_t oc_tile_size) {
         size_t IC = param.filter_meta.icpg, FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
@@ -322,15 +297,16 @@ public:
     }
 };
 
-fallback::MatrixMulImpl::KernSizeParam
-ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
-                                                 size_t ohw_tile_size,
-                                                 size_t oc_tile_size) const {
+namespace {
+static fallback::MatrixMulImpl::KernSizeParam get_matmul_kern_param(
+        const fallback::ConvBiasImpl::NCBKernSizeParam& param,
+        size_t ohw_tile_size, size_t oc_tile_size) {
     auto format = param::MatrixMul::Format::DEFAULT;
     size_t pack_oc_size = pack_size(param.filter_meta.format);
     if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
         format = param::MatrixMul::Format::MK4;
-    } else if(param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT){
+    } else if (param.filter_meta.format ==
+               param::ConvBias::Format::NCHW44_DOT) {
         format = param::MatrixMul::Format::MK4_DOT;
     }
     size_t M = oc_tile_size;
@@ -358,10 +334,23 @@ ConvBiasImpl::AlgoIm2col ::get_matmul_kern_param(const NCBKernSizeParam& param,
             format};
 }
 
-void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
-        const NCBKernSizeParam& param, size_t& oc_tile_size,
-        size_t& ohw_tile_size, size_t block_m, size_t block_n,
-        fallback::MatrixMulImpl::AlgoBase::PackMode pack_mode) const {
+static void choice_ohw_oc_block(
+        const fallback::ConvBiasImpl::NCBKernSizeParam& param,
+        size_t& oc_tile_size, size_t& ohw_tile_size, size_t block_m,
+        size_t block_n, const size_t m_ohw_tile_size,
+        fallback::MatrixMulImpl::AlgoBase::PackMode pack_mode) {
+    //! calculate m_oc_tile_size in choice_ohw_oc_block() fucntion,
+    //! when ohw_tile_size < this value ohw_tile_size = ohw
+    static constexpr size_t DEFAULT_OHW_MIN_TILE_SIZE = 32;
+    //! when nr_threads > 1 and round(ohw,nr_threads)>nr_threads,
+    //! oc_tile_size = DEFAULT_OC_TILE_SIZE
+    static constexpr size_t DEFAULT_OC_TILE_SIZE = 512;
+    //! when oc_tile_size > this value m_oc_tile_size =
+    //! DEFAULT_OC_MAX_TILE_SIZE
+    static constexpr size_t DEFAULT_OC_MAX_TILE_SIZE = 1024;
+    //! when oc_tile_size < this value oc_tile_size =
+    //! DEFAULT_OC_MIN_TILE_SIZE the purpose is aligning the calculation
+    static constexpr size_t DEFAULT_OC_MIN_TILE_SIZE = 128;
     size_t nr_threads = param.nr_threads;
     size_t OC = param.filter_meta.ocpg;
     size_t ohw = param.osz[0] * param.osz[1];
@@ -393,8 +382,74 @@ void ConvBiasImpl::AlgoIm2col::choice_ohw_oc_block(
     }
 }
 
-WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
-        const NCBKernSizeParam& param) const {
+static size_t packA_group_size(
+        const MatrixMulImpl::AlgoBase* matmul_algo,
+        const fallback::MatrixMulImpl::KernSizeParam& matmul_param,
+        const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& matmul_desc,
+        size_t packa_parallel_times) {
+    if (matmul_desc.packmode ==
+        fallback::MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
+        return matmul_algo->get_bundle(matmul_param).get_size(0);
+    } else if (matmul_desc.packmode ==
+               fallback::MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
+        return packa_parallel_times *
+               matmul_algo->get_bundle(matmul_param).get_size(0);
+    }
+    megdnn_assert(matmul_desc.packmode ==
+                  fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK);
+    //! nopack mode return 0;
+    return 0;
+}
+
+static WorkspaceBundle get_thread_bundle(
+        const fallback::ConvBiasImpl::NCBKernSizeParam& param,
+        const MatrixMulImpl::AlgoBase* matmul_algo,
+        const fallback::MatrixMulImpl::KernSizeParam& matmul_param,
+        const fallback::MatrixMulImpl::AlgoBase::MatmulDescription& matmul_desc,
+        size_t oc_tile_size, size_t ohw_tile_size) {
+    if (matmul_desc.packmode == Pack_Mode::DEFAULT) {
+        MIDOUT_BEGIN(
+                megdnn_fallback_im2col,
+                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_dft"_hash)) {
+            Im2colKerns<Pack_Mode::DEFAULT> defaultkern;
+            return defaultkern.get_thread_bundle(param, matmul_param,
+                                                 matmul_algo, ohw_tile_size,
+                                                 oc_tile_size);
+        }
+        MIDOUT_END();
+    } else if (matmul_desc.packmode ==
+               fallback::MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
+        MIDOUT_BEGIN(
+                megdnn_fallback_im2col,
+                midout_iv(
+                        "ConvBiasImpl::AlgoIm2col::get_bundle_onlypacka"_hash)) {
+            Im2colKerns<Pack_Mode::ONLY_PACKA> onlypackakern;
+            return onlypackakern.get_thread_bundle(param, matmul_param,
+                                                   matmul_algo, ohw_tile_size,
+                                                   oc_tile_size);
+        }
+        MIDOUT_END();
+    } else {
+        megdnn_assert(matmul_desc.packmode ==
+                      fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK);
+        MIDOUT_BEGIN(
+                megdnn_fallback_im2col,
+                midout_iv(
+                        "ConvBiasImpl::AlgoIm2col::get_thread_bundle_nopack"_hash)) {
+            Im2colKerns<Pack_Mode::NO_PACK> nopackkern;
+            return nopackkern.get_thread_bundle(param, matmul_param,
+                                                matmul_algo, ohw_tile_size,
+                                                oc_tile_size);
+        }
+        MIDOUT_END();
+    }
+    return {nullptr, {}};
+}
+
+static WorkspaceBundle get_bundle(
+        const fallback::ConvBiasImpl::NCBKernSizeParam& param,
+        MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_tile_size,
+        size_t ohw_tile_size) {
     UNPACK_CONV_F32_NCB_KERN_SIZES(param);
     MEGDNN_MARK_USED_VAR(OC);
     MEGDNN_MARK_USED_VAR(OH);
@@ -410,23 +465,20 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
     size_t padding = 0, packa_size = 0, packa_group_size = 0;
     size_t nr_threads = param.nr_threads;
     size_t GROUP = param.filter_meta.group;
-    fallback::MatrixMulImpl::AlgoBase::MatmulDescription mdesc =
-            m_matmul_algo->matmul_description();
-    bool need_pack = mdesc.packmode == Pack_Mode::DEFAULT;
-    bool only_packA = mdesc.packmode == Pack_Mode::ONLY_PACKA;
-    size_t oc_tile_size = 0, ohw_tile_size = 0;
-    choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
-                        mdesc.innerblocksize.m, mdesc.innerblocksize.n,
-                        mdesc.packmode);
-    if (need_pack || only_packA) {
-        auto im2col_kern_param = get_matmul_kern_param(
-                param, ohw_tile_size, only_packA ? oc_tile_size : OC);
-        size_t oc_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
-        WorkspaceBundle wb = m_matmul_algo->get_bundle(im2col_kern_param);
-        packa_group_size = only_packA ? oc_parallel_times * wb.get_size(0)
-                                      : wb.get_size(0);
-    } else {  //! not support pack,not need pack
+    fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
+            matmul_algo->matmul_description();
+    bool default_pack = matmul_desc.packmode == Pack_Mode::DEFAULT;
+
+    //! packmode is default should use oc
+    //! packmode is onlypackA should use oc_tile_size
+    auto im2col_kern_param = get_matmul_kern_param(
+            param, ohw_tile_size, default_pack ? OC : oc_tile_size);
+    if (is_enable_filter_preprocess(param)) {
         packa_group_size = 0;
+    } else {
+        size_t oc_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
+        packa_group_size = packA_group_size(matmul_algo, im2col_kern_param,
+                                            matmul_desc, oc_parallel_times);
     }
 
     if (no_need_pading) {
@@ -437,50 +489,27 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
     }
 
     packa_size = GROUP * packa_group_size;  //! for packA  size = GROUP * a_size
-    WorkspaceBundle ws = {nullptr, {}};
-    auto im2col_kern_param =
-            get_matmul_kern_param(param, ohw_tile_size, oc_tile_size);
 
-    if (m_matmul_algo->packmode() == Pack_Mode::DEFAULT) {
-        MIDOUT_BEGIN(
-                megdnn_fallback_im2col,
-                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_dft"_hash)) {
-            Im2colKerns<Pack_Mode::DEFAULT> defaultkern;
-            ws = defaultkern.get_thread_bundle(param, im2col_kern_param,
-                                               m_matmul_algo, ohw_tile_size,
-                                               oc_tile_size);
-        }
-        MIDOUT_END();
-    } else if (m_matmul_algo->packmode() == Pack_Mode::ONLY_PACKA) {
-        MIDOUT_BEGIN(
-                megdnn_fallback_im2col,
-                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_packa"_hash)) {
-            Im2colKerns<Pack_Mode::ONLY_PACKA> onlypackakern;
-            ws = onlypackakern.get_thread_bundle(param, im2col_kern_param,
-                                                 m_matmul_algo, ohw_tile_size,
-                                                 oc_tile_size);
-        }
-        MIDOUT_END();
-    } else {
-        MIDOUT_BEGIN(
-                megdnn_fallback_im2col,
-                midout_iv("ConvBiasImpl::AlgoIm2col::get_bundle_other"_hash)) {
-            Im2colKerns<Pack_Mode::NO_PACK> nopackkern;
-            ws = nopackkern.get_thread_bundle(param, im2col_kern_param,
-                                              m_matmul_algo, ohw_tile_size,
-                                              oc_tile_size);
-        }
-        MIDOUT_END();
-    }
-
+    WorkspaceBundle ws =
+            get_thread_bundle(param, matmul_algo, im2col_kern_param,
+                              matmul_desc, oc_tile_size, ohw_tile_size);
     return {nullptr,
             {padding, packa_size, ws.total_size_in_bytes() * nr_threads}};
 }
 
+}  // namespace
+
 size_t ConvBiasImpl::AlgoIm2col::get_workspace(
         const NCBKernSizeParam& p) const {
     MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 0) {
-        return get_bundle(p).total_size_in_bytes();
+        fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
+                m_matmul_algo->matmul_description();
+        size_t oc_tile_size = 0, ohw_tile_size = 0;
+        choice_ohw_oc_block(p, oc_tile_size, ohw_tile_size,
+                            matmul_desc.innerblocksize.m, matmul_desc.innerblocksize.n,
+                            m_ohw_tile_size, matmul_desc.packmode);
+        return get_bundle(p, m_matmul_algo, oc_tile_size, ohw_tile_size)
+                .total_size_in_bytes();
     }
     MIDOUT_END();
     return 0;
@@ -499,22 +528,21 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         size_t oc_tile_size = 0, ohw_tile_size = 0;
         size_t ohw = OH * OW;
         size_t GROUP = param.filter_meta.group;
-        WorkspaceBundle bundle = get_bundle(param);
-        WorkspaceBundle bundle_thread = {nullptr, {}};
         bool need_padding = (PH != 0 || PW != 0);
 
-        fallback::MatrixMulImpl::AlgoBase::MatmulDescription mdesc =
+        fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
                 m_matmul_algo->matmul_description();
 
-        Pack_Mode packmode = mdesc.packmode;
-        bool default_pack = packmode == Pack_Mode::DEFAULT;
-        bool no_pack = packmode == Pack_Mode::NO_PACK;
-        bool only_packA = packmode == Pack_Mode::ONLY_PACKA;
-
+        bool default_pack = matmul_desc.packmode == Pack_Mode::DEFAULT;
+        bool no_pack = matmul_desc.packmode == Pack_Mode::NO_PACK;
+        bool only_packA = matmul_desc.packmode == Pack_Mode::ONLY_PACKA;
+        bool enable_filter_preprocess = is_enable_filter_preprocess(param);
         choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
-                            mdesc.innerblocksize.m, mdesc.innerblocksize.n,
-                            mdesc.packmode);
+                            matmul_desc.innerblocksize.m,
+                            matmul_desc.innerblocksize.n, m_ohw_tile_size,
+                            matmul_desc.packmode);
 
+        WorkspaceBundle bundle = get_bundle(param,m_matmul_algo,oc_tile_size,ohw_tile_size);
         size_t ohw_parallel_times = div_ceil(ohw, ohw_tile_size);
         size_t oc_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
         size_t packa_parallel_times = 0;
@@ -523,28 +551,16 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
         if (only_packA) {
             packa_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
         } else if (default_pack) {
-            packa_parallel_times = div_ceil<size_t>(OC, mdesc.innerblocksize.m);
+            packa_parallel_times =
+                    div_ceil<size_t>(OC, matmul_desc.innerblocksize.m);
         }
 
         auto matmul_param = get_matmul_kern_param(
-                param, ohw_tile_size, only_packA ? oc_tile_size : OC);
-        if (mdesc.packmode == Pack_Mode::DEFAULT) {
-            Im2colKerns<Pack_Mode::DEFAULT> defaultkern;
-            bundle_thread = defaultkern.get_thread_bundle(
-                    param, matmul_param, m_matmul_algo, ohw_tile_size,
-                    oc_tile_size);
-        } else if (mdesc.packmode == Pack_Mode::ONLY_PACKA) {
-            Im2colKerns<Pack_Mode::ONLY_PACKA> onlypackakern;
-            bundle_thread = onlypackakern.get_thread_bundle(
-                    param, matmul_param, m_matmul_algo, ohw_tile_size,
-                    oc_tile_size);
-        } else {
-            Im2colKerns<Pack_Mode::NO_PACK> nopackkern;
-            bundle_thread = nopackkern.get_thread_bundle(
-                    param, matmul_param, m_matmul_algo, ohw_tile_size,
-                    oc_tile_size);
-        }
+                param, ohw_tile_size, default_pack ? OC : oc_tile_size);
 
+        WorkspaceBundle bundle_thread =
+                get_thread_bundle(param, m_matmul_algo, matmul_param,
+                                  matmul_desc, oc_tile_size, ohw_tile_size);
         StrategyParam strategyparam;
         strategyparam.ohw = ohw;
         strategyparam.is_dst_8bit =
@@ -557,6 +573,9 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
                 strategyparam.is_ohw_size_bigger && !strategyparam.is_dst_8bit;
         strategyparam.oc_tile_size = oc_tile_size;
         strategyparam.pack_oc_size = pack_oc_size;
+        strategyparam.enable_filter_preprocess = enable_filter_preprocess;
+        strategyparam.packA_group_size = packA_group_size(
+                m_matmul_algo, matmul_param, matmul_desc, packa_parallel_times);
 
         SmallVector<ConvBiasImpl::NCBKern> ret_kern;
         MIDOUT_BEGIN(
@@ -569,88 +588,126 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
                                         const NCBKernParam& param,
                                         const NCBKernIndex& ncb_index) mutable {
                 bundle.set(param.workspace_ptr);
-                copy_padding_kern(bundle, param, ncb_index, im2colstrategy,
-                                  pack_oc_size);
+                im2colstrategy->copy_padding_kern(bundle, param, ncb_index,
+                                                  pack_oc_size);
             };
 
             auto kern_packA = [bundle, matmul_algo = m_matmul_algo,
                                matmul_param, im2colstrategy,
-                               pack_oc_size = pack_oc_size, mdesc = mdesc](
+                               strategyparam = strategyparam,
+                               matmul_desc = matmul_desc](
                                       const NCBKernParam& param,
                                       const NCBKernIndex& ncb_index) mutable {
                 bundle.set(param.workspace_ptr);
-                packA_kern(bundle, param, matmul_param, matmul_algo, ncb_index,
-                           im2colstrategy, mdesc, pack_oc_size);
+
+                im2colstrategy->packA_kern(bundle, param, matmul_param,
+                                           matmul_algo, ncb_index, matmul_desc,
+                                           strategyparam);
             };
             if (default_pack) {
-                auto kern_compute_default =
-                        [bundle, bundle_thread, matmul_param,
-                         matmul_algo = m_matmul_algo,
-                         ohw_tile_size = ohw_tile_size,
-                         strategyparam = strategyparam, matmul_desc = mdesc,
-                         im2colstrategy](
-                                const NCBKernParam& param,
-                                const NCBKernIndex& ncb_index) mutable {
-                            bundle.set(param.workspace_ptr);
-                            Im2colKerns<Pack_Mode::DEFAULT>::kerns(
-                                    bundle, bundle_thread, param, matmul_param,
-                                    matmul_algo, matmul_desc, strategyparam,
-                                    ncb_index, ohw_tile_size, im2colstrategy);
-                        };
-                ret_kern.push_back({kern_packA, {GROUP, packa_parallel_times}});
-
-                if (need_padding) {
-                    ret_kern.push_back({kern_padding,
-                                        {param.n, GROUP, IC / pack_oc_size}});
+                MIDOUT_BEGIN(
+                        megdnn_fallback_im2col,
+                        midout_iv(
+                                "ConvBiasImpl::AlgoIm2col::dispatch_kerns_default_pack"_hash)) {
+                    auto kern_compute_default =
+                            [bundle, bundle_thread, matmul_param,
+                             matmul_algo = m_matmul_algo,
+                             ohw_tile_size = ohw_tile_size,
+                             strategyparam = strategyparam,
+                             matmul_desc = matmul_desc, im2colstrategy](
+                                    const NCBKernParam& param,
+                                    const NCBKernIndex& ncb_index) mutable {
+                                bundle.set(param.workspace_ptr);
+                                Im2colKerns<Pack_Mode::DEFAULT>::kerns(
+                                        bundle, bundle_thread, param,
+                                        matmul_param, matmul_algo, matmul_desc,
+                                        strategyparam, ncb_index, ohw_tile_size,
+                                        im2colstrategy);
+                            };
+                    if (!enable_filter_preprocess) {
+                        ret_kern.push_back(
+                                {kern_packA, {GROUP, packa_parallel_times}});
+                    }
+                    if (need_padding) {
+                        ret_kern.push_back(
+                                {kern_padding,
+                                 {param.n, GROUP, IC / pack_oc_size}});
+                    }
+                    ret_kern.push_back({kern_compute_default,
+                                        {N, GROUP, ohw_parallel_times,
+                                         oc_parallel_times}});
+                    return ret_kern;
                 }
-                ret_kern.push_back(
-                        {kern_compute_default,
-                         {N, GROUP, ohw_parallel_times, oc_parallel_times}});
+                MIDOUT_END();
+                return {};
             } else if (only_packA) {
-                auto kern_compute_onlypackA =
-                        [bundle, bundle_thread, matmul_param,
-                         matmul_algo = m_matmul_algo,
-                         strategyparam = strategyparam,
-                         ohw_tile_size = ohw_tile_size, matmul_desc = mdesc,
-                         im2colstrategy](
-                                const NCBKernParam& param,
-                                const NCBKernIndex& ncb_index) mutable {
-                            bundle.set(param.workspace_ptr);
-                            Im2colKerns<Pack_Mode::ONLY_PACKA>::kerns(
-                                    bundle, bundle_thread, param, matmul_param,
-                                    matmul_algo, matmul_desc, strategyparam,
-                                    ncb_index, ohw_tile_size, im2colstrategy);
-                        };
-                ret_kern.push_back({kern_packA, {GROUP, packa_parallel_times}});
-                if (need_padding) {
-                    ret_kern.push_back({kern_padding, {param.n, GROUP, IC}});
+                MIDOUT_BEGIN(
+                        megdnn_fallback_im2col,
+                        midout_iv(
+                                "ConvBiasImpl::AlgoIm2col::dispatch_kerns_onlypacka"_hash)) {
+                    auto kern_compute_onlypackA =
+                            [bundle, bundle_thread, matmul_param,
+                             matmul_algo = m_matmul_algo,
+                             strategyparam = strategyparam,
+                             ohw_tile_size = ohw_tile_size,
+                             matmul_desc = matmul_desc, im2colstrategy](
+                                    const NCBKernParam& param,
+                                    const NCBKernIndex& ncb_index) mutable {
+                                bundle.set(param.workspace_ptr);
+                                Im2colKerns<Pack_Mode::ONLY_PACKA>::kerns(
+                                        bundle, bundle_thread, param,
+                                        matmul_param, matmul_algo, matmul_desc,
+                                        strategyparam, ncb_index, ohw_tile_size,
+                                        im2colstrategy);
+                            };
+                    if (!enable_filter_preprocess) {
+                        ret_kern.push_back(
+                                {kern_packA, {GROUP, packa_parallel_times}});
+                    }
+                    if (need_padding) {
+                        ret_kern.push_back(
+                                {kern_padding, {param.n, GROUP, IC}});
+                    }
+                    ret_kern.push_back({kern_compute_onlypackA,
+                                        {N, GROUP, ohw_parallel_times,
+                                         oc_parallel_times}});
+                    return ret_kern;
                 }
-                ret_kern.push_back(
-                        {kern_compute_onlypackA,
-                         {N, GROUP, ohw_parallel_times, oc_parallel_times}});
+                MIDOUT_END();
+                return {};
             } else if (no_pack) {
-                auto kern_compute_nopack =
-                        [bundle, bundle_thread, matmul_param,
-                         matmul_algo = m_matmul_algo,
-                         strategyparam = strategyparam,
-                         ohw_tile_size = ohw_tile_size, matmul_desc = mdesc,
-                         im2colstrategy](
-                                const NCBKernParam& param,
-                                const NCBKernIndex& ncb_index) mutable {
-                            bundle.set(param.workspace_ptr);
-                            Im2colKerns<Pack_Mode::NO_PACK>::kerns(
-                                    bundle, bundle_thread, param, matmul_param,
-                                    matmul_algo, matmul_desc, strategyparam,
-                                    ncb_index, ohw_tile_size, im2colstrategy);
-                        };
-                if (need_padding) {
-                    ret_kern.push_back({kern_padding, {param.n, GROUP, IC}});
+                MIDOUT_BEGIN(
+                        megdnn_fallback_im2col,
+                        midout_iv(
+                                "ConvBiasImpl::AlgoIm2col::dispatch_kerns_no_pack"_hash)) {
+                    auto kern_compute_nopack =
+                            [bundle, bundle_thread, matmul_param,
+                             matmul_algo = m_matmul_algo,
+                             strategyparam = strategyparam,
+                             ohw_tile_size = ohw_tile_size,
+                             matmul_desc = matmul_desc, im2colstrategy](
+                                    const NCBKernParam& param,
+                                    const NCBKernIndex& ncb_index) mutable {
+                                bundle.set(param.workspace_ptr);
+                                Im2colKerns<Pack_Mode::NO_PACK>::kerns(
+                                        bundle, bundle_thread, param,
+                                        matmul_param, matmul_algo, matmul_desc,
+                                        strategyparam, ncb_index, ohw_tile_size,
+                                        im2colstrategy);
+                            };
+                    if (need_padding) {
+                        ret_kern.push_back(
+                                {kern_padding, {param.n, GROUP, IC}});
+                    }
+                    ret_kern.push_back({kern_compute_nopack,
+                                        {N, GROUP, ohw_parallel_times,
+                                         oc_parallel_times}});
+                    return ret_kern;
                 }
-                ret_kern.push_back(
-                        {kern_compute_nopack,
-                         {N, GROUP, ohw_parallel_times, oc_parallel_times}});
+                MIDOUT_END();
+                return {};
             }
-            return ret_kern;
+            return {};
         }
         MIDOUT_END();
         return {};
@@ -694,12 +751,19 @@ bool ConvBiasImpl::AlgoIm2col::usable(
                 return false;
             }
         }
-        fallback::MatrixMulImpl::AlgoBase::MatmulDescription mdesc =
+        fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
                 m_matmul_algo->matmul_description();
+        //! only matmul's packmode is packa or default support weight preprocess
+        if (is_enable_filter_preprocess(param) &&
+            (matmul_desc.packmode ==
+             fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK)) {
+            return false;
+        }
+
         if (format == param::ConvBias::Format::NCHW44 ||
             format == param::ConvBias::Format::NCHW44_DOT) {
             //! current NCHW44 im2col only support DEFAULT mode matmul
-            if (mdesc.packmode != Pack_Mode::DEFAULT) {
+            if (matmul_desc.packmode != Pack_Mode::DEFAULT) {
                 return false;
                 //! nchw44 hybird mode and channel wise is not support
             } else if (param.filter_meta.icpg < 4_z ||
@@ -711,8 +775,9 @@ bool ConvBiasImpl::AlgoIm2col::usable(
 
         size_t oc_tile_size = 0, ohw_tile_size = 0;
         choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
-                            mdesc.innerblocksize.m, mdesc.innerblocksize.n,
-                            m_matmul_algo->packmode());
+                            matmul_desc.innerblocksize.m,
+                            matmul_desc.innerblocksize.n, m_ohw_tile_size,
+                            matmul_desc.packmode);
         fallback::MatrixMulImpl::KernSizeParam matmul_param =
                 get_matmul_kern_param(param, ohw_tile_size, oc_tile_size);
         bool matmulusable = m_matmul_algo->usable(matmul_param);
@@ -729,6 +794,106 @@ bool ConvBiasImpl::AlgoIm2col::usable(
     }
     MIDOUT_END();
     return false;
+}
+
+SmallVector<TensorLayout>
+ConvBiasImpl::AlgoIm2col::deduce_preprocessed_filter_layout(
+        const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(
+            megdnn_fallback_im2col,
+            midout_iv(
+                    "ConvBiasImpl::AlgoIm2col::deduce_preprocessed_filter_layout"_hash)) {
+        fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
+                m_matmul_algo->matmul_description();
+
+        //! only support default_pack and only_packa mode
+        if (matmul_desc.packmode == Pack_Mode::NO_PACK) {
+            return {};
+        }
+
+        size_t GROUP = param.filter_meta.group;
+        bool default_pack = matmul_desc.packmode == Pack_Mode::DEFAULT;
+
+        size_t OC = param.filter_meta.ocpg;
+        SmallVector<TensorLayout> preprocessed_layouts;
+        size_t oc_tile_size = 0, ohw_tile_size = 0;
+        choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
+                            matmul_desc.innerblocksize.m,
+                            matmul_desc.innerblocksize.n, m_ohw_tile_size,
+                            matmul_desc.packmode);
+        auto matmul_param = get_matmul_kern_param(
+                param, ohw_tile_size, default_pack ? OC : oc_tile_size);
+
+        size_t packa_parallel_times = div_ceil<size_t>(
+                OC, default_pack ? matmul_desc.innerblocksize.m : oc_tile_size);
+
+        size_t packa_group_size = packA_group_size(
+                m_matmul_algo, matmul_param, matmul_desc, packa_parallel_times);
+        preprocessed_layouts.push_back(
+                {{GROUP, packa_group_size}, dtype::Int8()});
+        return preprocessed_layouts;
+    }
+    MIDOUT_END();
+    return {};
+}
+
+SmallVector<ConvBiasImpl::NCBKern>
+ConvBiasImpl::AlgoIm2col::dispatch_preprocess_kerns(
+        const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 3) {
+        size_t OC = param.filter_meta.ocpg;
+        size_t oc_tile_size = 0, ohw_tile_size = 0;
+        size_t GROUP = param.filter_meta.group;
+        fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
+                m_matmul_algo->matmul_description();
+        choice_ohw_oc_block(param, oc_tile_size, ohw_tile_size,
+                            matmul_desc.innerblocksize.m,
+                            matmul_desc.innerblocksize.n, m_ohw_tile_size,
+                            matmul_desc.packmode);
+        WorkspaceBundle bundle =
+                get_bundle(param, m_matmul_algo, oc_tile_size, ohw_tile_size);
+
+        Pack_Mode packmode = matmul_desc.packmode;
+        bool default_pack = packmode == Pack_Mode::DEFAULT;
+        bool only_packA = packmode == Pack_Mode::ONLY_PACKA;
+        size_t packa_parallel_times = 0;
+
+        if (only_packA) {
+            packa_parallel_times = div_ceil<size_t>(OC, oc_tile_size);
+        } else if (default_pack) {
+            packa_parallel_times =
+                    div_ceil<size_t>(OC, matmul_desc.innerblocksize.m);
+        } else {
+            //! if nopack return null so that OprWeightPreprocessProxy can run
+            //! with nopack mode
+            return {};
+        }
+        auto matmul_param = get_matmul_kern_param(
+                param, ohw_tile_size, default_pack ? OC : oc_tile_size);
+
+        StrategyParam strategyparam;
+        strategyparam.enable_filter_preprocess =
+                is_enable_filter_preprocess(param);
+        strategyparam.packA_group_size = packA_group_size(
+                m_matmul_algo, matmul_param, matmul_desc, packa_parallel_times);
+        SmallVector<ConvBiasImpl::NCBKern> ret_kern;
+        StrategyBase* im2colstrategy =
+                Factory::get_im2col_strategy(param, m_matmul_algo);
+
+        auto kern_packA = [bundle, matmul_algo = m_matmul_algo, matmul_param,
+                           im2colstrategy, strategyparam = strategyparam,
+                           matmul_desc = matmul_desc](
+                                  const NCBKernParam& param,
+                                  const NCBKernIndex& ncb_index) mutable {
+            bundle.set(param.workspace_ptr);
+            im2colstrategy->packA_kern(bundle, param, matmul_param, matmul_algo,
+                                       ncb_index, matmul_desc, strategyparam);
+        };
+        ret_kern.push_back({kern_packA, {GROUP, packa_parallel_times}});
+        return ret_kern;
+    }
+    MIDOUT_END();
+    return {};
 }
 
 // vim: syntax=cpp.doxygen
