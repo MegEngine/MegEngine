@@ -293,7 +293,7 @@ void Fwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
         float trans_std = param.trans_std, scale = param.spatial_scale;
 
         size_t nr_bbox = rois.layout[0];
-        size_t nr_cls = no_trans ? 1 : trans.layout[0];
+        size_t nr_cls = no_trans ? 1 : trans.layout[1] / 2;
         size_t IC = data.layout[1], IH = data.layout[2], IW = data.layout[3];
 
         const float* data_ptr = data.ptr<float>();
@@ -339,7 +339,7 @@ void Bwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
         float trans_std = param.trans_std, scale = param.spatial_scale;
 
         size_t nr_bbox = rois.layout[0];
-        size_t nr_cls = no_trans ? 1 : trans.layout[0];
+        size_t nr_cls = no_trans ? 1 : trans.layout[1] / 2;
         size_t IC = data.layout[1], IH = data.layout[2], IW = data.layout[3];
 
         const float* data_ptr = data.ptr<float>();
