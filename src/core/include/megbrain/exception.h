@@ -90,7 +90,7 @@ class MegBrainError: public std::exception {
                 virtual ~ExtraInfo() = default;
         };
 
-        MegBrainError(const std::string &msg);
+        MegBrainError(const std::string& msg) : m_msg(msg) { init(); }
 
         const char *what() const noexcept override {
             return m_msg.c_str();
@@ -116,6 +116,7 @@ class MegBrainError: public std::exception {
 
     private:
         std::shared_ptr<ExtraInfo> m_extra_info;
+        void init();
 };
 
 //! base class for system error: error caused by uncontrollable environment
@@ -188,8 +189,14 @@ class TimeoutError final: public MegBrainError {
         using MegBrainError::MegBrainError;
 };
 
+
+}  // namespace mgb
+
+namespace mgb {
+
 bool has_uncaught_exception();
 
-} // namespace mgb
+}  // namespace mgb
+
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

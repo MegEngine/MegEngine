@@ -35,15 +35,14 @@ namespace {
     MegDNNErrorHandler MegDNNErrorHandler::inst;
 }
 
-MegBrainError::MegBrainError(const std::string &msg):
-    m_msg(msg)
+void MegBrainError::init()
 {
     m_msg.append("\n");
 #if MGB_ENABLE_DEBUG_UTIL
     debug::backtrace(2).fmt_to_str(m_msg);
     static bool print_exc = MGB_GETENV("MGB_PRINT_EXC");
     if (print_exc) {
-        fprintf(stderr, "mgb: exception occurred: %s\n", msg.c_str());
+        fprintf(stderr, "mgb: exception occurred: %s\n", m_msg.c_str());
     }
 #endif
 }
