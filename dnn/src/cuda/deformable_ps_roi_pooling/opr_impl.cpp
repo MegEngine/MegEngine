@@ -32,7 +32,7 @@ void create_param(const DeformablePSROIPoolingBase* opr,
     p.sample_per_part = param.sample_per_part;
     p.trans_std = param.trans_std;
     p.scale = param.spatial_scale;
-    p.nr_cls = p.no_trans ? 1 : trans[0];
+    p.nr_cls = p.no_trans ? 1 : trans[1] / 2;
     p.nr_bbox = rois[0];
     p.IC = data[1];
     p.IH = data[2];
