@@ -14,6 +14,7 @@
 #include "test/common/benchmarker.h"
 #include "test/common/warp_perspective.h"
 #include "test/common/opr_proxy.h"
+#include "test/cuda/utils.h"
 
 namespace {
 
@@ -216,6 +217,30 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD)
         checker.exec({{1000, 2, 10, 11}, {1000, 3, 3}, {1000, 2, 12, 13}});
     }
 }
+
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_INTMAX)
+{
+    require_compute_capability(6, 0);
+    using Param = WarpPerspective::Param;
+    Checker<WarpPerspectiveForward> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+    checker.set_rng(1, &rng);
+    for (auto bmode: {WarpPerspective::BorderMode::REPLICATE})
+    {
+        WarpPerspective::Param param;
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+
+        param.format = Param::Format::NHWC;
+        checker.set_param(param);
+        checker.set_epsilon(0.15).set_max_avg_error(4e-2);
+		size_t n = (INT_MAX) / (512 * 512 * 3);
+		checker.execs(
+				{{n + 1, 512, 512, 3}, {n + 1, 3, 3}, {n + 1, 25, 25, 3}});
+    }
+}
+
 
 TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_FP16)
 {

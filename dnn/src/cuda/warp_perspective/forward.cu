@@ -28,7 +28,7 @@ struct DirectSrcVisitor {
     const ctype* ptr;
 
     __device__ __forceinline__ const ctype* get(int batch, int im_size) {
-        return ptr + batch * im_size;
+        return ptr + static_cast<int64_t>(batch) * static_cast<int64_t>(im_size);
     }
 
     void move_batch(size_t batch, size_t im_size) {
@@ -54,7 +54,7 @@ struct IndexedSrcVisitor {
                     orig_batch, batch, N_SRC);
             batch = 0;
         }
-        return ptr + batch * im_size;
+        return ptr + static_cast<int64_t>(batch) * static_cast<int64_t>(im_size);
     }
 
     void move_batch(size_t batch, size_t) {
