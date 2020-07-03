@@ -10,6 +10,7 @@
  */
 
 #include "src/cuda/convolution/opr_impl.h"
+#include "megdnn/dtype.h"
 #include "src/cuda/convolution/helper.h"
 #include "src/cuda/convolution/backward_data/algo.h"
 #include "src/cuda/convolution/backward_filter/algo.h"
@@ -28,10 +29,35 @@ using namespace convolution;
 
 /* ============== ConvolutionForwardImpl ============== */
 ConvolutionForwardImpl::ConvBiasExtraData
-ConvolutionForwardImpl::conv_bias_extra_data(const TensorLayout& dst) {
+ConvolutionForwardImpl::conv_bias_extra_data(const TensorLayout& src,
+                                             const TensorLayout& filter,
+                                             const TensorLayout& dst) {
     auto conv_param = param();
+    DType bias_type;
+    if (src.dtype.enumv() == DTypeEnum::QuantizedS8) {
+        bias_type = dtype::QuantizedS32(
+                src.dtype.param<dtype::QuantizedS8>().scale *
+
+                filter.dtype.param<dtype::QuantizedS8>().scale);
+    } else if (src.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
+        bias_type = dtype::QuantizedS32(
+                src.dtype.param<dtype::Quantized8Asymm>().scale *
+
+                filter.dtype.param<dtype::Quantized8Asymm>().scale);
+    } else if (src.dtype.enumv() == DTypeEnum::Uint8 ||
+               src.dtype.enumv() == DTypeEnum::Int8) {
+        bias_type = dtype::Int32{};
+    } else if (src.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        bias_type = dtype::QuantizedS32(
+                src.dtype.param<dtype::Quantized4Asymm>().scale *
+
+                filter.dtype.param<dtype::Quantized4Asymm>().scale);
+    } else {
+        megdnn_assert(src.dtype.category() == DTypeCategory::FLOAT);
+        bias_type = src.dtype;
+    }
     ConvBiasExtraData ret = {this->handle()->create_operator<ConvBiasForward>(),
-                             TensorLayout(dst.dtype), TensorLayout(dst.dtype)};
+                             TensorLayout(bias_type), TensorLayout(dst.dtype)};
     ret.convbias_opr->param() = {param::ConvBias::NonlineMode::IDENTITY,
                                  conv_param.mode,
                                  conv_param.sparse,
@@ -54,7 +80,7 @@ ConvolutionForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
                                                 const TensorLayout& dst,
                                                 size_t workspace_limit_in_bytes,
                                                 bool reproducible) {
-    auto extra_data = conv_bias_extra_data(dst);
+    auto extra_data = conv_bias_extra_data(src, filter, dst);
     return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
             ->get_algorithm_heuristic(src, filter, extra_data.bias_layout,
                                       extra_data.z_layout, dst,
@@ -65,7 +91,7 @@ std::vector<ConvolutionForwardImpl::Algorithm*>
 ConvolutionForwardImpl::get_all_algorithms(const TensorLayout& src,
                                            const TensorLayout& filter,
                                            const TensorLayout& dst) {
-    auto extra_data = conv_bias_extra_data(dst);
+    auto extra_data = conv_bias_extra_data(src, filter, dst);
     return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
             ->get_all_algorithms(src, filter, extra_data.bias_layout,
                                  extra_data.z_layout, dst);
@@ -75,7 +101,7 @@ size_t ConvolutionForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
-    auto extra_data = conv_bias_extra_data(dst);
+    auto extra_data = conv_bias_extra_data(src, filter, dst);
     return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
             ->get_workspace_in_bytes(
                     src, filter, extra_data.bias_layout, extra_data.z_layout,
@@ -90,7 +116,8 @@ void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
                                   _megdnn_tensor_out dst,
                                   const PreprocessedFilter* preprocessed_filter,
                                   _megdnn_workspace workspace) {
-    auto extra_data = conv_bias_extra_data(dst.layout);
+    auto extra_data =
+            conv_bias_extra_data(src.layout, filter.layout, dst.layout);
     TensorND bias(nullptr, extra_data.bias_layout);
     TensorND z(nullptr, extra_data.z_layout);
     return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
