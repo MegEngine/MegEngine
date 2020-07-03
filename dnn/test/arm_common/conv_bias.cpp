@@ -791,8 +791,8 @@ void benchmark_winograd_nchw_vs_nchw44(const char* algo_name, Handle* handle) {
 
     std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
     for (auto nlmode : nonlinemode)
-        for (size_t n : {1, 2})
-            for (size_t group = 1; group <= 2; ++group) {
+        for (size_t n : {1})
+            for (size_t group = 1; group <= 1; ++group) {
                 pack(n, 512, 512, 15, 15, group, nlmode);
                 pack(n, 512, 256, 15, 15, group, nlmode);
                 pack(n, 256, 256, 29, 29, group, nlmode);

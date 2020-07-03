@@ -538,9 +538,42 @@ struct Vfmaq_laneq_f32_armv7<3> {
         return vmlaq_lane_f32(a, b, vget_high_f32(v), 1);
     }
 };
+
+template <int lane>
+struct Vfmsq_laneq_f32_armv7 {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v);
+};
+
+template <>
+struct Vfmsq_laneq_f32_armv7<0> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlsq_lane_f32(a, b, vget_low_f32(v), 0);
+    }
+};
+template <>
+struct Vfmsq_laneq_f32_armv7<1> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlsq_lane_f32(a, b, vget_low_f32(v), 1);
+    }
+};
+template <>
+struct Vfmsq_laneq_f32_armv7<2> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlsq_lane_f32(a, b, vget_high_f32(v), 0);
+    }
+};
+template <>
+struct Vfmsq_laneq_f32_armv7<3> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        return vmlsq_lane_f32(a, b, vget_high_f32(v), 1);
+    }
+};
 }  // namespace
 #define vfmaq_laneq_f32(a, b, v, lane) \
     Vfmaq_laneq_f32_armv7<lane>::impl(a, b, v)
+
+#define vfmsq_laneq_f32(a, b, v, lane) \
+    Vfmsq_laneq_f32_armv7<lane>::impl(a, b, v)
 
 #if __ARM_FEATURE_DOTPROD
 namespace {
@@ -582,7 +615,6 @@ struct Vdotq_laneq_s32_armv7<3> {
 
 //! GCC split fmla with lane to dup+fmla when version < 9
 //! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89101
-#if !defined(__clang__) && __GNUC__ < 9
 #if MEGDNN_AARCH64
 namespace {
 
@@ -630,13 +662,59 @@ struct Vfmaq_laneq_f32_armv8<3> {
         return a;
     }
 };
+
+template <int lane>
+struct Vfmsq_laneq_f32_armv8 {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v);
+};
+template <>
+struct Vfmsq_laneq_f32_armv8<0> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmls %0.4s, %1.4s, %2.s[0]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+template <>
+struct Vfmsq_laneq_f32_armv8<1> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmls %0.4s, %1.4s, %2.s[1]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+template <>
+struct Vfmsq_laneq_f32_armv8<2> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmls %0.4s, %1.4s, %2.s[2]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
+template <>
+struct Vfmsq_laneq_f32_armv8<3> {
+    __ai float32x4_t impl(float32x4_t a, float32x4_t b, float32x4_t v) {
+        asm volatile("fmls %0.4s, %1.4s, %2.s[3]\n"
+                     : "+w"(a)
+                     : "w"(b), "w"(v)
+                     :);
+        return a;
+    }
+};
 }  // namespace
 #undef vfmaq_laneq_f32
 #define vfmaq_laneq_f32(a, b, v, lane) \
     Vfmaq_laneq_f32_armv8<lane>::impl(a, b, v)
 
-#endif
-
+#undef vfmsq_laneq_f32
+#define vfmsq_laneq_f32(a, b, v, lane) \
+    Vfmsq_laneq_f32_armv8<lane>::impl(a, b, v)
 #endif
 
 __ai int8x16_t vld_dup_tbl_s32(const int8_t* ptr, uint8x16_t& idx) {
@@ -676,6 +754,16 @@ __ai int8x8_t vldq_tbl_low_s8(const int8_t* ptr, uint8x16_t idx) {
 }
 __ai int16x8_t vld1_dup_s8_s16(const int8_t* ptr) {
     return vmovl_s8(vld1_dup_s8(ptr));
+}
+
+//! we add this because we found that cpu=aarch64_android cann't compile fmsq into fmls.
+//! it use dup+fmla instead
+__ai float32x4_t Vfmsq_f32(float32x4_t& a, float32x4_t& b, float32x4_t& v) {
+    asm volatile("fmls %0.4s, %1.4s, %2.4s\n"
+                    : "+w"(a)
+                    : "w"(b), "w"(v)
+                    :);
+    return a;
 }
 
 #undef __ai

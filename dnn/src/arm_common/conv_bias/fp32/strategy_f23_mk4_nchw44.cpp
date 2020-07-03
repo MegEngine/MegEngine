@@ -32,29 +32,37 @@ constexpr size_t pack_size = 4;
 
 struct InputTransformF23_NCHW44 {
     template <bool inner>
-    static void prepare(const float* input, float* patch, float* patchT,
-                        int ih_start, int iw_start, size_t IH, size_t IW,
-                        size_t ic, size_t IC) {
-        MEGDNN_MARK_USED_VAR(patch);
+    static void transform(float* patchT, const float* input,
+                          float* input_transform_buf, size_t ih_start,
+                          size_t iw_start, size_t IH, size_t IW,
+                          size_t unit_idx, size_t nr_units_in_tile, size_t ic,
+                          size_t IC) {
         size_t IW4 = IW * pack_size;
-        size_t iw4_start = iw_start * pack_size;
         size_t icb = ic / pack_size;
+        size_t iw4_start = iw_start * pack_size;
+        size_t ICB = IC / pack_size;
+
+#define cb(m, n) Vector<float, 4> d##m##n;
+        UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
+#undef cb
+
         if (!(inner && ic + pack_size < IC)) {
             memset(patchT, 0, sizeof(float) * pack_size * alpha * alpha);
         }
         if (inner) {
+            MEGDNN_MARK_USED_VAR(patchT);
             const float* input_ptr =
                     input + icb * IH * IW4 + ih_start * IW4 + iw4_start;
-            for (size_t ih = 0; ih < alpha; ih++) {
-#define cb(i) auto v##i = vld1q_f32(input_ptr + pack_size * i);
-                UNROLL_CALL_NOWRAPPER(4, cb);
-#undef cb
+#define cb(n, m) d##m##n = Vector<float, 4>::load(input_ptr + pack_size * n);
 
-#define cb(i) vst1q_f32(patchT + ih * alpha * pack_size + i * pack_size, v##i);
-                UNROLL_CALL_NOWRAPPER(4, cb);
+            UNROLL_CALL_RAW(4, cb, 0);
+            input_ptr += IW4;
+            UNROLL_CALL_RAW(4, cb, 1);
+            input_ptr += IW4;
+            UNROLL_CALL_RAW(4, cb, 2);
+            input_ptr += IW4;
+            UNROLL_CALL_RAW(4, cb, 3);
 #undef cb
-                input_ptr += IW4;
-            }
         } else {
             int ih0_act = std::max<int>(ih_start, 0),
                 ih1_act = std::min<int>(ih_start + alpha, IH),
@@ -71,19 +79,12 @@ struct InputTransformF23_NCHW44 {
                             src);
                 }
             }
-        }
-    }
-
-    static void transform(const float* patchT, float* input_transform_buf,
-                          size_t unit_idx, size_t nr_units_in_tile, size_t ic,
-                          size_t IC) {
-        // BT * d * B
-#define cb(m, n)                                       \
-    Vector<float, 4> d##m##n = Vector<float, 4>::load( \
-            patchT + m * alpha * pack_size + n * pack_size);
-        UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
+#define cb(m, n)                                                      \
+    d##m##n = Vector<float, 4>::load(patchT + m * alpha * pack_size + \
+                                     n * pack_size);
+            UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
-
+        }
         //! 1   0 -1 0    d00 d01 d02 d03     1 0  0  0
         //! 0   1  1 0    d10 d11 d12 d13     0 1 -1 -1
         //! 0  -1  1 0    d20 d21 d22 d23    -1 1  1  0
@@ -106,8 +107,6 @@ struct InputTransformF23_NCHW44 {
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
 
-        size_t ICB = IC / 4;
-        size_t icb = ic / 4;
 #define cb(m, n)                                                        \
     d##m##n.save(input_transform_buf +                                  \
                  (m * alpha + n) * ICB * nr_units_in_tile * pack_size + \
@@ -273,7 +272,6 @@ void winograd_F23_mk4_f_nchw44::input(const float* input,
     // OW = IW + 2 * PW - KERNEL_SIZE + 1
     auto units_w =
             div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
-    float* patch = transform_mid_buf;
     float* patchT = transform_mid_buf + 4 * alpha * alpha;
 
     for (size_t ic = 0; ic < IC; ic += 4) {
@@ -285,20 +283,13 @@ void winograd_F23_mk4_f_nchw44::input(const float* input,
             int iw_start = nw * OUTPUT_BLOCK_SIZE - PW;
             if (ih_start >= 0 && ih_start + alpha <= static_cast<int>(IH) &&
                 iw_start >= 0 && iw_start + alpha <= static_cast<int>(IW)) {
-                InputTransformF23_NCHW44::prepare<true>(input, patch, patchT,
-                                                        ih_start, iw_start, IH,
-                                                        IW, ic, IC);
-                InputTransformF23_NCHW44::transform(patchT, input_transform_buf,
-                                                    unit_idx, nr_units_in_tile,
-                                                    ic, IC);
-
+                InputTransformF23_NCHW44::transform<true>(
+                        patchT, input, input_transform_buf, ih_start, iw_start,
+                        IH, IW, unit_idx, nr_units_in_tile, ic, IC);
             } else {
-                InputTransformF23_NCHW44::prepare<false>(input, patch, patchT,
-                                                         ih_start, iw_start, IH,
-                                                         IW, ic, IC);
-                InputTransformF23_NCHW44::transform(patchT, input_transform_buf,
-                                                    unit_idx, nr_units_in_tile,
-                                                    ic, IC);
+                InputTransformF23_NCHW44::transform<false>(
+                        patchT, input, input_transform_buf, ih_start, iw_start,
+                        IH, IW, unit_idx, nr_units_in_tile, ic, IC);
             }
         }
     }
@@ -311,9 +302,21 @@ void winograd_F23_mk4_f_nchw44::output(const float* output_transform_buf,
                                        size_t OW, size_t oc_start,
                                        size_t oc_end, size_t unit_start_idx,
                                        size_t nr_units_in_tile) {
-#define cb(_bmode, _nonline_op, ...)                                       \
-    OutputTransformF23_NCHW44<_bmode MEGDNN_COMMA _nonline_op>::transform( \
-            __VA_ARGS__);
+#define cb(_bmode, _nonline_op, ...)                                        \
+    for (size_t oc = oc_start; oc < oc_end; oc += 4) {                      \
+        size_t oc_index = oc - oc_start;                                    \
+        rep(unit_idx, nr_units_in_tile) {                                   \
+            size_t index = unit_start_idx + unit_idx;                       \
+            auto nh = index / units_w;                                      \
+            auto nw = index % units_w;                                      \
+            size_t oh_start = nh * OUTPUT_BLOCK_SIZE;                       \
+            size_t ow_start = nw * OUTPUT_BLOCK_SIZE;                       \
+            OutputTransformF23_NCHW44<_bmode, _nonline_op>::transform(      \
+                    output_transform_buf, bias, output, transform_mid_buf,  \
+                    oh_start, ow_start, OH, OW, oc_start, oc_end, oc_index, \
+                    unit_idx, nr_units_in_tile, src_dtype, dst_dtype);      \
+        }                                                                   \
+    }
 
     auto units_w = div_ceil<size_t>(OW, OUTPUT_BLOCK_SIZE);
     constexpr size_t pack_size = 4;
@@ -323,22 +326,8 @@ void winograd_F23_mk4_f_nchw44::output(const float* output_transform_buf,
                           oc_end % pack_size == 0,
                   "NCHW44 Winograd filter transform requires OC is times of 4");
 
-    for (size_t oc = oc_start; oc < oc_end; oc += 4) {
-        size_t oc_index = oc - oc_start;
-        rep(unit_idx, nr_units_in_tile) {
-            size_t index = unit_start_idx + unit_idx;
-            auto nh = index / units_w;
-            auto nw = index % units_w;
-            size_t oh_start = nh * OUTPUT_BLOCK_SIZE;
-            size_t ow_start = nw * OUTPUT_BLOCK_SIZE;
-            DISPATCH_CONV_WINOGRAD_BIAS(
-                    megdnn_arm_common_winograd_nchw44_fp32_F23_mk4, cb, float,
-                    float, bmode, nonline_mode, output_transform_buf, bias,
-                    output, transform_mid_buf, oh_start, ow_start, OH, OW,
-                    oc_start, oc_end, oc_index, unit_idx, nr_units_in_tile,
-                    src_dtype, dst_dtype);
-        }
-    }
+    DISPATCH_CONV_WINOGRAD_BIAS(megdnn_arm_common_winograd_nchw44_fp32_F23_mk4,
+                                cb, float, float, bmode, nonline_mode);
 #undef cb
 }
 
