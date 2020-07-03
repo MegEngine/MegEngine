@@ -619,14 +619,14 @@ elseif(TARGET _xxx)
     add_custom_target(
         develop
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/$<TARGET_FILE_NAME:${MODULE_NAME}>
-          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/$<TARGET_FILE_NAME:${MODULE_NAME}>
+          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/$<TARGET_FILE_NAME:${MODULE_NAME}>
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/$<TARGET_FILE_NAME:${MODULE_NAME}>
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/generated_ops.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/generated_ops.py
+          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/generated_ops.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/generated_ops.py
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/param_defs.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/ops/_internal/param_defs.py
+          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/param_defs.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/param_defs.py
         DEPENDS _xxx
         VERBATIM
     )

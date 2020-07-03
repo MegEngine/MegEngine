@@ -359,14 +359,14 @@ class PyWriter(IndentWriterBase):
         else:
             self._write(
                 'def _as_dtype_num(dtype):\n'
-                '    import xxx._xxx.utils as m\n'
+                '    import megengine.core._xxx.utils as m\n'
                 '    return m._get_dtype_num(dtype)\n'
                 '\n'
             )
 
             self._write(
                 'def _as_serialized_dtype(dtype):\n'
-                '    import xxx._xxx.utils as m\n'
+                '    import megengine.core._xxx.utils as m\n'
                 '    return m._get_serialized_dtype(dtype)\n'
                 '\n'
             )
