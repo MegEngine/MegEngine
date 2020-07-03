@@ -2725,6 +2725,67 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
+    REQUIRE_GPU(1);
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{
+            1.2f, 127 * 127};
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {2, 3, 16, 16}, dtype::QuantizedS8(2.5f));
+    // ConvBias test dense
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    auto w1 = mkcvar("w1", {8, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto conv1 =
+            opr::ConvBias::make(x, w1, b1, param_conv_bias, {},
+                                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    auto w2 = mkcvar("w2", {2, 4, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b2 = mkcvar("b2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto conv2 =
+            opr::ConvBias::make(conv1, w2, b2, param_conv_bias, {},
+                                OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+    auto y = opr::TypeCvt::make(conv2, dtype::Float32());
+
+    SymbolVar y_opt;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw4();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4,
+              find_opr<opr::ConvBias>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNCHW4Ic3.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
+
 TEST(TestGoptInference, ConvertFormatNCHW88) {
     HostTensorGenerator<> gen;
     auto cn = CompNode::load("cpu0");

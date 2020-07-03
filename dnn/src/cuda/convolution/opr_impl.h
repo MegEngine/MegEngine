@@ -61,7 +61,9 @@ class ConvolutionForwardImpl: public ConvolutionForward {
             TensorLayout z_layout;
         };
     private:
-        ConvBiasExtraData conv_bias_extra_data(const TensorLayout&);
+        ConvBiasExtraData conv_bias_extra_data(const TensorLayout&,
+                                               const TensorLayout&,
+                                               const TensorLayout&);
 };
 
 class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
