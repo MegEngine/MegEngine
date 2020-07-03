@@ -107,11 +107,7 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle,
           m_dispatcher{megcoreGetCPUDispatcher(computing_handle)} {}
 
 size_t HandleImpl::image2d_pitch_alignment() const {
-    if (type() == Handle::HandleType::NAIVE) {
-        // only naive CPU handle supports this format
-        return g_image2d_pitch_alignment;
-    }
-    megdnn_throw("Image2DTensorFormat is not supported on this handle");
+    return g_image2d_pitch_alignment;
 }
 
 size_t HandleImpl::exchange_image2d_pitch_alignment(size_t alignment) {
