@@ -25,25 +25,14 @@ namespace opr {
  */
 MGB_DEFINE_CLS_WITH_SUPER(RemoteIOBase, cg::SingleCNOperatorNodeBase) // {
     public:
-        enum Type {
-            SEND,
-            RECV
-        };
-
-        struct PeerDesc {
-            std::string key;
-            Type type;
-            bool is_grad;
-        };
-
-        const PeerDesc& peer_desc() const { return m_peer; }
+        const std::string& key() const { return m_key; }
 
         std::shared_ptr<GroupClient> group_client() const {
             return m_group_client;
         }
 
     protected:
-        PeerDesc m_peer;
+        std::string m_key;
         std::shared_ptr<GroupClient> m_group_client;
         std::shared_ptr<MegRay::Communicator> m_megray_comm;
         std::shared_ptr<MegRay::Context> m_megray_ctx;
@@ -53,21 +42,24 @@ MGB_DEFINE_CLS_WITH_SUPER(RemoteIOBase, cg::SingleCNOperatorNodeBase) // {
 
 /*!
  * \brief send a variable to remote address; a virtual output is produced
- *      for expressing dependency
+ *        for expressing dependency
  */
 MGB_DEFINE_OPR_CLASS(RemoteSend, RemoteIOBase) // {
     public:
-        RemoteSend(const PeerDesc& peer, VarNode* var,
+        RemoteSend(const std::string& key, VarNode* var,
                    std::shared_ptr<GroupClient> group_client,
-                   const OperatorNodeConfig& config);
+                   bool is_grad, const OperatorNodeConfig& config);
 
         static SymbolVar make(
-                const PeerDesc& peer, SymbolVar var,
+                const std::string& key, SymbolVar var,
                 std::shared_ptr<GroupClient> group_client,
-                const OperatorNodeConfig& config = {});
+                bool is_grad, const OperatorNodeConfig& config = {});
+
+        bool is_grad() const { return m_is_grad; }
 
     private:
         HostTensorND m_output_val;
+        bool m_is_grad;
 
         void scn_do_execute() override;
         void init_output_static_infer_desc() override;
@@ -75,19 +67,18 @@ MGB_DEFINE_OPR_CLASS(RemoteSend, RemoteIOBase) // {
 };
 
 /*!
- * \brief receive from multiple remote addresses and write to a var
- *
- * Target computing node of the var must be specified in config
+ * \brief receive a variable from remote address; target computing node
+ *        of the var must be specified in config
  */
 MGB_DEFINE_OPR_CLASS(RemoteRecv, RemoteIOBase) // {
     public:
-        RemoteRecv(const PeerDesc& peer, cg::ComputingGraph& graph,
+        RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
                    std::shared_ptr<GroupClient> group_client,
                    const OperatorNodeConfig& config, const TensorShape& shape,
                    DType dtype);
 
         static SymbolVar make(
-                const PeerDesc& peer, cg::ComputingGraph& graph,
+                const std::string& key, cg::ComputingGraph& graph,
                 std::shared_ptr<GroupClient> group_client,
                 const OperatorNodeConfig& config, const TensorShape& shape,
                 DType dtype);

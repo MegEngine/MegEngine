@@ -72,10 +72,10 @@ SymbolVar _Opr::remote_send(
         const std::string& key, SymbolVar var,
         const bool is_grad,
         const OperatorNodeConfig& config) {
-    return RemoteSend::make({key, RemoteIOBase::Type::SEND, is_grad}, var,
+    return RemoteSend::make(key, var,
                             std::make_shared<GroupClientProxy>(ssprintf(
                                     "%s:%d", server_addr.c_str(), port)),
-                            config);
+                            is_grad, config);
 }
 
 SymbolVar _Opr::remote_recv(const std::string& server_addr, const int port,
@@ -85,8 +85,7 @@ SymbolVar _Opr::remote_recv(const std::string& server_addr, const int port,
     const TensorShape ishape = npy::vec2shape(shape);
     const DType idtype = npy::dtype_np2mgb(dtype);
 
-    return RemoteRecv::make({key, RemoteIOBase::Type::RECV, false},
-                            graph.get(),
+    return RemoteRecv::make(key, graph.get(),
                             std::make_shared<GroupClientProxy>(
                                     ssprintf("%s:%d", server_addr.c_str(), port)),
                             config, ishape, idtype);
