@@ -21,6 +21,13 @@
 #include <thread>
 
 namespace mgb {
+class VarSanityCheckError : public MegBrainError {
+public:
+    using MegBrainError::MegBrainError;
+};
+}  // namespace mgb
+
+namespace mgb {
 
 /*!
  * \brief check that content of a variable does not change between when it
@@ -87,10 +94,7 @@ class VarSanityCheck final : public PluginBase {
 public:
     VarSanityCheck(cg::ComputingGraph* graph);
 
-    class Error : public MegBrainError {
-    public:
-        using MegBrainError::MegBrainError;
-    };
+    using Error = VarSanityCheckError;
 
     /*!
      * \brief perform basic sanity check after opr exec

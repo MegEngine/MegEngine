@@ -48,6 +48,15 @@
 
 namespace mgb {
 
+class GraphError : public MegBrainError {
+public:
+    using MegBrainError::MegBrainError;
+};
+
+}  // namespace mgb
+
+namespace mgb {
+
 //! computing graph
 namespace cg {
 
@@ -55,11 +64,7 @@ namespace static_infer {
     struct DepElement;
 };
 
-class GraphError: public MegBrainError {
-    public:
-        using MegBrainError::MegBrainError;
-};
-
+using GraphError = mgb::GraphError;
 class OperatorNodeBase;
 class ComputingGraph;
 

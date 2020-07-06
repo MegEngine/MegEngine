@@ -17,6 +17,13 @@
 #include "megbrain/utils/thin/hash_table.h"
 
 namespace mgb {
+class NumRangeCheckerError final : public MegBrainError {
+public:
+    using MegBrainError::MegBrainError;
+};
+}  // namespace mgb
+
+namespace mgb {
 
     /*!
      * \brief check that the absolute values of all numbers in a computing graph
@@ -47,11 +54,7 @@ namespace mgb {
         std::string format_msg(const HostTensorND &hv, float range);
 
         public:
-            class Error final: public MegBrainError {
-                public:
-                    using MegBrainError::MegBrainError;
-            };
-
+            using Error = NumRangeCheckerError;
             NumRangeChecker(cg::ComputingGraph *graph, float range);
     };
 }
