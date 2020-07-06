@@ -84,9 +84,13 @@ void __on_exception_throw__(const std::exception &exc)
     MGB_CATCH(..., {_stmt; throw; }) \
     _stmt
 
+#if MGB_ENABLE_LOGGING
 //! throw exception with given message
-#define mgb_throw(_exc, _msg...) \
-    mgb_throw_raw(_exc(::mgb::ssprintf(_msg))) \
+#define mgb_throw(_exc, _msg...) mgb_throw_raw(_exc(::mgb::ssprintf(_msg)))
+#else
+//! throw exception with given message
+#define mgb_throw(_exc, _msg...) mgb_throw_raw(_exc(""))
+#endif
 
 //! throw exception with given message if condition is true
 #define mgb_throw_if(_cond, _exc, _msg...) \
