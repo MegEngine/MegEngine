@@ -12,8 +12,8 @@
 #pragma once
 
 #define MGB_MAJOR   8
-#define MGB_MINOR   4
-#define MGB_PATCH   1
+#define MGB_MINOR   5
+#define MGB_PATCH   0
 //! whether it is development version
 #ifndef MGB_IS_DEV
 #define MGB_IS_DEV  0
