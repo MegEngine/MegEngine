@@ -141,20 +141,25 @@ void WarpPerspectiveImpl::kern_fallback(
         if (is_resize_optimizable(sub_param.mptr)) {
             if (bmode == BorderMode::CONSTANT) {
                 MIDOUT_BEGIN(megdnn_fallback_warpperspective, midout_iv(1),
-                             midout_iv(true)) {
+                             midout_iv(true), ctype, mtype) {
                     kern_resize<true, ctype, mtype>(sub_param);
-                } MIDOUT_END();
+                }
+                MIDOUT_END();
             } else {
                 MIDOUT_BEGIN(megdnn_fallback_warpperspective, midout_iv(1),
-                             midout_iv(false)) {
+                             midout_iv(false), ctype, mtype) {
                     kern_resize<false, ctype, mtype>(sub_param);
                 }
                 MIDOUT_END();
             }
         } else {
-            rep(oh, OH) kern_naive<ctype, mtype>(sub_param, oh);
+            MIDOUT_BEGIN(megdnn_fallback_warpperspective, midout_iv(2), ctype,
+                         mtype) {
+                rep(oh, OH) kern_naive<ctype, mtype>(sub_param, oh);
+            }
+            MIDOUT_END();
         }
-        sub_param.mptr += 3*3;
+        sub_param.mptr += 3 * 3;
         sub_param.dptr += C*OH*OW;
     }
 

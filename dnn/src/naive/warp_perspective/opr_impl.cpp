@@ -148,6 +148,24 @@ void WarpPerspectiveForwardImpl::kern_naive(
     MIDOUT_END();
 }
 
+#define INST(ctype, mtype)                                              \
+    template void WarpPerspectiveForwardImpl::kern_naive<ctype, mtype>( \
+            const KernParam<ctype, mtype>&, size_t);
+
+INST(float, float);
+
+#if !MEGDNN_DISABLE_FLOAT16
+INST(dt_float16, float);
+INST(dt_float16, dt_float16);
+INST(dt_bfloat16, float);
+INST(dt_bfloat16, dt_bfloat16);
+#endif
+
+INST(int8_t, float);
+INST(uint8_t, float);
+
+#undef INST
+
 template <typename ctype, typename mtype>
 void WarpPerspectiveForwardImpl::kern_naive_nhwcd4(
         const KernParam<ctype, mtype>& kern_param, size_t task_id) {
