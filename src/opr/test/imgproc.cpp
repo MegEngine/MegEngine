@@ -216,7 +216,10 @@ TEST(TestOprImgproc, WarpPerspectiveWithMatIdx) {
             .set_input_generator(1, gen_mat)
             .set_input_generator(2, gen_mat_idx)
             .set_input_dtype(2, dtype::Int32{})
+            /*! it's hard to make the grad check success,
+                the cuda implementation is grad sum */
             .disable_grad_check()
+            .set_input_allow_grad(2,false)
             .run({TensorShape{N_SRC, C, 4, 5}, {N_MAT, 3, 3}, {N_MAT}})
             .run({TensorShape{N_SRC, C, 6, 5}, {N_MAT, 3, 3}, {N_MAT}})
             .run({TensorShape{N_SRC, C, 22, 19}, {N_MAT, 3, 3}, {N_MAT}});

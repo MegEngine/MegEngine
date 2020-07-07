@@ -22,7 +22,11 @@ namespace test {
 struct WarpPerspectiveMatIdxProxy {
     WorkspaceWrapper W;
     static void deduce_layout(WarpPerspective*, TensorLayoutArray&);
+    static void deduce_layout(WarpPerspectiveBackwardData*, TensorLayoutArray&);
+    static void deduce_layout(WarpPerspectiveBackwardMat*, TensorLayoutArray&);
     void exec(WarpPerspective* opr, const TensorNDArray& tensors);
+    void exec(WarpPerspectiveBackwardData* opr, const TensorNDArray& tensors);
+    void exec(WarpPerspectiveBackwardMat* opr, const TensorNDArray& tensors);
 };
 
 class WarpPerspectiveMatRNG final : public IIDRNG {

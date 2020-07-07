@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "test/common/warp_perspective.h"
@@ -19,6 +20,10 @@ using namespace warp_perspective;
 
 void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspective*,
                                                TensorLayoutArray&) {}
+void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspectiveBackwardData*,
+                                               TensorLayoutArray&) {}
+void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspectiveBackwardMat*,
+                                               TensorLayoutArray&) {}
 
 void WarpPerspectiveMatIdxProxy::exec(WarpPerspective* opr,
                                       const TensorNDArray& tensors) {
@@ -29,6 +34,30 @@ void WarpPerspectiveMatIdxProxy::exec(WarpPerspective* opr,
     W.update(opr->get_workspace_in_bytes(tensors[0].layout, tensors[1].layout,
                                          tensors[2].layout, tensors[3].layout));
     opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], W.workspace());
+}
+
+void WarpPerspectiveMatIdxProxy::exec(WarpPerspectiveBackwardData* opr,
+                                      const TensorNDArray& tensors) {
+    if (!W.valid()) {
+        W = WorkspaceWrapper(opr->handle(), 0);
+    }
+    megdnn_assert(tensors.size() == 4);
+    W.update(opr->get_workspace_in_bytes(tensors[0].layout, tensors[1].layout,
+                                         tensors[2].layout, tensors[3].layout));
+    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], W.workspace());
+}
+
+void WarpPerspectiveMatIdxProxy::exec(WarpPerspectiveBackwardMat* opr,
+                                      const TensorNDArray& tensors) {
+    if (!W.valid()) {
+        W = WorkspaceWrapper(opr->handle(), 0);
+    }
+    megdnn_assert(tensors.size() == 5);
+    W.update(opr->get_workspace_in_bytes(tensors[0].layout, tensors[1].layout,
+                                         tensors[2].layout, tensors[3].layout,
+                                         tensors[4].layout));
+    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], tensors[4],
+              W.workspace());
 }
 
 std::vector<TestArg> warp_perspective::get_cv_args() {
@@ -101,10 +130,10 @@ void warp_perspective::run_mat_idx_test(Handle* handle) {
 
     // test NHWC
     param.format = WarpPerspective::Param::Format::NHWC;
-	checker.set_param(param)
-	       .set_rng(2, &mat_idx_rng)
-		   .set_epsilon(1e-1)
-		   .set_dtype(2, dtype::Int32());
+        checker.set_param(param)
+               .set_rng(2, &mat_idx_rng)
+                   .set_epsilon(1e-1)
+                   .set_dtype(2, dtype::Int32());
     checker.execs({{N_SRC, 10, 11, 3}, {2, 3, 3}, {2}, {2, 11, 12, 3}});
 }
 
