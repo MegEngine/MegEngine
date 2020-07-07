@@ -37,13 +37,59 @@ namespace serialization {
             }
         }
     };
+
+    template<>
+    struct OprMaker<opr::WarpPerspectiveBackwardData, 0> {
+        using Opr = opr::WarpPerspectiveBackwardData;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                                          const cg::VarNodeArray& inputs,
+                                          ComputingGraph& graph,
+                                          const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if (inputs.size() == 3) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                mgb_assert(inputs.size() == 4);
+                return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3],
+                                 param, config)
+                        .node()
+                        ->owner_opr();
+            }
+        }
+    };
+
+    template<>
+    struct OprMaker<opr::WarpPerspectiveBackwardMat, 0> {
+        using Opr = opr::WarpPerspectiveBackwardMat;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                                          const cg::VarNodeArray& inputs,
+                                          ComputingGraph& graph,
+                                          const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if (inputs.size() == 3) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                mgb_assert(inputs.size() == 4);
+                return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3],
+                                 param, config)
+                        .node()
+                        ->owner_opr();
+            }
+        }
+    };
 } // namespace serialization
 
 namespace opr {
 
     MGB_SEREG_OPR(WarpPerspective, 0);
-    MGB_SEREG_OPR(WarpPerspectiveBackwardData, 3);
-    MGB_SEREG_OPR(WarpPerspectiveBackwardMat, 3);
+    MGB_SEREG_OPR(WarpPerspectiveBackwardData, 0);
+    MGB_SEREG_OPR(WarpPerspectiveBackwardMat, 0);
 
     MGB_SEREG_OPR(Rotate, 1);
     MGB_SEREG_OPR(CvtColor, 1);

@@ -255,29 +255,31 @@ void WarpPerspectiveForward::check_exec_allow_nhwc_mat_idx(
 }
 
 void WarpPerspectiveBackwardData::check_exec(const TensorLayout& mat,
+                                             const TensorLayout& mat_idx,
                                              const TensorLayout& diff,
                                              const TensorLayout& grad,
                                              size_t workspace_in_bytes) {
-    check_layout_fwd(grad, mat, diff);
+    check_layout_fwd(grad, mat, mat_idx, diff);
     megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
                                         || grad.dtype == dtype::BFloat16()),
                   "Backward WarpPerspective only supports Float32/BFloat16.");
-    auto required_workspace_in_bytes = get_workspace_in_bytes(mat, diff, grad);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(mat, mat_idx, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
 void WarpPerspectiveBackwardMat::check_exec(const TensorLayout& src,
                                             const TensorLayout& mat,
+                                            const TensorLayout& mat_idx,
                                             const TensorLayout& diff,
                                             const TensorLayout& grad,
                                             size_t workspace_in_bytes) {
-    check_layout_fwd(src, mat, diff);
+    check_layout_fwd(src, mat, mat_idx, diff);
     megdnn_assert_eq_layout(mat, grad);
     megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
                                         || grad.dtype == dtype::BFloat16()),
                   "Backward WarpPerspective only supports Float32/BFloat16.");
     auto required_workspace_in_bytes =
-            get_workspace_in_bytes(src, mat, diff, grad);
+            get_workspace_in_bytes(src, mat, mat_idx, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 

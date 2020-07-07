@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/cuda/warp_perspective/common.h"
 
@@ -20,16 +21,21 @@ namespace warp_perspective {
 const int factor = 4;
 
 template <typename Getter, int factor>
-__global__ void warp_perspective_bwd_data_kernel(const float *hidden,
-        const float *mat, float *dst,
-        int N, int C, int IH, int IW, int OH, int OW)
-{
+__global__ void warp_perspective_bwd_data_kernel(const float* hidden,
+                                                 const float* mat,
+                                                 const int* midx, float* dst,
+                                                 int N, int C, int IH, int IW,
+                                                 int OH, int OW) {
     Getter getter;
     int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
     hidden += n * C*OH*OW;
-    dst += n * C*factor*IH*IW;
+    if (midx) {
+        dst += midx[n] * C * factor * IH * IW;
+    } else {
+        dst += n * C * factor * IH * IW;
+    }
     mat += n * 3*3;
     if (ow < OW && oh < OH) {
         float denominator = mat[6]*ow + mat[7]*oh + mat[8];
@@ -72,15 +78,19 @@ __global__ void add_up_kernel(const float *src, float *dst,
 }
 
 template <int factor>
-__global__ void warp_perspective_bwd_data_constant_kernel(const float *hidden,
-        const float *mat, float *dst,
-        int N, int C, int IH, int IW, int OH, int OW)
-{
+__global__ void warp_perspective_bwd_data_constant_kernel(
+        const float* hidden, const float* mat, const int* midx, float* dst,
+        int N, int C, int IH, int IW, int OH, int OW) {
+    int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
-    hidden += blockIdx.z * C*OH*OW;
-    dst += blockIdx.z * C*factor*IH*IW;
-    mat += blockIdx.z * 3*3;
+    hidden += n * C * OH * OW;
+    if (midx) {
+        dst += midx[n] * C * factor * IH * IW;
+    } else {
+        dst += n * C * factor * IH * IW;
+    }
+    mat += n * 3 * 3;
     if (ow < OW && oh < OH) {
         float denominator = mat[6]*ow + mat[7]*oh + mat[8];
         float iw = (mat[0]*ow + mat[1]*oh + mat[2]) / denominator;
@@ -119,30 +129,35 @@ __global__ void warp_perspective_bwd_data_constant_kernel(const float *hidden,
     }
 }
 
-size_t get_backward_data_workspace_in_bytes(
-        int N, int C, int IH, int IW, int /* OH */, int /* OW */,
-        BorderMode /* bmode */)
-{
+size_t get_backward_data_workspace_in_bytes(int N, int C, int IH, int IW,
+                                            int /* OH */, int /* OW */,
+                                            BorderMode /* bmode */) {
     return N*C*IH*IW*factor * sizeof(float);
 }
 
-void backward_data_proxy(const float *mat, const float *diff,
-        float *grad, float *workspace,
-        int N, int C, int IH, int IW, int OH, int OW, float bval,
-        BorderMode mode, cudaStream_t stream)
-{
-
+void backward_data_proxy(const float* mat, const int* midx, const float* diff,
+                         float* grad, float* workspace, int N, int N_SRC, int C,
+                         int IH, int IW, int OH, int OW, float bval,
+                         BorderMode mode, cudaStream_t stream) {
     (void)bval;
     (void)grad;
     const int BY = 16, BX = 32;
     {
         dim3 threads(BX, BY);
         dim3 blocks((OW+BX-1)/BX, (OH+BY-1)/BY, N);
-        cuda_check(cudaMemsetAsync(workspace, 0, sizeof(float) * factor*N*C*IH*IW,
+        if (midx) {
+            cuda_check(cudaMemsetAsync(
+                    workspace, 0, sizeof(float) * factor * N_SRC * C * IH * IW,
                     stream));
-#define DISPATCH(Getter) \
-        warp_perspective_bwd_data_kernel<Getter, factor><<<blocks, threads, \
-            0, stream>>>(diff, mat, workspace, N, C, IH, IW, OH, OW);
+        } else {
+            cuda_check(cudaMemsetAsync(workspace, 0,
+                                       sizeof(float) * factor * N * C * IH * IW,
+                                       stream));
+        }
+#define DISPATCH(Getter)                                                       \
+    warp_perspective_bwd_data_kernel<Getter, factor>                           \
+            <<<blocks, threads, 0, stream>>>(diff, mat, midx, workspace, N, C, \
+                                             IH, IW, OH, OW);
         switch (mode) {
             case BORDER_REPLICATE:
                 DISPATCH(ReplicateGetter);
@@ -158,8 +173,9 @@ void backward_data_proxy(const float *mat, const float *diff,
                 break;
             case BORDER_CONSTANT:
                 warp_perspective_bwd_data_constant_kernel<factor>
-                    <<<blocks, threads, 0, stream>>>
-                    (diff, mat, workspace, N, C, IH, IW, OH, OW);
+                        <<<blocks, threads, 0, stream>>>(diff, mat, midx,
+                                                         workspace, N, C, IH,
+                                                         IW, OH, OW);
                 break;
             default:
                 break;
@@ -169,9 +185,15 @@ void backward_data_proxy(const float *mat, const float *diff,
     {
         int THREADS = 512;
         dim3 threads(THREADS);
-        dim3 blocks((IH*IW+THREADS-1)/THREADS, N*C);
-        add_up_kernel<factor><<<blocks, threads, 0, stream>>>(workspace, grad,
-                IH*IW);
+        if (midx) {
+            dim3 blocks((IH * IW + THREADS - 1) / THREADS, N_SRC * C);
+            add_up_kernel<factor>
+                    <<<blocks, threads, 0, stream>>>(workspace, grad, IH * IW);
+        } else {
+            dim3 blocks((IH * IW + THREADS - 1) / THREADS, N * C);
+            add_up_kernel<factor>
+                    <<<blocks, threads, 0, stream>>>(workspace, grad, IH * IW);
+        }
     }
     after_kernel_launch();
 }
@@ -181,4 +203,3 @@ void backward_data_proxy(const float *mat, const float *diff,
 } // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

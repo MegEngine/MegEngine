@@ -6,17 +6,17 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
-#include "./internal/megdnn_opr_wrapper.inl"
 #include "megbrain/opr/imgproc.h"
-#include "megbrain/opr/utility.h"
+#include "./internal/megdnn_opr_wrapper.inl"
 #include "megbrain/graph/grad_impl.h"
+#include "megbrain/opr/utility.h"
 
 using namespace mgb;
 using namespace opr;
-
 
 /* ======================= WarpPerspectiveForward ======================= */
 
@@ -54,8 +54,7 @@ void WarpPerspectiveForward::add_input_layout_constraint() {
 }
 
 void WarpPerspectiveForward::outshape_by_symvar_do_get_output_shape(
-        TensorShape &dest, const ShapeInferInfo &shpinfo) {
-
+        TensorShape& dest, const ShapeInferInfo& shpinfo) {
     TensorShape oshp2d;
     cg::copy_tensor_value_to_shape(oshp2d, *shpinfo.shpval_inp_val.at(0));
     auto imgshp = shpinfo.shape_inp_shp.at(0),
@@ -112,8 +111,8 @@ void WarpPerspectiveForward::scn_do_execute() {
 }
 
 size_t WarpPerspectiveForward::get_workspace_size_bytes(
-        const TensorShapeArray &input_shapes,
-        const TensorShapeArray &output_shapes) const {
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
     if (input().size() == 3) {
         return intl::_MegDNNOprMethInvoker<2, 1>::get_workspace_in_bytes(
                 megdnn_opr(), this, input_shapes, output_shapes);
@@ -129,19 +128,34 @@ void WarpPerspectiveForward::record_execute_deps(ExecDependencyArray& deps) {
 
 #ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(WarpPerspectiveForward) {
-    mgb_assert(opr.input().size() == 3,
-            "backward with mat_idx is currently unsupported");
+    if (opr.input().size() == 4) {
+        if (wrt_idx == 0) {
+            // wrt data
+            SymbolVar grad = WarpPerspectiveBackwardData::make(
+                    opr.input(1), opr.input(2), out_grad[0], opr.input(0),
+                    opr.param());
+            return grad.node();
+        } else if (wrt_idx == 1) {
+            // wrt mat
+            SymbolVar grad = WarpPerspectiveBackwardMat::make(
+                    opr.input(0), opr.input(1), opr.input(2), out_grad[0],
+                    opr.param());
+            return grad.node();
+        } else {
+            return InvalidGrad::make(opr, wrt_idx);
+        }
+    }
+
+    mgb_assert(opr.input().size() == 3);
     if (wrt_idx == 0) {
         // wrt data
         SymbolVar grad = WarpPerspectiveBackwardData::make(
-                opr.input(1), out_grad[0], opr.input(0),
-                opr.param());
+                opr.input(1), out_grad[0], opr.input(0), opr.param());
         return grad.node();
-    } else if (wrt_idx == 1){
+    } else if (wrt_idx == 1) {
         // wrt mat
         SymbolVar grad = WarpPerspectiveBackwardMat::make(
-                opr.input(0), opr.input(1), out_grad[0],
-                opr.param());
+                opr.input(0), opr.input(1), out_grad[0], opr.param());
         return grad.node();
     } else
         return InvalidGrad::make(opr, wrt_idx);
@@ -151,14 +165,116 @@ MGB_IMPL_OPR_GRAD(WarpPerspectiveForward) {
 /* ====================== WarpPerspectiveBackwardData ====================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(WarpPerspectiveBackwardData);
-MEGDNN_OPR_INIT3(WarpPerspectiveBackwardData, "warp_perspective_bwd_data",
-        2, false);
+
+WarpPerspectiveBackwardData::WarpPerspectiveBackwardData(
+        VarNode* mat, VarNode* out_diff, VarNode* in_for_shape,
+        const Param& param, const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{mat->owner_graph(),
+                                          config,
+                                          "warp_perspective_bwd_data",
+                                          {mat}},
+                2, false) {
+    init_megdnn_opr(*this, param);
+    add_input({mat, out_diff, in_for_shape});
+    intl::MegDNNOprInitPostCtor<WarpPerspectiveBackwardData>::apply(*this);
+}
+
+WarpPerspectiveBackwardData::WarpPerspectiveBackwardData(
+        VarNode* mat, VarNode* mat_idx, VarNode* out_diff,
+        VarNode* in_for_shape, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{mat->owner_graph(),
+                                          config,
+                                          "warp_perspective_bwd_data",
+                                          {mat, mat_idx}},
+                3, false) {
+    init_megdnn_opr(*this, param);
+    add_input({mat, mat_idx, out_diff, in_for_shape});
+    intl::MegDNNOprInitPostCtor<WarpPerspectiveBackwardData>::apply(*this);
+}
+
+SymbolVar WarpPerspectiveBackwardData::make(SymbolVar i0, SymbolVar i1,
+                                            SymbolVar i2, const Param& param,
+                                            const OperatorNodeConfig& config) {
+    intl::MegDNNOprInitInputsModifier<WarpPerspectiveBackwardData>::apply(
+            param, {&i0, &i1, &i2});
+    return i0.insert_single_output_opr<WarpPerspectiveBackwardData>(
+            i0.node(), i1.node(), i2.node(), param, config);
+}
+
+SymbolVar WarpPerspectiveBackwardData::make(SymbolVar i0, SymbolVar i1,
+                                            SymbolVar i2, SymbolVar i3,
+                                            const Param& param,
+                                            const OperatorNodeConfig& config) {
+    intl::MegDNNOprInitInputsModifier<WarpPerspectiveBackwardData>::apply(
+            param, {&i0, &i1, &i2, &i3});
+    return i0.insert_single_output_opr<WarpPerspectiveBackwardData>(
+            i0.node(), i1.node(), i2.node(), i3.node(), param, config);
+}
+
+void WarpPerspectiveBackwardData::scn_do_execute() {
+    if (input().size() == 3) {
+        megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
+                           input(1)->dev_tensor().as_megdnn(),
+                           output(0)->dev_tensor().as_megdnn(),
+                           intl::get_megdnn_workspace_from_var(output(1)));
+    } else {
+        mgb_assert(input().size() == 4);
+        megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
+                           input(1)->dev_tensor().as_megdnn(),
+                           input(2)->dev_tensor().as_megdnn(),
+                           output(0)->dev_tensor().as_megdnn(),
+                           intl::get_megdnn_workspace_from_var(output(1)));
+    }
+}
 
 /* ====================== WarpPerspectiveBackwardMat ====================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(WarpPerspectiveBackwardMat);
-MEGDNN_OPR_INIT3(WarpPerspectiveBackwardMat, "warp_perspective_bwd_mat",
-        1, true);
+
+WarpPerspectiveBackwardMat::WarpPerspectiveBackwardMat(
+        VarNode* src, VarNode* mat, VarNode* mat_idx, VarNode* out_diff,
+        const Param& param, const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{src->owner_graph(),
+                                          config,
+                                          "warp_perspective_bwd_mat",
+                                          {src, mat, mat_idx}},
+                1, true) {
+    init_megdnn_opr(*this, param);
+    if (mat_idx) {
+        add_input({src, mat, mat_idx, out_diff});
+    } else {
+        add_input({src, mat, out_diff});
+    }
+    intl::MegDNNOprInitPostCtor<WarpPerspectiveBackwardMat>::apply(*this);
+}
+
+void WarpPerspectiveBackwardMat::scn_do_execute() {
+    if (input().size() == 3) {
+        megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
+                           input(1)->dev_tensor().as_megdnn(),
+                           input(2)->dev_tensor().as_megdnn(),
+                           output(0)->dev_tensor().as_megdnn(),
+                           intl::get_megdnn_workspace_from_var(output(1)));
+    } else {
+        mgb_assert(input().size() == 4);
+        megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
+                           input(1)->dev_tensor().as_megdnn(),
+                           input(2)->dev_tensor().as_megdnn(),
+                           input(3)->dev_tensor().as_megdnn(),
+                           output(0)->dev_tensor().as_megdnn(),
+                           intl::get_megdnn_workspace_from_var(output(1)));
+    }
+}
+
+SymbolVar WarpPerspectiveBackwardMat::make(
+        SymbolVar i0, SymbolVar i1, SymbolVar i2, SymbolVar i3,
+        const Param& param, const OperatorNodeConfig& config) {
+    intl::MegDNNOprInitInputsModifier<WarpPerspectiveBackwardMat>::apply(
+            param, {&i0, &i1, &i2, &i3});
+    return i0.insert_single_output_opr<WarpPerspectiveBackwardMat>(
+            i0.node(), i1.node(), i2.node(), i3.node(), param, config);
+}
 
 /* ====================== Cv operator ====================== */
 
@@ -188,8 +304,7 @@ void ResizeForward::add_input_layout_constraint() {
 }
 
 void ResizeForward::outshape_by_symvar_do_get_output_shape(
-        TensorShape &dest, const ShapeInferInfo &shpinfo) {
-
+        TensorShape& dest, const ShapeInferInfo& shpinfo) {
     TensorShape oshp2d;
     cg::copy_tensor_value_to_shape(oshp2d, *shpinfo.shpval_inp_val.at(0));
     auto imgshp = shpinfo.shape_inp_shp.at(0);
@@ -232,7 +347,7 @@ size_t ResizeForward::get_workspace_size_bytes(
             megdnn_opr(), this, input_shapes, output_shapes);
 }
 
-void ResizeForward::record_execute_deps(ExecDependencyArray &deps) {
+void ResizeForward::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
@@ -268,19 +383,17 @@ void WarpAffineForward::add_input_layout_constraint() {
 }
 
 void WarpAffineForward::outshape_by_symvar_do_get_output_shape(
-        TensorShape &dest, const ShapeInferInfo &shpinfo) {
-
+        TensorShape& dest, const ShapeInferInfo& shpinfo) {
     TensorShape oshp2d;
     cg::copy_tensor_value_to_shape(oshp2d, *shpinfo.shpval_inp_val.at(0));
     auto imgshp = shpinfo.shape_inp_shp.at(0),
          matshp = shpinfo.shape_inp_shp.at(1);
-    mgb_assert(
-            (imgshp.ndim == 4 || imgshp.ndim == 5) && matshp.ndim == 3 && oshp2d.ndim == 2 &&
-            matshp.shape[0] == imgshp.shape[0] &&
-            matshp.shape[1] == 2 && matshp.shape[2] == 3,
-            "shape mismatch for WarpAffineForward: img=%s mat=%s out2d=%s",
-            imgshp.to_string().c_str(), matshp.to_string().c_str(),
-            oshp2d.to_string().c_str());
+    mgb_assert((imgshp.ndim == 4 || imgshp.ndim == 5) && matshp.ndim == 3 &&
+                       oshp2d.ndim == 2 && matshp.shape[0] == imgshp.shape[0] &&
+                       matshp.shape[1] == 2 && matshp.shape[2] == 3,
+               "shape mismatch for WarpAffineForward: img=%s mat=%s out2d=%s",
+               imgshp.to_string().c_str(), matshp.to_string().c_str(),
+               oshp2d.to_string().c_str());
 
     size_t height_idx = 0;
     if (param().format == Param::Format::NCHW) {
@@ -305,18 +418,19 @@ void WarpAffineForward::init_output_static_infer_desc() {
 }
 
 void WarpAffineForward::scn_do_execute() {
-    intl::MegDNNOprMethInvoker<megdnn::WarpAffine>::
-        exec(megdnn_opr(), this);
+    intl::MegDNNOprMethInvoker<megdnn::WarpAffine>::exec(megdnn_opr(), this);
 }
 
 size_t WarpAffineForward::get_workspace_size_bytes(
-        const TensorShapeArray &input_shapes,
-        const TensorShapeArray &output_shapes) const {
-    return intl::MegDNNOprMethInvoker<megdnn::WarpAffine>::
-        get_workspace_in_bytes(megdnn_opr(), this, input_shapes, output_shapes);
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    return intl::MegDNNOprMethInvoker<
+            megdnn::WarpAffine>::get_workspace_in_bytes(megdnn_opr(), this,
+                                                        input_shapes,
+                                                        output_shapes);
 }
 
-void WarpAffineForward::record_execute_deps(ExecDependencyArray &deps) {
+void WarpAffineForward::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
@@ -325,7 +439,7 @@ void WarpAffineForward::record_execute_deps(ExecDependencyArray &deps) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemapForward);
 MEGDNN_OPR_INIT2(RemapForward, "remap")
 
-void RemapForward::init_output_dtype(){
+void RemapForward::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
 

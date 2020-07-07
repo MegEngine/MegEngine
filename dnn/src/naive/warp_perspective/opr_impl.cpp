@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/naive/warp_perspective/opr_impl.h"
 #include "src/naive/warp_perspective/warp_perspective_cv.h"
@@ -358,18 +359,29 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in src,
 }
 
 template <typename ctype, typename mtype>
-void WarpPerspectiveBackwardDataImpl::kern_naive(const KernParam<ctype, mtype>& kern_param) {
-    const int N = kern_param.n, C = kern_param.c,
-              IH = kern_param.ih, IW = kern_param.iw;
+void WarpPerspectiveBackwardDataImpl::kern_naive(
+        const KernParam<ctype, mtype>& kern_param) {
+    const int N = kern_param.n_mat, C = kern_param.c, IH = kern_param.ih,
+              IW = kern_param.iw;
     const int OH = kern_param.oh, OW = kern_param.ow;
     const ctype* hptr_ = kern_param.hptr;
     const mtype* mptr_ = kern_param.mptr;
     ctype* sptr_ = kern_param.sptr;
+    int* midx_ptr = kern_param.midx_ptr;
     auto hptr = hptr_;
     auto mptr = mptr_;
     auto sptr = sptr_;
-    std::memset(sptr, 0, sizeof(ctype) * N * C * IH * IW);
+    if (midx_ptr) {
+        std::memset(sptr, 0, sizeof(ctype) * kern_param.n_src * C * IH * IW);
+    } else {
+        std::memset(sptr, 0, sizeof(ctype) * N * C * IH * IW);
+    }
     rep(n, N) {
+        if (midx_ptr) {
+            sptr = sptr_ + midx_ptr[n] * C * IH * IW;
+        } else {
+            sptr = sptr_ + n * C * IH * IW;
+        }
         rep(oh, OH) rep(ow, OW) {
             float numeratorw = mptr[0] * ow + mptr[1] * oh + mptr[2];
             float numeratorh = mptr[3] * ow + mptr[4] * oh + mptr[5];
@@ -404,27 +416,30 @@ void WarpPerspectiveBackwardDataImpl::kern_naive(const KernParam<ctype, mtype>& 
                 }
             }
         }
-        sptr += C * IH * IW;
         hptr += C * OH * OW;
         mptr += 3 * 3;
     }
 }
 
 void WarpPerspectiveBackwardDataImpl::exec(_megdnn_tensor_in mat,
+                                           _megdnn_tensor_in mat_idx,
                                            _megdnn_tensor_in diff,
                                            _megdnn_tensor_out grad,
                                            _megdnn_workspace workspace) {
-    check_exec(mat.layout, diff.layout, grad.layout, workspace.size);
+    check_exec(mat.layout, mat_idx.layout, diff.layout, grad.layout,
+               workspace.size);
     megdnn_assert(param().format == param::WarpPerspective::Format::NCHW,
                   "invalid warp_perspective format");
 #define DISPATCH_ST_MT(dt, ct)                                                 \
     if (diff.layout.dtype.enumv() == DTypeTrait<dt>::enumv) {                  \
         if (mat.layout.dtype.enumv() == DTypeTrait<dtype::Float32>::enumv) {   \
-            auto kparam = KernParam<ct, float>::from_tensors(mat, diff, grad); \
+            auto kparam = KernParam<ct, float>::from_tensors(mat, mat_idx,     \
+                                                             diff, grad);      \
             MEGDNN_DISPATCH_CPU_KERN_OPR(kern_naive(kparam));                  \
             return;                                                            \
         } else {                                                               \
-            auto kparam = KernParam<ct, ct>::from_tensors(mat, diff, grad);    \
+            auto kparam =                                                      \
+                    KernParam<ct, ct>::from_tensors(mat, mat_idx, diff, grad); \
             MEGDNN_DISPATCH_CPU_KERN_OPR(kern_naive(kparam));                  \
             return;                                                            \
         }                                                                      \
@@ -441,7 +456,7 @@ void WarpPerspectiveBackwardDataImpl::exec(_megdnn_tensor_in mat,
 template <typename ctype, typename mtype>
 void WarpPerspectiveBackwardMatImpl::kern_naive(
         const KernParam<ctype, mtype>& kern_param) {
-    const int N = kern_param.n, C = kern_param.c, IH = kern_param.ih,
+    const int N = kern_param.n_mat, C = kern_param.c, IH = kern_param.ih,
               IW = kern_param.iw;
     const int OH = kern_param.oh, OW = kern_param.ow;
 
@@ -449,9 +464,15 @@ void WarpPerspectiveBackwardMatImpl::kern_naive(
     auto sptr = kern_param.sptr;
     auto mptr = kern_param.mptr;
     auto res = kern_param.res;
+    auto midx_ptr = kern_param.midx_ptr;
     auto border_val = kern_param.border_val;
     std::memset(res, 0, sizeof(float) * N * 3 * 3);
     rep(n, N) {
+        if (midx_ptr) {
+            sptr = kern_param.sptr + midx_ptr[n] * C * IH * IW;
+        } else {
+            sptr = kern_param.sptr + n * C * IH * IW;
+        }
         rep(oh, OH) rep(ow, OW) {
             float numeratorw = mptr[0] * ow + mptr[1] * oh + mptr[2];
             float numeratorh = mptr[3] * ow + mptr[4] * oh + mptr[5];
@@ -537,7 +558,6 @@ void WarpPerspectiveBackwardMatImpl::kern_naive(
             }
         }
         hptr += C * OH * OW;
-        sptr += C * IH * IW;
         mptr += 3 * 3;
         res += 3 * 3;
     }
@@ -545,21 +565,22 @@ void WarpPerspectiveBackwardMatImpl::kern_naive(
 
 void WarpPerspectiveBackwardMatImpl::exec(_megdnn_tensor_in src,
                                           _megdnn_tensor_in mat,
+                                          _megdnn_tensor_in mat_idx,
                                           _megdnn_tensor_in diff,
                                           _megdnn_tensor_out grad,
                                           _megdnn_workspace workspace) {
-    check_exec(src.layout, mat.layout, diff.layout, grad.layout,
+    check_exec(src.layout, mat.layout, mat_idx.layout, diff.layout, grad.layout,
                workspace.size);
 #define DISPATCH_ST_MT(dt, ct)                                               \
     if (src.layout.dtype.enumv() == DTypeTrait<dt>::enumv) {                 \
         if (mat.layout.dtype.enumv() == DTypeTrait<dtype::Float32>::enumv) { \
             auto kparam = KernParam<ct, float>::from_tensors(                \
-                    param().border_val, src, mat, diff, grad);               \
+                    param().border_val, src, mat, mat_idx, diff, grad);      \
             MEGDNN_DISPATCH_CPU_KERN_OPR(kern_naive(kparam));                \
             return;                                                          \
         } else {                                                             \
             auto kparam = KernParam<ct, ct>::from_tensors(                   \
-                    param().border_val, src, mat, diff, grad);               \
+                    param().border_val, src, mat, mat_idx, diff, grad);      \
             MEGDNN_DISPATCH_CPU_KERN_OPR(kern_naive(kparam));                \
             return;                                                          \
         }                                                                    \

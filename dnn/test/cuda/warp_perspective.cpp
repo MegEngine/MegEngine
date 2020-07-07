@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/cuda/fixture.h"
 
@@ -21,10 +22,10 @@ namespace {
 using namespace megdnn;
 using namespace test;
 
-class NanMatRNG: public RNG {
-    void gen(const TensorND &tensor_) override
+class NanMatRNG : public RNG {
+    void gen(const TensorND& tensor_) override
     {
-        auto &gen = RandomState::generator();
+        auto& gen = RandomState::generator();
         std::uniform_real_distribution<dt_float32> pdist3(1.9f, 2.1f);
         std::uniform_real_distribution<dt_float32> pdist(0.9f, 1.1f);
         std::uniform_real_distribution<dt_float32> pdisth(0.4f, 0.6f);
@@ -32,7 +33,7 @@ class NanMatRNG: public RNG {
         std::uniform_real_distribution<dt_float32> ndist3(-2.1f, -1.9f);
         std::uniform_real_distribution<dt_float32> ndisth(-0.6f, -0.4f);
         std::uniform_int_distribution<int> dice(0, 5);
-        float *ptr = tensor_.ptr<dt_float32>();
+        float* ptr = tensor_.ptr<dt_float32>();
         auto N = tensor_.layout.shape[0];
         for (size_t n = 0; n < N; ++n) {
             for (size_t i = 0; i < 9; ++i) {
@@ -65,7 +66,7 @@ class NanMatRNG: public RNG {
     }
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 namespace megdnn {
 namespace test {
@@ -171,17 +172,15 @@ TEST_F(CUDA, WARP_PERSPECTIVE_CV) {
 }
 #endif
 
-TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD) {
     using Param = WarpPerspective::Param;
     Checker<WarpPerspectiveForward> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
-    for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-            WarpPerspective::BorderMode::REFLECT,
-            WarpPerspective::BorderMode::REPLICATE,
-            WarpPerspective::BorderMode::CONSTANT})
-    {
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
         WarpPerspective::Param param;
         param.border_val = 0.3f;
         param.bmode = bmode;
@@ -204,8 +203,7 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD)
     // nan case
     NanMatRNG rng_nan;
     UniformFloatRNG rng_zero(0, 0);
-    for (auto rng: std::vector<RNG *>{&rng_nan, &rng_zero})
-    {
+    for (auto rng : std::vector<RNG*>{&rng_nan, &rng_zero}) {
         param::WarpPerspective param;
         param.bmode = param::WarpPerspective::BorderMode::CONSTANT;
         param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
@@ -213,20 +211,18 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD)
         param.border_val = 1.737;
         checker.set_param(param);
         // no invalid mem access is enough; no need to check value
-        checker.set_expect_exec_fail([](){});
+        checker.set_expect_exec_fail([]() {});
         checker.exec({{1000, 2, 10, 11}, {1000, 3, 3}, {1000, 2, 12, 13}});
     }
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_INTMAX)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_INTMAX) {
     require_compute_capability(6, 0);
     using Param = WarpPerspective::Param;
     Checker<WarpPerspectiveForward> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
-    for (auto bmode: {WarpPerspective::BorderMode::REPLICATE})
-    {
+    for (auto bmode : {WarpPerspective::BorderMode::REPLICATE}) {
         WarpPerspective::Param param;
         param.border_val = 0.3f;
         param.bmode = bmode;
@@ -235,27 +231,24 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_INTMAX)
         param.format = Param::Format::NHWC;
         checker.set_param(param);
         checker.set_epsilon(0.15).set_max_avg_error(4e-2);
-		size_t n = (INT_MAX) / (512 * 512 * 3);
-		checker.execs(
-				{{n + 1, 512, 512, 3}, {n + 1, 3, 3}, {n + 1, 25, 25, 3}});
+        size_t n = (INT_MAX) / (512 * 512 * 3);
+        checker.execs(
+                {{n + 1, 512, 512, 3}, {n + 1, 3, 3}, {n + 1, 25, 25, 3}});
     }
 }
 
-
-TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_FP16)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_FP16) {
     using Param = WarpPerspective::Param;
     Checker<WarpPerspectiveForward> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
     checker.set_dtype(0, dtype::Float16())
-        .set_dtype(1, dtype::Float32())
-        .set_dtype(2, dtype::Float16());
-    for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-            WarpPerspective::BorderMode::REFLECT,
-            WarpPerspective::BorderMode::REPLICATE,
-            WarpPerspective::BorderMode::CONSTANT})
-    {
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::Float16());
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
         WarpPerspective::Param param;
         param.border_val = 0.3f;
         param.bmode = bmode;
@@ -278,8 +271,7 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_FP16)
     // nan case
     NanMatRNG rng_nan;
     UniformFloatRNG rng_zero(0, 0);
-    for (auto rng: std::vector<RNG *>{&rng_nan, &rng_zero})
-    {
+    for (auto rng : std::vector<RNG*>{&rng_nan, &rng_zero}) {
         param::WarpPerspective param;
         param.bmode = param::WarpPerspective::BorderMode::CONSTANT;
         param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
@@ -287,13 +279,12 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_FP16)
         param.border_val = 1.737;
         checker.set_param(param);
         // no invalid mem access is enough; no need to check value
-        checker.set_expect_exec_fail([](){});
+        checker.set_expect_exec_fail([]() {});
         checker.exec({{1000, 2, 10, 11}, {1000, 3, 3}, {1000, 2, 12, 13}});
     }
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_NCHW4)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_NCHW4) {
     using Param = WarpPerspective::Param;
     WarpPerspective::Param param;
     Checker<WarpPerspectiveForward> checker(handle_cuda());
@@ -348,31 +339,29 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_NCHW_INT8) {
     warp_perspective::run_int8_test(handle_cuda());
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA) {
     Checker<WarpPerspectiveBackwardData> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(0, &rng);
     for (int i = 0; i < 1; ++i) {
-        for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-                WarpPerspective::BorderMode::REFLECT,
-                WarpPerspective::BorderMode::REPLICATE,
-                WarpPerspective::BorderMode::CONSTANT})
-        {
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
             WarpPerspective::Param param;
             param.border_val = 0.3f;
             param.bmode = bmode;
             param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
             checker.set_param(param);
             checker.execs({{2, 3, 3}, {2, 3, 11, 12}, {2, 3, 10, 11}});
-            checker.execs({{22000, 3, 3}, {22000, 3, 11, 12}, {22000, 3, 10, 11}});
+            checker.execs(
+                    {{22000, 3, 3}, {22000, 3, 11, 12}, {22000, 3, 10, 11}});
         }
     }
     // nan case
     NanMatRNG rng_nan;
     UniformFloatRNG rng_zero(0, 0);
-    for (auto rng: std::vector<RNG *>{&rng_nan, &rng_zero})
-    {
+    for (auto rng : std::vector<RNG*>{&rng_nan, &rng_zero}) {
         param::WarpPerspective param;
         param.bmode = param::WarpPerspective::BorderMode::CONSTANT;
         param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
@@ -380,39 +369,54 @@ TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA)
         param.border_val = 1.737;
         checker.set_param(param);
         // no invalid mem access is enough; no need to check value
-        checker.set_expect_exec_fail([](){});
+        checker.set_expect_exec_fail([]() {});
         checker.exec({{1000, 3, 3}, {1000, 2, 10, 11}, {1000, 2, 12, 13}});
+    }
+
+    {
+        Checker<WarpPerspectiveBackwardData, WarpPerspectiveMatIdxProxy>
+                checker(handle_cuda());
+        constexpr int N_SRC = 5;
+        UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+        checker.set_rng(0, &rng);
+        checker.set_dtype(1, dtype::Int32());
+        checker.set_rng(1, &mat_idx_rng);
+        param::WarpPerspective param;
+        param.bmode = param::WarpPerspective::BorderMode::REFLECT;
+        param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{2, 3, 3}, {2}, {2, 12, 11, 12}, {N_SRC, 12, 10, 11}});
+        checker.execs(
+                {{123, 3, 3}, {123}, {123, 56, 16, 15}, {N_SRC, 56, 17, 13}});
     }
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT) {
     Checker<WarpPerspectiveBackwardMat> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
     for (int i = 0; i < 1; ++i) {
-        for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-                WarpPerspective::BorderMode::REFLECT,
-                WarpPerspective::BorderMode::REPLICATE,
-                WarpPerspective::BorderMode::CONSTANT})
-        {
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
             WarpPerspective::Param param;
             param.border_val = 0.3f;
             param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
             param.bmode = bmode;
             checker.set_param(param);
             checker.set_epsilon(1e-2);
-            checker.execs({
-                    {1000, 3, 11, 12}, {1000, 3, 3},
-                    {1000, 3, 10, 11}, {1000, 3, 3}
-                    });
+            checker.execs({{1000, 3, 11, 12},
+                           {1000, 3, 3},
+                           {1000, 3, 10, 11},
+                           {1000, 3, 3}});
         }
     }
     // nan case
     NanMatRNG rng_nan;
     UniformFloatRNG rng_zero(0, 0);
-    for (auto rng: std::vector<RNG *>{&rng_nan, &rng_zero})
-    {
+    for (auto rng : std::vector<RNG*>{&rng_nan, &rng_zero}) {
         param::WarpPerspective param;
         param.bmode = param::WarpPerspective::BorderMode::CONSTANT;
         param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
@@ -420,26 +424,50 @@ TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT)
         param.border_val = 1.737;
         checker.set_param(param);
         // no invalid mem access is enough; no need to check value
-        checker.set_expect_exec_fail([](){});
-        checker.exec({{1000, 2, 10, 11}, {1000, 3, 3},
-                {1000, 2, 12, 13}, {1000, 3, 3}});
+        checker.set_expect_exec_fail([]() {});
+        checker.exec({{1000, 2, 10, 11},
+                      {1000, 3, 3},
+                      {1000, 2, 12, 13},
+                      {1000, 3, 3}});
+    }
+    {
+        Checker<WarpPerspectiveBackwardMat, WarpPerspectiveMatIdxProxy> checker(
+                handle_cuda());
+        constexpr int N_SRC = 5;
+        UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+        checker.set_rng(1, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_rng(2, &mat_idx_rng);
+        param::WarpPerspective param;
+        param.bmode = param::WarpPerspective::BorderMode::REFLECT;
+        param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{N_SRC, 12, 10, 11},
+                       {2, 3, 3},
+                       {2},
+                       {2, 12, 11, 12},
+                       {2, 3, 3}});
+        checker.execs({{N_SRC, 56, 17, 13},
+                       {123, 3, 3},
+                       {123},
+                       {123, 56, 16, 15},
+                       {123, 3, 3}});
     }
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_BFLOAT16)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_BFLOAT16) {
     using Param = WarpPerspective::Param;
     Checker<WarpPerspectiveForward> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
     checker.set_dtype(0, dtype::BFloat16())
-        .set_dtype(1, dtype::Float32())
-        .set_dtype(2, dtype::BFloat16());
-    for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-            WarpPerspective::BorderMode::REFLECT,
-            WarpPerspective::BorderMode::REPLICATE,
-            WarpPerspective::BorderMode::CONSTANT})
-    {
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::BFloat16());
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
         WarpPerspective::Param param;
         param.border_val = 0.3f;
         param.bmode = bmode;
@@ -457,21 +485,19 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_BFLOAT16)
     }
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA_BFLOAT16)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA_BFLOAT16) {
     Checker<WarpPerspectiveBackwardData> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(0, &rng)
-    .set_epsilon(1e-1)
-    .set_dtype(0, dtype::Float32())
-    .set_dtype(1, dtype::BFloat16())
-    .set_dtype(2, dtype::BFloat16());
+            .set_epsilon(1e-1)
+            .set_dtype(0, dtype::Float32())
+            .set_dtype(1, dtype::BFloat16())
+            .set_dtype(2, dtype::BFloat16());
     for (int i = 0; i < 1; ++i) {
-        for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-                WarpPerspective::BorderMode::REFLECT,
-                WarpPerspective::BorderMode::REPLICATE,
-                WarpPerspective::BorderMode::CONSTANT})
-        {
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
             WarpPerspective::Param param;
             param.border_val = 0.3f;
             param.bmode = bmode;
@@ -482,31 +508,29 @@ TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_DATA_BFLOAT16)
     }
 }
 
-TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT_BFLOAT16)
-{
+TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT_BFLOAT16) {
     Checker<WarpPerspectiveBackwardMat> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng)
-    .set_epsilon(1e-2)
-    .set_dtype(0, dtype::BFloat16())
-    .set_dtype(1, dtype::Float32())
-    .set_dtype(2, dtype::BFloat16())
-    .set_dtype(3, dtype::Float32());
+            .set_epsilon(1e-2)
+            .set_dtype(0, dtype::BFloat16())
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::BFloat16())
+            .set_dtype(3, dtype::Float32());
     for (int i = 0; i < 1; ++i) {
-        for (auto bmode: {WarpPerspective::BorderMode::WRAP,
-                WarpPerspective::BorderMode::REFLECT,
-                WarpPerspective::BorderMode::REPLICATE,
-                WarpPerspective::BorderMode::CONSTANT})
-        {
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
             WarpPerspective::Param param;
             param.border_val = 0.3f;
             param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
             param.bmode = bmode;
             checker.set_param(param);
-            checker.execs({
-                    {1000, 3, 11, 12}, {1000, 3, 3},
-                    {1000, 3, 10, 11}, {1000, 3, 3}
-                    });
+            checker.execs({{1000, 3, 11, 12},
+                           {1000, 3, 3},
+                           {1000, 3, 10, 11},
+                           {1000, 3, 3}});
         }
     }
 }
@@ -549,14 +573,14 @@ TEST_F(CUDA, BENCHMARK_WARP_PERSPECTIVE_NCHW4) {
     benchmarker.set_dtype(0, dtype::QuantizedS8(1.0f));
     benchmarker.set_dtype(2, dtype::QuantizedS8(1.0f));
     run({TensorShape{1, 25, 256, 256, 4}, {1, 3, 3}, {1, 25, 256, 5120, 4}});
-    run({TensorShape{1, 25, 256, 5120, 4}, {1, 3, 3}, {1,25, 256, 256, 4}});
+    run({TensorShape{1, 25, 256, 5120, 4}, {1, 3, 3}, {1, 25, 256, 256, 4}});
     run({TensorShape{1, 25, 256, 256, 4}, {1, 3, 3}, {1, 25, 512, 512, 4}});
     run({TensorShape{1, 25, 512, 512, 4}, {1, 3, 3}, {1, 25, 256, 256, 4}});
 }
 
 #endif
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

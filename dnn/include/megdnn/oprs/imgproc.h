@@ -105,15 +105,32 @@ class WarpPerspectiveBackwardData: public WarpPerspectiveBase {
          * \param[out] grad the backpropagated gradient wrt. src
          * \param[out] workspace temporary workspace to perform backward
          */
+        void exec(_megdnn_tensor_in mat,
+                _megdnn_tensor_in diff,
+                _megdnn_tensor_out grad,
+                _megdnn_workspace workspace) {
+            exec(mat, {}, diff, grad, workspace);
+        }
+
         virtual void exec(_megdnn_tensor_in mat,
+                _megdnn_tensor_in mat_idx,
                 _megdnn_tensor_in diff,
                 _megdnn_tensor_out grad,
                 _megdnn_workspace workspace) = 0;
+
+        size_t get_workspace_in_bytes(const TensorLayout &mat,
+                const TensorLayout &diff,
+                const TensorLayout &grad) {
+            return get_workspace_in_bytes(mat, {}, diff, grad);
+        }
+
         virtual size_t get_workspace_in_bytes(const TensorLayout &mat,
+                const TensorLayout &mat_idx,
                 const TensorLayout &diff,
                 const TensorLayout &grad) = 0;
     protected:
         void check_exec(const TensorLayout &mat,
+                const TensorLayout &mat_idx,
                 const TensorLayout &diff,
                 const TensorLayout &grad,
                 size_t workspace_in_bytes);
@@ -129,18 +146,37 @@ class WarpPerspectiveBackwardMat: public WarpPerspectiveBase {
          * \param[out] grad the backpropagated gradient wrt. mat
          * \param[out] workspace temporary workspace to perform backward
          */
-        virtual void exec(_megdnn_tensor_in src,
+        void exec(_megdnn_tensor_in src,
                 _megdnn_tensor_in mat,
                 _megdnn_tensor_in diff,
                 _megdnn_tensor_out grad,
+                _megdnn_workspace workspace) {
+            exec(src, mat, {}, diff, grad, workspace);
+        }
+
+        virtual void exec(_megdnn_tensor_in src,
+                _megdnn_tensor_in mat,
+                _megdnn_tensor_in mat_idx,
+                _megdnn_tensor_in diff,
+                _megdnn_tensor_out grad,
                 _megdnn_workspace workspace) = 0;
+
+        size_t get_workspace_in_bytes(const TensorLayout &src,
+                const TensorLayout &mat,
+                const TensorLayout &diff,
+                const TensorLayout &grad) {
+            return get_workspace_in_bytes(src, mat, {}, diff, grad);
+        }
+
         virtual size_t get_workspace_in_bytes(const TensorLayout &src,
                 const TensorLayout &mat,
+                const TensorLayout &mat_idx,
                 const TensorLayout &diff,
                 const TensorLayout &grad) = 0;
     protected:
         void check_exec(const TensorLayout &src,
                 const TensorLayout &mat,
+                const TensorLayout &mat_idx,
                 const TensorLayout &diff,
                 const TensorLayout &grad,
                 size_t workspace_in_bytes);
