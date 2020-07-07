@@ -443,4 +443,29 @@ void RemapForward::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
 
+#ifdef MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(RemapForward) {
+    mgb_assert(opr.input().size() == 2);
+    if (wrt_idx == 0) {
+        SymbolVar grad =
+                RemapBackwardData::make(opr.input(1), out_grad[0],
+                                        opr.input(0), opr.param());
+        return grad.node();
+    } else if (wrt_idx == 1) {
+        SymbolVar grad = 
+                RemapBackwardMat::make(opr.input(0), opr.input(1),
+                                       out_grad[0], opr.param());
+        return grad.node();
+    } else
+        return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
+/* ====================== RemapBackward ====================== */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemapBackwardData);
+MEGDNN_OPR_INIT3(RemapBackwardData, "remap_bwd_data", 2, false);
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemapBackwardMat);
+MEGDNN_OPR_INIT3(RemapBackwardMat, "remap_bwd_mat", 1, true);
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

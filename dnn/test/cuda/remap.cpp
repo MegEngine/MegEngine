@@ -40,6 +40,22 @@ TEST_F(CUDA, REMAP_NCHW_FLOAT) {
     cb(dtype::Float32(), float_rng);
     cb(dtype::Float16(), float_rng);
 #undef cb
+#define cb(data_type, data_rng)                                              \
+    for (auto arg : args) {                                                  \
+        UniformFloatRNG map_rng(                                             \
+                -2, std::max(arg.map_xy.shape[2], arg.map_xy.shape[1]) + 2); \
+        checker.set_dtype(0, data_type)                                      \
+                .set_dtype(1, dtype::Float32())                              \
+                .set_dtype(2, data_type)                                     \
+                .set_rng(0, &data_rng)                                       \
+                .set_rng(1, &map_rng)                                        \
+                .set_rng(2, &data_rng)                                       \
+                .set_param(arg.param)                                        \
+                .set_epsilon(1e-2)                                           \
+                .execs({arg.src, arg.map_xy, arg.dst});                      \
+    }
+    cb(dtype::BFloat16(), float_rng);
+#undef cb
 }
 
 TEST_F(CUDA, REMAP_NCHW_INT) {
@@ -87,6 +103,22 @@ TEST_F(CUDA, REMAP_NHWC_FLOAT) {
     cb(dtype::Float32(), float_rng);
     cb(dtype::Float16(), float_rng);
 #undef cb
+#define cb(data_type, data_rng)                                              \
+    for (auto arg : args) {                                                  \
+        UniformFloatRNG map_rng(                                             \
+                -2, std::max(arg.map_xy.shape[2], arg.map_xy.shape[1]) + 2); \
+        checker.set_dtype(0, data_type)                                      \
+                .set_dtype(1, dtype::Float32())                              \
+                .set_dtype(2, data_type)                                     \
+                .set_rng(0, &data_rng)                                       \
+                .set_rng(1, &map_rng)                                        \
+                .set_rng(2, &data_rng)                                       \
+                .set_param(arg.param)                                        \
+                .set_epsilon(1e-2)                                           \
+                .execs({arg.src, arg.map_xy, arg.dst});                      \
+    }
+    cb(dtype::BFloat16(), float_rng);
+#undef cb
 }
 
 TEST_F(CUDA, REMAP_NHWC_INT) {
@@ -111,6 +143,85 @@ TEST_F(CUDA, REMAP_NHWC_INT) {
     }
     cb(dtype::Int8(), int8_rng);
     cb(dtype::Uint8(), uint8_rng);
+#undef cb
+}
+
+TEST_F(CUDA, REMAP_BACKWARD_DATA) {
+    Checker<RemapBackwardData> checker(handle_cuda());
+    std::vector<TestArg> args = get_nchw_args();
+    UniformFloatRNG float_rng(0, 255);
+#define cb(data_type, data_rng)                                              \
+    for (auto arg : args) {                                                  \
+        UniformFloatRNG map_rng(                                             \
+                -2, std::max(arg.map_xy.shape[2], arg.map_xy.shape[1]) + 2); \
+        checker.set_dtype(1, data_type)                                      \
+                .set_dtype(0, dtype::Float32())                              \
+                .set_dtype(2, data_type)                                     \
+                .set_rng(1, &data_rng)                                       \
+                .set_rng(0, &map_rng)                                        \
+                .set_rng(2, &data_rng)                                       \
+                .set_param(arg.param)                                        \
+                .execs({arg.map_xy, arg.dst, arg.src});                      \
+    }
+    cb(dtype::Float32(), float_rng);
+#undef cb
+#define cb(data_type, data_rng)                                              \
+    for (auto arg : args) {                                                  \
+        UniformFloatRNG map_rng(                                             \
+                -2, std::max(arg.map_xy.shape[2], arg.map_xy.shape[1]) + 2); \
+        checker.set_dtype(1, data_type)                                      \
+                .set_dtype(0, dtype::Float32())                              \
+                .set_dtype(2, data_type)                                     \
+                .set_rng(1, &data_rng)                                       \
+                .set_rng(0, &map_rng)                                        \
+                .set_rng(2, &data_rng)                                       \
+                .set_param(arg.param)                                        \
+                .set_epsilon(1e-1)                                           \
+                .execs({arg.map_xy, arg.dst, arg.src});                      \
+    }
+    cb(dtype::BFloat16(), float_rng);
+#undef cb
+}
+
+TEST_F(CUDA, REMAP_BACKWARD_MAT) {
+    Checker<RemapBackwardMat> checker(handle_cuda());
+    std::vector<TestArg> args = get_nchw_args();
+    UniformFloatRNG float_rng(0, 255);
+#define cb(data_type, data_rng)                                              \
+    for (auto arg : args) {                                                  \
+        UniformFloatRNG map_rng(                                             \
+                -2, std::max(arg.map_xy.shape[2], arg.map_xy.shape[1]) + 2); \
+        checker.set_dtype(0, data_type)                                      \
+                .set_dtype(1, dtype::Float32())                              \
+                .set_dtype(2, data_type)                                     \
+                .set_dtype(3, dtype::Float32())                              \
+                .set_rng(0, &data_rng)                                       \
+                .set_rng(1, &map_rng)                                        \
+                .set_rng(2, &data_rng)                                       \
+                .set_rng(3, &map_rng)                                        \
+                .set_param(arg.param)                                        \
+                .set_epsilon(2e-2)                                           \
+                .execs({arg.src, arg.map_xy, arg.dst, arg.map_xy});          \
+    }
+    cb(dtype::Float32(), float_rng);
+#undef cb
+#define cb(data_type, data_rng)                                              \
+    for (auto arg : args) {                                                  \
+        UniformFloatRNG map_rng(                                             \
+                -2, std::max(arg.map_xy.shape[2], arg.map_xy.shape[1]) + 2); \
+        checker.set_dtype(0, data_type)                                      \
+                .set_dtype(1, dtype::Float32())                              \
+                .set_dtype(2, data_type)                                     \
+                .set_dtype(3, dtype::Float32())                              \
+                .set_rng(0, &data_rng)                                       \
+                .set_rng(1, &map_rng)                                        \
+                .set_rng(2, &data_rng)                                       \
+                .set_rng(3, &map_rng)                                        \
+                .set_param(arg.param)                                        \
+                .set_epsilon(1e-1)                                           \
+                .execs({arg.src, arg.map_xy, arg.dst, arg.map_xy});          \
+    }
+    cb(dtype::BFloat16(), float_rng);
 #undef cb
 }
 
@@ -144,13 +255,31 @@ TEST_F(CUDA, BENCHMARK_REMAP) {
                           .execs(shapes);
         auto t2 = benchmarker_cuda.set_display(false).set_param(param).execs(
                 shapes);
+
+        int size = 0;
+        if (dtype == dtype::Float32{}) {
+            size = sizeof(float);
+            printf("float32: ");
+        } else if (dtype == dtype::Float16{}) {
+            size = sizeof(dt_float16);
+            printf("float16: ");
+        } else if (dtype == dtype::Int8{}) {
+            size = sizeof(dt_int8);
+            printf("int8:    ");
+        } else if (dtype == dtype::Uint8{}) {
+            size = sizeof(dt_uint8);
+            printf("uint8:   ");
+        }
+        const TensorShape map_xy = shapes[1];
         const TensorShape dst_layout = shapes[2];
 
-        float calc_amount = dst_layout.total_nr_elems();
-        printf("naive={%.3fms, %.3fMflops}, "
-               "cuda={%.3fms, %.3fMflops}\n",
-               t1 / RUN, calc_amount / (t1 / RUN * 1000), t2,
-               calc_amount / (t2 * 1000));
+        float calc_amount = (dst_layout.total_nr_elems() * (4.f + 1.f) * size +
+                             map_xy.total_nr_elems() * sizeof(float)) /
+                            (1024 * 1024 * 1024);
+        printf("naive={%.3fms, %.3fGBPS}, "
+               "cuda={%.3fms, %.3fGBPS}\n",
+               t1 / RUN, calc_amount / (t1 / RUN) * 1e3, t2,
+               calc_amount / t2 * 1e3);
     };
     Param param;
     param.imode = param::Remap::InterpolationMode::LINEAR;

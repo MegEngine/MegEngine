@@ -97,6 +97,8 @@ namespace opr {
 
     MGB_SEREG_OPR(ResizeBackward, 2);
     MGB_SEREG_OPR(Remap, 2);
+    MGB_SEREG_OPR(RemapBackwardData, 3);
+    MGB_SEREG_OPR(RemapBackwardMat, 3);
 
     //! current warp affine version
     using WarpAffineV1 = opr::WarpAffine;

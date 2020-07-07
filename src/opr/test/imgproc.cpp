@@ -640,11 +640,11 @@ TEST(TestOprImgproc, WarpAffineForward) {
 }
 
 TEST(TestOprImgproc, Remap_NCHW) {
-    constexpr size_t N = 2, C = 8;
+    constexpr size_t N = 2, C = 8, OH = 10, OW = 10;
 
     opr::Remap::Param param;
     using Checker = AutoOprChecker<2, 1>;
-    TensorShape out_shp{N, C, 10, 10};
+    TensorShape out_shp{N, C, OH, OW};
     param.format = opr::Remap::Param::Format::NCHW;
     auto make_graph = [&](const Checker::SymInpArray &inputs) ->
             Checker::SymOutArray {
@@ -657,12 +657,34 @@ TEST(TestOprImgproc, Remap_NCHW) {
         opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(), {});
     };
 
+    std::mt19937 rng(next_rand_seed());
+    auto rand_real = [&](double lo, double hi) {
+        auto real = rng() / (std::mt19937::max() + 1.0) * (hi - lo) + lo;
+        if(std::abs(std::round(real) - real) <= 1e-2)
+            return real + 1e-1;
+        return real;
+    };
+    auto rand_real2 = [&](double range) {
+        return rand_real(-range, range);
+    };
+    auto gen_mat = [&](HostTensorND& mat) {
+        auto ptr = mat.ptr<float>();
+        for (size_t i = 0; i < N; ++ i) {
+            for(size_t j = 0; j < OH * OW * 2; j++) {
+                //! undifferentiable when map is an integer
+                ptr[j] = static_cast<float>(rand_real2(20));
+            }
+            ptr += OH * OW * 2;
+        }
+        mgb_assert(ptr == mat.ptr<float>() + mat.shape().total_nr_elems());
+    };
+
     Checker::RunOptions opt;
     Checker(make_graph, fwd, CompNode::load("cpu1"))
-            .disable_grad_check()
-            .run({TensorShape{N, C, 3, 20}, TensorShape{N, 10, 10, 2}}, opt)
-            .run({TensorShape{N, C, 6, 5}, TensorShape{N, 10, 10, 2}}, opt)
-            .run({TensorShape{N, C, 20, 20}, TensorShape{N, 10, 10, 2}}, opt);
+            .set_input_generator(1, gen_mat)
+            .run({TensorShape{N, C, 3, 20}, TensorShape{N, OH, OW, 2}}, opt)
+            .run({TensorShape{N, C, 6, 5}, TensorShape{N, OH, OW, 2}}, opt)
+            .run({TensorShape{N, C, 20, 20}, TensorShape{N, OH, OW, 2}}, opt);
 }
 
 TEST(TestOprImgproc, Remap_NHWC) {
@@ -690,4 +712,5 @@ TEST(TestOprImgproc, Remap_NHWC) {
             .run({TensorShape{N, 6, 5, C}, TensorShape{N, 10, 10, 2}}, opt)
             .run({TensorShape{N, 20, 20, C}, TensorShape{N, 10, 10, 2}}, opt);
 }
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

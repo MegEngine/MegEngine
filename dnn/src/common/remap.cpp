@@ -50,6 +50,7 @@ void RemapBase::check_layout_fwd(const TensorLayout& src,
     megdnn_assert(dst.shape[0] == src.shape[0], "%s", errmsg().c_str());
     megdnn_assert(map_xy.shape[3] == 2);
     megdnn_assert(map_xy.shape[0] == src.shape[0]);
+    megdnn_assert_contiguous(src);
 
     // map_xy only support floa32 type
     // map_xy always in NHWC format
@@ -82,6 +83,34 @@ void Remap::check_exec(const TensorLayout& src, const TensorLayout& map_xy,
                        const TensorLayout& dst, size_t workspace_in_bytes) {
     check_layout_fwd(src, map_xy, dst);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, map_xy, dst);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+}
+
+void RemapBackwardData::check_exec(const TensorLayout& map_xy,
+                                   const TensorLayout& diff,
+                                   const TensorLayout& grad,
+                                   size_t workspace_in_bytes) {
+    check_layout_fwd(grad, map_xy, diff);
+    megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+                                       || grad.dtype == dtype::BFloat16()),
+                  "Backward Remap only supports Float32/BFloat16.");
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(map_xy, diff, grad);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+}
+
+void RemapBackwardMat::check_exec(const TensorLayout& src,
+                                  const TensorLayout& map_xy,
+                                  const TensorLayout& diff,
+                                  const TensorLayout& grad,
+                                  size_t workspace_in_bytes) {
+    check_layout_fwd(src, map_xy, diff);
+    megdnn_assert_eq_layout(map_xy, grad);
+    megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+                                       || grad.dtype == dtype::BFloat16()),
+                  "Backward Remap only supports Float32/BFloat16.");
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(src, map_xy, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 

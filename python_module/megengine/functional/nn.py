@@ -706,6 +706,61 @@ def warp_perspective(
 
 
 @wrap_io_tensor
+def remap(
+    inp: Tensor,
+    map_xy: Tensor,
+    border_mode: str = "REPLICATE",
+    scalar: float = 0.0,
+    interp_mode: str = "LINEAR",
+) -> Tensor:
+    r"""
+    Applies remap transformation to batched 2D images.
+
+    The input images are transformed to the output images by the tensor map_xy.
+    The output's H and W are same as map_xy's H and W.
+
+    :param inp: input image
+    :param map_xy: (batch, oh, ow, 2) transformation matrix
+    :param border_mode: pixel extrapolation method. Default: ``"REPLICATE"``
+    :param scalar: value used in case of a constant border. Default: ``0``
+    :param interp_mode: interpolation methods. Default: ``"LINEAR"``
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+        inp_shape = (1, 1, 4, 4)
+        inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+        map_xy_shape = (1, 2, 2, 2)
+        map_xy = tensor(np.array([[[1., 0.],[0., 1.]],
+                            [[0., 1.],[0., 1.]]],
+                             dtype=np.float32).reshape(map_xy_shape))
+        out = F.remap(inp, map_xy)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[[[1. 4.]
+           [4. 4.]]]]
+
+    """
+
+    return mgb.opr.remap(
+        inp,
+        map_xy,
+        border_type=border_mode,
+        scalar=scalar,
+        imode=interp_mode,
+        format="NCHW",
+    )
+
+
+@wrap_io_tensor
 def eye(
     n: int,
     m: Optional[int] = None,

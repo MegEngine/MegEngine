@@ -74,7 +74,7 @@ size_t get_workspace_size_bytes(
         const TensorShapeArray& output_shapes) const override;
 
 void record_execute_deps(ExecDependencyArray& deps) override;
-};  // namespace opr
+};
 using WarpPerspective = WarpPerspectiveForward;
 
 MGB_DEFINE_OPR_CLASS(
@@ -98,7 +98,7 @@ static SymbolVar make(SymbolVar mat, SymbolVar mat_idx, SymbolVar out_diff,
                       const OperatorNodeConfig& config = {});
 
 void scn_do_execute() override;
-};  // namespace mgb
+};
 
 MGB_DEFINE_OPR_CLASS(
         WarpPerspectiveBackwardMat,
@@ -119,8 +119,7 @@ static SymbolVar make(SymbolVar src, SymbolVar mat, SymbolVar mat_idx,
                       const OperatorNodeConfig& config = {});
 
 void scn_do_execute() override;
-}
-;
+};
 
 /* ============================= shape infer ============================== */
 //! param: src, dst
@@ -164,8 +163,7 @@ size_t get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const override;
 void record_execute_deps(ExecDependencyArray& deps) override;
-}
-;
+};
 using Resize = ResizeForward;
 
 MGB_DEFINE_OPR_CLASS(ResizeBackward,
@@ -177,8 +175,7 @@ ResizeBackward(VarNode* out_diff, VarNode* in_for_shape, const Param& param,
 static SymbolVar make(SymbolVar out_diff, SymbolVar in_for_shape,
                       const Param& param = {},
                       const OperatorNodeConfig& config = {});
-}
-;
+};
 
 MGB_DEFINE_OPR_CLASS(RemapForward,
                      intl::MegDNNOprWrapperFwd<megdnn::RemapForward>)  // {
@@ -192,9 +189,30 @@ static SymbolVar make(SymbolVar in_tensor, SymbolVar map,
 
 private:
 void init_output_dtype() override;
-}
-;
+};
 using Remap = RemapForward;
+
+MGB_DEFINE_OPR_CLASS(RemapBackwardData,
+        intl::MegDNNOprWrapperBwd<megdnn::RemapBackwardData>) // {
+public:
+RemapBackwardData(VarNode *map, VarNode *out_diff,
+        VarNode *in_for_shape, const Param &param,
+        const OperatorNodeConfig &config);
+
+static SymbolVar make(SymbolVar map, SymbolVar out_diff,
+        SymbolVar in_for_shape, const Param &param = {},
+        const OperatorNodeConfig &config = {});
+};
+
+MGB_DEFINE_OPR_CLASS(RemapBackwardMat,
+        intl::MegDNNOprWrapperBwd<megdnn::RemapBackwardMat>) // {
+public:
+RemapBackwardMat(VarNode *src, VarNode *map, VarNode *out_diff,
+                 const Param &param, const OperatorNodeConfig &config);
+
+static SymbolVar make(SymbolVar src, SymbolVar map, SymbolVar out_diff,
+        const Param &param = {}, const OperatorNodeConfig &config = {});
+};
 
 /*!
  * \brief apply affine transformation to batched 2D images
@@ -238,8 +256,7 @@ size_t get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const override;
 void record_execute_deps(ExecDependencyArray& deps) override;
-}
-;
+};
 using WarpAffine = WarpAffineForward;
 
 }  // opr

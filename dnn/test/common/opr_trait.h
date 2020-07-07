@@ -106,6 +106,8 @@ DEF(DeformablePSROIPoolingForward, 5, true, true);
 DEF(DeformablePSROIPoolingBackward, 7, true, false);
 DEF(BatchConvBiasForward, 5, true, true);
 DEF(Remap, 3, true, true);
+DEF(RemapBackwardData, 3, true, false);
+DEF(RemapBackwardMat, 4, true, false);
 }  // namespace test
 }  // namespace megdnn
 

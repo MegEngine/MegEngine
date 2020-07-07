@@ -24,7 +24,17 @@ namespace remap {
 template <typename ctype, const uint32_t format, ::BorderMode bmode>
 void forward_proxy(const ctype* src, const float* map_xy, ctype* dst, int N,
                    int C, int IH, int IW, int OH, int OW, float scalar,
-                   int S_IN, int S_IC, int S_IH, int S_IW, cudaStream_t stream);
+                   cudaStream_t stream);
+
+template <typename ctype, const uint32_t format, ::BorderMode bmode>
+void backwarddata_proxy(ctype* grad, const float* map_xy, const ctype* diff,
+                        int N, int C, int IH, int IW, int OH, int OW,
+                        cudaStream_t stream);
+
+template <typename ctype, const uint32_t format, ::BorderMode bmode>
+void backwardmat_proxy(const ctype* src, const float* map_xy, const ctype* diff,
+                       float* grad, int N, int C, int IH, int IW, int OH,
+                       int OW, float scalar, cudaStream_t stream);
 
 }  // namespace remap
 }  // namespace cuda

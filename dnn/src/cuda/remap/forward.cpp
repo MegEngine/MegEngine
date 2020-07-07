@@ -22,9 +22,10 @@ using namespace cuda;
 void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out map_xy,
                      _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, map_xy.layout, dst.layout, workspace.size);
+    megdnn_assert(map_xy.layout.dtype.enumv() ==
+                  DTypeTrait<dtype::Float32>::enumv);
     auto stream = cuda_stream(this->handle());
     int N, C, IH, IW, OH, OW;
-    ptrdiff_t S_IN = 0, S_IC = 0, S_IH = 0, S_IW = 0;
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
 
@@ -36,10 +37,6 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out map_xy,
         C = src.layout.shape[1];
         IH = src.layout.shape[2];
         IW = src.layout.shape[3];
-        S_IN = src.layout.stride[0];
-        S_IC = src.layout.stride[1];
-        S_IH = src.layout.stride[2];
-        S_IW = src.layout.stride[3];
     } else if (param().format == param::Remap::Format::NHWC) {
         N = src.layout.shape[0];
         C = src.layout.shape[3];
@@ -58,7 +55,7 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out map_xy,
                 src.compatible_ptr<ctype>(),                             \
                 map_xy.compatible_ptr<dt_float32>(),                     \
                 dst.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW,       \
-                param().scalar, S_IN, S_IC, S_IH, S_IW, stream);         \
+                param().scalar, stream);                                 \
         break;                                                           \
     }
 
@@ -78,15 +75,16 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out map_xy,
     }
 
     switch (src.layout.dtype.enumv()) {
-        support_dtype(dtype::Float32)
-        MEGDNN_INC_FLOAT16(support_dtype(dtype::Float16))
-        support_dtype(dtype::Int8)
-        support_dtype(dtype::Uint8)
+        support_dtype(dtype::Float32);
+        MEGDNN_INC_FLOAT16(support_dtype(dtype::Float16));
+        MEGDNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
+        support_dtype(dtype::Int8);
+        support_dtype(dtype::Uint8);
         default:
             megdnn_throw("unsupported dtype in remap cuda");
     }
 
-#undef supported_dtype
+#undef support_dtype
 #undef cb
 }
 

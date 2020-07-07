@@ -270,6 +270,41 @@ protected:
 };
 using Remap = RemapForward;
 
+class RemapBackwardData : public RemapBase {
+    DEF_OPR_IMPL(RemapBackwardData, RemapBase, 2, 1);
+
+public:
+    virtual void exec(_megdnn_tensor_in map_xy, _megdnn_tensor_in diff,
+                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+
+    virtual size_t get_workspace_in_bytes(const TensorLayout& map_xy,
+                                          const TensorLayout& diff,
+                                          const TensorLayout& grad) = 0;
+
+protected:
+    void check_exec(const TensorLayout& map_xy, const TensorLayout& diff,
+                    const TensorLayout& grad, size_t workspace_in_bytes);
+};
+
+class RemapBackwardMat : public RemapBase {
+    DEF_OPR_IMPL(RemapBackwardMat, RemapBase, 3, 1);
+
+public:
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
+                      _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                      _megdnn_workspace workspace) = 0;
+
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
+                                          const TensorLayout& map_xy,
+                                          const TensorLayout& diff,
+                                          const TensorLayout& grad) = 0;
+
+protected:
+    void check_exec(const TensorLayout& src, const TensorLayout& map_xy,
+                    const TensorLayout& diff, const TensorLayout& grad,
+                    size_t workspace_in_bytes);
+};
+
 class SeparableFilterBase : public OperatorBase {
     DEF_OPR_IMPL_CTOR(SeparableFilterBase, OperatorBase);
     DEF_OPR_PARAM(SeparableFilter);

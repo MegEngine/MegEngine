@@ -46,6 +46,9 @@ static inline std::vector<TestArg> get_nchw_args() {
         for (auto border_type : border_mode_vec) {
             param.format = fmt;
             param.border_type = border_type;
+            args.emplace_back(param, TensorShape{70000, 1, 2, 2},
+                              TensorShape{70000, 2, 2, 2}, TensorShape{70000, 1, 2, 2});
+
             args.emplace_back(param, TensorShape{1, 1, 2, 2},
                               TensorShape{1, 2, 2, 2}, TensorShape{1, 1, 2, 2});
 
@@ -90,6 +93,9 @@ static inline std::vector<TestArg> get_nhwc_args() {
             param.format = fmt;
             param.border_type = border_type;
             param.scalar = 12.f;
+            args.emplace_back(param, TensorShape{70000, 2, 2, 1},
+                              TensorShape{70000, 2, 2, 2}, TensorShape{70000, 2, 2, 1});
+
             args.emplace_back(param, TensorShape{1, 2, 2, 1},
                               TensorShape{1, 2, 2, 2}, TensorShape{1, 2, 2, 1});
 

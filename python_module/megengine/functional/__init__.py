@@ -84,6 +84,7 @@ from .nn import (
     max_pool2d,
     one_hot,
     prelu,
+    remap,
     roi_align,
     roi_pooling,
     softmax,
