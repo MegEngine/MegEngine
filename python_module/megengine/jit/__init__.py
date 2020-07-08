@@ -455,17 +455,17 @@ class trace:
 
         :param enable_hwcd4: whether to use NHWCD4 data layout. This is faster on some
             OpenCL backend.
-        :param enable_nchw88: whether to use NCHW4 data layout. it currently
+        :param enable_nchw88: whether to use NCHW88 data layout. it currently
             used in X86 AVX backend.
-        :param enable_nchw44: whether to use NCHW4 data layout. it currently
+        :param enable_nchw44: whether to use NCHW44 data layout. it currently
             used in arm backend.
-        :param enable_nchw44_dot: whether to use NCHW4 data layout. it currently
+        :param enable_nchw44_dot: whether to use NCHW44_dot data layout. it currently
             used in armv8.2+dotprod backend.
         :param enable_nchw4: whether to use NCHW4 data layout. it currently
             used in nvidia backend(based on cudnn).
-        :param enable_nchw32 whether to use NCHW32 data layout. it currently
+        :param enable_nchw32: whether to use NCHW32 data layout. it currently
             used in nvidia backend with tensorcore(based on cudnn).
-        :param enable_chwn4 whether to use CHWN4 data layout. it currently
+        :param enable_chwn4: whether to use CHWN4 data layout. it currently
             used in nvidia backend with tensorcore.
 
         :param enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
