@@ -171,7 +171,10 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
 
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT ||
         pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
-        ret_kern.push_back({kern_packA, {GROUP, oc_blocks_per_group}});
+        //! if enable filter preprocess kern_packA should not dispatch
+        if (!is_enable_filter_preprocess(param)) {
+            ret_kern.push_back({kern_packA, {GROUP, oc_blocks_per_group}});
+        }
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
             ret_kern.push_back({kern_packB, {1}});
         }
@@ -197,6 +200,13 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
         if (FH != 1 || FW != 1 || PH || PW || SH != 1 || SW != 1)
             return false;
         if (param.src_type.enumv() != param.filter_type.enumv()) {
+            return false;
+        }
+
+        //! only matmul's packmode is packa or default support weight preprocess
+        if (is_enable_filter_preprocess(param) &&
+            (m_matmul_algo->packmode() ==
+             fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK)) {
             return false;
         }
 
@@ -251,6 +261,122 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
     }
     MIDOUT_END();
     return false;
+}
+
+SmallVector<TensorLayout>
+ConvBiasImpl::AlgoConv1x1::deduce_preprocessed_filter_layout(
+        const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(
+            megdnn_fallback_conv1x1,
+            midout_iv(
+                    "ConvBiasImpl::AlgoConv1x1::deduce_preprocessed_filter_layout"_hash)) {
+        fallback::MatrixMulImpl::AlgoBase::MatmulDescription matmul_desc =
+                m_matmul_algo->matmul_description();
+        bool default_pack = matmul_desc.packmode ==
+                            MatrixMulImpl::AlgoBase::PackMode::DEFAULT;
+        bool only_packA = matmul_desc.packmode ==
+                          MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA;
+        //! only support default_pack and only_packa mode
+        if (matmul_desc.packmode ==
+            MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
+            return {};
+        }
+        size_t OH = param.osz[0];
+        size_t OW = param.osz[1];
+        size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
+
+        auto matmul_param = utils::get_matmul_kern_param(param, OH * OW,
+                                                         compt_oc_block_size);
+
+        WorkspaceBundle wb(nullptr, {});
+        if (default_pack) {
+            Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::DEFAULT> dispatcher;
+            wb = dispatcher.get_bundle(param, matmul_param, m_matmul_algo,
+                                       compt_oc_block_size);
+        } else if (only_packA) {
+            Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>
+                    dispatcher;
+            wb = dispatcher.get_bundle(param, matmul_param, m_matmul_algo,
+                                       compt_oc_block_size);
+        }
+
+        size_t GROUP = param.filter_meta.group;
+        SmallVector<TensorLayout> preprocessed_layouts;
+        preprocessed_layouts.push_back(
+                {{GROUP, wb.get_size(0)}, dtype::Int8()});
+        return preprocessed_layouts;
+    }
+    MIDOUT_END();
+    return {};
+}
+
+SmallVector<ConvBiasImpl::NCBKern>
+ConvBiasImpl::AlgoConv1x1::dispatch_preprocess_kerns(
+        const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(
+            megdnn_fallback_conv1x1,
+            midout_iv(
+                    "ConvBiasImpl::AlgoConv1x1::dispatch_preprocess_kerns"_hash)) {
+        SmallVector<ConvBiasImpl::NCBKern> ret_kern;
+        size_t OH = param.osz[0];
+        size_t OW = param.osz[1];
+        size_t OC = param.filter_meta.ocpg;
+        size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
+        size_t GROUP = param.filter_meta.group;
+        size_t oc_blocks_per_group = div_ceil(OC, compt_oc_block_size);
+
+        auto matmul_param = utils::get_matmul_kern_param(param, OH * OW,
+                                                         compt_oc_block_size);
+        WorkspaceBundle whole_bundle = {nullptr, {}};
+        WorkspaceBundle matmul_bundle = {nullptr, {}};
+        auto pack_mode = m_matmul_algo->packmode();
+        if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
+            MIDOUT_BEGIN(megdnn_fallback_conv1x1,
+                         midout_iv("get_defaul_matmul_packmode_bundle"_hash)) {
+                Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::DEFAULT>
+                        dispatcher;
+                whole_bundle = dispatcher.get_bundle(param, matmul_param,
+                                                     m_matmul_algo,
+                                                     compt_oc_block_size);
+                matmul_bundle = m_matmul_algo->get_bundle(matmul_param);
+            }
+            MIDOUT_END();
+        } else if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
+            MIDOUT_BEGIN(
+                    megdnn_fallback_conv1x1,
+                    midout_iv("get_onlypacka_matmul_packmode_bundle"_hash)) {
+                Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>
+                        dispatcher;
+                whole_bundle = dispatcher.get_bundle(param, matmul_param,
+                                                     m_matmul_algo,
+                                                     compt_oc_block_size);
+                matmul_bundle = m_matmul_algo->get_bundle(matmul_param);
+            }
+            MIDOUT_END();
+        } else {
+            //! if nopack return null so that OprWeightPreprocessProxy can run
+            //! with nopack mode
+            return {};
+        }
+
+        Conv1x1StrategyBase* conv1x1_strategy =
+                Conv1x1Factory::make_conv1x1_strategy(param, pack_mode,
+                                                      param.filter_meta.format);
+
+        auto kern_packA = [this, whole_bundle, matmul_bundle, param,
+                           compt_oc_block_size, conv1x1_strategy](
+                                  const NCBKernParam& ncb_param,
+                                  const NCBKernIndex& ncb_index) mutable {
+            conv1x1_strategy->packA(whole_bundle, matmul_bundle,
+                                    compt_oc_block_size, this->m_matmul_algo,
+                                    param, ncb_param, std::move(ncb_index));
+        };
+
+        ret_kern.push_back({kern_packA, {GROUP, oc_blocks_per_group}});
+        return ret_kern;
+    }
+    MIDOUT_END();
+    return {};
 }
 
 bool ConvBiasImpl::AlgoConv1x1::is_preferred(

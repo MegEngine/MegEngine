@@ -35,7 +35,6 @@ public:
         auto matmul_bundle = matmul_algo->get_bundle(matmul_param);
         auto thread_bundle = utils::get_thread_bundle(param, matmul_bundle.get_size(2),
                                                oc_tile_size);
-
         //! size per thread
         size_t all_threads_bytes =
                 thread_bundle.total_size_in_bytes() * param.nr_threads;
@@ -44,7 +43,9 @@ public:
         size_t packa_bytes_per_oc_tile = matmul_bundle.get_size(0);
         size_t oc_tiles_per_group = div_ceil(OC, oc_tile_size);
         size_t all_packa_bytes =
-                packa_bytes_per_oc_tile * oc_tiles_per_group * GROUP;
+                is_enable_filter_preprocess(param)
+                        ? 0
+                        : packa_bytes_per_oc_tile * oc_tiles_per_group * GROUP;
 
         if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA)
             return WorkspaceBundle{nullptr,

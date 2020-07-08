@@ -106,9 +106,14 @@ public:
         size_t numbers_offset_of_filter =
                 oc_tile_size * IC * oc_tile_id_in_group;
 
-        src_ctype* a_panel = reinterpret_cast<src_ctype*>(
-                reinterpret_cast<int8_t*>(whole_bundle.get(0)) +
-                bytes_offset_of_a_panel);
+        int8_t* tmp_ptr =
+                is_enable_filter_preprocess(param)
+                        ? static_cast<int8_t*>(
+                                  param.preprocessed_filter->tensors[0].raw_ptr)
+                        : static_cast<int8_t*>(whole_bundle.get(0));
+
+        src_ctype* a_panel =
+                reinterpret_cast<src_ctype*>(tmp_ptr + bytes_offset_of_a_panel);
 
         matmul_kern_param.A_ptr = const_cast<src_ctype*>(
                 ncb_param.filter<src_ctype>(group_id) +
@@ -206,8 +211,14 @@ public:
         size_t bytes_offset_of_a_panel =
                 group_id * packa_bytes_per_group +
                 oc_tile_id_in_group * packa_bytes_per_oc_tile;
-        int8_t* a_panel = reinterpret_cast<int8_t*>(whole_bundle.get(0)) +
-                          bytes_offset_of_a_panel;
+
+        int8_t* tmp_ptr =
+                is_enable_filter_preprocess(param)
+                        ? static_cast<int8_t*>(
+                                  param.preprocessed_filter->tensors[0].raw_ptr)
+                        : static_cast<int8_t*>(whole_bundle.get(0));
+
+        int8_t* a_panel = tmp_ptr + bytes_offset_of_a_panel;
 
         size_t bytes_offset_of_b_panel =
                 batch_id * packb_bytes_per_group * GROUP +

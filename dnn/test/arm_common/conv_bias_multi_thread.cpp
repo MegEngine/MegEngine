@@ -2724,7 +2724,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
         }
     check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");
 }
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
 
+#define cb(name)                                                   \
+    check_conv_bias_preprocess(args, handle(), nullptr, 0.001,     \
+                               dtype::Float32(), dtype::Float32(), \
+                               dtype::Float32(), dtype::Float32(), name);
+
+#if MEGDNN_AARCH64
+    cb("CONV1x1:AARCH64_F32K8X12X1:24");
+#elif MEGDNN_ARMV7
+    cb("CONV1x1:ARMV7_F32:48");
+#endif
+#undef cb
+}
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
@@ -2741,7 +2756,21 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32) {
         }
     check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");
 }
-
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({1}, 1, true, false, false);
+#define cb(name)                                                   \
+    check_conv_bias_preprocess(args, handle(), nullptr, 0.001,     \
+                               dtype::Float32(), dtype::Float32(), \
+                               dtype::Float32(), dtype::Float32(), name);
+#if MEGDNN_AARCH64
+    cb("CONV1x1:AARCH64_F32_MK4_K8X12X1:24");
+#elif MEGDNN_ARMV7
+    cb("CONV1x1:ARMV7_F32_MK4_PACK_4X12:24");
+#endif
+#undef cb
+}
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_NO_PACK_F32) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
@@ -2780,6 +2809,22 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F16) {
         }
     check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F16_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
+    NormalRNG rng(1);
+#if MEGDNN_AARCH64
+    check_conv_bias_preprocess(args, handle(), &rng, 0.03, dtype::Float16{},
+                      dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
+                      "CONV1x1:AARCH64_F16_K8X24X1:48");
+#elif MEGDNN_ARMV7
+    check_conv_bias_preprocess(args, handle(), &rng, 0.03, dtype::Float16{},
+                      dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
+                      "CONV1x1:AARCH32_F16_K4X16X1:24");
+#endif
+}
+
 #endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM) {
@@ -2813,6 +2858,31 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM) {
                       dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f),
                       "CONV1x1_GEMV");
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM_PREPROCESS) {
+    UniformIntRNG rng{-50, 50};
+    float epsilon = 0.001;
+    std::vector<conv_bias::TestArg> args =
+            get_conv_bias_1x1_args(false, false, true, true);
+#define cb(name)                                                     \
+    check_conv_bias_preprocess(                                      \
+            args, handle(), &rng, epsilon, dtype::QuantizedS8(2.5f), \
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
+            dtype::QuantizedS8(60.25f), name);
+#if MEGDNN_AARCH64
+#if __ARM_FEATURE_DOTPROD
+    cb("CONV1x1:AARCH64_INT8X8X32_K8X12X4_DOTPROD:24");
+#else
+    cb("CONV1x1:AARCH64_INT8X8X32_K8X8X8:24");
+    cb("CONV1x1:AARCH64_INT8X8X32_K4X4X16:48");
+#endif
+#elif MEGDNN_ARMV7
+    epsilon = 1;
+    cb("CONV1x1:ARMV7_INT8X8X32_K4X8X8:48");
+#endif
+#undef cb
+}
+
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM) {
@@ -2849,6 +2919,32 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM) {
                       dtype::Quantized8Asymm(50.3f, (uint8_t)120),
                       "CONV1x1_GEMV");
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM_PREPROCESS) {
+    UniformIntRNG rng{-50, 50};
+    std::vector<conv_bias::TestArg> args =
+            get_conv_bias_1x1_args(false, false, true, true);
+#define cb(name)                                                            \
+    check_conv_bias_preprocess(args, handle(), &rng, epsilon,               \
+                               dtype::Quantized8Asymm(1.2f, (uint8_t)125),  \
+                               dtype::Quantized8Asymm(1.3f, (uint8_t)129),  \
+                               dtype::QuantizedS32(1.2 * 1.3),              \
+                               dtype::Quantized8Asymm(50.3f, (uint8_t)120), \
+                               name);
+    float epsilon = 0.001;
+#if MEGDNN_AARCH64
+#if __ARM_FEATURE_DOTPROD
+    cb("CONV1x1:AARCH64_QUINT8_K8X8X4_DOTPROD:48");
+#else
+    cb("CONV1x1:AARCH64_QUINT8_K8X8X8:24");
+#endif
+#elif MEGDNN_ARMV7
+    epsilon = 1;
+    cb("CONV1x1:ARMV7_QUINT8_K4X8X8:48");
+#endif
+#undef cb
+}
+
 #endif
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
@@ -2885,6 +2981,32 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32) {
                       dtype::Quantized8Asymm(1.2f, (uint8_t)125),
                       dtype::Quantized8Asymm(1.3f, (uint8_t)129),
                       dtype::QuantizedS32(1.2 * 1.3), {}, "CONV1x1_GEMV");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32_PREPROCESS) {
+    NormalRNG rng(128.f);
+    float epsilon = 0.001;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+#define cb(name)                                                           \
+    check_conv_bias_preprocess(args, handle(), &rng, epsilon,              \
+                               dtype::Quantized8Asymm(1.2f, (uint8_t)125), \
+                               dtype::Quantized8Asymm(1.3f, (uint8_t)129), \
+                               dtype::QuantizedS32(1.2 * 1.3), {}, name);
+
+#if MEGDNN_AARCH64
+#if __ARM_FEATURE_DOTPROD
+    cb("CONV1x1:AARCH64_QUINT8_K8X8X4_DOTPROD:24");
+#else
+    cb("CONV1x1:AARCH64_QUINT8_K8X8X8:48");
+#endif
+#elif MEGDNN_ARMV7
+#if __ARM_FEATURE_DOTPROD
+    cb("CONV1x1:AARCH32_QUINT8_K4X8X4:48");
+#endif
+    cb("CONV1x1:ARMV7_QUINT8_K4X8X8:24");
+#endif
+#undef cb
+
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
@@ -2924,6 +3046,28 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
                       dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
                       "CONV1x1_GEMV");
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16_PREPROCESS) {
+    UniformIntRNG rng{-50, 50};
+    float epsilon = 0.001;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+#define cb(name)                                                              \
+    check_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},  \
+                               dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, \
+                               name);
+
+#if MEGDNN_AARCH64
+    cb("CONV1x1:AARCH64_INT8X8X16_K8X8X8:24");
+    cb("CONV1x1:AARCH64_INT8X8X16_K4X4X16:24");
+    cb("CONV1x1:ARM_COMMON_INT8X8X16:24");//!add nopack test
+#elif MEGDNN_ARMV7
+    cb("CONV1x1:ARMV7_INT8X8X16_K4X8X8:24");
+    cb("CONV1x1:ARMV7_INT8X8X16_K4X2X16:48");
+    cb("CONV1x1:ARM_COMMON_INT8X8X16:24");//!add nopack test
+#endif
+#undef cb
+}
+
 #endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32) {
@@ -2959,6 +3103,32 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32) {
     checker_conv_bias_mul_int8x8x32(gemv_args, handle(), "CONV1x1_GEMV");
 }
 
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+
+#define cb(name) checker_conv_bias_int8x8x32_preprocess(args, handle(), name);
+
+#if MEGDNN_AARCH64
+#if __ARM_FEATURE_DOTPROD
+    cb("CONV1x1:AARCH64_INT8X8X32_K8X12X4_DOTPROD:48");
+#else
+    cb("CONV1x1:AARCH64_INT8X8X32_K8X8X8:24");
+    cb("CONV1x1:AARCH64_INT8X8X32_K4X4X16:24");
+#endif
+#elif MEGDNN_ARMV7
+#if __ARM_FEATURE_DOTPROD
+    cb("CONV1x1:AARCH32_INT8_K6X8X4:48");
+#endif
+    cb("CONV1x1:ARMV7_INT8X8X32_K4X8X8:24");
+#endif
+
+#if MEGDNN_ARMV7
+    cb("CONV1x1:ARMV7_INT8X8X32_K4X2X16:48");
+#endif
+#undef cb
+}
+
 #ifndef __ARM_FEATURE_DOTPROD
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_MK4) {
     using namespace conv_bias;
@@ -2988,6 +3158,36 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_MK4) {
 #endif
 #undef cb
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_MK4_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({1}, 1, true, true, true);
+
+#define cb(name) checker_conv_bias_int8x8x32_preprocess(args, handle(), name);
+
+#if MEGDNN_AARCH64
+    cb("CONV1x1:AARCH64_INT8X8X32_MK4_4X4X16:24");
+#elif MEGDNN_ARMV7
+    cb("CONV1x1:ARMV7_INT8X8X32_MK4_4X2X16:24");
+#endif
+#undef cb
+
+    UniformIntRNG rng{-50, 50};
+    float epsilon = 0.001;
+#define cb(name)                                                             \
+    check_conv_bias_preprocess(get_nchw44_conv_bias_args({1}, 1, true, false, false), \
+                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),     \
+                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),  \
+                      dtype::QuantizedS8(60.25f), name);
+#if MEGDNN_AARCH64
+    cb("CONV1x1:AARCH64_INT8X8X32_MK4_4X4X16:24");
+#elif MEGDNN_ARMV7
+    cb("CONV1x1:ARMV7_INT8X8X32_MK4_4X2X16:24");
+#endif
+#undef cb
+}
+
 #endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_NCHW44) {

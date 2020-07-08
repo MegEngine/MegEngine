@@ -41,6 +41,15 @@ public:
             const NCBKernSizeParam& param) const override;
 
     bool is_preferred(const NCBKernSizeParam&) const override;
+    
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const NCBKernSizeParam& param) const override;
+    size_t get_preprocess_workspace(
+            const NCBKernSizeParam& /*param*/) const override {
+        return 0;
+    }
+    SmallVector<NCBKern> dispatch_preprocess_kerns(
+            const NCBKernSizeParam& param) const override;
 
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;
