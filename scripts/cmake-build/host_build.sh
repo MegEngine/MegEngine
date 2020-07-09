@@ -8,7 +8,9 @@ function usage() {
     echo "-c : Build with CUDA, default without CUDA"
     echo "-t : Build with training mode, default inference only"
     echo "-m : Build with m32 mode(only for windows build), default m64"
+    echo "-r : remove old build dir before make, default off"
     echo "-h : show usage"
+    echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
     exit -1
 }
@@ -19,8 +21,10 @@ MGE_INFERENCE_ONLY=ON
 MGE_WINDOWS_BUILD_ARCH=x64
 MGE_WINDOWS_BUILD_MARCH=m64
 MGE_ARCH=x86_64
+REMOVE_OLD_BUILD=false
+echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
-while getopts "hdctm" arg
+while getopts "rhdctm" arg
 do
     case $arg in
         d)
@@ -38,6 +42,10 @@ do
         h)
             echo "show usage"
             usage
+            ;;
+        r)
+            echo "config REMOVE_OLD_BUILD=true"
+            REMOVE_OLD_BUILD=true
             ;;
         m)
             echo "build for m32(only use for windows)"
@@ -71,6 +79,7 @@ elif [[ $OS =~ "NT" ]]; then
 fi
 
 SRC_DIR=$($READLINK -f "`dirname $0`/../../")
+source $SRC_DIR/scripts/cmake-build/utils/utils.sh
 
 function cmake_build() {
     BUILD_DIR=$SRC_DIR/build_dir/host/MGE_WITH_CUDA_$1/MGE_INFERENCE_ONLY_$2/$3/build
@@ -83,14 +92,7 @@ function cmake_build() {
     echo "build type: $BUILD_TYPE"
     echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
     echo "MGE_INFERENCE_ONLY: $MGE_INFERENCE_ONLY"
-    if [ -e $BUILD_DIR ];then
-        echo "clean old dir: $BUILD_DIR"
-        rm -rf $BUILD_DIR
-    fi
-    if [ -e $INSTALL_DIR ];then
-        echo "clean old dir: $INSTALL_DIR"
-        rm -rf $INSTALL_DIR
-    fi
+    try_remove_old_build $REMOVE_OLD_BUILD $BUILD_DIR $INSTALL_DIR
 
     echo "create build dir"
     mkdir -p $BUILD_DIR
@@ -101,6 +103,7 @@ function cmake_build() {
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+        ${EXTRA_CMAKE_ARGS} \
         $SRC_DIR
 
     make -j$(nproc)
@@ -156,7 +159,7 @@ function prepare_env_for_windows_build() {
         echo "Ninja valid ..."
     else
         echo "Ninja Invalid: ..."
-        windows_env_er
+        windows_env_err
     fi
 
     export PATH=$VS_PATH/VC/Auxiliary/Build:$PATH
@@ -176,14 +179,7 @@ function cmake_build_windows() {
     echo "build type: $BUILD_TYPE"
     echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
     echo "MGE_INFERENCE_ONLY: $MGE_INFERENCE_ONLY"
-    if [ -e $BUILD_DIR ];then
-        echo "clean old dir: $BUILD_DIR"
-        rm -rf $BUILD_DIR
-    fi
-    if [ -e $INSTALL_DIR ];then
-        echo "clean old dir: $INSTALL_DIR"
-        rm -rf $INSTALL_DIR
-    fi
+    try_remove_old_build $REMOVE_OLD_BUILD $BUILD_DIR $INSTALL_DIR
 
     echo "create build dir"
     mkdir -p $BUILD_DIR
@@ -202,6 +198,7 @@ function cmake_build_windows() {
         -DCMAKE_C_COMPILER=clang-cl.exe \
         -DCMAKE_CXX_COMPILER=clang-cl.exe \
         -DCMAKE_MAKE_PROGRAM=ninja.exe \
+        ${EXTRA_CMAKE_ARGS} \
         ../../.. && \
         echo \"start Ninja build log to build.log, may take serval min...\" && \
         Ninja load_and_run > build.log"

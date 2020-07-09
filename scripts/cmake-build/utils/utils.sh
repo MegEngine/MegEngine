@@ -37,3 +37,23 @@ function build_flatc() {
     make -j$(nproc)
     make install/strip
 }
+
+function try_remove_old_build() {
+    REMOVE_OLD_BUILD=$1
+    echo $REMOVE_OLD_BUILD
+    BUILD_DIR=$2
+    INSTALL_DIR=$3
+
+    if [ $REMOVE_OLD_BUILD = "true" ]; then
+        if [ -e $BUILD_DIR ];then
+            echo "clean old dir: $BUILD_DIR"
+            rm -rf $BUILD_DIR
+        fi
+        if [ -e $INSTALL_DIR ];then
+            echo "clean old dir: $INSTALL_DIR"
+            rm -rf $INSTALL_DIR
+        fi
+    else
+        echo "strip remove old build"
+    fi
+}

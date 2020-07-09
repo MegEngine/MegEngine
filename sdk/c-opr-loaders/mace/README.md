@@ -4,7 +4,7 @@
 
 ```bash
 cd $MEGENGINE_HOME
-./scripts/cmake-build/cross_build_android_arm_inference.sh -a arm64-v8a
+./scripts/cmake-build/cross_build_android_arm_inference.sh -a arm64-v8a -r
 ```
 
 After successfully built, load_and_run should be in `$MEGENGINE_HOME/build_dir/android/arm64-v8a/Release/install/bin`

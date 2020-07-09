@@ -274,7 +274,8 @@ void _config::load_opr_library(const char* self_path, const char* lib_path) {
     }
 }
 
-std::vector<std::pair<uint64_t, std::string>> _config::dump_registered_oprs() {
+std::vector<std::pair<unsigned long int, std::string>>
+_config::dump_registered_oprs() {
 #if MGB_ENABLE_DEBUG_UTIL
     return serialization::OprRegistry::dump_registries();
 #else

@@ -159,9 +159,10 @@ void OprRegistry::add_using_dynamic_loader(
 }
 
 #if MGB_ENABLE_DEBUG_UTIL
-std::vector<std::pair<uint64_t, std::string>> OprRegistry::dump_registries() {
-    auto &&id2reg = static_data().id2reg;
-    std::vector<std::pair<uint64_t, std::string>> result;
+std::vector<std::pair<unsigned long int, std::string>>
+OprRegistry::dump_registries() {
+    auto&& id2reg = static_data().id2reg;
+    std::vector<std::pair<unsigned long int, std::string>> result;
     for (auto iter = id2reg.begin(); iter != id2reg.end(); ++iter) {
         if (iter->second.name.size() == 0)
             result.push_back({iter->first, "<special>"});
