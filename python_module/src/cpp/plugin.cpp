@@ -76,8 +76,15 @@ class _FastSignal::Impl {
     std::unordered_map<int, HandlerCallback> m_handler_callbacks;
 
     void worker() {
+#ifdef __APPLE__
+        uint64_t tid;
+        pthread_threadid_np(NULL, &tid);
+        mgb_log("fast signal worker started in thread 0x%zx",
+                static_cast<size_t>(tid));
+#else
         mgb_log("fast signal worker started in thread 0x%zx",
                 static_cast<size_t>(pthread_self()));
+#endif
         mgb::sys::set_thread_name("fastsgl");
         int signum;
         for (; ; ) {

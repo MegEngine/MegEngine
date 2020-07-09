@@ -28,7 +28,7 @@ class CompNode {
         static CompNode load(const char* id);
 
         %extend {
-            static std::vector<int> _parse_locator(const std::string &id) const {
+            static std::vector<int> _parse_locator(const std::string &id) {
                 auto logi = CompNode::Locator::parse(id);
                 return {
                     static_cast<int>(logi.type), logi.device, logi.stream,

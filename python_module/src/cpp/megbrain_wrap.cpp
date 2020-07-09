@@ -404,7 +404,7 @@ void CompGraphCallbackValueProxy::do_copy() {
     m_copy_event->record();
 }
 
-void CompGraphCallbackValueProxy::sync() {
+void CompGraphCallbackValueProxy::sync() const {
     mgb_assert(!m_use_raw_hv);
     RealTimer t0;
     double next_warn_time = 2, warn_time_delta = 1;
@@ -516,7 +516,7 @@ class AsyncExec::Core {
 
         class Worker final: public AsyncQueueSC<CallbackParam, Worker> {
             public:
-                void process_one_task(CallbackParam &task) {
+                void process_one_task(const CallbackParam &task) {
                     for (auto &tmp_value: task.value) {
                         tmp_value.sync();
                     }

@@ -214,7 +214,7 @@ class CompGraphCallbackValueProxy {
         }
 
         void setup(const mgb::DeviceTensorND &val, bool eager_copy);
-        void sync();
+        void sync() const;
 
         /*!
          * \brief called after python callback returned
