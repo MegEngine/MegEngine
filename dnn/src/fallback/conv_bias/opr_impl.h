@@ -193,7 +193,7 @@ public:
 
     //! move arm_common to fallback
     virtual bool is_matmul_quantized_prefer(
-            const ConvBiasImpl::NCBKernSizeParam& ncb_param) {
+            const ConvBiasImpl::NCBKernSizeParam& ncb_param) const {
         MEGDNN_MARK_USED_VAR(ncb_param);
         return true;
     };
@@ -209,43 +209,39 @@ public:
     public:
         virtual ~AlgoBase() = default;
         virtual bool usable(
-                ConvBiasImpl* opr, const NCBKernSizeParam& param,
+                const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const = 0;
-        virtual size_t get_workspace(ConvBiasImpl* opr,
-                                     const NCBKernSizeParam& param) const = 0;
+        virtual size_t get_workspace(const NCBKernSizeParam& param) const = 0;
 
         virtual SmallVector<NCBKern> dispatch_kerns(
-                ConvBiasImpl* opr, const NCBKernSizeParam& param) const = 0;
+                const NCBKernSizeParam& param) const = 0;
 
         virtual SmallVector<NCBKern> dispatch_preprocess_kerns(
-                ConvBiasImpl*, const NCBKernSizeParam&) const {
+                const NCBKernSizeParam&) const {
             return {};
         };
 
         //! get the layouts of weight_prerocess dst
         virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
-                ConvBiasImpl*, const NCBKernSizeParam&) const {
+                const NCBKernSizeParam&) const {
             return {};
         };
 
         //! get the workspace when weight_prerocess
-        virtual size_t get_preprocess_workspace(ConvBiasImpl*,
-                                                const NCBKernSizeParam&) const {
+        virtual size_t get_preprocess_workspace(const NCBKernSizeParam&) const {
             return 0_z;
         };
 
         //! Temporarily used to identify whether the matmul algorithm is
         //! is_preferred.
-        virtual bool is_preferred(ConvBiasImpl*,
-                                  const NCBKernSizeParam&) const {
+        virtual bool is_preferred(const NCBKernSizeParam&) const {
             return false;
         }
-        bool usable_reproducible(ConvBiasImpl* opr,
-                                 const NCBKernSizeParam& param,
+        bool usable_reproducible(const NCBKernSizeParam& param,
                                  AlgoSelectionStrategy algo_selection_strategy,
                                  bool reproducible = true) const {
             return (!reproducible || is_reproducible()) &&
-                   usable(opr, param, algo_selection_strategy);
+                   usable(param, algo_selection_strategy);
         }
     };
 

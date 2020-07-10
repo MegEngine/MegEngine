@@ -137,13 +137,11 @@ public:
         return m_large_group ? "F32DIRECT_LARGE_GROUP"
                              : "F32DIRECT_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -157,13 +155,11 @@ public:
     const char* name() const override {
         return m_large_group ? "F32STRD1_LARGE_GROUP" : "F32STRD1_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -177,13 +173,11 @@ public:
     const char* name() const override {
         return m_large_group ? "F32STRD2_LARGE_GROUP" : "F32STRD2_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -194,13 +188,11 @@ public:
     AlgoF32DirectNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "F32_CONV_NCHW44_DIRECT"; }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -211,13 +203,11 @@ public:
     AlgoF32DirectNCHWNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "F32_CONV_NCHW_NCHW44"; }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -227,13 +217,11 @@ class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "F32_CHANNEL_WISE_NCHW44"; }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 

@@ -27,10 +27,9 @@ using namespace arm_common;
 /* ======================= AlgoFP16WinogradF23 ======================== */
 
 bool ConvBiasImpl::AlgoFP16WinogradF23::usable(
-        fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+         const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MEGDNN_MARK_USED_VAR(param);
-    MEGDNN_MARK_USED_VAR(opr);
     MIDOUT_BEGIN(megdnn_arm_common_winograd_fp16, 0, 0) {
         using Strategy = winograd::winograd_2x3_4x4_f16;
         Strategy strategy(param.src_type, param.filter_type, param.dst_type);
@@ -38,13 +37,13 @@ bool ConvBiasImpl::AlgoFP16WinogradF23::usable(
                                       strategy, m_tile_size, param)
                                       .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
-               (opr->param().format == param::ConvBias::Format::NCHW ||
-                (opr->param().format ==
+               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
+                (param.filter_meta.format ==
                          param::ConvBias::Format::NCHW_WINOGRAD &&
-                 opr->param().output_block_size == 2 &&
+                 param.output_block_size == 2 &&
                  param.winograd_matmul_format ==
                          param::MatrixMul::Format::DEFAULT)) &&
-               opr->param().mode == param::ConvBias::Mode::CROSS_CORRELATION &&
+               !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
                (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
@@ -69,10 +68,9 @@ MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP16WinogradF23,
 /* ======================= AlgoFP16WinogradF45 ======================== */
 
 bool ConvBiasImpl::AlgoFP16WinogradF45::usable(
-        fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MEGDNN_MARK_USED_VAR(param);
-    MEGDNN_MARK_USED_VAR(opr);
     MIDOUT_BEGIN(megdnn_arm_common_winograd_fp16, 1, 0) {
         using Strategy = winograd::winograd_4x5_1x1_f16;
         Strategy strategy(param.src_type, param.filter_type, param.dst_type);
@@ -80,13 +78,13 @@ bool ConvBiasImpl::AlgoFP16WinogradF45::usable(
                                       strategy, m_tile_size, param)
                                       .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
-               (opr->param().format == param::ConvBias::Format::NCHW ||
-                (opr->param().format ==
+               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
+                (param.filter_meta.format ==
                          param::ConvBias::Format::NCHW_WINOGRAD &&
-                 opr->param().output_block_size == 4 &&
+                 param.output_block_size == 4 &&
                  param.winograd_matmul_format ==
                          param::MatrixMul::Format::DEFAULT)) &&
-               opr->param().mode == param::ConvBias::Mode::CROSS_CORRELATION &&
+               !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 5) &&
                (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
@@ -109,10 +107,9 @@ MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP16WinogradF45,
 /* ======================= AlgoFP16WinogradF63 ======================== */
 
 bool ConvBiasImpl::AlgoFP16WinogradF63::usable(
-        fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MEGDNN_MARK_USED_VAR(param);
-    MEGDNN_MARK_USED_VAR(opr);
     MIDOUT_BEGIN(megdnn_arm_common_winograd_fp16, 2, 0) {
         using Strategy = winograd::winograd_6x3_1x1_f16;
         Strategy strategy(param.src_type, param.filter_type, param.dst_type);
@@ -120,13 +117,13 @@ bool ConvBiasImpl::AlgoFP16WinogradF63::usable(
                                       strategy, m_tile_size, param)
                                       .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
-               (opr->param().format == param::ConvBias::Format::NCHW ||
-                (opr->param().format ==
+               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
+                (param.filter_meta.format ==
                          param::ConvBias::Format::NCHW_WINOGRAD &&
-                 opr->param().output_block_size == 6 &&
+                 param.output_block_size == 6 &&
                  param.winograd_matmul_format ==
                          param::MatrixMul::Format::DEFAULT)) &&
-               opr->param().mode == param::ConvBias::Mode::CROSS_CORRELATION &&
+               !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
                (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
@@ -149,10 +146,9 @@ MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP16WinogradF63,
 /* ======================= AlgoFP16WinogradF23_8x8 ======================== */
 
 bool ConvBiasImpl::AlgoFP16WinogradF23_8x8::usable(
-        fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MEGDNN_MARK_USED_VAR(param);
-    MEGDNN_MARK_USED_VAR(opr);
     MIDOUT_BEGIN(megdnn_arm_common_winograd_fp16, 3, 0) {
         if (param.filter_meta.icpg % 8 != 0 || param.filter_meta.ocpg % 8 != 0)
             return false;
@@ -166,13 +162,13 @@ bool ConvBiasImpl::AlgoFP16WinogradF23_8x8::usable(
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() == PackMode::NO_PACK &&
-               (opr->param().format == param::ConvBias::Format::NCHW ||
-                (opr->param().format ==
+               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
+                (param.filter_meta.format ==
                          param::ConvBias::Format::NCHW_WINOGRAD &&
-                 opr->param().output_block_size == 2 &&
+                 param.output_block_size == 2 &&
                  param.winograd_matmul_format ==
                          param::MatrixMul::Format::MK8)) &&
-               opr->param().mode == param::ConvBias::Mode::CROSS_CORRELATION &&
+               !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
                (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
@@ -197,7 +193,7 @@ MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP16WinogradF23_8x8,
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp16_kimpl)
 
 bool ConvBiasImpl::AlgoF16Direct::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 0, 0) {
         auto&& fm = param.filter_meta;
@@ -227,7 +223,7 @@ bool ConvBiasImpl::AlgoF16Direct::usable(
 }
 
 size_t ConvBiasImpl::AlgoF16Direct::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 0, 1) {
         auto wbundle =
                 MultithreadDirectConvCommon<dt_float16, __fp16>::get_bundle(
@@ -310,7 +306,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16Direct::get_kimpls(
 }
 
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16Direct::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 0, 1) {
         return get_kimpls(param);
     }
@@ -321,7 +317,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16Direct::dispatch_kerns(
 /* ===================== stride-1 algo ===================== */
 
 bool ConvBiasImpl::AlgoF16DirectStride1::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 1, 0) {
         auto&& fm = param.filter_meta;
@@ -425,7 +421,7 @@ ConvBiasImpl::AlgoF16DirectStride1::get_kimpls(
 }
 
 size_t ConvBiasImpl::AlgoF16DirectStride1::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 1, 1) {
         auto bundle = MultithreadDirectConvCommon<
                 dt_float16, __fp16>::get_bundle_stride(param, m_large_group);
@@ -437,7 +433,7 @@ size_t ConvBiasImpl::AlgoF16DirectStride1::get_workspace(
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoF16DirectStride1::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 1, 2) {
         return get_kimpls(param);
     }

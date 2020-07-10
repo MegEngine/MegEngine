@@ -478,7 +478,7 @@ WorkspaceBundle ConvBiasImpl::AlgoIm2col::get_bundle(
 }
 
 size_t ConvBiasImpl::AlgoIm2col::get_workspace(
-        ConvBiasImpl*, const NCBKernSizeParam& p) const {
+        const NCBKernSizeParam& p) const {
     MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 0) {
         return get_bundle(p).total_size_in_bytes();
     }
@@ -487,7 +487,7 @@ size_t ConvBiasImpl::AlgoIm2col::get_workspace(
 }
 
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
-        ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 1) {
         UNPACK_CONV_F32_NCB_KERN_SIZES(param);
         MEGDNN_MARK_USED_VAR(SH);
@@ -660,12 +660,13 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoIm2col::dispatch_kerns(
 }
 
 bool ConvBiasImpl::AlgoIm2col::usable(
-        ConvBiasImpl* opr, const NCBKernSizeParam& param,
+         const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MIDOUT_BEGIN(megdnn_fallback_im2col, 0, 2) {
-        if (opr->param().format != param::ConvBias::Format::NCHW &&
-            opr->param().format != param::ConvBias::Format::NCHW44_DOT &&
-            opr->param().format != param::ConvBias::Format::NCHW44) {
+        auto format = param.filter_meta.format;
+        if (format != param::ConvBias::Format::NCHW &&
+            format != param::ConvBias::Format::NCHW44_DOT &&
+            format != param::ConvBias::Format::NCHW44) {
             return false;
         }
 
@@ -695,8 +696,8 @@ bool ConvBiasImpl::AlgoIm2col::usable(
         }
         fallback::MatrixMulImpl::AlgoBase::MatmulDescription mdesc =
                 m_matmul_algo->matmul_description();
-        if (opr->param().format == param::ConvBias::Format::NCHW44 ||
-            opr->param().format == param::ConvBias::Format::NCHW44_DOT) {
+        if (format == param::ConvBias::Format::NCHW44 ||
+            format == param::ConvBias::Format::NCHW44_DOT) {
             //! current NCHW44 im2col only support DEFAULT mode matmul
             if (mdesc.packmode != Pack_Mode::DEFAULT) {
                 return false;

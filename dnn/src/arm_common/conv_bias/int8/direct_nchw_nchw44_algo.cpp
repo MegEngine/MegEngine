@@ -214,7 +214,7 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
 }
 
 bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MEGDNN_MARK_USED_VAR(algo_selection_strategy);
     auto&& fm = param.filter_meta;
@@ -236,22 +236,20 @@ bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::usable(
 }
 
 bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::is_preferred(
-        megdnn::fallback::ConvBiasImpl* conv_bias_impl_ptr,
         const NCBKernSizeParam& param) const {
     // TODO: benchmark and fix
-    MEGDNN_MARK_USED_VAR(conv_bias_impl_ptr);
     MEGDNN_MARK_USED_VAR(param);
     return false;
 }
 
 size_t ConvBiasImpl::AlgoS8DirectNCHWNCHW44::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     size_t N = param.n;
     size_t OC = fm.ocpg;

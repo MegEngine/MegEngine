@@ -159,8 +159,7 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
 }  // namespace
 
 /* ===================== stride1 algo ===================== */
-bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(fallback::ConvBiasImpl*,
-                                               const NCBKernSizeParam& param,
+bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(const NCBKernSizeParam& param,
                                                AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     auto fh = fm.spatial[0];
@@ -182,13 +181,13 @@ bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(fallback::ConvBiasImpl*,
 }
 
 size_t ConvBiasImpl::AlgoF32DirectNCHW44::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     const int batch = param.n;
     const int group = fm.group;

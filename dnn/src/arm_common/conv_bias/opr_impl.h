@@ -27,7 +27,7 @@ public:
     SmallVector<AlgoBase*> algo_pack() override;
 
     bool is_matmul_quantized_prefer(
-            const ConvBiasImpl::NCBKernSizeParam& ncb_param) override;
+            const ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
     class AlgoPack;
 
 protected:

@@ -48,7 +48,7 @@ size_t ConvBiasImpl::AlgoConv1x1::get_oc_tile_size_heuristic(
 }
 
 size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
-        ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
     size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
@@ -90,7 +90,7 @@ size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
 }
 
 SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
-        ConvBiasImpl* opr, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     SmallVector<ConvBiasImpl::NCBKern> ret_kern;
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
@@ -138,11 +138,11 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
 
     //! get thread bundle
     thread_bundle = utils::get_thread_bundle(param, matmul_bundle.get_size(2),
-                                      compt_oc_block_size);
+                                             compt_oc_block_size);
 
     Conv1x1StrategyBase* conv1x1_strategy =
             Conv1x1Factory::make_conv1x1_strategy(param, pack_mode,
-                                                  opr->param().format);
+                                                  param.filter_meta.format);
 
     auto kern_packA = [this, whole_bundle, matmul_bundle, param,
                        compt_oc_block_size, conv1x1_strategy](
@@ -180,13 +180,12 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
     return ret_kern;
 }
 
-bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
-                                       const NCBKernSizeParam& param,
+bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                                        AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 2) {
-        if (opr->param().format != param::ConvBias::Format::NCHW &&
-            opr->param().format != param::ConvBias::Format::NCHW44 &&
-            opr->param().format != param::ConvBias::Format::NCHW44_DOT)
+        if (param.filter_meta.format != param::ConvBias::Format::NCHW &&
+            param.filter_meta.format != param::ConvBias::Format::NCHW44 &&
+            param.filter_meta.format != param::ConvBias::Format::NCHW44_DOT)
             return false;
 
         size_t FH = param.filter_meta.spatial[0],
@@ -199,7 +198,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
         if (FH != 1 || FW != 1 || PH || PW || SH != 1 || SW != 1)
             return false;
 
-        if(param.src_type.enumv() != param.filter_type.enumv()) {
+        if (param.src_type.enumv() != param.filter_type.enumv()) {
             return false;
         }
 
@@ -225,8 +224,8 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
             }
         }
 
-        if (opr->param().format == param::ConvBias::Format::NCHW44 ||
-            opr->param().format == param::ConvBias::Format::NCHW44_DOT) {
+        if (param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
+            param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT) {
             if (param.filter_meta.icpg < 4_z || param.filter_meta.icpg == 1 ||
                 param.filter_meta.ocpg == 1) {
                 return false;
@@ -236,13 +235,14 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
         size_t OH = param.osz[0];
         size_t OW = param.osz[1];
 
-        MatrixMulImpl::KernSizeParam matmul_param = utils::get_matmul_kern_param(
-                param, OH * OW, get_oc_tile_size_heuristic(param));
+        MatrixMulImpl::KernSizeParam matmul_param =
+                utils::get_matmul_kern_param(param, OH * OW,
+                                             get_oc_tile_size_heuristic(param));
         bool matmul_usable = m_matmul_algo->usable(matmul_param);
 
         auto pack_mode = m_matmul_algo->packmode();
         bool strategy_usable = Conv1x1Factory::can_make_conv1x1_strategy(
-                param, pack_mode, opr->param().format);
+                param, pack_mode, param.filter_meta.format);
 
         return matmul_usable && strategy_usable &&
                (param.filter_meta.dilation[0] ==
@@ -255,7 +255,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(ConvBiasImpl* opr,
 }
 
 bool ConvBiasImpl::AlgoConv1x1::is_preferred(
-        ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
     if (OH * OW != 1) {
@@ -265,8 +265,8 @@ bool ConvBiasImpl::AlgoConv1x1::is_preferred(
         if (param.src_type.enumv() == DTypeEnum::Int8 &&
             param.filter_type.enumv() == DTypeEnum::Int8 &&
             param.dst_type.enumv() == DTypeEnum::Int16) {
-                return true;
-            }
+            return true;
+        }
 #elif MEGDNN_X86
         size_t OC = param.filter_meta.ocpg;
         if (OC > 2 || param.src_type.enumv() == DTypeEnum::Float32)

@@ -26,9 +26,8 @@ using namespace armv7;
 /* ===================== matrix mul algo ===================== */
 
 bool ConvBiasImpl::AlgoS8MatrixMul::usable(
-        FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    MEGDNN_MARK_USED_VAR(opr);
     auto&& fm = param.filter_meta;
     return param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
            param.dst_type.enumv() == DTypeEnum::QuantizedS8 &&

@@ -19,6 +19,7 @@ namespace aarch64 {
 class ConvBiasImpl::AlgoF16DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     bool m_large_group;
+
 public:
     AlgoF16DirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
@@ -26,15 +27,12 @@ public:
         return m_large_group ? "ARMV8F16STRD2_LARGE_GROUP"
                              : "ARMV8F16STRD2_SMALL_GROUP";
     }
-
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
-    SmallVector<NCBKern> dispatch_kerns(FallbackConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 };
 }  // namespace aarch64
 }  // namespace megdnn

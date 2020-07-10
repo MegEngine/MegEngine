@@ -27,15 +27,13 @@ public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "QU8MATMUL"; }
 
-    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override {
+    size_t get_workspace(const NCBKernSizeParam& param) const override {
         return get_bundle(param).total_size_in_bytes();
     }
 
     SmallVector<fallback::ConvBiasImpl::NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* /*opr*/,
             const NCBKernSizeParam& param) const override {
         size_t group = param.filter_meta.group;
         return {{kimpl, {group, 1_z, 1_z}}};

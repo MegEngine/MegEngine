@@ -83,7 +83,7 @@ void get_rectified_size_str2(size_t IH, size_t IW, size_t OH, size_t OW,
 
 /* ===================== direct algo ===================== */
 bool ConvBiasImpl::AlgoI8x8x16Direct::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 0) {
         auto&& fm = param.filter_meta;
@@ -129,7 +129,7 @@ WorkspaceBundle ConvBiasImpl::AlgoI8x8x16Direct::get_bundle(
     return {nullptr, {part0, part1}};
 }
 size_t ConvBiasImpl::AlgoI8x8x16Direct::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 1) {
         auto bundle = get_bundle(param);
         return bundle.total_size_in_bytes();
@@ -293,7 +293,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Direct::get_kimpls(
 }
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoI8x8x16Direct::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 2) {
         return get_kimpls(param);
     }
@@ -303,7 +303,7 @@ ConvBiasImpl::AlgoI8x8x16Direct::dispatch_kerns(
 
 /* ===================== stride-2 algo ===================== */
 bool ConvBiasImpl::AlgoI8x8x16Stride2::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 0) {
         auto&& fm = param.filter_meta;
@@ -350,7 +350,7 @@ WorkspaceBundle ConvBiasImpl::AlgoI8x8x16Stride2::get_bundle(
     return {nullptr, {part0, part1}};
 }
 size_t ConvBiasImpl::AlgoI8x8x16Stride2::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 1) {
         auto bundle = get_bundle(param);
         return bundle.total_size_in_bytes();
@@ -513,7 +513,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Stride2::get_kimpls(
 }
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoI8x8x16Stride2::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 2) {
         return get_kimpls(param);
     }
@@ -521,7 +521,7 @@ ConvBiasImpl::AlgoI8x8x16Stride2::dispatch_kerns(
     return {};
 }
 bool ConvBiasImpl::AlgoI8x8x16Stride2Filter2::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 3, 0) {
         return param.bias_mode == BiasMode::NO_BIAS &&
@@ -534,7 +534,7 @@ bool ConvBiasImpl::AlgoI8x8x16Stride2Filter2::usable(
 }
 
 size_t ConvBiasImpl::AlgoI8x8x16Stride2Filter2::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 3, 1) {
         return conv_bias::get_workspace_in_bytes_conv_int8x8x16_stride2_flt2(
                 param);
@@ -545,7 +545,7 @@ size_t ConvBiasImpl::AlgoI8x8x16Stride2Filter2::get_workspace(
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoI8x8x16Stride2Filter2::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     // return {conv_bias::conv_int8x8x16_stride2_flt2,true};
     auto kern = [](const NCBKernParam& param, const NCBKernIndex& ncb_index) {
         MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 3, 2) {

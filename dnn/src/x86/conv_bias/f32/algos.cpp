@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/x86/conv_bias/f32/algos.h"
@@ -104,7 +105,7 @@ void get_rectified_size(size_t IH, size_t IW, size_t OH, size_t OW, size_t FH,
 /* ===================== direct algo ===================== */
 
 bool ConvBiasImpl::AlgoDirect::usable(
-        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     auto&& fm = param.filter_meta;
     bool aviliable = fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
@@ -142,7 +143,7 @@ WorkspaceBundle ConvBiasImpl::AlgoDirect::get_bundle(
     return {nullptr, {part0, part1}};
 }
 size_t ConvBiasImpl::AlgoDirect::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
@@ -280,7 +281,8 @@ void ConvBiasImpl::AlgoDirect::do_conv_kern(const WorkspaceBundle& bundle,
     size_t workspace_group_id = workspace_ids[0],
            workspace_batch_id = workspace_ids[1], oc = workspace_ids[2];
     const float* sptr = kern_param.src<float>(batch_id, group_id);
-    const float* filter = kern_param.filter<float>(group_id) + oc * FH * FW * IC;
+    const float* filter =
+            kern_param.filter<float>(group_id) + oc * FH * FW * IC;
     const float* bias_ptr =
             kern_param.bias<float>(batch_id, group_id) + oc * bias_offset;
     float* dst = kern_param.dst<float>(batch_id, group_id) + oc * OH * OW;
@@ -318,7 +320,7 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDirect::get_kimpls(
 }
 /* ===================== direct-stride2 algo ===================== */
 bool ConvBiasImpl::AlgoDirectStride2::usable(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
@@ -363,7 +365,7 @@ WorkspaceBundle ConvBiasImpl::AlgoDirectStride2::get_bundle(
 }
 
 size_t ConvBiasImpl::AlgoDirectStride2::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 //! Process one input channel copy padding
@@ -528,7 +530,7 @@ WorkspaceBundle ConvBiasImpl::AlgoMatrixMul::get_bundle(
 }
 
 bool ConvBiasImpl::AlgoMatrixMul::is_preferred(
-        FallbackConvBiasImpl* opr, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     auto&& fm = param.filter_meta;
     if (fm.dilation[0] != 1 || fm.dilation[1] != 1) {
         return false;
@@ -550,7 +552,7 @@ bool ConvBiasImpl::AlgoMatrixMul::is_preferred(
     int ic = find_nearest_elem<int>(fm.icpg, {4, 8, 16, 32, 64, 96, 128});
     int on = std::round(geometric_mean(param.osz[0], param.osz[1]));
     ProfileElement cur(f, oc, ic, on);
-    auto H = static_cast<HandleImpl*>(opr->handle());
+    auto H = static_cast<HandleImpl*>(inplace_cpu_handle().get());
     auto&& target = std::lower_bound(H->profile_cache().begin(),
                                      H->profile_cache().end(), cur);
     megdnn_assert_internal(target->f == cur.f);

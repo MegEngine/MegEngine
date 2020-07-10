@@ -59,8 +59,7 @@ public:
                 static_cast<ConvBiasImpl*>(conv_bias_opr)->algo_pack();
         for (auto&& algorithm : conv_bias_algo) {
             // fallback algo
-            refhold.emplace_back(new AlgoDefault(
-                    static_cast<ConvBiasImpl*>(conv_bias_opr), algorithm));
+            refhold.emplace_back(new AlgoDefault(algorithm));
             all_algos.emplace_back(refhold.back().get());
         }
 
@@ -82,7 +81,7 @@ bool ConvolutionImpl::is_naive_algo(ConvolutionImpl::Algorithm* algo) {
 }
 
 #define NCB_ALGO_FUNC(name, algo, param) \
-    static_cast<AlgoBase*>(algo)->name(this, fparam)
+    static_cast<AlgoBase*>(algo)->name(param)
 
 void ConvolutionImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                            _megdnn_tensor_out dst,
@@ -131,7 +130,7 @@ size_t ConvolutionImpl::get_workspace_in_bytes(
         return naive::ConvolutionForwardImpl::get_workspace_in_bytes(
                 src, filter, dst, preprocessed_filter);
     } else {
-        return static_cast<AlgoBase*>(algo)->get_workspace(this, fparam);
+        return NCB_ALGO_FUNC(get_workspace, algo, fparam);
     }
 }
 
@@ -144,8 +143,7 @@ size_t ConvolutionImpl::get_preprocess_workspace_in_bytes(
         return naive::ConvolutionForwardImpl::get_preprocess_workspace_in_bytes(
                 src, filter, dst);
     } else {
-        return static_cast<AlgoBase*>(algo)->get_preprocess_workspace(this,
-                                                                      fparam);
+        return NCB_ALGO_FUNC(get_preprocess_workspace, algo, fparam);
     }
 }
 
@@ -158,8 +156,7 @@ SmallVector<TensorLayout> ConvolutionImpl::deduce_preprocessed_filter_layout(
         return naive::ConvolutionForwardImpl::deduce_preprocessed_filter_layout(
                 src, filter, dst);
     } else {
-        return static_cast<AlgoBase*>(algo)->deduce_preprocessed_filter_layout(
-                this, fparam);
+        return NCB_ALGO_FUNC(deduce_preprocessed_filter_layout, algo, fparam);
     }
 }
 
@@ -251,8 +248,7 @@ ConvolutionImpl::NCBKernParam ConvolutionImpl::make_ncb_kern_param(
 
 void ConvolutionImpl::exec_preprocess_with_ncb_kern(const NCBKernParam& param,
                                                     Algorithm* algo) {
-    auto kerns =
-            static_cast<AlgoBase*>(algo)->dispatch_preprocess_kern(this, param);
+    auto kerns = NCB_ALGO_FUNC(dispatch_preprocess_kern, algo, param);
     auto fallback_handle = handle();
     for (auto kernel : kerns) {
         megdnn_assert(
@@ -272,14 +268,15 @@ void ConvolutionImpl::exec_preprocess_with_ncb_kern(const NCBKernParam& param,
 
 void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                          Algorithm* algo) {
-    auto kerns = static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
+    auto kerns = NCB_ALGO_FUNC(dispatch_kern, algo, param);
     auto fallback_handle = handle();
     for (auto kernel : kerns) {
-        megdnn_assert(param.filter_meta.format == Param::Format::NCHW ||
-                              param.filter_meta.format == Param::Format::NHWC ||
-                              param.filter_meta.format == Param::Format::NCHW88 ||
-                              param.filter_meta.format == Param::Format::NCHW44,
-                      "invalid conv format");
+        megdnn_assert(
+                param.filter_meta.format == Param::Format::NCHW ||
+                        param.filter_meta.format == Param::Format::NHWC ||
+                        param.filter_meta.format == Param::Format::NCHW88 ||
+                        param.filter_meta.format == Param::Format::NCHW44,
+                "invalid conv format");
         auto run = [param, kernel](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
             kernel.kern(param, {thread_id, ndrange_id});
@@ -293,13 +290,11 @@ ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
         bool reproducible) {
     for (auto i : get_all_algorithms_with_ncb(param)) {
-        size_t need_workspace =
-                static_cast<AlgoBase*>(i)->get_workspace(this, param);
         bool usable_reproducible =
                 static_cast<AlgoBase*>(i)->usable_reproducible(
-                        this, param, AlgoSelectionStrategy::HEURISTIC,
-                        reproducible);
-        if (usable_reproducible && need_workspace <= workspace_limit_in_bytes) {
+                        param, AlgoSelectionStrategy::HEURISTIC, reproducible);
+        if (usable_reproducible && NCB_ALGO_FUNC(get_workspace, i, param) <=
+                                           workspace_limit_in_bytes) {
             return i;
         }
     }
@@ -311,8 +306,8 @@ ConvolutionImpl::get_all_algorithms_with_ncb(const NCBKernSizeParam& param) {
     std::vector<Algorithm*> ret;
     std::vector<Algorithm*> prefer_algos;
     for (auto&& i : algo_pack()) {
-        if (i->usable(this, param, AlgoSelectionStrategy::FULL_RUN)) {
-            if (i->is_preferred(this, param)) {
+        if (i->usable(param, AlgoSelectionStrategy::FULL_RUN)) {
+            if (i->is_preferred(param)) {
                 prefer_algos.push_back(i);
             } else {
                 ret.push_back(i);

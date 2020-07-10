@@ -36,7 +36,7 @@ using namespace megdnn;
 using namespace x86;
 
 bool ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::usable(
-        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     return chanwise_avx2_stride1_qint8_usable(param);
 }
@@ -66,7 +66,7 @@ WorkspaceBundle ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::get_bundle(
 }
 
 size_t ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
@@ -78,12 +78,12 @@ ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::get_kimpls(
 }
 
 bool ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::is_preferred(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return chanwise_avx2_stride1_qint8_preferred(param);
 }
 
 bool ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::usable(
-        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     return chanwise_avx2_stride2_qint8_usable(param);
 }
@@ -113,7 +113,7 @@ WorkspaceBundle ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::get_bundle(
 }
 
 size_t ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
@@ -125,12 +125,12 @@ ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::get_kimpls(
 }
 
 bool ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::is_preferred(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return chanwise_avx2_stride2_qint8_preferred(param);
 }
 
 bool ConvBiasImpl::AlgoDirectAvx2Stride1Int8::usable(
-        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     return direct_avx2_stride1_int8_usable(param);
 }
@@ -170,7 +170,7 @@ WorkspaceBundle ConvBiasImpl::AlgoDirectAvx2Stride1Int8::get_bundle(
 }
 
 size_t ConvBiasImpl::AlgoDirectAvx2Stride1Int8::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
@@ -182,14 +182,13 @@ ConvBiasImpl::AlgoDirectAvx2Stride1Int8::get_kimpls(
 }
 
 bool ConvBiasImpl::AlgoDirectAvx2Stride1Int8::is_preferred(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return direct_avx2_stride1_int8_preferred(param);
 }
 
 /* ===================== avx2 int8 stride 2 ===================== */
 bool ConvBiasImpl::AlgoAVX2DirectConvStride2::usable(
-        FallbackConvBiasImpl* /*opr*/, const NCBKernSizeParam& param,
-        AlgoSelectionStrategy) const {
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     return direct_avx2_stride2_int8_usable(param);
 }
 
@@ -229,7 +228,7 @@ WorkspaceBundle ConvBiasImpl::AlgoAVX2DirectConvStride2::get_bundle(
 }
 
 size_t ConvBiasImpl::AlgoAVX2DirectConvStride2::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
@@ -241,13 +240,12 @@ ConvBiasImpl::AlgoAVX2DirectConvStride2::get_kimpls(
 }
 
 bool ConvBiasImpl::AlgoAVX2DirectConvStride2::is_preferred(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return direct_avx2_stride2_int8_preferred(param);
 }
 
 #if MEGDNN_X86_WITH_MKL_DNN
-bool ConvBiasImpl::AlgoMkldnnQint8::usable(FallbackConvBiasImpl*,
-                                           const NCBKernSizeParam& param,
+bool ConvBiasImpl::AlgoMkldnnQint8::usable(const NCBKernSizeParam& param,
                                            AlgoSelectionStrategy) const {
     return mkldnn_qint8_usable(param);
 }
@@ -426,19 +424,18 @@ void ConvBiasImpl::AlgoMkldnnQint8::kern_mkldnn_s8x8x32(
 #undef REORDER_MEMORY
 
 bool ConvBiasImpl::AlgoMkldnnQint8::is_preferred(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return mkldnn_qint8_preferred(param);
 }
 
 /* ===================== mkldnn qint8 matmul algo ===================== */
-bool ConvBiasImpl::AlgoMkldnnMatmulQint8::usable(FallbackConvBiasImpl*,
-                                                 const NCBKernSizeParam& param,
+bool ConvBiasImpl::AlgoMkldnnMatmulQint8::usable(const NCBKernSizeParam& param,
                                                  AlgoSelectionStrategy) const {
     return mkldnn_matmul_qint8_usable(param);
 }
 
 bool ConvBiasImpl::AlgoMkldnnMatmulQint8::is_preferred(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return mkldnn_matmul_qint8_preferred(param);
 }
 

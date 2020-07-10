@@ -26,16 +26,13 @@ public:
     const char* name() const override {
         return m_large_group ? "S8STRD1_LARGE_GROUP" : "S8STRD1_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 
-    bool is_preferred(megdnn::fallback::ConvBiasImpl*,
-                      const NCBKernSizeParam& param) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
 };
 
 class ConvBiasImpl::AlgoS8DirectStride2 final : public AlgoBase {
@@ -47,13 +44,11 @@ public:
     const char* name() const override {
         return m_large_group ? "S8STRD2_LARGE_GROUP" : "S8STRD2_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -62,15 +57,12 @@ public:
     AlgoS8DirectNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "S8_NCHW44_DIRECT"; }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
-    bool is_preferred(megdnn::fallback::ConvBiasImpl*,
-                      const NCBKernSizeParam& param) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
 };
 
 class ConvBiasImpl::AlgoS8DirectNCHWNCHW44 final : public AlgoBase {
@@ -78,27 +70,22 @@ public:
     AlgoS8DirectNCHWNCHW44() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "S8_CONV_NCHW_NCHW44"; }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
-    bool is_preferred(megdnn::fallback::ConvBiasImpl*,
-                      const NCBKernSizeParam& param) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
 };
 
 class ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "S8_CHAN_WISE_STRD1_NCHW44"; }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -106,12 +93,10 @@ class ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "S8_CHAN_WISE_STRD2_NCHW44"; }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -121,13 +106,11 @@ class ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "ARMDOTS8_NCHW_NCHW44"; }
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam&,
+    bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam&) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -142,13 +125,11 @@ public:
         return m_large_group ? "ARMDOTS8STRD1_LARGE_GROUP"
                              : "ARMDOTS8STRD1_SMALL_GROUP";
     }
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam&,
+    bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam&) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -163,13 +144,11 @@ public:
                              : "ARMDOTS8STRD2_SMALL_GROUP";
     }
 
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam&,
+    bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam&) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -178,21 +157,16 @@ public:
     AlgoDotS8Direct_NCHW44() {}
 
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return "ARMDOTS8DIRECT_NCHW44";
-    }
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam&,
+    const char* name() const override { return "ARMDOTS8DIRECT_NCHW44"; }
+    bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam&) const override;
 
     SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 
-    bool is_preferred(megdnn::fallback::ConvBiasImpl*,
-                      const NCBKernSizeParam& param) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
 };
 #endif
 

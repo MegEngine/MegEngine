@@ -15,6 +15,8 @@
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
+#include "src/common/opr_delegate.h"
+
 
 namespace megdnn {
 namespace fallback {
@@ -54,16 +56,18 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(
-            ConvBiasImpl* opr, const NCBKernSizeParam& param) const override;
-    bool is_preferred(fallback::ConvBiasImpl* opr,
+            const NCBKernSizeParam& param) const override;
+    bool is_preferred(
                       const NCBKernSizeParam& param) const override {
         if (param.src_type.category() == DTypeCategory::QUANTIZED) {
-            return opr->is_matmul_quantized_prefer(param);
+            static CpuOprDelegationStorage<1> storage;
+            auto conv_bias_opr = storage.get<ConvBias, 0>();
+            return static_cast<ConvBiasImpl*>(conv_bias_opr)
+                    ->is_matmul_quantized_prefer(param);
         }
         auto&& fm = param.filter_meta;
         auto OC = fm.ocpg, IC = fm.icpg;

@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -35,10 +36,10 @@ void kern_naive_forward(const ConvolutionImpl::NCBKernParam& p,
     src.layout.dtype = p.src_type;
     dst.layout.dtype = p.dst_type;
     if (p.filter_meta.format == param::Convolution::Format::NCHW) {
-       istrd *= p.isz[0] * p.isz[1];
-       ostrd *= p.osz[0] * p.osz[1];
-       src.layout.init_contiguous_stride({1, IC, IH, IW});
-       dst.layout.init_contiguous_stride({1, OC, OH, OW});
+        istrd *= p.isz[0] * p.isz[1];
+        ostrd *= p.osz[0] * p.osz[1];
+        src.layout.init_contiguous_stride({1, IC, IH, IW});
+        dst.layout.init_contiguous_stride({1, OC, OH, OW});
     } else {
         // Must be NHWC
         megdnn_assert(
@@ -75,14 +76,12 @@ class ConvolutionImpl::AlgoFallback final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "FALLBACK_ALGO"; }
-    bool usable(ConvolutionImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(ConvolutionImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
     SmallVector<NCBKern> dispatch_kern(
-            ConvolutionImpl* /*opr*/,
             const NCBKernSizeParam& /*param*/) const override;
 };
 
@@ -90,66 +89,55 @@ class ConvolutionImpl::AlgoNaive final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "NAIVE_ALGO"; }
-    bool usable(ConvolutionImpl* /*opr*/, const NCBKernSizeParam& /*param*/,
+    bool usable(const NCBKernSizeParam& /*param*/,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(ConvolutionImpl*,
-                         const NCBKernSizeParam&) const override {
-        return 0;
-    };
+    size_t get_workspace(const NCBKernSizeParam&) const override { return 0; };
 
     SmallVector<NCBKern> dispatch_kern(
-            ConvolutionImpl* /*opr*/,
             const NCBKernSizeParam& /*param*/) const override;
 };
 
 class ConvolutionImpl::AlgoDefault final : public AlgoBase {
-    static ConvBiasImpl::NCBKernSizeParam init_convbias_opr_and_param(
-            ConvBiasImpl* conv_bias_opr, const NCBKernSizeParam& param);
+    static ConvBiasImpl::NCBKernSizeParam init_conv_bias_param(
+            const NCBKernSizeParam& param);
     WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
-    static SmallVector<NCBKern> get_kimpl(ConvBiasImpl* conv_bias_opr,
-                                          ConvBiasImpl::AlgoBase* algo,
+    static SmallVector<NCBKern> get_kimpl(ConvBiasImpl::AlgoBase* algo,
                                           const NCBKernSizeParam& param);
     static SmallVector<NCBKern> get_preprocess_kimpl(
-            ConvBiasImpl* conv_bias_opr, ConvBiasImpl::AlgoBase* algo,
-            const NCBKernSizeParam& param);
+            ConvBiasImpl::AlgoBase* algo, const NCBKernSizeParam& param);
 
 public:
-    AlgoDefault(fallback::ConvBiasImpl* conv_bias_opr, ConvBiasImpl::AlgoBase*);
+    AlgoDefault(ConvBiasImpl::AlgoBase*);
     bool is_reproducible() const override { return true; }
     const char* name() const override { return m_name.c_str(); }
-    bool usable(ConvolutionImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(ConvolutionImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
-    size_t get_preprocess_workspace(ConvolutionImpl*,
-                                    const NCBKernSizeParam&) const override;
+    size_t get_preprocess_workspace(const NCBKernSizeParam&) const override;
 
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
-            ConvolutionImpl*, const NCBKernSizeParam&) const override;
+            const NCBKernSizeParam&) const override;
 
     SmallVector<NCBKern> dispatch_preprocess_kern(
-            ConvolutionImpl*, const NCBKernSizeParam& param) const override {
-        return get_preprocess_kimpl(m_conv_bias_opr, m_algorithm, param);
+            const NCBKernSizeParam& param) const override {
+        return get_preprocess_kimpl(m_algorithm, param);
     }
 
     SmallVector<NCBKern> dispatch_kern(
-            ConvolutionImpl* /*opr*/,
             const NCBKernSizeParam& param) const override {
-        return get_kimpl(m_conv_bias_opr, m_algorithm, param);
+        return get_kimpl(m_algorithm, param);
     }
 
     void* type() const override { return sm_fallback_conv_algo_type; }
 
     //! select matmul to the highest preference
-    bool is_preferred(ConvolutionImpl* opr,
-                      const NCBKernSizeParam& param) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
 
 private:
     std::string m_name;
-    fallback::ConvBiasImpl* m_conv_bias_opr;
     ConvBiasImpl::AlgoBase* m_algorithm;
 };
 
