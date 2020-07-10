@@ -88,14 +88,12 @@ public:
         return m_large_group ? "F16DIRECT_LARGE_GROUP"
                              : "F16DIRECT_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -109,12 +107,10 @@ public:
     const char* name() const override {
         return m_large_group ? "F16STRD1_LARGE_GROUP" : "F16STRD1_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 

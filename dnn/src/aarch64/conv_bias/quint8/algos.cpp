@@ -32,9 +32,8 @@ using megdnn::arm_common::TypeCvtOp;
 /* ===================== matrix mul algo ===================== */
 
 bool ConvBiasImpl::AlgoQU8MatrixMul::usable(
-        FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    MEGDNN_MARK_USED_VAR(opr);
     auto&& fm = param.filter_meta;
     return param.src_type.enumv() == DTypeEnum::Quantized8Asymm &&
            param.dst_type.enumv() == DTypeEnum::Quantized8Asymm &&

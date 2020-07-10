@@ -10,8 +10,8 @@
  * implied.
  */
 
-#include "src/arm_common/conv_bias/fp32/channel_wise_nchw44_kern.h"
 #include "src/arm_common/conv_bias/fp32/algos.h"
+#include "src/arm_common/conv_bias/fp32/channel_wise_nchw44_kern.h"
 #include "src/arm_common/elemwise_op.h"
 
 #include "midout.h"
@@ -26,8 +26,7 @@ using conv_fun = std::function<void(
 MIDOUT_DECL(conv_bias_fp32_channel_wise_nchw44)
 
 bool ConvBiasImpl::AlgoF32ChannelWiseNCHW44::usable(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
-        AlgoSelectionStrategy) const {
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
     size_t OC = fm.ocpg;
@@ -49,13 +48,13 @@ bool ConvBiasImpl::AlgoF32ChannelWiseNCHW44::usable(
 }
 
 size_t ConvBiasImpl::AlgoF32ChannelWiseNCHW44::get_workspace(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam&) const {
+        const NCBKernSizeParam&) const {
     return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoF32ChannelWiseNCHW44::dispatch_kerns(
-        fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     const constexpr size_t pack_group_size = 4_z;
     auto fm = param.filter_meta;
     const int batch = param.n;

@@ -157,7 +157,7 @@ static void conv_kern(const WorkspaceBundle& bundle,
 }  // namespace
 
 bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MEGDNN_MARK_USED_VAR(algo_selection_strategy);
     auto&& fm = param.filter_meta;
@@ -195,19 +195,19 @@ bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
 }
 
 bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::is_preferred(
-        megdnn::fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MEGDNN_MARK_USED_VAR(param);
     return true;
 }
 
 size_t ConvBiasImpl::AlgoDotS8Direct_NCHW44::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     return get_bundle(param).total_size_in_bytes();
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
                  midout_iv("ALGODOTS8DIRECT_NCHW44"_hash)) {
         auto fm = param.filter_meta;

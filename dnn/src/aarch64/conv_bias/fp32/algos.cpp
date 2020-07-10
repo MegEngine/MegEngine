@@ -22,7 +22,7 @@ using namespace aarch64;
 
 MIDOUT_DECL(megdnn_aarch64_conv_bias_stride2_conv2357_fp32)
 bool ConvBiasImpl::AlgoF32DirectStride2::usable(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp32, 0, 0) {
         auto&& fm = param.filter_meta;
@@ -47,7 +47,7 @@ bool ConvBiasImpl::AlgoF32DirectStride2::usable(
 }
 
 size_t ConvBiasImpl::AlgoF32DirectStride2::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp32, 0, 1) {
         auto wbundle = arm_common::MultithreadDirectConvCommon<
                 float, float>::get_bundle_stride(param, m_large_group);
@@ -58,7 +58,7 @@ size_t ConvBiasImpl::AlgoF32DirectStride2::get_workspace(
 }
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoF32DirectStride2::dispatch_kerns(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp32, 0, 2) {
         return get_kimpls(param);
     }

@@ -23,6 +23,7 @@ using FallbackConvBiasImpl = fallback::ConvBiasImpl;
 class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
     bool m_large_group;
+
 public:
     AlgoF32DirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
@@ -31,14 +32,12 @@ public:
                              : "ARMV8F32STRD2_SMALL_GROUP";
     }
 
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
-    SmallVector<NCBKern> dispatch_kerns(FallbackConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 };
 
 }  // namespace aarch64

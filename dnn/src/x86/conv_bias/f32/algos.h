@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -37,14 +38,13 @@ public:
         return m_large_group ? "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"
                              : "X86_CONV_BIAS_DIRECT_STRIDE1_SMALL_GROUP";
     }
-    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl*,
+
             const NCBKernSizeParam& param) const override {
         return get_kimpls(param);
     }
@@ -74,14 +74,13 @@ public:
         return m_large_group ? "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"
                              : "X86_CONV_BIAS_DIRECT_STRIDE2_SMALL_GROUP";
     }
-    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl* opr,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
 
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl*,
+
             const NCBKernSizeParam& param) const override {
         return get_kimpls(param);
     }
@@ -131,7 +130,7 @@ public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "X86_CONV_BIAS_MATMUL"; }
 
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy) const override {
         auto&& fm = param.filter_meta;
         return fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
@@ -145,15 +144,12 @@ public:
                param.nr_threads == 1_z;
     }
 
-    bool is_preferred(FallbackConvBiasImpl*,
-                      const NCBKernSizeParam&) const override;
+    bool is_preferred(const NCBKernSizeParam&) const override;
 
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override {
+    size_t get_workspace(const NCBKernSizeParam& param) const override {
         return get_bundle(param).total_size_in_bytes();
     }
     SmallVector<NCBKern> dispatch_kerns(
-            FallbackConvBiasImpl* /*opr*/,
             const NCBKernSizeParam& param) const override {
         size_t group = param.filter_meta.group;
         return {{kimpl, {group, 1_z, 1_z}}};
@@ -171,7 +167,7 @@ public:
     AlgoMkldnnConv() {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "MKLDNN_CONV_FP32"; }
-    bool usable(FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy) const override {
         auto&& fm = param.filter_meta;
 
@@ -184,13 +180,9 @@ public:
         return ok;
     };
 
-    size_t get_workspace(FallbackConvBiasImpl* /*opr*/,
-                         const NCBKernSizeParam&) const override {
-        return 0;
-    }
+    size_t get_workspace(const NCBKernSizeParam&) const override { return 0; }
 
     SmallVector<NCBKern> dispatch_kerns(
-            FallbackConvBiasImpl* /*opr*/,
             const NCBKernSizeParam& /*param*/) const override {
         auto kern = [](const NCBKernParam& param,
                        const NCBKernIndex& ncb_index) {

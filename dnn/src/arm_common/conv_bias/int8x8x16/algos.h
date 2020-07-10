@@ -35,12 +35,10 @@ public:
         return m_large_group ? "I8816DIRECT_LARGE_GROUP"
                              : "I8816DIRECT_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl*, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -64,13 +62,11 @@ public:
         return m_large_group ? "I8816STRD2_LARGE_GROUP"
                              : "I8816STRD2_SMALL_GROUP";
     }
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 
@@ -79,13 +75,11 @@ public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "I8816STRD2F2"; }
 
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
-    size_t get_workspace(fallback::ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
-            fallback::ConvBiasImpl* opr,
             const NCBKernSizeParam& param) const override;
 };
 

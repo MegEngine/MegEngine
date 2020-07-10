@@ -140,22 +140,17 @@ using BiasMode = ConvBiasForward::BiasMode;
 
 #define MEGDNN_WINOGRAD_ALGO_FUN_DECLARE()                                     \
     bool is_reproducible() const override { return true; }                     \
-    bool usable(fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param,    \
+    bool usable(const NCBKernSizeParam& param,                                 \
                 AlgoSelectionStrategy algo_selection_strategy) const override; \
-    size_t get_workspace(fallback::ConvBiasImpl*,                              \
-                         const NCBKernSizeParam& param) const override;        \
-    virtual SmallVector<NCBKern> dispatch_kerns(fallback::ConvBiasImpl* opr,   \
-                                                const NCBKernSizeParam& param) \
+    size_t get_workspace(const NCBKernSizeParam& param) const override;        \
+    virtual SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam& param) \
             const override;                                                    \
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(               \
-            fallback::ConvBiasImpl*, const NCBKernSizeParam& param)            \
-            const override;                                                    \
-    size_t get_preprocess_workspace(fallback::ConvBiasImpl*,                   \
-                                    const NCBKernSizeParam& param)             \
+            const NCBKernSizeParam& param) const override;                     \
+    size_t get_preprocess_workspace(const NCBKernSizeParam& param)             \
             const override;                                                    \
     virtual SmallVector<NCBKern> dispatch_preprocess_kerns(                    \
-            fallback::ConvBiasImpl* opr, const NCBKernSizeParam& param)        \
-            const override;                                                    \
+            const NCBKernSizeParam& param) const override;                     \
                                                                                \
 private:                                                                       \
     fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;                          \

@@ -54,7 +54,6 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
-        
         refhold.emplace_back(new AlgoConv1x1Gemv());
         all_algos.emplace_back(refhold.back().get());
 
@@ -121,7 +120,7 @@ bool ConvBiasImpl::is_naive_algo(ConvBiasImpl::Algorithm* algo) {
 }
 
 #define NCB_ALGO_FUNC(name, algo, param) \
-    static_cast<AlgoBase*>(algo)->name(this, param)
+    static_cast<AlgoBase*>(algo)->name(param)
 
 void ConvBiasImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                         _megdnn_tensor_in bias, _megdnn_tensor_in z,
@@ -243,11 +242,10 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
         bool reproducible) {
     for (auto i : get_all_algorithms_with_ncb(param)) {
-        size_t need_workspace = NCB_ALGO_FUNC(get_workspace, i, param);
         if (static_cast<AlgoBase*>(i)->usable_reproducible(
-                    this, param, AlgoSelectionStrategy::HEURISTIC,
-                    reproducible) &&
-            need_workspace <= workspace_limit_in_bytes) {
+                    param, AlgoSelectionStrategy::HEURISTIC, reproducible) &&
+            NCB_ALGO_FUNC(get_workspace, i, param) <=
+                    workspace_limit_in_bytes) {
             return i;
         }
     }
@@ -392,8 +390,8 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
     std::vector<Algorithm*> algos;
     std::vector<Algorithm*> prefer_algos;
     for (auto&& algo : algo_pack()) {
-        if (algo->usable(this, param, AlgoSelectionStrategy::FULL_RUN)) {
-            if (algo->is_preferred(this, param)) {
+        if (algo->usable(param, AlgoSelectionStrategy::FULL_RUN)) {
+            if (algo->is_preferred(param)) {
                 prefer_algos.push_back(algo);
             } else {
                 algos.push_back(algo);

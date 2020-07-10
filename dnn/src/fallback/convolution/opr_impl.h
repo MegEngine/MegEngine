@@ -178,42 +178,38 @@ public:
     class AlgoBase : public Algorithm {
     public:
         virtual ~AlgoBase() = default;
-        virtual bool usable(ConvolutionImpl* opr, const NCBKernSizeParam& param,
+        virtual bool usable(const NCBKernSizeParam& param,
                             AlgoSelectionStrategy) const = 0;
-        virtual size_t get_workspace(ConvolutionImpl* opr,
-                                     const NCBKernSizeParam& param) const = 0;
+        virtual size_t get_workspace(const NCBKernSizeParam& param) const = 0;
         virtual SmallVector<NCBKern> dispatch_kern(
-                ConvolutionImpl* opr, const NCBKernSizeParam& param) const = 0;
+                const NCBKernSizeParam& param) const = 0;
 
         virtual SmallVector<NCBKern> dispatch_preprocess_kern(
-                ConvolutionImpl*, const NCBKernSizeParam&) const {
+                const NCBKernSizeParam&) const {
             return {};
         };
 
         //! get the layouts of weight_prerocess dst
         virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
-                ConvolutionImpl*, const NCBKernSizeParam&) const {
+                const NCBKernSizeParam&) const {
             return {};
         };
 
         //! get the workspace when weight_prerocess
-        virtual size_t get_preprocess_workspace(ConvolutionImpl*,
-                                                const NCBKernSizeParam&) const {
+        virtual size_t get_preprocess_workspace(const NCBKernSizeParam&) const {
             return 0_z;
         };
 
         //! Temporarily used to identify whether the matmul algorithm is
         //! is_preferred.
-        virtual bool is_preferred(ConvolutionImpl*,
-                                  const NCBKernSizeParam&) const {
+        virtual bool is_preferred(const NCBKernSizeParam&) const {
             return false;
         }
-        bool usable_reproducible(ConvolutionImpl* opr,
-                                 const NCBKernSizeParam& param,
+        bool usable_reproducible(const NCBKernSizeParam& param,
                                  AlgoSelectionStrategy algo_selection_strategy,
                                  bool reproducible = true) const {
             return (!reproducible || is_reproducible()) &&
-                   usable(opr, param, algo_selection_strategy);
+                   usable(param, algo_selection_strategy);
         }
     };
 
