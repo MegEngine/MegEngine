@@ -13,6 +13,7 @@
 
 #include "src/aarch64/conv_bias/opr_impl.h"
 #include "src/fallback/conv_bias/opr_impl.h"
+#include "src/common/opr_delegate.h"
 
 namespace megdnn {
 namespace aarch64 {
@@ -27,22 +28,21 @@ public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "QU8MATMUL"; }
 
-    bool usable(FallbackConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(FallbackConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override {
+    size_t get_workspace(const NCBKernSizeParam& param) const override {
         return get_bundle(param).total_size_in_bytes();
     }
     SmallVector<NCBKern> dispatch_kerns(
-            FallbackConvBiasImpl*,
             const NCBKernSizeParam& param) const override {
         size_t group = param.filter_meta.group;
         return {{kimpl, {group, 1_z, 1_z}}};
     }
     //! select matmul to the highest preference
-    bool is_preferred(FallbackConvBiasImpl* opr,
-                      const NCBKernSizeParam& param) const override {
-        return static_cast<arm_common::ConvBiasImpl*>(opr)
+    bool is_preferred(const NCBKernSizeParam& param) const override {
+        static CpuOprDelegationStorage<1> storage;
+        auto conv_bias_opr = storage.get<ConvBias, 0>();
+        return static_cast<ConvBiasImpl*>(conv_bias_opr)
                 ->is_matmul_quantized_prefer(param);
     }
 };

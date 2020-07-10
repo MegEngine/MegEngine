@@ -24,18 +24,15 @@ public:
 
     bool is_reproducible() const override { return true; }
 
-    const char* name() const override {
-        return "CONV1x1_GEMV";
-    }
+    const char* name() const override { return "CONV1x1_GEMV"; }
 
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(
-            ConvBiasImpl* opr, const NCBKernSizeParam& param) const override;
+            const NCBKernSizeParam& param) const override;
 
-    bool is_preferred(ConvBiasImpl*, const NCBKernSizeParam&) const override;
+    bool is_preferred(const NCBKernSizeParam&) const override;
 
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;

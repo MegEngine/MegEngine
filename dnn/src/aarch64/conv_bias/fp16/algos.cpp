@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/aarch64/conv_bias/fp16/algos.h"
@@ -22,7 +23,7 @@ using namespace aarch64;
 MIDOUT_DECL(megdnn_aarch64_conv_bias_stride2_conv2357_fp16)
 
 bool ConvBiasImpl::AlgoF16DirectStride2::usable(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp16, 0, 0) {
         auto&& fm = param.filter_meta;
@@ -47,7 +48,7 @@ bool ConvBiasImpl::AlgoF16DirectStride2::usable(
 }
 
 size_t ConvBiasImpl::AlgoF16DirectStride2::get_workspace(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp16, 0, 1) {
         auto wbundle = arm_common::MultithreadDirectConvCommon<
                 dt_float16, __fp16>::get_bundle_stride(param, m_large_group);
@@ -59,7 +60,7 @@ size_t ConvBiasImpl::AlgoF16DirectStride2::get_workspace(
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoF16DirectStride2::dispatch_kerns(
-        FallbackConvBiasImpl*, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp32, 0, 2) {
         return get_kimpls(param);
     }

@@ -55,7 +55,7 @@ public:
     const char* get_algorithm_set_name() const override;
 
     bool is_matmul_quantized_prefer(
-            const ConvBiasImpl::NCBKernSizeParam& ncb_param) override;
+            const ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
 };
 
 }  // namespace x86

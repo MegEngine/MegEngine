@@ -163,7 +163,7 @@ const char* ConvBiasImpl::get_algorithm_set_name() const {
 }
 
 bool ConvBiasImpl::is_matmul_quantized_prefer(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+        const ConvBiasImpl::NCBKernSizeParam& param) const {
     bool conv_direct_chanwise_mkldnn_usable = true;
     if (param.dst_type.enumv() == DTypeEnum::QuantizedS8 ||
         param.dst_type.enumv() == DTypeEnum::QuantizedS32) {

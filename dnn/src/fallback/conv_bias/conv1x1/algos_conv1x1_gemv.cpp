@@ -249,7 +249,7 @@ size_t ConvBiasImpl::AlgoConv1x1Gemv::get_oc_tile_size_heuristic(
 }
 
 size_t ConvBiasImpl::AlgoConv1x1Gemv::get_workspace(
-        ConvBiasImpl*, const NCBKernSizeParam& param) const {
+         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1_gemv,
                  midout_iv("AlgoConv1x1Gemv::get_workspace"_hash)) {
         size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
@@ -265,7 +265,7 @@ size_t ConvBiasImpl::AlgoConv1x1Gemv::get_workspace(
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
-        ConvBiasImpl* opr, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     SmallVector<ConvBiasImpl::NCBKern> ret_kern;
     size_t OC = param.filter_meta.ocpg;
     size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
@@ -311,7 +311,7 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
     }                                                                      \
     MIDOUT_END()
 
-    switch (opr->param().format) {
+    switch (param.filter_meta.format) {
         case param::ConvBias::Format::NCHW:
             cb1(param::ConvBias::Format::NCHW, dt_float32, dt_float32,
                 PostprocessMode::FLOAT, "NCHW::GEMV::FLOAT"_hash);
@@ -401,18 +401,18 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
     return ret_kern;
 }
 
-bool ConvBiasImpl::AlgoConv1x1Gemv::usable(ConvBiasImpl* opr,
-                                           const NCBKernSizeParam& param,
+bool ConvBiasImpl::AlgoConv1x1Gemv::usable(const NCBKernSizeParam& param,
                                            AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1_gemv,
                  midout_iv("AlgoConv1x1Gemv::usable"_hash)) {
+        auto format = param.filter_meta.format;
 #if MEGDNN_X86
-        if (opr->param().format != param::ConvBias::Format::NCHW)
+        if (format != param::ConvBias::Format::NCHW)
             return false;
 #elif MEGDNN_AARCH64 || MEGDNN_ARMV7
-        if (opr->param().format != param::ConvBias::Format::NCHW &&
-            opr->param().format != param::ConvBias::Format::NCHW44 &&
-            opr->param().format != param::ConvBias::Format::NCHW44_DOT)
+        if (format != param::ConvBias::Format::NCHW &&
+            format != param::ConvBias::Format::NCHW44 &&
+            format != param::ConvBias::Format::NCHW44_DOT)
             return false;
 #endif
 
@@ -469,13 +469,13 @@ bool ConvBiasImpl::AlgoConv1x1Gemv::usable(ConvBiasImpl* opr,
             return false;
         }
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
-        if (opr->param().format == param::ConvBias::Format::NCHW44) {
+        if (format == param::ConvBias::Format::NCHW44) {
             if (param.src_type.enumv() != DTypeEnum::Float32 &&
                 param.src_type.enumv() != DTypeEnum::Int8 &&
                 param.src_type.enumv() != DTypeEnum::QuantizedS8) {
                 return false;
             }
-        } else if (opr->param().format == param::ConvBias::Format::NCHW44_DOT) {
+        } else if (format == param::ConvBias::Format::NCHW44_DOT) {
             if (param.src_type.enumv() != DTypeEnum::Int8 &&
                 param.src_type.enumv() != DTypeEnum::QuantizedS8) {
                 return false;
@@ -492,11 +492,11 @@ bool ConvBiasImpl::AlgoConv1x1Gemv::usable(ConvBiasImpl* opr,
 }
 
 bool ConvBiasImpl::AlgoConv1x1Gemv::is_preferred(
-        ConvBiasImpl* opr, const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1_gemv,
                  midout_iv("AlgoConv1x1Gemv::is_preferred"_hash)) {
 #if (MEGDNN_ARMV7 || MEGDNN_AARCH64)
-        if (opr->param().format == param::ConvBias::Format::NCHW &&
+        if (param.filter_meta.format == param::ConvBias::Format::NCHW &&
             param.src_type.enumv() == DTypeEnum::Quantized8Asymm) {
             return false;
         }

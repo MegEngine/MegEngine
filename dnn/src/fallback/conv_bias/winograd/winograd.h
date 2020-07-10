@@ -501,9 +501,10 @@ public:
         Strategy strategy = m_strategy;
         SmallVector<NCBKern> kerns;
         auto filter_process_kern =
-                [strategy, bundle, &preprocessed_dst](
+                [strategy, bundle, &preprocessed_dst, this](
                         const NCBKernParam& ncb_param,
                         const NCBKernIndex& ncb_index) mutable {
+                    MEGDNN_MARK_USED_VAR(this);
                     MIDOUT_BEGIN(megdnn_fallback_conv_bias_winograd_common,
                                  midout_iv("filter_preprocess"_hash)) {
                         bundle.set(ncb_param.workspace_ptr);
@@ -569,9 +570,10 @@ public:
              param.filter_meta.format == param::ConvBias::Format::NCHW88 ||
              param.filter_meta.format == param::ConvBias::Format::NCHW44)) {
             auto filter_process_kern =
-                    [strategy = m_strategy, bundle_top, bundle_compute](
+                    [strategy = m_strategy, bundle_top, bundle_compute, this](
                             const NCBKernParam& ncb_param,
                             const NCBKernIndex& ncb_index) mutable {
+                        MEGDNN_MARK_USED_VAR(this);
                         MIDOUT_BEGIN(megdnn_fallback_conv_bias_winograd_common,
                                      midout_iv("filter_process"_hash)) {
                             bundle_top.set(ncb_param.workspace_ptr);
@@ -594,9 +596,10 @@ public:
         }
         auto winograd_compute_kern =
                 [strategy = m_strategy, bundle_top, bundle_compute, matmul_algo,
-                 matmul_param, unit_tile_size,
-                 unit_oc_size](const NCBKernParam& ncb_param,
-                               const NCBKernIndex& ncb_index) mutable {
+                 matmul_param, unit_tile_size, unit_oc_size,
+                 this](const NCBKernParam& ncb_param,
+                       const NCBKernIndex& ncb_index) mutable {
+                    MEGDNN_MARK_USED_VAR(this);
                     MIDOUT_BEGIN(megdnn_fallback_conv_bias_winograd_common,
                                  midout_iv("winograd_compute"_hash)) {
                         bundle_top.set(ncb_param.workspace_ptr);
@@ -728,43 +731,43 @@ public:
     }                                                                          \
     MIDOUT_END();
 
-#define MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(_class, _strategy, _midout_flag, \
-                                            _matmul_format)                  \
-    size_t ConvBiasImpl::_class::get_workspace(                              \
-            fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {  \
-        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(_class, get_workspace_size,         \
-                                         _strategy, _midout_flag,            \
-                                         _matmul_format);                    \
-        return 0;                                                            \
-    }                                                                        \
-    size_t ConvBiasImpl::_class::get_preprocess_workspace(                   \
-            fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {  \
-        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(                                    \
-                _class, get_preprocess_workspace_size, _strategy,            \
-                _midout_flag, _matmul_format);                               \
-        return 0;                                                            \
-    }                                                                        \
-    SmallVector<TensorLayout>                                                \
-    ConvBiasImpl::_class::deduce_preprocessed_filter_layout(                 \
-            fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {  \
-        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(                                    \
-                _class, deduce_preprocessed_filter_layout, _strategy,        \
-                _midout_flag, _matmul_format);                               \
-        return {};                                                           \
-    }                                                                        \
-    SmallVector<ConvBiasImpl::NCBKern>                                       \
-    ConvBiasImpl::_class::dispatch_preprocess_kerns(                         \
-            fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {  \
-        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(_class, get_preprocess_kerns,       \
-                                         _strategy, _midout_flag,            \
-                                         _matmul_format);                    \
-        return {};                                                           \
-    }                                                                        \
-    SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::_class::dispatch_kerns( \
-            fallback::ConvBiasImpl*, const NCBKernSizeParam& param) const {  \
-        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(_class, get_kerns, _strategy,       \
-                                         _midout_flag, _matmul_format);      \
-        return {};                                                           \
+#define MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(_class, _strategy, _midout_flag,  \
+                                            _matmul_format)                   \
+    size_t ConvBiasImpl::_class::get_workspace(const NCBKernSizeParam& param) \
+            const {                                                           \
+        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(_class, get_workspace_size,          \
+                                         _strategy, _midout_flag,             \
+                                         _matmul_format);                     \
+        return 0;                                                             \
+    }                                                                         \
+    size_t ConvBiasImpl::_class::get_preprocess_workspace(                    \
+            const NCBKernSizeParam& param) const {                            \
+        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(                                     \
+                _class, get_preprocess_workspace_size, _strategy,             \
+                _midout_flag, _matmul_format);                                \
+        return 0;                                                             \
+    }                                                                         \
+    SmallVector<TensorLayout>                                                 \
+    ConvBiasImpl::_class::deduce_preprocessed_filter_layout(                  \
+            const NCBKernSizeParam& param) const {                            \
+        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(                                     \
+                _class, deduce_preprocessed_filter_layout, _strategy,         \
+                _midout_flag, _matmul_format);                                \
+        return {};                                                            \
+    }                                                                         \
+    SmallVector<ConvBiasImpl::NCBKern>                                        \
+    ConvBiasImpl::_class::dispatch_preprocess_kerns(                          \
+            const NCBKernSizeParam& param) const {                            \
+        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(_class, get_preprocess_kerns,        \
+                                         _strategy, _midout_flag,             \
+                                         _matmul_format);                     \
+        return {};                                                            \
+    }                                                                         \
+    SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::_class::dispatch_kerns(  \
+            const NCBKernSizeParam& param) const {                            \
+        MEGDNN_WINOGRADS_ALGO_FUN_DEFINE(_class, get_kerns, _strategy,        \
+                                         _midout_flag, _matmul_format);       \
+        return {};                                                            \
     }
 
 // vim: syntax=cpp.doxygen

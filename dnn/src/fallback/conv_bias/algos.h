@@ -22,12 +22,10 @@ class ConvBiasImpl::AlgoNaive final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "FALLBACK_NAIVE"; }
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(ConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 };
 
 class ConvBiasImpl::AlgoWinogradF32 final : public AlgoBase {
@@ -43,12 +41,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(ConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -69,12 +65,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(ConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -95,12 +89,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(ConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -121,12 +113,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(ConvBiasImpl* opr, const NCBKernSizeParam& param,
+    bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
-    size_t get_workspace(ConvBiasImpl*,
-                         const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(ConvBiasImpl*,
-                                        const NCBKernSizeParam&) const override;
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
