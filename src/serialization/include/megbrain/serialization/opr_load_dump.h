@@ -29,9 +29,7 @@ struct OperatorParamTraits;
 
 enum class SerializationFormat {
     RAW_POD,
-#if MGB_ENABLE_FBS_SERIALIZATION
     FLATBUFFERS,
-#endif
 };
 
 //! context for serializing a single operator
@@ -162,12 +160,12 @@ void OprDumpContext::write_param(const Param& p) {
         case SerializationFormat::RAW_POD:
             static_cast<OprDumpContextRawPOD*>(this)->write_param(p);
             break;
-#if MGB_ENABLE_FBS_SERIALIZATION
         case SerializationFormat::FLATBUFFERS:
+#if MGB_ENABLE_FBS_SERIALIZATION
             static_cast<OprDumpContextFlatBuffers*>(this)->write_param(
                     p, fbs::SupportFlatBuffersSerialization<Param>{});
-            break;
 #endif
+            break;
     }
 }
 
@@ -322,11 +320,13 @@ Param OprLoadContext::read_param() {
         case SerializationFormat::RAW_POD:
             return static_cast<OprLoadContextRawPOD*>(this)
                     ->read_param<Param>();
-#if MGB_ENABLE_FBS_SERIALIZATION
         case SerializationFormat::FLATBUFFERS:
+#if MGB_ENABLE_FBS_SERIALIZATION
             return static_cast<OprLoadContextFlatBuffers*>(this)
                     ->read_param<Param>(
                             fbs::SupportFlatBuffersSerialization<Param>{});
+#else
+            mgb_trap();
 #endif
     }
     mgb_assert(0);

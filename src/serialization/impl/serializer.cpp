@@ -53,10 +53,11 @@ bool GraphDumper::should_remove_in_dump(cg::OperatorNodeBase *opr) {
 std::unique_ptr<GraphDumper> GraphDumper::make(std::unique_ptr<OutputFile> file,
                                                GraphDumpFormat format) {
     switch (format) {
-#if MGB_ENABLE_FBS_SERIALIZATION
         case GraphDumpFormat::FLATBUFFERS:
+#if MGB_ENABLE_FBS_SERIALIZATION
             return make_fbs_dumper(std::move(file));
 #endif
+        MGB_FALLTHRU
         default:
             mgb_throw(SerializationError,
                       "unsupported serialization format requested");
@@ -66,10 +67,11 @@ std::unique_ptr<GraphDumper> GraphDumper::make(std::unique_ptr<OutputFile> file,
 
 std::unique_ptr<GraphLoader> GraphLoader::make(std::unique_ptr<InputFile> file, GraphDumpFormat format) {
     switch (format) {
-#if MGB_ENABLE_FBS_SERIALIZATION
         case GraphDumpFormat::FLATBUFFERS:
+#if MGB_ENABLE_FBS_SERIALIZATION
             return make_fbs_loader(std::move(file));
 #endif
+        MGB_FALLTHRU
         default:
             mgb_throw(SerializationError,
                       "unsupported serialization format requested");

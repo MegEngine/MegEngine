@@ -48,6 +48,13 @@ namespace mgb {
 //! warn if result of a function is not used
 #define MGB_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 
+#if __cplusplus >= 201703L || __clang_major__ >= 4
+#define MGB_FALLTHRU [[fallthrough]];
+#elif __GNUC__ >= 7
+#define MGB_FALLTHRU __attribute__((fallthrough));
+#else
+#define MGB_FALLTHRU
+#endif
 
 /* ================ exception and assertion ================  */
 
