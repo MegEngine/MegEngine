@@ -12,9 +12,12 @@
 #include "megbrain/graph.h"
 #include "megbrain/serialization/load_dump_config.h"
 #include "megbrain/serialization/opr_registry.h"
-#if MGB_ENABLE_FBS_SERIALIZATION
-#include <flatbuffers/flatbuffers.h>
-#endif
+
+// Forward declaration for breaking header dependency: we do not want to hard
+// depend on flatbuffers/flatbuffers.h in our public headers.
+namespace flatbuffers {
+class FlatBufferBuilder;
+}  // namespace flatbuffers
 
 namespace mgb {
 namespace serialization {
@@ -122,8 +125,12 @@ class OprDumpContextFlatBuffers : public OprDumpContext {
 protected:
     OprDumpContextFlatBuffers()
             : OprDumpContext(SerializationFormat::FLATBUFFERS) {}
-    virtual void append_param(uint32_t type,
-                              flatbuffers::Offset<void> value) = 0;
+    // value_offset should be a flatbuffers::Offset<ParamType> (or <void>).
+    // Assuming flatbuffers::Offset<T> is a wrapper around uoffset_t = uint32_t,
+    // we pass around a uint32_t to avoid dependency to flatbuffers in public
+    // headers. There are a few static_asserts in serializer_oss.cpp about the
+    // assumption.
+    virtual void append_param(uint32_t type, uint32_t value_offset) = 0;
 
 public:
     virtual flatbuffers::FlatBufferBuilder& builder() = 0;
@@ -136,7 +143,7 @@ public:
         auto param_offset =
                 fbs::ParamConverter<Param>::to_flatbuffer(builder(), param);
         append_param(fbs::OperatorParamTraits<ResultType>::enum_value,
-                     param_offset.Union());
+                     param_offset.Union().o);
     }
 
     template <class Param>
