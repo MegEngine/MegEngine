@@ -93,8 +93,8 @@ void do_weight_trans(const WorkspaceBundle& bundle,
     const int fw2 = round_up(fw, 4);
     auto packed_weight = reinterpret_cast<int8_t*>(bundle.get(1));
     auto origin_weight = kern_param.filter<dt_int8>();
-    pack_weight_int8_nchw_nchw44_dot(packed_weight, origin_weight, oc, ic, fh,
-                                     fw, fw2);
+    dot_direct_nchw_nchw44::pack_weight_int8_nchw_nchw44_dot(
+            packed_weight, origin_weight, oc, ic, fh, fw, fw2);
 }
 
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
@@ -147,7 +147,7 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
         tmp_ptr = reinterpret_cast<int8_t*>(bundle.get(2)) +
                   ncb_index.thread_id * tmp_size;
     }
-    pack_src_int8_nchw_nchw44_dot<stride>(
+    dot_direct_nchw_nchw44::pack_src_int8_nchw_nchw44_dot<stride>(
             sptr, origin_sptr, ph, pw, remain_right_pad,
             ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
             src_bottom_pad, ic, ih * iw, tmp_ptr);
@@ -164,7 +164,8 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     float scale_bias = kern_param.bias_type.param<dtype::QuantizedS32>().scale;
     float scale_dst = kern_param.dst_type.param<dtype::QuantizedS8>().scale;
     Op op(scale_bias, scale_dst);
-    conv_direct_int8_nchw_nchw44_dot<bias_mode, Op, filter, stride>(
+    dot_direct_nchw_nchw44::conv_direct_int8_nchw_nchw44_dot<bias_mode, Op,
+                                                             filter, stride>(
             sptr, fptr, bptr, nullptr, dst, oc_block, ic, ih_real, iw2, oh,
             oh_block_real, ow, op);
 }

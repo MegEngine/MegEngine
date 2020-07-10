@@ -120,7 +120,8 @@ static void pack_weight(const WorkspaceBundle& bundle,
             kern_param.filter<dt_float32>(group_id) + oc_idx * fh * fw * ic;
     auto packed_weight = reinterpret_cast<float*>(bundle.get(1)) +
                          group_id * oc * ic * fh * fw + oc_idx * ic * fh * fw;
-    pack_weight_fp32_nchw_nchw44(fptr, packed_weight, oc_block, fh, fw, ic);
+    fp32_direct_nchw_nchw44::pack_weight_fp32_nchw_nchw44(fptr, packed_weight,
+                                                          oc_block, fh, fw, ic);
 }
 
 template <size_t filter_size, BiasMode bias_mode, typename Op, size_t stride>
@@ -180,7 +181,8 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
             kern_param.bias<dt_float32>(batch_id, group_id) + oc_idx;
     Op op;
 
-    conv_direct_fp32_nchw_nchw44<bias_mode, Op, filter_size, stride>(
+    fp32_direct_nchw_nchw44::conv_direct_fp32_nchw_nchw44<bias_mode, Op,
+                                                          filter_size, stride>(
             sptr, packed_weight, bptr, nullptr, dst, oc_block, ic, ih_real, iw2,
             oh, oh_block_real, ow, op, ph, pw);
 }

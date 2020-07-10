@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #if __ARM_FEATURE_DOTPROD
@@ -42,20 +43,13 @@ using BiasMode = ConvBiasForward::BiasMode;
  * @return  none
  */
 
-#define KERN(filter_size)                                                     \
-    template <typename dst_type, BiasMode bias_mode, typename Op, int stride> \
-    void conv_direct_##filter_size##x##filter_size##_int8_nchw44(             \
-            dst_type* dst, const int oh, const int ow, const int8_t* src,     \
-            const int ih, const int iw, const int8_t* weight,                 \
-            const int32_t* bias, const int oh_size, const int oc,             \
-            const int ic, const Op& op)
-
-KERN(2);
-KERN(3);
-KERN(5);
-KERN(7);
-
-#undef KERN
+template <typename dst_type, int stride, BiasMode bias_mode, typename Op,
+          int filter_size>
+void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
+                                  const int8_t* src, const int ih, const int iw,
+                                  const int8_t* filter, const int32_t* bias,
+                                  const int oh_size, const int oc, const int ic,
+                                  const Op& op);
 /**
  * @brief : copy data from src to dst for direct conv with no side effect
  * @param : [output ptr] dst
@@ -84,4 +78,4 @@ void copy_packed_src_int8_nchw44(int8_t* dst, const int dst_step,
 
 #endif
 
-//vim: syntax=cpp.doxygen
+// vim: syntax=cpp.doxygen

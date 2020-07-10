@@ -2344,7 +2344,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F32) {
 #endif
     std::vector<conv_bias::TestArg> gemv_args;
     for (auto&& arg : args)
-        if(arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
             gemv_args.emplace_back(arg);
         }
     check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");
@@ -2361,7 +2361,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_MK4_PACK_F32) {
 #endif
     std::vector<conv_bias::TestArg> gemv_args;
     for (auto&& arg : args)
-        if(arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
+        if (arg.src.shape[2] == 1 && arg.src.shape[3] == 1) {
             gemv_args.emplace_back(arg);
         }
     check_conv_bias(gemv_args, handle(), "CONV1x1_GEMV");

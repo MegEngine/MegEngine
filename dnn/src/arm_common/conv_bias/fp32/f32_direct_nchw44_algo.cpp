@@ -13,8 +13,8 @@
 #include "megdnn/oprs.h"
 #include "src/arm_common/conv_bias/block_helper.h"
 #include "src/arm_common/conv_bias/fp32/algos.h"
-#include "src/arm_common/conv_bias/fp32/f32_direct_stride1_nchw44_kern.h"
-#include "src/arm_common/conv_bias/fp32/f32_direct_stride2_nchw44_kern.h"
+#include "src/arm_common/conv_bias/fp32/f32_direct_nchw44_kern.h"
+
 #include "src/arm_common/elemwise_op.h"
 
 #include "midout.h"
@@ -112,17 +112,11 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     const size_t src_size = get_perthread_cache_bytes(ic, ih2, iw2);
     float* sptr = reinterpret_cast<float*>((int8_t*)bundle.get(0) +
                                            ncb_index.thread_id * src_size);
-    if (stride == 1) {
-        conv_bias::pack_src_fp32_nchw44_stride1(
-                sptr, origin_sptr, ph, pw, remain_right_pad,
-                ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
-                src_bottom_pad, ic, ih * iw);
-    } else {
-        conv_bias::pack_src_fp32_nchw44_stride2(
-                sptr, origin_sptr, ph, pw, remain_right_pad,
-                ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
-                src_bottom_pad, ic, ih * iw);
-    }
+
+    conv_bias::pack_src_fp32_nchw44<stride>(
+            sptr, origin_sptr, ph, pw, remain_right_pad,
+            ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
+            src_bottom_pad, ic, ih * iw);
 
     const float* fptr =
             kern_param.filter<dt_float32>(group_id) + oc_idx * fh * fw * ic;
@@ -135,25 +129,9 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
             kern_param.bias<dt_float32>(batch_id, group_id) + bias_offset;
 
     Op op;
-    if (stride == 1) {
-#define KERN1_NCHW44_CONV(filter)                                        \
-    conv_bias::conv_direct_stride1_##filter##x##filter##_fp32_nchw44<    \
-                                                                         \
-            bias_mode, Op>(sptr, fptr, bptr, nullptr, dst, oc_block, ic, \
-                           ih_real, iw2, oh, oh_block_real, ow, op, ph, pw)
-
-        DISPATCH_FILTER(filter, KERN1_NCHW44_CONV);
-#undef KERN1_NCHW44_CONV
-    } else {
-#define KERN1_NCHW44_CONV(filter)                                        \
-    conv_bias::conv_direct_stride2_##filter##x##filter##_fp32_nchw44<    \
-                                                                         \
-            bias_mode, Op>(sptr, fptr, bptr, nullptr, dst, oc_block, ic, \
-                           ih_real, iw2, oh, oh_block_real, ow, op, ph, pw)
-
-        DISPATCH_FILTER(filter, KERN1_NCHW44_CONV);
-#undef KERN1_NCHW44_CONV
-    }
+    conv_bias::conv_direct_fp32_nchw44<bias_mode, Op, filter, stride>(
+            sptr, fptr, bptr, nullptr, dst, oc_block, ic, ih_real, iw2, oh,
+            oh_block_real, ow, op, ph, pw);
 }
 
 }  // namespace

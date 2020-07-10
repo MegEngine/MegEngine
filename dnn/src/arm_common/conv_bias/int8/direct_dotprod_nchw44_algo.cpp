@@ -148,14 +148,10 @@ static void conv_kern(const WorkspaceBundle& bundle,
         float scale_dst = ncb_param.dst_type.param<dtype::QuantizedS8>().scale;
         op = Op(scale_bias, scale_dst);
     }
-
-#define KERN1_NCHW44_CONV(filter)                                              \
-    direct_dotprod_nchw44::conv_direct_##filter##x##filter##_int8_nchw44<      \
-            dst_type, bias_mode, Op, stride>(dst, OH, OW, copy_dst,            \
-                                             ih_real_size, iw2, weights, bias, \
-                                             oh_real_size, OC, IC, op);
-    DISPATCH_FILTER(filter_size, KERN1_NCHW44_CONV);
-#undef KERN1_NCHW44_CONV
+    direct_dotprod_nchw44::conv_direct_sdot_int8_nchw44<
+            dst_type, stride, bias_mode, Op, filter_size>(
+            dst, OH, OW, copy_dst, ih_real_size, iw2, weights, bias,
+            oh_real_size, OC, IC, op);
 }
 
 }  // namespace
@@ -342,4 +338,4 @@ ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
 
 #endif
 
-//vim: syntax=cpp.doxygen
+// vim: syntax=cpp.doxygen

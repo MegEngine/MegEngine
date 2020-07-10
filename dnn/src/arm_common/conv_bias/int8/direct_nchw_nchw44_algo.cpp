@@ -117,11 +117,11 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
         const size_t tmp_size = get_temp_bytes(iw, pw);
         int8_t* tmp_ptr = reinterpret_cast<int8_t*>(bundle.get(2)) +
                           ncb_index.thread_id * tmp_size;
-        pack_nchw_src_for_nchw44_conv<1>(sptr, sptr_base, 1, ph, ph, pw, pw, ih,
-                                         iw, iw2, pw, tmp_ptr);
+        int8_direct_nchw_nchw44::pack_nchw_src_for_nchw44_conv<1>(
+                sptr, sptr_base, 1, ph, ph, pw, pw, ih, iw, iw2, pw, tmp_ptr);
     } else {
-        pack_nchw_src_for_nchw44_conv<2>(sptr, sptr_base, 1, ph, ph, pw, pw, ih,
-                                         iw, iw2, pw, nullptr);
+        int8_direct_nchw_nchw44::pack_nchw_src_for_nchw44_conv<2>(
+                sptr, sptr_base, 1, ph, ph, pw, pw, ih, iw, iw2, pw, nullptr);
     }
 }
 static void pack_weight(const WorkspaceBundle& bundle,
@@ -142,11 +142,11 @@ static void pack_weight(const WorkspaceBundle& bundle,
                          group_id * oc * ic * fh * fw2 + oc_idx * ic * fh * fw2;
 
     if (stride_h == 1) {
-        pack_nchw44_weight_for_nchw_conv<1>(fptr, packed_weight, ic, fh, fw,
-                                            oc_block);
+        int8_direct_nchw_nchw44::pack_nchw44_weight_for_nchw_conv<1>(
+                fptr, packed_weight, ic, fh, fw, oc_block);
     } else {
-        pack_nchw44_weight_for_nchw_conv<2>(fptr, packed_weight, ic, fh, fw,
-                                            oc_block);
+        int8_direct_nchw_nchw44::pack_nchw44_weight_for_nchw_conv<2>(
+                fptr, packed_weight, ic, fh, fw, oc_block);
     }
 }
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
@@ -208,7 +208,8 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     int8_t* packed_weight = reinterpret_cast<int8_t*>(bundle.get(1)) +
                             group_id * oc * ic * fh * fw2 +
                             oc_idx * ic * fh * fw2;
-    conv_direct_int8_nchw_nchw44<bias_mode, Op, filter, stride>(
+    int8_direct_nchw_nchw44::conv_direct_int8_nchw_nchw44<bias_mode, Op, filter,
+                                                          stride>(
             sptr, packed_weight, bptr, nullptr, dst, oc_block, ic, ih2, iw2, oh,
             ow, op);
 }

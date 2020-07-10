@@ -114,7 +114,7 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
         rep(ih_idx, IH) {
             std::memset(sptr_base, 0, nr_pad_w * sizeof(int8_t));
             sptr_base += nr_pad_w;
-            nchw44_pack_src(sptr, sptr_base, IW);
+            int8_direct_nchw44::nchw44_pack_src(sptr, sptr_base, IW);
             sptr_base += IW * pack_ic * expend_element;
             sptr += IW * pack_ic;
             std::memset(sptr_base, 0, row_last_pad * sizeof(int8_t));
@@ -125,8 +125,8 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
     }
 }
 
-template <size_t filter, BiasMode bias_mode, typename Op, int ow_remain,
-          typename DstType, int stride>
+template <size_t filter, BiasMode bias_mode, typename Op, typename DstType,
+          int stride>
 static void do_conv_kern(const WorkspaceBundle& bundle,
                          const ConvBiasImpl::NCBKernParam& kern_param,
                          const ConvBiasImpl::NCBKernIndex& ncb_index,
@@ -182,8 +182,10 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
             kern_param.bias<dt_int32>(batch_id, group_id) + oc_idx;
     auto packed_weight = reinterpret_cast<int8_t*>(bundle.get(1)) +
                          group_id * OC * IC * FH * FW + oc_idx * IC * FH * FW;
-    nchw44_pack_filter(fptr, packed_weight, oc_block / 4 * IC / 4 * FH * FW);
-    conv_direct_int8_nchw44<bias_mode, Op, ow_remain, filter, DstType, stride>(
+    int8_direct_nchw44::nchw44_pack_filter(fptr, packed_weight,
+                                           oc_block / 4 * IC / 4 * FH * FW);
+    int8_direct_nchw44::conv_direct_int8_nchw44<bias_mode, Op, filter, DstType,
+                                                stride>(
             sptr, packed_weight, bptr, nullptr, static_cast<DstType*>(dst),
             oc_block, IC, IH2, IW2, OH, OW, op);
 }
@@ -233,40 +235,38 @@ ConvBiasImpl::AlgoS8DirectNCHW44::dispatch_kerns(
     size_t N = param.n;
     size_t IC = fm.icpg;
     size_t OC = fm.ocpg;
-    size_t OW = param.osz[1];
     size_t group = fm.group;
     size_t fh = fm.spatial[0];
     size_t fw = fm.spatial[1];
     WorkspaceBundle wbundle = get_bundle(param);
     conv_fun do_conv_fun = nullptr;
-    int ow_remain = OW % 8;
+
     bool need_post_process = param.dst_type.enumv() == DTypeEnum::QuantizedS8;
 // NOTE: remain_w is not used to gen hash of midout for compatible with changing
 // shape runtime
-#define DO_CONV_KERN_FUN(stride, dst_type, filter, bias_mode, remain_w, op)    \
+#define DO_CONV_KERN_FUN(stride, dst_type, filter, bias_mode, op)              \
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8_nchw44,                      \
                  midout_iv(#stride #dst_type #filter #bias_mode #op##_hash)) { \
-        do_conv_fun = do_conv_kern<filter, bias_mode, op, remain_w, dst_type,  \
-                                   stride>;                                    \
+        do_conv_fun = do_conv_kern<filter, bias_mode, op, dst_type, stride>;   \
     }                                                                          \
     MIDOUT_END();
 
-#define GET_OP_PARAM(stride, filter, bias_mode, remain_w)                    \
+#define GET_OP_PARAM(stride, filter, bias_mode)                              \
     if (need_post_process) {                                                 \
         switch (param.nonlineMode) {                                         \
             case param::ConvBias::NonlineMode::IDENTITY:                     \
                 DO_CONV_KERN_FUN(stride, dt_qint8, filter, bias_mode,        \
-                                 remain_w,                                   \
+                                                                             \
                                  TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
                 break;                                                       \
             case param::ConvBias::NonlineMode::RELU:                         \
                 DO_CONV_KERN_FUN(stride, dt_qint8, filter, bias_mode,        \
-                                 remain_w,                                   \
+                                                                             \
                                  ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
                 break;                                                       \
             case param::ConvBias::NonlineMode::H_SWISH:                      \
                 DO_CONV_KERN_FUN(stride, dt_qint8, filter, bias_mode,        \
-                                 remain_w,                                   \
+                                                                             \
                                  HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
                 break;                                                       \
             default:                                                         \
@@ -277,7 +277,7 @@ ConvBiasImpl::AlgoS8DirectNCHW44::dispatch_kerns(
         switch (param.nonlineMode) {                                         \
             case param::ConvBias::NonlineMode::IDENTITY:                     \
                 DO_CONV_KERN_FUN(stride, dt_int32, filter, bias_mode,        \
-                                 remain_w, NoneOp<dt_int32>)                 \
+                                 NoneOp<dt_int32>)                           \
                 break;                                                       \
             default:                                                         \
                 megdnn_assert(                                               \
@@ -287,48 +287,17 @@ ConvBiasImpl::AlgoS8DirectNCHW44::dispatch_kerns(
         }                                                                    \
     }
 
-#define GET_REMAIN_W_PARAM(stride, filter, bias_mode)   \
-    switch (ow_remain) {                                \
-        case 0:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 0); \
-            break;                                      \
-        case 1:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 1); \
-            break;                                      \
-        case 2:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 2); \
-            break;                                      \
-        case 3:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 3); \
-            break;                                      \
-        case 4:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 4); \
-            break;                                      \
-        case 5:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 5); \
-            break;                                      \
-        case 6:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 6); \
-            break;                                      \
-        case 7:                                         \
-            GET_OP_PARAM(stride, filter, bias_mode, 7); \
-            break;                                      \
-        default:                                        \
-            megdnn_assert(0);                           \
-    }
-
-#define GET_BIAS_MODE_PARAM(stride, filter)                       \
-    switch (param.bias_mode) {                                    \
-        case BiasMode::NO_BIAS:                                   \
-            GET_REMAIN_W_PARAM(stride, filter, BiasMode::NO_BIAS) \
-            break;                                                \
-        case BiasMode::BROADCAST_CHANNEL_BIAS:                    \
-            GET_REMAIN_W_PARAM(stride, filter,                    \
-                               BiasMode::BROADCAST_CHANNEL_BIAS)  \
-            break;                                                \
-        default:                                                  \
-            megdnn_assert(0);                                     \
-            break;                                                \
+#define GET_BIAS_MODE_PARAM(stride, filter)                                \
+    switch (param.bias_mode) {                                             \
+        case BiasMode::NO_BIAS:                                            \
+            GET_OP_PARAM(stride, filter, BiasMode::NO_BIAS)                \
+            break;                                                         \
+        case BiasMode::BROADCAST_CHANNEL_BIAS:                             \
+            GET_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS) \
+            break;                                                         \
+        default:                                                           \
+            megdnn_assert(0);                                              \
+            break;                                                         \
     }
 
 #define DISPATCH_CONV_KERN(stride)          \

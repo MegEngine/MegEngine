@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/arm_common/fixture.h"
 
@@ -30,8 +31,7 @@ TEST_F(ARM_COMMON, MATRIX_MUL_INT8x8x16) {
 
 TEST_F(ARM_COMMON, MATRIX_MUL_QUINT8) {
     matrix_mul::check_matrix_mul(dtype::Quantized8Asymm(1.2f, (uint8_t)127),
-                                 dtype::Quantized8Asymm(1.3f, (uint8_t)129),
-                                 {},
+                                 dtype::Quantized8Asymm(1.3f, (uint8_t)129), {},
                                  handle());
 }
 
@@ -232,8 +232,7 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEVM) {
     Checker<MatrixMul> checker(handle());
     using Param = MatrixMul::Param;
 
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_GEVM"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_GEVM"));
 
     std::unique_ptr<RNG> rng = std::make_unique<UniformIntRNG>(-127, 127);
     checker.set_rng(0, rng.get()).set_rng(1, rng.get());
@@ -251,7 +250,7 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEVM) {
                 .set_dtype(2, dtype::QuantizedS32(6.25f))
                 .execs({A, B, {}});
     };
-    
+
     // M = 1
     for (size_t N : {1, 10, 16, 33, 64})
         for (size_t K : {7, 512, 1024})
@@ -263,8 +262,7 @@ TEST_F(ARM_COMMON, FP32_GEVM) {
     Checker<MatrixMul> checker(handle());
     using Param = MatrixMul::Param;
 
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_GEVM"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_GEVM"));
 
     checker.set_epsilon(1e-2);
     auto run = [&](size_t M, size_t K, size_t N) {
@@ -276,7 +274,7 @@ TEST_F(ARM_COMMON, FP32_GEVM) {
         B = TensorShape{N, K};
         checker.set_param(param).execs({A, B, {}});
     };
-    
+
     // M = 1
     for (size_t M : {1})
         for (size_t K : {1000, 4096, 25088})
@@ -298,15 +296,15 @@ TEST_F(ARM_COMMON, FP32_GEMV_MK4) {
         param.transposeA = false;
         param.transposeB = false;
         TensorShape A, B;
-        A = TensorShape{M/4, K/4, 4, 4};
-        B = TensorShape{K/4, 1, 4};
+        A = TensorShape{M / 4, K / 4, 4, 4};
+        B = TensorShape{K / 4, 1, 4};
         checker.set_param(param).execs({A, B, {}});
     };
-    
+
     // N = 1
     for (size_t M : {4, 16, 128, 1024})
         for (size_t K : {4, 8, 12, 128, 256, 4096})
-                run(M, K);
+            run(M, K);
 }
 
 #if MEGDNN_WITH_BENCHMARK
@@ -343,7 +341,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {
 
     for (size_t M : {4, 64, 1024, 4096})
         for (size_t K : {128, 256, 1024, 4096})
-                run(M, K, 1);
+            run(M, K, 1);
 }
 
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
@@ -372,7 +370,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
                 .exec({{2, 1024}, {1024, 512}, {}});
         benchmarker.set_display(true);
     }
-    
+
     // run gemv
     run(12, 48, 1);
     run(48, 12, 1);
@@ -396,14 +394,14 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_MK4) {
     Benchmarker<MatrixMul> benchmarker(handle());
     benchmarker.set_times(exec_times);
     benchmarker.set_dtype(0, dtype::Float32())
-               .set_dtype(1, dtype::Float32())
-               .set_param(param);
+            .set_dtype(1, dtype::Float32())
+            .set_param(param);
 
     auto run = [&](size_t M, size_t K) {
-        printf("SGEMV_MK4: (%zu, %zu, %zu)\n", M, K, N);
+        printf("SGEMV_MK4: (%zu, %zu)\n", M, K);
         TensorShape A, B;
-        A = TensorShape{M/4, K/4, 4, 4};
-        B = TensorShape{K/4, 1, 4};
+        A = TensorShape{M / 4, K / 4, 4, 4};
+        B = TensorShape{K / 4, 1, 4};
         auto time = benchmarker.exec({A, B, {}}) / exec_times;
         auto computations = 2.f * M * K * 1e-6;
         auto perf = computations / time;
@@ -422,7 +420,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_MK4) {
     // run gemv mk4
     for (size_t M : {4, 64, 1024, 4096})
         for (size_t K : {128, 1024, 4096})
-                run(M, K);
+            run(M, K);
 }
 
 TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP16) {
@@ -490,7 +488,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMM) {
     //////////////////////// gemv //////////////////////////
     for (size_t M : {8, 64, 112, 256}) {
         for (size_t K : {8, 64, 112, 256}) {
-            run (M, 1, K);
+            run(M, 1, K);
         }
     }
 
@@ -502,9 +500,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMM) {
             }
         }
     }
-
 }
-
 
 TEST_F(ARM_COMMON, BENCHMARK_MATRIX_MUL_INT8x8x32) {
     constexpr size_t RUNS = 50;
@@ -514,7 +510,8 @@ TEST_F(ARM_COMMON, BENCHMARK_MATRIX_MUL_INT8x8x32) {
             .set_dtype(0, dtype::Int8{})
             .set_dtype(1, dtype::Int8{})
             .set_dtype(2, dtype::Int32{})
-            .set_param(param).set_display(false);
+            .set_param(param)
+            .set_display(false);
     Benchmarker<MatrixMul> benchmarker_float(handle());
     benchmarker_float.set_display(false).set_times(RUNS);
 
@@ -533,7 +530,7 @@ TEST_F(ARM_COMMON, BENCHMARK_MATRIX_MUL_INT8x8x32) {
     //////////////////////// gemv //////////////////////////
     for (size_t M : {8, 64, 112, 256}) {
         for (size_t K : {8, 64, 112, 256}) {
-            run (M, 1, K);
+            run(M, 1, K);
         }
     }
 
@@ -617,6 +614,5 @@ TEST_F(ARM_COMMON, BENCHMARK_TRANSPOSED_MATRIX_MUL_QUINT8) {
 }
 
 #endif
-
 
 // vim: syntax=cpp.doxygen
