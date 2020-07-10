@@ -399,7 +399,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_MK4) {
             .set_param(param);
 
     auto run = [&](size_t M, size_t K) {
-        printf("SGEMV_MK4: (%zu, %zu)\n", M, K);
+        printf("SGEMV_MK4: (%zu, %zu, 1)\n", M, K);
         TensorShape A, B;
         A = TensorShape{M / 4, K / 4, 4, 4};
         B = TensorShape{K / 4, 1, 4};

@@ -1,6 +1,5 @@
 /**
- * \file dnn/src/arm_common/conv_bias/fp32/strategy_f
- * 63_mk4_nchw44.cpp
+ * \file dnn/src/arm_common/conv_bias/fp32/strategy_f63_mk4_nchw44.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.

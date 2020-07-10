@@ -777,7 +777,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F16_F23_8x8) {
 }
 #endif
 
-void benchmark_winograd_nchw_vs_nchw44(const char* algo_name, Handle* handle) {
+void benchmark_winograd_nchw_vs_nchw44(const char* algo_name0,
+                                       const char* algo_name1, Handle* handle) {
     using namespace conv_bias;
     using NLMode = param::ConvBias::NonlineMode;
     std::vector<conv_bias::TestArg> args_nchw44;
@@ -846,9 +847,9 @@ void benchmark_winograd_nchw_vs_nchw44(const char* algo_name, Handle* handle) {
     benchmark_winograd_nchw44.set_display(false);
     benchmark_winograd_nchw44.set_times(RUN);
 
-    std::string winograd_nchw_algo_name = ssprintf("WINOGRAD:%s", algo_name);
+    std::string winograd_nchw_algo_name = ssprintf("WINOGRAD:%s", algo_name0);
     std::string winograd_nchw44_algo_name =
-            ssprintf("WINOGRAD_NCHW44:%s", algo_name);
+            ssprintf("WINOGRAD_NCHW44:%s", algo_name1);
 
     for (size_t i = 0; i < args_nchw.size(); ++i) {
         auto arg_nchw = args_nchw[i];
@@ -892,17 +893,31 @@ void benchmark_winograd_nchw_vs_nchw44(const char* algo_name, Handle* handle) {
 
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23_MK4_NCHW_VS_NCHW44) {
 #if MEGDNN_AARCH64
-    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:2", handle());
+    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:2",
+                                      "AARCH64_F32_MK4_4x16:4:2", handle());
 #else
-    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:2", handle());
+    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:2",
+                                      "ARMV7_F32_MK4_4x8:4:2", handle());
 #endif
 }
 
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F63_MK4_NCHW_VS_NCHW44) {
 #if MEGDNN_AARCH64
-    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:6", handle());
+    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:6",
+                                      "AARCH64_F32_MK4_4x16:4:6", handle());
 #else
-    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:6", handle());
+    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:6",
+                                      "ARMV7_F32_MK4_4x8:4:6", handle());
+#endif
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F73_MK4_NCHW_VS_NCHW44) {
+#if MEGDNN_AARCH64
+    benchmark_winograd_nchw_vs_nchw44("AARCH64_F32_MK4_4x16:4:6",
+                                      "ARM_COMMON_F32_GEMV_MK4:4:7", handle());
+#else
+    benchmark_winograd_nchw_vs_nchw44("ARMV7_F32_MK4_4x8:4:6",
+                                      "ARMV7_F32_MK4_4x8:4:7", handle());
 #endif
 }
 

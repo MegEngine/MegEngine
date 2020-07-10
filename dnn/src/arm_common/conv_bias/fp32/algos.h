@@ -124,6 +124,22 @@ public:
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
 };
+
+class ConvBiasImpl::AlgoFP32WinogradF73_4x4_NCHW44 final : public AlgoBase {
+public:
+    AlgoFP32WinogradF73_4x4_NCHW44(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
+            : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
+                    m_matmul_algo->name(), {4, 7, m_tile_size},
+                    param::ConvBias::Format::NCHW44);
+        }
+        return m_name.c_str();
+    }
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+};
 // ================================================================= //
 
 class ConvBiasImpl::AlgoF32Direct final : public AlgoBase {

@@ -25,7 +25,7 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                                         _megdnn_tensor_out dst,
                                         _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-
+    
     //! nchw88 group conv
     size_t flt_start = 0;
     size_t pack_c_size = 1;
@@ -212,6 +212,10 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                     std::vector<float> interp_points = {0,  1,   -1,  2,
                                                         -2, 0.5, -0.5};
                     DISPATCH_DTYPE(7);
+                } else if (m == 7) {
+                    std::vector<float> interp_points = {0,  1,   -1,   2,
+                                                        -2, 0.5, -0.5, 1.5};
+                    DISPATCH_DTYPE(8);
                 }
             }
 #undef cb
@@ -221,6 +225,7 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
 #undef DISPATCH_DTYPE
         }
     }
+
     megdnn_assert(execed,
                   "Unsupport winograd filter preprocess. m: %zu src: %s", m,
                   src.layout.to_string().c_str());

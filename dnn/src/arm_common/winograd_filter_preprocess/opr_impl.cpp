@@ -94,6 +94,10 @@ void WinogradFilterPreprocessImpl::exec(_megdnn_tensor_in src,
                     DISPATCH(winograd_F63_mk4_f_nchw44,
                              param::Winograd::Format::MK4, 0, 6);
                 }
+            } else if (m == 7) {
+                megdnn_assert(pack_c_size == 4, "WINOGRAD F(7,3) Only Supports NCHW44");
+                DISPATCH(winograd_F73_mk4_f_nchw44,
+                         param::Winograd::Format::MK4, 0, 7);
             }
         } else if (FW == 4) {
             if (m == 5) {

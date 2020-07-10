@@ -38,6 +38,9 @@ MEGDNN_REG_WINOGRAD_STRATEGY(float, float, float, float, 2, 3, 4, 4,
 
 MEGDNN_REG_WINOGRAD_STRATEGY(float, float, float, float, 6, 3, 4, 4,
                              winograd_F63_mk4_f_nchw44)
+
+MEGDNN_REG_WINOGRAD_STRATEGY(float, float, float, float, 7, 3, 4, 4,
+                             winograd_F73_mk4_f_nchw44)
 }  // namespace winograd
 }  // namespace arm_common
 }  // namespace megdnn

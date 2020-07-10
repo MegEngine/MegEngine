@@ -151,6 +151,13 @@ public:
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
+//! uncomment this when low precision mode is done
+#if 0
+                refhold.emplace_back(new AlgoFP32WinogradF73_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                winograd_algos.emplace_back(refhold.back().get());
+#endif
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
                 refhold.emplace_back(new AlgoFP16WinogradF23(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),

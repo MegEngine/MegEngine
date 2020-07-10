@@ -750,6 +750,26 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
                    param::ConvBias::Format::NCHW44);
 }
 
+//! uncomment it when low precision mode is ok
+#if 0
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F73_4_NCHW44) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_nchw44_conv_bias_args({3}, 1);
+    Checker<ConvBiasForward> checker(handle());
+    check_winograd("4:7:16", checker, args, param::MatrixMul::Format::MK4,
+                   param::ConvBias::Format::NCHW44);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F73_4_NCHW44_WEIGHT_PREPROCESS) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_nchw44_conv_bias_args({3}, 1);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle());
+    check_winograd("4:7:16", checker, args, param::MatrixMul::Format::MK4,
+                   param::ConvBias::Format::NCHW44);
+}
+#endif
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F54) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_winograd_args(4);
@@ -923,6 +943,12 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_PREPROCESS_NCHW44) {
             }
         }
     };
+
+    //! uncomment this when low precision mode is ok
+    // run(handle(), nchw44_args, {2, 6, 7}, dtype::Float32(), dtype::Float32(),
+    //     dtype::Float32(), dtype::Float32(), 1e-2f);
+
+    //! remove this when low precision mode is ok
     run(handle(), nchw44_args, {2, 6}, dtype::Float32(), dtype::Float32(),
         dtype::Float32(), dtype::Float32(), 1e-3f);
 }
