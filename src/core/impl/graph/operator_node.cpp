@@ -93,10 +93,8 @@ OperatorNodeBase::OperatorNodeBase(ComputingGraph *owner,
 }
 
 OperatorNodeBase::~OperatorNodeBase() noexcept {
-    auto &&pool = ComputingGraphImpl::cast(
-            owner_graph())->var_node_pool();
     for (auto i: m_output) {
-        pool.free(i);
+        owner_graph()->free_varnode(i);
     }
 }
 
@@ -264,8 +262,7 @@ VarNode* OperatorNodeBase::add_output(const Maybe<std::string> &name) {
     mgb_assert(!m_inserted_in_graph && !m_node_prop.valid(),
             "add output on opr after it has been inserted into graph");
 
-    auto ptr = ComputingGraphImpl::cast(
-                owner_graph())->var_node_pool().alloc(
+    auto ptr = owner_graph()->alloc_varnode(
                 name.valid() ? this->name() + ":" + name.val() : name, this);
     m_output.push_back(ptr);
     return ptr;

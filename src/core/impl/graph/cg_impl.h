@@ -142,6 +142,10 @@ public:
     OperatorNodeBase* insert_opr(
             std::unique_ptr<OperatorNodeBase> opr) override;
 
+    void* alloc_varnode_storage() override;
+
+    void free_varnode_storage(void *ptr) override;
+
     const VarReceiverInfo& var_receiver_in_current_comp_seq(
             const VarNode* var) const override;
 
@@ -161,7 +165,7 @@ public:
 
     TopoSorter& topo_sorter() { return components().topo_sorter; }
 
-    size_t next_node_id() { return (*m_node_id_counter)++; }
+    size_t next_node_id() override { return (*m_node_id_counter)++; }
 
     VarNodeMemManager& var_node_mem_manager() {
         return components().var_node_mem_manager;

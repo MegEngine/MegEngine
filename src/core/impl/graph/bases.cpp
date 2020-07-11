@@ -18,11 +18,9 @@ GraphNodeBase::GraphNodeBase(ComputingGraph *owner_graph):
     m_owner_graph{owner_graph}
 {
     mgb_assert(owner_graph, "owner graph not given");
-    auto id = static_cast<ComputingGraphImpl*>(owner_graph)->next_node_id();
-    m_id = id;
+    m_id = owner_graph->next_node_id();
 }
 
 AsyncExecutable::~AsyncExecutable() noexcept = default;
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

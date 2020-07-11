@@ -174,6 +174,8 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             return m_id;
         }
 
+        virtual size_t next_node_id() = 0;
+
         static std::shared_ptr<ComputingGraph> make();
 
         //! assert that refcnt for ptr is one and destories the ptr
@@ -235,6 +237,26 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
         virtual OperatorNodeBase* insert_opr(
                 std::unique_ptr<OperatorNodeBase> opr) = 0;
 
+        /*!
+         * \brief used by OperatorNodeBase to allocate its outputs
+         */
+        template<typename... Args>
+        VarNode* alloc_varnode(Args&&... args) {
+            return new(alloc_varnode_storage()) VarNode(std::forward<Args>(args)...);
+        }
+
+        inline void free_varnode(VarNode* var) {
+            var->~VarNode();
+            free_varnode_storage(var);
+        }
+    protected:
+        /*!
+         * \brief provided by impl to support alloc_varnode
+         */
+        virtual void* alloc_varnode_storage() = 0;
+
+        virtual void free_varnode_storage(void *ptr) = 0;
+    public:
         /*!
          * \brief get current computing sequence
          */

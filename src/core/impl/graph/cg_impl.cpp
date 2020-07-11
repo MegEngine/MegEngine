@@ -267,6 +267,14 @@ void ComputingGraphImpl::cleanup() {
     m_opr_refkeeper.clear();
 }
 
+void* ComputingGraphImpl::alloc_varnode_storage() {
+    return m_var_node_pool.alloc_raw();
+};
+
+void ComputingGraphImpl::free_varnode_storage(void *ptr) {
+    m_var_node_pool.free_raw(ptr);
+};
+
 OperatorNodeBase* ComputingGraphImpl::insert_opr(
         std::unique_ptr<OperatorNodeBase> opr_uniqp) {
     auto opr = opr_uniqp.get();
