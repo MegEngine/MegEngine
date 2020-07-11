@@ -99,8 +99,8 @@ SymbolVarArray cg::grad(SymbolVar target_, SymbolVarArray wrts_, bool warn_mid_w
     grads.reserve(wrts_.size());
     VarNodeArray dest_vars;
     auto&& graph = target->owner_graph();
-    auto&& eager_mgr = static_cast<ComputingGraphImpl*>(graph)->eager_eval_manager();
-    auto&& grad_mgr = static_cast<ComputingGraphImpl*>(graph)->grad_manager();
+    auto&& eager_mgr = ComputingGraphImpl::downcast(graph)->eager_eval_manager();
+    auto&& grad_mgr = ComputingGraphImpl::downcast(graph)->grad_manager();
     bool already_recorded = eager_mgr.enter_record_mode();
     for (auto&& wrt_ : wrts_) {
         auto wrt = wrt_.node();
@@ -139,7 +139,7 @@ SymbolVarArray cg::grad(SymbolVar target_, SymbolVarArray wrts_, bool warn_mid_w
 
 SymbolVar cg::current_grad_target(ComputingGraph &graph) {
 #if MGB_ENABLE_GRAD
-    auto var = static_cast<ComputingGraphImpl&>(graph).grad_manager(
+    auto var = ComputingGraphImpl::downcast(&graph)->grad_manager(
             ).current_grad_target();
     mgb_throw_if(!var, GraphError, "current_grad_target() called outside "
             "grad computing environment");

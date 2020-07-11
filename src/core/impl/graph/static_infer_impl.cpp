@@ -813,7 +813,7 @@ StaticInferManagerImpl::~StaticInferManagerImpl() noexcept {
     m_mem_pool_value_trait.disable_freelist();
     for (auto &&i: m_dtor_callbacks)
         i.second();
-    for (auto &&i: static_cast<ComputingGraphImpl*>(
+    for (auto &&i: ComputingGraphImpl::downcast(
                 m_owner_graph)->all_oprs()) {
         for (auto j: i->output()) {
             clear_tag_handler(j);
@@ -1212,7 +1212,7 @@ class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
 
     void check_graph_par(VarNode *var) {
         if (mgb_unlikely(!m_par_graph)) {
-            m_par_graph = static_cast<ComputingGraphImpl*>(var->owner_graph());
+            m_par_graph = ComputingGraphImpl::downcast(var->owner_graph());
             mgb_assert(m_par_graph != m_sub_graph);
 
             auto cb = [this]() {
@@ -1230,7 +1230,7 @@ class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
 
     void check_graph_sub(VarNode *var) {
         if (mgb_unlikely(!m_sub_graph)) {
-            m_sub_graph = static_cast<ComputingGraphImpl*>(var->owner_graph());
+            m_sub_graph = ComputingGraphImpl::downcast(var->owner_graph());
             mgb_assert(m_sub_graph != m_par_graph);
         } else {
             mgb_assert(m_sub_graph == var->owner_graph());

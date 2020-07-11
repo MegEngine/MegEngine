@@ -340,7 +340,7 @@ VarNodeMemManager::DynamicAllocOprInfo::DynamicAllocOprInfo(
     prev_dev_val_input.clear();
     static_infer_inp.clear();
     dev_val_input.clear();
-    auto &&mgr = static_cast<ComputingGraphImpl*>(opr->owner_graph())->
+    auto &&mgr = ComputingGraphImpl::downcast(opr->owner_graph())->
         static_infer_manager_impl();
 
     CompNode single_cn;

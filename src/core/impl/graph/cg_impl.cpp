@@ -674,7 +674,7 @@ void ComputingGraphImpl::share_device_memory_with(ComputingGraph& other) {
     mgb_assert(
             !m_current_comp_seq,
             "share_device_memory_with must be called before compiling graph");
-    auto&& oimpl = static_cast<ComputingGraphImpl&>(other);
+    auto&& oimpl = *ComputingGraphImpl::downcast(&other);
     var_node_mem_manager().static_device_memory_manager(
             oimpl.var_node_mem_manager().static_device_memory_manager());
 }
@@ -707,7 +707,7 @@ size_t ComputingGraphImpl::clear_device_memory() {
 }
 
 void ComputingGraphImpl::set_as_subgraph(ComputingGraph& par_graph) {
-    m_parent_graph = static_cast<ComputingGraphImpl*>(&par_graph);
+    m_parent_graph = ComputingGraphImpl::downcast(&par_graph);
     m_parent_graph->m_subgraphs.emplace_back(this);
     m_node_id_counter = m_parent_graph->m_node_id_counter;
     options().var_sanity_check_first_run =

@@ -40,7 +40,7 @@ class GradShapeChecker {
 
     void do_on_var_shape(VarNode *var) {
         MGB_MARK_USED_VAR(m_opr);
-        auto graph = static_cast<ComputingGraphImpl*>(var->owner_graph());
+        auto graph = ComputingGraphImpl::downcast(var->owner_graph());
 
         auto seq = graph->current_comp_seq();
         if (seq) {
@@ -90,7 +90,7 @@ class GradShapeChecker {
         }
 
         static void make(OperatorNodeBase *opr, VarNode *wrt, VarNode *grad) {
-            if (static_cast<ComputingGraphImpl*>(wrt->owner_graph())
+            if (ComputingGraphImpl::downcast(wrt->owner_graph())
                     ->eager_eval_manager().enabled())
                 return;
             using namespace std::placeholders;
@@ -650,13 +650,13 @@ void GradManager::add_var_virtual_receiver(
 }
 
 void cg::add_grad_transformer(VarNode *var, const GradTransformer &cb) {
-    static_cast<ComputingGraphImpl*>(var->owner_graph())->
+    ComputingGraphImpl::downcast(var->owner_graph())->
         grad_manager().
         add_grad_transformer(var, cb);
 }
 
 void cg::add_extra_dep_for_grad(VarNode *inp, VarNode *out) {
-    static_cast<ComputingGraphImpl*>(inp->owner_graph())->grad_manager().
+    ComputingGraphImpl::downcast(inp->owner_graph())->grad_manager().
         add_extra_dep_for_grad(inp, out);
 }
 
@@ -667,7 +667,7 @@ void cg::add_var_virtual_receiver(
     desc->inputs = inputs;
     desc->outputs = outputs;
     desc->grad = grad;
-    static_cast<ComputingGraphImpl*>(inputs.at(0)->owner_graph())->
+    ComputingGraphImpl::downcast(inputs.at(0)->owner_graph())->
         grad_manager().
         add_var_virtual_receiver(desc);
 }

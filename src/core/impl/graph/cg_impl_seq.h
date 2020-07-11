@@ -100,7 +100,7 @@ class ComputingGraphImpl::ComputingSequence final : public AsyncExecutable {
 public:
     ComputingSequence(const std::shared_ptr<ComputingGraph>& graph)
             : m_owner_graph_refkeep{graph},
-              m_owner_graph{static_cast<ComputingGraphImpl*>(graph.get())},
+              m_owner_graph{ComputingGraphImpl::downcast(graph.get())},
               m_have_parent_graph{m_owner_graph->m_parent_graph} {}
 
     GraphExecutable::ExecEnv& exec_env() { return m_exec_env; }

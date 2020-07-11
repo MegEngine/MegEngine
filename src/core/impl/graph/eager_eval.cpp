@@ -76,7 +76,7 @@ EagerEvalManager::~EagerEvalManager() noexcept {
     if (m_first_opr_enable_status == 1) {
         m_var_sync_mgr_pool.disable_freelist();
         for (auto&& i :
-             static_cast<ComputingGraphImpl*>(m_owner_graph)->all_oprs()) {
+             ComputingGraphImpl::downcast(m_owner_graph)->all_oprs()) {
             for (auto var : i->output()) {
                 auto mgr = VarNodeMemManager::var_node_cn_sync_manager(var);
                 if (mgr) {
@@ -223,7 +223,7 @@ void EagerEvalManager::prepare_for_exec(OperatorNodeBase* opr) {
 }
 
 void EagerEvalManager::update_static_infer_result(OperatorNodeBase* opr) {
-    auto&& mgr = static_cast<ComputingGraphImpl*>(m_owner_graph)
+    auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)
                          ->static_infer_manager_impl();
     auto sync_missing_trait =
             [&](static_infer::StaticInferManagerImpl::TagHandler* handler) {
@@ -260,7 +260,7 @@ void EagerEvalManager::update_static_infer_result(OperatorNodeBase* opr) {
 }
 
 void EagerEvalManager::ensure_input_layout(VarNode* var) {
-    auto&& mem_mgr = static_cast<ComputingGraphImpl*>(var->owner_graph())
+    auto&& mem_mgr = ComputingGraphImpl::downcast(var->owner_graph())
                              ->var_node_mem_manager();
 
     auto trait = mem_mgr.get_var_node_mem_trait_nullable(var);
@@ -287,7 +287,7 @@ void EagerEvalManager::alloc_output_mem(OperatorNodeBase* opr) {
         }
     }
 
-    auto&& mgr = static_cast<ComputingGraphImpl*>(m_owner_graph)
+    auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)
                          ->var_node_mem_manager();
     OprNodeArray opr_seq{opr};
 
@@ -348,7 +348,7 @@ void EagerEvalManager::do_on_opr_insert(OperatorNodeBase* opr) {
         if (status) {
             update_static_infer_result(opr);
             alloc_output_mem(opr);
-            auto&& mgr = static_cast<ComputingGraphImpl*>(m_owner_graph)
+            auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)
                              ->var_node_mem_manager();
             mgr.on_graph_compile_finished();
             opr->execute(*m_exec_env);

@@ -93,7 +93,7 @@ OperatorNodeBase::OperatorNodeBase(ComputingGraph *owner,
 }
 
 OperatorNodeBase::~OperatorNodeBase() noexcept {
-    auto &&pool = static_cast<ComputingGraphImpl*>(
+    auto &&pool = ComputingGraphImpl::cast(
             owner_graph())->var_node_pool();
     for (auto i: m_output) {
         pool.free(i);
@@ -124,7 +124,7 @@ void OperatorNodeBase::execute(ExecEnv &env) {
     }
 
     // allocate output with dynamic storage
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
             ->var_node_mem_manager()
             .alloc_var_node_mem_dynamic(env, this);
 
@@ -135,11 +135,11 @@ void OperatorNodeBase::execute(ExecEnv &env) {
     // static_infer_manager so the value would be up-to-date; however for shape
     // deps, oprs would access the shape directly, so we need to insert some
     // code here to ensure it is up-to-date.
-    if (!static_cast<ComputingGraphImpl*>(owner_graph())
+    if (!ComputingGraphImpl::downcast(owner_graph())
                  ->eager_eval_manager()
                  .enabled()) {
         VarNodeArray vars_to_set;
-        auto cg = static_cast<ComputingGraphImpl*>(owner_graph());
+        auto cg = ComputingGraphImpl::downcast(owner_graph());
         auto step_cur = cg->opr_step_num_in_cur_comp_seq(this).val();
         mgb_assert(step_cur < std::numeric_limits<size_t>::max());
         using DT = NodeProp::DepType;
@@ -264,7 +264,7 @@ VarNode* OperatorNodeBase::add_output(const Maybe<std::string> &name) {
     mgb_assert(!m_inserted_in_graph && !m_node_prop.valid(),
             "add output on opr after it has been inserted into graph");
 
-    auto ptr = static_cast<ComputingGraphImpl*>(
+    auto ptr = ComputingGraphImpl::cast(
                 owner_graph())->var_node_pool().alloc(
                 name.valid() ? this->name() + ":" + name.val() : name, this);
     m_output.push_back(ptr);
@@ -676,7 +676,7 @@ void mixin::IOSameShapeOperatorNode::get_output_var_shape(
 
 void PostExecActions::add(VarNode* var) {
     mgb_assert(m_comp_node == var->comp_node());
-    auto graph = static_cast<ComputingGraphImpl*>(var->owner_graph());
+    auto graph = ComputingGraphImpl::downcast(var->owner_graph());
 
     auto&& infer_mgr = graph->static_infer_manager_impl();
     auto&& extra_info = graph->current_comp_seq_extra_info();

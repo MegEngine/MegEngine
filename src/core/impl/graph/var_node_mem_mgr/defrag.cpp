@@ -73,7 +73,7 @@ void VarDevMemDefragmenter::defrag(VarNode* req_var,
                                    const CompNodeInfo& cn_info,
                                    size_t extra_size) {
     // pause all other comp nodes before calling defrag_impl()
-    auto exec_env = static_cast<ComputingGraphImpl*>(req_var->owner_graph())
+    auto exec_env = ComputingGraphImpl::downcast(req_var->owner_graph())
                             ->current_exec_env();
     mgb_assert(exec_env);
     exec_env->pause_exec();

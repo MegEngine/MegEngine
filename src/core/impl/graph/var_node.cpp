@@ -233,12 +233,12 @@ bool VarNode::set_fwd_in2out_readonly(
     if (owner_graph()->options().imperative_proxy_graph) {
         return false;
     }
-    return static_cast<ComputingGraphImpl*>(owner_graph())
+    return ComputingGraphImpl::downcast(owner_graph())
         ->var_node_mem_manager().fwd_in2out_readonly(input, sub, this);
 }
 
 VarNode& VarNode::set_fwd_in2out_writable(VarNode *input) {
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
         ->var_node_mem_manager().fwd_in2out_writable(input, this);
     return *this;
 }
@@ -246,20 +246,20 @@ VarNode& VarNode::set_fwd_in2out_writable(VarNode *input) {
 
 VarNode& VarNode::set_fwd_in2out_writable_force(VarNode *input) {
     mgb_assert(!owner_graph()->options().imperative_proxy_graph);
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
         ->var_node_mem_manager().fwd_in2out_writable_force(input, this);
     return *this;
 }
 
 VarNode& VarNode::add_layout_constraint(LayoutConstraintCallback callback) {
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
         ->var_node_mem_manager().add_layout_constraint(
                 this, std::move(callback));
     return *this;
 }
 
 VarNode& VarNode::add_layout_constraint_contiguous() {
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
             ->var_node_mem_manager()
             .add_layout_constraint_level(
                     this, VarNodeMemManager::LayoutConstraintLevel::CONTIG);
@@ -267,7 +267,7 @@ VarNode& VarNode::add_layout_constraint_contiguous() {
 }
 
 VarNode& VarNode::add_layout_constraint_monotone() {
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
             ->var_node_mem_manager()
             .add_layout_constraint_level(
                     this, VarNodeMemManager::LayoutConstraintLevel::MONOTONE);
@@ -315,7 +315,7 @@ VarNode& VarNode::shape_alloc(const TensorShape &shape) {
                 "shape_alloc() could only be used for vars with"
                 " NO_SYS_MEM_ALLOC flag; actual var: %s",
                 cg::dump_var_info({this}).c_str());
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
         ->var_node_mem_manager().var_alloc_with_shape(this, shape);
     return *this;
 }
@@ -330,7 +330,7 @@ bool VarNode::reset_dev_tensor_from_other_var(VarNode* src_var) {
                 "dynamic storage on src is required for dynamic readonly "
                 "forwarding: vars=%s",
                 dump_var_info({src_var, this}).c_str());
-        auto&& trait = static_cast<ComputingGraphImpl*>(owner_graph())
+        auto&& trait = ComputingGraphImpl::downcast(owner_graph())
                                ->var_node_mem_manager()
                                .get_var_node_mem_trait_at(src_var);
         if (trait.seq_force_update_dest ||
@@ -403,7 +403,7 @@ std::shared_ptr<json::Value> VarNode::to_json() const {
         return json::Null::make();
     };
 
-    auto &&trait = static_cast<ComputingGraphImpl*>(owner_graph()
+    auto &&trait = ComputingGraphImpl::downcast(owner_graph()
             )->var_node_mem_manager().get_var_node_mem_trait(this);
     auto flag = json::Array::make();
     {
@@ -459,7 +459,7 @@ std::shared_ptr<json::Value> VarNode::to_json() const {
 #endif
 
 MemAllocPlan& VarNode::init_mem_plan(const DeviceTensorND* fixed_alloc) {
-    static_cast<ComputingGraphImpl*>(owner_graph())
+    ComputingGraphImpl::downcast(owner_graph())
             ->var_node_mem_manager()
             .init_single_var_mem_plan(this, fixed_alloc);
     return m_mem_plan;
@@ -477,7 +477,7 @@ void VarNode::modify_flag(Flag delta, Flag new_flag) {
                     Flag::NO_SYS_STATIC_MEM_ALLOC |
                     Flag::RT_FORCE_DYNAMIC_MEM_ALLOC)) == delta);
 
-        mgb_assert(!static_cast<ComputingGraphImpl*>(owner_graph())->
+        mgb_assert(!ComputingGraphImpl::downcast(owner_graph())->
                 var_node_mem_manager().optimize_started(),
                 "could not modify var flags after optimization started");
     }

@@ -260,7 +260,7 @@ void TopoSorter::DFSDepDiscover::proc_add_dep_comp_order1() {
 void TopoSorter::DFSDepDiscover::proc_find_missing_inp() {
     auto frame = m_cur_frame;
     auto opr = frame->opr;
-    auto&& mgr = static_cast<ComputingGraphImpl*>(opr->owner_graph())
+    auto&& mgr = ComputingGraphImpl::downcast(opr->owner_graph())
                          ->static_infer_manager_impl();
     auto&& missing_inp = frame->missing_inputs;
 

@@ -129,7 +129,7 @@ else()
     if(ANDROID)
         set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
         set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -g")
-        
+
     else()
         set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
         set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g")
@@ -224,6 +224,7 @@ endif()
 option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
 option(MGE_BUILD_XXX "Build _xxx.so instead of mgb.so " OFF)
 if(MGE_BUILD_XXX)
+    add_compile_definitions(MGB_ENABLE_IMPERATIVE_RUNTIME)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
@@ -662,14 +663,14 @@ endif()
 configure_file(cmake/megengine.pc.in
                ${CMAKE_CURRENT_BINARY_DIR}/megengine.pc
                @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/megengine.pc 
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/megengine.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready.
 if (NOT MGE_WITH_DISTRIBUTED)
     include(CMakePackageConfigHelpers)
     set (MGE_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/MegEngine)
-    configure_package_config_file(cmake/MegEngineConfig.cmake.in 
+    configure_package_config_file(cmake/MegEngineConfig.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfig.cmake
         INSTALL_DESTINATION ${MGE_INSTALL_CMAKEDIR}
     )

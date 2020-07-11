@@ -132,7 +132,7 @@ const DeviceTensorND& SymbolVar::eager_eval_get_value() const {
 #if MGB_BUILD_SLIM_SERVING
     mgb_throw(MegBrainError, "eager eval disabled at compile time");
 #else
-    auto og = static_cast<ComputingGraphImpl*>(node()->owner_graph());
+    auto og = ComputingGraphImpl::downcast(node()->owner_graph());
     mgb_assert(og->options().eager_evaluation);
     return node()->dev_tensor();
 #endif
