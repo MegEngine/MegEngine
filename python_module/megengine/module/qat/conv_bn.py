@@ -62,6 +62,7 @@ class _ConvBnActivation2d(Float._ConvBnActivation2d, QATModule):
                 self.conv.groups, -1, 1, 1, 1
             )
 
+        w_fold = self.apply_quant_weight(w_fold)
         # b_fold = gamma * (b - bn_mean) / bn_std + beta
         b_fold = beta + gamma * (conv_bias - bn_mean) * bn_istd
         return w_fold, b_fold
