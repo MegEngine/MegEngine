@@ -6,6 +6,7 @@ OUTPUTDIR=$(readlink -f ${CWD}/output)
 USERID=$(id -u)
 TMPFS_ARGS="--tmpfs /tmp:exec"
 
+echo ${BASEDIR}
 pushd ${BASEDIR}/third_party >/dev/null
     ./prepare.sh
 popd >/dev/null
@@ -91,6 +92,6 @@ if [ $TENSORRT_VERSION != $REQUIR_TENSORRT_VERSION ] ; then
     exit -1
 fi
 
-docker run -it --rm $TMPFS_ARGS -e UID=${USERID} -e LOCAL_VERSION=${LOCAL_VERSION} -e ALL_PYTHON=${ALL_PYTHON} -v ${CUDA_ROOT_DIR}:/usr/local/cuda -v ${CUDNN_ROOT_DIR}:/opt/cudnn -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt -v ${BASEDIR}:/home/code -v ${OUTPUTDIR}:/home/output:rw env_manylinux2010:latest /home/code/ci/docker_env/manylinux2010/do_build.sh
+docker run -it --rm $TMPFS_ARGS -e UID=${USERID} -e LOCAL_VERSION=${LOCAL_VERSION} -e ALL_PYTHON=${ALL_PYTHON} -v ${CUDA_ROOT_DIR}:/usr/local/cuda -v ${CUDNN_ROOT_DIR}:/opt/cudnn -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt -v ${BASEDIR}:/home/code -v ${OUTPUTDIR}:/home/output:rw env_manylinux2010:latest /home/code/scripts/whl/manylinux2010/do_build.sh
 
 
