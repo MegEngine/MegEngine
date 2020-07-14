@@ -810,7 +810,7 @@ void CollectiveComm::init_output_static_infer_desc() {
         };
 
         auto get_shape_from_server = [this](TensorShape& dest, const InpVal&) {
-            if (!m_enable_shape_infer) {
+            if (!m_enable_shape_infer && !owner_graph()->options().imperative_proxy_graph) {
                 return false;
             }
 
