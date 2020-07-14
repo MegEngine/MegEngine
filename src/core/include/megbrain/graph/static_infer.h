@@ -14,6 +14,11 @@
 #include "megbrain/tensor.h"
 
 namespace mgb {
+
+namespace imperative {
+    class ProxyGraph;
+} // namespace imperative
+
 namespace cg {
 
 class VarNode;
@@ -50,6 +55,7 @@ namespace static_infer {
         const DeviceTensorND *m_value = nullptr;
 
         friend class StaticInferManagerImpl;
+        friend class imperative::ProxyGraph;
 
         public:
             /*!
