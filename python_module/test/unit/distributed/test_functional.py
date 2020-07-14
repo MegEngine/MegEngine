@@ -7,6 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 import multiprocessing as mp
+import platform
 
 import numpy as np
 import pytest
@@ -25,6 +26,9 @@ def _init_process_group_wrapper(world_size, rank, dev, backend, q):
         dist.init_process_group("localhost", port, world_size, rank, dev, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_reduce_sum():
     world_size = 2
@@ -61,6 +65,9 @@ def test_reduce_sum():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_gather():
     world_size = 2
@@ -97,6 +104,9 @@ def test_gather():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_broadcast():
     world_size = 2
@@ -129,6 +139,9 @@ def test_broadcast():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_scatter():
     world_size = 2
@@ -165,6 +178,9 @@ def test_scatter():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_all_to_all():
     world_size = 2
@@ -199,6 +215,9 @@ def test_all_to_all():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_all_gather():
     world_size = 2
@@ -232,6 +251,9 @@ def test_all_gather():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_reduce_scatter_sum():
     world_size = 2
@@ -269,6 +291,9 @@ def test_reduce_scatter_sum():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_all_reduce_sum():
     world_size = 2
@@ -302,6 +327,9 @@ def test_all_reduce_sum():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_all_reduce_max():
     world_size = 2
@@ -335,6 +363,9 @@ def test_all_reduce_max():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_all_reduce_min():
     world_size = 2
@@ -368,6 +399,9 @@ def test_all_reduce_min():
             check(shape, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_bcast_param():
     world_size = 2

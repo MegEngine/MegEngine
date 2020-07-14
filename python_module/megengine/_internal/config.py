@@ -285,8 +285,8 @@ class exc_opr_tracker_scope(_GraphPropertyBase):
         ), "bad args for exc_opr_tracker_scope: {!r} {!r}".format(comp_graph, tracker)
         super().__init__(comp_graph, tracker)
 
-    __prop_setup__ = _mgb._config.begin_set_exc_opr_tracker
-    __prop_clear__ = _mgb._config.end_set_exc_opr_tracker
+    __prop_setup__ = staticmethod(_mgb._config.begin_set_exc_opr_tracker)
+    __prop_clear__ = staticmethod(_mgb._config.end_set_exc_opr_tracker)
 
 
 class opr_priority_scope(_GraphPropertyBase):
@@ -312,8 +312,8 @@ class opr_priority_scope(_GraphPropertyBase):
     def __init__(self, comp_graph, priority):
         super().__init__(comp_graph, int(priority))
 
-    __prop_setup__ = _mgb._config.begin_set_opr_priority
-    __prop_clear__ = _mgb._config.end_set_opr_priority
+    __prop_setup__ = staticmethod(_mgb._config.begin_set_opr_priority)
+    __prop_clear__ = staticmethod(_mgb._config.end_set_opr_priority)
 
 
 OprTrackerResult = collections.namedtuple(

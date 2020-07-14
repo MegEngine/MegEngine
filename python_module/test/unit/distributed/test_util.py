@@ -6,6 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import multiprocessing as mp
+import platform
 import queue
 from time import sleep
 
@@ -41,6 +42,9 @@ def _init_process_group_wrapper(world_size, rank, dev, backend, q):
         dist.init_process_group(_LOCALHOST, port, world_size, rank, dev, backend)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_create_mm_server():
     def worker():
@@ -60,6 +64,9 @@ def test_create_mm_server():
     assert p.exitcode == 0
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_init_process_group():
     world_size = 2
@@ -92,6 +99,9 @@ def test_init_process_group():
     check("ucx")
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_group_barrier():
     world_size = 2
@@ -124,6 +134,9 @@ def test_group_barrier():
     assert p0.exitcode == 0 and p1.exitcode == 0
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_synchronized():
     world_size = 2

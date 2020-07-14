@@ -11,11 +11,7 @@ find_package(NumPy REQUIRED)
 
 find_package(SWIG REQUIRED)
 set(SWIG_SRC src/swig/mgb.i)
-if (APPLE)
-    set(CMAKE_SWIG_FLAGS -Wall -threads -py3 -modern)
-else()
-    set(CMAKE_SWIG_FLAGS -Wall -threads -py3 -modern -DSWIGWORDSIZE64)
-endif()
+set(CMAKE_SWIG_FLAGS -Wall -threads -py3 -modern -DSWIGWORDSIZE64)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 
 file(GLOB_RECURSE OPR_DECL_SRCS "${PROJECT_SOURCE_DIR}/src/**/*.oprdecl")

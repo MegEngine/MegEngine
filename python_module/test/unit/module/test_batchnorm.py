@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import multiprocessing as mp
+import platform
 
 import numpy as np
 import pytest
@@ -18,6 +19,9 @@ from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 from megengine.test import assertTensorClose
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.isolated_distributed
 def test_syncbn():
     nr_chan = 8
@@ -136,6 +140,9 @@ def test_batchnorm():
     assertTensorClose(yv_expect, yv1.numpy(), max_err=5e-6)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 def test_syncbn1d():
     nr_chan = 8
     data_shape = (3, nr_chan, 4)
@@ -231,6 +238,9 @@ def test_batchnorm2d():
     assertTensorClose(yv_expect, yv1.numpy(), max_err=5e-6)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 def test_syncbn2d():
     nr_chan = 8
     data_shape = (3, nr_chan, 16, 16)
@@ -302,6 +312,9 @@ def test_batchnorm_no_stats():
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 def test_syncbn_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 4)
@@ -351,6 +364,9 @@ def test_batchnorm2d_no_stats():
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 def test_syncbn2d_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 16, 16)

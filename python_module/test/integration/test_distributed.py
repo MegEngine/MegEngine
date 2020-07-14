@@ -7,10 +7,12 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import multiprocessing as mp
+import platform
 import subprocess
 import sys
 
 import numpy as np
+import pytest
 
 
 def worker(master_ip, master_port, world_size, rank, dev, trace):
@@ -84,6 +86,9 @@ def start_workers(worker, world_size, trace=False):
         assert p.exitcode == 0
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 def test_distributed():
     start_workers(worker, 2, trace=True)
     start_workers(worker, 2, trace=False)

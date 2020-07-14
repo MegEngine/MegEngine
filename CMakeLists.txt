@@ -426,6 +426,14 @@ endif()
 set(MGB_JIT ${MGE_WITH_JIT})
 set(MGB_JIT_HALIDE ${MGE_WITH_HALIDE})
 
+IF(APPLE)
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
 # Thread
 if(CMAKE_THREAD_LIBS_INIT)
     set(MGB_HAVE_THREAD 1)
@@ -640,14 +648,6 @@ elseif(TARGET _xxx)
         VERBATIM
     )
 endif()
-
-IF(APPLE)
-    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-    set(CMAKE_HAVE_THREADS_LIBRARY 1)
-    set(CMAKE_USE_WIN32_THREADS_INIT 0)
-    set(CMAKE_USE_PTHREADS_INIT 1)
-    set(THREADS_PREFER_PTHREAD_FLAG ON)
-ENDIF()
 
 # Configure and install pkg-config.
 # Note that unlike the Config.cmake modules, this is not relocatable (and not

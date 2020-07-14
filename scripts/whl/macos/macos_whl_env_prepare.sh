@@ -1,20 +1,6 @@
 #!/bin/bash -e
 
-READLINK=readlink
-OS=$(uname -s)
-
-if [ $OS = "Darwin" ];then
-    READLINK=greadlink
-else
-    echo "ERR: only run at macos env"
-    exit -1
-fi
-
-SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
-
-echo ${SRC_DIR}
-ALL_PYTHON="3.5.9 3.6.10 3.7.7 3.8.3"
-
+#install env before use greadlink
 function try_install_brew() {
     which brew
     if [ $? -eq 0 ]; then
@@ -34,13 +20,33 @@ function try_install_brew() {
 }
 
 function install_brew_package() {
-    BREW_PACKAGE="openssl readline sqlite3 xz gdbm zlib pyenv wget swig coreutils llvm"
+    BREW_PACKAGE="openssl readline sqlite3 xz gdbm zlib pyenv wget swig coreutils llvm git-lfs"
     for pak in ${BREW_PACKAGE}
     do
         echo "###### do command: brew install ${pak}"
         brew install ${pak}
     done
+
+    git lfs install
 }
+try_install_brew
+install_brew_package
+
+READLINK=readlink
+OS=$(uname -s)
+
+if [ $OS = "Darwin" ];then
+    READLINK=greadlink
+else
+    echo "ERR: only run at macos env"
+    exit -1
+fi
+
+SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
+
+echo ${SRC_DIR}
+ALL_PYTHON="3.5.9 3.6.10 3.7.7 3.8.3"
+
 
 function install_python_package() {
     for pak in ${ALL_PYTHON}
@@ -51,7 +57,7 @@ function install_python_package() {
         else
             env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${pak}
         fi
-        echo "###### do command: /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install numpy wheel"
+        echo "###### do command: /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install numpy wheel requests tqdm tabulate"
         /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install numpy wheel
         echo "###### do command: /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/python_module/requires-test.txt"
         /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/python_module/requires-test.txt
@@ -95,8 +101,6 @@ function append_path_env_message() {
 }
 
 ############install env now###########
-try_install_brew
-install_brew_package
 install_python_package
 install_cmake
 append_path_env_message

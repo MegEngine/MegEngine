@@ -141,5 +141,17 @@ function do_build() {
     done
 }
 
+function third_party_prepare() {
+    if [[ -z ${ALREADY_INSTALL_THIRD_PARTY} ]]
+    then
+        echo "init third_party..."
+        ${SRC_DIR}/third_party/prepare.sh
+        ${SRC_DIR}/third_party/install-mkl.sh
+    else
+        echo "skip init third_party..."
+    fi
+}
+
 ######################
+third_party_prepare
 do_build

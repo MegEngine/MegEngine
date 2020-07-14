@@ -32,12 +32,9 @@ void _init_bfloat16_types(PyObject *m); // implemented in bfloat16.cpp
 %template(_PairStringSizeT) std::pair<std::string, size_t>;
 %template(_PairSizeTSizeT) std::pair<size_t, size_t>;
 /*
- *
- * real define uint64_t here, BUT, do not define SWIGWORDSIZE64
- * at osx env, at this time uint64_t means unsigned long long,
- * BUT, unsigned long long do not have type_name() method at c++,
- * when define SWIGWORDSIZE64 at linux env, uint64_t means
- * unsigned long int, more detail refs stdint.i
+ * swig use uint64_t have compat build issue with
+ * clang at osx env, so we use unsigned long to
+ * replace uint64_t,more detail refs stdint.i
  *
  */
 %template(_VectorPairUint64String) std::vector<std::pair<unsigned long int, std::string>>;

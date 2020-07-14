@@ -139,9 +139,12 @@ class SigHandlerInit {
             mgb_log_error("%s: caught deadly signal %d(%s)", msg0, signum,
                           strsignal(signum));
         }
+//FIXME: imp backtrace for macos
+#ifndef __APPLE__
         std::string bp;
         debug::backtrace(2).fmt_to_str(bp);
         mgb_log_error("%s", bp.c_str());
+#endif
         exit(EXIT_FAILURE);
     }
 
