@@ -59,7 +59,7 @@ void RemoteSend::scn_do_execute() {
                 comp_node.get_uid());
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
-                reg_info.hash, m_key, 2, 0, MegRay::MEGRAY_UCX, m_group_client);
+                reg_info.hash, m_key, 2, 0, MegRay::MEGRAY_NCCL, m_group_client);
 
         m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
 
@@ -158,7 +158,7 @@ void RemoteRecv::scn_do_execute() {
                 comp_node.get_uid());
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
-                reg_info.hash, m_key, 2, 1, MegRay::MEGRAY_UCX, m_group_client);
+                reg_info.hash, m_key, 2, 1, MegRay::MEGRAY_NCCL, m_group_client);
 
         m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
 
