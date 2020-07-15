@@ -83,9 +83,11 @@ void TensorRTOpr::Logger::log(nvinfer1::ILogger::Severity severity,
         case Severity::kINFO:
             mgb_log_debug("TRT_INFO: %s", msg);
             return;
+#if NV_TENSOR_RT_VERSION >= 6001
         case Severity::kVERBOSE:
             mgb_log_debug("TRT_VERBOSE: %s", msg);
             return;
+#endif
         default:
             mgb_log_debug("TRT_UNKNOWN: %s", msg);
             return;
