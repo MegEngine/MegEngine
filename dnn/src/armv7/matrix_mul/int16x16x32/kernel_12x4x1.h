@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/arm_common/simd_macro/marm_neon.h"
@@ -988,8 +989,10 @@ static void gemm_s16x16x32_12x4_transpose_pack_B_n(dt_int16* outptr,
         switch (y + 3 - ymax) {
             case 2:
                 inptr1 = zerobuff;
+                MEGDNN_FALLTHRU
             case 1:
                 inptr2 = zerobuff;
+                MEGDNN_FALLTHRU
             case 0:
                 inptr3 = zerobuff;
                 break;

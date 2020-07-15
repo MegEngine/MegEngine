@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/arm_common/simd_macro/marm_neon.h"
@@ -453,8 +454,10 @@ static void gemm_u8_4x8_pack_A_n(dt_uint8* outptr, const dt_uint8* inptr,
                 switch (y + 3 - ymax) {
                     case 2:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -471,8 +474,10 @@ static void gemm_u8_4x8_pack_A_n(dt_uint8* outptr, const dt_uint8* inptr,
                 switch (y + 3 - ymax) {
                     case 2:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -523,16 +528,22 @@ static void gemm_u8_4x8_transpose_pack_A_n(dt_uint8* out, const dt_uint8* in,
                 switch (k + 7 - kmax) {
                     case 6:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
                         inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
                         inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
                         inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -551,16 +562,22 @@ static void gemm_u8_4x8_transpose_pack_A_n(dt_uint8* out, const dt_uint8* in,
                 switch (k + 7 - kmax) {
                     case 6:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
                         inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
                         inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
                         inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -617,16 +634,22 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
                 switch (k + 7 - kmax) {
                     case 6:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
                         inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
                         inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
                         inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -646,16 +669,22 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
                 switch (k + 7 - kmax) {
                     case 6:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
                         inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
                         inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
                         inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -675,16 +704,22 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
                 switch (k + 7 - kmax) {
                     case 6:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
                         inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
                         inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
                         inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -763,8 +798,10 @@ static void gemm_u8_4x8_transpose_pack_B_n(dt_uint8* outptr,
                 switch (y + 3 - ymax) {
                     case 2:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -782,8 +819,10 @@ static void gemm_u8_4x8_transpose_pack_B_n(dt_uint8* outptr,
                 switch (y + 3 - ymax) {
                     case 2:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;

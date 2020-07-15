@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/arm_common/simd_macro/marm_neon.h"
@@ -323,8 +324,10 @@ static void gemm_mk4_s8_4x2_pack_B(dt_int8* out, const dt_int8* in, int ldin,
                 switch (k + 3 - ICB) {
                     case 2:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -340,8 +343,10 @@ static void gemm_mk4_s8_4x2_pack_B(dt_int8* out, const dt_int8* in, int ldin,
                 switch (k + 3 - ICB) {
                     case 2:
                         inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
                         inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
