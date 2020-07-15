@@ -99,6 +99,17 @@ class StaticInferManagerImpl final: public StaticInferManager {
          */
         void update_mutable_src_shape(Tag tag);
 
+
+        /*!
+         * \brief get original deps given in the InferDesc which is registered
+         * by register_shape_infer or register_value_infer
+         *
+         * Note: the \p elem with DepType::SHAPE and InferType::CONST shows no
+         * deps since the StaticInferManagerImpl folds the infererence chain of
+         * the const var shape
+         */
+        DepVal get_deps(const DepElement &elem);
+
     private:
         friend class CompSeqManager;
 

@@ -575,6 +575,10 @@ class VarNode final: public GraphNodeBase {
 
         void assign_dev_tensor_from_tensor(const DeviceTensorND &value);
 
+#if MGB_ENABLE_JSON
+        std::shared_ptr<json::Value> dump_static_infer_info_to_json() const;
+#endif
+
         friend class static_infer::StaticInferManagerImpl;
         friend class VarNodeMemManager;
         friend class VarDevMemDefragmenter;

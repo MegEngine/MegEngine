@@ -245,6 +245,9 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagTraitMutableBase,
             return m_infer_withoutexc_ret;
         }
 
+        //! original deps given in the InferDesc by the caller
+        virtual const DepVal& raw_deps() = 0;
+
     protected:
         //! current infer result, to be used by dependents
         InpElement m_inp_element;
@@ -299,9 +302,6 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagTraitMutableBase,
 
         //! all missing inputs
         SharedSet<TagHandler*, TagHandlerSet> m_missing_input;
-
-        //! original deps given in the InferDesc by the caller
-        virtual const DepVal& raw_deps() = 0;
 
         //! recursively set m_inp_element_synced of this and all receivers to
         //! false
@@ -1025,6 +1025,14 @@ void StaticInferManagerImpl::update_mutable_src_shape(Tag dest) {
         }
     }
     MGB_CATCH(MegBrainError & exc, { update_rethrow_exc(dest, exc); })
+}
+
+DepVal StaticInferManagerImpl::get_deps(const DepElement &elem) {
+    auto trait_base = get_tag_trait_container(elem.dest).select(elem.type);
+    if (!trait_base || trait_base->is_const())
+        return {};
+
+    return trait_base->as_mutable_safe()->raw_deps();
 }
 
 /* ===================== CompSeqManager ===================== */

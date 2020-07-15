@@ -396,6 +396,108 @@ VarNode& VarNode::comp_node(const CompNode &cn) {
 }
 
 #if MGB_ENABLE_JSON
+std::shared_ptr<json::Value>
+VarNode::dump_static_infer_info_to_json() const {
+    using namespace cg::static_infer;
+    auto&& mgr = static_cast<cg::ComputingGraphImpl*>(
+            owner_graph())->static_infer_manager_impl();
+    auto get_dep_type = [](const DepType& type) -> std::string {
+        switch (type) {
+#define cb(name) \
+case DepType::name: \
+    return #name;
+            cb(SHAPE)
+            cb(VALUE)
+#undef cb
+            default:
+                mgb_throw(MegBrainError, "unknown dep type");
+        }
+    };
+    auto get_infer_type = [](const InferType::Flag& type) {
+        switch (type) {
+#define cb(name) \
+case InferType::Flag::name: \
+    return json::String::make(#name);
+            cb(NO_DESC)
+            cb(CONST)
+            cb(RT_STATIC)
+            cb(MISSING_INP)
+#undef cb
+            default:
+                mgb_throw(MegBrainError, "unknown infer type");
+        }
+    };
+    auto make_tag = [&](const DepType& type) {
+        VarNode* self = const_cast<VarNode*>(this);
+        auto c_deps = mgr.get_deps({self, type});
+        auto deps = json::Array::make();
+        for (auto&& i : c_deps) {
+            mgb_assert(i.dest);
+            deps->add(json::Object::make({
+                {"var", json::String::make(i.dest->id_str())},
+                {"dep_type", json::String::make(get_dep_type(i.type))}
+            }));
+        }
+        auto infer_type_handle = mgr.get_infer_type(self);
+        auto inferred_result = json::Null::make();
+        auto infer_type = type == DepType::SHAPE ? infer_type_handle.shape
+                                                 : infer_type_handle.value;
+        if (infer_type != InferType::Flag::NO_DESC) {
+            if (type == DepType::SHAPE) {
+                if (auto shape = mgr.infer_shape_fallible(self)) {
+                    auto inferred_shape = json::Array::make();
+                    for (size_t i = 0; i < shape->ndim; ++ i) {
+                        inferred_shape->add(json::Number::make((*shape)[i]));
+                    }
+                    inferred_result = inferred_shape;
+                }
+            } else {
+                if (auto p = mgr.infer_value_fallible(self)) {
+                    auto&& dev = *p;
+                    if (dev.shape().ndim == 1 &&
+                        dev.shape(0) < TensorShape::MAX_NDIM &&
+                        mgb_likely(dev.comp_node() == CompNode::default_cpu())) {
+                        MGB_TRY {
+                            size_t nr_elems = dev.shape(0);
+                            auto&& dtype = dev.dtype();
+                            void* vptr = dev.raw_ptr();
+                            double data[nr_elems];
+                            HostTensorND contig;
+                            if (!dev.layout().is_contiguous()) {
+                                // both src and dst are placed on default cpu,
+                                // no need for sync
+                                contig.copy_from(dev);
+                                mgb_assert(contig.layout().is_contiguous());
+                                vptr = contig.raw_ptr();
+                            } 
+                            static_cast_dtype(data, dtype, vptr, nr_elems);
+                            auto inferred_value = json::Array::make();
+                            for (size_t i = 0; i < nr_elems; ++ i) {
+                                inferred_value->add(json::Number::make(data[i]));
+                            }
+                            inferred_result = inferred_value;
+                        }
+                        MGB_CATCH(ConversionError&, {});
+                    } else {
+                        inferred_result = json::String::make("Large Array");
+                    }
+                }
+            }
+        }
+        return json::Object::make({
+            {"node_type", json::String::make("static_infer_tag")},
+            {"infer_type", get_infer_type(infer_type)},
+            {"inferred_result", inferred_result},
+            {"deps", deps}
+        });
+    };
+    return json::Object::make({
+#define TAG(type) {get_dep_type(type), make_tag(type)}
+        TAG(DepType::SHAPE), TAG(DepType::VALUE)
+#undef TAG
+    });
+}
+
 std::shared_ptr<json::Value> VarNode::to_json() const {
     auto get_var = [](VarNode *p) -> std::shared_ptr<json::Value> {
         if(p)
@@ -443,8 +545,10 @@ std::shared_ptr<json::Value> VarNode::to_json() const {
         {"dev_ptr", json::Null::make()},
         {"prev_dev_ptr", json::NumberInt::make(reinterpret_cast<size_t>(
                     m_prev_dev_ptr))},
-        {"flag", flag}
+        {"flag", flag},
+        {"static_infer_tags", dump_static_infer_info_to_json()}
     });
+
     if (m_prev_dev_ptr) {
         (*rst)["prev_dev_ptr_end"] = json::NumberInt::make(
                 reinterpret_cast<size_t>(m_prev_dev_ptr) +
