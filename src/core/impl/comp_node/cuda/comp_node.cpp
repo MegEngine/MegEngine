@@ -235,6 +235,7 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
         }
 
         void add_callback(CudaHostFunc&& cb) override {
+#if CUDART_VERSION >= 10000
             activate();
             CudaHostFunc* func_ptr = new CudaHostFunc(std::move(cb));
             MGB_TRY {
@@ -244,6 +245,13 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
                 delete func_ptr;
                 throw;
             });
+#else
+            MGB_MARK_USED_VAR(cb);
+            MGB_MARK_USED_VAR(cuda_host_func_caller);
+            mgb_throw(
+                    MegBrainError,
+                    "add_callback only support in cuda10.0 and later version");
+#endif
         }
 
         uint64_t get_uid() override {
