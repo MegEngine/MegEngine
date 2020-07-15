@@ -2727,6 +2727,9 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
 
 TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
     REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(6, 1);
     HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{
             1.2f, 127 * 127};
     auto graph = ComputingGraph::make();
