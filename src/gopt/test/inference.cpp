@@ -2948,6 +2948,90 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
 }
 
+TEST(TestGoptInference, ConvertFormatNCHW44MultiInput) {
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x1 = gen({1, 8, 16, 16}, cn);
+    auto host_x2 = gen({1, 1, 16, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+    opr::Convolution::Param param_conv;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    auto w1 = mkcvar("w1", {8, 8, 3, 3}),
+         conv1 = opr::Convolution::make(x, w1, param_conv);
+
+    auto b = mkvar("b", {1, 1, 16, 16}),
+         y = opr::Elemwise::make({conv1 + b}, opr::Elemwise::Param::Mode::RELU);
+
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw44();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::Convolution>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNCHW44MultiInput.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    //! meybe go to winograd in x86-32, so set error 1e-1
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
+}
+
+TEST(TestGoptInference, ConvertFormatNCHW44Reshape) {
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x1 = gen({1, 8, 16, 16}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+    opr::Convolution::Param param_conv;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    auto w1 = mkcvar("w1", {8, 8, 3, 3}),
+         conv1 = opr::Convolution::make(x, w1, param_conv);
+    auto y = opr::Reshape::make(conv1, {8, 16 * 16});
+
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw44();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::Convolution>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNCHW44Reshape.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    //! meybe go to winograd in x86-32, so set error 1e-1
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
+}
+
 TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     HostTensorGenerator<> gen;
     auto cn = CompNode::load("cpu0");
