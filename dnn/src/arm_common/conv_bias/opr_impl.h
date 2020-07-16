@@ -54,6 +54,7 @@ private:
 
     class AlgoS8ChanWiseStride1NCHW44;
     class AlgoS8ChanWiseStride2NCHW44;
+    class AlgoS8x8x16ChanWiseStride1Stride2NCHW44;
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     class AlgoFP16WinogradF23;

@@ -558,6 +558,142 @@ void BENCHMARK_IM2COL_NCHW44_VS_NCHW(const char* algo_name,
     }
 }
 
+std::vector<conv_bias::TestArg> get_nchw44_channel_wise_benchmark_args(
+        std::vector<size_t> kernel, size_t stride, bool no_bias,
+        bool no_nonlinemode, bool no_full_bias) {
+    using namespace conv_bias;
+    using Param = param::ConvBias;
+    using NLMode = param::ConvBias::NonlineMode;
+    std::vector<TestArg> args;
+
+    auto pack = [&](size_t n, size_t group, size_t w, size_t h, size_t kernel,
+                    size_t stride, NLMode nlmode, bool pad) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        if (pad) {
+            param.pad_h = kernel / 2;
+            param.pad_w = kernel / 2;
+        } else {
+            param.pad_h = 0;
+            param.pad_w = 0;
+        }
+        param.nonlineMode = nlmode;
+        param.format = param::ConvBias::Format::NCHW44;
+        param.sparse = param::ConvBias::Sparse::GROUP;
+
+        args.emplace_back(param, TensorShape{n, group, h, w, 4},
+                          TensorShape{group, 1, 1, kernel, kernel, 4},
+                          TensorShape{});
+        if (!no_bias) {
+            args.emplace_back(param, TensorShape{n, group, h, w, 4},
+                              TensorShape{group, 1, 1, kernel, kernel, 4},
+                              TensorShape{1, group, 1, 1, 4});
+        }
+        if (!no_full_bias) {
+            args.emplace_back(
+                    param, TensorShape{n, group, h, w, 4},
+                    TensorShape{group, 1, 1, kernel, kernel, 4},
+                    TensorShape{n, group,
+                                (h + 2 * param.pad_w - kernel) / stride + 1,
+                                (w + 2 * param.pad_w - kernel) / stride + 1,
+                                4});
+        }
+    };
+
+    std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
+    if (!no_nonlinemode) {
+        nonlinemode.emplace_back(NLMode::RELU);
+        nonlinemode.emplace_back(NLMode::H_SWISH);
+    }
+    for (size_t n : {1}) {
+        for (auto nlmode : nonlinemode) {
+            for (bool pad : {true}) {
+                for (size_t group : {1, 2, 4, 128}) {
+                    for (size_t size : {40,89,100,200}) {
+                        for (size_t kern : kernel) {
+                            pack(n, group, size, size, kern, stride, nlmode,
+                                 pad);
+                        }
+                    }
+                }
+            }
+           for (bool pad : {false}) {
+               for (size_t group : {1, 2, 4, 8, 16, 32, 64, 128}) {
+                   for (size_t size : {40, 89, 100}) {
+                       for (size_t kern : kernel) {
+                           pack(n, group, size, size, kern, stride, nlmode,
+                                pad);
+                       }
+                   }
+               }
+           }
+        }
+    }
+    return args;
+}
+
+void BENCHMARK_GROUPCONV_NCHW44_int8x8x16VS_int8x8x32(const char* algo_name0,
+                                     const char* algo_name1, Handle* handle,
+                                     size_t kernel,size_t stride = 1, size_t pack_size = 1) {
+
+auto args = get_nchw44_channel_wise_benchmark_args({2, 3, 5}, stride, false, true, true);
+
+    using namespace conv_bias;
+    constexpr size_t RUN = 10;
+    Benchmarker<ConvBias> benchmark(handle);
+    benchmark.set_display(false);
+    benchmark.set_times(RUN);
+    benchmark.set_dtype(0, dtype::Int8());
+    benchmark.set_dtype(1, dtype::Int8());
+    benchmark.set_dtype(2, dtype::Int32());
+    benchmark.set_dtype(4, dtype::Int32());
+
+    Benchmarker<ConvBias> benchmark_algo1(handle);
+    benchmark_algo1.set_display(false);
+    benchmark_algo1.set_times(RUN);
+    benchmark_algo1.set_dtype(0, dtype::Int8());
+    benchmark_algo1.set_dtype(1, dtype::Int8());
+    benchmark_algo1.set_dtype(2, dtype::Int16());
+    benchmark_algo1.set_dtype(4, dtype::Int16());
+
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle->create_operator<ConvBias>();
+        opr->param() = arg.param;
+        opr->deduce_layout({arg.src, dtype::Float32()},
+                           {arg.filter, dtype::Float32()},
+                           {arg.bias, dtype::Float32()}, {}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
+                             arg.filter[2] * arg.filter[3] * 2.0 * pack_size/
+                             (1024 * 1024 * 1024) * 1e3;
+
+        benchmark.set_param(arg.param);
+        auto used = algo_benchmark<ConvBias>(benchmark,
+                                             {arg.src, arg.filter, {}, {}, {}},
+                                             algo_name0) /
+                    RUN;
+
+        arg.param.nonlineMode = param::ConvBias::NonlineMode::IDENTITY;
+        arg.param.format = param::ConvBias::Format::NCHW44;
+        benchmark_algo1.set_param(arg.param);
+
+        auto used_algo1 =
+                algo_benchmark<ConvBias>(
+                        benchmark_algo1,
+                        {arg.src, arg.filter, {}, {}, {}},
+                        algo_name1) /
+                RUN;
+        printf("%s %s: normal: %f ms %f Gflops 8x8x16: %f ms %f GFlops "
+               "speedup: "
+               "%f\n",
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
+               used, computations / used, used_algo1,
+               computations / used_algo1, used / used_algo1);
+    }
+}
+
 #if MEGDNN_AARCH64
 TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x32) {
     printf("=========================compare "
@@ -578,6 +714,17 @@ TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x16) {
                                     dtype::Int8(), dtype::Int16());
 }
 #endif
+
+TEST_F(ARM_COMMON, BENCHMARK_GROUP_CONV_NCHW44_INT8x8x32_VS_INT8x8x16_STRIDE1) {
+    BENCHMARK_GROUPCONV_NCHW44_int8x8x16VS_int8x8x32("S8_CHAN_WISE_STRD1_NCHW44",
+                                    "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44",
+                                    handle(), 3,1,4);
+}
+TEST_F(ARM_COMMON, BENCHMARK_GROUP_CONV_NCHW44_INT8x8x32_VS_INT8x8x16_STRIDE2) {
+    BENCHMARK_GROUPCONV_NCHW44_int8x8x16VS_int8x8x32("S8_CHAN_WISE_STRD2_NCHW44",
+                                    "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44",
+                                    handle(), 3,2, 4);
+}
 
 TEST_F(ARM_COMMON, BENCHMARK_GROUP_CONVBIAS_QUANTIZED) {
     constexpr size_t RUNS = 50;

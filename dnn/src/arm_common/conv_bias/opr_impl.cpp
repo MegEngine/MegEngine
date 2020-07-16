@@ -48,6 +48,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoS8DirectStride1 s8_direct_stride1;
     AlgoS8ChanWiseStride1NCHW44 s8_channel_wise_stride1_nchw44;
     AlgoS8ChanWiseStride2NCHW44 s8_channel_wise_stride2_nchw44;
+    AlgoS8x8x16ChanWiseStride1Stride2NCHW44 s8x8x16_channel_wise_stride1_stride2_nchw44;
 
 #if __ARM_FEATURE_DOTPROD
     AlgoDotS8DirectStride1 ds8_direct_stride1;
@@ -95,6 +96,7 @@ public:
         direct_algos.emplace_back(&s8_direct_nchw_nchw44);
         direct_algos.emplace_back(&s8_direct_stride1);
 
+        direct_algos.emplace_back(&s8x8x16_channel_wise_stride1_stride2_nchw44);
         direct_algos.emplace_back(&s8_channel_wise_stride1_nchw44);
         direct_algos.emplace_back(&s8_channel_wise_stride2_nchw44);
 

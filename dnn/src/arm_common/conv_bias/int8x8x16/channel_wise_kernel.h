@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/arm_common/conv_bias/int8/channel_wise_kernel.h
+ * \file dnn/src/arm_common/conv_bias/int8x8x16/channel_wise_kernel.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -14,14 +14,14 @@
 
 namespace megdnn {
 namespace arm_common {
-namespace channel_wise_nchw44 {
+namespace channel_wise_nchw44_8x8x16 {
 
 #define KERN(stride, i)                                                   \
-    template <bool quantized, BiasMode bias_mode, typename Op>            \
-    void direct_##stride##_##i##x##i##_int8(                              \
-            const int8_t* src, const int8_t* filter, const int32_t* bias, \
+    template <BiasMode bias_mode>                                         \
+    void direct_##stride##_##i##x##i##_int8x8x16(                         \
+            const int8_t* src, const int8_t* filter, const int16_t* bias, \
             void* dst, const size_t IH, const size_t IW, const size_t OH, \
-            const size_t OW, const Op& op);
+            const size_t OW);
 
 KERN(stride1, 2)
 KERN(stride1, 3)
@@ -33,7 +33,7 @@ KERN(stride2, 5)
 
 #undef KERN
 
-}  // namespace channel_wise_nchw44
+}  // namespace channel_wise_nchw44_8x8x16
 }  // namespace arm_common
 }  // namespace megdnn
 

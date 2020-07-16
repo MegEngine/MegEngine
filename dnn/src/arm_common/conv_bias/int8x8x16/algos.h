@@ -72,6 +72,18 @@ public:
             const NCBKernSizeParam& param) const override;
 };
 
+class ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"; }
+    bool usable(const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+    size_t get_workspace(
+                         const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+};
+
 }  // namespace arm_common
 }  // namespace megdnn
 

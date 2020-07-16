@@ -10,16 +10,15 @@
  */
 
 #include "src/arm_common/conv_bias/int8x8x16/algos.h"
+#include "src/arm_common/conv_bias/int8x8x16/channel_wise_nchw44.h"
+#include "src/arm_common/conv_bias/int8x8x16/channel_wise_nchw44_8x8x16.h"
 #include "src/arm_common/conv_bias/int8x8x16/conv_direct.h"
 #include "src/arm_common/conv_bias/int8x8x16/conv_stride2.h"
 
 #include "midout.h"
-#include "src/common/opr_delegate.h"
+
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8816_kimpl)
 
-#include <atomic>
-#include <cstring>
-#include <mutex>
 
 using namespace megdnn;
 using namespace arm_common;
@@ -548,6 +547,72 @@ ConvBiasImpl::AlgoI8x8x16Stride2Filter2::dispatch_kerns(
     };
     size_t group = param.filter_meta.group;
     return {{kern, {group, 1_z, 1_z}}};
+}
+
+/* =====================8int8x8x16 channel_wise_nchw44  stride1 stride2 algo ===================== */
+bool ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
+    auto&& fm = param.filter_meta;
+    auto FH = fm.spatial[0];
+    bool avaible =
+            //! src and filter are int8, dst is int16
+            (param.src_type.enumv() == DTypeEnum::Int8 &&
+             param.filter_type.enumv() == DTypeEnum::Int8 &&
+             param.dst_type.enumv() == DTypeEnum::Int16) &&
+            fm.format == param::Convolution::Format::NCHW44 &&
+            param.bias_mode != megdnn::BiasMode::BIAS &&
+            param.nonlineMode == megdnn::NonlineMode::IDENTITY &&
+            !fm.should_flip && fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+            fm.dilation[1] == 1 &&
+            (fm.stride[0] == fm.stride[1] &&
+             (fm.stride[0] == 1 || fm.stride[0] == 2)) &&
+            FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5) &&
+            fm.icpg == 1 && fm.ocpg == 1 && fm.group % 4 == 0;
+    return avaible;
+}
+
+size_t ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44::get_workspace(
+        const NCBKernSizeParam& param) const {
+    size_t stride_h = param.filter_meta.stride[0];
+    size_t stride_w = param.filter_meta.stride[1];
+    megdnn_assert(stride_h == stride_w);
+    if (stride_h == 1) {
+        return channel_wise_nchw44_8x8x16::stride1::get_bundle(param)
+                .total_size_in_bytes();
+    } else if (stride_h == 2) {
+        return channel_wise_nchw44_8x8x16::stride2::get_bundle(param)
+                .total_size_in_bytes();
+    } else {
+        return 0;
+    }
+}
+
+SmallVector<ConvBiasImpl::NCBKern>
+ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44::dispatch_kerns(
+        const NCBKernSizeParam& param) const {
+    size_t stride_h = param.filter_meta.stride[0];
+    size_t stride_w = param.filter_meta.stride[1];
+    if (stride_h == stride_w && stride_h == 1) {
+        MIDOUT_BEGIN(
+                megdnn_arm_common_conv_bias_int8816_kimpl,
+                midout_iv(
+                        "AlgoS8x8x16ChanWiseStride1Stride2NCHW44_dispatch_kerns"_hash)) {
+            return channel_wise_nchw44_8x8x16::stride1::get_kimpls(param);
+        }
+        MIDOUT_END();
+        return {};
+    } else if (stride_h == stride_w && stride_h == 2) {
+        MIDOUT_BEGIN(
+                megdnn_arm_common_conv_bias_int8816_kimpl,
+                midout_iv(
+                        "AlgoS8x8x16ChanWiseStride2NCHW44_dispatch_kerns"_hash)) {
+            return channel_wise_nchw44_8x8x16::stride2::get_kimpls(param);
+        }
+        MIDOUT_END();
+        return {};
+    } else {
+        return {};
+    }
 }
 
 // vim: syntax=cpp.doxygen

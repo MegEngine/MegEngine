@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#include "megdnn/dtype.h"
 #include "test/arm_common/fixture.h"
 #include "test/common/benchmarker.h"
 #include "test/common/conv_bias.h"
@@ -473,6 +474,36 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
     checker_conv_bias_int8x8x32_multi(
             get_nchw44_channel_wise_args({2, 3, 5}, 2, false, true, true),
             handle(), "S8_CHAN_WISE_STRD2_NCHW44");
+}
+
+TEST_F(ARM_COMMON,
+       CONV_BIAS_INT8_INT8_INT16_CHANNEL_WISE_DIRECT1_NCHW44) {
+    Checker<ConvBias> checker(handle());
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"));
+    checker.set_dtype(0, dtype::Int8());
+    checker.set_dtype(1, dtype::Int8());
+    checker.set_dtype(2, dtype::Int16());
+    checker.set_dtype(4, dtype::Int16());
+    auto args = get_nchw44_channel_wise_args({2, 3, 5}, 1, false, true, true);
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, {}, {}, {}});
+    }
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_INT8_INT8_INT16_CHANNEL_WISE_DIRECT2_NCHW44) {
+    Checker<ConvBias> checker(handle());
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>("S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"));
+    checker.set_dtype(0, dtype::Int8());
+    checker.set_dtype(1, dtype::Int8());
+    checker.set_dtype(2, dtype::Int16());
+    checker.set_dtype(4, dtype::Int16());
+    auto args = get_nchw44_channel_wise_args({2, 3, 5}, 2, false, true, true);
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, {}, {}, {}});
+    }
 }
 
 /********************************qint8 direct******************************/
