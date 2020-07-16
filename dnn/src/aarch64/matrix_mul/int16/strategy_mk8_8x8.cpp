@@ -20,6 +20,82 @@ using namespace aarch64::matmul;
 
 namespace {
 
+void kern_8x1(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
+              dt_int32* output) {
+    //! As each load 32 number from B, but the pos add 24 * 2, so we minus 24
+    //! here.
+    LDB *= sizeof(dt_int16);
+
+    asm volatile(
+            "subs %w[K], %w[K], #8\n"
+            "ld1 {v24.4s, v25.4s, v26.4s, v27.4s}, [%[a_ptr]], 64\n"
+            "ld1 {v28.4s, v29.4s, v30.4s, v31.4s}, [%[a_ptr]], 64\n"
+            "ld1 {v0.4s}, [%[b_ptr]], %x[LDB]\n"
+
+            "smull v16.4s, v24.4h, v0.h[0]\n"
+            "smull2 v17.4s, v24.8h, v0.h[0]\n"
+            "smull v18.4s, v25.4h, v0.h[1]\n"
+            "smull2 v19.4s, v25.8h, v0.h[1]\n"
+            "smull v20.4s, v26.4h, v0.h[2]\n"
+            "smull2 v21.4s, v26.8h, v0.h[2]\n"
+            "smull v22.4s, v27.4h, v0.h[3]\n"
+            "smull2 v23.4s, v27.8h, v0.h[3]\n"
+
+            "beq 2f\n"
+
+            "1:\n"
+            "ld1 {v24.4s, v25.4s, v26.4s, v27.4s}, [%[a_ptr]], 64\n"
+            "smlal v16.4s, v28.4h, v0.h[4]\n"
+            "smlal2 v17.4s, v28.8h, v0.h[4]\n"
+            "smlal v18.4s, v29.4h, v0.h[5]\n"
+            "smlal2 v19.4s, v29.8h, v0.h[5]\n"
+            "smlal v20.4s, v30.4h, v0.h[6]\n"
+            "smlal2 v21.4s, v30.8h, v0.h[6]\n"
+            "smlal v22.4s, v31.4h, v0.h[7]\n"
+            "smlal2 v23.4s, v31.8h, v0.h[7]\n"
+
+            "ld1 {v0.4s}, [%[b_ptr]], %x[LDB]\n"
+            "ld1 {v28.4s, v29.4s, v30.4s, v31.4s}, [%[a_ptr]], 64\n"
+
+            "smlal v16.4s, v24.4h, v0.h[0]\n"
+            "smlal2 v17.4s, v24.8h, v0.h[0]\n"
+            "smlal v18.4s, v25.4h, v0.h[1]\n"
+            "smlal2 v19.4s, v25.8h, v0.h[1]\n"
+            "smlal v20.4s, v26.4h, v0.h[2]\n"
+            "smlal2 v21.4s, v26.8h, v0.h[2]\n"
+            "smlal v22.4s, v27.4h, v0.h[3]\n"
+            "smlal2 v23.4s, v27.8h, v0.h[3]\n"
+
+            "subs %w[K], %w[K], #8\n"
+            "bne 1b\n"
+
+            "2:\n"
+            "smlal v16.4s, v28.4h, v0.h[4]\n"
+            "smlal2 v17.4s, v28.8h, v0.h[4]\n"
+            "smlal v18.4s, v29.4h, v0.h[5]\n"
+            "smlal2 v19.4s, v29.8h, v0.h[5]\n"
+            "smlal v20.4s, v30.4h, v0.h[6]\n"
+            "smlal2 v21.4s, v30.8h, v0.h[6]\n"
+            "smlal v22.4s, v31.4h, v0.h[7]\n"
+            "smlal2 v23.4s, v31.8h, v0.h[7]\n"
+
+            "add v16.4s, v16.4s, v18.4s\n"
+            "add v20.4s, v20.4s, v22.4s\n"
+            "add v17.4s, v17.4s, v19.4s\n"
+            "add v21.4s, v21.4s, v23.4s\n"
+            "add v16.4s, v16.4s, v20.4s\n"
+            "add v17.4s, v17.4s, v21.4s\n"
+
+            "st1 {v16.4s, v17.4s}, [%[output]], 32\n"
+
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [output] "+r"(output), [LDB] "+r"(LDB)
+            :
+            : "v0", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "v24", "v25", "v26", "v27", "v28",
+              "v29", "v30", "v31", "cc", "memory");
+}
+
 // Overview of register layout:
 //
 // A 8x1 cell of Lhs is stored in 16bit in v24-v27
@@ -636,7 +712,7 @@ void gemm_nopack_s16_8x8::kern(const dt_int16* A, size_t LDA, const dt_int16* B,
     constexpr static size_t NB = 8;
     constexpr static size_t CALCBLK = 4;
 
-    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0 && N % CALCBLK == 0);
+    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0);
 
     //! (m/8, k/8, 8, 8) * (k/8, n, 8) = (m/8, n, 8)
     for (size_t m = 0; m < M; m += MB) {
@@ -648,8 +724,17 @@ void gemm_nopack_s16_8x8::kern(const dt_int16* A, size_t LDA, const dt_int16* B,
             cur_B += KB * NB;
             output += MB * NB;
         }
-        if (n < N) {
+        if (N - n >= 4) {
             kern_8x4(A, cur_B, LDB, K, output);
+            cur_B += KB * CALCBLK;
+            output += MB * CALCBLK;
+            n += 4;
+        }
+        while (n < N) {
+            kern_8x1(A, cur_B, LDB, K, output);
+            cur_B += KB;
+            output += MB;
+            n++;
         }
         A += LDA;
     }

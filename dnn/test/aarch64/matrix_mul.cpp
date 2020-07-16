@@ -38,10 +38,9 @@ TEST_F(AARCH64, MATRIX_MUL_FP32_PACK_MK4) {
 }
 
 TEST_F(AARCH64, MATRIX_MUL_FP32_MK4) {
-    //! nbase should be 4 in order to test the last rest 4 in N dim
     matrix_mul::check_matrix_mul(
             dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
-            "AARCH64_F32_MK4_4x16", param::MatrixMul::Format::MK4, 4);
+            "AARCH64_F32_MK4_4x16", param::MatrixMul::Format::MK4, 1);
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -52,10 +51,9 @@ TEST_F(AARCH64, MATRIX_MUL_F16_K8X24X1) {
 }
 
 TEST_F(AARCH64, MATRIX_MUL_F16_MK8) {
-    //! nbase should be 4 in order to test the last rest 4 in N dim
     matrix_mul::check_matrix_mul(
             dtype::Float16{}, dtype::Float16{}, dtype::Float16{}, handle(),
-            "AARCH64_F16_MK8_8X8", param::MatrixMul::Format::MK8, 4);
+            "AARCH64_F16_MK8_8X8", param::MatrixMul::Format::MK8, 1);
 }
 #endif
 
@@ -116,10 +114,9 @@ TEST_F(AARCH64, MATRIX_MUL_INT16x16x32_K12X8X1) {
 }
 
 TEST_F(AARCH64, MATRIX_MUL_INT16x16x32_MK8) {
-    //! nbase should be 4 in order to test the last rest 4 in N dim
     matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
                                  handle(), "AARCH64_INT16X16X32_MK8_8X8",
-                                 param::MatrixMul::Format::MK8, 4);
+                                 param::MatrixMul::Format::MK8, 1);
 }
 
 //! FIXME: need to add tests of GEMV and QUINT8

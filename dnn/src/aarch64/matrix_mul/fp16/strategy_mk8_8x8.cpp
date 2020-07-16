@@ -21,6 +21,76 @@ using namespace aarch64::matmul;
 
 namespace {
 
+void kern_8x1(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
+              dt_float16* output) {
+    LDB *= sizeof(dt_float16);
+    asm volatile(
+            ".arch armv8.2-a+fp16\n"
+
+            "subs %w[K], %w[K], #8\n"
+            "ld1 {v16.4s, v17.4s, v18.4s, v19.4s}, [%[a_ptr]], 64\n"
+            "ld1 {v20.4s, v21.4s, v22.4s, v23.4s}, [%[a_ptr]], 64\n"
+            "eor v24.16b, v24.16b, v24.16b\n"
+            "eor v25.16b, v25.16b, v25.16b\n"
+            "eor v26.16b, v26.16b, v26.16b\n"
+            "eor v27.16b, v27.16b, v27.16b\n"
+            "eor v28.16b, v28.16b, v28.16b\n"
+            "eor v29.16b, v29.16b, v29.16b\n"
+            "eor v30.16b, v30.16b, v30.16b\n"
+            "eor v31.16b, v31.16b, v31.16b\n"
+            "ld1 {v0.4s}, [%[b_ptr]], %x[LDB]\n"
+
+            "fmla v24.8h, v16.8h, v0.h[0]\n"
+            "fmla v25.8h, v17.8h, v0.h[1]\n"
+            "fmla v26.8h, v18.8h, v0.h[2]\n"
+            "fmla v27.8h, v19.8h, v0.h[3]\n"
+
+            "beq 2f\n"
+
+            "1:\n"
+
+            "ld1 {v16.4s, v17.4s, v18.4s, v19.4s}, [%[a_ptr]], 64\n"
+            "fmla v28.8h, v20.8h, v0.h[4]\n"
+            "fmla v29.8h, v21.8h, v0.h[5]\n"
+            "fmla v30.8h, v22.8h, v0.h[6]\n"
+            "fmla v31.8h, v23.8h, v0.h[7]\n"
+
+            "ld1 {v0.4s}, [%[b_ptr]], %x[LDB]\n"
+
+            "ld1 {v20.4s, v21.4s, v22.4s, v23.4s}, [%[a_ptr]], 64\n"
+            "fmla v24.8h, v16.8h, v0.h[0]\n"
+            "fmla v25.8h, v17.8h, v0.h[1]\n"
+            "fmla v26.8h, v18.8h, v0.h[2]\n"
+            "fmla v27.8h, v19.8h, v0.h[3]\n"
+
+            "subs %w[K], %w[K], #8\n"
+            "bne 1b\n"
+
+            "2:\n"
+
+            "fmla v28.8h, v20.8h, v0.h[4]\n"
+            "fmla v29.8h, v21.8h, v0.h[5]\n"
+            "fmla v30.8h, v22.8h, v0.h[6]\n"
+            "fmla v31.8h, v23.8h, v0.h[7]\n"
+
+            "fadd v24.8h, v24.8h, v25.8h\n"
+            "fadd v26.8h, v26.8h, v27.8h\n"
+            "fadd v28.8h, v28.8h, v29.8h\n"
+            "fadd v30.8h, v30.8h, v31.8h\n"
+            "fadd v24.8h, v24.8h, v26.8h\n"
+            "fadd v28.8h, v28.8h, v30.8h\n"
+            "fadd v24.8h, v24.8h, v28.8h\n"
+
+            "st1 {v24.4s}, [%[output]], 16\n"
+
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [output] "+r"(output), [LDB] "+r"(LDB)
+            :
+            : "v0", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
+              "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31", "cc",
+              "memory");
+}
+
 // Overview of register layout:
 //
 // A 8x1 cell of Rhs is stored in 16bit in v0-v3
@@ -416,7 +486,7 @@ void gemm_nopack_f16_8x8::kern(const dt_float16* A, size_t LDA,
     constexpr static size_t NB = 8;
     constexpr static size_t CALCBLK = 4;
 
-    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0 && N % CALCBLK == 0);
+    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0);
 
     //! (m/8, k/8, 8, 8) * (k/8, n, 8) = (m/8, n, 8)
     for (size_t m = 0; m < M; m += MB) {
@@ -428,8 +498,17 @@ void gemm_nopack_f16_8x8::kern(const dt_float16* A, size_t LDA,
             cur_B += KB * NB;
             output += MB * NB;
         }
-        if (n < N) {
+        if (N - n >= 4) {
             kern_8x4(A, cur_B, LDB, K, output);
+            cur_B += KB * CALCBLK;
+            output += MB * CALCBLK;
+            n += 4;
+        }
+        while (n < N) {
+            kern_8x1(A, cur_B, LDB, K, output);
+            cur_B += KB;
+            output += MB;
+            n++;
         }
         A += LDA;
     }

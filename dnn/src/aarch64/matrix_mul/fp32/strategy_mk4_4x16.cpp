@@ -20,6 +20,54 @@ using namespace aarch64::matmul;
 
 namespace {
 
+void kern_4x1(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
+              float* output) {
+    LDB *= sizeof(float);
+    asm volatile(
+            "subs %w[K], %w[K], #4\n"
+            "ld1 {v4.4s, v5.4s, v6.4s, v7.4s}, [%[a_ptr]], 64\n"
+            "eor v16.16b, v16.16b, v16.16b\n"
+            "eor v17.16b, v17.16b, v17.16b\n"
+            "eor v18.16b, v18.16b, v18.16b\n"
+            "eor v19.16b, v19.16b, v19.16b\n"
+            "ld1 {v0.4s}, [%[b_ptr]], %x[LDB]\n"
+            "prfm pstl1keep, [%[b_ptr]]\n"
+
+            "fmla v16.4s, v4.4s, v0.s[0]\n"
+            "fmla v17.4s, v5.4s, v0.s[1]\n"
+
+            "beq 2f\n"
+
+            "1:\n"
+            "ld1 {v4.4s, v5.4s}, [%[a_ptr]], 32\n"
+            "fmla v18.4s, v6.4s, v0.s[2]\n"
+            "fmla v19.4s, v7.4s, v0.s[3]\n"
+            "ld1 {v0.4s}, [%[b_ptr]], %x[LDB]\n"
+            "prfm pstl1keep, [%[b_ptr]]\n"
+            "ld1 {v6.4s, v7.4s}, [%[a_ptr]], 32\n"
+            "fmla v16.4s, v4.4s, v0.s[0]\n"
+            "fmla v17.4s, v5.4s, v0.s[1]\n"
+
+            "subs %w[K], %w[K], #4\n"
+            "bne 1b\n"
+
+            "2:\n"
+
+            "fmla v18.4s, v6.4s, v0.s[2]\n"
+            "fmla v19.4s, v7.4s, v0.s[3]\n"
+            "fadd v16.4s, v16.4s, v18.4s\n"
+            "fadd v17.4s, v17.4s, v19.4s\n"
+            "fadd v16.4s, v16.4s, v17.4s\n"
+
+            "st1 {v16.4s}, [%[output]], 16\n"
+
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [output] "+r"(output), [LDB] "+r"(LDB)
+            :
+            : "v0", "v4", "v5", "v6", "v7", "v16", "v17", "v18", "v19", "cc",
+              "memory");
+}
+
 // Overview of register layout:
 //
 // A 4x4 block of A is stored in register v4-v7
@@ -117,7 +165,8 @@ void kern_4x4(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17",
+              "v18", "v19", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -535,7 +584,7 @@ void sgemm_nopack_4x16::kern(const float* A, size_t LDA, const float* B,
     constexpr static size_t NB = 16;
     constexpr static size_t CALCBLK = 4;
 
-    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0 && N % CALCBLK == 0);
+    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0);
 
     //! (m/4, k/4, 4, 4) * (k/4, n, 4) = (m/4, n, 4)
     for (size_t m = 0; m < M; m += MB) {
@@ -547,21 +596,23 @@ void sgemm_nopack_4x16::kern(const float* A, size_t LDA, const float* B,
             cur_B += KB * NB;
             output += MB * NB;
         }
-        switch (N - n) {
-            case 4:
-                kern_4x4(A, cur_B, LDB, K, output);
-                break;
-            case 8:
-                kern_4x8(A, cur_B, LDB, K, output);
-                break;
-            case 12:
-                kern_4x8(A, cur_B, LDB, K, output);
-                cur_B += KB * CALCBLK * 2;
-                output += MB * CALCBLK * 2;
-                kern_4x4(A, cur_B, LDB, K, output);
-                break;
-            default:
-                break;
+        if (N - n >= 8) {
+            kern_4x8(A, cur_B, LDB, K, output);
+            cur_B += KB * CALCBLK * 2;
+            output += MB * CALCBLK * 2;
+            n += 8;
+        }
+        if (N - n >= 4) {
+            kern_4x4(A, cur_B, LDB, K, output);
+            cur_B += KB * CALCBLK;
+            output += MB * CALCBLK;
+            n += 4;
+        }
+        while (n < N) {
+            kern_4x1(A, cur_B, LDB, K, output);
+            cur_B += KB;
+            output += MB;
+            n++;
         }
         A += LDA;
     }

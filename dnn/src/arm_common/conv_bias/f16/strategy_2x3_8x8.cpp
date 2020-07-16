@@ -390,7 +390,7 @@ void winograd_2x3_8x8_f16::output(const dt_float16* output_transform_buf,
             size_t oh_start = nh * OUTPUT_BLOCK_SIZE;
             size_t ow_start = nw * OUTPUT_BLOCK_SIZE;
             DISPATCH_CONV_WINOGRAD_BIAS(
-                    megdnn_arm_common_winograd_fp16_F23_8x8, cb, __fp16, __fp16,
+                    megdnn_arm_common_winograd_f16_F23_8x8, cb, __fp16, __fp16,
                     bmode, nonline_mode, output_transform_buf, bias, output,
                     transform_mid_buf, oh_start, ow_start, OH, OW, oc_start,
                     oc_end, oc_index, unit_idx, nr_units_in_tile, src_dtype, dst_dtype);

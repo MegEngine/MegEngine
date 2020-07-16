@@ -20,6 +20,58 @@ using namespace armv7::matmul;
 
 namespace {
 
+void kern_4x1(const float* A, const float* B, size_t LDB, size_t K, float* C) {
+    LDB = (LDB - 4) * sizeof(float);
+    asm volatile(
+            "subs %[K], %[K], #4\n"
+
+            "vld1.32 {d8-d11}, [%[A]]!\n"
+            "vld1.32 {d12-d15}, [%[A]]!\n"
+            "veor    q8,     q8 \n"
+            "veor    q9,     q9 \n"
+            "veor    q10,    q10 \n"
+            "veor    q11,    q11 \n"
+
+            "vld1.32 {d0-d1}, [%[B]]!\n"
+
+            "vmla.f32 q8, q4, d0[0]\n"
+            "vmla.f32 q9, q5, d0[1]\n"
+
+            "beq 2f\n"
+
+            "1:\n"
+
+            "vld1.32 {d8-d11}, [%[A]]!\n"
+            "vmla.f32 q10, q6, d1[0]\n"
+            "vmla.f32 q11, q7, d1[1]\n"
+
+            "add %[B], %[B], %[LDB]\n"
+            "vld1.32 {d0-d1}, [%[B]]!\n"
+            "vld1.32 {d12-d15}, [%[A]]!\n"
+
+            "vmla.f32 q8, q4, d0[0]\n"
+            "vmla.f32 q9, q5, d0[1]\n"
+
+            "subs %[K], %[K], #4\n"
+            "bne 1b\n"
+
+            "2:\n"
+
+            "vmla.f32 q10, q6, d1[0]\n"
+            "vmla.f32 q11, q7, d1[1]\n"
+            "vadd.f32 q8,  q8, q10\n"
+            "vadd.f32 q9,  q9, q11\n"
+            "vadd.f32 q8,  q8, q9\n"
+
+            "vst1.32 {d16, d17}, [%[C]]!\n"
+
+            : [ A ] "+r"(A), [ B ] "+r"(B), [ K ] "+r"(K), [ C ] "+r"(C)
+            : [ LDB ] "r"(LDB)
+            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15",
+              "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "cc",
+              "memory");
+}
+
 // Overview of register layout:
 //
 // A 8x4 cell of Rhs is stored in 32bit in q0-q3, load 4 register each time
@@ -268,9 +320,9 @@ void sgemm_nopack_4x8::kern(const float* A, size_t LDA, const float* B,
     constexpr size_t MB = 4;
     constexpr size_t KB = 4;
     constexpr size_t NB = 8;
-    constexpr size_t CALCBLK = 4;
+    constexpr size_t NB_HALF = 4;
 
-    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0 && N % CALCBLK == 0);
+    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0);
 
     //! (m/8, k/8, 8, 8) * (k/8, n, 8) = (m/8, n, 8)
     for (size_t m = 0; m < M; m += MB) {
@@ -282,8 +334,17 @@ void sgemm_nopack_4x8::kern(const float* A, size_t LDA, const float* B,
             cur_B += KB * NB;
             output += MB * NB;
         }
-        if (n < N) {
+        if (N - n >= 4) {
             kern_4x4(A, cur_B, LDB, K, output);
+            cur_B += KB * NB_HALF;
+            output += MB * NB_HALF;
+            n += 4;
+        }
+        while (n < N) {
+            kern_4x1(A, cur_B, LDB, K, output);
+            cur_B += KB;
+            output += MB;
+            n++;
         }
         A += LDA;
     }

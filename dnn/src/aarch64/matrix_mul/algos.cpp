@@ -214,8 +214,7 @@ bool MatrixMulImpl::AlgoF32MK4_4x16::usable(
            kern_size_param.B_type == dtype::Float32() &&
            kern_size_param.A_type == dtype::Float32() &&
            kern_size_param.format == param::MatrixMul::Format::MK4 &&
-           !kern_size_param.trA && !kern_size_param.trB &&
-           kern_size_param.N % 4 == 0;
+           !kern_size_param.trA && !kern_size_param.trB;
 }
 
 size_t MatrixMulImpl::AlgoF32MK4_4x16::get_workspace(
@@ -330,8 +329,7 @@ bool MatrixMulImpl::AlgoF16MK8_8x8::usable(
            kern_size_param.B_type == kern_size_param.A_type &&
            kern_size_param.A_type == dtype::Float16() &&
            kern_size_param.format == param::MatrixMul::Format::MK8 &&
-           !kern_size_param.trA && !kern_size_param.trB &&
-           kern_size_param.N % 4 == 0;
+           !kern_size_param.trA && !kern_size_param.trB;
 }
 
 size_t MatrixMulImpl::AlgoF16MK8_8x8::get_workspace(
@@ -918,8 +916,7 @@ bool MatrixMulImpl::AlgoInt16x16x32MK8_8x8::usable(
            kern_size_param.B_type == dtype::Int16() &&
            kern_size_param.A_type == dtype::Int16() &&
            kern_size_param.format == param::MatrixMul::Format::MK8 &&
-           !kern_size_param.trA && !kern_size_param.trB &&
-           kern_size_param.N % 4 == 0;
+           !kern_size_param.trA && !kern_size_param.trB;
 }
 
 size_t MatrixMulImpl::AlgoInt16x16x32MK8_8x8::get_workspace(

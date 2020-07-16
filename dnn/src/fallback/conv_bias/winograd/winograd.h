@@ -427,9 +427,6 @@ public:
                       "The winograd remain oc is not times of OC_BLOCK_SIZE");
         if (format == param::MatrixMul::Format::MK4 ||
             format == param::MatrixMul::Format::MK8) {
-#if !MEGDNN_X86
-            nr_tiles_in_unit = round_up<size_t>(nr_tiles_in_unit, 4);
-#endif
             megdnn_assert(nr_tiles_in_unit <= unit_tile_size,
                           "nr_tiles_in_unit: %zu TILE_SIZE:%zu",
                           nr_tiles_in_unit, unit_tile_size);

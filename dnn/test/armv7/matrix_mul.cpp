@@ -26,7 +26,7 @@ TEST_F(ARMV7, MATRIX_MUL) {
 TEST_F(ARMV7, MATRIX_MUL_MK4) {
     matrix_mul::check_matrix_mul(
             dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
-            "ARMV7_F32_MK4_4x8", param::MatrixMul::Format::MK4, 4);
+            "ARMV7_F32_MK4_4x8", param::MatrixMul::Format::MK4, 1);
 }
 
 TEST_F(ARMV7, MATRIX_MUL_PACK_MK4) {
@@ -66,7 +66,7 @@ TEST_F(ARMV7, MATRIX_MUL_INT16x16x32) {
 TEST_F(ARMV7, MATRIX_MUL_INT16x16x32_MK8) {
     matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
                                  handle(), "ARMV7_INT16X16X32_MK8_4X8",
-                                 param::MatrixMul::Format::MK8, 4);
+                                 param::MatrixMul::Format::MK8, 1);
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -78,7 +78,7 @@ TEST_F(ARMV7, MATRIX_MUL_FP16) {
 TEST_F(ARMV7, MATRIX_MUL_F16_MK8) {
     matrix_mul::check_matrix_mul(
             dtype::Float16{}, dtype::Float16{}, dtype::Float16{}, handle(),
-            "AARCH32_F16_MK8_4X8", param::MatrixMul::Format::MK8, 4);
+            "AARCH32_F16_MK8_4X8", param::MatrixMul::Format::MK8, 1);
 }
 #endif
 

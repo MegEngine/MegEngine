@@ -21,6 +21,66 @@ using namespace armv7::matmul;
 
 namespace {
 
+void kern_8x1(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
+              dt_float16* output) {
+    LDB = (LDB - 4) * sizeof(dt_float16);
+    asm volatile(
+            "subs %[K], #8\n"
+
+            "vld1.32 {d0}, [%[b_ptr]]!\n"
+            "vld1.32 {d1}, [%[b_ptr]], %[LDB]\n"
+            "vld1.32 {d8, d9, d10, d11}, [%[a_ptr]]!\n"
+            "vld1.32 {d12, d13, d14, d15}, [%[a_ptr]]!\n"
+            "vld1.32 {d16, d17, d18, d19}, [%[a_ptr]]!\n"
+            "vld1.32 {d20, d21, d22, d23}, [%[a_ptr]]!\n"
+
+            "vmul.f16 q12, q4, d0[0]\n"
+            "vmul.f16 q13, q5, d0[1]\n"
+            "vmul.f16 q14, q6, d0[2]\n"
+            "vmul.f16 q15, q7, d0[3]\n"
+
+            "beq 2f\n"
+
+            "1:\n"
+            "vmla.f16 q12, q8, d1[0]\n"
+            "vld1.32 {d0}, [%[b_ptr]]!\n"
+            "vmla.f16 q13, q9, d1[1]\n"
+            "vld1.32 {d8, d9, d10, d11}, [%[a_ptr]]!\n"
+            "vmla.f16 q14, q10, d1[2]\n"
+            "vld1.32 {d12, d13, d14, d15}, [%[a_ptr]]!\n"
+            "vmla.f16 q15, q11, d1[3]\n"
+
+            "vmla.f16 q12, q4, d0[0]\n"
+            "vld1.32 {d1}, [%[b_ptr]], %[LDB]\n"
+            "vmla.f16 q13, q5, d0[1]\n"
+            "vld1.32 {d16, d17, d18, d19}, [%[a_ptr]]!\n"
+            "vmla.f16 q14, q6, d0[2]\n"
+            "vld1.32 {d20, d21, d22, d23}, [%[a_ptr]]!\n"
+            "vmla.f16 q15, q7, d0[3]\n"
+
+            "subs %[K], #8\n"
+            "bne 1b\n"
+
+            "2:\n"
+            "vmla.f16 q12, q8, d1[0]\n"
+            "vmla.f16 q13, q9, d1[1]\n"
+            "vmla.f16 q14, q10, d1[2]\n"
+            "vmla.f16 q15, q11, d1[3]\n"
+
+            "vadd.f16 q12, q12, q14\n"
+            "vadd.f16 q13, q13, q15\n"
+            "vadd.f16 q12, q12, q13\n"
+
+            "vst1.32 {d24, d25}, [%[output]]!\n"
+
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [output] "+r"(output), [LDB] "+r"(LDB)
+            :
+            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15",
+              "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "d24",
+              "d25", "d26", "d27", "d28", "d29", "d30", "d31", "cc", "memory");
+}
+
 // Overview of register layout:
 //
 // A 8x1 cell of Rhs is stored in 16bit in v4-v11
@@ -45,7 +105,7 @@ namespace {
 //  | v3[0-7]|          |v15[0-7]|
 //  +--------+          +--------+--------+
 //                      Accumulator
-void kern_4x8(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
+void kern_8x4(const dt_float16* a_ptr, const dt_float16* b_ptr, int LDB, int K,
               dt_float16* output) {
     //! As each load 64 number from B, but the pos add 48 * 2, so we minus 48
     //! here.
@@ -179,18 +239,24 @@ void gemm_nopack_f16_4x8::kern(const dt_float16* A, size_t LDA,
     constexpr static size_t MB = 8;
     constexpr static size_t KB = 8;
     constexpr static size_t NB = 4;
-    constexpr static size_t CALCBLK = 4;
 
-    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0 && N % CALCBLK == 0);
+    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0);
 
     //! (m/8, k/8, 8, 8) * (k/8, n, 8) = (m/8, n, 8)
     for (size_t m = 0; m < M; m += MB) {
         dt_float16* output = C + (m / MB) * LDC;
         const dt_float16* cur_B = B;
-        for (size_t n = 0; n < N; n += NB) {
-            kern_4x8(A, cur_B, LDB, K, output);
+        size_t n = 0;
+        for (; n + NB - 1 < N; n += NB) {
+            kern_8x4(A, cur_B, LDB, K, output);
             cur_B += KB * NB;
             output += MB * NB;
+        }
+        while (n < N) {
+            kern_8x1(A, cur_B, LDB, K, output);
+            cur_B += KB;
+            output += MB;
+            n++;
         }
         A += LDA;
     }

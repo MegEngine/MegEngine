@@ -20,6 +20,91 @@ using namespace armv7::matmul;
 
 namespace {
 
+void kern_8x1(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
+              dt_int32* output) {
+    //! As each load 16 number from B, but the pos add 16 * 2, so we minus 16
+    //! here.
+    LDB = (LDB - 4) * sizeof(dt_int16);
+
+    asm volatile(
+            "subs %[K], #8\n"
+            "vld1.32 {d8, d9, d10, d11}, [%[a_ptr]]!\n"
+            "vld1.32 {d12, d13, d14, d15}, [%[a_ptr]]!\n"
+            "vld1.32 {d16, d17, d18, d19}, [%[a_ptr]]!\n"
+            "vld1.32 {d20, d21, d22, d23}, [%[a_ptr]]!\n"
+
+            "vld1.32 {d0}, [%[b_ptr]]!\n"
+            "vld1.32 {d1}, [%[b_ptr]], %[LDB]\n"
+
+            "vmull.s16 q12, d8, d0[0]\n"
+            "vmull.s16 q13, d9, d0[0]\n"
+            "vmull.s16 q14, d10, d0[1]\n"
+            "vmull.s16 q15, d11, d0[1]\n"
+
+            "vmlal.s16 q12, d12, d0[2]\n"
+            "vmlal.s16 q13, d13, d0[2]\n"
+            "vmlal.s16 q14, d14, d0[3]\n"
+            "vmlal.s16 q15, d15, d0[3]\n"
+
+            "beq 2f\n"
+
+            "1:\n"
+
+            "vld1.32 {d8, d9, d10, d11}, [%[a_ptr]]!\n"
+            "vld1.32 {d12, d13, d14, d15}, [%[a_ptr]]!\n"
+            "vld1.32 {d0}, [%[b_ptr]]!\n"
+
+            "vmlal.s16 q12, d16, d1[0]\n"
+            "vmlal.s16 q13, d17, d1[0]\n"
+            "vmlal.s16 q14, d18, d1[1]\n"
+            "vmlal.s16 q15, d19, d1[1]\n"
+
+            "vmlal.s16 q12, d20, d1[2]\n"
+            "vmlal.s16 q13, d21, d1[2]\n"
+            "vmlal.s16 q14, d22, d1[3]\n"
+            "vmlal.s16 q15, d23, d1[3]\n"
+
+            "vld1.32 {d1}, [%[b_ptr]], %[LDB]\n"
+            "vld1.32 {d16, d17, d18, d19}, [%[a_ptr]]!\n"
+            "vld1.32 {d20, d21, d22, d23}, [%[a_ptr]]!\n"
+
+            "vmlal.s16 q12, d8, d0[0]\n"
+            "vmlal.s16 q13, d9, d0[0]\n"
+            "vmlal.s16 q14, d10, d0[1]\n"
+            "vmlal.s16 q15, d11, d0[1]\n"
+
+            "vmlal.s16 q12, d12, d0[2]\n"
+            "vmlal.s16 q13, d13, d0[2]\n"
+            "vmlal.s16 q14, d14, d0[3]\n"
+            "vmlal.s16 q15, d15, d0[3]\n"
+
+            "subs %[K], %[K], #8\n"
+            "bne 1b\n"
+
+            "2:\n"
+            "vmlal.s16 q12, d16, d1[0]\n"
+            "vmlal.s16 q13, d17, d1[0]\n"
+            "vmlal.s16 q14, d18, d1[1]\n"
+            "vmlal.s16 q15, d19, d1[1]\n"
+
+            "vmlal.s16 q12, d20, d1[2]\n"
+            "vmlal.s16 q13, d21, d1[2]\n"
+            "vmlal.s16 q14, d22, d1[3]\n"
+            "vmlal.s16 q15, d23, d1[3]\n"
+
+            "vadd.s32 q12, q12, q14\n"
+            "vadd.s32 q13, q13, q15\n"
+
+            "vst1.32 {d24, d25, d26, d27}, [%[output]]!\n"
+
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [output] "+r"(output), [LDB] "+r"(LDB)
+            :
+            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15",
+              "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "d24",
+              "d25", "d26", "d27", "d28", "d29", "d30", "d31", "cc", "memory");
+}
+
 // Overview of register layout:
 //
 // A 4x8 cell of Rhs is stored in 16bit in q0-q3
@@ -40,7 +125,7 @@ namespace {
 //  | q3[0-7]|          |q14[0-3]|v15[0-3]|
 //  +--------+          +--------+--------+
 //                      Accumulator
-void kern_4x8(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
+void kern_8x4(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
               dt_int32* output) {
     //! As each load 16 number from B, but the pos add 16 * 2, so we minus 16
     //! here.
@@ -247,18 +332,24 @@ void gemm_nopack_s16_4x8::kern(const dt_int16* A, size_t LDA, const dt_int16* B,
     constexpr static size_t MB = 8;
     constexpr static size_t KB = 8;
     constexpr static size_t NB = 4;
-    constexpr static size_t CALCBLK = 4;
 
-    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0 && N % CALCBLK == 0);
+    megdnn_assert(!trA && !trB && M % MB == 0 && K % KB == 0);
 
     //! (m/8, k/8, 8, 8) * (k/8, n, 8) = (m/8, n, 8)
     for (size_t m = 0; m < M; m += MB) {
         dt_int32* output = C + (m / MB) * LDC;
         const dt_int16* cur_B = B;
-        for (size_t n = 0; n < N; n += NB) {
-            kern_4x8(A, cur_B, LDB, K, output);
+        size_t n = 0;
+        for (; n + NB - 1 < N; n += NB) {
+            kern_8x4(A, cur_B, LDB, K, output);
             cur_B += KB * NB;
             output += MB * NB;
+        }
+        while (n < N) {
+            kern_8x1(A, cur_B, LDB, K, output);
+            cur_B += KB;
+            output += MB;
+            n++;
         }
         A += LDA;
     }
