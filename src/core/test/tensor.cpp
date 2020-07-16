@@ -418,4 +418,13 @@ TEST(TestTensor, CpuCudaD2DCopy) {
     }
 }
 
+TEST(TestTensor, ProxyToDefaultCPU) {
+    auto cn = CompNode::load("xpux");
+    auto x = HostTensorND(cn, TensorLayout({1, 2, 3}, dtype::Float32{}));
+    auto y = x.proxy_to_default_cpu();
+    ASSERT_EQ(y.comp_node(), CompNode::default_cpu());
+    ASSERT_EQ(x.layout(), y.layout());
+    ASSERT_EQ(x.raw_ptr(), y.raw_ptr());
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
