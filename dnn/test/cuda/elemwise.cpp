@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "test/common/elemwise.h"
@@ -26,66 +27,61 @@ using namespace test;
 
 #define cudnn_check(e) megdnn_assert((e) == CUDNN_STATUS_SUCCESS)
 namespace {
-    __attribute__((unused))
-    cudnnTensorDescriptor_t make_cudnn_tensor_desc(const TensorLayout &ly) {
-        megdnn_assert(ly.ndim && ly.ndim <= 4 && ly.is_contiguous());
-        int dim[4] = {1, 1, 1, 1}, stride[4] = {1, 1, 1, 1};
-        for (size_t i = 0; i < ly.ndim; ++ i) {
-            dim[i] = ly.shape[i];
-            stride[i] = ly.stride[i];
-        }
-        cudnnTensorDescriptor_t ret;
-        cudnn_check(cudnnCreateTensorDescriptor(&ret));
-        // cudnn requires tensors to be at-least 4D
-        cudnn_check(cudnnSetTensor4dDescriptorEx(ret,
-                    CUDNN_DATA_FLOAT,
-                    dim[0], dim[1], dim[2], dim[3],
-                    stride[0], stride[1], stride[2], stride[3]));
-
-        return ret;
+__attribute__((unused)) cudnnTensorDescriptor_t make_cudnn_tensor_desc(
+        const TensorLayout& ly) {
+    megdnn_assert(ly.ndim && ly.ndim <= 4 && ly.is_contiguous());
+    int dim[4] = {1, 1, 1, 1}, stride[4] = {1, 1, 1, 1};
+    for (size_t i = 0; i < ly.ndim; ++i) {
+        dim[i] = ly.shape[i];
+        stride[i] = ly.stride[i];
     }
+    cudnnTensorDescriptor_t ret;
+    cudnn_check(cudnnCreateTensorDescriptor(&ret));
+    // cudnn requires tensors to be at-least 4D
+    cudnn_check(cudnnSetTensor4dDescriptorEx(ret, CUDNN_DATA_FLOAT, dim[0],
+                                             dim[1], dim[2], dim[3], stride[0],
+                                             stride[1], stride[2], stride[3]));
 
-    void run_tensor_add(
-            Handle *handle_cuda,
-            const TensorND &a, const TensorND &b,
-            const TensorND &c) {
+    return ret;
+}
+
+void run_tensor_add(Handle* handle_cuda, const TensorND& a, const TensorND& b,
+                    const TensorND& c) {
 #if 1
-        cudnnHandle_t cudnn_handle;
-        cudnn_check(cudnnCreate(&cudnn_handle));
-        cuda_check(cudaDeviceSynchronize());
-        cuda_check(cudaMemcpy(c.raw_ptr, a.raw_ptr, a.layout.span().dist_byte(),
-                    cudaMemcpyDeviceToDevice));
+    cudnnHandle_t cudnn_handle;
+    cudnn_check(cudnnCreate(&cudnn_handle));
+    cuda_check(cudaDeviceSynchronize());
+    cuda_check(cudaMemcpy(c.raw_ptr, a.raw_ptr, a.layout.span().dist_byte(),
+                          cudaMemcpyDeviceToDevice));
 
-        auto bdesc = make_cudnn_tensor_desc(b.layout),
-             cdesc = make_cudnn_tensor_desc(c.layout);
+    auto bdesc = make_cudnn_tensor_desc(b.layout),
+         cdesc = make_cudnn_tensor_desc(c.layout);
 
-        float alpha = 1, beta = 1;
-        cudaProfilerStart();
-        cudnn_check(cudnnAddTensor(cudnn_handle,
-                &alpha, bdesc, b.raw_ptr,
-                &beta, cdesc, c.raw_ptr));
-        cudaProfilerStop();
+    float alpha = 1, beta = 1;
+    cudaProfilerStart();
+    cudnn_check(cudnnAddTensor(cudnn_handle, &alpha, bdesc, b.raw_ptr, &beta,
+                               cdesc, c.raw_ptr));
+    cudaProfilerStop();
 
-        cudnn_check(cudnnDestroyTensorDescriptor(cdesc));
-        cudnn_check(cudnnDestroyTensorDescriptor(bdesc));
-        cudnn_check(cudnnDestroy(cudnn_handle));
+    cudnn_check(cudnnDestroyTensorDescriptor(cdesc));
+    cudnn_check(cudnnDestroyTensorDescriptor(bdesc));
+    cudnn_check(cudnnDestroy(cudnn_handle));
 
-        cuda_check(cudaMemset(c.raw_ptr, 0, c.layout.span().dist_byte()));
-        cuda_check(cudaDeviceSynchronize());
+    cuda_check(cudaMemset(c.raw_ptr, 0, c.layout.span().dist_byte()));
+    cuda_check(cudaDeviceSynchronize());
 #endif
 
-        auto opr = handle_cuda->create_operator<ElemwiseForward>();
-        opr->param().mode = ElemwiseForward::Mode::ADD;
-        cudaProfilerStart();
-        opr->exec({a, b}, c);
-        cudaProfilerStop();
-    }
+    auto opr = handle_cuda->create_operator<ElemwiseForward>();
+    opr->param().mode = ElemwiseForward::Mode::ADD;
+    cudaProfilerStart();
+    opr->exec({a, b}, c);
+    cudaProfilerStop();
+}
 
-} // anonymous namespace
+}  // anonymous namespace
 
-template<typename tag>
-class CUDA_ELEMWISE: public CUDA {
-};
+template <typename tag>
+class CUDA_ELEMWISE : public CUDA {};
 TYPED_TEST_CASE(CUDA_ELEMWISE, elemwise::test_types);
 TYPED_TEST(CUDA_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle_cuda());
@@ -275,18 +271,17 @@ TEST_F(CUDA, ELEMWISE_BFLOAT16) {
 
 //! the memory of this test case is too large, sometimes will fail on tx1
 TEST_F(CUDA, ELEMWISE_BENCHMARK_DENSE) {
-    constexpr size_t A = 256 * 1024 * 64,
-              S0 = 16, S1 = 256, S2 = 64, S3 = 64;
+    constexpr size_t A = 256 * 1024 * 64, S0 = 16, S1 = 256, S2 = 64, S3 = 64;
     static_assert(A == S0 * S1 * S2 * S3, "bad value");
-    SyncedTensor<>
-        t0(handle_cuda(), {TensorShape{S0, S1, S2, S3}, dtype::Float32()}),
-        t1(handle_cuda(), {TensorShape{S0, S1, S2, S3}, dtype::Float32()});
+    SyncedTensor<> t0(handle_cuda(),
+                      {TensorShape{S0, S1, S2, S3}, dtype::Float32()}),
+            t1(handle_cuda(), {TensorShape{S0, S1, S2, S3}, dtype::Float32()});
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
-    run_tensor_add(handle_cuda(),
-            t0.tensornd_dev(), t0.tensornd_dev(), t1.tensornd_dev());
+    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t0.tensornd_dev(),
+                   t1.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host();
-    for (size_t i = 0; i < A; ++ i) {
+    for (size_t i = 0; i < A; ++i) {
         ASSERT_EQ(p0[i] + p0[i], p1[i]) << "at index " << i << "/" << A;
     }
 }
@@ -294,19 +289,19 @@ TEST_F(CUDA, ELEMWISE_BENCHMARK_DENSE) {
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_101) {
     constexpr size_t A = 511, B = 509, C0 = 23, C1 = 23, C = C0 * C1;
-    SyncedTensor<>
-        t0(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Float32()}),
-        t1(handle_cuda(), {TensorShape{1, B, 1, 1}, dtype::Float32()}),
-        t2(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Float32()});
+    SyncedTensor<> t0(handle_cuda(),
+                      {TensorShape{A, B, C0, C1}, dtype::Float32()}),
+            t1(handle_cuda(), {TensorShape{1, B, 1, 1}, dtype::Float32()}),
+            t2(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Float32()});
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
     rng.gen(t1.tensornd_host());
-    run_tensor_add(handle_cuda(),
-            t0.tensornd_dev(), t1.tensornd_dev(), t2.tensornd_dev());
+    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(),
+                   t2.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host(), p2 = t2.ptr_host();
-    for (size_t i = 0; i < A; ++ i) {
-        for (size_t j = 0; j < B; ++ j) {
-            for (size_t k = 0; k < C; ++ k) {
+    for (size_t i = 0; i < A; ++i) {
+        for (size_t j = 0; j < B; ++j) {
+            for (size_t k = 0; k < C; ++k) {
                 auto off = i * B * C + j * C + k;
                 ASSERT_EQ(p0[off] + p1[j], p2[off]);
             }
@@ -317,16 +312,16 @@ TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_101) {
 TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_10) {
     constexpr size_t A = 11583, B = 11587;
     SyncedTensor<> t0(handle_cuda(), {TensorShape{A, B}, dtype::Float32()}),
-                   t1(handle_cuda(), {TensorShape{1, B}, dtype::Float32()}),
-                   t2(handle_cuda(), {TensorShape{A, B}, dtype::Float32()});
+            t1(handle_cuda(), {TensorShape{1, B}, dtype::Float32()}),
+            t2(handle_cuda(), {TensorShape{A, B}, dtype::Float32()});
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
     rng.gen(t1.tensornd_host());
-    run_tensor_add(handle_cuda(),
-            t0.tensornd_dev(), t1.tensornd_dev(), t2.tensornd_dev());
+    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(),
+                   t2.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host(), p2 = t2.ptr_host();
-    for (size_t i = 0; i < A; ++ i) {
-        for (size_t j = 0; j < B; ++ j) {
+    for (size_t i = 0; i < A; ++i) {
+        for (size_t j = 0; j < B; ++j) {
             auto off = i * B + j;
             ASSERT_EQ(p0[off] + p1[j], p2[off]);
         }
@@ -336,16 +331,16 @@ TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_10) {
 TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_01) {
     constexpr size_t A = 11583, B = 11587;
     SyncedTensor<> t0(handle_cuda(), {TensorShape{1, A, B}, dtype::Float32()}),
-                   t1(handle_cuda(), {TensorShape{1, A, 1}, dtype::Float32()}),
-                   t2(handle_cuda(), {TensorShape{1, A, B}, dtype::Float32()});
+            t1(handle_cuda(), {TensorShape{1, A, 1}, dtype::Float32()}),
+            t2(handle_cuda(), {TensorShape{1, A, B}, dtype::Float32()});
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
     rng.gen(t1.tensornd_host());
-    run_tensor_add(handle_cuda(),
-            t0.tensornd_dev(), t1.tensornd_dev(), t2.tensornd_dev());
+    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(),
+                   t2.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host(), p2 = t2.ptr_host();
-    for (size_t i = 0; i < A; ++ i) {
-        for (size_t j = 0; j < B; ++ j) {
+    for (size_t i = 0; i < A; ++i) {
+        for (size_t j = 0; j < B; ++j) {
             auto off = i * B + j;
             ASSERT_EQ(p0[off] + p1[i], p2[off]);
         }
@@ -361,8 +356,9 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_IBYTE) {
                 .set_param(Mode::FUSE_ADD_RELU)
                 .set_dtype(0, dtype::Int8())
                 .set_dtype(1, dtype::Int8());
-        auto time = bencher.execs({{N * C * H * W + 1}, {N * C * H * W + 1}, {}}) /
-                    nr_times;
+        auto time =
+                bencher.execs({{N * C * H * W + 1}, {N * C * H * W + 1}, {}}) /
+                nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * (N * C * H * W + 1)) / (time * 1e6));
         time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
@@ -395,7 +391,6 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_IBYTE) {
                nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (C + 2.0 * N * C * H * W) / (time * 1e6));
-
     };
     run_bench(256, 256, 56, 56);
 }
@@ -428,4 +423,3 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_MIN_MAX) {
 #endif
 
 // vim: syntax=cpp.doxygen
-
