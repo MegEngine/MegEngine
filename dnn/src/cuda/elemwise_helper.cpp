@@ -34,9 +34,9 @@ namespace elemwise_intl {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 template <int ndim, typename ctype>
-void ParamElemVisitor<ndim, ctype, BCAST_OTHER>::host_init(const TensorND& rv,
-                                                           int /*grid_size*/,
-                                                           int /*block_size*/) {
+void ParamVisitorBase<ndim, ctype, BCAST_OTHER>::host_init(
+        const TensorND& rv, int /*grid_size*/, int /*block_size*/,
+        int /*packed_size*/) {
     megdnn_assert(rv.layout.ndim && rv.layout.ndim <= ndim);
     m_ptr = rv.ptr<ctype>();
     for (size_t i = 0; i < rv.layout.ndim; ++i) {
@@ -54,9 +54,10 @@ void ParamElemVisitor<ndim, ctype, BCAST_OTHER>::host_init(const TensorND& rv,
 #pragma GCC diagnostic pop
 
 template <typename ctype>
-void ParamElemVisitor<3, ctype, BCAST_101>::host_init(const TensorND& rv,
+void ParamVisitorBase<3, ctype, BCAST_101>::host_init(const TensorND& rv,
                                                       int grid_size,
-                                                      int block_size) {
+                                                      int block_size,
+                                                      int packed_size) {
     uint32_t shape2, shape1;
     int stride1;
     if (rv.layout.ndim == 3) {
@@ -76,9 +77,10 @@ void ParamElemVisitor<3, ctype, BCAST_101>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<2, ctype, BCAST_10>::host_init(const TensorND& rv,
+void ParamVisitorBase<2, ctype, BCAST_10>::host_init(const TensorND& rv,
                                                      int grid_size,
-                                                     int block_size) {
+                                                     int block_size,
+                                                     int packed_size) {
     megdnn_assert(rv.layout.ndim == NDIM && !rv.layout.stride[0]);
     m_ptr = rv.ptr<ctype>();
     m_stride1 = rv.layout.stride[1];
@@ -87,9 +89,10 @@ void ParamElemVisitor<2, ctype, BCAST_10>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<2, ctype, BCAST_01>::host_init(const TensorND& rv,
+void ParamVisitorBase<2, ctype, BCAST_01>::host_init(const TensorND& rv,
                                                      int grid_size,
-                                                     int block_size) {
+                                                     int block_size,
+                                                     int packed_size) {
     megdnn_assert(rv.layout.ndim == NDIM && !rv.layout.stride[1]);
     m_ptr = rv.ptr<ctype>();
     m_stride0 = rv.layout.stride[0];
@@ -98,9 +101,10 @@ void ParamElemVisitor<2, ctype, BCAST_01>::host_init(const TensorND& rv,
 }
 
 template <typename ctype>
-void ParamElemVisitor<1, ctype, BCAST_FULL>::host_init(const TensorND& rv,
+void ParamVisitorBase<1, ctype, BCAST_FULL>::host_init(const TensorND& rv,
                                                        int /*grid_size*/,
-                                                       int /*block_size*/) {
+                                                       int /*block_size*/,
+                                                       int /*packed_size*/) {
     megdnn_assert(rv.layout.ndim == NDIM && !rv.layout.stride[0]);
     m_ptr = rv.ptr<ctype>();
 }
@@ -121,6 +125,53 @@ void ParamVectVisitor<4, ctype, BCAST_1010>::host_init(const TensorND& rv,
                          shape1);
     m_shape3.host_init(packed_size * grid_size * block_size, shape3);
 }
+
+#define INST(ndim, ctype, brd) template class ParamVisitorBase<ndim, ctype, brd>
+#define INST_FOR_CTYPE                  \
+    MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb) \
+    INST(3, ct, BCAST_101);             \
+    INST(2, ct, BCAST_10);              \
+    INST(2, ct, BCAST_01);              \
+    INST(1, ct, BCAST_FULL);
+
+#define ndim_cb(_ndim) INST(_ndim, ct, BCAST_OTHER);
+
+#define ct dt_byte
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_int32
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_float32
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_float16
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_bfloat16
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_int8
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_uint8
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_int16
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_quint8
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_qint8
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_qint32
+INST_FOR_CTYPE
+#undef ct
+
+#undef INST_FOR_CTYPE
+#undef INST
 
 #define INST(ndim, ctype, brd) template class ParamElemVisitor<ndim, ctype, brd>
 #define INST_FOR_CTYPE                  \

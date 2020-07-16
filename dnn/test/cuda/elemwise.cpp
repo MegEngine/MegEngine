@@ -269,6 +269,43 @@ TEST_F(CUDA, ELEMWISE_BFLOAT16) {
 #undef BUILD_TERNARY_COMPLATE_TEST_CASE
 }
 
+TEST_F(CUDA, ELEMWISE_ADD_BCAST_10_INT8_INPLACE) {
+    constexpr size_t A = 2, B = 48, C0 = 14, C1 = 14, C = C0 * C1;
+    SyncedTensor<dt_int8> t0(handle_cuda(),
+                             {TensorShape{A, B, C0, C1}, dtype::Int8()}),
+            t1(handle_cuda(), {TensorShape{1, B, C0, C1}, dtype::Int8()}),
+            t2(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Int8()});
+    UniformIntRNG rng{-128, 127};
+    rng.gen(t0.tensornd_host());
+    rng.gen(t1.tensornd_host());
+    auto p0 = t0.ptr_host(), p1 = t1.ptr_host();
+    auto p2 = t2.ptr_mutable_host();
+    for (size_t i = 0; i < A; ++i) {
+        for (size_t j = 0; j < B; ++j) {
+            for (size_t k = 0; k < C; ++k) {
+                auto off0 = j * C + k;
+                auto off1 = i * B * C + j * C + k;
+                p2[off1] = p0[off1] + p1[off0];
+            }
+        }
+    }
+
+    auto opr = handle_cuda()->create_operator<ElemwiseForward>();
+    opr->param().mode = ElemwiseForward::Mode::ADD;
+    opr->exec({t0.tensornd_dev(), t1.tensornd_dev()}, t0.tensornd_dev());
+
+    auto pt = t0.ptr_host();
+
+    for (size_t i = 0; i < A; ++i) {
+        for (size_t j = 0; j < B; ++j) {
+            for (size_t k = 0; k < C; ++k) {
+                auto off = i * B * C + j * C + k;
+                ASSERT_EQ(pt[off], p2[off]);
+            }
+        }
+    }
+}
+
 //! the memory of this test case is too large, sometimes will fail on tx1
 TEST_F(CUDA, ELEMWISE_BENCHMARK_DENSE) {
     constexpr size_t A = 256 * 1024 * 64, S0 = 16, S1 = 256, S2 = 64, S3 = 64;
