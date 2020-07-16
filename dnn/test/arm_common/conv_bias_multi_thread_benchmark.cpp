@@ -1707,6 +1707,77 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
 }
 
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
+       BENCHMARK_CHANNEL_WISE_INT8_INT8_INT16_STRIDE1) {
+    constexpr size_t RUNS = 50;
+
+    param::ConvBias param;
+    param.nonlineMode = param::ConvBias::NonlineMode::IDENTITY;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.sparse = param::ConvBias::Sparse::GROUP;
+    param.format = param::ConvBias::Format::NCHW44;
+
+    std::vector<std::pair<SmallVector<TensorShape>, float>>
+            shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t H, size_t W, size_t FS,
+                          size_t P) {
+        size_t group = IC;
+        size_t OC = IC;
+        size_t S = 1;
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W, 4},
+                {group, 1, 1, FS, FS, 4},
+                {1, OC, 1, 1, 4},
+                {},
+                {N, OC, (H + 2 * P - FS) / S + 1, (W + 2 * P - FS) / S + 1, 4}};
+        TensorShape dst{N, OC, (H + 2 * P - FS) / S + 1,
+                        (W + 2 * P - FS) / S + 1, 4};
+        float computations =
+                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+    bench_case(1, 128, 200, 200, 3, 1);
+    bench_case(1, 128, 128, 128, 3, 1);
+    bench_case(1, 128, 100, 100, 3, 1);
+    bench_case(1, 128, 80, 80, 3, 1);
+    bench_case(1, 128, 56, 56, 3, 1);
+    bench_case(1, 128, 28, 28, 3, 1);
+    bench_case(1, 128, 14, 14, 3, 1);
+
+    bench_case(1, 64, 200, 200, 3, 1);
+    bench_case(1, 64, 128, 128, 3, 1);
+    bench_case(1, 64, 100, 100, 3, 1);
+    bench_case(1, 64, 80, 80, 3, 1);
+    bench_case(1, 64, 56, 56, 3, 1);
+    bench_case(1, 64, 28, 28, 3, 1);
+    bench_case(1, 64, 14, 14, 3, 1);
+
+    bench_case(1, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 80, 80, 3, 1);
+    bench_case(1, 32, 56, 56, 3, 1);
+    bench_case(1, 32, 28, 28, 3, 1);
+    bench_case(1, 32, 14, 14, 3, 1);
+
+    std::string algo_name = "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44";
+    printf("Benchmarker S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44 algo\n");
+    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
+                                    dtype::Int16(), dtype::Int16()};
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
+                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
+    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
+                   {1, {4}}, data_type);
+}
+
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_IM2COL_NCHW44_INT8x8x32_STRIDE1) {
     constexpr size_t RUNS = 50;
 
