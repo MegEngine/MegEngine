@@ -16,6 +16,7 @@ from .._internal.dtype import _metadata_dict, get_quantized_dtype
 from ..core import Buffer, Function, tensor
 from ..jit import sideeffect
 from ..module import Module
+from .utils import QuantMode, get_qparam_dict
 
 
 class Round(Function):
@@ -81,29 +82,10 @@ class Observer(Module):
         pass
 
 
-class ObserverMode(Enum):
-    SYMMERTIC = 1
-    ASYMMERTIC = 2
-
-
-def create_observer_dict(mode):
-    if mode == ObserverMode.SYMMERTIC:
-        return {
-            "mode": ObserverMode.SYMMERTIC,
-            "scale": None,
-        }
-    else:
-        return {
-            "mode": ObserverMode.ASYMMERTIC,
-            "scale": None,
-            "zero_point": None,
-        }
-
-
 class MinMaxObserver(Observer):
     def __init__(
         self,
-        mode=ObserverMode.SYMMERTIC,
+        mode=QuantMode.SYMMERTIC,
         eps=0.00001,
         dtype="qint8",
         narrow_range: bool = False,
@@ -117,10 +99,10 @@ class MinMaxObserver(Observer):
     def _calculate_qparams(self, inp_min_val, inp_max_val):
         min_val = F.minimum(0.0, inp_min_val)
         max_val = F.maximum(0.0, inp_max_val)
-        q_dict = create_observer_dict(self.mode)
+        q_dict = get_qparam_dict(self.mode)
         q_dict["min_val"] = inp_min_val
         q_dict["max_val"] = inp_max_val
-        if self.mode == ObserverMode.SYMMERTIC:
+        if self.mode == QuantMode.SYMMERTIC:
             symmetric_max_vals = F.maximum(-min_val, max_val)
             # use maximun to avoid scale too small at the begin
             q_dict["scale"] = F.maximum(
@@ -166,7 +148,7 @@ class ExponentialMovingAverageObserver(MinMaxObserver):
     def __init__(
         self,
         momentum=0.9,
-        mode=ObserverMode.SYMMERTIC,
+        mode=QuantMode.SYMMERTIC,
         eps=0.00001,
         dtype="qint8",
         narrow_range: bool = False,
@@ -204,7 +186,7 @@ class HistogramObserver(MinMaxObserver):
         self,
         bins=2048,
         upsample_rate=128,
-        mode=ObserverMode.SYMMERTIC,
+        mode=QuantMode.SYMMERTIC,
         eps=0.00001,
         dtype="qint8",
         narrow_range: bool = False,

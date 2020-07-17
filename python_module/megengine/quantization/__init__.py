@@ -8,7 +8,7 @@
 
 from .fake_quant import FakeQuantize
 from .internal_fake_quant import *
-from .observer import HistogramObserver, Observer, ObserverMode
+from .observer import HistogramObserver, Observer
 from .qconfig import (
     QConfig,
     calibration_qconfig,
@@ -16,3 +16,4 @@ from .qconfig import (
     min_max_fakequant_qconfig,
     tqt_quant_qconfig,
 )
+from .utils import QuantMode

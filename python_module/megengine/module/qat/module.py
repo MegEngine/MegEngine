@@ -92,6 +92,25 @@ class QATModule(Module):
         else:
             return self.act_observer.get_dtype()
 
+    def _get_qparams(self, fake_quant: FakeQuantize, observer: Observer):
+        if hasattr(fake_quant, "get_qparams"):
+            return fake_quant.get_qparams()
+        elif observer is not None:
+            return observer.get_qparams()
+        return None
+
+    def get_weight_qparams(self):
+        r"""
+        Get weight's quantization parameters.
+        """
+        return self._get_qparams(self.weight_fake_quant, self.weight_observer)
+
+    def get_activation_qparams(self):
+        r"""
+        Get activation's quantization parameters.
+        """
+        return self._get_qparams(self.act_fake_quant, self.act_observer)
+
     @classmethod
     @abstractmethod
     def from_float_module(cls, float_module: Module):

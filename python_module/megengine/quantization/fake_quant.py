@@ -15,7 +15,8 @@ from .._internal.dtype import _metadata_dict, get_quantized_dtype
 from ..core import Buffer, Function, Parameter
 from ..jit import sideeffect
 from ..module import Module
-from .observer import ObserverMode, Round
+from .observer import Round
+from .utils import QuantMode, get_qparam_dict
 
 
 class _FakeQuantize(Module):
@@ -121,8 +122,18 @@ class TQT(_FakeQuantize):
         F.add_update(self.scale, tmp_scale, alpha=0.0, beta=1.0, bias=0.0)
         return inp
 
+    def get_qparams(self):
+        qdict = get_qparam_dict(QuantMode.TQT)
+        qdict["scale"] = 2 ** self.scale
+        return qdict
+
     def get_dtype(self):
-        return get_quantized_dtype(self.dtype, 2 ** self.scale.numpy()[0], None)
+        q_dict = self.get_qparams()
+        scale = None if "scale" not in q_dict else q_dict["scale"].numpy()[0]
+        zero_point = (
+            None if "zero_point" not in q_dict else q_dict["zero_point"].numpy()[0]
+        )
+        return get_quantized_dtype(self.dtype, scale, zero_point)
 
 
 class FakeQuantize(_FakeQuantize):
@@ -131,7 +142,7 @@ class FakeQuantize(_FakeQuantize):
     """
 
     def fake_quant_forward(self, inp, q_dict):
-        if q_dict["mode"] == ObserverMode.SYMMERTIC:
+        if q_dict["mode"] == QuantMode.SYMMERTIC:
             scale = q_dict["scale"]
             # Quant
             oup = Round()(inp / scale)
