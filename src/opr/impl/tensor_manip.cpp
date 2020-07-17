@@ -742,7 +742,8 @@ void ModifySubtensorImplHelper::init_output_static_infer_desc() {
                 !cg::is_static_var_shape(input(1)))
             return false;
         for (size_t i = 2; i < input().size(); ++ i) {
-            if (!cg::is_static_var_value(input(i)))
+            if (!cg::is_static_var_value(input(i)) ||
+                !mgr.infer_value_fallible(input(i)))
                 return false;
         }
 
