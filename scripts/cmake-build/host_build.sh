@@ -197,7 +197,7 @@ function cmake_build_windows() {
         -DMGE_ARCH=$MGE_ARCH \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
-        -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIR  \
         -DCMAKE_C_COMPILER=clang-cl.exe \
         -DCMAKE_CXX_COMPILER=clang-cl.exe \
