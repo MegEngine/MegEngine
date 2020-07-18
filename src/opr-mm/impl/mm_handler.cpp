@@ -41,7 +41,7 @@ public:
         RUNSERVER(opr_register);
         RUNSERVER(set_output_shape);
         RUNSERVER(get_output_shape);
-        RUNSERVER(gather_uid);
+        RUNSERVER(bcast_addr);
         RUNSERVER(group_barrier);
         mgb_assert(false, "invalid rpc request");
     }
@@ -49,7 +49,7 @@ private:
     void opr_register(void* input_ptr, size_t input_len, std::string *output);
     void set_output_shape(void* input_ptr, size_t input_len, std::string *output);
     void get_output_shape(void* input_ptr, size_t input_len, std::string *output);
-    void gather_uid(void* input_ptr, size_t input_len, std::string *output);
+    void bcast_addr(void* input_ptr, size_t input_len, std::string *output);
     void group_barrier(void* input_ptr, size_t input_len, std::string *output);
 
 private:
@@ -101,15 +101,14 @@ void GroupServerProxy::get_output_shape(void* input_ptr, size_t input_len,
     rsp.SerializeToString(output);
 }
 
-void GroupServerProxy::gather_uid(void* input_ptr, size_t input_len,
+void GroupServerProxy::bcast_addr(void* input_ptr, size_t input_len,
         std::string *output) {
-    INFO_INIT(mm_handler, GatherUid);
-    auto uid = req.uid();
-    auto uids = m_mgr.gather_uid(uid, req.key(), req.size(), req.rank());
-    for (size_t i = 0;i < uids.size();i++) {
-        rsp.add_uids();
-        rsp.set_uids(i, uids[i].data(), uids[i].size());
-    }
+    INFO_INIT(mm_handler, BcastAddr);
+    std::string master_ip = req.master_ip();
+    int port = req.port();
+    m_mgr.bcast_addr(master_ip, port, req.key(), req.size(), req.rank(), req.root());
+    rsp.set_master_ip(master_ip);
+    rsp.set_port(port);
     rsp.SerializeToString(output);
 }
 
@@ -184,19 +183,20 @@ TensorShape GroupClientProxy::get_output_shape(const std::string& key) {
     }
     return shape;
 }
-std::vector<std::string> GroupClientProxy::gather_uid(const std::string& uid,
-        const std::string& key, uint32_t size, uint32_t rank) {
-    INFO_INIT(mm_handler, gather_uid, GatherUid);
-    req.set_uid(uid.data(), uid.size());
+
+void GroupClientProxy::bcast_addr(std::string& master_ip,
+        int& port, const std::string& key, uint32_t size,
+        uint32_t rank, uint32_t root) {
+    INFO_INIT(mm_handler, bcast_addr, BcastAddr);
+    req.set_master_ip(master_ip.data(), master_ip.size());
+    req.set_port(port);
     req.set_key(key.data(), key.size());
     req.set_size(size);
     req.set_rank(rank);
+    req.set_root(root);
     SOLVE_REQUEST(func_name, req, rsp);
-    std::vector<std::string> rst;
-    for (size_t i = 0;i < size;i++) {
-        rst.push_back(rsp.uids(i));
-    }
-    return rst;
+    master_ip = rsp.master_ip();
+    port = rsp.port();
 }
 
 uint32_t GroupClientProxy::group_barrier(uint32_t size, uint32_t rank) {

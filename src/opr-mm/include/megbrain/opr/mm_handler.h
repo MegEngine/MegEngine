@@ -37,8 +37,8 @@ public:
                                             int rank,
                                             uint64_t comp_node_hash) override;
 
-    std::vector<std::string> gather_uid(const std::string& uid,
-            const std::string& key, uint32_t size, uint32_t rank) override;
+    void bcast_addr(std::string& master_ip, int& port, const std::string& key,
+            uint32_t size, uint32_t rank, uint32_t root) override;
 
     void set_output_shape(const std::string& key,
                                   const TensorShape& shape) override;

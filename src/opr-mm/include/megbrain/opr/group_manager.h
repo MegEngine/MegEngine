@@ -82,9 +82,9 @@ class GroupManager {
         RegisterInfo opr_register(const std::string& key, size_t nr_devices,
                                   bool is_root, int rank, uint64_t comp_node_hash);
 
-        //! gather uids from all ranks
-        std::vector<std::string> gather_uid(const std::string& uid,
-                const std::string& key, uint32_t size, uint32_t rank);
+        //! broadcast master_ip and port
+        void bcast_addr(std::string& master_ip, int& port,
+            const std::string& key, uint32_t size, uint32_t rank, uint32_t root);
     
         //! Set output shape of this key
         void set_output_shape(const std::string& key, const TensorShape& shape);
@@ -102,12 +102,13 @@ class GroupManager {
         std::unordered_map<std::string, GroupInfo> m_key2group_info;
         std::mutex m_key2group_info_mtx;
     
-        //! key -> uid
-        std::unordered_map<std::string, std::vector<std::string>> m_key2uids;
-        std::unordered_map<std::string, uint32_t> m_key2uids_size;
-        std::unordered_map<std::string, bool> m_key2uids_flag;
-        std::mutex m_key2uids_mtx;
-        std::condition_variable m_gather_uid_cv;
+        //! key -> addr
+        std::unordered_map<std::string, std::string> m_key2master_ip;
+        std::unordered_map<std::string, int> m_key2port;
+        std::unordered_map<std::string, uint32_t> m_key2addr_size;
+        std::unordered_map<std::string, bool> m_key2addr_flag;
+        std::mutex m_key2addr_mtx;
+        std::condition_variable m_bcast_cv;
 
         //! barrier
         uint32_t m_barrier_size;
@@ -133,8 +134,8 @@ class GroupClient {
                                                         bool is_root, int rank,
                                                         uint64_t comp_node_hash) = 0;
 
-        virtual std::vector<std::string> gather_uid(const std::string& uid,
-                const std::string& key, uint32_t size, uint32_t rank) = 0;
+        virtual void bcast_addr(std::string& master_ip, int& port,
+            const std::string& key, uint32_t size, uint32_t rank, uint32_t root) = 0;
     
         virtual void set_output_shape(const std::string& key,
                 const TensorShape& shape) = 0;

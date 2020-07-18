@@ -139,27 +139,29 @@ GroupManager::RegisterInfo GroupManager::opr_register(const std::string& key,
     return ret;
 }
 
-std::vector<std::string> GroupManager::gather_uid(const std::string& uid,
-    const std::string& key, uint32_t size, uint32_t rank) {
-    std::unique_lock<std::mutex> lk{m_key2uids_mtx};
-    if (m_key2uids_size[key] == 0)
-        m_key2uids[key].resize(size);
-    m_key2uids[key][rank] = uid;
-    m_key2uids_size[key]++;
-    if (m_key2uids_size[key] == size) {
-        m_key2uids_flag[key] = true;
-        m_gather_uid_cv.notify_all();
+void GroupManager::bcast_addr(std::string& master_ip, int& port,
+    const std::string& key, uint32_t size, uint32_t rank, uint32_t root) {
+    std::unique_lock<std::mutex> lk{m_key2addr_mtx};
+    if (rank == root) {
+        m_key2master_ip[key] = master_ip;
+        m_key2port[key] = port;
+    }
+    m_key2addr_size[key]++;
+    if (m_key2addr_size[key] == size) {
+        m_key2addr_flag[key] = true;
+        m_bcast_cv.notify_all();
     } else {
-        m_gather_uid_cv.wait(
-                lk, [&] { return m_key2uids_flag.count(key) > 0; });
+        m_bcast_cv.wait(
+                lk, [&] { return m_key2addr_flag.count(key) > 0; });
     }
-    auto uids = m_key2uids[key];
-    m_key2uids_size[key]--;
-    if (m_key2uids_size[key] == 0) {
-        m_key2uids.erase(key);
-        m_key2uids_flag.erase(key);
+    master_ip = m_key2master_ip[key];
+    port = m_key2port[key];
+    m_key2addr_size[key]--;
+    if (m_key2addr_size[key] == 0) {
+        m_key2master_ip.erase(key);
+        m_key2port.erase(key);
+        m_key2addr_flag.erase(key);
     }
-    return uids;
 }
 
 void GroupManager::set_output_shape(const std::string& key,

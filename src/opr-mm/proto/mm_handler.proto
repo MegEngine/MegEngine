@@ -16,15 +16,18 @@ message OprRegisterResponse {
     int32 root_rank = 3;
 }
 
-message GatherUidRequest {
-    bytes uid = 1;
-    string key = 2;
-    uint32 size = 3;
-    uint32 rank = 4;
+message BcastAddrRequest {
+    string master_ip = 1;
+    int32 port = 2;
+    string key = 3;
+    uint32 size = 4;
+    uint32 rank = 5;
+    uint32 root = 6;
 }
 
-message GatherUidResponse {
-    repeated bytes uids = 1;
+message BcastAddrResponse {
+    string master_ip = 1;
+    int32 port = 2;
 }
 
 message SetOutputShapeRequest {

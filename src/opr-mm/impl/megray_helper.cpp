@@ -44,10 +44,22 @@ std::shared_ptr<MegRay::Communicator> MegRayCommBuilder::get_megray_comm(
 
     std::shared_ptr<MegRay::Communicator> comm;
     if (!sm_instance->find(hash, comm)) {
+        uint32_t root = 0;
+        std::string master_ip;
+        int port = 0;
+        if (rank == root) {
+            char* c = MegRay::get_host_ip();
+            master_ip = std::string(c);
+            delete c;
+            port = MegRay::get_free_port();
+            auto ret = MegRay::create_server(size, port);
+            mgb_assert(ret == MegRay::Status::MEGRAY_OK);
+        }
+        group_client->bcast_addr(master_ip, port, key, size, rank, root);
+
         comm = MegRay::get_communicator(size, rank, backend);
-        auto uid = comm->get_uid();
-        auto uids = group_client->gather_uid(uid, key, size, rank);
-        mgb_assert(comm->init(uids) == MegRay::Status::MEGRAY_OK);
+        auto ret = comm->init(master_ip.c_str(), port);
+        mgb_assert(ret == MegRay::Status::MEGRAY_OK);
         sm_instance->emplace(hash, comm);
     }
     return comm;

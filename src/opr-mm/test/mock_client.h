@@ -29,13 +29,14 @@ class MockGroupClient final : public opr::GroupClient {
         }
 
 	RegisterInfo opr_register(const std::string& key, size_t nr_devices,
-                                  bool is_root, int rank, uint64_t comp_node_hash) {
+                                  bool is_root, int rank, uint64_t comp_node_hash) override {
             return m_mgr.opr_register(key, nr_devices, is_root, rank, comp_node_hash);
         }
 
-        std::vector<std::string> gather_uid(const std::string& uid,
-                const std::string& key, uint32_t size, uint32_t rank) {
-            return m_mgr.gather_uid(uid, key, size, rank);
+        void bcast_addr(std::string& master_ip, int& port,
+                        const std::string& key, uint32_t size,
+                        uint32_t rank, uint32_t root) override {
+            return m_mgr.bcast_addr(master_ip, port, key, size, rank, root);
         }
 
         void set_output_shape(const std::string& key,
