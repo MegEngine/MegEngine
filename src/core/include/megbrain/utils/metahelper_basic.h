@@ -21,30 +21,11 @@
 
 namespace mgb {
 
-//! like std::index_sequence in C++14
-template <size_t... Idx>
-class index_sequence {
-    public:
-        static constexpr size_t size() { return sizeof...(Idx); }
-};
-
 namespace metahelper_detail {
     [[noreturn]] void on_maybe_invalid_val_access();
 
-    template <typename Idxseq, size_t End>
-    struct make_index_sequence_impl;
-    template <size_t... Idx, size_t End>
-    struct make_index_sequence_impl<index_sequence<Idx...>, End> {
-        using type = typename make_index_sequence_impl<
-            index_sequence<End-1, Idx...>, End-1>::type;
-    };
-    template <size_t... Idx>
-    struct make_index_sequence_impl<index_sequence<Idx...>, 0> {
-        using type = index_sequence<Idx...>;
-    };
-
     template <class T, class Tuple, size_t... I>
-    constexpr T make_from_tuple_impl(Tuple&& t, index_sequence<I...>) {
+    constexpr T make_from_tuple_impl(Tuple&& t, std::index_sequence<I...>) {
         return T(std::get<I>(std::forward<Tuple>(t))...);
     }
 
@@ -108,18 +89,13 @@ namespace metahelper_detail {
     }
 } // namespace metahelper_detail
 
-//! construct index_sequence<0..N-1>
-template <size_t N>
-using make_index_sequence =
-typename metahelper_detail::make_index_sequence_impl<index_sequence<>, N>::type;
-
 //! construct object T from tuple of arguments
 template <class T, class Tuple>
 constexpr T make_from_tuple(Tuple&& t) {
     constexpr std::size_t size =
         std::tuple_size<std::decay_t<Tuple>>::value;
     return metahelper_detail::make_from_tuple_impl<T>(
-            std::forward<Tuple>(t), make_index_sequence<size>{});
+            std::forward<Tuple>(t), std::make_index_sequence<size>{});
 }
 
 /*!

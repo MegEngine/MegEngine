@@ -466,8 +466,8 @@ namespace thin_hash_table {
                     const std::tuple<Kargs...> &k,
                     const std::tuple<Vargs...> &v) {
                 return do_emplace_picewise(k, v,
-                        make_index_sequence<sizeof...(Kargs)>{},
-                        make_index_sequence<sizeof...(Vargs)>{});
+                        std::make_index_sequence<sizeof...(Kargs)>{},
+                        std::make_index_sequence<sizeof...(Vargs)>{});
             }
 
             template<typename U, typename V>
@@ -539,7 +539,8 @@ namespace thin_hash_table {
             std::pair<iterator, bool> do_emplace_picewise(
                     const std::tuple<Kargs...> &kargs,
                     const std::tuple<Vargs...> &vargs,
-                    index_sequence<Kidx...>, index_sequence<Vidx...>) {
+                    std::index_sequence<Kidx...>,
+                    std::index_sequence<Vidx...>) {
                 Key key(std::forward<Kargs>(std::get<Kidx>(kargs))...);
                 auto ret = m_impl.insert(make_impl_key(key));
                 if (ret.second) {
