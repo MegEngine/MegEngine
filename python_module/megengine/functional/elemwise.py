@@ -19,6 +19,7 @@ __all__ = [
     "arccos",
     "add",
     "arcsin",
+    "clamp",
     "ceil",
     "cos",
     "divide",
