@@ -18,14 +18,10 @@ namespace megdnn {
 namespace arm_common {
 
 class ConvBiasImpl::AlgoS8DirectStride1 final : public AlgoBase {
-    bool m_large_group;
 
 public:
-    AlgoS8DirectStride1(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "S8STRD1_LARGE_GROUP" : "S8STRD1_SMALL_GROUP";
-    }
+    const char* name() const override { return "S8STRD1"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
@@ -36,14 +32,10 @@ public:
 };
 
 class ConvBiasImpl::AlgoS8DirectStride2 final : public AlgoBase {
-    bool m_large_group;
 
 public:
-    AlgoS8DirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "S8STRD2_LARGE_GROUP" : "S8STRD2_SMALL_GROUP";
-    }
+    const char* name() const override { return "S8STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
@@ -115,16 +107,10 @@ public:
 };
 
 class ConvBiasImpl::AlgoDotS8DirectStride1 final : public AlgoBase {
-    bool m_large_group;
 
 public:
-    AlgoDotS8DirectStride1(bool large_group) : m_large_group(large_group) {}
-
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "ARMDOTS8STRD1_LARGE_GROUP"
-                             : "ARMDOTS8STRD1_SMALL_GROUP";
-    }
+    const char* name() const override { return "ARMDOTS8STRD1"; }
     bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
@@ -134,15 +120,10 @@ public:
 };
 
 class ConvBiasImpl::AlgoDotS8DirectStride2 final : public AlgoBase {
-    bool m_large_group;
 
 public:
-    AlgoDotS8DirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "ARMDOTS8STRD2_LARGE_GROUP"
-                             : "ARMDOTS8STRD2_SMALL_GROUP";
-    }
+    const char* name() const override { return "ARMDOTS8STRD2"; }
 
     bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;

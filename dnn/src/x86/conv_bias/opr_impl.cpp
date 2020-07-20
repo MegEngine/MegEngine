@@ -76,10 +76,8 @@ void* ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::type() const {
 }
 
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
-    AlgoDirect stride1_direct_large_group{true};
-    AlgoDirect stride1_direct_small_group{false};
-    AlgoDirectStride2 stride2_direct_large_group{true};
-    AlgoDirectStride2 stride2_direct_small_group{false};
+    AlgoDirect stride1_direct;
+    AlgoDirectStride2 stride2_direct;
     AlgoDirectAvx2Stride1Int8 avx2_stride1_direct_int8;
     AlgoAVX2DirectConvStride2 avx2_stride2_direct;
     AlgoChanWiseAvx2Stride1Qint8 avx2_stride1_chanwsie_qint8;
@@ -103,10 +101,8 @@ public:
         all_algos.emplace_back(&mkldnn_matmul_qint8);
         all_algos.emplace_back(&mkldnn_qint8);
 #endif
-        all_algos.emplace_back(&stride1_direct_large_group);
-        all_algos.emplace_back(&stride1_direct_small_group);
-        all_algos.emplace_back(&stride2_direct_large_group);
-        all_algos.emplace_back(&stride2_direct_small_group);
+        all_algos.emplace_back(&stride1_direct);
+        all_algos.emplace_back(&stride2_direct);
         all_algos.emplace_back(&avx2_stride1_direct_int8);
         all_algos.emplace_back(&avx2_stride2_direct);
         all_algos.emplace_back(&avx2_stride1_chanwsie_qint8);

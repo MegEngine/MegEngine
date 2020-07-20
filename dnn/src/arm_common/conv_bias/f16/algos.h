@@ -79,15 +79,10 @@ public:
 
 class ConvBiasImpl::AlgoF16Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
 
 public:
-    AlgoF16Direct(bool is_large_group) : m_large_group{is_large_group} {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "F16DIRECT_LARGE_GROUP"
-                             : "F16DIRECT_SMALL_GROUP";
-    }
+    const char* name() const override { return "F16DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
@@ -99,14 +94,10 @@ public:
 
 class ConvBiasImpl::AlgoF16DirectStride1 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
 
 public:
-    AlgoF16DirectStride1(bool is_large_group) : m_large_group{is_large_group} {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "F16STRD1_LARGE_GROUP" : "F16STRD1_SMALL_GROUP";
-    }
+    const char* name() const override { return "F16STRD1"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;

@@ -22,15 +22,9 @@ using FallbackConvBiasImpl = fallback::ConvBiasImpl;
 
 class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
-
 public:
-    AlgoF32DirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "ARMV8F32STRD2_LARGE_GROUP"
-                             : "ARMV8F32STRD2_SMALL_GROUP";
-    }
+    const char* name() const override { return "ARMV8F32STRD2"; }
 
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;

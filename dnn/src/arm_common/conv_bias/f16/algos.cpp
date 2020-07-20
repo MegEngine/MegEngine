@@ -192,9 +192,8 @@ MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoFP16WinogradF23_8x8,
 
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp16_kimpl)
 
-bool ConvBiasImpl::AlgoF16Direct::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
+bool ConvBiasImpl::AlgoF16Direct::usable(const NCBKernSizeParam& param,
+                                         AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 0, 0) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
@@ -203,20 +202,14 @@ bool ConvBiasImpl::AlgoF16Direct::usable(
         // ``param.osz[0]*param.osz[1] >= 8'' comes from the fact that the
         // kernel may have access to up to 8 fp16 after the end of the memory
         // chunk.
-        bool aviliable = fm.format == param::ConvBias::Format::NCHW &&
-                         param.src_type.enumv() == DTypeEnum::Float16 &&
-                         param.filter_type.enumv() == DTypeEnum::Float16 &&
-                         param.dst_type.enumv() == DTypeEnum::Float16 &&
-                         fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-                         fm.dilation[1] == 1 &&
-                         param.isz[0] * param.isz[1] >= 8 &&
-                         param.osz[0] * param.osz[1] >= 8 && FH <= 7 &&
-                         SH == 1 && SW == 1;
-        if (algo_selection_strategy == AlgoSelectionStrategy::HEURISTIC) {
-            bool large_group = param.filter_meta.group >= param.nr_threads;
-            aviliable &= (large_group == m_large_group);
-        }
-        return aviliable;
+        return fm.format == param::ConvBias::Format::NCHW &&
+               param.src_type.enumv() == DTypeEnum::Float16 &&
+               param.filter_type.enumv() == DTypeEnum::Float16 &&
+               param.dst_type.enumv() == DTypeEnum::Float16 &&
+               fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+               fm.dilation[1] == 1 && param.isz[0] * param.isz[1] >= 8 &&
+               param.osz[0] * param.osz[1] >= 8 && FH <= 7 && SH == 1 &&
+               SW == 1;
     }
     MIDOUT_END();
     return false;
@@ -225,9 +218,10 @@ bool ConvBiasImpl::AlgoF16Direct::usable(
 size_t ConvBiasImpl::AlgoF16Direct::get_workspace(
         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 0, 1) {
+        bool large_group = param.filter_meta.group >= param.nr_threads;
         auto wbundle =
                 MultithreadDirectConvCommon<dt_float16, __fp16>::get_bundle(
-                        param, m_large_group);
+                        param, large_group);
         return wbundle.total_size_in_bytes();
     }
     MIDOUT_END();
@@ -241,13 +235,14 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16Direct::get_kimpls(
     size_t IC = param.filter_meta.icpg;
     size_t OC = param.filter_meta.ocpg;
     size_t group = fm.group;
+    bool large_group = group >= param.nr_threads;
     WorkspaceBundle bundle =
             MultithreadDirectConvCommon<dt_float16, __fp16>::get_bundle(
-                    param, m_large_group);
+                    param, large_group);
     SmallVector<NCBKern> ret_kerns;
     //! When group >= nr_threads, treat it as large_group, each thread process
     //! one group for better performance
-    if (m_large_group) {
+    if (large_group) {
         //! Channel wise conv and big groups
         auto exec_one_group = [bundle](const NCBKernParam& kern_param,
                                         const NCBKernIndex& ncb_index) mutable {
@@ -316,27 +311,18 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16Direct::dispatch_kerns(
 
 /* ===================== stride-1 algo ===================== */
 
-bool ConvBiasImpl::AlgoF16DirectStride1::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
+bool ConvBiasImpl::AlgoF16DirectStride1::usable(const NCBKernSizeParam& param,
+                                                AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 1, 0) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
-        bool aviliable =
-                param.filter_meta.format == param::ConvBias::Format::NCHW &&
-                param.src_type.enumv() == DTypeEnum::Float16 &&
-                param.filter_type.enumv() == DTypeEnum::Float16 &&
-                param.dst_type.enumv() == DTypeEnum::Float16 &&
-                !fm.should_flip && fm.spatial_ndim == 2 &&
-                fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                fm.stride[0] == 1 && fm.stride[1] == 1 && FH == fm.spatial[1] &&
-                (FH == 2 || FH == 3 || FH == 5);
-        if (algo_selection_strategy ==
-            ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-            bool large_group = param.filter_meta.group >= param.nr_threads;
-            aviliable &= (large_group == m_large_group);
-        }
-        return aviliable;
+        return param.filter_meta.format == param::ConvBias::Format::NCHW &&
+               param.src_type.enumv() == DTypeEnum::Float16 &&
+               param.filter_type.enumv() == DTypeEnum::Float16 &&
+               param.dst_type.enumv() == DTypeEnum::Float16 &&
+               !fm.should_flip && fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+               fm.dilation[1] == 1 && fm.stride[0] == 1 && fm.stride[1] == 1 &&
+               FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5);
     }
     MIDOUT_END();
     return false;
@@ -351,6 +337,7 @@ ConvBiasImpl::AlgoF16DirectStride1::get_kimpls(
     size_t IC = param.filter_meta.icpg;
     size_t OC = param.filter_meta.ocpg;
     size_t group = fm.group;
+    bool large_group = group >= param.nr_threads;
     using Func = std::function<void(const __fp16*, const __fp16*, __fp16*,
                                     size_t, size_t, size_t, size_t, size_t)>;
     Func conv_kern_function = nullptr;
@@ -371,11 +358,11 @@ ConvBiasImpl::AlgoF16DirectStride1::get_kimpls(
 
     WorkspaceBundle bundle =
             MultithreadDirectConvCommon<dt_float16, __fp16>::get_bundle_stride(
-                    param, m_large_group);
+                    param, large_group);
     SmallVector<NCBKern> ret_kerns;
     //! When group >= nr_threads, treat it as large_group, each thread process
     //! one group for better performance
-    if (m_large_group) {
+    if (large_group) {
         //! Channel wise conv and big groups
         auto exec_one_group = [bundle, conv_kern_function](
                                       const NCBKernParam& kern_param,
@@ -423,8 +410,9 @@ ConvBiasImpl::AlgoF16DirectStride1::get_kimpls(
 size_t ConvBiasImpl::AlgoF16DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_kimpl, 1, 1) {
+        bool large_group = param.filter_meta.group >= param.nr_threads;
         auto bundle = MultithreadDirectConvCommon<
-                dt_float16, __fp16>::get_bundle_stride(param, m_large_group);
+                dt_float16, __fp16>::get_bundle_stride(param, large_group);
         return bundle.total_size_in_bytes();
     }
     MIDOUT_END();

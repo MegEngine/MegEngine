@@ -176,7 +176,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_I8x8x32_WITHDOTPROD) {
     constexpr size_t RUN = 50;
     Benchmarker<Convolution> benchmark(handle());
     benchmark.set_before_exec_callback(
-            AlgoChecker<Convolution>("CONVOLUTION_DEFAULT_ARMDOTS8STRD1_SMALL_GROUP"));
+            AlgoChecker<Convolution>("CONVOLUTION_DEFAULT_ARMDOTS8STRD1"));
     benchmark.set_dtype(0, dtype::Int8())
             .set_dtype(1, dtype::Int8())
             .set_dtype(2, dtype::Int32());
@@ -243,7 +243,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_I8x8x32_WITHDOTPROD) {
     constexpr size_t RUN = 10;
     Benchmarker<Convolution> benchmark(handle());
     benchmark.set_before_exec_callback(
-            AlgoChecker<Convolution>("CONVOLUTION_DEFAULT_ARMDOTS8STRD2_SMALL_GROUP"));
+            AlgoChecker<Convolution>("CONVOLUTION_DEFAULT_ARMDOTS8STRD2"));
     benchmark.set_dtype(0, dtype::Int8())
             .set_dtype(1, dtype::Int8())
             .set_dtype(2, dtype::Int32());
@@ -317,7 +317,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_QUINT8_WITHDOTPROD) {
     benchmark.set_display(false);
     benchmark.set_times(RUN);
     benchmark.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_ARMDOTU8STRD1_SMALL_GROUP"));
+            "CONVOLUTION_DEFAULT_ARMDOTU8STRD1"));
 
     Benchmarker<Convolution> benchmark_float(handle());
     benchmark_float.set_display(false);
@@ -387,7 +387,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_QUINT8_WITHDOTPROD) {
     benchmark.set_display(false);
     benchmark.set_times(RUN);
     benchmark.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_ARMDOTU8STRD2_SMALL_GROUP"));
+            "CONVOLUTION_DEFAULT_ARMDOTU8STRD2"));
 
     Benchmarker<Convolution> benchmark_float(handle());
     benchmark_float.set_display(false);

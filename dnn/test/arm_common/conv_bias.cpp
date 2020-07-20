@@ -1310,8 +1310,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CHANNEL_WISE_F32_STRIDE1_NCHW44) {
     benchmark0.set_param(param);
     benchmark0.set_times(RUN);
     benchmark0.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "F32STRD1_LARGE_GROUP"));
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("F32STRD1"));
 
     auto opr = handle()->create_operator<ConvBias>();
     opr->param() = param;
@@ -1385,8 +1384,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CHANNEL_WISE_F32_STRIDE2_NCHW44) {
     benchmark0.set_param(param);
     benchmark0.set_times(RUN);
     benchmark0.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "F32STRD2_LARGE_GROUP"));
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("F32STRD2"));
 
     auto opr = handle()->create_operator<ConvBias>();
     opr->param() = param;
@@ -1464,8 +1462,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QINT8_STRIDE1_NCHW44) {
     benchmark0.set_param(param);
     benchmark0.set_times(RUN);
     benchmark0.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "S8STRD1_LARGE_GROUP"));
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("S8STRD1"));
 
     auto opr = handle()->create_operator<ConvBias>();
     opr->param() = param;

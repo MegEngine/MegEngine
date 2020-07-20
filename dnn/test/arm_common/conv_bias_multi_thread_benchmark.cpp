@@ -125,7 +125,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32) {
     bench_case(1, 32, 32, 80, 80, 3, 4);
     bench_case(1, 32, 32, 80, 80, 3, 32);
 
-    std::string algo_name = "F32DIRECT_LARGE_GROUP";
+    std::string algo_name = "F32DIRECT";
     printf("Benchmark F32DIRECT_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
                                     dtype::Float32(), dtype::Float32()};
@@ -137,7 +137,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32) {
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "F32DIRECT_SMALL_GROUP";
+    algo_name = "F32DIRECT";
     printf("Benchmark F32DIRECT_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1);
@@ -186,7 +186,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32_STR1) {
     bench_case(1, 32, 32, 80, 80, 3, 4);
     bench_case(1, 32, 32, 80, 80, 3, 32);
 
-    std::string algo_name = "F32STRD1_LARGE_GROUP";
+    std::string algo_name = "F32STRD1";
     printf("Benchmark F32STRD1_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
                                     dtype::Float32(), dtype::Float32()};
@@ -198,7 +198,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32_STR1) {
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "F32STRD1_SMALL_GROUP";
+    algo_name = "F32STRD1";
     printf("Benchmark F32STRD1_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1);
@@ -249,7 +249,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32_STR2) {
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 2);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 2);
 
-    std::string algo_name = "F32STRD2_LARGE_GROUP";
+    std::string algo_name = "F32STRD2";
     printf("Benchmark F32STRD2_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
                                     dtype::Float32(), dtype::Float32()};
@@ -261,7 +261,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32_STR2) {
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "F32STRD2_SMALL_GROUP";
+    algo_name = "F32STRD2";
     printf("Benchmark F32STRD2_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 2);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 2);
@@ -313,7 +313,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF16) {
     bench_case(1, 32, 32, 80, 80, 3, 4);
     bench_case(1, 32, 32, 80, 80, 3, 32);
 
-    std::string algo_name = "F16DIRECT_LARGE_GROUP";
+    std::string algo_name = "F16DIRECT";
     printf("Benchmark F16DIRECT_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Float16(), dtype::Float16(),
                                     dtype::Float16(), dtype::Float16()};
@@ -325,7 +325,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF16) {
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "F16DIRECT_SMALL_GROUP";
+    algo_name = "F16DIRECT";
     printf("Benchmark F16DIRECT_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1);
@@ -375,7 +375,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF16_STR1) {
     bench_case(1, 32, 32, 80, 80, 3, 4);
     bench_case(1, 32, 32, 80, 80, 3, 32);
 
-    std::string algo_name = "F16STRD1_LARGE_GROUP";
+    std::string algo_name = "F16STRD1";
     printf("Benchmark F16STRD1_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Float16(), dtype::Float16(),
                                     dtype::Float16(), dtype::Float16()};
@@ -387,7 +387,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF16_STR1) {
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "F16STRD1_SMALL_GROUP";
+    algo_name = "F16STRD1";
     printf("Benchmark F16STRD1_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1);
@@ -439,7 +439,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4);
     bench_case(1, 32, 32, 80, 80, 3, 32);
 
-    std::string algo_name = "I8816DIRECT_LARGE_GROUP";
+    std::string algo_name = "I8816DIRECT";
     printf("Benchmark I8816DIRECT_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
                                     dtype::Int16(), dtype::Int16()};
@@ -451,7 +451,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "I8816DIRECT_SMALL_GROUP";
+    algo_name = "I8816DIRECT";
     printf("Benchmark I8816DIRECT_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1);
@@ -503,7 +503,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 2);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 2);
 
-    std::string algo_name = "I8816STRD2_LARGE_GROUP";
+    std::string algo_name = "I8816STRD2";
     printf("Benchmark I8816STRD2_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
                                     dtype::Int16(), dtype::Int16()};
@@ -515,7 +515,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "I8816STRD2_SMALL_GROUP";
+    algo_name = "I8816STRD2";
     printf("Benchmark I8816STRD2_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 2);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 2);
@@ -567,7 +567,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 1);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 1);
 
-    std::string algo_name = "S8STRD1_LARGE_GROUP";
+    std::string algo_name = "S8STRD1";
     printf("Benchmark S8STRD1_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {
             dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
@@ -580,7 +580,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "S8STRD1_SMALL_GROUP";
+    algo_name = "S8STRD1";
     printf("Benchmark S8STRD1_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 1);
@@ -866,7 +866,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 2);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 2);
 
-    std::string algo_name = "S8STRD2_LARGE_GROUP";
+    std::string algo_name = "S8STRD2";
     printf("Benchmark S8STRD2_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {
             dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
@@ -879,7 +879,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "S8STRD2_SMALL_GROUP";
+    algo_name = "S8STRD2";
     printf("Benchmark S8STRD2_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 2);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 2);
@@ -932,7 +932,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 1);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 1);
 
-    std::string algo_name = "ARMDOTS8STRD1_LARGE_GROUP";
+    std::string algo_name = "ARMDOTS8STRD1";
     printf("Benchmark ARMDOTS8STRD1_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {
             dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
@@ -945,7 +945,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "ARMDOTS8STRD1_SMALL_GROUP";
+    algo_name = "ARMDOTS8STRD1";
     printf("Benchmark ARMDOTS8STRD1_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 1);
@@ -997,7 +997,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 2);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 2);
 
-    std::string algo_name = "ARMDOTS8STRD2_LARGE_GROUP";
+    std::string algo_name = "ARMDOTS8STRD2";
     printf("Benchmark ARMDOTS8STRD2_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {
             dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
@@ -1010,7 +1010,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "ARMDOTS8STRD2_SMALL_GROUP";
+    algo_name = "ARMDOTS8STRD2";
     printf("Benchmark ARMDOTS8STRD2_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 2);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 2);
@@ -1064,7 +1064,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 1);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 1);
 
-    std::string algo_name = "QU8STRD1_LARGE_GROUP";
+    std::string algo_name = "QU8STRD1";
     printf("Benchmark QU8STRD1_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Quantized8Asymm(0.2f, 100),
                                     dtype::Quantized8Asymm(0.2f, 120),
@@ -1078,7 +1078,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "QU8STRD1_SMALL_GROUP";
+    algo_name = "QU8STRD1";
     printf("Benchmark QU8STRD1_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 1);
@@ -1130,7 +1130,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 2);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 2);
 
-    std::string algo_name = "QU8STRD2_LARGE_GROUP";
+    std::string algo_name = "QU8STRD2";
     printf("Benchmark QU8STRD2_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Quantized8Asymm(0.2f, 100),
                                     dtype::Quantized8Asymm(0.2f, 120),
@@ -1144,7 +1144,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "QU8STRD2_SMALL_GROUP";
+    algo_name = "QU8STRD2";
     printf("Benchmark QU8STRD2_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 2);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 2);
@@ -1198,7 +1198,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 3, 4, 1, 1);
     bench_case(1, 32, 32, 80, 80, 3, 32, 1, 1);
 
-    std::string algo_name = "ARMDOTU8STRD1_LARGE_GROUP";
+    std::string algo_name = "ARMDOTU8STRD1";
     printf("Benchmark ARMDOTU8STRD1_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Quantized8Asymm(0.2f, 100),
                                     dtype::Quantized8Asymm(0.2f, 120),
@@ -1212,7 +1212,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "ARMDOTU8STRD1_SMALL_GROUP";
+    algo_name = "ARMDOTU8STRD1";
     printf("Benchmark ARMDOTS8STRD1_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 3, 1, 1, 1);
     bench_case(1, 32, 32, 128, 128, 3, 1, 1, 1);
@@ -1265,7 +1265,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     bench_case(1, 32, 32, 80, 80, 5, 4, 1, 2);
     bench_case(1, 32, 32, 80, 80, 5, 32, 1, 2);
 
-    std::string algo_name = "ARMDOTU8STRD2_LARGE_GROUP";
+    std::string algo_name = "ARMDOTU8STRD2";
     printf("Benchmark ARMDOTU8STRD2_LARGE_GROUP algo\n");
     std::vector<DType> data_type = {dtype::Quantized8Asymm(0.2f, 100),
                                     dtype::Quantized8Asymm(0.2f, 120),
@@ -1279,7 +1279,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
     shapes_and_computation.clear();
 
-    algo_name = "ARMDOTU8STRD2_SMALL_GROUP";
+    algo_name = "ARMDOTU8STRD2";
     printf("Benchmark ARMDOTU8STRD2_SMALL_GROUP algo\n");
     bench_case(1, 32, 32, 200, 200, 5, 1, 1, 2);
     bench_case(1, 32, 32, 128, 128, 5, 1, 1, 2);

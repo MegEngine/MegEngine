@@ -128,15 +128,10 @@ public:
 
 class ConvBiasImpl::AlgoF32Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
 
 public:
-    AlgoF32Direct(bool is_large_group) : m_large_group{is_large_group} {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "F32DIRECT_LARGE_GROUP"
-                             : "F32DIRECT_SMALL_GROUP";
-    }
+    const char* name() const override { return "F32DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
@@ -147,14 +142,10 @@ public:
 
 class ConvBiasImpl::AlgoF32DirectStride1 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
 
 public:
-    AlgoF32DirectStride1(bool is_large_group) : m_large_group{is_large_group} {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "F32STRD1_LARGE_GROUP" : "F32STRD1_SMALL_GROUP";
-    }
+    const char* name() const override { return "F32STRD1"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 
@@ -165,14 +156,10 @@ public:
 
 class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
 
 public:
-    AlgoF32DirectStride2(bool is_large_group) : m_large_group{is_large_group} {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "F32STRD2_LARGE_GROUP" : "F32STRD2_SMALL_GROUP";
-    }
+    const char* name() const override { return "F32STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 

@@ -18,15 +18,9 @@ namespace aarch64 {
 /* ===================== stride-2 algo ===================== */
 class ConvBiasImpl::AlgoF16DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
-    bool m_large_group;
-
 public:
-    AlgoF16DirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "ARMV8F16STRD2_LARGE_GROUP"
-                             : "ARMV8F16STRD2_SMALL_GROUP";
-    }
+    const char* name() const override { return "ARMV8F16STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 

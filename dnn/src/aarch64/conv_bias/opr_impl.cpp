@@ -25,13 +25,11 @@ using namespace megdnn;
 using namespace aarch64;
 
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
-    AlgoF32DirectStride2 f32_direct_stride2_large_group{true};
-    AlgoF32DirectStride2 f32_direct_stride2_small_group{false};
+    AlgoF32DirectStride2 f32_direct_stride2;
     AlgoS8MatrixMul s8_matrix_mul;
     AlgoQU8MatrixMul qu8_matrix_mul;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    AlgoF16DirectStride2 f16_direct_stride2_large_group{true};
-    AlgoF16DirectStride2 f16_direct_stride2_small_group{false};
+    AlgoF16DirectStride2 f16_direct_stride2;
 #endif
 
 public:
@@ -39,11 +37,9 @@ public:
         matmul_algos.emplace_back(&qu8_matrix_mul);
         matmul_algos.emplace_back(&s8_matrix_mul);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-        direct_algos.emplace_back(&f16_direct_stride2_large_group);
-        direct_algos.emplace_back(&f16_direct_stride2_small_group);
+        direct_algos.emplace_back(&f16_direct_stride2);
 #endif
-        direct_algos.emplace_back(&f32_direct_stride2_large_group);
-        direct_algos.emplace_back(&f32_direct_stride2_small_group);
+        direct_algos.emplace_back(&f32_direct_stride2);
     }
     SmallVector<AlgoBase*> direct_algos;
     SmallVector<AlgoBase*> matmul_algos;

@@ -356,15 +356,10 @@ void checker_conv_bias_int8x8x32_multi(std::vector<conv_bias::TestArg> args,
 }
 
 /**********************************F32 direct************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32) {
     check_conv_bias(
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
-            handle(), "F32DIRECT_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_SMALL_GROUP) {
-    check_conv_bias(
-            get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
-            handle(), "F32DIRECT_SMALL_GROUP");
+            handle(), "F32DIRECT");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S1_K7) {
@@ -391,21 +386,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_NCHW44_S2) {
                     handle(), "F32_CONV_NCHW44_DIRECT");
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR1_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR1) {
     check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 1, false, false, false),
-                    handle(), "F32STRD1_LARGE_GROUP");
+                    handle(), "F32STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR1_SMALL_GROUP) {
-    check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 1, false, false, false),
-                    handle(), "F32STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2) {
     check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
-                    handle(), "F32STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_SMALL_GROUP) {
-    check_conv_bias(get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
-                    handle(), "F32STRD2_SMALL_GROUP");
+                    handle(), "F32STRD2");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_NCHW_NCHW44_F32_S2) {
     check_conv_bias(get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false,
@@ -437,72 +424,41 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE2_FP32_NCHW44) {
 
 /**********************************F16 direct************************/
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16) {
     NormalRNG rng(1);
     checker_conv_bias_f16(
             get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
-            handle(), rng, "F16DIRECT_LARGE_GROUP", 0.03);
+            handle(), rng, "F16DIRECT", 0.03);
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_SMALL_GROUP) {
-    NormalRNG rng(1);
-    checker_conv_bias_f16(
-            get_conv_bias_args({1, 2, 3, 4, 5, 6, 7}, 1, false, false, false),
-            handle(), rng, "F16DIRECT_SMALL_GROUP", 0.03);
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR1_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR1) {
     NormalRNG rng(1);
     checker_conv_bias_f16(get_conv_bias_args({2, 3, 5}, 1, false, false, false),
-                          handle(), rng, "F16STRD1_LARGE_GROUP", 0.03);
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR1_SMALL_GROUP) {
-    NormalRNG rng(1);
-    checker_conv_bias_f16(get_conv_bias_args({2, 3, 5}, 1, false, false, false),
-                          handle(), rng, "F16STRD1_SMALL_GROUP", 0.03);
+                          handle(), rng, "F16STRD1", 0.03);
 }
 #endif
 
 /**********************************algo 8816 direct************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_DIRECT_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_DIRECT) {
     checker_conv_bias_int8x8x16(
             get_conv_bias_args({2, 3, 5}, 1, false, true, true), handle(),
-            "I8816DIRECT_LARGE_GROUP");
+            "I8816DIRECT");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_DIRECT_SMALL_GROUP) {
-    checker_conv_bias_int8x8x16(
-            get_conv_bias_args({2, 3, 5}, 1, false, true, true), handle(),
-            "I8816DIRECT_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_STRIDE2_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_STRIDE2) {
     checker_conv_bias_int8x8x16(
             get_conv_bias_args({2, 3, 5}, 2, false, true, true), handle(),
-            "I8816STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_STRIDE2_SMALL_GROUP) {
-    checker_conv_bias_int8x8x16(
-            get_conv_bias_args({2, 3, 5}, 2, false, true, true), handle(),
-            "I8816STRD2_SMALL_GROUP");
+            "I8816STRD2");
 }
 
 /**********************************algo 8-8-32 direct************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE1_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE1) {
     checker_conv_bias_int8x8x32_multi(
             get_conv_bias_args({2, 3, 5, 7}, 1, false, true, true), handle(),
-            "S8STRD1_LARGE_GROUP");
+            "S8STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE1_SMALL_GROUP) {
-    checker_conv_bias_int8x8x32_multi(
-            get_conv_bias_args({2, 3, 5, 7}, 1, false, true, true), handle(),
-            "S8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE2_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE2) {
     checker_conv_bias_int8x8x32_multi(
             get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
-            "S8STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE2_SMALL_GROUP) {
-    checker_conv_bias_int8x8x32_multi(
-            get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
-            "S8STRD2_SMALL_GROUP");
+            "S8STRD2");
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS,
@@ -520,25 +476,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
 }
 
 /********************************qint8 direct******************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1) {
     checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
                                         {2, 3, 5, 7}, 1, false, false, false),
-                                handle(), "S8STRD1_LARGE_GROUP");
+                                handle(), "S8STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_SMALL_GROUP) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
-                                        {2, 3, 5, 7}, 1, false, false, false),
-                                handle(), "S8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2) {
     checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
                                         {2, 3, 5, 7}, 2, false, false, false),
-                                handle(), "S8STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_SMALL_GROUP) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
-                                        {2, 3, 5, 7}, 2, false, false, false),
-                                handle(), "S8STRD2_SMALL_GROUP");
+                                handle(), "S8STRD2");
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_NCHW44) {
     checker_conv_bias_qint8x8x8(
@@ -586,25 +532,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44_S2) {
 }
 
 /*****************************quint8 direct****************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE1_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE1) {
     checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
                                          {2, 3, 5, 7}, 1, false, false, false),
-                                 handle(), "QU8STRD1_LARGE_GROUP");
+                                 handle(), "QU8STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE1_SMALL_GROUP) {
-    checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
-                                         {2, 3, 5, 7}, 1, false, false, false),
-                                 handle(), "QU8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2) {
     checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
                                          {2, 3, 5, 7}, 2, false, false, false),
-                                 handle(), "QU8STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2_SMALL_GROUP) {
-    checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
-                                         {2, 3, 5, 7}, 2, false, false, false),
-                                 handle(), "QU8STRD2_SMALL_GROUP");
+                                 handle(), "QU8STRD2");
 }
 
 /****************************dot qint8 direct*************************/
@@ -624,100 +560,53 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_NCHW_NCHW44) {
     }
     checker_conv_bias_qint8x8x8(args, handle(), "ARMDOTS8_NCHW_NCHW44");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_WITHDOTPROD) {
     checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
                                         {2, 3, 5, 7}, 1, false, false, false),
-                                handle(), "ARMDOTS8STRD1_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_SMALL_GROUP) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
-                                        {2, 3, 5, 7}, 1, false, false, false),
-                                handle(), "ARMDOTS8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_INT8_STRIDE2_WITHDOTPROD_LARGE_GROUP) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
-                                        {2, 3, 5, 7}, 2, false, false, false),
-                                handle(), "ARMDOTS8STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_INT8_STRIDE2_WITHDOTPROD_SMALL_GROUP) {
-    checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
-                                        {2, 3, 5, 7}, 2, false, false, false),
-                                handle(), "ARMDOTS8STRD2_SMALL_GROUP");
+                                handle(), "ARMDOTS8STRD1");
 }
 
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_WITHDOTPROD) {
+    checker_conv_bias_qint8x8x8(get_int8_quint8_conv_bias_args(
+                                        {2, 3, 5, 7}, 2, false, false, false),
+                                handle(), "ARMDOTS8STRD2");
+}
 /****************************dot 8-8-32 direct*************************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_I8832STRD1_WITHDOT_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_I8832STRD1_WITHDOT) {
     checker_conv_bias_qint8x8x32(
             get_conv_bias_args({2, 3, 5, 7}, 1, false, true, true), handle(),
-            "ARMDOTS8STRD1_LARGE_GROUP");
+            "ARMDOTS8STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_I8832STRD1_WITHDOT_SMALL_GROUP) {
-    checker_conv_bias_qint8x8x32(
-            get_conv_bias_args({2, 3, 5, 7}, 1, false, true, true), handle(),
-            "ARMDOTS8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_I8832STRD2_WITHDOT_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_I8832STRD2_WITHDOT) {
     checker_conv_bias_qint8x8x32(
             get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
-            "ARMDOTS8STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_I8832STRD2_WITHDOT_SMALL_GROUP) {
-    checker_conv_bias_qint8x8x32(
-            get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
-            "ARMDOTS8STRD2_SMALL_GROUP");
+            "ARMDOTS8STRD2");
 }
 /******************************dot quint8*****************************/
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_QUINT8_STRIDE1_WITHDOTPROD_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE1_WITHDOTPROD) {
     checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
                                          {2, 3, 5, 7}, 1, false, false, false),
-                                 handle(), "ARMDOTU8STRD1_LARGE_GROUP");
+                                 handle(), "ARMDOTU8STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_QUINT8_STRIDE1_WITHDOTPROD_SMALL_GROUP) {
-    checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
-                                         {2, 3, 5, 7}, 1, false, false, false),
-                                 handle(), "ARMDOTU8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_QUINT8_STRIDE2_WITHDOTPROD_LARGE_GROUP) {
+//! TODO: this test without test kernel size=3, add it will case buss error now
+//! in armv7
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2_WITHDOTPROD) {
     checker_conv_bias_quint8x8x8(
             get_int8_quint8_conv_bias_args({2, 5, 7}, 2, false, false, false),
-            handle(), "ARMDOTU8STRD2_LARGE_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS,
-       CONV_BIAS_QUINT8_STRIDE2_WITHDOTPROD_SMALL_GROUP) {
-    checker_conv_bias_quint8x8x8(
-            get_int8_quint8_conv_bias_args({2, 5, 7}, 2, false, false, false),
-            handle(), "ARMDOTU8STRD2_SMALL_GROUP");
+            handle(), "ARMDOTU8STRD2");
 }
 
 /******************************dot quint8x8x32***********************/
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE1_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE1) {
     checker_conv_bias_quint8x8x32(
             get_conv_bias_args({2, 3, 5, 7}, 1, false, true, true), handle(),
-            "ARMDOTU8STRD1_LARGE_GROUP");
+            "ARMDOTU8STRD1");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE1_SMALL_GROUP) {
-    checker_conv_bias_quint8x8x32(
-            get_conv_bias_args({2, 3, 5, 7}, 1, false, true, true), handle(),
-            "ARMDOTU8STRD1_SMALL_GROUP");
-}
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE2_LARGE_GROUP) {
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE2) {
     checker_conv_bias_quint8x8x32(
             get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
-            "ARMDOTU8STRD2_LARGE_GROUP");
+            "ARMDOTU8STRD2");
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_QUINT8_DIRECT_STRIDE2_SMALL_GROUP) {
-    checker_conv_bias_quint8x8x32(
-            get_conv_bias_args({2, 3, 5, 7}, 2, false, true, true), handle(),
-            "ARMDOTU8STRD2_SMALL_GROUP");
-}
-
 /******************************dot int8x8x8 nchw44 ***********************/
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_DIRECT_DOT_NCHW44_S1_Q8x8x8) {
     using namespace conv_bias;

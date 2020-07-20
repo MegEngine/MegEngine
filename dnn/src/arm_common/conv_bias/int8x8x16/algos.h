@@ -26,15 +26,10 @@ class ConvBiasImpl::AlgoI8x8x16Direct final : public AlgoBase {
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);
-    bool m_large_group;
 
 public:
-    AlgoI8x8x16Direct(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "I8816DIRECT_LARGE_GROUP"
-                             : "I8816DIRECT_SMALL_GROUP";
-    }
+    const char* name() const override { return "I8816DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
@@ -53,15 +48,9 @@ class ConvBiasImpl::AlgoI8x8x16Stride2 final : public AlgoBase {
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);
-    bool m_large_group;
-
 public:
-    AlgoI8x8x16Stride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return m_large_group ? "I8816STRD2_LARGE_GROUP"
-                             : "I8816STRD2_SMALL_GROUP";
-    }
+    const char* name() const override { return "I8816STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
 

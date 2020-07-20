@@ -82,28 +82,20 @@ void get_rectified_size_str2(size_t IH, size_t IW, size_t OH, size_t OW,
 }  // namespace
 
 /* ===================== direct algo ===================== */
-bool ConvBiasImpl::AlgoI8x8x16Direct::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
+bool ConvBiasImpl::AlgoI8x8x16Direct::usable(const NCBKernSizeParam& param,
+                                             AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 0) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
-        bool aviliable =
-                param.bias_mode == BiasMode::NO_BIAS &&
-                param.nonlineMode == NonlineMode::IDENTITY &&
-                fm.format == param::ConvBias::Format::NCHW && !fm.should_flip &&
-                param.src_type.enumv() == DTypeEnum::Int8 &&
-                param.filter_type.enumv() == DTypeEnum::Int8 &&
-                param.dst_type.enumv() == DTypeEnum::Int16 &&
-                fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-                fm.dilation[1] == 1 && fm.stride[0] == 1 && fm.stride[1] == 1 &&
-                FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5);
-        if (algo_selection_strategy ==
-            ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-            bool large_group = param.filter_meta.group >= param.nr_threads;
-            aviliable &= (large_group == m_large_group);
-        }
-        return aviliable;
+        return param.bias_mode == BiasMode::NO_BIAS &&
+               param.nonlineMode == NonlineMode::IDENTITY &&
+               fm.format == param::ConvBias::Format::NCHW && !fm.should_flip &&
+               param.src_type.enumv() == DTypeEnum::Int8 &&
+               param.filter_type.enumv() == DTypeEnum::Int8 &&
+               param.dst_type.enumv() == DTypeEnum::Int16 &&
+               fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+               fm.dilation[1] == 1 && fm.stride[0] == 1 && fm.stride[1] == 1 &&
+               FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5);
     }
     MIDOUT_END();
     return false;
@@ -117,11 +109,12 @@ WorkspaceBundle ConvBiasImpl::AlgoI8x8x16Direct::get_bundle(
     auto OH = param.osz[0], OW = param.osz[1];
     auto PH = fm.padding[0], PW = fm.padding[1];
     size_t OH2, OW2, IH2, IW2;
+    bool large_group = group >= param.nr_threads;
     get_rectified_size_str1(IH, IW, OH, OW, PH, PW, IH2, IW2, OH2, OW2);
     size_t part0 = 0u, part1 = 0u;
     if (need_src_copy_str1(param)) {
-        part0 = m_large_group ? IC * IH2 * IW2 * sizeof(int8_t) * nr_threads
-                              : IC * IH2 * IW2 * sizeof(int8_t) * group * batch;
+        part0 = large_group ? IC * IH2 * IW2 * sizeof(int8_t) * nr_threads
+                            : IC * IH2 * IW2 * sizeof(int8_t) * group * batch;
     }
     if (need_dst_copy_str1(param)) {
         part1 = OH2 * OW2 * sizeof(int16_t) * nr_threads + 16;
@@ -255,9 +248,10 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Direct::get_kimpls(
     size_t IC = param.filter_meta.icpg;
     size_t OC = param.filter_meta.ocpg;
     size_t group = fm.group;
+    bool large_group = group >= param.nr_threads;
     WorkspaceBundle bundle = get_bundle(param);
     SmallVector<NCBKern> ret_kerns;
-    if (m_large_group) {
+    if (large_group) {
         auto exec_one_group = [bundle](const NCBKernParam& kern_param,
                                         const NCBKernIndex& ncb_index) mutable {
             auto fm = kern_param.filter_meta;
@@ -302,28 +296,20 @@ ConvBiasImpl::AlgoI8x8x16Direct::dispatch_kerns(
 }
 
 /* ===================== stride-2 algo ===================== */
-bool ConvBiasImpl::AlgoI8x8x16Stride2::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
+bool ConvBiasImpl::AlgoI8x8x16Stride2::usable(const NCBKernSizeParam& param,
+                                              AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 0) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
-        bool aviliable = param.bias_mode == BiasMode::NO_BIAS &&
-                         param.nonlineMode == NonlineMode::IDENTITY &&
-                         fm.format == param::ConvBias::Format::NCHW &&
-                         !fm.should_flip &&
-                         param.src_type.enumv() == DTypeEnum::Int8 &&
-                         param.filter_type.enumv() == DTypeEnum::Int8 &&
-                         param.dst_type.enumv() == DTypeEnum::Int16 &&
-                         fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                         fm.stride[0] == 2 && fm.stride[1] == 2 &&
-                         FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5);
-        if (algo_selection_strategy ==
-            ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-            bool large_group = param.filter_meta.group >= param.nr_threads;
-            aviliable &= (large_group == m_large_group);
-        }
-        return aviliable;
+        return param.bias_mode == BiasMode::NO_BIAS &&
+               param.nonlineMode == NonlineMode::IDENTITY &&
+               fm.format == param::ConvBias::Format::NCHW && !fm.should_flip &&
+               param.src_type.enumv() == DTypeEnum::Int8 &&
+               param.filter_type.enumv() == DTypeEnum::Int8 &&
+               param.dst_type.enumv() == DTypeEnum::Int16 &&
+               fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
+               fm.stride[0] == 2 && fm.stride[1] == 2 && FH == fm.spatial[1] &&
+               (FH == 2 || FH == 3 || FH == 5);
     }
     MIDOUT_END();
     return false;
@@ -340,9 +326,10 @@ WorkspaceBundle ConvBiasImpl::AlgoI8x8x16Stride2::get_bundle(
     size_t OH2, OW2, IH2, IW2;
     get_rectified_size_str2(IH, IW, OH, OW, FH, FW, PH, PW, IH2, IW2, OH2, OW2);
     size_t part0 = 0u, part1 = 0u;
+    bool large_group = group >= param.nr_threads;
     if (need_src_copy_str2(param)) {
-        part0 = m_large_group ? IC * IH2 * IW2 * sizeof(int8_t) * nr_threads
-                              : IC * IH2 * IW2 * sizeof(int8_t) * group * batch;
+        part0 = large_group ? IC * IH2 * IW2 * sizeof(int8_t) * nr_threads
+                            : IC * IH2 * IW2 * sizeof(int8_t) * group * batch;
     }
     if (need_dst_copy_str2(param)) {
         part1 = OH2 * OW2 * sizeof(int16_t) * nr_threads + 16;
@@ -475,9 +462,10 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Stride2::get_kimpls(
     size_t IC = param.filter_meta.icpg;
     size_t OC = param.filter_meta.ocpg;
     size_t group = fm.group;
+    bool large_group = group >= param.nr_threads;
     WorkspaceBundle bundle = get_bundle(param);
     SmallVector<NCBKern> ret_kerns;
-    if (m_large_group) {
+    if (large_group) {
         auto exec_one_group = [bundle](const NCBKernParam& kern_param,
                                         const NCBKernIndex& ncb_index) mutable {
             auto fm = kern_param.filter_meta;

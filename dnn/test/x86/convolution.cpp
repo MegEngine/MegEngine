@@ -125,7 +125,7 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE1) {
 
     Checker<ConvolutionForward> checker(handle());
     checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_X86_CONV_BIAS_DIRECT_STRIDE1_SMALL_GROUP"));
+            "CONVOLUTION_DEFAULT_X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"));
     checker.set_epsilon(1);
     UniformIntRNG rng{-50, 50};
     checker.set_dtype(0, dtype::Float32())
@@ -167,7 +167,7 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE2) {
 
     Checker<ConvolutionForward> checker(handle());
     checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_X86_CONV_BIAS_DIRECT_STRIDE2_SMALL_GROUP"));
+            "CONVOLUTION_DEFAULT_X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"));
     checker.set_epsilon(1);
     UniformIntRNG rng{-50, 50};
     checker.set_dtype(0, dtype::Float32())

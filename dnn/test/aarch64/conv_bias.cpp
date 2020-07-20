@@ -81,15 +81,10 @@ void checker_conv_bias(std::vector<conv_bias::TestArg> args, Handle* handle,
                 {arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
-TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_LARGE_GROUP) {
+TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2) {
     check_conv_bias(
             conv_bias::get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
-            handle(), "ARMV8F32STRD2_LARGE_GROUP");
-}
-TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP32_STR2_SMALL_GROUP) {
-    check_conv_bias(
-            conv_bias::get_conv_bias_args({2, 3, 5, 7}, 2, false, false, false),
-            handle(), "ARMV8F32STRD2_SMALL_GROUP");
+            handle(), "ARMV8F32STRD2");
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -114,17 +109,11 @@ void checker_conv_bias_fp16(std::vector<conv_bias::TestArg> args,
     }
 }
 
-TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR2_LARGE_GROUP) {
+TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR2) {
     NormalRNG rng(1);
     checker_conv_bias_f16(
             conv_bias::get_conv_bias_args({2, 3, 5}, 2, false, false, false),
-            handle(), rng, "ARMV8F16STRD2_LARGE_GROUP", 0.04);
-}
-TEST_F(AARCH64_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR2_SMALL_GROUP) {
-    NormalRNG rng(1);
-    checker_conv_bias_f16(
-            conv_bias::get_conv_bias_args({2, 3, 5}, 2, false, false, false),
-            handle(), rng, "ARMV8F16STRD2_SMALL_GROUP", 0.04);
+            handle(), rng, "ARMV8F16STRD2", 0.04);
 }
 #endif
 

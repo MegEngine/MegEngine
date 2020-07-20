@@ -40,28 +40,20 @@ uint8_t arm_common_algo_type_storage;
 }  // anonymous namespace
 
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
-    AlgoQU8DirectStride2 qu8_direct_stride2_large_group{true};
-    AlgoQU8DirectStride2 qu8_direct_stride2_small_group{false};
-    AlgoQU8DirectStride1 qu8_direct_stride1_large_group{true};
-    AlgoQU8DirectStride1 qu8_direct_stride1_small_group{false};
-    AlgoS8DirectStride2 s8_direct_stride2_large_group{true};
-    AlgoS8DirectStride2 s8_direct_stride2_small_group{false};
+    AlgoQU8DirectStride2 qu8_direct_stride2;
+    AlgoQU8DirectStride1 qu8_direct_stride1;
+    AlgoS8DirectStride2 s8_direct_stride2;
     AlgoS8DirectNCHW44 s8_direct_nchw44;
     AlgoS8DirectNCHWNCHW44 s8_direct_nchw_nchw44;
-    AlgoS8DirectStride1 s8_direct_stride1_large_group{true};
-    AlgoS8DirectStride1 s8_direct_stride1_small_group{false};
+    AlgoS8DirectStride1 s8_direct_stride1;
     AlgoS8ChanWiseStride1NCHW44 s8_channel_wise_stride1_nchw44;
     AlgoS8ChanWiseStride2NCHW44 s8_channel_wise_stride2_nchw44;
 
 #if __ARM_FEATURE_DOTPROD
-    AlgoDotS8DirectStride1 ds8_direct_stride1_large_group{true};
-    AlgoDotS8DirectStride1 ds8_direct_stride1_small_group{false};
-    AlgoDotS8DirectStride2 ds8_direct_stride2_large_group{true};
-    AlgoDotS8DirectStride2 ds8_direct_stride2_small_group{false};
-    AlgoDotU8DirectStride1 du8_direct_stride1_large_group{true};
-    AlgoDotU8DirectStride1 du8_direct_stride1_small_group{false};
-    AlgoDotU8DirectStride2 du8_direct_stride2_large_group{true};
-    AlgoDotU8DirectStride2 du8_direct_stride2_small_group{false};
+    AlgoDotS8DirectStride1 ds8_direct_stride1;
+    AlgoDotS8DirectStride2 ds8_direct_stride2;
+    AlgoDotU8DirectStride1 du8_direct_stride1;
+    AlgoDotU8DirectStride2 du8_direct_stride2;
 
     AlgoDotS8Direct_NCHW44 ds8_direct_nchw44;
     AlgoDotS8DirectNCHWNCHW44 ds8_direct_nchw_nchw44;
@@ -71,23 +63,16 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoF32ChannelWiseNCHW44 f32_chanel_wise_nchw44;
     AlgoF32DirectNCHW44 f32_direct_nchw44;
 
-    AlgoF32Direct f32_direct_large_group{true};
-    AlgoF32Direct f32_direct_small_group{false};
-    AlgoF32DirectStride2 f32_direct_stride2_large_group{true};
-    AlgoF32DirectStride2 f32_direct_stride2_small_group{false};
-    AlgoF32DirectStride1 f32_direct_stride1_large_group{true};
-    AlgoF32DirectStride1 f32_direct_stride1_small_group{false};
+    AlgoF32Direct f32_direct;
+    AlgoF32DirectStride2 f32_direct_stride2;
+    AlgoF32DirectStride1 f32_direct_stride1;
 
-    AlgoI8x8x16Direct i8x8x16_direct_large_group{true};
-    AlgoI8x8x16Direct i8x8x16_direct_small_group{false};
-    AlgoI8x8x16Stride2 i8x8x16_stride2_large_group{true};
-    AlgoI8x8x16Stride2 i8x8x16_stride2_small_group{false};
+    AlgoI8x8x16Direct i8x8x16_direct;
+    AlgoI8x8x16Stride2 i8x8x16_stride2;
     AlgoI8x8x16Stride2Filter2 i8x8x16_stride2_filter2;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    AlgoF16Direct f16_direct_large_group{true};
-    AlgoF16Direct f16_direct_small_group{false};
-    AlgoF16DirectStride1 f16_direct_stride1_large_group{true};
-    AlgoF16DirectStride1 f16_direct_stride1_small_group{false};
+    AlgoF16Direct f16_direct;
+    AlgoF16DirectStride1 f16_direct_stride1;
 #endif
 
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
@@ -95,54 +80,39 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 public:
     AlgoPack() {
 #if __ARM_FEATURE_DOTPROD
-        direct_algos.emplace_back(&ds8_direct_stride1_large_group);
-        direct_algos.emplace_back(&ds8_direct_stride1_small_group);
-        direct_algos.emplace_back(&ds8_direct_stride2_large_group);
-        direct_algos.emplace_back(&ds8_direct_stride2_small_group);
-        direct_algos.emplace_back(&du8_direct_stride1_large_group);
-        direct_algos.emplace_back(&du8_direct_stride1_small_group);
-        direct_algos.emplace_back(&du8_direct_stride2_large_group);
-        direct_algos.emplace_back(&du8_direct_stride2_small_group);
+        direct_algos.emplace_back(&ds8_direct_stride1);
+        direct_algos.emplace_back(&ds8_direct_stride2);
+        direct_algos.emplace_back(&du8_direct_stride1);
+        direct_algos.emplace_back(&du8_direct_stride2);
 
         direct_algos.emplace_back(&ds8_direct_nchw44);
         direct_algos.emplace_back(&ds8_direct_nchw_nchw44);
 #endif
-        direct_algos.emplace_back(&qu8_direct_stride2_large_group);
-        direct_algos.emplace_back(&qu8_direct_stride2_small_group);
-        direct_algos.emplace_back(&qu8_direct_stride1_large_group);
-        direct_algos.emplace_back(&qu8_direct_stride1_small_group);
-        direct_algos.emplace_back(&s8_direct_stride2_large_group);
-        direct_algos.emplace_back(&s8_direct_stride2_small_group);
+        direct_algos.emplace_back(&qu8_direct_stride2);
+        direct_algos.emplace_back(&qu8_direct_stride1);
+        direct_algos.emplace_back(&s8_direct_stride2);
         direct_algos.emplace_back(&s8_direct_nchw44);
         direct_algos.emplace_back(&s8_direct_nchw_nchw44);
-        direct_algos.emplace_back(&s8_direct_stride1_large_group);
-        direct_algos.emplace_back(&s8_direct_stride1_small_group);
+        direct_algos.emplace_back(&s8_direct_stride1);
 
         direct_algos.emplace_back(&s8_channel_wise_stride1_nchw44);
         direct_algos.emplace_back(&s8_channel_wise_stride2_nchw44);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-        direct_algos.emplace_back(&f16_direct_stride1_large_group);
-        direct_algos.emplace_back(&f16_direct_stride1_small_group);
-        direct_algos.emplace_back(&f16_direct_large_group);
-        direct_algos.emplace_back(&f16_direct_small_group);
+        direct_algos.emplace_back(&f16_direct_stride1);
+        direct_algos.emplace_back(&f16_direct);
 #endif
-        direct_algos.emplace_back(&i8x8x16_direct_large_group);
-        direct_algos.emplace_back(&i8x8x16_direct_small_group);
+        direct_algos.emplace_back(&i8x8x16_direct);
         direct_algos.emplace_back(&i8x8x16_stride2_filter2);
-        direct_algos.emplace_back(&i8x8x16_stride2_large_group);
-        direct_algos.emplace_back(&i8x8x16_stride2_small_group);
+        direct_algos.emplace_back(&i8x8x16_stride2);
 
         direct_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
         direct_algos.emplace_back(&f32_chanel_wise_nchw44);
         direct_algos.emplace_back(&f32_direct_nchw44);
 
-        direct_algos.emplace_back(&f32_direct_stride1_large_group);
-        direct_algos.emplace_back(&f32_direct_stride1_small_group);
-        direct_algos.emplace_back(&f32_direct_stride2_large_group);
-        direct_algos.emplace_back(&f32_direct_stride2_small_group);
-        direct_algos.emplace_back(&f32_direct_large_group);
-        direct_algos.emplace_back(&f32_direct_small_group);
+        direct_algos.emplace_back(&f32_direct_stride1);
+        direct_algos.emplace_back(&f32_direct_stride2);
+        direct_algos.emplace_back(&f32_direct);
 
         static CpuOprDelegationStorage<2> storage;
         auto matmul_opr = storage.get<MatrixMul, 0>();

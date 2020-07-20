@@ -27,17 +27,10 @@ using namespace arm_common;
 
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8)
 /* ===================== stride1 algo ===================== */
-bool ConvBiasImpl::AlgoS8DirectStride1::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
-    bool avaible = direct_int8_stride1::can_conv_direct_stride1_int8(param);
-    auto fm = param.filter_meta;
-    if (algo_selection_strategy ==
-        ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-        bool large_group = fm.group >= param.nr_threads;
-        avaible &= (large_group == m_large_group);
-    }
-    return avaible;
+
+bool ConvBiasImpl::AlgoS8DirectStride1::usable(const NCBKernSizeParam& param,
+                                               AlgoSelectionStrategy) const {
+    return direct_int8_stride1::can_conv_direct_stride1_int8(param);
 }
 bool ConvBiasImpl::AlgoS8DirectStride1::is_preferred(
          const NCBKernSizeParam& param) const {
@@ -53,8 +46,9 @@ bool ConvBiasImpl::AlgoS8DirectStride1::is_preferred(
 }
 
 size_t ConvBiasImpl::AlgoS8DirectStride1::get_workspace(
-         const NCBKernSizeParam& param) const {
-    auto bundle = direct_int8_stride1::get_bundle(param, m_large_group);
+        const NCBKernSizeParam& param) const {
+    bool large_group = param.filter_meta.group >= param.nr_threads;
+    auto bundle = direct_int8_stride1::get_bundle(param, large_group);
     return bundle.total_size_in_bytes();
 }
 
@@ -62,7 +56,8 @@ SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8DirectStride1::dispatch_kerns(
          const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 1, 0) {
-        return direct_int8_stride1::get_kimpls(param, m_large_group);
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        return direct_int8_stride1::get_kimpls(param, large_group);
     }
     MIDOUT_END();
     return {};
@@ -117,21 +112,15 @@ ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44::dispatch_kerns(
 }
 
 /* ===================== stride2 algo ===================== */
-bool ConvBiasImpl::AlgoS8DirectStride2::usable(
-         const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
-    bool avaible = direct_int8_stride2::can_conv_direct_stride2_int8(param);
-    if (algo_selection_strategy ==
-        ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-        bool large_group = param.filter_meta.group >= param.nr_threads;
-        avaible &= (large_group == m_large_group);
-    }
-    return avaible;
+bool ConvBiasImpl::AlgoS8DirectStride2::usable(const NCBKernSizeParam& param,
+                                               AlgoSelectionStrategy) const {
+    return direct_int8_stride2::can_conv_direct_stride2_int8(param);
 }
 
 size_t ConvBiasImpl::AlgoS8DirectStride2::get_workspace(
         const NCBKernSizeParam& param) const {
-    auto bundle = direct_int8_stride2::get_bundle(param, m_large_group);
+    bool large_group = param.filter_meta.group >= param.nr_threads;
+    auto bundle = direct_int8_stride2::get_bundle(param, large_group);
     return bundle.total_size_in_bytes();
 }
 
@@ -139,7 +128,8 @@ SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8DirectStride2::dispatch_kerns(
          const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 1, 1) {
-        return direct_int8_stride2::get_kimpls(param, m_large_group);
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        return direct_int8_stride2::get_kimpls(param, large_group);
     }
     MIDOUT_END();
     return {};
@@ -147,24 +137,15 @@ ConvBiasImpl::AlgoS8DirectStride2::dispatch_kerns(
 
 #if __ARM_FEATURE_DOTPROD
 /* ===================== dot stride1 algo ======================== */
-bool ConvBiasImpl::AlgoDotS8DirectStride1::usable(
-         const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
-    bool avaible =
-            direct_dotprod_int8_stride1::can_conv_direct_stride1_int8(param);
-
-    if (algo_selection_strategy ==
-        ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-        bool large_group = param.filter_meta.group >= param.nr_threads;
-        avaible &= (large_group == m_large_group);
-    }
-
-    return avaible;
+bool ConvBiasImpl::AlgoDotS8DirectStride1::usable(const NCBKernSizeParam& param,
+                                                  AlgoSelectionStrategy) const {
+    return direct_dotprod_int8_stride1::can_conv_direct_stride1_int8(param);
 }
 
 size_t ConvBiasImpl::AlgoDotS8DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
-    auto bundle = direct_dotprod_int8_stride1::get_bundle(param, m_large_group);
+    bool large_group = param.filter_meta.group >= param.nr_threads;
+    auto bundle = direct_dotprod_int8_stride1::get_bundle(param, large_group);
     return bundle.total_size_in_bytes();
 }
 
@@ -172,29 +153,23 @@ SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoDotS8DirectStride1::dispatch_kerns(
          const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 2, 1) {
-        return direct_dotprod_int8_stride1::get_kimpls(param, m_large_group);
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        return direct_dotprod_int8_stride1::get_kimpls(param, large_group);
     }
     MIDOUT_END();
     return {};
 }
 
 /* ===================== dot stride2 algo ======================== */
-bool ConvBiasImpl::AlgoDotS8DirectStride2::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
-    bool avaible =
-            direct_dotprod_int8_stride2::can_conv_direct_stride2_int8(param);
-    if (algo_selection_strategy ==
-        ConvBiasImpl::AlgoSelectionStrategy::HEURISTIC) {
-        bool large_group = param.filter_meta.group >= param.nr_threads;
-        avaible &= (large_group == m_large_group);
-    }
-    return avaible;
+bool ConvBiasImpl::AlgoDotS8DirectStride2::usable(const NCBKernSizeParam& param,
+                                                  AlgoSelectionStrategy) const {
+    return direct_dotprod_int8_stride2::can_conv_direct_stride2_int8(param);
 }
 
 size_t ConvBiasImpl::AlgoDotS8DirectStride2::get_workspace(
-         const NCBKernSizeParam& param) const {
-    auto bundle = direct_dotprod_int8_stride2::get_bundle(param, m_large_group);
+        const NCBKernSizeParam& param) const {
+    bool large_group = param.filter_meta.group >= param.nr_threads;
+    auto bundle = direct_dotprod_int8_stride2::get_bundle(param, large_group);
     return bundle.total_size_in_bytes();
 }
 
@@ -202,7 +177,8 @@ SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoDotS8DirectStride2::dispatch_kerns(
          const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 2, 2) {
-        return direct_dotprod_int8_stride2::get_kimpls(param, m_large_group);
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        return direct_dotprod_int8_stride2::get_kimpls(param, large_group);
     }
     MIDOUT_END();
     return {};

@@ -29,14 +29,10 @@ class ConvBiasImpl::AlgoDirect final : public AlgoBase {
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);
-    bool m_large_group;
-
 public:
-    AlgoDirect(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
     const char* name() const override {
-        return m_large_group ? "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"
-                             : "X86_CONV_BIAS_DIRECT_STRIDE1_SMALL_GROUP";
+        return "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP";
     }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -65,14 +61,10 @@ class ConvBiasImpl::AlgoDirectStride2 final : public AlgoBase {
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);
-    bool m_large_group;
-
 public:
-    AlgoDirectStride2(bool large_group) : m_large_group(large_group) {}
     bool is_reproducible() const override { return true; }
     const char* name() const override {
-        return m_large_group ? "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"
-                             : "X86_CONV_BIAS_DIRECT_STRIDE2_SMALL_GROUP";
+        return "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP";
     }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
