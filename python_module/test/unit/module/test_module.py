@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import tempfile
+from collections import OrderedDict
 from io import BytesIO
 
 import numpy as np
@@ -16,7 +17,14 @@ from helpers import MLP
 import megengine as mge
 import megengine._internal as mgb
 from megengine.core import Buffer, Parameter, Tensor, tensor
-from megengine.module import BatchNorm1d, BatchNorm2d, Conv2d, Module, Sequential
+from megengine.module import (
+    BatchNorm1d,
+    BatchNorm2d,
+    Conv2d,
+    Linear,
+    Module,
+    Sequential,
+)
 from megengine.quantization.quantize import quantize, quantize_qat
 from megengine.test import assertTensorClose
 
@@ -236,6 +244,18 @@ def test_module_api_with_sequential():
         ("seq.1", m.seq[1]),
         ("seq.1.bn", m.seq[1].bn),
     ]
+
+
+def test_sequential_named_children():
+    modules = OrderedDict()
+    modules["name0"] = Linear(20, 10)
+    modules["name1"] = Linear(10, 5)
+    modules["name2"] = Linear(5, 1)
+    m = Sequential(modules)
+    l = list(m.named_children())
+    assert l[0][0] == "name0"
+    assert l[1][0] == "name1"
+    assert l[2][0] == "name2"
 
 
 def test_state_dict():
