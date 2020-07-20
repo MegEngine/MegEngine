@@ -73,6 +73,32 @@ namespace metahelper_detail {
         static std::false_type test(...);
         using type = decltype(test(reinterpret_cast<T*>(0)));
     };
+
+    struct if_constexpr_identity {
+        template <typename T>
+        decltype(auto) operator()(T&& x) {
+            return std::forward<T>(x);
+        }
+    };
+
+    template <bool cond>
+    struct if_constexpr_impl;
+
+    template <>
+    struct if_constexpr_impl<true> {
+        template <class Then, class Else>
+        static decltype(auto) run(Then&& then, Else&&) {
+            return then(if_constexpr_identity{});
+        }
+    };
+
+    template <>
+    struct if_constexpr_impl<false> {
+        template <class Then, class Else>
+        static decltype(auto) run(Then&&, Else&& else_) {
+            return else_(if_constexpr_identity{});
+        }
+    };
 } // namespace metahelper_detail
 
 //! construct index_sequence<0..N-1>
@@ -302,6 +328,20 @@ T raw_cast(U&& u) {
     SafeUnion2<typename std::decay<T>::type, typename std::decay<U>::type> x;
     x.u = u;
     return x.t;
+}
+
+//! functionally equivalent to "if constexpr" in C++17.
+//! then/else callbacks receives an Identity functor as its sole argument.
+//! The functor is useful for masking eager type check on generic lambda,
+//! preventing syntax error on not taken branches.
+template <bool Cond, class Then, class Else>
+decltype(auto) if_constexpr(Then&& then, Else&& else_) {
+    return metahelper_detail::if_constexpr_impl<Cond>::run(then, else_);
+}
+
+template <bool Cond, class Then>
+decltype(auto) if_constexpr(Then&& then) {
+    return if_constexpr<Cond>(std::forward<Then>(then), [](auto) {});
 }
 
 } // namespace mgb
