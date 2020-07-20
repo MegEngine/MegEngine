@@ -10,6 +10,7 @@
  */
 
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/io.h"
 
 #include "megbrain/graph/grad_impl.h"
 #include "megbrain/system.h"
@@ -95,67 +96,14 @@ MGB_FOREACH_FASTRUN_OPR(cb)
 
 #undef cb
 
-template <class MGBOpr>
-struct OprAttributeTrait {
-    static bool is_weights_persistent(const MGBOpr*) { return false; }
-};
-
-template <>
-struct OprAttributeTrait<opr::ConvBias> {
-    //! return true if the flag of weights is PERSISTENT_DEVICE_VALUE, false
-    //! otherwise. True means weights can be tranformed in the first run.
-    static bool is_weights_persistent(const opr::ConvBias* opr) {
-        return opr->input()[1]->contain_flag(
-                VarNode::Flag::PERSISTENT_DEVICE_VALUE);
-    }
-};
-
-template <typename Opr>
-constexpr bool opr_supports_preprocess() {
-    return std::is_same<Opr, megdnn::ConvolutionForward>::value ||
-           std::is_same<Opr, megdnn::ConvBias>::value;
-}
-
 template <typename Opr>
 struct OprArityTrait;
-
-#define APPLY(statement, ...)                                  \
-    mgb::apply([&](const auto&... args) { return statement; }, \
-               std::tuple_cat(__VA_ARGS__))
 
 template <typename Opr, int _arity_in, int _arity_out>
 struct OprArityTraitTmpl {
     static constexpr int arity_in = _arity_in;
     static constexpr int arity_out = _arity_out;
     static constexpr int arity = arity_in + arity_out;
-    using Algorithm = typename Opr::Algorithm;
-    using TensorLayoutArray = std::array<TensorLayout, arity>;
-
-    static size_t get_workspace_in_bytes(Opr* opr, Algorithm* algo,
-                                         const TensorLayoutArray& layouts) {
-        opr->execution_policy() = {algo};
-        size_t workspace_size;
-        if_constexpr<opr_supports_preprocess<Opr>()>([&](auto) {
-            workspace_size = APPLY(
-                    opr->get_workspace_in_bytes(args..., nullptr), layouts);
-        }, /* else */ [&](auto) {
-            workspace_size =
-                    APPLY(opr->get_workspace_in_bytes(args...), layouts);
-        });
-        return workspace_size;
-    }
-
-    static void exec(Opr* opr,
-                     const std::array<DeviceTensorND, arity_in>& inp_val,
-                     const std::array<DeviceTensorND, arity_out>& out_val,
-                     megdnn::Workspace& workspace) {
-        if_constexpr<opr_supports_preprocess<Opr>()>([&](auto) {
-            APPLY(opr->exec(args.as_megdnn()..., nullptr, workspace), inp_val,
-                   out_val);
-        }, /* else */ [&](auto) {
-            APPLY(opr->exec(args.as_megdnn()..., workspace), inp_val, out_val);
-        });
-    }
 };
 
 #define INST_ARITY(_Opr, _in, _out) \
@@ -178,6 +126,26 @@ INST_ARITY(megdnn::ConvBias, 4, 1);
 INST_ARITY(megdnn::DeformableConvBackwardData, 5, 3);
 
 #undef INST_ARITY
+
+template <typename Opr>
+constexpr bool opr_supports_preprocess() {
+    return std::is_same<Opr, megdnn::ConvolutionForward>::value ||
+           std::is_same<Opr, megdnn::ConvBias>::value;
+}
+
+template <typename Opr, bool has_prep>
+struct PreprocessFilterImpl {
+    using T = union {};
+};
+
+template <typename Opr>
+struct PreprocessFilterImpl<Opr, true> {
+    using T = typename Opr::PreprocessedFilter;
+};
+
+template <typename Opr>
+using PreprocessFilter =
+        typename PreprocessFilterImpl<Opr, opr_supports_preprocess<Opr>()>::T;
 
 // timeout delta to be added with fastest known algorithm for new algos
 constexpr double TIMEOUT_TOLERANCE = 2;
@@ -225,6 +193,7 @@ public:
         CompNode::Locator comp_node_loc;
         ConvTensorShapes shapes;
         typename Opr::Param opr_param;
+        bool allow_weight_preprocess;
 
         //! filled by profile()
         mutable double actual_timeout;
@@ -277,6 +246,10 @@ double TimedProfiler<Opr>::init_timeout_setting() {
     return 0;
 }
 
+#define APPLY(statement, ...)                                  \
+    mgb::apply([&](const auto&... args) { return statement; }, \
+               std::tuple_cat(__VA_ARGS__))
+
 template <typename Opr>
 typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         const TParam& raw_param) {
@@ -324,6 +297,16 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         megdnn_opr->execution_policy() = {algo};
     }
 
+    // Allocate preprocessed weight buffers.
+    TensorLayoutArray preprocessed_layout;
+    if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
+        if (param.allow_weight_preprocess) {
+            preprocessed_layout = APPLY(
+                    _(megdnn_opr)->deduce_preprocessed_filter_layout(args...),
+                    layouts);
+        }
+    });
+
     {
         // first allocate a whole chunk to avoid memory fragmentation (here we
         // rely on memory allocator to reuse memory)
@@ -331,6 +314,9 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         size_t tot_size = align;
         for (int i = 0; i < arity; ++i) {
             tot_size += layouts[i].span().high_byte + align;
+        }
+        for (const auto& layout : preprocessed_layout) {
+            tot_size += layout.span().high_byte + align;
         }
         tot_size += param.workspace;
         DeviceTensorStorage storage{cn};
@@ -362,15 +348,46 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         mdn_workspace.raw_ptr = workspace.raw_ptr();
     }
 
+    // allocate storage for preprocessed filter
+    SmallVector<DeviceTensorND> flt_val(preprocessed_layout.size());
+    for (size_t i = 0; i < preprocessed_layout.size(); i++) {
+        flt_val[i] = {cn, preprocessed_layout[i], preprocessed_layout[i].dtype,
+                      preprocessed_layout[i].format};
+    }
+
     for (int i = 0; i < arity_in; ++i) {
         fill_zero_dev_tensor(inp_val[i]);
     }
+
+    PreprocessFilter<Opr> prep_flt;
+    if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
+        if (!preprocessed_layout.empty()) {
+            auto&& pf = _(prep_flt);
+            pf.algorithm_id = nullptr;
+            pf.tensors.resize(flt_val.size());
+            for (size_t i = 0; i < flt_val.size(); i++) {
+                pf.tensors[i] = flt_val[i].as_megdnn();
+            }
+            APPLY(_(megdnn_opr)->exec_preprocess(args..., &pf, mdn_workspace),
+                  std::forward_as_tuple(layouts[0], inp_val[1].as_megdnn()),
+                  array_skip<2>(layouts));
+        }
+    });
 
     RealTimer timer;
     auto ev_start = cn.create_event(CompNode::Event::NEED_TIMER),
          ev_end = cn.create_event(CompNode::Event::NEED_TIMER);
     ev_start->record();
-    OprArityTrait<Opr>::exec(megdnn_opr.get(), inp_val, out_val, mdn_workspace);
+    if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
+        auto&& opr = _(megdnn_opr);
+        PreprocessFilter<Opr>* pf =
+                preprocessed_layout.empty() ? nullptr : &prep_flt;
+        APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace), inp_val,
+              out_val);
+    }, /* else */ [&](auto _) {
+        APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace), inp_val,
+              out_val);
+    });
     ev_end->record();
 
     double next_report_time = 0.5;
@@ -425,13 +442,15 @@ class AlgoChooser {
         const ConvTensorLayouts& m_layouts;
         Opr* m_megdnn_opr;
         const MGBOpr* m_mgb_opr;
+        bool m_allow_weight_preprocess;
 
     public:
         ExeContext(const ConvTensorLayouts& layouts, Opr* megdnn_opr,
-                   const MGBOpr* mgb_opr)
+                   const MGBOpr* mgb_opr, bool allow_weight_preprocess)
                 : m_layouts{layouts},
                   m_megdnn_opr{megdnn_opr},
-                  m_mgb_opr{mgb_opr} {
+                  m_mgb_opr{mgb_opr},
+                  m_allow_weight_preprocess{allow_weight_preprocess} {
             mgb_assert(m_layouts.size() == layouts.size());
             static_assert(
                     std::tuple_size<ConvTensorLayouts>::value == 3 ||
@@ -499,8 +518,23 @@ class AlgoChooser {
 
         //! get workspace size required for specific algo
         size_t get_workspace_size_bytes(ImplAlgo algo) const {
-            return OprArityTrait<Opr>::get_workspace_in_bytes(m_megdnn_opr,
-                                                              algo, m_layouts);
+            m_megdnn_opr->execution_policy() = {algo};
+            size_t result;
+            if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
+                auto&& opr = _(m_megdnn_opr);
+                auto prep = construct_fake_preprocess_filter();
+                PreprocessFilter<Opr>* prep_ptr =
+                        prep.valid() ? &prep.val() : nullptr;
+                result = std::max(
+                        APPLY(opr->get_preprocess_workspace_in_bytes(args...),
+                              m_layouts),
+                        APPLY(opr->get_workspace_in_bytes(args..., prep_ptr),
+                              m_layouts));
+            }, /* else */ [&](auto _) {
+                result = APPLY(_(m_megdnn_opr)->get_workspace_in_bytes(args...),
+                               m_layouts);
+            });
+            return result;
         }
 
         /*!
@@ -525,6 +559,28 @@ class AlgoChooser {
          */
         void modify_param_with_weights_preprocessed(
                 typename TimedProfiler<Opr>::Param& param) const {}
+        
+        Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const {
+            Maybe<PreprocessFilter<Opr>> result = None;
+            if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
+                if (!m_allow_weight_preprocess)
+                    return;
+                auto opr = _(m_megdnn_opr);
+                auto layout =
+                        APPLY(opr->deduce_preprocessed_filter_layout(args...),
+                              m_layouts);
+                if (layout.empty())
+                    return;
+                result = PreprocessFilter<Opr>{};
+                auto& res = result.val();
+                res.algorithm_id = nullptr;
+                res.tensors.resize(layout.size());
+                for (size_t i = 0; i < layout.size(); i++) {
+                    res.tensors[i] = megdnn::TensorND(nullptr, layout[i]);
+                }
+            });
+            return result;
+        }
     };
 
     //! entrance for getting algorithm according to execution strategy
@@ -571,12 +627,13 @@ public:
      * \brief setup algorithm and return workspace size
      */
     static size_t setup_algo(const ConvTensorLayouts& layouts, Opr* megdnn_opr,
-                             const MGBOpr* mgb_opr) {
+                             const MGBOpr* mgb_opr,
+                             bool allow_weight_preprocess = false) {
         if (WorkspaceLimitGetter::is_prealloc_run(mgb_opr->owner_graph())) {
             return 0;
         }
 
-        ExeContext ctx(layouts, megdnn_opr, mgb_opr);
+        ExeContext ctx(layouts, megdnn_opr, mgb_opr, allow_weight_preprocess);
 
         auto algo = get_algo(ctx);
         size_t workspace = ctx.get_workspace_size_bytes(algo);
@@ -780,9 +837,6 @@ Maybe<AlgoChooserProfileCache::ResultEntry>
 AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
                                                   double& timeout) const {
     typename TimedProfiler<Opr>::Param param;
-    bool is_weights_persistent =
-            OprAttributeTrait<typename MegDNNOpr2MGBOpr<Opr>::MGBOpr>::
-                    is_weights_persistent(m_mgb_opr);
     auto name = algo->name();
     // force check copy size <= dest len-1 from gcc8 for safe
     auto len = sizeof(param.algo_name);
@@ -806,8 +860,9 @@ AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
     for (size_t i = 0; i < param.shapes.size(); ++i)
         param.shapes[i] = m_layouts[i];
     param.opr_param = m_megdnn_opr->param();
+    param.allow_weight_preprocess = m_allow_weight_preprocess;
 
-    if (is_weights_persistent) {
+    if (m_allow_weight_preprocess) {
         modify_param_with_weights_preprocessed(param);
     }
 
@@ -911,6 +966,78 @@ AlgoChooserProfileCache& mixin::Convolution::profile_cache() const {
     return *m_profile_cache;
 }
 
+class mixin::WeightPreprocessExecutor::PreprocessedFilterExecDep final
+        : public cg::GraphExecutable::ExecDependency {
+    std::unique_ptr<PreprocessedFilter> m_pf;
+    SmallVector<DeviceTensorND> m_filter_storage;
+
+public:
+    explicit PreprocessedFilterExecDep(
+            std::unique_ptr<PreprocessedFilter> preprocessed_filter,
+            SmallVector<DeviceTensorND> filter_storage)
+            : m_pf(std::move(preprocessed_filter)),
+              m_filter_storage(std::move(filter_storage)) {}
+};
+
+void mixin::WeightPreprocessExecutor::mixin_update_preprocessed_filter(
+        cg::OperatorNodeBase& opr) {
+    if (!mixin_allow_weight_preprocess(opr)) return;
+
+    auto new_layout = deduce_preprocessed_filter_layout();
+    if (new_layout.empty()) {
+        // Weight preprocess was needed before, but no longer needed.
+        if (m_preprocessed_filter) {
+            m_preprocessed_filter.reset();
+            m_filter_storage.clear();
+        }
+        return;
+    }
+
+    bool should_update = false;
+    size_t new_size = new_layout.size();
+    if (!m_preprocessed_filter ||
+        m_preprocessed_filter->tensors.size() != new_size) {
+        should_update = true;
+    } else {
+        for (size_t i = 0; i < new_size; i++) {
+            if (!new_layout[i].eq_layout(
+                        m_preprocessed_filter->tensors[i].layout)) {
+                should_update = true;
+                break;
+            }
+        }
+    }
+    if (!should_update) return;
+
+    if (!m_preprocessed_filter) {
+        m_preprocessed_filter.reset(new PreprocessedFilter{});
+    }
+    m_preprocessed_filter->tensors.resize(new_size);
+    m_filter_storage.resize(new_size);
+    m_preprocessed_filter->algorithm_id = nullptr;
+    for (size_t i = 0; i < new_size; i++) {
+        m_filter_storage[i] = {opr.output(0)->comp_node(), new_layout[i],
+                               new_layout[i].dtype, new_layout[i].format};
+        m_preprocessed_filter->tensors[i] = m_filter_storage[i].as_megdnn();
+    }
+    scn_do_execute_preprocess();
+}
+
+void mixin::WeightPreprocessExecutor::record_preprocessed_weight(
+        cg::GraphExecutable::ExecDependencyArray& deps) {
+    deps.emplace_back(new PreprocessedFilterExecDep{
+            std::move(m_preprocessed_filter), std::move(m_filter_storage)});
+}
+
+bool mixin::WeightPreprocessExecutor::mixin_allow_weight_preprocess(
+        const cg::OperatorNodeBase& opr) const {
+    bool param_merged = opr.input(1)
+                                ->owner_opr()
+                                ->same_type<opr::MultipleDeviceTensorHolder>();
+    return opr.input(1)->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE) &&
+           (cg::is_const_var_value(opr.input(1)) || param_merged);
+}
+
 /* ==================== ConvolutionForward  ==================== */
 
 IMPL_CONV(ConvolutionForward, "conv_fwd");
@@ -971,7 +1098,7 @@ size_t ConvolutionForward::get_workspace_size_bytes(
                           input(0)->format()},
              {input_shapes[1], input(1)->dtype(), input(1)->format()},
              {output_shapes[0], output(0)->dtype(), output(0)->format()}},
-            megdnn_opr(), this);
+            megdnn_opr(), this, allow_weight_preprocess());
 }
 
 void ConvolutionForward::init_output_format() {
@@ -980,9 +1107,14 @@ void ConvolutionForward::init_output_format() {
 }
 
 void ConvolutionForward::scn_do_execute() {
+    if (input(1)->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE) &&
+        cg::is_const_var_value(input(1))) {
+        update_preprocessed_filter();
+    }
     megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
                        input(1)->dev_tensor().as_megdnn(),
-                       output(0)->dev_tensor().as_megdnn(), nullptr,
+                       output(0)->dev_tensor().as_megdnn(),
+                       preprocessed_filter(),
                        intl::get_megdnn_workspace_from_var(output().back()));
 }
 
@@ -1012,6 +1144,20 @@ void ConvolutionForward::get_output_var_shape(
 void ConvolutionForward::record_execute_deps(
         cg::GraphExecutable::ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
+    record_preprocessed_weight(deps);
+}
+
+SmallVector<TensorLayout>
+ConvolutionForward::deduce_preprocessed_filter_layout() {
+    return megdnn_opr()->deduce_preprocessed_filter_layout(
+            input(0)->layout(), input(1)->layout(), output(0)->layout());
+}
+
+void ConvolutionForward::scn_do_execute_preprocess() {
+    megdnn_opr()->exec_preprocess(
+            input(0)->layout(), input(1)->dev_tensor().as_megdnn(),
+            output(0)->layout(), preprocessed_filter(),
+            intl::get_megdnn_workspace_from_var(output().back()));
 }
 
 /* ==================== ConvolutionBackwardData  ==================== */
@@ -1504,10 +1650,12 @@ size_t ConvBiasForward::get_workspace_size_bytes(
              i2,
              i3,
              {output_shapes[0], output(0)->dtype(), output(0)->format()}},
-            mo, this);
+            mo, this, allow_weight_preprocess());
 }
 
 void ConvBiasForward::scn_do_execute() {
+    update_preprocessed_filter();
+
     auto&& inp = input();
     auto mo = megdnn_opr();
     if (inp.size() == 2) {
@@ -1619,6 +1767,33 @@ megdnn::param::MatrixMul::Format ConvBiasForward::get_matmul_format(
                       "channel_block_size, got: %u",
                       param.channel_block_size);
     }
+}
+
+SmallVector<TensorLayout> ConvBiasForward::deduce_preprocessed_filter_layout() {
+    TensorLayout i2, i3;
+    if (input().size() > 2) {
+        i2 = input(2)->layout();
+    }
+    if (input().size() > 3) {
+        i3 = input(3)->layout();
+    }
+    return megdnn_opr()->deduce_preprocessed_filter_layout(
+            input(0)->layout(), input(1)->layout(), i2, i3,
+            output(0)->layout());
+}
+
+void ConvBiasForward::scn_do_execute_preprocess() {
+    TensorLayout bias_layout(output(0)->dtype()), z_layout(output(0)->dtype());
+    if (input().size() > 2) {
+        bias_layout = input(2)->layout();
+    }
+    if (input().size() > 3) {
+        z_layout = input(3)->layout();
+    }
+    megdnn_opr()->exec_preprocess(
+            input(0)->layout(), input(1)->dev_tensor().as_megdnn(), bias_layout,
+            z_layout, output(0)->layout(), preprocessed_filter(),
+            intl::get_megdnn_workspace_from_var(output().back()));
 }
 
 /* ===================== LocalShareForward ==================== */

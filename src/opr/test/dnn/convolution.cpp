@@ -21,6 +21,8 @@
 #include "megbrain/gopt/inference.h"
 #include "megbrain/opr/tensor_manip.h"
 
+#include <gmock/gmock.h>
+
 #include <cmath>
 #include <random>
 
@@ -244,7 +246,6 @@ opr::Convolution::Param convert_to_conv_param(
             param.dilate_w, param.sparse,   param.format};
 };
 #endif
-} // anonymous namespace
 
 TEST(TestOprDNN, ConvolutionForward) {
     uint32_t ih = 10, ic = 16, oc = 32, ph = 0, sh = 1, fh = 2;
@@ -1172,6 +1173,7 @@ TEST(TestOprDNN, ConvBiasForward) {
                           {1, OC, 1, 1}},
                          opt3);
         };
+        run(1, 1, 1, 5, 5, 1, 1);
         run(1, 1, 1, 5, 5, 3, 3);
         run(2, 3, 4, 5, 5, 3, 3);
         run(3, 3, 4, 224, 223, 3, 3);
@@ -2124,4 +2126,225 @@ TEST(TestOprDNN, ConvolutionMultiCompNode) {
 
 #endif
 
+}  // anonymous namespace
+
+namespace mgb {
+namespace opr {
+namespace testing {
+
+class ConvolutionTestingPeer {
+    opr::ConvolutionForward& m_conv_opr;
+public:
+    explicit ConvolutionTestingPeer(cg::OperatorNodeBase* opr)
+            : m_conv_opr(opr->cast_final_safe<opr::ConvolutionForward>()) {}
+    void set_megdnn_opr(
+            std::unique_ptr<megdnn::ConvolutionForward> megdnn_opr) {
+        m_conv_opr.set_megdnn_opr(std::move(megdnn_opr));
+    }
+};
+
+}  // namespace testing
+}  // namespace opr
+}  // namespace mgb
+
+namespace {
+
+using megdnn::TensorND;
+using megdnn::Workspace;
+using opr::testing::ConvolutionTestingPeer;
+
+class MockConvolutionForward : public megdnn::ConvolutionForward {
+    const char* m_algorithm_set_name;
+public:
+    MockConvolutionForward(megdnn::ConvolutionForward* orig,
+                           const char* algo_set_name)
+            : megdnn::ConvolutionForward(orig->handle()),
+              m_algorithm_set_name(algo_set_name) {}
+
+    MOCK_METHOD5(exec, void(_megdnn_tensor_in src, _megdnn_tensor_in filter,
+                            _megdnn_tensor_out dst,
+                            const PreprocessedFilter* preprocessed_filter,
+                            _megdnn_workspace workspace));
+    MOCK_METHOD5(exec_preprocess,
+                 void(const TensorLayout& src_layout, _megdnn_tensor_in filter,
+                      const TensorLayout& dst_layout,
+                      PreprocessedFilter* preprocessed_filter,
+                      _megdnn_workspace workspace));
+    MOCK_METHOD4(get_workspace_in_bytes,
+                 size_t(const TensorLayout& src, const TensorLayout& filter,
+                        const TensorLayout& dst,
+                        const PreprocessedFilter* preprocessed_filter));
+    MOCK_METHOD3(deduce_preprocessed_filter_layout,
+                 SmallVector<TensorLayout>(const TensorLayout& src,
+                                           const TensorLayout& filter,
+                                           const TensorLayout& dst));
+    MOCK_METHOD3(get_preprocess_workspace_in_bytes,
+                 size_t(const TensorLayout& src, const TensorLayout& filter,
+                        const TensorLayout& dst));
+    MOCK_METHOD3(get_all_algorithms,
+                 std::vector<Algorithm*>(const TensorLayout& p0,
+                                         const TensorLayout& p1,
+                                         const TensorLayout& p2));
+    MOCK_METHOD5(get_algorithm_heuristic,
+                 Algorithm*(const TensorLayout& p0, const TensorLayout& p1,
+                            const TensorLayout& p2,
+                            size_t workspace_limit_in_bytes,
+                            bool reproducible));
+    const char* get_algorithm_set_name() const override {
+        return m_algorithm_set_name;
+    }
+};
+
+class MockAlgorithm : public megdnn::detail::Algorithm {
+    const char* m_name;
+
+public:
+    MockAlgorithm(const char* name = "NotImportant") : m_name(name) {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return m_name; }
+
+    virtual ~MockAlgorithm() = default;
+};
+
+class TestWeightPreprocess : public ::testing::Test {
+protected:
+    CompNode comp_node;
+    std::shared_ptr<ComputingGraph> graph;
+    std::shared_ptr<HostTensorND> x_host;
+    MockConvolutionForward* mock_conv_ptr;
+    SymbolVar y;
+    HostTensorND y_host;
+    std::unique_ptr<cg::AsyncExecutable> func;
+
+    MockConvolutionForward& mock_conv() { return *mock_conv_ptr; }
+
+    void SetUp() override {
+        constexpr uint32_t ih = 10, ic = 16, oc = 32, ph = 0, sh = 1, fh = 2,
+                           iw = ih;
+        comp_node = CompNode::load("cpux");
+        graph = ComputingGraph::make();
+        TensorShape x_shape{1, ic, ih, iw}, w_shape{oc, ic, fh, fh};
+        x_host = std::make_shared<HostTensorND>(comp_node, x_shape);
+        auto x = opr::Host2DeviceCopy::make(*graph, x_host);
+        auto w = opr::ImmutableTensor::make(*graph, {comp_node, w_shape});
+        Param param;
+        param.pad_h = param.pad_w = ph;
+        param.stride_h = param.stride_w = sh;
+        param.format = Param::Format::NCHW;
+        y = opr::ConvolutionForward::make(x, w, param);
+        auto& opr =
+                y.node()->owner_opr()->cast_final<opr::ConvolutionForward>();
+        auto mock = std::make_unique<MockConvolutionForward>(
+                opr.megdnn_opr(), ::testing::UnitTest::GetInstance()
+                                          ->current_test_info()
+                                          ->name());
+        mock_conv_ptr = mock.get();
+        ConvolutionTestingPeer{&opr}.set_megdnn_opr(std::move(mock));
+        func = graph->compile({make_callback_copy(y, y_host)});
+    }
+
+    void run() { func->execute().wait(); }
+
+    void TearDown() override {
+        func.reset();
+        // Triggers mock check
+        graph.reset();
+        x_host.reset();
+    }
+};
+
+TEST_F(TestWeightPreprocess, NoPreprocessNeeded) {
+    using ::testing::_;
+    using ::testing::Return;
+    auto& mock = mock_conv();
+
+    MockAlgorithm algo;
+    EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+            .WillRepeatedly(Return(&algo));
+    EXPECT_CALL(mock, get_workspace_in_bytes(_, _, _, _))
+            .WillRepeatedly(Return(0));
+    EXPECT_CALL(mock, get_preprocess_workspace_in_bytes(_, _, _))
+            .WillRepeatedly(Return(0));
+
+    {
+        ::testing::InSequence seq;
+        // Return empty preprocess filters, indicating no need to preprocess
+        EXPECT_CALL(mock, deduce_preprocessed_filter_layout(_, _, _))
+                .WillRepeatedly(Return(SmallVector<TensorLayout>{}));
+        EXPECT_CALL(mock, exec_preprocess(_, _, _, _, _)).Times(0);
+        EXPECT_CALL(mock, exec(_, _, _, nullptr, _));
+        run();
+    }
+}
+
+TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
+    using ::testing::_;
+    using ::testing::Return;
+    using ::testing::Field;
+    using ::testing::Invoke;
+    using ::testing::Expectation;
+    using PF = MockConvolutionForward::PreprocessedFilter;
+
+    auto& mock = mock_conv();
+    MockAlgorithm algo;
+    SmallVector<TensorLayout> filter_layout{{{1, 2, 3, 4}, dtype::Float32()},
+                                            {{5, 6, 7, 8}, dtype::Float32()}};
+
+    EXPECT_CALL(mock, deduce_preprocessed_filter_layout(_, _, _))
+            .WillRepeatedly(Return(filter_layout));
+
+    Expectation algo_call =
+            EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+                    .WillOnce(Return(&algo));
+    Expectation ws_call = EXPECT_CALL(mock, get_workspace_in_bytes(_, _, _, _))
+                                  .After(algo_call)
+                                  .WillOnce(Return(0));
+    Expectation pre_ws_call =
+            EXPECT_CALL(mock, get_preprocess_workspace_in_bytes(_, _, _))
+                    .After(algo_call)
+                    .WillOnce(Return(233));
+    {
+        ::testing::InSequence seq;
+
+        // exec_preprocess should be called only once, with workspace allocated
+        int salt = 0;
+        EXPECT_CALL(mock, exec_preprocess(_, _, _, _, _))
+                .After(ws_call, pre_ws_call)
+                .WillOnce(Invoke([&](const TensorLayout&, _megdnn_tensor_in,
+                                     const TensorLayout&, PF* pf,
+                                     _megdnn_workspace workspace) {
+                    ASSERT_EQ(workspace.size, 233);
+                    ASSERT_NE(pf, nullptr);
+                    pf->algorithm_id = &salt;
+                    ASSERT_EQ(pf->tensors.size(), 2);
+                    ASSERT_TRUE(pf->tensors[0].layout.eq_shape({1, 2, 3, 4}));
+                    ASSERT_TRUE(pf->tensors[1].layout.eq_shape({5, 6, 7, 8}));
+                    ASSERT_NE(pf->tensors[0].raw_ptr, nullptr);
+                    ASSERT_NE(pf->tensors[1].raw_ptr, nullptr);
+                    pf->tensors[0].ptr<float>()[0] = 114.514f;
+                    pf->tensors[1].ptr<float>()[0] = 1926.0817f;
+                }));
+
+        // Run the graph multiple times.
+        for (int i = 0; i < 3; i++) {
+            if (i > 0) {
+                EXPECT_CALL(mock, exec_preprocess(_, _, _, _, _)).Times(0);
+            }
+            EXPECT_CALL(mock, exec(_, _, _, _, _))
+                    .WillOnce(Invoke([&](_megdnn_tensor_in, _megdnn_tensor_in,
+                                         _megdnn_tensor_out, const PF* pf,
+                                         _megdnn_workspace) {
+                        ASSERT_NE(pf, nullptr);
+                        ASSERT_EQ(pf->algorithm_id, &salt);
+                        ASSERT_EQ(pf->tensors[0].ptr<float>()[0], 114.514f);
+                        ASSERT_EQ(pf->tensors[1].ptr<float>()[0], 1926.0817f);
+                    }));
+            run();
+        }
+    }
+}
+
+}  // anonymous namespace
+
+>>>>>>> 11c3561ca... feat(opr): use weight preprocess feature of MegDNN
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

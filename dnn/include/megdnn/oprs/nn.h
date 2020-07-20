@@ -51,6 +51,17 @@ protected:
 };
 using SeparableConv = SeparableConvForward;
 
+namespace detail {
+
+struct PreprocessedFilter {
+    //! user data; its lifetime should be bound to MegDNN Convolution
+    //! operator
+    void* algorithm_id;
+    TensorNDArray tensors;
+};
+
+}  // namespace intl
+
 /**
  * \brief base class for convolution operation
  *
@@ -131,13 +142,7 @@ public:
             return flag;
         }
     };
-
-    struct PreprocessedFilter {
-        //! user data; its lifetime should be bound to MegDNN Convolution
-        //! operator
-        void* algorithm_id;
-        TensorNDArray tensors;
-    };
+    using PreprocessedFilter = detail::PreprocessedFilter;
 
 protected:
     // Check or deduce output DType
