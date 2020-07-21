@@ -175,6 +175,7 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4) {
     checker.set_rng(0, rng.get()).set_rng(1, rng.get());
 
     auto run = [&](size_t M, size_t K, size_t N) {
+        MEGDNN_MARK_USED_VAR(N);
         Param param;
         param.format = param::MatrixMul::Format::MK4;
         param.transposeA = false;

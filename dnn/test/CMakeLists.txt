@@ -28,6 +28,7 @@ endif()
 
 
 add_executable(megdnn_test ${SOURCES})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")
 target_link_libraries(megdnn_test gtest)
 target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS})
 
@@ -36,7 +37,9 @@ target_include_directories(megdnn_test
         ${PROJECT_SOURCE_DIR}/third_party/midout/src
 )
 
-if(UNIX)
+if(APPLE OR ANDROID)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+else()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
@@ -44,6 +47,8 @@ if(MGE_ENABLE_COVERAGE)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
-if(UNIX)
+if(APPLE OR ANDROID)
+    target_link_libraries(megdnn_test dl)
+else()
     target_link_libraries(megdnn_test dl rt)
 endif()
