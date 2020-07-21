@@ -99,6 +99,13 @@ namespace metahelper_detail {
             return else_(if_constexpr_identity{});
         }
     };
+
+    template <size_t skip, typename T, size_t isize, size_t... I>
+    decltype(auto) array_skip_impl(const std::array<T, isize>& arr,
+                                   std::index_sequence<I...>) {
+        static_assert(isize > skip, "invalid argument `skip`");
+        return std::forward_as_tuple(arr[I + skip]...);
+    }
 } // namespace metahelper_detail
 
 //! construct index_sequence<0..N-1>
@@ -342,6 +349,12 @@ decltype(auto) if_constexpr(Then&& then, Else&& else_) {
 template <bool Cond, class Then>
 decltype(auto) if_constexpr(Then&& then) {
     return if_constexpr<Cond>(std::forward<Then>(then), [](auto) {});
+}
+
+template <size_t skip, typename T, size_t isize>
+decltype(auto) array_skip(const std::array<T, isize>& arr) {
+    return metahelper_detail::array_skip_impl<skip>(
+            arr, std::make_index_sequence<isize - skip>{});
 }
 
 } // namespace mgb
