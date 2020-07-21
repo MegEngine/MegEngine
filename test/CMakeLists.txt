@@ -28,7 +28,9 @@ if(CXX_SUPPORT_WCLASS_MEMACCESS)
     endif()
 endif()
 
-if(UNIX)
+if(APPLE OR ANDROID)
+    target_link_libraries(megbrain_test dl)
+else()
     target_link_libraries(megbrain_test dl rt)
 endif()
 

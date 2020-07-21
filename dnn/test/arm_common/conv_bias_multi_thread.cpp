@@ -79,6 +79,7 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
     using NLMode = param::ConvBias::NonlineMode;
 
     std::vector<TestArg> args;
+    MEGDNN_MARK_USED_VAR(no_pad);
 
     auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
                     size_t kernel, size_t stride, size_t group, NLMode nlmode,

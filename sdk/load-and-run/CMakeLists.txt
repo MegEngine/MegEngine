@@ -2,7 +2,7 @@ include_directories(src)
 file (GLOB_RECURSE SOURCES src/*.cpp main.cpp)
 add_executable (load_and_run  ${SOURCES})
 
-if (WIN32) 
+if (WIN32)
     # Windows does not support implicitly importing data members from DLL.
     target_link_libraries(load_and_run megbrain megdnn)
 else()

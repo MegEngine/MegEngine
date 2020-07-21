@@ -128,7 +128,7 @@ function cmake_build() {
     make install/strip
 }
 
-build_flatc $SRC_DIR
+build_flatc $SRC_DIR $REMOVE_OLD_BUILD
 
 toolchain=null
 if [ "$ARCH" = "arm64-v8a" ]; then

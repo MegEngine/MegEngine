@@ -138,7 +138,7 @@ function cmake_build() {
     make install/strip
 }
 
-build_flatc $SRC_DIR
+build_flatc $SRC_DIR $REMOVE_OLD_BUILD
 
 api_level=16
 abi="armeabi-v7a with NEON"

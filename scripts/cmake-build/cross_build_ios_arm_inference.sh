@@ -136,7 +136,7 @@ function cmake_build() {
     make install
 }
 
-build_flatc $SRC_DIR
+build_flatc $SRC_DIR $REMOVE_OLD_BUILD
 
 # refs for ../../toolchains/ios.toolchain.cmake
 # to config this, if u want to build other,
