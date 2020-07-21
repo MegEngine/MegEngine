@@ -81,7 +81,7 @@ TEST(TestOprIORemote, IdentityMultiThread) {
 TEST(TestOprIORemote, IdentityWithGopt) {
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;
-    auto host_x = gen({2, 3}, cns[0]);
+    auto host_x = gen({2, 3}, cns[1]);
     HostTensorND host_x_get;
     auto client = std::make_shared<test::MockGroupClient>();
 
