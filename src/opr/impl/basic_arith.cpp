@@ -552,6 +552,7 @@ void Elemwise::call_megdnn_opr_exec(
     opr->exec(inp, out);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Elemwise) {
     SymbolVar i[5];
     SymbolVar i0(opr.input(0)), i1, i2, out(opr.output(0)),
@@ -730,6 +731,7 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
         result = -result;
     return result.node();
 }
+#endif
 
 VarNode* Elemwise::sum_grad_list(VarNode *wrt, VarNodeArray &grads) {
     mgb_assert(!grads.empty());
@@ -814,6 +816,7 @@ TypeCvt::NodeProp* TypeCvt::do_make_node_prop() const {
     return ret;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TypeCvt) {
     MGB_MARK_USED_VAR(wrt_idx);
     auto itype = opr.input(0)->dtype(), otype = opr.output(0)->dtype();
@@ -826,6 +829,7 @@ MGB_IMPL_OPR_GRAD(TypeCvt) {
     }
     return TypeCvt::make(out_grad[0], opr.input(0)->dtype()).node();
 }
+#endif
 
 void TypeCvt::mem_plan_fwd_in2out_writable() {
     if (input(0)->dtype().size() == output(0)->dtype().size() &&
@@ -963,10 +967,12 @@ void AddUpdate::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(AddUpdate) {
     // actually valid, just not implemented
     return InvalidGrad::make(opr, wrt_idx);
 }
+#endif
 
 /* =========================== Reduce =========================== */
 
@@ -1698,6 +1704,7 @@ void Reduce::create_megdnn_opr() {
             create_operator<megdnn::Reduce>());
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Reduce) {
     for (size_t i = 1; i < opr.output().size(); ++ i)
         mgb_assert(!out_grad[i]);
@@ -1733,7 +1740,7 @@ MGB_IMPL_OPR_GRAD(Reduce) {
     grad = TypeCvt::make(grad, iv.dtype());
     return grad.node();
 }
-
+#endif
 
 void Reduce::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
@@ -1783,11 +1790,13 @@ void PowC::init_output_static_infer_desc() {
             {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_value});
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(PowC) {
     auto exp = opr.param().exp;
     return (exp * SymbolVar{out_grad[0]} *
             PowC::make(opr.input(0), exp - 1, opr.config()))
             .node();
 }
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -112,19 +112,21 @@ UniqPtrWithCN<megdnn::RNGBase> RNGOpr<MegDNNOpr>::create_megdnn_opr() {
     return opr;
 }
 
-#define IMPL(_cls) \
-template class RNGOpr<::megdnn::_cls>; \
-MGB_IMPL_OPR_GRAD(_cls) { \
-    MGB_MARK_USED_VAR(out_grad); \
-    return InvalidGrad::make(opr, wrt_idx); \
-} \
-
+#define IMPL(_cls)                                      \
+    MGB_IMPL_OPR_GRAD(_cls) {                           \
+        MGB_MARK_USED_VAR(out_grad);                    \
+        return InvalidGrad::make(opr, wrt_idx);         \
+    }
 
 namespace mgb {
 namespace opr {
 namespace intl {
+template class RNGOpr<::megdnn::GaussianRNG>;
+template class RNGOpr<::megdnn::UniformRNG>;
+#ifdef MGB_ENABLE_GRAD
 IMPL(GaussianRNG);
 IMPL(UniformRNG);
+#endif
 }
 }
 }

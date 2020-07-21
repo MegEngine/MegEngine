@@ -255,9 +255,11 @@ void MarkDynamicVar::scn_do_execute() {
     o->dev_tensor().copy_from_fixlayout(i->dev_tensor());
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(MarkDynamicVar) {
     return MarkDynamicVar::make(out_grad.at(0)).node();
 }
+#endif
 
 MarkDynamicVar::MarkDynamicVar(VarNode *node, const OperatorNodeConfig &config):
     Super{node->owner_graph(), config, "mark_dyn", {node}}
@@ -381,10 +383,12 @@ CallbackInjector::mixin_get_static_infer_desc(OperatorNodeBase &opr) {
     }
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CallbackInjector) {
     MGB_MARK_USED_VAR(wrt_idx);
     return out_grad.at(0);
 }
+#endif
 
 /* ===================== MarkNoBroadcastElemwise ===================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MarkNoBroadcastElemwise);
@@ -404,9 +408,11 @@ SymbolVar MarkNoBroadcastElemwise::make(
             input.node(), config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(MarkNoBroadcastElemwise) {
     return out_grad.at(0);
 }
+#endif
 
 /* ===================== Identity ===================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Identity);
@@ -429,9 +435,11 @@ SymbolVar Identity::make(
     return input.insert_single_output_opr<Identity>(input.node(), config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Identity) {
     return out_grad.at(0);
 }
+#endif
 
 /* ===================== AssertEqual ===================== */
 
@@ -530,6 +538,7 @@ SymbolVar SetGrad::make(SymbolVar input, const GradGetter& grad_getter,
             input.node(), grad_getter, config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(SetGrad) {
     MGB_MARK_USED_VAR(wrt_idx);
     MGB_MARK_USED_VAR(out_grad);
@@ -538,6 +547,7 @@ MGB_IMPL_OPR_GRAD(SetGrad) {
             "var returned by grad_getter belongs to a different comp graph");
     return grad.node();
 }
+#endif
 
 /* ===================== InvalidGrad ===================== */
 
@@ -690,6 +700,7 @@ VirtualLoss::NodeProp* VirtualLoss::do_make_node_prop() const {
     return ret;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(VirtualLoss) {
     mgb_assert(out_grad.size() == 1);
     auto mid = opr.input().size() / 2;
@@ -698,6 +709,7 @@ MGB_IMPL_OPR_GRAD(VirtualLoss) {
     }
     return nullptr;
 }
+#endif
 
 #else
 VarNode* InvalidGrad::make(const OperatorNodeBase&, size_t) {

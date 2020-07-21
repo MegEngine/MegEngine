@@ -818,6 +818,7 @@ SymbolVar CondExecMark::mark_if_need(SymbolVar maybe_ppv, SymbolVar input,
     return input;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondExecMark) {
     if (wrt_idx == opr.input().size() - 1 || !out_grad.at(wrt_idx)) {
         return nullptr;
@@ -841,6 +842,7 @@ MGB_IMPL_OPR_GRAD(CondExecMark) {
                                    {1, grad_mode}, OperatorNodeConfig{})
             ->output(0);
 }
+#endif
 
 /* ============================= CondExecMerge ============================= */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondExecMerge);
@@ -1225,6 +1227,7 @@ CondExecMerge::NodeProp* CondExecMerge::do_make_node_prop() const {
     return ret;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondExecMerge) {
     using Mode = CondExecMerge::Param::Mode;
     if (opr.param().mode == Mode::SUM_COND_OUT &&
@@ -1259,6 +1262,7 @@ MGB_IMPL_OPR_GRAD(CondExecMerge) {
                                   OperatorNodeConfig{og->comp_node()})
             ->output(0);
 }
+#endif
 
 void CondExecMerge::modify_grad_sum_list(VarNode* wrt, VarNodeArray& grads) {
     if (!ExecutionMask::have_alive_instance()) {

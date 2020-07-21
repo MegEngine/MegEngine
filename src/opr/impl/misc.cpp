@@ -48,23 +48,26 @@ namespace intl {
 
 /* ================= Argmxx ================= */
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Argmax) {
     MGB_MARK_USED_VAR(out_grad);
     MGB_MARK_USED_VAR(opr);
     mgb_assert(!wrt_idx);
     return nullptr;
 }
+#endif
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Argmax);
 MEGDNN_OPR_INIT1(Argmax, "argmax")
 
-
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Argmin) {
     MGB_MARK_USED_VAR(out_grad);
     MGB_MARK_USED_VAR(opr);
     mgb_assert(!wrt_idx);
     return nullptr;
 }
+#endif
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Argmin);
 MEGDNN_OPR_INIT1(Argmin, "argmin")
@@ -84,12 +87,14 @@ std::array<SymbolVar, 2> ArgsortForward::make(
     return {node->output(0), node->output(1)};
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ArgsortForward) {
     mgb_assert(out_grad.size() == 3 && wrt_idx == 0 && !out_grad[2]);
     if (!out_grad[0])
         return nullptr;
     return ArgsortBackward::make(out_grad[0], opr.output(1)).node();
 }
+#endif
 
 /* ================= ArgsortBackward =================  */
 
@@ -107,12 +112,14 @@ Cumsum::Cumsum(VarNode* opr, const Param& param,
     add_input({opr}, AddInputSortType::CUR_ADDED);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Cumsum) {
     mgb_assert(out_grad[0] && !out_grad[1]);
     auto param = opr.param();
     param.reverse = !param.reverse;
     return Cumsum::make(out_grad[0], param).node();
 }
+#endif
 
 SymbolVar Cumsum::make(SymbolVar opr, const Param& param,
                        const OperatorNodeConfig& config) {
@@ -170,6 +177,7 @@ CondTake::CondTake(VarNode *data, VarNode *mask,
     }
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondTake) {
     mgb_assert(out_grad.size() == 3 && !out_grad[2]);
     if (wrt_idx == 0 && out_grad[0]) {
@@ -181,6 +189,7 @@ MGB_IMPL_OPR_GRAD(CondTake) {
     }
     return nullptr;
 }
+#endif
 
 std::array<SymbolVar, 2> CondTake::make(
         SymbolVar data, SymbolVar mask,
@@ -318,6 +327,7 @@ void TopK::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TopK) {
     if (opr.param().mode == TopK::Param::Mode::KTH_ONLY) {
         mgb_assert(out_grad[0] && !out_grad[1] && !out_grad[2]);
@@ -334,5 +344,6 @@ MGB_IMPL_OPR_GRAD(TopK) {
     return ArgsortBackward::make(out_grad[0], opr.output(1), opr.input(0))
             .node();
 }
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

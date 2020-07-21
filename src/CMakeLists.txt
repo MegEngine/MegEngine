@@ -43,6 +43,7 @@ add_library(megbrain OBJECT EXCLUDE_FROM_ALL ${SOURCES})
 target_link_libraries(megbrain PUBLIC mgb_opr_param_defs)
 target_include_directories(megbrain
     PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE ${PROJECT_SOURCE_DIR}/third_party/midout/src
 )
 foreach (INCPATH IN LISTS MGB_INC)
     target_include_directories(megbrain

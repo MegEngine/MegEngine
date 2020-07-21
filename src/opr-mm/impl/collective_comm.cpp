@@ -855,10 +855,12 @@ VarNode* CollectiveComm::grad(VarNode* out_grad) const {
     return ModeTrait::from_mode(m_param.mode).grad(out_grad, this);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CollectiveComm) {
     mgb_assert(out_grad.size() == 1, "CollectiveComm should only have one grad");
     return opr.grad(out_grad[0]);
 }
+#endif
 
 /* ===================== shallow copy ===================== */
 

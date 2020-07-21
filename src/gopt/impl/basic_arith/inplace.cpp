@@ -19,6 +19,16 @@
 
 #include <cmath>
 
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_inplace)
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_inplace, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 using namespace mgb;
 using namespace opr;
 using namespace gopt;
@@ -150,8 +160,10 @@ bool gopt::has_inplace_basic_arith_opt(const cg::OperatorNodeBase& opr) {
 
 const inplace_optimize::OptimizerRegistry&
 inplace_optimize::optimizer_registry() {
+    MIDOUT_B("inplace_optimize::optimizer_registry")
     static OptimizerRegistry ret = make_optimizer_registry();
     return ret;
+    MIDOUT_E
 }
 
 inplace_optimize::OptimizerRegistry

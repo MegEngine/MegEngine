@@ -15,6 +15,20 @@
 
 #include <deque>
 
+//! TODO: here has to be know some megdnn::opr when there is produced midout.h
+//! fix it if there is another graceful way.
+#include "megdnn/oprs.h"
+
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_chain)
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_chain, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 using namespace mgb;
 using namespace gopt;
 using namespace opr;
@@ -132,6 +146,7 @@ const char* ExpandFusedArithPass::name() const {
 }
 
 void ExpandFusedArithPass::apply(OptState &opt) const {
+    MIDOUT_B("ExpandFusedArithPass::apply")
     auto rewriter = opt.graph().make_rewriter();
     auto on_opr = [&](OperatorNodeBase *opr) {
         using Mode = Elemwise::Mode;
@@ -172,6 +187,7 @@ void ExpandFusedArithPass::apply(OptState &opt) const {
 
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ NormalizeArithChainPass ================ */
@@ -529,7 +545,9 @@ const char* NormalizeArithChainPass::name() const {
 }
 
 void NormalizeArithChainPass::apply(OptState &opt) const {
+    MIDOUT_B("NormalizeArithChainPass::apply")
     Impl{opt};
+    MIDOUT_E
 }
 
 /* ================ ReorderArithChainPass ================ */
@@ -737,7 +755,9 @@ const char* ReorderArithChainPass::name() const {
 }
 
 void ReorderArithChainPass::apply(OptState &opt) const {
+    MIDOUT_B("ReorderArithChainPass::apply")
     Impl{*this, opt};
+    MIDOUT_E
 }
 
 /* ================ ArithFusePass ================ */
@@ -944,8 +964,9 @@ const char* ArithFusePass::name() const {
 }
 
 void ArithFusePass::apply(OptState &opt) const {
+    MIDOUT_B("ArithFusePass::apply")
     Impl{opt};
+    MIDOUT_E
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

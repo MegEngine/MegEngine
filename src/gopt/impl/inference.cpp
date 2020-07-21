@@ -27,6 +27,7 @@
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/tensor_gen.h"
+#include "megbrain/utils/hash_ct.h"
 
 #include "megdnn/tensor_format.h"
 
@@ -35,6 +36,16 @@
 #endif
 
 #include "megbrain/gopt/misc.h"
+
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_inference)
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_inference, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
 
 using namespace mgb;
 using namespace gopt;
@@ -430,7 +441,9 @@ ParamRedistributePass::Impl::Impl(OptState &state):
 }
 
 void ParamRedistributePass::apply(OptState &state) const {
+    MIDOUT_B("ParamRedistributePass::apply")
     Impl{state};
+    MIDOUT_E
 }
 
 /* ================ ParamFusePass ================ */
@@ -512,6 +525,7 @@ const char* ParamFusePass::name() const {
 }
 
 void ParamFusePass::apply(OptState &state) const {
+    MIDOUT_B("ParamFusePass::apply")
     auto rewriter = state.graph().make_rewriter();
     auto cg = state.graph().comp_graph();
 
@@ -613,6 +627,7 @@ void ParamFusePass::apply(OptState &state) const {
 
     state.graph().iter(replace_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ One2OneOprReplacePass ================ */
@@ -621,6 +636,7 @@ const char* ConvertF32ToF16Pass::name() const {
 }
 
 void ConvertF32ToF16Pass::apply(OptState& state) const {
+    MIDOUT_B("ConvertF32ToF16Pass::apply")
     state.set_var_replace_check_flag(m_var_replace_check_flag);
     auto rewriter = state.graph().make_rewriter();
     VarNodeArray new_inp_cache;
@@ -674,6 +690,7 @@ void ConvertF32ToF16Pass::apply(OptState& state) const {
     auto opr = endpoints[0].node()->owner_opr();
     state.call_with_opr(opr, replace_output, OprPropertyFlag::NONE);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
@@ -940,6 +957,7 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
 /* ================ ConvertFormatPass ================ */
 
 void ConvertFormatPass::apply(OptState& state) const {
+    MIDOUT_B("ConvertFormatPass::apply")
     state.set_var_replace_check_flag(m_var_replace_check_flag);
     auto rewriter = state.graph().make_rewriter();
     VarNodeArray new_inp_cache;
@@ -994,9 +1012,11 @@ void ConvertFormatPass::apply(OptState& state) const {
     };
     state.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
+    MIDOUT_B("ConvertFormatPass::make")
     auto filter_mode =
             [](const megdnn::param::Convolution::Sparse conv_mode,
                const VarNode* filter) -> megdnn::param::RelayoutFormat::Mode {
@@ -1551,6 +1571,7 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
     replace_func[opr::GroupLocalForward::typeinfo()] =
             relayout_first_inp_to_chw;
     return ret;
+    MIDOUT_E
 }
 
 /* ================ ConvertBatchNormPass ================ */
@@ -1559,6 +1580,7 @@ const char* ConvertBatchNormToElemwisePass::name() const {
 }
 
 void ConvertBatchNormToElemwisePass::apply(OptState& state) const {
+    MIDOUT_B("ConvertBatchNormToElemwisePass::apply")
     auto rewriter = state.graph().make_rewriter();
     auto on_opr = [&](OperatorNodeBase* opr) {
         if (auto bn = try_cast_as_op<opr::BatchNorm>(opr)) {
@@ -1586,6 +1608,7 @@ void ConvertBatchNormToElemwisePass::apply(OptState& state) const {
     state.graph().iter(on_opr);
 
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ FuseConvBiasNonlinPass ================ */
@@ -1594,6 +1617,7 @@ const char* FuseConvBiasNonlinPass::name() const {
 }
 
 void FuseConvBiasNonlinPass::apply(OptState& state) const {
+    MIDOUT_B("FuseConvBiasNonlinPass::apply")
     std::unordered_map<VarNode*, std::vector<OperatorNodeBase*>> m_deps;
     state.graph().iter([&m_deps](OperatorNodeBase* opr) {
         for (auto& inp : opr->input()) {
@@ -1843,6 +1867,7 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
     state.graph().iter(on_opr);
 
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ FuseConvBiasZPass ================ */
@@ -1851,6 +1876,7 @@ const char* FuseConvBiasZPass::name() const {
 }
 
 void FuseConvBiasZPass::apply(OptState& state) const {
+    MIDOUT_B("FuseConvBiasZPass::apply")
     UniqReaderCheck uniq_reader_check{state.graph()};
 
     auto rewriter = state.graph().make_rewriter();
@@ -1977,6 +2003,7 @@ void FuseConvBiasZPass::apply(OptState& state) const {
     state.graph().iter(on_opr);
 
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ FuseDeconvCvtPass ================ */
@@ -1986,6 +2013,7 @@ const char* FuseDeconvCvtPass::name() const {
 
 
 void FuseDeconvCvtPass::apply(OptState& state) const {
+    MIDOUT_B("FuseDeconvCvtPass::apply")
     std::unordered_map<VarNode*, std::vector<OperatorNodeBase*>> m_deps;
     state.graph().iter([&m_deps](OperatorNodeBase* opr) {
         for (auto& inp : opr->input()) {
@@ -2036,6 +2064,7 @@ void FuseDeconvCvtPass::apply(OptState& state) const {
     state.graph().iter(on_opr);
 
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ ParamMergePass ================ */
@@ -2044,10 +2073,12 @@ const char* ParamMergePass::name() const {
 }
 
 void ParamMergePass::apply(OptState& opt_state) const {
+    MIDOUT_B("ParamMergePass::apply")
     param_merge<opr::SharedDeviceTensor, opr::MultipleDeviceTensorHolder>(
             opt_state);
     param_merge<opr::SharedDeviceTensorWithFormat,
                 opr::MultipleDeviceTensorWithFormatHolder>(opt_state);
+    MIDOUT_E
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

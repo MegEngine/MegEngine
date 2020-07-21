@@ -109,6 +109,7 @@ cg::OperatorNodeBase::NodeProp* RemoteSend::do_make_node_prop() const {
     return prop;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(RemoteSend) {
     mgb_assert(opr.is_grad());
     return RemoteRecv::make(opr.key() + ":grad",
@@ -118,6 +119,7 @@ MGB_IMPL_OPR_GRAD(RemoteSend) {
                             opr.input(0)->shape(), opr.input(0)->dtype())
             .node();
 }
+#endif
 
 /* ===================== RemoteRecv ===================== */
 

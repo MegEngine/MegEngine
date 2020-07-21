@@ -14,6 +14,16 @@
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/tensor_manip.h"
 
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_weight_preprocess)
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_weight_preprocess, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 using namespace mgb;
 using namespace gopt;
 using namespace cg;
@@ -23,6 +33,7 @@ const char* WinogradTransformReplacePass::name() const {
 }
 
 void WinogradTransformReplacePass::apply(OptState& opt) const {
+    MIDOUT_B("WinogradTransformReplacePass::apply")
     auto rewriter = opt.graph().make_rewriter();
     ConstVarPropogate cvprop{ConstVarType::IMMUTABLE_AND_PARAM};
     opt.graph().iter([&cvprop](OperatorNodeBase *opr) {
@@ -174,6 +185,7 @@ void WinogradTransformReplacePass::apply(OptState& opt) const {
 
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /**

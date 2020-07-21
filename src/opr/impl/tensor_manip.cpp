@@ -165,12 +165,13 @@ void GetVarShape::init_output_static_infer_desc() {
     mgr.register_value_infer(output(0),
             {SourceType::DEP, deps, infer_value});
 }
-
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(GetVarShape) {
     MGB_MARK_USED_VAR(wrt_idx);
     MGB_MARK_USED_VAR(out_grad);
     return nullptr;
 }
+#endif
 
 SymbolVar GetVarShape::make(const VarNodeArrayView& inp, Param param,
                             const OperatorNodeConfig& config) {
@@ -362,11 +363,13 @@ SymbolVar Reshape::make(SymbolVar inp, SymbolVar tshp,
             inp.node(), tshp.node(), unspec_axis, config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Reshape) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
     return Reshape::make(out_grad[0], GetVarShape::make(opr.input(0))).node();
 }
+#endif
 
 Maybe<TensorLayout> Reshape::reshapebrdcast_get_dest_layout(
         const TensorLayout &src, const TensorShape &tshape) const {
@@ -429,12 +432,14 @@ SymbolVar Broadcast::make(SymbolVar inp, SymbolVar tshp,
             inp.node(), tshp.node(), config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Broadcast) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
     return Reduce::make(out_grad.at(0), Reduce::Mode::SUM,
             GetVarShape::make(opr.input(0))).node();
 }
+#endif
 
 Maybe<TensorLayout> Broadcast::reshapebrdcast_get_dest_layout(
         const TensorLayout &src, const TensorShape &tshape) const {
@@ -562,9 +567,11 @@ VarNode* Dimshuffle::grad(
     return Dimshuffle::make(out_grad.at(0), back, m_pattern.size()).node();
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Dimshuffle) {
     return opr.grad(wrt_idx, out_grad);
 }
+#endif
 
 // f}}}
 
@@ -631,10 +638,12 @@ AxisAddRemove::NodeProp* AxisAddRemove::do_make_node_prop() const {
     return ret;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(AxisAddRemove) {
     MGB_MARK_USED_VAR(wrt_idx);
     return Reshape::make(out_grad[0], GetVarShape::make(opr.input(0))).node();
 }
+#endif
 
 // f}}}
 
@@ -642,6 +651,7 @@ MGB_IMPL_OPR_GRAD(AxisAddRemove) {
 
 MGB_IMPL_FANCY_INDEXING_OPR_GET(Subtensor, "subtensor", true);
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Subtensor) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -650,6 +660,7 @@ MGB_IMPL_OPR_GRAD(Subtensor) {
             SymbolVar{opr.input(0)}.fill_retain_dtype(0),
             out_grad.at(0), opr.index_desc()).node();
 }
+#endif
 
 void Subtensor::init_output_static_infer_desc() {
     using namespace cg::static_infer;
@@ -783,6 +794,7 @@ void SetSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
     sub.copy_from_fixlayout(val);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(SetSubtensor) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -793,6 +805,7 @@ MGB_IMPL_OPR_GRAD(SetSubtensor) {
     }
     return Subtensor::make(out_grad.at(0), opr.index_desc()).node();
 }
+#endif
 
 // f}}}
 
@@ -813,6 +826,7 @@ void IncrSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
     opr->exec(sub.as_megdnn(), val.as_megdnn());
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IncrSubtensor) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -821,6 +835,7 @@ MGB_IMPL_OPR_GRAD(IncrSubtensor) {
     }
     return Subtensor::make(out_grad.at(0), opr.index_desc()).node();
 }
+#endif
 
 // f}}}
 
@@ -1085,6 +1100,7 @@ void Split::do_execute(ExecEnv &env) {
     }
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Split) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -1100,6 +1116,7 @@ MGB_IMPL_OPR_GRAD(Split) {
     return Concat::make(grad, opr.options().axis,
             OperatorNodeConfig{}.follow_comp_node(opr.input(0))).node();
 }
+#endif
 
 void Split::mem_plan_fwd_in2out_readonly() {
     m_readonly_fwd_called = true;
@@ -1236,6 +1253,7 @@ SymbolVar Concat::make(const VarNodeArrayView& inp, int axis,
                                                               axis, config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Concat) {
     auto axis = opr.axis();
     mgb_assert(out_grad.size() == 1);
@@ -1250,6 +1268,7 @@ MGB_IMPL_OPR_GRAD(Concat) {
                            OperatorNodeConfig().comp_node_arr(comp_node));
     return cg::to_var_node_array(ret);
 }
+#endif
 
 void Concat::scn_do_execute() {
     auto&& out = output(0)->dev_tensor();
@@ -1507,6 +1526,7 @@ void ParamPackSplit::init_output_static_infer_desc() {
     }
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ParamPackSplit) {
     mgb_assert(out_grad.size() == opr.output().size());
     SmallVector<SymbolVar> grad;
@@ -1531,6 +1551,7 @@ MGB_IMPL_OPR_GRAD(ParamPackSplit) {
                    OperatorNodeConfig{}.follow_comp_node(opr.input(0)))
             .node();
 }
+#endif
 // f}}}
 
 /* f{{{ ======================= RelayoutFormat ======================= */

@@ -316,9 +316,11 @@ VarNodeArray AllGather::grad(const VarNodeArray &out_grad) {
             OperatorNodeConfig().comp_node_arr(sp_cn)));
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(AllGather) {
     return const_cast<AllGather&>(opr).grad(out_grad);
 }
+#endif
 
 void AllGather::on_output_comp_node_stream_changed() {
 }

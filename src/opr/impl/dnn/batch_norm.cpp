@@ -230,6 +230,7 @@ void BatchNormForward::mem_plan_fwd_in2out_writable() {
     }
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchNormForward) {
     mgb_assert(wrt_idx < 5);
     if (wrt_idx < 3) {
@@ -242,6 +243,7 @@ MGB_IMPL_OPR_GRAD(BatchNormForward) {
         return nullptr;
     }
 }
+#endif
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(BatchNormBackward);
 

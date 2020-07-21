@@ -24,6 +24,16 @@
 #include "megdnn/opr_param_json.h"
 #endif
 
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_opr_footprint)
+#define MIDOUT_B(...) \
+    MIDOUT_BEGIN(megbrain_opr_footprint, __VA_ARGS__) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 using namespace mgb;
 
 namespace {
@@ -581,9 +591,12 @@ std::shared_ptr<json::Value> opr_param_json_func<opr::Subtensor>(
 
 template <class OprType>
 void OprFootprint::add_single_comp_footprint() {
+    MIDOUT_B(OprType,
+             midout_iv(MGB_HASH_STR("OprFootprint::add_single_comp_footprint")))
     auto&& record = m_type2comp_footprint.emplace(OprType::typeinfo(),
                                                   opr_footprint_func<OprType>);
     mgb_assert(record.second, "duplicate opr typeinfo");
+    MIDOUT_E
 }
 
 #if MGB_ENABLE_JSON

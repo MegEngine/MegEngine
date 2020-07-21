@@ -268,9 +268,11 @@ VarNode* Loop::grad(Loop &opr, size_t wrt_idx, const VarNodeArray &out_grad) {
     return gopr->get_grad_var(wrt_idx);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Loop) {
     return Loop::grad(const_cast<Loop&>(opr), wrt_idx, out_grad);
 }
+#endif
 
 cg::OperatorNodeBase::NodeProp* Loop::do_make_node_prop() const {
     auto prop = LoopImpl::do_make_node_prop();

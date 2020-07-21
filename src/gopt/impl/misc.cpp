@@ -19,6 +19,16 @@
 #include "megbrain/serialization/opr_shallow_copy.h"
 #include "../../core/impl/graph/cg_impl.h"
 
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_misc)
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_misc, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 using namespace mgb;
 using namespace gopt;
 
@@ -29,6 +39,7 @@ const char* RemoveNonComputingOprPass::name() const {
 }
 
 void RemoveNonComputingOprPass::apply(OptState& opt) const {
+    MIDOUT_B("RemoveNonComputingOprPass::apply")
     auto rewriter = opt.graph().make_rewriter();
     auto on_opr = [&](OperatorNodeBase* opr) {
         auto type = opr->dyn_typeinfo();
@@ -75,6 +86,7 @@ void RemoveNonComputingOprPass::apply(OptState& opt) const {
 
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ ExpandVirtualGradPass ================ */
@@ -84,6 +96,7 @@ const char* ExpandVirtualGradPass::name() const {
 }
 
 void ExpandVirtualGradPass::apply(OptState& opt) const {
+    MIDOUT_B("ExpandVirtualGradPass::apply")
 #if MGB_ENABLE_GRAD
     opt.set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
     auto rewriter = opt.graph().make_rewriter();
@@ -111,6 +124,7 @@ void ExpandVirtualGradPass::apply(OptState& opt) const {
 #else
     MGB_MARK_USED_VAR(opt);
 #endif
+    MIDOUT_E
 }
 
 /* ================= DelayBroadcastPass ================ */
@@ -144,6 +158,7 @@ void DelayBroadcastPass::apply(OptState& opt) const {
     // remove them from the chain, and add them back right after the endpoint.
 
     // TypeCvt's order may change, so disable the check.
+    MIDOUT_B("DelayBroadcastPass::apply")
     opt.set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
 
     auto unique_reader_chk = UniqReaderCheck{opt.graph()};
@@ -325,6 +340,7 @@ void DelayBroadcastPass::apply(OptState& opt) const {
 
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ======================= RecompTypeCvtPass ====================== */
@@ -334,6 +350,7 @@ const char* RecompTypeCvtPass::name() const {
 }
 
 void RecompTypeCvtPass::apply(OptState& opt) const {
+    MIDOUT_B("RecompTypeCvtPass::apply")
     auto rewriter = opt.graph().make_rewriter();
 
     auto allowed_typecvt = [](OperatorNodeBase* opr) -> OperatorNodeBase* {
@@ -399,6 +416,7 @@ void RecompTypeCvtPass::apply(OptState& opt) const {
     };
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ======================= CombineAstypeAndReducePass ====================== */
@@ -408,6 +426,7 @@ const char* CombineAstypeAndReducePass::name() const {
 }
 
 void CombineAstypeAndReducePass::apply(OptState& opt) const {
+    MIDOUT_B("CombineAstypeAndReducePass::apply")
     auto rewriter = opt.graph().make_rewriter();
 
     using DataType = opr::Reduce::Param::DataType;
@@ -453,6 +472,7 @@ void CombineAstypeAndReducePass::apply(OptState& opt) const {
 
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ================ CondExecConstPredicateFolding ================ */
@@ -462,6 +482,7 @@ const char* CondExecConstPredicateFolding::name() const {
 
 void CondExecConstPredicateFolding::apply(OptState& opt) const {
 #if MGB_ENABLE_COND_EXEC
+    MIDOUT_B("CondExecConstPredicateFolding::apply")
     if (!cg::ExecutionMask::have_alive_instance()) {
         return;
     }
@@ -605,6 +626,7 @@ void CondExecConstPredicateFolding::apply(OptState& opt) const {
     }
 
     rewriter.apply_inplace();
+    MIDOUT_E
 
 #endif  // MGB_ENABLE_COND_EXEC
 }
@@ -632,6 +654,7 @@ bool RemoveRedundantTypeCvtPass::should_remove(DType A, DType B) {
 }
 
 void RemoveRedundantTypeCvtPass::apply(OptState& opt) const {
+    MIDOUT_B("RemoveRedundantTypeCvtPass::apply")
     auto rewriter = opt.graph().make_rewriter();
 
     auto on_opr = [&](OperatorNodeBase* opr) {
@@ -656,6 +679,7 @@ void RemoveRedundantTypeCvtPass::apply(OptState& opt) const {
 
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 #if MGB_ENABLE_OPR_MM
@@ -668,6 +692,7 @@ const char* PackAllReduceScanPass::name() const {
 }
 
 void PackAllReduceScanPass::apply(OptState& opt) const {
+    MIDOUT_B("PackAllReduceScanPass::apply")
     auto comp_graph = opt.graph().comp_graph();
     if (comp_graph->options().allreduce_pack_max_size == 0) return;
     auto cb_scan = [this] (OperatorNodeBase* opr) {
@@ -682,6 +707,7 @@ void PackAllReduceScanPass::apply(OptState& opt) const {
         }
     };
     opt.graph().iter(cb_scan);
+    MIDOUT_E
 }
 
 bool PackAllReduceScanPass::check_pattern(OperatorNodeBase* opr) {
@@ -856,6 +882,7 @@ void PackAllReduceReplacePass::insert_packed_oprs(
 }
 
 void PackAllReduceReplacePass::apply(OptState& opt) const {
+    MIDOUT_B("PackAllReduceReplacePass::apply")
     // get graph options
     auto comp_graph = opt.graph().comp_graph();
     size_t max_size = comp_graph->options().allreduce_pack_max_size * 1024 * 1024;
@@ -917,6 +944,7 @@ void PackAllReduceReplacePass::apply(OptState& opt) const {
     };
     opt.graph().iter(cb_replace);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 #else

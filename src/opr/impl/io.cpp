@@ -764,11 +764,13 @@ Copy::NodeProp* Copy::do_make_node_prop() const {
     return rst;
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Copy) {
     mgb_assert(wrt_idx == 0);
     return Copy::make(out_grad[0],
             OperatorNodeConfig{}.follow_comp_node(opr.input(0))).node();
 }
+#endif
 
 void Copy::add_input_layout_constraint() {
     if (input(0)->comp_node() != output(0)->comp_node()) {

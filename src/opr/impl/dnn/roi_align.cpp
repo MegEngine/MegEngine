@@ -40,6 +40,7 @@ SymbolVar ROIAlignForward::make(SymbolVar src, SymbolVar rois,
             src.node(), rois.node(), param, config);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ROIAlignForward) {
     if (out_grad[1]) {
         return InvalidGrad::make(opr, wrt_idx);
@@ -55,6 +56,7 @@ MGB_IMPL_OPR_GRAD(ROIAlignForward) {
         return nullptr;
     }
 }
+#endif
 
 /* ==================== ROIAlignBackward ==================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ROIAlignBackward);

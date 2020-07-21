@@ -36,6 +36,16 @@
 #endif
 
 #include "megbrain/gopt/misc.h"
+#include "megbrain/utils/hash_ct.h"
+
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_tensor_reformat)
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_tensor_reformat, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
 
 using namespace mgb;
 using namespace gopt;
@@ -755,8 +765,10 @@ void TensorReformatPass::translate_pass(OptState& opt) const {
 }
 
 void TensorReformatPass::apply(OptState& opt) const {
+    MIDOUT_B("TensorReformatPass::apply")
     insert_pass(opt);
     translate_pass(opt);
+    MIDOUT_E
 }
 
 /* ================ EnableTensorCorePass =============== */
@@ -773,6 +785,7 @@ VarNode* EnableTensorCorePass::on_graph_endpoint_var(VarNode* new_var,
 
 std::unique_ptr<EnableTensorCorePass>
 EnableTensorCorePass::make_tensorcore_converter() {
+    MIDOUT_B("EnableTensorCorePass::make")
     // replace rule for conv bias opr
     auto replace_conv_bias_opr = [](OperatorNodeBase* opr,
                                     const VarNodeArray& new_inp) {
@@ -1111,6 +1124,7 @@ EnableTensorCorePass::make_tensorcore_converter() {
     replace_func[opr::GetVarShape::typeinfo()] = replace_inps_to_nchw4;
     replace_func[opr::Dimshuffle::typeinfo()] = replace_inps_to_nchw4;
     return ret;
+    MIDOUT_E
 }
 
 /* ================ EnableCHWN4Pass =============== */
@@ -1125,6 +1139,7 @@ VarNode* EnableCHWN4Pass::on_graph_endpoint_var(VarNode* new_var,
 }
 
 std::unique_ptr<EnableCHWN4Pass> EnableCHWN4Pass::make_chwn4_converter() {
+    MIDOUT_B("EnableCHWN4Pass::make")
     auto ret = std::make_unique<EnableCHWN4Pass>();
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
     auto&& replace_func = ret->m_opr_replace_func;
@@ -1381,6 +1396,7 @@ std::unique_ptr<EnableCHWN4Pass> EnableCHWN4Pass::make_chwn4_converter() {
     replace_func[opr::Dimshuffle::typeinfo()] = replace_inps_to_nchw4;
     replace_func[opr::BatchConvBias::typeinfo()] = replace_inps_to_nchw4;
     return ret;
+    MIDOUT_E
 }
 
 /* ================ EnableNCHW4Pass ================ */
@@ -1395,6 +1411,7 @@ VarNode* EnableNCHW4Pass::on_graph_endpoint_var(VarNode* new_var,
 }
 
 std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
+    MIDOUT_B("EnableNCHW4Pass::make")
     auto ret = std::make_unique<EnableNCHW4Pass>();
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
     using RelayoutMode = RelayoutPlaceholder::LayoutType;
@@ -1772,6 +1789,7 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter(){
     replace_func[opr::IncrSubtensor::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::WarpAffineForward::typeinfo()] = relayout_inp_to_nchw;
     return ret;
+    MIDOUT_E
 }
 
 /* ================ EnableNchwxxPass =============== */
@@ -2140,6 +2158,7 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size){
 
 std::unique_ptr<EnableNchwxxPass> EnableNchwxxPass::make_nchwxx_converter(
         size_t pack_c_size) {
+    MIDOUT_B("EnableNchwxxPass::make")
     auto ret = std::make_unique<EnableNchwxxPass>(pack_c_size);
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
     std::string convter_pass_name = "conv_format_nchw88";
@@ -2149,6 +2168,7 @@ std::unique_ptr<EnableNchwxxPass> EnableNchwxxPass::make_nchwxx_converter(
     ret->fill_opr_convert_fun(pack_c_size);
     ret->set_name(convter_pass_name);
     return ret;
+    MIDOUT_E
 }
 
 /* ================ EnableNchw44DotPass =============== */
@@ -2164,6 +2184,7 @@ VarNode* EnableNchw44DotPass::on_graph_endpoint_var(VarNode* new_var,
 
 std::unique_ptr<EnableNchw44DotPass>
 EnableNchw44DotPass::make_nchw44_dot_converter() {
+    MIDOUT_B("EnableNchw44DotPass::make")
     auto ret = std::make_unique<EnableNchw44DotPass>();
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
     //! First is whether the conv can trans to nchwxx, second is the filter
@@ -2384,6 +2405,7 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
     replace_func[opr::Convolution::typeinfo()] = replace_conv_opr;
     replace_func[opr::ConvBias::typeinfo()] = replace_conv_bias_opr;
     return ret;
+    MIDOUT_E
 }
 
 /* ==================== ShuffleShuffleRemovePass ================= */
@@ -2961,9 +2983,11 @@ const char* ShuffleShuffleRemovePass::name() const {
 }
 
 void ShuffleShuffleRemovePass::apply(OptState& opt) const {
+    MIDOUT_B("ShuffleShuffleRemovePass::apply")
     opt.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_SHAPE |
                                    VarReplaceCheckFlag::CHECK_DTYPE);
     Impl{opt};
+    MIDOUT_E
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

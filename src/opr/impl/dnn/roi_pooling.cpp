@@ -84,6 +84,7 @@ size_t ROIPoolingForward::get_workspace_size_bytes(
             input_shapes, output_shapes);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ROIPoolingForward) {
     if (out_grad[1] || wrt_idx == 2) {
         return InvalidGrad::make(opr, wrt_idx);
@@ -98,6 +99,7 @@ MGB_IMPL_OPR_GRAD(ROIPoolingForward) {
         return nullptr;
     }
 }
+#endif
 
 void ROIPoolingForward::scn_do_execute() {
     return intl::MegDNNOprMethInvoker<megdnn::ROIPoolingForward>::
@@ -146,6 +148,7 @@ SymbolVar DeformablePSROIPoolingForward::make(
     return all[0];
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(DeformablePSROIPooling) {
     mgb_assert(wrt_idx <= 2);  // wrt_idx = 0 or 1 or 2
 
@@ -168,6 +171,7 @@ MGB_IMPL_OPR_GRAD(DeformablePSROIPooling) {
     }
     return nullptr;
 }
+#endif
 
 /* ==================== DeformablePSROIPoolingBackward ==================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(DeformablePSROIPoolingBackward);

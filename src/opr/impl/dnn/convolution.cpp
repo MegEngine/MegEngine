@@ -18,6 +18,19 @@
 
 #include "megdnn/oprs/utils.h"
 
+//! TODO: here has to be know some megdnn::opr when there is produced midout.h
+//! fix it if there is another graceful way.
+#include "megdnn/oprs.h"
+
+#include "midout.h"
+
+MIDOUT_DECL(megbrain_opr_convolution)
+#define MIDOUT_B(...) \
+    MIDOUT_BEGIN(megbrain_opr_convolution, __VA_ARGS__) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 #include "../internal/megdnn_opr_wrapper.inl"
 
 #include <array>
@@ -230,6 +243,7 @@ class TimedProfiler {
     static constexpr int arity_in = OprArityTrait<Opr>::arity_in;
     static constexpr int arity_out = OprArityTrait<Opr>::arity_out;
     static constexpr int arity = OprArityTrait<Opr>::arity;
+
     using ConvTensorShapes = std::array<TensorShape, arity>;
 
 public:
@@ -295,6 +309,7 @@ double TimedProfiler<Opr>::init_timeout_setting() {
 template <typename Opr>
 typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         const TParam& raw_param) {
+    MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("TimedProfiler::prof_impl")))
     auto&& param = raw_param.as_single_pod<Param>();
     CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
     auto megdnn_opr = intl::create_megdnn_opr<Opr>(cn);
@@ -401,14 +416,17 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
 
     mgb_assert(ev_start->finished());
     return TResult::from_pod(Result{ev_start->elapsed_time_until(*ev_end)});
+    MIDOUT_E
 };
 
 template <typename Opr>
 void TimedProfiler<Opr>::prof_init_device(const TParam& raw_param) {
+    MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("TimedProfiler::prof_init_device")))
     auto&& param = raw_param.as_single_pod<Param>();
     CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
     // wait for cuda init, so its time does not get accounted in timeout
     cn.sync();
+    MIDOUT_E
 }
 
 /* =================== AlgoChooser =================== */
@@ -426,6 +444,7 @@ class AlgoChooser {
     static constexpr int arity_in = OprArityTrait<Opr>::arity_in;
     static constexpr int arity_out = OprArityTrait<Opr>::arity_out;
     static constexpr int arity = OprArityTrait<Opr>::arity;
+
     using ImplAlgo = typename Opr::Algorithm*;
     using MGBOpr = typename MegDNNOpr2MGBOpr<Opr>::MGBOpr;
     using ConvTensorLayouts = std::array<TensorLayout, arity>;
@@ -473,8 +492,8 @@ class AlgoChooser {
         //! put first
         std::vector<ImplAlgo> get_all_candidates() const {
             auto heu = choose_by_heuristic();
-            auto&& ret = OprArityTrait<Opr>::get_all_algorithms(
-                    m_megdnn_opr, m_layouts);
+            auto&& ret = OprArityTrait<Opr>::get_all_algorithms(m_megdnn_opr,
+                                                                m_layouts);
             bool found = false;
             for (size_t i = 0; i < ret.size(); ++i) {
                 if (ret[i] == heu) {
@@ -491,7 +510,7 @@ class AlgoChooser {
 
         //! get candidate algos with workspace limit.
         std::vector<ImplAlgo> get_all_candidates_with_workspace_limit() const {
-            auto && all_algos = get_all_candidates();
+            auto&& all_algos = get_all_candidates();
             auto opr = m_mgb_opr;
             auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
                     opr->owner_graph(), opr->comp_node(),
@@ -633,16 +652,16 @@ AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
                                    algo->name(), str_on_inp_shape.c_str());
         timer.reset();
         MGB_TRY { cur_rst = ctx.profile_single_algo(algo, cur_timeout); }
-        MGB_CATCH(std::exception & exc,
-                  {
-                      mgb_log_warn("caught exception during %s: %s",
-                                   msg.c_str(), exc.what());
-                      continue;
-                  })
+        MGB_CATCH(std::exception & exc, {
+            mgb_log_warn("caught exception during %s: %s", msg.c_str(),
+                         exc.what());
+            continue;
+        })
         MGB_CATCH(..., {
             mgb_log_warn("caught exception during %s", msg.c_str());
             continue;
-        }) if (!cur_rst.valid()) {
+        })
+        if (!cur_rst.valid()) {
             mgb_log_warn("timeout when %s; timeout setting: %.3fsec",
                          msg.c_str(), cur_timeout);
             continue;
@@ -680,6 +699,7 @@ void AlgoChooser<megdnn::ConvBias>::get_origin_param_and_layouts(
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
         ExeContext& ctx, bool require_reproducible, bool enable_update) {
+    MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("AlgoChooser::choose_by_profile")))
     auto opr = ctx.mgb_opr();
     if (opr->owner_graph()->options().no_profiling_on_shape_change) {
         auto algo = ctx.megdnn_opr()->execution_policy().algorithm;
@@ -720,6 +740,7 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
                     opr->owner_graph(), opr->comp_node(),
                     opr->execution_policy().workspace_limit));
     mgb_trap();
+    MIDOUT_E
 }
 
 template <>
@@ -748,7 +769,7 @@ void AlgoChooser<megdnn::ConvBias>::ExeContext::
         if (m_layouts[1].dtype.enumv() == DTypeEnum::QuantizedS8 &&
             param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW44) {
             if (winograd_preprocess_opr->param().format ==
-                megdnn::param::MatrixMul::Format::MK4){
+                megdnn::param::MatrixMul::Format::MK4) {
                 winograd_preprocess_opr->param().compute_mode =
                         ConvBias::Param::ComputeMode::FLOAT32;
                 param.opr_param.compute_mode =
@@ -941,6 +962,7 @@ void ConvolutionForward::init_output_dtype() {
     output(0)->dtype(output_dtype);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ConvolutionForward) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
                "only float data type supported for grad");
@@ -960,6 +982,7 @@ MGB_IMPL_OPR_GRAD(ConvolutionForward) {
         return grad.node();
     }
 }
+#endif
 
 size_t ConvolutionForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
@@ -1086,6 +1109,7 @@ void ConvolutionBackwardData::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output(1)));
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ConvolutionBackwardData) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1101,6 +1125,7 @@ MGB_IMPL_OPR_GRAD(ConvolutionBackwardData) {
     }
     return nullptr;
 }
+#endif
 
 /* ==================== ConvolutionBackwardFilter  ==================== */
 IMPL_CONV(ConvolutionBackwardFilter, "conv_bwd_filter");
@@ -1138,6 +1163,7 @@ size_t ConvolutionBackwardFilter::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ConvolutionBackwardFilter) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1153,6 +1179,7 @@ MGB_IMPL_OPR_GRAD(ConvolutionBackwardFilter) {
     }
     return nullptr;
 }
+#endif
 /* ==================== Convolution3DForward ==================== */
 
 IMPL_CONV(Convolution3DForward, "conv3d_fwd");
@@ -1192,6 +1219,7 @@ void Convolution3DForward::init_output_dtype() {
     }
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Convolution3DForward) {
     mgb_assert(opr.param().data_type ==
                        Convolution3DForward::Param::DataType::FLOAT,
@@ -1212,6 +1240,7 @@ MGB_IMPL_OPR_GRAD(Convolution3DForward) {
         return grad.node();
     }
 }
+#endif
 
 size_t Convolution3DForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
@@ -1285,6 +1314,7 @@ void Convolution3DBackwardData::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output(1)));
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Convolution3DBackwardData) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1300,6 +1330,7 @@ MGB_IMPL_OPR_GRAD(Convolution3DBackwardData) {
     }
     return nullptr;
 }
+#endif
 
 /* ==================== Convolution3DBackwardFilter  ==================== */
 IMPL_CONV(Convolution3DBackwardFilter, "conv3d_bwd_filter");
@@ -1658,6 +1689,7 @@ size_t LocalShareForward::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareForward) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
             "only float data type supported for grad");
@@ -1677,6 +1709,7 @@ MGB_IMPL_OPR_GRAD(LocalShareForward) {
         return grad.node();
     }
 }
+#endif
 
 /* ===================== LocalShareBackwardData ==================== */
 
@@ -1737,6 +1770,7 @@ void LocalShareBackwardData::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output(1)));
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareBackwardData) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1752,6 +1786,7 @@ MGB_IMPL_OPR_GRAD(LocalShareBackwardData) {
     }
     return nullptr;
 }
+#endif
 
 /* ==================== LocalShareBackwardFilter  ==================== */
 
@@ -1792,6 +1827,7 @@ size_t LocalShareBackwardFilter::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareBackwardFilter) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1805,6 +1841,7 @@ MGB_IMPL_OPR_GRAD(LocalShareBackwardFilter) {
     }
     return nullptr;
 }
+#endif
 
 /* ===================== DeformableConvForward ==================== */
 
@@ -1869,6 +1906,7 @@ size_t DeformableConvForward::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(DeformableConvForward) {
     mgb_assert(opr.input(0)->dtype() == dtype::Float32(),
                "only float data type supported for grad");
@@ -1888,6 +1926,7 @@ MGB_IMPL_OPR_GRAD(DeformableConvForward) {
     SymbolVarArray grads = {grad_arr[0], filter_grad, grad_arr[1], grad_arr[2]};
     return grads[wrt_idx].node();
 }
+#endif
 
 /* ==================== DeformableConvBackwardData  ==================== */
 

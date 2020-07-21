@@ -127,6 +127,7 @@ void WarpPerspectiveForward::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(WarpPerspectiveForward) {
     mgb_assert(opr.input().size() == 3,
             "backward with mat_idx is currently unsupported");
@@ -145,6 +146,7 @@ MGB_IMPL_OPR_GRAD(WarpPerspectiveForward) {
     } else
         return InvalidGrad::make(opr, wrt_idx);
 }
+#endif
 
 /* ====================== WarpPerspectiveBackwardData ====================== */
 
@@ -234,6 +236,7 @@ void ResizeForward::record_execute_deps(ExecDependencyArray &deps) {
     record_megdnn_opr(deps);
 }
 
+#ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ResizeForward) {
     mgb_assert(opr.input().size() == 2);
     if (wrt_idx == 0) {
@@ -243,6 +246,7 @@ MGB_IMPL_OPR_GRAD(ResizeForward) {
     } else
         return InvalidGrad::make(opr, wrt_idx);
 }
+#endif
 
 /* ====================== ResizeBackward ====================== */
 
