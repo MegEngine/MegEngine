@@ -102,6 +102,7 @@ INST(dt_float16, half4);
 INST(dt_bfloat16, bhalf4);
 INST(dt_int32, int4);
 INST(dt_int16, short4);
+INST(dt_bool, uchar4);
 #undef as_raw
 #define as_raw(x) x.as_int8()
 INST(dt_qint8, char4);
@@ -454,6 +455,7 @@ INST_DT_IBYTE(dt_int8);
 INST_DT_IBYTE(dt_uint8);
 INST_DT_IBYTE(dt_qint8);
 INST_DT_IBYTE(dt_quint8);
+INST_DT_IBYTE(dt_bool);
 #undef INST_DT_IBYTE
 #undef DEVICE_WRAPPER
 #undef INST_PARAM_VECT_VISITOR
@@ -913,6 +915,7 @@ INST_DT_IBYTE(dt_int8);
 INST_DT_IBYTE(dt_uint8);
 INST_DT_IBYTE(dt_qint8);
 INST_DT_IBYTE(dt_quint8);
+INST_DT_IBYTE(dt_bool);
 #undef INST_DT_IBYTE
 
 //! implement general case by UserOpInvokerToSameNdim
@@ -1259,6 +1262,7 @@ INST_DT_IBYTE(dt_int8);
 INST_DT_IBYTE(dt_uint8);
 INST_DT_IBYTE(dt_qint8);
 INST_DT_IBYTE(dt_quint8);
+INST_DT_IBYTE(dt_bool);
 #undef INST_DT_IBYTE
 #endif
 

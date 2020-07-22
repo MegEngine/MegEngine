@@ -138,7 +138,8 @@ void do_cvt_s8_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     dctype* __restrict dptr = dst.ptr<dctype>();
     float scale = src.layout.dtype.param<dtype::QuantizedS8>().scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = static_cast<dctype>(sptr[i] * scale);
+        auto val = sptr[i] * scale;
+        dptr[i] = static_cast<dctype>(val);
     }
 }
 
@@ -150,7 +151,8 @@ void do_cvt_s32_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     dctype* __restrict dptr = dst.ptr<dctype>();
     float scale = src.layout.dtype.param<dtype::QuantizedS32>().scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = static_cast<dctype>(sptr[i] * scale);
+        auto val = sptr[i] * scale;
+        dptr[i] = static_cast<dctype>(val);
     }
 }
 
@@ -163,7 +165,8 @@ void do_cvt_asymm8_normal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
     uint8_t zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = static_cast<dctype>((sptr[i] - zp) * scale);
+        auto val = (sptr[i] - zp) * scale;
+        dptr[i] = static_cast<dctype>(val);
     }
 }
 
@@ -310,6 +313,7 @@ void on_dest_ctype(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         break;                                            \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
         case DTypeEnum::QuantizedS8:
             MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
                          midout_iv(DTypeEnum::QuantizedS8)) {
@@ -467,6 +471,7 @@ void run_contiguous(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     }
 
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
         case DTypeEnum::QuantizedS8:
             MIDOUT_BEGIN(megdnn_fb_typecvt_dst_dtype,
                          midout_iv(DTypeEnum::QuantizedS8)) {

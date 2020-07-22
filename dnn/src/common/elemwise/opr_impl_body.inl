@@ -18,6 +18,15 @@ void ElemwiseForwardImpl::on_arity_dispatched() {
     auto src = make_elemwise_op_param<arity>();
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(on_arity_dispatched_cb_dtype)
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(on_arity_dispatched_cb_dtype)
+    on_arity_dispatched_cb_dtype(::megdnn::dtype::Bool)
+    megdnn_throw("bad dtype");
+}
+
+template<int arity>
+void ElemwiseForwardImpl::on_arity_dispatched_no_bool() {
+    auto src = make_elemwise_op_param<arity>();
+    MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(on_arity_dispatched_cb_dtype)
+    MEGDNN_FOREACH_COMPUTING_DTYPE_INT(on_arity_dispatched_cb_dtype)
     megdnn_throw("bad dtype");
 }
 
@@ -43,6 +52,14 @@ IMPL_MODE_DISPATCHER(2, DTypeCategory::FLOAT);
 
 #define FOREACH MEGDNN_FOREACH_ELEMWISE_MODE_TERNARY_FLOAT
 IMPL_MODE_DISPATCHER(3, DTypeCategory::FLOAT);
+#undef FOREACH
+
+#define FOREACH MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_BOOL
+IMPL_MODE_DISPATCHER(1, DTypeCategory::BOOL);
+#undef FOREACH
+
+#define FOREACH MEGDNN_FOREACH_ELEMWISE_MODE_BINARY_BOOL
+IMPL_MODE_DISPATCHER(2, DTypeCategory::BOOL);
 #undef FOREACH
 
 void ElemwiseForwardImpl::exec(
@@ -97,8 +114,8 @@ void ElemwiseForwardImpl::exec(
 #define D(_n) case _n: return on_arity_dispatched<_n>()
         D(1);
         D(2);
-        D(3);
 #undef D
+        case 3: return on_arity_dispatched_no_bool<3>();
         default:
             megdnn_throw("bad size of input tensors");
     }

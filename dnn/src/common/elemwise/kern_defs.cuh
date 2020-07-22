@@ -139,6 +139,7 @@ namespace megdnn {
     DEF_KERN_FLOAT(H_SWISH, x * min(max(x + 3, 0.f), 6.f) * (1.f / 6.f));
 
     // int only
+    DEF_KERN(dt_bool, NOT, x ^ 1);
 
 #undef KERN_SIG
 
@@ -156,6 +157,9 @@ namespace megdnn {
     DEF_KERN_ALL(MAX, x > y ? x : y);
     DEF_KERN_ALL(MIN, x < y ? x : y);
     DEF_KERN_ALL(MUL, x* y);
+    DEF_KERN(dt_bool, AND, x && y);
+    DEF_KERN(dt_bool, OR, x || y);
+    DEF_KERN(dt_bool, XOR, x ^ y);
     DEF_KERN_INT(RMULH, round_mulh_saturate(x, y));
     DEF_KERN_ALL(SIGMOID_GRAD, x*(ctype(1) - x) * y);
     DEF_KERN_ALL(SUB, x - y);

@@ -206,6 +206,7 @@ namespace {
         static constexpr Mode MODE = Mode::_mode; \
         static constexpr bool ALLOW_INT = _ALLOW_INT; \
         static constexpr bool ALLOW_FLOAT = _ALLOW_FLOAT; \
+        static constexpr bool ALLOW_BOOL = _ALLOW_BOOL; \
         static constexpr const char* NAME = #_mode; \
         template<typename ctype> \
         static inline ctype apply( \
@@ -588,6 +589,14 @@ namespace {
         struct enable_for_dtype_impl<dtype::Int32, void> {
             static constexpr bool value = false;
         };
+        template<class Trait>
+        struct enable_for_dtype_impl<dtype::Bool, Trait> {
+            static constexpr bool value = Trait::ALLOW_BOOL;
+        };
+        template<>
+        struct enable_for_dtype_impl<dtype::Bool, void> {
+            static constexpr bool value = false;
+        };
     }
 
     //! whether to enable test for specific dtype and Trait
@@ -749,8 +758,60 @@ TYPED_TEST(TestOprBasicArithTernaryElemwise, Float32) {
 
 TEST(TestOprBasicArithElemwise, CheckAllModeTested) {
     size_t nr_member = opr::Elemwise::Param::MODE_NR_MEMBER;
-    ASSERT_EQ(nr_member, tested_mode.size());
+    ASSERT_EQ(nr_member, tested_mode.size() + 4);
+    // Not using TestRunner: NOT, AND, OR, XOR
 }
+#define TEST_OPR_BASIC_ARITH_UNARY_BOOL(_mode, _op) \
+    TEST(TestOprBasicArithElemwise, _mode) { \
+        HostTensorGenerator<dtype::Bool> gen; \
+        auto host_x = gen({2, 1}); \
+        auto ptr = host_x->ptr<dt_bool>(); \
+        for (size_t i = 0; i < 2; ++i) { \
+            ptr[i] = (i & 1); \
+        } \
+        auto graph = ComputingGraph::make(); \
+        using Mode = opr::Elemwise::Mode; \
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x), \
+             y = opr::Elemwise::make({x}, Mode::_mode); \
+        HostTensorND host_y; \
+        auto func = graph->compile({make_callback_copy(y, host_y)}); \
+        func->execute(); \
+        ASSERT_EQ(TensorShape({2, 1}), host_y.shape()); \
+        auto ptry = host_y.ptr<dt_bool>(); \
+        for (int i = 0;i < 2;i ++) { \
+            ASSERT_EQ(_op ptr[i], ptry[i]); \
+        } \
+    } \
+
+TEST_OPR_BASIC_ARITH_UNARY_BOOL(NOT, !)
+
+#define TEST_OPR_BASIC_ARITH_BINARY_BOOL(_mode, _op) \
+    TEST(TestOprBasicArithElemwise, _mode) { \
+        HostTensorGenerator<dtype::Bool> gen; \
+        auto host_x1 = gen({2, 2}), host_x2 = gen({2, 2}); \
+        auto ptr1 = host_x1->ptr<dt_bool>(), ptr2 = host_x2->ptr<dt_bool>(); \
+        for (size_t i = 0; i < 4; ++i) { \
+            ptr1[i] = (i < 2); \
+            ptr2[i] = (i & 1); \
+        } \
+        auto graph = ComputingGraph::make(); \
+        using Mode = opr::Elemwise::Mode; \
+        auto x1 = opr::Host2DeviceCopy::make(*graph, host_x1), \
+             x2 = opr::Host2DeviceCopy::make(*graph, host_x2), \
+             y = opr::Elemwise::make({x1, x2}, Mode::_mode); \
+        HostTensorND host_y; \
+        auto func = graph->compile({make_callback_copy(y, host_y)}); \
+        func->execute(); \
+        ASSERT_EQ(TensorShape({2, 2}), host_y.shape()); \
+        auto ptry = host_y.ptr<dt_bool>(); \
+        for (int i = 0;i < 4;i ++) { \
+            ASSERT_EQ(ptr1[i] _op ptr2[i], ptry[i]); \
+        } \
+    } \
+
+TEST_OPR_BASIC_ARITH_BINARY_BOOL(AND, &&)
+TEST_OPR_BASIC_ARITH_BINARY_BOOL(OR, ||)
+TEST_OPR_BASIC_ARITH_BINARY_BOOL(XOR, ^)
 
 TEST(TestOprBasicArithElemwise, FuseMulAdd3Shapes) {
     using Checker = AutoOprChecker<3, 1>;

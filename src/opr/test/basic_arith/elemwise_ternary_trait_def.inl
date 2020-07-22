@@ -20,6 +20,7 @@
     ctype y = inp[1][idx]; \
     ctype z = inp[2][idx]
 
+#define _ALLOW_BOOL false
 #define _ALLOW_FLOAT true
 #define _ALLOW_INT true
 DEF_TRAIT(COND_LEQ_MOV, x <= y ? z : 0)
@@ -46,5 +47,6 @@ DEF_TRAIT(FUSE_MUL_ADD4, i0 * i1 + i2 * i3)
 
 #undef _CUR_ARITY
 #undef _EXPAND_PARAMS
+#undef _ALLOW_BOOL
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

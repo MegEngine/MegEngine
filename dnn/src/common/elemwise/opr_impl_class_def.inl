@@ -13,6 +13,9 @@
         template<int arity>
         void on_arity_dispatched();
 
+        template<int arity>
+        void on_arity_dispatched_no_bool();
+
         template<int arity, DTypeCategory dtype_cat, typename ctype>
         struct ModeDispatcher;
 

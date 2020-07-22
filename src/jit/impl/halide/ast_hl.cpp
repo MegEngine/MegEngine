@@ -193,6 +193,14 @@ Halide::Expr dispatch_elemwise_mode(
             return Halide::round(inp(0));
         case Mode::RMULH:
             return (inp(0) * inp(1)) >> Halide::popcount(inp(0));
+        case Mode::NOT:
+            return cv(1) - cv(inp(0) != cv(0));
+        case Mode::AND:
+            return cv(inp(0) != cv(0)) * cv(inp(1) != cv(0));
+        case Mode::OR:
+            return cv(cv(inp(0) != cv(0)) + cv(inp(1) != cv(0)) > cv(0));
+        case Mode::XOR:
+            return cv(cv(inp(0) != cv(0)) + cv(inp(1) != cv(0)) == cv(1));
         default:
             mgb_throw(InternalError, "unsupported Elemwise mode(%d)",
                       static_cast<int>(mode));

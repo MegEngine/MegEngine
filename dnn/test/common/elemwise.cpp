@@ -942,6 +942,8 @@ TEST(TEST_ELEMWISE, MODE_TRAIT) {
 
     ASSERT_TRUE(T::from_mode(M::RMULH).commutable);
     ASSERT_FALSE(T::from_mode(M::RMULH).allow_float);
+
+    ASSERT_TRUE(T::from_mode(M::XOR).allow_bool);
 }
 
 } // namespace elemwise

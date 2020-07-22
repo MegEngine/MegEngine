@@ -25,8 +25,9 @@ namespace cuda {
             1, KernImpl,
             typename std::enable_if<
                     !std::is_same<typename KernImpl::ctype, dt_int8>::value &&
-                    !std::is_same<typename KernImpl::ctype,
-                                  dt_uint8>::value>::type> {
+                    !std::is_same<typename KernImpl::ctype, dt_uint8>::value &&
+					!std::is_same<typename KernImpl::ctype, 
+									dt_bool>::value>::type> {
         typedef typename KernImpl::ctype ctype;
         ctype* dst;
 
@@ -41,8 +42,9 @@ namespace cuda {
             2, KernImpl,
             typename std::enable_if<
                     !std::is_same<typename KernImpl::ctype, dt_int8>::value &&
-                    !std::is_same<typename KernImpl::ctype,
-                                  dt_uint8>::value>::type> {
+                    !std::is_same<typename KernImpl::ctype, dt_uint8>::value &&
+					!std::is_same<typename KernImpl::ctype,
+									dt_bool>::value>::type> {
         typedef typename KernImpl::ctype ctype;
         ctype* dst;
 
@@ -57,8 +59,9 @@ namespace cuda {
             3, KernImpl,
             typename std::enable_if<
                     !std::is_same<typename KernImpl::ctype, dt_int8>::value &&
-                    !std::is_same<typename KernImpl::ctype,
-                                  dt_uint8>::value>::type> {
+                    !std::is_same<typename KernImpl::ctype, dt_uint8>::value &&
+					!std::is_same<typename KernImpl::ctype,
+									dt_bool>::value>::type> {
         typedef typename KernImpl::ctype ctype;
         ctype* dst;
 
@@ -74,8 +77,9 @@ namespace cuda {
             1, KernImpl,
             typename std::enable_if<
                     std::is_same<typename KernImpl::ctype, dt_int8>::value ||
-                    std::is_same<typename KernImpl::ctype,
-                                 dt_uint8>::value>::type> {
+                    std::is_same<typename KernImpl::ctype, dt_uint8>::value ||
+					std::is_same<typename KernImpl::ctype, 
+									dt_bool>::value>::type> {
         typedef typename KernImpl::ctype ctype;
         using VectTypeTrait = elemwise_intl::VectTypeTrait<ctype>;
         typedef typename VectTypeTrait::vect_type vect_type;
@@ -99,8 +103,9 @@ namespace cuda {
             2, KernImpl,
             typename std::enable_if<
                     std::is_same<typename KernImpl::ctype, dt_int8>::value ||
-                    std::is_same<typename KernImpl::ctype,
-                                 dt_uint8>::value>::type> {
+                    std::is_same<typename KernImpl::ctype, dt_uint8>::value ||
+					std::is_same<typename KernImpl::ctype,
+									dt_bool>::value>::type> {
         typedef typename KernImpl::ctype ctype;
         using VectTypeTrait = elemwise_intl::VectTypeTrait<ctype>;
         typedef typename VectTypeTrait::vect_type vect_type;
@@ -126,8 +131,9 @@ namespace cuda {
             3, KernImpl,
             typename std::enable_if<
                     std::is_same<typename KernImpl::ctype, dt_int8>::value ||
-                    std::is_same<typename KernImpl::ctype,
-                                 dt_uint8>::value>::type> {
+                    std::is_same<typename KernImpl::ctype, dt_uint8>::value ||
+					std::is_same<typename KernImpl::ctype,
+									dt_bool>::value>::type> {
         typedef typename KernImpl::ctype ctype;
         using VectTypeTrait = elemwise_intl::VectTypeTrait<ctype>;
         typedef typename VectTypeTrait::vect_type vect_type;

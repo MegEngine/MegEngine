@@ -52,6 +52,7 @@ namespace megdnn {
     MEGDNN_INC_FLOAT16(cb(Float16)) \
     MEGDNN_INC_FLOAT16(cb(BFloat16)) \
     cb(UintB4) \
+    cb(Bool) \
 
 /*!
  * \brief iterate through each full byte dtype
@@ -65,6 +66,7 @@ namespace megdnn {
     cb(Byte) \
     MEGDNN_INC_FLOAT16(cb(Float16)) \
     MEGDNN_INC_FLOAT16(cb(BFloat16)) \
+    cb(Bool) \
 
 /*!
  * \brief iterate through each fractional byte dtype
@@ -122,7 +124,7 @@ namespace megdnn {
  */
 #define MEGDNN_FOREACH_COMPUTING_DTYPE(cb) \
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb) \
-    MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
+    MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb) \
 
 //! In order to avoid an unnecessary increase in binary size, we just
 //! use QuantizedS16 dtype in winograd_filter_preprocess now. So I didn't add
@@ -348,6 +350,7 @@ typedef int32_t dt_int32;
 typedef int16_t dt_int16;
 typedef int8_t dt_int8;
 typedef uint8_t dt_uint8;
+typedef bool dt_bool;
 MEGDNN_INC_FLOAT16(typedef half_float::half dt_float16;)
 MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 
@@ -375,7 +378,7 @@ MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 #if !MEGDNN_DISABLE_FLOAT16
             BFloat16 = 11,
 #endif
-
+            Bool = 12,
             #define FST(_name) _name = MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE,
             #define D(_name) _name,
             MEGDNN_FOREACH_PARAMETERIZED_DTYPE_2(FST, D)
@@ -392,7 +395,7 @@ MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 #if MEGDNN_CC_HOST
     //! dtype numeric category fo
     enum class DTypeCategory: int {
-        OTHER, FLOAT, INT, LOWBIT, QUANTIZED
+        OTHER, FLOAT, INT, LOWBIT, QUANTIZED, BOOL
     };
     //! dtype signedness
     enum class DTypeSignedness: int {
@@ -401,7 +404,7 @@ MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 #else
     struct DTypeCategory {
         enum Ev {
-            OTHER, FLOAT, INT, LOWBIT, QUANTIZED
+            OTHER, FLOAT, INT, LOWBIT, QUANTIZED, BOOL
         };
         int ev;
     };
@@ -707,6 +710,7 @@ MEGDNN_DEF_DT(Int32, dt_int32, INT, SIGNED, INT32_MIN, INT32_MAX);
 MEGDNN_DEF_DT(Int16, dt_int16, INT, SIGNED, INT16_MIN, INT16_MAX);
 MEGDNN_DEF_DT(Int8, dt_int8, INT, SIGNED, INT8_MIN, INT8_MAX);
 MEGDNN_DEF_DT(Uint8, dt_uint8, INT, UNSIGNED, 0, UINT8_MAX);
+MEGDNN_DEF_DT(Bool, dt_bool, BOOL, UNSIGNED, false, true);
 MEGDNN_INC_FLOAT16(MEGDNN_DEF_DT(Float16, dt_float16, FLOAT, SIGNED,
             std::numeric_limits<dt_float16>::lowest(),
             std::numeric_limits<dt_float16>::max()));

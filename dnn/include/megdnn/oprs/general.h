@@ -39,11 +39,12 @@ class ElemwiseForward: public OperatorBase {
             bool commutable;    //!< whether arity == 2 and inputs commutable
             bool allow_int;     //!< whether int inputs allowed
             bool allow_float;   //!< whether float inputs allowed
+            bool allow_bool;    //!< whether bool inputs allowed
             const char* name;   //!< name of the mode
 
 
             ModeTrait():
-                arity(0), commutable(0), allow_int(0), allow_float(0),
+                arity(0), commutable(0), allow_int(0), allow_float(0), allow_bool(0),
                 name(NULL)
             {}
 

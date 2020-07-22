@@ -32,6 +32,7 @@ namespace opr {
     EL1(exp, EXP)
     EL1(log, LOG)
     EL1(abs, ABS)
+    EL1(not_, NOT)
 
 #undef EL1
 
@@ -53,6 +54,9 @@ namespace opr {
     EL2(min, MIN)
     EL2(switch_gt0, SWITCH_GT0)
     EL2(eq, EQ)
+    EL2(and_, AND)
+    EL2(or_, OR)
+    EL2(xor_, XOR)
 
 #undef EL2
 

@@ -74,6 +74,15 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
 #define cb(_m)                                                  \
     MIDOUT_BEGIN(megdnn_common_elemwise, midout_iv(Mode::_m)) { \
+        get(Mode::_m).allow_bool = true;                       \
+    }                                                           \
+    MIDOUT_END();
+        MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_BOOL(cb);
+        MEGDNN_FOREACH_ELEMWISE_MODE_BINARY_BOOL(cb);
+#undef cb
+
+#define cb(_m)                                                  \
+    MIDOUT_BEGIN(megdnn_common_elemwise, midout_iv(Mode::_m)) { \
         auto&& t = get(Mode::_m);                               \
         t.arity = _a;                                           \
         t.name = megdnn_mangle(#_m);                            \
@@ -82,10 +91,12 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 #define _a 1
         MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_FLOAT(cb);
         MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_INT(cb);
+        MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_BOOL(cb);
 #undef _a
 #define _a 2
         MEGDNN_FOREACH_ELEMWISE_MODE_BINARY_FLOAT(cb);
         MEGDNN_FOREACH_ELEMWISE_MODE_BINARY_INT(cb);
+        MEGDNN_FOREACH_ELEMWISE_MODE_BINARY_BOOL(cb);
 #undef _a
 #define _a 3
         MEGDNN_FOREACH_ELEMWISE_MODE_TERNARY_FLOAT(cb);
@@ -98,6 +109,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         auto&& t = get(Mode::_m);                               \
         t.allow_int = true;                                     \
         t.allow_float = true;                                   \
+        t.allow_bool = true;                                    \
         t.arity = _arity;                                       \
         t.name = megdnn_mangle(#_m);                            \
     }                                                           \
@@ -129,7 +141,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
 #if MEGDNN_ELEMWISE_MODE_ENABLE_ALL
         for (auto&& i : traits) {
-            megdnn_assert(i.arity && (i.allow_int || i.allow_float) &&
+            megdnn_assert(i.arity && (i.allow_int || i.allow_float || i.allow_bool) &&
                           (!i.commutable || i.arity == 2));
         }
 #else
@@ -280,6 +292,10 @@ void ElemwiseForward::check_dtype(DType dtype) {
             break;
         case DTypeCategory::INT:
             megdnn_assert(trait.allow_int, "unsupport mode %s for int\n",
+                          trait.name);
+            break;
+        case DTypeCategory::BOOL:
+            megdnn_assert(trait.allow_bool, "unsupport mode %s for bool\n",
                           trait.name);
             break;
         default:

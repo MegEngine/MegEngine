@@ -314,7 +314,12 @@ pdef('Elemwise').add_enum(
     Doc('ERFCINV', 'unary: inverse function of erfc(x)'),
     Doc('H_SWISH', 'unary: x * clip(x + 3, 0, 6) / 6'),
     Doc('H_SWISH_GRAD', 'binary: x < -3 ? 0 : (x > 3 ? y : (2 * x + 3) / 6 * y)'),
-    Doc('FUSE_ADD_H_SWISH', 'binary: hswish(x+y)')
+    Doc('FUSE_ADD_H_SWISH', 'binary: hswish(x+y)'),
+
+    Doc('NOT', 'unary: !x'),
+    Doc('AND', 'binary: x && y'),
+    Doc('OR', 'binary: x || y'),
+    Doc('XOR', 'binary: x ^ y')
 )
 
 pdef('ElemwiseMultiType').add_enum(

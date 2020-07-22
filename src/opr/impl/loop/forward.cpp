@@ -408,6 +408,8 @@ cg::OperatorNodeBase::NodeProp* Loop::do_make_node_prop() const {
                     break;
                 case DTypeEnum::UintB4:
                     break;
+                case DTypeEnum::Bool:
+                    break;
 
                 #define cb(x) case DTypeEnum::x: break;
                 MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb)

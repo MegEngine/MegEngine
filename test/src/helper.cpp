@@ -141,6 +141,21 @@ namespace mgb {
     template class HostTensorGenerator<
         dtype::Int32, RandomDistribution::CONSTANT>;
     std::shared_ptr<HostTensorND>
+    HostTensorGenerator<dtype::Bool, RandomDistribution::UNIFORM>::
+    operator()(const TensorShape& shape, CompNode cn) {
+        if (!cn.valid())
+            cn = CompNode::load("xpu0");
+        auto dtype = dtype::Bool();
+        std::shared_ptr<HostTensorND> ret =
+                std::make_shared<HostTensorND>(cn, shape, dtype);
+        auto ptr = ret->ptr<dt_bool>();
+        for (size_t i = 0, it = shape.total_nr_elems(); i < it; ++i) {
+            ptr[i] = (i % 2 == 1);
+        }
+        return ret;
+    }
+
+    std::shared_ptr<HostTensorND>
     HostTensorGenerator<dtype::QuantizedS8, RandomDistribution::UNIFORM>::
     operator()(const TensorShape& shape, CompNode cn) {
         if (!cn.valid())

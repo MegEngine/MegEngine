@@ -68,6 +68,7 @@ namespace cond_take {
 #define inst_eq_i(_dt) do_inst_eq_i(DTypeTrait<_dt>::ctype)
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(inst_eq_f)
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(inst_eq_i)
+    inst_eq_i(::megdnn::dtype::Bool)
 #undef inst_eq_f
 #undef inst_eq_i
 

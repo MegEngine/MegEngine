@@ -916,6 +916,7 @@ SymbolVar fill_retain_dtype(SymbolVar var, PyObject *value) {
         case DTypeEnum::QuantizedS4:
         case DTypeEnum::Byte:
         case DTypeEnum::QuantizedS16:
+        case DTypeEnum::Bool:
             break;
 #define cb(low_bit, size) \
         case DTypeEnum::low_bit##size: \

@@ -18,6 +18,15 @@
 #define _EXPAND_PARAMS \
     ctype x = inp[0][idx]
 
+#define _ALLOW_BOOL true
+#define _ALLOW_FLOAT false
+#define _ALLOW_INT false
+DEF_TRAIT(NOT, !x)
+#undef _ALLOW_INT
+#undef _ALLOW_FLOAT
+#undef _ALLOW_BOOL
+
+#define _ALLOW_BOOL false
 
 #define _ALLOW_FLOAT true
 
@@ -50,6 +59,8 @@ DEF_TRAIT(H_SWISH, do_h_swish(x))
 #undef _ALLOW_INT
 
 #undef _ALLOW_FLOAT
+
+#undef _ALLOW_BOOL
 
 #undef _CUR_ARITY
 #undef _EXPAND_PARAMS

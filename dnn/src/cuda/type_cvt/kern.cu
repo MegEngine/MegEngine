@@ -62,7 +62,8 @@ template <typename ctype_dest, typename ctype_src>
 struct TypeCvtOp<ctype_dest, ctype_src,
                  typename std::enable_if<
                          std::is_same<ctype_src, dt_int8>::value ||
-                         std::is_same<ctype_src, dt_uint8>::value>::type> {
+                         std::is_same<ctype_src, dt_uint8>::value ||
+						 std::is_same<ctype_src, dt_bool>::value>::type> {
     ctype_dest* dest;
     using src_vect_type = typename VectTypeTrait<ctype_src>::vect_type;
     using dst_vect_type = typename VectTypeTrait<ctype_dest>::vect_type;
@@ -85,7 +86,8 @@ struct TypeCvtOpToQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 std::is_same<ctype_src, dt_int8>::value ||
-                std::is_same<ctype_src, dt_uint8>::value>::type> {
+                std::is_same<ctype_src, dt_uint8>::value ||
+				std::is_same<ctype_src, dt_bool>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_dest> param;
     using src_vect_type = typename VectTypeTrait<ctype_src>::vect_type;
@@ -109,7 +111,8 @@ struct TypeCvtOpFromQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 std::is_same<ctype_src, dt_qint8>::value ||
-                std::is_same<ctype_src, dt_quint8>::value>::type> {
+                std::is_same<ctype_src, dt_quint8>::value ||
+				std::is_same<ctype_src, dt_bool>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_src> param;
     using src_vect_type = typename VectTypeTrait<ctype_src>::vect_type;
@@ -137,7 +140,8 @@ struct TypeCvtOpBetweenQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 std::is_same<ctype_src, dt_qint8>::value ||
-                std::is_same<ctype_src, dt_quint8>::value>::type> {
+                std::is_same<ctype_src, dt_quint8>::value ||
+				std::is_same<ctype_src, dt_bool>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_src> src_param;
     CudaDTypeParam<ctype_dest> dst_param;
@@ -243,6 +247,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
     cb(dtype_src, dt_float32) \
     cb(dtype_src, dt_float16) \
     cb(dtype_src, dt_bfloat16) \
+    cb(dtype_src, dt_bool) \
 
 #define MEGDNN_FOREACH_QUANTIZED_DTYPE_WITH_DTYPE_SRC(dtype_src, cb) \
     cb(dtype_src, dt_quint8) \
@@ -265,6 +270,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
     cb(dt_float32) \
     cb(dt_float16) \
     cb(dt_bfloat16) \
+    cb(dt_bool) \
 
 #define MEGDNN_FOREACH_QUANTIZED_CTYPE(cb) \
     cb(dt_quint8) \

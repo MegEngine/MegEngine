@@ -5,6 +5,7 @@ DTYPES = {'dt_int32': ('Int32', 'INT'),
           'dt_uint8': ('Uint8', 'INT'),
           'dt_int8': ('Int8', 'INT'),
           'dt_int16': ('Int16', 'INT'),
+          'dt_bool': ('Bool', 'BOOL'),
           'dt_float32': ('Float32', 'FLOAT'),
           'dt_float16': ('Float16', 'FLOAT'),
           'dt_bfloat16': ('BFloat16', 'FLOAT')
@@ -28,4 +29,7 @@ MODES = {
                    'FUSE_ADD_SIGMOID', 'ATAN2', 'H_SWISH_GRAD',
                    'FUSE_ADD_H_SWISH'],
     (3, 'FLOAT'): ['COND_LEQ_MOV', 'FUSE_MUL_ADD3'],
+    (1, 'BOOL'): ['NOT'],
+    (2, 'BOOL'): ['AND', 'OR', 'XOR'],
+    (3, 'BOOL'): []
 }

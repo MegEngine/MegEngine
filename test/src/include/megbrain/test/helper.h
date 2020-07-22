@@ -202,6 +202,10 @@ struct RandomDistributionDTypeDefault<dtype::Int32> {
     static constexpr auto dist = RandomDistribution::UNIFORM;
 };
 template<>
+struct RandomDistributionDTypeDefault<dtype::Bool> {
+    static constexpr auto dist = RandomDistribution::UNIFORM;
+};
+template<>
 struct RandomDistributionDTypeDefault<dtype::QuantizedS8> {
     static constexpr auto dist = RandomDistribution::UNIFORM;
 };
@@ -249,6 +253,10 @@ struct UniformRNGDefaultRange<dtype::Int8> {
 template<>
 struct UniformRNGDefaultRange<dtype::Uint8> {
     static constexpr dt_uint8 LO = 0, HI = 255;
+};
+template<>
+struct UniformRNGDefaultRange<dtype::Bool> {
+    static constexpr dt_bool LO = false, HI = true;
 };
 template<>
 struct UniformRNGDefaultRange<dtype::Int16> {
@@ -340,6 +348,20 @@ class HostTensorGenerator<dtype, RandomDistribution::CONSTANT> final:
 
     private:
         ctype m_default_val;
+};
+template <>
+class HostTensorGenerator<dtype::Bool, RandomDistribution::UNIFORM> final
+        : public HostTensorGeneratorBase {
+public:
+    using ctype = typename DTypeTrait<dtype::Bool>::ctype;
+
+    HostTensorGenerator(uint64_t seed = next_rand_seed())
+            : HostTensorGeneratorBase{seed} {}
+
+    std::shared_ptr<HostTensorND> operator()(const TensorShape& shape,
+                                             CompNode cn = {}) override;
+    using HostTensorGeneratorBase::operator();
+
 };
 
 template <>
