@@ -22,6 +22,7 @@
 
 #if MGB_CUDA
 #include <cuda_runtime.h>
+#include <cuda.h>
 
 #if MGB_ENABLE_LOGGING
 #define MGB_CUDA_CHECK(expr)                                          \
@@ -32,6 +33,16 @@
                                   __func__, __LINE__);                \
         }                                                             \
     } while (0)
+
+#define MGB_CUDA_CU_CHECK(expr)                                          \
+    do {                                                                 \
+        CUresult __cuda_check_code = (expr);                             \
+        if (!mgb_likely(__cuda_check_code == CUDA_SUCCESS)) {            \
+            ::mgb::_on_cuda_cu_error(#expr, __cuda_check_code, __FILE__, \
+                                     __func__, __LINE__);                \
+        }                                                                \
+    } while (0)
+
 #else
 #define MGB_CUDA_CHECK(expr)                                            \
     do {                                                                \
@@ -39,6 +50,14 @@
         if (!mgb_likely(__cuda_check_code == cudaSuccess)) {            \
             ::mgb::_on_cuda_error(#expr, __cuda_check_code, "", "", 1); \
         }                                                               \
+    } while (0)
+
+#define MGB_CUDA_CU_CHECK(expr)                                            \
+    do {                                                                   \
+        CUresult __cuda_check_code = (expr);                               \
+        if (!mgb_likely(__cuda_check_code == CUDA_SUCCESS)) {              \
+            ::mgb::_on_cuda_cu_error(#expr, __cuda_check_code, "", "", 1); \
+        }                                                                  \
     } while (0)
 
 #endif //MGB_ENABLE_LOGGING
@@ -178,6 +197,9 @@ namespace mgb {
 #if MGB_CUDA
 [[noreturn]] void _on_cuda_error(const char* expr, cudaError_t err,
                                  const char* file, const char* func, int line);
+[[noreturn]] void _on_cuda_cu_error(const char* expr, CUresult err,
+                                    const char* file, const char* func,
+                                    int line);
 #endif
 
 

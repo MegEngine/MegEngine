@@ -11,6 +11,7 @@
 
 #include "./halide/compiler_cuda.h"
 #include "./nvrtc/compiler_cuda.h"
+#include "./mlir/compiler.h"
 
 #include "megbrain/jit/compiler.h"
 #include "megbrain/utils/hash.h"
@@ -54,6 +55,8 @@ bool Compiler::is_supported_device(CompNode::DeviceType device) {
         case CompNode::DeviceType::CUDA:
             return true;
 #endif
+        case CompNode::DeviceType::CPU:
+            return true;
         default:
             return false;
     }
@@ -87,12 +90,30 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
                     break;
                 }
 #endif
+#if MGB_JIT_MLIR
+                if (!backend || !strcmp(backend, "MLIR")) {
+                    compiler = std::make_unique<MLIRCompiler>(
+                            CompNode::DeviceType::CUDA);
+                    break;
+                }
+#endif
                 if (!backend || !strcmp(backend, "NVRTC")) {
                     compiler = std::make_unique<CudaCompiler>();
                     break;
                 }
 #endif
-            // fall through
+                mgb_throw(InternalError, "No compiler support for cuda");
+                break;
+            case CompNode::DeviceType::CPU:
+#if MGB_JIT_MLIR
+                if (!backend || !strcmp(backend, "MLIR")) {
+                    compiler = std::make_unique<MLIRCompiler>(
+                            CompNode::DeviceType::CPU);
+                    break;
+                }
+#endif
+                mgb_throw(InternalError, "No compiler support for cpu");
+                break;
             default:
                 mgb_throw(InternalError,
                           "unsupported JIT config: "

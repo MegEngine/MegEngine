@@ -14,6 +14,7 @@
 #include "megbrain/jit/executor_opr.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/test/helper.h"
+#include "megdnn/dtype.h"
 
 #if MGB_JIT
 using namespace mgb;
@@ -120,6 +121,44 @@ void run<grad>(Backend backend, CompNode cn) {
 
 template <>
 void run<void>(Backend, CompNode) {}
+
+#if MGB_JIT_MLIR
+void run_mlir(CompNode cn) {
+    set_backend(Backend::MLIR);
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<dtype::Float32> gen;
+
+    auto host_x0 = gen({23, 42}, cn), host_x1 = gen({23, 42}, cn),
+         host_x2 = gen({23, 42}, cn);
+
+    auto a = opr::Host2DeviceCopy::make(*graph, host_x0),
+         b = opr::Host2DeviceCopy::make(*graph, host_x1),
+         c = opr::Host2DeviceCopy::make(*graph, host_x2);
+
+    auto y = a + b + c;
+
+    VarNodeArray inputs{a.node(), b.node(), c.node()}, outputs{y.node()};
+    auto ig_gen =
+            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+
+    for (auto i : get_rev_topo_order(y)) {
+        if (!i->same_type<opr::Host2DeviceCopy>()) {
+            ig_gen->add_opr(i);
+        }
+    }
+
+    auto igraph = ig_gen->generate();
+    auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
+
+    HostTensorND host_y, host_y_jit;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_jit, host_y_jit)});
+    func->execute();
+
+    MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
+}
+#endif
+
 }  // anonymous namespace
 
 #if MGB_JIT_HALIDE
@@ -139,6 +178,20 @@ TYPED_TEST(TestJITNvrtcCodeGen, run) {
     REQUIRE_GPU(1);
     run<TypeParam>(Backend::NVRTC, CompNode::load("gpu0"));
 }
+
+#if MGB_JIT_MLIR
+TEST(TestJITMlirCodeGen, Basic) {
+    auto cn = CompNode::load("cpu0");
+    run_mlir(cn);
+}
+
+TEST(TestJITMlirCodeGen, BasicGPU) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    run_mlir(cn);
+}
+
+#endif
 
 #endif  // MGB_JIT
 

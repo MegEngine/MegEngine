@@ -18,8 +18,8 @@
  */
 
 /*!
- *  * \brief fast division for unsigned int
- *   */
+ * \brief fast division for unsigned int
+ */
 struct Uint32Fastdiv {
     unsigned int m_mul, m_divisor, m_divisor_is_not_1, m_inc_dividend, m_shift;
 

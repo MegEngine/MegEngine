@@ -15,7 +15,7 @@
 
 namespace mgb {
 namespace jit {
-enum class Backend { NONE, HALIDE, NVRTC };
+enum class Backend { NONE, HALIDE, NVRTC, MLIR };
 
 void set_backend(Backend backend);
 

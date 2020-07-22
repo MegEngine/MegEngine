@@ -162,6 +162,15 @@ void mgb::_on_cuda_error(const char* expr, cudaError_t err, const char* file,
               cudaGetErrorString(err), expr, file, func, line);
 }
 
+void mgb::_on_cuda_cu_error(const char* expr, CUresult err, const char* file,
+                         const char* func, int line) {
+    const char* msg;
+    cuGetErrorName(err, &msg);
+    mgb_throw(CudaError, "cuda error %d: %s (%s at %s:%s:%d)", int(err), msg,
+              expr, file, func, line);
+}
+
+
 void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
                                   const ContinuationCtx<cudaStream_t>& cont) {
     m_comp_node = comp_node;
