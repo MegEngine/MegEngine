@@ -46,29 +46,46 @@ def test_tensor_set_dtype():
                 )
 
     t = mge.Parameter(np.ones((3, 4), dtype="float32"))
-    t.set_dtype(mgb.dtype.qint8(0.1))
+    t.dtype = mgb.dtype.qint8(0.1)
     check_dtype_value(t, 0.1, 10)
 
     t = mge.Parameter(np.ones((3, 4), dtype=mgb.dtype.qint8(1)))
-    t.set_dtype(mgb.dtype.qint8(0.3))
+    t.dtype = mgb.dtype.qint8(0.3)
     check_dtype_value(t, 0.3, 3)
 
     t = mge.Buffer(np.ones((3, 4), dtype="float32"))
-    t.set_dtype(mgb.dtype.qint8(0.1))
+    t.dtype = mgb.dtype.qint8(0.1)
     check_dtype_value(t, 0.1, 10)
 
     t = mge.Buffer(np.ones((3, 4), dtype=mgb.dtype.qint8(1)))
-    t.set_dtype(mgb.dtype.qint8(0.3))
+    t.dtype = mgb.dtype.qint8(0.3)
     check_dtype_value(t, 0.3, 3)
 
     t = mge.Buffer(np.ones((3, 4), dtype="float32"))
     s = t + 1
-    s.set_dtype(mgb.dtype.qint8(0.2))
+    s.dtype = mgb.dtype.qint8(0.2)
     check_dtype_value(s, 0.2, 10)
 
-    t.set_dtype(mgb.dtype.qint8(0.3))
+    t.dtype = mgb.dtype.qint8(0.3)
     s = t + 1
-    s.set_dtype(mgb.dtype.qint8(0.1))
+    s.dtype = mgb.dtype.qint8(0.1)
     check_dtype_value(s, 0.1, 18)
-    s.set_dtype("float32")
+    s.dtype = "float32"
     check_dtype_value(s, 0, 1.8)
+
+
+def test_tensor_name():
+    p = mge.Parameter(np.ones((3, 4), dtype="float32"))
+    assert "shared" in p.name
+    with pytest.raises(ValueError):
+        p.name = "Parameter0"
+
+    b = mge.Buffer(np.ones((3, 4), dtype="float32"))
+    assert "shared" in b.name
+    with pytest.raises(ValueError):
+        b.name = "Buffer0"
+
+    s = b + 1
+    assert "ADD" in s.name
+    s.name = "WeightAdd1"
+    assert s.name == "WeightAdd1"

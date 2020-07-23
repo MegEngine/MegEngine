@@ -235,13 +235,34 @@ class Tensor:
             return self.__val.dtype
         return self._symvar.dtype
 
-    def set_dtype(self, dtype: str = None):
+    @dtype.setter
+    def dtype(self, dtype: str = None):
         r"""Set the data type of the tensor.
         """
         if self.__val is not None:
             self.__val = mgb.make_shared(self.device, value=self.astype(dtype).numpy())
+        elif self.__sym_override is not None:
+            self.__sym_override = self.__sym_override.astype(dtype)
         elif self.__sym is not None:
             self.__sym = self.__sym.astype(dtype)
+
+    @property
+    def name(self):
+        r"""Get the tensor name, does not support Parameter and Buffer.
+        """
+        return self._symvar.name
+
+    @name.setter
+    def name(self, name: str = None):
+        r"""Set the tensor name, does not support Parameter and Buffer.
+        """
+        if self.__val is not None:
+            raise ValueError("name setting is not available for Parameter or Buffer.")
+        if self.__sym_override is not None:
+            self.__sym_override = self.__sym_override.rename(name)
+        if self.__sym is not None:
+            assert not self.__val
+            self.__sym = self.__sym.rename(name)
 
     @property
     def _comp_node(self):

@@ -464,7 +464,7 @@ class Module(metaclass=ABCMeta):
             # For quantized dtype, the initialized dtype
             # scale/zero_points maybe invalid, use pretrained dtype instead.
             if is_quantize(to_be_load.dtype) and is_quantize(var.dtype):
-                var.set_dtype(to_be_load.dtype)
+                var.dtype = to_be_load.dtype
             var.set_value(to_be_load)
             loaded.append(k)
 

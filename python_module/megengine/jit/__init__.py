@@ -436,6 +436,7 @@ class trace:
         arg_names=None,
         append=False,
         optimize_for_inference=False,
+        output_names=None,
         **kwargs
     ):
         """
@@ -446,6 +447,8 @@ class trace:
         :param append: whether output is appended to ``fpath``.
         :param optimize_for_inference: whether to enable optimize_for_inference
             pass before dump.
+        :param output_names: names of the output tensors in the traced function,
+            will use the default name if does not specify.
 
         :param enable_io16xc32: whether to use float16 for I/O between oprs and use
             float32 as internal computation precision. Note the output var would be
@@ -488,6 +491,17 @@ class trace:
                     len(self._args), len(arg_names)
                 )
             )
+        if isinstance(output_names, str):
+            output_names = [output_names]
+        if output_names is None:
+            output_names = [var.name for var in self._sym_outputs]
+        elif len(output_names) != len(self._sym_outputs):
+            raise ValueError(
+                "len(output_names) should be {}, got {}".format(
+                    len(self._sym_outputs), len(output_names)
+                )
+            )
+
         optimize_for_inference_args_map = {
             "enable_io16xc32": "f16_io_f32_comp",
             "enable_ioc16": "f16_io_comp",
@@ -541,6 +555,8 @@ class trace:
             sym_outputs = mgb.optimize_for_inference(
                 sym_outputs, **optimize_for_inference_kwargs
             )
+        for var, name in zip(sym_outputs, output_names):
+            var.rename(name)
         mgb.serialize_comp_graph_to_file(fpath, sym_outputs, append=append)
 
     def get_profile(self):
