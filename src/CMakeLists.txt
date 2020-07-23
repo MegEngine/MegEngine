@@ -156,7 +156,7 @@ if(ANDROID)
     target_link_libraries(megbrain PUBLIC log)
 endif()
 
-if(NOT MGE_BUILD_XXX)
+if(NOT MGE_BUILD_IMPERATIVE_RT)
     # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
     add_library(megengine)
     target_link_libraries(megengine PUBLIC megbrain megdnn)
