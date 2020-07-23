@@ -489,25 +489,26 @@ void benchmark_im2col_single_algo(const char* im2col_name, Handle* handle,
 
 void BENCHMARK_IM2COL_NCHW44_VS_NCHW(const char* algo_name,
                                      const char* im2col_name, Handle* handle,
-                                     size_t kernel, size_t pack_size = 1) {
-    auto&& args = get_winograd_benchmark_args(kernel, pack_size);
+                                     size_t kernel, DType src_type,
+                                     DType dst_type) {
+    auto&& args = get_winograd_benchmark_args(kernel, 4);
     using namespace conv_bias;
     constexpr size_t RUN = 10;
     Benchmarker<ConvBias> benchmark(handle);
     benchmark.set_display(false);
     benchmark.set_times(RUN);
-    benchmark.set_dtype(0, dtype::Int8());
-    benchmark.set_dtype(1, dtype::Int8());
-    benchmark.set_dtype(2, dtype::Int32());
-    benchmark.set_dtype(4, dtype::Int32());
+    benchmark.set_dtype(0, src_type);
+    benchmark.set_dtype(1, src_type);
+    benchmark.set_dtype(2, dst_type);
+    benchmark.set_dtype(4, dst_type);
 
     Benchmarker<ConvBias> benchmark_im2col(handle);
     benchmark_im2col.set_display(false);
     benchmark_im2col.set_times(RUN);
-    benchmark_im2col.set_dtype(0, dtype::Int8());
-    benchmark_im2col.set_dtype(1, dtype::Int8());
-    benchmark_im2col.set_dtype(2, dtype::Int32());
-    benchmark_im2col.set_dtype(4, dtype::Int32());
+    benchmark_im2col.set_dtype(0, src_type);
+    benchmark_im2col.set_dtype(1, src_type);
+    benchmark_im2col.set_dtype(2, dst_type);
+    benchmark_im2col.set_dtype(4, dst_type);
 
     for (auto&& arg : args) {
         TensorLayout dst_layout;
@@ -556,6 +557,7 @@ void BENCHMARK_IM2COL_NCHW44_VS_NCHW(const char* algo_name,
                computations / used_im2col, used / used_im2col);
     }
 }
+
 #if MEGDNN_AARCH64
 TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x32) {
     printf("=========================compare "
@@ -563,7 +565,17 @@ TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x32) {
            "IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16 \n");
     BENCHMARK_IM2COL_NCHW44_VS_NCHW("IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16",
                                     "IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16",
-                                    handle(), 3, 4);
+                                    handle(), 3, dtype::Int8(), dtype::Int32());
+}
+#endif
+
+#if MEGDNN_ARMV7
+TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x16) {
+    const char* default_algo = "IM2COLMATMUL:ARMV7_INT8X8X16_K4X8X8";
+    const char* mk4_algo = "IM2COLMATMUL:ARMV7_INT8X8X16_MK4_K8X8X4";
+    printf("compare %s vs %s \n", default_algo, mk4_algo);
+    BENCHMARK_IM2COL_NCHW44_VS_NCHW(default_algo, mk4_algo, handle(), 3,
+                                    dtype::Int8(), dtype::Int16());
 }
 #endif
 
@@ -1860,15 +1872,16 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_NCHW44_DOT) {
         param.format = param::ConvBias::Format::NCHW44_DOT;
 
         //! channel bias
-        args.emplace_back(param, TensorShape{1, ic/4, h, w, 4},
-                          TensorShape{oc/4, ic/4, kernel, kernel, 4, 4},
-                          TensorShape{1, oc/4, 1, 1, 4});
+        args.emplace_back(param, TensorShape{1, ic / 4, h, w, 4},
+                          TensorShape{oc / 4, ic / 4, kernel, kernel, 4, 4},
+                          TensorShape{1, oc / 4, 1, 1, 4});
     };
     for (size_t stride : {1, 2})
         for (size_t kernel : {2, 3, 5, 7})
-            for(size_t oc : {64})
+            for (size_t oc : {64})
                 for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
-                    run(oc, oc, 56, 56, kernel, kernel / 2, stride, nonline_mode);
+                    run(oc, oc, 56, 56, kernel, kernel / 2, stride,
+                        nonline_mode);
                 }
 
     constexpr size_t RUN = 50;
@@ -1880,7 +1893,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_STRIDE1_WITHDOTPROD_NCHW44_DOT) {
     benchmark0.set_display(false);
     benchmark0.set_times(RUN);
     benchmark0.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("ARMDOTS8DIRECT_NCHW44"));
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "ARMDOTS8DIRECT_NCHW44"));
 
     Benchmarker<ConvBias> benchmark1(handle());
     benchmark1.set_dtype(0, dtype::QuantizedS8(2.5f))
@@ -2002,15 +2016,20 @@ std::vector<conv_bias::TestArg> get_conv_bias_1x1_benchmark_args(
 
 void benchmark_conv1x1(const char* matmul_algo_name, Handle* handle,
                        DType stype, DType matmul_dtype, DType bias_type,
-                       DType conv_dtype) {
+                       DType conv_dtype, bool is_mk4 = false) {
     using namespace conv_bias;
+    int pack_size = is_mk4 ? 4 : 1;
     std::vector<TestArg> conv_bias_1x1_args =
-            get_conv_bias_1x1_benchmark_args();
+            get_conv_bias_1x1_benchmark_args(pack_size);
+
     constexpr size_t RUNS = 50;
 
     param::MatrixMul param;
     param.transposeA = false;
     param.transposeB = false;
+    if (is_mk4) {
+        param.format = MatrixMul::Param::Format::MK4;
+    }
     Benchmarker<MatrixMul> benchmark_matmul(handle);
     benchmark_matmul.set_before_exec_callback(
             AlgoChecker<MatrixMul>(matmul_algo_name));
@@ -2038,8 +2057,8 @@ void benchmark_conv1x1(const char* matmul_algo_name, Handle* handle,
         size_t OH = arg.src[2];
         size_t OW = arg.src[3];
         size_t OC = arg.filter[0];
-        size_t M = OC;
-        size_t K = IC;
+        size_t M = OC * pack_size;
+        size_t K = IC * pack_size;
         size_t N = OH * OW;
 
         float computations = M * N * K * 2.f / (1024 * 1024 * 1024) * 1e3;
@@ -2047,6 +2066,10 @@ void benchmark_conv1x1(const char* matmul_algo_name, Handle* handle,
         TensorShape A, B;
         A = TensorShape{M, K};
         B = TensorShape{K, N};
+        if (is_mk4) {
+            A = TensorShape{M / 4, K / 4, 4, 4};
+            B = TensorShape{K / 4, N, 4};
+        }
 
         auto conv1x1_used = benchmark_conv1x1.set_param(arg.param).exec(
                                     {arg.src, arg.filter, arg.bias, {}, {}}) /
@@ -2133,6 +2156,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_S1_INT8x8x16) {
                       dtype::Int16{}, dtype::Int16{}, dtype::Int16{});
     benchmark_conv1x1("ARMV7_INT8X8X16_K4X2X16", handle(), dtype::Int8{},
                       dtype::Int16{}, dtype::Int16{}, dtype::Int16{});
+    benchmark_conv1x1("ARMV7_INT8X8X16_MK4_K8X8X4", handle(), dtype::Int8{},
+                      dtype::Int16{}, dtype::Int16{}, dtype::Int16{}, true);
 #endif
 }
 
@@ -2145,13 +2170,13 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_GEMV_FP32) {
     conv_param.pad_h = 0;
     conv_param.pad_w = 0;
     conv_param.nonlineMode = param::ConvBias::NonlineMode::IDENTITY;
-    auto run = [&](size_t M, size_t K){
+    auto run = [&](size_t M, size_t K) {
         args.emplace_back(conv_param, TensorShape{1, K, 1, 1},
                           TensorShape{M, K, 1, 1}, TensorShape{});
     };
     for (size_t M : {4, 64, 1024, 4096})
         for (size_t K : {128, 256, 1024, 4096})
-                run(M, K);
+            run(M, K);
 
     constexpr size_t RUNS = 50;
     param::MatrixMul param;

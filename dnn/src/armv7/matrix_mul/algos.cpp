@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/armv7/matrix_mul/algos.h"
@@ -526,6 +527,74 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x16K4x8x8,
                                      "AlgoInt8x8x16K4x8x8"_hash,
                                      armv7::matmul::gemm_s8x8x16_4x8, int8_t,
                                      int16_t);
+
+/* =================== Int8x8x16 Kernel MK4 8x8x4 algo ===================*/
+
+namespace {
+void kern_int8x8x16_mk4_k8x8x4(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_armv7_matmul_kern,
+                 midout_iv("kern_int8x8x16_mk4_k8x8x4"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int16>();
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        auto trA = kern_param.trA, trB = kern_param.trB;
+
+        armv7::matmul::gemm_s8x8x16_mk4_8x8 strategy(M, N, K, kern_param.A_type,
+                                                     kern_param.B_type,
+                                                     kern_param.C_type);
+        megdnn::matmul::GemmInterleaved<armv7::matmul::gemm_s8x8x16_mk4_8x8>(
+                M, N, K, trA, trB, strategy)
+                .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC,
+                         kern_param.workspace_ptr);
+    }
+    MIDOUT_END();
+}
+}  // anonymous namespace
+
+bool MatrixMulImpl::AlgoInt8x8x16MK4_8x8x4::usable(
+        const KernSizeParam& kern_size_param) const {
+    bool type_ok = can_be_treated_as_int8x8x16(kern_size_param);
+
+    return type_ok && kern_size_param.format == param::MatrixMul::Format::MK4 &&
+           kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+           !kern_size_param.trA && !kern_size_param.trB &&
+           kern_size_param.M % 4 == 0 && kern_size_param.K % 4 == 0;
+}
+
+size_t MatrixMulImpl::AlgoInt8x8x16MK4_8x8x4::get_workspace(
+        const KernSizeParam& kern_size_param) const {
+    MIDOUT_BEGIN(megdnn_armv7_matmul_kern,
+                 midout_iv("AlgoInt8x8x16K8x8x4::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N,
+             K = kern_size_param.K;
+        auto A_type = kern_size_param.A_type, B_type = kern_size_param.B_type,
+             C_type = kern_size_param.C_type;
+        auto trA = kern_size_param.trA, trB = kern_size_param.trB;
+        matmul::gemm_s8x8x16_mk4_8x8 strategy(M, N, K, A_type, B_type, C_type);
+        return megdnn::matmul::GemmInterleaved<matmul::gemm_s8x8x16_mk4_8x8>(
+                       M, N, K, trA, trB, strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16MK4_8x8x4::get_kern(
+        const KernSizeParam&) const {
+    return kern_int8x8x16_mk4_k8x8x4;
+}
+
+bool MatrixMulImpl::AlgoInt8x8x16MK4_8x8x4::preferred(
+        const KernSizeParam& kern_size_param) const {
+    return kern_size_param.K >= 4;
+}
+
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(AlgoInt8x8x16MK4_8x8x4,
+                                            megdnn_armv7_matmul_kern,
+                                            "AlgoInt8x8x16MK4_8x8x4"_hash,
+                                            armv7::matmul::gemm_s8x8x16_mk4_8x8,
+                                            int8_t, int16_t, int16_t);
+
 /* ===================== Int16x16x32 Kernel 12x4x1 algo ===================== */
 
 namespace {
@@ -937,11 +1006,9 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16MK8_4x8::get_kern(
                        Bptr = kern_param.B<dt_float16>();
             auto Cptr = kern_param.C<dt_float16>();
 
-            armv7::matmul::gemm_nopack_f16_4x8 strategy(A_type, B_type,
-                                                          C_type);
-            megdnn::matmul::GemmInterleaved<
-                    armv7::matmul::gemm_nopack_f16_4x8, false>(M, N, K, trA,
-                                                                 trB, strategy)
+            armv7::matmul::gemm_nopack_f16_4x8 strategy(A_type, B_type, C_type);
+            megdnn::matmul::GemmInterleaved<armv7::matmul::gemm_nopack_f16_4x8,
+                                            false>(M, N, K, trA, trB, strategy)
                     .execute(Aptr, LDA, Bptr, LDB, Cptr, LDC,
                              kern_param.workspace_ptr);
         }

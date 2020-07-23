@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/armv7/fixture.h"
 #include "test/common/benchmarker.h"
@@ -51,9 +52,15 @@ TEST_F(ARMV7, MATRIX_MUL_INT8x8x16_K4x8x8) {
                                  handle(), "ARMV7_INT8X8X16_K4X8X8");
 }
 
+TEST_F(ARMV7, MATRIX_MUL_INT8x8x16_MK4_K8x8x4) {
+    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
+                                 handle(), "ARMV7_INT8X8X16_MK4_K8X8X4",
+                                 param::MatrixMul::Format::MK4, 1);
+}
+
 TEST_F(ARMV7, MATRIX_MUL_INT16x16x32) {
-     matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
-                                 handle(),"ARMV7_INT16X16X32_K12X4X1");
+    matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
+                                 handle(), "ARMV7_INT16X16X32_K12X4X1");
 }
 
 TEST_F(ARMV7, MATRIX_MUL_INT16x16x32_MK8) {
@@ -83,7 +90,8 @@ TEST_F(ARMV7, MATRIX_MUL_SDOT) {
 
 TEST_F(ARMV7, MATRIX_MUL_UDOT) {
     matrix_mul::check_matrix_mul(
-            dtype::Quantized8Asymm(4.0f, static_cast<uint8_t>(10)), dtype::Quantized8Asymm(3.0f, static_cast<uint8_t>(54)),
+            dtype::Quantized8Asymm(4.0f, static_cast<uint8_t>(10)),
+            dtype::Quantized8Asymm(3.0f, static_cast<uint8_t>(54)),
             dtype::QuantizedS32(12.0f), handle(), "AARCH32_QUINT8_K4X8X4");
 }
 
@@ -103,7 +111,9 @@ TEST_F(ARMV7, MATRIX_MUL_MK4_DOT_INT8) {
 #if MEGDNN_WITH_BENCHMARK
 
 namespace {
-void run_8x8x16_benchmark(const char* algo, Handle* handle) {
+void run_8x8x16_benchmark(
+        const char* algo, Handle* handle,
+        MatrixMul::Param::Format format = MatrixMul::Param::Format::DEFAULT) {
     constexpr size_t RUNS = 50;
     param::MatrixMul param;
     Benchmarker<MatrixMul> benchmarker_int(handle);
@@ -116,21 +126,31 @@ void run_8x8x16_benchmark(const char* algo, Handle* handle) {
             .set_dtype(2, dtype::Int16{})
             .set_param(param)
             .set_display(false);
+    param::MatrixMul target_param;
+    target_param.format = format;
     benchmarker_int_kern_4x2x16.set_before_exec_callback(
             AlgoChecker<MatrixMul>(algo));
     benchmarker_int_kern_4x2x16.set_times(RUNS)
             .set_dtype(0, dtype::Int8{})
             .set_dtype(1, dtype::Int8{})
             .set_dtype(2, dtype::Int16{})
-            .set_param(param)
+            .set_param(target_param)
             .set_display(false);
     Benchmarker<MatrixMul> benchmarker_float(handle);
     benchmarker_float.set_display(false).set_times(RUNS);
 
     auto run = [&](size_t M, size_t N, size_t K) {
         auto int_used = benchmarker_int.exec({{M, K}, {K, N}, {}}) / RUNS;
-        auto int_kern_used =
-                benchmarker_int_kern_4x2x16.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto int_kern_used = 1e10;
+        if (format == MatrixMul::Param::Format::MK4) {
+            int_kern_used = benchmarker_int_kern_4x2x16.exec(
+                                    {{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) /
+                            RUNS;
+        } else {
+            int_kern_used =
+                    benchmarker_int_kern_4x2x16.exec({{M, K}, {K, N}, {}}) /
+                    RUNS;
+        }
         auto float_used = benchmarker_float.exec({{M, K}, {K, N}, {}}) / RUNS;
         float computations = 2.f * M * K * N * 1e-6;
         printf("run: {%zu{M} %zu{K} %zu{N}} float: %f ms %f Gflops int: %f "
@@ -145,6 +165,7 @@ void run_8x8x16_benchmark(const char* algo, Handle* handle) {
     };
 
     run(256, 12 * 24, 256);
+    run(256, 256, 256);
 
     //////////////////////// gemv //////////////////////////
     for (size_t M : {8, 64, 112, 256}) {
@@ -185,7 +206,8 @@ void run_16x16x32_benchmark(const char* algo, Handle* handle) {
                "int: %f ms %f Gflops %s: \n"
                "speedup(%s/arm_common, %s/float): %f\n",
                M, K, N, float_used, computations / float_used, int_used,
-               computations / int_used,algo,algo,algo,float_used / int_used);
+               computations / int_used, algo, algo, algo,
+               float_used / int_used);
     };
 
     run(256, 12 * 24, 256);
@@ -231,7 +253,8 @@ void run_8x8x32_benchmark(const char* algo, Handle* handle) {
                "int: %f ms %f Gflops %s: \n"
                "speedup(%s/arm_common, %s/float): %f\n",
                M, K, N, float_used, computations / float_used, int_used,
-               computations / int_used,algo,algo,algo,float_used / int_used);
+               computations / int_used, algo, algo, algo,
+               float_used / int_used);
     };
 
     run(256, 12 * 24, 256);
@@ -252,9 +275,11 @@ void run_8x8x32_quint_benchmark(Handle* handle) {
     benchmarker_quint8_dot.set_before_exec_callback(
             AlgoChecker<MatrixMul>("AARCH32_QUINT8_K4X8X4"));
     benchmarker_quint8_dot.set_times(RUNS)
-            .set_dtype(0, dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
-            .set_dtype(1, dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
-            .set_dtype(2, dtype::QuantizedS32(2.3f*3.1f))
+            .set_dtype(0,
+                       dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
+            .set_dtype(1,
+                       dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
+            .set_dtype(2, dtype::QuantizedS32(2.3f * 3.1f))
             .set_param(param)
             .set_display(false);
 
@@ -262,14 +287,17 @@ void run_8x8x32_quint_benchmark(Handle* handle) {
     benchmarker_quint8.set_before_exec_callback(
             AlgoChecker<MatrixMul>("ARMV7_QUINT8_K4X8X8"));
     benchmarker_quint8.set_times(RUNS)
-            .set_dtype(0, dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
-            .set_dtype(1, dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
-            .set_dtype(2, dtype::QuantizedS32(2.3f*3.1f))
+            .set_dtype(0,
+                       dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
+            .set_dtype(1,
+                       dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
+            .set_dtype(2, dtype::QuantizedS32(2.3f * 3.1f))
             .set_param(param)
             .set_display(false);
 
     auto run = [&](size_t M, size_t N, size_t K) {
-        auto dot_used = benchmarker_quint8_dot.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto dot_used =
+                benchmarker_quint8_dot.exec({{M, K}, {K, N}, {}}) / RUNS;
         auto normal_used = benchmarker_quint8.exec({{M, K}, {K, N}, {}}) / RUNS;
         float computations = 2.f * M * K * N * 1e-6;
         printf("run: {%zu{M} %zu{K} %zu{N}} dot: %f ms %f Gflops \n"
@@ -351,9 +379,13 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_K4x2x16) {
     run_8x8x16_benchmark("ARMV7_INT8X8X16_K4X2X16", handle());
 }
 
-
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_K4x8x8) {
     run_8x8x16_benchmark("ARMV7_INT8X8X16_K4X8X8", handle());
+}
+
+TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_MK4_K4x8x8) {
+    run_8x8x16_benchmark("ARMV7_INT8X8X16_MK4_K8X8X4", handle(),
+                         MatrixMul::Param::Format::MK4);
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT16x16x32_K12x4x1) {

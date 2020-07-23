@@ -6,11 +6,12 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
-#include "src/naive/matrix_mul/opr_impl.h"
 #include "src/common/utils.h"
+#include "src/naive/matrix_mul/opr_impl.h"
 namespace megdnn {
 namespace fallback {
 
@@ -66,7 +67,8 @@ public:
     };
 
     typedef void (*kern_t)(const KernParam&);
-    typedef void (*kern_naked_t)(const KernParam& , const void* a_panel, const void *b_panel);
+    typedef void (*kern_naked_t)(const KernParam&, const void* a_panel,
+                                 const void* b_panel);
     class AlgoBase : public Algorithm {
     protected:
         virtual ~AlgoBase() = default;
@@ -83,18 +85,19 @@ public:
 
         bool can_be_treated_as_int8x8x16(const KernSizeParam& param) const {
             return param.A_type.enumv() == param.B_type.enumv() &&
-                   param.A_type.enumv() == DTypeEnum::Int8 &&
-                   param.C_type.enumv() == DTypeEnum::Int16 &&
-                   param.format == param::MatrixMul::Format::DEFAULT &&
-                   param.compute_mode == Param::ComputeMode::DEFAULT;
+                   (param.A_type.enumv() == DTypeEnum::Int8 ||
+                    param.A_type.enumv() == DTypeEnum::QuantizedS8) &&
+                   (param.C_type.enumv() == DTypeEnum::Int16 ||
+                    param.C_type.enumv() == DTypeEnum::QuantizedS16);
         }
+
     public:
-        enum class AlgoSet:uint32_t {
+        enum class AlgoSet : uint32_t {
             ALGO_TYPE_GEMM = 0,
             ALGO_TYPE_GEMV = 1,
         };
 
-        enum class PackMode:uint32_t {
+        enum class PackMode : uint32_t {
             DEFAULT = 0,
             NO_PACK = 1,
             ONLY_PACKA = 2,

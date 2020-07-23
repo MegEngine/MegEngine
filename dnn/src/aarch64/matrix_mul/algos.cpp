@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/aarch64/matrix_mul/algos.h"
@@ -733,7 +734,9 @@ void int8x8x16_k8x8x8_kern(const MatrixMulImpl::KernParam& kern_param) {
 
 bool MatrixMulImpl::AlgoInt8x8x16K8x8x8::usable(
         const KernSizeParam& kern_size_param) const {
-    return can_be_treated_as_int8x8x16(kern_size_param);
+    return can_be_treated_as_int8x8x16(kern_size_param) &&
+           kern_size_param.format == param::MatrixMul::Format::DEFAULT &&
+           kern_size_param.compute_mode == Param::ComputeMode::DEFAULT;
 }
 
 bool MatrixMulImpl::AlgoInt8x8x16K8x8x8::preferred(
@@ -796,7 +799,9 @@ void int8x8x16_k4x4x16_kern(const MatrixMulImpl::KernParam& kern_param) {
 
 bool MatrixMulImpl::AlgoInt8x8x16K4x4x16::usable(
         const KernSizeParam& kern_size_param) const {
-    return can_be_treated_as_int8x8x16(kern_size_param);
+    return can_be_treated_as_int8x8x16(kern_size_param) &&
+           kern_size_param.format == param::MatrixMul::Format::DEFAULT &&
+           kern_size_param.compute_mode == Param::ComputeMode::DEFAULT;
 }
 
 bool MatrixMulImpl::AlgoInt8x8x16K4x4x16::preferred(

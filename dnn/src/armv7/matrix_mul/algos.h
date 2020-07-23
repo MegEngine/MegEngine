@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -163,6 +164,18 @@ class MatrixMulImpl::AlgoInt8x8x16K4x8x8 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "ARMV7_INT8X8X16_K4X8X8"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    void* type() const override { return sm_arm_common_algo_type; }
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+};
+
+class MatrixMulImpl::AlgoInt8x8x16MK4_8x8x4 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "ARMV7_INT8X8X16_MK4_K8X8X4"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
