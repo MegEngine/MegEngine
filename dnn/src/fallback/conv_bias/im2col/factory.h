@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include <unordered_map>
@@ -226,10 +227,10 @@ public:
                         PostprocessMode::FLOAT,
                         "DefaultStrategyType::FLOAT"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44) {
-
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
                     auto matmul_block = matmul_algo->get_inner_block_size();
-                        //! Optimize NCHW44 3x3s2 aarch64 8X12X1 and armv7 4x12x1 im2col+pack fuse
+                    //! Optimize NCHW44 3x3s2 aarch64 8X12X1 and armv7 4x12x1
+                    //! im2col+pack fuse
                     if ((matmul_block.m == 8 || matmul_block.m == 4) &&
                         matmul_block.n == 12 && matmul_block.k == 1 &&
                         param.filter_meta.spatial[0] == 3 &&
@@ -297,9 +298,21 @@ public:
                 break;
 
             case StrategyType::INT8x8x16:
-                cb2(NCHW, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
-                    dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
-                    "DefaultStrategyType::INT8x8x16"_hash);
+                if (format == param::ConvBias::Format::NCHW) {
+                    cb2(NCHW, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
+                        dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
+                        "DefaultStrategyType::INT8x8x16"_hash);
+                } else if (format == param::ConvBias::Format::NCHW44) {
+                    cb2(NCHW44, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
+                        dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
+                        "DefaultStrategyType::INT8x8x16"_hash);
+                } else {
+                    megdnn_throw(
+                            ssprintf("Current only support layout "
+                                     "NCHW44/NCHW for im2col "
+                                     "algo, but got %d\n",
+                                     uint32_t(format)));
+                }
                 break;
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
             case StrategyType::QUINT8x8x32:
@@ -421,10 +434,11 @@ public:
                         dt_int32, dt_int8, PostprocessMode::QUANTIZED,
                         "DefaultStrategyTypeNCHW44::QINT8x8x32x8"_hash);
                 } else {
-                    megdnn_throw(ssprintf("Current only support layout "
-                                          "NCHW44/NCHW/NCHW_DOT for im2col "
-                                          "algo, but got %d\n",
-                                          uint32_t(format)));
+                    megdnn_throw(
+                            ssprintf("Current only support layout "
+                                     "NCHW44/NCHW/NCHW_DOT for im2col "
+                                     "algo, but got %d\n",
+                                     uint32_t(format)));
                 }
                 break;
         }

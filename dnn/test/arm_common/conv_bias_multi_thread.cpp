@@ -850,7 +850,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4_NCHW44) {
                    param::ConvBias::Format::NCHW44);
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4_NCHW44_WEIGHT_PREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_WINOGRAD_F63_4_NCHW44_WEIGHT_PREPROCESS) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_nchw44_conv_bias_args({3}, 1);
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
@@ -1131,7 +1132,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_F32_2) {
         1e-3f);
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_F32_2_WEIGHT_PREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_WINOGRAD_MK_PACKED_F32_2_WEIGHT_PREPROCESS) {
     using namespace conv_bias;
 
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
@@ -2089,6 +2091,12 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUINT8x8x32) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
+    std::vector<conv_bias::TestArg> args_nchw44 =
+            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, true, true, true,
+                                      false, false, false, false, true);
+    std::vector<conv_bias::TestArg> args_nchw44_1x1s2 =
+            get_nchw44_conv_bias_args({1}, 2, true, true, true, false, false,
+                                      false, false, true);
 #define cb(name)                                                               \
     checker_conv_bias(                                                         \
             get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true),      \
@@ -2098,6 +2106,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16) {
                       &rng, epsilon, dtype::Int8{}, dtype::Int8{},             \
                       dtype::Int16{}, dtype::Int16{}, name);
 
+#define cb_nchw44(name)                                                     \
+    checker_conv_bias(args_nchw44, handle(), &rng, epsilon, dtype::Int8{},  \
+                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, name); \
+    checker_conv_bias(args_nchw44_1x1s2, handle(), &rng, epsilon,           \
+                      dtype::Int8{}, dtype::Int8{}, dtype::Int16{},         \
+                      dtype::Int16{}, name);
+
 #if MEGDNN_AARCH64
     cb("IM2COLMATMUL:AARCH64_INT8X8X16_K8X8X8");
     cb("IM2COLMATMUL:AARCH64_INT8X8X16_K4X4X16");
@@ -2106,8 +2121,11 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16) {
     cb("IM2COLMATMUL:ARM_COMMON_INT8X8X16");
     cb("IM2COLMATMUL:ARMV7_INT8X8X16_K4X8X8");
     cb("IM2COLMATMUL:ARMV7_INT8X8X16_K4X2X16");
+    cb_nchw44("IM2COLMATMUL:ARMV7_INT8X8X16_MK4_K8X8X4");
 #endif
+
 #undef cb
+#undef cb_nchw44
 }
 #endif
 
@@ -2516,8 +2534,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
     std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+    std::vector<conv_bias::TestArg> args_nchw44 = get_nchw44_conv_bias_args(
+            {1}, 1, true, true, true, false, false, false, false, true);
 #define cb(name)                                                    \
     checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{}, \
+                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, name);
+
+#define cb_nchw44(name)                                                    \
+    checker_conv_bias(args_nchw44, handle(), &rng, epsilon, dtype::Int8{}, \
                       dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, name);
 
 #if MEGDNN_AARCH64
@@ -2526,9 +2550,12 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
 #elif MEGDNN_ARMV7
     cb("CONV1x1:ARMV7_INT8X8X16_K4X8X8:24");
     cb("CONV1x1:ARMV7_INT8X8X16_K4X2X16:48");
+    cb_nchw44("CONV1x1:ARMV7_INT8X8X16_MK4_K8X8X4:48");
 #endif
     cb("CONV1x1:ARM_COMMON_INT8X8X16:48");
+
 #undef cb
+#undef cb_nchw44
 
     std::vector<conv_bias::TestArg> gemv_args;
     for (auto&& arg : args)

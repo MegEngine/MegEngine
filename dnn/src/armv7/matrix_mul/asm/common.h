@@ -6,13 +6,15 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include <arm_neon.h>
 #include <cmath>
 #include <cstdint>
 #include <type_traits>
+#include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/common.h"
 
@@ -172,7 +174,6 @@ static inline void interleave_8x8_1_b(const T*& inptr0, const T*& inptr1,
             [inptr6] "+r"(inptr6), [inptr7] "+r"(inptr7), [outptr] "+r"(outptr)
             :
             : "q0", "q1", "q2", "q3", "memory");
-
 }
 
 template <typename T>
@@ -183,12 +184,12 @@ static inline void interleave_4x4_4_b(const T*& inptr0, const T*& inptr1,
             std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
             "interleave_4x4_4_b only support uint8_t and int8_t");
     asm volatile(
-            "vld1.32 {d0, d1},  [%[inptr0]]!\n"    // A0A1A2A3
-            "vld1.32 {d2, d3},  [%[inptr1]]!\n"    // B0B1B2B3
-            "vld1.32 {d4, d5},  [%[inptr2]]!\n"    // C0C1C2C3
-            "vld1.32 {d6, d7},  [%[inptr3]]!\n"    // D0D1D2D3
-            "vtrn.32 q0, q1\n"                     // A0B0A2B2 A1B1A3B3
-            "vtrn.32 q2, q3\n"                     // C0D0C2D2 C1D1C3D3
+            "vld1.32 {d0, d1},  [%[inptr0]]!\n"  // A0A1A2A3
+            "vld1.32 {d2, d3},  [%[inptr1]]!\n"  // B0B1B2B3
+            "vld1.32 {d4, d5},  [%[inptr2]]!\n"  // C0C1C2C3
+            "vld1.32 {d6, d7},  [%[inptr3]]!\n"  // D0D1D2D3
+            "vtrn.32 q0, q1\n"                   // A0B0A2B2 A1B1A3B3
+            "vtrn.32 q2, q3\n"                   // C0D0C2D2 C1D1C3D3
             "vswp     d1, d4    \n"  // q0=A0,B0,C0,D0 q2=A2,B2,C2,D2
             "vswp     d3, d6    \n"  // q1=A1,B1,C1,D1 q3=A3,B3,C3,D3
             "vst1.32 {d0-d1},[%[outptr]]!\n"
@@ -323,10 +324,10 @@ static inline void interleave_6x4_8_b(const T*& inptr0, const T*& inptr1,
             "vtrn.32  q1, q3    \n"  // q1=r02,r12,r03,r13 q3=r06,r16,r07,r17
             "vtrn.32  q5, q7    \n"  // q5=r22,r32,r23,r33 q7=r26,r36,r27,r37
             "vtrn.32  q9, q11   \n"  // q9=r42,r52,r43,r53 q11=r46,r56,r47,r57
-            "vst1.32  {d0-d1},  [%[outptr]]! \n" 
-            "vst1.32  {d16},    [%[outptr]]! \n" 
+            "vst1.32  {d0-d1},  [%[outptr]]! \n"
+            "vst1.32  {d16},    [%[outptr]]! \n"
             "vswp     d3, d10   \n"  //  q1=r02,r12,r22,r32 q5=r03,r13,r23,r33
-            "vst1.32  {d8-d9},  [%[outptr]]! \n" 
+            "vst1.32  {d8-d9},  [%[outptr]]! \n"
             "vst1.32  {d17},    [%[outptr]]! \n"
             "vst1.32  {d2-d3},  [%[outptr]]!\n"
             "vst1.32  {d18},    [%[outptr]]!\n"
@@ -810,15 +811,15 @@ static inline void transpose_12x4_1_h(const T*& inptr0, const T*& inptr1,
             "interleave_12x4_1_h only support uint16_t and int16_t");
     auto ldin_asm = ldin << 1;
     asm volatile(
-            "vld1.16 {d0},  [%[inptr0]]!\n"   // A0A1A2A3
-            "vld1.16 {d1},  [%[inptr1]]!\n"   // B0B1B2B3
-            "vld1.16 {d2},  [%[inptr2]]!\n"   // C0C1C2C3
-            "vld1.16 {d3},  [%[inptr3]]!\n"   // D0D1D2D3
-            "vld1.16 {d4},  [%[inptr4]]!\n"   // E0E1E2E3
-            "vld1.16 {d5},  [%[inptr5]]!\n"   // F0F1F2F3
-            "vld1.16 {d6},  [%[inptr6]]!\n"   // G0G1G2G3
-            "vld1.16 {d7},  [%[inptr7]]!\n"   // H0H1H2H3
-            "vld1.16 {d8},  [%[inptr8]]!\n"   // I0I1I2I3
+            "vld1.16 {d0},  [%[inptr0]]!\n"  // A0A1A2A3
+            "vld1.16 {d1},  [%[inptr1]]!\n"  // B0B1B2B3
+            "vld1.16 {d2},  [%[inptr2]]!\n"  // C0C1C2C3
+            "vld1.16 {d3},  [%[inptr3]]!\n"  // D0D1D2D3
+            "vld1.16 {d4},  [%[inptr4]]!\n"  // E0E1E2E3
+            "vld1.16 {d5},  [%[inptr5]]!\n"  // F0F1F2F3
+            "vld1.16 {d6},  [%[inptr6]]!\n"  // G0G1G2G3
+            "vld1.16 {d7},  [%[inptr7]]!\n"  // H0H1H2H3
+            "vld1.16 {d8},  [%[inptr8]]!\n"  // I0I1I2I3
             "vld1.16 {d9},  [%[inptr9]]\n"   // J0J1J2J3
             "add %[inptr9], %[inptr9], %[ldin_asm]\n"
             "vld1.16 {d10}, [%[inptr9]]\n"  // K0K1K2K3
@@ -854,16 +855,14 @@ static inline void transpose_12x4_1_h(const T*& inptr0, const T*& inptr1,
             [inptr3] "+r"(inptr3), [inptr4] "+r"(inptr4), [inptr5] "+r"(inptr5),
             [inptr6] "+r"(inptr6), [inptr7] "+r"(inptr7), [inptr8] "+r"(inptr8),
             [inptr9] "+r"(inptr9), [outptr] "+r"(outptr)
-            :[ldin_asm] "r"(ldin_asm)
+            : [ldin_asm] "r"(ldin_asm)
             : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
               "d11", "memory");
-    inptr9 -=  ldin_asm;
-    inptr9 +=  4;
+    inptr9 -= ldin_asm;
+    inptr9 += 4;
     inptr10 += 4;
     inptr11 += 4;
 }
-
-
 
 template <typename T>
 static inline void transpose_2x16_1_b_helper(const T*& inptr0, const T*& inptr1,
@@ -1038,7 +1037,7 @@ static inline void transpose_4x4_1_s(const T*& inptr0, const T*& inptr1,
             "vst1.32 {d7},  [%[outptr]], %[stride]\n"
             : [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1),
               [inptr2] "+r"(inptr2), [inptr3] "+r"(inptr3),
-              [outptr] "+r"(outptr), [stride] "+r" (stride)
+              [outptr] "+r"(outptr), [stride] "+r"(stride)
             :
             : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "memory");
 }
@@ -1069,7 +1068,6 @@ static inline void transpose_4x2_1_s(const T*& inptr0, const T*& inptr1,
             : "d0", "d1", "d2", "d3", "memory");
 }
 
-
 template <typename T>
 static inline void transpose_6x4_1_b(const T*& inptr0, const T*& inptr1,
                                      const T*& inptr2, const T*& inptr3,
@@ -1082,9 +1080,9 @@ static inline void transpose_6x4_1_b(const T*& inptr0, const T*& inptr1,
             "vld1.8 {d1},  [%[inptr1]]\n"  // B0B1B2B3B4B5 B6B7
             "vld1.8 {d2},  [%[inptr2]]\n"  // C0C1C2C3C4C5 C6C7
             "vld1.8 {d3},  [%[inptr3]]\n"  // D0D1D2D3D4D5 D6D7
-            "vtrn.8 d0, d1\n"  // A0B0A2B2A4B4A6B6 A1B1A3B3A5B5A7B7
-            "vtrn.8 d2, d3\n"  // C0D0C2D2C4D4C6D6 C1D1C3D3C5D5C7D7
-            
+            "vtrn.8 d0, d1\n"              // A0B0A2B2A4B4A6B6 A1B1A3B3A5B5A7B7
+            "vtrn.8 d2, d3\n"              // C0D0C2D2C4D4C6D6 C1D1C3D3C5D5C7D7
+
             "add %[inptr0],%[inptr0],#6  \n"
             "add %[inptr1],%[inptr1],#6  \n"
             "add %[inptr2],%[inptr2],#6  \n"
@@ -1121,9 +1119,9 @@ static inline void transpose_4x4_1_b(const T*& inptr0, const T*& inptr1,
             "vld1.8 {d1},  [%[inptr1]]\n"  // B0B1B2B3B4B5 B6B7
             "vld1.8 {d2},  [%[inptr2]]\n"  // C0C1C2C3C4C5 C6C7
             "vld1.8 {d3},  [%[inptr3]]\n"  // D0D1D2D3D4D5 D6D7
-            "vtrn.8 d0, d1\n"  // A0B0A2B2A4B4A6B6 A1B1A3B3A5B5A7B7
-            "vtrn.8 d2, d3\n"  // C0D0C2D2C4D4C6D6 C1D1C3D3C5D5C7D7
-            
+            "vtrn.8 d0, d1\n"              // A0B0A2B2A4B4A6B6 A1B1A3B3A5B5A7B7
+            "vtrn.8 d2, d3\n"              // C0D0C2D2C4D4C6D6 C1D1C3D3C5D5C7D7
+
             "add %[inptr0],%[inptr0],#4  \n"
             "add %[inptr1],%[inptr1],#4  \n"
             "add %[inptr2],%[inptr2],#4  \n"
@@ -1176,7 +1174,7 @@ static inline void transpose_1x12_4_s(const T*& inptr0, T* outptr) {
             "vst1.32 {d6-d7}, [%[outptr]]! \n"
             "vst1.32 {d14-d15}, [%[outptr]]! \n"
             "vst1.32 {d22-d23}, [%[outptr]]! \n"
-            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
             :
             : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
               "q11", "memory");
@@ -1195,11 +1193,10 @@ static inline void transpose_1x4_4_s(const T*& inptr0, T* outptr) {
             "vst1.32 {d4-d5}, [%[outptr]]! \n"
             "vst1.32 {d2-d3}, [%[outptr]]! \n"
             "vst1.32 {d6-d7}, [%[outptr]]! \n"
-            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
             :
             : "q0", "q1", "q2", "q3", "memory");
 }
-
 
 template <typename T>
 static inline void transpose_4(const T*& inptr0, const T*& inptr1,
@@ -1250,7 +1247,6 @@ static inline void transpose_8(const T*& inptr0, const T*& inptr1,
         *outptr++ = val;
     }
 }
-
 
 template <typename T>
 static inline void transpose_4x1(const T*& inptr0, const T*& inptr1,
@@ -1375,7 +1371,68 @@ static inline void transpose_interleave_1x4_4_b(const T*& inptr0, T* outptr,
             : "q0", "q1", "q2", "q3", "memory");
 }
 
-}  // armv7
+static inline void interleave_4x4_8x4_s8_s16(const int8_t* inptr0,
+                                             const int8_t* inptr1,
+                                             int16_t* outptr) {
+    int8x16_t row0 = vld1q_s8(inptr0);
+    int16x8_t row0_01 = vmovl_low_s8(row0);
+    int16x8_t row0_23 = vmovl_high_s8(row0);
+    int16x4_t row0_0 = vget_low_s16(row0_01);
+    int16x4_t row0_1 = vget_high_s16(row0_01);
+    int16x4_t row0_2 = vget_low_s16(row0_23);
+    int16x4_t row0_3 = vget_high_s16(row0_23);
+
+    int8x16_t row1 = vld1q_s8(inptr1);
+    int16x8_t row1_01 = vmovl_low_s8(row1);
+    int16x8_t row1_23 = vmovl_high_s8(row1);
+    int16x4_t row1_0 = vget_low_s16(row1_01);
+    int16x4_t row1_1 = vget_high_s16(row1_01);
+    int16x4_t row1_2 = vget_low_s16(row1_23);
+    int16x4_t row1_3 = vget_high_s16(row1_23);
+
+    vst1_s16(outptr, row0_0);
+    vst1_s16(outptr + 1 * 4, row1_0);
+    vst1_s16(outptr + 2 * 4, row0_1);
+    vst1_s16(outptr + 3 * 4, row1_1);
+    vst1_s16(outptr + 4 * 4, row0_2);
+    vst1_s16(outptr + 5 * 4, row1_2);
+    vst1_s16(outptr + 6 * 4, row0_3);
+    vst1_s16(outptr + 7 * 4, row1_3);
+};
+
+static inline void transpos_8x4_int8(const int8_t* inptr0, int8_t* outptr) {
+    int8x8x4_t input = vld4_s8(inptr0);
+    vst1_s8(outptr, input.val[0]);
+    vst1_s8(outptr + 1 * 8, input.val[1]);
+    vst1_s8(outptr + 2 * 8, input.val[2]);
+    vst1_s8(outptr + 3 * 8, input.val[3]);
+}
+static inline void memcpy_s8_s16(const int8_t* inptr, int16_t* outptr,
+                                 int count) {
+    for (; count >= 32; count -= 32) {
+        int8x8_t in0 = vld1_s8(inptr);
+        int8x8_t in1 = vld1_s8(inptr + 1 * 8);
+        int8x8_t in2 = vld1_s8(inptr + 2 * 8);
+        int8x8_t in3 = vld1_s8(inptr + 3 * 8);
+        vst1q_s16(outptr, vmovl_s8(in0));
+        vst1q_s16(outptr + 1 * 8, vmovl_s8(in1));
+        vst1q_s16(outptr + 2 * 8, vmovl_s8(in2));
+        vst1q_s16(outptr + 3 * 8, vmovl_s8(in3));
+        inptr += 32;
+        outptr += 32;
+    }
+    for (; count >= 8; count -= 8) {
+        int8x8_t in0 = vld1_s8(inptr);
+        vst1q_s16(outptr, vmovl_s8(in0));
+        inptr += 8;
+        outptr += 8;
+    }
+    for (; count > 0; --count) {
+        *outptr++ = (int16_t)(*inptr++);
+    }
+}
+
+}  // namespace armv7
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

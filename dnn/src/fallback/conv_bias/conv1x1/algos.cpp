@@ -10,9 +10,9 @@
  * implied.
  */
 
-#include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
+#include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/fallback/conv_bias/conv1x1/conv1x1_dispatcher.h"
 #include "src/fallback/conv_bias/conv1x1/conv1x1_strategy.h"
 #include "src/fallback/conv_bias/opr_impl.h"
@@ -194,10 +194,8 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                PW = param.filter_meta.padding[1];
         size_t SH = param.filter_meta.stride[0],
                SW = param.filter_meta.stride[1];
-
         if (FH != 1 || FW != 1 || PH || PW || SH != 1 || SW != 1)
             return false;
-
         if (param.src_type.enumv() != param.filter_type.enumv()) {
             return false;
         }
@@ -216,6 +214,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
         //! is identity otherwise return false mean that 8x8x32 and 8x8x16
         //! not support PostProcess
         if (param.dst_type.enumv() == DTypeEnum::Int16 ||
+            param.dst_type.enumv() == DTypeEnum::QuantizedS16 ||
             param.dst_type.enumv() == DTypeEnum::Int32 ||
             param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
             if (param.bias_mode != megdnn::BiasMode::NO_BIAS ||

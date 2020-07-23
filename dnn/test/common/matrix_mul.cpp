@@ -6,12 +6,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-#include "test/common/matrix_mul.h"
 #include "src/common/utils.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/matrix_mul.h"
 
 using namespace megdnn;
 using namespace test;
@@ -39,9 +40,9 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_no_mask() {
 std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_mk_packed_args(
         size_t nbase) {
     std::vector<TestArg> args;
-    for (size_t m : {1, 2, 3, 4, 5})
+    for (size_t m : {1, 2, 3, 4, 5, 6, 7, 8, 11})
         for (size_t n : {1, 2, 3, 4, 5, 8, 12, 16, 24})
-            for (size_t k : {1, 2, 3, 4, 5, 9, 10})
+            for (size_t k : {1, 2, 3, 4, 5, 9, 10, 11})
                 args.emplace_back(m, n * nbase, k, 0);
     return args;
 }
