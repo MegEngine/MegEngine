@@ -70,9 +70,10 @@ bool eq_layout1(const TensorLayout &a, const TensorLayout &b) {
 }
 
 } // anonymous namespace
+// config NR_TEST at small memory device, eg, EV300 etc
+static constexpr size_t NR_TEST = 10000;
 TEST(BENCHMARK_BASIC_TYPES, EQ_SHAPE) {
     std::mt19937_64 rng;
-    static constexpr size_t NR_TEST = 1000000;
     static TensorShape s0, s1[NR_TEST];
     auto gen = [&](int type) {
         if (type == 0) {
@@ -115,7 +116,6 @@ TEST(BENCHMARK_BASIC_TYPES, EQ_SHAPE) {
 
 TEST(BENCHMARK_BASIC_TYPES, EQ_LAYOUT) {
     std::mt19937_64 rng;
-    static constexpr size_t NR_TEST = 1000000;
     static TensorLayout s0, s1[NR_TEST];
     auto gen = [&](int type) {
         if (type == 0) {
