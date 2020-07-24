@@ -65,17 +65,15 @@ function config_python_env() {
     fi
     echo ${ver}
 
+    #config a dir to trick cmake find a null pythonlib
+    PYTHON_LIBRARY=${PYTHON_DIR}lib/
     if [ "$1" = "3.5.9" ]; then
-        PYTHON_LIBRARY=${PYTHON_DIR}lib/libpython3.5m.dylib
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.5m
     elif [ "$1" = "3.6.10" ]; then
-        PYTHON_LIBRARY=${PYTHON_DIR}lib/libpython3.6m.dylib
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.6m
     elif [ "$1" = "3.7.7" ]; then
-        PYTHON_LIBRARY=${PYTHON_DIR}lib/libpython3.7m.dylib
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.7m
     elif [ "$1" = "3.8.3" ]; then
-        PYTHON_LIBRARY=${PYTHON_DIR}lib/libpython3.8.dylib
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.8
     else
         echo "ERR: DO NOT SUPPORT PYTHON VERSION"
@@ -91,7 +89,7 @@ function do_build() {
         config_python_env ${ver}
 
         #check env
-        if [ ! -f "$PYTHON_LIBRARY" ]; then
+        if [ ! -d "$PYTHON_LIBRARY" ]; then
             echo "ERR: can not find $PYTHON_LIBRARY , Invalid python package"
             err_env
         fi
@@ -131,7 +129,16 @@ function do_build() {
         llvm-strip -s _mgb.so
         cd ${BUILD_DIR}/staging
         ${PYTHON_DIR}/bin/python3 setup.py bdist_wheel
-        cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/
+        cd ${BUILD_DIR}/staging/dist/
+        org_whl_name=`ls Meg*.whl`
+        index=`awk -v a="${org_whl_name}" -v b="-macosx" 'BEGIN{print index(a,b)}'`
+        #compat for osx version from 10.5(Leopard)
+        #FIXME: same no need at -macosx-version-min=10.5 for build so
+        compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_5_x86_64.whl
+        echo "org whl name: ${org_whl_name}"
+        echo "comapt whl name: ${compat_whl_name}"
+        cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}
+        cd ${SRC_DIR}
 
         echo ""
         echo "##############################################################################################"
