@@ -51,6 +51,13 @@ add_definitions(${LIBMEGDNN_DEF})
 add_library(megdnn EXCLUDE_FROM_ALL OBJECT ${SOURCES})
 
 target_link_libraries(megdnn PUBLIC opr_param_defs)
+
+if(${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} STREQUAL "armv7" OR ${MGE_ARCH} STREQUAL "aarch64")
+    if(MGB_ENABLE_CPUINFO)
+        target_link_libraries(megdnn PRIVATE $<BUILD_INTERFACE:cpuinfo>)
+    endif()
+endif()
+
 target_include_directories(megdnn
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/genfiles>
