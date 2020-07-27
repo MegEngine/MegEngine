@@ -13,7 +13,7 @@ echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 function usage() {
     echo "$0 args1 args2 .."
     echo "available args detail:"
-    echo "-d : Build with Debug mode, defaule Release mode"
+    echo "-d : Build with Debug mode, default Release mode"
     echo "-f : enable MGE_ARMV8_2_FEATURE_FP16 for ARM64, need toolchain and hardware support"
     echo "-p : enable MGE_ARMV8_2_FEATURE_DOTPROD for ARM64, need toolchain and hardware support"
     echo "-k : open MGE_DISABLE_FLOAT16 for NEON "

@@ -4,7 +4,7 @@ set -e
 function usage() {
     echo "$0 args1 args2 .."
     echo "available args detail:"
-    echo "-d : Build with Debug mode, defaule Release mode"
+    echo "-d : Build with Debug mode, default Release mode"
     echo "-c : Build with CUDA, default without CUDA"
     echo "-t : Build with training mode, default inference only"
     echo "-m : Build with m32 mode(only for windows build), default m64"

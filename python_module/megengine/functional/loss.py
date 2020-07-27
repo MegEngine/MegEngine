@@ -306,7 +306,7 @@ def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
 
     The hinge loss can be described as:
 
-    .. math:: loss(x, y) = \frac{1}{N}\sum_i\sum_j(max(0, 1 - x_i_j*y_i_j))
+    .. math:: loss(x, y) = \frac{1}{N}\sum_i\sum_j(max(0, 1 - x_{ij}*y_{ij}))
 
     :param pred: The input tensor representing the predicted probability, shape is (N, C).
     :param label: The input tensor representing the binary classification label, shape is (N, C).

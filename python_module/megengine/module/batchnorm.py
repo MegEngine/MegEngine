@@ -216,6 +216,7 @@ class BatchNorm2d(_BatchNorm):
 
     .. testcode::
 
+        import numpy as np
         import megengine as mge
         import megengine.module as M
 

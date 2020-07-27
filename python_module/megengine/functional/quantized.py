@@ -47,10 +47,6 @@ def conv_bias_activation(
         'CROSS_CORRELATION'.
     :param dtype:  Support for np.dtype, Default:
         np.int8.
-    :param scale:  scale if use quantization, Default:
-        0.0.
-    :param zero_point:  scale if use quantization quint8, Default:
-        0.0.
     :type compute_mode: string or
         :class:`mgb.opr_param_defs.Convolution.ComputeMode`
     :param compute_mode: When set to 'DEFAULT', no special requirements will be
