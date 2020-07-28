@@ -243,6 +243,7 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
 
     if (is_fp32) {
         run(1, 1, 4, 112, 112, 2, 2, true);
+        run(1, 3, 24, 224, 224, 3, 2, true);
         run(1, 3, 32, 224, 224, 3, 2, true);
         run(1, 3, 64, 224, 224, 7, 2, true);
 

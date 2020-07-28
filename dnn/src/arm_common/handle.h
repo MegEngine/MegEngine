@@ -10,6 +10,9 @@
  */
 #pragma once
 #include "src/fallback/handle.h"
+#if MGB_ENABLE_CPUINFO
+#include "cpuinfo.h"
+#endif
 
 namespace megdnn {
 namespace arm_common {
@@ -20,6 +23,9 @@ class HandleImpl: public fallback::HandleImpl {
                 HandleType type = HandleType::ARM_COMMON):
             fallback::HandleImpl::HandleImpl(computing_handle, type)
         {
+            #if MGB_ENABLE_CPUINFO
+            cpuinfo_initialize();
+            #endif
         }
 
         template <typename Opr>
