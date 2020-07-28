@@ -994,6 +994,38 @@ TEST(TestGoptInference, Float32TOFloat16Linspace) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, Float32TOFloat16Endpoints) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
+    };
+
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp))
+                .rename(name);
+    };
+
+    graph->options().graph_opt_level = 0;
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 0;
+
+    auto x = mkvar("x", {8, 8, 8, 8}),
+         y = mkvar("y", {8, 8, 8, 8}),
+         w = mkcvar("w", {4, 8, 3, 3}),
+         z = opr::Convolution::make(x + y, w, param);
+
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_f32_comp();
+    SymbolVarArray out = gopt::optimize_for_inference({x + y, z}, options);
+
+    ASSERT_EQ(out[0].dtype(), dtype::Float32());
+    ASSERT_EQ(out[1].dtype(), dtype::Float32());
+    ASSERT_EQ(out[0].node()->owner_opr()->input(0)->dtype(), dtype::Float16());
+    ASSERT_EQ(out[1].node()->owner_opr()->input(0)->dtype(), dtype::Float16());
+}
+
 TEST(TestGoptInference, ConvertFormatNHWCD4) {
     // hwcd4 is only supported in naive handle
     NaiveMegDNNHandleScope naive_megdnn_handle;
