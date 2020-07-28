@@ -9,9 +9,11 @@ assignees: ''
 
 <!-- 请您简介清晰的描述您遇到的问题 -->
 ## 环境
-1.系统环境：
-2.MegEngine版本：
+1.系统环境及版本：（例 Ubuntu 18.04）
+2.MegEngine版本：（若您是自行编译，请提供 fork 时对应 commit id 、编译器及版本）
 3.python版本：
+4.CPU/GPU ：（若您使用GPU进行训练，请提供您的CUDA和cuDNN版本号）
+5.Git 版本：
 
 ## 复现步骤
 1.
