@@ -236,14 +236,14 @@ if(MGE_WITH_TEST)
 endif()
 
 option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
-option(MGE_BUILD_XXX "Build _xxx.so instead of mgb.so " OFF)
-if(MGE_BUILD_XXX)
+option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt.so instead of _mgb.so " OFF)
+if(MGE_BUILD_IMPERATIVE_RT)
     add_compile_definitions(MGB_ENABLE_IMPERATIVE_RUNTIME)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
 option(MGE_BUILD_SDK "Build load_and_run" ON)
-if(MGE_BUILD_XXX)
+if(MGE_BUILD_IMPERATIVE_RT)
     set(MGE_BUILD_SDK OFF)
 endif()
 
@@ -561,7 +561,7 @@ endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 
-set(MGB_ENABLE_IMPERATIVE ${MGE_BUILD_XXX})
+set(MGB_ENABLE_IMPERATIVE ${MGE_BUILD_IMPERATIVE_RT})
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
@@ -611,7 +611,7 @@ if(MGE_BUILD_SDK)
 endif()
 
 if(MGE_WITH_PYTHON_MODULE)
-    if(MGE_BUILD_XXX)
+    if(MGE_BUILD_IMPERATIVE_RT)
         add_subdirectory(imperative)
     else()
         add_subdirectory(python_module)
@@ -619,7 +619,7 @@ if(MGE_WITH_PYTHON_MODULE)
 endif()
 
 if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)
-    if(NOT MGE_BUILD_XXX)
+    if(NOT MGE_BUILD_IMPERATIVE_RT)
         add_subdirectory(test)
     endif()
 endif()
@@ -645,7 +645,7 @@ if(TARGET mgb)
         DEPENDS mgb
         VERBATIM
     )
-elseif(TARGET _xxx)
+elseif(TARGET _imperative_rt)
     add_custom_target(
         develop
         COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -657,7 +657,7 @@ elseif(TARGET _xxx)
         COMMAND ${CMAKE_COMMAND} -E create_symlink
           ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/param_defs.py
           ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/param_defs.py
-        DEPENDS _xxx
+        DEPENDS _imperative_rt
         VERBATIM
     )
 endif()

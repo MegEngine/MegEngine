@@ -59,7 +59,7 @@ install(TARGETS opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
 
 
 if(MGE_WITH_TEST)
-    if(NOT MGE_BUILD_XXX)
+    if(NOT MGE_BUILD_IMPERATIVE_RT)
         add_subdirectory(test)
     endif()
 endif()
