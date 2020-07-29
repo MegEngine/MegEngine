@@ -100,7 +100,8 @@ namespace mgb {
 
             struct ResultEntry {
                 std::string algo;   //! identifier of the algorithm
-                bool reproducible;  //! whether algorithm is reproducible
+                //! sscanf will up bool as int
+                int reproducible;  //! whether algorithm is reproducible
                 double time;        //! execution time in seconds
                 size_t workspace;   //! workspace in bytes
             };
