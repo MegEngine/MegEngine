@@ -880,6 +880,64 @@ TEST(TestGoptInference, Float32TOFloat16) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, Float32TOFloat16C32) {
+    CompNode cn = CompNode::load("cpu0");
+    HostTensorGenerator<> gen(0, 1, 0);
+    auto host_x0 = gen({1, 4, 1, 1}, cn), host_x1 = gen({2, 3, 16, 8}, cn),
+         host_x2 = gen({4, 3, 1, 1}, cn);
+    auto graph = ComputingGraph::make();
+
+    auto make_f32_to_f16_graph = [&]() {
+        graph->options().graph_opt_level = 0;
+
+        auto d0 = opr::Host2DeviceCopy::make(*graph, host_x0),
+             d1 = opr::Host2DeviceCopy::make(*graph, host_x1),
+             d2 = opr::SharedDeviceTensor::make(*graph, *host_x2);
+
+        auto y = opr::ConvBias::make(d1, d2, d0);
+        y = opr::Reduce::make(y, {}, y.make_scalar(1));
+
+        SymbolVar y_opt;
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_f16_io_f32_comp();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+        return y_opt;
+    };
+
+    auto make_f16_graph = [&]() {
+        auto d0 = opr::TypeCvt::make(opr::TypeCvt::make(
+                     opr::Host2DeviceCopy::make(*graph, host_x0),
+                     dtype::Float16{}), dtype::Float32{}),
+             d1 = opr::TypeCvt::make(opr::TypeCvt::make(
+                     opr::Host2DeviceCopy::make(*graph, host_x1),
+                     dtype::Float16{}), dtype::Float32{}),
+             d2 = opr::TypeCvt::make(opr::TypeCvt::make(
+                     opr::SharedDeviceTensor::make(*graph, *host_x2),
+                     dtype::Float16{}), dtype::Float32{});
+
+        auto y = opr::ConvBias::make(d1, d2, d0);
+        y = opr::Reduce::make(y, {}, y.make_scalar(1));
+        y = opr::TypeCvt::make(
+               opr::TypeCvt::make(y, dtype::Float16{}),
+               dtype::Float32{});
+
+        return y;
+    };
+
+    auto y_opt = make_f32_to_f16_graph();
+    auto y = make_f16_graph();
+    ASSERT_EQ(find_opr<opr::ConvBias>(y_opt).param().compute_mode,
+            opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
+    ASSERT_EQ(y_opt.dtype(), dtype::Float32{});
+    ASSERT_EQ(y.dtype(), dtype::Float32{});
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
 TEST(TestGoptInference, Float32TOFloat16EndpointElemwise) {
     CompNode cn = CompNode::load("cpu0");
     HostTensorGenerator<> gen(0, 1, 0);

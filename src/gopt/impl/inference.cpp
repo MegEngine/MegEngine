@@ -754,6 +754,42 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
         return new_conv_opr.node()->owner_opr();
     };
 
+    auto replace_convbias_opr = [use_f32_comp](OperatorNodeBase* opr,
+                                               const VarNodeArray& new_inp) {
+        auto& convbias_opr = opr->cast_final_safe<opr::ConvBiasForward>();
+        auto new_param = convbias_opr.param();
+        if (use_f32_comp) {
+            new_param.compute_mode =
+                    megdnn::param::ConvBias::ComputeMode::FLOAT32;
+        }
+        mgb_assert(new_inp[0]->dtype() == dtype::Float16(),
+                   "inp %s:%s, owner_opr:%s", new_inp[0]->dtype().name(),
+                   new_inp[0]->name().c_str(),
+                   new_inp[0]->owner_opr()->name().c_str());
+        mgb_assert(new_inp[1]->dtype() == dtype::Float16(),
+                   "inp %s:%s, owner_opr:%s", new_inp[1]->dtype().name(),
+                   new_inp[1]->name().c_str(),
+                   new_inp[1]->owner_opr()->name().c_str());
+        if(opr->input().size() == 2) {
+            auto new_conv_opr = opr::ConvBias::make(
+                    new_inp[0], new_inp[1], new_param, convbias_opr.execution_policy(),
+                    convbias_opr.config());
+            return new_conv_opr.node()->owner_opr();
+        } else if(opr->input().size() == 3) {
+            auto new_conv_opr = opr::ConvBias::make(
+                    new_inp[0], new_inp[1], new_inp[2], new_param, convbias_opr.execution_policy(),
+                    convbias_opr.config());
+            return new_conv_opr.node()->owner_opr();
+        } else {
+            mgb_assert(opr->input().size() == 4, "invalid input size %zu",
+                       opr->input().size());
+            auto new_conv_opr = opr::ConvBias::make(
+                    new_inp[0], new_inp[1], new_inp[2], new_inp[3], new_param, convbias_opr.execution_policy(),
+                    convbias_opr.config());
+            return new_conv_opr.node()->owner_opr();
+        }
+    };
+
     auto replace_matmul_opr = [use_f32_comp](OperatorNodeBase* opr,
                                              const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
@@ -888,6 +924,7 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
     replace_func[opr::Host2DeviceCopy::typeinfo()] = replace_h2d_opr;
     replace_func[opr::SharedDeviceTensor::typeinfo()] = replace_sdt_opr;
     replace_func[opr::Convolution::typeinfo()] = replace_conv_opr;
+    replace_func[opr::ConvBias::typeinfo()] = replace_convbias_opr;
     replace_func[opr::MatrixMul::typeinfo()] = replace_matmul_opr;
     replace_func[opr::Reduce::typeinfo()] = replace_reduce_opr;
     replace_func[opr::ImmutableTensor::typeinfo()] = replace_imt_opr;
@@ -1622,7 +1659,9 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
                                            param.stride_h,
                                            param.stride_w,
                                            param.dilate_h,
-                                           param.dilate_w};
+                                           param.dilate_w,
+                                           0,
+                                           param.compute_mode};
     };
 
     auto check_bias_shape = [&](opr::Convolution* conv, VarNode* bias) -> bool {
