@@ -462,8 +462,10 @@ class VarNode final: public GraphNodeBase {
          * this var must have NO_SYS_MEM_ALLOC flag; if shape does not increase
          * and original tensor storage is valid, it is guaranteed that old data
          * would be retained.
+         *
+         * \warning Alloc size_req memory if size_req != 0.
          */
-        VarNode& shape_alloc(const TensorShape &shape);
+        VarNode& shape_alloc(const TensorShape &shape, size_t size_req = 0);
 
         /*!
          * \brief directly reset device tensor from another var

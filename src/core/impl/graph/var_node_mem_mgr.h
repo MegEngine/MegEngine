@@ -294,7 +294,13 @@ class VarNodeMemManager {
         void add_layout_constraint_level(
                 VarNode *dest, LayoutConstraintLevel level);
 
-        void var_alloc_with_shape(VarNode *var, const TensorShape &shape);
+        /**
+         * \brief alloc var memory with shape.
+         *
+         * Alloc memory of size_seq if size_req != 0.
+         */
+        void var_alloc_with_shape(VarNode* var, const TensorShape& shape,
+                                  size_t size_req = 0);
 
         /*!
          * \brief initialize mem plan for a single var

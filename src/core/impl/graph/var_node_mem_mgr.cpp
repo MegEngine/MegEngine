@@ -1239,13 +1239,18 @@ void VarNodeMemManager::make_dev_tensor_from_mem_plan_single(
 }
 
 void VarNodeMemManager::var_alloc_with_shape(VarNode* var,
-                                             const TensorShape& shape) {
+                                             const TensorShape& shape,
+                                             size_t size_req) {
     mgb_assert(var->format().is_default(),
                "dynamic shape is currently only supported for var with "
                "default format; got %s",
                var->format().to_string().c_str());
     var->shape(shape);
-    auto size_req = var->dtype().size(shape.total_nr_elems());
+    if (size_req != 0) {
+        mgb_assert(var->dtype().size(shape.total_nr_elems()) <= size_req);
+    } else {
+        size_req = var->dtype().size(shape.total_nr_elems());
+    }
 
     auto&& mplan = var->m_mem_plan;
     if (!mplan.valid() || mplan.chunk().owner_var != var)

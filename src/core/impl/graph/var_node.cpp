@@ -307,7 +307,7 @@ VarNode& VarNode::shape(const TensorShape &shape) {
     return *this;
 }
 
-VarNode& VarNode::shape_alloc(const TensorShape &shape) {
+VarNode& VarNode::shape_alloc(const TensorShape &shape, size_t size_req) {
     mgb_assert(shape.ndim, "got empty shape in shape_alloc: "
             "var=%s owner_opr=%s{%s}", cname(), owner_opr()->cname(),
             owner_opr()->dyn_typeinfo()->name);
@@ -316,7 +316,7 @@ VarNode& VarNode::shape_alloc(const TensorShape &shape) {
                 " NO_SYS_MEM_ALLOC flag; actual var: %s",
                 cg::dump_var_info({this}).c_str());
     ComputingGraphImpl::downcast(owner_graph())
-        ->var_node_mem_manager().var_alloc_with_shape(this, shape);
+        ->var_node_mem_manager().var_alloc_with_shape(this, shape, size_req);
     return *this;
 }
 
