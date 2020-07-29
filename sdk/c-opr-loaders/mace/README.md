@@ -45,10 +45,9 @@ First of all, send all files to the executed device:
 - load_and_run
 - resnet_50.mdl
 - libmace_loader.so
-- opencl library(something like libOpenCL.so, libmali.so or libEGL.so ...) if you want to run it on GPU
 
 ```
-MGB_MACE_RUNTIME=GPU MGB_MACE_OPENCL_PATH=/path/to/opencl MGB_MACE_LOADER_FORMAT=NCHW /path/to/load_and_run /path/to/resnet_50.mdl --c-opr-lib /path/to/libmace_loader.so
+MGB_MACE_RUNTIME=GPU MGB_MACE_OPENCL_CACHE_PATH=/path/to/opencl MGB_MACE_LOADER_FORMAT=NCHW /path/to/load_and_run /path/to/resnet_50.mdl --c-opr-lib /path/to/libmace_loader.so
 ```
 
 RUNTIME candidates:
@@ -56,10 +55,26 @@ RUNTIME candidates:
 - CPU
 - GPU
 
-Running with GPU runtime on android needs opencl library, one can set `MGB_MACE_OPENCL_PATH` by using environment variable
+`MGB_MACE_OPENCL_CACHE_PATH` is the directory path where OpenCL binary cache writes to (the cache file name is always `mace_cl_compiled_program.bin`), if the cache file does not exist then it will be created.
 
 We mainly use NCHW data format, if you have NHWC model, use environment `MGB_MACE_LOADER_FORMAT=NHWC`
 
 For CPU runtime, default running thread is 1, could be specified with `MGB_MACE_NR_THREADS=n`
 
 if you want to run with HEXAGON runtime, more efforts should be made, please check [here](https://mace.readthedocs.io/en/latest/faq.html#why-is-mace-not-working-on-dsp).
+
+### Tuning on specific OpenCL device
+
+MACE supports tuning on specific SoC to optimize the performace on GPU, see [doc](https://mace.readthedocs.io/en/latest/user_guide/advanced_usage.html#tuning-for-specific-soc-s-gpu).
+
+To enable this feature, use `MGB_MACE_TUNING_PARAM_PATH` env to give the path to the tuning param file.
+
+To generate the tunig param file, give `MACE_TUNING=1` env and set the `MACE_RUN_PARAMETER_PATH` to the file name you want.
+
+ ```bash
+ # search for tuning param
+ MACE_TUNING=1 MACE_RUN_PARAMETER_PATH=opencl/vgg16.tune_param MGB_MACE_RUNTIME=GPU MGB_MACE_OPENCL_PATH=opencl MGB_MACE_LOADER_FORMAT=NCHW ./load_and_run mace/vgg16.mdl --c-opr-lib libmace_loader.so --input 4d.npy
+
+ # then run test using the param
+ MGB_MACE_TUNING_PARAM_PATH=opencl/vgg16.tune_param MGB_MACE_RUNTIME=GPU MGB_MACE_OPENCL_PATH=opencl MGB_MACE_LOADER_FORMAT=NCHW ./load_and_run mace/vgg16.mdl --c-opr-lib libmace_loader.so --input 4d.npy
+ ```

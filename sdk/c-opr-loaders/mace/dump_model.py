@@ -100,8 +100,7 @@ def main():
         inputs = [
             np.random.random(isizes[i]).astype(np.float32) for i in range(len(isizes))
         ]
-
-        inference.trace(inputs)
+        inference.trace(*inputs)
         inference.dump(args.output)
 
 

@@ -129,7 +129,7 @@ class MGBOprDescImpl {
         std::map<std::string, mace::MaceTensor> mace_outputs;
 
         auto mace_data_format = mace::DataFormat::NCHW;
-        char *data_format = getenv("MGB_MACE_LOADER_FROAMT");
+        char *data_format = getenv("MGB_MACE_LOADER_FORMAT");
         if (data_format != nullptr && !strcmp(data_format, "NHWC")) {
             mace_data_format = mace::DataFormat::NHWC;
         }
@@ -206,22 +206,19 @@ public:
         if (device_type == mace::DeviceType::GPU) {
             std::shared_ptr<mace::GPUContext> gpu_context;
 
-            char *opencl_path = getenv("MGB_MACE_OPENCL_PATH");
+            char *cache_path = getenv("MGB_MACE_OPENCL_CACHE_PATH");
+            ASSERT(cache_path, "there must be an opencl cache file path");
 
-            // check default opencl paths
-            if (opencl_path == nullptr) {
-                for (size_t i = 0; i < (sizeof(default_so_paths) / sizeof(char*)); i++) {
-                    if (file_exists(default_so_paths[i])) {
-                        opencl_path = const_cast<char *>(default_so_paths[i]);
-                        break;
-                    }
-                }
+            char *param_path = getenv("MGB_MACE_TUNING_PARAM_PATH");
+            std::string opencl_param_path("");
+            if (param_path != nullptr) {
+                opencl_param_path = std::string(param_path);
             }
 
-            ASSERT(opencl_path, "Please set opencl library path");
-            std::string storage_path(opencl_path);
+            std::string storage_path(cache_path);
             gpu_context = mace::GPUContextBuilder()
                             .SetStoragePath(storage_path)
+                            .SetOpenCLParameterPath(opencl_param_path)
                             .Finalize();
 
             config.SetGPUContext(gpu_context);
