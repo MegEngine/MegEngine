@@ -211,7 +211,32 @@ public:
     FreeMemStat get_free_memory_dev() override;
 };
 
+class SimpleCachingAllocImpl : public SimpleCachingAlloc,
+                               public MemAllocImplHelper {
+    struct AllocatedBlock {
+        bool is_head;
+        size_t size;
+    };
+
+    std::unique_ptr<RawAllocator> m_raw_alloc;
+    std::unordered_map<void*, size_t> m_alloc_from_raw;
+    std::unordered_map<void*, AllocatedBlock> m_allocated_blocks;
+    size_t m_used_size = 0;
+
+public:
+    SimpleCachingAllocImpl(std::unique_ptr<RawAllocator> m_raw_alloc);
+    ~SimpleCachingAllocImpl();
+
+    void* alloc(size_t size) override;
+    void free(void* ptr) override;
+    size_t get_used_memory() override;
+    FreeMemStat get_free_memory_dev() override;
+
+protected:
+    MemAddr alloc_from_parent(size_t size) override;
+    std::string get_name() const override;
+};
+
 }
 }
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

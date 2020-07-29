@@ -364,5 +364,57 @@ DevMemAllocImpl::~DevMemAllocImpl() {
         m_raw_allocator->free(i.first);
 }
 
-// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
+std::unique_ptr<SimpleCachingAlloc> SimpleCachingAlloc::make(std::unique_ptr<RawAllocator> raw_alloc) {
+    return std::make_unique<SimpleCachingAllocImpl>(std::move(raw_alloc));
+}
 
+SimpleCachingAllocImpl::SimpleCachingAllocImpl(std::unique_ptr<RawAllocator> raw_alloc)
+        : m_raw_alloc(std::move(raw_alloc)) {}
+
+void* SimpleCachingAllocImpl::alloc(size_t size) {
+    size = get_aligned_power2(size, m_alignment);
+    auto&& addr = do_alloc(size, true);
+    auto ptr = addr.addr_ptr();
+    MGB_LOCK_GUARD(m_mutex);
+    m_allocated_blocks[ptr] = {addr.is_head, size};
+    m_used_size += size;
+    return ptr;
+}
+
+void SimpleCachingAllocImpl::free(void* ptr) {
+    MGB_LOCK_GUARD(m_mutex);
+    auto&& iter = m_allocated_blocks.find(ptr);
+    mgb_assert(iter != m_allocated_blocks.end(),
+            "releasing bad pointer: %p", ptr);
+    auto size = iter->second.size;
+    FreeBlock fb{MemAddr{iter->second.is_head, reinterpret_cast<size_t>(ptr)}, size};
+    m_allocated_blocks.erase(iter);
+    merge_free_unsafe(fb);
+    m_used_size -= size;
+}
+
+SimpleCachingAllocImpl::~SimpleCachingAllocImpl() {
+    for (auto&& ptr_size : m_alloc_from_raw) {
+        m_raw_alloc->free(ptr_size.first);
+    }
+}
+
+SimpleCachingAllocImpl::MemAddr SimpleCachingAllocImpl::alloc_from_parent(size_t size) {
+    void* ptr = m_raw_alloc->alloc(size);
+    m_alloc_from_raw[ptr] = size;
+    return {true, reinterpret_cast<size_t>(ptr)};
+}
+
+std::string SimpleCachingAllocImpl::get_name() const {
+    return "SimpleCachingAllocImpl";
+}
+
+size_t SimpleCachingAllocImpl::get_used_memory() {
+    return m_used_size;
+}
+
+FreeMemStat SimpleCachingAllocImpl::get_free_memory_dev() {
+    return get_free_memory();
+}
+
+// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

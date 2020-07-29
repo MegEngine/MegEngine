@@ -440,6 +440,54 @@ TEST(TestMemAlloc, RandomOprs) {
     ASSERT_EQ(dummy_alloc->nr_alloc(), dummy_alloc->nr_free());
 }
 
+TEST(TestSimpleCachingAlloc, Basic) {
+    constexpr size_t TOT = 2048, REQ = 1000;
+    static_assert(TOT > REQ * 2, "");
+    auto raw_alloc = new DummyAllocator(TOT);
+    auto alloc = SimpleCachingAlloc::make(std::unique_ptr<RawAllocator>(raw_alloc));
+
+    auto ptr = alloc->alloc(REQ);
+    EXPECT_EQ(TOT - REQ, raw_alloc->free_size());
+    EXPECT_EQ(REQ, alloc->get_used_memory());
+    EXPECT_EQ(0u, alloc->get_free_memory().tot);
+
+    alloc->free(ptr);
+    EXPECT_EQ(0u, raw_alloc->nr_free());
+    EXPECT_EQ(REQ, alloc->get_free_memory().tot);
+
+    ptr = alloc->alloc(REQ / 2);
+    EXPECT_EQ(1u, raw_alloc->nr_alloc());
+    EXPECT_EQ(REQ / 2, alloc->get_used_memory());
+    EXPECT_EQ(REQ - REQ / 2, alloc->get_free_memory().tot);
+
+    auto ptr2 = alloc->alloc(REQ / 2);
+    EXPECT_EQ(1u, raw_alloc->nr_alloc());
+    EXPECT_EQ(REQ / 2 * 2, alloc->get_used_memory());
+    EXPECT_EQ(REQ - REQ / 2 * 2, alloc->get_free_memory().tot);
+    EXPECT_EQ(REQ / 2, (char*)ptr2 - (char*)ptr);
+
+    alloc->free(ptr);
+    EXPECT_EQ(1u, raw_alloc->nr_alloc());
+    EXPECT_EQ(REQ / 2, alloc->get_used_memory());
+    EXPECT_EQ(REQ - REQ / 2, alloc->get_free_memory().tot);
+
+    ptr = alloc->alloc(REQ);
+    EXPECT_EQ(2u, raw_alloc->nr_alloc());
+    EXPECT_EQ(TOT - REQ * 2, raw_alloc->free_size());
+    EXPECT_EQ(REQ + REQ / 2, alloc->get_used_memory());
+    EXPECT_EQ(REQ - REQ / 2, alloc->get_free_memory().tot);
+
+    alloc->free(ptr2);
+    ptr2 = alloc->alloc(REQ);
+    EXPECT_EQ(2u, raw_alloc->nr_alloc());
+    EXPECT_EQ(REQ * 2, alloc->get_used_memory());
+    EXPECT_EQ(0u, alloc->get_free_memory().tot);
+
+    alloc->free(ptr);
+    alloc->free(ptr2);
+    EXPECT_EQ(0u, raw_alloc->nr_free());
+};
+
 namespace {
 class DevicePolicy {
 public:

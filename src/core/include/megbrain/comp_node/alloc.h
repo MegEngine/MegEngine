@@ -341,6 +341,32 @@ public:
     FwdDevMemAlloc(const std::shared_ptr<RawAllocator>& ra) : m_raw_alloc(ra) {}
 };
 
+/* ===================== SimpleCachingAlloc  ===================== */
+/*!
+ * \brief An allocator that cache allocations to reduce call to raw allocator.
+ * Mainly used for CUDA pinned memory.
+ */
+class SimpleCachingAlloc : virtual public MemAllocBase {
+protected:
+    size_t m_alignment = 1;
+
+public:
+    virtual ~SimpleCachingAlloc() = default;
+    static std::unique_ptr<SimpleCachingAlloc> make(std::unique_ptr<RawAllocator> raw_alloc);
+
+    virtual void* alloc(size_t size) = 0;
+    virtual void free(void* ptr) = 0;
+
+    SimpleCachingAlloc& alignment(size_t alignment) {
+        m_alignment = alignment;
+        return *this;
+    };
+
+    size_t alignment() const {
+        return m_alignment;
+    };
+};
+
 } // mem_alloc
 } // mgb
 

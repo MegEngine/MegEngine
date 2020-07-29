@@ -99,6 +99,46 @@ public:
     }
 };
 
+class CudaHostAllocator : public RawAllocator {
+public:
+    void* alloc(size_t size) override {
+        void* addr;
+        cudaError_t cuda_error = cudaHostAlloc(&addr, size, cudaHostAllocDefault);
+        if (cuda_error == cudaSuccess) {
+            mgb_assert(addr);
+            return addr;
+        }
+        auto msg = mgb_ssprintf_log(
+                "cudaHostAlloc failed while requesting %zd bytes (%.3fMiB)"
+                " of pinned host memory; error: %s",
+                size, size / (1024.0 * 1024), cudaGetErrorString(cuda_error));
+        msg.append(CudaError::get_cuda_extra_info());
+        if (cuda_error == cudaErrorMemoryAllocation) {
+            mgb_log_error("%s", msg.c_str());
+            // clear cuda error
+            cudaGetLastError();
+            mgb_assert(cudaGetLastError() == cudaSuccess);
+            return nullptr;
+        }
+        mgb_throw_raw(MemAllocError{msg});
+    }
+
+    void free(void* ptr) override {
+        cudaError_t cuda_error = cudaFreeHost(ptr);
+        if (cuda_error == cudaSuccess)
+            return;
+        auto msg = ssprintf("cudaFreeHost failed for %p: %s", ptr,
+                            cudaGetErrorString(cuda_error));
+        msg.append(CudaError::get_cuda_extra_info());
+        mgb_throw_raw(MemAllocError{msg});
+    }
+
+    void get_mem_info(size_t& free, size_t& tot) override {
+        free = 0;
+        tot = 0;
+    }
+};
+
 class CudaDeviceRuntimePolicy : public DeviceRuntimePolicy {
 public:
     CompNode::DeviceType device_type() override {
@@ -175,19 +215,9 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
 
         void free_device(void *ptr);
 
-        void *alloc_host(size_t size) override {
-            activate();
-            void *ptr;
-            MGB_CUDA_CHECK(cudaMallocHost(&ptr, size));
-            return ptr;
-        }
+        void *alloc_host(size_t size) override;
 
-        void free_host(void *ptr) {
-            if (!check_global_finalized()) {
-                activate();
-            }
-            MGB_CUDA_CHECK(cudaFreeHost(ptr));
-        }
+        void free_host(void *ptr);
 
         void copy_to_host(void *host_ptr,
                 const void *device_ptr, size_t size) override {
@@ -284,14 +314,18 @@ struct CudaCompNodeImpl::StaticData {
 
     mem_alloc::DevMemAlloc::PreAllocConfig prealloc_config;
 
+    std::unique_ptr<mem_alloc::SimpleCachingAlloc> host_alloc;
     CudaCompNode::CompNodeImpl node[MAX_NR_COMP_NODE];
     DeviceInfo dev_info[MAX_NR_DEVICE];
     int nr_node = 0,        //!< number of loaded node[]
         nr_dev_used = 0;    //!< number of used dev_info[]
 
-    StaticData() {
+    StaticData() : host_alloc(
+            mem_alloc::SimpleCachingAlloc::make(
+                std::make_unique<mem_alloc::CudaHostAllocator>())) {
         prealloc_config.max_overhead = 0;
         prealloc_config.alignment = 1;
+        host_alloc->alignment(1);
     }
 
     ~StaticData() {
@@ -386,6 +420,18 @@ void CudaCompNodeImpl::free_device(void *ptr) {
 
     activate();
     m_mem_alloc->free(ptr);
+}
+
+void* CudaCompNodeImpl::alloc_host(size_t size) {
+    // no need for activate() here because under
+    // unified addressing, host memory can be accessed
+    // and freed on any device
+    return sd->host_alloc->alloc(size);
+}
+
+void CudaCompNodeImpl::free_host(void* ptr) {
+    if (check_global_finalized()) return;
+    sd->host_alloc->free(ptr);
 }
 
 void CudaCompNodeImpl::peer_copy_to(
