@@ -71,7 +71,6 @@ void GroupInfo::add_opr(const std::string& key, size_t nr_expected_devices,
     }
     m_opr_infos.push_back({comp_node_hash, is_root, rank});
     m_nr_registered_devs++;
-    m_count++;
     if (m_nr_registered_devs > nr_expected_devices) {
         mgb_log_error(
                 "too many opr registered with key %s, expected %zu, actual %u",
@@ -84,6 +83,7 @@ void GroupInfo::add_opr(const std::string& key, size_t nr_expected_devices,
     if (m_nr_expected_devs == m_nr_registered_devs) {
         sort_opr_infos();
         gen_infos_from_opr_infos();
+        m_count = m_nr_registered_devs;
         m_register_cv.notify_all();
     } else {
         m_register_cv.wait(lk,
