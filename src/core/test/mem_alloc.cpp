@@ -209,16 +209,71 @@ TEST(TestMemAlloc, Alloc) {
 
     auto ptr = strm_alloc->alloc_shared(REQ);
     EXPECT_EQ(REQ, strm_alloc->get_used_memory());
-    EXPECT_EQ(0u, strm_alloc->get_free_memory().tot);
-    EXPECT_EQ(REQ, dev_alloc->get_used_memory());
-    EXPECT_EQ(TOT - REQ, dev_alloc->get_free_memory().tot);
+    EXPECT_EQ(TOT - REQ, strm_alloc->get_free_memory().tot);
+    EXPECT_EQ(TOT, dev_alloc->get_used_memory());
+    EXPECT_EQ(0u, dev_alloc->get_free_memory().tot);
     auto addr = ptr.get();
     ptr.reset();
     EXPECT_EQ(0u, strm_alloc->get_used_memory());
-    EXPECT_EQ(REQ, strm_alloc->get_free_memory().tot);
-    EXPECT_EQ(REQ, dev_alloc->get_used_memory());
-    EXPECT_EQ(TOT - REQ, dev_alloc->get_free_memory().tot);
+    EXPECT_EQ(TOT, strm_alloc->get_free_memory().tot);
+    EXPECT_EQ(TOT, dev_alloc->get_used_memory());
+    EXPECT_EQ(0u, dev_alloc->get_free_memory().tot);
     EXPECT_EQ(addr, strm_alloc->alloc_shared(REQ).get());
+}
+
+TEST(TestMemAlloc, MergeFreeBlock) {
+    using StreamKey = DevMemAlloc::StreamKey;
+    auto raw_alloc = std::make_shared<DummyAllocator>(7000);
+    auto runtime_policy = std::make_shared<DummyRuntimePolicy>(0);
+    auto dev_alloc = DevMemAlloc::make(0, 7000, raw_alloc, runtime_policy);
+
+    StreamKey stream_key = nullptr;
+    auto strm_alloc =
+            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key));
+
+    auto ptr = strm_alloc->alloc_shared(2000);
+    auto addr = ptr.get();
+    ptr.reset();
+    ptr = strm_alloc->alloc_shared(3000);
+    EXPECT_EQ(addr, ptr.get());
+    strm_alloc->alloc_shared(4000);
+}
+
+TEST(TestMemAlloc, AllocTwoStream) {
+    constexpr size_t TOT = 2048, REQ0 = 1000, REQ1 = 2000;
+    using StreamKey = DevMemAlloc::StreamKey;
+    auto raw_alloc = std::make_shared<DummyAllocator>(TOT);
+    auto runtime_policy = std::make_shared<DummyRuntimePolicy>(0);
+    auto dev_alloc = DevMemAlloc::make(0, TOT, raw_alloc, runtime_policy);
+
+    StreamKey stream_key0, stream_key1;
+    auto strm_alloc0 =
+            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key0)),
+         strm_alloc1 =
+            dev_alloc->add_stream(static_cast<StreamKey>(&stream_key1));
+    ASSERT_NE(strm_alloc0, strm_alloc1);
+
+    auto ptr0 = strm_alloc0->alloc_shared(REQ0);
+    EXPECT_EQ(REQ0, strm_alloc0->get_used_memory());
+    EXPECT_EQ(0u, strm_alloc0->get_free_memory().tot);
+    EXPECT_EQ(REQ0, dev_alloc->get_used_memory());
+    EXPECT_EQ(TOT - REQ0, dev_alloc->get_free_memory().tot);
+    ptr0.reset();
+    EXPECT_EQ(0u, strm_alloc0->get_used_memory());
+    EXPECT_EQ(REQ0, strm_alloc0->get_free_memory().tot);
+    EXPECT_EQ(REQ0, dev_alloc->get_used_memory());
+    EXPECT_EQ(TOT - REQ0, dev_alloc->get_free_memory().tot);
+    auto ptr1 = strm_alloc1->alloc_shared(REQ1);
+    EXPECT_EQ(0u, strm_alloc0->get_free_memory().tot);
+    EXPECT_EQ(REQ1, strm_alloc1->get_used_memory());
+    EXPECT_EQ(0u, strm_alloc1->get_free_memory().tot);
+    EXPECT_EQ(REQ1, dev_alloc->get_used_memory());
+    EXPECT_EQ(0u, dev_alloc->get_free_memory().tot);
+    ptr1.reset();
+    EXPECT_EQ(0u, strm_alloc1->get_used_memory());
+    EXPECT_EQ(REQ1, strm_alloc1->get_free_memory().tot);
+    EXPECT_EQ(REQ1, dev_alloc->get_used_memory());
+    EXPECT_EQ(0u, dev_alloc->get_free_memory().tot);
 }
 
 TEST(TestMemAlloc, AllocMoreThanReserve) {

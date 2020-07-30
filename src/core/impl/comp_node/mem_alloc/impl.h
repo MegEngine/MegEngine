@@ -94,7 +94,7 @@ class MemAllocImplHelper: virtual public MemAllocBase {
          * \brief directly insert a free block into m_free_blk_size and
          *      m_free_blk_addr, without merging
          */
-        inline void insert_free_unsafe(const FreeBlock &block);
+        virtual void insert_free_unsafe(const FreeBlock &block);
 
         /*!
          * \brief allocate from parent allocator; this method must either return
@@ -153,6 +153,12 @@ class StreamMemAllocImpl final: public StreamMemAlloc,
         {}
 };
 
+/*!
+ * \Note: DevMemAlloc has two-level structure, but when only one stream was
+ * registered into the DevMemAlloc, the DevMemAlloc would behave like a
+ * single-level allocator(i.e. only the FreeBlock pool in its child stream
+ * allocator will be used) for better performance
+ */
 class DevMemAllocImpl final: public DevMemAlloc,
                              public MemAllocImplHelper {
     friend class StreamMemAllocImpl;
@@ -192,6 +198,14 @@ class DevMemAllocImpl final: public DevMemAlloc,
     }
 
     size_t get_used_memory() override { return m_used_size.load(); }
+
+    void insert_free_unsafe(const FreeBlock &block) override;
+
+    /*!
+     * \brief return stream allocator if DevMemAlloc has single child,
+     * otherwise return nullptr
+     */
+    StreamMemAllocImpl* get_single_child_stream_unsafe();
 
 public:
     DevMemAllocImpl(
