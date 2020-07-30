@@ -91,8 +91,6 @@ FancyIndexingHelper::FancyIndexingHelper(
 
 void FancyIndexingHelper::init(const IndexDesc &index_desc) {
     mgb_assert(input().size() == m_idx_inp_start);
-    mgb_throw_if(index_desc.empty(), GraphError,
-            "empty index desc for subtensor opr");
     mgb_assert(m_index_desc.empty());
 
     m_input2idxonly_axis_indexer.resize(input().size(), nullptr);
