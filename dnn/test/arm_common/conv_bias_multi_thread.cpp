@@ -449,7 +449,18 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_STRIDE2) {
             get_conv_bias_args({2, 3, 5}, 2, false, true, true), handle(),
             "I8816STRD2");
 }
-
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_NCHW_NCHW44_S2) {
+    checker_conv_bias_int8x8x16(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, true,
+                                      true),
+            handle(), "I8816_CONV_NCHW_NCHW44");
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT16_NCHW_NCHW44_S1) {
+    checker_conv_bias_int8x8x16(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, true,
+                                      true),
+            handle(), "I8816_CONV_NCHW_NCHW44");
+}
 /**********************************algo 8-8-32 direct************************/
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_INT8_INT8_INT32_STRIDE1) {
     checker_conv_bias_int8x8x32_multi(

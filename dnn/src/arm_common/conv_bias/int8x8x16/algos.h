@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -48,6 +49,7 @@ class ConvBiasImpl::AlgoI8x8x16Stride2 final : public AlgoBase {
                              const NCBKernParam& kern_param,
                              const NCBKernIndex& ncb_index,
                              const CpuNDRange& workspace_ids);
+
 public:
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "I8816STRD2"; }
@@ -80,6 +82,21 @@ public:
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(
                          const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+};
+
+class ConvBiasImpl::AlgoI8x8x16DirectNCHWNCHW44 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    AlgoI8x8x16DirectNCHWNCHW44() {}
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "I8816_CONV_NCHW_NCHW44"; }
+    bool usable(const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
 };
