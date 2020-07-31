@@ -2924,6 +2924,9 @@ void ShuffleShuffleRemovePass::Impl::do_replace() {
 #endif
             auto new_var = rewriter.get_var(inp_var);
             if (inp_format != out_format) {
+                mgb_assert(m_reformat.find(std::make_pair(
+                                   inp_format, out_format)) != m_reformat.end(),
+                           "Unsupported shuffle shuffle remove pass");
                 new_var = m_reformat[std::make_pair(inp_format, out_format)](
                         new_var);
             }
