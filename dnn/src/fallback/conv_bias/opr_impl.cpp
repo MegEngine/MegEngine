@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/fallback/convolution/opr_impl.h"
 #include "src/common/algo_chooser.h"
 #include "src/common/metahelper.h"
 #include "src/common/opr_delegate.h"
@@ -19,6 +18,7 @@
 #include "src/fallback/conv_bias/conv1x1/algos_conv1x1_gemv.h"
 #include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/conv_bias/opr_impl.h"
+#include "src/fallback/convolution/opr_impl.h"
 #include "src/naive/convolution/algorithms.h"
 #include "src/naive/handle.h"
 
@@ -479,7 +479,8 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
             //! four format of weight layout
             //! 1. {oc/4, ic/4, fh, fw, 4, 4},
             //! 2. {g, oc/4, ic/4, fh, fw, 4, 4},
-            //! 3. {g/4, fh, fw, 1, 1, 4}, 4. {oc/4, fh, fw, ic, 4}
+            //! 3. {g/4, fh, fw, 1, 1, 4},
+            //! 4. {oc/4, fh, fw, ic, 4}
             megdnn_assert((icpg % 4 == 0 && ocpg % 4 == 0) ||
                                   (group % 4 == 0 && icpg == 1 && ocpg == 1 &&
                                    pack_group_size > 1) ||

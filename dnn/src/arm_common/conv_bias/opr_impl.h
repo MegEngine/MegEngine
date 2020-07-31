@@ -81,6 +81,7 @@ private:
     class AlgoI8x8x16Direct;
     class AlgoI8x8x16Stride2;
     class AlgoI8x8x16Stride2Filter2;
+    class AlgoI8x8x16DirectNCHWNCHW44;
     class AlgoS8WinogradF23_8x8;
     class AlgoS8CF32WinogradF23_4x4_NCHW44;
     class AlgoS8WinogradF23_8x8_NCHW44;

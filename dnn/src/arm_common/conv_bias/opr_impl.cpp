@@ -71,6 +71,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoI8x8x16Direct i8x8x16_direct;
     AlgoI8x8x16Stride2 i8x8x16_stride2;
     AlgoI8x8x16Stride2Filter2 i8x8x16_stride2_filter2;
+    AlgoI8x8x16DirectNCHWNCHW44 i8x8x16_nchw_nchw44;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     AlgoF16Direct f16_direct;
     AlgoF16DirectStride1 f16_direct_stride1;
@@ -107,6 +108,7 @@ public:
         direct_algos.emplace_back(&i8x8x16_direct);
         direct_algos.emplace_back(&i8x8x16_stride2_filter2);
         direct_algos.emplace_back(&i8x8x16_stride2);
+        direct_algos.emplace_back(&i8x8x16_nchw_nchw44);
 
         direct_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
         direct_algos.emplace_back(&f32_chanel_wise_nchw44);

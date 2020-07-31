@@ -116,7 +116,8 @@ CB_TEST(H_SWISH);
 #if MEGDNN_WITH_BENCHMARK
 
 static void benchmark_convbias(Handle* handle, std::string int_name,
-                               std::string float_name, bool is_fp32 = false) {
+                               std::string float_name, bool is_fp32 = false,
+                               bool is_8x8x16 = false) {
     constexpr size_t RUNS = 30;
 
     Benchmarker<ConvBias> benchmarker_int(handle);
@@ -142,6 +143,13 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
                 .set_dtype(2, dtype::Float32())
                 .set_dtype(4, dtype::Float32())
                 .set_display(false);
+    } else if (is_8x8x16) {
+        benchmarker_nchw44.set_times(RUNS)
+                .set_dtype(0, dtype::Int8())
+                .set_dtype(1, dtype::Int8())
+                .set_dtype(2, dtype::Int16())
+                .set_dtype(4, dtype::Int16())
+                .set_display(false);
     } else {
         benchmarker_nchw44.set_times(RUNS)
                 .set_dtype(0, dtype::QuantizedS8(2.5))
@@ -163,6 +171,9 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
                    size_t FS, size_t stride, bool input_nchw = false) {
         param::ConvBias param;
         param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        if (is_8x8x16) {
+            param.nonlineMode = param::ConvBias::NonlineMode::IDENTITY;
+        }
         param.stride_h = stride;
         param.stride_w = stride;
 
@@ -235,6 +246,7 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
         run(1, 512, 512, 7, 7, 3, 1, false);
     } else {
         run(1, 1, 4, 112, 112, 2, 2, true);
+        run(1, 3, 8, 224, 224, 3, 2, true);
         run(1, 3, 32, 224, 224, 3, 2, true);
         run(1, 3, 32, 224, 224, 5, 2, true);
         run(1, 3, 64, 224, 224, 7, 2, true);
@@ -271,11 +283,15 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_NCHW44) {
                        "IM2COLMATMUL:AARCH64_F32K8X12X1:192", true);
     benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
                        "IM2COLMATMUL:AARCH64_F32K8X12X1:192", false);
+    benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
+                       "IM2COLMATMUL:AARCH64_F32K8X12X1:192", false, true);
 #else
     benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
                        "IM2COLMATMUL:ARMV7_F32:192", true);
     benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
                        "IM2COLMATMUL:ARMV7_F32:192", false);
+    benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
+                       "IM2COLMATMUL:ARMV7_F32:192", false, true);
 #endif
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, BENCHMARK_CONVBIAS_NCHW44) {

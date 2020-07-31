@@ -375,6 +375,89 @@ __ai void store_ocx_ow8_remain_static_dt(T& c, const Op& op, T2 dst_ptr,
     StoreOcxOw8Remain<c_dim, ow_remain, Op, T, T2, T3>::impl(c, op, dst_ptr,
                                                              ld_dst_oc);
 }
+////////////////////Store_OCX_OW8_Remain/////////////////////////
+template <int c_dim, int ow_block, int nr_group, int out_group, typename T,
+          typename T2, typename T3>
+struct StoreOc4Ow8Remain {
+    static __ai void impl(T& c, T2 dst_ptr, int ld_dst_oc, const int ow_remain);
+};
+
+#define cb(step)                                               \
+    vst1q_lane_s64((int64_t*)(dst_ptr + step * 4),             \
+                   vreinterpretq_s64_s16(c[0][step]), 0);      \
+    vst1q_lane_s64((int64_t*)(dst_ptr + step * 4 + ld_dst_oc), \
+                   vreinterpretq_s64_s16(c[0][step]), 1);
+
+#define cb2(step)                                  \
+    vst1q_lane_s64((int64_t*)(dst_ptr + step * 4), \
+                   vreinterpretq_s64_s16(c[0][step]), 0);
+
+#define cb_case(step)              \
+    case step:                     \
+        UNROLL_CALL_RAW(step, cb); \
+        break;
+
+#define cb_case2(step)              \
+    case step:                      \
+        UNROLL_CALL_RAW(step, cb2); \
+        break;
+template <typename T, typename T2, typename T3>
+struct StoreOc4Ow8Remain<1, 8, 2, 2, T, T2, T3> {
+    static __ai void impl(T& c, T2 dst_ptr, int ld_dst_oc,
+                          const int ow_remain) {
+        if (ow_remain == 8) {
+            UNROLL_CALL_RAW(8, cb)
+        } else {
+            switch (ow_remain) {
+                cb_case(7);
+                cb_case(6);
+                cb_case(5);
+                cb_case(4);
+                cb_case(3);
+                cb_case(2);
+                cb_case(1);
+
+                default:
+                    break;
+            }
+        }
+    }
+};
+template <typename T, typename T2, typename T3>
+struct StoreOc4Ow8Remain<1, 8, 2, 1, T, T2, T3> {
+    static __ai void impl(T& c, T2 dst_ptr, int, const int ow_remain) {
+        if (ow_remain == 8) {
+            UNROLL_CALL_RAW(8, cb2)
+        } else {
+            switch (ow_remain) {
+                cb_case2(7);
+                cb_case2(6);
+                cb_case2(5);
+                cb_case2(4);
+                cb_case2(3);
+                cb_case2(2);
+                cb_case2(1);
+
+                default:
+                    break;
+            }
+        }
+    }
+};
+
+#undef cb
+#undef cb2
+#undef cb_case
+#undef cb_case2
+
+template <int c_dim, int ow_block, int nr_group, int out_group, typename T,
+          typename T2>
+__ai void store_oc4_ow8_remain_static(T& c, T2 dst_ptr, const int ld_dst_oc,
+                                      const int ow_remain) {
+    StoreOc4Ow8Remain<c_dim, ow_block, nr_group, out_group, T, T2, T2>::impl(
+            c, dst_ptr, ld_dst_oc, ow_remain);
+}
+
 ////////////////////Store_OC8_OW8_Remain/////////////////////////
 
 template <int ow_remain, typename Op>
@@ -548,12 +631,17 @@ __ai float32x4_t neon_vdupq_n(float val) {
 __ai int32x4_t neon_vdupq_n(int val) {
     return vdupq_n_s32(val);
 }
+__ai int16x8_t neon_vdupq_n(int16_t val) {
+    return vdupq_n_s16(val);
+}
 __ai float32x4_t neon_vld1q(const float* ptr) {
     return vld1q_f32(ptr);
 }
-
 __ai int32x4_t neon_vld1q(const int* ptr) {
     return vld1q_s32(ptr);
+}
+__ai int16x8_t neon_vld1q(const int16_t* ptr) {
+    return vld1q_s16(ptr);
 }
 
 template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
@@ -724,6 +812,39 @@ __ai void init_ocx_ow4(T& c, const int32_t* bias_ptr, int oc_step) {
     InitOcxOw4<c_dim, bias_mode, T>::impl(c, bias_ptr, oc_step);
 }
 ///////////////////////////////////////
+
+static inline void memcpy_s8_dup(int8_t* outptr, const int8_t* inptr,
+                                 int count) {
+    constexpr int expand = 8;
+    for (; count >= 8; count -= 8) {
+        int8x8_t in = vld1_s8(inptr);
+        int8x8_t in0 = vdup_lane_s8(in, 0);
+        int8x8_t in1 = vdup_lane_s8(in, 1);
+        int8x8_t in2 = vdup_lane_s8(in, 2);
+        int8x8_t in3 = vdup_lane_s8(in, 3);
+        int8x8_t in4 = vdup_lane_s8(in, 4);
+        int8x8_t in5 = vdup_lane_s8(in, 5);
+        int8x8_t in6 = vdup_lane_s8(in, 6);
+        int8x8_t in7 = vdup_lane_s8(in, 7);
+
+        vst1_s8(outptr + 0 * 8, in0);
+        vst1_s8(outptr + 1 * 8, in1);
+        vst1_s8(outptr + 2 * 8, in2);
+        vst1_s8(outptr + 3 * 8, in3);
+        vst1_s8(outptr + 4 * 8, in4);
+        vst1_s8(outptr + 5 * 8, in5);
+        vst1_s8(outptr + 6 * 8, in6);
+        vst1_s8(outptr + 7 * 8, in7);
+
+        inptr += 8;
+        outptr += 8 * expand;
+    }
+    for (; count > 0; --count) {
+        int8x8_t in0 = vld1_dup_s8(inptr++);
+        vst1_s8(outptr, in0);
+        outptr += 1 * expand;
+    }
+}
 
 }  // namespace
 }  // namespace megdnn
