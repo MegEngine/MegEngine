@@ -29,6 +29,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoQU8DirectStride2 final : public AlgoBase {
@@ -42,6 +45,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 #if __ARM_FEATURE_DOTPROD
 class ConvBiasImpl::AlgoDotU8DirectStride1 final : public AlgoBase {
@@ -56,6 +62,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoDotU8DirectStride2 final : public AlgoBase {
@@ -69,6 +78,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 #endif
 }  // namespace arm_common

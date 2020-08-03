@@ -29,6 +29,10 @@ public:
             const NCBKernSizeParam& param) const override;
 
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8DirectStride2 final : public AlgoBase {
@@ -42,6 +46,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8DirectNCHW44 final : public AlgoBase {
@@ -55,6 +62,9 @@ public:
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8DirectNCHWNCHW44 final : public AlgoBase {
@@ -68,6 +78,9 @@ public:
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44 final : public AlgoBase {
@@ -79,6 +92,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44 final : public AlgoBase {
@@ -90,6 +106,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 #if __ARM_FEATURE_DOTPROD
@@ -104,6 +123,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam&) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoDotS8DirectStride1 final : public AlgoBase {
@@ -117,6 +139,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam&) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoDotS8DirectStride2 final : public AlgoBase {
@@ -131,6 +156,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam&) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoDotS8Direct_NCHW44 final : public AlgoBase {
@@ -148,6 +176,10 @@ public:
             const NCBKernSizeParam& param) const override;
 
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 #endif
 
@@ -163,7 +195,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
 };
 
 //=======================input int8 compute fp32 output int8============
@@ -180,7 +212,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
 };
 
 //=======================input int8 compute int16 output int8============
@@ -198,7 +230,7 @@ public:
         return m_name.c_str();
     }
 
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
 };
 
 }  // namespace arm_common

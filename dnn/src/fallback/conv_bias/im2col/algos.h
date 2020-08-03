@@ -48,15 +48,25 @@ public:
     SmallVector<NCBKern> dispatch_preprocess_kerns(
             const NCBKernSizeParam& param) const override;
     bool is_preferred(const NCBKernSizeParam& param) const override {
-        if (param.src_type.category() == DTypeCategory::QUANTIZED) {
-            static CpuOprDelegationStorage<1> storage;
-            auto conv_bias_opr = storage.get<ConvBias, 0>();
-            return static_cast<ConvBiasImpl*>(conv_bias_opr)
-                    ->is_matmul_quantized_prefer(param);
+        size_t OH = param.osz[0];
+        size_t OW = param.osz[1];
+        //! gemm and oh * ow > 1 is prefer
+        //! gemv and oh * ow == 1 is prefer
+        if ((m_matmul_algo->algoset() !=
+                     MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV &&
+             OH * OW > 1) ||
+            (m_matmul_algo->algoset() ==
+                     MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV &&
+             OH * OW == 1)) {
+            return true;
+        } else {
+            return false;
         }
-        auto&& fm = param.filter_meta;
-        auto OC = fm.ocpg, IC = fm.icpg;
-        return OC >= 32 || IC >= 32;
+    }
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {m_matmul_algo->matmul_description().algo_type.data_type,
+                AlgoCategory::IM2COL};
     }
 
 private:

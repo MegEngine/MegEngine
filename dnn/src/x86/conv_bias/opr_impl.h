@@ -24,6 +24,8 @@ public:
 
     bool is_thread_safe() const override { return true; }
     SmallVector<AlgoBase*> algo_pack() override;
+    SmallVector<AlgoCategory> suggest_algo_category_order(
+            const NCBKernSizeParam& param) const override;
 
     class AlgoDirect;
     class AlgoDirectStride2;

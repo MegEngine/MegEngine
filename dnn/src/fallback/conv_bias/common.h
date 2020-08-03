@@ -140,7 +140,7 @@ using BiasMode = ConvBiasForward::BiasMode;
             break;                                         \
     }
 
-#define MEGDNN_WINOGRAD_ALGO_FUN_DECLARE()                                     \
+#define MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(_algo_data_type)                      \
     bool is_reproducible() const override { return true; }                     \
     bool usable(const NCBKernSizeParam& param,                                 \
                 AlgoSelectionStrategy algo_selection_strategy) const override; \
@@ -153,6 +153,9 @@ using BiasMode = ConvBiasForward::BiasMode;
             const override;                                                    \
     virtual SmallVector<NCBKern> dispatch_preprocess_kerns(                    \
             const NCBKernSizeParam& param) const override;                     \
+    ConvAlgoTypePack get_algo_type() const override {                          \
+        return {_algo_data_type, AlgoCategory::WINOGRAD};                      \
+    }                                                                          \
                                                                                \
 private:                                                                       \
     fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;                          \

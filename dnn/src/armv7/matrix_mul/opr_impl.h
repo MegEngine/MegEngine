@@ -18,7 +18,6 @@ namespace armv7 {
 class MatrixMulImpl : public arm_common::MatrixMulImpl {
 public:
     using arm_common::MatrixMulImpl::MatrixMulImpl;
-
     SmallVector<AlgoBase*> algo_pack() override;
 
 private:

@@ -18,6 +18,8 @@
 #include "src/fallback/matrix_mul/opr_impl.h"
 #include "src/naive/conv_bias/opr_impl.h"
 
+#include <unordered_map>
+
 namespace megdnn {
 namespace fallback {
 
@@ -44,6 +46,7 @@ class ConvBiasImpl : public naive::ConvBiasForwardImpl {
 public:
     using naive::ConvBiasForwardImpl::ConvBiasForwardImpl;
     using AlgoSelectionStrategy = detail::AlgoSelectionStrategy;
+    using AlgoDataType = detail::AlgoDataType;
 
     //! implemented by exec_with_ncb_kern()
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
@@ -93,6 +96,8 @@ public:
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
                                        bool reproducible) override;
+
+
 
     //! size param for kernels with non-contiguous batch
     struct NCBKernSizeParam : ConvolutionImpl::NCBKernSizeParam {
@@ -244,12 +249,26 @@ public:
             return (!reproducible || is_reproducible()) &&
                    usable(param, algo_selection_strategy);
         }
+
+        //! get the type of the algo
+        virtual ConvAlgoTypePack get_algo_type() const = 0;
     };
 
     /**
      * \brief get all the algorithm for the opr.
      */
     virtual SmallVector<AlgoBase*> algo_pack();
+
+    /**
+     * \brief select algo according to input algo type
+     */
+    SmallVector<AlgoBase*> select_algo_type(ConvAlgoTypePack algo_type);
+
+    /**
+     * \brief suggest algo category according to the param
+     */
+    virtual SmallVector<AlgoCategory> suggest_algo_category_order(
+            const NCBKernSizeParam& param) const;
 
 protected:
     virtual void exec_with_ncb_kern(const NCBKernParam& param,

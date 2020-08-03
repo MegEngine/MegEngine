@@ -83,6 +83,10 @@ public:
 
     SmallVector<NCBKern> dispatch_kern(
             const NCBKernSizeParam& /*param*/) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::NAIVE};
+    }
 };
 
 class ConvolutionImpl::AlgoNaive final : public AlgoBase {
@@ -96,11 +100,17 @@ public:
 
     SmallVector<NCBKern> dispatch_kern(
             const NCBKernSizeParam& /*param*/) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        auto support_data_type = static_cast<AlgoDataType>(
+                static_cast<uint32_t>(AlgoDataType::INT8X8X16) |
+                static_cast<uint32_t>(AlgoDataType::QINT8X8X32) |
+                static_cast<uint32_t>(AlgoDataType::QUINT8X8X32));
+        return {support_data_type, AlgoCategory::NAIVE};
+    }
 };
 
 class ConvolutionImpl::AlgoDefault final : public AlgoBase {
-    static ConvBiasImpl::NCBKernSizeParam init_conv_bias_param(
-            const NCBKernSizeParam& param);
     WorkspaceBundle get_bundle(const NCBKernSizeParam& param) const;
     static SmallVector<NCBKern> get_kimpl(ConvBiasImpl::AlgoBase* algo,
                                           const NCBKernSizeParam& param);
@@ -135,6 +145,13 @@ public:
 
     //! select matmul to the highest preference
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    static ConvBiasImpl::NCBKernSizeParam init_conv_bias_param(
+            const NCBKernSizeParam& param);
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return m_algorithm->get_algo_type();
+    }
 
 private:
     std::string m_name;

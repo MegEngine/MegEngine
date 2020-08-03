@@ -29,7 +29,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
 };
 
 class ConvBiasImpl::AlgoFP16WinogradF45 final : public AlgoBase {
@@ -44,7 +44,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
 
 };
 class ConvBiasImpl::AlgoFP16WinogradF63 final : public AlgoBase {
@@ -60,7 +60,7 @@ public:
         return m_name.c_str();
     }
 
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
 };
 class ConvBiasImpl::AlgoFP16WinogradF23_8x8 final : public AlgoBase {
 public:
@@ -74,7 +74,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
 };
 
 class ConvBiasImpl::AlgoF16Direct final : public AlgoBase {
@@ -90,6 +90,10 @@ public:
 
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override{
+        return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoF16DirectStride1 final : public AlgoBase {
@@ -103,6 +107,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
+    }
 };
 
 }  // namespace arm_common

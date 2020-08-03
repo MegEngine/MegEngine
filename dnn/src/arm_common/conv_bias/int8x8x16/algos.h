@@ -36,6 +36,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8x8x16DirectNCHW44 final : public AlgoBase {
@@ -48,6 +51,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoI8x8x16Stride2 final : public AlgoBase {
@@ -71,6 +77,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoI8x8x16Stride2Filter2 final : public AlgoBase {
@@ -84,6 +93,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44 final : public AlgoBase {
@@ -96,6 +108,9 @@ public:
                          const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoI8x8x16DirectNCHWNCHW44 final : public AlgoBase {
@@ -111,6 +126,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
+    }
 };
 
 }  // namespace arm_common

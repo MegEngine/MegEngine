@@ -10,14 +10,23 @@
  * implied.
  */
 #pragma once
+#include "megdnn/opr_param_defs.h"
 #include "src/common/utils.h"
 #include "src/naive/matrix_mul/opr_impl.h"
-namespace megdnn {
-namespace fallback {
+#include <unordered_map>
 
+namespace megdnn {
+
+struct AlgoTypePack {
+    detail::AlgoDataType data_type : 32;
+    param::MatrixMul::Format format : 32;
+};
+
+namespace fallback {
 class MatrixMulImpl : public naive::MatrixMulForwardImpl {
 public:
     using naive::MatrixMulForwardImpl::MatrixMulForwardImpl;
+    using AlgoDataType = detail::AlgoDataType;
 
     bool is_thread_safe() const override { return true; }
 
@@ -34,6 +43,8 @@ public:
         bool trA, trB;
         Param::ComputeMode compute_mode;
         Param::Format format;
+        //! get the data type category of the param for select the algo
+        AlgoDataType deduce_algo_data_type() const;
     };
 
     struct KernParam : public KernSizeParam {
@@ -110,6 +121,7 @@ public:
         struct MatmulDescription {
             PackMode packmode;
             InnerBlockSize innerblocksize;
+            AlgoTypePack algo_type;
             size_t packa_type_size;
         };
 
@@ -145,6 +157,11 @@ public:
      * \brief get all the algorithm for the opr.
      */
     virtual SmallVector<AlgoBase*> algo_pack();
+
+    /**
+     * \brief select algo according to input algo type
+     */
+    SmallVector<AlgoBase*> select_algo_type(AlgoTypePack algo_type);
 
 protected:
     KernSizeParam make_kern_size_param(const TensorLayout& A,

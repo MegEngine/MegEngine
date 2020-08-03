@@ -288,7 +288,8 @@ bool ConvBiasImpl::AlgoConv1x1::is_preferred(
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
     if (OH * OW != 1) {
-        return true;
+        return m_matmul_algo->algoset() !=
+               MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV;
     } else {
 #if (MEGDNN_ARMV7 || MEGDNN_AARCH64)
         if (param.src_type.enumv() == DTypeEnum::Int8 &&

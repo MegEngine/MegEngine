@@ -224,8 +224,6 @@ bool mkldnn_matmul_qint8_preferred(
         const ConvBiasImpl::NCBKernSizeParam& param) {
     auto is_preferred = true;
     auto&& fm = param.filter_meta;
-    megdnn_assert_internal(fm.group == 1 && fm.dilation[0] == 1 &&
-                           fm.dilation[1] == 1);
 
     // single channel conv should never use matrix mul
     if (fm.ocpg == 1 || fm.icpg == 1)

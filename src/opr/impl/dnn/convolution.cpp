@@ -495,8 +495,9 @@ class AlgoChooser {
                 }
             }
             mgb_assert(found,
-                       "algo got by heuristic not found in "
-                       "candidate list");
+                       "algo %s got by heuristic not found in "
+                       "candidate list",
+                       heu->name());
             return std::move(ret);
         }
 
@@ -628,7 +629,7 @@ public:
         auto algo = get_algo(ctx);
         size_t workspace = ctx.get_workspace_size_bytes(algo);
         mgb_log_debug(
-                "%s: input shapes (%s %s, %s %s) -> (%s %s): algo=%s "
+                "%s:tensor layouts (%s %s, %s %s)->(%s %s) :algo=%s "
                 "workspace=%.2fMiB reproducible=%d",
                 mgb_opr->dyn_typeinfo()->name,
                 layouts[0].to_string().c_str(),
@@ -636,8 +637,7 @@ public:
                 layouts[1].to_string().c_str(),
                 layouts[1].dtype.name(),
                 layouts[layouts.size() - 1].to_string().c_str(),
-                layouts[layouts.size() - 1].dtype.name(),
-                 algo->name(),
+                layouts[layouts.size() - 1].dtype.name(), algo->name(),
                 workspace / (1024 * 1024.0), algo->is_reproducible());
         megdnn_opr->execution_policy() = {algo};
         return workspace;

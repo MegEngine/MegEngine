@@ -26,6 +26,16 @@ public:
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        auto support_data_type = static_cast<AlgoDataType>(
+                static_cast<uint32_t>(AlgoDataType::FLOAT16) |
+                static_cast<uint32_t>(AlgoDataType::FLOAT32) |
+                static_cast<uint32_t>(AlgoDataType::INT8X8X16) |
+                static_cast<uint32_t>(AlgoDataType::QINT8X8X32) |
+                static_cast<uint32_t>(AlgoDataType::QUINT8X8X32));
+        return {support_data_type, AlgoCategory::NAIVE};
+    }
 };
 
 class ConvBiasImpl::AlgoWinogradF32 final : public AlgoBase {
@@ -45,6 +55,10 @@ public:
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::WINOGRAD};
+    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -70,6 +84,10 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::WINOGRAD};
+    }
+
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
     mutable std::string m_name;
@@ -94,6 +112,10 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::WINOGRAD};
+    }
+
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
     mutable std::string m_name;
@@ -117,6 +139,10 @@ public:
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::WINOGRAD};
+    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;

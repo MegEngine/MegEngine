@@ -10,11 +10,28 @@
  */
 #pragma once
 
+#include "megdnn/oprs/base.h"
 #include "src/common/utils.h"
 #include "src/fallback/handle.h"
 #include "src/naive/convolution/opr_impl.h"
 
 namespace megdnn {
+
+/**
+ * \brief Convolutino algo category
+ */
+enum class AlgoCategory : int32_t {
+    DIRECT = 0,
+    IM2COL = 1,
+    WINOGRAD = 2,
+    NAIVE = 3,
+};
+
+struct ConvAlgoTypePack {
+    detail::AlgoDataType data_type : 32;
+    AlgoCategory algo_category : 32;
+};
+
 namespace fallback {
 
 /*!
@@ -33,6 +50,7 @@ class ConvolutionImpl : public naive::ConvolutionForwardImpl {
 public:
     using naive::ConvolutionForwardImpl::ConvolutionForwardImpl;
     using AlgoSelectionStrategy = detail::AlgoSelectionStrategy;
+    using AlgoDataType = detail::AlgoDataType;
 
     //! implemented by exec_with_ncb_kern()
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
@@ -86,6 +104,8 @@ public:
         size_t nr_threads;
         //! weight_preprocess info
         const PreprocessedFilter* preprocessed_filter;
+        //! get the data type category of the param for select the algo
+        AlgoDataType deduce_algo_data_type() const;
     };
 
     //! memory param for kernels with non-contiguous batch
@@ -211,12 +231,20 @@ public:
             return (!reproducible || is_reproducible()) &&
                    usable(param, algo_selection_strategy);
         }
+
+        //! get the type of the algo
+        virtual ConvAlgoTypePack get_algo_type() const = 0;
     };
 
     /**
      * \brief get all the algorithm for the opr.
      */
     virtual SmallVector<AlgoBase*> algo_pack();
+
+    /**
+     * \brief select algo according to input algo type
+     */
+    SmallVector<AlgoBase*> select_algo_type(ConvAlgoTypePack algo_type);
 
 protected:
     virtual void exec_with_ncb_kern(const NCBKernParam& param, Algorithm* algo);
@@ -258,6 +286,9 @@ private:
             _megdnn_tensor_out dst,
             const PreprocessedFilter* preprocessed_filter,
             _megdnn_workspace workspace);
+
+    SmallVector<AlgoCategory> suggest_algo_category_order(
+            const NCBKernSizeParam& param) const;
 };
 
 class ConvolutionBackwardDataImpl : public naive::ConvolutionBackwardDataImpl {

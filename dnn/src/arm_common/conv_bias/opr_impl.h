@@ -28,6 +28,9 @@ public:
 
     bool is_matmul_quantized_prefer(
             const ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
+
+    SmallVector<AlgoCategory> suggest_algo_category_order(
+            const NCBKernSizeParam& param) const override;
     class AlgoPack;
 
 protected:
@@ -90,7 +93,7 @@ private:
     class AlgoF16Direct;
     class AlgoF16DirectStride1;
 #endif
-};
+    };
 
 }  // namespace arm_common
 }  // namespace megdnn

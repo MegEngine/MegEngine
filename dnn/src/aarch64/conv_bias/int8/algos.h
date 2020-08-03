@@ -45,6 +45,9 @@ public:
         return static_cast<ConvBiasImpl*>(conv_bias_opr)
                 ->is_matmul_quantized_prefer(param);
     }
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};
+    }
 };
 
 }  // namespace aarch64

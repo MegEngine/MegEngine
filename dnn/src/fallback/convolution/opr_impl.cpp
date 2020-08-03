@@ -23,6 +23,7 @@
 #include "midout.h"
 
 #include <cstring>
+#include <unordered_map>
 
 MIDOUT_DECL(megdnn_fb_convbwd_float)
 
@@ -75,6 +76,22 @@ SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
     return sl_algo_pack.all_algos;
 }
+
+SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::select_algo_type(
+        ConvAlgoTypePack target_type) {
+    megdnn_assert(nr_type_contain(target_type.data_type),
+                  "ConvBias algo selection only support one type");
+    SmallVector<ConvolutionImpl::AlgoBase*> algos;
+    for (auto&& algo : algo_pack()) {
+        auto algo_type = algo->get_algo_type();
+        if (contain_data_type(algo_type.data_type, target_type.data_type) &&
+            algo_type.algo_category == target_type.algo_category) {
+            algos.push_back(algo);
+        }
+    }
+    return algos;
+}
+
 bool ConvolutionImpl::is_naive_algo(ConvolutionImpl::Algorithm* algo) {
     return algo == nullptr || strcmp(algo->name(), "DEFAULT") == 0;
 }
@@ -249,9 +266,9 @@ ConvolutionImpl::NCBKernParam ConvolutionImpl::make_ncb_kern_param(
 
 void ConvolutionImpl::exec_preprocess_with_ncb_kern(const NCBKernParam& param,
                                                     Algorithm* algo) {
-    auto kerns = NCB_ALGO_FUNC(dispatch_preprocess_kern, algo, param);
-    auto fallback_handle = handle();
-    for (auto kernel : kerns) {
+    auto&& kerns = NCB_ALGO_FUNC(dispatch_preprocess_kern, algo, param);
+    auto&& fallback_handle = handle();
+    for (auto&& kernel : kerns) {
         megdnn_assert(
                 param.filter_meta.format == Param::Format::NCHW ||
                         param.filter_meta.format == Param::Format::NHWC ||
@@ -270,9 +287,9 @@ void ConvolutionImpl::exec_preprocess_with_ncb_kern(const NCBKernParam& param,
 
 void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                          Algorithm* algo) {
-    auto kerns = NCB_ALGO_FUNC(dispatch_kern, algo, param);
-    auto fallback_handle = handle();
-    for (auto kernel : kerns) {
+    auto&& kerns = NCB_ALGO_FUNC(dispatch_kern, algo, param);
+    auto&& fallback_handle = handle();
+    for (auto&& kernel : kerns) {
         megdnn_assert(
                 param.filter_meta.format == Param::Format::NCHW ||
                         param.filter_meta.format == Param::Format::NHWC ||
@@ -292,13 +309,32 @@ void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
         bool reproducible) {
-    for (auto i : get_all_algorithms_with_ncb(param)) {
-        bool usable_reproducible =
-                static_cast<AlgoBase*>(i)->usable_reproducible(
-                        param, AlgoSelectionStrategy::HEURISTIC, reproducible);
-        if (usable_reproducible && NCB_ALGO_FUNC(get_workspace, i, param) <=
-                                           workspace_limit_in_bytes) {
-            return i;
+    auto algo_data_type = param.deduce_algo_data_type();
+    auto suggest_category_order = suggest_algo_category_order(param);
+    for (auto category : suggest_category_order) {
+        auto&& origin_algos = select_algo_type({algo_data_type, category});
+        ConvolutionImpl::Algorithm* heuristic_algo = nullptr;
+        for (auto i : origin_algos) {
+            bool usable_reproducible =
+                    static_cast<AlgoBase*>(i)->usable_reproducible(
+                            param, AlgoSelectionStrategy::HEURISTIC,
+                            reproducible);
+            if (usable_reproducible &&
+                static_cast<AlgoBase*>(i)->get_workspace(param) <=
+                        workspace_limit_in_bytes) {
+                //! store the first usable algo if no prefer algo, choose it as
+                //! the target algo
+                if (!heuristic_algo) {
+                    heuristic_algo = i;
+                }
+                //! choose the first prefer algo
+                if (i->is_preferred(param)) {
+                    return i;
+                }
+            }
+        }
+        if (heuristic_algo) {
+            return heuristic_algo;
         }
     }
     return nullptr;
@@ -317,8 +353,6 @@ ConvolutionImpl::get_all_algorithms_with_ncb(const NCBKernSizeParam& param) {
             }
         }
     }
-    std::reverse(prefer_algos.begin(), prefer_algos.end());
-    //! Prefer algo inserted from begin
     ret.insert(ret.begin(), prefer_algos.begin(), prefer_algos.end());
     return ret;
 }
@@ -337,9 +371,43 @@ ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm(
     return m_prev_selected_algo;
 }
 
+SmallVector<AlgoCategory> ConvolutionImpl::suggest_algo_category_order(
+        const NCBKernSizeParam& param) const {
+    static CpuOprDelegationStorage<1> storage;
+    auto conv_bias_opr = storage.get<ConvBias, 0>();
+    auto conv_bias_param =
+            ConvolutionImpl::AlgoDefault::init_conv_bias_param(param);
+    return static_cast<ConvBiasImpl*>(conv_bias_opr)
+            ->suggest_algo_category_order(conv_bias_param);
+}
+
 const char* ConvolutionImpl::get_algorithm_set_name() const {
     // fallback version 0
     return "F0";
+}
+
+ConvolutionImpl::AlgoDataType
+ConvolutionImpl::NCBKernSizeParam::deduce_algo_data_type() const {
+    if (src_type.enumv() == DTypeEnum::Float32) {
+        return ConvolutionImpl::AlgoDataType::FLOAT32;
+#if !MEGDNN_DISABLE_FLOAT16
+    } else if (src_type.enumv() == DTypeEnum::Float16) {
+        return ConvolutionImpl::AlgoDataType::FLOAT16;
+#endif
+    } else if (src_type.enumv() == DTypeEnum::Int8 ||
+               src_type.enumv() == DTypeEnum::QuantizedS8) {
+        if (dst_type.enumv() == DTypeEnum::Int16) {
+            return ConvolutionImpl::AlgoDataType::INT8X8X16;
+        } else {
+            return ConvolutionImpl::AlgoDataType::QINT8X8X32;
+        }
+    } else if (src_type.enumv() == DTypeEnum::Quantized8Asymm) {
+        return ConvolutionImpl::AlgoDataType::QUINT8X8X32;
+    } else {
+        megdnn_throw(ssprintf("megdnn not support data type of %s * %s -> %s\n",
+                              src_type.name(), filter_type.name(),
+                              dst_type.name()));
+    }
 }
 
 /* ===================== ConvolutionBackwardData ===================== */

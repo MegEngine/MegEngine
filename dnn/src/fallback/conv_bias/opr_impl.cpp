@@ -48,11 +48,26 @@ void incr_ptr(T*& dst, ptrdiff_t delta) {
 
 }  // namespace
 
+#if MEGDNN_X86
+#define SKIP_GEMV()
+//! As we haven't direct conv for int8x8x16 yet, if we disable gemv here, it may
+//! fallback to naive implementation, which may cause performance very low, so
+//! here we just enable im2col for gemv in x86 backend.
+//! FIXME: remove it when we add direct conv support for int8x8x16
+#else
+#define SKIP_GEMV()                                                            \
+    if (algo->algoset() == MatrixMulImpl::AlgoBase::AlgoSet::ALGO_TYPE_GEMV) { \
+        continue;                                                              \
+    }
+#endif
+
+
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoNaive algo_naive;
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
 
 public:
+
     AlgoPack() {
         refhold.emplace_back(new AlgoConv1x1Gemv());
         all_algos.emplace_back(refhold.back().get());
@@ -110,8 +125,6 @@ public:
             all_algos.emplace_back(refhold.back().get());
 #endif
         }
-        //! reverse matmul algo, when the algo is_prefer can be selected first
-        std::reverse(all_algos.begin(), all_algos.end());
         all_algos.emplace_back(&algo_naive);
     }
     SmallVector<AlgoBase*> all_algos;
@@ -121,6 +134,22 @@ SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
     return sl_algo_pack.all_algos;
 }
+
+SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::select_algo_type(
+        ConvAlgoTypePack target_type) {
+    megdnn_assert(nr_type_contain(target_type.data_type),
+                  "ConvBias algo selection only support one type");
+    SmallVector<ConvBiasImpl::AlgoBase*> algos;
+    for (auto&& algo : algo_pack()) {
+        auto algo_type = algo->get_algo_type();
+        if (contain_data_type(algo_type.data_type, target_type.data_type) &&
+            algo_type.algo_category == target_type.algo_category) {
+            algos.push_back(algo);
+        }
+    }
+    return algos;
+}
+
 bool ConvBiasImpl::is_naive_algo(ConvBiasImpl::Algorithm* algo) {
     return algo == nullptr || strcmp(algo->name(), "DEFAULT") == 0;
 }
@@ -248,12 +277,32 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic(
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
         bool reproducible) {
-    for (auto i : get_all_algorithms_with_ncb(param)) {
-        if (static_cast<AlgoBase*>(i)->usable_reproducible(
-                    param, AlgoSelectionStrategy::HEURISTIC, reproducible) &&
-            NCB_ALGO_FUNC(get_workspace, i, param) <=
-                    workspace_limit_in_bytes) {
-            return i;
+    auto algo_data_type = param.deduce_algo_data_type();
+    auto suggest_category_order = suggest_algo_category_order(param);
+    for (auto category : suggest_category_order) {
+        auto&& origin_algos = select_algo_type({algo_data_type, category});
+        ConvBiasImpl::Algorithm* heuristic_algo = nullptr;
+        for (auto i : origin_algos) {
+            bool usable_reproducible =
+                    static_cast<AlgoBase*>(i)->usable_reproducible(
+                            param, AlgoSelectionStrategy::HEURISTIC,
+                            reproducible);
+            if (usable_reproducible &&
+                static_cast<AlgoBase*>(i)->get_workspace(param) <=
+                        workspace_limit_in_bytes) {
+                //! store the first usable algo if no prefer algo, choose it as
+                //! the target algo
+                if (!heuristic_algo) {
+                    heuristic_algo = i;
+                }
+                //! choose the first prefer algo
+                if (i->is_preferred(param)) {
+                    return i;
+                }
+            }
+        }
+        if (heuristic_algo) {
+            return heuristic_algo;
         }
     }
     return nullptr;
@@ -300,9 +349,8 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
                           sizeof(ConvolutionImpl::CanonizedFilterMeta),
                   "sizeof CanonizedFilterMeta in convolution and conv_bias "
                   "should be equal");
-    CanonizedFilterMeta fm = check_layout_fwd(src, filter, dst);
-    ConvolutionImpl::CanonizedFilterMeta conv_fm;
-    conv_fm.copy_from(fm);
+    auto&& fm = check_layout_fwd(src, filter, dst);
+    auto& conv_fm = reinterpret_cast<ConvolutionImpl::CanonizedFilterMeta&>(fm);
 
     param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT;
     if (param().format == Param::Format::NCHW_WINOGRAD ||
@@ -367,7 +415,7 @@ ConvBiasImpl::NCBKernParam ConvBiasImpl::make_ncb_kern_param(
 
 void ConvBiasImpl::exec_with_ncb_kern(const NCBKernParam& param,
                                       ConvBiasImpl::Algorithm* algo) {
-    auto ncb_kerns = NCB_ALGO_FUNC(dispatch_kerns, algo, param);
+    auto&& ncb_kerns = NCB_ALGO_FUNC(dispatch_kerns, algo, param);
     for (auto&& kernel : ncb_kerns) {
         auto run = [kernel, param](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
@@ -380,7 +428,7 @@ void ConvBiasImpl::exec_with_ncb_kern(const NCBKernParam& param,
 
 void ConvBiasImpl::exec_preprocess_with_ncb_kern(
         const NCBKernParam& param, ConvBiasImpl::Algorithm* algo) {
-    auto ncb_kerns = NCB_ALGO_FUNC(dispatch_preprocess_kerns, algo, param);
+    auto&& ncb_kerns = NCB_ALGO_FUNC(dispatch_preprocess_kerns, algo, param);
     for (auto&& kernel : ncb_kerns) {
         auto run = [kernel, param](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
@@ -405,7 +453,6 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
             }
         }
     }
-    std::reverse(prefer_algos.begin(), prefer_algos.end());
     //! Prefer algo inserted from begin
     algos.insert(algos.begin(), prefer_algos.begin(), prefer_algos.end());
     return algos;
@@ -423,6 +470,35 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm(
         m_prev_selected_algo_sizep = param;
     }
     return m_prev_selected_algo;
+}
+
+SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
+        const NCBKernSizeParam& param) const {
+    auto IC = param.filter_meta.icpg;
+    auto OC = param.filter_meta.ocpg;
+    auto FH = param.filter_meta.spatial[0];
+    auto FW = param.filter_meta.spatial[1];
+    //! TODO: now winograd only support in fast-run
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW_WINOGRAD ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW44_WINOGRAD ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW88_WINOGRAD) {
+        return {AlgoCategory::WINOGRAD};
+    }
+    //! im2col + matmul
+    bool im2col_prefer = (IC >= 32 || OC >= 32);
+    //! quantized algo use matmul when direct algo is unusable
+    if (param.src_type.category() == DTypeCategory::QUANTIZED) {
+        im2col_prefer = is_matmul_quantized_prefer(param);
+    }
+    //! conv1x1
+    im2col_prefer |= (FH == 1 && FW == 1);
+    if (im2col_prefer) {
+        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT,
+                AlgoCategory::NAIVE};
+    } else {
+        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL,
+                AlgoCategory::NAIVE};
+    }
 }
 
 const char* ConvBiasImpl::get_algorithm_set_name() const {

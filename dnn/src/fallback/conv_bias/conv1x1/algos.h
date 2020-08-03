@@ -56,6 +56,11 @@ public:
     SmallVector<NCBKern> dispatch_preprocess_kerns(
             const NCBKernSizeParam& param) const override;
 
+    ConvAlgoTypePack get_algo_type() const override{
+        return {m_matmul_algo->matmul_description().algo_type.data_type,
+                AlgoCategory::IM2COL};
+    }
+
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;
 

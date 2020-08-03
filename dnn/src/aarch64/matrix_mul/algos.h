@@ -61,7 +61,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(4, 16, 4, 4)
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 16, 4, 4, AlgoDataType::FLOAT32, MK4)
 };
 
 class MatrixMulImpl::AlgoF32Gemv final
@@ -88,7 +88,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 2, AlgoDataType::FLOAT16, MK8)
 };
 
 #endif
@@ -253,7 +253,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 2, AlgoDataType::INT16X16X32, MK8)
 };
 
 #if __ARM_FEATURE_DOTPROD
@@ -281,7 +281,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QUINT8X8X32, DEFAULT)
 };
 #else
 

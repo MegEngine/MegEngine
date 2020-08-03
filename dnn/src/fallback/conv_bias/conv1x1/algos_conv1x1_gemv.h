@@ -34,6 +34,16 @@ public:
 
     bool is_preferred(const NCBKernSizeParam&) const override;
 
+    ConvAlgoTypePack get_algo_type() const override {
+        auto support_data_type = static_cast<AlgoDataType>(
+                static_cast<uint32_t>(AlgoDataType::FLOAT16) |
+                static_cast<uint32_t>(AlgoDataType::FLOAT32) |
+                static_cast<uint32_t>(AlgoDataType::INT8X8X16) |
+                static_cast<uint32_t>(AlgoDataType::QINT8X8X32) |
+                static_cast<uint32_t>(AlgoDataType::QUINT8X8X32));
+        return {support_data_type, AlgoCategory::IM2COL};
+    }
+
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;
 };

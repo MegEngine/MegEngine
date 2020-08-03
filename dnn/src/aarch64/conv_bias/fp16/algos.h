@@ -27,6 +27,10 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
 
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
+    }
 };
 }  // namespace aarch64
 }  // namespace megdnn

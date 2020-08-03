@@ -85,7 +85,8 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32::get_kern(
 
 MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32, megdnn_armv7_matmul_kern,
                                      "AlgoF32Impl"_hash,
-                                     armv7::matmul::sgemm_4x12, float, float);
+                                     armv7::matmul::sgemm_4x12, float, float,
+                                     AlgoDataType::FLOAT32, DEFAULT);
 
 /* ===================== F32 algo mk4 K4x12 ===================== */
 
@@ -154,7 +155,7 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32MK4Pack4x12,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoF32MK4Pack4x12"_hash,
                                      armv7::matmul::sgemm_mk4_pack_4x12, float,
-                                     float);
+                                     float, AlgoDataType::FLOAT32, MK4);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 /* ===================== F16 K4x16x1 algo ===================== */
@@ -215,7 +216,8 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16K4x16x1::get_kern(
 MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF16K4x16x1, megdnn_armv7_matmul_kern,
                                      "AlgoF16K4x16x1"_hash,
                                      armv7::matmul::hgemm_4x16, dt_float16,
-                                     dt_float16);
+                                     dt_float16, AlgoDataType::FLOAT16,
+                                     DEFAULT);
 
 #endif
 
@@ -280,7 +282,8 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32K4x2x16,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x32K4x2x16"_hash,
                                      armv7::matmul::gemm_s8_4x2, int8_t,
-                                     int32_t);
+                                     int32_t, AlgoDataType::QINT8X8X32,
+                                     DEFAULT);
 /* ===================== Int8x8x32 Kernel 4x8x8 algo ===================== */
 
 namespace {
@@ -342,7 +345,8 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32K4x8x8,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x32K4x8x8"_hash,
                                      armv7::matmul::gemm_s8_4x8, int8_t,
-                                     int32_t);
+                                     int32_t, AlgoDataType::QINT8X8X32,
+                                     DEFAULT);
 /* ===================== Quint8 Kernel 4x8x8 algo ===================== */
 
 namespace {
@@ -402,7 +406,8 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoQuint8K4x8x8::get_kern(
 MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoQuint8K4x8x8, megdnn_armv7_matmul_kern,
                                      "AlgoQuint8K4x8x8"_hash,
                                      armv7::matmul::gemm_u8_4x8, uint8_t,
-                                     int32_t);
+                                     int32_t, AlgoDataType::QUINT8X8X32,
+                                     DEFAULT);
 /* ===================== Int8x8x16 Kernel 2x4x16 algo ===================== */
 
 namespace {
@@ -468,7 +473,7 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x16K4x2x16,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x16K4x2x16"_hash,
                                      armv7::matmul::gemm_s8x8x16_4x2, int8_t,
-                                     int16_t);
+                                     int16_t, AlgoDataType::INT8X8X16, DEFAULT);
 /* ===================== Int8x8x16 Kernel 4x8x8 algo ===================== */
 
 namespace {
@@ -534,7 +539,7 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x16K4x8x8,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x16K4x8x8"_hash,
                                      armv7::matmul::gemm_s8x8x16_4x8, int8_t,
-                                     int16_t);
+                                     int16_t, AlgoDataType::INT8X8X16, DEFAULT);
 
 /* =================== Int8x8x16 Kernel MK4 8x8x4 algo ===================*/
 
@@ -602,7 +607,8 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(AlgoInt8x8x16MK4_8x8x4,
                                             megdnn_armv7_matmul_kern,
                                             "AlgoInt8x8x16MK4_8x8x4"_hash,
                                             armv7::matmul::gemm_s8x8x16_mk4_8x8,
-                                            int8_t, int16_t, int16_t);
+                                            int8_t, int16_t, int16_t,
+                                            AlgoDataType::INT8X8X16, MK4);
 
 /* ===================== Int16x16x32 Kernel 12x4x1 algo ===================== */
 
@@ -668,7 +674,8 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt16x16x32K12x4x1,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt16x16x32K12x4x1"_hash,
                                      armv7::matmul::gemm_s16x16x32_12x4,
-                                     int16_t, int32_t);
+                                     int16_t, int32_t,
+                                     AlgoDataType::INT16X16X32, DEFAULT);
 #if __ARM_FEATURE_DOTPROD
 /* ===================== Int8 K6x8x4 algo ===================== */
 namespace {
@@ -724,7 +731,8 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32K6x8x4,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x32K6x8x4"_hash,
                                      armv7::matmul::gemm_dots8_6x8, int8_t,
-                                     int32_t);
+                                     int32_t, AlgoDataType::QINT8X8X32,
+                                     DEFAULT);
 /* ===================== Quint8 K4x8x4 algo ===================== */
 namespace {
 void quint8_dot_k4x8x4_kern(const MatrixMulImpl::KernParam& kern_param) {
@@ -786,7 +794,8 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoQuint8DotK4x8x4,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoQuint8DotK4x8x4"_hash,
                                      armv7::matmul::gemm_dot_quint8_4x8,
-                                     uint8_t, int32_t);
+                                     uint8_t, int32_t,
+                                     AlgoDataType::QUINT8X8X32, DEFAULT);
 
 /* ======================== Int8 MK4 8x4x4 dot algo ======================== */
 namespace {
@@ -854,7 +863,7 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32MK4_8x4x4DotProd,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x32MK4_8x4x4DotProd"_hash,
                                      armv7::matmul::gemm_mk4_dots8_8x4, int8_t,
-                                     int32_t);
+                                     int32_t, AlgoDataType::QINT8X8X32, MK4_DOT);
 #endif
 
 /* ===================== F32 algo K4x8 ===================== */
@@ -1099,6 +1108,6 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt8x8x32MK4_4x2x16,
                                      megdnn_armv7_matmul_kern,
                                      "AlgoInt8x8x32MK4_4x2x16"_hash,
                                      armv7::matmul::gemm_mk4_s8_4x2, int8_t,
-                                     int32_t);
+                                     int32_t, AlgoDataType::QINT8X8X32, MK4);
 
 // vim: syntax=cpp.doxygen

@@ -352,13 +352,15 @@ void gemm_kern(const Tin* packA, const Tin* packB, size_t M, size_t N, size_t K,
                                            DType dtype_c)                \
             : A_dtype(dtype_a), B_dtype(dtype_b), C_dtype(dtype_c) {}
 
-#define MEGDNN_OVERRIDE_MATMUL_DESC(_m, _n, _k, _packa_type_size) \
-    MatmulDescription matmul_description() const override {       \
-        MatmulDescription mdesc;                                  \
-        mdesc.packmode = packmode();                              \
-        mdesc.innerblocksize = {_m, _n, _k};                      \
-        mdesc.packa_type_size = _packa_type_size;                 \
-        return mdesc;                                             \
+#define MEGDNN_OVERRIDE_MATMUL_DESC(_m, _n, _k, _packa_type_size, _data_type, \
+                                    _format)                                  \
+    MatmulDescription matmul_description() const override {                   \
+        MatmulDescription mdesc;                                              \
+        mdesc.packmode = packmode();                                          \
+        mdesc.innerblocksize = {_m, _n, _k};                                  \
+        mdesc.packa_type_size = _packa_type_size;                             \
+        mdesc.algo_type = {_data_type, Param::Format::_format};               \
+        return mdesc;                                                         \
     }
 
 #define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL()                             \
@@ -373,7 +375,7 @@ void gemm_kern(const Tin* packA, const Tin* packB, size_t M, size_t N, size_t K,
 
 #define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(                          \
         _algo_name, _midout_name, _mid_index, _strategy, _i_type, _c_type,    \
-        _packa_type)                                                          \
+        _packa_type, _support_data_type, _format)                             \
                                                                               \
     MatrixMulImpl::kern_naked_t MatrixMulImpl::_algo_name::get_kern_naked(    \
             const KernSizeParam&) const {                                     \
@@ -474,14 +476,16 @@ void gemm_kern(const Tin* packA, const Tin* packB, size_t M, size_t N, size_t K,
         mdesc.innerblocksize = {_strategy::KERNEL_H, _strategy::KERNEL_W,     \
                                 _strategy::UNROLL_K};                         \
         mdesc.packa_type_size = sizeof(_packa_type);                          \
+        mdesc.algo_type = {_support_data_type, Param::Format::_format};       \
         return mdesc;                                                         \
     }
 
-#define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(                              \
-        _algo_name, _midout_name, _mid_index, _strategy, _i_type, _c_type) \
-    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(_algo_name, _midout_name,  \
-                                                _mid_index, _strategy,     \
-                                                _i_type, _c_type, _i_type)
+#define MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(                                  \
+        _algo_name, _midout_name, _mid_index, _strategy, _i_type, _c_type,     \
+        _support_data_type, _format)                                           \
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(                               \
+            _algo_name, _midout_name, _mid_index, _strategy, _i_type, _c_type, \
+            _i_type, _support_data_type, _format)
 }  // namespace matmul
 }  // namespace megdnn
 

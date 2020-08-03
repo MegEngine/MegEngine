@@ -48,6 +48,10 @@ public:
     }
 
     void* type() const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 /* ===================== direct-stride2 algo ===================== */
@@ -81,6 +85,10 @@ public:
     }
 
     void* type() const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 /* =========================== winograd ======================== */
 class ConvBiasImpl::AlgoFP32WinogradF63_8x8 final : public AlgoBase {
@@ -96,7 +104,7 @@ public:
         return m_name.c_str();
     }
     void* type() const override;
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF23_8x8 final : public AlgoBase {
@@ -112,7 +120,7 @@ public:
         return m_name.c_str();
     }
     void* type() const override;
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 /* ===================== matmul algo ===================== */
@@ -151,6 +159,9 @@ public:
     }
 
     void* type() const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::IM2COL};
+    }
 };
 
 #if MEGDNN_X86_WITH_MKL_DNN
@@ -192,6 +203,10 @@ public:
         return {{kern, {1_z, 1_z, 1_z}}};
     }
     void* type() const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 #endif
 // vim: syntax=cpp.doxygen

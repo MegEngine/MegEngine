@@ -29,7 +29,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63 final : public AlgoBase {
@@ -44,7 +44,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4 final : public AlgoBase {
@@ -59,7 +59,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF54 final : public AlgoBase {
@@ -74,7 +74,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF45 final : public AlgoBase {
@@ -89,7 +89,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 //===================== NCHW44 Winograd Support =====================//
@@ -106,7 +106,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4_NCHW44 final : public AlgoBase {
@@ -122,7 +122,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF73_4x4_NCHW44 final : public AlgoBase {
@@ -138,7 +138,7 @@ public:
         }
         return m_name.c_str();
     }
-    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE();
+    MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 // ================================================================= //
 
@@ -154,6 +154,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoF32DirectStride1 final : public AlgoBase {
@@ -168,6 +171,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
@@ -182,6 +188,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
@@ -197,6 +206,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoF32DirectNCHWNCHW44 final : public AlgoBase {
@@ -212,6 +224,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {
@@ -226,6 +241,9 @@ public:
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
+    }
 };
 
 }  // namespace arm_common

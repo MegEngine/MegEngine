@@ -103,10 +103,10 @@ public:
 #endif
         all_algos.emplace_back(&stride1_direct);
         all_algos.emplace_back(&stride2_direct);
-        all_algos.emplace_back(&avx2_stride1_direct_int8);
-        all_algos.emplace_back(&avx2_stride2_direct);
         all_algos.emplace_back(&avx2_stride1_chanwsie_qint8);
         all_algos.emplace_back(&avx2_stride2_chanwsie_qint8);
+        all_algos.emplace_back(&avx2_stride1_direct_int8);
+        all_algos.emplace_back(&avx2_stride2_direct);
         all_algos.emplace_back(&matmul);
 
         static CpuOprDelegationStorage<> storage;
@@ -180,6 +180,43 @@ bool ConvBiasImpl::is_matmul_quantized_prefer(
            (is_supported(SIMDType::VNNI) &&
             !chanwise_avx2_stride1_qint8_usable_preferred(param) &&
             !chanwise_avx2_stride2_qint8_usable_preferred(param));
+}
+
+SmallVector<AlgoCategory>
+ConvBiasImpl::suggest_algo_category_order(const NCBKernSizeParam& param) const {
+    auto IC = param.filter_meta.icpg;
+    auto OC = param.filter_meta.ocpg;
+    auto FH = param.filter_meta.spatial[0];
+    auto FW = param.filter_meta.spatial[1];
+    //! TODO: now winograd only support fast-run
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW_WINOGRAD ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW44_WINOGRAD ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW88_WINOGRAD) {
+        return {AlgoCategory::WINOGRAD};
+    }
+    //! nchw88 use mkl-dnn which algo is direct
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
+        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL};
+    }
+    //! im2col + matmul
+    bool im2col_prefer = (IC >= 32 || OC >= 32);
+    //! quantized algo use matmul when direct algo is unusable
+    if (param.src_type.category() == DTypeCategory::QUANTIZED) {
+        im2col_prefer = is_matmul_quantized_prefer(param);
+    }
+    //! conv1x1
+    im2col_prefer |= (FH == 1 && FW == 1);
+    //! x86 8x8x16 not optmized, so it will use fallback im2col+matmul
+    if (param.deduce_algo_data_type() == AlgoDataType::INT8X8X16) {
+        im2col_prefer = true;
+    }
+    if (im2col_prefer) {
+        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT,
+                AlgoCategory::NAIVE};
+    } else {
+        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL,
+                AlgoCategory::NAIVE};
+    }
 }
 
 // vim: syntax=cpp.doxygen

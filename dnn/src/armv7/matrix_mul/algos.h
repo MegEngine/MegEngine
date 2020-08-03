@@ -50,7 +50,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 4, 4)
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 4, 4, AlgoDataType::FLOAT32, MK4)
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -73,7 +73,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 8, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 8, 2, AlgoDataType::FLOAT16, MK8)
 };
 #endif
 #if __ARM_FEATURE_DOTPROD
@@ -205,7 +205,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 8, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 8, 8, 2, AlgoDataType::INT16X16X32, MK8)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32MK4_4x2x16 final : public AlgoBase {

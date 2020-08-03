@@ -50,10 +50,9 @@ SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
     auto&& algos = arm_common::ConvBiasImpl::algo_pack();
     algos.insert(algos.begin(), sl_algo_pack.direct_algos.begin(),
                  sl_algo_pack.direct_algos.end());
-    //! We put matmul algos at the end. Because matmul will get privilege when
+    //! We put matmul algos at the begin. Because matmul will get privilege when
     //! prefer return true. See
-    //! fallback::ConvolutionImpl::ncb_1g_get_all_algorithms for more details.
-    algos.insert(algos.end(), sl_algo_pack.matmul_algos.begin(),
+    algos.insert(algos.begin(), sl_algo_pack.matmul_algos.begin(),
                  sl_algo_pack.matmul_algos.end());
     return std::move(algos);
 }

@@ -76,6 +76,18 @@ enum class AlgoSelectionStrategy {
     FULL_RUN = 2,
 };
 
+/**
+ * \brief separate algo by datatype for Matmul and conv
+ */
+enum class AlgoDataType : uint32_t {
+    FLOAT32 = 1 << 0,
+    FLOAT16 = 1 << 1,
+    QINT8X8X32 = 1 << 2,
+    QUINT8X8X32 = 1 << 3,
+    INT8X8X16 = 1 << 4,
+    INT16X16X32 = 1 << 5,
+};
+
 /*!
  * \brief Abstract representation of an algorithm for implementing
  *      the operator

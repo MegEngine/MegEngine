@@ -110,6 +110,11 @@ void __log__(LogLevel level, const char* file, const char* func, int line,
     } while (0)
 #endif  // megdnn_ENABLE_LOGGING
 
+template <typename T>
+constexpr int32_t cast_int(T data) {
+    return static_cast<int32_t>(data);
+}
+
 /* helper functions */
 /**
  * \brief Get the next `stride' index lexicographically.
@@ -185,6 +190,29 @@ num_t sqr(num_t x) {
 template <typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args&&... args) {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+/*!
+ * \brief check whether the source enum contain the target data type enum
+ */
+bool inline contain_data_type(detail::AlgoDataType source,
+                       detail::AlgoDataType target) {
+    return static_cast<bool>(static_cast<uint32_t>(source) &
+                             static_cast<uint32_t>(target));
+}
+
+/*!
+ * \brief get the source enum contain the data type number
+ */
+template<typename T>
+size_t nr_type_contain(T index) {
+    uint32_t sr_index = static_cast<uint32_t>(index);
+    size_t nr_type = 0;
+    while (sr_index != 0) {
+        nr_type++;
+        sr_index &= (sr_index - 1);
+    }
+    return nr_type;
 }
 
 /**

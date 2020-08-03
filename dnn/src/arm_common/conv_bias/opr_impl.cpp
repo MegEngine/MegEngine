@@ -10,6 +10,7 @@
  * implied.
  */
 
+#include "megdnn/opr_param_defs.h"
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8x8x16/algos.h"
 #include "src/arm_common/conv_bias/quint8/algos.h"
@@ -122,9 +123,11 @@ public:
 
         static CpuOprDelegationStorage<2> storage;
         auto matmul_opr = storage.get<MatrixMul, 0>();
+        using MatmulFormat = param::MatrixMul::Format;
         auto&& matmul_algos =
                 static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
-                        ->algo_pack();
+                        ->select_algo_type(
+                                {AlgoDataType::FLOAT32, MatmulFormat::MK4});
         for (auto&& algo : matmul_algos) {
             if (algo->type() == nullptr)
                 continue;
@@ -133,11 +136,40 @@ public:
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF63(
+                refhold.emplace_back(new AlgoFP32WinogradF63_4x4(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF63_4x4(
+                refhold.emplace_back(new AlgoFP32WinogradF63_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                winograd_algos.emplace_back(refhold.back().get());
+                refhold.emplace_back(new AlgoFP32WinogradF23_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                winograd_algos.emplace_back(refhold.back().get());
+//! uncomment this when low precision mode is done
+#if 0
+                refhold.emplace_back(new AlgoFP32WinogradF73_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                winograd_algos.emplace_back(refhold.back().get());
+#endif
+                //! Qint8x8x32 winograd compute with fp32
+                refhold.emplace_back(new AlgoS8CF32WinogradF23_4x4_NCHW44(
+                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
+                        tile_size));
+                winograd_algos.emplace_back(refhold.back().get());
+            }
+        }
+        matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
+                               ->select_algo_type({AlgoDataType::FLOAT32,
+                                                   MatmulFormat::DEFAULT});
+        for (auto&& algo : matmul_algos) {
+            if (algo->type() == nullptr)
+                continue;
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
+                refhold.emplace_back(new AlgoFP32WinogradF63(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
@@ -149,22 +181,17 @@ public:
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF23_4x4_NCHW44(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoFP32WinogradF63_4x4_NCHW44(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
-//! uncomment this when low precision mode is done
-#if 0
-                refhold.emplace_back(new AlgoFP32WinogradF73_4x4_NCHW44(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
-#endif
+            }
+        }
+
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+        matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
+                               ->select_algo_type({AlgoDataType::FLOAT16,
+                                                   MatmulFormat::DEFAULT});
+        for (auto&& algo : matmul_algos) {
+            if (algo->type() == nullptr)
+                continue;
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP16WinogradF23(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
@@ -177,16 +204,30 @@ public:
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
+            }
+        }
+        matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
+                               ->select_algo_type({AlgoDataType::FLOAT16,
+                                                   MatmulFormat::MK8});
+        for (auto&& algo : matmul_algos) {
+            if (algo->type() == nullptr)
+                continue;
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP16WinogradF23_8x8(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
+            }
+        }
 #endif
+        matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
+                               ->select_algo_type({AlgoDataType::INT16X16X32,
+                                                   MatmulFormat::MK8});
+        for (auto&& algo : matmul_algos) {
+            if (algo->type() == nullptr)
+                continue;
+            for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoS8WinogradF23_8x8(
-                        static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
-                        tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
-                refhold.emplace_back(new AlgoS8CF32WinogradF23_4x4_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
                 winograd_algos.emplace_back(refhold.back().get());
@@ -238,6 +279,42 @@ bool ConvBiasImpl::is_matmul_quantized_prefer(
                         can_conv_direct_stride2_quint8(conv_ncb_param);
     }
     return conv_direct_unusable;
+}
+
+SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
+        const NCBKernSizeParam& param) const {
+    auto IC = param.filter_meta.icpg;
+    auto OC = param.filter_meta.ocpg;
+    auto FH = param.filter_meta.spatial[0];
+    auto FW = param.filter_meta.spatial[1];
+    //! TODO: now winograd only support fast-run
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW_WINOGRAD ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW44_WINOGRAD ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW88_WINOGRAD) {
+        return {AlgoCategory::WINOGRAD};
+    }
+    //! im2col
+    bool im2col_prefer = (IC >= 32 || OC >= 32);
+    //! quantized algo use matmul when direct algo is unusable
+    if (param.src_type.category() == DTypeCategory::QUANTIZED) {
+        im2col_prefer = is_matmul_quantized_prefer(param);
+    }
+    //! conv1x1
+    im2col_prefer |= (FH == 1 && FW == 1);
+    //! nchw44 and nchw44-dot hybird mode is direct
+    if (param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
+        param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT) {
+        if (IC < 4) {
+            im2col_prefer = false;
+        }
+    }
+    if (im2col_prefer) {
+        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT,
+                AlgoCategory::NAIVE};
+    } else {
+        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL,
+                AlgoCategory::NAIVE};
+    }
 }
 
 const char* ConvBiasImpl::get_algorithm_set_name() const {

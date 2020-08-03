@@ -76,7 +76,7 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32K8x12x1::get_kern(
 
 MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32K8x12x1, megdnn_fb_matmul_f32_kern,
                                      5, matmul::fallback::sgemm_8x12, float,
-                                     float);
+                                     float, AlgoDataType::FLOAT32, DEFAULT);
 
 /* ===================== gemv algo ===================== */
 bool MatrixMulImpl::AlgoGemv::usable(

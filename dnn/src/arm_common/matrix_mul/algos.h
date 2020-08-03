@@ -26,7 +26,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::INT8X8X16, DEFAULT)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32Gemv : public AlgoBase {
@@ -40,7 +40,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, DEFAULT)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4 : public AlgoBase {
@@ -54,7 +54,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4)
 };
 
 #if __ARM_FEATURE_DOTPROD
@@ -69,7 +69,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4_DOT)
 };
 #endif
 
@@ -87,7 +87,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
 };
 
 class MatrixMulImpl::AlgoF32GemvMK4 : public AlgoBase {
@@ -101,7 +101,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(4, 1, 1, 4)
+    MEGDNN_OVERRIDE_MATMUL_DESC(4, 1, 1, 4, AlgoDataType::FLOAT32, MK4)
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -116,7 +116,7 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2)
+    MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::FLOAT16, DEFAULT)
 };
 #endif
 
@@ -131,7 +131,13 @@ public:
     void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
-    MEGDNN_OVERRIDE_MATMUL_DESC(1, 1, 1, 4)
+    MEGDNN_OVERRIDE_MATMUL_DESC(
+            1, 1, 1, 4,
+            static_cast<AlgoDataType>(
+                    static_cast<uint32_t>(AlgoDataType::FLOAT16) |
+                    static_cast<uint32_t>(AlgoDataType::FLOAT32) |
+                    static_cast<uint32_t>(AlgoDataType::QINT8X8X32)),
+            DEFAULT)
 };
 
 }  // namespace arm_common

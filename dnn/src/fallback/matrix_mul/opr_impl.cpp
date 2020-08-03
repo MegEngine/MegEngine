@@ -38,6 +38,22 @@ SmallVector<MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
     return s_algo_pack.all_algos;
 }
 
+SmallVector<MatrixMulImpl::AlgoBase*> MatrixMulImpl::select_algo_type(
+        AlgoTypePack index) {
+    megdnn_assert(nr_type_contain(index.data_type),
+                  "Matmul algo selection only support one type");
+    SmallVector<MatrixMulImpl::AlgoBase*> algos;
+    for (auto&& algo : algo_pack()) {
+        auto algo_desc = algo->matmul_description();
+        if (contain_data_type(algo_desc.algo_type.data_type,
+                              index.data_type) &&
+            algo_desc.algo_type.format == index.format) {
+            algos.push_back(algo);
+        }
+    }
+    return algos;
+}
+
 std::vector<MatrixMul::Algorithm*> MatrixMulImpl::get_all_algorithms(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     std::vector<Algorithm*> gemm_algos, gemv_algos;
@@ -71,17 +87,25 @@ MatrixMul::Algorithm* MatrixMulImpl::get_algorithm_heuristic(
                 "require reproducible algorithm, but given algorithm is not "
                 "reproducible");
     }
-
-    auto algos = get_all_algorithms(A, B, C);
+    AlgoTypePack algo_type;
+    algo_type.data_type = kern_size_param.deduce_algo_data_type();
+    algo_type.format = kern_size_param.format;
+    auto algos = select_algo_type(algo_type);
+    Algorithm *heuristic_algo = nullptr;
     for (auto&& algo : algos) {
-        if (static_cast<AlgoBase*>(algo)->preferred_reproducible(
+        if (static_cast<AlgoBase*>(algo)->usable(kern_size_param) &&
+            static_cast<AlgoBase*>(algo)->preferred_reproducible(
                     kern_size_param, reproducible) &&
             static_cast<AlgoBase*>(algo)->get_workspace(kern_size_param) <=
                     workspace_limit_in_bytes) {
-            return algo;
+            if (algo->algoset() == AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
+                return algo;
+            } else if (!heuristic_algo) {
+                heuristic_algo = algo;
+            }
         }
     }
-    return nullptr;
+    return heuristic_algo;
 }
 
 MatrixMulImpl::KernSizeParam MatrixMulImpl::make_kern_size_param(
@@ -148,6 +172,36 @@ void MatrixMulImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
     }
 
     naive::MatrixMulForwardImpl::exec(A, B, C, workspace);
+}
+
+MatrixMulImpl::AlgoDataType
+MatrixMulImpl::KernSizeParam::deduce_algo_data_type() const {
+    megdnn_assert(A_type.enumv() == B_type.enumv(),
+                  "Matmul A type and B type of different ctype\n");
+    if (A_type.enumv() == DTypeEnum::Float32) {
+        return MatrixMulImpl::AlgoDataType::FLOAT32;
+#if !MEGDNN_DISABLE_FLOAT16
+    } else if (A_type.enumv() == DTypeEnum::Float16) {
+        return MatrixMulImpl::AlgoDataType::FLOAT16;
+#endif
+    } else if (A_type.enumv() == DTypeEnum::Int8 ||
+               A_type.enumv() == DTypeEnum::QuantizedS8) {
+        if (C_type.enumv() == DTypeEnum::Int16) {
+            return MatrixMulImpl::AlgoDataType::INT8X8X16;
+        } else {
+            megdnn_assert(C_type.enumv() == DTypeEnum::Int32 ||
+                          C_type.enumv() == DTypeEnum::QuantizedS32);
+            return MatrixMulImpl::AlgoDataType::QINT8X8X32;
+        }
+    } else if (A_type.enumv() == DTypeEnum::Quantized8Asymm) {
+        return MatrixMulImpl::AlgoDataType::QUINT8X8X32;
+    } else if (A_type.enumv() == DTypeEnum::Int16) {
+        return MatrixMulImpl::AlgoDataType::INT16X16X32;
+    } else {
+        megdnn_throw(ssprintf(
+                "megdnn matmul not support data type of %s * %s -> %s\n",
+                A_type.name(), B_type.name(), C_type.name()));
+    }
 }
 
 // vim: syntax=cpp.doxygen

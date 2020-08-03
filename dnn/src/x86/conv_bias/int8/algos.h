@@ -34,6 +34,10 @@ public:
     }
     void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 /* ===================== avx2 stride2 chanwise algo ===================== */
@@ -55,6 +59,10 @@ public:
     }
     void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 /* ===================== avx2 stride1 direct algo ===================== */
@@ -76,6 +84,10 @@ public:
     }
     void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 /* ================== avx2 int8 direct conv stride2 algo ================== */
@@ -97,6 +109,10 @@ public:
     }
     void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 
 #if MEGDNN_X86_WITH_MKL_DNN
@@ -134,6 +150,10 @@ public:
     }
     void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
+    }
 };
 /* ===================== mkldnn qint8 matmul algo ===================== */
 class ConvBiasImpl::AlgoMkldnnMatmulQint8 final : public AlgoBase {
@@ -160,6 +180,10 @@ public:
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
     void* type() const override;
+
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};
+    }
 };
 #endif
 

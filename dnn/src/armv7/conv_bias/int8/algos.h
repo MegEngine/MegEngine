@@ -37,6 +37,9 @@ public:
         size_t group = param.filter_meta.group;
         return {{kimpl, {group, 1_z, 1_z}}};
     }
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};
+    }
 };
 
 }  // namespace armv7
