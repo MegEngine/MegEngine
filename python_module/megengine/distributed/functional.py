@@ -43,8 +43,8 @@ def reduce_sum(
     :param is_root: whether this is a root node
     """
     assert _group_check(
-        key, nr_ranks, is_root
-    ), "key, nr_ranks, is_root should be set at the same time"
+        key, is_root
+    ), "key, is_root should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.REDUCE_SUM, nr_ranks, is_root, device=tensor.device,
     )
@@ -66,8 +66,8 @@ def gather(
     :param rank: rank of this node
     """
     assert _group_check(
-        key, nr_ranks, is_root, rank
-    ), "key, nr_ranks, is_root, rank should be set at the same time"
+        key, is_root, rank
+    ), "key, is_root, rank should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.GATHER, nr_ranks, is_root, rank, device=tensor.device,
     )
@@ -87,8 +87,8 @@ def broadcast(
     :param is_root: whether this is a root node
     """
     assert _group_check(
-        key, nr_ranks, is_root
-    ), "key, nr_ranks, is_root should be set at the same time"
+        key, is_root
+    ), "key, is_root should be set at the same time"
 
     if is_root is None:
         is_root = get_rank() == 0
@@ -124,8 +124,8 @@ def scatter(
     :param rank: rank of this node
     """
     assert _group_check(
-        key, nr_ranks, is_root, rank
-    ), "key, nr_ranks, is_root, rank should be set at the same time"
+        key, is_root, rank
+    ), "key, is_root, rank should be set at the same time"
     if key is None:
         key = tensor._symvar.name
     if is_root is None:
@@ -164,8 +164,8 @@ def all_to_all(
     :param local_grad: whether use local grad
     """
     assert _group_check(
-        key, nr_ranks, rank
-    ), "key, nr_ranks, rank should be set at the same time"
+        key, rank
+    ), "key, rank should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.ALL_TO_ALL, nr_ranks, rank=rank, local_grad=local_grad,
     )
@@ -187,8 +187,8 @@ def all_gather(
     :param local_grad: whether use local grad
     """
     assert _group_check(
-        key, nr_ranks, rank
-    ), "key, nr_ranks, rank should be set at the same time"
+        key, rank
+    ), "key, rank should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.ALL_GATHER, nr_ranks, rank=rank, local_grad=local_grad
     )
@@ -210,8 +210,8 @@ def reduce_scatter_sum(
     :param local_grad: whether use local grad
     """
     assert _group_check(
-        key, nr_ranks, rank
-    ), "key, nr_ranks, rank should be set at the same time"
+        key, rank
+    ), "key, rank should be set at the same time"
     return _collective_comm(
         tensor,
         key,
@@ -235,7 +235,6 @@ def all_reduce_sum(
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param local_grad: whether use local grad
     """
-    assert _group_check(key, nr_ranks), "key, nr_ranks should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.ALL_REDUCE_SUM, nr_ranks, local_grad=local_grad
     )
@@ -254,7 +253,6 @@ def all_reduce_max(
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param local_grad: whether use local grad
     """
-    assert _group_check(key, nr_ranks), "key, nr_ranks should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.ALL_REDUCE_MAX, nr_ranks, local_grad=local_grad
     )
@@ -273,7 +271,6 @@ def all_reduce_min(
     :param nr_ranks: number of ranks, use util.get_world_size() as default
     :param local_grad: whether use local grad
     """
-    assert _group_check(key, nr_ranks), "key, nr_ranks should be set at the same time"
     return _collective_comm(
         tensor, key, Param.Mode.ALL_REDUCE_MIN, nr_ranks, local_grad=local_grad
     )
@@ -295,8 +292,8 @@ def bcast_param(
     if not is_distributed():
         return
     assert _group_check(
-        key, nr_ranks, is_root
-    ), "key, nr_ranks, is_root should be set at the same time"
+        key, is_root
+    ), "key, is_root should be set at the same time"
     assert isinstance(inp, (Buffer, Parameter))
     bcast_res = broadcast(inp, key, nr_ranks, is_root)
     add_update(inp, bcast_res, alpha=0)
