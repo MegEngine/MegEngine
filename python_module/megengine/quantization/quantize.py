@@ -143,8 +143,7 @@ def disable_fake_quant(module: Module):
 
     def fn(mod: Module):
         if isinstance(mod, QATModule):
-            mod.act_fake_quant.disable()
-            mod.weight_fake_quant.disable()
+            mod.set_fake_quant(False)
 
     module.apply(fn)
 
@@ -158,8 +157,7 @@ def disable_observer(module: Module):
 
     def fn(mod: Module):
         if isinstance(mod, QATModule):
-            mod.act_observer.disable()
-            mod.weight_observer.disable()
+            self.set_observer(False)
 
     module.apply(fn)
 
@@ -173,8 +171,7 @@ def enable_fake_quant(module: Module):
 
     def fn(mod: Module):
         if isinstance(mod, QATModule):
-            mod.act_fake_quant.enable()
-            mod.weight_fake_quant.enable()
+            mod.set_fake_quant(True)
 
     module.apply(fn)
 
@@ -188,7 +185,6 @@ def enable_observer(module: Module):
 
     def fn(mod: Module):
         if isinstance(mod, QATModule):
-            mod.act_observer.enable()
-            mod.weight_observer.enable()
+            mod.set_observer(True)
 
     module.apply(fn)

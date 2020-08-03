@@ -17,6 +17,10 @@ class Elemwise(Float.Elemwise, QATModule):
     :param method: the elemwise method, see :class:`~.module.elemwise.Elemwise` for detail.
     """
 
+    def __init__(self, method):
+        super().__init__(method)
+        self.with_weight = False
+
     def forward(self, *inps):
         return self.apply_quant_activation(super().forward(*inps))
 
