@@ -376,14 +376,14 @@ def get_cuda_gencode(only_cap=False):
 
 
 def get_cuda_lib_path():
-    """get the cuda root path by locating loaded libcudart.so
+    """get the cuda lib64 path by locating nvcc
     """
     return _mgb._config.get_cuda_lib_path()
 
 
 def get_cuda_include_path():
-    """get the cuda include path by locating loaded libcudart.so, including
-        libcudart.so's path, parent path and `parent path`/include
+    """get the cuda include path by locating nvcc, including
+        parent path and `parent path`/include
     """
     return _mgb._config.get_cuda_include_path()
 
@@ -392,6 +392,12 @@ def get_cuda_version():
     """get runtime cuda version
     """
     return _mgb._config.get_cuda_version()
+
+
+def is_local_cuda_env_ok():
+    """check whether local cuda environment ok by locating nvcc
+    """
+    return _mgb._config.is_local_cuda_env_ok()
 
 
 def is_compiled_with_cuda():

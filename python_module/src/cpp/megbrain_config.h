@@ -57,6 +57,10 @@ class _config {
         //! get cuda version
         static int get_cuda_version();
 
+        //! check local cuda env. The method returns true if CUDA's nvcc
+        //! compiler and cudnn installs in PATH.
+        static bool is_local_cuda_env_ok();
+
         static bool is_compiled_with_cuda();
 
         static void load_opr_library(

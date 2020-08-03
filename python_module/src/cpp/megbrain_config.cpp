@@ -16,16 +16,34 @@
 #include "megbrain/serialization/opr_registry.h"
 
 #include <set>
+#include <fstream>
+#include <string>
+#include <sstream>
 
-#if defined(WIN32)
+#ifdef WIN32
 #include <io.h>
 #include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
+#if MGB_ENABLE_OPR_MM
+#include "megbrain/opr/mm_handler.h"
+#endif
+
+#if MGB_CUDA
+#include <cuda.h>
+#endif
+
+#ifdef WIN32
 #define F_OK 0
 #define RTLD_LAZY 0
 #define RTLD_GLOBAL 0
 #define RTLD_NOLOAD 0
 #define access(a, b) false
-
+#define SPLITER ';'
+#define ENV_PATH "Path"
+#define NVCC_EXE "nvcc.exe"
 static void* dlopen(const char* file, int) {
     return static_cast<void*>(LoadLibrary(file));
 }
@@ -40,16 +58,16 @@ static void* dlsym(void* handle, const char* name) {
     return reinterpret_cast<void*>(symbol);
 }
 
+static int check_file_exist(const char* path, int mode) {
+    return _access(path, mode);
+}
 #else
-#include <dlfcn.h>
-#endif
-
-#if MGB_ENABLE_OPR_MM
-#include "megbrain/opr/mm_handler.h"
-#endif
-
-#if MGB_CUDA
-#include <cuda.h>
+#define SPLITER ':'
+#define ENV_PATH "PATH"
+#define NVCC_EXE "nvcc"
+static int check_file_exist(const char* path, int mode) {
+    return access(path, mode);
+}
 #endif
 
 using namespace mgb;
@@ -220,29 +238,159 @@ std::string _config::get_cuda_gencode() {
 }
 
 namespace {
-#if MGB_CUDA
-    std::string get_loaded_shared_lib_path(const char* sl_name) {
-        char path[PATH_MAX];
-        auto handle = dlopen(sl_name,
-                             RTLD_GLOBAL | RTLD_LAZY | RTLD_NOLOAD);
-        mgb_assert(handle != nullptr, "%s", dlerror());
-        mgb_assert(dlinfo(handle, RTLD_DI_ORIGIN, &path) != -1,
-                   "%s", dlerror());
-        return path;
+
+std::string find_content_in_file(const std::string& file_name,
+                                 const std::string& content) {
+    std::ifstream fin(file_name.c_str());
+    std::string read_str;
+    while (std::getline(fin, read_str)) {
+        auto idx = read_str.find(content);
+        if (idx != std::string::npos) {
+            fin.close();
+            return read_str.substr(idx);
+        }
     }
-#endif
+    fin.close();
+    return {};
 }
+
+std::vector<std::string> split_env(const char* env) {
+    std::string e(env);
+    std::istringstream stream(e);
+    std::vector<std::string> ret;
+    std::string path;
+    while (std::getline(stream, path, SPLITER)) {
+        ret.emplace_back(path);
+    }
+    return ret;
+}
+
+//! this function will find file_name in each path in envs. It accepts add
+//! intermediate path between env and file_name
+std::string find_file_in_envs_with_intmd(
+        const std::vector<std::string>& envs, const std::string& file_name,
+        const std::vector<std::string>& itmedias = {}) {
+    for (auto&& env : envs) {
+        auto ret = getenv(env.c_str());
+        if (ret) {
+            for (auto&& path : split_env(ret)) {
+                auto file_path = std::string(path) + "/" + file_name;
+                if (!check_file_exist(file_path.c_str(), F_OK)) {
+                    return file_path;
+                }
+                if (!itmedias.empty()) {
+                    for (auto&& inter_path : itmedias) {
+                        file_path = std::string(path) + "/" + inter_path + "/" +
+                                    file_name;
+                        if (!check_file_exist(file_path.c_str(), F_OK)) {
+                            return file_path;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return std::string{};
+}
+
+std::string get_nvcc_root_path() {
+    auto nvcc_root_path = find_file_in_envs_with_intmd({ENV_PATH}, NVCC_EXE);
+    if (nvcc_root_path.empty()) {
+        mgb_throw(MegBrainError,
+                  "nvcc not found. Add your nvcc to your environment Path");
+    } else {
+        auto idx = nvcc_root_path.rfind('/');
+        return nvcc_root_path.substr(0, idx + 1);
+    }
+}
+
+size_t get_local_cuda_version() {
+    auto nvcc_root_path = get_nvcc_root_path();
+    auto ver_path = nvcc_root_path + "../version.txt";
+    if (check_file_exist(ver_path.c_str(), F_OK)) {
+        mgb_throw(MegBrainError, "No such file : %s\n", ver_path.c_str());
+    }
+    auto str_cuda_version = find_content_in_file(ver_path, "CUDA Version");
+    if (str_cuda_version.empty()) {
+        mgb_throw(MegBrainError, "can not read version information from : %s\n",
+                  ver_path.c_str());
+    }
+    size_t cuda_major = 0;
+    size_t cuda_minor = 0;
+    sscanf(str_cuda_version.c_str(), "CUDA Version %zu.%zu,", &cuda_major,
+           &cuda_minor);
+    return cuda_major * 1000 + cuda_minor * 10;
+}
+
+void check_cudnn_existence() {
+    auto cudnn_header_path = find_file_in_envs_with_intmd(
+            {"PC_CUDNN_INCLUDE_DIRS", "CUDNN_ROOT_DIR", "CUDA_TOOLKIT_INCLUDE",
+             "CUDNN_LIBRARY", "CUDA_PATH"},
+            "cudnn.h", {"../include", "include"});
+    if (cudnn_header_path.empty()) {
+        mgb_log_warn(
+                "cudnn.h not found. Please make sure cudnn install at "
+                "${CUDNN_ROOT_DIR}");
+    } else {  // check cudnn lib exist
+        auto str_cudnn_major =
+                find_content_in_file(cudnn_header_path, "#define CUDNN_MAJOR");
+        auto str_cudnn_minor =
+                find_content_in_file(cudnn_header_path, "#define CUDNN_MINOR");
+        auto str_cudnn_patch = find_content_in_file(cudnn_header_path,
+                                                    "#define CUDNN_PATCHLEVEL");
+
+        if (str_cudnn_major.empty() || str_cudnn_minor.empty() ||
+            str_cudnn_patch.empty()) {
+            mgb_log_warn(
+                    "can not find cudnn version information in %s.\n You may "
+                    "Update cudnn\n",
+                    cudnn_header_path.c_str());
+            return;
+        }
+
+        size_t cudnn_major = 0, cudnn_minor = 0, cudnn_patch = 0;
+        sscanf(str_cudnn_major.c_str(), "#define CUDNN_MAJOR %zu",
+               &cudnn_major);
+        sscanf(str_cudnn_minor.c_str(), "#define CUDNN_MINOR %zu",
+               &cudnn_minor);
+        sscanf(str_cudnn_patch.c_str(), "#define CUDNN_PATCHLEVEL %zu",
+               &cudnn_patch);
+
+#ifdef WIN32
+        std::string cudnn_lib_name =
+                "cudnn64_" + std::to_string(cudnn_major) + ".dll";
+#else
+        std::string cudnn_lib_name =
+                "libcudnn.so." + std::to_string(cudnn_major) + "." +
+                std::to_string(cudnn_minor) + "." + std::to_string(cudnn_patch);
+#endif
+
+        auto cudnn_lib_path = find_file_in_envs_with_intmd(
+                {"CUDNN_ROOT_DIR", "CUDNN_LIBRARY", "CUDA_PATH", ENV_PATH},
+                cudnn_lib_name, {"lib64", "lib/x64"});
+        if (cudnn_lib_path.empty()) {
+            mgb_log_warn(
+                    "%s not found. Please make sure cudnn install at "
+                    "${CUDNN_LIBRARY}",
+                    cudnn_lib_name.c_str());
+        }
+    }
+}
+}  // namespace
 
 std::vector<std::string> _config::get_cuda_include_path() {
 #if MGB_CUDA
-    auto cuda_path = getenv("CUDA_BIN_PATH");
-    if (cuda_path) {
-        return std::vector<std::string>{cuda_path,
-                                        std::string(cuda_path) + "/include"};
+    auto nvcc_path = get_nvcc_root_path();
+    auto cudart_header_path =  nvcc_path + "../include/cuda_runtime.h";
+    //! double check path_to_nvcc/../include/cuda_runtime.h exists
+    auto ret = check_file_exist(cudart_header_path.c_str(), F_OK);
+    if (ret) {
+        mgb_throw(MegBrainError,
+                  "%s not found. Please make sure your cuda toolkit install "
+                  "right",
+                  cudart_header_path.c_str());
     } else {
-        auto cuda_lib_path = get_loaded_shared_lib_path("libcudart.so");
-        return {cuda_lib_path, cuda_lib_path + "/../",
-                cuda_lib_path + "/../include"};
+        return {nvcc_path + "..", nvcc_path + "../include"};
     }
 #else
     mgb_throw(MegBrainError, "cuda disabled at compile time");
@@ -251,13 +399,31 @@ std::vector<std::string> _config::get_cuda_include_path() {
 
 std::vector<std::string> _config::get_cuda_lib_path() {
 #if MGB_CUDA
-    auto cuda_path = getenv("CUDA_BIN_PATH");
-    if (cuda_path) {
-        return std::vector<std::string>{cuda_path,
-                                        std::string(cuda_path) + "/lib64"};
+    auto nvcc_path = get_nvcc_root_path();
+#ifdef WIN32
+    auto cuda_version = get_local_cuda_version();
+    auto cuda_major = cuda_version / 1000;
+    auto cuda_minor = cuda_version % 10;
+    auto cudart_lib_path = nvcc_path + "cudart64_" +
+                           std::to_string(cuda_major * 10 + cuda_minor) +
+                           ".dll";
+#else
+    auto cudart_lib_path = nvcc_path + "../lib64/libcudart.so";
+#endif
+    //! double check cudart_lib_path exists
+    auto ret = check_file_exist(cudart_lib_path.c_str(), F_OK);
+    if (ret) {
+        mgb_throw(MegBrainError,
+                  "%s not found. Please make sure your cuda toolkit install "
+                  "right",
+                  cudart_lib_path.c_str());
     } else {
-        auto cuda_lib_path = get_loaded_shared_lib_path("libcudart.so");
-        return {cuda_lib_path};
+#ifdef WIN32
+        //! cudart64_101.dll locates at cuda/bin
+        return {nvcc_path + "../lib/x64", nvcc_path};
+#else
+        return {nvcc_path + "../lib64"};
+#endif
     }
 #else
     mgb_throw(MegBrainError, "cuda disabled at compile time");
@@ -272,6 +438,14 @@ int _config::get_cuda_version() {
 #else
     mgb_throw(MegBrainError, "cuda disabled at compile time");
 #endif
+}
+
+bool _config::is_local_cuda_env_ok() {
+    check_cudnn_existence();
+    if (get_nvcc_root_path().empty()) {
+        return false;
+    }
+    return true;
 }
 
 bool _config::is_compiled_with_cuda() {
