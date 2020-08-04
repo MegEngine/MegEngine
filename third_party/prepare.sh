@@ -2,7 +2,7 @@
 
 git_version=$(git --version)
 if [ >= "1.8.4" ]; then
-    echo "Since git 1.8.4 (August 2013), and commit 091a6eb, you don't have to be at top-level to run git submodule update."
+    echo "Since git 1.8.4 (August 2013), you don't have to be at top-level to run git submodule update."
 else
     echo "You have to update your git version to 1.8.4 or later."
     exit -1
