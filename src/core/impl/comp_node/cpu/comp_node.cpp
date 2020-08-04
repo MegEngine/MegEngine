@@ -63,13 +63,12 @@ class CpuCompNode::WorkerQueue final
 #endif
         }
         sys::set_thread_name(m_locator.to_string());
-        if(m_thread_pool)
-            m_thread_pool->active();
     }
 
     void on_sync_all_task_finish() override {
-        if (m_thread_pool)
+        if (m_thread_pool) {
             m_thread_pool->deactive();
+        }
     }
 
 public:
@@ -436,6 +435,8 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
             }
         }
 
+        ThreadPool* get_thread_pool() const { return m_thread_pool.get(); }
+
         void* mgb_aligned_alloc(size_t size) {
             auto alignment = get_mem_addr_alignment();
 #ifdef WIN32
@@ -545,6 +546,9 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
                 m_cur_recorder->on_sync();
             } else if (m_worker_queue) {
                 m_worker_queue->wait_all_task_finish();
+            }
+            if (m_thread_pool) {
+                m_thread_pool->deactive();
             }
         }
 
@@ -893,6 +897,11 @@ bool CpuCompNode::CpuDispatchableBase::EventImpl::do_finished() {
 void CpuCompNode::CpuDispatchableBase::EventImpl::host_wait_cv() {
     for (size_t i = 0, it = SCQueueSynchronizer::max_spin() / 20; i < it; ++i) {
         if (finished()) {
+            auto thread_pool = static_cast<CpuCompNodeImpl*>(m_comp_node_impl)
+                                       ->get_thread_pool();
+            if (thread_pool) {
+                thread_pool->deactive();
+            }
             return;
         }
     }
@@ -906,6 +915,11 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::host_wait_cv() {
         m_dev_wait_cv.wait(lock);
     }
     m_dev_wait_nr_waiter.fetch_sub(1, std::memory_order_release);
+    auto thread_pool =
+            static_cast<CpuCompNodeImpl*>(m_comp_node_impl)->get_thread_pool();
+    if (thread_pool) {
+        thread_pool->deactive();
+    }
 }
 
 CpuCompNode::CpuDispatchableBase::EventImpl::~EventImpl() noexcept {

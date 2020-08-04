@@ -12,6 +12,8 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/system.h"
 #include "megbrain/test/helper.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/utility.h"
 #include <atomic>
 #include <random>
 
@@ -58,6 +60,73 @@ TEST(TestThreadPool, BASIC) {
         ASSERT_EQ(dst0[i], truth[i]);
         ASSERT_EQ(dst1[i], truth[i]);
     }
+}
+
+TEST(TestGraph, ParallelRunMultithreadMode) {
+    // check race conditions when graphs are executed on multple threads
+    std::atomic_size_t sync_counter{0};
+    constexpr size_t NR_RUN = 50;
+    size_t nr_worker = std::max(4, sys::get_cpu_count() / 4);
+    if (auto setting = MGB_GETENV("TestGraphParallelRun_nr_worker")) {
+        nr_worker = std::stoul(setting);
+    }
+    mgb_log("use %zu workers", nr_worker);
+
+    auto sync_barrier = [&sync_counter, nr_worker](size_t& cnt) {
+        ++sync_counter;
+        ++cnt;
+        while (sync_counter < cnt * nr_worker)
+            ;
+    };
+
+    auto do_worker = [&sync_barrier](size_t sync_cnt) {
+        auto cn = CompNode::load("multithread2:0");
+        HostTensorGenerator<> gen;
+        auto host_x = gen({23}, cn);
+        HostTensorND host_y, y_expect;
+        y_expect.copy_from(*host_x);
+        {
+            auto py = y_expect.ptr<float>();
+            for (int i = 0; i < 23; ++i) {
+                for (int j = 0; j < 5; ++j) {
+                    py[i] = py[i] * 2 + 3;
+                }
+            }
+        }
+
+        sync_barrier(sync_cnt);
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x), y = x;
+        for (int i = 0; i < 5; ++i) {
+            y = y * 2 + 3;
+        }
+
+        sync_barrier(sync_cnt);
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+
+        sync_barrier(sync_cnt);
+        func->execute();
+        MGB_ASSERT_TENSOR_EQ(y_expect, host_y);
+        memset(host_y.raw_ptr(), -1, 23 * sizeof(float));
+
+        sync_barrier(sync_cnt);
+        func->execute();
+        MGB_ASSERT_TENSOR_EQ(y_expect, host_y);
+        func->wait();
+    };
+    auto worker = [&]() {
+        size_t scnt = 0;
+        for (size_t run_id = 0; run_id < NR_RUN; ++run_id) {
+            do_worker(scnt);
+        }
+    };
+
+    std::vector<std::thread> workers;
+    for (size_t i = 0; i < nr_worker; ++i)
+        workers.emplace_back(worker);
+
+    for (auto&& i : workers)
+        i.join();
 }
 #else
 #pragma message "tests are disabled as thread is not enabled."
