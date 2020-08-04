@@ -46,7 +46,8 @@ class _OverrideGradientCraniotome(mgb.craniotome.CraniotomeBase):
             *(Tensor(x) if x is not None else None for x in out_grad)
         )
         # pylint: disable=literal-comparison
-        if isinstance(grads, Tensor) or grads is None or grads is 0:
+        if isinstance(grads, Tensor) or grads is None or \
+            (isinstance(grads, int) and grads == 0):
             grads = (grads,)
         assert (
             len(grads) == self.__nr_inputs__ - self.__nr_outputs__
@@ -55,7 +56,8 @@ class _OverrideGradientCraniotome(mgb.craniotome.CraniotomeBase):
         )
         # pylint: disable=literal-comparison
         return (
-            list(x._symvar if x is not None and x is not 0 else 0 for x in grads)
+            list(x._symvar if x is not None and \
+                (not isinstance(x, int) or x != 0) else 0 for x in grads)
             + [0] * self.__nr_outputs__
         )
 
