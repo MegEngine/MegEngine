@@ -14,6 +14,7 @@ from ..module import qat as QAT
 from ..module import quantized as Quantized
 from ..module.qat import QATModule
 from ..module.quantized import QuantizedModule
+from .fake_quant import TQT
 from .qconfig import QConfig, ema_fakequant_qconfig
 
 
@@ -119,6 +120,14 @@ def quantize_qat(
     return module
 
 
+def _propagate(module: Module, func_str: str, *args, **kargs):
+    def fn(mod: Module):
+        if isinstance(mod, QATModule):
+            getattr(mod, func_str)(*args, **kargs)
+
+    module.apply(fn)
+
+
 def propagate_qconfig(module: QATModule, qconfig: QConfig):
     r"""
     Recursively set ``module``'s qconfig through :meth:`~.Module.apply`.
@@ -126,12 +135,7 @@ def propagate_qconfig(module: QATModule, qconfig: QConfig):
     :param module: root module to traverse recursively.
     :param qconfig: a instance of :class:`~.QConfig` to be set as submodules' qconfig.
     """
-
-    def fn(mod: Module):
-        if isinstance(mod, QATModule):
-            mod.set_qconfig(qconfig)
-
-    module.apply(fn)
+    _propagate(module, "set_qconfig", qconfig)
 
 
 def disable_fake_quant(module: Module):
@@ -141,11 +145,7 @@ def disable_fake_quant(module: Module):
     :param module: root module to do disable fake quantization recursively.
     """
 
-    def fn(mod: Module):
-        if isinstance(mod, QATModule):
-            mod.set_fake_quant(False)
-
-    module.apply(fn)
+    _propagate(module, "set_fake_quant", False)
 
 
 def disable_observer(module: Module):
@@ -155,11 +155,7 @@ def disable_observer(module: Module):
     :param module: root module to do disable observer recursively.
     """
 
-    def fn(mod: Module):
-        if isinstance(mod, QATModule):
-            self.set_observer(False)
-
-    module.apply(fn)
+    _propagate(module, "set_observer", False)
 
 
 def enable_fake_quant(module: Module):
@@ -169,11 +165,7 @@ def enable_fake_quant(module: Module):
     :param module: root module to do enable fake quantization recursively.
     """
 
-    def fn(mod: Module):
-        if isinstance(mod, QATModule):
-            mod.set_fake_quant(True)
-
-    module.apply(fn)
+    _propagate(module, "set_fake_quant", True)
 
 
 def enable_observer(module: Module):
@@ -183,8 +175,4 @@ def enable_observer(module: Module):
     :param module: root module to do enable observer recursively.
     """
 
-    def fn(mod: Module):
-        if isinstance(mod, QATModule):
-            mod.set_observer(True)
-
-    module.apply(fn)
+    _propagate(module, "set_observer", False)

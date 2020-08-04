@@ -15,9 +15,7 @@ class QuantStub(Float.QuantStub, QATModule):
     input after converted to :class:`~.QuantizedModule`.
     """
 
-    def __init__(self):
-        super().__init__()
-        self.with_weight = False
+    with_weight = False
 
     def forward(self, inp):
         return self.apply_quant_activation(inp)
@@ -37,10 +35,8 @@ class DequantStub(Float.DequantStub, QATModule):
     input after converted to :class:`~.QuantizedModule`.
     """
 
-    def __init__(self):
-        super().__init__()
-        self.with_weight = False
-        self.with_act = False
+    with_weight = False
+    with_act = False
 
     def forward(self, inp):
         return inp

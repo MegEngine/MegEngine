@@ -102,6 +102,7 @@ class MinMaxObserver(Observer):
         q_dict = get_qparam_dict(self.mode)
         q_dict["min_val"] = inp_min_val
         q_dict["max_val"] = inp_max_val
+        q_dict["enable_observer"] = self.enable
         if self.mode == QuantMode.SYMMERTIC:
             symmetric_max_vals = F.maximum(-min_val, max_val)
             # use maximun to avoid scale too small at the begin

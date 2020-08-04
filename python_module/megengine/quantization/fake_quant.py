@@ -116,10 +116,11 @@ class TQT(_FakeQuantize):
         return TQT_Function(self.qmin, self.qmax)(inp, self.scale)
 
     def normal_foward(self, inp, q_dict):
-        # when disable, TQT will do normal forward, initialize scale weight
-        tmp_scale = F.maximum(F.abs(q_dict["min_val"]), F.abs(q_dict["max_val"]))
-        tmp_scale = F.log(tmp_scale / 127) / F.log(2)
-        F.add_update(self.scale, tmp_scale, alpha=0.0, beta=1.0, bias=0.0)
+        if q_dict["enable_observer"]:
+            # when disable, TQT will do normal forward, initialize scale weight
+            tmp_scale = F.maximum(F.abs(q_dict["min_val"]), F.abs(q_dict["max_val"]))
+            tmp_scale = F.log(tmp_scale / 127) / F.log(2)
+            F.add_update(self.scale, tmp_scale, alpha=0.0, beta=1.0, bias=0.0)
         return inp
 
     def get_qparams(self):

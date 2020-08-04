@@ -23,6 +23,9 @@ class QATModule(Module):
     :func:`~.quantize.quantize` further.
     """
 
+    with_weight = True
+    with_act = True
+
     def __init__(self):
         super().__init__()
 
@@ -31,9 +34,6 @@ class QATModule(Module):
 
         self.weight_fake_quant = None  # type: FakeQuantize
         self.act_fake_quant = None  # type: FakeQuantize
-
-        self.with_weight = True
-        self.with_act = True
 
     def set_qconfig(self, qconfig: QConfig):
         r"""
@@ -51,29 +51,21 @@ class QATModule(Module):
             self.weight_observer = safe_call(qconfig.weight_observer)
             self.weight_fake_quant = safe_call(qconfig.weight_fake_quant)
 
+    def _enable_exec(self, with_module, func, enable):
+        if not with_module:
+            return
+        if enable:
+            func.enable()
+        else:
+            func.disable()
+
     def set_fake_quant(self, enable):
-        if self.with_act:
-            if enable:
-                self.act_fake_quant.enable()
-            else:
-                self.act_fake_quant.disable()
-        if self.with_weight:
-            if enable:
-                self.weight_fake_quant.enable()
-            else:
-                self.weight_fake_quant.disable()
+        self._enable_exec(self.with_act, self.act_fake_quant, enable)
+        self._enable_exec(self.with_weight, self.weight_fake_quant, enable)
 
     def set_observer(self, enable):
-        if self.with_act:
-            if enable:
-                self.act_observer.enable()
-            else:
-                self.act_observer.disable()
-        if self.with_weight:
-            if enable:
-                self.weight_observer.enable()
-            else:
-                self.weight_observer.disable()
+        self._enable_exec(self.with_act, self.act_observer, enable)
+        self._enable_exec(self.with_weight, self.weight_observer, enable)
 
     def _apply_fakequant_with_observer(
         self, target: Tensor, fake_quant: FakeQuantize, observer: Observer
