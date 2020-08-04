@@ -80,7 +80,7 @@ public:
     ~ThreadPool();
 
 private:
-    size_t m_nr_threads = 0;
+    const size_t m_nr_threads = 0;
     //! Indicate whether the main thread have binding
     bool m_main_affinity_flag;
     //! The callback binding the threads to cores
