@@ -1404,6 +1404,7 @@ void TensorRTReplacePass::Impl::detect_replace() {
 
             m_graph_map[opr] = max;
             if (max > m_tensorrt_graphs.size()) {
+                opr->output(0)->comp_node().activate();
                 m_tensorrt_graphs.push_back(
                         std::make_shared<TensorRTGraph>(feature_bits));
             }

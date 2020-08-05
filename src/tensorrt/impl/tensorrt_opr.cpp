@@ -533,6 +533,7 @@ void TensorRTOpr::get_output_var_shape(const TensorShapeArray& inp_shape,
     }
 
     if (!engine_valid) {
+        comp_node().activate();
         // If a context created by a cuda engine, the context must be destroyed
         // before the corresponding cuda engine. Otherwise, a segmentfault will
         // occur.
@@ -576,6 +577,7 @@ void TensorRTOpr::build_engine_from_cache() {
             TensorRTEngineCache::make_key_from_trt_opr(this));
     if (!ret.valid())
         return;
+    comp_node().activate();
     auto engine = runtime->deserializeCudaEngine(
             reinterpret_cast<const void*>(ret->ptr), ret->size, nullptr);
     mgb_assert(engine, "failed to deserialize ICudaEngine");
