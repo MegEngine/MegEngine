@@ -308,7 +308,7 @@ class CraniotomeBase(_mgb.CraniotomeDesc, metaclass=_CraniotomeBaseMeta):
 
         for i in range(len(rst)):
             cur = rst[i]
-            if cur is 0:
+            if isinstance(cur, int) and cur == 0:
                 rst[i] = _mgb.SymbolVar()
             else:
                 assert isinstance(cur, _mgb.SymbolVar), (
