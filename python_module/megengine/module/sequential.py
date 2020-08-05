@@ -21,26 +21,27 @@ class Sequential(Module):
     .. testcode::
         from collections import OrderedDict
         import numpy as np
-        import megengine.nn as nn
-        import megengine.nn.functional as F
+        import megengine.functional as F
+        from megengine.module import Sequential, Linear
+        from megengine import tensor
 
         batch_size = 64
-        data = nn.Input("data", shape=(batch_size, 1, 28, 28), dtype=np.float32, value=np.zeros((batch_size, 1, 28, 28)))
-        label = nn.Input("label", shape=(batch_size,), dtype=np.int32, value=np.zeros(batch_size,))
+        data = tensor(np.zeros((batch_size, 1, 28, 28)), dtype=np.float32)
+        label = tensor(np.zeros(batch_size,), dtype=np.int32)
 
         data = data.reshape(batch_size, -1)
 
-        net0 = nn.Sequential(
-                nn.Linear(28 * 28, 320),
-                nn.Linear(320, 10)
+        net0 = Sequential(
+                Linear(28 * 28, 320),
+                Linear(320, 10)
             )
 
         pred0 = net0(data)
 
         modules = OrderedDict()
-        modules["fc0"] = nn.Linear(28 * 28, 320)
-        modules["fc1"] = nn.Linear(320, 10)
-        net1 = nn.Sequential(modules)
+        modules["fc0"] = Linear(28 * 28, 320)
+        modules["fc1"] = Linear(320, 10)
+        net1 = Sequential(modules)
 
         pred1 = net1(data)
     """

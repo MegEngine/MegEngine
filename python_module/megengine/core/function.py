@@ -82,7 +82,7 @@ class Function(metaclass=ABCMeta):
                 self.save_for_backward(y)
                 return y
 
-            def backward(self. output_grads):
+            def backward(self, output_grads):
                 (y, ) = self.saved_tensors
                 return output_grads * y * (1-y)
 
