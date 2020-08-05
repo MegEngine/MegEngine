@@ -378,11 +378,13 @@ public:
             void init() {
                 MGB_LOCK_GUARD(mtx);
                 if (!initialized) {
-                    auto acl_err = aclInit(nullptr);
+                    const char* config_path =
+                            MGB_GETENV("MGB_ATLAS_PROFILE_JSON");
+                    auto acl_err = aclInit(config_path);
                     initialized = acl_err == ACL_ERROR_NONE;
                     mgb_throw_if(!initialized, AtlasError,
-                                 "acl initialize failed: (acl: %d)",
-                                 static_cast<int>(acl_err));
+                                 "acl initialize failed: (acl: %s)",
+                                 megcore::atlas::get_error_str(acl_err));
                 }
             }
             ~InitStatus() {
