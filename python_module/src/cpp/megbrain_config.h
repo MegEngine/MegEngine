@@ -62,8 +62,8 @@ class _config {
         static void load_opr_library(
                 const char* self_path, const char* lib_path);
 
-        static std::vector<std::pair<unsigned long int, std::string>>
-            dump_registered_oprs();
+        static std::vector<std::pair<size_t, std::string>>
+        dump_registered_oprs();
 
         static int create_mm_server(const std::string& server_addr, int port);
 

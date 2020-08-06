@@ -16,10 +16,15 @@
 
 #include <thread>
 #include <cstring>
+#include <sstream>
 
+#ifdef WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
-#include <signal.h>
 #include <unistd.h>
+#endif
+#include <signal.h>
 
 /* ================= _InfkernFinderImpl ================= */
 size_t _InfkernFinderImpl::sm_id = 0;
@@ -72,23 +77,28 @@ class _FastSignal::Impl {
     bool m_worker_started = false;
     std::mutex m_mtx;
     std::thread m_worker_hdl;
+#ifdef WIN32
+    SECURITY_ATTRIBUTES win_sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+    HANDLE pipe_r, pipe_w;
+    DWORD bytes_r_w;
+#else
     int m_pfd[2]; //! pipe fds; write signal handlers, -1 for exit
+#endif
     std::unordered_map<int, HandlerCallback> m_handler_callbacks;
 
     void worker() {
-#ifdef __APPLE__
-        uint64_t tid;
-        pthread_threadid_np(NULL, &tid);
-        mgb_log("fast signal worker started in thread 0x%zx",
-                static_cast<size_t>(tid));
-#else
-        mgb_log("fast signal worker started in thread 0x%zx",
-                static_cast<size_t>(pthread_self()));
-#endif
+        std::ostringstream oss;
+        oss << std::this_thread::get_id() << std::endl;
+        mgb_log("fast signal worker started in thread %s", oss.str().c_str());
         mgb::sys::set_thread_name("fastsgl");
         int signum;
-        for (; ; ) {
+        for (;;) {
+#ifdef WIN32
+            if (ReadFile(pipe_r, &signum, sizeof(int), &bytes_r_w, NULL) ==
+                NULL) {
+#else
             if (read(m_pfd[0], &signum, sizeof(int)) != sizeof(int)) {
+#endif
                 if (errno == EINTR)
                     continue;
                 mgb_log_error("fast signal worker: "
@@ -114,10 +124,17 @@ class _FastSignal::Impl {
         if (m_worker_started)
             return;
 
-        if (pipe(m_pfd)) {
-            throw mgb::MegBrainError(mgb::ssprintf(
-                        "failed to create pipe: %s", strerror(errno)));
+#ifdef WIN32
+        if (!CreatePipe(&pipe_r, &pipe_w, &win_sa, 0)) {
+            throw mgb::MegBrainError(mgb::ssprintf("failed to create pipe: %s",
+                                                   strerror(errno)));
         }
+#else
+        if (pipe(m_pfd)) {
+            throw mgb::MegBrainError(mgb::ssprintf("failed to create pipe: %s",
+                                                   strerror(errno)));
+        }
+#endif
         std::thread t(std::bind(&Impl::worker, this));
         m_worker_hdl.swap(t);
         m_worker_started = true;
@@ -125,7 +142,11 @@ class _FastSignal::Impl {
 
     void write_pipe(int v) {
         mgb_assert(m_worker_started);
+#ifdef WIN32
+        if (WriteFile(pipe_w, &v, sizeof(int), &bytes_r_w, NULL) == NULL) {
+#else
         if (write(m_pfd[1], &v, sizeof(int)) != sizeof(int)) {
+#endif
             mgb_log_error("fast signal: failed to write to self pipe: %s",
                     strerror(errno));
         }
@@ -169,8 +190,13 @@ class _FastSignal::Impl {
                 return;
             write_pipe(-1);
             m_worker_hdl.join();
+#ifdef WIN32
+            CloseHandle(pipe_r);
+            CloseHandle(pipe_w);
+#else
             close(m_pfd[0]);
             close(m_pfd[1]);
+#endif
             m_handler_callbacks.clear();
             m_worker_started = false;
         }
@@ -192,11 +218,19 @@ void _FastSignal::signal_hander(int signum) {
 }
 
 void _FastSignal::register_handler(int signum, PyObject *func) {
+#ifdef WIN32
+    //! up to now we can only use CTRL_C_EVENT to unix signal.SIGUSR1/2
+    //FIXME: how to coherence signal number at python side
+    // https://docs.microsoft.com/en-gb/cpp/c-runtime-library/reference/signal?view=vs-2017
+    mgb_assert(signum == CTRL_C_EVENT, "only allow register CTRL_C_EVENT as unix signal.SIGUSR1/2 now");
+    signal(signum, signal_hander);
+#else
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = &signal_hander;
     int ret = sigaction(signum, &action, nullptr);
     mgb_assert(!ret, "sigaction failed: %s", strerror(errno));
+#endif
 
     sm_impl.register_handler(signum, func);
 }

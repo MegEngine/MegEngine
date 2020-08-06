@@ -166,6 +166,18 @@ function prepare_env_for_windows_build() {
     echo "put vcvarsall.bat path to PATH env.."
 }
 
+WINDOWS_BUILD_TARGET="Ninja all > build.log"
+if [[ -z ${MAKE_DEVELOP} ]]
+then
+    MAKE_DEVELOP="false"
+fi
+function config_windows_build_target() {
+    if [ ${MAKE_DEVELOP} = "true" ]; then
+        echo "build all and develop for pytest test"
+        WINDOWS_BUILD_TARGET="Ninja all > build.log && Ninja develop"
+    fi
+}
+
 function cmake_build_windows() {
     # windows do not support long path, so we cache the BUILD_DIR ASAP
     prepare_env_for_windows_build
@@ -201,11 +213,12 @@ function cmake_build_windows() {
         ${EXTRA_CMAKE_ARGS} \
         ../../.. && \
         echo \"start Ninja build log to build.log, may take serval min...\" && \
-        Ninja load_and_run > build.log"
+        ${WINDOWS_BUILD_TARGET}"
 }
 
 
 if [[ $OS =~ "NT" ]]; then
+    config_windows_build_target
     cmake_build_windows $MGE_WITH_CUDA $MGE_INFERENCE_ONLY $BUILD_TYPE
 else
     cmake_build $MGE_WITH_CUDA $MGE_INFERENCE_ONLY $BUILD_TYPE

@@ -89,6 +89,9 @@ def start_workers(worker, world_size, trace=False):
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 def test_distributed():
     start_workers(worker, 2, trace=True)
     start_workers(worker, 2, trace=False)

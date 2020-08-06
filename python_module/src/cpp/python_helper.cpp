@@ -45,7 +45,7 @@ std::string demangle_typeid(const char* name) {
 
 namespace {
 // does nothing if not g++
-std::string mgb::demangle_typeid(const char* name) {
+std::string demangle_typeid(const char* name) {
     return name;
 }
 }

@@ -35,15 +35,20 @@ using namespace debug;
 #include <cuda_runtime.h>
 #endif
 
+#ifndef WIN32
 #include <pthread.h>
+#include <unistd.h>
+#endif
+
 #include <signal.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #ifdef __ANDROID__
 #include <unwind.h>
 #else
+#ifndef WIN32
 #include <execinfo.h>
+#endif
 #endif
 
 #ifdef __ANDROID__
@@ -121,6 +126,8 @@ void get_mem_map(
     fclose(fin);
 }
 
+#ifndef WIN32
+//FIXME: imp SigHandlerInit backtrace for windows
 class SigHandlerInit {
     static void death_handler(int signum) {
         char msg0[] =
@@ -157,6 +164,7 @@ public:
         std::set_terminate([]() { death_handler(-1); });
     }
 };
+#endif
 
 #if MGB_CUDA
 class CudaCheckOnFork {
@@ -201,7 +209,9 @@ class InitCaller {
     static InitCaller inst;
 
     InitCaller() {
+#ifndef WIN32
         SigHandlerInit::init_for_segv();
+#endif
 #if MGB_CUDA
         CudaCheckOnFork::init();
 #endif
@@ -216,6 +226,7 @@ void (*ForkAfterCudaError::throw_)() = throw_fork_cuda_exc;
 std::atomic_size_t ScopedForkWarningSupress::sm_depth{0};
 
 BacktraceResult mgb::debug::backtrace(int nr_exclude) {
+#ifndef WIN32
     static bool thread_local recursive_call = false;
     if (recursive_call) {
         fprintf(stderr, "recursive call to backtrace()!\n");
@@ -265,6 +276,11 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
 
     recursive_call = false;
     return result;
+#else
+    //FIXME: imp Backtrace for windows
+    BacktraceResult result;
+    return result;
+#endif
 }
 
 void BacktraceResult::fmt_to_str(std::string& dst) {

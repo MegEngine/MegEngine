@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
 import tempfile
 from collections import OrderedDict
 from io import BytesIO
@@ -367,8 +368,13 @@ def test_dump_model():
     data.set_value(np.random.random(data_shape))
     mlp = MLP()
     pred = mlp(data)
-    with tempfile.NamedTemporaryFile() as f:
-        mge.dump(pred, f.name)
+    f = tempfile.NamedTemporaryFile(delete=False)
+    f_name = f.name
+    try:
+        mge.dump(pred, f_name)
+    finally:
+        f.close()
+        os.unlink(f_name)
 
 
 def test_load_quantized():

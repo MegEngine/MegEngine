@@ -439,6 +439,7 @@ endif()
 set(MGB_JIT ${MGE_WITH_JIT})
 set(MGB_JIT_HALIDE ${MGE_WITH_HALIDE})
 
+# Thread
 IF(APPLE)
     set(CMAKE_THREAD_LIBS_INIT "-lpthread")
     set(CMAKE_HAVE_THREADS_LIBRARY 1)
@@ -447,8 +448,14 @@ IF(APPLE)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
 ENDIF()
 
-# Thread
-if(CMAKE_THREAD_LIBS_INIT)
+if(MSVC OR WIN32)
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 1)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
+
+if(CMAKE_THREAD_LIBS_INIT OR CMAKE_USE_WIN32_THREADS_INIT)
     set(MGB_HAVE_THREAD 1)
 endif()
 
@@ -469,12 +476,6 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWith
 else()
     set(MGB_ASSERT_LOC 0)
     set(MGB_ENABLE_DEBUG_UTIL 0)
-endif()
-
-# FIXME: remove this after imp DEBUG UTIL for windows
-if(MSVC OR WIN32)
-    set(MGB_ENABLE_DEBUG_UTIL 0)
-    message(" -- disable MGB_ENABLE_DEBUG_UTIL in windows build")
 endif()
 
 # TensorRT

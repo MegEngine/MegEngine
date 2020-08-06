@@ -10,10 +10,10 @@ ignore_list="--ignore test/unit/module/test_pytorch.py \
 test_dirs="megengine test"
 
 pushd $(dirname "${BASH_SOURCE[0]}")/.. >/dev/null
-    pytest -xv -m 'isolated_distributed' \
+    python3 -m pytest -xv -m 'isolated_distributed' \
         --json-report --json-report-file=time_python_test.json \
         $ignore_list $test_dirs
-    pytest -xv -m 'not internet and not isolated_distributed' \
+    python3 -m pytest -xv -m 'not internet and not isolated_distributed' \
         --json-report --json-report-file=time_python_test.json \
         $ignore_list $test_dirs
 popd >/dev/null

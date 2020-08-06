@@ -21,7 +21,13 @@
 #include <cstdarg>
 
 #include <Python.h>
+
+#ifdef WIN32
+#include <windows.h>
+#include <stdio.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace {
 
@@ -50,8 +56,35 @@ class Init {
 };
 Init Init::inst;
 
-int fork_exec_impl(const std::string &arg0, const std::string &arg1,
-        const std::string &arg2) {
+int fork_exec_impl(const std::string& arg0, const std::string& arg1,
+                   const std::string& arg2) {
+#ifdef WIN32
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+    auto args_str = " " + arg1 + " " + arg2;
+
+    // Start the child process.
+    if (!CreateProcess(arg0.c_str(),                         // exe name
+                       const_cast<char*>(args_str.c_str()),  // Command line
+                       NULL,   // Process handle not inheritable
+                       NULL,   // Thread handle not inheritable
+                       FALSE,  // Set handle inheritance to FALSE
+                       0,      // No creation flags
+                       NULL,   // Use parent's environment block
+                       NULL,   // Use parent's starting directory
+                       &si,    // Pointer to STARTUPINFO structure
+                       &pi)    // Pointer to PROCESS_INFORMATION structure
+    ) {
+        mgb_log_warn("CreateProcess failed (%lu).\n", GetLastError());
+        fprintf(stderr, "[megbrain] failed to execl %s [%s, %s]\n",
+                arg0.c_str(), arg1.c_str(), arg2.c_str());
+        __builtin_trap();
+    }
+    return pi.dwProcessId;
+#else
     auto pid = fork();
     if (!pid) {
         execl(arg0.c_str(), arg0.c_str(), arg1.c_str(), arg2.c_str(), nullptr);
@@ -62,6 +95,7 @@ int fork_exec_impl(const std::string &arg0, const std::string &arg1,
     }
     mgb_assert(pid > 0, "failed to fork: %s", std::strerror(errno));
     return pid;
+#endif
 }
 
 } // anonymous namespace

@@ -1,0 +1,28 @@
+diff --git a/Lib/stdint.i b/Lib/stdint.i
+index 14fe619..45337c0 100644
+--- a/Lib/stdint.i
++++ b/Lib/stdint.i
+@@ -86,8 +86,8 @@ typedef unsigned long long int	uint_fast64_t;
+ 
+ /* Types for `void *' pointers.  */
+ #if defined(SWIGWORDSIZE64)
+-typedef long int		intptr_t;
+-typedef unsigned long int	uintptr_t;
++typedef long long		intptr_t;
++typedef unsigned long long	uintptr_t;
+ #else
+ typedef int			intptr_t;
+ typedef unsigned int		uintptr_t;
+diff --git a/Lib/swigarch.i b/Lib/swigarch.i
+index bf4ee8e..bf6b5c3 100644
+--- a/Lib/swigarch.i
++++ b/Lib/swigarch.i
+@@ -53,7 +53,7 @@
+ #ifndef LONG_MAX
+ #include <limits.h>
+ #endif
+-#if (__WORDSIZE == 32) || (LONG_MAX == INT_MAX)
++#if (__WORDSIZE == 32)
+ # error "SWIG wrapped code invalid in 32 bit architecture, regenerate code using -DSWIGWORDSIZE32"
+ #endif
+ %}
