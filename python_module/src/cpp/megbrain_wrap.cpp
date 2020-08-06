@@ -404,11 +404,18 @@ void CompGraphCallbackValueProxy::do_copy() {
     m_copy_event->record();
 }
 
+#if defined(WIN32)
+#include <windows.h>
+#include <stdio.h>
+#undef CONST
+#define usleep Sleep
+#endif
 void CompGraphCallbackValueProxy::sync() const {
     mgb_assert(!m_use_raw_hv);
     RealTimer t0;
     double next_warn_time = 2, warn_time_delta = 1;
     while (!m_copy_event->finished()) {
+        //! sleep 1ms or sleep 1us no difference for performance on win32
         usleep(1);
         if (t0.get_secs() >= next_warn_time) {
             mgb_log_warn("wait d2h copy for more than %.3f secs",

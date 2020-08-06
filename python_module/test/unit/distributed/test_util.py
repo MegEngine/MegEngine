@@ -45,6 +45,9 @@ def _init_process_group_wrapper(world_size, rank, dev, backend, q):
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_create_mm_server():
     def worker():
@@ -66,6 +69,9 @@ def test_create_mm_server():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_init_process_group():
@@ -102,6 +108,9 @@ def test_init_process_group():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_group_barrier():
     world_size = 2
@@ -136,6 +145,9 @@ def test_group_barrier():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_synchronized():

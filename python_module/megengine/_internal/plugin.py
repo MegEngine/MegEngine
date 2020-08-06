@@ -13,6 +13,7 @@ import atexit
 import collections
 import json
 import os
+import platform
 import signal
 import struct
 
@@ -163,7 +164,11 @@ class GlobalInfkernFinder:
     further investigation
     """
 
-    _signal = signal.SIGUSR1
+    _signal = None
+    if platform.system() != "Windows":
+        _signal = signal.SIGUSR1
+    else:
+        _signal = signal.CTRL_C_EVENT
     _registry = []
     _shell_maker = None
 
@@ -197,7 +202,7 @@ class GlobalInfkernFinder:
             from IPython.terminal.embed import InteractiveShellEmbed
 
             cls._shell_maker = InteractiveShellEmbed
-            fast_signal_hander(signal.SIGUSR1, cls._on_signal)
+            fast_signal_hander(cls._signal, cls._on_signal)
 
         cls._registry.append(finder)
 

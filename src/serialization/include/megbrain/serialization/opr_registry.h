@@ -76,8 +76,7 @@ namespace serialization {
 
 #if MGB_ENABLE_DEBUG_UTIL
         //! dump registered oprs
-        static std::vector<std::pair<unsigned long int, std::string>>
-        dump_registries();
+        static std::vector<std::pair<size_t, std::string>> dump_registries();
 #endif
     };
 

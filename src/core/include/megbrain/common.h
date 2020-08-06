@@ -197,6 +197,11 @@ void __log__(LogLevel level, const char *file, const char *func, int line,
 #define MGB_GETENV(_name)  static_cast<char*>(nullptr)
 #endif
 
+#ifdef WIN32
+#define unsetenv(_name) _putenv_s(_name, "");
+#define setenv(name,value,overwrite) _putenv_s(name,value)
+#endif
+
 // use some macro tricks to get lock guard with unique variable name
 #define MGB_TOKENPASTE(x, y) x ## y
 #define MGB_TOKENPASTE2(x, y) MGB_TOKENPASTE(x, y)

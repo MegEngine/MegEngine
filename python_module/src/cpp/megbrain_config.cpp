@@ -17,7 +17,32 @@
 
 #include <set>
 
+#if defined(WIN32)
+#include <io.h>
+#include <windows.h>
+#define F_OK 0
+#define RTLD_LAZY 0
+#define RTLD_GLOBAL 0
+#define RTLD_NOLOAD 0
+#define access(a, b) false
+
+static void* dlopen(const char* file, int) {
+    return static_cast<void*>(LoadLibrary(file));
+}
+
+static void* dlerror() {
+    const char* errmsg = "dlerror not aviable in windows";
+    return const_cast<char*>(errmsg);
+}
+
+static void* dlsym(void* handle, const char* name) {
+    FARPROC symbol = GetProcAddress((HMODULE)handle, name);
+    return reinterpret_cast<void*>(symbol);
+}
+
+#else
 #include <dlfcn.h>
+#endif
 
 #if MGB_ENABLE_OPR_MM
 #include "megbrain/opr/mm_handler.h"
@@ -274,8 +299,7 @@ void _config::load_opr_library(const char* self_path, const char* lib_path) {
     }
 }
 
-std::vector<std::pair<unsigned long int, std::string>>
-_config::dump_registered_oprs() {
+std::vector<std::pair<size_t, std::string>> _config::dump_registered_oprs() {
 #if MGB_ENABLE_DEBUG_UTIL
     return serialization::OprRegistry::dump_registries();
 #else

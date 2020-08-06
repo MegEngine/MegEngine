@@ -17,13 +17,6 @@
 
 #include <iostream>
 
-#if defined(WIN32)
-static inline void unsetenv(std::string name) {
-    name += "=";
-    _putenv(name.c_str());
-}
-#define setenv(name,value,overwrite) _putenv_s(name,value)
-#endif
 #if !MGB_ENABLE_EXCEPTION
 #pragma GCC diagnostic ignored  "-Wunused-variable"
 #endif

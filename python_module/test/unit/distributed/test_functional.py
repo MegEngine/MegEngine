@@ -29,6 +29,9 @@ def _init_process_group_wrapper(world_size, rank, dev, backend, q):
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_reduce_sum():
     world_size = 2
@@ -67,6 +70,9 @@ def test_reduce_sum():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_gather():
@@ -107,6 +113,9 @@ def test_gather():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_broadcast():
     world_size = 2
@@ -141,6 +150,9 @@ def test_broadcast():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_scatter():
@@ -181,6 +193,9 @@ def test_scatter():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_all_to_all():
     world_size = 2
@@ -218,6 +233,9 @@ def test_all_to_all():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_all_gather():
     world_size = 2
@@ -253,6 +271,9 @@ def test_all_gather():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_reduce_scatter_sum():
@@ -294,6 +315,9 @@ def test_reduce_scatter_sum():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_all_reduce_sum():
     world_size = 2
@@ -329,6 +353,9 @@ def test_all_reduce_sum():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_all_reduce_max():
@@ -366,6 +393,9 @@ def test_all_reduce_max():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
 @pytest.mark.isolated_distributed
 def test_all_reduce_min():
     world_size = 2
@@ -401,6 +431,9 @@ def test_all_reduce_min():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_bcast_param():

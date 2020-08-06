@@ -31,13 +31,7 @@ void _init_bfloat16_types(PyObject *m); // implemented in bfloat16.cpp
 %template(_VectorString) std::vector<std::string>;
 %template(_PairStringSizeT) std::pair<std::string, size_t>;
 %template(_PairSizeTSizeT) std::pair<size_t, size_t>;
-/*
- * swig use uint64_t have compat build issue with
- * clang at osx env, so we use unsigned long to
- * replace uint64_t,more detail refs stdint.i
- *
- */
-%template(_VectorPairUint64String) std::vector<std::pair<unsigned long int, std::string>>;
+%template(_VectorPairSizeTString) std::vector<std::pair<size_t, std::string>>;
 
 %pythoncode %{
 import numpy as np
