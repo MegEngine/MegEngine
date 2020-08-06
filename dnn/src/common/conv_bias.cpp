@@ -13,6 +13,7 @@
 #include "src/common/conv_bias.h"
 #include "megdnn/oprs/nn.h"
 #include "src/common/utils.h"
+#include "src/common/opr_delegate.h"
 
 namespace megdnn {
 
@@ -445,13 +446,13 @@ void handle_bias_and_nonlinear(Handle* handle, param::ConvBias args,
 
 //! Only used for naive implementation. DO NOT use the following function in
 //! other backends.
-void handle_z_inp_and_activation(Handle* handle,
-                                 param::ConvBias::NonlineMode nonline_mode,
-                                 const TensorND& conv_bias_tensor,
-                                 const TensorND& z_tensor,
-                                 const TensorND& dst_tensor,
-                                 dt_byte* workspace_ptr) {
+void handle_z_inp_and_activation_naive(
+        param::ConvBias::NonlineMode nonline_mode,
+        const TensorND& conv_bias_tensor, const TensorND& z_tensor,
+        const TensorND& dst_tensor, dt_byte* workspace_ptr) {
     auto res = dst_tensor, z_float = z_tensor;
+    //!create naive inplace handle
+    auto handle = inplace_cpu_handle(2);
     if (z_tensor.layout.ndim > 0 &&
         z_tensor.layout.dtype.category() != DTypeCategory::FLOAT) {
         dt_byte *res_float_workspace_ptr = nullptr,

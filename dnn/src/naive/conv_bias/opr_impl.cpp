@@ -137,8 +137,8 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         }
 #undef DISPATCH
 #undef DISPATCH_RAW
-        handle_z_inp_and_activation(handle(), param().nonlineMode, sfb, z, dst,
-                                    workspace_ptr);
+        MEGDNN_DISPATCH_CPU_KERN_OPR(handle_z_inp_and_activation_naive(
+                param().nonlineMode, sfb, z, dst, workspace_ptr));
     }
     MIDOUT_END();
 }

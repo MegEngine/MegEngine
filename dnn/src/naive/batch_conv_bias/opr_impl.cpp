@@ -104,8 +104,9 @@ void BatchConvBiasForwardImpl::exec(_megdnn_tensor_in src,
     }
 #undef DISPATCH
 #undef DISPATCH_RAW
-    handle_z_inp_and_activation(handle(), param().nonlineMode, sfb, z, dst,
-                                reinterpret_cast<dt_byte*>(ws.get(1)));
+    MEGDNN_DISPATCH_CPU_KERN_OPR(handle_z_inp_and_activation_naive(
+            param().nonlineMode, sfb, z, dst,
+            reinterpret_cast<dt_byte*>(ws.get(1))));
 }
 
 std::vector<BatchConvBiasForward::Algorithm*>
