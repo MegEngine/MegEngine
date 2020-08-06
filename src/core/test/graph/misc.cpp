@@ -11,6 +11,7 @@
 
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/tensor_manip.h"
@@ -22,6 +23,7 @@
 #include "megbrain/graph/execution_mask.h"
 #include "megbrain/utils/timer.h"
 #include "megbrain/comp_node_env.h"
+#include "megbrain/gopt/inference.h"
 
 #include "megbrain/test/helper.h"
 
@@ -1812,6 +1814,31 @@ TEST(TestGraph, OperatorNodeConfigInstanceID) {
         config1.update_instance_id(p1);
         ASSERT_NE(config0.instance_id(), config1.instance_id());
     }
+}
+
+TEST(TestGraph, NaiveRecord2NCHW44) {
+    auto cn = CompNode::load("cpu0");
+    using ConvParam = megdnn::ConvBias::Param;
+    ConvParam param;
+    param.sparse = ConvParam::Sparse::DENSE;
+    param.format = ConvParam::Format::NCHW44;
+    HostTensorGenerator<> gen;
+    auto host_x = gen({1, 2, 12, 12, 4}, cn),
+         host_w = gen({2, 2, 3, 3, 4, 4}, cn),
+         host_b = gen({1, 2, 1, 1, 4}, cn);
+
+    HostTensorND host_z;
+    auto graph = ComputingGraph::make();
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+         w = opr::Host2DeviceCopy::make(*graph, host_w),
+         b = opr::Host2DeviceCopy::make(*graph, host_b),
+         z = opr::ConvBiasForward::make(x, w, b, param, {});
+    graph->options().comp_node_seq_record_level = 2;
+    graph->options().var_sanity_check_first_run = false;
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    ComputingGraph::assert_destroy(graph);
+    host_x->copy_from_fixlayout(*gen(host_x->shape(), cn));
+    func->execute().wait();
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
