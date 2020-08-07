@@ -213,6 +213,22 @@ public:
     }                                                                   \
     MIDOUT_END();                                                       \
     return {};
+#define cb3(_format, _packmode, _i_src_type, _i_bias_type, _i_dst_type,        \
+            _src_ctype, _bias_ctype, _dst_ctype, _postprocess_mode,            \
+            _midout_tag)                                                       \
+    MIDOUT_BEGIN(megdnn_fallback_im2col_factory_make_strategy,                 \
+                 midout_iv(_midout_tag)) {                                     \
+        if (param.filter_type.enumv() == param.src_type.enumv() &&             \
+            param.src_type.enumv() == DTypeTrait<_i_src_type>::enumv &&        \
+            param.dst_type.enumv() == DTypeTrait<_i_dst_type>::enumv) {        \
+            return std::make_unique<                                           \
+                    Strategy<_src_ctype, _bias_ctype, _dst_ctype, _bias_ctype, \
+                             _dst_ctype, _postprocess_mode,                    \
+                             PackMode::_packmode, FormatMode::_format>>();     \
+        }                                                                      \
+    }                                                                          \
+    MIDOUT_END();                                                              \
+    return {};
 
     static std::unique_ptr<StrategyBase> make_default_strategy(
             fallback::MatrixMulImpl::AlgoBase* matmul_algo,
@@ -279,13 +295,13 @@ public:
 #endif
             case StrategyType::INT8x8x32:
                 if (format == param::ConvBias::Format::NCHW) {
-                    cb2(NCHW, DEFAULT, dt_int8, dt_int32, dt_int32, dt_int8,
-                        dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+                    cb3(NCHW, DEFAULT, dt_int8, dt_int32, dt_int32, dt_int8,
+                        dt_int32, dt_int32, PostprocessMode::ADD_BIAS,
                         "DefaultStrategyType::INT8x8x32"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44 ||
                            format == param::ConvBias::Format::NCHW44_DOT) {
-                    cb2(NCHW44, DEFAULT, dt_int8, dt_int32, dt_int32, dt_int8,
-                        dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+                    cb3(NCHW44, DEFAULT, dt_int8, dt_int32, dt_int32, dt_int8,
+                        dt_int32, dt_int32, PostprocessMode::ADD_BIAS,
                         "DefaultStrategyType::INT8x8x32"_hash);
                 } else {
                     megdnn_throw(
@@ -299,12 +315,12 @@ public:
 
             case StrategyType::INT8x8x16:
                 if (format == param::ConvBias::Format::NCHW) {
-                    cb2(NCHW, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
-                        dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
+                    cb3(NCHW, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
+                        dt_int16, dt_int16, PostprocessMode::ADD_BIAS,
                         "DefaultStrategyType::INT8x8x16"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44) {
-                    cb2(NCHW44, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
-                        dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
+                    cb3(NCHW44, DEFAULT, dt_int8, dt_int16, dt_int16, dt_int8,
+                        dt_int16, dt_int16, PostprocessMode::ADD_BIAS,
                         "DefaultStrategyType::INT8x8x16"_hash);
                 } else {
                     megdnn_throw(
@@ -316,9 +332,9 @@ public:
                 break;
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
             case StrategyType::QUINT8x8x32:
-                cb2(NCHW, DEFAULT, dtype::Quantized8Asymm, dtype::QuantizedS32,
+                cb3(NCHW, DEFAULT, dtype::Quantized8Asymm, dtype::QuantizedS32,
                     dtype::QuantizedS32, dt_uint8, dt_int32, dt_int32,
-                    PostprocessMode::NO_PROCESS,
+                    PostprocessMode::ADD_BIAS,
                     "DefaultStrategyType::QUINT8x8x32"_hash);
                 break;
 
@@ -331,15 +347,15 @@ public:
 #endif
             case StrategyType::QINT8x8x32:
                 if (format == param::ConvBias::Format::NCHW) {
-                    cb2(NCHW, DEFAULT, dtype::QuantizedS8, dtype::QuantizedS32,
+                    cb3(NCHW, DEFAULT, dtype::QuantizedS8, dtype::QuantizedS32,
                         dtype::QuantizedS32, dt_int8, dt_int32, dt_int32,
-                        PostprocessMode::NO_PROCESS,
+                        PostprocessMode::ADD_BIAS,
                         "DefaultStrategyTypeNCHW::QINT8x8x32"_hash);
                 } else if (format == param::ConvBias::Format::NCHW44 ||
                            format == param::ConvBias::Format::NCHW44_DOT) {
-                    cb2(NCHW44, DEFAULT, dtype::QuantizedS8,
+                    cb3(NCHW44, DEFAULT, dtype::QuantizedS8,
                         dtype::QuantizedS32, dtype::QuantizedS32, dt_int8,
-                        dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+                        dt_int32, dt_int32, PostprocessMode::ADD_BIAS,
                         "DefaultStrategyTypeHCHW44::QINT8x8x32"_hash);
                 } else {
                     megdnn_throw(
@@ -467,13 +483,13 @@ public:
 #endif
 #endif
             case StrategyType::INT8x8x16:
-                cb2(NCHW, NO_PACK, dt_int8, dt_int16, dt_int16, dt_int8,
-                    dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
+                cb3(NCHW, NO_PACK, dt_int8, dt_int16, dt_int16, dt_int8,
+                    dt_int16, dt_int16, PostprocessMode::ADD_BIAS,
                     "NoPackStrategyType::INT8x8x16"_hash);
                 break;
             case StrategyType::INT8x8x32:
-                cb2(NCHW, NO_PACK, dt_int8, dt_int32, dt_int32, dt_int8,
-                    dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+                cb3(NCHW, NO_PACK, dt_int8, dt_int32, dt_int32, dt_int8,
+                    dt_int32, dt_int32, PostprocessMode::ADD_BIAS,
                     "NoPackStrategyType::INT8x8x32"_hash);
                 break;
             default:
@@ -509,6 +525,7 @@ public:
 
 #undef cb1
 #undef cb2
+#undef cb3
 
     static std::unique_ptr<StrategyBase> make_strategy(
             fallback::MatrixMulImpl::AlgoBase* matmul_algo,

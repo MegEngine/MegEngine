@@ -310,6 +310,19 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
         }                                                                  \
     }                                                                      \
     MIDOUT_END()
+#define cb3(_format, _i_src_type, _i_bias_type, _i_dst_type, _src_ctype,   \
+            _bias_ctype, _dst_ctype, _postprocess_mode, _midout_tag)       \
+    MIDOUT_BEGIN(megdnn_fallback_conv1x1_gemv, midout_iv(_midout_tag)) {   \
+        if (param.filter_type.enumv() == param.src_type.enumv() &&         \
+            param.src_type.enumv() == DTypeTrait<_i_src_type>::enumv &&    \
+            param.dst_type.enumv() == DTypeTrait<_i_dst_type>::enumv) {    \
+            conv1x1_gemv_worker =                                          \
+                    Conv1x1GemvWorker<_src_ctype, _bias_ctype, _dst_ctype, \
+                                      _bias_ctype, _dst_ctype,             \
+                                      _postprocess_mode, _format>::exec;   \
+        }                                                                  \
+    }                                                                      \
+    MIDOUT_END()
 
     switch (param.filter_meta.format) {
         case param::ConvBias::Format::NCHW:
@@ -324,23 +337,23 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
                 PostprocessMode::NO_PROCESS, "NCHW::GEMV::FLOAT16_FLOAT16"_hash);
 #endif
 #endif
-            cb2(param::ConvBias::Format::NCHW, dt_int8, dt_int32, dt_int32,
-                dt_int8, dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+            cb3(param::ConvBias::Format::NCHW, dt_int8, dt_int32, dt_int32,
+                dt_int8, dt_int32, dt_int32, PostprocessMode::ADD_BIAS,
                 "NCHW::GEMV::INT8x8x32_INT32"_hash);
-            cb2(param::ConvBias::Format::NCHW, dt_int8, dt_int16, dt_int16,
-                dt_int8, dt_int16, dt_int16, PostprocessMode::NO_PROCESS,
+            cb3(param::ConvBias::Format::NCHW, dt_int8, dt_int16, dt_int16,
+                dt_int8, dt_int16, dt_int16, PostprocessMode::ADD_BIAS,
                 "NCHW::GEMV::INT8x8x16_INT16"_hash);
-            cb2(param::ConvBias::Format::NCHW, dtype::QuantizedS8,
+            cb3(param::ConvBias::Format::NCHW, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS32, dt_int8, dt_int32,
-                dt_int32, PostprocessMode::NO_PROCESS,
+                dt_int32, PostprocessMode::ADD_BIAS,
                 "NCHW::GEMV::QINT8x8x32_QINT32"_hash);
             cb2(param::ConvBias::Format::NCHW, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS8, dt_int8, dt_int32,
                 dt_int8, PostprocessMode::QUANTIZED,
                 "NCHW::GEMV::QINT8x8x32_QINT8"_hash);
-            cb2(param::ConvBias::Format::NCHW, dtype::Quantized8Asymm,
+            cb3(param::ConvBias::Format::NCHW, dtype::Quantized8Asymm,
                 dtype::QuantizedS32, dtype::QuantizedS32, dt_uint8, dt_int32,
-                dt_int32, PostprocessMode::NO_PROCESS,
+                dt_int32, PostprocessMode::ADD_BIAS,
                 "NCHW::GEMV::QUINT8x8x32_QINT32"_hash);
             cb2(param::ConvBias::Format::NCHW, dtype::Quantized8Asymm,
                 dtype::QuantizedS32, dtype::Quantized8Asymm, dt_uint8, dt_int32,
@@ -365,13 +378,13 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
             break;
 
         case param::ConvBias::Format::NCHW44_DOT:
-            cb2(param::ConvBias::Format::NCHW44_DOT, dt_int8, dt_int32,
+            cb3(param::ConvBias::Format::NCHW44_DOT, dt_int8, dt_int32,
                 dt_int32, dt_int8, dt_int32, dt_int32,
-                PostprocessMode::NO_PROCESS,
+                PostprocessMode::ADD_BIAS,
                 "NCHW44_DOT::GEMV::INT8x8x32_INT32"_hash);
-            cb2(param::ConvBias::Format::NCHW44_DOT, dtype::QuantizedS8,
+            cb3(param::ConvBias::Format::NCHW44_DOT, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS32, dt_int8, dt_int32,
-                dt_int32, PostprocessMode::NO_PROCESS,
+                dt_int32, PostprocessMode::ADD_BIAS,
                 "NCHW44_DOT::GEMV::QINT8x8x32_QINT32"_hash);
             cb2(param::ConvBias::Format::NCHW44_DOT, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS8, dt_int8, dt_int32,
@@ -385,6 +398,7 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
     }
 #undef cb1
 #undef cb2
+#undef cb3
 
     megdnn_assert(conv1x1_gemv_worker, "No suitable gemv worker");
 
@@ -448,8 +462,7 @@ bool ConvBiasImpl::AlgoConv1x1Gemv::usable(const NCBKernSizeParam& param,
         if (param.dst_type.enumv() == DTypeEnum::Int16 ||
             param.dst_type.enumv() == DTypeEnum::Int32 ||
             param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
-            if (param.bias_mode != megdnn::BiasMode::NO_BIAS ||
-                param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
+            if (param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
                 return false;
             }
         }

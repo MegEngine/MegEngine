@@ -56,6 +56,19 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
         }                                                                  \
     }                                                                      \
     MIDOUT_END()
+#define cb3(_packmode, _i_src_type, _i_bias_type, _i_dst_type, _src_ctype,   \
+            _bias_ctype, _dst_ctype, _postprocess_mode, _midout_tag)         \
+    MIDOUT_BEGIN(megdnn_fallback_conv1x1_factory_strategy,                   \
+                 midout_iv(_midout_tag)) {                                   \
+        if (param.filter_type.enumv() == param.src_type.enumv() &&           \
+            param.src_type.enumv() == DTypeTrait<_i_src_type>::enumv &&      \
+            param.dst_type.enumv() == DTypeTrait<_i_dst_type>::enumv) {      \
+            return std::make_unique<Conv1x1Strategy<                         \
+                    _src_ctype, _bias_ctype, _dst_ctype, _bias_ctype,        \
+                    _dst_ctype, _postprocess_mode, _packmode>>(pack_c_size); \
+        }                                                                    \
+    }                                                                        \
+    MIDOUT_END()
 
     switch (pack_mode) {
         case MatrixMulImpl::AlgoBase::PackMode::DEFAULT:
@@ -71,26 +84,26 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
                 "Default::FLOAT16_FLOAT16"_hash);
 #endif
 #endif
-            cb2(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dt_int8, dt_int32,
+            cb3(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dt_int8, dt_int32,
                 dt_int32, dt_int8, dt_int32, dt_int32,
-                PostprocessMode::NO_PROCESS, "Default::INT8x8x32_INT32"_hash);
-            cb2(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dt_int8, dt_int16,
+                PostprocessMode::ADD_BIAS, "Default::INT8x8x32_INT32"_hash);
+            cb3(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dt_int8, dt_int16,
                 dt_int16, dt_int8, dt_int16, dt_int16,
-                PostprocessMode::NO_PROCESS, "Default::INT8x8x16_INT16"_hash);
+                PostprocessMode::ADD_BIAS, "Default::INT8x8x16_INT16"_hash);
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
-            cb2(MatrixMulImpl::AlgoBase::PackMode::DEFAULT,
+            cb3(MatrixMulImpl::AlgoBase::PackMode::DEFAULT,
                 dtype::Quantized8Asymm, dtype::QuantizedS32,
                 dtype::QuantizedS32, dt_uint8, dt_int32, dt_int32,
-                PostprocessMode::NO_PROCESS,
+                PostprocessMode::ADD_BIAS,
                 "Default::QUINT8x8x32_QINT32"_hash);
             cb2(MatrixMulImpl::AlgoBase::PackMode::DEFAULT,
                 dtype::Quantized8Asymm, dtype::QuantizedS32,
                 dtype::Quantized8Asymm, dt_uint8, dt_int32, dt_uint8,
                 PostprocessMode::QUANTIZED, "Default::QUINT8x8x32_QUINT8"_hash);
 #endif
-            cb2(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dtype::QuantizedS8,
+            cb3(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS32, dt_int8, dt_int32,
-                dt_int32, PostprocessMode::NO_PROCESS,
+                dt_int32, PostprocessMode::ADD_BIAS,
                 "Default::QINT8x8x32_QINT32"_hash);
             cb2(MatrixMulImpl::AlgoBase::PackMode::DEFAULT, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS8, dt_int8, dt_int32,
@@ -107,17 +120,17 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
             cb1(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dt_float32,
                 dt_float32, PostprocessMode::FLOAT, "NoPack::FLOAT"_hash);
 
-            cb2(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dt_int8, dt_int16,
+            cb3(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dt_int8, dt_int16,
                 dt_int16, dt_int8, dt_int16, dt_int16,
-                PostprocessMode::NO_PROCESS, "NoPack::INT8x8x16_INT16"_hash);
+                PostprocessMode::ADD_BIAS, "NoPack::INT8x8x16_INT16"_hash);
 
-            cb2(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dt_int8, dt_int32,
+            cb3(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dt_int8, dt_int32,
                 dt_int32, dt_int8, dt_int32, dt_int32,
-                PostprocessMode::NO_PROCESS, "NoPack::INT8x8x32_INT32"_hash);
+                PostprocessMode::ADD_BIAS, "NoPack::INT8x8x32_INT32"_hash);
 
-            cb2(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dtype::QuantizedS8,
+            cb3(MatrixMulImpl::AlgoBase::PackMode::NO_PACK, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS32, dt_int8, dt_int32,
-                dt_int32, PostprocessMode::NO_PROCESS,
+                dt_int32, PostprocessMode::ADD_BIAS,
                 "NoPack::QINT8x8x32_QINT32"_hash);
             break;
 
@@ -127,6 +140,7 @@ std::unique_ptr<Conv1x1StrategyBase> create_conv1x1_strategy(
     }
 #undef cb1
 #undef cb2
+#undef cb3
     megdnn_throw("Invalid Data Type");
     return nullptr;
 }

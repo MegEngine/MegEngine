@@ -162,9 +162,9 @@ void Strategy<src_ctype, bias_ctype, dst_ctype, op_ctype, op_dtype,
 INSTANTIAL_CLASS(dt_float32, dt_float32, dt_float32, dt_float32, dt_float32,
                  megdnn::PostprocessMode::FLOAT)
 INSTANTIAL_CLASS(dt_int8, dt_int16, dt_int16, dt_int16, dt_int16,
-                 megdnn::PostprocessMode::NO_PROCESS)
+                 megdnn::PostprocessMode::ADD_BIAS)
 INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int32, dt_int32, dt_int32,
-                 megdnn::PostprocessMode::NO_PROCESS)
+                 megdnn::PostprocessMode::ADD_BIAS)
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 #else
 #if !MEGDNN_DISABLE_FLOAT16

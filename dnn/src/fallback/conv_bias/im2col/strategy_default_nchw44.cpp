@@ -119,19 +119,16 @@ INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, dt_float16, dt_float16,
 //! x86 do not have uint8 matmul so only armv7 armv8 support uint8
 INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_uint8, dt_qint32, dt_quint8,
                  megdnn::PostprocessMode::QUANTIZED)
-INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_int32, dt_qint32, dt_qint32,
-                 megdnn::PostprocessMode::NO_PROCESS)
+INSTANTIAL_CLASS(dt_uint8, dt_int32, dt_int32, dt_int32, dt_int32,
+                 megdnn::PostprocessMode::ADD_BIAS)
 #endif
 
 INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int8, dt_qint32, dt_qint8,
                  megdnn::PostprocessMode::QUANTIZED)
 INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int32, dt_int32, dt_int32,
-                 megdnn::PostprocessMode::NO_PROCESS)
+                 megdnn::PostprocessMode::ADD_BIAS)
 INSTANTIAL_CLASS(dt_int8, dt_int16, dt_int16, dt_int16, dt_int16,
-                 megdnn::PostprocessMode::NO_PROCESS)
-INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int32, dt_qint32, dt_qint32,
-                 megdnn::PostprocessMode::NO_PROCESS)
-
+                 megdnn::PostprocessMode::ADD_BIAS)
 #undef INSTANTIAL_CLASS
 }  // namespace megdnn
 
