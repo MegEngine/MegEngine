@@ -150,6 +150,13 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
                 .set_dtype(2, dtype::Int16())
                 .set_dtype(4, dtype::Int16())
                 .set_display(false);
+        benchmarker_int.set_times(RUNS)
+                .set_dtype(0, dtype::Int8())
+                .set_dtype(1, dtype::Int8())
+                .set_dtype(2, dtype::Int16())
+                .set_dtype(4, dtype::Int16())
+                .set_display(false);
+
     } else {
         benchmarker_nchw44.set_times(RUNS)
                 .set_dtype(0, dtype::QuantizedS8(2.5))
@@ -187,7 +194,11 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
                   1;
         TensorShape src({N, IC, H, W}), filter({OC, IC, FS, FS}),
                 bias({1, OC, 1, 1}), dst({N, OC, OH, OW});
+        if (is_8x8x16) {
+            bias = {};
+        }
         param.format = param::ConvBias::Format::NCHW;
+
         auto int_used = benchmarker_int.set_param(param).exec(
                                 {src, filter, bias, {}, dst}) /
                         RUNS;
@@ -203,6 +214,9 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
         }
 
         bias = {1, OC / 4, 1, 1, 4};
+        if (is_8x8x16) {
+            bias = {};
+        }
         dst = {N, OC / 4, OH, OW, 4};
         auto int_nchw44_used = benchmarker_nchw44.set_param(param).exec(
                                        {src, filter, bias, {}, dst}) /
@@ -283,14 +297,14 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_NCHW44) {
                        "IM2COLMATMUL:AARCH64_F32K8X12X1:192", true);
     benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
                        "IM2COLMATMUL:AARCH64_F32K8X12X1:192", false);
-    benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X32_K4X4X16:384",
+    benchmark_convbias(handle(), "IM2COLMATMUL:AARCH64_INT8X8X16_K4X4X16:192",
                        "IM2COLMATMUL:AARCH64_F32K8X12X1:192", false, true);
 #else
     benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
                        "IM2COLMATMUL:ARMV7_F32:192", true);
     benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
                        "IM2COLMATMUL:ARMV7_F32:192", false);
-    benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X32_K4X8X8:384",
+    benchmark_convbias(handle(), "IM2COLMATMUL:ARMV7_INT8X8X16_K4X8X8:384",
                        "IM2COLMATMUL:ARMV7_F32:192", false, true);
 #endif
 }
