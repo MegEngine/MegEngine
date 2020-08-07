@@ -100,7 +100,6 @@ namespace {
             MIDOUT_END();                                                 \
             break;                                                        \
         default:                                                          \
-            megdnn_throw("no quantized unsupported biasmode");            \
             break;                                                        \
     }
 
@@ -257,6 +256,66 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
 #undef FOR_NONLINEAR_BINARY
 #undef FOR_NONLINEAR_NOBIAS
 #undef FOR_NONLINEAR
+#undef FOR_BIAS
+
+#define FOR_BINARY_BROADCAST(_op)                                              \
+    megdnn::arm_common::                                                       \
+            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>::run( \
+                    static_cast<ctype*>(conv_dst_ptr),                         \
+                    reinterpret_cast<const ctype*>(bias_ptr),                  \
+                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,   \
+                    dst_type, N, OC, OH* OW);
+
+#define FOR_BINARY_BROADCAST_NCHW44(_op)                                     \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>,                           \
+                                       megdnn::arm_common::VEC_BCAST101x4>:: \
+            run(static_cast<ctype*>(conv_dst_ptr),                           \
+                reinterpret_cast<const ctype*>(bias_ptr),                    \
+                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,     \
+                dst_type, N, OC, OH* OW, pack_oc_size);
+
+#define FOR_BINARY(_op)                                                      \
+    megdnn::arm_common::                                                     \
+            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run(    \
+                    static_cast<ctype*>(conv_dst_ptr),                       \
+                    reinterpret_cast<const ctype*>(bias_ptr),                \
+                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
+                    dst_type, N* OC* OH* OW* pack_oc_size);
+
+#define FOR_BIAS(_bias_mode, OH, OW)                                \
+    switch (_bias_mode) {                                           \
+        case megdnn::BiasMode::NO_BIAS:                             \
+            break;                                                  \
+        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:              \
+            if (pack_oc_size == 1) {                                \
+                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));             \
+            } else {                                                \
+                megdnn_assert(pack_oc_size == 4,                    \
+                              "Only support nchw44 in ARM");        \
+                FOR_BINARY_BROADCAST_NCHW44(CONCAT_OP(AddOp));      \
+            }                                                       \
+            break;                                                  \
+        case megdnn::BiasMode::BIAS:                                \
+            FOR_BINARY(CONCAT_OP(AddOp));                           \
+            break;                                                  \
+        default:                                                    \
+            break;                                                  \
+    }
+
+template <typename ctype, typename dtype>
+struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
+    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
+                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
+                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+        megdnn_assert(nonlineMode == megdnn::NonlineMode::IDENTITY);
+        FOR_BIAS(bias_mode, OH, OW);
+    }
+};
+
+#undef FOR_BINARY_BROADCAST
+#undef FOR_BINARY_BROADCAST_NCHW44
+#undef FOR_BINARY
 #undef FOR_BIAS
 #undef CB
 #undef CONCAT_OP

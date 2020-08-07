@@ -1992,13 +1992,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_S8x8x32_MK4_DOT) {
 
 #define cb(name)                                                              \
     checker_conv_bias(                                                        \
-            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false,    \
-                                      true, false, true, false, false, true), \
+            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true,     \
+                                      true, false, true, true, false, false), \
             handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                \
             dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);  \
     checker_conv_bias(                                                        \
             get_nchw44_conv_bias_args({1}, 2, false, true, true, false, true, \
-                                      false, false, true),                    \
+                                      true, false, false),                    \
             handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),                \
             dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f), {}, name);
 
@@ -2041,13 +2041,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32_MK4_DOT) {
 
 #define cb(name)                                                              \
     checker_conv_bias(                                                        \
-            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false,    \
-                                      true, false, true, false, false, true), \
+            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true,     \
+                                      true, false, true, true, false, false), \
             handle(), &rng, epsilon, dtype::Int8(), dtype::Int8(),            \
             dtype::Int32(), {}, name);                                        \
     checker_conv_bias(                                                        \
             get_nchw44_conv_bias_args({1}, 2, false, true, true, false, true, \
-                                      false, false, true),                    \
+                                      true, false, false),                    \
             handle(), &rng, epsilon, dtype::Int8(), dtype::Int8(),            \
             dtype::Int32(), {}, name);
 
@@ -2118,7 +2118,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CONV1x1_QUANTIZEDSYM_MK4_DOT) {
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDASYM) {
     NormalRNG rng(128.f);
-
 #define cb(name)                                                              \
     checker_conv_bias(get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false, \
                                          false, true, true),                  \
@@ -2188,18 +2187,19 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUINT8x8x32) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-#define cb(name)                                                               \
-    checker_conv_bias(                                                         \
-            get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true),      \
-            handle(), &rng, epsilon,                                           \
-            dtype::Quantized8Asymm(1.2f, (uint8_t)125),                        \
-            dtype::Quantized8Asymm(1.3f, (uint8_t)129),                        \
-            dtype::QuantizedS32(1.2 * 1.3), {}, name);                         \
-    checker_conv_bias(get_conv_bias_args({1}, 2, false, true, true), handle(), \
-                      &rng, epsilon,                                           \
-                      dtype::Quantized8Asymm(1.2f, (uint8_t)125),              \
-                      dtype::Quantized8Asymm(1.3f, (uint8_t)129),              \
-                      dtype::QuantizedS32(1.2 * 1.3), {}, name);
+#define cb(name)                                                              \
+    checker_conv_bias(get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false, \
+                                         true, true, false),                  \
+                      handle(), &rng, epsilon,                                \
+                      dtype::Quantized8Asymm(1.2f, (uint8_t)125),             \
+                      dtype::Quantized8Asymm(1.3f, (uint8_t)129),             \
+                      dtype::QuantizedS32(1.2 * 1.3), {}, name);              \
+    checker_conv_bias(                                                        \
+            get_conv_bias_args({1}, 2, false, false, true, true, false),      \
+            handle(), &rng, epsilon,                                          \
+            dtype::Quantized8Asymm(1.2f, (uint8_t)125),                       \
+            dtype::Quantized8Asymm(1.3f, (uint8_t)129),                       \
+            dtype::QuantizedS32(1.2 * 1.3), {}, name);
 
 #if MEGDNN_AARCH64
 #if __ARM_FEATURE_DOTPROD
@@ -2252,18 +2252,18 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
     std::vector<conv_bias::TestArg> args_nchw44 =
-            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, true, true, true,
-                                      false, false, false, false, true);
+            get_nchw44_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, true, false, true,
+                                      false, false, true, false, false);
     std::vector<conv_bias::TestArg> args_nchw44_1x1s2 =
-            get_nchw44_conv_bias_args({1}, 2, true, true, true, false, false,
-                                      false, false, true);
-#define cb(name)                                                               \
-    checker_conv_bias(                                                         \
-            get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true),      \
-            handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},             \
-            dtype::Int16{}, dtype::Int16{}, name);                             \
-    checker_conv_bias(get_conv_bias_args({1}, 2, false, true, true), handle(), \
-                      &rng, epsilon, dtype::Int8{}, dtype::Int8{},             \
+            get_nchw44_conv_bias_args({1}, 2, true, false, true, false, false,
+                                      true, false, false);
+#define cb(name)                                                             \
+    checker_conv_bias(                                                       \
+            get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false, true),   \
+            handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},           \
+            dtype::Int16{}, dtype::Int16{}, name);                           \
+    checker_conv_bias(get_conv_bias_args({1}, 2, false, false, true),        \
+                      handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{}, \
                       dtype::Int16{}, dtype::Int16{}, name);
 
 #define cb_nchw44(name)                                                     \
@@ -2314,14 +2314,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16_FILTERPREPROCES
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16_NOPACK_FILTERPREPROCESS) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-#define cb(name)                                                              \
-    check_conv_bias_preprocess(                                               \
-            get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true),     \
-            handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},            \
-            dtype::Int16{}, dtype::Int16{}, name);                            \
-    check_conv_bias_preprocess(get_conv_bias_args({1}, 2, false, true, true), \
-                               handle(), &rng, epsilon, dtype::Int8{},        \
-                               dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, \
+#define cb(name)                                                               \
+    check_conv_bias_preprocess(                                                \
+            get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, false, true),     \
+            handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},             \
+            dtype::Int16{}, dtype::Int16{}, name);                             \
+    check_conv_bias_preprocess(get_conv_bias_args({1}, 2, false, false, true), \
+                               handle(), &rng, epsilon, dtype::Int8{},         \
+                               dtype::Int8{}, dtype::Int16{}, dtype::Int16{},  \
                                name);
 
 #if MEGDNN_AARCH64
@@ -2406,7 +2406,7 @@ void checker_conv_bias_mul_int8x8x32(std::vector<conv_bias::TestArg> args,
         checker.set_dtype(0, dtype::QuantizedS8(2.5f))
                 .set_dtype(1, dtype::QuantizedS8(2.5f))
                 .set_dtype(2, dtype::QuantizedS32(6.25f))
-                .set_dtype(4, {})
+                .set_dtype(4, dtype::QuantizedS32(6.25f))
                 .set_rng(0, &rng)
                 .set_rng(1, &rng)
                 .set_rng(2, &rng)
@@ -2436,7 +2436,7 @@ void checker_conv_bias_int8x8x32_preprocess(std::vector<conv_bias::TestArg> args
         checker.set_dtype(0, dtype::QuantizedS8(2.5f))
                 .set_dtype(1, dtype::QuantizedS8(2.5f))
                 .set_dtype(2, dtype::QuantizedS32(6.25f))
-                .set_dtype(4, {})
+                .set_dtype(4, dtype::QuantizedS32(6.25f))
                 .set_rng(0, &rng)
                 .set_rng(1, &rng)
                 .set_rng(2, &rng)
@@ -2450,7 +2450,7 @@ void checker_conv_bias_int8x8x32_preprocess(std::vector<conv_bias::TestArg> args
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({2, 5, 7}, 2, false, true, true);
+            get_nchw44_conv_bias_args({2, 5, 7}, 2, false, false, true);
 
 #define cb(name) checker_conv_bias_mul_int8x8x32(args, handle(), name);
 #if MEGDNN_AARCH64
@@ -2464,7 +2464,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({2, 5, 7}, 2, false, true, true);
+            get_nchw44_conv_bias_args({2, 5, 7}, 2, false, false, true);
 
 #define cb(name) checker_conv_bias_int8x8x32_preprocess(args, handle(), name);
 #if MEGDNN_AARCH64
@@ -2478,7 +2478,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2_PREPR
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S1) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
-            get_nchw44_conv_bias_args({3, 4, 6}, 1, false, true, true);
+            get_nchw44_conv_bias_args({3, 4, 6}, 1, false, false, true);
 
 #define cb(name) checker_conv_bias_mul_int8x8x32(args, handle(), name);
 #if MEGDNN_AARCH64
@@ -3080,9 +3080,10 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32_PREPROCESS) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+    std::vector<conv_bias::TestArg> args =
+            get_conv_bias_1x1_args(false, true, false, false);
     std::vector<conv_bias::TestArg> args_nchw44 = get_nchw44_conv_bias_args(
-            {1}, 1, true, true, true, false, false, false, false, true);
+            {1}, 1, true, true, true, false, false, true, false, false);
 #define cb(name)                                                    \
     checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{}, \
                       dtype::Int8{}, dtype::Int16{}, dtype::Int16{}, name);
@@ -3140,7 +3141,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16_PREPROCESS) {
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32) {
     using namespace conv_bias;
-    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+    std::vector<conv_bias::TestArg> args =
+            get_conv_bias_1x1_args(false, true, false, false);
 
 #define cb(name) checker_conv_bias_mul_int8x8x32(args, handle(), name);
 

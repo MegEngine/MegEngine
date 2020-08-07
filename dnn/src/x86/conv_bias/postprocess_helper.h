@@ -294,6 +294,73 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::QUANTIZED> {
 #undef FOR_BIAS
     }
 };
+
+#undef CALL_BINARY
+#undef CALL_BINARY_BROADCAST
+
+#define CALL_BINARY(_op, _simd_type)                                        \
+    thin_function<void(const ctype*, const ctype*, dtype*, DType, DType,    \
+                       DType, size_t)>                                      \
+            run = OpCallerBinary<_op<_simd_type, ctype, dtype>, _simd_type, \
+                                 megdnn::x86::BcastType::VEC_VEC>::run;     \
+    run(static_cast<ctype*>(conv_dst_ptr), static_cast<ctype*>(bias_ptr),   \
+        reinterpret_cast<dtype*>(dst_ptr), bias_type, bias_type, dst_type,  \
+        N* OC* OH* OW);
+
+#define CALL_BINARY_BROADCAST(_op, _simd_type)                                \
+    thin_function<void(const ctype*, const ctype*, dtype*, DType, DType,      \
+                       DType, size_t, size_t, size_t)>                        \
+            run = OpCallerBinary<_op<_simd_type, ctype, dtype>, _simd_type,   \
+                                 megdnn::x86::BcastType::VEC_BCAST101>::run;  \
+    run(static_cast<ctype*>(conv_dst_ptr), static_cast<ctype*>(bias_ptr),     \
+        reinterpret_cast<dtype*>(dst_ptr), bias_type, bias_type, dst_type, N, \
+        OC, OH* OW);
+
+#define FOR_SIMD(CALLER)                         \
+    if (is_supported(SIMDType::AVX2)) {          \
+        CALLER(AddOp, SIMDType::AVX2)            \
+    } else if (is_supported(SIMDType::SSE4_2)) { \
+        CALLER(AddOp, SIMDType::SSE4_2)          \
+    } else {                                     \
+        CALLER(AddOp, SIMDType::NONE)            \
+    }
+
+#define FOR_BIAS(bias_mode)                    \
+    switch (bias_mode) {                       \
+        case BiasMode::BIAS:                   \
+            FOR_SIMD(CALL_BINARY);             \
+            break;                             \
+        case BiasMode::BROADCAST_CHANNEL_BIAS: \
+            FOR_SIMD(CALL_BINARY_BROADCAST);   \
+            break;                             \
+        default:                               \
+            break;                             \
+    }
+
+template <typename ctype, typename dtype>
+struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
+    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
+                    megdnn::ConvBiasForward::BiasMode bias_mode,
+                    megdnn::param::ConvBiasV0::NonlineMode nonlineMode,
+                    DType bias_type, DType dst_type, size_t N, size_t OC,
+                    size_t OH, size_t OW, size_t pack_oc_size = 1) {
+        MEGDNN_MARK_USED_VAR(pack_oc_size);
+        megdnn_assert(pack_oc_size == 1,
+                      "PostProcess only support nchw in x86");
+        megdnn_assert(
+                nonlineMode == megdnn::param::ConvBiasV0::NonlineMode::IDENTITY,
+                "Add bias PostProcess only support IDENTITY");
+        if (bias_mode == megdnn::ConvBiasForward::BiasMode::NO_BIAS) {
+            return;
+        }
+        FOR_BIAS(bias_mode);
+#undef CALL_BINARY
+#undef CALL_BINARY_BROADCAST
+#undef FOR_SIMD
+#undef FOR_BIAS
+    }
+};
+
 #undef cb_unary
 #undef cb_binary
 #undef BIAS_CASE

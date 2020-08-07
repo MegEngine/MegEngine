@@ -92,6 +92,8 @@ OP(dt_int8, SIMDType::AVX2, "avx2", __m256i, __m256ix2, __m256i, mm256, epi8,
         using AddOpBase::operator();                                   \
     };
 
+OP(dt_int32, SIMDType::NONE);
+OP(dt_int16, SIMDType::NONE);
 OP(dt_float32, SIMDType::NONE);
 #undef OP
 }  // namespace x86

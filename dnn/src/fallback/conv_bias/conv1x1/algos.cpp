@@ -227,8 +227,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
             param.dst_type.enumv() == DTypeEnum::QuantizedS16 ||
             param.dst_type.enumv() == DTypeEnum::Int32 ||
             param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
-            if (param.bias_mode != megdnn::BiasMode::NO_BIAS ||
-                param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
+            if (param.nonlineMode != megdnn::NonlineMode::IDENTITY) {
                 return false;
             }
         }

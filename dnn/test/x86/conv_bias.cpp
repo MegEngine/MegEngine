@@ -834,6 +834,13 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32) {
         //! no bias
         args.emplace_back(param, TensorShape{1, ic, h, w},
                           TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(param, TensorShape{1, ic, h, w},
+                          TensorShape{oc, ic, kernel, kernel},
+                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(param, TensorShape{1, ic, h, w},
+                          TensorShape{oc, ic, kernel, kernel},
+                          TensorShape{1, oc, (h + 2 * p - kernel) + 1,
+                                      (h + 2 * p - kernel) + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1384,7 +1391,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32) {
     using namespace conv_bias;
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, true);
 #if MEGDNN_X86_WITH_MKL_DNN
     if (x86::is_supported(x86::SIMDType::VNNI)) {
         checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
@@ -1422,7 +1429,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32_PREPROCESS) {
     using namespace conv_bias;
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(true, true);
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, true);
 #if MEGDNN_X86_WITH_VNNI
     if (x86::is_supported(x86::SIMDType::VNNI)) {
         checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
