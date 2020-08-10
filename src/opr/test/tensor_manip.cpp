@@ -602,6 +602,32 @@ TEST(TestTensorManip, SubtensorNegativeAxis) {
         run({TensorShape{2, 3, 4, 5}});
 }
 
+TEST(TestTensorManip, SubtensorWithEmptyIndexDesc) {
+    using Checker = AutoOprChecker<1, 1>;
+
+    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
+            Checker::SymOutArray {
+        auto x = inputs[0];
+        return {opr::Subtensor::make(x, {})};
+    };
+
+    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+        auto iptr = inp[0]->ptr<float>();
+        auto oshp = inp[0]->shape();
+        auto optr = dest[0].resize(oshp).ptr<float>();
+        for (size_t i = 0, it = oshp.total_nr_elems(); i < it; ++i) {
+            optr[i] = iptr[i];
+        }
+    };
+
+    Checker checker(make_graph, fwd);
+    checker.
+        run({TensorShape{5}}).
+        run({TensorShape{2, 3}}).
+        run({TensorShape{2, 3, 4}}).
+        run({TensorShape{2, 3, 4, 5}});
+}
+
 TEST(TestTensorManip, SubtensorShapeInferForDynAxisIdx) {
     HostTensorGenerator<> gen;
     auto host_x = gen({5, 6, 3});
@@ -1104,6 +1130,24 @@ TEST(TestTensorManip, SetSubtensorDynIdx) {
 
     host_x->ptr<float>()[3] = host_sub->ptr<float>()[0];
     MGB_ASSERT_TENSOR_EQ(*host_x, host_y);
+}
+
+TEST(TestTensorManip, SetSubtensorWithEmptyIndexDesc) {
+    HostTensorGenerator<> gen;
+    auto host_x = gen({12}), host_y = gen({12});
+
+    auto graph = ComputingGraph::make();
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+         y = opr::Host2DeviceCopy::make(*graph, host_y),
+         z = opr::SetSubtensor::make(x, y, {});
+
+    ASSERT_TRUE(cg::is_static_var_storage(z.node()));
+    HostTensorND host_z;
+
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    func->execute();
+
+    MGB_ASSERT_TENSOR_EQ(*host_y, host_z);
 }
 
 TEST(TestTensorManip, IncrSubtensor) {
