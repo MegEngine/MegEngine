@@ -119,7 +119,8 @@ size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
         arm_common_workspace = ws.total_size_in_bytes() * nr_threads;
     }
 
-    if ((param.src_type.enumv() == DTypeEnum::QuantizedS8) &&
+    if ((param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
+         param.src_type.enumv() == DTypeEnum::Int8) &&
         (param.format == param::Pooling::Format::NCHW44)) {
         WorkspaceBundle ws = get_bundle_nchw44(param);
         arm_common_workspace = ws.total_size_in_bytes() * nr_threads;

@@ -118,18 +118,19 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_NCHW44_FP32) {
 
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44)
 {
+    UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+    Checker<Pooling> checker(handle());
+    checker.set_rng(0, &rng);
     // clang-format off
     for (size_t ih: {3, 5, 10})
     for (size_t iw: {3, 5, 7, 9, 15, 20})
     for (size_t ph: {0, 1, 2})
     for (size_t pw: {0, 1, 2})
     for(auto mode: {param::Pooling::Mode::MAX, param::Pooling::Mode::AVERAGE})
+    for(auto data_type: SmallVector<DType>{dtype::QuantizedS8(1.1f), dtype::Int8()})
     if (ih+2*ph >= 3 && iw+2*pw >= 3)
     {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
+        checker.set_dtype(0, data_type);
 
         param::Pooling param;
         param.mode = mode;
@@ -149,18 +150,20 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44)
 
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W2x2_NCHW44)
 {
+    UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+    Checker<Pooling> checker(handle());
+    checker.set_rng(0, &rng);
     // clang-format off
    for (size_t ih: {2, 5, 10, 17})
    for (size_t iw: {2, 6, 8, 16, 26})
    for (size_t ph: {0, 1})
    for (size_t pw: {0, 1})
-   for(auto mode: {param::Pooling::Mode::MAX,param::Pooling::Mode::AVERAGE})
+   for(auto mode: {param::Pooling::Mode::MAX, param::Pooling::Mode::AVERAGE})
+   for(auto data_type: SmallVector<DType>{dtype::QuantizedS8(1.1f), dtype::Int8()})
     if (ih+2*ph >= 2 && iw+2*pw >= 2)
     {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
+        checker.set_dtype(0, data_type);
+        checker.set_dtype(1, data_type);
 
         param::Pooling param;
         param.mode = mode;
@@ -179,18 +182,19 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W2x2_NCHW44)
 
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W4x4_NCHW44)
 {
+    UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+    Checker<Pooling> checker(handle());
+    checker.set_rng(0, &rng);
     // clang-format off
     for (size_t ih: {4, 10, 18, 25, 30})
     for (size_t iw: {4, 12, 17, 20, 25})
     for (size_t ph: {0, 1, 2})
     for (size_t pw: {0, 1, 2})
+    for(auto data_type: SmallVector<DType>{dtype::QuantizedS8(1.1f), dtype::Int8()})
     for(auto mode: {param::Pooling::Mode::MAX,param::Pooling::Mode::AVERAGE})
     if (ih+2*ph >= 4 && iw+2*pw >= 4)
     {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
+        checker.set_dtype(0, data_type);
 
         param::Pooling param;
         param.mode = mode;
@@ -208,18 +212,19 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W4x4_NCHW44)
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W5x5_NCHW44)
 {
+    UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
+    Checker<Pooling> checker(handle());
+    checker.set_rng(0, &rng);
     // clang-format off
     for (size_t ih: {5, 9, 19, 20, 39})
     for (size_t iw: {5, 12, 23, 27, 39})
     for (size_t ph: {0, 1, 2})
     for (size_t pw: {0, 1, 2})
+    for(auto data_type: SmallVector<DType>{dtype::QuantizedS8(1.1f), dtype::Int8()})
     for(auto mode: {param::Pooling::Mode::MAX,param::Pooling::Mode::AVERAGE})
     if (ih+2*ph >= 5 && iw+2*pw >= 5)
     {
-        UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::QuantizedS8(1.1f));
-        checker.set_rng(0,&rng);
+        checker.set_dtype(0, data_type);
 
         param::Pooling param;
         param.mode = mode;

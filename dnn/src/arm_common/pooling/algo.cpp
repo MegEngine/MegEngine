@@ -58,7 +58,8 @@ WorkspaceBundle get_bundle(const PoolingImpl::PoolingKernSizeParam& param) {
 
 WorkspaceBundle get_bundle_nchw44(
         const PoolingImpl::PoolingKernSizeParam& param) {
-    megdnn_assert((param.src_type.enumv() == DTypeEnum::QuantizedS8) &&
+    megdnn_assert((param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
+                   param.src_type.enumv() == DTypeEnum::Int8) &&
                   (param.format == param::Pooling::Format::NCHW44));
     auto IH = param.isz[0];
     auto IW = param.isz[1];
@@ -605,10 +606,15 @@ bool PoolingImpl::AlgoFilter3ModexStridexNCHW44::usable(
     auto FH = param.filter[0];
     auto FW = param.filter[1];
 
-    bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+    bool avaible = (param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
+                    param.src_type.enumv() == DTypeEnum::Int8) &&
                    param.format == Param::Format::NCHW44 &&
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 3 && FW == 3 && SW == SH && (SH == 1 || SW == 2);
+    //! Int8 not support average, because its round mode is different form
+    //! quint8
+    avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
+                 param.mode == Mode::AVERAGE);
     return avaible;
 }
 
@@ -693,10 +699,15 @@ bool PoolingImpl::AlgoFilter2ModexStridexNCHW44::usable(
     auto FH = param.filter[0];
     auto FW = param.filter[1];
 
-    bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+    bool avaible = (param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
+                    param.src_type.enumv() == DTypeEnum::Int8) &&
                    param.format == Param::Format::NCHW44 &&
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 2 && FW == 2 && SH == SW && (SW == 1 || SW == 2);
+    //! Int8 not support average, because its round mode is different form
+    //! quint8
+    avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
+                 param.mode == Mode::AVERAGE);
     return avaible;
 }
 
@@ -781,10 +792,16 @@ bool PoolingImpl::AlgoFilter4ModexStridexNCHW44::usable(
     auto FH = param.filter[0];
     auto FW = param.filter[1];
 
-    bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+    bool avaible = (param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
+                    param.src_type.enumv() == DTypeEnum::Int8) &&
                    param.format == Param::Format::NCHW44 &&
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 4 && FW == 4 && SH == SW && (SW == 1 || SW == 2);
+
+    //! Int8 not support average, because its round mode is different form
+    //! quint8
+    avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
+                 param.mode == Mode::AVERAGE);
     return avaible;
 }
 
@@ -869,10 +886,15 @@ bool PoolingImpl::AlgoFilter5ModexStridexNCHW44::usable(
     auto FH = param.filter[0];
     auto FW = param.filter[1];
 
-    bool avaible = param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+    bool avaible = (param.src_type.enumv() == DTypeEnum::QuantizedS8 ||
+                    param.src_type.enumv() == DTypeEnum::Int8) &&
                    param.format == Param::Format::NCHW44 &&
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 5 && FW == 5 && SH == SW && (SW == 1 || SW == 2);
+    //! Int8 not support average, because its round mode is different form
+    //! quint8
+    avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
+                 param.mode == Mode::AVERAGE);
     return avaible;
 }
 
