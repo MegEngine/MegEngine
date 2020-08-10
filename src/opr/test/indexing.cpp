@@ -336,6 +336,23 @@ TEST(TestOprIndexing, MultiAxisVec) {
     checker.run({TensorShape{12, 1, 2, 9}, {23}}, opt);
 }
 
+TEST(TestOprIndexing, MultiAxisVecWithEmptyIndexDesc) {
+    auto graph = ComputingGraph::make();
+    auto host_x = HostTensorGenerator<>{}({2, 3});
+    auto run_check = [&](SymbolVar y) {
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({2, 3}), host_y.shape());
+        func->execute();
+        MGB_ASSERT_TENSOR_EQ(*host_x, host_y);
+    };
+
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    run_check(opr::IndexingMultiAxisVec::make(x, {}));
+}
+
 TEST(TestOprIndexing, IncrMultiAxisVec) {
     using Checker = AutoOprChecker<3, 1>;
     using AIdx = opr::indexing::AxisIndexer;
@@ -427,6 +444,26 @@ TEST(TestOprIndexing, SetMultiAxisVec) {
     checker.run({TensorShape{7, 2, 23}, {15}, {3, 2, 15}}, opt);
     cur_axis_size = 18;
     checker.run({TensorShape{12, 1, 2, 18}, {1}, {5, 1, 2, 1}}, opt);
+}
+
+TEST(TestOprIndexing, SetMultiAxisVecWithEmptyIndexDesc) {
+    auto graph = ComputingGraph::make();
+    auto host_x = HostTensorGenerator<>{}({2, 3}),
+        host_y = HostTensorGenerator<>{}({2, 3});
+    auto run_check = [&](SymbolVar z) {
+        HostTensorND host_z;
+        auto func = graph->compile({make_callback_copy(z, host_z)});
+        // warning should be printed on the first execution
+        func->execute();
+        ASSERT_EQ(TensorShape({2, 3}), host_z.shape());
+        func->execute();
+        MGB_ASSERT_TENSOR_EQ(host_z, *host_y);
+    };
+
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+         y = opr::Host2DeviceCopy::make(*graph, host_y);
+
+    run_check(opr::IndexingSetMultiAxisVec::make(x, y, {}));
 }
 
 TEST(TestOprIndexing, MultiAxisVecDegenerate) {
