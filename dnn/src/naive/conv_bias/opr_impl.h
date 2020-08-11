@@ -66,6 +66,11 @@ public:
     const char* get_algorithm_set_name() const override;
 };
 
+void handle_z_inp_and_activation_naive(
+        param::ConvBias::NonlineMode nonline_mode,
+        const TensorND& conv_bias_tensor, const TensorND& z_tensor,
+        const TensorND& dst_tensor, dt_byte* workspace_ptr);
+
 } // namespace naive
 } // namespace megdnn
 // vim: syntax=cpp.doxygen
