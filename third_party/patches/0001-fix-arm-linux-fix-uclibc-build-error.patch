@@ -1,0 +1,86 @@
+From 0c64236f0d9463e508f8ebd8e73efafa0049d13b Mon Sep 17 00:00:00 2001
+From: Megvii Engine Team <megengine@megvii.com>
+Date: Thu, 30 Jul 2020 14:26:40 +0800
+Subject: [PATCH] fix(arm/linux): fix uclibc build error
+
+---
+ src/arm/linux/hwcap.c  | 7 ++++---
+ src/arm/linux/init.c   | 4 +++-
+ src/linux/processors.c | 5 +++++
+ 3 files changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/src/arm/linux/hwcap.c b/src/arm/linux/hwcap.c
+index 36d0d91..5e1c301 100644
+--- a/src/arm/linux/hwcap.c
++++ b/src/arm/linux/hwcap.c
+@@ -15,7 +15,8 @@
+ #include <arm/linux/api.h>
+ #include <cpuinfo/log.h>
+ 
+-#if CPUINFO_ARCH_ARM64 || CPUINFO_ARCH_ARM && !defined(__ANDROID__)
++#if CPUINFO_ARCH_ARM64 || CPUINFO_ARCH_ARM && !defined(__ANDROID__) && !defined(__UCLIBC__)
++
+ 	#include <sys/auxv.h>
+ #else
+ 	#define AT_HWCAP 16
+@@ -38,7 +39,7 @@
+ #endif
+ 
+ 
+-#if CPUINFO_ARCH_ARM
++#if CPUINFO_ARCH_ARM && !defined(__UCLIBC__)
+ 	typedef unsigned long (*getauxval_function_t)(unsigned long);
+ 
+ 	bool cpuinfo_arm_linux_hwcap_from_getauxval(
+@@ -144,7 +145,7 @@
+ 			#endif
+ 		}
+ 	#endif /* __ANDROID__ */
+-#elif CPUINFO_ARCH_ARM64
++#elif CPUINFO_ARCH_ARM64 && !defined(__UCLIBC__)
+ 	uint32_t cpuinfo_arm_linux_hwcap_from_getauxval(void) {
+ 		#if CPUINFO_MOCK
+ 			return mock_hwcap;
+diff --git a/src/arm/linux/init.c b/src/arm/linux/init.c
+index 89d957e..8225f5e 100644
+--- a/src/arm/linux/init.c
++++ b/src/arm/linux/init.c
+@@ -234,6 +234,8 @@ void cpuinfo_arm_linux_init(void) {
+ 		cpuinfo_arm_linux_decode_chipset(proc_cpuinfo_hardware, proc_cpuinfo_revision, valid_processors, 0);
+ #endif
+ 
++#if !defined(__UCLIBC__)
++
+ 	#if CPUINFO_ARCH_ARM
+ 		uint32_t isa_features = 0, isa_features2 = 0;
+ 		#ifdef __ANDROID__
+@@ -282,7 +284,7 @@ void cpuinfo_arm_linux_init(void) {
+ 		cpuinfo_arm64_linux_decode_isa_from_proc_cpuinfo(
+ 			isa_features, last_midr, &chipset, &cpuinfo_isa);
+ 	#endif
+-
++#endif
+ 	/* Detect min/max frequency and package ID */
+ 	for (uint32_t i = 0; i < arm_linux_processors_count; i++) {
+ 		if (bitmask_all(arm_linux_processors[i].flags, CPUINFO_LINUX_FLAG_VALID)) {
+diff --git a/src/linux/processors.c b/src/linux/processors.c
+index 4904e2a..a1d4693 100644
+--- a/src/linux/processors.c
++++ b/src/linux/processors.c
+@@ -90,8 +90,13 @@ static bool uint32_parser(const char* text_start, const char* text_end, void* co
+ 	uint32_t kernel_max = 0;
+ 	const char* parsed_end = parse_number(text_start, text_end, &kernel_max);
+ 	if (parsed_end == text_start) {
++#if defined(__UCLIBC__)
++		cpuinfo_log_warning("failed to parse file %s: \"%.*s\" is not an unsigned number",
++			KERNEL_MAX_FILENAME, (int) (text_end - text_start), text_start);
++#else
+ 		cpuinfo_log_error("failed to parse file %s: \"%.*s\" is not an unsigned number",
+ 			KERNEL_MAX_FILENAME, (int) (text_end - text_start), text_start);
++#endif
+ 		return false;
+ 	} else {
+ 		for (const char* char_ptr = parsed_end; char_ptr != text_end; char_ptr++) {
+-- 
+2.26.2
+

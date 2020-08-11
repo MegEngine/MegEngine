@@ -11,11 +11,20 @@ fi
 cd $(dirname $0)
 
 git submodule sync
+
+git submodule foreach --recursive git reset --hard
+git submodule foreach --recursive git clean -fd
+
+
 git submodule update --init intel-mkl-dnn
 git submodule update --init Halide
 git submodule update --init protobuf
 git submodule update --init flatbuffers
 git submodule update --init gtest
+
+git submodule update --init cpuinfo
+source ./apply-patches.sh
+apply_cpuinfo_patches
 
 git submodule update --init OpenBLAS
 git submodule update --init libzmq
