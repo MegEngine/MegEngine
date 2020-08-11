@@ -204,6 +204,18 @@ ConvBiasImpl::AlgoConv1x1::dispatch_preprocess_kerns(
 bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                                        AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 2) {
+        //! x86 only support nchw
+#if MEGDNN_X86
+        if (param.filter_meta.format != param::ConvBias::Format::NCHW) {
+            return false;
+        }
+#else
+        if (param.filter_meta.format != param::ConvBias::Format::NCHW &&
+            param.filter_meta.format != param::ConvBias::Format::NCHW44 &&
+            param.filter_meta.format != param::ConvBias::Format::NCHW44_DOT) {
+            return false;
+        }
+#endif
         size_t FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
         size_t PH = param.filter_meta.padding[0],
