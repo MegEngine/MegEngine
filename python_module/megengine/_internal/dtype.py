@@ -25,6 +25,9 @@ _metadata_dict = {
     "qint32": _QuantDtypeMetadata(
         "QuantizedS32", "int32", False, -(2 ** 31), 2 ** 31 - 1,
     ),
+    # NOTE: int2 is not supported for model dump yet
+    "quint2": _QuantDtypeMetadata(None, "uint8", True, 0, 3),
+    "qint2": _QuantDtypeMetadata(None, "int8", False, -2, 1),
 }
 
 

@@ -13,6 +13,7 @@ from .qconfig import (
     QConfig,
     calibration_qconfig,
     ema_fakequant_qconfig,
+    ema_lowbit_fakequant_qconfig,
     min_max_fakequant_qconfig,
     tqt_quant_qconfig,
 )
