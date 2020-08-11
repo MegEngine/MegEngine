@@ -1049,7 +1049,7 @@ Args Args::from_argv(int argc, char **argv) {
                     ret.data_files.emplace_back(cmd.substr(start));
                     break;
                 }
-                std::string substr = cmd.substr(start, end);
+                std::string substr = cmd.substr(start, end - start);
                 ret.data_files.emplace_back(substr);
                 start = end + 1;
             }
