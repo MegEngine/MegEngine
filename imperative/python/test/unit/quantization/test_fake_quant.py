@@ -72,7 +72,7 @@ def test_TQT():
         c1, c2 = f.backward(c)
         c1_np, c2_np = nf.backward(c_np)
         np.testing.assert_allclose(c1.numpy(), c1_np.astype("float32"), rtol=1e-6)
-        np.testing.assert_allclose(c2.numpy(), c2_np.astype("float32"), rtol=1e-6)
+        np.testing.assert_allclose(c2.numpy(), c2_np.astype("float32"), rtol=5e-5)
 
     a_np = np.random.random((4, 3)).astype("float32")
     b_np = np.random.random((1)).astype("float32")
