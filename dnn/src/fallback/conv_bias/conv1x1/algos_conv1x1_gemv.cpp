@@ -261,6 +261,7 @@ size_t ConvBiasImpl::AlgoConv1x1Gemv::get_workspace(
                 .total_size_in_bytes();
     }
     MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>

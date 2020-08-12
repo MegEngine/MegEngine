@@ -53,13 +53,20 @@ bool MatrixMulImpl::AlgoF32K8x12x1::usable(
 
 size_t MatrixMulImpl::AlgoF32K8x12x1::get_workspace(
         const KernSizeParam& kern_size_param) const {
-    auto M = kern_size_param.M, N = kern_size_param.N, K = kern_size_param.K;
-    matmul::fallback::sgemm_8x12 strategy(M, N, K, kern_size_param.A_type,
-                                          kern_size_param.B_type,
-                                          kern_size_param.C_type);
-    return matmul::GemmInterleaved<matmul::fallback::sgemm_8x12>(
-                   M, N, K, kern_size_param.trA, kern_size_param.trB, strategy)
-            .get_workspace_size();
+    MIDOUT_BEGIN(megdnn_fb_matmul_f32_kern,
+                 midout_iv("AlgoF32K8x12x1::get_workspace"_hash)) {
+        auto M = kern_size_param.M, N = kern_size_param.N,
+             K = kern_size_param.K;
+        matmul::fallback::sgemm_8x12 strategy(M, N, K, kern_size_param.A_type,
+                                              kern_size_param.B_type,
+                                              kern_size_param.C_type);
+        return matmul::GemmInterleaved<matmul::fallback::sgemm_8x12>(
+                       M, N, K, kern_size_param.trA, kern_size_param.trB,
+                       strategy)
+                .get_workspace_size();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32K8x12x1::get_kern(

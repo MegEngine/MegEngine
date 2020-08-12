@@ -17,6 +17,7 @@
 #cmakedefine01 MGB_ENABLE_DEBUG_UTIL
 #cmakedefine01 MGB_ENABLE_LOGGING
 #cmakedefine01 MGB_ENABLE_GRAD
+#cmakedefine01 MGB_ENABLE_CPUINFO
 #cmakedefine01 MGB_VERBOSE_TYPEINFO_NAME
 #cmakedefine01 MGB_BUILD_SLIM_SERVING
 #cmakedefine01 MGB_ENABLE_EXCEPTION
@@ -78,6 +79,16 @@
 // whether to enable registering opr grad functions
 #ifndef MGB_ENABLE_GRAD
 #define MGB_ENABLE_GRAD         1
+#endif
+
+// whether to enable cpuinfo
+#ifndef MGB_ENABLE_CPUINFO
+#define MGB_ENABLE_CPUINFO      1
+#endif
+
+#ifdef IOS
+#undef MGB_ENABLE_CPUINFO
+#define MGB_ENABLE_CPUINFO      0
 #endif
 
 // whether to include actual class name in mgb::Typeinfo object; if this is

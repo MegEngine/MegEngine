@@ -202,14 +202,19 @@ bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::is_preferred(
 
 size_t ConvBiasImpl::AlgoDotS8Direct_NCHW44::get_workspace(
         const NCBKernSizeParam& param) const {
-    return get_bundle(param).total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("ALGODOTS8DIRECT_NCHW44::get_workspace"_hash)) {
+        return get_bundle(param).total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
         const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
-                 midout_iv("ALGODOTS8DIRECT_NCHW44"_hash)) {
+                 midout_iv("ALGODOTS8DIRECT_NCHW44::dispatch_kerns"_hash)) {
         auto fm = param.filter_meta;
         size_t BATCH = param.n;
         size_t GROUP = fm.group;

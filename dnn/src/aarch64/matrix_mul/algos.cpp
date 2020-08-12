@@ -58,6 +58,7 @@ size_t MatrixMulImpl::AlgoF32K8x12x1::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32K8x12x1::get_kern(
@@ -118,6 +119,7 @@ size_t MatrixMulImpl::AlgoF32MK4_8x12x1::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32MK4_8x12x1::get_kern(
@@ -177,6 +179,7 @@ size_t MatrixMulImpl::AlgoF32K4x16x1::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32K4x16x1::get_kern(
@@ -237,6 +240,7 @@ size_t MatrixMulImpl::AlgoF32MK4_4x16::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32MK4_4x16::get_kern(
@@ -313,6 +317,7 @@ size_t MatrixMulImpl::AlgoF16K8x24x1::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16K8x24x1::get_kern(
@@ -352,6 +357,7 @@ size_t MatrixMulImpl::AlgoF16MK8_8x8::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoF16MK8_8x8::get_kern(
@@ -431,6 +437,7 @@ size_t MatrixMulImpl::AlgoInt8x8x32K8x12x4DotProd::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32K8x12x4DotProd::get_kern(
@@ -501,6 +508,7 @@ size_t MatrixMulImpl::AlgoInt8x8x32MK4_8x12x4DotProd::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32MK4_8x12x4DotProd::get_kern(
@@ -573,6 +581,7 @@ size_t MatrixMulImpl::AlgoInt8x8x32MK4_4x4x16::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32MK4_4x4x16::get_kern(
@@ -635,6 +644,7 @@ size_t MatrixMulImpl::AlgoInt8x8x32K4x4x16::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32K4x4x16::get_kern(
@@ -696,6 +706,7 @@ size_t MatrixMulImpl::AlgoInt8x8x32K8x8x8::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32K8x8x8::get_kern(
@@ -762,6 +773,7 @@ size_t MatrixMulImpl::AlgoInt8x8x16K8x8x8::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16K8x8x8::get_kern(
@@ -828,6 +840,7 @@ size_t MatrixMulImpl::AlgoInt8x8x16K4x4x16::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16K4x4x16::get_kern(
@@ -905,6 +918,7 @@ size_t MatrixMulImpl::AlgoInt8x8x16MK4_16x12x4::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16MK4_16x12x4::get_kern(
@@ -981,6 +995,7 @@ size_t MatrixMulImpl::AlgoInt8x8x16MK4_4x4x8::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16MK4_4x4x8::get_kern(
@@ -1051,6 +1066,7 @@ size_t MatrixMulImpl::AlgoInt16x16x32K12x8x1::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt16x16x32K12x8x1::get_kern(
@@ -1092,6 +1108,7 @@ size_t MatrixMulImpl::AlgoInt16x16x32MK8_8x8::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt16x16x32MK8_8x8::get_kern(
@@ -1172,6 +1189,7 @@ size_t MatrixMulImpl::AlgoQuint8K8x8x4DotProd::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoQuint8K8x8x4DotProd::get_kern(
@@ -1277,6 +1295,7 @@ size_t MatrixMulImpl::AlgoQuint8K8x8x8::get_workspace(
                 .get_workspace_size();
     }
     MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoQuint8K8x8x8::get_kern(

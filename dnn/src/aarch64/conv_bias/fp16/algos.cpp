@@ -49,13 +49,13 @@ size_t ConvBiasImpl::AlgoF16DirectStride2::get_workspace(
         return wbundle.total_size_in_bytes();
     }
     MIDOUT_END();
-    return false;
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoF16DirectStride2::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp32, 0, 2) {
+    MIDOUT_BEGIN(megdnn_aarch64_conv_bias_stride2_conv2357_fp16, 0, 2) {
         return get_kimpls(param);
     }
     MIDOUT_END();

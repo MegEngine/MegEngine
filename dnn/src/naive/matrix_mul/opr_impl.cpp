@@ -23,10 +23,16 @@ namespace naive {
 size_t MatrixMulForwardImpl::get_workspace_in_bytes(const TensorLayout& A,
                                                     const TensorLayout& B,
                                                     const TensorLayout&) {
-    if (A.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
-        return (A.span().dist_elem() + B.span().dist_elem()) * sizeof(uint8_t);
+    MIDOUT_BEGIN(
+            megdnn_naive_matmul,
+            midout_iv("MatrixMulForwardImpl::get_workspace_in_bytes"_hash)) {
+        if (A.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+            return (A.span().dist_elem() + B.span().dist_elem()) *
+                   sizeof(uint8_t);
+        }
+        return 0;
     }
-    return 0;
+    MIDOUT_END();
 }
 
 template <bool TA, bool TB>
@@ -127,7 +133,8 @@ void MatrixMulForwardImpl::exec_internal(_megdnn_tensor_in A,
 void MatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
                                 _megdnn_tensor_out C,
                                 _megdnn_workspace workspace) {
-    MIDOUT_BEGIN(megdnn_naive_matmul) {
+    MIDOUT_BEGIN(megdnn_naive_matmul,
+                 midout_iv("MatrixMulForwardImpl::exec"_hash)) {
         check_exec(A.layout, B.layout, C.layout, workspace.size);
         auto p = param();
         MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal(A, B, C, workspace, p));

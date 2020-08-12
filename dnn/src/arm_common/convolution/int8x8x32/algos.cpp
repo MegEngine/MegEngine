@@ -32,13 +32,23 @@ bool ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::usable(
 
 size_t ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::get_workspace(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
-    return deconv::get_workspace_in_bytes_stride1_int8x8x32_dot(param);
+    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
+                 midout_iv("AlgoSdot8DirectStride1::get_workspace"_hash)) {
+        return deconv::get_workspace_in_bytes_stride1_int8x8x32_dot(param);
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 ConvolutionBackwardDataImpl::ncb_kern_t
 ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::dispatch_kern(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
-    return deconv::stride1_int8x8x32_dot;
+    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
+                 midout_iv("AlgoSdot8DirectStride1::dispatch_kern"_hash)) {
+        return deconv::stride1_int8x8x32_dot;
+    }
+    MIDOUT_END();
+    return {};
 }
 
 /* ===================== direct stride 2 algo ===================== */
@@ -49,13 +59,23 @@ bool ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::usable(
 
 size_t ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::get_workspace(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
-    return deconv::get_workspace_in_bytes_stride2_int8x8x32_dot(param);
+    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
+                 midout_iv("AlgoSdot8DirectStride2::get_workspace"_hash)) {
+        return deconv::get_workspace_in_bytes_stride2_int8x8x32_dot(param);
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 ConvolutionBackwardDataImpl::ncb_kern_t
 ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::dispatch_kern(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
-    return deconv::stride2_int8x8x32_dot;
+    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
+                 midout_iv("AlgoSdot8DirectStride2::dispatch_kern"_hash)) {
+        return deconv::stride2_int8x8x32_dot;
+    }
+    MIDOUT_END();
+    return {};
 }
 
 #endif

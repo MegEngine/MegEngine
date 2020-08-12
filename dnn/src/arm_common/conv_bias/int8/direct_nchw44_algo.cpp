@@ -223,7 +223,12 @@ bool ConvBiasImpl::AlgoS8DirectNCHW44::is_preferred(
 
 size_t ConvBiasImpl::AlgoS8DirectNCHW44::get_workspace(
          const NCBKernSizeParam& param) const {
-    return get_bundle(param).total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8_nchw44,
+                 midout_iv("AlgoS8DirectNCHW44::get_workspace"_hash)) {
+        return get_bundle(param).total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>

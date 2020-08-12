@@ -83,7 +83,8 @@ void get_rectified_size_str2(size_t IH, size_t IW, size_t OH, size_t OW,
 /* ===================== direct algo ===================== */
 bool ConvBiasImpl::AlgoI8x8x16Direct::usable(const NCBKernSizeParam& param,
                                              AlgoSelectionStrategy) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 0) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Direct::usable"_hash)) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
         return param.bias_mode == BiasMode::NO_BIAS &&
@@ -122,7 +123,8 @@ WorkspaceBundle ConvBiasImpl::AlgoI8x8x16Direct::get_bundle(
 }
 size_t ConvBiasImpl::AlgoI8x8x16Direct::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 1) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Direct::get_workspace"_hash)) {
         auto bundle = get_bundle(param);
         return bundle.total_size_in_bytes();
     }
@@ -287,7 +289,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Direct::get_kimpls(
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoI8x8x16Direct::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 1, 2) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Direct::dispatch_kerns"_hash)) {
         return get_kimpls(param);
     }
     MIDOUT_END();
@@ -297,7 +300,8 @@ ConvBiasImpl::AlgoI8x8x16Direct::dispatch_kerns(
 /* ===================== stride-2 algo ===================== */
 bool ConvBiasImpl::AlgoI8x8x16Stride2::usable(const NCBKernSizeParam& param,
                                               AlgoSelectionStrategy) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 0) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Stride2::usable"_hash)) {
         auto&& fm = param.filter_meta;
         auto FH = fm.spatial[0];
         return param.bias_mode == BiasMode::NO_BIAS &&
@@ -337,7 +341,8 @@ WorkspaceBundle ConvBiasImpl::AlgoI8x8x16Stride2::get_bundle(
 }
 size_t ConvBiasImpl::AlgoI8x8x16Stride2::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 1) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Stride2::get_workspace"_hash)) {
         auto bundle = get_bundle(param);
         return bundle.total_size_in_bytes();
     }
@@ -501,7 +506,8 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoI8x8x16Stride2::get_kimpls(
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoI8x8x16Stride2::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 2, 2) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Stride2::dispatch_kerns"_hash)) {
         return get_kimpls(param);
     }
     MIDOUT_END();
@@ -510,7 +516,8 @@ ConvBiasImpl::AlgoI8x8x16Stride2::dispatch_kerns(
 bool ConvBiasImpl::AlgoI8x8x16Stride2Filter2::usable(
         const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 3, 0) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Stride2Filter2::usable"_hash)) {
         return param.bias_mode == BiasMode::NO_BIAS &&
                param.nonlineMode == NonlineMode::IDENTITY &&
                param.nr_threads == 1_z &&
@@ -522,7 +529,8 @@ bool ConvBiasImpl::AlgoI8x8x16Stride2Filter2::usable(
 
 size_t ConvBiasImpl::AlgoI8x8x16Stride2Filter2::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 3, 1) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Stride2Filter2::get_workspace"_hash)) {
         return conv_bias::get_workspace_in_bytes_conv_int8x8x16_stride2_flt2(
                 param);
     }
@@ -535,7 +543,8 @@ ConvBiasImpl::AlgoI8x8x16Stride2Filter2::dispatch_kerns(
         const NCBKernSizeParam& param) const {
     // return {conv_bias::conv_int8x8x16_stride2_flt2,true};
     auto kern = [](const NCBKernParam& param, const NCBKernIndex& ncb_index) {
-        MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl, 3, 2) {
+        MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8816_kimpl,
+                 midout_iv("AlgoI8x8x16Stride2Filter2::dispatch_kerns"_hash)) {
             auto ncb_param = param;
             ncb_param.src_ptr = param.src<void>(0, ncb_index.ndrange_id[0]);
             ncb_param.dst_ptr = param.dst<void>(0, ncb_index.ndrange_id[0]);
@@ -573,18 +582,25 @@ bool ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44::usable(
 
 size_t ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44::get_workspace(
         const NCBKernSizeParam& param) const {
-    size_t stride_h = param.filter_meta.stride[0];
-    size_t stride_w = param.filter_meta.stride[1];
-    megdnn_assert(stride_h == stride_w);
-    if (stride_h == 1) {
-        return channel_wise_nchw44_8x8x16::stride1::get_bundle(param)
-                .total_size_in_bytes();
-    } else if (stride_h == 2) {
-        return channel_wise_nchw44_8x8x16::stride2::get_bundle(param)
-                .total_size_in_bytes();
-    } else {
-        return 0;
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_int8816_kimpl,
+            midout_iv(
+                    "AlgoS8x8x16ChanWiseStride1Stride2NCHW44::get_workspace"_hash)) {
+        size_t stride_h = param.filter_meta.stride[0];
+        size_t stride_w = param.filter_meta.stride[1];
+        megdnn_assert(stride_h == stride_w);
+        if (stride_h == 1) {
+            return channel_wise_nchw44_8x8x16::stride1::get_bundle(param)
+                    .total_size_in_bytes();
+        } else if (stride_h == 2) {
+            return channel_wise_nchw44_8x8x16::stride2::get_bundle(param)
+                    .total_size_in_bytes();
+        } else {
+            return 0;
+        }
     }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
