@@ -12,9 +12,7 @@
 #include "src/common/utils.h"
 
 #include <cstring>
-#include "midout.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
-MIDOUT_DECL(megdnn_arm_common_conv_bias_s2_filter)
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 

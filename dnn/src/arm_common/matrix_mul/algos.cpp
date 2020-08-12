@@ -18,6 +18,8 @@
 
 MIDOUT_DECL(megdnn_arm_hgemv)
 MIDOUT_DECL(megdnn_arm_exec_int8816)
+MIDOUT_DECL(megdnn_arm_exec_int8832)
+MIDOUT_DECL(megdnn_arm_exec_fp32)
 
 using namespace megdnn;
 using namespace arm_common;
@@ -63,8 +65,13 @@ bool MatrixMulImpl::AlgoInt8x8x16::usable(
 
 size_t MatrixMulImpl::AlgoInt8x8x16::get_workspace(
         const KernSizeParam& kern_size_param) const {
-    auto wbundle = get_workspace_bundle_int_8x8x16(kern_size_param);
-    return wbundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_exec_int8816,
+                 midout_iv("AlgoInt8x8x16::get_workspace"_hash)) {
+        auto wbundle = get_workspace_bundle_int_8x8x16(kern_size_param);
+        return wbundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16::get_kern(
@@ -75,11 +82,15 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x16::get_kern(
 /* ===================== Int8x8x32 Gemv algo ===================== */
 namespace {
 void int8x8x32_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-    const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
-    auto Cptr = kern_param.C<dt_int32>();
-    gemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    MIDOUT_BEGIN(megdnn_arm_exec_int8832,
+                 midout_iv("int8x8x32_gemv_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int32>();
+        gemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
 }
 }  // anonymous namespace
 
@@ -104,11 +115,15 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32Gemv::get_kern(
 /* ===================== Int8x8x32 Gemv MK4 algo ===================== */
 namespace {
 void int8x8x32_gemv_mk4_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-    const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
-    auto Cptr = kern_param.C<dt_int32>();
-    gemv_like_mk4(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    MIDOUT_BEGIN(megdnn_arm_exec_int8832,
+                 midout_iv("int8x8x32_gemv_mk4_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int32>();
+        gemv_like_mk4(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
 }
 }  // anonymous namespace
 
@@ -147,11 +162,15 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GemvMK4::get_kern(
 /* =================== Int8x8x32 Gemv MK4_DOT algo ==================== */
 namespace {
 void int8x8x32_gemv_mk4_dot_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-    const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
-    auto Cptr = kern_param.C<dt_int32>();
-    gemv_like_mk4_dot(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    MIDOUT_BEGIN(megdnn_arm_exec_int8832,
+                 midout_iv("int8x8x32_gemv_mk4_dot_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_int8>(), Bptr = kern_param.B<dt_int8>();
+        auto Cptr = kern_param.C<dt_int32>();
+        gemv_like_mk4_dot(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
 }
 }  // anonymous namespace
 
@@ -189,12 +208,16 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GemvMK4Dot::get_kern(
 /* ===================== F32 Gemv algo ===================== */
 namespace {
 void f32_gemv_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-    const auto Aptr = kern_param.A<dt_float32>(),
-               Bptr = kern_param.B<dt_float32>();
-    auto Cptr = kern_param.C<dt_float32>();
-    gemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    MIDOUT_BEGIN(megdnn_arm_exec_fp32,
+                 midout_iv("f32_gemv_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_float32>(),
+                Bptr = kern_param.B<dt_float32>();
+        auto Cptr = kern_param.C<dt_float32>();
+        gemv_like(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
 }
 }  // anonymous namespace
 
@@ -225,12 +248,16 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32Gemv::get_kern(
 /* ================== F32 Gemv MK4 algo ================== */
 namespace {
 void f32_gemv_mk4_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
-    const auto Aptr = kern_param.A<dt_float32>(),
-               Bptr = kern_param.B<dt_float32>();
-    auto Cptr = kern_param.C<dt_float32>();
-    gemv_like_mk4(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    MIDOUT_BEGIN(megdnn_arm_exec_fp32,
+                 midout_iv("f32_gemv_mk4_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+        const auto Aptr = kern_param.A<dt_float32>(),
+                Bptr = kern_param.B<dt_float32>();
+        auto Cptr = kern_param.C<dt_float32>();
+        gemv_like_mk4(Aptr, Bptr, Cptr, M, N, K, LDA, LDB, LDC);
+    }
+    MIDOUT_END();
 }
 }  // anonymous namespace
 
@@ -266,11 +293,15 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoF32GemvMK4::get_kern(
 namespace {
 template <typename stype, typename dtype>
 void gevm_like_kern(const MatrixMulImpl::KernParam& kern_param) {
-    auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
-    auto LDB = kern_param.LDB;
-    const auto Aptr = kern_param.A<stype>(), Bptr = kern_param.B<stype>();
-    auto Cptr = kern_param.C<dtype>();
-    megdnn::arm_common::gemv_like(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
+    MIDOUT_BEGIN(megdnn_arm_exec_fp32,
+                 midout_iv("gevm_like_kern"_hash)) {
+        auto M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        auto LDB = kern_param.LDB;
+        const auto Aptr = kern_param.A<stype>(), Bptr = kern_param.B<stype>();
+        auto Cptr = kern_param.C<dtype>();
+        megdnn::arm_common::gemv_like(Bptr, Aptr, Cptr, N, M, K, LDB, 1, 1);
+    }
+    MIDOUT_END();
 }
 }  // anonymous namespace
 

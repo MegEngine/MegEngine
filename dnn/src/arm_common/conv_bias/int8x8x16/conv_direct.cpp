@@ -13,10 +13,7 @@
 #include "src/common/utils.h"
 
 #include <cstring>
-#include "midout.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
-
-MIDOUT_DECL(megdnn_arm_common_conv_bias_int8816_filter)
 
 using namespace megdnn;
 using namespace arm_common;

@@ -33,29 +33,39 @@ bool ConvBiasImpl::AlgoS8DirectStride1::usable(const NCBKernSizeParam& param,
     return direct_int8_stride1::can_conv_direct_stride1_int8(param);
 }
 bool ConvBiasImpl::AlgoS8DirectStride1::is_preferred(
-         const NCBKernSizeParam& param) const {
-    auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0];
-    auto OC = fm.ocpg;
-    auto IC = fm.icpg;
-    bool preferred = ((FH == 2 && (OC <= 10 || IC <= 8)) ||
-                      ((FH == 3 || FH == 5 || FH == 7) &&
-                       (OC <= 16 || (IC <= 4 && OC <= 32)))) &&
-                     param.bias_mode != BiasMode::BIAS;
-    return preferred;
+        const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8DirectStride1::is_preferred"_hash)) {
+        auto&& fm = param.filter_meta;
+        auto FH = fm.spatial[0];
+        auto OC = fm.ocpg;
+        auto IC = fm.icpg;
+        bool preferred = ((FH == 2 && (OC <= 10 || IC <= 8)) ||
+                          ((FH == 3 || FH == 5 || FH == 7) &&
+                           (OC <= 16 || (IC <= 4 && OC <= 32)))) &&
+                         param.bias_mode != BiasMode::BIAS;
+        return preferred;
+    }
+    MIDOUT_END();
 }
 
 size_t ConvBiasImpl::AlgoS8DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
-    bool large_group = param.filter_meta.group >= param.nr_threads;
-    auto bundle = direct_int8_stride1::get_bundle(param, large_group);
-    return bundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8DirectStride1::get_workspace"_hash)) {
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        auto bundle = direct_int8_stride1::get_bundle(param, large_group);
+        return bundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8DirectStride1::dispatch_kerns(
          const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 1, 0) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8DirectStride1::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_int8_stride1::get_kimpls(param, large_group);
     }
@@ -72,15 +82,20 @@ bool ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44::usable(
 
 size_t ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44::get_workspace(
          const NCBKernSizeParam& param) const {
-    auto bundle = channel_wise_nchw44::stride1::get_bundle(param);
-    return bundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+            midout_iv("AlgoS8ChanWiseStride1NCHW44::get_workspace"_hash)) {
+        auto bundle = channel_wise_nchw44::stride1::get_bundle(param);
+        return bundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44::dispatch_kerns(
          const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
-                 midout_iv("AlgoS8ChanWiseStride1NCHW44"_hash)) {
+                 midout_iv("AlgoS8ChanWiseStride1NCHW44::dispatch_kerns"_hash)) {
         return channel_wise_nchw44::stride1::get_kimpls(param);
     }
     MIDOUT_END();
@@ -96,15 +111,20 @@ bool ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44::usable(
 
 size_t ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44::get_workspace(
          const NCBKernSizeParam& param) const {
-    auto bundle = channel_wise_nchw44::stride2::get_bundle(param);
-    return bundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8ChanWiseStride2NCHW44::get_workspace"_hash)) {
+        auto bundle = channel_wise_nchw44::stride2::get_bundle(param);
+        return bundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44::dispatch_kerns(
          const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
-                 midout_iv("AlgoS8ChanWiseStride2NCHW44"_hash)) {
+                 midout_iv("AlgoS8ChanWiseStride2NCHW44::dispatch_kerns"_hash)) {
         return channel_wise_nchw44::stride2::get_kimpls(param);
     }
     MIDOUT_END();
@@ -119,15 +139,21 @@ bool ConvBiasImpl::AlgoS8DirectStride2::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoS8DirectStride2::get_workspace(
         const NCBKernSizeParam& param) const {
-    bool large_group = param.filter_meta.group >= param.nr_threads;
-    auto bundle = direct_int8_stride2::get_bundle(param, large_group);
-    return bundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8DirectStride2::get_workspace"_hash)) {
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        auto bundle = direct_int8_stride2::get_bundle(param, large_group);
+        return bundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoS8DirectStride2::dispatch_kerns(
          const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 1, 1) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8DirectStride2::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_int8_stride2::get_kimpls(param, large_group);
     }
@@ -144,15 +170,21 @@ bool ConvBiasImpl::AlgoDotS8DirectStride1::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoDotS8DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
-    bool large_group = param.filter_meta.group >= param.nr_threads;
-    auto bundle = direct_dotprod_int8_stride1::get_bundle(param, large_group);
-    return bundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoDotS8DirectStride1::get_workspace"_hash)) {
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        auto bundle = direct_dotprod_int8_stride1::get_bundle(param, large_group);
+        return bundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoDotS8DirectStride1::dispatch_kerns(
          const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 2, 1) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoDotS8DirectStride1::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_dotprod_int8_stride1::get_kimpls(param, large_group);
     }
@@ -168,15 +200,21 @@ bool ConvBiasImpl::AlgoDotS8DirectStride2::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoDotS8DirectStride2::get_workspace(
         const NCBKernSizeParam& param) const {
-    bool large_group = param.filter_meta.group >= param.nr_threads;
-    auto bundle = direct_dotprod_int8_stride2::get_bundle(param, large_group);
-    return bundle.total_size_in_bytes();
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoDotS8DirectStride2::get_workspace"_hash)) {
+        bool large_group = param.filter_meta.group >= param.nr_threads;
+        auto bundle = direct_dotprod_int8_stride2::get_bundle(param, large_group);
+        return bundle.total_size_in_bytes();
+    }
+    MIDOUT_END();
+    return 0;
 }
 
 SmallVector<ConvBiasImpl::NCBKern>
 ConvBiasImpl::AlgoDotS8DirectStride2::dispatch_kerns(
          const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8, 2, 2) {
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoDotS8DirectStride2::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_dotprod_int8_stride2::get_kimpls(param, large_group);
     }
@@ -188,37 +226,45 @@ ConvBiasImpl::AlgoDotS8DirectStride2::dispatch_kerns(
 /* ======================= AlgoS8WinogradF23_8x8 ======================== */
 
 bool ConvBiasImpl::AlgoS8WinogradF23_8x8::usable(
-         const NCBKernSizeParam& param,
+        const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
-    if (param.filter_meta.icpg % 8 != 0 || param.filter_meta.ocpg % 8 != 0)
-        return false;
-    using Strategy = winograd::winograd_2x3_8x8_s8;
-    using PackMode = fallback::MatrixMulImpl::AlgoBase::PackMode;
-    Strategy strategy(param.src_type, param.filter_type, param.dst_type);
-    auto&& matmul_param =
-            megdnn::winograd::ConvBias<Strategy, param::MatrixMul::Format::MK8>(
-                    strategy, m_tile_size, param)
-                    .get_matmul_kern_param(param);
-    return m_matmul_algo->usable(matmul_param) &&
-           m_matmul_algo->packmode() == PackMode::NO_PACK &&
-           ((param.filter_meta.format == param::ConvBias::Format::NCHW &&
-             param.filter_type.enumv() == DTypeEnum::QuantizedS8) ||
-            (param.filter_meta.format ==
-                     param::ConvBias::Format::NCHW_WINOGRAD &&
-             param.output_block_size == 2 &&
-             param.winograd_matmul_format == param::MatrixMul::Format::MK8 &&
-             param.filter_type.enumv() == DTypeEnum::QuantizedS16)) &&
-           !param.filter_meta.should_flip &&
-           (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
-            param.filter_meta.spatial[0] == 3) &&
-           (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
-            param.filter_meta.stride[0] == 1) &&
-           (param.filter_meta.dilation[0] == param.filter_meta.dilation[1] &&
-            param.filter_meta.dilation[0] == 1) &&
-           param.compute_mode == param::ConvBias::ComputeMode::DEFAULT &&
-           param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-           param.bias_type.enumv() == DTypeEnum::QuantizedS32 &&
-           param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
+                 midout_iv("AlgoS8WinogradF23_8x8::usable"_hash)) {
+        if (param.filter_meta.icpg % 8 != 0 || param.filter_meta.ocpg % 8 != 0)
+            return false;
+        using Strategy = winograd::winograd_2x3_8x8_s8;
+        using PackMode = fallback::MatrixMulImpl::AlgoBase::PackMode;
+        Strategy strategy(param.src_type, param.filter_type, param.dst_type);
+        auto&& matmul_param =
+                megdnn::winograd::ConvBias<Strategy,
+                                           param::MatrixMul::Format::MK8>(
+                        strategy, m_tile_size, param)
+                        .get_matmul_kern_param(param);
+        return m_matmul_algo->usable(matmul_param) &&
+               m_matmul_algo->packmode() == PackMode::NO_PACK &&
+               ((param.filter_meta.format == param::ConvBias::Format::NCHW &&
+                 param.filter_type.enumv() == DTypeEnum::QuantizedS8) ||
+                (param.filter_meta.format ==
+                         param::ConvBias::Format::NCHW_WINOGRAD &&
+                 param.output_block_size == 2 &&
+                 param.winograd_matmul_format ==
+                         param::MatrixMul::Format::MK8 &&
+                 param.filter_type.enumv() == DTypeEnum::QuantizedS16)) &&
+               !param.filter_meta.should_flip &&
+               (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
+                param.filter_meta.spatial[0] == 3) &&
+               (param.filter_meta.stride[0] == param.filter_meta.stride[1] &&
+                param.filter_meta.stride[0] == 1) &&
+               (param.filter_meta.dilation[0] ==
+                        param.filter_meta.dilation[1] &&
+                param.filter_meta.dilation[0] == 1) &&
+               param.compute_mode == param::ConvBias::ComputeMode::DEFAULT &&
+               param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+               param.bias_type.enumv() == DTypeEnum::QuantizedS32 &&
+               param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    }
+    MIDOUT_END();
+    return false;
 }
 
 MEGDNN_WINOGRAD_ALGO_FUN_DEFINE_ALL(AlgoS8WinogradF23_8x8,

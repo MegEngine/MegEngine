@@ -24,7 +24,6 @@
 
 #include <cstring>
 
-MIDOUT_DECL(megdnn_fb_conv_float)
 MIDOUT_DECL(megdnn_fb_convbwd_float)
 
 using namespace megdnn;
