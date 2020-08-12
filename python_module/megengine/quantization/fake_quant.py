@@ -15,8 +15,7 @@ from .._internal.dtype import _metadata_dict, get_quantized_dtype
 from ..core import Buffer, Function, Parameter
 from ..jit import sideeffect
 from ..module import Module
-from .observer import Round
-from .utils import QuantMode, get_qparam_dict
+from .utils import QuantMode, Round, fake_quant_tensor, get_qparam_dict
 
 
 class _FakeQuantize(Module):
@@ -143,22 +142,4 @@ class FakeQuantize(_FakeQuantize):
     """
 
     def fake_quant_forward(self, inp, q_dict):
-        if q_dict["mode"] == QuantMode.SYMMERTIC:
-            scale = q_dict["scale"]
-            # Quant
-            oup = Round()(inp / scale)
-            # clip
-            oup = F.minimum(F.maximum(oup, self.qmin), self.qmax)
-            # DeQuant
-            oup = (oup) * scale
-            return oup
-        else:
-            scale = q_dict["scale"]
-            zero_point = q_dict["zero_point"]
-            # Quant
-            oup = Round()(inp / scale) + zero_point
-            # clip
-            oup = F.minimum(F.maximum(oup, self.qmin), self.qmax)
-            # DeQuant
-            oup = (oup - zero_point) * scale
-            return oup
+        return fake_quant_tensor(inp, self.qmin, self.qmax, q_dict)

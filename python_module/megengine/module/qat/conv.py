@@ -6,6 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from ... import functional as F
+from ...quantization.utils import fake_quant_bias
 from .. import conv as Float
 from .module import QATModule
 
@@ -18,7 +19,8 @@ class Conv2d(Float.Conv2d, QATModule):
 
     def calc_conv_qat(self, inp):
         w_qat = self.apply_quant_weight(self.weight)
-        conv = self.calc_conv(inp, w_qat, self.bias)
+        b_qat = fake_quant_bias(self.bias, inp, w_qat)
+        conv = self.calc_conv(inp, w_qat, b_qat)
         return conv
 
     @classmethod

@@ -13,18 +13,10 @@ import numpy as np
 
 from .. import functional as F
 from .._internal.dtype import _metadata_dict, get_quantized_dtype
-from ..core import Buffer, Function, tensor
+from ..core import Buffer
 from ..jit import sideeffect
 from ..module import Module
-from .utils import QuantMode, get_qparam_dict
-
-
-class Round(Function):
-    def forward(self, x):
-        return x.round()
-
-    def backward(self, output_grads):
-        return output_grads
+from .utils import QuantMode, Round, get_qparam_dict
 
 
 class Observer(Module):

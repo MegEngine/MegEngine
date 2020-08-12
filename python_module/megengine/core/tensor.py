@@ -138,6 +138,7 @@ class Tensor:
 
     def __init__(self, val=None, *, requires_grad=None):
         self._reset(val, requires_grad=requires_grad)
+        self.q_dict = {"mode": None, "scale": None, "zero_point": None}
 
     def _reset(self, val=None, *, requires_grad=None):
         self.__sym_override = None
@@ -677,9 +678,9 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         """
-        Since Tensor have __getstate__ and __setstate__ method,
-        deepcopy only process the that and ignore the attribute of Parameter.
-        So we need to add __deepcopy__ method to deepcopy correct attribute.
+        The default deepcopy will ignore other attributes except those defined at
+        __getstate__ and __setstate__ method.
+        So we need to add __deepcopy__ method to deepcopy correct attributes.
         """
         assert (self.__val is not None) and (
             self.__sym is None
