@@ -73,11 +73,16 @@ class QATModule(Module):
         if observer is None:
             return target
         oup = observer(target)
-        if fake_quant is None:
-            return oup
-        else:
-            q_dict = observer.get_qparams()
-            return fake_quant(oup, q_dict)
+        q_dict = observer.get_qparams()
+        # do fake quant
+        if fake_quant is not None:
+            oup = fake_quant(oup, q_dict)
+        # use qparams of fake_quant if have.
+        if hasattr(fake_quant, "get_qparams"):
+            q_dict = fake_quant.get_qparams()
+        # set to tensor qparams.
+        oup.q_dict.update(q_dict)
+        return oup
 
     def apply_quant_weight(self, target: Tensor):
         r"""
