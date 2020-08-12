@@ -79,6 +79,8 @@
     ```
     ALL_PYTHON=35m ./build_wheel.sh cpu
     ```
+
+    Please append `imperative`  to `build_wheel.sh` to use the new runtime, e.g., `./build_wheel.sh cpu imperative`.
 ## build for macos
     ```
     ./scripts/whl/macos/macos_build_whl.sh
