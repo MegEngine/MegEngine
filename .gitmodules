@@ -25,6 +25,3 @@
 [submodule "third_party/flatbuffers"]
 	path = third_party/flatbuffers
 	url = https://github.com/google/flatbuffers.git
-[submodule "third_party/cpuinfo"]
-	path = third_party/cpuinfo
-	url = https://github.com/pytorch/cpuinfo.git
