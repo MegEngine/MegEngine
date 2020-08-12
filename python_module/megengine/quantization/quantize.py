@@ -175,4 +175,4 @@ def enable_observer(module: Module):
     :param module: root module to do enable observer recursively.
     """
 
-    _propagate(module, "set_observer", False)
+    _propagate(module, "set_observer", True)
