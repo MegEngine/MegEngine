@@ -534,11 +534,25 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_NCHW44) {
             get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, false),
             handle(), "S8_NCHW44_DIRECT");
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_NCHW44_8816) {
+    checker_conv_bias_int8x8x16(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, true),
+            handle(), "S8x8x16_NCHW44_DIRECT");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_NCHW44_8816) {
+    checker_conv_bias_int8x8x16(
+            get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, true),
+            handle(), "S8x8x16_NCHW44_DIRECT");
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE1_NCHW44_8832) {
     checker_conv_bias_qint8x8x32(
             get_nchw44_conv_bias_args({2, 3, 5, 7}, 1, false, false, true),
             handle(), "S8_NCHW44_DIRECT");
 }
+
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_STRIDE2_NCHW44_8832) {
     checker_conv_bias_qint8x8x32(
             get_nchw44_conv_bias_args({2, 3, 5, 7}, 2, false, false, true),

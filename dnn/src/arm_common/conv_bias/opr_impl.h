@@ -39,6 +39,7 @@ private:
     class AlgoS8DirectStride1;
     class AlgoS8DirectStride2;
     class AlgoS8DirectNCHW44;
+    class AlgoS8x8x16DirectNCHW44;
     class AlgoS8DirectNCHWNCHW44;
     class AlgoQU8DirectStride1;
     class AlgoQU8DirectStride2;

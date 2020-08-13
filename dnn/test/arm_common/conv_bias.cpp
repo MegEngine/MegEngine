@@ -518,6 +518,116 @@ void benchmark_im2col_single_algo(const char* im2col_name, Handle* handle,
     }
 }
 
+void benchmark_nchw44_8x8x16_vs_8x8x32(const char* im2col_name, Handle* handle,
+                                       size_t kernel, size_t stride,
+                                       size_t pack_size = 1) {
+    megdnn_assert(stride == 1 || stride == 2, "only support stride 1 or 2");
+    std::vector<conv_bias::TestArg> args;
+    auto pack = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
+                    size_t p) {
+        if (ic % pack_size != 0 || oc % pack_size != 0)
+            return;
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.format = param::ConvBias::Format::NCHW44;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.sparse = param::ConvBias::Sparse::DENSE;
+        args.push_back(conv_bias::TestArg{
+                param,
+                TensorShape{1, ic / 4, h, w, 4},
+                TensorShape{oc / 4, ic / 4, kernel, kernel, 4, 4},
+                {1, oc / 4, 1, 1, 4}});
+    };
+    pack(1, 64, 56, 56, kernel, 0);
+    pack(8, 64, 56, 56, kernel, 0);
+    pack(16, 64, 56, 56, kernel, 1);
+    pack(32, 64, 56, 56, kernel, 1);
+    pack(1, 64, 100, 100, kernel, 1);
+    pack(8, 64, 100, 100, kernel, 1);
+    pack(1, 64, 100, 100, kernel, 0);
+    pack(8, 64, 100, 100, kernel, 0);
+    pack(16, 64, 100, 100, kernel, 1);
+    pack(32, 64, 100, 100, kernel, 1);
+    pack(64, 64, 100, 100, kernel, 1);
+    pack(128, 64, 100, 100, kernel, 1);
+    pack(256, 64, 100, 100, kernel, 1);
+    pack(512, 64, 100, 100, kernel, 1);
+    pack(1024, 64, 100, 100, kernel, 1);
+    pack(1, 32, 200, 200, kernel, 1);
+    pack(8, 64, 200, 200, kernel, 1);
+    pack(1, 32, 200, 200, kernel, 0);
+    pack(8, 64, 200, 200, kernel, 0);
+    pack(16, 96, 200, 200, kernel, 1);
+    pack(32, 32, 200, 200, kernel, 1);
+    pack(64, 64, 200, 200, kernel, 1);
+    pack(128, 96, 200, 200, kernel, 1);
+    pack(1, 64, 10, 10, kernel, 1);
+    pack(8, 64, 10, 10, kernel, 1);
+    pack(16, 64, 10, 10, kernel, 1);
+    pack(32, 64, 10, 10, kernel, 1);
+    pack(64, 64, 10, 10, kernel, 1);
+    pack(128, 64, 10, 10, kernel, 1);
+    pack(256, 64, 10, 10, kernel, 1);
+    pack(512, 64, 10, 10, kernel, 1);
+    pack(1024, 64, 10, 10, kernel, 1);
+
+    using namespace conv_bias;
+    constexpr size_t RUN = 20;
+
+    Benchmarker<ConvBias> benchmark_im2col(handle);
+    benchmark_im2col.set_display(false);
+    benchmark_im2col.set_times(RUN);
+
+    Benchmarker<ConvBias> benchmark_8832(handle);
+    benchmark_8832.set_display(false);
+    benchmark_8832.set_times(RUN);
+    for (auto&& arg : args) {
+        TensorLayout dst_layout;
+        auto opr = handle->create_operator<ConvBias>();
+        opr->param() = arg.param;
+        opr->deduce_layout({arg.src, dtype::Float32()},
+                           {arg.filter, dtype::Float32()},
+                           {arg.bias, dtype::Float32()}, {}, dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
+        float computations = dst_layout.total_nr_elems() * arg.filter[1] *
+                             arg.filter[2] * arg.filter[3] * 2.0 * 4 /
+                             (1024 * 1024 * 1024) * 1e3;
+
+        benchmark_im2col.set_param(arg.param);
+        benchmark_im2col.set_dtype(0, dtype::Int8());
+        benchmark_im2col.set_dtype(1, dtype::Int8());
+        benchmark_im2col.set_dtype(2, dtype::Int16());
+        benchmark_im2col.set_dtype(4, dtype::Int16());
+        auto used_8816 =
+                algo_benchmark<ConvBias>(benchmark_im2col,
+                                         {arg.src, arg.filter, {}, {}, {}},
+                                         im2col_name) /
+                RUN;
+        benchmark_8832.set_param(arg.param);
+        benchmark_8832.set_dtype(0, dtype::QuantizedS8(2.5));
+        benchmark_8832.set_dtype(1, dtype::QuantizedS8(2.5));
+        benchmark_8832.set_dtype(2, dtype::QuantizedS32(6.25));
+        benchmark_8832.set_dtype(4, {});
+        auto used_8832 =
+                algo_benchmark<ConvBias>(benchmark_8832,
+                                         {arg.src, arg.filter, {}, {}, {}},
+                                         "S8_NCHW44_DIRECT") /
+                RUN;
+
+        printf("%s %s: 8816: %f ms %f GFlops ", arg.src.to_string().c_str(),
+               arg.filter.to_string().c_str(), used_8816,
+               computations / used_8816);
+        printf("%s %s: 8832: %f ms %f GFlops ", arg.src.to_string().c_str(),
+               arg.filter.to_string().c_str(), used_8832,
+               computations / used_8832);
+        printf("speedup %f \n", used_8832 / used_8816);
+    }
+}
+
 void BENCHMARK_IM2COL_NCHW44_VS_NCHW(const char* algo_name,
                                      const char* im2col_name, Handle* handle,
                                      size_t kernel, DType src_type,
@@ -871,6 +981,28 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_MATMUL) {
 }
 #endif
 #if MEGDNN_WITH_BENCHMARK
+
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_8X8X16_DIRECT_STRIDE1) {
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 2, 1,
+                                      4);
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 3, 1,
+                                      4);
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 5, 1,
+                                      4);
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 7, 1,
+                                      4);
+}
+
+TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_8X8X16_DIRECT_STRIDE2) {
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 2, 2,
+                                      4);
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 3, 2,
+                                      4);
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 5, 2,
+                                      4);
+    benchmark_nchw44_8x8x16_vs_8x8x32("S8x8x16_NCHW44_DIRECT", handle(), 7, 2,
+                                      4);
+}
 
 TEST_F(ARM_COMMON, BENCHMARK_CONVBIAS_WINOGRAD_F23) {
 #if MEGDNN_AARCH64
