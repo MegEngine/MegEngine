@@ -8,7 +8,6 @@ decl_raw_opr(
             'operation to which this operator belongs.', 'int'),
         Doc('is_root', 'whether this node is root node', 'bool'),
         Doc('rank', 'rank of this node, if is -1, generate one', 'int'),
-        Doc('local_grad', 'whether use local grad', 'bool'),
         Doc('server_addr', 'rpc server ip address'),
         Doc('port', 'server rpc listening port'),
         Doc('param', 'The only component of *param* is *mode*, which refers to '
@@ -20,6 +19,7 @@ decl_raw_opr(
             'any).', ':class:`~megbrain.opr_param_defs.DType`', 'None'),
         Doc('backend', 'Backend for collective communication, nccl or ucx',
             'str', '\'nccl\''),
+        Doc('local_grad', 'whether use local grad', 'bool', 'False'),
         Doc('output_buffer', 'The external dev buffer reserving output result',
             ':class:`.SharedND`', 'None'),
         Doc('disable', 'If true, the execution will return directly and the output '
