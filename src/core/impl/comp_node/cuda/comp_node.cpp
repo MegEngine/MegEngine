@@ -423,9 +423,8 @@ void CudaCompNodeImpl::free_device(void *ptr) {
 }
 
 void* CudaCompNodeImpl::alloc_host(size_t size) {
-    // no need for activate() here because under
-    // unified addressing, host memory can be accessed
-    // and freed on any device
+    // need activate because it create cuda cuda context in current device
+    activate();
     return sd->host_alloc->alloc(size);
 }
 
