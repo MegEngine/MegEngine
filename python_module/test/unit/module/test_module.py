@@ -17,6 +17,7 @@ from helpers import MLP
 
 import megengine as mge
 import megengine._internal as mgb
+import megengine.functional as F
 from megengine.core import Buffer, Parameter, Tensor, tensor
 from megengine.module import (
     BatchNorm1d,
@@ -37,7 +38,7 @@ class MyModule(Module):
             self.bn = BatchNorm2d(4)
 
         def forward(self, x):
-            x = self.bn(x)
+            return self.bn(x)
 
     def __init__(self):
         super().__init__()
@@ -143,6 +144,57 @@ def test_module_api_iterable_stability():
     l = list(m.modules())
     for _ in range(100):
         assert list(m.modules()) == l
+
+
+def test_module_api_hooks():
+    net = MyModule()
+    pre_hook_num = 0
+    post_hook_num = 0
+    hooks = []
+
+    def pre_hook(module, inputs):
+        nonlocal pre_hook_num
+        pre_hook_num += 1
+        modified_inputs = tuple(inp + 1 for inp in inputs)
+        return modified_inputs
+
+    def post_hook(module, inputs, outputs):
+        nonlocal post_hook_num
+        post_hook_num += 1
+        outputs += 1
+        return outputs
+
+    net.apply(lambda module: hooks.append(module.register_forward_pre_hook(pre_hook)))
+    net.apply(lambda module: hooks.append(module.register_forward_hook(post_hook)))
+
+    shape = (1, 4, 1, 1)
+    x = tensor(np.zeros(shape, dtype=np.float32))
+    y = net(x)
+
+    assert pre_hook_num == 4
+    assert post_hook_num == 4
+    mean1 = Parameter(np.zeros(shape), dtype=np.float32)
+    bn1 = F.batch_norm2d(
+        x + 3, mean1, Parameter(np.ones(shape), dtype=np.float32), training=True
+    )
+    assertTensorClose(
+        net.i.bn.running_mean, mean1,
+    )
+    mean2 = Parameter(np.zeros(shape), dtype=np.float32)
+    bn2 = F.batch_norm2d(
+        bn1 + 3, mean2, Parameter(np.ones(shape), dtype=np.float32), training=True
+    )
+    assertTensorClose(
+        net.bn.running_mean, mean2,
+    )
+    assertTensorClose(bn2 + 2, y)
+
+    assert len(hooks) == 8
+    for handler in hooks:
+        handler.remove()
+    y = net(x)
+    assert pre_hook_num == 4
+    assert post_hook_num == 4
 
 
 class MyModule2(Module):
