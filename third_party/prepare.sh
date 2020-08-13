@@ -2,6 +2,15 @@
 
 cd $(dirname $0)
 
+requiredGitVersion="1.8.4"
+currentGitVersion="$(git --version | awk '{print $3}')"
+if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | sort -V | head -n1)" = "$currentGitVersion" ]; then
+    echo "Found Git: $(which git). (foud version $currentGitVersion, required version >= $requiredGitVersion)"
+else
+    echo "Please update your Git version. (foud version $currentGitVersion, required version >= $requiredGitVersion)"
+    exit 1
+fi
+
 git submodule sync
 git submodule update --init intel-mkl-dnn
 git submodule update --init Halide
