@@ -26,10 +26,9 @@ enum class StrategyType : uint32_t {
     FLOAT = 0,
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     FLOAT_FP16 = 1,
-#else
+#endif
 #if !MEGDNN_DISABLE_FLOAT16
     FLOAT16_FLOAT16 = 2,
-#endif
 #endif
     INT8x8x32 = 3,
     INT8x8x16 = 4,
@@ -153,12 +152,10 @@ public:
         cb1(dt_float32, dt_float32, StrategyType::FLOAT);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         cb1(dt_float16, __fp16, StrategyType::FLOAT_FP16);
-#else
+#endif
 #if !MEGDNN_DISABLE_FLOAT16
         cb1(dt_float16, dt_float16, StrategyType::FLOAT16_FLOAT16);
 #endif
-#endif
-
         cb2(dt_int8, dt_int32, dt_int32, dt_int8, dt_int32, dt_int32,
             StrategyType::INT8x8x32);
 
@@ -256,8 +253,7 @@ public:
                         !param.filter_meta.should_flip) {
                         MIDOUT_BEGIN(
                                 megdnn_fallback_im2col_factory_make_strategy,
-                                midout_iv(
-                                        "DefaultStrategyType::8x12x1_fuse_packb_s2_nchw44"_hash)) {
+                                midout_iv("8x12x1_fuse_packb_s2_nchw44"_hash)) {
                             return std::make_unique<
                                     StrategyFuseXx12x1Nchw44K3x3S2<
                                             float, float,
@@ -284,14 +280,13 @@ public:
                 cb1(NCHW, DEFAULT, dt_float16, __fp16, PostprocessMode::FLOAT,
                     "DefaultStrategyType::FLOAT_FP16"_hash);
                 break;
-#else
+#endif
 #if !MEGDNN_DISABLE_FLOAT16
             case StrategyType::FLOAT16_FLOAT16:
                 cb1(NCHW, DEFAULT, dt_float16, dt_float16,
                     PostprocessMode::NO_PROCESS,
                     "DefaultStrategyType::FLOAT16_FLOAT16"_hash);
                 break;
-#endif
 #endif
             case StrategyType::INT8x8x32:
                 if (format == param::ConvBias::Format::NCHW) {
@@ -472,15 +467,12 @@ public:
                 cb1(NCHW, NO_PACK, dt_float32, dt_float32,
                     PostprocessMode::FLOAT, "NoPackStrategyType::FLOAT"_hash);
                 break;
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#else
 #if !MEGDNN_DISABLE_FLOAT16
             case StrategyType::FLOAT16_FLOAT16:
                 cb1(NCHW, NO_PACK, dt_float16, dt_float16,
                     PostprocessMode::NO_PROCESS,
                     "NoPackStrategyType::FLOAT16_FLOAT16"_hash);
                 break;
-#endif
 #endif
             case StrategyType::INT8x8x16:
                 cb3(NCHW, NO_PACK, dt_int8, dt_int16, dt_int16, dt_int8,

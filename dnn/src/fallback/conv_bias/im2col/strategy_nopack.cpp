@@ -165,12 +165,9 @@ INSTANTIAL_CLASS(dt_int8, dt_int16, dt_int16, dt_int16, dt_int16,
                  megdnn::PostprocessMode::ADD_BIAS)
 INSTANTIAL_CLASS(dt_int8, dt_int32, dt_int32, dt_int32, dt_int32,
                  megdnn::PostprocessMode::ADD_BIAS)
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#else
 #if !MEGDNN_DISABLE_FLOAT16
 INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, dt_float16, dt_float16,
                  megdnn::PostprocessMode::NO_PROCESS)
-#endif
 #endif
 #undef INSTANTIAL_CLASS
 }  // namespace megdnn
