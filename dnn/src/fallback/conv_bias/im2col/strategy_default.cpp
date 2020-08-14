@@ -192,11 +192,10 @@ INSTANTIAL_CLASS(dt_float32, dt_float32, dt_float32, dt_float32, dt_float32,
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, __fp16, __fp16,
                  megdnn::PostprocessMode::FLOAT)
-#else
+#endif
 #if !MEGDNN_DISABLE_FLOAT16
 INSTANTIAL_CLASS(dt_float16, dt_float16, dt_float16, dt_float16, dt_float16,
                  megdnn::PostprocessMode::NO_PROCESS)
-#endif
 #endif
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7

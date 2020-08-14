@@ -100,6 +100,7 @@ namespace {
             MIDOUT_END();                                                 \
             break;                                                        \
         default:                                                          \
+            megdnn_throw("unknow biasmode");                             \
             break;                                                        \
     }
 
@@ -282,24 +283,25 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
                     dst_type, N* OC* OH* OW* pack_oc_size);
 
-#define FOR_BIAS(_bias_mode, OH, OW)                                \
-    switch (_bias_mode) {                                           \
-        case megdnn::BiasMode::NO_BIAS:                             \
-            break;                                                  \
-        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:              \
-            if (pack_oc_size == 1) {                                \
-                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));             \
-            } else {                                                \
-                megdnn_assert(pack_oc_size == 4,                    \
-                              "Only support nchw44 in ARM");        \
-                FOR_BINARY_BROADCAST_NCHW44(CONCAT_OP(AddOp));      \
-            }                                                       \
-            break;                                                  \
-        case megdnn::BiasMode::BIAS:                                \
-            FOR_BINARY(CONCAT_OP(AddOp));                           \
-            break;                                                  \
-        default:                                                    \
-            break;                                                  \
+#define FOR_BIAS(_bias_mode, OH, OW)                           \
+    switch (_bias_mode) {                                      \
+        case megdnn::BiasMode::NO_BIAS:                        \
+            break;                                             \
+        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:         \
+            if (pack_oc_size == 1) {                           \
+                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));        \
+            } else {                                           \
+                megdnn_assert(pack_oc_size == 4,               \
+                              "Only support nchw44 in ARM");   \
+                FOR_BINARY_BROADCAST_NCHW44(CONCAT_OP(AddOp)); \
+            }                                                  \
+            break;                                             \
+        case megdnn::BiasMode::BIAS:                           \
+            FOR_BINARY(CONCAT_OP(AddOp));                      \
+            break;                                             \
+        default:                                               \
+            megdnn_throw("unknow biasmode");                   \
+            break;                                             \
     }
 
 template <typename ctype, typename dtype>
