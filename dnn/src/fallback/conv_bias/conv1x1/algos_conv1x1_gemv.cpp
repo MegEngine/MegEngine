@@ -360,23 +360,23 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
                 dt_uint8, PostprocessMode::QUANTIZED,
                 "NCHW::GEMV::QUINT8x8x32_QUINT8"_hash);
             break;
-
+        //!no support nchw44 8x8x16
         case param::ConvBias::Format::NCHW44:
             cb1(param::ConvBias::Format::NCHW44, dt_float32, dt_float32,
                 PostprocessMode::FLOAT, "NCHW44::GEMV::FLOAT"_hash);
-            cb2(param::ConvBias::Format::NCHW44, dt_int8, dt_int32, dt_int32,
-                dt_int8, dt_int32, dt_int32, PostprocessMode::NO_PROCESS,
+            cb3(param::ConvBias::Format::NCHW44, dt_int8, dt_int32, dt_int32,
+                dt_int8, dt_int32, dt_int32, PostprocessMode::ADD_BIAS,
                 "NCHW44::GEMV::INT8x8x32_INT32"_hash);
-            cb2(param::ConvBias::Format::NCHW44, dtype::QuantizedS8,
+            cb3(param::ConvBias::Format::NCHW44, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS32, dt_int8, dt_int32,
-                dt_int32, PostprocessMode::NO_PROCESS,
+                dt_int32, PostprocessMode::ADD_BIAS,
                 "NCHW44::GEMV::QINT8x8x32_QINT32"_hash);
             cb2(param::ConvBias::Format::NCHW44, dtype::QuantizedS8,
                 dtype::QuantizedS32, dtype::QuantizedS8, dt_int8, dt_int32,
                 dt_int8, PostprocessMode::QUANTIZED,
                 "NCHW44::GEMV::QINT8x8x32_QINT8"_hash);
             break;
-
+        //!no support nchw44-dot 8x8x16
         case param::ConvBias::Format::NCHW44_DOT:
             cb3(param::ConvBias::Format::NCHW44_DOT, dt_int8, dt_int32,
                 dt_int32, dt_int8, dt_int32, dt_int32,
@@ -420,45 +420,61 @@ bool ConvBiasImpl::AlgoConv1x1Gemv::usable(const NCBKernSizeParam& param,
     MIDOUT_BEGIN(megdnn_fallback_conv1x1_gemv,
                  midout_iv("AlgoConv1x1Gemv::usable"_hash)) {
         auto format = param.filter_meta.format;
-#if MEGDNN_X86
-        if (format != param::ConvBias::Format::NCHW)
-            return false;
-#elif MEGDNN_AARCH64 || MEGDNN_ARMV7
-        if (format != param::ConvBias::Format::NCHW &&
-            format != param::ConvBias::Format::NCHW44 &&
-            format != param::ConvBias::Format::NCHW44_DOT)
-            return false;
-#endif
-
-        //! whether 1x1
         size_t FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
         size_t PH = param.filter_meta.padding[0],
                PW = param.filter_meta.padding[1];
         size_t SH = param.filter_meta.stride[0],
                SW = param.filter_meta.stride[1];
-
-        if (FH != 1 || FW != 1 || PH || PW || SH != 1 || SW != 1) {
-            return false;
-        }
-
-        //! whether gemv
         size_t OH = param.osz[0];
         size_t OW = param.osz[1];
-        if (OH * OW != 1) {
+        //! whether gemv and 1x1
+        if (OH * OW != 1 || FH != 1 || FW != 1 || PH || PW || SH != 1 ||
+            SW != 1) {
             return false;
         }
-
-        //! even no naive support in gemv
-        if ((param.src_type.enumv() == param.filter_type.enumv() &&
-             param.src_type.enumv() == DTypeEnum::Int16) &&
-            param.dst_type.enumv() == DTypeEnum::Int32) {
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+        if (format != param::ConvBias::Format::NCHW &&
+            format != param::ConvBias::Format::NCHW44 &&
+            format != param::ConvBias::Format::NCHW44_DOT) {
             return false;
         }
-
-        //! make sure 8x8x16 and 8x8x32 biasmode is nobias and nonlineMode
-        //! is identity otherwise return false mean that 8x8x32 and 8x8x16
-        //! not support PostProcess
+#else
+        if (format != param::ConvBias::Format::NCHW) {
+            return false;
+        }
+#endif
+        //! supports a few dtypes
+        if (param.src_type.enumv() != param.filter_type.enumv() ||
+            (param.src_type.enumv() != DTypeEnum::Int8 &&
+             param.src_type.enumv() != DTypeEnum::QuantizedS8 &&
+             param.src_type.enumv() != DTypeEnum::Quantized8Asymm &&
+#if !MEGDNN_DISABLE_FLOAT16
+             param.src_type.enumv() != DTypeEnum::Float16 &&
+#endif
+             param.src_type.enumv() != DTypeEnum::Float32)) {
+            return false;
+        }
+        if (format == param::ConvBias::Format::NCHW44) {
+            if (param.src_type.enumv() != DTypeEnum::Float32 &&
+                param.src_type.enumv() != DTypeEnum::Int8 &&
+                param.src_type.enumv() != DTypeEnum::QuantizedS8) {
+                return false;
+            }
+            //! 8x8x16 is not support nchw44
+            if (param.src_type.enumv() == DTypeEnum::Int8 &&
+                param.dst_type.enumv() == DTypeEnum::Int16) {
+                return false;
+            }
+        } else if (format == param::ConvBias::Format::NCHW44_DOT) {
+            if ((param.src_type.enumv() != DTypeEnum::Int8 &&
+                 param.src_type.enumv() != DTypeEnum::QuantizedS8) ||
+                param.dst_type.enumv() == DTypeEnum::Int16) {
+                return false;
+            }
+        }
+        //! make sure 8x8x16 and 8x8x32 biasmode nonlineMode is identity
+        //! otherwise return false
         if (param.dst_type.enumv() == DTypeEnum::Int16 ||
             param.dst_type.enumv() == DTypeEnum::Int32 ||
             param.dst_type.enumv() == DTypeEnum::QuantizedS32) {
@@ -466,35 +482,12 @@ bool ConvBiasImpl::AlgoConv1x1Gemv::usable(const NCBKernSizeParam& param,
                 return false;
             }
         }
-
-        //! supports a few dtypes
-        if (param.src_type.enumv() != param.filter_type.enumv()) {
+        //! even no naive support in gemv
+        if ((param.src_type.enumv() == param.filter_type.enumv() &&
+             param.src_type.enumv() == DTypeEnum::Int16) &&
+            param.dst_type.enumv() == DTypeEnum::Int32) {
             return false;
         }
-
-        if (param.src_type.enumv() != DTypeEnum::Int8 &&
-            param.src_type.enumv() != DTypeEnum::QuantizedS8 &&
-            param.src_type.enumv() != DTypeEnum::Quantized8Asymm &&
-#if !MEGDNN_DISABLE_FLOAT16
-            param.src_type.enumv() != DTypeEnum::Float16 &&
-#endif
-            param.src_type.enumv() != DTypeEnum::Float32) {
-            return false;
-        }
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
-        if (format == param::ConvBias::Format::NCHW44) {
-            if (param.src_type.enumv() != DTypeEnum::Float32 &&
-                param.src_type.enumv() != DTypeEnum::Int8 &&
-                param.src_type.enumv() != DTypeEnum::QuantizedS8) {
-                return false;
-            }
-        } else if (format == param::ConvBias::Format::NCHW44_DOT) {
-            if (param.src_type.enumv() != DTypeEnum::Int8 &&
-                param.src_type.enumv() != DTypeEnum::QuantizedS8) {
-                return false;
-            }
-        }
-#endif
         return (param.filter_meta.dilation[0] ==
                         param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&

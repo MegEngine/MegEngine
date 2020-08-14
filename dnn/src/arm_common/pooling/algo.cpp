@@ -612,7 +612,7 @@ bool PoolingImpl::AlgoFilter3ModexStridexNCHW44::usable(
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 3 && FW == 3 && SW == SH && (SH == 1 || SW == 2);
     //! Int8 not support average, because its round mode is different form
-    //! quint8
+    //! qint8
     avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
                  param.mode == Mode::AVERAGE);
     return avaible;
@@ -705,7 +705,7 @@ bool PoolingImpl::AlgoFilter2ModexStridexNCHW44::usable(
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 2 && FW == 2 && SH == SW && (SW == 1 || SW == 2);
     //! Int8 not support average, because its round mode is different form
-    //! quint8
+    //! qint8
     avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
                  param.mode == Mode::AVERAGE);
     return avaible;
@@ -799,7 +799,7 @@ bool PoolingImpl::AlgoFilter4ModexStridexNCHW44::usable(
                    FH == 4 && FW == 4 && SH == SW && (SW == 1 || SW == 2);
 
     //! Int8 not support average, because its round mode is different form
-    //! quint8
+    //! qint8
     avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
                  param.mode == Mode::AVERAGE);
     return avaible;
@@ -892,7 +892,7 @@ bool PoolingImpl::AlgoFilter5ModexStridexNCHW44::usable(
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    FH == 5 && FW == 5 && SH == SW && (SW == 1 || SW == 2);
     //! Int8 not support average, because its round mode is different form
-    //! quint8
+    //! qint8
     avaible &= !(param.src_type.enumv() == DTypeEnum::Int8 &&
                  param.mode == Mode::AVERAGE);
     return avaible;

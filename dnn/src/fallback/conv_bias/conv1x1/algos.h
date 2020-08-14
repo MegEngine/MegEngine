@@ -20,6 +20,11 @@ namespace megdnn {
 namespace fallback {
 
 class ConvBiasImpl::AlgoConv1x1 final : public AlgoBase {
+    WorkspaceBundle get_bundle_according_packmode(
+            const NCBKernSizeParam& param) const;
+    SmallVector<NCBKern> get_kerns_according_packmode(
+            const NCBKernSizeParam& param, bool weight_preprocess) const;
+
 public:
     AlgoConv1x1(MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size)
             : m_matmul_algo(matmul_algo), m_oc_block_size(oc_block_size) {}
@@ -41,7 +46,7 @@ public:
             const NCBKernSizeParam& param) const override;
 
     bool is_preferred(const NCBKernSizeParam&) const override;
-    
+
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const NCBKernSizeParam& param) const override;
     size_t get_preprocess_workspace(

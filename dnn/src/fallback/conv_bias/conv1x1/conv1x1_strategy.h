@@ -59,7 +59,8 @@ public:
 
 template <typename src_ctype, typename bias_ctype, typename dst_ctype,
           typename op_ctype, typename op_dtype,
-          megdnn::PostprocessMode postprocess_mode, MatrixMulImpl::AlgoBase::PackMode pack_mode>
+          megdnn::PostprocessMode postprocess_mode,
+          MatrixMulImpl::AlgoBase::PackMode pack_mode>
 class Conv1x1Strategy : public Conv1x1StrategyBase {
 public:
     explicit Conv1x1Strategy(size_t pack_size = 1) : m_pack_size(pack_size) {}
@@ -136,32 +137,30 @@ public:
             size_t packb_bytes_per_group = matmul_bundle.get_size(1);
 
             size_t GROUP = param.filter_meta.group;
-            size_t BATCH = param.n;
             size_t SH = param.filter_meta.stride[0];
             size_t SW = param.filter_meta.stride[1];
             size_t OH = param.osz[0];
             size_t OW = param.osz[1];
             size_t OC = param.filter_meta.ocpg;
+            size_t batch = ncb_index.ndrange_id[0];
 
             MatrixMulImpl::KernParam matmul_kern_param;
             static_cast<MatrixMulImpl::KernSizeParam&>(matmul_kern_param) =
                     utils::get_matmul_kern_param(param, OH * OW, OC);
 
-            rep(batch, BATCH) {
-                rep(g, GROUP) {
-                    if (SH == 2 && SW == 2)
-                        megdnn_throw("no support for stride = 2");
+            rep(g, GROUP) {
+                if (SH == 2 && SW == 2)
+                    megdnn_throw("no support for stride = 2");
 
-                    size_t bytes_offset_of_b_panel =
-                            batch * packb_bytes_per_group * GROUP +
-                            g * packb_bytes_per_group;
-                    src_ctype* b_panel = reinterpret_cast<src_ctype*>(
-                            reinterpret_cast<int8_t*>(whole_bundle.get(1)) +
-                            bytes_offset_of_b_panel);
-                    matmul_kern_param.B_ptr = const_cast<src_ctype*>(
-                            ncb_param.src<src_ctype>(batch, g));
-                    matmul_algo->pack_B(matmul_kern_param, b_panel, 0, OH * OW);
-                }
+                size_t bytes_offset_of_b_panel =
+                        batch * packb_bytes_per_group * GROUP +
+                        g * packb_bytes_per_group;
+                src_ctype* b_panel = reinterpret_cast<src_ctype*>(
+                        reinterpret_cast<int8_t*>(whole_bundle.get(1)) +
+                        bytes_offset_of_b_panel);
+                matmul_kern_param.B_ptr = const_cast<src_ctype*>(
+                        ncb_param.src<src_ctype>(batch, g));
+                matmul_algo->pack_B(matmul_kern_param, b_panel, 0, OH * OW);
             }
         } else {
             megdnn_log_error("OnlyPackA mode and NoPack mode has no packB kernel");
