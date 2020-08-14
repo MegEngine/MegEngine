@@ -25,6 +25,7 @@
 #cmakedefine01 MGB_BUILD_SLIM_SERVING
 #cmakedefine01 MGB_ENABLE_EXCEPTION
 #cmakedefine01 MGB_JIT
+#cmakedefine01 MGB_JIT_MLIR
 #cmakedefine01 MGB_JIT_HALIDE
 #cmakedefine01 MGB_ENABLE_TENSOR_RT
 #cmakedefine01 MGB_ENABLE_JSON

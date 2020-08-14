@@ -11,6 +11,7 @@
  */
 
 #pragma once
+#include "megbrain_build_config.h"
 
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
@@ -37,6 +38,6 @@ std::pair<llvm::StringRef, mlir::OwningModuleRef> mlir_gen(
 }
 }  // namespace mgb
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

@@ -28,6 +28,6 @@ namespace jit {
 
 
 
-#endif // MGB_JIT_MLIR
+#endif // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

@@ -1500,6 +1500,7 @@ TEST(TestJITExecutor, GradBehavior) {
         ASSERT_EQ(nr_ph, 2);
         ASSERT_EQ(nr_mul, 1);
     }
+#if MGB_JIT_HALIDE
     {
         set_backend(Backend::HALIDE);
         auto graph = ComputingGraph::make();
@@ -1529,6 +1530,7 @@ TEST(TestJITExecutor, GradBehavior) {
         // GetVarShape(a) and broadcast
         ASSERT_EQ(nr_ops, 4);
     }
+#endif // MGB_JIT_HALIDE
     {
         set_backend(Backend::NVRTC);
         auto graph = ComputingGraph::make();

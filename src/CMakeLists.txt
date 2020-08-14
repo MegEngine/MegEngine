@@ -1,7 +1,15 @@
+if(MGE_WITH_JIT_MLIR)
+    add_subdirectory(jit/impl/mlir/ir)
+endif()
+
 file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
 
 if(MGE_WITH_JIT)
     file(GLOB_RECURSE SOURCES_ jit/impl/*.cpp jit/impl/*.inl)
+    if(MGE_WITH_JIT_MLIR)
+        file(GLOB_RECURSE MLIR_SOURCES_ jit/impl/mlir/ir/*.cpp jit/impl/mlir/*.cpp)
+        list(APPEND SOURCES_ ${MLIR_SOURCES_})
+    endif()
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
@@ -47,7 +55,7 @@ if(MGE_WITH_CUDA)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
-add_library(megbrain OBJECT EXCLUDE_FROM_ALL ${SOURCES})
+add_library(megbrain OBJECT ${SOURCES})
 target_link_libraries(megbrain PUBLIC mgb_opr_param_defs)
 target_include_directories(megbrain
     PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -90,6 +98,11 @@ target_link_libraries(megbrain PUBLIC ${MGE_ATLAS_LIBS})
 if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
     target_link_libraries(megbrain PRIVATE libhalide)
     target_link_libraries(megbrain PRIVATE ${HALIDE_LLVM_LIBS})
+endif()
+if(MGE_WITH_JIT_MLIR)
+    target_link_libraries(megbrain PRIVATE mlir_op_def)
+    target_link_libraries(megbrain PRIVATE mlir_shape_inference)
+    target_link_libraries(megbrain PRIVATE ${MLIR_LLVM_LIBS})
 endif()
 if (MGB_WITH_FLATBUFFERS)
     set (GEN_FLATBUFFERS_SCHEMA_PY ${PROJECT_SOURCE_DIR}/dnn/scripts/gen_flatbuffers_schema.py)
@@ -203,8 +216,7 @@ install(TARGETS megengine
 if (NOT MGE_WITH_DISTRIBUTED)
     install(TARGETS megbrain
             EXPORT ${MGE_EXPORT_TARGETS}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+            )
 endif()
 
 foreach(_PATH ${MGB_INC})

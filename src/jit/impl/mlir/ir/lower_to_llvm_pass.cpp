@@ -51,6 +51,6 @@ std::unique_ptr<mlir::Pass> mgb::jit::create_lower_to_llvm_pass() {
     return std::make_unique<AffineToLLVMLoweringPass>();
 }
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

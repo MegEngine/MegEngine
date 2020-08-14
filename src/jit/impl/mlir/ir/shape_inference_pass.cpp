@@ -95,6 +95,6 @@ std::unique_ptr<mlir::Pass> mgb::jit::create_shape_inference_pass() {
     return std::make_unique<ShapeInferencePass>();
 }
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

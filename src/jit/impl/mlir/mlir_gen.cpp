@@ -14,7 +14,6 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "./mlir_gen.h"
-
 #include "./utils.h"
 #include "megbrain/jit/mlir/ir/dialect.h"
 #include "megbrain/opr/basic_arith.h"
@@ -202,6 +201,6 @@ std::pair<llvm::StringRef, mlir::OwningModuleRef> mgb::jit::mlir_gen(
     return MLIRGenImpl(context).gen(internal_graph, args);
 }
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

@@ -27,6 +27,6 @@ mlir::Value insert_alloc_and_dealloc(mlir::MemRefType type, mlir::Location loc,
 }  // namespace jit
 }  // namespace mgb
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -11,6 +11,7 @@
  */
 
 #pragma once
+#include "megbrain_build_config.h"
 
 #include <mlir/IR/Module.h>
 #include "megbrain_build_config.h"
@@ -38,6 +39,6 @@ std::unique_ptr<mlir::Pass> create_lower_to_gpu_pass();
 }  // namespace jit
 }  // namespace mgb
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

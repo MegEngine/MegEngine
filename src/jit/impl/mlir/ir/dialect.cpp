@@ -86,6 +86,6 @@ void AddOp::infer_shapes() { getResult().setType(getOperand(0).getType()); }
 #define GET_OP_CLASSES
 #include "megbrain/jit/mlir/ir/ops.cpp.inc"
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen
