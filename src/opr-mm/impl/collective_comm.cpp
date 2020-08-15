@@ -687,11 +687,21 @@ SymbolVarArray CollectiveComm::make(
 void CollectiveComm::opr_register() {
     if (m_init)
         return;
-    auto&& comp_node = output(0)->comp_node();
 
-    auto reg_info = m_group_client->opr_register(
-            m_key, m_nr_devices, m_is_root, m_rank,
-            comp_node.get_uid());
+    auto&& comp_node = output(0)->comp_node();
+    bool use_cache = output(0)->owner_graph()->options().imperative_proxy_graph;
+    struct GroupManager::RegisterInfo reg_info;
+
+    if (use_cache and RegInfoCache::has_info(m_key)) {
+        reg_info = RegInfoCache::get_info(m_key);
+    } else {
+        reg_info = m_group_client->opr_register(
+                m_key, m_nr_devices, m_is_root, m_rank,
+                comp_node.get_uid());
+        if (use_cache) {
+            RegInfoCache::set_info(m_key, reg_info);
+        }
+    }
 
     m_rank = reg_info.rank;
     m_root = reg_info.root_rank;
