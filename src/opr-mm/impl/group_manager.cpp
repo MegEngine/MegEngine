@@ -205,4 +205,20 @@ uint32_t GroupManager::group_barrier(uint32_t size, uint32_t rank) {
     return m_barrier_size;
 }
 
+void RegInfoCache::set_info(const std::string& key,
+        const GroupManager::RegisterInfo& info) {
+    std::unique_lock<std::mutex> lock(RegInfoCache::mtx);
+    RegInfoCache::key2info[key] = info;
+}
+
+bool RegInfoCache::has_info(const std::string& key) {
+    std::unique_lock<std::mutex> lock(RegInfoCache::mtx);
+    return RegInfoCache::key2info.find(key) != RegInfoCache::key2info.end();
+}
+
+GroupManager::RegisterInfo RegInfoCache::get_info(const std::string& key) {
+    std::unique_lock<std::mutex> lock(RegInfoCache::mtx);
+    return RegInfoCache::key2info[key];
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

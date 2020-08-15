@@ -145,6 +145,22 @@ class GroupClient {
         virtual uint32_t group_barrier(uint32_t size, uint32_t rank) = 0;
 };
 
+/*!
+ * Cache RegisterInfo returned from GroupManager. This feature is only enabled
+ * in imperative runtime mode, so that multi-machine operators do not have to
+ * call opr_register repeatedly in each iter
+ */
+namespace RegInfoCache {
+
+static std::mutex mtx;
+static std::unordered_map<std::string, GroupManager::RegisterInfo> key2info;
+
+void set_info(const std::string& key, const GroupManager::RegisterInfo& info);
+bool has_info(const std::string& key);
+GroupManager::RegisterInfo get_info(const std::string& key);
+
+}  // namespace RegInfoCache
+
 }  // namespace opr
 }  // namespace mgb
 
