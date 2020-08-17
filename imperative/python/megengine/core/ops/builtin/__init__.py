@@ -19,7 +19,7 @@ from .._internal.helper import PodOpVisitor
 OpBase.register(OpDef)
 
 # forward to apply(OpDef, ...)
-@apply.add
+@apply.register()
 def _(op: PodOpVisitor, *args: Union[TensorBase, TensorWrapperBase]):
     return apply(op.to_c(), *args)
 

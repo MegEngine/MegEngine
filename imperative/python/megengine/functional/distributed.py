@@ -46,7 +46,7 @@ __all__ = [
 ]
 
 
-@apply.add
+@apply.register()
 def _(op: RemoteSend, *args: Tensor):
     ret = tensor_apply(op, *args)
 

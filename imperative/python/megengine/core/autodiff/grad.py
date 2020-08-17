@@ -343,7 +343,7 @@ def default_has_grad_fn(opnode, reached):
     return False
 
 
-@apply.add
+@apply.register()
 def tracer_apply(op: (OpDef, Function), *args: typing.Optional[Tracer]):
     args = tuple(i if isinstance(i, Tracer) else None for i in args)
     input_requires_grad = list(map(bool, args))
@@ -385,6 +385,6 @@ def tracer_apply(op: (OpDef, Function), *args: typing.Optional[Tracer]):
     return tuple(outputs)
 
 
-@apply.add
+@apply.register()
 def _(op: Const, *_: typing.Optional[Tracer]):
     return None

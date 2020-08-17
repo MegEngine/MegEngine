@@ -102,7 +102,7 @@ class Function:
 Function.apply = Function.__call__
 
 
-@apply.add
+@apply.register()
 def _(op: Function, *args: TensorWrapperBase):
     assert args
     Wrapper = type(args[0])
@@ -148,11 +148,11 @@ def _(op: Function, *args: TensorWrapperBase):
     return tuple(map(Wrapper, outputs))
 
 
-@apply.add
+@apply.register()
 def _(op: Function, *args: Tensor):
     raise NotImplementedError
 
 
-@apply.add
+@apply.register()
 def _(op: Function, *args: RawTensor):
     raise NotImplementedError

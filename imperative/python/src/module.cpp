@@ -21,6 +21,8 @@
 #include "./graph_rt.h"
 #include "./ops.h"
 
+#include "./dispatcher.h"
+
 namespace py = pybind11;
 
 #ifndef MODULE_NAME
@@ -63,4 +65,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         from .graph import *
         )",
         py::getattr(m, "__dict__"));
+
+    init_dispatcher(submodule(m, "dispatcher"));
 }

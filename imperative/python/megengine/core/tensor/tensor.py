@@ -79,7 +79,7 @@ def get_context():
     return _context
 
 
-@apply.add
+@apply.register()
 def tensor_apply(op: OpBase, *args: Tensor):
     data = tuple(i._data if isinstance(i, Tensor) else i for i in args)
     # type(Tensor._data) is RawTensor

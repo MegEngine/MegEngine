@@ -111,7 +111,7 @@ def _unwrap(x):
     return x._node
 
 
-@apply.add
+@apply.register()
 def _(op: OpDef, *args: VarNode):
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)

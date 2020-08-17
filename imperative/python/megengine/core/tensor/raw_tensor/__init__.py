@@ -66,13 +66,13 @@ class RawTensor(TensorBase):
         delete(self._handle)
 
 
-@apply.add
+@apply.register()
 def _(op: OpDef, *args: RawTensor):
     outputs = apply_op(op, tuple(i._handle for i in args))
     return tuple(map(RawTensor, outputs))
 
 
-@apply.add
+@apply.register()
 def _(op: Const, *args: RawTensor):
     dtype = op.dtype
     device = as_device(op.device).to_c()
