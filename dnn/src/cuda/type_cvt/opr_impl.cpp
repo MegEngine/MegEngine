@@ -109,6 +109,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         return;                                 \
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+            cb(::megdnn::dtype::Bool)
 #undef cb
             default:
                 megdnn_assert_internal(0);
