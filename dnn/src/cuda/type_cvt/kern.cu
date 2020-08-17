@@ -111,8 +111,7 @@ struct TypeCvtOpFromQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 std::is_same<ctype_src, dt_qint8>::value ||
-                std::is_same<ctype_src, dt_quint8>::value ||
-				std::is_same<ctype_src, dt_bool>::value>::type> {
+                std::is_same<ctype_src, dt_quint8>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_src> param;
     using src_vect_type = typename VectTypeTrait<ctype_src>::vect_type;
@@ -140,8 +139,7 @@ struct TypeCvtOpBetweenQuantized<
         ctype_dest, ctype_src,
         typename std::enable_if<
                 std::is_same<ctype_src, dt_qint8>::value ||
-                std::is_same<ctype_src, dt_quint8>::value ||
-				std::is_same<ctype_src, dt_bool>::value>::type> {
+                std::is_same<ctype_src, dt_quint8>::value>::type> {
     ctype_dest* dest;
     CudaDTypeParam<ctype_src> src_param;
     CudaDTypeParam<ctype_dest> dst_param;

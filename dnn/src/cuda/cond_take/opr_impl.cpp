@@ -59,6 +59,7 @@ CondTakeImpl::Output CondTakeImpl::exec(
             break; \
         }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
 #undef cb
         default:
             megdnn_throw("bad mask dtype");
