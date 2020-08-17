@@ -422,6 +422,7 @@ Maybe<std::string> debug::compare_tensor_value(const HostTensorND& v0,
         return do_compare_tensor_value<DTypeTrait<_dt>::ctype>( \
                 expr0, expr1, v0, v1, maxerr);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
 #undef cb
         default:
             mgb_throw(MegBrainError, "unhandled dtype: %s", dtype.name());
