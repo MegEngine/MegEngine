@@ -935,5 +935,3 @@ when the ``I`` suffix is present.
  add_enum_alias('Format', 'ConvolutionV0').
  add_enum_alias('ComputeMode', 'Convolution', name_field="compute_mode")
  )
-
-
