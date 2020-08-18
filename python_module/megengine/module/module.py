@@ -60,7 +60,7 @@ class Module(metaclass=ABCMeta):
     def __init__(self):
         # runtime attributes
         self.training = True
-        self.quantize_diabled = False
+        self.quantize_disabled = False
 
         # hooks
         self._forward_pre_hooks = OrderedDict()
@@ -328,12 +328,12 @@ class Module(metaclass=ABCMeta):
 
     def disable_quantize(self, value=True):
         r"""
-        Set ``module``'s ``quantize_diabled`` attribute and return ``module``.
+        Set ``module``'s ``quantize_disabled`` attribute and return ``module``.
         Could be used as a decorator.
         """
 
         def fn(module: Module) -> None:
-            module.quantize_diabled = value
+            module.quantize_disabled = value
 
         self.apply(fn)
 
