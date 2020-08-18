@@ -6,10 +6,11 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-#include "src/aarch64/matrix_mul/opr_impl.h"
 #include "src/aarch64/matrix_mul/algos.h"
+#include "src/aarch64/matrix_mul/opr_impl.h"
 #include "src/common/metahelper.h"
 #include "src/common/utils.h"
 
@@ -36,6 +37,8 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 #endif
     AlgoInt8x8x16K8x8x8 int8x8x16_k8x8x8;
     AlgoInt8x8x16K4x4x16 int8x8x16_k4x4x16;
+    AlgoInt8x8x16MK4_16x12x4 int8x8x16_mk4_16x12x4;
+    AlgoInt8x8x16MK4_4x4x8 int8x8x16_mk4_4x4x8;
 
     AlgoInt16x16x32K12x8x1 int16x16x32_k12x8x1;
     AlgoInt16x16x32MK8_8x8 int16x16x32_mk8_8x8;
@@ -70,6 +73,8 @@ public:
 #endif
         all_algos.emplace_back(&int8x8x16_k4x4x16);
         all_algos.emplace_back(&int8x8x16_k8x8x8);
+        all_algos.emplace_back(&int8x8x16_mk4_4x4x8);
+        all_algos.emplace_back(&int8x8x16_mk4_16x12x4);
 
         all_algos.emplace_back(&int16x16x32_k12x8x1);
         all_algos.emplace_back(&int16x16x32_mk8_8x8);

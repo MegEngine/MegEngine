@@ -214,7 +214,6 @@ void* const ConvBiasImpl::sm_arm_common_algo_type =
 
 bool ConvBiasImpl::is_matmul_quantized_prefer(
         const ConvBiasImpl::NCBKernSizeParam& param) const {
-    // fallback::ConvBiasImpl::NCBKernParam conv_ncb_param;
     fallback::ConvBiasImpl::NCBKernSizeParam conv_ncb_param(
             param, 0, param::MatrixMul::Format::DEFAULT, {}, 0,
             BiasMode::NO_BIAS, param::ConvBias::NonlineMode::IDENTITY);
