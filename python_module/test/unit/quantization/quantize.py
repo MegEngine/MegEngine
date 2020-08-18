@@ -52,3 +52,29 @@ def test_disable_quantize():
     qat_net = quantize_qat(net, inplace=False)
     assert isinstance(qat_net.conv, Float.ConvBnRelu2d)
     assert isinstance(qat_net.conv.conv, Float.Conv2d)
+
+
+def test_convert_with_custom_mapping():
+    class FloatExample(Float.Module):
+        def forward(self, x):
+            return x
+
+    class QATExample(QAT.QATModule):
+        def forward(self, x):
+            return x
+
+        @classmethod
+        def from_float_module(cls, float_module):
+            return cls()
+
+    class Net(Float.Module):
+        def __init__(self):
+            super().__init__()
+            self.example = FloatExample()
+
+        def forward(self, x):
+            return self.example(x)
+
+    net = Net()
+    qat_net = quantize_qat(net, inplace=False, mapping={FloatExample: QATExample})
+    assert isinstance(qat_net.example, QATExample)
