@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/common/cpuinfo_arch_vendor.h
+ * \file dnn/test/arm_common/cpuinfo_help.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -9,19 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-
-#pragma once
 #include "src/common/utils.h"
-#if defined(MGB_ENABLE_CPUINFO_CHECK) && MGB_ENABLE_CPUINFO
-
-#include <cpuinfo.h>
-
-namespace megdnn {
-
-const char* vendor_to_string(enum cpuinfo_vendor vendor);
-const char* uarch_to_string(enum cpuinfo_uarch uarch);
-
-}  // namespace megdnn
+#include "test/arm_common/cpuinfo_help.h"
+#if MGB_ENABLE_CPUINFO
+std::mutex CpuInfoTmpReplace::m_cpuinfo_lock;
 #endif
-
 // vim: syntax=cpp.doxygen

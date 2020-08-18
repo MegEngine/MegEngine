@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include <cmath>
@@ -993,8 +994,8 @@ static inline void interleave_4x1_4_s(const int32_t*& inptr0,
 
 template <typename T>
 static inline void interleave_4x8_1_s(const T*& inptr0, const T*& inptr1,
-                                       const T*& inptr2, const T*& inptr3,
-                                       T*& outptr) {
+                                      const T*& inptr2, const T*& inptr3,
+                                      T*& outptr) {
     static_assert(sizeof(T) == 4, "only support size == 4");
     asm volatile(
             "ld1 {v0.4s, v1.4s}, [%[inptr0]], #32\n"
@@ -1140,8 +1141,8 @@ static inline void interleave_2x4_4_s(const T*& inptr0, const T*& inptr1,
             "stp q2, q6, [%[outptr], #64]\n"
             "stp q3, q7, [%[outptr], #96]\n"
 
-            : [ inptr0 ] "+r"(inptr0), [ inptr1 ] "+r"(inptr1),
-              [ outptr ] "+r"(outptr)
+            :
+            [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1), [outptr] "+r"(outptr)
             :
             : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "memory");
 }
@@ -1153,7 +1154,7 @@ static inline void interleave_1x4_4_s(const T*& inptr0, T* outptr) {
             "ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[inptr0]], #64\n"
             "st1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[outptr]]\n"
 
-            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
             :
             : "v0", "v1", "v2", "v3", "memory");
 }
@@ -1550,7 +1551,7 @@ static inline void transpose_1x12_4_s(const T*& inptr0, T* outptr) {
             "stp q2, q6, [%[outptr], #96] \n"
             "stp q10, q3, [%[outptr], #128] \n"
             "stp q7, q11, [%[outptr], #160] \n"
-            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
             :
             : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
               "v11", "memory");
@@ -1564,7 +1565,7 @@ static inline void transpose_1x4_4_s(const T*& inptr0, T* outptr) {
     asm volatile(
             "ld4 {v0.4s, v1.4s, v2.4s, v3.4s},  [%[inptr0]], #64\n"
             "st1 {v0.4s, v1.4s, v2.4s, v3.4s},  [%[outptr]]\n"
-            : [ inptr0 ] "+r"(inptr0), [ outptr ] "+r"(outptr)
+            : [inptr0] "+r"(inptr0), [outptr] "+r"(outptr)
             :
             : "v0", "v1", "v2", "v3", "memory");
 }
@@ -1681,13 +1682,12 @@ static inline void transpose_12x4_1_s(const T*& inptr0, const T*& inptr1,
             "st1 {v3.4s,v4.4s,v5.4s},  [%[outptr]], #48\n"
             "st1 {v6.4s,v7.4s,v8.4s},  [%[outptr]], #48\n"
             "st1 {v24.4s,v25.4s,v26.4s},  [%[outptr]], #48\n"
-            : [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1),
-              [inptr2] "+r"(inptr2), [inptr3] "+r"(inptr3),
-              [inptr4] "+r"(inptr4), [inptr5] "+r"(inptr5),
-              [inptr6] "+r"(inptr6), [inptr7] "+r"(inptr7),
-              [inptr8] "+r"(inptr8), [inptr9] "+r"(inptr9),
-              [inptr10] "+r"(inptr10), [inptr11] "+r"(inptr11),
-              [outptr] "+r"(outptr)
+            :
+            [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1), [inptr2] "+r"(inptr2),
+            [inptr3] "+r"(inptr3), [inptr4] "+r"(inptr4), [inptr5] "+r"(inptr5),
+            [inptr6] "+r"(inptr6), [inptr7] "+r"(inptr7), [inptr8] "+r"(inptr8),
+            [inptr9] "+r"(inptr9), [inptr10] "+r"(inptr10),
+            [inptr11] "+r"(inptr11), [outptr] "+r"(outptr)
             :
             : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
               "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
@@ -1970,6 +1970,135 @@ static inline void transpose_interleave_1x4_4_b(const T*& inptr0, T* outptr,
             [inptr0] "+r"(inptr0), [outptr] "+r"(outptr), [stride] "+r"(stride)
             :
             : "v0", "v1", "v2", "v3", "v4", "memory");
+}
+
+static inline void interleave_4x4_16x4_s8_s16(const int8_t* inptr0,
+                                              const int8_t* inptr1,
+                                              const int8_t* inptr2,
+                                              const int8_t* inptr3,
+                                              int16_t* outptr) {
+    int8x16_t row0 = vld1q_s8(inptr0);
+    int16x8_t row0_01 = vmovl_low_s8(row0);
+    int16x8_t row0_23 = vmovl_high_s8(row0);
+    int16x4_t row0_0 = vget_low_s16(row0_01);
+    int16x4_t row0_1 = vget_high_s16(row0_01);
+    int16x4_t row0_2 = vget_low_s16(row0_23);
+    int16x4_t row0_3 = vget_high_s16(row0_23);
+
+    int8x16_t row1 = vld1q_s8(inptr1);
+    int16x8_t row1_01 = vmovl_low_s8(row1);
+    int16x8_t row1_23 = vmovl_high_s8(row1);
+    int16x4_t row1_0 = vget_low_s16(row1_01);
+    int16x4_t row1_1 = vget_high_s16(row1_01);
+    int16x4_t row1_2 = vget_low_s16(row1_23);
+    int16x4_t row1_3 = vget_high_s16(row1_23);
+
+    int8x16_t row2 = vld1q_s8(inptr2);
+    int16x8_t row2_01 = vmovl_low_s8(row2);
+    int16x8_t row2_23 = vmovl_high_s8(row2);
+    int16x4_t row2_0 = vget_low_s16(row2_01);
+    int16x4_t row2_1 = vget_high_s16(row2_01);
+    int16x4_t row2_2 = vget_low_s16(row2_23);
+    int16x4_t row2_3 = vget_high_s16(row2_23);
+
+    int8x16_t row3 = vld1q_s8(inptr3);
+    int16x8_t row3_01 = vmovl_low_s8(row3);
+    int16x8_t row3_23 = vmovl_high_s8(row3);
+    int16x4_t row3_0 = vget_low_s16(row3_01);
+    int16x4_t row3_1 = vget_high_s16(row3_01);
+    int16x4_t row3_2 = vget_low_s16(row3_23);
+    int16x4_t row3_3 = vget_high_s16(row3_23);
+
+    vst1_s16(outptr, row0_0);
+    vst1_s16(outptr + 1 * 4, row1_0);
+    vst1_s16(outptr + 2 * 4, row2_0);
+    vst1_s16(outptr + 3 * 4, row3_0);
+    vst1_s16(outptr + 4 * 4, row0_1);
+    vst1_s16(outptr + 5 * 4, row1_1);
+    vst1_s16(outptr + 6 * 4, row2_1);
+    vst1_s16(outptr + 7 * 4, row3_1);
+    vst1_s16(outptr + 8 * 4, row0_2);
+    vst1_s16(outptr + 9 * 4, row1_2);
+    vst1_s16(outptr + 10 * 4, row2_2);
+    vst1_s16(outptr + 11 * 4, row3_2);
+    vst1_s16(outptr + 12 * 4, row0_3);
+    vst1_s16(outptr + 13 * 4, row1_3);
+    vst1_s16(outptr + 14 * 4, row2_3);
+    vst1_s16(outptr + 15 * 4, row3_3);
+};
+static inline void interleave_4x4_8x4_s8_s16(const int8_t* inptr0,
+                                             const int8_t* inptr1,
+                                             int16_t* outptr) {
+    int8x16_t row0 = vld1q_s8(inptr0);
+    int16x8_t row0_01 = vmovl_low_s8(row0);
+    int16x8_t row0_23 = vmovl_high_s8(row0);
+    int16x4_t row0_0 = vget_low_s16(row0_01);
+    int16x4_t row0_1 = vget_high_s16(row0_01);
+    int16x4_t row0_2 = vget_low_s16(row0_23);
+    int16x4_t row0_3 = vget_high_s16(row0_23);
+
+    int8x16_t row1 = vld1q_s8(inptr1);
+    int16x8_t row1_01 = vmovl_low_s8(row1);
+    int16x8_t row1_23 = vmovl_high_s8(row1);
+    int16x4_t row1_0 = vget_low_s16(row1_01);
+    int16x4_t row1_1 = vget_high_s16(row1_01);
+    int16x4_t row1_2 = vget_low_s16(row1_23);
+    int16x4_t row1_3 = vget_high_s16(row1_23);
+
+    vst1_s16(outptr, row0_0);
+    vst1_s16(outptr + 1 * 4, row1_0);
+    vst1_s16(outptr + 2 * 4, row0_1);
+    vst1_s16(outptr + 3 * 4, row1_1);
+    vst1_s16(outptr + 4 * 4, row0_2);
+    vst1_s16(outptr + 5 * 4, row1_2);
+    vst1_s16(outptr + 6 * 4, row0_3);
+    vst1_s16(outptr + 7 * 4, row1_3);
+};
+
+static inline void memcpy_s8_s16(const int8_t* inptr, int16_t* outptr,
+                                 int count) {
+    for (; count >= 32; count -= 32) {
+        int8x8_t in0 = vld1_s8(inptr);
+        int8x8_t in1 = vld1_s8(inptr + 1 * 8);
+        int8x8_t in2 = vld1_s8(inptr + 2 * 8);
+        int8x8_t in3 = vld1_s8(inptr + 3 * 8);
+        vst1q_s16(outptr, vmovl_s8(in0));
+        vst1q_s16(outptr + 1 * 8, vmovl_s8(in1));
+        vst1q_s16(outptr + 2 * 8, vmovl_s8(in2));
+        vst1q_s16(outptr + 3 * 8, vmovl_s8(in3));
+        inptr += 32;
+        outptr += 32;
+    }
+    for (; count >= 8; count -= 8) {
+        int8x8_t in0 = vld1_s8(inptr);
+        vst1q_s16(outptr, vmovl_s8(in0));
+        inptr += 8;
+        outptr += 8;
+    }
+    for (; count > 0; --count) {
+        *outptr++ = (int16_t)(*inptr++);
+    }
+}
+
+static inline void transpos_12x4_s8(const int8_t* inptr0, int8_t* outptr) {
+    static const uint8_t src_idx_buffer[16] = {0, 4, 8,  12, 1, 5, 9,  13,
+                                               2, 6, 10, 14, 3, 7, 11, 15};
+    static const uint8x16_t vtbl = vld1q_u8(&src_idx_buffer[0]);
+    int8x8x4_t input = vld4_s8(inptr0);
+    int8x16_t input2 = vqtbl1q_s8(vld1q_s8(inptr0 + 4 * 8), vtbl);
+
+    vst1_s8(outptr, input.val[0]);
+    vst1q_lane_s32(reinterpret_cast<int32_t*>(outptr + 8),
+                   vreinterpretq_s32_s8(input2), 0);
+    vst1_s8(outptr + 1 * 12, input.val[1]);
+    vst1q_lane_s32(reinterpret_cast<int32_t*>(outptr + 1 * 12 + 8),
+                   vreinterpretq_s32_s8(input2), 1);
+    vst1_s8(outptr + 2 * 12, input.val[2]);
+    vst1q_lane_s32(reinterpret_cast<int32_t*>(outptr + 2 * 12 + 8),
+                   vreinterpretq_s32_s8(input2), 2);
+    vst1_s8(outptr + 3 * 12, input.val[3]);
+    vst1q_lane_s32(reinterpret_cast<int32_t*>(outptr + 3 * 12 + 8),
+                   vreinterpretq_s32_s8(input2), 3);
 }
 
 }  // namespace aarch64

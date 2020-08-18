@@ -736,15 +736,21 @@ TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x32) {
 }
 #endif
 
-#if MEGDNN_ARMV7
 TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NCHW44_INT8x8x16) {
+#if MEGDNN_ARMV7
     const char* default_algo = "IM2COLMATMUL:ARMV7_INT8X8X16_K4X8X8";
     const char* mk4_algo = "IM2COLMATMUL:ARMV7_INT8X8X16_MK4_K8X8X4";
     printf("compare %s vs %s \n", default_algo, mk4_algo);
     BENCHMARK_IM2COL_NCHW44_VS_NCHW(default_algo, mk4_algo, handle(), 3,
                                     dtype::Int8(), dtype::Int16());
-}
+#else
+    const char* default_algo = "IM2COLMATMUL:AARCH64_INT8X8X16_K4X4X16";
+    const char* mk4_algo = "IM2COLMATMUL:AARCH64_INT8X8X16_MK4_4X4X8";
+    printf("compare %s vs %s \n", default_algo, mk4_algo);
+    BENCHMARK_IM2COL_NCHW44_VS_NCHW(default_algo, mk4_algo, handle(), 3,
+                                    dtype::Int8(), dtype::Int16());
 #endif
+}
 
 TEST_F(ARM_COMMON, BENCHMARK_GROUP_CONV_NCHW44_INT8x8x32_VS_INT8x8x16_STRIDE1) {
     BENCHMARK_GROUPCONV_NCHW44_int8x8x16VS_int8x8x32("S8_CHAN_WISE_STRD1_NCHW44",

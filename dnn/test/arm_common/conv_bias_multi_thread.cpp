@@ -14,6 +14,8 @@
 #include "test/common/benchmarker.h"
 #include "test/common/conv_bias.h"
 
+#include "test/arm_common/cpuinfo_help.h"
+
 using namespace megdnn;
 using namespace test;
 using namespace conv_bias;
@@ -487,11 +489,10 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
             handle(), "S8_CHAN_WISE_STRD2_NCHW44");
 }
 
-TEST_F(ARM_COMMON,
-       CONV_BIAS_INT8_INT8_INT16_CHANNEL_WISE_DIRECT1_NCHW44) {
+TEST_F(ARM_COMMON, CONV_BIAS_INT8_INT8_INT16_CHANNEL_WISE_DIRECT1_NCHW44) {
     Checker<ConvBias> checker(handle());
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>("S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"));
     checker.set_dtype(0, dtype::Int8());
     checker.set_dtype(1, dtype::Int8());
     checker.set_dtype(2, dtype::Int16());
@@ -505,8 +506,8 @@ TEST_F(ARM_COMMON,
 TEST_F(ARM_COMMON_MULTI_THREADS,
        CONV_BIAS_INT8_INT8_INT16_CHANNEL_WISE_DIRECT2_NCHW44) {
     Checker<ConvBias> checker(handle());
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBias>("S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
+            "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"));
     checker.set_dtype(0, dtype::Int8());
     checker.set_dtype(1, dtype::Int8());
     checker.set_dtype(2, dtype::Int16());
@@ -1803,8 +1804,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COL_FP32_STRIDE2_PREPROCESS) {
             handle(), nullptr, 0.001, dtype::Float32(), dtype::Float32(),      \
             dtype::Float32(), dtype::Float32(), name);
 #if MEGDNN_AARCH64
-    cb("IM2COLMATMUL:AARCH64_F32K8X12X1") 
-    cb("IM2COLMATMUL:AARCH64_F32K4X16X1")
+    cb("IM2COLMATMUL:AARCH64_F32K8X12X1") cb("IM2COLMATMUL:AARCH64_F32K4X16X1")
 #elif MEGDNN_ARMV7
     cb("IM2COLMATMUL:ARMV7_F32")
 #endif
@@ -1857,6 +1857,94 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COL_FP32_STRIDE1) {
 #endif
 #undef cb
 }
+
+//! CPUINFO ralated test
+#if MEGDNN_AARCH64
+#if MGB_ENABLE_CPUINFO
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COL_FP32_A55) {
+CpuInfoTmpReplace cpu_replace_guard(cpuinfo_uarch_cortex_a55);
+#define cb(name,stride)                                                          \
+    check_conv_bias(                                                             \
+            get_conv_bias_args({2, 3, 4, 5, 6, 7}, stride, false, false, false), \
+            handle(), name);
+
+    cb("IM2COLMATMUL:AARCH64_F32K8X12X1", 1)
+    cb("IM2COLMATMUL:AARCH64_F32K8X12X1", 2)
+#undef cb
+}
+#endif
+#endif
+
+#if MEGDNN_AARCH64
+#if MGB_ENABLE_CPUINFO
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COL_FP32_A53) {
+CpuInfoTmpReplace cpu_replace_guard(cpuinfo_uarch_cortex_a53);
+#define cb(name,stride)                                                          \
+    check_conv_bias(                                                             \
+            get_conv_bias_args({2, 3, 4, 5, 6, 7}, stride, false, false, false), \
+            handle(), name);
+
+    cb("IM2COLMATMUL:AARCH64_F32K8X12X1", 1)
+    cb("IM2COLMATMUL:AARCH64_F32K8X12X1", 2)
+#undef cb
+}
+#endif
+#endif
+
+#if MEGDNN_AARCH64
+#if MGB_ENABLE_CPUINFO
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_MK4_PACK_F32_A55) {
+    CpuInfoTmpReplace cpu_replace_guard(cpuinfo_uarch_cortex_a55);
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
+            {2, 3, 7}, 1, false, false, false, false, false, true, true);
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+    args = get_nchw44_conv_bias_args(
+            {2, 3, 7}, 2, false, false, false, false, false, true, true);
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+}
+#endif
+#endif
+
+#if MEGDNN_AARCH64
+#if MGB_ENABLE_CPUINFO
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_MK4_PACK_F32_A53) {
+    CpuInfoTmpReplace cpu_replace_guard(cpuinfo_uarch_cortex_a53);
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
+            {2, 3, 7}, 1, false, false, false, false, false, true, true);
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+    args = get_nchw44_conv_bias_args(
+            {2, 3, 7}, 2, false, false, false, false, false, true, true);
+    check_conv_bias(args, handle(), "IM2COLMATMUL:AARCH64_F32_MK4_K8X12X1");
+}
+#endif
+#endif
+
+
+#if MEGDNN_AARCH64
+#if MGB_ENABLE_CPUINFO
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_MK4_PACK_F32_A55) {
+    CpuInfoTmpReplace cpu_replace_guard(cpuinfo_uarch_cortex_a55);
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({1}, 1, true, false, false);
+    check_conv_bias(args, handle(), "CONV1x1:AARCH64_F32_MK4_K8X12X1:24");
+}
+#endif
+#endif
+
+#if MEGDNN_AARCH64
+#if MGB_ENABLE_CPUINFO
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_MK4_PACK_F32_A53) {
+    CpuInfoTmpReplace cpu_replace_guard(cpuinfo_uarch_cortex_a53);
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args =
+            get_nchw44_conv_bias_args({1}, 1, true, false, false);
+    check_conv_bias(args, handle(), "CONV1x1:AARCH64_F32_MK4_K8X12X1:24");
+}
+#endif
+#endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM) {
     UniformIntRNG rng{-50, 50};
@@ -2216,7 +2304,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUINT8x8x32) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUINT8x8x32_FILTERPREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_IM2COLMATMUL_QUINT8x8x32_FILTERPREPROCESS) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
 #define cb(name)                                                              \
@@ -2247,7 +2336,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QUINT8x8x32_FILTERPREPRO
 #undef cb
 }
 
-
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
@@ -2276,19 +2364,21 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16) {
 #if MEGDNN_AARCH64
     cb("IM2COLMATMUL:AARCH64_INT8X8X16_K8X8X8");
     cb("IM2COLMATMUL:AARCH64_INT8X8X16_K4X4X16");
-    cb("IM2COLMATMUL:ARM_COMMON_INT8X8X16");
+    cb_nchw44("IM2COLMATMUL:AARCH64_INT8X8X16_MK4_4X4X8");
+    cb_nchw44("IM2COLMATMUL:AARCH64_INT8X8X16_MK4_16X12X4");
 #elif MEGDNN_ARMV7
-    cb("IM2COLMATMUL:ARM_COMMON_INT8X8X16");
     cb("IM2COLMATMUL:ARMV7_INT8X8X16_K4X8X8");
     cb("IM2COLMATMUL:ARMV7_INT8X8X16_K4X2X16");
     cb_nchw44("IM2COLMATMUL:ARMV7_INT8X8X16_MK4_K8X8X4");
 #endif
+    cb("IM2COLMATMUL:ARM_COMMON_INT8X8X16");
 
 #undef cb
 #undef cb_nchw44
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16_FILTERPREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONVBIAS_IM2COLMATMUL_INT8x8x16_FILTERPREPROCESS) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
 #define cb(name)                                                              \
@@ -2311,7 +2401,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16_FILTERPREPROCES
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_IM2COLMATMUL_INT8x8x16_NOPACK_FILTERPREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONVBIAS_IM2COLMATMUL_INT8x8x16_NOPACK_FILTERPREPROCESS) {
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
 #define cb(name)                                                               \
@@ -2415,8 +2506,9 @@ void checker_conv_bias_mul_int8x8x32(std::vector<conv_bias::TestArg> args,
     }
 }
 
-void checker_conv_bias_int8x8x32_preprocess(std::vector<conv_bias::TestArg> args,
-                                     Handle* handle, const char* algo_name) {
+void checker_conv_bias_int8x8x32_preprocess(
+        std::vector<conv_bias::TestArg> args, Handle* handle,
+        const char* algo_name) {
     using namespace conv_bias;
 
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
@@ -2461,7 +2553,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2_PREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S2_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
             get_nchw44_conv_bias_args({2, 5, 7}, 2, false, false, true);
@@ -2490,7 +2583,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S1) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S1_PREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_IM2COLMATMUL_INT8x8x32NCHW44_S1_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
             get_nchw44_conv_bias_args({3, 4, 6}, 1, false, true, true);
@@ -2540,7 +2634,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS,
 #endif
 #undef cb
 }
-
 
 TEST_F(ARM_COMMON_MULTI_THREADS,
        CONV_BIAS_IM2COLMATMUL_QUANTIZEDSYM_NCHW44_S1) {
@@ -2678,7 +2771,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8x8x32) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32_FILTER_PREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_IM2COLMATMUL_INT8X8X32_FILTER_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
             get_conv_bias_args({2, 3, 4, 5, 6, 7}, 1, false, true, true);
@@ -2722,7 +2816,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32) {
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S1_MK4_PACK_F32_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
-            {2, 4, 7}, 1, false, false, false, false, false, true,true);
+            {2, 4, 7}, 1, false, false, false, false, false, true, true);
 #define cb(name)                                                   \
     check_conv_bias_preprocess(args, handle(), nullptr, 0.001,     \
                                dtype::Float32(), dtype::Float32(), \
@@ -2748,7 +2842,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32) {
 #undef cb
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_IM2COL_S2_MK4_PACK_F32_FUSE_PREPROCESS) {
+TEST_F(ARM_COMMON_MULTI_THREADS,
+       CONV_BIAS_IM2COL_S2_MK4_PACK_F32_FUSE_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(
             {3}, 2, false, false, false, false, false, true, true, false);
@@ -2884,12 +2979,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_F16_PREPROCESS) {
     NormalRNG rng(1);
 #if MEGDNN_AARCH64
     check_conv_bias_preprocess(args, handle(), &rng, 0.03, dtype::Float16{},
-                      dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
-                      "CONV1x1:AARCH64_F16_K8X24X1:48");
+                               dtype::Float16{}, dtype::Float16{},
+                               dtype::Float16{},
+                               "CONV1x1:AARCH64_F16_K8X24X1:48");
 #elif MEGDNN_ARMV7
     check_conv_bias_preprocess(args, handle(), &rng, 0.03, dtype::Float16{},
-                      dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
-                      "CONV1x1:AARCH32_F16_K4X16X1:24");
+                               dtype::Float16{}, dtype::Float16{},
+                               dtype::Float16{},
+                               "CONV1x1:AARCH32_F16_K4X16X1:24");
 #endif
 }
 
@@ -2950,7 +3047,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM_PREPROCESS) {
 #endif
 #undef cb
 }
-
 
 #if MEGDNN_AARCH64 || MEGDNN_ARMV7
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM) {
@@ -3074,7 +3170,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32_PREPROCESS) {
     cb("CONV1x1:ARMV7_QUINT8_K4X8X8:24");
 #endif
 #undef cb
-
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
@@ -3095,6 +3190,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16) {
 #if MEGDNN_AARCH64
     cb("CONV1x1:AARCH64_INT8X8X16_K8X8X8:24");
     cb("CONV1x1:AARCH64_INT8X8X16_K4X4X16:24");
+    cb_nchw44("CONV1x1:AARCH64_INT8X8X16_MK4_4X4X8:48");
+    cb_nchw44("CONV1x1:AARCH64_INT8X8X16_MK4_16X12X4:48");
 #elif MEGDNN_ARMV7
     cb("CONV1x1:ARMV7_INT8X8X16_K4X8X8:24");
     cb("CONV1x1:ARMV7_INT8X8X16_K4X2X16:48");
@@ -3128,11 +3225,11 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_1X1_S1_INT8x8x16_PREPROCESS) {
 #if MEGDNN_AARCH64
     cb("CONV1x1:AARCH64_INT8X8X16_K8X8X8:24");
     cb("CONV1x1:AARCH64_INT8X8X16_K4X4X16:24");
-    cb("CONV1x1:ARM_COMMON_INT8X8X16:24");//!add nopack test
+    cb("CONV1x1:ARM_COMMON_INT8X8X16:24");  //! add nopack test
 #elif MEGDNN_ARMV7
     cb("CONV1x1:ARMV7_INT8X8X16_K4X8X8:24");
     cb("CONV1x1:ARMV7_INT8X8X16_K4X2X16:48");
-    cb("CONV1x1:ARM_COMMON_INT8X8X16:24");//!add nopack test
+    cb("CONV1x1:ARM_COMMON_INT8X8X16:24");  //! add nopack test
 #endif
 #undef cb
 }
@@ -3245,11 +3342,11 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_MK4_PREPROCESS) {
 
     UniformIntRNG rng{-50, 50};
     float epsilon = 0.001;
-#define cb(name)                                                             \
-    check_conv_bias_preprocess(get_nchw44_conv_bias_args({1}, 1, true, false, false), \
-                      handle(), &rng, epsilon, dtype::QuantizedS8(2.5f),     \
-                      dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),  \
-                      dtype::QuantizedS8(60.25f), name);
+#define cb(name)                                                               \
+    check_conv_bias_preprocess(                                                \
+            get_nchw44_conv_bias_args({1}, 1, true, false, false), handle(),   \
+            &rng, epsilon, dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f), \
+            dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f), name);
 #if MEGDNN_AARCH64
     cb("CONV1x1:AARCH64_INT8X8X32_MK4_4X4X16:24");
 #elif MEGDNN_ARMV7

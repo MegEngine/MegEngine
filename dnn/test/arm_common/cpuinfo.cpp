@@ -9,7 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#ifdef MGB_ENABLE_CPUINFO_CHECK
+#include "src/common/utils.h"
+#if defined(MGB_ENABLE_CPUINFO_CHECK) && MGB_ENABLE_CPUINFO
 #include <cpuinfo.h>
 #include <inttypes.h>
 #include "gtest/gtest.h"
@@ -18,7 +19,6 @@ namespace megdnn {
 namespace test {
 
 TEST(ARM_RUNTIME, CPUINFO_KIRIN980) {
-
     ASSERT_TRUE(cpuinfo_initialize());
 
     int right_soc = strcmp(cpuinfo_get_package(0)->name, "HiSilicon Kirin 980");
@@ -68,7 +68,6 @@ TEST(ARM_RUNTIME, CPUINFO_KIRIN980) {
 }
 
 TEST(ARM_RUNTIME, CPUINFO_SDM8150) {
-
     ASSERT_TRUE(cpuinfo_initialize());
 
     int right_soc =
@@ -119,7 +118,6 @@ TEST(ARM_RUNTIME, CPUINFO_SDM8150) {
 }
 
 TEST(ARM_RUNTIME, CPUINFO_SDM660) {
-
     ASSERT_TRUE(cpuinfo_initialize());
 
     int right_soc =
@@ -173,4 +171,3 @@ TEST(ARM_RUNTIME, CPUINFO_SDM660) {
 }  // namespace megdnn
 #endif
 // vim: syntax=cpp.doxygen
-
