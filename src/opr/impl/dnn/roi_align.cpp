@@ -42,9 +42,6 @@ SymbolVar ROIAlignForward::make(SymbolVar src, SymbolVar rois,
 
 #ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ROIAlignForward) {
-    if (out_grad[1]) {
-        return InvalidGrad::make(opr, wrt_idx);
-    }
     if (wrt_idx == 0) {
         // wrt src
         SymbolVar grad =
