@@ -86,7 +86,7 @@ size_t ROIPoolingForward::get_workspace_size_bytes(
 
 #ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ROIPoolingForward) {
-    if (out_grad[1] || wrt_idx == 2) {
+    if (wrt_idx == 2) {
         return InvalidGrad::make(opr, wrt_idx);
     }
     if (wrt_idx == 0) {
