@@ -34,7 +34,7 @@ bool check_compute_capability_eq(int major, int minor);
     do {                                                               \
         if (!megdnn::test::check_compute_capability((x), (y))) {       \
             printf("skip testcase due to cuda compute capability not " \
-                   "require.(expected:%d.%d)",                         \
+                   "require.(expected:%d.%d)\n",                       \
                    (x), (y));                                          \
             return;                                                    \
         }                                                              \
@@ -44,7 +44,7 @@ bool check_compute_capability_eq(int major, int minor);
     do {                                                               \
         if (!megdnn::test::check_compute_capability_eq((x), (y))) {    \
             printf("skip testcase due to cuda compute capability not " \
-                   "equal to %d.%d",                                   \
+                   "equal to %d.%d\n",                                 \
                    (x), (y));                                          \
             return;                                                    \
         }                                                              \

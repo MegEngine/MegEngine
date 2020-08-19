@@ -85,6 +85,11 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : int8_chwn4_imma_unroll_width) {
         all_algos.push_back(&algo);
     }
+#if CUDA_VERSION >= 10020
+    for (auto&& algo : int8_nchw32_imma) {
+        all_algos.push_back(&algo);
+    }
+#endif
 #endif
     all_algos.push_back(&int8_nchw4_dotprod);
     all_algos.push_back(&int8_chwn4_dotprod);
@@ -233,6 +238,18 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
     int8_chwn4_imma_unroll_width.push_back(
             {AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth::MMATileSize::
                      IMMA8x32x16});
+#if CUDA_VERSION >= 10020
+    {
+        using AlgoParam = AlgoInt8NCHW32IMMAImplicitGemm::AlgoParam;
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 256, 64, 64, 64, 64});
+        int8_nchw32_imma.emplace_back(AlgoParam{256, 128, 64, 64, 64, 64});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 128, 64, 64, 64, 64});
+        int8_nchw32_imma.emplace_back(AlgoParam{64, 128, 64, 32, 64, 64});
+        int8_nchw32_imma.emplace_back(AlgoParam{128, 64, 64, 64, 32, 64});
+        int8_nchw32_imma.emplace_back(AlgoParam{64, 64, 64, 32, 32, 64});
+        int8_nchw32_imma.emplace_back(AlgoParam{32, 64, 64, 32, 16, 64});
+    }
+#endif
 }
 #endif
 

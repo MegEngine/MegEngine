@@ -57,6 +57,13 @@ add_dependencies(opr_param_defs _opr_param_defs)
 install(TARGETS opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
 
 
+if(MGE_WITH_CUDA)
+    add_library(cutlass INTERFACE)
+    target_include_directories(cutlass 
+        INTERFACE 
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/cutlass/include>)
+    install(TARGETS cutlass EXPORT ${MGE_EXPORT_TARGETS})
+endif()
 
 if(MGE_WITH_TEST)
     if(NOT MGE_BUILD_IMPERATIVE_RT)

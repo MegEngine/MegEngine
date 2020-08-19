@@ -56,7 +56,6 @@ const char *cublasGetErrorString(cublasStatus_t error) {
 	}
 	return "Unknown CUBLAS error";
 }
-
 } // anonymous namespace
 
 void cuda::__throw_cuda_error__(cudaError_t err, const char *msg) {
@@ -84,6 +83,12 @@ void cuda::__throw_cusolver_error__(cusolverStatus_t err, const char* msg) {
 
 void cuda::__throw_cuda_driver_error__(CUresult err, const char* msg) {
     auto s = ssprintf("cuda driver error %d occurred; expr: %s", int(err), msg);
+    megdnn_throw(s.c_str());
+}
+
+void cuda::__throw_cutlass_error__(cutlass::Status err, const char* msg) {
+    auto s = ssprintf("cutlass error %s(%d) occurred; expr: %s",
+                      cutlass::cutlassGetStatusString(err), int(err), msg);
     megdnn_throw(s.c_str());
 }
 

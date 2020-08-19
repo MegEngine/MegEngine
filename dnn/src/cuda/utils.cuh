@@ -20,6 +20,7 @@
 #include <cusolverDn.h>
 #include "cuda.h"
 #include "src/cuda/cudnn_with_check.h"
+#include "cutlass/cutlass.h"
 
 #define cuda_check(_x)                                       \
     do {                                                     \
@@ -61,6 +62,14 @@
         }                                                           \
     } while (0)
 
+#define cutlass_check(_x)                                       \
+    do {                                                        \
+        cutlass::Status _err = (_x);                            \
+        if (_err != cutlass::Status::kSuccess) {                \
+            ::megdnn::cuda::__throw_cutlass_error__(_err, #_x); \
+        }                                                       \
+    } while (0)
+
 #define after_kernel_launch()           \
     do {                                \
         cuda_check(cudaGetLastError()); \
@@ -93,6 +102,8 @@ MEGDNN_NORETURN void __throw_cublas_error__(cublasStatus_t err,
 MEGDNN_NORETURN void __throw_cusolver_error__(cusolverStatus_t err,
                                               const char* msg);
 MEGDNN_NORETURN void __throw_cuda_driver_error__(CUresult err, const char* msg);
+MEGDNN_NORETURN void __throw_cutlass_error__(cutlass::Status status,
+                                             const char* msg);
 MEGDNN_NORETURN void report_error(const char* msg);
 
 template <typename T, size_t N>

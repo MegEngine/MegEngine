@@ -254,8 +254,8 @@ public:
 };
 
 ////////////////// Algo Benchmark ////////////////////////
-template <typename Opr, typename Proxy = OprProxy<Opr>>
-float algo_benchmark(Benchmarker<Opr>& benchmark, TensorLayoutArray layouts,
+template <typename Opr, typename Proxy = OprProxy<Opr>, typename T = Timer>
+float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
                      const std::string& algo_base) {
     Proxy proxy;
     auto opr = benchmark.opr();
@@ -279,8 +279,8 @@ float algo_benchmark(Benchmarker<Opr>& benchmark, TensorLayoutArray layouts,
     return min_used;
 }
 
-template <typename Opr, typename Proxy = OprProxy<Opr>>
-float algo_benchmark(Benchmarker<Opr>& benchmark, TensorShapeArray shapes,
+template <typename Opr, typename Proxy = OprProxy<Opr>, typename T = Timer>
+float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorShapeArray shapes,
                      const std::string& algo_base) {
     return algo_benchmark(benchmark, benchmark.make_layouts(shapes), algo_base);
 }

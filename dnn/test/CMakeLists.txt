@@ -32,6 +32,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")
 target_link_libraries(megdnn_test gtest)
 target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS})
 
+if (MGE_WITH_CUDA)
+    target_link_libraries(megdnn_test cutlass)
+endif()
+
 target_include_directories(megdnn_test
     PRIVATE
         ${PROJECT_SOURCE_DIR}/third_party/midout/src
