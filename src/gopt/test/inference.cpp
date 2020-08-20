@@ -2976,11 +2976,16 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    //! Hybrid nchw88 mode
+    //! Hybrid nchw44 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
+    opr::ConvBias::Param param_conv_bias_stride4;
+    param_conv_bias_stride4.stride_h = param_conv_bias_stride4.stride_w = 4;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
          conv1 = opr::Convolution::make(x, w1, param_conv);
+    auto w1_1 = mkcvar("w1_1", {8, 3, 4, 4}), b1 = mkcvar("b2", {1, 8, 1, 1}),
+         conv1_f4 = opr::Convolution::make(x, w1_1, param_conv);
+    auto conv1_s4 = opr::ConvBias::make(x, w1, b1, param_conv_bias_stride4);
     //! channel wise
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
@@ -3015,22 +3020,35 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     auto w6 = mkcvar("w6", {4, 6, 3, 3}), b6 = mkcvar("b6", {1, 4, 1, 1}),
          y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
 
-    SymbolVar y_opt;
+    SymbolVar y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt, conv2_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
     options.enable_nchw44();
-    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    unpack_vector(gopt::optimize_for_inference(
+                          {y, conv1, conv1_f4, conv1_s4, conv2}, options),
+                  y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt, conv2_opt);
 
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
+              find_opr<opr::Convolution>(conv1_opt).param().format);
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
+              find_opr<opr::ConvBias>(conv1_s4_opt).param().format);
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
+              find_opr<opr::Convolution>(conv1_f4_opt).param().format);
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(conv2_opt).param().format);
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
               find_opr<opr::ConvBias>(y_opt).param().format);
 
-    graph->compile({{y_opt, {}}})
+    graph->compile({{y_opt, {}}, {conv2, {}}})
             ->to_json()
             ->writeto_fpath(
                     output_file("TestGoptInference.ConvertFormatNCHW44.json"));
 
     HostTensorND host_y_opt, host_y;
+    HostTensorND host_conv1;
     auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_opt, host_y_opt)});
+                                make_callback_copy(y_opt, host_y_opt),
+                                make_callback_copy(conv1, host_conv1)});
+
     func->execute();
     //! meybe go to winograd in x86-32, so set error 1e-1
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
@@ -3140,11 +3158,16 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    //! Hybrid nchw88 mode
+    //! Hybrid nchw44 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
+    opr::ConvBias::Param param_conv_bias_stride4;
+    param_conv_bias_stride4.stride_h = param_conv_bias_stride4.stride_w = 4;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
          conv1 = opr::Convolution::make(x, w1, param_conv);
+    auto w1_1 = mkcvar("w1_1", {8, 3, 4, 4}), b1 = mkcvar("b2", {1, 8, 1, 1}),
+         conv1_f4 = opr::Convolution::make(x, w1_1, param_conv);
+    auto conv1_s4 = opr::ConvBias::make(x, w1, b1, param_conv_bias_stride4);
     //! channel wise
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
@@ -3179,11 +3202,19 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     auto w6 = mkcvar("w6", {4, 6, 3, 3}), b6 = mkcvar("b6", {1, 4, 1, 1}),
          y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
 
-    SymbolVar y_opt;
+    SymbolVar y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
     options.enable_nchw44_dot();
-    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    unpack_vector(gopt::optimize_for_inference({y, conv1, conv1_f4, conv1_s4},
+                                               options),
+                  y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt);
 
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44_DOT,
+              find_opr<opr::Convolution>(conv1_opt).param().format);
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
+              find_opr<opr::ConvBias>(conv1_s4_opt).param().format);
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
+              find_opr<opr::Convolution>(conv1_f4_opt).param().format);
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44_DOT,
               find_opr<opr::Convolution>(y_opt).param().format);
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
