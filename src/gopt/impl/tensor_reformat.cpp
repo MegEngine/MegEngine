@@ -31,6 +31,8 @@
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/tensor_format.h"
 
+#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
+
 #if MGB_ENABLE_TENSOR_RT
 #include "megbrain/tensorrt/tensorrt_opr.h"
 #endif
@@ -392,7 +394,8 @@ void TensorReformatPass::insert_pass(OptState& opt) const {
             auto new_opr = (it->second)(opr, new_inp);
             auto &&out0 = opr->output(), &&out1 = new_opr->output();
             mgb_assert(out0.size() == out1.size(),
-                       "bad opr replace: src=%s{%s} dst=%s{%s}, src.size=%zu "
+                       "bad opr replace: src=%s{%s} dst=%s{%s}, "
+                       "src.size=%zu "
                        "dst.size=%zu",
                        opr->cname(), opr->dyn_typeinfo()->name,
                        new_opr->cname(), new_opr->dyn_typeinfo()->name,
@@ -1811,14 +1814,156 @@ VarNode* EnableNchwxxPass::on_graph_endpoint_var(VarNode* new_var,
     }
     return new_var;
 }
-//! nchw_nchwxx_valid is used to indicate optimized nchw_nchw44 conv
-static inline bool nchw_nchwxx_valid(const size_t oc, const size_t ic,
-                                     const size_t pack_c_size, const size_t fh,
-                                     const size_t fw, const size_t stride_h,
-                                     const size_t stride_w) {
-    return ic < pack_c_size && oc % pack_c_size == 0 && fh == fw &&
-           stride_h == stride_w && (stride_h == 1 || stride_h == 2) &&
-           (fh == 2 || fh == 3 || fh == 5 || fh == 7);
+
+template <typename OprType>
+static inline bool nchw_nchwxx_valid(const OprType& opr,
+                                     const VarNodeArray& new_inp,
+                                     const size_t pack_size, bool is_dense,
+                                     bool is_dot = false);
+template <>
+inline bool nchw_nchwxx_valid<opr::ConvolutionForward>(
+        const opr::ConvolutionForward& opr, const VarNodeArray& new_inp,
+        const size_t pack_size, bool is_dense, bool is_dot) {
+    auto& filter_shape = new_inp[1]->shape();
+    auto filter_dtype = new_inp[1]->dtype();
+    bool is_int8 = filter_dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                   filter_dtype.enumv() == DTypeEnum::Int8;
+    const size_t oc = filter_shape[0];
+    const size_t ic = filter_shape[1];
+    bool is_like_nchw_nchwxx =
+            is_dense && oc % pack_size == 0 && ic < pack_size;
+    if (!is_like_nchw_nchwxx) {
+        return false;
+    }
+    SmallVector<TensorLayout> layouts;
+
+    //! src
+    layouts.push_back(
+            {new_inp[0]->shape(), new_inp[0]->dtype(), new_inp[0]->format()});
+
+    //! weight
+    layouts.push_back({{filter_shape[0] / pack_size, filter_shape[2],
+                        filter_shape[3], filter_shape[1], pack_size},
+                       new_inp[1]->dtype(),
+                       new_inp[1]->format()});
+
+    auto out0 = opr.output(0);
+    auto& out_shape = out0->shape();
+    //! FIXME: return false if oc is invalid
+    layouts.push_back({{out_shape[0], out_shape[1] / pack_size, out_shape[2],
+                        out_shape[3], pack_size},
+                       out0->dtype(),
+                       out0->format()});
+
+    auto megdnn_conv = opr::intl::get_megdnn_handle(opr.comp_node())
+                               ->create_operator<megdnn::ConvolutionForward>();
+    megdnn_conv.get()->param() = opr.param();
+    //! set by dtype
+    switch (pack_size) {
+        case 4:
+            if (is_dot && is_int8) {
+                megdnn_conv.get()->param().format =
+                        megdnn::param::Convolution::Format::NCHW44_DOT;
+            } else {
+                megdnn_conv.get()->param().format =
+                        megdnn::param::Convolution::Format::NCHW44;
+            }
+            break;
+        case 8:
+            megdnn_conv.get()->param().format =
+                    megdnn::param::Convolution::Format::NCHW88;
+            break;
+
+        default:
+            break;
+    }
+
+    bool find_valid_algo = false;
+    auto algos = megdnn_conv.get()->get_all_algorithms(layouts[0], layouts[1],
+                                                       layouts[2]);
+    for (auto i : algos) {
+        if (i->type() != nullptr) {
+            find_valid_algo = true;
+        }
+    }
+
+    return find_valid_algo;
+}
+template <>
+inline bool nchw_nchwxx_valid<opr::ConvBiasForward>(
+        const opr::ConvBiasForward& opr, const VarNodeArray& new_inp,
+        const size_t pack_size, bool is_dense, bool is_dot) {
+    auto& filter_shape = new_inp[1]->shape();
+    auto filter_dtype = new_inp[1]->dtype();
+    bool is_int8 = filter_dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                   filter_dtype.enumv() == DTypeEnum::Int8;
+    const size_t oc = filter_shape[0];
+    const size_t ic = filter_shape[1];
+    bool is_like_nchw_nchwxx =
+            is_dense && oc % pack_size == 0 && ic < pack_size;
+    if (!is_like_nchw_nchwxx) {
+        return false;
+    }
+    SmallVector<TensorLayout> layouts;
+
+    //! src
+    layouts.push_back(
+            {new_inp[0]->shape(), new_inp[0]->dtype(), new_inp[0]->format()});
+
+    //! weight
+    layouts.push_back({{filter_shape[0] / pack_size, filter_shape[2],
+                        filter_shape[3], filter_shape[1], pack_size},
+                       new_inp[1]->dtype(),
+                       new_inp[1]->format()});
+
+    auto& bias_shape = new_inp[2]->shape();
+    layouts.push_back({{bias_shape[0], bias_shape[1] / pack_size, bias_shape[2],
+                        bias_shape[3], pack_size},
+                       new_inp[2]->dtype(),
+                       new_inp[2]->format()});
+
+    auto out0 = opr.output(0);
+    auto& out_shape = out0->shape();
+    //! FIXME: return false if oc is invalid
+    layouts.push_back({{out_shape[0], out_shape[1] / pack_size, out_shape[2],
+                        out_shape[3], pack_size},
+                       out0->dtype(),
+                       out0->format()});
+
+    // megdnn::ConvolutionForward
+    auto megdnn_conv = opr::intl::get_megdnn_handle(opr.comp_node())
+                               ->create_operator<megdnn::ConvBiasForward>();
+    megdnn_conv.get()->param() = opr.param();
+
+    //! FIXME: set by dtype
+    switch (pack_size) {
+        case 4:
+            if (is_dot && is_int8) {
+                megdnn_conv.get()->param().format =
+                        megdnn::param::Convolution::Format::NCHW44_DOT;
+            } else {
+                megdnn_conv.get()->param().format =
+                        megdnn::param::Convolution::Format::NCHW44;
+            }
+            break;
+        case 8:
+            megdnn_conv.get()->param().format =
+                    megdnn::param::Convolution::Format::NCHW88;
+            break;
+
+        default:
+            break;
+    }
+    bool find_valid_algo = false;
+    auto algos = megdnn_conv.get()->get_all_algorithms(
+            layouts[0], layouts[1], layouts[2], {}, layouts[3]);
+    for (auto i : algos) {
+        if (i->type() != nullptr) {
+            find_valid_algo = true;
+        }
+    }
+
+    return find_valid_algo;
 }
 void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     using RelayoutMode = RelayoutPlaceholder::LayoutType;
@@ -1839,6 +1984,20 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     megdnn::param::Pooling::Format pooling_format =
             megdnn::param::Pooling::Format::NCHW88;
     std::string convter_pass_name = "conv_format_nchw88";
+#if MEGDNN_AARCH64 || MEGDNN_ARMv7
+    if (pack_c_size == 8) {
+        mgb_log_error(
+                "runtime backend is ARM, but nchw88 only support X86, you may "
+                "have performance loss\n");
+    }
+#elif MEGDNN_X86
+    if (pack_c_size == 4) {
+        mgb_log_error(
+                "runtime backend is X86, but nchw44 only support arm, you may "
+                "have performance loss\n");
+    }
+#endif
+
     if (pack_c_size == 4) {
         weight_to_nchwxx_mode_dense = RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DENSE;
         weight_to_nchwxx_mode_group = RelayoutMode::WEIGHT_NCHW_TO_NCHW44_GROUP;
@@ -1857,18 +2016,16 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
              hybrid_nchw_nchwxx](
                     const megdnn::param::Convolution::Sparse conv_mode,
                     const VarNode* filter, const size_t stride_h,
-                    const size_t stride_w) -> TestFilterResult {
+                    const size_t stride_w,
+                    bool valid_nchw_nchw44) -> TestFilterResult {
         TestFilterResult ret{TransType::TRANS_NONE, {}};
         if (conv_mode == megdnn::param::Convolution::Sparse::DENSE) {
             size_t OC = filter->shape()[0];
             size_t IC = filter->shape()[1];
-            size_t FH = filter->shape()[2];
-            size_t FW = filter->shape()[3];
             if ((IC % pack_c_size == 0) && (OC % pack_c_size == 0)) {
                 ret.first = TransType::TRANS_PURE_NCHWXX;
                 ret.second = weight_to_nchwxx_mode_dense;
-            } else if (nchw_nchwxx_valid(OC, IC, pack_c_size, FH, FW, stride_h,
-                                         stride_w)) {
+            } else if (valid_nchw_nchw44) {
                 ret.first = TransType::TRANS_HYBIRD_NCHWXX;
                 ret.second = hybrid_nchw_nchwxx;
             }
@@ -1888,16 +2045,21 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         return ret;
     };
     auto replace_conv_opr = [test_trans_nchwxx, conv_format, src_to_nchwxx_mode,
-                             src_to_nchw_mode](OperatorNodeBase* opr,
-                                               const VarNodeArray& new_inp) {
+                             src_to_nchw_mode,
+                             pack_c_size](OperatorNodeBase* opr,
+                                          const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_opr = opr->cast_final_safe<opr::ConvolutionForward>();
         mgb_assert(conv_opr.param().format ==
                            megdnn::param::Convolution::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHWXX");
-        auto is_trans = test_trans_nchwxx(conv_opr.param().sparse, new_inp[1],
-                                          conv_opr.param().stride_h,
-                                          conv_opr.param().stride_w);
+        bool is_dense = conv_opr.param().sparse ==
+                        megdnn::param::Convolution::Sparse::DENSE;
+        bool valid_nchw_nchw44 =
+                nchw_nchwxx_valid(conv_opr, new_inp, pack_c_size, is_dense);
+        auto is_trans = test_trans_nchwxx(
+                conv_opr.param().sparse, new_inp[1], conv_opr.param().stride_h,
+                conv_opr.param().stride_w, valid_nchw_nchw44);
         //! can not trans to nchwxx
         if (is_trans.first == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -1963,17 +2125,23 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     };
 
     auto replace_conv_bias_opr = [test_trans_nchwxx, conv_bias_format,
-                                  src_to_nchwxx_mode, src_to_nchw_mode](
-                                         OperatorNodeBase* opr,
-                                         const VarNodeArray& new_inp) {
+                                  src_to_nchwxx_mode, src_to_nchw_mode,
+                                  pack_c_size](OperatorNodeBase* opr,
+                                               const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_bias_opr = opr->cast_final_safe<opr::ConvBiasForward>();
         mgb_assert(conv_bias_opr.param().format ==
                            megdnn::param::ConvBias::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHWXX");
+        bool is_dense = conv_bias_opr.param().sparse ==
+                        megdnn::param::Convolution::Sparse::DENSE;
+        bool valid_nchw_nchw44 = nchw_nchwxx_valid(conv_bias_opr, new_inp,
+                                                   pack_c_size, is_dense);
         auto is_trans = test_trans_nchwxx(
                 conv_bias_opr.param().sparse, new_inp[1],
-                conv_bias_opr.param().stride_h, conv_bias_opr.param().stride_w);
+                conv_bias_opr.param().stride_h, conv_bias_opr.param().stride_w,
+                valid_nchw_nchw44);
+
         //! can not trans to nchwxx
         if (is_trans.first == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -2203,8 +2371,14 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
     MIDOUT_B("EnableNchw44DotPass::make")
     auto ret = std::make_unique<EnableNchw44DotPass>();
     ret->set_var_replace_check_flag(VarReplaceCheckFlag::NOCHECK);
-    //! First is whether the conv can trans to nchwxx, second is the filter
-    //! trans mode
+//! First is whether the conv can trans to nchwxx, second is the filter
+//! trans mode
+#if MEGDNN_X86
+    mgb_log_error(
+            "backend is X86, but nchw44_dot only support arm, you may have "
+            "performance loss\n");
+#endif
+
     using RelayoutMode = RelayoutPlaceholder::LayoutType;
     struct TestTransResult {
         TransType trans_type;
@@ -2215,23 +2389,35 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
     auto test_trans_nchw44_dot =
             [](const megdnn::param::Convolution::Sparse conv_mode,
                const VarNode* filter, const size_t stride_h,
-               const size_t stride_w) -> TestTransResult {
+               const size_t stride_w,
+               const bool valid_nchw_nchw44) -> TestTransResult {
         TestTransResult ret{TransType::TRANS_NONE, {}, {}};
+        bool is_int8 = filter->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                       filter->dtype().enumv() == DTypeEnum::Int8;
         if (conv_mode == megdnn::param::Convolution::Sparse::DENSE) {
             size_t OC = filter->shape()[0];
             size_t IC = filter->shape()[1];
-            size_t FH = filter->shape()[2];
-            size_t FW = filter->shape()[3];
             if ((IC % pack_c_size == 0) && (OC % pack_c_size == 0)) {
                 ret.trans_type = TransType::TRANS_PURE_NCHWXX;
-                ret.relayout_mod =
-                        RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DOT_DENSE;
-                ret.conv_format = megdnn::param::ConvBias::Format::NCHW44_DOT;
-            } else if (nchw_nchwxx_valid(OC, IC, pack_c_size, FH, FW, stride_h,
-                                         stride_w)) {
+                if (is_int8) {
+                    ret.relayout_mod =
+                            RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DOT_DENSE;
+                    ret.conv_format =
+                            megdnn::param::ConvBias::Format::NCHW44_DOT;
+                } else {
+                    ret.relayout_mod =
+                            RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DENSE;
+                    ret.conv_format = megdnn::param::ConvBias::Format::NCHW44;
+                }
+            } else if (valid_nchw_nchw44) {
                 ret.trans_type = TransType::TRANS_HYBIRD_NCHWXX;
                 ret.relayout_mod = RelayoutMode::WEIGHT_HYBIRD_NCHW_NCHW44;
-                ret.conv_format = megdnn::param::ConvBias::Format::NCHW44_DOT;
+                if (is_int8) {
+                    ret.conv_format =
+                            megdnn::param::ConvBias::Format::NCHW44_DOT;
+                } else {
+                    ret.conv_format = megdnn::param::ConvBias::Format::NCHW44;
+                }
             }
         } else {
             mgb_assert(conv_mode == megdnn::param::Convolution::Sparse::GROUP);
@@ -2244,9 +2430,16 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
                 ret.conv_format = megdnn::param::ConvBias::Format::NCHW44;
             } else if ((icpg % pack_c_size == 0) && (ocpg % pack_c_size == 0)) {
                 ret.trans_type = TransType::TRANS_PURE_NCHWXX;
-                ret.relayout_mod =
-                        RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DOT_GROUP;
-                ret.conv_format = megdnn::param::ConvBias::Format::NCHW44_DOT;
+                if (is_int8) {
+                    ret.relayout_mod =
+                            RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DOT_GROUP;
+                    ret.conv_format =
+                            megdnn::param::ConvBias::Format::NCHW44_DOT;
+                } else {
+                    ret.relayout_mod =
+                            RelayoutMode::WEIGHT_NCHW_TO_NCHW44_GROUP;
+                    ret.conv_format = megdnn::param::ConvBias::Format::NCHW44;
+                }
             }
         }
         return ret;
@@ -2260,9 +2453,14 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
                            megdnn::param::Convolution::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to "
                    "NCHW44_DOT");
+        bool is_dense = conv_opr.param().sparse ==
+                        megdnn::param::Convolution::Sparse::DENSE;
+        bool valid_nchw_nchw44 =
+                nchw_nchwxx_valid(conv_opr, new_inp, pack_c_size, is_dense);
         auto is_trans = test_trans_nchw44_dot(
                 conv_opr.param().sparse, new_inp[1], conv_opr.param().stride_h,
-                conv_opr.param().stride_w);
+                conv_opr.param().stride_w, valid_nchw_nchw44);
+
         //! can not trans to nchwxx
         if (is_trans.trans_type == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -2335,9 +2533,19 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
         mgb_assert(conv_bias_opr.param().format ==
                            megdnn::param::ConvBias::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHWXX");
+        bool is_dense = conv_bias_opr.param().sparse ==
+                        megdnn::param::Convolution::Sparse::DENSE;
+        bool valid_nchw_nchw44 = nchw_nchwxx_valid(conv_bias_opr, new_inp,
+                                                   pack_c_size, is_dense);
         auto is_trans = test_trans_nchw44_dot(
                 conv_bias_opr.param().sparse, new_inp[1],
-                conv_bias_opr.param().stride_h, conv_bias_opr.param().stride_w);
+                conv_bias_opr.param().stride_h, conv_bias_opr.param().stride_w,
+                valid_nchw_nchw44);
+        auto megdnn_conv =
+                opr::intl::get_megdnn_handle(conv_bias_opr.comp_node())
+                        ->create_operator<megdnn::ConvBiasForward>();
+        SmallVector<TensorLayout> layouts;
+
         //! can not trans to nchwxx
         if (is_trans.trans_type == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -2350,6 +2558,7 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
                         new_inp[0], RelayoutMode::NCHW4_TO_NCHW);
                 temp_inp[0] = new_src.node();
             }
+
             //! the bias is nchwxx
             if (temp_inp[2]->shape().ndim == 5) {
                 auto new_bias = RelayoutPlaceholder::make(
