@@ -173,6 +173,9 @@ namespace megdnn {
     DEF_KERN_ALL(LT, x < y);
     DEF_KERN_ALL(LEQ, x <= y);
     DEF_KERN_ALL(EQ, x == y);
+    DEF_KERN(dt_bool, LT, x < y);
+    DEF_KERN(dt_bool, LEQ, x <= y);
+    DEF_KERN(dt_bool, EQ, x == y);
 
     DEF_KERN_INT(FLOOR_DIV, x / y);
     DEF_KERN_FLOAT(FLOOR_DIV, floorf(x / y));
