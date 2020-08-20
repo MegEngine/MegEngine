@@ -275,51 +275,52 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
 
 #define SET_SW(func, type, sw)                         \
     if (param.flt_h == 2 && param.flt_w == 2) {        \
-        kern = func<type, 1, 2, 2, sw>;                \
+        f_struct.f = func<type, 1, 2, 2, sw>;          \
     } else if (param.flt_h == 3 && param.flt_w == 3) { \
-        kern = func<type, 1, 3, 3, sw>;                \
+        f_struct.f = func<type, 1, 3, 3, sw>;          \
     } else if (param.flt_h == 5 && param.flt_w == 5) { \
-        kern = func<type, 1, 5, 5, sw>;                \
+        f_struct.f = func<type, 1, 5, 5, sw>;          \
     } else if (param.flt_h == 7 && param.flt_w == 7) { \
-        kern = func<type, 1, 7, 7, sw>;                \
+        f_struct.f = func<type, 1, 7, 7, sw>;          \
     } else {                                           \
-        kern = func<type, 1, 0, 0, sw>;                \
+        f_struct.f = func<type, 1, 0, 0, sw>;          \
     }
 
-#define GET_KERN(func, type)                              \
-    void (*kern)(type*, const type*, const type*, Param); \
-    if (param.chl_mul == 1) {                             \
-        if (param.stride_w == 1) {                        \
-            SET_SW(func, type, 1)                         \
-        } else {                                          \
-            SET_SW(func, type, 0)                         \
-        }                                                 \
-    } else {                                              \
-        kern = func<type, 0, 0, 0, 0>;                    \
-    }                                                     \
-    return kern;
+#define GET_KERN(func, type)                 \
+    FixFunction<type> f_struct;              \
+    if (param.chl_mul == 1) {                \
+        if (param.stride_w == 1) {           \
+            SET_SW(func, type, 1)            \
+        } else {                             \
+            SET_SW(func, type, 0)            \
+        }                                    \
+    } else {                                 \
+        f_struct.f = func<type, 0, 0, 0, 0>; \
+    }                                        \
+    return f_struct;
 
 template <typename T>
-void (*get_kern(const Param& param))(T*, const T*, const T*, const Param);
+struct FixFunction {
+    void (*f)(T*, const T*, const T*, Param);
+};
+
+template <typename T>
+FixFunction<T> get_kern(const Param& param);
 
 template <>
-void (*get_kern<float>(const Param& param))(float*, const float*, const float*,
-                                            const Param) {
+FixFunction<float> get_kern<float>(const Param& param) {
     GET_KERN(kern_fwd_float, float);
 }
 
 #if CUDA_VERSION >= 9000
 template <>
-void (*get_kern<__half>(const Param& param))(__half*, const __half*,
-                                             const __half*, const Param) {
+FixFunction<__half> get_kern<__half>(const Param& param) {
     GET_KERN(kern_fwd_half, __half);
 }
 #endif
 
 template <>
-void (*get_kern<dt_float16>(const Param& param))(dt_float16*, const dt_float16*,
-                                                 const dt_float16*,
-                                                 const Param) {
+FixFunction<dt_float16> get_kern<dt_float16>(const Param& param) {
     GET_KERN(kern_fwd_float, dt_float16);
 }
 
@@ -337,7 +338,7 @@ template <typename T>
 void run_fwd(T* dst, const T* src, const T* flt, const Param& param,
              cudaStream_t stream) {
     void (*kern)(T*, const T*, const T*, Param);
-    kern = get_kern<T>(param);
+    kern = get_kern<T>(param).f;
 
     int nr_thread = query_blocksize_for_kernel(kern),
         nr_out_dimx = param.out_h * param.out_w * param.batch * param.chl_mul;

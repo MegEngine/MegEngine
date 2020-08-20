@@ -259,8 +259,8 @@ void DeformablePSROIPoolForward(const TensorND& data, const TensorND& rois,
 
     auto&& out_data_elems = out_data.layout.total_nr_elems();
     auto&& out_count_elems = out_count.layout.total_nr_elems();
-    size_t out_data_bytes = sizeof(float[out_data_elems]);
-    size_t out_count_bytes = sizeof(float[out_count_elems]);
+    size_t out_data_bytes = sizeof(float) * out_data_elems;
+    size_t out_count_bytes = sizeof(float) * out_count_elems;
 
     cudaMemsetAsync(out_data_ptr, 0, out_data_bytes, p.stream);
     cudaMemsetAsync(out_count_ptr, 0, out_count_bytes, p.stream);
@@ -292,8 +292,8 @@ void DeformablePSROIPoolBackwardAcc(const TensorND& data, const TensorND& rois,
 
     auto&& data_diff_elems = data_diff.layout.total_nr_elems();
     auto&& trans_diff_elems = trans_diff.layout.total_nr_elems();
-    size_t data_diff_bytes = sizeof(float[data_diff_elems]);
-    size_t trans_diff_bytes = sizeof(float[trans_diff_elems]);
+    size_t data_diff_bytes = sizeof(float) * data_diff_elems;
+    size_t trans_diff_bytes = sizeof(float) * trans_diff_elems;
 
     cudaMemsetAsync(data_diff_ptr, 0, data_diff_bytes, p.stream);
     cudaMemsetAsync(trans_diff_ptr, 0, trans_diff_bytes, p.stream);

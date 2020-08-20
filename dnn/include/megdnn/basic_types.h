@@ -215,9 +215,9 @@ struct TensorLayout : public TensorShape {
     DType dtype;
     Format format;
 
-#if MEGDNN_CC_HOST
     TensorLayout();
 
+#if MEGDNN_CC_HOST
     TensorLayout(const TensorLayout& layout) = default;
 
     //! create empty layout with given dtype

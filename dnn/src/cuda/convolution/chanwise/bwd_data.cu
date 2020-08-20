@@ -178,25 +178,29 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                 __half2 dst2 = {0.0, 0.0};
                                 if (static_cast<uint32_t>(ow) <
                                     static_cast<uint32_t>(owmin_y)) {
-                                    dst2 = {*(pd + ow), 0.0};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = 0.0;
                                     sum = fma2(dst2, flt3, sum);
                                     ++ow;
                                     --fw;
                                 }
                                 if (static_cast<uint32_t>(owmax_x) <
                                     static_cast<uint32_t>(owmax)) {
-                                    dst2 = {0.0, *(pd + owmax)};
+                                    dst2.x = 0.0;
+                                    dst2.y = *(pd + owmax);
                                     sum = fma2(dst2, flt0, sum);
                                 }
                                 if (static_cast<uint32_t>(fw) == 1) {
-                                    dst2 = {*(pd + ow), *(pd + ow)};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = *(pd + ow);
                                     sum = fma2(dst2, flt2, sum);
                                     ++ow;
                                     --fw;
                                 }
                                 if (static_cast<uint32_t>(ow) <=
                                     static_cast<uint32_t>(owmax_x)) {
-                                    dst2 = {*(pd + ow), *(pd + ow)};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = *(pd + ow);
                                     sum = fma2(dst2, flt1, sum);
                                 }
 
@@ -218,18 +222,21 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                 __half2 dst2 = {0.0, 0.0};
                                 if (static_cast<uint32_t>(ow) <
                                     static_cast<uint32_t>(owmin_y)) {
-                                    dst2 = {*(pd + ow), 0.0};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = 0.0;
                                     sum = fma2(dst2, flt5, sum);
                                     ++ow;
                                     --fw;
                                 }
                                 if (static_cast<uint32_t>(owmax_x) <
                                     static_cast<uint32_t>(owmax)) {
-                                    dst2 = {0.0, *(pd + owmax)};
+                                    dst2.x = 0.0;
+                                    dst2.y = *(pd + owmax);
                                     sum = fma2(dst2, flt0, sum);
                                 }
                                 if (static_cast<uint32_t>(fw) == 3) {
-                                    dst2 = {*(pd + ow), *(pd + ow)};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = *(pd + ow);
                                     sum = fma2(dst2, flt4, sum);
                                     ++ow;
                                     --fw;
@@ -237,7 +244,8 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                 if (static_cast<uint32_t>(fw) == 2 &&
                                     static_cast<uint32_t>(ow) <=
                                             static_cast<uint32_t>(owmax_x)) {
-                                    dst2 = {*(pd + ow), *(pd + ow)};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = *(pd + ow);
                                     sum = fma2(dst2, flt3, sum);
                                     ++ow;
                                     --fw;
@@ -245,7 +253,8 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                 if (static_cast<uint32_t>(fw) == 1 &&
                                     static_cast<uint32_t>(ow) <=
                                             static_cast<uint32_t>(owmax_x)) {
-                                    dst2 = {*(pd + ow), *(pd + ow)};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = *(pd + ow);
                                     sum = fma2(dst2, flt2, sum);
                                     ++ow;
                                     --fw;
@@ -253,7 +262,8 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                 if (static_cast<uint32_t>(fw) == 0 &&
                                     static_cast<uint32_t>(ow) <=
                                             static_cast<uint32_t>(owmax_x)) {
-                                    dst2 = {*(pd + ow), *(pd + ow)};
+                                    dst2.x = *(pd + ow);
+                                    dst2.y = *(pd + ow);
                                     sum = fma2(dst2, flt1, sum);
                                 }
 
@@ -270,8 +280,10 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                     uint32_t fw = iw - ow + PW;
                                     if (static_cast<uint32_t>(ow) <=
                                         static_cast<uint32_t>(owmax)) {
-                                        pd2 = {*(pd + ow), *(pd + ow)};
-                                        pf2 = {0.0, 0.0};
+                                        pd2.x = *(pd + ow);
+                                        pd2.y = *(pd + ow);
+                                        pf2.x = 0.0;
+                                        pf2.y = 0.0;
                                         if (static_cast<uint32_t>(ow) >=
                                             static_cast<uint32_t>(owmin_y))
                                             pf2.y = *(pf + fw + 1);
@@ -425,16 +437,17 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
 
 #define sh param.stride_h
 #define sw param.stride_w
-#define SET_STRIDE(func, type, chl_mul, fh, fw)       \
-    if (sh == 1 && sw == 1) {                         \
-        kern_ptr = func<type, chl_mul, fh, fw, 1, 1>; \
-    } else if (sh == 2 && sw == 2) {                  \
-        kern_ptr = func<type, chl_mul, fh, fw, 2, 2>; \
-    } else {                                          \
-        kern_ptr = func<type, chl_mul, fh, fw, 0, 0>; \
+#define SET_STRIDE(func, type, chl_mul, fh, fw)         \
+    if (sh == 1 && sw == 1) {                           \
+        f_struct.f = func<type, chl_mul, fh, fw, 1, 1>; \
+    } else if (sh == 2 && sw == 2) {                    \
+        f_struct.f = func<type, chl_mul, fh, fw, 2, 2>; \
+    } else {                                            \
+        f_struct.f = func<type, chl_mul, fh, fw, 0, 0>; \
     }
 
 #define GET_KERN(func, type)                               \
+    FixFunction<type> f_struct;                            \
     if (param.chl_mul == 1) {                              \
         if (param.flt_h == 3 && param.flt_w == 3) {        \
             SET_STRIDE(func, type, 1, 3, 3);               \
@@ -447,36 +460,32 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
         }                                                  \
     } else {                                               \
         SET_STRIDE(func, type, 0, 0, 0);                   \
-    }
+    }                                                      \
+    return f_struct;
 
 template <typename T>
-void (*get_kern(const Param& param))(T*, const T*, const T*, const Param);
+struct FixFunction {
+    void (*f)(T*, const T*, const T*, const Param);
+};
+
+template <typename T>
+FixFunction<T> get_kern(const Param& param);
 
 template <>
-void (*get_kern<float>(const Param& param))(float*, const float*, const float*,
-                                            const Param) {
-    void (*kern_ptr)(float*, const float*, const float*, Param);
+FixFunction<float> get_kern<float>(const Param& param) {
     GET_KERN(kern_bwd_data_float, float);
-    return kern_ptr;
 }
 
 #if CUDA_VERSION >= 9000
 template <>
-void (*get_kern<__half>(const Param& param))(__half*, const __half*,
-                                             const __half*, const Param) {
-    void (*kern_ptr)(__half*, const __half*, const __half*, Param);
+FixFunction<__half> get_kern<__half>(const Param& param) {
     GET_KERN(kern_bwd_data_hf, __half);
-    return kern_ptr;
 }
 #endif
 
 template <>
-void (*get_kern<dt_float16>(const Param& param))(dt_float16*, const dt_float16*,
-                                                 const dt_float16*,
-                                                 const Param) {
-    void (*kern_ptr)(dt_float16*, const dt_float16*, const dt_float16*, Param);
+FixFunction<dt_float16> get_kern<dt_float16>(const Param& param) {
     GET_KERN(kern_bwd_data_float, dt_float16);
-    return kern_ptr;
 }
 
 #undef sh
@@ -494,7 +503,7 @@ template <typename T>
 void run_bwd_data(T* src_grad, const T* dst_grad, const T* flt,
                   const Param& param, cudaStream_t stream) {
     void (*kern)(T*, const T*, const T*, Param);
-    kern = get_kern<T>(param);
+    kern = get_kern<T>(param).f;
 
     int nr_thread = query_blocksize_for_kernel(kern),
         nr_out_dimx = param.src_h * param.src_w * param.batch;

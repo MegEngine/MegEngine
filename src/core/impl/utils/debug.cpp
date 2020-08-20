@@ -195,12 +195,14 @@ public:
     static void set_flag(int f) { flag() = f; }
 
     static void init() {
+#if !defined(WIN32)
         int err = pthread_atfork(&CudaCheckOnFork::atfork_prepare, nullptr,
                                  nullptr);
         if (err) {
             mgb_throw(SystemError, "failed to setup atfork handler: %s",
                       strerror(err));
         }
+#endif
     }
 };
 #endif

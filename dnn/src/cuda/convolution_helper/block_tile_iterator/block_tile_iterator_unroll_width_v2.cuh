@@ -154,7 +154,7 @@ struct BlockTileIteratorUnrollWidthV2 {
                     filter_gl2sh_visitor.copy();
                 }
 
-                consumer.template consume_block(src_gl2sh_visitor,
+                consumer.consume_block(src_gl2sh_visitor,
                                                 filter_gl2sh_visitor);
 
                 if (!(ci_outer == ci_blks - 1 && h == h_end)) {

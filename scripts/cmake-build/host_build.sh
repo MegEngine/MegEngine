@@ -162,8 +162,22 @@ function prepare_env_for_windows_build() {
         windows_env_err
     fi
 
-    export PATH=$VS_PATH/VC/Auxiliary/Build:$PATH
     echo "put vcvarsall.bat path to PATH env.."
+    export PATH=$VS_PATH/VC/Auxiliary/Build:$PATH
+
+    echo "config cuda/cudnn/TensorRT env..."
+    export NIVIDA_INSTALL_PRE=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit
+    export CUDA_V=v10.1
+    export CUDNN_V=cudnn-10.1-windows10-x64-v7.6.5.32
+    export TRT_V=TensorRT-6.0.1.5
+    export CUDA_PATH=$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}
+    export PATH=$PATH:$CUDA_PATH/bin
+    export CUDA_BIN_PATH=$CUDA_PATH
+    export PC_CUDNN_INCLUDE_DIRS=$NIVIDA_INSTALL_PRE/${CUDNN_V}/cuda/include
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NIVIDA_INSTALL_PRE/${TRT_V}/lib:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/lib/x64:$NIVIDA_INSTALL_PRE/${CUDNN_V}/cuda/lib/x64
+    export CPATH=$CPATH:$NIVIDA_INSTALL_PRE/${TRT_V}/include:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/include:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/include/nvtx3:$PC_CUDNN_INCLUDE_DIRS
+    export LIBRARY_PATH=$LIBRARY_PATH:$LD_LIBRARY_PATH
+    export INCLUDE=$INCLUDE:$CPATH
 }
 
 WINDOWS_BUILD_TARGET="Ninja all > build.log"

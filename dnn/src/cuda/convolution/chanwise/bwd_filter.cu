@@ -193,7 +193,8 @@ __global__ void kern_bwd_filter_hf(
                 return;
 		}
 
-		sum2 = {0.0, 0.0};
+		sum2.x = 0.0;
+		sum2.y = 0.0;
 		__half2 src2{0.0, 0.0};
 		__half2 dst2{0.0, 0.0};
 
@@ -330,51 +331,74 @@ __global__ void kern_bwd_filter_hf(
 }
 #endif
 
-#define GET_KERN(func, type) \
-	switch(_p) { \
-        case 1<<10: kern_ptr = func<type, 1<<10>; break; \
-		case 1<<9: kern_ptr = func<type, 1<<9>; break; \
-		case 1<<8: kern_ptr = func<type, 1<<8>; break; \
-		case 1<<7: kern_ptr = func<type, 1<<7>; break; \
-		case 1<<6: kern_ptr = func<type, 1<<6>; break; \
-		case 1<<5: kern_ptr = func<type, 1<<5>; break; \
-		case 1<<4: kern_ptr = func<type, 1<<4>; break; \
-		case 1<<3: kern_ptr = func<type, 1<<3>; break; \
-		case 1<<2: kern_ptr = func<type, 1<<2>; break; \
-		case 1<<1: kern_ptr = func<type, 1<<1>; break; \
-		case 1<<0: kern_ptr = func<type, 1<<0>; break; \
-	}
+#define GET_KERN(func, type)                                    \
+    FixFunction<type> f_struct;                                 \
+    switch (_p) {                                               \
+        case 1 << 10:                                           \
+            f_struct.f = func<type, 1 << 10>;                   \
+            break;                                              \
+        case 1 << 9:                                            \
+            f_struct.f = func<type, 1 << 9>;                    \
+            break;                                              \
+        case 1 << 8:                                            \
+            f_struct.f = func<type, 1 << 8>;                    \
+            break;                                              \
+        case 1 << 7:                                            \
+            f_struct.f = func<type, 1 << 7>;                    \
+            break;                                              \
+        case 1 << 6:                                            \
+            f_struct.f = func<type, 1 << 6>;                    \
+            break;                                              \
+        case 1 << 5:                                            \
+            f_struct.f = func<type, 1 << 5>;                    \
+            break;                                              \
+        case 1 << 4:                                            \
+            f_struct.f = func<type, 1 << 4>;                    \
+            break;                                              \
+        case 1 << 3:                                            \
+            f_struct.f = func<type, 1 << 3>;                    \
+            break;                                              \
+        case 1 << 2:                                            \
+            f_struct.f = func<type, 1 << 2>;                    \
+            break;                                              \
+        case 1 << 1:                                            \
+            f_struct.f = func<type, 1 << 1>;                    \
+            break;                                              \
+        case 1 << 0:                                            \
+            f_struct.f = func<type, 1 << 0>;                    \
+            break;                                              \
+        default:                                                \
+            megdnn_assert(false, "DO NOT IMP CASE FUNCTION!!"); \
+    }                                                           \
+    return f_struct;
 
 template <typename T>
-void (*get_kern(const uint32_t& _p))(T*, const T*, const T*, Param);
+struct FixFunction {
+    void (*f)(T*, const T*, const T*, Param);
+};
+
+template <typename T>
+FixFunction<T> get_kern(const uint32_t& _p);
 
 template <>
-void (*get_kern<float>(const uint32_t& _p))(float*, const float*, const float*, Param) {
-	void (*kern_ptr)(float*, const float*, const float*, Param) = NULL;
-	GET_KERN(kern_bwd_filter_float, float);
-	return kern_ptr;
+FixFunction<float> get_kern<float>(const uint32_t& _p) {
+    GET_KERN(kern_bwd_filter_float, float);
 }
 
 #if CUDA_VERSION >= 9000
 template <>
-void (*get_kern<__half>(const uint32_t& _p))(__half*, const __half*, const __half*, Param) {
-	void (*kern_ptr)(__half*, const __half*, const __half*, Param) = NULL;
-	GET_KERN(kern_bwd_filter_hf, __half);
-	return kern_ptr;
+FixFunction<__half> get_kern<__half>(const uint32_t& _p) {
+    GET_KERN(kern_bwd_filter_hf, __half);
 }
 #endif
 
 template <>
-void (*get_kern<dt_float16>(const uint32_t& _p))(dt_float16*, const dt_float16*,
-                                                 const dt_float16*, Param) {
-    void (*kern_ptr)(dt_float16*, const dt_float16*, const dt_float16*, Param) = NULL;
+FixFunction<dt_float16> get_kern<dt_float16>(const uint32_t& _p) {
     GET_KERN(kern_bwd_filter_float, dt_float16);
-    return kern_ptr;
 }
 
 #undef GET_KERN
-} // anonymous namespace
-
+}  // anonymous namespace
 
 namespace megdnn {
 namespace cuda {
@@ -385,7 +409,7 @@ void run_bwd_filter(T *filter_grad, const T *src, const T *dst_grad,
 		const Param &param, cudaStream_t stream) {
 	void (*kern)(T*, const T*, const T*, Param) = NULL;
 	uint32_t                                           
-		nr_thread = query_blocksize_for_kernel(get_kern<T>(1024)),
+		nr_thread = query_blocksize_for_kernel(get_kern<T>(1024).f),
 		nr_thpf = std::min(nr_thread,                  
         	std::max<uint32_t>(                    
 				1,                                 
@@ -395,7 +419,7 @@ void run_bwd_filter(T *filter_grad, const T *src, const T *dst_grad,
 	do {
 #define CK(_n) \
 		if (nr_thpf >= _n) { \
-			kern = get_kern<T>(_n); \
+			kern = get_kern<T>(_n).f; \
 			nr_thpf = _n; \
 			break; \
 		}

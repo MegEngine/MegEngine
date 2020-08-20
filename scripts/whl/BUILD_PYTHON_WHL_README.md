@@ -1,7 +1,7 @@
 # python whl package build support status
-*  windows build (ok,cpu only)
-*  linux   build (ok, cpu or gpu)
-*  macos   build (ok,cpu only)
+*  windows build (cpu + gpu)
+*  linux   build (cpu + gpu)
+*  macos   build (cpu only)
 # build env prepare
 ## linux
 
