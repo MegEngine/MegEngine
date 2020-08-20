@@ -32,6 +32,7 @@
 #include "./helper.h"
 #include "megbrain/comp_node_env.h"
 
+#include "cpuinfo.h"
 #include "megdnn/tensor_format.h"
 
 #include <random>
@@ -49,7 +50,21 @@ T& find_opr(SymbolVar endpoint) {
         }
     };
     cg::DepOprIter{cb}.add(endpoint.node()->owner_opr());
-    mgb_assert(found);
+    mgb_assert(found, "not found opr from %s", endpoint.node()->name().c_str());
+    return *found;
+}
+
+template <typename T>
+T& find_opr(SymbolVar endpoint, const std::string& node_name) {
+    T* found = nullptr;
+    auto cb = [&found, &node_name](cg::OperatorNodeBase* opr) {
+        if (!found && opr->same_type<T>() && opr->name() == node_name) {
+            found = &opr->cast_final_safe<T>();
+        }
+    };
+    cg::DepOprIter{cb}.add(endpoint.node()->owner_opr());
+    mgb_assert(found, "not found opr %s from %s", node_name.c_str(),
+               endpoint.node()->name().c_str());
     return *found;
 }
 
@@ -2973,25 +2988,48 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
                 .rename(name);
     };
+    auto mkcvar_dtype = [&](const char* name, const TensorShape& shp,
+                            const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     //! Hybrid nchw44 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
-    opr::ConvBias::Param param_conv_bias_stride4;
-    param_conv_bias_stride4.stride_h = param_conv_bias_stride4.stride_w = 4;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
-         conv1 = opr::Convolution::make(x, w1, param_conv);
-    auto w1_1 = mkcvar("w1_1", {8, 3, 4, 4}), b1 = mkcvar("b2", {1, 8, 1, 1}),
-         conv1_f4 = opr::Convolution::make(x, w1_1, param_conv);
-    auto conv1_s4 = opr::ConvBias::make(x, w1, b1, param_conv_bias_stride4);
-    //! channel wise
+         conv1 = opr::Convolution::make(x, w1, param_conv, {},
+                                        OperatorNodeConfig("conv1"));
+
+    //! no supported hybrid nchw44
+    opr::ConvBias::Param param_conv_bias_pad0;
+    param_conv_bias_pad0.pad_h = param_conv_bias_pad0.pad_w = 0;
+    auto b1 = mkcvar("b1", {1, 8, 1, 1});
+    auto w1_f1 = mkcvar("w1_1", {8, 3, 1, 1});
+    auto conv1_f1 = opr::ConvBias::make(x, w1_f1, b1, param_conv_bias_pad0, {},
+                                        OperatorNodeConfig("conv1_f1"));
+
+    auto conv1_add = conv1_f1 * conv1;
+    auto conv_1_q8 = opr::TypeCvt::make(conv1_add, dtype::QuantizedS8(2.5f));
+
+    //! s8 dense conv
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    auto w1_2 = mkcvar_dtype("w1_2", {8, 8, 3, 3}, dtype::QuantizedS8(2.5f));
+    auto b1_2 = mkcvar_dtype("b1_2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto conv_1_2 = opr::ConvBias::make(
+            conv_1_q8, w1_2, b1_2, param_conv_bias, {},
+            OperatorNodeConfig{"conv_1_2", cn, dtype::QuantizedS8{6.25f}});
+    auto conv_1_2_fp32 = opr::TypeCvt::make(conv_1_2, dtype::Float32());
+
+    //! channel wise
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
     auto w2 = mkcvar("w2", {8, 1, 1, 3, 3}), b2 = mkcvar("b2", {1, 8, 1, 1}),
-         conv2 = opr::ConvBias::make(conv1, w2, b2, param_conv_bias);
+         conv2 = opr::ConvBias::make(conv_1_2_fp32, w2, b2, param_conv_bias);
     //! group
     auto w3 = mkcvar("w3", {2, 4, 4, 3, 3}), b3 = mkcvar("b3", {1, 8, 1, 1}),
          conv3 = opr::ConvBias::make(conv2, w3, b3, param_conv_bias);
@@ -3013,42 +3051,67 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     //! Dense
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
-    auto w4 = mkcvar("w4", {4, 8, 3, 3}), b4 = mkcvar("b4", {1, 4, 1, 1}),
-         conv4 = opr::ConvBias::make(elem, w4, b4, param_conv_bias);
-    auto w5 = mkcvar("w5", {6, 4, 3, 3}), b5 = mkcvar("b5", {1, 6, 1, 1}),
-         conv5 = opr::ConvBias::make(conv4, w5, b5, param_conv_bias);
-    auto w6 = mkcvar("w6", {4, 6, 3, 3}), b6 = mkcvar("b6", {1, 4, 1, 1}),
-         y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
+    auto w3_2 = mkcvar("w3_2", {16, 8, 3, 3}),
+         b3_2 = mkcvar("b3_2", {1, 16, 1, 1}),
+         conv3_2 = opr::ConvBias::make(elem, w3_2, b3_2, param_conv_bias, {},
+                                       OperatorNodeConfig("conv3_2"));
+    //! s8 group conv
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    auto conv3_2_q8 = opr::TypeCvt::make(conv3_2, dtype::QuantizedS8(2.5f));
+    auto w3_3 = mkcvar_dtype("w3_3", {4, 8, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b3_3 = mkcvar_dtype("b3_3", {1, 32, 1, 1}, dtype::QuantizedS32(6.25f)),
+         conv3_3_q = opr::ConvBias::make(
+                 conv3_2_q8, w3_3, b3_3, param_conv_bias, {},
+                 OperatorNodeConfig{"conv_3_3_q", cn,
+                                    dtype::QuantizedS8{6.25f}});
+    auto conv3_3 = opr::TypeCvt::make(conv3_3_q, dtype::Float32());
 
-    SymbolVar y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt, conv2_opt;
+    //! Dense
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    auto w4 = mkcvar("w4", {4, 32, 3, 3}), b4 = mkcvar("b4", {1, 4, 1, 1}),
+         conv4 = opr::ConvBias::make(conv3_3, w4, b4, param_conv_bias, {},
+                                     OperatorNodeConfig("conv4"));
+
+    auto w5 = mkcvar("w5", {6, 4, 3, 3}), b5 = mkcvar("b5", {1, 6, 1, 1}),
+         conv5 = opr::ConvBias::make(conv4, w5, b5, param_conv_bias, {},
+                                     OperatorNodeConfig("conv5"));
+    auto w6 = mkcvar("w6", {4, 6, 3, 3}), b6 = mkcvar("b6", {1, 4, 1, 1}),
+         y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias, {},
+                                 OperatorNodeConfig("conv6"));
+
+    SymbolVar y_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
     options.enable_nchw44();
-    unpack_vector(gopt::optimize_for_inference(
-                          {y, conv1, conv1_f4, conv1_s4, conv2}, options),
-                  y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt, conv2_opt);
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
-              find_opr<opr::Convolution>(conv1_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
-              find_opr<opr::ConvBias>(conv1_s4_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
-              find_opr<opr::Convolution>(conv1_f4_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
-              find_opr<opr::ConvBias>(conv2_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44,
-              find_opr<opr::ConvBias>(y_opt).param().format);
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
+#else
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
+#endif
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::ConvBias>(y_opt, "conv1_f1").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt, "conv_1_2").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt, "conv3_2").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt, "conv_3_3_q").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt, "conv4").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::ConvBias>(y_opt, "conv5").param().format);
 
-    graph->compile({{y_opt, {}}, {conv2, {}}})
+    graph->compile({{y_opt, {}}})
             ->to_json()
             ->writeto_fpath(
                     output_file("TestGoptInference.ConvertFormatNCHW44.json"));
 
     HostTensorND host_y_opt, host_y;
-    HostTensorND host_conv1;
     auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_opt, host_y_opt),
-                                make_callback_copy(conv1, host_conv1)});
-
+                                make_callback_copy(y_opt, host_y_opt)});
     func->execute();
     //! meybe go to winograd in x86-32, so set error 1e-1
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
@@ -3155,25 +3218,58 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
                 .rename(name);
     };
+    auto mkcvar_dtype = [&](const char* name, const TensorShape& shp,
+                            const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     //! Hybrid nchw44 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
-    opr::ConvBias::Param param_conv_bias_stride4;
-    param_conv_bias_stride4.stride_h = param_conv_bias_stride4.stride_w = 4;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
-         conv1 = opr::Convolution::make(x, w1, param_conv);
-    auto w1_1 = mkcvar("w1_1", {8, 3, 4, 4}), b1 = mkcvar("b2", {1, 8, 1, 1}),
-         conv1_f4 = opr::Convolution::make(x, w1_1, param_conv);
-    auto conv1_s4 = opr::ConvBias::make(x, w1, b1, param_conv_bias_stride4);
-    //! channel wise
+         conv1 = opr::Convolution::make(x, w1, param_conv, {},
+                                        OperatorNodeConfig("conv1"));
+    printf("create conv1 %s\n",
+           conv1.node()->owner_opr()->dyn_typeinfo()->name);
+    param_conv.pad_h = param_conv.pad_w = 1;
+    //! no supported hybrid nchw44
+    opr::ConvBias::Param param_conv_bias_pad0;
+    param_conv_bias_pad0.pad_h = param_conv_bias_pad0.pad_w = 0;
+    auto b1 = mkcvar("b1", {1, 8, 1, 1});
+    auto w1_f1 = mkcvar("w1_1", {8, 3, 1, 1});
+    auto conv1_f1 = opr::ConvBias::make(x, w1_f1, b1, param_conv_bias_pad0, {},
+                                        OperatorNodeConfig("conv1_f1"));
+
+    //! hybrid dot
+    auto x_s = opr::TypeCvt::make(x, dtype::QuantizedS8(2.5f));
+    auto w1_3 = mkcvar_dtype("w1_3", {8, 3, 3, 3}, dtype::QuantizedS8(2.5f));
+    auto conv1_3_q = opr::Convolution::make(
+            x_s, w1_3, param_conv, {},
+            OperatorNodeConfig{"conv1_3_q", cn, dtype::QuantizedS8{6.25f}});
+    auto conv1_3 = opr::TypeCvt::make(conv1_3_q, dtype::Float32());
+
+    auto conv1_add = conv1_f1 * conv1 * conv1_3;
+    auto conv_1_q8 = opr::TypeCvt::make(conv1_add, dtype::QuantizedS8(2.5f));
+
+    //! s8 dense conv
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    auto w1_2 = mkcvar_dtype("w1_2", {8, 8, 3, 3}, dtype::QuantizedS8(2.5f));
+    auto b1_2 = mkcvar_dtype("b1_2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto conv_1_2 = opr::ConvBias::make(
+            conv_1_q8, w1_2, b1_2, param_conv_bias, {},
+            OperatorNodeConfig{"conv_1_2", cn, dtype::QuantizedS8{6.25f}});
+    auto conv_1_2_fp32 = opr::TypeCvt::make(conv_1_2, dtype::Float32());
+
+    //! channel wise
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
     auto w2 = mkcvar("w2", {8, 1, 1, 3, 3}), b2 = mkcvar("b2", {1, 8, 1, 1}),
-         conv2 = opr::ConvBias::make(conv1, w2, b2, param_conv_bias);
+         conv2 = opr::ConvBias::make(conv_1_2_fp32, w2, b2, param_conv_bias);
     //! group
     auto w3 = mkcvar("w3", {2, 4, 4, 3, 3}), b3 = mkcvar("b3", {1, 8, 1, 1}),
          conv3 = opr::ConvBias::make(conv2, w3, b3, param_conv_bias);
@@ -3195,35 +3291,68 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     //! Dense
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
-    auto w4 = mkcvar("w4", {4, 8, 3, 3}), b4 = mkcvar("b4", {1, 4, 1, 1}),
-         conv4 = opr::ConvBias::make(elem, w4, b4, param_conv_bias);
+    auto w3_2 = mkcvar("w3_2", {16, 8, 3, 3}),
+         b3_2 = mkcvar("b3_2", {1, 16, 1, 1}),
+         conv3_2 = opr::ConvBias::make(elem, w3_2, b3_2, param_conv_bias, {},
+                                       OperatorNodeConfig("conv3_2"));
+    //! s8 group conv
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    auto conv3_2_q8 = opr::TypeCvt::make(conv3_2, dtype::QuantizedS8(2.5f));
+    auto w3_3 = mkcvar_dtype("w3_3", {4, 8, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b3_3 = mkcvar_dtype("b3_3", {1, 32, 1, 1}, dtype::QuantizedS32(6.25f)),
+         conv3_3_q = opr::ConvBias::make(
+                 conv3_2_q8, w3_3, b3_3, param_conv_bias, {},
+                 OperatorNodeConfig{"conv_3_3_q", cn,
+                                    dtype::QuantizedS8{6.25f}});
+    auto conv3_3 = opr::TypeCvt::make(conv3_3_q, dtype::Float32());
+
+    //! Dense
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    auto w4 = mkcvar("w4", {4, 32, 3, 3}), b4 = mkcvar("b4", {1, 4, 1, 1}),
+         conv4 = opr::ConvBias::make(conv3_3, w4, b4, param_conv_bias, {},
+                                     OperatorNodeConfig("conv4"));
+
     auto w5 = mkcvar("w5", {6, 4, 3, 3}), b5 = mkcvar("b5", {1, 6, 1, 1}),
-         conv5 = opr::ConvBias::make(conv4, w5, b5, param_conv_bias);
+         conv5 = opr::ConvBias::make(conv4, w5, b5, param_conv_bias, {},
+                                     OperatorNodeConfig("conv5"));
     auto w6 = mkcvar("w6", {4, 6, 3, 3}), b6 = mkcvar("b6", {1, 4, 1, 1}),
-         y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias);
+         y = opr::ConvBias::make(conv5, w6, b6, param_conv_bias, {},
+                                 OperatorNodeConfig("conv6"));
 
-    SymbolVar y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt;
+    SymbolVar y_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_fuse_conv_bias_nonlinearity();
     options.enable_nchw44_dot();
-    unpack_vector(gopt::optimize_for_inference({y, conv1, conv1_f4, conv1_s4},
-                                               options),
-                  y_opt, conv1_opt, conv1_f4_opt, conv1_s4_opt);
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44_DOT,
-              find_opr<opr::Convolution>(conv1_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
-              find_opr<opr::ConvBias>(conv1_s4_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
-              find_opr<opr::Convolution>(conv1_f4_opt).param().format);
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW44_DOT,
-              find_opr<opr::Convolution>(y_opt).param().format);
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
-              find_opr<opr::ConvBias>(y_opt).param().format);
+              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44_DOT,
+              find_opr<opr::Convolution>(y_opt, "conv1_3_q").param().format);
+#else
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::Convolution>(y_opt, "conv1_3_q").param().format);
+#endif
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::ConvBias>(y_opt, "conv1_f1").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44_DOT,
+              find_opr<opr::ConvBias>(y_opt, "conv_1_2").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt, "conv3_2").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44_DOT,
+              find_opr<opr::ConvBias>(y_opt, "conv_3_3_q").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
+              find_opr<opr::ConvBias>(y_opt, "conv4").param().format);
+    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
+              find_opr<opr::ConvBias>(y_opt, "conv5").param().format);
 
     graph->compile({{y_opt, {}}})
             ->to_json()
-            ->writeto_fpath(
-                    output_file("TestGoptInference.ConvertFormatNCHW44.json"));
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNCHW44_DOT.json"));
 
     HostTensorND host_y_opt, host_y;
     auto func = graph->compile({make_callback_copy(y, host_y),

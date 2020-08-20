@@ -10,12 +10,12 @@
  * implied.
  */
 
-#include "src/fallback/convolution/opr_impl.h"
 #include "src/common/algo_chooser.h"
 #include "src/common/metahelper.h"
 #include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/fallback/convolution/algos.h"
+#include "src/fallback/convolution/opr_impl.h"
 #include "src/fallback/convolution/run_conv.h"
 #include "src/naive/convolution/helper.h"
 #include "src/naive/handle.h"
@@ -100,10 +100,10 @@ void ConvolutionImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
 }
 
 void ConvolutionImpl::exec_preprocess(const TensorLayout& src_layout,
-                         _megdnn_tensor_in filter,
-                         const TensorLayout& dst_layout,
-                         PreprocessedFilter* preprocessed_filter,
-                         _megdnn_workspace workspace) {
+                                      _megdnn_tensor_in filter,
+                                      const TensorLayout& dst_layout,
+                                      PreprocessedFilter* preprocessed_filter,
+                                      _megdnn_workspace workspace) {
     //! exec_preprocess currently only support preprocess weights before exec,
     //! src/dst will be ignored, just set to nullptr
     TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout};
@@ -151,7 +151,7 @@ size_t ConvolutionImpl::get_preprocess_workspace_in_bytes(
 
 SmallVector<TensorLayout> ConvolutionImpl::deduce_preprocessed_filter_layout(
         const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& dst){
+        const TensorLayout& dst) {
     auto fparam = make_ncb_kern_size_param(src, filter, dst, nullptr);
     Algorithm* algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
@@ -257,7 +257,8 @@ void ConvolutionImpl::exec_preprocess_with_ncb_kern(const NCBKernParam& param,
                 param.filter_meta.format == Param::Format::NCHW ||
                         param.filter_meta.format == Param::Format::NHWC ||
                         param.filter_meta.format == Param::Format::NCHW88 ||
-                        param.filter_meta.format == Param::Format::NCHW44,
+                        param.filter_meta.format == Param::Format::NCHW44 ||
+                        param.filter_meta.format == Param::Format::NCHW44_DOT,
                 "invalid conv format");
         auto run = [param, kernel](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
@@ -277,7 +278,8 @@ void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
                 param.filter_meta.format == Param::Format::NCHW ||
                         param.filter_meta.format == Param::Format::NHWC ||
                         param.filter_meta.format == Param::Format::NCHW88 ||
-                        param.filter_meta.format == Param::Format::NCHW44,
+                        param.filter_meta.format == Param::Format::NCHW44 ||
+                        param.filter_meta.format == Param::Format::NCHW44_DOT,
                 "invalid conv format");
         auto run = [param, kernel](size_t index, size_t thread_id) {
             CpuNDRange ndrange_id(kernel.global_size, index);
