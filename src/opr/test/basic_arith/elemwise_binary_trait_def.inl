@@ -27,6 +27,13 @@ DEF_TRAIT(OR, x || y)
 DEF_TRAIT(XOR, x ^ y)
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT
+
+#define _ALLOW_INT true
+#define _ALLOW_FLOAT true
+DEF_TRAIT(EQ, x == y)
+DEF_TRAIT(LEQ, x <= y)
+DEF_TRAIT(LT, x < y)
+
 #undef _ALLOW_BOOL
 
 #define _ALLOW_BOOL false
@@ -43,10 +50,6 @@ DEF_TRAIT(SIGMOID_GRAD, x * (1 - x) * y)
 DEF_TRAIT(SUB, x - y)
 DEF_TRAIT(SWITCH_GT0, x > 0 ? y : 0)
 DEF_TRAIT(TANH_GRAD, (1 - x * x) * y)
-
-DEF_TRAIT(EQ, x == y)
-DEF_TRAIT(LEQ, x <= y)
-DEF_TRAIT(LT, x < y)
 
 DEF_TRAIT(FUSE_ADD_RELU, std::max<ctype>(x + y, 0))
 #undef _ALLOW_INT

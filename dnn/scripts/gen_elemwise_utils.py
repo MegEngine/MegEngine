@@ -30,6 +30,6 @@ MODES = {
                    'FUSE_ADD_H_SWISH'],
     (3, 'FLOAT'): ['COND_LEQ_MOV', 'FUSE_MUL_ADD3'],
     (1, 'BOOL'): ['NOT'],
-    (2, 'BOOL'): ['AND', 'OR', 'XOR'],
+    (2, 'BOOL'): ['AND', 'OR', 'XOR', 'LT', 'LEQ', 'EQ'],
     (3, 'BOOL'): []
 }
