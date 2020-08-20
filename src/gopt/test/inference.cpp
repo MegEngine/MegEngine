@@ -32,7 +32,6 @@
 #include "./helper.h"
 #include "megbrain/comp_node_env.h"
 
-#include "cpuinfo.h"
 #include "megdnn/tensor_format.h"
 
 #include <random>
