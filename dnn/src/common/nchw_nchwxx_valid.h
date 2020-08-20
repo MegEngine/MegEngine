@@ -144,7 +144,7 @@ inline bool nchw_nchwxx_valid<NCHW88>(
         const DTypeEnum dst_dtype,
         const ConvolutionBase<param::Convolution>::CanonizedFilterMeta& fm,
         const BiasMode bias_mode,
-        const param::ConvBias::NonlineMode nonline_mode) {
+        const param::ConvBias::NonlineMode ) {
     bool ok_type = ((src_dtype == DTypeEnum::Float32 &&
                      filter_dtype == DTypeEnum::Float32 &&
                      (dst_dtype == DTypeEnum::Float32))) &&
