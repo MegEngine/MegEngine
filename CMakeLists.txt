@@ -297,7 +297,7 @@ if(MGE_WITH_CUDA)
     if(MSVC OR WIN32)
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xfatbin -compress-all")
         set(CCBIN_FLAG "${CCBIN_FLAG} /wd4819 /wd4334 /wd4267 /wd4002 /wd4244 /wd4068")
-        if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+        if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
             set(CCBIN_FLAG "${CCBIN_FLAG} -D_ITERATOR_DEBUG_LEVEL=2 -MTd")
         endif()
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options \" ${CCBIN_FLAG} \" ")
@@ -680,6 +680,7 @@ if(TARGET mgb)
         COMMAND ${CMAKE_COMMAND} -E create_symlink
           ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/include
           ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/include
+
         DEPENDS mgb
         VERBATIM
     )
