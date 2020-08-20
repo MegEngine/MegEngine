@@ -58,7 +58,7 @@ enum BcastType {
 template <typename ctype>
 class VectTypeTrait;
 
-struct __attribute__((aligned(8))) half4 {
+struct ATTR_ALIGNED(8) half4 {
     dt_float16 x, y, z, w;
 };
 
@@ -69,7 +69,7 @@ __device__ __forceinline__ half4 make_half4(dt_float16 x, dt_float16 y,
     return t;
 }
 
-struct __attribute__((aligned(8))) bhalf4 {
+struct ATTR_ALIGNED(8) bhalf4 {
     dt_bfloat16 x, y, z, w;
 };
 

@@ -9,7 +9,7 @@ endif()
 
 if(MGE_CUDA_USE_STATIC)
     find_library(CUDNN_LIBRARY 
-        NAMES libcudnn_static.a libcudnn_static.lib
+        NAMES libcudnn_static.a cudnn.lib
         PATHS $ENV{LD_LIBRARY_PATH} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
         HINTS ${SYSTEM_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
@@ -30,7 +30,7 @@ endif()
 get_filename_component(__found_cudnn_root ${CUDNN_LIBRARY}/../.. REALPATH)
 find_path(CUDNN_INCLUDE_DIR 
     NAMES cudnn.h
-    HINTS ${PC_CUDNN_INCLUDE_DIRS} ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_INCLUDE} ${__found_cudnn_root}
+    HINTS $ENV{PC_CUDNN_INCLUDE_DIRS} ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_INCLUDE} ${__found_cudnn_root}
     PATH_SUFFIXES include 
     DOC "Path to CUDNN include directory." )
 

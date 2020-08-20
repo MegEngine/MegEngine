@@ -140,4 +140,9 @@
  #define MEGDNN_DEVICE
 #endif
 
+#if defined(_MSC_VER) || defined(WIN32)
+ #define ATTR_ALIGNED(v) __declspec(align(v))
+#else
+ #define ATTR_ALIGNED(v) __attribute__((aligned(v)))
+#endif
 // vim: syntax=cpp.doxygen

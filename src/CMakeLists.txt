@@ -52,8 +52,10 @@ foreach (INCPATH IN LISTS MGB_INC)
 endforeach()
 
 if(MGE_WITH_CUDA)
-    target_compile_options(megbrain PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-unused-parameter>"
-        "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-Wno-unused-parameter>")
+    if(NOT WIN32 AND NOT MSVC)
+        target_compile_options(megbrain PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-unused-parameter>"
+            "$<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-Wno-unused-parameter>")
+    endif()
 else()
     target_compile_options(megbrain PRIVATE "-Wno-unused-parameter")
 endif()

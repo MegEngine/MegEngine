@@ -72,7 +72,7 @@ __global__ void convolution_kernel(
     DataGlobal2ShareMemVisitor src_gl2sh_visitor{smem_src};
     FilterGlobal2ShareMemVisitor filter_gl2sh_visitor{smem_filter};
     if (check_bounds) {
-        block_iterator.template set_remain(src_gl2sh_visitor,
+        block_iterator.set_remain(src_gl2sh_visitor,
                                            filter_gl2sh_visitor);
     }
 
@@ -89,7 +89,7 @@ __global__ void convolution_kernel(
     GlobalMemoryWriter global_memory_writer;
     global_memory_writer.init(smem_dst, alpha, beta);
     if (check_bounds) {
-        block_iterator.template set_remain(global_memory_writer);
+        block_iterator.set_remain(global_memory_writer);
     }
     bias.move(block_iterator.block_batch, block_iterator.block_out_channel,
               block_iterator.block_out_height, block_iterator.block_out_width);
@@ -130,7 +130,7 @@ __global__ void convolution_kernel_precomp_offset(
     DataGlobal2ShareMemVisitor src_gl2sh_visitor{smem_src, offset};
     FilterGlobal2ShareMemVisitor filter_gl2sh_visitor{smem_filter};
     if (check_bounds) {
-        block_iterator.template set_remain(src_gl2sh_visitor,
+        block_iterator.set_remain(src_gl2sh_visitor,
                                            filter_gl2sh_visitor);
     }
 
@@ -147,7 +147,7 @@ __global__ void convolution_kernel_precomp_offset(
     GlobalMemoryWriter global_memory_writer;
     global_memory_writer.init(smem_dst, alpha, beta);
     if (check_bounds) {
-        block_iterator.template set_remain(global_memory_writer);
+        block_iterator.set_remain(global_memory_writer);
     }
     bias.move(block_iterator.block_batch, block_iterator.block_out_channel,
               block_iterator.block_out_height, block_iterator.block_out_width);

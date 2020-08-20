@@ -1,8 +1,8 @@
 # build support status
 ##  host build
-*  windows build (ok)
-*  linux build   (ok)
-*  macos build   (ok)
+*  windows build (cpu + gpu)
+*  linux build   (cpu + gpu)
+*  macos build   (cpu only)
 ##  cross build
 *  windows cross build arm-android (ok)
 *  windows cross build arm-linux   (ok)
@@ -17,9 +17,19 @@
 ### windows host build
     ```
     1: installl Visual Studio (need support LLVM/clang-cl), eg 2019
-    clang-cl 9 linker have crash issue, pls install 7/8/10
+    pls install LLVM-10, VS llvm linker have issue, pls replace lld-link.exe,
+    download from https://releases.llvm.org/download.html#10.0.0
     2: install extension of VS: python/cmake/LLVM
     3: CUDA env(if enable CUDA), version detail: project_root_dir/README.md
+    4: now we support cuda10.1+cudnn7.6+TensorRT6.0 on windows, as windows can
+    only use dll in fact with cudnn/TensorRT, so please install the same version;
+    4a: install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
+    4b: install cudnn7.6 to C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32
+    4c: install TensorRT6.0 to C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5
+    4d: add C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin to system Path env
+    4e: add C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32\cuda\bin to system Path env
+    4f: add C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5\lib Path
+    if u do not do 4d/4e/4f, CUDA runtime can not find dll
     ```
 ### linux host build
     ```
