@@ -168,7 +168,7 @@ class RNGxorshf {
 };
 
 enum class RandomDistribution {
-    GAUSSIAN, UNIFORM, CONSTANT
+    GAUSSIAN, UNIFORM, CONSTANT, CONSECUTIVE
 };
 
 template<class dtype>
@@ -342,6 +342,29 @@ class HostTensorGenerator<dtype, RandomDistribution::CONSTANT> final:
     private:
         ctype m_default_val;
 };
+
+//! consecutive value
+template<class dtype>
+class HostTensorGenerator<dtype, RandomDistribution::CONSECUTIVE> final:
+        public HostTensorGeneratorBase {
+
+    public:
+        using ctype = typename DTypeTrait<dtype>::ctype;
+
+        HostTensorGenerator(ctype val, ctype delta)
+                : HostTensorGeneratorBase{next_rand_seed()},
+                  m_val{val}, m_delta{delta} {}
+
+        std::shared_ptr<HostTensorND> operator ()(
+                const TensorShape &shape, CompNode cn = {}) override;
+        using HostTensorGeneratorBase::operator();
+
+    private:
+        ctype m_val;
+        ctype m_delta;
+};
+
+
 template <>
 class HostTensorGenerator<dtype::Bool, RandomDistribution::UNIFORM> final
         : public HostTensorGeneratorBase {

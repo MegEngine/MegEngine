@@ -99,6 +99,7 @@ union OperatorParam {
     DType = 67,
     param.Remap = 68,
     param.NMSKeep = 69,
+    param.AdaptivePooling = 70,
 }
 
 table Operator {

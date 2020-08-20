@@ -140,6 +140,13 @@ decl_opr('Pooling',
          inputs=['src'],
          params='Pooling')
 
+decl_opr('AdaptivePooling',
+        inputs=[Doc('src', 'input image, shape (n, c, ih, iw)'),
+                Doc('out_shape', 'output image shape, containing two elements specifying output height and width.')],
+        params='AdaptivePooling',
+        desc='Adaptive Pooling.'
+        'The output shape is (n, c, oh, ow), where (oh, ow) is given by *out_shape*.')
+
 decl_opr('ROIPooling', outputs=[0],
          inputs=[Doc('src', 'input image, shape (n, c, ih, iw)'),
                  Doc('rois', 'regions of interest, shape (m, 5). '
@@ -258,7 +265,7 @@ decl_opr('ROIAlign', outputs=[0],
                      'store it as a float, but it should be an integral value.'
                      ' The rois[:, 1:5] are (x0, y0, x1, y1) for each ROI, '
                      'which would be multiplied by the scale value given in '
-                     'param.')], 
+                     'param.')],
          params='ROIAlign',
          desc='ROI Align, see '
          'Mask-RCNN: https://arxiv.org/pdf/1703.06870.pdf, '
@@ -295,7 +302,7 @@ decl_opr('BatchConvBiasForward',
                  ('execution_policy', 'ExecutionPolicy')],
          desc=Doc(None,
 r"""
-    Apply a convolution of input tensor and filter tensor whose weights are not shared in batch dimensions. Outputs with batch index use the same weight. 
+    Apply a convolution of input tensor and filter tensor whose weights are not shared in batch dimensions. Outputs with batch index use the same weight.
     Assume input shape is :math:`(N, IC, IH, IW)` and filter shape is :math:`(batch, OC, IC, FH, FW)`, the output shape will be :math:`(N, OC, OH, OW)` where :math:`(OH, OW)` would be computed from padding, stride, :math:`(FH, FW)` and :math:`(IH, IW)`, as in convolution.
     for each output location, we have;
 
