@@ -60,6 +60,40 @@ function config_python_env() {
     PYTHON_INCLUDE_DIR=${PYTHON_DIR}/include
 }
 
+if [[ -z ${WINDOWS_WHL_WITH_CUDA} ]]
+then
+    WINDOWS_WHL_WITH_CUDA="false"
+fi
+
+
+# config NVIDIA libs
+TRT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5/lib/nvinfer.dll"
+CUDNN_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/cudnn-10.1-windows10-x64-v7.6.5.32/cuda/bin/cudnn64_7.dll"
+CUSOLVER_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cusolver64_10.dll"
+CUBLAS_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublas64_10.dll"
+CURAND_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/curand64_10.dll"
+CUBLASLT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublasLt64_10.dll"
+CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
+function copy_more_dll() {
+    # for python whl real use
+    CP_DST=${BUILD_DIR}/staging/megengine/_internal/lib
+    rm -rf ${CP_DST}
+    mkdir ${CP_DST}
+
+
+    if [ ${WINDOWS_WHL_WITH_CUDA} = "true" ]; then
+        echo "copy nvidia lib to whl use...."
+        cp "${TRT_LIB}" ${CP_DST}
+        cp "${CUDNN_LIB}" ${CP_DST}
+        cp "${CUSOLVER_LIB}" ${CP_DST}
+        cp "${CUBLAS_LIB}" ${CP_DST}
+        cp "${CURAND_LIB}" ${CP_DST}
+        cp "${CUBLASLT_LIB}" ${CP_DST}
+        cp "${CUDART_LIB}" ${CP_DST}
+
+    fi
+}
+
 function do_build() {
     for ver in ${ALL_PYTHON}
     do
@@ -91,7 +125,13 @@ function do_build() {
         #change PYTHON_LIBRARY and PYTHON_INCLUDE_DIR, so add
         #-r to remove build cache after a new ver build, which
         #will be more slow build than without -r
-        ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r
+        if [ ${WINDOWS_WHL_WITH_CUDA} = "true" ]; then
+            echo "build windows whl with cuda"
+            ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r -c
+        else
+            echo "build windows whl with cpu only"
+            ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r
+        fi
 
         #call setup.py
         BUILD_DIR=${SRC_DIR}/build_dir/host/build/
@@ -107,6 +147,7 @@ function do_build() {
         cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
         cd ${BUILD_DIR}/staging/megengine/_internal
         llvm-strip -s _mgb.pyd
+        copy_more_dll
         cd ${BUILD_DIR}/staging
         ${PYTHON_DIR}/python3 setup.py bdist_wheel
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${WINDOWS_WHL_HOME}/

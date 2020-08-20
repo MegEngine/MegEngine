@@ -99,3 +99,8 @@
     ```
     ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
     ```
+    If you want to build windows whl with cuda, also a specific Python verison. eg:
+
+    ```
+    WINDOWS_WHL_WITH_CUDA="true" ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
+    ```
