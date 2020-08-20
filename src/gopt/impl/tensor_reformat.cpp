@@ -1811,7 +1811,15 @@ VarNode* EnableNchwxxPass::on_graph_endpoint_var(VarNode* new_var,
     }
     return new_var;
 }
-
+//! nchw_nchwxx_valid is used to indicate optimized nchw_nchw44 conv
+static inline bool nchw_nchwxx_valid(const size_t oc, const size_t ic,
+                                     const size_t pack_c_size, const size_t fh,
+                                     const size_t fw, const size_t stride_h,
+                                     const size_t stride_w) {
+    return ic < pack_c_size && oc % pack_c_size == 0 && fh == fw &&
+           stride_h == stride_w && (stride_h == 1 || stride_h == 2) &&
+           (fh == 2 || fh == 3 || fh == 5 || fh == 7);
+}
 void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     using RelayoutMode = RelayoutPlaceholder::LayoutType;
     using TestFilterResult = std::pair<TransType, RelayoutMode>;
@@ -1848,15 +1856,19 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
              weight_to_nchwxx_mode_group, weight_to_nchwxx_mode_chan,
              hybrid_nchw_nchwxx](
                     const megdnn::param::Convolution::Sparse conv_mode,
-                    const VarNode* filter) -> TestFilterResult {
+                    const VarNode* filter, const size_t stride_h,
+                    const size_t stride_w) -> TestFilterResult {
         TestFilterResult ret{TransType::TRANS_NONE, {}};
         if (conv_mode == megdnn::param::Convolution::Sparse::DENSE) {
-            size_t IC = filter->shape()[1];
             size_t OC = filter->shape()[0];
+            size_t IC = filter->shape()[1];
+            size_t FH = filter->shape()[2];
+            size_t FW = filter->shape()[3];
             if ((IC % pack_c_size == 0) && (OC % pack_c_size == 0)) {
                 ret.first = TransType::TRANS_PURE_NCHWXX;
                 ret.second = weight_to_nchwxx_mode_dense;
-            } else if (IC < pack_c_size && OC % pack_c_size == 0) {
+            } else if (nchw_nchwxx_valid(OC, IC, pack_c_size, FH, FW, stride_h,
+                                         stride_w)) {
                 ret.first = TransType::TRANS_HYBIRD_NCHWXX;
                 ret.second = hybrid_nchw_nchwxx;
             }
@@ -1883,7 +1895,9 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         mgb_assert(conv_opr.param().format ==
                            megdnn::param::Convolution::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHWXX");
-        auto is_trans = test_trans_nchwxx(conv_opr.param().sparse, new_inp[1]);
+        auto is_trans = test_trans_nchwxx(conv_opr.param().sparse, new_inp[1],
+                                          conv_opr.param().stride_h,
+                                          conv_opr.param().stride_w);
         //! can not trans to nchwxx
         if (is_trans.first == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -1957,8 +1971,9 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         mgb_assert(conv_bias_opr.param().format ==
                            megdnn::param::ConvBias::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHWXX");
-        auto is_trans =
-                test_trans_nchwxx(conv_bias_opr.param().sparse, new_inp[1]);
+        auto is_trans = test_trans_nchwxx(
+                conv_bias_opr.param().sparse, new_inp[1],
+                conv_bias_opr.param().stride_h, conv_bias_opr.param().stride_w);
         //! can not trans to nchwxx
         if (is_trans.first == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -2199,17 +2214,21 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
     constexpr size_t pack_c_size = 4_z;
     auto test_trans_nchw44_dot =
             [](const megdnn::param::Convolution::Sparse conv_mode,
-               const VarNode* filter) -> TestTransResult {
+               const VarNode* filter, const size_t stride_h,
+               const size_t stride_w) -> TestTransResult {
         TestTransResult ret{TransType::TRANS_NONE, {}, {}};
         if (conv_mode == megdnn::param::Convolution::Sparse::DENSE) {
-            size_t IC = filter->shape()[1];
             size_t OC = filter->shape()[0];
+            size_t IC = filter->shape()[1];
+            size_t FH = filter->shape()[2];
+            size_t FW = filter->shape()[3];
             if ((IC % pack_c_size == 0) && (OC % pack_c_size == 0)) {
                 ret.trans_type = TransType::TRANS_PURE_NCHWXX;
                 ret.relayout_mod =
                         RelayoutMode::WEIGHT_NCHW_TO_NCHW44_DOT_DENSE;
                 ret.conv_format = megdnn::param::ConvBias::Format::NCHW44_DOT;
-            } else if (IC < pack_c_size && OC % pack_c_size == 0) {
+            } else if (nchw_nchwxx_valid(OC, IC, pack_c_size, FH, FW, stride_h,
+                                         stride_w)) {
                 ret.trans_type = TransType::TRANS_HYBIRD_NCHWXX;
                 ret.relayout_mod = RelayoutMode::WEIGHT_HYBIRD_NCHW_NCHW44;
                 ret.conv_format = megdnn::param::ConvBias::Format::NCHW44_DOT;
@@ -2241,8 +2260,9 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
                            megdnn::param::Convolution::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to "
                    "NCHW44_DOT");
-        auto is_trans =
-                test_trans_nchw44_dot(conv_opr.param().sparse, new_inp[1]);
+        auto is_trans = test_trans_nchw44_dot(
+                conv_opr.param().sparse, new_inp[1], conv_opr.param().stride_h,
+                conv_opr.param().stride_w);
         //! can not trans to nchwxx
         if (is_trans.trans_type == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
@@ -2315,8 +2335,9 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
         mgb_assert(conv_bias_opr.param().format ==
                            megdnn::param::ConvBias::Format::NCHW,
                    "ConvertFormat Pass only support converting NCHW to NCHWXX");
-        auto is_trans =
-                test_trans_nchw44_dot(conv_bias_opr.param().sparse, new_inp[1]);
+        auto is_trans = test_trans_nchw44_dot(
+                conv_bias_opr.param().sparse, new_inp[1],
+                conv_bias_opr.param().stride_h, conv_bias_opr.param().stride_w);
         //! can not trans to nchwxx
         if (is_trans.trans_type == TransType::TRANS_NONE) {
             mgb_assert(new_inp[1]->shape().ndim == 4 ||
