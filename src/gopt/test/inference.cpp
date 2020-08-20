@@ -6,32 +6,31 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/test/helper.h"
 
-#include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/gtrans.h"
+#include "megbrain/gopt/inference.h"
 
-#include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
-#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
-#include "megbrain/opr/utility.h"
-#include "megbrain/opr/imgproc.h"
-#include "megbrain/opr/tensor_manip.h"
-#include "megbrain/opr/nn_int.h"
-#include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/imgproc.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/tensor_gen.h"
-#include "megbrain/opr/blas.h"
+#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/utility.h"
 
-#include "megbrain/comp_node_env.h"
 #include "./helper.h"
+#include "megbrain/comp_node_env.h"
 
 #include "megdnn/tensor_format.h"
 
@@ -121,20 +120,17 @@ TEST(TestGoptInference, ParamFuseConstEndPoint) {
     graph->options().graph_opt_level = 0;
     auto x = opr::SharedDeviceTensor::make(*graph, *host_x),
          y = opr::SharedDeviceTensor::make(*graph, *host_y),
-         p = opr::Host2DeviceCopy::make(*graph, host_p),
-         q = p + x,
-         a = y + 3,
-         z0 = a + q,
-         z1 = a + 4;
+         p = opr::Host2DeviceCopy::make(*graph, host_p), q = p + x, a = y + 3,
+         z0 = a + q, z1 = a + 4;
 
     HostTensorND host_z0, host_z1;
 
     SymbolVar z0_1, z1_1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamFusePass>().
-            apply({{z1, z0}}).endpoint_vars(),
-            z1_1, z0_1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{z1, z0}})
+                          .endpoint_vars(),
+                  z1_1, z0_1);
 
     auto func = graph->compile({make_callback_copy(z0_1, host_z0),
                                 make_callback_copy(z1_1, host_z1)});
@@ -143,7 +139,10 @@ TEST(TestGoptInference, ParamFuseConstEndPoint) {
     func->execute();
 
     int nr_opr = 0;
-    func->iter_opr_seq([&](cg::OperatorNodeBase*) {++ nr_opr; return true; });
+    func->iter_opr_seq([&](cg::OperatorNodeBase*) {
+        ++nr_opr;
+        return true;
+    });
     ASSERT_EQ(8, nr_opr);
 
     auto px = host_x->ptr<float>(), pz0 = host_z0.ptr<float>();
@@ -151,12 +150,11 @@ TEST(TestGoptInference, ParamFuseConstEndPoint) {
     auto yv = host_y->ptr<float>()[0], pv = host_p->ptr<float>()[0],
          pz1 = host_z1.ptr<float>()[0];
 
-    for (size_t i = 0; i < SIZE; ++ i) {
+    for (size_t i = 0; i < SIZE; ++i) {
         MGB_ASSERT_FLOAT_EQ(px[i] + yv + 3 + pv, pz0[i]);
     }
     MGB_ASSERT_FLOAT_EQ(yv + 7, pz1);
 }
-
 
 TEST(TestGoptInference, ParamFuse) {
     constexpr size_t SIZE = 23;
@@ -168,35 +166,37 @@ TEST(TestGoptInference, ParamFuse) {
     auto x = opr::SharedDeviceTensor::make(*graph, *host_x),
          y = opr::SharedDeviceTensor::make(*graph, *host_y),
          p = opr::Host2DeviceCopy::make(*graph, host_p),
-         z = x + y,     // endpoint
-         q = x * y + p; // middle point
+         z = x + y,         // endpoint
+            q = x * y + p;  // middle point
 
     SymbolVar z1, q1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamFusePass>().
-            apply({{z, q}}).endpoint_vars(),
-            z1, q1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{z, q}})
+                          .endpoint_vars(),
+                  z1, q1);
 
     ASSERT_TRUE(z1.node()->owner_opr()->same_type<opr::SharedDeviceTensor>());
     ASSERT_NE(q1.node()->owner_opr(), q.node()->owner_opr());
     ASSERT_EQ(q1.node()->owner_opr()->dyn_typeinfo(),
-            q.node()->owner_opr()->dyn_typeinfo());
+              q.node()->owner_opr()->dyn_typeinfo());
 
     HostTensorND host_z, host_q;
     auto func = graph->compile(
-            {make_callback_copy(z1, host_z),
-            make_callback_copy(q1, host_q)});
+            {make_callback_copy(z1, host_z), make_callback_copy(q1, host_q)});
     func->execute();
 
     int nr_opr = 0;
-    func->iter_opr_seq([&](cg::OperatorNodeBase*) {++ nr_opr; return true; });
+    func->iter_opr_seq([&](cg::OperatorNodeBase*) {
+        ++nr_opr;
+        return true;
+    });
     ASSERT_EQ(6, nr_opr);
 
     auto px = host_x->ptr<float>(), pz = host_z.ptr<float>(),
          pq = host_q.ptr<float>();
     auto yv = host_y->ptr<float>()[0], pv = host_p->ptr<float>()[0];
-    for (size_t i = 0; i < SIZE; ++ i) {
+    for (size_t i = 0; i < SIZE; ++i) {
         MGB_ASSERT_FLOAT_EQ(px[i] + yv, pz[i]);
         MGB_ASSERT_FLOAT_EQ(px[i] * yv + pv, pq[i]);
     }
@@ -212,8 +212,8 @@ TEST(TestGoptInference, ParamFuseMultiDeviceTensorHolder) {
     auto x = opr::SharedDeviceTensor::make(*graph, *host_x),
          y = opr::SharedDeviceTensor::make(*graph, *host_y),
          p = opr::Host2DeviceCopy::make(*graph, host_p),
-         z = x + y,     // endpoint
-         q = x * y + p; // middle point
+         z = x + y,         //! endpoint
+            q = x * y + p;  //! middle point
 
     SymbolVar z1, q1;
     unpack_vector(gopt::GraphOptimizer{}
@@ -223,34 +223,38 @@ TEST(TestGoptInference, ParamFuseMultiDeviceTensorHolder) {
                   z1);
 
     ASSERT_TRUE(z1.node()
-                        ->owner_opr()->input(0)->owner_opr()
+                        ->owner_opr()
+                        ->input(0)
+                        ->owner_opr()
                         ->same_type<opr::MultipleDeviceTensorHolder>());
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamMergePass>().
-            add_pass<gopt::ParamFusePass>().
-            apply({{z, q}}).endpoint_vars(),
-            z1, q1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamMergePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{z, q}})
+                          .endpoint_vars(),
+                  z1, q1);
 
     ASSERT_TRUE(z1.node()->owner_opr()->same_type<opr::SharedDeviceTensor>());
     ASSERT_NE(q1.node()->owner_opr(), q.node()->owner_opr());
     ASSERT_EQ(q1.node()->owner_opr()->dyn_typeinfo(),
-            q.node()->owner_opr()->dyn_typeinfo());
+              q.node()->owner_opr()->dyn_typeinfo());
 
     HostTensorND host_z, host_q;
     auto func = graph->compile(
-            {make_callback_copy(z1, host_z),
-            make_callback_copy(q1, host_q)});
+            {make_callback_copy(z1, host_z), make_callback_copy(q1, host_q)});
     func->execute();
 
     int nr_opr = 0;
-    func->iter_opr_seq([&](cg::OperatorNodeBase*op) {++ nr_opr; return true; });
+    func->iter_opr_seq([&](cg::OperatorNodeBase* op) {
+        ++nr_opr;
+        return true;
+    });
     ASSERT_EQ(6, nr_opr);
 
     auto px = host_x->ptr<float>(), pz = host_z.ptr<float>(),
          pq = host_q.ptr<float>();
     auto yv = host_y->ptr<float>()[0], pv = host_p->ptr<float>()[0];
-    for (size_t i = 0; i < SIZE; ++ i) {
+    for (size_t i = 0; i < SIZE; ++i) {
         MGB_ASSERT_FLOAT_EQ(px[i] + yv, pz[i]);
         MGB_ASSERT_FLOAT_EQ(px[i] * yv + pv, pq[i]);
     }
@@ -262,33 +266,42 @@ TEST(TestGoptInference, ParamFuseMultiRead) {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
 
-    auto mkvar = [&](const char *name, const TensorShape &shp) {
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
-    auto mkcvar = [&](const char *name, const TensorShape &shp) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
     };
 
-    auto x = mkvar("x", {23}),
-         p0 = mkcvar("p0", {1}),
-         p1 = mkcvar("p1", {1}),
+    auto x = mkvar("x", {23}), p0 = mkcvar("p0", {1}), p1 = mkcvar("p1", {1}),
          z0 = x * (p0 + p1) + x / (p0 + p1);
 
     SymbolVar z1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamFusePass>().
-            apply({{z0}}).endpoint_vars(),
-            z1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{z0}})
+                          .endpoint_vars(),
+                  z1);
 
     ASSERT_NE(z0.node(), z1.node());
-    ASSERT_TRUE(z1.node()->owner_opr()->input(0)->owner_opr()
-            ->input(1)->owner_opr()->same_type<opr::SharedDeviceTensor>());
-    ASSERT_TRUE(z1.node()->owner_opr()->input(1)->owner_opr()
-            ->input(1)->owner_opr()->same_type<opr::SharedDeviceTensor>());
+    ASSERT_TRUE(z1.node()
+                        ->owner_opr()
+                        ->input(0)
+                        ->owner_opr()
+                        ->input(1)
+                        ->owner_opr()
+                        ->same_type<opr::SharedDeviceTensor>());
+    ASSERT_TRUE(z1.node()
+                        ->owner_opr()
+                        ->input(1)
+                        ->owner_opr()
+                        ->input(1)
+                        ->owner_opr()
+                        ->same_type<opr::SharedDeviceTensor>());
     HostTensorND host_z0, host_z1;
     graph->compile({make_callback_copy(z0, host_z0),
-            make_callback_copy(z1, host_z1)})->execute();
+                    make_callback_copy(z1, host_z1)})
+            ->execute();
     MGB_ASSERT_TENSOR_EQ(host_z0, host_z1);
 }
 
@@ -297,10 +310,10 @@ TEST(TestGoptInference, ParamFuseStaticInfer) {
 
     auto graph = ComputingGraph::make();
 
-    auto mkvar = [&](const char *name, const TensorShape &shp) {
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
-    auto mkcvar = [&](const char *name, const TensorShape &shp) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
     };
 
@@ -308,11 +321,11 @@ TEST(TestGoptInference, ParamFuseStaticInfer) {
          b = a.reshape(opr::GetVarShape::make(mkcvar("tshp", {2, 2})));
 
     SymbolVar b1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamFusePass>().
-            apply({{b}}).endpoint_vars(),
-            b1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{b}})
+                          .endpoint_vars(),
+                  b1);
 
     ASSERT_EQ(b1, a.reshape({2, 2}));
 }
@@ -333,11 +346,11 @@ TEST(TestGoptInference, ParamRedistributeConvMul) {
          y0 = opr::Convolution::make(x * k, w);
 
     SymbolVar y1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            apply({{y0}}).endpoint_vars(),
-            y1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .apply({{y0}})
+                          .endpoint_vars(),
+                  y1);
 
     ASSERT_NE(y0.node(), y1.node());
 
@@ -364,18 +377,18 @@ TEST(TestGoptInference, ParamRedistributeConvMulUniqReader) {
                  {-1, 0, -1, -1}),
          w = opr::SharedDeviceTensor::make(*graph, *host_w),
          // y0 should be replaced
-         y0 = opr::powf(opr::Convolution::make(x * k, w).rename("y0") + 2, 2),
+            y0 = opr::powf(opr::Convolution::make(x * k, w).rename("y0") + 2,
+                           2),
          y0k = (y0 * k).rename("y0k"),
          // y0k is accessed twice, so it should not be replaced
-         y1 = opr::Convolution::make(y0k, w).rename("y1"),
-         z0 = y1 / y0k;
+            y1 = opr::Convolution::make(y0k, w).rename("y1"), z0 = y1 / y0k;
 
     SymbolVar z1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            apply({{z0}}).endpoint_vars(),
-            z1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .apply({{z0}})
+                          .endpoint_vars(),
+                  z1);
 
     ASSERT_NE(z0.node(), z1.node());
     auto y1_repl = z1.node()->owner_opr()->input(0)->owner_opr();
@@ -394,10 +407,8 @@ TEST(TestGoptInference, ParamRedistributeMulConvMul) {
     constexpr size_t N = 4, IC = 3, IH = 5, IW = 4, OC = 4, KH = 3, KW = 2;
 
     HostTensorGenerator<> gen;
-    auto host_x = gen({N, IC, IH, IW}),
-         host_k1 = gen({IC}),
-         host_k2 = gen({1, OC, 1, 1}),
-         host_w = gen({OC, IC, KH, KW});
+    auto host_x = gen({N, IC, IH, IW}), host_k1 = gen({IC}),
+         host_k2 = gen({1, OC, 1, 1}), host_w = gen({OC, IC, KH, KW});
 
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
@@ -409,12 +420,12 @@ TEST(TestGoptInference, ParamRedistributeMulConvMul) {
          y0 = opr::Convolution::make(x * k1, w) * k2;
 
     SymbolVar y1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            add_pass<gopt::ParamFusePass>().
-            apply({{y0}}).endpoint_vars(),
-            y1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y0}})
+                          .endpoint_vars(),
+                  y1);
 
     auto y1opr = y1.node()->owner_opr();
     ASSERT_TRUE(y1opr->same_type<opr::Convolution>());
@@ -444,12 +455,12 @@ TEST(TestGoptInference, ParamRedistributeConvAdd) {
          y0 = opr::Convolution::make(x + b, w);
 
     SymbolVar y1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            add_pass<gopt::ParamFusePass>().
-            apply({{y0}}).endpoint_vars(),
-            y1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y0}})
+                          .endpoint_vars(),
+                  y1);
 
     ASSERT_NE(y0.node(), y1.node());
 
@@ -462,41 +473,37 @@ TEST(TestGoptInference, ParamRedistributeConvAdd) {
 }
 
 TEST(TestGoptInference, ParamRedistributeDistThenReasso) {
-    constexpr size_t N = 4, IC0 = 3, IC1 = 6, IH = 5,
-              IW = 4, OC = 4, KH = 3, KW = 2;
+    constexpr size_t N = 4, IC0 = 3, IC1 = 6, IH = 5, IW = 4, OC = 4, KH = 3,
+                     KW = 2;
 
     HostTensorGenerator<> gen;
     auto graph = ComputingGraph::make();
-    auto mkvar = [&](const char *name, const TensorShape &shp) {
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
-    auto mkcvar = [&](const char *name, const TensorShape &shp) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
     };
-    auto x0 = mkvar("x0", {N, IC0, IH, IW}),
-         x1 = mkvar("x1", {N, IC1, IH, IW}),
-         k0 = opr::Dimshuffle::make(
-                 mkcvar("x1_", {IC0}), {-1, 0, -1, -1}).rename("x1"),
+    auto x0 = mkvar("x0", {N, IC0, IH, IW}), x1 = mkvar("x1", {N, IC1, IH, IW}),
+         k0 = opr::Dimshuffle::make(mkcvar("x1_", {IC0}), {-1, 0, -1, -1})
+                      .rename("x1"),
          w0 = mkcvar("w0", {OC, IC0, KH, KW}),
          k1 = mkcvar("k1", {1, IC1, 1, 1}),
-         w1 = mkcvar("w1", {OC, IC1, KH, KW}),
-         b0 = mkvar("b0", {1, OC, 1, 1}),
-         b1 = mkcvar("b1", {1}),
-         k2 = mkcvar("k2", {1}),
-         y0 = (
-                 opr::Convolution::make(x0 * k0, w0) +
-                 opr::Convolution::make(x1 + k1, w1) +
-                 b0 + b1) * k2;
+         w1 = mkcvar("w1", {OC, IC1, KH, KW}), b0 = mkvar("b0", {1, OC, 1, 1}),
+         b1 = mkcvar("b1", {1}), k2 = mkcvar("k2", {1}),
+         y0 = (opr::Convolution::make(x0 * k0, w0) +
+               opr::Convolution::make(x1 + k1, w1) + b0 + b1) *
+              k2;
 
     SymbolVar y1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            add_pass<gopt::ReorderArithChainPass>(
-                gopt::ConstVarType::IMMUTABLE_AND_PARAM).
-            add_pass<gopt::ParamFusePass>().
-            apply({{y0}}).endpoint_vars(),
-            y1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .add_pass<gopt::ReorderArithChainPass>(
+                                  gopt::ConstVarType::IMMUTABLE_AND_PARAM)
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y0}})
+                          .endpoint_vars(),
+                  y1);
 
     ASSERT_NE(y0.node(), y1.node());
     HostTensorND host_y0, host_y1;
@@ -506,19 +513,21 @@ TEST(TestGoptInference, ParamRedistributeDistThenReasso) {
 
     MGB_ASSERT_TENSOR_NEAR(host_y0, host_y1, 1e-5);
 
-    auto chain = gopt::extract_opr_leaves(y1.node(),
-            [](cg::OperatorNodeBase*opr){
+    auto chain =
+            gopt::extract_opr_leaves(y1.node(), [](cg::OperatorNodeBase* opr) {
                 return gopt::as_elem_opr(opr, opr::Elemwise::Mode::ADD);
             });
     size_t nr_conv = 0;
-    for (auto i: chain) {
+    for (auto i : chain) {
         auto opr = i->owner_opr();
         if (opr->same_type<opr::Convolution>()) {
-            ++ nr_conv;
-            ASSERT_TRUE(opr->input(0)->owner_opr()
-                    ->same_type<opr::Host2DeviceCopy>());
-            ASSERT_TRUE(opr->input(1)->owner_opr()
-                    ->same_type<opr::SharedDeviceTensor>());
+            ++nr_conv;
+            ASSERT_TRUE(opr->input(0)
+                                ->owner_opr()
+                                ->same_type<opr::Host2DeviceCopy>());
+            ASSERT_TRUE(opr->input(1)
+                                ->owner_opr()
+                                ->same_type<opr::SharedDeviceTensor>());
         }
     }
     ASSERT_EQ(2u, nr_conv);
@@ -531,27 +540,24 @@ TEST(TestGoptInference, ParamRedistributeMultiChange) {
     HostTensorGenerator<> gen;
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char *name, const TensorShape &shp) {
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
-    auto mkcvar = [&](const char *name, const TensorShape &shp) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
     };
-    auto x = mkvar("x", {N, IC, IH, IW}),
-         k0 = mkcvar("k0", {1, IC, 1, 1}),
-         b0 = mkcvar("b0", {1, IC, 1, 1}),
-         k1 = mkcvar("k0", {1}),
-         b1 = mkcvar("b0", {1}),
-         w = mkcvar("w", {OC, IC, KH, KW}),
+    auto x = mkvar("x", {N, IC, IH, IW}), k0 = mkcvar("k0", {1, IC, 1, 1}),
+         b0 = mkcvar("b0", {1, IC, 1, 1}), k1 = mkcvar("k0", {1}),
+         b1 = mkcvar("b0", {1}), w = mkcvar("w", {OC, IC, KH, KW}),
          y0 = (opr::Convolution::make(x * k0 + b0, w) + b1) * k1;
 
     SymbolVar y1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            add_pass<gopt::ParamFusePass>().
-            apply({{y0}}).endpoint_vars(),
-            y1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y0}})
+                          .endpoint_vars(),
+                  y1);
 
     ASSERT_NE(y0.node(), y1.node());
     HostTensorND host_y0, host_y1;
@@ -577,16 +583,15 @@ TEST(TestGoptInference, ParamRedistributeMultiReader) {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
 
-    auto mkvar = [&](const char *name, const TensorShape &shp) {
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
 
-    auto mkcvar = [&](const char *name, const TensorShape &shp) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
         return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
     };
 
-    auto x = mkvar("x", {N, IC, IH, IW}),
-         k = mkcvar("k", {1, OC, 1, 1}),
+    auto x = mkvar("x", {N, IC, IH, IW}), k = mkcvar("k", {1, OC, 1, 1}),
          w = mkcvar("w", {OC, IC, KH, KW});
 
     auto conv = opr::Convolution::make(x, w);
@@ -594,12 +599,12 @@ TEST(TestGoptInference, ParamRedistributeMultiReader) {
     auto y0 = t * 4.2f + t * 2.4f;
 
     SymbolVar y1;
-    unpack_vector(
-            gopt::GraphOptimizer{}.
-            add_pass<gopt::ParamRedistributePass>().
-            add_pass<gopt::ParamFusePass>().
-            apply({{y0}}).endpoint_vars(),
-            y1);
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ParamRedistributePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y0}})
+                          .endpoint_vars(),
+                  y1);
 
     ASSERT_NE(y0.node(), y1.node());
     HostTensorND host_y0, host_y1;
@@ -616,13 +621,11 @@ TEST(TestGoptInference, ParamRedistributeMultiReader) {
     ASSERT_TRUE(ymul0);
     ASSERT_TRUE(ymul1);
     auto yconv = ymul0->input(0)->owner_opr();
-    if (!yconv->same_type<opr::Convolution>())
-    {
+    if (!yconv->same_type<opr::Convolution>()) {
         yconv = ymul0->input(1)->owner_opr();
     }
     ASSERT_TRUE(yconv->same_type<opr::Convolution>());
-    if (ymul1->input(0) != yconv->output(0))
-    {
+    if (ymul1->input(0) != yconv->output(0)) {
         ASSERT_EQ(yconv->output(0), ymul1->input(1));
     }
     ASSERT_EQ(x.node(), yconv->input(0));
@@ -751,9 +754,9 @@ TEST(TestGoptInference, Float16IOFloat32ComputeRemap) {
     auto a = mkvar("a", {N, 4, INP_H, INP_W});
     auto gen_map = [&](HostTensorND& mat) {
         auto ptr = mat.ptr<float>();
-        for(size_t n = 0; n < N; ++n){
-            for(int h = 0; h < 5; ++h){
-                for(int w = 0; w < 5; ++w){
+        for (size_t n = 0; n < N; ++n) {
+            for (int h = 0; h < 5; ++h) {
+                for (int w = 0; w < 5; ++w) {
                     *ptr++ = (h * 5 * 2) + 5 * 2 + 0;
                     *ptr++ = (h * 5 * 2) + 5 * 2 + 1;
                 }
@@ -905,21 +908,26 @@ TEST(TestGoptInference, Float32TOFloat16C32) {
     };
 
     auto make_f16_graph = [&]() {
-        auto d0 = opr::TypeCvt::make(opr::TypeCvt::make(
-                     opr::Host2DeviceCopy::make(*graph, host_x0),
-                     dtype::Float16{}), dtype::Float32{}),
-             d1 = opr::TypeCvt::make(opr::TypeCvt::make(
-                     opr::Host2DeviceCopy::make(*graph, host_x1),
-                     dtype::Float16{}), dtype::Float32{}),
-             d2 = opr::TypeCvt::make(opr::TypeCvt::make(
-                     opr::SharedDeviceTensor::make(*graph, *host_x2),
-                     dtype::Float16{}), dtype::Float32{});
+        auto d0 = opr::TypeCvt::make(
+                     opr::TypeCvt::make(
+                             opr::Host2DeviceCopy::make(*graph, host_x0),
+                             dtype::Float16{}),
+                     dtype::Float32{}),
+             d1 = opr::TypeCvt::make(
+                     opr::TypeCvt::make(
+                             opr::Host2DeviceCopy::make(*graph, host_x1),
+                             dtype::Float16{}),
+                     dtype::Float32{}),
+             d2 = opr::TypeCvt::make(
+                     opr::TypeCvt::make(
+                             opr::SharedDeviceTensor::make(*graph, *host_x2),
+                             dtype::Float16{}),
+                     dtype::Float32{});
 
         auto y = opr::ConvBias::make(d1, d2, d0);
         y = opr::Reduce::make(y, {}, y.make_scalar(1));
-        y = opr::TypeCvt::make(
-               opr::TypeCvt::make(y, dtype::Float16{}),
-               dtype::Float32{});
+        y = opr::TypeCvt::make(opr::TypeCvt::make(y, dtype::Float16{}),
+                               dtype::Float32{});
 
         return y;
     };
@@ -927,7 +935,7 @@ TEST(TestGoptInference, Float32TOFloat16C32) {
     auto y_opt = make_f32_to_f16_graph();
     auto y = make_f16_graph();
     ASSERT_EQ(find_opr<opr::ConvBias>(y_opt).param().compute_mode,
-            opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
+              opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
     ASSERT_EQ(y_opt.dtype(), dtype::Float32{});
     ASSERT_EQ(y.dtype(), dtype::Float32{});
 
@@ -1061,16 +1069,14 @@ TEST(TestGoptInference, Float32TOFloat16Endpoints) {
     };
 
     auto mkcvar = [&](const char* name, const TensorShape& shp) {
-        return opr::SharedDeviceTensor::make(*graph, *gen(shp))
-                .rename(name);
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
     };
 
     graph->options().graph_opt_level = 0;
     opr::Convolution::Param param;
     param.pad_h = param.pad_w = 0;
 
-    auto x = mkvar("x", {8, 8, 8, 8}),
-         y = mkvar("y", {8, 8, 8, 8}),
+    auto x = mkvar("x", {8, 8, 8, 8}), y = mkvar("y", {8, 8, 8, 8}),
          w = mkcvar("w", {4, 8, 3, 3}),
          z = opr::Convolution::make(x + y, w, param);
 
@@ -1277,9 +1283,8 @@ TEST(TestGoptInference, ConvertFormatNHWCD4Qint8) {
     param.pad_h = param.pad_w = 0;
     auto w = mkcvar("w", {4, 8, 3, 3}, dtype::QuantizedS8(0.1f)),
          b = mkcvar("b", {1, 4, 1, 1}, dtype::QuantizedS32(0.02f)),
-         y = opr::ConvBias::make(
-                 x, w, b, param, {},
-                 OperatorNodeConfig{dtype::QuantizedS8(0.2f)});
+         y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(0.2f)});
 
     SymbolVar y_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
@@ -1542,7 +1547,6 @@ TEST(TestGoptInference, AlgoWorkspaceLimit) {
     ASSERT_EQ(10000u, conv.execution_policy().workspace_limit);
 }
 
-
 TEST_PASS(FuseConvBiasNonlinPass, Basic) {
     auto cn = CompNode::load("xpux");
 
@@ -1563,11 +1567,9 @@ TEST_PASS(FuseConvBiasNonlinPass, Basic) {
                 dtype);
     };
 
-    for (auto format : {
-            opr::Convolution::Param::Format::NCHW,
+    for (auto format : {opr::Convolution::Param::Format::NCHW,
                         opr::Convolution::Param::Format::NHWC,
-                        opr::Convolution::Param::Format::NCHW4
-                        }) {
+                        opr::Convolution::Param::Format::NCHW4}) {
         opr::Convolution::Param param;
         param.format = format;
         SymbolVar x, w, b;
@@ -1669,7 +1671,6 @@ TEST(TestEnableTensorCore, SmallInputShape) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-
 
 TEST(TestEnableTensorCore, Nchw4Nchw) {
     REQUIRE_GPU(1);
@@ -2085,12 +2086,11 @@ TEST(TestEnableTensorCore, ShuffleMerge) {
         return y1;
     };
 
-
     auto x = mkvar("x", {32, 64, 16, 16}, dtype::QuantizedS8(2.5f)),
          w = mkcvar("w1", {64, 64, 3, 3}, dtype::QuantizedS8(2.5f)),
          b = mkcvar("b", {1, 64, 1, 1}, dtype::QuantizedS32(6.25f)),
          z = mkvar("b1", {32, 64, 16, 16}, dtype::QuantizedS8(2.5f));
-    x = nchw2nchw4(x), w = nchw2nchw4(w), b = nchw2nchw4(b), z= nchw2nchw4(z);
+    x = nchw2nchw4(x), w = nchw2nchw4(w), b = nchw2nchw4(b), z = nchw2nchw4(z);
     opr::ConvBias::Param param;
     param.format = opr::ConvBias::Param::Format::NCHW4;
     param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
@@ -2350,7 +2350,8 @@ TEST(TestGoptInference, EnableCHWN4WarpPespective) {
 
     opr::WarpPerspective::Param warp_param;
     warp_param.format = opr::WarpPerspective::Param::Format::NCHW4;
-    auto y1 = opr::WarpPerspective::make(y, mat_var, TensorShape{16, 16}, warp_param);
+    auto y1 = opr::WarpPerspective::make(y, mat_var, TensorShape{16, 16},
+                                         warp_param);
     y1 = opr::TypeCvt::make(y1, dtype::Float32());
     auto nchw42nchw = [](SymbolVar x) {
         auto xshp = opr::GetVarShape::make(x);
@@ -2366,7 +2367,8 @@ TEST(TestGoptInference, EnableCHWN4WarpPespective) {
     };
     y1 = nchw42nchw(y1);
     warp_param.format = opr::WarpPerspective::Param::Format::NCHW;
-    auto y2 = opr::WarpPerspective::make(y1, mat_var, TensorShape{16, 16}, warp_param);
+    auto y2 = opr::WarpPerspective::make(y1, mat_var, TensorShape{16, 16},
+                                         warp_param);
     SymbolVar y_opt;
     SymbolVar y_cudnn;
     {
@@ -2833,8 +2835,7 @@ TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
     auto mkcvar = [&](const char* name, const TensorShape& shp,
                       const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name),
                 dtype);
     };
 
@@ -2878,7 +2879,6 @@ TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
-
 TEST(TestGoptInference, ConvertFormatNCHW88) {
     HostTensorGenerator<> gen;
     auto cn = CompNode::load("cpu0");
@@ -2894,12 +2894,12 @@ TEST(TestGoptInference, ConvertFormatNCHW88) {
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    //!Hybrid nchw88 mode
+    //! Hybrid nchw88 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
          conv1 = opr::Convolution::make(x, w1, param_conv);
-    //!channel wise
+    //! channel wise
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
@@ -2976,12 +2976,12 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    //!Hybrid nchw88 mode
+    //! Hybrid nchw88 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
          conv1 = opr::Convolution::make(x, w1, param_conv);
-    //!channel wise
+    //! channel wise
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
@@ -3140,12 +3140,12 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
 
     auto host_x = gen({2, 3, 16, 16}, cn);
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    //!Hybrid nchw88 mode
+    //! Hybrid nchw88 mode
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
          conv1 = opr::Convolution::make(x, w1, param_conv);
-    //!channel wise
+    //! channel wise
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
