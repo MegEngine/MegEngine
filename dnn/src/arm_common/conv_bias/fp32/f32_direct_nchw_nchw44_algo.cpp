@@ -16,10 +16,10 @@
 #include "src/arm_common/conv_bias/fp32/f32_direct_nchw_nchw44_kern.h"
 #include "src/arm_common/conv_bias/fp32/strategy.h"
 #include "src/arm_common/elemwise_op.h"
+#include "src/common/nchw_nchwxx_valid.h"
 #include "src/common/opr_delegate.h"
 
 #include "midout.h"
-
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
@@ -191,22 +191,10 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
 
 bool ConvBiasImpl::AlgoF32DirectNCHWNCHW44::usable(
         const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
-    auto&& fm = param.filter_meta;
-    auto fh = fm.spatial[0];
-    int oc = fm.ocpg;
-    bool ok_type = ((param.src_type.enumv() == DTypeEnum::Float32 &&
-                     param.filter_type.enumv() == DTypeEnum::Float32 &&
-                     (param.dst_type.enumv() == DTypeEnum::Float32))) &&
-                   (fm.format == param::Convolution::Format::NCHW44);
-    bool ok_src_dst = fm.icpg < 4 && (oc % 4 == 0 && oc >= 4) && fm.group == 1;
-    bool ok_filter = fm.spatial_ndim == 2 && fh == fm.spatial[1] &&
-                     (fh == 2 || fh == 3 || fh == 5 || fh == 7);
-    bool ok_slide = fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                    fm.stride[0] == fm.stride[1] &&
-                    (fm.stride[0] == 1 || fm.stride[0] == 2);
-    bool ok_conv = !fm.should_flip && param.bias_mode != BiasMode::BIAS;
-    bool avaible = ok_type && ok_src_dst && ok_filter && ok_slide && ok_conv;
-    return avaible;
+    return nchw_nchwxx_valid<NchwNchwxxType::NCHW44_FP32>(
+            param.src_type.enumv(), param.filter_type.enumv(),
+            param.dst_type.enumv(), param.filter_meta, param.bias_mode,
+            param.nonlineMode);
 }
 
 size_t ConvBiasImpl::AlgoF32DirectNCHWNCHW44::get_workspace(

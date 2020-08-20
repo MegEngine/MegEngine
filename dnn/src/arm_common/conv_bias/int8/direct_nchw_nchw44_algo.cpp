@@ -15,6 +15,7 @@
 #include "src/arm_common/conv_bias/int8/direct_nchw_nchw44_kern.h"
 #include "src/arm_common/conv_bias/int8/strategy.h"
 #include "src/arm_common/elemwise_op.h"
+#include "src/common/nchw_nchwxx_valid.h"
 #include "src/common/opr_delegate.h"
 
 #include "midout.h"
@@ -214,26 +215,12 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
             ow, op);
 }
 
-bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::usable(
-        const NCBKernSizeParam& param,
-        AlgoSelectionStrategy algo_selection_strategy) const {
-    MEGDNN_MARK_USED_VAR(algo_selection_strategy);
-    auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0];
-    auto OC = fm.ocpg;
-    bool avaible =          //! src and filter are qint8, dst is qint8
-            fm.icpg < 4 &&  // must be nchw input
-            ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-              (param.dst_type.enumv() == DTypeEnum::QuantizedS8))) &&
-            (fm.format == param::Convolution::Format::NCHW44) &&
-            (OC % 4 == 0 && OC >= 4) && !fm.should_flip && fm.group == 1 &&
-            fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-            fm.dilation[1] == 1 && fm.stride[0] == fm.stride[1] &&
-            (fm.stride[0] == 1 || fm.stride[0] == 2) && FH == fm.spatial[1] &&
-            (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.group == 1 &&
-            param.bias_mode != BiasMode::BIAS;
-    return avaible;
+bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::usable(const NCBKernSizeParam& param,
+                                                  AlgoSelectionStrategy) const {
+    return nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8>(
+            param.src_type.enumv(), param.filter_type.enumv(),
+            param.dst_type.enumv(), param.filter_meta, param.bias_mode,
+            param.nonlineMode);
 }
 
 bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::is_preferred(

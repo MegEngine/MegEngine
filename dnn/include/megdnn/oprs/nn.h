@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/internal/opr_header_prologue.h"
@@ -314,8 +315,10 @@ public:
     /**
      * \param[in] src (n, ic, ih, iw) or (n, ih, iw, ic)
      * \param[in] filter (oc, ic, fh, fw) or (oc, fh, fw, ic) or (oc/4, fh, fw,
-     * 4*ic) \param[in] bias (1, oc, 1, 1) \param[in] z same as dst \param[out]
-     * dst (n, oc, oh, ow) or (n, oh, ow, oc)
+     * 4 * ic)
+     * \param[in] bias (1, oc, 1, 1)
+     * \param[in] z same as dst
+     * \param[out] dst (n, oc, oh, ow) or (n, oh, ow, oc)
      *
      * \note if the format is NCHW_WINOGRAD, the filter layout is (alphah,
      * alphaw, oc, ic)
@@ -406,6 +409,26 @@ public:
      * \warning: INVALID_WINOGRAD_PARAM returns if the algo_name is not matched.
      */
     static WinogradParam parse_winograd_name(const std::string& algo_name);
+
+    /**
+     * @brief find if there is nchw_nchwxx conv kernel optimized for argment,
+     * nchw44 used for arm, nchw88 used for x86
+     *
+     * @param src_dtype  conv feature map data type
+     * @param filter_dtype  conv filter or weight data type
+     * @param dst_dtype output data type
+     * @param fm filter meta param
+     * @param bias_mode bias mode, no_bias or broadcast or bias
+     * @param nonline_mode identity or relu or h_swish or sigmoid
+     * @return true, found a kernel
+     * @return false, can`t found any kernel
+     */
+    static bool is_nchw_nchwxx_optimized(
+            const DTypeEnum src_dtype, const DTypeEnum filter_dtype,
+            const DTypeEnum dst_dtype,
+            const ConvolutionBase<param::Convolution>::CanonizedFilterMeta& fm,
+            const ConvBiasForward::BiasMode bias_mode,
+            const param::ConvBias::NonlineMode nonline_mode);
 
 protected:
     CanonizedFilterMeta check_exec(

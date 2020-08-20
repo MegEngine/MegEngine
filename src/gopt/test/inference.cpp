@@ -2913,7 +2913,8 @@ TEST(TestGoptInference, ConvertFormatNCHW88) {
     opr::Convolution::Param param_conv;
     param_conv.pad_h = param_conv.pad_w = 1;
     auto w1 = mkcvar("w1", {8, 3, 3, 3}),
-         conv1 = opr::Convolution::make(x, w1, param_conv);
+         conv1 = opr::Convolution::make(x, w1, param_conv, {},
+                                        OperatorNodeConfig("conv1"));
     //! channel wise
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
@@ -2954,7 +2955,8 @@ TEST(TestGoptInference, ConvertFormatNCHW88) {
         options.enable_nchw88();
         unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     }
-
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW88,
+              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW88,
               find_opr<opr::ConvBias>(y_opt).param().format);
 
@@ -3084,13 +3086,8 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     options.enable_nchw44();
     unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
               find_opr<opr::Convolution>(y_opt, "conv1").param().format);
-#else
-    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
-              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
-#endif
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
               find_opr<opr::ConvBias>(y_opt, "conv1_f1").param().format);
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
@@ -3325,17 +3322,10 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     options.enable_nchw44_dot();
     unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
 
-#if MEGDNN_AARCH64 || MEGDNN_ARMV7
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44,
               find_opr<opr::Convolution>(y_opt, "conv1").param().format);
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44_DOT,
               find_opr<opr::Convolution>(y_opt, "conv1_3_q").param().format);
-#else
-    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
-              find_opr<opr::Convolution>(y_opt, "conv1").param().format);
-    ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
-              find_opr<opr::Convolution>(y_opt, "conv1_3_q").param().format);
-#endif
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW,
               find_opr<opr::ConvBias>(y_opt, "conv1_f1").param().format);
     ASSERT_EQ(opr::Convolution::Param::Format::NCHW44_DOT,

@@ -611,11 +611,11 @@ public:
                 "%s: input shapes (%s %s, %s %s) -> (%s %s): algo=%s "
                 "workspace=%.2fMiB reproducible=%d",
                 mgb_opr->dyn_typeinfo()->name,
-                layouts[0].TensorShape::to_string().c_str(),
+                layouts[0].to_string().c_str(),
                 layouts[0].dtype.name(),
-                layouts[1].TensorShape::to_string().c_str(),
+                layouts[1].to_string().c_str(),
                 layouts[1].dtype.name(),
-                layouts[layouts.size() - 1].TensorShape::to_string().c_str(),
+                layouts[layouts.size() - 1].to_string().c_str(),
                 layouts[layouts.size() - 1].dtype.name(),
                  algo->name(),
                 workspace / (1024 * 1024.0), algo->is_reproducible());
