@@ -455,6 +455,14 @@ bool ConvBiasImpl::AlgoConv1x1Gemv::usable(const NCBKernSizeParam& param,
              param.src_type.enumv() != DTypeEnum::Float32)) {
             return false;
         }
+
+        //! x86 disable  Quntized8Asymm
+#if MEGDNN_X86
+        if (param.src_type.enumv() == DTypeEnum::Quantized8Asymm) {
+            return false;
+        }
+#endif
+
         if (format == param::ConvBias::Format::NCHW44) {
             if (param.src_type.enumv() != DTypeEnum::Float32 &&
                 param.src_type.enumv() != DTypeEnum::Int8 &&
