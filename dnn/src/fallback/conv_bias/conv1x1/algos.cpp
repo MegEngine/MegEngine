@@ -204,18 +204,6 @@ ConvBiasImpl::AlgoConv1x1::dispatch_preprocess_kerns(
 bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                                        AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 2) {
-        //! x86 only support nchw
-#if MEGDNN_X86
-        if (param.filter_meta.format != param::ConvBias::Format::NCHW) {
-            return false;
-        }
-#else
-        if (param.filter_meta.format != param::ConvBias::Format::NCHW &&
-            param.filter_meta.format != param::ConvBias::Format::NCHW44 &&
-            param.filter_meta.format != param::ConvBias::Format::NCHW44_DOT) {
-            return false;
-        }
-#endif
         size_t FH = param.filter_meta.spatial[0],
                FW = param.filter_meta.spatial[1];
         size_t PH = param.filter_meta.padding[0],
@@ -239,7 +227,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                 return false;
             }
         }
-#else
+#else   //! x86 only support nchw mode
         if (format != param::ConvBias::Format::NCHW) {
             return false;
         }
@@ -259,6 +247,12 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
              param.src_type.enumv() != DTypeEnum::Float32)) {
             return false;
         }
+        //! x86 disable  Quntized8Asymm
+#if MEGDNN_X86
+        if (param.src_type.enumv() == DTypeEnum::Quantized8Asymm) {
+            return false;
+        }
+#endif
         //! make sure 8x8x16 and 8x8x32 biasmode is nobias and nonlineMode
         //! is identity otherwise return false mean that 8x8x32 and 8x8x16
         //! not support PostProcess

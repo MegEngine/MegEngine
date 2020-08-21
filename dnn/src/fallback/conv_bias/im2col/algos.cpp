@@ -377,6 +377,14 @@ bool ConvBiasImpl::AlgoIm2col::usable(
              param.src_type.enumv() != DTypeEnum::Float32)) {
             return false;
         }
+
+        //! x86 disable  Quntized8Asymm
+#if MEGDNN_X86
+        if (param.src_type.enumv() == DTypeEnum::Quantized8Asymm) {
+            return false;
+        }
+#endif
+
         //! make sure 8x8x16 and 8x8x32 biasmode is  nobias and nonlineMode is
         //! identity otherwise return false mean that 8x8x32 and 8x8x16 not
         //! support PostProcess
