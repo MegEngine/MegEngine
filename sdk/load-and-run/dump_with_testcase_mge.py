@@ -462,7 +462,7 @@ def main():
     for testcase in feeds['testcases']:
         assert isinstance(testcase, dict)
         cg = mgb.comp_graph()
-        cn = mgb.comp_node('xpux')
+        cn = mgb.comp_node('cpux')
         output_mgbvars = []
         for name, dtype in inputs:
             output_mgbvars.append(
