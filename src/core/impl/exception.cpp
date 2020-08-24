@@ -71,6 +71,29 @@ std::string CudaError::get_cuda_extra_info() {
 #endif
 }
 
+AtlasError::AtlasError(const std::string &msg):
+    SystemError(msg)
+{
+}
+
+
+CnrtError::CnrtError(const std::string& msg) : SystemError(msg) {
+    m_msg.append(get_cnrt_extra_info());
+}
+
+std::string CnrtError::get_cnrt_extra_info() {
+#if MGB_CAMBRICON
+    // get last error
+    auto err = cnrtGetLastErr();
+    return ssprintf("(last_err=%d(%s))", err, cnrtGetErrorStr(err));
+#else
+    return "cnrt disabled at compile time";
+#endif
+}
+
+CndevError::CndevError(const std::string& msg) : SystemError(msg) {}
+
+CnmlError::CnmlError(const std::string& msg) : SystemError(msg) {}
 
 bool mgb::has_uncaught_exception() {
 #if MGB_ENABLE_EXCEPTION

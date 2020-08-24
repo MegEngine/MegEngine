@@ -33,6 +33,8 @@ class Handle {
             ARMV7 = 4,
             AARCH64 = 5,
             CUDA = 6,
+            ATLAS = 13,
+            CAMBRICON = 12,
         };
 
     protected:

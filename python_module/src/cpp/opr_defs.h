@@ -130,6 +130,16 @@ static SymbolVar virtual_loss(const SymbolVarArray& ys,
 static SymbolVar virtual_dep(const SymbolVarArray& symvars,
                              const OperatorNodeConfig& config);
 
+static SymbolVarArray atlas_runtime(const SymbolVarArray& inputs,
+        PyObject* data_bytes,
+        const OperatorNodeConfig& config);
+
+
+static SymbolVarArray cambricon_runtime(PyObject* data_bytes,
+                                        const char* symbol,
+                                        const SymbolVarArray& inputs,
+                                        bool tensor_dim_mutable,
+                                        const OperatorNodeConfig& config);
 
 #ifdef SWIG
 %pythoncode {

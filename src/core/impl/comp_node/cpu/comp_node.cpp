@@ -528,9 +528,23 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
                 Impl *dest_impl, void *dest,
                 const void *src, size_t size) override {
             if (!dest_impl->same_type<CpuCompNode::CompNodeImpl>()) {
+                if (dest_impl->env().property().type == DeviceType::ATLAS) {
+#if MGB_ATLAS
+                    dest_impl->copy_to_device(dest, src, size);
+                    return;
+#else
+                    mgb_throw(MegBrainError,
+                              "Atlas comp_node used but "
+                              "MGB_ATLAS not enabled");
+#endif
+
+
+                } else {
                     mgb_assert(locator().device == Locator::DEVICE_CPU_DEFAULT,
-                            "currently only peer copy from default cpu comp nodes "
-                            "is implemented");
+                               "currently only peer copy from default cpu comp "
+                               "nodes "
+                               "is implemented");
+                }
             }
             dest_impl->copy_to_device(dest, src, size);
         }
@@ -841,12 +855,22 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
         auto type = cn_impl->env().property().type;
         mgb_throw_if(type != CompNode::DeviceType::CPU
                              && type != CompNode::DeviceType::CUDA
+                             && type != CompNode::DeviceType::ATLAS
                              ,
                      MegBrainError,
-                     "currently CPU can only wait for CPU, CUDA"
+                     "currently CPU can only wait for CPU, CUDA, ATLAS"
         );
     }
 
+    if (cn_impl->env().property().type == CompNode::DeviceType::ATLAS) {
+#if MGB_ATLAS
+        return m_comp_node_impl->sync();
+#else
+        mgb_throw(MegBrainError,
+                  "Atlas comp_node used but MGB_ATLAS not enabled");
+#endif
+
+    }
 
     auto version = m_record_nr_req.load(std::memory_order_relaxed);
     mgb_assert(version, "device wait on non-recorded event");

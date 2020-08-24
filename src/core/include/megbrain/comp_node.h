@@ -112,6 +112,8 @@ class CompNode {
 
             CUDA = 1,
             CPU = 2,
+            CAMBRICON = 3,
+            ATLAS = 9,
             MULTITHREAD,
             MAX_DEVICE_ID,
         };

@@ -1,0 +1,20 @@
+decl_raw_opr(
+    'cambricon_runtime',
+    desc='create an operator that could load and run cnrt offline models',
+    inputs=[
+        Doc('data_bytes', 'serialized cnrt/cnml model'),
+        Doc('symbol', 'name of cnrt/cnml function', 'str'), 
+        Doc('inputs', 'input vars', 'list of :class:`.SymbolVar`'),
+        Doc('tensor_dim_mutable', 'whether tensor shape is mutable in cnrt/cnml model', 'bool'),
+    ],
+    body=[
+        'assert isinstance(data_bytes, bytes), '
+            '"data must be bytes; got {}".format(type(data_bytes))',
+        'output = _mgb._Opr.cambricon_runtime(data_bytes, symbol, inputs, tensor_dim_mutable, config)',
+        'cvt_result_kwargs["explode_single"] = False',
+    ],
+)
+
+# vim: ft=python
+
+

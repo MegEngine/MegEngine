@@ -18,6 +18,14 @@
 #endif
 
 
+#if MEGDNN_WITH_CAMBRICON
+#include "src/cambricon/megcore/cambricon_computing_context.hpp"
+#endif
+
+#if MEGDNN_WITH_ATLAS
+#include "src/atlas/megcore/computing_context.hpp"
+#endif
+
 using namespace megcore;
 using namespace megdnn;
 
@@ -32,6 +40,15 @@ std::unique_ptr<ComputingContext> ComputingContext::make(
 #if MEGDNN_WITH_CUDA
         case megcorePlatformCUDA:
             return make_unique<cuda::CUDAComputingContext>(dev_handle, flags);
+#endif
+#if MEGDNN_WITH_CAMBRICON
+        case megcorePlatformCambricon:
+            return make_unique<cambricon::CambriconComputingContext>(dev_handle,
+                                                                     flags);
+#endif
+#if MEGDNN_WITH_ATLAS
+        case megcorePlatformAtlas:
+            return make_unique<atlas::AtlasComputingContext>(dev_handle, flags);
 #endif
         default:
             megdnn_throw("bad platform");

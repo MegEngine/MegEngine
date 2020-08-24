@@ -612,6 +612,12 @@ void mgb::dev_tensor_memset(const DeviceTensorND& tensor, int val) {
                     cudaMemsetAsync(ptr, val, size, env.cuda_env().stream));
             break;
 #endif
+#if MGB_ATLAS
+       case CompNode::DeviceType::ATLAS:
+           MGB_ATLAS_CHECK(aclrtMemsetAsync(ptr, -1, val, size,
+                                            env.atlas_env().stream));
+           break;
+#endif
         case CompNode::DeviceType::CPU: {
             auto fill = [ptr, size, val]() { std::memset(ptr, val, size); };
             env.cpu_env().dispatch(fill);

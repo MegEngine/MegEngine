@@ -13,6 +13,8 @@
 #define _HEADER_MGB_BUILD_CONFIG
 
 #cmakedefine01 MGB_CUDA
+#cmakedefine01 MGB_CAMBRICON
+#cmakedefine01 MGB_ATLAS
 #cmakedefine01 MGB_ASSERT_LOC
 #cmakedefine01 MGB_ENABLE_DEBUG_UTIL
 #cmakedefine01 MGB_ENABLE_LOGGING
@@ -54,6 +56,10 @@
 #cmakedefine01 MEGDNN_THREADS_512
 #cmakedefine01 MEGDNN_ENABLE_MULTI_THREADS
 
+// whether atlas is available
+#ifndef MGB_ATLAS
+#define MGB_ATLAS  0
+#endif
 
 // whether cuda is available
 #ifndef MGB_CUDA
@@ -132,6 +138,15 @@
 #endif
 #ifndef MGB_JIT_HALIDE
 #define MGB_JIT_HALIDE 0
+#endif
+
+
+#ifndef MEGDNN_WITH_CAMBRICON
+#define MEGDNN_WITH_CAMBRICON 0
+#endif
+
+#ifndef MGB_CAMBRICON
+#define MGB_CAMBRICON MEGDNN_WITH_CAMBRICON
 #endif
 
 

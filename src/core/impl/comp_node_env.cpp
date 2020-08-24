@@ -22,6 +22,15 @@
 #endif
 #endif
 
+#if MGB_CAMBRICON
+#include "megcore_cambricon.h"
+#endif
+
+#if MGB_ATLAS
+#include "acl/acl.h"
+#include "megcore_atlas.h"
+#endif
+
 using namespace mgb;
 
 /* =================== MegDNNHandle =================== */
@@ -51,6 +60,28 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
                                   env.cuda_env().device, 0);
         megcore::createComputingHandleWithCUDAContext(&m_comp_hdl, m_dev_hdl, 0,
                 {env.cuda_env().stream, make_async_error_info(env)});
+        init = true;
+    }
+#endif
+#if MGB_CAMBRICON
+    if (env.property().type == CompNode::DeviceType::CAMBRICON) {
+        CompNodeEnv::CnrtEnv::init_status.init();
+        megcore::createDeviceHandleWithGlobalInitStatus(
+                &m_dev_hdl, env.cnrt_env().device, 0, true);
+        megcore::createComputingHandleWithCambriconContext(
+                &m_comp_hdl, m_dev_hdl, 0, {env.cnrt_env().queue});
+        init = true;
+    }
+#endif
+
+#if MGB_ATLAS
+    if (env.property().type == CompNode::DeviceType::ATLAS) {
+        CompNodeEnv::AtlasEnv::init_status.init();
+        megcore::createAtlasDeviceHandleWithGlobalInitStatus(
+                &m_dev_hdl, env.atlas_env().device, 0, true);
+        megcore::createComputingHandleWithAtlasContext(
+                &m_comp_hdl, m_dev_hdl, 0, {env.atlas_env().stream});
+
         init = true;
     }
 #endif
@@ -175,6 +206,73 @@ void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
 }
 #endif
 
+#if MGB_ATLAS
+
+void mgb::_on_atlas_error(const char* expr, int err, const char* file,
+                          const char* func, int line) {
+    mgb_throw(AtlasError, "atlas error %d: %s (%s at %s:%s:%d)", int(err),
+              megcore::atlas::get_error_str(err), expr, file, func, line);
+}
+
+CompNodeEnv::AtlasEnv::InitStatus CompNodeEnv::AtlasEnv::init_status;
+void CompNodeEnv::init_atlas(CompNode comp_node, const AtlasEnv& env) {
+    m_comp_node = comp_node;
+    m_atlas_env = env;
+    m_property.type = DeviceType::ATLAS;
+    m_property.mem_alignment = 64;
+
+    m_atlas_env.activate();
+    MGB_ATLAS_CHECK(aclrtCreateStream(&m_atlas_env.stream));
+    m_user_data_container = std::make_unique<UserDataContainer>();
+    mgb_assert(m_property.mem_alignment ==
+               MegDNNHandle::get(*this).handle()->alignment_requirement());
+}
+#endif
+
+
+#if MGB_CAMBRICON
+const char* mgb::cnml_get_error_string(cnmlStatus_t err) {
+    switch (err) {
+#define cb(_err) \
+    case _err:   \
+        return #_err
+        cb(CNML_STATUS_SUCCESS);
+        cb(CNML_STATUS_NODEVICE);
+        cb(CNML_STATUS_DOMAINERR);
+        cb(CNML_STATUS_INVALIDARG);
+        cb(CNML_STATUS_LENGTHERR);
+        cb(CNML_STATUS_OUTOFRANGE);
+        cb(CNML_STATUS_RANGEERR);
+        cb(CNML_STATUS_OVERFLOWERR);
+        cb(CNML_STATUS_UNDERFLOWERR);
+        cb(CNML_STATUS_INVALIDPARAM);
+        cb(CNML_STATUS_BADALLOC);
+        cb(CNML_STATUS_BADTYPEID);
+        cb(CNML_STATUS_BADCAST);
+        cb(CNML_STATUS_UNSUPPORT);
+#undef cb
+    }
+    return "Unknown CNML error";
+}
+
+void mgb::_on_cnrt_error(const char* expr, cnrtRet_t err, const char* file,
+                         const char* func, int line) {
+    mgb_throw(CnrtError, "cnrt error %d: %s (%s at %s:%s:%d)", int(err),
+              cnrtGetErrorStr(err), expr, file, func, line);
+}
+
+void mgb::_on_cndev_error(const char* expr, cndevRet_t err, const char* file,
+                         const char* func, int line) {
+   mgb_throw(CndevError, "cndev error %d: %s (%s at %s:%s:%d)", int(err),
+              cndevGetErrorString(err), expr, file, func, line);
+}
+
+void mgb::_on_cnml_error(const char* expr, cnmlStatus_t err, const char* file,
+                         const char* func, int line) {
+    mgb_throw(CnmlError, "cnml error %d: %s (%s at %s:%s:%d)", int(err),
+              cnml_get_error_string(err), expr, file, func, line);
+}
+#endif
 
 void CompNodeEnv::init_cpu(const CpuEnv& env, CompNode comp_node) {
     m_comp_node = comp_node;
@@ -188,6 +286,41 @@ void CompNodeEnv::init_cpu(const CpuEnv& env, CompNode comp_node) {
 }
 
 
+#if MGB_CAMBRICON
+void CompNodeEnv::init_cnrt(int dev, CompNode comp_node,
+                            const ContinuationCtx<cnrtQueue_t>& cont) {
+    m_comp_node = comp_node;
+    m_cnrt_env.device = dev;
+    m_property.type = DeviceType::CAMBRICON;
+    MGB_CNRT_CHECK(cnrtGetDeviceInfo(&m_cnrt_env.device_info, dev));
+    // FIXME: doc doesn't describe the aligment requirement for device memory
+    // address
+    m_property.mem_alignment = 1u;
+    // ensure exception safe
+    bool queue_created = false;
+    MGB_MARK_USED_VAR(queue_created);
+    MGB_TRY {
+        m_cnrt_env.activate();
+        MGB_CNRT_CHECK(cnrtCreateQueue(&m_cnrt_env.queue));
+        queue_created = true;
+        m_user_data_container = std::make_unique<UserDataContainer>();
+        cont.next(m_cnrt_env.queue);
+        // TODO: initialize megdnn handle
+        mgb_assert(m_property.mem_alignment ==
+                   MegDNNHandle::get(*this).handle()->alignment_requirement());
+    }
+    MGB_CATCH(std::exception & exc, {
+        mgb_log_error("cnrt init failed: %s", exc.what());
+        if (queue_created) {
+            MGB_CNRT_CHECK(cnrtDestroyQueue(m_cnrt_env.queue));
+        }
+        cont.err(exc);
+        throw;
+    })
+}
+CompNodeEnv::CnrtEnv::InitStatus CompNodeEnv::CnrtEnv::init_status;
+#endif
+
 void CompNodeEnv::fini() {
     ensure_async_init_finished();
     m_user_data_container.reset();
@@ -195,6 +328,19 @@ void CompNodeEnv::fini() {
     if (m_property.type == DeviceType::CUDA) {
         m_cuda_env.activate();
         MGB_CUDA_CHECK(cudaStreamDestroy(m_cuda_env.stream));
+    }
+#endif
+#if MGB_CAMBRICON
+    if (m_property.type == DeviceType::CAMBRICON) {
+        m_cnrt_env.activate();
+        MGB_CNRT_CHECK(cnrtDestroyQueue(m_cnrt_env.queue));
+    }
+#endif
+
+#if MGB_ATLAS
+    if (m_property.type == DeviceType::ATLAS) {
+        m_atlas_env.activate();
+        MGB_ATLAS_CHECK(aclrtDestroyStream(m_atlas_env.stream));
     }
 #endif
 }

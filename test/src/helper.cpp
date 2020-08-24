@@ -310,6 +310,28 @@ bool mgb::check_gpu_available(size_t num) {
 }
 
 
+bool mgb::check_cambricon_device_available(size_t num) {
+    if (CompNode::get_device_count(CompNode::DeviceType::CAMBRICON) < num) {
+        mgb_log_warn("skip test case that requires %zu cambricon device(s)",
+                     num);
+        return false;
+    }
+    return true;
+}
+
+bool mgb::check_device_type_avaiable(CompNode::DeviceType device_type) {
+    switch (device_type) {
+        case mgb::CompNode::DeviceType::CUDA:
+        case mgb::CompNode::DeviceType::CPU:
+        case mgb::CompNode::DeviceType::CAMBRICON:
+        case mgb::CompNode::DeviceType::ATLAS:
+        case mgb::CompNode::DeviceType::MULTITHREAD:
+            return true;
+        default:
+            return false;
+    }
+    return false;
+}
 
 bool mgb::check_compute_capability(int major, int minor) {
 #if MGB_CUDA

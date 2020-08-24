@@ -32,6 +32,12 @@ namespace mgb{void call_sereg(){}}
 #if MGB_ENABLE_TENSOR_RT
 #include "../../tensorrt/impl/tensorrt_opr.sereg.h"
 #endif
+#if MGB_ATLAS
+#include "../../opr/impl/atlas_runtime_op.sereg.h"
+#endif
 #if MGB_JIT
 #include "../../jit/impl/jit.sereg.h"
+#endif
+#if MGB_CAMBRICON
+#include "../../cambricon/impl/cambricon_runtime_opr.sereg.h"
 #endif

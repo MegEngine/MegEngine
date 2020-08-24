@@ -118,6 +118,8 @@ void run_test(const PluginMaker& plugin_maker,
               const ResultChecker& result_checker) {
     for (size_t i = 1; i < CompNode::NR_DEVICE_TYPE; ++i) {
         auto type = static_cast<CompNode::DeviceType>(i);
+        if (!check_device_type_avaiable(type))
+            continue;
         if (CompNode::get_device_count(type)) {
             auto cn = CompNode::load({type, -1, 0});
             if (cn.contain_flag(CompNode::Flag::SUPPORT_RECORDER)) {
@@ -188,4 +190,3 @@ TEST(TestOprIODump, Binary) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

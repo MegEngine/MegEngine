@@ -437,14 +437,15 @@ std::vector<CompNode> load_multiple_xpus(size_t num);
 //! check whether given number of GPUs is available
 bool check_gpu_available(size_t num);
 
-//! check whether given number of AMD GPUs is available
-bool check_amd_gpu_available(size_t num);
 
 //! check whether given number of cambricon devices is available
 bool check_cambricon_device_available(size_t num);
 
 //! check current capability >= major.minor
 bool check_compute_capability(int major, int minor);
+
+//! check compnode avaiable
+bool check_device_type_avaiable(CompNode::DeviceType device_type);
 
 //! hook persistent cache get calls during the lifetime
 class PersistentCacheHook {
@@ -479,6 +480,12 @@ public:
         return; \
 } while(0)
 
+//! skip a testcase if cambricon device not available
+#define REQUIRE_CAMBRICON_DEVICE(n)               \
+    do {                                          \
+        if (!check_cambricon_device_available(n)) \
+            return;                               \
+    } while (0)
 
 #if MGB_HAVE_THREAD
 #define REQUIRE_THREAD()

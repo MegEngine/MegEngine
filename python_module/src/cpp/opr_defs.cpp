@@ -246,6 +246,27 @@ SymbolVarArray _Opr::tensor_rt_runtime(const SymbolVarArray& inputs,
 }
 #endif
 
+#if MGB_ATLAS
+
+#include "megbrain/opr/atlas_runtime_op.h"
+
+SymbolVarArray _Opr::atlas_runtime(const SymbolVarArray& inputs,
+                                   PyObject* data_bytes,
+                                   const OperatorNodeConfig& config) {
+    mgb_assert(PyBytes_Check(data_bytes));
+    auto size = PyBytes_Size(data_bytes);
+    mgb_assert(size, "atlas data bytes should not be empty");
+
+    return opr::AtlasRuntimeOpr::make(PyBytes_AsString(data_bytes), size,
+                                      inputs, config);
+}
+#else
+SymbolVarArray _Opr::atlas_runtime(const SymbolVarArray& inputs,
+                                   PyObject* data_bytes,
+                                   const OperatorNodeConfig& config) {
+    mgb_throw(MegBrainError, "Atlas disabled at compile time");
+}
+#endif
 
 SymbolVar _Opr::timestamp(SymbolVar input, PyObject* dest, size_t dest_off,
                            const OperatorNodeConfig& config) {
@@ -265,5 +286,28 @@ SymbolVar _Opr::virtual_dep(const SymbolVarArray& symvars,
     return opr::VirtualDep::make(symvars, config);
 }
 
+
+#if MGB_CAMBRICON
+#include "megbrain/cambricon/cambricon_runtime_opr.h"
+
+SymbolVarArray _Opr::cambricon_runtime(PyObject* data_bytes, const char* symbol,
+                                       const SymbolVarArray& inputs,
+                                       bool tensor_dim_mutable,
+                                       const OperatorNodeConfig& config) {
+    mgb_assert(PyBytes_Check(data_bytes));
+    auto size = PyBytes_Size(data_bytes);
+    mgb_assert(size, "cambricon data bytes should not be empty");
+    return opr::CambriconRuntimeOpr::make(PyBytes_AsString(data_bytes), size,
+                                          symbol, inputs, tensor_dim_mutable,
+                                          config);
+}
+#else
+SymbolVarArray _Opr::cambricon_runtime(PyObject* data_bytes, const char* symbol,
+                                       const SymbolVarArray& inputs,
+                                       bool tensor_dim_mutable,
+                                       const OperatorNodeConfig& config) {
+    mgb_throw(MegBrainError, "Cambricon disabled at compile time");
+}
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

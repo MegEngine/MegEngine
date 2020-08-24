@@ -40,6 +40,13 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("cpu2:23"), make_lc(D::CPU, 2, 23));
     ASSERT_EQ(L::parse("cpu21:23"), make_lc(D::CPU, 21, 23));
 
+    ASSERT_EQ(L::parse("cambriconx"), make_lc(D::CAMBRICON, -1, 0));
+    ASSERT_EQ(L::parse("cambricon2"), make_lc(D::CAMBRICON, 2, 0));
+    ASSERT_EQ(L::parse("cambricon2:3"), make_lc(D::CAMBRICON, 2, 3));
+
+    ASSERT_EQ(L::parse("atlasx"), make_lc(D::ATLAS, -1, 0));
+    ASSERT_EQ(L::parse("atlas2"), make_lc(D::ATLAS, 2, 0));
+    ASSERT_EQ(L::parse("atlas2:3"), make_lc(D::ATLAS, 2, 3));
     ASSERT_EQ(L::parse("xpu"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpux"), make_lc(D::UNSPEC, -1, 0));
     ASSERT_EQ(L::parse("xpu23"), make_lc(D::UNSPEC, 23, 0));
@@ -59,6 +66,8 @@ TEST(TestCompNode, Parse) {
     ASSERT_THROW(L::parse("cpu0:"), MegBrainError);
     ASSERT_THROW(L::parse("cpu0:x"), MegBrainError);
     ASSERT_THROW(L::parse("cpu2:23x"), MegBrainError);
+    ASSERT_THROW(L::parse("cmabricon0"), MegBrainError);
+    ASSERT_THROW(L::parse("atlast0"), MegBrainError);
     ASSERT_THROW(L::parse("multithread"), MegBrainError);
     ASSERT_THROW(L::parse("multithread1:"), MegBrainError);
     ASSERT_THROW(L::parse("multithread1:default"), MegBrainError);
@@ -129,13 +138,20 @@ TEST(TestCompNode, Load) {
         ASSERT_EQ(CompNode::load("gpux"), cn2);
         ASSERT_EQ(CompNode::load("gpu1"), cn3);
     }
+
+#if MGB_ATLAS
+    auto atlas0 = CompNode::load("atlas0");
+    auto atlas1 = CompNode::load("atlas1");
+    ASSERT_NE(atlas0, atlas1);
+#endif
 }
 
 TEST(TestCompNode, FreeAfterFinalize) {
     CompNode::finalize();
     for (size_t i = 0; i < CompNode::NR_DEVICE_TYPE; ++i) {
         auto type = static_cast<CompNode::DeviceType>(i);
-        if (!CompNode::get_device_count(type))
+        if (!check_device_type_avaiable(type) ||
+            !CompNode::get_device_count(type))
             continue;
         auto cn = CompNode::load(CompNode::Locator{type, -1, {0}});
         auto ptr = cn.alloc_device(123);
@@ -273,6 +289,30 @@ TEST(TestCompNodeCuda, Uid) {
     ASSERT_NE(cn00.get_uid(), cn02.get_uid());
     ASSERT_NE(cn00.get_uid(), cn1.get_uid());
 }
+
+
+#if MGB_CAMBRICON
+TEST(TestCompNodeCambricon, MemNode) {
+    REQUIRE_CAMBRICON_DEVICE(2);
+    auto cn00 = CompNode::load("cambricon0"),
+         cn1 = CompNode::load("cambricon1"),
+         cn01 = CompNode::load("cambricon0:1");
+    ASSERT_EQ(cn00, CompNode::load("cambricon0"));
+    ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
+    ASSERT_NE(cn00.mem_node(), cn1.mem_node());
+}
+#endif
+
+#if MGB_ATLAS
+TEST(TestCompNodeAtlas, MemNode) {
+    auto cn00 = CompNode::load("atlas0"),
+         cn1 = CompNode::load("atlas1"),
+         cn01 = CompNode::load("atlas0:1");
+    ASSERT_EQ(cn00, CompNode::load("atlas0"));
+    ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
+    ASSERT_NE(cn00.mem_node(), cn1.mem_node());
+}
+#endif
 
 
 TEST(TestCompNodeCPU, PhysicalDispatch) {
@@ -421,6 +461,41 @@ TEST(TestCompNodeCPU, PeerCopyFromCUDA) {
 }
 
 
+#if MGB_CAMBRICON
+TEST(TestCompNodeCPU, PeerCopyFromCambricon) {
+    REQUIRE_CAMBRICON_DEVICE(1);
+    REQUIRE_THREAD();
+    auto cn_gpu = CompNode::load("cambriconx");
+    auto cn_cpu = CompNode::load("cpux");
+
+    HostTensorGenerator<> gen;
+    auto a = gen({20, 3, 112, 112});
+    auto b = gen({20, 3, 112, 112});
+    auto c = gen({20, 3, 112, 112});
+    DeviceTensorND dev_a{cn_gpu}, dev_b{cn_cpu}, dev_c{cn_gpu};
+    dev_a.copy_from(*a).sync();
+    dev_b.copy_from(*b).sync();
+    dev_c.copy_from(*c).sync();
+
+    auto wait_event = cn_gpu.create_event();
+
+    dev_a.copy_from(dev_c);
+    wait_event->record();
+
+    cn_cpu.device_wait_event(*wait_event);
+    dev_b.copy_from(dev_a);
+
+    dev_b.sync();
+
+    HostTensorND result;
+    result.copy_from(dev_b);
+
+    CompNode::sync_all();
+
+    MGB_ASSERT_TENSOR_EQ(result, *c);
+}
+#endif
+
 TEST(TestCompNodeSyncManager, HostWait) {
     REQUIRE_THREAD();
     CompNodeSyncManager mgr(CompNode::load("xpu0"));
@@ -542,6 +617,8 @@ TEST(TestCompNode, MultipleLoad) {
     };
     for (size_t i = 1; i < CompNode::NR_DEVICE_TYPE; ++i) {
         auto dt = static_cast<CompNode::DeviceType>(i);
+        if (!check_device_type_avaiable(dt))
+            continue;
         if (CompNode::get_device_count(dt)) {
             auto cn = CompNode::load({dt, 0, {0}});
             mgb_log("comp node %s is available", cn.to_string().c_str());
@@ -552,6 +629,111 @@ TEST(TestCompNode, MultipleLoad) {
     }
 }
 
+#if MGB_CAMBRICON
+TEST(TestCompNodeCambricon, D2DCopy) {
+auto run = [](CompNode cn) {
+        constexpr size_t size = 100 * 1024 * 1024;
+        HostTensorND a(cn, {size}, dtype::Int32{}), b;
+        auto pa = a.ptr<int>();
+        for (size_t i = 0; i < size; ++i) {
+            pa[i] = i;
+        }
+        DeviceTensorND tmp, tmp1;
+        tmp.copy_from(a);
+        tmp1.copy_from(tmp);
+        b.copy_from(tmp1).sync();
+        auto pb = b.ptr<int>();
+        for (size_t i = 0; i < size; ++i) {
+            ASSERT_EQ(static_cast<int>(i), pb[i]);
+        }
+        CompNode::finalize();
+    };
+    REQUIRE_CAMBRICON_DEVICE(1);
+    auto cn = CompNode::load("cambricon0");
+    run(cn);
+    cn = CompNode::load("cambricon1");
+    run(cn);
+}
+
+// peer copy for cambricon between different devices is not correct now, so
+// disable this testcase
+#if 0
+TEST(TestCompNodeCambricon, P2PCopy) {
+    auto run_raw = []() {
+        int v0 = 0, v1 = 1;
+        cnrtDev_t dev0, dev1;
+        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev0, 0));
+        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev1, 1));
+        int *dp0, *dp1;
+        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev0));
+        MGB_CNRT_CHECK(cnrtMalloc((void**)(&dp0), sizeof(int)));
+        MGB_CNRT_CHECK(
+                cnrtMemcpy(dp0, &v0, sizeof(int), CNRT_MEM_TRANS_DIR_HOST2DEV));
+        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev1));
+        MGB_CNRT_CHECK(cnrtMalloc((void**)(&dp1), sizeof(int)));
+        MGB_CNRT_CHECK(
+                cnrtMemcpy(dp1, &v1, sizeof(int), CNRT_MEM_TRANS_DIR_HOST2DEV));
+        unsigned int can = 0;
+        MGB_CNRT_CHECK(cnrtGetPeerAccessibility(&can, 0, 1));
+        printf("can = %s\n", can ? "TRUE" : "FALSE");
+        if (can) {
+            MGB_CNRT_CHECK(cnrtMemcpyPeer(dp1, 1, dp0, 0, sizeof(int)));
+            int get;
+            MGB_CNRT_CHECK(cnrtMemcpy(&get, dp1, sizeof(int),
+                                      CNRT_MEM_TRANS_DIR_DEV2HOST));
+            ASSERT_EQ(0, get);
+        }
+    };
+    auto run = [](CompNode cn0, CompNode cn1) {
+        constexpr size_t size = 100;
+        HostTensorND a(cn0, {size}, dtype::Int32{}), b;
+        auto pa = a.ptr<int>();
+        for (size_t i = 0; i < size; ++i) {
+            pa[i] = i;
+        }
+        DeviceTensorND tmp(cn0, {size}, dtype::Int32{}),
+                tmp1(cn1, {size}, dtype::Int32{});
+        tmp.copy_from(a);
+        tmp1.copy_from(tmp);
+        b.copy_from(tmp1).sync();
+        auto pb = b.ptr<int>();
+        for (size_t i = 0; i < size; ++i) {
+            ASSERT_EQ(static_cast<int>(i), pb[i]);
+        }
+        CompNode::finalize();
+    };
+    REQUIRE_CAMBRICON_DEVICE(2);
+    auto cn0 = CompNode::load("cambricon0"), cn1 = CompNode::load("cambricon1");
+    run_raw();
+    run(cn0, cn1);
+}
+#endif
+#endif // MGB_CAMBRICON
+
+#if MGB_ATLAS
+
+TEST(TestCompNodeAtlas, D2DCopy) {
+    auto run = [](CompNode cn) {
+        constexpr size_t size = 10 * 1024 * 1024;
+        HostTensorND a(cn, {size}, dtype::Int32{}), b;
+        auto pa = a.ptr<int>();
+        for (size_t i = 0; i < size; ++i) {
+            pa[i] = i;
+        }
+        DeviceTensorND tmp, tmp1;
+        tmp.copy_from(a);
+        tmp1.copy_from(tmp);
+        b.copy_from(tmp1).sync();
+        auto pb = b.ptr<int>();
+        for (size_t i = 0; i < size; ++i) {
+            ASSERT_EQ(static_cast<int>(i), pb[i]);
+        }
+        CompNode::finalize();
+    };
+    auto cn = CompNode::load("atlas0");
+    run(cn);
+}
+#endif
 
 namespace {
 class CompNodeDepedentObjectInst final : public CompNodeDepedentObject {

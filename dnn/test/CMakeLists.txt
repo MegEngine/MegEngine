@@ -26,6 +26,16 @@ if(MGE_WITH_CUDA)
 endif()
 
 
+if(MGE_WITH_CAMBRICON)
+    file(GLOB_RECURSE SOURCES_ cambricon/*.cpp)
+    list(APPEND SOURCES ${SOURCES_})
+endif()
+
+if(MGE_WITH_ATLAS)
+    file(GLOB_RECURSE SOURCES_ atlas/*.cpp)
+    list(APPEND SOURCES ${SOURCES_})
+endif()
+
 
 add_executable(megdnn_test ${SOURCES})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")

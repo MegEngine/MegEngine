@@ -36,6 +36,14 @@
 #endif
 
 
+#if MEGDNN_WITH_CAMBRICON
+#include "src/cambricon/handle.h"
+#endif
+
+#ifdef MEGDNN_WITH_ATLAS
+#include "src/atlas/handle.h"
+#endif
+
 using namespace megdnn;
 
 MIDOUT_DECL(HandlePlatform);
@@ -85,6 +93,20 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
         MIDOUT_END();
 #endif
         }
+        else if (platform == megcorePlatformCambricon) {
+#if MEGDNN_WITH_CAMBRICON
+            return make_unique<cambricon::HandleImpl>(computing_handle);
+#else
+            return nullptr;
+#endif
+        }
+        else if (platform == megcorePlatformAtlas) {
+#if MEGDNN_WITH_ATLAS
+            return make_unique<atlas::HandleImpl>(computing_handle);
+#else
+            return nullptr;
+#endif
+        }
         else {
             // CUDA
             megdnn_assert_internal(platform == megcorePlatformCUDA);
@@ -94,6 +116,7 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
             return nullptr;
 #endif
         }
+        return nullptr;
     }
 
 
@@ -166,6 +189,12 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
 #endif  // !MEGDNN_NAIVE
 #if MEGDNN_WITH_CUDA
             CASE(CUDA,cuda);
+#endif
+#if MEGDNN_WITH_ATLAS
+            CASE(ATLAS, atlas);
+#endif
+#if MEGDNN_WITH_CAMBRICON
+            CASE(CAMBRICON, cambricon);
 #endif
             default:
                 megdnn_throw(megdnn_mangle("bad handle type"));
