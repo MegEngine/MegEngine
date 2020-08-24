@@ -53,10 +53,6 @@
        d0: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install --upgrade pip
        d1: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install -r python_module/requires-test.txt
        d2: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install numpy wheel requests tqdm tabulate
-    5: install swig from install gui
-       a: download swig: https://nchc.dl.sourceforge.net/project/swig/swigwin/swigwin-4.0.2/swigwin-4.0.2.zip
-       b: install swig to /c/Users/${USER}/swigwin-4.0.2
-       c: apply scripts/whl/windows/fix-ptr-define-issue.patch to c/Users/${USER}/swigwin-4.0.2
     ```
 
 # how to build
@@ -90,6 +86,11 @@
     ```
     ALL_PYTHON=3.5.9 ./scripts/whl/macos/macos_build_whl.sh
     ```
+    If you want to build with imperative rt, set env BUILD_IMPERATIVE="ON", eg:
+
+    ```
+    ALL_PYTHON=3.5.9 BUILD_IMPERATIVE="ON" ./scripts/whl/macos/macos_build_whl.sh
+    ```
 ## build for windows
     ```
     ./scripts/whl/windows/windows_build_whl.sh
@@ -102,5 +103,7 @@
     If you want to build windows whl with cuda, also a specific Python verison. eg:
 
     ```
-    WINDOWS_WHL_WITH_CUDA="true" ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
+    WINDOWS_WHL_WITH_CUDA="ON" ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
     ```
+    If you want to build with imperative rt, set env BUILD_IMPERATIVE="ON", eg:
+    BUILD_IMPERATIVE="ON" WINDOWS_WHL_WITH_CUDA="ON" ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh

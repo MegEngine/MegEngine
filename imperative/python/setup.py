@@ -9,6 +9,7 @@
 import os
 import re
 import pathlib
+import platform
 from distutils.file_util import copy_file
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -29,7 +30,10 @@ class build_ext(_build_ext):
             extdir.parent.mkdir(parents=True, exist_ok=True)
 
             modpath = self.get_ext_fullname(ext.name).split('.')
-            modpath[-1] += '.so'
+            if platform.system() == 'Windows':
+                modpath[-1] += '.pyd'
+            else:
+                modpath[-1] += '.so'
             modpath = str(pathlib.Path(*modpath).resolve())
 
             copy_file(modpath, fullpath, verbose=self.verbose, dry_run=self.dry_run)
@@ -47,6 +51,14 @@ if local_version:
     __version__ = '{}+{}'.format(__version__, local_version)
 
 packages = find_packages(exclude=['test'])
+package_data = [
+    str(f.relative_to('megengine'))
+    for f in pathlib.Path('megengine', 'core', 'include').glob('**/*')
+]
+package_data += [
+    str(f.relative_to('megengine'))
+    for f in pathlib.Path('megengine', 'core', 'lib').glob('**/*')
+]
 
 with open('requires.txt') as f:
     requires = f.read().splitlines()
@@ -63,6 +75,9 @@ setup_kwargs = dict(
     author='Megvii Engine Team',
     author_email=email,
     packages=packages,
+    package_data={
+        'megengine': package_data,
+    },
     ext_modules=[PrecompiledExtesion('megengine.core._imperative_rt')],
     install_requires=requires,
     extras_require={

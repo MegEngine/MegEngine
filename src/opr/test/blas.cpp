@@ -705,7 +705,12 @@ TEST(TestOprBlas, MatrixInverse) {
         }
         auto ptr = inp[0]->ptr<float>();
         for (size_t i = 0; i < batch; ++i, ptr += n * n) {
+#if __cplusplus >= 201703L
+            std::default_random_engine rng_engine;
+            std::shuffle(perm.begin(), perm.end(), rng_engine);
+#else
             std::random_shuffle(perm.begin(), perm.end());
+#endif
             for (size_t j = 0; j < n; ++j) {
                 ptr[j * n + perm[j]] += 5;
             }

@@ -6,9 +6,13 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import resource
+import platform
 import sys
 import threading
+
+# Windows do not imp resource package
+if platform.system() != "Windows":
+    import resource
 
 
 class AlternativeRecursionLimit:
@@ -28,16 +32,24 @@ class AlternativeRecursionLimit:
         with self.lock:
             if self.count == 0:
                 self.orig_py_limit = sys.getrecursionlimit()
+            if platform.system() != "Windows":
                 (
                     self.orig_rlim_stack_soft,
                     self.orig_rlim_stack_hard,
                 ) = resource.getrlimit(resource.RLIMIT_STACK)
-                resource.setrlimit(
-                    resource.RLIMIT_STACK,
-                    (self.orig_rlim_stack_hard, self.orig_rlim_stack_hard),
-                )
-                # increase recursion limit
-                sys.setrecursionlimit(self.new_py_limit)
+                # FIXME: https://bugs.python.org/issue34602, python3 release version
+                # on Macos always have this issue, not all user install python3 from src
+                try:
+                    resource.setrlimit(
+                        resource.RLIMIT_STACK,
+                        (self.orig_rlim_stack_hard, self.orig_rlim_stack_hard),
+                    )
+                except ValueError as exc:
+                    if platform.system() != "Darwin":
+                        raise exc
+
+            # increase recursion limit
+            sys.setrecursionlimit(self.new_py_limit)
             self.count += 1
 
     def __exit__(self, type, value, traceback):
@@ -45,10 +57,16 @@ class AlternativeRecursionLimit:
             self.count -= 1
             if self.count == 0:
                 sys.setrecursionlimit(self.orig_py_limit)
-                resource.setrlimit(
-                    resource.RLIMIT_STACK,
-                    (self.orig_rlim_stack_soft, self.orig_rlim_stack_hard),
-                )
+
+            if platform.system() != "Windows":
+                try:
+                    resource.setrlimit(
+                        resource.RLIMIT_STACK,
+                        (self.orig_rlim_stack_soft, self.orig_rlim_stack_hard),
+                    )
+                except ValueError as exc:
+                    if platform.system() != "Darwin":
+                        raise exc
 
 
 _max_recursion_limit_context_manager = AlternativeRecursionLimit(2 ** 31 - 1)

@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import multiprocessing as mp
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -196,6 +197,9 @@ def run_test(
 
 
 @pytest.mark.isolated_distributed
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
+)
 def test_dp_correctness():
     model_name = "mnist_model_with_test.mge"
     model_path = os.path.join(os.path.dirname(__file__), model_name)

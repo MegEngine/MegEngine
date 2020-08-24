@@ -361,9 +361,8 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_7) {
     for (size_t r = 0; r < _dim.size(); r++)
         permutation[r] = r;
     for (int nsample = 0; nsample < 50; nsample++) {
-        std::random_shuffle(_dim.begin(), _dim.end());
-
-        std::random_shuffle(permutation.begin(), permutation.end());
+        COMPAT_RANDOM(_dim.begin(), _dim.end());
+        COMPAT_RANDOM(permutation.begin(), permutation.end());
         if (!isTrivial(permutation)) {
             run({{_dim[0], _dim[1], _dim[2], _dim[3], _dim[4], _dim[5],
                   _dim[6]},
@@ -451,9 +450,10 @@ TEST_F(CUDA, BENCHMARK_RELAYOUT_5) {
             printf("vol %d cur_ratio %lf | %lf\n", vol, cur_ratio, vol_re);
             // printVec(dim);
 
-            std::random_shuffle(dim.begin(), dim.end());
+            COMPAT_RANDOM(dim.begin(), dim.end());
+
             while (isTrivial(permutation)) {
-                std::random_shuffle(permutation.begin(), permutation.end());
+                COMPAT_RANDOM(permutation.begin(), permutation.end());
             }
 
             run({{dim[0], dim[1], dim[2], dim[3], dim[4]}, dtype::Int32()},
@@ -603,8 +603,9 @@ TEST_F(CUDA, BENCHMARK_LAST_CONTIG_ALIGN_TEST) {
     for (size_t r = 0; r < _dim.size(); r++)
         permutation[r] = r;
     for (int nsample = 0; nsample < 20; nsample++) {
-        std::random_shuffle(_dim.begin(), _dim.end() - 1);
-        std::random_shuffle(permutation.begin(), permutation.end() - 1);
+        COMPAT_RANDOM(_dim.begin(), _dim.end() - 1);
+
+        COMPAT_RANDOM(permutation.begin(), permutation.end() - 1);
 
         if (nsample < 5)
             _dim[5] = (u.gen_single_val() / 4 + 1) * 4;

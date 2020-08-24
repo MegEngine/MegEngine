@@ -19,6 +19,16 @@
 namespace megdnn {
 namespace test {
 
+#if __cplusplus >= 201703L
+#define COMPAT_RANDOM(begin, end)              \
+    {                                          \
+        std::default_random_engine rng_engine; \
+        std::shuffle(begin, end, rng_engine);  \
+    }
+#else
+#define COMPAT_RANDOM(begin, end) std::random_shuffle(begin, end);
+#endif
+
 class RNG {
 protected:
     class RNGxorshf;

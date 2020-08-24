@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import platform
 import weakref
 
 import numpy as np
@@ -51,6 +52,9 @@ def save_to(self, name="grad"):
 
 
 @pytest.mark.isolated_distributed
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
+)
 def test_dist_grad():
     world_size = 2
     x_np = np.random.rand(10).astype("float32")

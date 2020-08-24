@@ -342,7 +342,11 @@ template <typename T>
 struct SafeMultiplies;
 
 template <typename T>
+#if __cplusplus >= 201703L
+struct _SafeMultipliesImplUnsigned {
+#else
 struct _SafeMultipliesImplUnsigned : public std::binary_function<T, T, T> {
+#endif
     static MEGDNN_CONSTEXPR size_t nbits = sizeof(T) * 8;
 
     static size_t clz(unsigned x) {

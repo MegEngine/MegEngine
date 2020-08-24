@@ -16,6 +16,10 @@
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 
+#if __cplusplus >= 201703L
+#include <optional>
+#endif
+
 namespace mgb {
 namespace imperative {
 

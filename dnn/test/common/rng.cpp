@@ -75,7 +75,7 @@ Float16PeriodicalRNG::Float16PeriodicalRNG() : m_offset(0) {
         i2f.i = static_cast<uint16_t>(x);
         m_sequence.push_back(i2f.f);
     }
-    std::random_shuffle(m_sequence.begin(), m_sequence.end());
+    COMPAT_RANDOM(m_sequence.begin(), m_sequence.end());
 }
 
 Float16PeriodicalRNG::Float16PeriodicalRNG(size_t range) : m_offset(0) {
@@ -99,7 +99,7 @@ Float16PeriodicalRNG::Float16PeriodicalRNG(size_t range) : m_offset(0) {
         m_sequence.push_back(i2f.f);
     }
 
-    std::random_shuffle(m_sequence.begin(), m_sequence.end());
+    COMPAT_RANDOM(m_sequence.begin(), m_sequence.end());
 }
 
 void Float16PeriodicalRNG::gen(const TensorND& tensor) {

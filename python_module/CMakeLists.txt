@@ -81,7 +81,10 @@ else()
     target_link_libraries(mgb megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
 endif()
 target_include_directories(mgb PRIVATE ${PYTHON_INCLUDE_DIRS} src/cpp ${CMAKE_CURRENT_BINARY_DIR} ${NUMPY_INCLUDE_DIR})
-target_link_libraries(mgb ${PYTHON_LIBRARIES})
+# only windows need link PYTHON_LIBRARIES
+if(MSVC OR WIN32)
+    target_link_libraries(mgb ${PYTHON_LIBRARIES})
+endif()
 
 if (MGE_WITH_DISTRIBUTED)
     target_link_libraries(mgb megray)

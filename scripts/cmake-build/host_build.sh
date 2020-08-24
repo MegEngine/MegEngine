@@ -9,6 +9,7 @@ function usage() {
     echo "-t : Build with training mode, default inference only"
     echo "-m : Build with m32 mode(only for windows build), default m64"
     echo "-r : remove old build dir before make, default off"
+    echo "-n : enable new python runtime(valid when training mode with -t, default is legacy runtime)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
@@ -22,9 +23,10 @@ MGE_WINDOWS_BUILD_ARCH=x64
 MGE_WINDOWS_BUILD_MARCH=m64
 MGE_ARCH=x86_64
 REMOVE_OLD_BUILD=false
+MGE_BUILD_IMPERATIVE_RT=OFF
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
-while getopts "rhdctm" arg
+while getopts "rhdctmn" arg
 do
     case $arg in
         d)
@@ -48,10 +50,14 @@ do
             REMOVE_OLD_BUILD=true
             ;;
         m)
-            echo "build for m32(only use for windows)"
+            echo "build for m32(only valid use for windows)"
             MGE_WINDOWS_BUILD_ARCH=x86
             MGE_WINDOWS_BUILD_MARCH=m32
             MGE_ARCH=i386
+            ;;
+        n)
+            echo "Enable imperative python wrapper runtime"
+            MGE_BUILD_IMPERATIVE_RT=ON
             ;;
         ?)
             echo "unkonw argument"
@@ -101,6 +107,7 @@ function cmake_build() {
     cmake \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
+        -DMGE_BUILD_IMPERATIVE_RT=${MGE_BUILD_IMPERATIVE_RT} \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
         ${EXTRA_CMAKE_ARGS} \
@@ -112,7 +119,7 @@ function cmake_build() {
 
 function windows_env_err() {
     echo "check windows env failed!!"
-    echo "please install LLVM/clang-cl/cmake/python at Visual Studio Extensions"
+    echo "please install env refs for: scripts/cmake-build/BUILD_README.md"
     exit -1
 }
 
@@ -178,6 +185,25 @@ function prepare_env_for_windows_build() {
     export CPATH=$CPATH:$NIVIDA_INSTALL_PRE/${TRT_V}/include:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/include:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/include/nvtx3:$PC_CUDNN_INCLUDE_DIRS
     export LIBRARY_PATH=$LIBRARY_PATH:$LD_LIBRARY_PATH
     export INCLUDE=$INCLUDE:$CPATH
+
+    # python version will be config by whl build script or ci script, we need
+    # a DFT version for build success when we just call host_build.sh
+    if [[ -z ${ALREADY_CONFIG_PYTHON_VER} ]]
+    then
+        echo "config a default python3"
+        DFT_PYTHON_BIN=/c/Users/${USER}/mge_whl_python_env/3.8.3
+        if [ ! -f "${DFT_PYTHON_BIN}/python3.exe" ]; then
+            echo "ERR: can not find ${DFT_PYTHON_BIN}/python3.exe , Invalid env"
+            windows_env_err
+        else
+            echo "put python3 to env..."
+            export PATH=${DFT_PYTHON_BIN}:$PATH
+            which python3
+        fi
+    fi
+
+    echo "export swig pwd to PATH"
+    export PATH=/c/Users/${USER}/swigwin-4.0.2::$PATH
 }
 
 WINDOWS_BUILD_TARGET="Ninja all > build.log"
@@ -218,6 +244,7 @@ function cmake_build_windows() {
         vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && cmake  -G "Ninja" \
         -DMGE_ARCH=$MGE_ARCH \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
+        -DMGE_BUILD_IMPERATIVE_RT=${MGE_BUILD_IMPERATIVE_RT} \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIR  \
@@ -230,8 +257,18 @@ function cmake_build_windows() {
         ${WINDOWS_BUILD_TARGET}"
 }
 
+if [ ${MGE_BUILD_IMPERATIVE_RT} = "ON" ] && [ ${MGE_INFERENCE_ONLY} = "ON" ]; then
+    echo "ERR: MGE_BUILD_IMPERATIVE_RT(-n) only valid when enable training mode(-t)"
+    echo "pls remove -n or add -t"
+    exit -1
+fi
 
 if [[ $OS =~ "NT" ]]; then
+    if [ ${MGE_ARCH} = "i386" ] && [ ${MGE_INFERENCE_ONLY} = "OFF" ]; then
+        echo "ERR: training mode(-t) only support 64 bit mode"
+        echo "pls remove -t or remove -m"
+        exit -1
+    fi
     config_windows_build_target
     cmake_build_windows $MGE_WITH_CUDA $MGE_INFERENCE_ONLY $BUILD_TYPE
 else

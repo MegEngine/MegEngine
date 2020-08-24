@@ -30,11 +30,17 @@
     4e: add C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32\cuda\bin to system Path env
     4f: add C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5\lib Path
     if u do not do 4d/4e/4f, CUDA runtime can not find dll
+    5: install python3 (DFT 3.8.3) to /c/Users/${USER}/mge_whl_python_env/3.8.3 and
+    put it to PATH env and run python3 -m pip install numpy (if u want to build with training mode or build python whl)
+    6: install swig from install gui (if u want to build with training mode or build python whl)
+       a: download swig: https://nchc.dl.sourceforge.net/project/swig/swigwin/swigwin-4.0.2/swigwin-4.0.2.zip
+       b: install swig to /c/Users/${USER}/swigwin-4.0.2
+       c: apply scripts/whl/windows/fix-ptr-define-issue.patch to c/Users/${USER}/swigwin-4.0.2
     ```
 ### linux host build
     ```
     1: cmake, which version > 3.14.4
-    2: gcc/g++, which version > 6
+    2: gcc/g++, which version > 6, (gcc/g++ >= 7, if need build training)
     3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl 
     4: zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool:
     5: librdmacm-dev rdmacm-utils python3-dev swig python3-numpy texinfo
@@ -47,6 +53,7 @@
     3: brew install python python3 swig coreutils
     4: install at least xcode command line tool: https://developer.apple.com/xcode/
     5: about cuda: we do not support CUDA on macos
+    6: python3 -m pip install numpy (if u want to build with training mode or build python whl)
     ```
 ### cross build for arm-android
     now we support windows/linux/macos cross build to arm-android

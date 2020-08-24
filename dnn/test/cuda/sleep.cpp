@@ -24,7 +24,7 @@ using namespace test;
 
 
 TEST_F(CUDA, SLEEP) {
-    auto opr = this->handle_cuda()->create_operator<Sleep>();
+    auto opr = this->handle_cuda()->create_operator<megdnn::SleepForward>();
 
     auto run = [&](float time) -> double {
         opr->param() = {time};

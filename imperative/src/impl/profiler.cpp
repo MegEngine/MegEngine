@@ -9,7 +9,17 @@
 
 #include "megbrain/imperative/profiler.h"
 
+#if defined(_MSC_VER) || defined(WIN32)
+#include <windows.h>
+#define getpid GetCurrentProcessId
+#else
 #include <sys/unistd.h>
+#endif
+
+#if defined(__APPLE__) || defined(__MACOSX)
+#include <unistd.h>
+#endif
+
 #include <variant>
 
 #include "megbrain/imperative/ops/opr_attr.h"

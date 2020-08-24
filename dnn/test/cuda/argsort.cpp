@@ -32,7 +32,7 @@ class ArgsortRNG final : public RNG {
         } else {
             for (int i = 0; i < n; ++i)
                 ptr[i] = static_cast<T>(i - n / 2);
-            std::random_shuffle(ptr, ptr + n);
+            COMPAT_RANDOM(ptr, ptr + n);
         }
     }
 
@@ -86,7 +86,7 @@ void run_backward_test(Handle* handle, DType dtype) {
                 for (size_t j = 0; j < n; ++j) {
                     ptr[j] = j;
                 }
-                std::random_shuffle(ptr, ptr + n);
+                COMPAT_RANDOM(ptr, ptr + n);
                 ptr += n;
             }
         }

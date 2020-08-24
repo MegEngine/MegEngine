@@ -24,16 +24,17 @@ class ArgmxxRNG final: public RNG {
         void gen(const TensorND &tensor) override {
             auto offset = tensor.layout.span().low_elem;
             auto nr_elems = tensor.layout.span().dist_elem();
-#define cb(DType) \
-            if (tensor.layout.dtype == DType()) { \
-                using ctype = typename DTypeTrait<DType>::ctype; \
-                auto ptr = tensor.ptr<ctype>(); \
-                for (size_t i = 0; i < nr_elems; ++i) { \
-                    ptr[offset+i] = i; \
-                } \
-                std::random_shuffle(ptr + offset, ptr + offset + nr_elems); \
-                return; \
-            }
+
+#define cb(DType)                                             \
+    if (tensor.layout.dtype == DType()) {                     \
+        using ctype = typename DTypeTrait<DType>::ctype;      \
+        auto ptr = tensor.ptr<ctype>();                       \
+        for (size_t i = 0; i < nr_elems; ++i) {               \
+            ptr[offset + i] = i;                              \
+        }                                                     \
+        COMPAT_RANDOM(ptr + offset, ptr + offset + nr_elems); \
+        return;                                               \
+    }
             MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
 #undef cb
             megdnn_throw(megdnn_mangle(ssprintf("Unsupported DType: %s",

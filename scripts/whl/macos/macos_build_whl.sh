@@ -65,22 +65,29 @@ function config_python_env() {
     fi
     echo ${ver}
 
-    #config a dir to trick cmake find a null pythonlib
-    PYTHON_LIBRARY=${PYTHON_DIR}lib/
     if [ "$1" = "3.5.9" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.5m
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.5m.dylib
     elif [ "$1" = "3.6.10" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.6m
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.6m.dylib
     elif [ "$1" = "3.7.7" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.7m
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.7m.dylib
     elif [ "$1" = "3.8.3" ]; then
         PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.8
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.8.dylib
     else
         echo "ERR: DO NOT SUPPORT PYTHON VERSION"
         echo "now support list: ${FULL_PYTHON_VER}"
         exit -1
     fi
 }
+
+if [[ -z ${BUILD_IMPERATIVE} ]]
+then
+    BUILD_IMPERATIVE="OFF"
+fi
 
 function do_build() {
     for ver in ${ALL_PYTHON}
@@ -89,7 +96,7 @@ function do_build() {
         config_python_env ${ver}
 
         #check env
-        if [ ! -d "$PYTHON_LIBRARY" ]; then
+        if [ ! -f "$PYTHON_LIBRARY" ]; then
             echo "ERR: can not find $PYTHON_LIBRARY , Invalid python package"
             err_env
         fi
@@ -102,14 +109,20 @@ function do_build() {
         #append cmake args for config python
         export EXTRA_CMAKE_ARGS="-DCMAKE_PREFIX_PATH=${PYTHON_DIR} -DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} "
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
-        export EXTRA_CMAKE_ARGS=${EXTRA_CMAKE_ARGS}" -DCMAKE_BUILD_TYPE=RelWithDebInfo "
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
 
         #call build and install
         #FIXME: cmake do not triger update python config, after
         #change PYTHON_LIBRARY and PYTHON_INCLUDE_DIR, so add
         #-r to remove build cache after a new ver build, which
         #will be more slow build than without -r
-        ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r
+        if [ ${BUILD_IMPERATIVE} = "ON" ]; then
+            echo "build whl with IMPERATIVE python rt"
+            ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -n -r
+        else
+            echo "build whl with legacy python rt"
+            ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r
+        fi
 
         #call setup.py
         BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/
@@ -121,12 +134,47 @@ function do_build() {
         fi
         mkdir -p staging
 
+        if [ ${BUILD_IMPERATIVE} = "ON" ]; then
+            echo "build whl with IMPERATIVE python rt"
+            cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+            cd ${BUILD_DIR}/staging/megengine/core
+            rt_file=`ls _imperative_rt.*.so`
+            echo "rt file is: ${rt_file}"
+            if [[ -z ${rt_file} ]]
+            then
+                echo "ERR: can not find valid rt file"
+                exit -1
+            fi
+            llvm-strip -s ${rt_file}
+            mv ${rt_file} _imperative_rt.so
+            echo "check so valid or not..."
+            otool_out=`otool -L _imperative_rt.so`
+            if [[ "${otool_out}" =~ "ython" ]]; then
+                echo "ERR: invalid _imperative_rt.so which depend on python lib, detail: log"
+                echo ${otool_out}
+                exit -1
+            else
+                echo "valid..."
+            fi
+        else
+            echo "build whl with legacy python rt"
 
-        cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
-        cd ${BUILD_DIR}/staging/megengine/_internal
-        #FIXME: set lib suffix to dylib may be better, BUT we find after distutils.file_util.copy_file
-        #will change to .so at macos even we set suffix to dylib, at the same time, macos also support .so
-        llvm-strip -s _mgb.so
+            cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+            cd ${BUILD_DIR}/staging/megengine/_internal
+            #FIXME: set lib suffix to dylib may be better, BUT we find after distutils.file_util.copy_file
+            #will change to .so at macos even we set suffix to dylib, at the same time, macos also support .so
+            echo "check so valid or not..."
+            llvm-strip -s _mgb.so
+            otool_out=`otool -L _mgb.so`
+            if [[ "${otool_out}" =~ "ython" ]]; then
+                echo "ERR: invalid _mgb.so which depend on python lib, detail: log"
+                echo ${otool_out}
+                exit -1
+            else
+                echo "valid..."
+            fi
+        fi
+
         cd ${BUILD_DIR}/staging
         ${PYTHON_DIR}/bin/python3 setup.py bdist_wheel
         cd ${BUILD_DIR}/staging/dist/

@@ -9,15 +9,6 @@
 #include "megbrain/utils/mempool.h"
 #include "./numpy_dtypes.h"
 
-/*
- * demangle typeid, see
- * http://stackoverflow.com/questions/281818/unmangling-the-result-of-stdtype-infoname
- */
-#ifdef __GNUG__
-#include <cstdlib>
-#include <memory>
-#include <cxxabi.h>
-
 namespace py = pybind11;
 
 PyTaskDipatcher py_task_q = {};
@@ -34,10 +25,18 @@ py::module rel_import(py::str name, py::module m, int level) {
     return import(name, m.attr("__dict__"), py::arg("level")=level);
 }
 
+/*
+ * demangle typeid, see
+ * http://stackoverflow.com/questions/281818/unmangling-the-result-of-stdtype-infoname
+ */
+#ifdef __GNUG__
+#include <cxxabi.h>
+#include <cstdlib>
+#include <memory>
+
 namespace {
 
 std::string demangle_typeid(const char* name) {
-
     int status = -4; // some arbitrary value to eliminate the compiler warning
 
     // enable c++11 by passing the flag -std=c++11 to g++
@@ -48,7 +47,7 @@ std::string demangle_typeid(const char* name) {
 
     return (status==0) ? res.get() : name ;
 }
-}
+}  // namespace
 #else
 
 namespace {

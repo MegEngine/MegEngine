@@ -1,4 +1,8 @@
 #include "utils.h"
+#ifdef WIN32
+#include <stdio.h>
+#include <windows.h>
+#endif
 
 #include <pybind11/operators.h>
 #include <atomic>

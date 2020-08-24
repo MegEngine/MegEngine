@@ -35,7 +35,7 @@ from megengine.functional.distributed import (
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_reduce_sum():
@@ -77,7 +77,7 @@ def test_reduce_sum():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_broadcast():
@@ -115,7 +115,7 @@ def test_broadcast():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_all_gather():
@@ -154,7 +154,7 @@ def test_all_gather():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_reduce_scatter_sum():
@@ -193,7 +193,7 @@ def test_reduce_scatter_sum():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_all_reduce_sum():
@@ -232,7 +232,7 @@ def test_all_reduce_sum():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_all_reduce_max():
@@ -271,7 +271,7 @@ def test_all_reduce_max():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_all_reduce_min():
@@ -310,7 +310,7 @@ def test_all_reduce_min():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_gather():
@@ -352,7 +352,7 @@ def test_gather():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_scatter():
@@ -390,7 +390,7 @@ def test_scatter():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_all_to_all():
@@ -430,7 +430,7 @@ def test_all_to_all():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_io_remote():

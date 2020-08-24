@@ -33,6 +33,11 @@ class RNGxorshf {
     uint64_t s[2];
 
 public:
+#if __cplusplus >= 201703L
+    typedef uint64_t result_type;
+    static constexpr uint64_t min() { return 0; }
+    static constexpr uint64_t max() { return UINT64_MAX; }
+#endif
     RNGxorshf(uint64_t seed) {
         std::mt19937_64 gen(seed);
         s[0] = gen();
@@ -936,8 +941,12 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_genetic() {
             }
         }
         m_cur_records = records;
+#if __cplusplus >= 201703L
+        std::shuffle(perm.begin(), perm.end(), rng);
+#else
         std::random_shuffle(perm.begin(), perm.end(),
                             [&](size_t x) { return rng() % x; });
+#endif
         for (size_t i = 0; i < length; ++i) {
             invoke_search(mutation(mutation(records[i].first)));
             invoke_search(crossover(records[i].first, records[perm[i]].first));

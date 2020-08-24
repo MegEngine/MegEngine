@@ -89,7 +89,7 @@ public:
         auto ptr = tensor.ptr<int>();
         for (size_t n = 0; n < size; ++n) {
             std::set<int> used;
-            std::random_shuffle(seq.begin(), seq.end());
+            COMPAT_RANDOM(seq.begin(), seq.end());
             for (size_t step = 0; step < stride; ++step) {
                 megdnn_assert(used.size() < m_size);
                 ptr[n * stride + step] = seq[step];

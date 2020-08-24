@@ -14,8 +14,6 @@ function err_env() {
 }
 
 function append_path_env_and_check() {
-    echo "export swig pwd to PATH"
-    export PATH=/c/Users/${USER}/swigwin-4.0.2::$PATH
     echo  "export vs2019 install path"
     export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise
     # for llvm-strip
@@ -62,7 +60,7 @@ function config_python_env() {
 
 if [[ -z ${WINDOWS_WHL_WITH_CUDA} ]]
 then
-    WINDOWS_WHL_WITH_CUDA="false"
+    WINDOWS_WHL_WITH_CUDA="OFF"
 fi
 
 
@@ -74,25 +72,45 @@ CUBLAS_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublas6
 CURAND_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/curand64_10.dll"
 CUBLASLT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublasLt64_10.dll"
 CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
+function depend_real_copy() {
+    REAL_DST=$1
+    echo "real copy lib to $1"
+    cp "${TRT_LIB}" ${REAL_DST}
+    cp "${CUDNN_LIB}" ${REAL_DST}
+    cp "${CUSOLVER_LIB}" ${REAL_DST}
+    cp "${CUBLAS_LIB}" ${REAL_DST}
+    cp "${CURAND_LIB}" ${REAL_DST}
+    cp "${CUBLASLT_LIB}" ${REAL_DST}
+    cp "${CUDART_LIB}" ${REAL_DST}
+}
+
 function copy_more_dll() {
     # for python whl real use
-    CP_DST=${BUILD_DIR}/staging/megengine/_internal/lib
-    rm -rf ${CP_DST}
-    mkdir ${CP_DST}
+    if [ ${BUILD_IMPERATIVE} = "ON" ]; then
+        echo "config BUILD_IMPERATIVE core lib dir"
+        CP_WHL_DST=${BUILD_DIR}/staging/megengine/core/lib
+    else
+        echo "config legacy python lib dir"
+        CP_WHL_DST=${BUILD_DIR}/staging/megengine/_internal/lib
+    fi
+    rm -rf ${CP_WHL_DST}
+    mkdir ${CP_WHL_DST}
+    # workround for cpu-only version import failed, use a
+    # empty.file to triger setup.py to create a null empty
+    echo "empty" > ${CP_WHL_DST}/empty.file
 
 
-    if [ ${WINDOWS_WHL_WITH_CUDA} = "true" ]; then
+    if [ ${WINDOWS_WHL_WITH_CUDA} = "ON" ]; then
         echo "copy nvidia lib to whl use...."
-        cp "${TRT_LIB}" ${CP_DST}
-        cp "${CUDNN_LIB}" ${CP_DST}
-        cp "${CUSOLVER_LIB}" ${CP_DST}
-        cp "${CUBLAS_LIB}" ${CP_DST}
-        cp "${CURAND_LIB}" ${CP_DST}
-        cp "${CUBLASLT_LIB}" ${CP_DST}
-        cp "${CUDART_LIB}" ${CP_DST}
+        depend_real_copy ${CP_WHL_DST}
 
     fi
 }
+
+if [[ -z ${BUILD_IMPERATIVE} ]]
+then
+    BUILD_IMPERATIVE="OFF"
+fi
 
 function do_build() {
     for ver in ${ALL_PYTHON}
@@ -118,20 +136,30 @@ function do_build() {
         #force LINK a real PYTHON_LIBRARY file, after test we do not find the symbols conflict with python
         #export EXTRA_CMAKE_ARGS="-DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} "
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
-        export EXTRA_CMAKE_ARGS=${EXTRA_CMAKE_ARGS}" -DCMAKE_BUILD_TYPE=RelWithDebInfo "
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
 
         #call build and install
         #FIXME: cmake do not triger update python config, after
         #change PYTHON_LIBRARY and PYTHON_INCLUDE_DIR, so add
         #-r to remove build cache after a new ver build, which
         #will be more slow build than without -r
-        if [ ${WINDOWS_WHL_WITH_CUDA} = "true" ]; then
+        BUILD_ARGS=" -t -r"
+        if [ ${BUILD_IMPERATIVE} = "ON" ]; then
+            echo "build whl with IMPERATIVE python rt"
+            BUILD_ARGS="${BUILD_ARGS} -n "
+        else
+            echo "build whl with legacy python rt"
+        fi
+
+        if [ ${WINDOWS_WHL_WITH_CUDA} = "ON" ]; then
             echo "build windows whl with cuda"
-            ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r -c
+            BUILD_ARGS="${BUILD_ARGS} -c "
         else
             echo "build windows whl with cpu only"
-            ${SRC_DIR}/scripts/cmake-build/host_build.sh -t -r
         fi
+
+        echo "host_build.sh BUILD_ARGS: ${BUILD_ARGS}"
+        ${SRC_DIR}/scripts/cmake-build/host_build.sh ${BUILD_ARGS}
 
         #call setup.py
         BUILD_DIR=${SRC_DIR}/build_dir/host/build/
@@ -143,10 +171,27 @@ function do_build() {
         fi
         mkdir -p staging
 
+        if [ ${BUILD_IMPERATIVE} = "ON" ]; then
+            echo "build whl with IMPERATIVE python rt"
+            cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+            cd ${BUILD_DIR}/staging/megengine/core
+            rt_file=`ls _imperative_rt.*.pyd`
+            echo "rt file is: ${rt_file}"
+            if [[ -z ${rt_file} ]]
+            then
+                echo "ERR: can not find valid rt file"
+                exit -1
+            fi
+            llvm-strip -s ${rt_file}
+            mv ${rt_file} _imperative_rt.pyd
+        else
+            echo "build whl with legacy python rt"
 
-        cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
-        cd ${BUILD_DIR}/staging/megengine/_internal
-        llvm-strip -s _mgb.pyd
+            cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+            cd ${BUILD_DIR}/staging/megengine/_internal
+            llvm-strip -s _mgb.pyd
+        fi
+
         copy_more_dll
         cd ${BUILD_DIR}/staging
         ${PYTHON_DIR}/python3 setup.py bdist_wheel
@@ -175,5 +220,6 @@ function third_party_prepare() {
 }
 
 ######################
+export ALREADY_CONFIG_PYTHON_VER="yes"
 third_party_prepare
 do_build

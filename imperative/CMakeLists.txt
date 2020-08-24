@@ -76,7 +76,11 @@ add_custom_target(_version_ld SOURCES ${VERSION_SCRIPT})
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/pybind11 ${PROJECT_BINARY_DIR}/third_party/pybind11)
 pybind11_add_module(${MODULE_NAME} NO_EXTRAS ${SRCS})
-target_link_libraries(${MODULE_NAME} PRIVATE gen_op_def megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
+if (APPLE OR MSVC OR WIN32)
+    target_link_libraries(${MODULE_NAME} PRIVATE gen_op_def megbrain megdnn)
+else()
+    target_link_libraries(${MODULE_NAME} PRIVATE gen_op_def megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
+endif()
 if (MGE_WITH_DISTRIBUTED)
     message("Imperative configured to link megray")
     target_link_libraries(${MODULE_NAME} PRIVATE megray)
@@ -91,6 +95,10 @@ set_target_properties(${MODULE_NAME} PROPERTIES
     SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX}
     LIBRARY_OUTPUT_DIRECTORY ${MEGENGINE_DIR}/${PACKAGE_NAME}/core
 )
+if (APPLE OR MSVC OR WIN32)
+    message("-- overwriting SUFFIX at macos and windows before config by set_target_properties")
+    pybind11_extension(${MODULE_NAME})
+endif()
 add_dependencies(${MODULE_NAME} gen_opr_py _version_ld)
 
 if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)

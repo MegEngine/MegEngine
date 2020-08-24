@@ -38,8 +38,11 @@ if(CXX_SUPPORT_WCLASS_MEMACCESS)
 endif()
 
 if(UNIX)
-    target_link_libraries(imperative_test dl rt)
+    if(APPLE OR ANDROID)
+        target_link_libraries(imperative_test dl)
+    else()
+        target_link_libraries(imperative_test dl rt)
+    endif()
 endif()
-
 
 install(TARGETS imperative_test RUNTIME DESTINATION test)
