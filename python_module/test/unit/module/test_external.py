@@ -13,10 +13,10 @@ import numpy as np
 import megengine as mge
 from megengine import tensor
 from megengine.module import Module
-from megengine.module.external import CambriconSubgraph
+from megengine.module.external import AtlasSubgraph, CambriconSubgraph
 
 
-class MyModule(Module):
+class CambriconModule(Module):
     def __init__(self, data):
         super().__init__()
         self.cambricon = CambriconSubgraph(data, "subnet0", True)
@@ -31,10 +31,37 @@ def test_cambricon_module():
     model = os.path.join(os.path.dirname(__file__), model)
     with open(model, "rb") as f:
         data = f.read()
-        m = MyModule(data)
+        m = CambriconModule(data)
         inputs = []
         inputs.append(tensor(dtype=np.float16, device="cambricon0"))
         inputs[0].set_value(np.random.normal(size=(1, 64, 32, 32)).astype(np.float16))
+
+        def inference(inps):
+            pred = m(inps)
+            return pred
+
+        pred = inference(inputs)
+
+
+class AtlasModule(Module):
+    def __init__(self, data):
+        super().__init__()
+        self.atlas = AtlasSubgraph(data)
+
+    def forward(self, inputs):
+        out = self.atlas(inputs)
+        return out
+
+
+def test_atlas_module():
+    model = "AtlasRuntimeOprTest.basic.om"
+    model = os.path.join(os.path.dirname(__file__), model)
+    with open(model, "rb") as f:
+        data = f.read()
+        m = AtlasModule(data)
+        inputs = []
+        inputs.append(tensor(dtype=np.float32, device="atlas0"))
+        inputs[0].set_value(np.random.normal(size=(4, 3, 16, 16)).astype(np.float32))
 
         def inference(inps):
             pred = m(inps)

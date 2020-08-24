@@ -8,7 +8,11 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..functional.external import cambricon_subgraph, extern_opr_subgraph
+from ..functional.external import (
+    atlas_subgraph,
+    cambricon_subgraph,
+    extern_opr_subgraph,
+)
 from .module import Module
 
 
@@ -38,6 +42,29 @@ class CambriconSubgraph(Module):
         outputs = cambricon_subgraph(
             inputs, self._data, self.symbol, self.tensor_dim_mutable,
         )
+        return outputs
+
+
+class AtlasSubgraph(Module):
+    r"""Load a serialized Atlas subgraph.
+
+    See :func:`~.atlas_subgraph` for more details.
+    """
+
+    def __init__(self, data):
+        super(AtlasSubgraph, self).__init__()
+        self._data = data
+
+    @property
+    def data(self):
+        return self._data.tobytes()
+
+    @data.setter
+    def data(self, val):
+        self._data = np.frombuffer(val, dtype=np.uint8)
+
+    def forward(self, inputs):
+        outputs = atlas_subgraph(inputs, self._data)
         return outputs
 
 

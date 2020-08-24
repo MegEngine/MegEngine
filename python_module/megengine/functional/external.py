@@ -35,6 +35,17 @@ def cambricon_subgraph(
 
 
 @wrap_io_tensor
+def atlas_subgraph(inputs: List[Tensor], data: bytes) -> List[Tensor]:
+    """Load a serialized Atlas subgraph (i.e. om model) and
+    execute the operations defined in the subgraph.
+
+    :param inputs: List of input tensors of the subgraph.
+    :param data: The serialized subgraph.
+    """
+    return mgb.opr.atlas_runtime(tuple(map(lambda x: x._symvar, inputs)), data)
+
+
+@wrap_io_tensor
 def extern_opr_subgraph(
     inputs, output_shapes: List[tuple], dump_name: str, dump_data: bytes,
 ) -> List[Tensor]:
