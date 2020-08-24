@@ -91,7 +91,10 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     }
 #endif
 #endif
-    all_algos.push_back(&int8_nchw4_dotprod);
+    fill_dp4a_algos();
+    for (auto&& algo : int8_nchw4_dotprod) {
+        all_algos.push_back(&algo);
+    }
     all_algos.push_back(&int8_chwn4_dotprod);
     for (size_t i = all_algo_size; i < all_algos.size(); ++i) {
         non_cudnn_algos.push_back(all_algos[i]);
@@ -252,6 +255,20 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
 #endif
 }
 #endif
+
+void ConvBiasForwardImpl::AlgoPack::fill_dp4a_algos() {
+    using AlgoParam = AlgoInt8NCHW4DotProdImplicitGemm::AlgoParam;
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 128, 32, 64, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 64, 32, 64, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 64, 32, 64, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 64, 32, 32, 64, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 32, 32, 64, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 32, 32, 32, 32, 32});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8});
+}
 
 
 ConvBiasForwardImpl::AlgoBase*

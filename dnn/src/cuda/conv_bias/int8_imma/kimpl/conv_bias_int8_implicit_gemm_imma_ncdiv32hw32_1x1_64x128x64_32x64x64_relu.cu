@@ -4,7 +4,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include "../conv_bias_int8_implicit_gemm_imma_ncdiv32hw32.cuinl"
+#include "src/cuda/conv_bias/int8/conv_bias_int8_implicit_gemm_cutlass_wrapper.cuinl"
 
 using LayoutSrc = cutlass::layout::TensorNCxHWx<32>;
 using LayoutFilter = cutlass::layout::TensorCxRSKx<32>;

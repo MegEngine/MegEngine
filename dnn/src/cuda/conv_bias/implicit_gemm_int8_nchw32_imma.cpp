@@ -57,30 +57,16 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
     // only support sm_75 or later, platform should have tensorcore int8
     // support
     available &= is_compute_capability_required(7, 5);
-    if (fh == 1 && fw == 1)
-        return available;
-    // for non 1x1 convolution, we have to check constant memory size
-    auto&& device_prop = current_device_prop();
-    // const mem size >= 64K
-    available &= device_prop.totalConstMem >= 65536;
-    size_t const_mem_usage = get_workspace_in_bytes(args) -
-                             args.filter_layout->span().dist_byte();
-    available &= const_mem_usage <= device_prop.totalConstMem;
+    // FIXME: too large filter size is not supported now 
+    available &= fh * fw <= 49;
     return available;
 }
 
 WorkspaceBundle
 ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::get_workspace_bundle(
         dt_byte* raw_ptr, const SizeArgs& args) const {
-    size_t ci = args.filter_layout->operator[](1) * 32;
-    size_t fh = args.filter_layout->operator[](2);
-    size_t fw = args.filter_layout->operator[](3);
     size_t ws_filter = args.filter_layout->span().dist_byte();
-    if (fh == 1 && fw == 1) {
-        return WorkspaceBundle{raw_ptr, {ws_filter}};
-    }
-    size_t ws_size = (ci / 32) * fh * fw * sizeof(int32_t) * 2;
-    return WorkspaceBundle{raw_ptr, {ws_filter, ws_size}};
+    return WorkspaceBundle{raw_ptr, {ws_filter}};
 }
 
 size_t
@@ -148,9 +134,9 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
                 false>(args.src_tensor->compatible_ptr<int8_t>(),
                        reinterpret_cast<int8_t*>(ws_filter),
                        args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
-                       args.dst_tensor->compatible_ptr<int8_t>(),
-                       nullptr, kern_param, nonlinear_mode,
-                       alpha, beta, gamma, dst_scale,
+                       args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                       kern_param, nonlinear_mode, alpha, beta, gamma,
+                       dst_scale,
                        cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
                                                   m_algo_param.threadblock_n,
                                                   m_algo_param.threadblock_k},
@@ -159,14 +145,12 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
                                                   m_algo_param.warp_k},
                        stream);
     } else {
-        auto workspace = ws.get(1);
         cutlass_wrapper::do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32<true>(
                 args.src_tensor->compatible_ptr<int8_t>(),
                 reinterpret_cast<int8_t*>(ws_filter),
                 args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
-                args.dst_tensor->compatible_ptr<int8_t>(),
-                reinterpret_cast<int*>(workspace), kern_param, nonlinear_mode,
-                alpha, beta, gamma, dst_scale,
+                args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
+                nonlinear_mode, alpha, beta, gamma, dst_scale,
                 cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
                                            m_algo_param.threadblock_n,
                                            m_algo_param.threadblock_k},

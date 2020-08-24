@@ -2031,4 +2031,96 @@ TEST(TestOprDNN, HeuristicReproducible) {
 #undef get_shp
 }
 
+#if MGB_CUDA
+TEST(TestOprDNN, ConvolutionMultiCompNode) {
+    REQUIRE_GPU(2);
+    auto cn0 = CompNode::load("gpu0:0"), cn1 = CompNode::load("gpu0:1");
+    cn0.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn0).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 61) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 61);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto mkvar = [&gen](const char* name, const TensorShape& shp,
+                     const DType& dtype,
+                     std::shared_ptr<ComputingGraph> graph,
+                     const CompNode& cn) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&gen](const char* name, const TensorShape& shp,
+                      const DType& dtype,
+                      std::shared_ptr<ComputingGraph> graph,
+                      const CompNode& cn) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto graph0 = ComputingGraph::make();
+    graph0->options().graph_opt_level = 0;
+    auto graph1 = ComputingGraph::make();
+    graph1->options().graph_opt_level = 0;
+    auto make_func = [&gen, &mkvar, &mkcvar](
+                             std::shared_ptr<ComputingGraph> graph,
+                             const CompNode& cn) {
+        using Policy = opr::ConvBias::ExecutionPolicy;
+        using S = Policy::Strategy;
+        auto x = mkvar("x", {64, 32, 28, 28, 4}, dtype::QuantizedS8(2.5f),
+                       graph, cn),
+             w1 = mkcvar("w1", {256, 32, 5, 5, 4}, dtype::QuantizedS8(2.5f),
+                         graph, cn),
+             b1 = mkcvar("b1", {1, 64, 1, 1, 4}, dtype::QuantizedS32(6.25f),
+                         graph, cn),
+             w2 = mkcvar("w2", {256, 64, 3, 3, 4}, dtype::QuantizedS8(2.5f),
+                         graph, cn),
+             b2 = mkcvar("b2", {1, 64, 1, 1, 4}, dtype::QuantizedS32(6.25f),
+                         graph, cn);
+        opr::ConvBias::Param param;
+        param.format = opr::ConvBias::Param::Format::NCHW4;
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+        param.stride_h = param.stride_w = 2;
+        param.pad_h = param.pad_w = 2;
+        Policy policy;
+        policy.strategy = S::PROFILE;
+
+        auto y = opr::ConvBias::make(
+                x, w1, b1, param, policy,
+                OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+        param.stride_h = param.stride_w = 1;
+        param.pad_h = param.pad_w = 1;
+        y = opr::ConvBias::make(y, w2, b2, param, policy,
+                                OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+        return y;
+    };
+    auto y0 = make_func(graph0, cn0);
+    auto y1 = make_func(graph1, cn1);
+    HostTensorND host_y0, host_y1;
+    auto func0 = graph0->compile({make_callback_copy(y0, host_y0)});
+    auto func1 = graph1->compile({make_callback_copy(y1, host_y1)});
+
+     auto worker = [&func0, &func1](int wid) {
+        static int const iter_num = 1000;
+         if (wid == 0) {
+             for (int i = 0; i < iter_num; ++i)
+                 func0->execute();
+         } else {
+             for (int i = 0; i < iter_num; ++i)
+                 func1->execute();
+         }
+     };
+     std::thread worker0(worker, 0);
+     std::thread worker1(worker, 1);
+     worker0.join();
+     worker1.join();
+}
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

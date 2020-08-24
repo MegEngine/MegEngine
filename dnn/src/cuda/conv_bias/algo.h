@@ -386,18 +386,39 @@ public:
 class ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm final
         : public AlgoBase {
 public:
-    AlgoInt8NCHW4DotProdImplicitGemm() = default;
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        std::string to_string() {
+            /// default algorithm
+            if (threadblock_m == 128 && threadblock_n == 128 &&
+                threadblock_k == 32 && warp_m == 32 && warp_n == 64 &&
+                warp_k == 32) {
+                return "";
+            }
+            return ssprintf("_%dX%dX%d_%dX%dX%d", threadblock_m, threadblock_n,
+                            threadblock_k, warp_m, warp_n, warp_k);
+        }
+    };
+    AlgoInt8NCHW4DotProdImplicitGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf("INT8_NCHW4_DOTPROD_IMPLICIT_GEMM%s",
+                              m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
-    const char* name() const override {
-        return "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM";
-    }
+    const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
+    AlgoParam m_algo_param;
+    std::string m_name;
 };
 
 #if CUDA_VERSION >= 10000
@@ -578,7 +599,7 @@ public:
     AlgoMatmul8x8x32 matmul8x8x32;
     AlgoBatchedMatmul batched_matmul;
     Algo1x1 a1x1;
-    AlgoInt8NCHW4DotProdImplicitGemm int8_nchw4_dotprod;
+    std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8CHWN4DotProdImplicitGemm int8_chwn4_dotprod;
 #if CUDA_VERSION >= 10000
     AlgoQUInt4x4x32WMMA wmma_quint4x4x32;
@@ -605,6 +626,7 @@ private:
     void fill_imma_algos();
 #endif
     void fill_cudnn_algos();
+    void fill_dp4a_algos();
 };
 
 }  // namespace cuda

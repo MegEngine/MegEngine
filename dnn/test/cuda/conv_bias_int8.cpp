@@ -18,8 +18,6 @@
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
 
-
-#define MEGDNN_WITH_BENCHMARK 1
 #define V1(x) #x
 #define V(x) V1(x)
 
@@ -1228,8 +1226,17 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW32) {
             param::ConvBias::Format::NCHW32);
 }
 #endif
-#endif
 
+TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW4) {
+    require_compute_capability(6, 1);
+    benchmark_target_algo(
+            handle_cuda(), get_resnet50_bench_args(64),
+            dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.0f},
+            "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM",
+            param::ConvBias::Format::NCHW4);
+}
+#endif
 }  // namespace test
 }  // namespace megdnn
 

@@ -36,8 +36,9 @@ all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL}
 ../src/cuda/elemwise_multi_type/kimpl: gen_elemwise_multi_type_kern_impls.py
 	./$^ --type cuda $@
 
-../src/cuda/conv_bias/int8/kimpl: gen_cuda_conv_bias_kern_impls.py
-	./$^ --type dp4a $@
+../src/cuda/conv_bias/int8/kimpl: gen_cuda_conv_bias_kern_impls.py gen_cutlass_conv_bias_kern_impls.py
+	./gen_cuda_conv_bias_kern_impls.py --type dp4a $@
+	./gen_cutlass_conv_bias_kern_impls.py --type dp4a $@
 
 ../src/cuda/conv_bias/int8_imma/kimpl: gen_cuda_conv_bias_kern_impls.py gen_cutlass_conv_bias_kern_impls.py
 	./gen_cuda_conv_bias_kern_impls.py --type imma $@

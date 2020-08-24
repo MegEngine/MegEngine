@@ -748,7 +748,7 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
         bias_rng = std::make_unique<UniformIntRNG>(-50, 50);
         checker.set_epsilon(1 + 1e-3)
                 .set_max_avg_error(1e-1)
-                .set_max_avg_biased_error(1e-1);
+                .set_max_avg_biased_error(1e-3);
     } else if (src_dtype.enumv() == DTypeEnum::Float16) {
         rng = std::make_unique<NormalRNG>(2.f);
         megdnn_assert(bias_dtype.enumv() == DTypeEnum::Float16);

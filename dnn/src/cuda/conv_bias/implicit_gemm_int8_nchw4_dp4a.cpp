@@ -11,7 +11,8 @@
 
 #include "./algo.h"
 #include "src/cuda/utils.h"
-#include "src/cuda/convolution_helper/bias_visitor.cuh"
+#include "src/cuda/convolution_helper/parameter.cuh"
+#include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -53,21 +54,16 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     // only support sm_61 or later, platform should have fast native int8
     // support
     available &= is_compute_capability_required(6, 1);
+    // FIXME: too large filter size is not supported now 
+    available &= fh * fw <= 49;
     return available;
 }
 
 WorkspaceBundle
 ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_workspace_bundle(
         dt_byte* raw_ptr, const SizeArgs& args) const {
-    size_t ws_size_src = args.src_layout->span().dist_byte();
-    size_t ws_size_filter = args.filter_layout->span().dist_byte();
-    size_t ws_size_dst = args.dst_layout->span().dist_byte();
-    if (args.z_layout->ndim > 0) {
-        size_t ws_size_z = args.z_layout->span().dist_byte();
-        return WorkspaceBundle{
-                raw_ptr, {ws_size_src, ws_size_filter, ws_size_dst, ws_size_z}};
-    }
-    return WorkspaceBundle{raw_ptr, {ws_size_src, ws_size_filter, ws_size_dst}};
+    size_t ws_filter = args.filter_layout->span().dist_byte();
+    return WorkspaceBundle{raw_ptr, {ws_filter}};
 }
 
 size_t
@@ -84,26 +80,8 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     UNPACK_CONV_BIAS_NCHW4_PARAM(*(args.src_layout), fm, *(args.dst_layout),
                                  param);
     auto ws = get_workspace_bundle(args.workspace.raw_ptr, args);
-    auto ws_src = ws.get(0);
-    auto ws_filter = ws.get(1);
-    auto ws_dst = ws.get(2);
+    auto ws_filter = ws.get(0);
     auto&& stream = cuda_stream(args.opr->handle());
-
-    // reformat src from nchw4 to chwn4
-    {
-        TensorLayout src{{n, ci / 4 * hi * wi}, dtype::Int32()};
-        src.init_contiguous_stride();
-        TensorLayout dst = src;
-        dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = args.src_tensor->raw_ptr;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = ws_src;
-        ts_dst.layout = dst;
-        auto&& transpose =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        transpose->exec(ts_src, ts_dst);
-    }
 
     // reformat filter from nchw4 to chwn4
     {
@@ -136,53 +114,42 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
           dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS8>().scale;
     float alpha = src_scale * filter_scale / dst_scale,
           beta = bias_scale / dst_scale;
-    
-    // process z
     int8_t* z_dev_ptr = nullptr;
-    float gamma = 1.f;
+    float gamma = 0.0;
     if (args.z_layout->ndim > 0) {
-        auto ws_z = ws.get(3);
-
-        TensorLayout src{{n, co / 4 * ho * wo}, dtype::Int32()};
-        src.init_contiguous_stride();
-        TensorLayout dst = src;
-        dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = args.z_tensor->raw_ptr;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = ws_z;
-        ts_dst.layout = dst;
-        auto&& transpose =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        transpose->exec(ts_src, ts_dst);
-        z_dev_ptr = reinterpret_cast<int8_t*>(ws_z);
+        z_dev_ptr = args.z_tensor->compatible_ptr<int8_t>();
         float z_scale = args.z_layout->dtype.param<dtype::QuantizedS8>().scale;
         gamma = z_scale / dst_scale;
     }
-
-    convolution::PerChannelBiasVisitor bias_visitor;
-    bias_visitor.bias = args.bias_tensor->compatible_ptr<int32_t>();
-    ConvBiasForwardImpl::AlgoInt8CHWN4DotProdImplicitGemm::
-            dispatch_nonlinear_mode<convolution::PerChannelBiasVisitor>(
-                    reinterpret_cast<int8_t*>(ws_src),
-                    reinterpret_cast<int8_t*>(ws_filter), bias_visitor,
-                    z_dev_ptr, reinterpret_cast<int8_t*>(ws_dst), kern_param,
-                    alpha, beta, gamma, dst_scale, stream, param.nonlineMode);
-
-    // reformat chwn4 to nchw4
-    {
-        TensorLayout src{{co / 4 * ho * wo, n}, dtype::Int32()};
-        src.init_contiguous_stride();
-        TensorLayout dst = src;
-        dst.stride[0] = 1, dst.stride[1] = dst[0];
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = ws_dst;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = args.dst_tensor->raw_ptr;
-        ts_dst.layout = dst;
-        auto&& transpose =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        transpose->exec(ts_src, ts_dst);
+    uint32_t nonlinear_mode = static_cast<uint32_t>(param.nonlineMode);
+    if (fh == 1 && fw == 1) {
+        cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4<false>(
+                args.src_tensor->compatible_ptr<int8_t>(),
+                reinterpret_cast<int8_t*>(ws_filter),
+                args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
+                args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
+                nonlinear_mode, alpha, beta, gamma, dst_scale,
+                cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
+                                           m_algo_param.threadblock_n,
+                                           m_algo_param.threadblock_k},
+                cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                           m_algo_param.warp_n,
+                                           m_algo_param.warp_k},
+                stream);
+    } else {
+        cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4<true>(
+                args.src_tensor->compatible_ptr<int8_t>(),
+                reinterpret_cast<int8_t*>(ws_filter),
+                args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
+                args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
+                nonlinear_mode, alpha, beta, gamma, dst_scale,
+                cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
+                                           m_algo_param.threadblock_n,
+                                           m_algo_param.threadblock_k},
+                cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                           m_algo_param.warp_n,
+                                           m_algo_param.warp_k},
+                stream);
     }
 }
 
