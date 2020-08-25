@@ -72,11 +72,11 @@ class QATModule(Module):
     ):
         # do observer
         if observer is None:
-            q_dict = None
             oup = target
+            q_dict = None
         else:
-            q_dict = observer.get_qparams()
             oup = observer(target)
+            q_dict = observer.get_qparams()
         # do fake quant
         if fake_quant is not None:
             oup = fake_quant(oup, q_dict)
