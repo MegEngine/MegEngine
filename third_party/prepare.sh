@@ -1,14 +1,13 @@
 #!/bin/bash -e
 
-git_version=$(git --version)
-if [ >= "1.8.4" ]; then
-    echo "Since git 1.8.4 (August 2013), you don't have to be at top-level to run git submodule update."
-else
-    echo "You have to update your git version to 1.8.4 or later."
+cd $(dirname $0)
+
+requiredGitVersion="1.8.4"
+currentGitVersion="$(git --version | awk '{print $3}')"
+if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | sort -V | head -n1)" = "$currentGitVersion" ]; then
+    echo "Please update your Git version. (foud version $currentGitVersion, required version >= $requiredGitVersion)"
     exit -1
 fi
-
-cd $(dirname $0)
 
 git submodule sync
 
