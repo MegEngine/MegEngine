@@ -4,6 +4,13 @@ cd $(dirname $0)
 
 source ../ci/utils.sh
 
+requiredGitVersion="1.8.4"
+currentGitVersion="$(git --version | awk '{print $3}')"
+if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | sort -V | head -n1)" = "$currentGitVersion" ]; then
+    echo "Please update your Git version. (foud version $currentGitVersion, required version >= $requiredGitVersion)"
+    exit -1
+fi
+
 log "Start downloading git submodules"
 git submodule sync
 git submodule update -f --init midout
