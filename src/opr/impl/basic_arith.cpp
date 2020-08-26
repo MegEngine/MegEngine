@@ -1666,8 +1666,10 @@ void Reduce::perform(
     mgb_assert(!dest.storage().comp_node_valid() ||
             opr.comp_node() == dest.comp_node());
     KernScheduler ksched;
+    OutTensorShapeExtender extender(input.shape(), target_shape);
+    auto&& canonized_oshp = extender.get();
     ksched.init_shapes(opr.get(), opr.comp_node(), input.layout().dtype,
-            mode, input.shape(), target_shape, data_type);
+            mode, input.shape(), canonized_oshp, data_type);
 
     if (!ksched.has_actual_computing()) {
         mgb_assert(target_shape.total_nr_elems() ==

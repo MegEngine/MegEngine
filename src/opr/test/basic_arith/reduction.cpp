@@ -844,4 +844,26 @@ TEST(TestBasicArithReduction, CompSeqRecordLevel2) {
     EXPECT_NO_THROW(func->execute().wait());
 }
 
+TEST(TestBasicArithReduction, StaticInferValue) {
+    HostTensorGenerator<> gen;
+    auto host_x = gen({2, 3, 4, 5});
+    auto graph = ComputingGraph::make();
+    using AI = opr::Subtensor::AxisIndexer;
+    // h2d default param enable value infer
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+         x_shape = opr::GetVarShape::make(x),
+         x_shape_sub = opr::Subtensor::make(x_shape,
+            {AI::make_interval(0, x.make_scalar(-2), nullptr ,nullptr)}),
+         y = opr::reduce_sum(x, x_shape_sub);
+    auto inferred_dev = graph->static_infer_manager().infer_value(y.node());
+    HostTensorND expected{host_x->comp_node(), dtype::Float32()};
+    // reduce_raw requires the same ndim between src and dest
+    expected.resize({1, 1, 4, 5});
+    reduce_raw<Mode::SUM, float>(expected, *host_x);
+    // reshape as {4, 5}
+    expected.reset(expected.storage(), inferred_dev.layout());
+    HostTensorND inferred = HostTensorND::make_proxy(inferred_dev);
+    MGB_ASSERT_TENSOR_EQ(inferred, expected);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
