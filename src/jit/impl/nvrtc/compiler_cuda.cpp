@@ -189,12 +189,6 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
                                      env.cuda_env().stream, exec_args, 0));
 }
 }  // namespace
-void mgb::jit::_on_cuda_cu_error(const char* expr, CUresult cu_res,
-                                 const char* msg, const char* file,
-                                 const char* func, int line) {
-    mgb_throw(CudaError, "cuda error %d: %s (%s at %s:%s:%d)", int(cu_res), msg,
-              expr, file, func, line);
-}
 
 void mgb::jit::_on_nvrtc_error(const char* expr, nvrtcResult nvrtc_res,
                                const char* file, const char* func, int line) {

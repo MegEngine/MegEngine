@@ -19,17 +19,6 @@
 #include <nvrtc.h>
 #include "megbrain/jit/compiler.h"
 
-#define MGB_CUDA_CU_CHECK(expr)                                          \
-    do {                                                                 \
-        CUresult __cuda_result = (expr);                                 \
-        if (!mgb_likely(__cuda_result == CUDA_SUCCESS)) {                \
-            const char* __msg;                                           \
-            cuGetErrorName(__cuda_result, &__msg);                       \
-            ::mgb::jit::_on_cuda_cu_error(#expr, __cuda_result, __msg,   \
-                                          __FILE__, __func__, __LINE__); \
-        }                                                                \
-    } while (0)
-
 #define MGB_NVRTC_CHECK(expr)                                            \
     do {                                                                 \
         nvrtcResult __nvrtc_result = (expr);                             \
@@ -41,10 +30,6 @@
 
 namespace mgb {
 namespace jit {
-
-[[noreturn]] void _on_cuda_cu_error(const char* expr, CUresult cu_res,
-                                    const char* msg, const char* file,
-                                    const char* func, int line);
 
 [[noreturn]] void _on_nvrtc_error(const char* expr, nvrtcResult nvrtc_res,
                                   const char* file, const char* func, int line);

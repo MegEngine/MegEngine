@@ -79,7 +79,7 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
             CompNodeEnv::from_comp_node(fusion_opr->comp_node());
 
     int64_t num_block = (nr_elements - 1) / block_size + 1;
-    params.insert(params.begin(), &nr_elements);
+    params.push_back(&nr_elements);
     MGB_CUDA_CU_CHECK(cuLaunchKernel(func, num_block, 1, 1, block_size, 1, 1, 0,
                                      env.cuda_env().stream, params.data(), 0));
 }

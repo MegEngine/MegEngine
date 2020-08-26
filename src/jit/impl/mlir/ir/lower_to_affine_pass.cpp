@@ -23,6 +23,7 @@
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
 #include <mlir/Pass/Pass.h>
 #include <mlir/Transforms/DialectConversion.h>
+#include "mlir/IR/StandardTypes.h"
 
 #include <llvm/ADT/Sequence.h>
 
@@ -154,7 +155,6 @@ struct TernaryOpLowering : public ConversionPattern {
             TernaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
 MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
 #undef cb
-
 
 struct AssignOpLowering : public ConversionPattern {
     AssignOpLowering(MLIRContext* ctx)

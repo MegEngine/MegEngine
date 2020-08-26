@@ -94,7 +94,7 @@ void add_cuda_lowering_pass(mlir::PassManager& manager, CompNode cn) {
         opt_pm.addPass(mlir::createLoopFusionPass());
         opt_pm.addPass(mlir::createMemRefDataFlowOptPass());
     }
-    manager.addPass(mlir::createGpuKernelOutliningPass());
+    manager.addPass(create_gpu_kernel_outlining_pass());
     {
         auto& kernel_pm = manager.nest<gpu::GPUModuleOp>();
         kernel_pm.addPass(mlir::createLowerGpuOpsToNVVMOpsPass());

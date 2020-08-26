@@ -32,6 +32,14 @@ std::unique_ptr<mlir::Pass> create_lower_to_llvm_pass();
 
 std::unique_ptr<mlir::Pass> create_lower_to_gpu_pass();
 
+/**
+ * \brief Outline gpu.launch bodies to kernel functions
+ *
+ * \warning Modified from lib/Dialect/GPU/Transforms/KernelOutlining.cpp, it
+ * will reorder gpu function args with the args of the emit c interface.
+ */
+std::unique_ptr<mlir::Pass> create_gpu_kernel_outlining_pass();
+
 }  // namespace jit
 }  // namespace mgb
 
