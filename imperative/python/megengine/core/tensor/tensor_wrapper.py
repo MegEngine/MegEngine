@@ -23,6 +23,15 @@ from .tensor import Tensor
 
 def _elwise(*args, mode):
     op = builtin.Elemwise(mode=mode)
+    if mode in ("TRUE_DIV", "POW"):
+        args = tuple(
+            map(
+                lambda x: x.astype("float32")
+                if hasattr(x, "dtype") and x.dtype != np.float32
+                else x,
+                args,
+            )
+        )
     args = utils.convert_inputs(*args)
     (result,) = apply(op, *args)
     return result

@@ -76,6 +76,10 @@ __all__ = [
 
 def _elwise(*args, mode):
     op = builtin.Elemwise(mode=mode)
+    if mode in ("true_div", "exp", "pow", "log", "expm1", "log1p"):
+        args = tuple(
+            map(lambda x: x.astype("float32") if hasattr(x, "dtype") else x, args)
+        )
     args = utils.convert_inputs(*args)
     (result,) = apply(op, *args)
     return result
