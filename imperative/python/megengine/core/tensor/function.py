@@ -87,13 +87,21 @@ class Function:
 
         def _backward(*output_grads):
             if type(output_grads) is tuple:
-                _output_grads = map(TensorWrapper, output_grads)
+                _output_grads = [
+                    TensorWrapper(i) if i is not None else i for i in output_grads
+                ]
             else:
-                _output_grads = (TensorWrapper(output_grads),)
+                _output_grads = (
+                    TensorWrapper(output_grads)
+                    if output_grads is not None
+                    else output_grads,
+                )
             ret = self.backward(*_output_grads)
             if type(ret) is not tuple:
                 ret = (ret,)
-            ret = tuple([i.__wrapped__ for i in ret])
+            ret = tuple(
+                i.__wrapped__ if isinstance(i, TensorWrapper) else i for i in ret
+            )
             return ret
 
         return _backward
@@ -127,7 +135,8 @@ def _(op: Function, *args: TensorWrapperBase):
     )
 
     for output in outputs:
-        output._extra_data = {}
+        if output not in inputs:
+            output._extra_data = {}
 
     with push_context() as ctx:
         ctx.inputs = inputs
