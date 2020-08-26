@@ -58,6 +58,7 @@ def test_tensor_serialization():
     with TemporaryFile() as f:
         if mge.is_cuda_available():
             device_org = mge.get_default_device()
+            mge.set_default_device("gpu0")
             a = Buffer(np.random.random(size=(2, 233)).astype(np.float32))
             mge.save(a, f)
             f.seek(0)

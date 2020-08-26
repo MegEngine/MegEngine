@@ -274,9 +274,10 @@ def stack(inps, axis=0):
           [ 9. 10. 11.]]]
 
     """
-    shapes = {arr.shape for arr in inps}
-    if len(shapes) != 1:
-        raise ValueError("All input tensors must have the same shape")
+    if len(inps) > 0 and not isinstance(inps[0].shape, inps[0].__class__):
+        shapes = {arr.shape for arr in inps}
+        if len(shapes) != 1:
+            raise ValueError("All input tensors must have the same shape")
 
     inps = [add_axis(inp, axis=axis) for inp in inps]
     return concat(inps, axis=axis)

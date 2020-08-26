@@ -14,7 +14,7 @@ from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
 from ..core.tensor import utils
-from ..core.tensor.core import apply
+from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..distributed import WORLD, is_distributed
 from ..random import uniform
 from ..tensor import Tensor
@@ -623,7 +623,7 @@ def batch_norm2d(
     from .tensor import expand_dims, squeeze, broadcast
 
     def full(value):
-        N, C, H, W = data.shape
+        C = data.shape[1]
         (x,) = Const(value, dtype=data.dtype, device=data.device)(data)
         return broadcast(x, [1, C, 1, 1])
 
@@ -1126,8 +1126,11 @@ def interpolate(
     if mode == "LINEAR":
         inp = add_axis(inp, 3)
 
-    if len(inp.shape) != 4:
-        raise ValueError("shape of input tensor must correspond to the operartion mode")
+    if not isinstance(inp.shape, inp.__class__):
+        if len(inp.shape) != 4:
+            raise ValueError(
+                "shape of input tensor must correspond to the operartion mode"
+            )
 
     if size is None:
         if scale_factor is None:
@@ -1438,7 +1441,11 @@ def indexing_one_hot(
         [1.]
 
     """
+    assert isinstance(
+        src, (TensorWrapperBase, TensorBase)
+    ), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
+    index = utils.convert_single_value(index, (src,), dtype="int32")
     (result,) = apply(op, src, index)
     if not keepdims:
         result = remove_axis(result, axis)

@@ -11,7 +11,9 @@ import collections
 
 import numpy as np
 
+from .._trace_option import use_tensor_shape
 from ..ops import builtin
+from ..ops.builtin import GetVarShape
 from ..ops.special import Const
 from . import utils
 from .core import OpBase, TensorBase, TensorWrapperBase, apply
@@ -19,6 +21,7 @@ from .indexing import getitem as _getitem
 from .indexing import setitem as _setitem
 from .raw_tensor import RawTensor, as_raw_tensor
 from .tensor import Tensor
+from .utils import make_shape_tuple as _make_shape_tuple
 
 
 def _elwise(*args, mode):
@@ -60,11 +63,10 @@ def _broadcast(inp, shape):
 
 
 def _reshape(x, shape):
-    if isinstance(shape, (TensorBase, TensorWrapperBase)):
-        shape = shape.numpy()
-    shape = tuple(map(int, shape))
+    shape_tuple = _make_shape_tuple(shape)
     unspec_axis = None
-    for i, s in enumerate(shape):
+    # XXX: assume unspec_axis is not changed in trace
+    for i, s in enumerate(shape_tuple):
         if s < 0:
             if s != -1:
                 raise ValueError("expect shape[{}] >= -1, got {}".format(i, s))
@@ -72,8 +74,10 @@ def _reshape(x, shape):
                 raise ValueError("multiple -1 in shape: {} & {}".format(unspec_axis, i))
             unspec_axis = i
 
-    # TODO: device should be None (cpu)
-    (shape,) = Const(shape, dtype=np.int32, device=x.device)(x)
+    if not isinstance(shape, (TensorBase, TensorWrapperBase)):
+        # TODO: device should be None (cpu)
+        (shape,) = Const(shape, dtype=np.int32, device=x.device)(x)
+
     if unspec_axis is None:
         op = builtin.Reshape()
     else:
@@ -157,6 +161,13 @@ def _inplace(f):
 
 def _todo(*_):
     raise NotImplementedError
+
+
+def _expand_args(args):
+    if len(args) == 1:
+        if isinstance(args[0], (collections.Sequence, TensorBase, TensorWrapperBase)):
+            args = args[0]
+    return args
 
 
 class ArrayMethodMixin(abc.ABC):
@@ -251,6 +262,8 @@ class ArrayMethodMixin(abc.ABC):
 
     def __len__(self):
         shape = self.shape
+        if use_tensor_shape():
+            shape = shape.numpy()
         if shape:
             return int(shape[0])
         raise TypeError("ndim is 0")
@@ -271,10 +284,16 @@ class ArrayMethodMixin(abc.ABC):
 
     @property
     def ndim(self):
-        return len(self.shape)
+        shape = self.shape
+        # XXX: assume ndim is not changed during trace
+        if isinstance(shape, self.__class__):
+            shape = shape.numpy()
+        return len(shape)
 
     @property
     def size(self):
+        if use_tensor_shape():
+            return self.shape.prod()
         return np.prod(self.shape).item()
 
     @property
@@ -283,7 +302,8 @@ class ArrayMethodMixin(abc.ABC):
 
     def item(self, *args):
         if not args:
-            assert self.size == 1
+            if isinstance(self.size, int):
+                assert self.size == 1
             return self.numpy().item()
         return self[args].item()
 
@@ -294,24 +314,15 @@ class ArrayMethodMixin(abc.ABC):
         return utils.astype(self, dtype)
 
     def reshape(self, *args):
-        if len(args) == 1:
-            if isinstance(args[0], collections.Sequence):
-                args = args[0]
-        return _reshape(self, args)
+        return _reshape(self, _expand_args(args))
 
     def broadcast(self, *args):
-        if len(args) == 1:
-            if isinstance(args[0], collections.Sequence):
-                args = args[0]
-        return _broadcast(self, args)
+        return _broadcast(self, _expand_args(args))
 
     def transpose(self, *args):
         if not args:
             args = reversed(range(self.ndim))
-        elif len(args) == 1:
-            if isinstance(args[0], collections.Sequence):
-                args = args[0]
-        return _transpose(self, args)
+        return _transpose(self, _expand_args(args))
 
     def flatten(self):
         return self.reshape(-1)
@@ -339,7 +350,10 @@ class GenericTensorWrapper(ArrayMethodMixin, TensorWrapperBase):
 
     @property
     def shape(self):
-        return self.__wrapped__.shape
+        if use_tensor_shape():
+            return apply(GetVarShape(), self)[0]
+        else:
+            return self.__wrapped__.shape
 
     @property
     def device(self):

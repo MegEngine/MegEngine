@@ -147,10 +147,10 @@ class SyncBatchNorm(_BatchNorm):
         if _ndims != 4:
             origin_shape = inp.shapeof()
             if _ndims == 2:
-                n, c = inp.shapeof(0), inp.shapeof(1)
+                n, c = inp.shape[0], inp.shape[1]
                 new_shape = (n, c, 1, 1)
             elif _ndims == 3:
-                n, c, h = inp.shapeof(0), inp.shapeof(1), inp.shapeof(2)
+                n, c, h = inp.shape[0], inp.shape[1], inp.shape[2]
                 new_shape = (n, c, h, 1)
 
             inp = inp.reshape(new_shape)

@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
+from ..core.tensor.utils import make_shape_tuple
 from ..tensor import Tensor
 from .elemwise import abs, eq, exp, log, maximum, pow, relu
 from .nn import assert_equal, indexing_one_hot
@@ -179,7 +180,7 @@ def cross_entropy_with_softmax(
     pred = pred - offset
     down = exp(pred).sum(axis=axis)
 
-    up = pred[np.arange(pred.shape[0]), label]
+    up = indexing_one_hot(pred, label, axis)
 
     if label_smooth != 0:
         factor = label_smooth / num_classes
@@ -238,7 +239,7 @@ def binary_cross_entropy(pred: Tensor, label: Tensor) -> Tensor:
     :param label: (N,*), same shape as the input.
 
     """
-    assert pred.shape == label.shape
+    assert make_shape_tuple(pred.shape) == make_shape_tuple(label.shape)
 
     return -1.0 * (label * log(pred) + (1.0 - label) * log(1 - pred)).mean()
 

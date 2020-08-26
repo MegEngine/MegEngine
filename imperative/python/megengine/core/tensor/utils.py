@@ -152,3 +152,23 @@ def astensor1d(x, *reference, dtype=None, device=None):
 
     (x,) = Const(x, dtype=dtype, device=device)(*reference)
     return x
+
+
+def _expand_int(s, i):
+    if isinstance(i, (TensorBase, TensorWrapperBase)):
+        s += list(i.numpy())
+        return
+    if isinstance(i, Iterable):
+        for ii in i:
+            _expand_int(s, ii)
+        return
+    if np.issubdtype(type(i), np.integer):
+        s.append(i)
+        return
+    raise
+
+
+def make_shape_tuple(shape):
+    s = []
+    _expand_int(s, shape)
+    return tuple(s)

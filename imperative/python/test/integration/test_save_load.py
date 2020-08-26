@@ -45,6 +45,7 @@ def test_save_load():
 
     # Load param to cpu
     checkpoint = mge.load(model_name, map_location="cpu0")
+    device_save = mge.get_default_device()
     mge.set_default_device("cpu0")
     net = Simple()
     net.load_state_dict(checkpoint["state_dict"])
@@ -57,3 +58,5 @@ def test_save_load():
         optim.backward(loss)
 
     optim.step()
+    # Restore device
+    mge.set_default_device(device_save)

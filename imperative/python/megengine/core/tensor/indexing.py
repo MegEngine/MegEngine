@@ -6,11 +6,15 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+from typing import Iterable
+
 import numpy as np
 
+from .._trace_option import use_tensor_shape
 from ..ops import builtin
 from ..ops.special import Const
 from .core import TensorBase, TensorWrapperBase, apply
+from .utils import astensor1d, make_shape_tuple
 
 
 def remove_ellipsis(tensor, tuple_val):
@@ -35,8 +39,9 @@ def remove_ellipsis(tensor, tuple_val):
         )
 
 
+# XXX: assume same results during trace
 def check_bool_index(tensor, tuple_val):
-    cur_shape = tensor.shape
+    cur_shape = make_shape_tuple(tensor.shape)
     new_tuple_val = []
     offset = 0
     tdim = 0
@@ -44,20 +49,35 @@ def check_bool_index(tensor, tuple_val):
         if hasattr(i, "dtype") and i.dtype == np.bool_:
             if i.ndim > 1:
                 tot = i.ndim
+                ishape = make_shape_tuple(i.shape)
                 for j in range(i.ndim):
-                    if cur_shape[tdim + j - offset] != i.shape[j]:
+                    if cur_shape[tdim + j - offset] != ishape[j]:
                         raise IndexError(
                             "boolean index did not match tensor along dimension {}; dimension is {} but corresponding boolean dimension is {}".format(
-                                tdim + j, cur_shape[tdim + j - offset], i.shape[j]
+                                tdim + j, cur_shape[tdim + j - offset], ishape[j]
                             )
                         )
                 i = i.reshape(-1)
-                cur_shape = (
-                    cur_shape[:idx] + (i.shape[0],) + cur_shape[tdim + tot - offset :]
-                )
+                if not use_tensor_shape():
+                    cur_shape = (
+                        cur_shape[:idx]
+                        + (i.shape[0],)
+                        + cur_shape[tdim + tot - offset :]
+                    )
+                else:
+                    # XXX: use only for trace
+                    new_shape = []
+                    for ii in range(idx):
+                        new_shape.append(tensor.shape[ii])
+                    new_shape.append(i.shape[0])
+                    for ii in range(tdim + tot - offset, len(cur_shape)):
+                        new_shape.append(cur_shape[ii])
+                    cur_shape = astensor1d(new_shape)
                 offset += 1
                 tensor = tensor.reshape(cur_shape)
                 tdim += tot
+                if use_tensor_shape():
+                    cur_shape = make_shape_tuple(cur_shape)
             new_tuple_val.append(i)
         else:
             new_tuple_val.append(i)
@@ -177,7 +197,9 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
 def try_condtake(tensor, index):
     if not hasattr(index, "dtype") or not hasattr(index, "shape"):
         return []
-    if index.dtype != np.bool_ or index.shape != tensor.shape:
+    if index.dtype != np.bool_ or make_shape_tuple(index.shape) != make_shape_tuple(
+        tensor.shape
+    ):
         return []
     if isinstance(index, np.ndarray):
         (index,) = Const(index, dtype=np.bool_, device=tensor.device)(tensor)
@@ -197,6 +219,8 @@ def getitem(tensor, index):
         return try_result[0]
     tensor, tensors, items, use_subtensor = unpack_getitem(tensor, index)
     for v in tensors:
+        if isinstance(v.shape, v.__class__):
+            break
         if v.shape[0] == 0:
             (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)(
                 tensor
@@ -230,7 +254,9 @@ def setitem(tensor, index, value):
     else:
         op = builtin.IndexingMultiAxisVec(items=items)
     (tmp_result,) = apply(op, tensor, *tensors)
-    if value.shape != tmp_result.shape:
+
+    # XXX: broadcast can always be applied even if shapes are equal
+    if make_shape_tuple(value.shape) != make_shape_tuple(tmp_result.shape):
         for i in range(min(len(value.shape), len(tmp_result.shape))):
             if (
                 value.shape[-i - 1] != 1

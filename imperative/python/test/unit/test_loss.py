@@ -18,3 +18,10 @@ def test_cross_entropy_with_softmax():
     label = tensor([1]).astype(np.int32)
     loss = F.cross_entropy_with_softmax(data, label)
     np.testing.assert_allclose(loss.numpy(), 0.0)
+    label = tensor([0]).astype(np.int32)
+    loss = F.cross_entropy_with_softmax(data, label)
+    np.testing.assert_allclose(loss.numpy(), 100 - 1)
+
+    label = np.array([1])
+    loss = F.cross_entropy_with_softmax(data, label)
+    np.testing.assert_allclose(loss.numpy(), 0.0)

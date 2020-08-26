@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
 import numpy as np
 
 from ..core.tensor.dtype import is_quantize
+from ..core.tensor.utils import make_shape_tuple
 from ..logger import get_logger
 from ..tensor import Tensor
 from ..tensor_nn import Buffer, Parameter
@@ -355,7 +356,9 @@ class Module(metaclass=ABCMeta):
             seen.add(hash_id)
             if isinstance(module_dict[key], Parameter):
                 if start_pos + offset in params:
-                    assert module_dict[key].shape == params[start_pos + offset].shape
+                    assert make_shape_tuple(module_dict[key].shape) == make_shape_tuple(
+                        params[start_pos + offset].shape
+                    )
                     module_dict[key] = params[start_pos + offset]
                 offset += 1
             if isinstance(module_dict[key], Module):
@@ -493,8 +496,8 @@ class Module(metaclass=ABCMeta):
             ), "closure should return a `np.ndarray`, now `{}` get {}".format(
                 k, to_be_load
             )
-            assert (
-                var.shape == to_be_load.shape
+            assert make_shape_tuple(var.shape) == make_shape_tuple(
+                to_be_load.shape
             ), "param `{}` shape mismatch, should be {}, get {}".format(
                 k, var.shape, to_be_load.shape
             )
