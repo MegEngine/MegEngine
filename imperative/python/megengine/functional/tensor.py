@@ -558,7 +558,7 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
 
         from megengine import tensor
         import megengine.functional as F
-        mask = tensor(np.array([[1, 0], [0, 1]], dtype=np.int32))
+        mask = tensor(np.array([[True, False], [False, True]], dtype=np.bool))
         x = tensor(np.array([[1, np.inf], [np.nan, 4]],
             dtype=np.float32))
         y = tensor(np.array([[5, 6], [7, 8]], dtype=np.float32))
@@ -572,19 +572,33 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         [[1. 6.]
          [7. 4.]]
     """
-    raise NotImplementedError
-    # v0, index0 = mgb.opr.cond_take(
-    #     x, mask, mode=P.CondTake.Mode.EQ, val=1
-    # )
-    # v1, index1 = mgb.opr.cond_take(
-    #     y, mask, mode=P.CondTake.Mode.EQ, val=0
-    # )
-    # out = x.flatten()
-    # index = mgb.opr.concat(index0, index1, axis=0)
-    # v = mgb.opr.concat(v0, v1, axis=0)
-    # out = mgb.opr.set_advanced_indexing(out, v)[index]
-    # out = out.reshape(x.shape)
-    # return out
+
+    x, y = convert_inputs(x, y)
+    if not isinstance(x, (TensorWrapperBase, TensorBase)):
+        raise TypeError("input x must be a tensor")
+    if not isinstance(y, (TensorWrapperBase, TensorBase)):
+        raise TypeError("input y must be a tensor")
+    if not isinstance(mask, (TensorWrapperBase, TensorBase)):
+        raise TypeError("mask must be a tensor")
+    if mask.dtype != np.bool_:
+        raise ValueError("mask must be bool")
+    if x.device != mask.device:
+        raise ValueError("ambiguous device: {} vs {}".format(x.device, mask.device))
+
+    v0, index0 = cond_take(mask, x)
+    v1, index1 = cond_take(~mask, y)
+
+    if v0.shape == (0,):
+        out = v1
+    elif v1.shape == (0,):
+        out = v0
+    else:
+        out = concat([v0, v1])
+
+    out[index0] = v0
+    out[index1] = v1
+    out = out.reshape(x.shape)
+    return out
 
 
 def cond_take(mask: Tensor, x: Tensor) -> Tensor:
