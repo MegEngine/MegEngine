@@ -1,5 +1,5 @@
 /**
- * \file src/jit/impl/mlir/ir/shape_inference_interface.h
+ * \file src/jit/include/mlir/ir/interfaces.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -13,21 +13,16 @@
 #pragma once
 
 #include "megbrain_build_config.h"
-#if MGB_JIT && MGB_JIT_MLIR
+#if MGB_JIT_MLIR
 
-#include "mlir/IR/OpDefinition.h"
+#include <mlir/IR/OpDefinition.h>
+#include <mlir/IR/Types.h>
 
-namespace mgb {
-namespace jit {
-
+namespace mlir {
 /// Include the auto-generated declarations.
-#include "megbrain/jit/mlir/ir/shape_inference_interface.h.inc"
+#include "megbrain/jit/mlir/ir/interfaces.h.inc"
+}
 
-} // end namespace toy
-} // end namespace mlir
-
-
-
-#endif // MGB_JIT && MGB_JIT_MLIR
+#endif // MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

@@ -13,29 +13,88 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
-#include "common.h"
+#include "./common.h"
 
-#include <mlir/Dialect/Affine/IR/AffineOps.h>
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mgb;
 using namespace jit;
 
-mlir::Value jit::insert_alloc_and_dealloc(mlir::MemRefType type,
-                                          mlir::Location loc,
-                                          mlir::PatternRewriter& rewriter) {
-    auto alloc = rewriter.create<mlir::AllocOp>(loc, type);
+#define cb(name, op)                                                         \
+    mlir::Value ValueBuilderHelper::name(mlir::Value lhs, mlir::Value rhs) { \
+        return m_builder.create<mlir::op>(m_location, lhs, rhs);             \
+    }
+cb(add, AddFOp);
+cb(sub, SubFOp);
+cb(mul, MulFOp);
+cb(div, DivFOp);
+cb(mod, RemFOp);
+#undef cb
 
-    // Make sure to allocate at the beginning of the block.
-    auto* parent_block = alloc.getOperation()->getBlock();
-    alloc.getOperation()->moveBefore(&parent_block->front());
+#define cb(name, mode)                                                       \
+    mlir::Value ValueBuilderHelper::name(mlir::Value lhs, mlir::Value rhs) { \
+        return m_builder.create<mlir::CmpFOp>(                               \
+                m_location, mlir::CmpFPredicate::mode, lhs, rhs);            \
+    }
+cb(gt, OGT);
+cb(ge, OGE);
+cb(lt, OLT);
+cb(le, OLE);
+cb(eq, OEQ);
+#undef cb
 
-    // Make sure to deallocate this alloc at the end of the block. This is fine
-    // as toy functions have no control flow.
-    auto dealloc = rewriter.create<mlir::DeallocOp>(loc, alloc);
-    dealloc.getOperation()->moveBefore(&parent_block->back());
-    return alloc;
+mlir::Value ValueBuilderHelper::min(mlir::Value lhs, mlir::Value rhs) {
+    mlir::Value cmp = m_builder.create<mlir::CmpFOp>(
+            m_location, mlir::CmpFPredicate::OLT, lhs, rhs);
+    return m_builder.create<mlir::SelectOp>(m_location, cmp, lhs, rhs);
+}
+
+mlir::Value ValueBuilderHelper::max(mlir::Value lhs, mlir::Value rhs) {
+    mlir::Value cmp = m_builder.create<mlir::CmpFOp>(
+            m_location, mlir::CmpFPredicate::OGT, lhs, rhs);
+    return m_builder.create<mlir::SelectOp>(m_location, cmp, lhs, rhs);
+}
+
+mlir::Value ValueBuilderHelper::const_val(float val) {
+    return m_builder.create<mlir::ConstantOp>(m_location,
+                                              m_builder.getF32FloatAttr(val));
+}
+
+#define cb(name, op)                                        \
+    mlir::Value ValueBuilderHelper::name(mlir::Value lhs) { \
+        return m_builder.create<mlir::op>(m_location, lhs); \
+    }
+
+cb(neg, NegFOp);
+cb(abs, AbsFOp);
+cb(ceil, CeilFOp);
+cb(cos, CosOp);
+cb(exp, ExpOp);
+cb(exp2, Exp2Op);
+cb(log10, Log10Op);
+cb(log2, Log2Op);
+cb(rsqrt, RsqrtOp);
+cb(sin, SinOp);
+cb(sqrt, SqrtOp);
+cb(tanh, TanhOp);
+#undef cb
+
+mlir::Value ValueBuilderHelper::floor(mlir::Value lhs) {
+    //! FIXME use standard floor when upgrade llvm
+    return neg(ceil(neg(lhs)));
+}
+
+mlir::Value ValueBuilderHelper::log(mlir::Value lhs) {
+    // math.log10(math.e) = 0.4342944819032518f
+    return div(log10(lhs), const_val(0.4342944819032518f));
+}
+
+mlir::Value ValueBuilderHelper::select(mlir::Value cond, mlir::Value true_val,
+                                       mlir::Value false_val) {
+    return m_builder.create<mlir::SelectOp>(m_location, cond, true_val,
+                                            false_val);
 }
 
 #endif  // MGB_JIT && MGB_JIT_MLIR
 
-// vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
+// vim: syntax=cpp.doxygen

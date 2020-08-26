@@ -64,7 +64,6 @@ mlir::OwnedBlob compile_ptx_to_cubin(const std::string ptx, mlir::Location,
 void add_cpu_lowering_pass(mlir::PassManager& manager) {
     {
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
-        opt_pm.addPass(create_shape_inference_pass());
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
     }
@@ -84,7 +83,6 @@ void add_cpu_lowering_pass(mlir::PassManager& manager) {
 void add_cuda_lowering_pass(mlir::PassManager& manager, CompNode cn) {
     {
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
-        opt_pm.addPass(create_shape_inference_pass());
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
     }

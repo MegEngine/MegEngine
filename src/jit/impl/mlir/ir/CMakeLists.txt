@@ -8,12 +8,12 @@ external_tablegen_library(
     TBLGEN
         MLIR
     SRCS
-        "shape_inference_interface.td"
+        "interfaces.td"
     INCLUDES
         ${MGB_MLIR_TABLEGEN_INC} ${MLIR_LLVM_INCLUDE_DIR}
     OUTS
-        -gen-op-interface-decls include/megbrain/jit/mlir/ir/shape_inference_interface.h.inc
-        -gen-op-interface-defs include/megbrain/jit/mlir/ir/shape_inference_interface.cpp.inc
+        -gen-op-interface-decls include/megbrain/jit/mlir/ir/interfaces.h.inc
+        -gen-op-interface-defs include/megbrain/jit/mlir/ir/interfaces.cpp.inc
 )
 
 external_tablegen_library(

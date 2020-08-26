@@ -16,11 +16,11 @@
 #include "megbrain/common.h"
 #include "megbrain/jit/mlir/ir/dialect.h"
 #include "megbrain/jit/mlir/ir/passes.h"
+#include "megbrain/jit/mlir/ir/utils.h"
 
-#include "./common.h"
+#include "./each_mode.h"
 
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
-#include <mlir/Dialect/StandardOps/IR/Ops.h>
 #include <mlir/Pass/Pass.h>
 #include <mlir/Transforms/DialectConversion.h>
 
@@ -57,10 +57,10 @@ void lower_op_to_loops(Operation* op, ValueRange operands,
     rewriter.replaceOp(op, alloc);
 }
 
-template <typename BinaryOp, typename LoweredBinaryOp>
-struct BinaryOpLowering : public ConversionPattern {
-    BinaryOpLowering(MLIRContext* ctx)
-            : ConversionPattern(BinaryOp::getOperationName(), 1, ctx) {}
+template <typename Op, typename LoweredOp>
+struct UnaryOpLowering : public ConversionPattern {
+    UnaryOpLowering(MLIRContext* ctx)
+            : ConversionPattern(Op::getOperationName(), 1, ctx) {}
 
     LogicalResult matchAndRewrite(
             Operation* op, ArrayRef<Value> operands,
@@ -70,20 +70,91 @@ struct BinaryOpLowering : public ConversionPattern {
                 op, operands, rewriter,
                 [loc](OpBuilder& builder, ValueRange memref_operands,
                       ValueRange loop_ivs) {
-                    typename BinaryOp::Adaptor binary_adaptor(memref_operands);
+                    typename Op::Adaptor binary_adaptor(memref_operands);
+                    LoweredOp lower_op;
+
+                    auto loaded_lhs = builder.create<AffineLoadOp>(
+                            loc, binary_adaptor.lhs(), loop_ivs);
+
+                    return lower_op(builder, loc, {loaded_lhs});
+                });
+        return success();
+    }
+};
+
+#define cb(_op, _) \
+    using _op##Lowering = UnaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
+MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(cb)
+#undef cb
+
+template <typename Op, typename LoweredOp>
+struct BinaryOpLowering : public ConversionPattern {
+    BinaryOpLowering(MLIRContext* ctx)
+            : ConversionPattern(Op::getOperationName(), 1, ctx) {}
+
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands,
+            ConversionPatternRewriter& rewriter) const final {
+        auto loc = op->getLoc();
+        lower_op_to_loops(
+                op, operands, rewriter,
+                [loc](OpBuilder& builder, ValueRange memref_operands,
+                      ValueRange loop_ivs) {
+                    typename Op::Adaptor binary_adaptor(memref_operands);
+                    LoweredOp lower_op;
 
                     auto loaded_lhs = builder.create<AffineLoadOp>(
                             loc, binary_adaptor.lhs(), loop_ivs);
                     auto loaded_rhs = builder.create<AffineLoadOp>(
                             loc, binary_adaptor.rhs(), loop_ivs);
 
-                    return builder.create<LoweredBinaryOp>(loc, loaded_lhs,
-                                                           loaded_rhs);
+                    return lower_op(builder, loc, {loaded_lhs, loaded_rhs});
                 });
         return success();
     }
 };
-using AddOpLowering = BinaryOpLowering<jit::AddOp, AddFOp>;
+
+#define cb(_op, _) \
+    using _op##Lowering = BinaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
+MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
+#undef cb
+
+template <typename Op, typename LoweredOp>
+struct TernaryOpLowering : public ConversionPattern {
+    TernaryOpLowering(MLIRContext* ctx)
+            : ConversionPattern(Op::getOperationName(), 1, ctx) {}
+
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands,
+            ConversionPatternRewriter& rewriter) const final {
+        auto loc = op->getLoc();
+        lower_op_to_loops(
+                op, operands, rewriter,
+                [loc](OpBuilder& builder, ValueRange memref_operands,
+                      ValueRange loop_ivs) {
+                    typename Op::Adaptor ternary_adaptor(memref_operands);
+                    LoweredOp lower_op;
+
+                    auto loaded_x = builder.create<AffineLoadOp>(
+                            loc, ternary_adaptor.x(), loop_ivs);
+                    auto loaded_y = builder.create<AffineLoadOp>(
+                            loc, ternary_adaptor.y(), loop_ivs);
+                    auto loaded_z = builder.create<AffineLoadOp>(
+                            loc, ternary_adaptor.z(), loop_ivs);
+
+                    return lower_op(builder, loc,
+                                    {loaded_x, loaded_y, loaded_z});
+                });
+        return success();
+    }
+};
+
+#define cb(_op, _)        \
+    using _op##Lowering = \
+            TernaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
+MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
+#undef cb
+
 
 struct AssignOpLowering : public ConversionPattern {
     AssignOpLowering(MLIRContext* ctx)
@@ -126,21 +197,18 @@ class MgbToAffineLoweringPass
         : public PassWrapper<MgbToAffineLoweringPass, FunctionPass> {
 public:
     void runOnFunction() override final {
-        auto function = getFunction();
-
-        // Verify that the given main has no inputs and results.
-        if (function.getType().getNumResults()) {
-            mgb_log_error("expected 'main' to have 0 results");
-            return signalPassFailure();
-        }
-
         ConversionTarget target(getContext());
         target.addLegalDialect<AffineDialect, StandardOpsDialect>();
         target.addIllegalDialect<MgbDialect>();
 
         OwningRewritePatternList patterns;
-        patterns.insert<AddOpLowering, ReturnOpLowering, AssignOpLowering>(
-                &getContext());
+#define cb(_op, _) _op##Lowering,
+        patterns.insert<MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(
+                                cb) MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
+                                MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
+                                        ReturnOpLowering,
+                        AssignOpLowering>(&getContext());
+#undef cb
 
         if (failed(applyPartialConversion(getFunction(), target, patterns))) {
             signalPassFailure();

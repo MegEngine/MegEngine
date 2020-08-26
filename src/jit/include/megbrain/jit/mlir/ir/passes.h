@@ -13,18 +13,14 @@
 #pragma once
 #include "megbrain_build_config.h"
 
-#include <mlir/IR/Module.h>
-#include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include <memory>
-
+#include <mlir/IR/Module.h>
 #include <mlir/Pass/Pass.h>
 
 namespace mgb {
 namespace jit {
-
-std::unique_ptr<mlir::Pass> create_shape_inference_pass();
 
 /**
  * \brief  Create a pass for lowering to operations in the `Affine` and `Std`

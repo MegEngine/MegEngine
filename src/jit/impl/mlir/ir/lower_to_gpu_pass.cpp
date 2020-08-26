@@ -13,11 +13,11 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
+#include "./each_mode.h"
 #include "megbrain/common.h"
 #include "megbrain/jit/mlir/ir/dialect.h"
 #include "megbrain/jit/mlir/ir/passes.h"
-
-#include "../utils.h"
+#include "megbrain/jit/mlir/ir/utils.h"
 
 #include <mlir/Dialect/GPU/GPUDialect.h>
 #include <mlir/Dialect/SCF/SCF.h>
@@ -62,10 +62,10 @@ mlir::Value get_tid(ConversionPatternRewriter& rewriter, const Location& loc) {
     return index;
 }
 
-template <typename BinaryOp, typename LoweredBinaryOp>
-struct BinaryOpLowering : public ConversionPattern {
-    BinaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
-            : ConversionPattern(BinaryOp::getOperationName(), 1, ctx),
+template <typename Op, typename LoweredOp>
+struct UnaryOpLowering : public ConversionPattern {
+    UnaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+            : ConversionPattern(Op::getOperationName(), 1, ctx),
               m_launch_op{launch_op} {}
 
     LogicalResult matchAndRewrite(
@@ -73,7 +73,40 @@ struct BinaryOpLowering : public ConversionPattern {
             ConversionPatternRewriter& rewriter) const final {
         auto loc = op->getLoc();
 
-        typename BinaryOp::Adaptor binary_adaptor(operands);
+        typename Op::Adaptor binary_adaptor(operands);
+        rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
+
+        auto index = get_tid(rewriter, loc);
+        auto loaded_lhs =
+                get_operand(rewriter, loc, binary_adaptor.lhs(), index);
+
+        LoweredOp lower_op;
+
+        rewriter.replaceOp(op, lower_op(rewriter, loc, {loaded_lhs}));
+        return success();
+    }
+
+private:
+    gpu::LaunchOp* m_launch_op;
+};
+
+#define cb(_op, _) \
+    using _op##Lowering = UnaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
+MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(cb)
+#undef cb
+
+template <typename Op, typename LoweredOp>
+struct BinaryOpLowering : public ConversionPattern {
+    BinaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+            : ConversionPattern(Op::getOperationName(), 1, ctx),
+              m_launch_op{launch_op} {}
+
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands,
+            ConversionPatternRewriter& rewriter) const final {
+        auto loc = op->getLoc();
+
+        typename Op::Adaptor binary_adaptor(operands);
         rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
 
         auto index = get_tid(rewriter, loc);
@@ -82,10 +115,10 @@ struct BinaryOpLowering : public ConversionPattern {
         auto loaded_rhs =
                 get_operand(rewriter, loc, binary_adaptor.rhs(), index);
 
-        auto binary_op =
-                rewriter.create<LoweredBinaryOp>(loc, loaded_lhs, loaded_rhs);
+        LoweredOp lower_op;
 
-        rewriter.replaceOp(op, binary_op.getResult());
+        rewriter.replaceOp(op,
+                           lower_op(rewriter, loc, {loaded_lhs, loaded_rhs}));
         return success();
     }
 
@@ -93,7 +126,49 @@ private:
     gpu::LaunchOp* m_launch_op;
 };
 
-using AddOpLowering = BinaryOpLowering<jit::AddOp, AddFOp>;
+#define cb(_op, _) \
+    using _op##Lowering = BinaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
+MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
+#undef cb
+
+template <typename Op, typename LoweredOp>
+struct TernaryOpLowering : public ConversionPattern {
+    TernaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+            : ConversionPattern(Op::getOperationName(), 1, ctx),
+              m_launch_op{launch_op} {}
+
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands,
+            ConversionPatternRewriter& rewriter) const final {
+        auto loc = op->getLoc();
+
+        typename Op::Adaptor ternary_adaptor(operands);
+        rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
+
+        auto index = get_tid(rewriter, loc);
+        auto loaded_x =
+                get_operand(rewriter, loc, ternary_adaptor.x(), index);
+        auto loaded_y =
+                get_operand(rewriter, loc, ternary_adaptor.y(), index);
+        auto loaded_z =
+                get_operand(rewriter, loc, ternary_adaptor.z(), index);
+
+        LoweredOp lower_op;
+
+        rewriter.replaceOp(
+                op, lower_op(rewriter, loc, {loaded_x, loaded_y, loaded_z}));
+        return success();
+    }
+
+private:
+    gpu::LaunchOp* m_launch_op;
+};
+
+#define cb(_op, _)        \
+    using _op##Lowering = \
+            TernaryOpLowering<jit::_op, jit::StandardOp<jit::_op>>;
+MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
+#undef cb
 
 struct ReturnOpLowering : public ConversionPattern {
     ReturnOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
@@ -193,6 +268,14 @@ public:
 
         patterns.insert<AddOpLowering, AssignOpLowering, ReturnOpLowering>(
                 &getContext(), &launch_op);
+
+#define cb(_op, _) _op##Lowering,
+        patterns.insert<MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(
+                                cb) MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
+                                MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
+                                        ReturnOpLowering,
+                        AssignOpLowering>(&getContext(), &launch_op);
+#undef cb
 
         if (failed(applyPartialConversion(func_op, target, patterns))) {
             signalPassFailure();

@@ -17,13 +17,15 @@
 
 #if MGB_CUDA
 #include "./executable_cuda.h"
-#include "./utils.h"
-#include "megbrain/utils/timer.h"
-#include "megbrain/utils/persistent_cache.h"
-#include "megbrain/comp_node_env.h"
 
-#include <mlir/ExecutionEngine/OptUtils.h>
+#include "megbrain/comp_node_env.h"
+#include "megbrain/jit/mlir/ir/utils.h"
+#include "megbrain/utils/persistent_cache.h"
+#include "megbrain/utils/timer.h"
+
 #include <mlir/Dialect/GPU/GPUDialect.h>
+#include <mlir/ExecutionEngine/CRunnerUtils.h>
+#include <mlir/ExecutionEngine/OptUtils.h>
 #include <mlir/IR/OpDefinition.h>
 
 using namespace mgb;

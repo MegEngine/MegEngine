@@ -21,6 +21,7 @@
 #include <mlir/Conversion/SCFToStandard/SCFToStandard.h>
 #include <mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h>
 #include <mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h>
+#include <mlir/Dialect/StandardOps/Transforms/Passes.h>
 
 using namespace mgb;
 using namespace jit;
@@ -39,6 +40,7 @@ class AffineToLLVMLoweringPass : public PassWrapper<AffineToLLVMLoweringPass,
         populateAffineToStdConversionPatterns(patterns, &getContext());
         populateLoopToStdConversionPatterns(patterns, &getContext());
         populateStdToLLVMConversionPatterns(typeConverter, patterns);
+        populateExpandTanhPattern(patterns, &getContext());
 
         auto module = getOperation();
         if (failed(applyFullConversion(module, target, patterns)))

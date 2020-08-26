@@ -15,12 +15,13 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
-#include <mlir/IR/OpDefinition.h>
+#include "megbrain/jit/mlir/ir/interfaces.h"
+#include "megbrain/jit/mlir/ir/utils.h"
+
 #include <mlir/IR/Dialect.h>
 #include <mlir/IR/Function.h>
+#include <mlir/IR/OpDefinition.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
-
-#include "megbrain/jit/mlir/ir/shape_inference_interface.h"
 
 namespace mgb {
 namespace jit {

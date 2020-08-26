@@ -9,12 +9,12 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/jit/utils.h"
 #include "megbrain_build_config.h"
 
 #if MGB_JIT
 
 #include "megbrain/utils/debug.h"
+#include "megbrain/jit/utils.h"
 
 #include <atomic>
 

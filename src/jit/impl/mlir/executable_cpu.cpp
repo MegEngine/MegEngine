@@ -14,9 +14,10 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "./executable_cpu.h"
-#include "./utils.h"
+#include "megbrain/jit/mlir/ir/utils.h"
 
 #include <mlir/ExecutionEngine/OptUtils.h>
+#include <mlir/ExecutionEngine/CRunnerUtils.h>
 
 using namespace mgb;
 using namespace jit;
@@ -113,7 +114,7 @@ void MLIRCPUExecutable::execute(JITExecutor* fusion_opr) {
         idx++;
     }
 
-    args_array_pointer[idx++] = &nr_elements;
+    args_array_pointer.push_back(&nr_elements);
     std::string adapter_name = std::string("_mlir_ciface_") + m_kernel_name;
     auto err = m_engine->invoke(
             adapter_name, llvm::MutableArrayRef<void*>(args_array_pointer));

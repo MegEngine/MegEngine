@@ -14,8 +14,10 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "./mlir_gen.h"
-#include "./utils.h"
+#include "./ir/each_mode.h"
+
 #include "megbrain/jit/mlir/ir/dialect.h"
+#include "megbrain/jit/mlir/ir/utils.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megdnn/dtype.h"
 
@@ -118,7 +120,7 @@ private:
         if (!return_op) {
             m_builder.create<jit::ReturnOp>(m_builder.getUnknownLoc());
         }
-        std::string op_content = to_string(func_op);
+        std::string op_content = mlir_type_to_string(func_op);
         func_op.setName(
                 ssprintf("jit_mlir_%" PRIx64,
                          XXHash{}.update(op_content.data(), op_content.size())
@@ -140,7 +142,8 @@ private:
                 mgb_assert(
                         mlir::succeeded(declare(opr->output(0)->name(), out)));
             }
-        }}.add(internal_graph.output());
+        }}
+                .add(internal_graph.output());
         m_builder.create<AssignOp>(m_builder.getUnknownLoc(),
                                    get(internal_graph.output()),
                                    get(args.outputs[0].from));
@@ -150,11 +153,31 @@ private:
 
     mlir::Value gen_op(const opr::Elemwise& opr) {
         switch (opr.param().mode) {
-            case opr::Elemwise::Mode::ADD:
-                return m_builder.create<AddOp>(m_builder.getUnknownLoc(),
-                                               get(opr.input(0)),
-                                               get(opr.input(1)));
-                break;
+#define cb(mlir_op, mgb_mode)                                            \
+    case opr::Elemwise::Mode::mgb_mode:                                  \
+        return m_builder.create<jit::mlir_op>(m_builder.getUnknownLoc(), \
+                                              get(opr.input(0)),         \
+                                              get(opr.input(1)));        \
+        break;
+            MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
+#undef cb
+
+#define cb(mlir_op, mgb_mode)                                            \
+    case opr::Elemwise::Mode::mgb_mode:                                  \
+        return m_builder.create<jit::mlir_op>(m_builder.getUnknownLoc(), \
+                                              get(opr.input(0)));        \
+        break;
+            MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(cb)
+#undef cb
+#define cb(mlir_op, mgb_mode)                                 \
+    case opr::Elemwise::Mode::mgb_mode:                       \
+        return m_builder.create<jit::mlir_op>(                \
+                m_builder.getUnknownLoc(), get(opr.input(0)), \
+                get(opr.input(1)), get(opr.input(2)));        \
+        break;
+            MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
+#undef cb
+
             default:
                 return nullptr;
         }
@@ -162,19 +185,7 @@ private:
     }
 
     mlir::Type get_type(const TensorLayout& layout) {
-        std::vector<int64_t> shape;
-        for (size_t i = 0; i < layout.ndim; i++) {
-            shape.push_back(layout[i]);
-        }
-        mgb_assert(layout.ndim != 0);
-        switch (layout.dtype.enumv()) {
-            case DTypeEnum::Float32:
-                return mlir::MemRefType::get(shape, m_builder.getF32Type());
-            default:
-                mgb_throw(InternalError, "No supported dtype: %s",
-                          layout.dtype.name());
-        }
-        return mlir::UnrankedMemRefType::get(m_builder.getNoneType(), 0);
+        return layout_to_mlir_type(layout, m_builder);
     }
 
     mlir::Value get(const VarNode* var) {

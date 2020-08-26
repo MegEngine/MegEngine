@@ -57,6 +57,7 @@ namespace opr {
     EL2(and_, AND)
     EL2(or_, OR)
     EL2(xor_, XOR)
+    EL2(mod, MOD)
 
 #undef EL2
 
