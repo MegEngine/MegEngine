@@ -1815,6 +1815,15 @@ VarNode* EnableNchwxxPass::on_graph_endpoint_var(VarNode* new_var,
     return new_var;
 }
 
+static inline TensorShape nchwxx_shape_2_nchw_shape(
+        const TensorShape& origin_shape) {
+    mgb_assert(origin_shape.ndim == 5);
+    TensorShape result = origin_shape;
+    result[1] *= result[4];
+    result.ndim = 4;
+    return result;
+}
+
 template <typename OprType>
 static inline bool nchw_nchwxx_valid(
         const OprType& opr, const VarNodeArray& new_inp, const size_t pack_size,
@@ -1847,7 +1856,10 @@ static inline bool nchw_nchwxx_valid(
     megdnn::ConvBiasForward::BiasMode bias_mode =
             megdnn::ConvBiasForward::BiasMode::NO_BIAS;
     if (std::is_same<OprType, opr::ConvBiasForward>::value) {
-        auto& bias_shape = new_inp[2]->shape();
+        TensorShape bias_shape = new_inp[2]->shape();
+        if (bias_shape.ndim == 5) {
+            bias_shape = nchwxx_shape_2_nchw_shape(bias_shape);
+        }
         if (bias_shape.ndim == 0) {
             bias_mode = megdnn::ConvBiasForward::BiasMode::NO_BIAS;
         } else if (bias_shape.eq_shape(dst_node->shape())) {
