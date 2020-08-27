@@ -247,10 +247,6 @@ if(MGE_BUILD_IMPERATIVE_RT)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
-if(MGE_BUILD_IMPERATIVE_RT)
-    set(MGE_BUILD_SDK OFF)
-endif()
-
 if(NOT MGE_WITH_CUDA)
     message("-- Disable distributed support, as CUDA is not enabled.")
     set(MGE_WITH_DISTRIBUTED OFF)
@@ -697,9 +693,7 @@ if(MGE_WITH_PYTHON_MODULE)
 endif()
 
 if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)
-    if(NOT MGE_BUILD_IMPERATIVE_RT)
-        add_subdirectory(test)
-    endif()
+    add_subdirectory(test)
 endif()
 
 if(TARGET mgb)

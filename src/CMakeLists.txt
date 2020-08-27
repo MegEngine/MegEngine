@@ -168,24 +168,27 @@ if(ANDROID)
     target_link_libraries(megbrain PUBLIC log)
 endif()
 
-if(NOT MGE_BUILD_IMPERATIVE_RT)
-    # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
-    add_library(megengine)
-    target_link_libraries(megengine PUBLIC megbrain megdnn)
-    if (UNIX AND NOT APPLE)
-        # TODO: Use target_link_options after upgrading to CMake 3.13
-        # FIXME; Please use right directory for mgb or imperative
-        target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
-    endif()
-    set_target_properties(megengine PROPERTIES CXX_VISIBILITY_PRESET default)
-    set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-    # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
-    # for this.
-    install(TARGETS megengine
-            EXPORT ${MGE_EXPORT_TARGETS}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(MGE_BUILD_IMPERATIVE_RT)
+    set (_VER_FILE ${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
+else()
+    set (_VER_FILE ${PROJECT_SOURCE_DIR}/imperative/src/version.ld)
 endif()
+
+# Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
+add_library(megengine)
+target_link_libraries(megengine PUBLIC megbrain megdnn)
+if (UNIX AND NOT APPLE)
+    # TODO: Use target_link_options after upgrading to CMake 3.13
+    target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
+endif()
+set_target_properties(megengine PROPERTIES CXX_VISIBILITY_PRESET default)
+set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+# Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
+# for this.
+install(TARGETS megengine
+        EXPORT ${MGE_EXPORT_TARGETS}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 if (NOT MGE_WITH_DISTRIBUTED)
     install(TARGETS megbrain

@@ -66,9 +66,7 @@ if(MGE_WITH_CUDA)
 endif()
 
 if(MGE_WITH_TEST)
-    if(NOT MGE_BUILD_IMPERATIVE_RT)
-        add_subdirectory(test)
-    endif()
+    add_subdirectory(test)
 endif()
 
 add_subdirectory(src)
