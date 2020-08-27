@@ -103,10 +103,12 @@ namespace megdnn {
  * \brief iterate through each dtype object that can be involved in float
  *      numeric computing
  */
+
 #define MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb) \
     cb(::megdnn::dtype::Float32) \
     MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::Float16)) \
-    MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::BFloat16)) \
+    MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::BFloat16))
+
 
 /*!
  * \brief iterate through each dtype object that can be involved in integer

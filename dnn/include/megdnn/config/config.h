@@ -11,7 +11,7 @@
 
 #include "megbrain_build_config.h"
 
-#if !defined(__CUDACC__)
+#if !defined(__CUDACC__) && !defined(__HIPCC__)
 
 
 #endif  // !defined(__CUDACC__)

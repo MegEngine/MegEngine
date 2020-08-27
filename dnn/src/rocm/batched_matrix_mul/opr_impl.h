@@ -27,6 +27,22 @@ public:
         return 0;
     }
 
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/) override {
+        return {};
+    }
+
+    Algorithm* get_algorithm_heuristic(const TensorLayout& /*A*/,
+                                       const TensorLayout& /*B*/,
+                                       const TensorLayout& /*C*/,
+                                       size_t /*workspace_limit_in_bytes*/,
+                                       bool /* reproducible */) override {
+        return nullptr;
+    }
+
+    const char* get_algorithm_set_name() const override { return "DEFAULT"; }
+
     bool is_thread_safe() const override { return true; }
 
 private:

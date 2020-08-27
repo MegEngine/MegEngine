@@ -142,6 +142,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
     cb(dtype_src, dt_uint8) \
     cb(dtype_src, dt_float32) \
     cb(dtype_src, dt_float16) \
+    cb(dtype_src, dt_bfloat16) \
 
 #else
 
@@ -176,6 +177,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
     cb(dt_uint8) \
     cb(dt_float32) \
     cb(dt_float16) \
+    cb(dt_bfloat16) \
 
 #else
 #define MEGDNN_FOREACH_COMPUTING_CTYPE(cb) \

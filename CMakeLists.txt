@@ -52,6 +52,7 @@ option(MGE_BUILD_SDK "Build load_and_run" ON)
 option(MGE_INFERENCE_ONLY "Build inference only library." OFF)
 option(MGE_WITH_PYTHON_MODULE "Build MegEngine Python Module." ON)
 option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
+option(MGE_WITH_ROCM "Enable ROCM support" OFF)
 
 if (APPLE)
     set (BUILD_SHARED_LIBS OFF)
@@ -441,6 +442,10 @@ if(MGE_WITH_CAMBRICON)
     list(APPEND MGE_CAMBRICON_LIBS libcnrt libcndev libcnml)
     set(MGE_CAMBRICON_LIBS "${MGE_CAMBRICON_LIBS}")
 endif()
+
+if (MGE_WITH_ROCM)
+    include(cmake/rocm.cmake)
+endif ()
 
 
 if(MGE_WITH_ATLAS)

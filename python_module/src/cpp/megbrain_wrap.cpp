@@ -1013,7 +1013,8 @@ void add_update_impl(const DeviceTensorND& dest,
     auto&& cn = dest.comp_node();
     using DT = CompNode::DeviceType;
     mgb_assert(cn == delta_nobrd.comp_node() &&
-        (cn.device_type() == DT::CUDA || cn.device_type() == DT::CPU));
+               (cn.device_type() == DT::CUDA || cn.device_type() == DT::CPU ||
+                cn.device_type() == DT::ROCM));
     mgb_assert(dest.dtype() == delta_nobrd.dtype());
     auto&& delta = delta_nobrd.sub(SubTensorSpec::make_from_offset_elem(
         delta_nobrd.layout().broadcast(dest.shape()), 0));

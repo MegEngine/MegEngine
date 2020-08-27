@@ -36,6 +36,9 @@
 #include "src/rocm/argmxx/opr_impl.h"
 #include "src/rocm/sleep/opr_impl.h"
 
+#include <miopen/version.h>
+#include <hip/hip_version.h>
+
 #include <cstring>
 
 #define STR_HELPER(x) #x
@@ -56,7 +59,7 @@ std::unique_ptr<Handle> Handle::make_rocm_handle(megcoreComputingHandle_t comput
 }
 template <typename Opr>
 std::unique_ptr<Opr> Handle::create_rocm_operator() {
-    return static_cast<rocm::HandleImpl*>(this)->create_operator<Opr>(); 
+    return static_cast<rocm::HandleImpl*>(this)->create_operator<Opr>();
 }
 #define INST(opr) \
     template std::unique_ptr<opr> Handle::create_rocm_operator();
@@ -178,7 +181,8 @@ MEGDNN_FOREACH_OPR_CLASS(MEGDNN_INST_CREATE_OPERATOR)
 }  // namespace rocm
 }  // namespace megdnn
 
-MEGDNN_VERSION_SYMBOL(HIP, HIP_VERSION);
+
+MEGDNN_VERSION_SYMBOL3(HIP, HIP_VERSION_MAJOR, HIP_VERSION_MINOR, HIP_VERSION_PATCH);
 MEGDNN_VERSION_SYMBOL3(MIOPEN, MIOPEN_VERSION_MAJOR, MIOPEN_VERSION_MINOR,
                        MIOPEN_VERSION_PATCH);
 // vim: syntax=cpp.doxygen

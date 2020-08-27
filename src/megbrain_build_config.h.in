@@ -13,6 +13,7 @@
 #define _HEADER_MGB_BUILD_CONFIG
 
 #cmakedefine01 MGB_CUDA
+#cmakedefine01 MGB_ROCM
 #cmakedefine01 MGB_CAMBRICON
 #cmakedefine01 MGB_ATLAS
 #cmakedefine01 MGB_ASSERT_LOC
@@ -38,6 +39,7 @@
 // Platform macro's
 #cmakedefine01 MEGDNN_WITH_CUDA
 
+#cmakedefine01 MEGDNN_WITH_ROCM
 #cmakedefine01 MEGDNN_ARMV7
 #cmakedefine01 MEGDNN_AARCH64
 #cmakedefine01 MEGDNN_ENABLE_FP16_NEON

@@ -36,6 +36,11 @@ if(MGE_WITH_ATLAS)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
+if (MGE_WITH_ROCM)
+    file (GLOB_RECURSE SOURCES_ rocm/*.cpp)
+    list (APPEND SOURCES ${SOURCES_})
+endif()
+
 
 add_executable(megdnn_test ${SOURCES})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")
@@ -60,6 +65,10 @@ endif()
 if(MGE_ENABLE_COVERAGE)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
+
+if (MEG_WITH_ROCM)
+    target_link_libraries (megdnn_test ${MGE_ROCM_LIBS})
+endif ()
 
 if(APPLE OR ANDROID)
     target_link_libraries(megdnn_test dl)

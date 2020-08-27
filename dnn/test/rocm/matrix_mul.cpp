@@ -71,22 +71,22 @@ TEST_F(ROCM, MATRIX_MUL) {
             BS = TensorShape{k, n};
         CS = TensorShape{m, n};
         TensorLayout AL, BL, CL;
-        if (arg.Astride == 0) {
+        if (arg.A_stride == 0) {
             AL = TensorLayout(AS, dtype::Float32());
         } else {
-            AL = TensorLayout(AS, {ptrdiff_t(arg.Astride), 1},
+            AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1},
                               dtype::Float32());
         }
-        if (arg.Bstride == 0) {
+        if (arg.B_stride == 0) {
             BL = TensorLayout(BS, dtype::Float32());
         } else {
-            BL = TensorLayout(BS, {ptrdiff_t(arg.Bstride), 1},
+            BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1},
                               dtype::Float32());
         }
-        if (arg.Cstride == 0) {
+        if (arg.C_stride == 0) {
             CL = TensorLayout(CS, dtype::Float32());
         } else {
-            CL = TensorLayout(CS, {ptrdiff_t(arg.Cstride), 1},
+            CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1},
                               dtype::Float32());
         }
         checker.set_param(param).execl({AL, BL, CL});

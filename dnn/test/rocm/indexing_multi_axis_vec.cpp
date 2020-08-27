@@ -202,7 +202,7 @@ TEST_F(ROCM, INDEXING_MULTI_AXIS_VEC_BENCHMARK) {
         set_rng(1, &rng_inp).
         set_rng(2, &rng0).
         set_rng(3, &rng1).
-        set_proxy({0, 1});
+        set_proxy({{0, 1}});
     auto time_ms = benchmarker.execs({{1000, 1000, 1000}, {1000, 1000}, {1000}, {1000}});
     long io = 2 * 1000 * 1000 * dtype::Float32().size();
     printf("io = %.3f GB, random access bandwidth = %.3f GB/s\n",

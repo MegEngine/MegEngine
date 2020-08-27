@@ -9,6 +9,7 @@
 import numpy as np
 
 from ..core import Buffer, Parameter
+from ..core.device import get_default_device
 from ..functional import batch_norm2d, sync_batch_norm
 from . import init
 from .module import Module
@@ -79,16 +80,31 @@ class _BatchNorm(Module):
         else:
             exponential_average_factor = 0.0  # useless
 
-        output = batch_norm2d(
-            inp,
-            self.running_mean,
-            self.running_var,
-            self.weight,
-            self.bias,
-            self.training or not self.track_running_stats,
-            exponential_average_factor,
-            self.eps,
-        )
+        # FIXME currently rocm does not support real bn opr so we just use
+        # sync_batch_norm(as implemented by elemwise) here,
+        # we will fix it in the next version
+        if get_default_device() == "rocmx":
+            output = sync_batch_norm(
+                inp,
+                self.running_mean,
+                self.running_var,
+                self.weight,
+                self.bias,
+                self.training or not self.track_running_stats,
+                exponential_average_factor,
+                self.eps,
+            )
+        else:
+            output = batch_norm2d(
+                inp,
+                self.running_mean,
+                self.running_var,
+                self.weight,
+                self.bias,
+                self.training or not self.track_running_stats,
+                exponential_average_factor,
+                self.eps,
+            )
 
         if _ndims != 4:
             output = output.reshape(origin_shape)

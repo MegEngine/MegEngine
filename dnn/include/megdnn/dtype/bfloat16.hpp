@@ -2809,6 +2809,7 @@ namespace std {
 /// Numeric limits for bfloat16-precision floats.
 /// Because of the underlying single-precision implementation of many
 /// operations, it inherits some properties from `numeric_limits<float>`.
+#if !defined(__HIPCC__)
 template <>
 class numeric_limits<half_bfloat16::bfloat16> : public numeric_limits<float> {
 public:
@@ -2932,6 +2933,7 @@ public:
                                        0x0001);
     }
 };
+#endif
 
 #ifdef MEGDNN_CC_HOST
 #if HALF_ENABLE_CPP11_HASH

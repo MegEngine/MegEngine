@@ -16,6 +16,8 @@
 #include "hip_header.h"
 #include "megdnn/internal/visibility_prologue.h"
 
+#include <atomic>
+
 namespace megcore {
 struct ROCMContext {
     hipStream_t stream = nullptr;

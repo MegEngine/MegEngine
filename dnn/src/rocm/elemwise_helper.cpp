@@ -124,6 +124,9 @@ INST_FOR_CTYPE
 INST_FOR_CTYPE
 #undef ct
 #endif
+#define ct dt_bfloat16
+INST_FOR_CTYPE
+#undef ct
 #define ct dt_int8
 INST_FOR_CTYPE
 #undef ct
@@ -140,6 +143,9 @@ INST_FOR_CTYPE
 INST_FOR_CTYPE
 #undef ct
 #define ct dt_qint32
+INST_FOR_CTYPE
+#undef ct
+#define ct dt_bool
 INST_FOR_CTYPE
 #undef ct
 

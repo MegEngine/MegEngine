@@ -11,6 +11,11 @@
 #include "hip_header.h"
 #include "megdnn/dtype.h"
 
+__device__ void atomicAdd(megdnn::dt_bfloat16 *, megdnn::dt_bfloat16) {
+    asm("s_trap 2;");
+    ((int*)0)[0] = 1;
+}
+
 #if !MEGDNN_DISABLE_FLOAT16
 __device__ void atomicAdd(megdnn::dt_float16 *, megdnn::dt_float16) {
     asm("s_trap 2;");
