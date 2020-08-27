@@ -1,11 +1,10 @@
-PARAM_DEFS := ../include/megdnn/opr_param_defs.h \
-	../include/megdnn/opr_param_json.h \
-	../src/common/opr_param_defs_enumv.cuh \
-	../src/common/elemwise/each_mode.inl
+PARAM_DEFS := ../src/common/elemwise/each_mode.inl
 
 ELEMWISE_IMPL := ../src/cuda/cond_take/kimpl \
 	../src/cuda/elemwise/special_kimpl \
 	../src/cuda/elemwise/kimpl \
+	../src/rocm/elemwise/special_kimpl \
+	../src/rocm/elemwise/kimpl \
 	../src/naive/elemwise/kimpl \
 	../src/cuda/elemwise_multi_type/kimpl
 
@@ -22,10 +21,14 @@ all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL}
 ../src/cuda/elemwise/special_kimpl: gen_elemwise_special_kern_impls.py
 	./$^ --type cuda $@
 
+../src/rocm/elemwise/special_kimpl: gen_elemwise_special_kern_impls.py
+	./$^ --type hip $@
 
 ../src/cuda/elemwise/kimpl: gen_elemwise_kern_impls.py
 	./$^ --type cuda $@
 
+../src/rocm/elemwise/kimpl: gen_elemwise_kern_impls.py
+	./$^ --type hip $@
 
 ../src/%/elemwise/kimpl: gen_elemwise_kern_impls.py
 	./$^ $@
