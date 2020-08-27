@@ -11,6 +11,7 @@ def main():
         description='generate elemwise impl files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--type', type=str, choices=['cuda',
+                                                     'hip',
                                                      'cpp'],
                         default='cpp', help='generate cuda/hip kernel file')
     parser.add_argument('output', help='output directory')
@@ -21,6 +22,8 @@ def main():
 
     if args.type == 'cuda':
         cpp_ext = 'cu'
+    elif args.type == 'hip':
+        cpp_ext = 'cpp.hip'
     else:
         assert args.type == 'cpp'
         cpp_ext = 'cpp'

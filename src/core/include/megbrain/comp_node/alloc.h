@@ -199,6 +199,21 @@ class DevMemAlloc: virtual public MemAllocBase {
         static std::unique_ptr<DevMemAlloc> make_cuda_alloc();
 #endif
 
+#if MGB_ROCM
+        /*!
+         * \brief create a new allocator for a device that merely forward
+         *      hipMalloc and hipFree.
+         */
+        static std::unique_ptr<DevMemAlloc> make_rocm_alloc();
+#endif
+
+#if MGB_CAMBRICON
+        /*!
+         * \brief create a new allocator for a device that merely forward
+         * cnrtMalloc and cnrtFree.
+         */
+        static std::unique_ptr<DevMemAlloc> make_cambricon_alloc();
+#endif
 
         virtual ~DevMemAlloc() = default;
 

@@ -15,6 +15,9 @@
 #if MEGDNN_WITH_CUDA
 #include "src/cuda/megcore/cuda_device_context.hpp"
 #endif
+#if MEGDNN_WITH_ROCM
+#include "src/rocm/megcore/device_context.hpp"
+#endif
 #if MEGDNN_WITH_CAMBRICON
 #include "src/cambricon/megcore/cambricon_device_context.hpp"
 #endif
@@ -35,6 +38,10 @@ std::unique_ptr<DeviceContext> DeviceContext::make(megcorePlatform_t platform,
 #if MEGDNN_WITH_CUDA
         case megcorePlatformCUDA:
             return make_unique<cuda::CUDADeviceContext>(deviceID, flags);
+#endif
+#if MEGDNN_WITH_ROCM
+        case megcorePlatformROCM:
+            return make_rocm_device_context(deviceID, flags);
 #endif
 #if MEGDNN_WITH_CAMBRICON
         case megcorePlatformCambricon:

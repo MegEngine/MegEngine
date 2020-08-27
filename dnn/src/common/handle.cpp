@@ -93,6 +93,13 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
         MIDOUT_END();
 #endif
         }
+        else if (platform == megcorePlatformROCM) {
+#if MEGDNN_WITH_ROCM
+            return make_rocm_handle(computing_handle);
+#else
+            return nullptr;
+#endif
+        }
         else if (platform == megcorePlatformCambricon) {
 #if MEGDNN_WITH_CAMBRICON
             return make_unique<cambricon::HandleImpl>(computing_handle);
@@ -192,6 +199,14 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
 #endif
 #if MEGDNN_WITH_ATLAS
             CASE(ATLAS, atlas);
+#endif
+#if MEGDNN_WITH_ROCM
+            case HandleType::ROCM: {
+                MIDOUT_BEGIN(HandleOpr, Opr, midout_iv(HandleType::ROCM)) {
+                    return create_rocm_operator<Opr>();
+                }
+                MIDOUT_END();
+            }
 #endif
 #if MEGDNN_WITH_CAMBRICON
             CASE(CAMBRICON, cambricon);

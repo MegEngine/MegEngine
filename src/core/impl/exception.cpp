@@ -77,6 +77,30 @@ AtlasError::AtlasError(const std::string &msg):
 }
 
 
+ROCmError::ROCmError(const std::string &msg):
+    SystemError(msg)
+{
+    m_msg.append(get_rocm_extra_info());
+}
+
+std::string ROCmError::get_rocm_extra_info() {
+#if MGB_ROCM
+    // get last error and clear error
+    auto err = hipGetLastError();
+    int dev = -1;
+    hipGetDevice(&dev);
+    size_t free_byte = 0, total_byte = 0;
+    hipMemGetInfo(&free_byte, &total_byte);
+    constexpr double SIZE2MB = 1.0 / 1024 / 1024;
+    return ssprintf("(last_err=%d(%s) "
+            "device=%d mem_free=%.3fMiB mem_tot=%.3fMiB)",
+            err, hipGetErrorString(err),
+            dev, free_byte * SIZE2MB, total_byte * SIZE2MB);
+#else
+    return "rocm disabled at compile time";
+#endif
+}
+
 CnrtError::CnrtError(const std::string& msg) : SystemError(msg) {
     m_msg.append(get_cnrt_extra_info());
 }

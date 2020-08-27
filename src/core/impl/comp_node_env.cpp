@@ -21,6 +21,10 @@
 #include <nvToolsExtCudaRt.h>
 #endif
 #endif
+#if MGB_ROCM
+#include "hcc_detail/hcc_defs_prologue.h"
+#include "megcore_rocm.h"
+#endif
 
 #if MGB_CAMBRICON
 #include "megcore_cambricon.h"
@@ -60,6 +64,17 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
                                   env.cuda_env().device, 0);
         megcore::createComputingHandleWithCUDAContext(&m_comp_hdl, m_dev_hdl, 0,
                 {env.cuda_env().stream, make_async_error_info(env)});
+        init = true;
+    }
+#endif
+
+#if MGB_ROCM
+    if (env.property().type == CompNode::DeviceType::ROCM) {
+        megcoreCreateDeviceHandle(&m_dev_hdl, megcorePlatformROCM,
+                                  env.rocm_env().device, 0);
+        megcore::createComputingHandleWithROCMContext(
+                &m_comp_hdl, m_dev_hdl, 0,
+                {env.rocm_env().stream, make_async_error_info(env)});
         init = true;
     }
 #endif
@@ -230,6 +245,70 @@ void CompNodeEnv::init_atlas(CompNode comp_node, const AtlasEnv& env) {
 #endif
 
 
+#if MGB_ROCM
+
+void mgb::_on_hip_error(const char* expr, hipError_t err, const char* file,
+                        const char* func, int line) {
+    mgb_throw(ROCmError, "rocm error %d: %s (%s at %s:%s:%d)", int(err),
+              hipGetErrorString(err), expr, file, func, line);
+}
+
+void CompNodeEnv::init_rocm_async(int dev, CompNode comp_node,
+                                  const ContinuationCtx<hipStream_t>& cont) {
+    m_comp_node = comp_node;
+
+    mgb_assert(!m_user_data_container && !m_async_init_need_wait);
+    m_rocm_env.device = dev;
+    m_property.type = DeviceType::ROCM;
+    MGB_ROCM_CHECK(hipGetDeviceProperties(&m_rocm_env.device_prop, dev));
+    {
+        auto&& prop = m_rocm_env.device_prop;
+        MGB_MARK_USED_VAR(prop);
+        //! FIXME: no texure alignment in device property
+        m_property.mem_alignment = 1u;
+    }
+
+    std::atomic_bool tid_set{false};
+    auto worker = [this, cont, &tid_set]() {
+        sys::set_thread_name("async_rocm_init");
+        m_async_init_tid = std::this_thread::get_id();
+        tid_set.store(true);
+        bool stream_done = false;
+        MGB_MARK_USED_VAR(stream_done);
+        MGB_TRY {
+            m_rocm_env.activate();
+            MGB_ROCM_CHECK(hipStreamCreateWithFlags(&m_rocm_env.stream,
+                                                    hipStreamNonBlocking));
+            stream_done = true;
+
+            m_user_data_container = std::make_unique<UserDataContainer>();
+
+            cont.next(m_rocm_env.stream);
+
+            // megdnn is initialized here; must be placed after cont.next()
+            // which handles comp node init
+            mgb_assert(
+                    m_property.mem_alignment ==
+                    MegDNNHandle::get(*this).handle()->alignment_requirement());
+        }
+        MGB_CATCH(std::exception & exc, {
+            mgb_log_error("async rocm init failed: %s", exc.what());
+            if (stream_done) {
+                hipStreamDestroy(m_rocm_env.stream);
+            }
+            cont.err(exc);
+            throw;
+        })
+    };
+
+    m_async_init_need_wait = true;
+    m_async_init_future = std::async(std::launch::async, worker);
+    while (!tid_set.load())
+        std::this_thread::yield();
+    mgb_assert(m_async_init_tid != std::this_thread::get_id());
+}
+#endif
+
 #if MGB_CAMBRICON
 const char* mgb::cnml_get_error_string(cnmlStatus_t err) {
     switch (err) {
@@ -328,6 +407,12 @@ void CompNodeEnv::fini() {
     if (m_property.type == DeviceType::CUDA) {
         m_cuda_env.activate();
         MGB_CUDA_CHECK(cudaStreamDestroy(m_cuda_env.stream));
+    }
+#endif
+#if MGB_ROCM
+    if (m_property.type == DeviceType::ROCM) {
+        m_rocm_env.activate();
+        MGB_ROCM_CHECK(hipStreamDestroy(m_rocm_env.stream));
     }
 #endif
 #if MGB_CAMBRICON

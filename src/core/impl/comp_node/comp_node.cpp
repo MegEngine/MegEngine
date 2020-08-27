@@ -15,6 +15,7 @@
 
 #include "./cuda/comp_node.h"
 #include "./cpu/comp_node.h"
+#include "./rocm/comp_node.h"
 #include "./cambricon/comp_node.h"
 #include "./atlas/comp_node.h"
 
@@ -44,6 +45,8 @@ namespace {
                 return "cpu";
             case DT::ATLAS:
                 return "atlas";
+            case DT::ROCM:
+                return "rocm";
             case DT::CAMBRICON:
                 return "cambricon";
             case DT::MULTITHREAD:
@@ -157,6 +160,13 @@ CompNode::Locator CompNode::Locator::parse(const std::string &id) {
         }
         dev_type = DeviceType::ATLAS;
         ptr += 5;
+    }
+    else if (ptr[0] == 'r') {
+        if (strncmp(ptr, "rocm", 4)) {
+            err();
+        }
+        dev_type = DeviceType::ROCM;
+        ptr += 4;
     }
     else if (ptr[2] == 'm') {
         if (strncmp(ptr, "cambricon", 9)) {
@@ -500,6 +510,9 @@ CompNode CompNode::load(const Locator& locator_physical,
         case DeviceType::ATLAS:
             ret = AtlasCompNode::load_atlas(locator_physical, locator_logical);
             break;
+        case DeviceType::ROCM:
+            ret = ROCmCompNode::load_rocm(locator_physical, locator_logical);
+            break;
         case DeviceType::CAMBRICON:
             ret = CambriconCompNode::load_cambricon(locator_physical,
                                                     locator_logical);
@@ -522,18 +535,21 @@ void CompNode::finalize() {
     comp_node_detail::DepedentObjList::invoke_callback_and_clean();
     CudaCompNode::finalize();
     CpuCompNode::finalize();
+    ROCmCompNode::finalize();
     CambriconCompNode::finalize();
     AtlasCompNode::finalize();
 }
 
 void CompNode::try_coalesce_all_free_memory() {
     CudaCompNode::try_coalesce_all_free_memory();
+    ROCmCompNode::try_coalesce_all_free_memory();
     CambriconCompNode::try_coalesce_all_free_memory();
 }
 
 void CompNode::sync_all() {
     CudaCompNode::sync_all();
     CpuCompNode::sync_all();
+    ROCmCompNode::sync_all();
     CambriconCompNode::sync_all();
     AtlasCompNode::sync_all();
 }
@@ -541,6 +557,7 @@ void CompNode::sync_all() {
 void CompNode::foreach(thin_function<void(CompNode)> callback) {
     CudaCompNode::foreach(callback);
     CpuCompNode::foreach(callback);
+    ROCmCompNode::foreach(callback);
     CambriconCompNode::foreach(callback);
     AtlasCompNode::foreach(callback);
 }
@@ -552,6 +569,8 @@ size_t CompNode::get_device_count(DeviceType type, bool warn) {
         case DeviceType::MULTITHREAD:
         case DeviceType::CPU:
             return CpuCompNode::get_device_count();
+        case DeviceType::ROCM:
+            return ROCmCompNode::get_device_count();
         case DeviceType::CAMBRICON:
             return CambriconCompNode::get_device_count();
         case DeviceType::ATLAS:
@@ -570,6 +589,9 @@ bool CompNode::contain_flag(DeviceType device_type, Flag flag) {
         case DeviceType::MULTITHREAD:
         case DeviceType::CPU:
             cn_flag = CpuCompNode::sm_flag;
+            break;
+        case DeviceType::ROCM:
+            cn_flag = ROCmCompNode::sm_flag;
             break;
         case DeviceType::CAMBRICON:
             cn_flag = CambriconCompNode::sm_flag;

@@ -19,6 +19,7 @@
 typedef enum {
     megcorePlatformCPU = 1,
     megcorePlatformCUDA = 4,
+    megcorePlatformROCM = 6,
     megcorePlatformCambricon = 7,
     megcorePlatformAtlas = 8,
 } megcorePlatform_t;

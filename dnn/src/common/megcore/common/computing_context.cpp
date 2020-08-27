@@ -18,6 +18,10 @@
 #endif
 
 
+#if MEGDNN_WITH_ROCM
+#include "src/rocm/megcore/computing_context.hpp"
+#endif
+
 #if MEGDNN_WITH_CAMBRICON
 #include "src/cambricon/megcore/cambricon_computing_context.hpp"
 #endif
@@ -40,6 +44,10 @@ std::unique_ptr<ComputingContext> ComputingContext::make(
 #if MEGDNN_WITH_CUDA
         case megcorePlatformCUDA:
             return make_unique<cuda::CUDAComputingContext>(dev_handle, flags);
+#endif
+#if MEGDNN_WITH_ROCM
+        case megcorePlatformROCM:
+            return make_rocm_computing_context(dev_handle, flags);
 #endif
 #if MEGDNN_WITH_CAMBRICON
         case megcorePlatformCambricon:

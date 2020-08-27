@@ -1,0 +1,54 @@
+/**
+ * \file src/rocm/reduce_helper.hipinl
+ *
+ * This file is part of MegDNN, a deep neural network run-time library
+ * developed by Megvii.
+ *
+ * \brief helper for implementing reduce operators
+ *
+ * \copyright Copyright (c) 2014-2019 Megvii Inc. All rights reserved.
+ */
+
+#pragma once
+
+#if MEGDNN_CC_CUDA
+
+#include "./reduce_helper/column.hipinl"
+#include "./reduce_helper/largeBC.hipinl"
+
+namespace megdnn {
+namespace rocm {
+
+namespace reduce_intl {
+static inline bool use_reduce_column(size_t A, size_t B, size_t C) {
+    return C == 1 && (B <= A * 4 || B <= 32);
+}
+}  // namespace reduce_intl
+
+template <class PublicOperator, bool sync_within_warp>
+void run_reduce(typename PublicOperator::wtype* workspace, size_t A, size_t B,
+                size_t C, hipStream_t stream, const PublicOperator& opr) {
+    using namespace reduce_intl;
+    if (use_reduce_column(A, B, C)) {
+        reduce_intl::run_column<PublicOperator>::run(A, B, stream, opr);
+    } else {
+        reduce_intl::run_largeBC<PublicOperator, sync_within_warp>(workspace, A, B, C,
+                                                      stream, opr);
+    }
+}
+
+template <typename Op>
+size_t get_reduce_workspace_in_bytes(size_t A, size_t B, size_t C) {
+    using namespace reduce_intl;
+    if (use_reduce_column(A, B, C))
+        return 0;
+
+    return get_workspace_largeBC<typename Op::wtype>(A, B, C);
+}
+
+}  // namespace rocm
+}  // namespace megdnn
+
+#endif
+
+// vim: ft=cpp syntax=cpp.doxygen

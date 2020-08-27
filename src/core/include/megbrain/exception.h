@@ -145,6 +145,17 @@ public:
 };
 
 
+class ROCmError final : public SystemError {
+public:
+    /*!
+     * \brief get extra info for current rocm status, to be appended in
+     *      error message
+     */
+    static std::string get_rocm_extra_info();
+
+    ROCmError(const std::string& msg);
+};
+
 class CnrtError final : public SystemError {
 public:
     /*!

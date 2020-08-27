@@ -11,6 +11,7 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--type', type=str, choices=[
                                                     'cuda',
+                                                    'hip'
                                                     ],
                         default='cuda',
                         help='generate cuda/hip elemwise special kernel file')
@@ -22,6 +23,9 @@ def main():
 
     if args.type == 'cuda':
         cpp_ext = 'cu'
+    else:
+        assert  args.type =='hip'
+        cpp_ext = 'cpp.hip'
 
     for dtype in DTYPES.keys():
         fname = 'special_{}.{}'.format(dtype, cpp_ext)
