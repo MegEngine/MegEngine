@@ -52,7 +52,7 @@ class QATModule(Module):
             self.weight_fake_quant = safe_call(qconfig.weight_fake_quant)
 
     def _enable_exec(self, with_module, func, enable):
-        if not with_module:
+        if not with_module or not func:
             return
         if enable:
             func.enable()
