@@ -31,6 +31,25 @@ Copyright (c) 2017 Leon Merten Lohse
 8. invoke.hpp
 Copyright (c) 2018-2020 Matvey Cherevko (blackmatov@gmail.com)
 
+9. deeplabv3plus-pytorch
+Copyright (c) 2019 Hibercraft
+
+10. attrs
+Copyright (c) 2015 Hynek Schlawack
+
+11. PyYAML
+Copyright (c) 2017-2020 Ingy döt Net
+Copyright (c) 2006-2016 Kirill Simonov
+
+12. MIOpen
+Copyright (c) 2017 AMD Compute Libraries
+
+13. rocBLAS
+Copyright 2016-2020 Advanced Micro Devices, Inc.
+
+14. rocRAND
+Copyright (c) 2017 Advanced Micro Devices, Inc. All rights reserved.
+
 Terms of the MIT License:
 --------------------------------------------------------------------
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -2164,6 +2183,33 @@ Each version is given a distinguishing version number. If the Library as you rec
 If the Library as you received it specifies that a proxy can decide whether future versions of the GNU Lesser General Public License shall apply, that proxy's public statement of acceptance of any version is permanent authorization for you to choose that version for the Library.
 *********************************************************************************************************************************
 
+
+
+
+
+
+*********************************************************************************************************************************
+Software Licensed under the University of Illinois/NCSA Open Source License:
+1. ROCR-Runtime
+Copyright (c) 2014-2017, Advanced Micro Devices, Inc.
+Developed by:
+                AMD Research and AMD HSA Software Development
+                Advanced Micro Devices, Inc.
+                www.amd.com
+
+2. hcc
+Copyright (c) MulticoreWare, Inc.
+Copyright (c) Advanced Micro Devices, Inc.
+Copyright (c) Microsoft Corporation.
+
+Terms of the University of Illinois/NCSA Open Source License:
+--------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal with the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ - Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimers.
+ - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimers in the documentation and/or other materials provided with the distribution.
+ - Neither the names of Advanced Micro Devices, Inc, nor the names of its contributors may be used to endorse or promote products derived from this Software without specific prior written permission.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
+*********************************************************************************************************************************
 
 
 
