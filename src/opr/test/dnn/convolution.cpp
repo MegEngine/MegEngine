@@ -2033,7 +2033,7 @@ TEST(TestOprDNN, HeuristicReproducible) {
 
 #if MGB_CUDA
 TEST(TestOprDNN, ConvolutionMultiCompNode) {
-    REQUIRE_GPU(2);
+    REQUIRE_GPU(1);
     auto cn0 = CompNode::load("gpu0:0"), cn1 = CompNode::load("gpu0:1");
     cn0.activate();
     auto&& prop = CompNodeEnv::from_comp_node(cn0).cuda_env().device_prop;
@@ -2106,21 +2106,22 @@ TEST(TestOprDNN, ConvolutionMultiCompNode) {
     auto func0 = graph0->compile({make_callback_copy(y0, host_y0)});
     auto func1 = graph1->compile({make_callback_copy(y1, host_y1)});
 
-     auto worker = [&func0, &func1](int wid) {
-        static int const iter_num = 1000;
-         if (wid == 0) {
-             for (int i = 0; i < iter_num; ++i)
-                 func0->execute();
-         } else {
-             for (int i = 0; i < iter_num; ++i)
-                 func1->execute();
-         }
-     };
-     std::thread worker0(worker, 0);
-     std::thread worker1(worker, 1);
-     worker0.join();
-     worker1.join();
+    auto worker = [&func0, &func1](int wid) {
+        static const int iter_num = 1000;
+        if (wid == 0) {
+            for (int i = 0; i < iter_num; ++i)
+                func0->execute();
+        } else {
+            for (int i = 0; i < iter_num; ++i)
+                func1->execute();
+        }
+    };
+    std::thread worker0(worker, 0);
+    std::thread worker1(worker, 1);
+    worker0.join();
+    worker1.join();
 }
+
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
