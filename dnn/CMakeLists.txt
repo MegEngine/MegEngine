@@ -62,7 +62,6 @@ if(MGE_WITH_CUDA)
     target_include_directories(cutlass 
         INTERFACE 
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/third_party/cutlass/include>)
-    install(TARGETS cutlass EXPORT ${MGE_EXPORT_TARGETS})
 endif()
 
 if(MGE_WITH_TEST)

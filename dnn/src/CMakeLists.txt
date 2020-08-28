@@ -130,7 +130,7 @@ add_library(megdnn EXCLUDE_FROM_ALL OBJECT ${SOURCES})
 
 target_link_libraries(megdnn PUBLIC opr_param_defs)
 if(MGE_WITH_CUDA)
-    target_link_libraries(megdnn PUBLIC cutlass)
+    target_link_libraries(megdnn PRIVATE $<BUILD_INTERFACE:cutlass>)
 endif()
 
 if(MGE_WITH_ROCM)
