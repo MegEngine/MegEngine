@@ -937,6 +937,38 @@ def arange(
 
 
 def param_pack_split(inp: Tensor, offsets: List, shapes: List) -> Tensor:
+    r"""
+    Returns split Tensor to Tensor list as offsets and shapes described,
+            only used for parampack.
+
+    :param inp: Input tensor
+    :param offsets: offsets of outputs, length of 2 * n,
+            while n is tensor nums you want to split,
+            format [begin0, end0, begin1, end1].
+    :param shapes: tensor shapes of outputs
+    :return: split tensors
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+        from megengine import tensor
+
+        a = tensor(np.ones((10,), np.int32))
+        b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
+        print(b.numpy())
+        print(c.numpy())
+
+    .. testoutput::
+
+        [1]
+        [[1 1 1]
+         [1 1 1]
+         [1 1 1]]
+
+    """
     op = builtin.ParamPackSplit()
     op.offsets = offsets
     op.shapes = shapes
@@ -944,6 +976,35 @@ def param_pack_split(inp: Tensor, offsets: List, shapes: List) -> Tensor:
 
 
 def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
+    r"""
+    Returns concat Tensor, only used for parampack.
+
+    :param inps: Input tensors
+    :param offsets: offsets of inputs, length of 2 * n,
+            format [begin0, end0, begin1, end1].
+    :param offsets_val: device value of offsets
+    :return: split tensors
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+        from megengine import tensor
+
+        a = tensor(np.ones((1,), np.int32))
+        b = tensor(np.ones((3, 3), np.int32))
+        offsets = [0, 1, 1, 10]
+        offsets_val = tensor(offsets, np.int32)
+        c = F.param_pack_concat([a, b], offsets, offsets_val)
+        print(c.numpy())
+
+    .. testoutput::
+
+        [1 1 1 1 1 1 1 1 1 1]
+
+    """
     op = builtin.ParamPackConcat()
     op.offsets = offsets_val
     return apply(op, *inps, offsets)[0]

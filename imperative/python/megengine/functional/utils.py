@@ -77,4 +77,28 @@ def zero_grad(inp: Tensor) -> Tensor:
 
 
 def copy(inp, cn):
+    r"""
+    Copy tensor to another device.
+
+    :param inp: Input tensor.
+    :param cn: device that you copy to
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, 2, 3], np.int32)
+        y = F.copy(x, "xpu1")
+        print(y.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [1 2 3]
+    """
     return apply(Copy(comp_node=cn), inp)[0]
