@@ -522,6 +522,7 @@ def test_advance_indexing_with_bool():
     b = np.array([[False, False], [False, False]])
     aa = Tensor(a)
     bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[b].numpy())
     np.testing.assert_equal(a[b], aa[bb].numpy())
 
     b = np.array([False, False])
