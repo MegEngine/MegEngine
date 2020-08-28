@@ -16,7 +16,7 @@ void init_common(py::module m) {
     py::class_<CompNode>(m, "CompNode")
         .def(py::init())
         .def(py::init(py::overload_cast<const std::string&>(&CompNode::load)))
-        .def("__str__", &CompNode::to_string)
+        .def("__str__", &CompNode::to_string_logical)
         .def_static("_sync_all", &CompNode::sync_all)
         .def(py::self == py::self)
         .def_static("_get_device_count", &CompNode::get_device_count,
