@@ -17,7 +17,7 @@ endif()
 
 
 add_executable(megbrain_test ${SOURCES})
-target_link_libraries(megbrain_test gtest)
+target_link_libraries(megbrain_test gtest gmock)
 if(MSVC OR WIN32)
     target_link_libraries(megbrain_test megbrain megdnn)
 else()
