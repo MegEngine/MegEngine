@@ -12,6 +12,7 @@
 #include "./graph_rt.h"
 
 #include "megbrain/imperative/opr_utility.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/imperative.h"
 #include "./helper.h"
@@ -29,29 +30,44 @@ auto def_rendezvous(py::object m, const char* name) {
         .def(py::init([](){return std::make_shared<Rendezvous<T>>();}))
         .def("set", [](Rendezvous<T>& r, T v) {r.set(std::move(v));})
         .def("get", [](Rendezvous<T>& r) {return r.get();}, py::call_guard<py::gil_scoped_release>())
+        .def("drop", &Rendezvous<T>::drop)
         .def("reset", &Rendezvous<T>::reset);
 }
 
 using TensorAttr = LogicalTensorDesc;
+using HostNDWithEvent = std::pair<HostTensorND, std::shared_ptr<CompNode::Event>>;
 
 void init_graph_rt(py::module m) {
     def_rendezvous<DeviceTensorND>(m, "DeviceTensorNDRendezvous");
+
+    def_rendezvous<HostNDWithEvent>(m, "HostTensorNDRendezvous");
 
     def_rendezvous<TensorAttr>(m, "TensorAttrRendezvous");
 
     py::class_<cg::VarNode, GraphNodePtr<cg::VarNode>>(m, "VarNode")
         .def_property_readonly("owner", [](cg::VarNode* v) {return v->owner_opr();})
         .def_property_readonly("graph", [](cg::VarNode* v) {return v->owner_graph();})
+        .def_property_readonly("name", py::overload_cast<>(&VarNode::name, py::const_))
         .def_property_readonly("dtype", [](cg::VarNode* v) {return v->dtype();})
-        .def_property_readonly("comp_node", [](cg::VarNode* v) {return v->comp_node();});
+        .def_property_readonly("comp_node", [](cg::VarNode* v) {return v->comp_node();})
+        .def_property_readonly("shape", [](cg::VarNode* v) -> const TensorShape* {
+                auto&& mgr = v->owner_graph()->static_infer_manager();
+                auto&& type = mgr.get_infer_type(v);
+                using InferType = cg::static_infer::InferType;
+                if (!(type.shape & (InferType::CONST | InferType::RT_STATIC))) {
+                    return nullptr;
+                }
+                return mgr.infer_shape_fallible(v);
+            });
 
     py::class_<cg::OperatorNodeBase, GraphNodePtr<cg::OperatorNodeBase>>(m, "OperatorNode")
         .def_property_readonly("graph", [](cg::OperatorNodeBase* opr) {return opr->owner_graph();})
+        .def_property_readonly("name", py::overload_cast<>(&cg::OperatorNodeBase::name, py::const_))
         .def_property_readonly("inputs", [](cg::OperatorNodeBase* opr) {
                 return to_tuple(opr->input());
             })
         .def_property_readonly("outputs", [](cg::OperatorNodeBase* opr) {
-                return to_tuple(opr->output());
+                return to_tuple(opr->usable_output());
             });
 
     py::class_<cg::AsyncExecutable>(m, "AsyncExecutable")
@@ -117,7 +133,7 @@ void init_graph_rt(py::module m) {
     common.def("invoke_op", [](const OpDef& def, const std::vector<cg::VarNode*> inputs, cg::ComputingGraph* graph) {
             cg::VarNodeArray vinputs(inputs.begin(), inputs.end());
             auto opr = OpDef::apply_on_var_node(def, vinputs);
-            auto outputs = opr->output();
+            auto outputs = opr->usable_output();
             return to_tuple(outputs);
         },
         py::arg(), py::arg(), py::arg("graph") = py::none());
@@ -125,6 +141,7 @@ void init_graph_rt(py::module m) {
     auto input_callback = [](auto callback,
                              const CompNode& comp_node,
                              const DType& dtype,
+                             const TensorShape& shape,
                              const std::vector<cg::VarNode*>& inputs,
                              cg::ComputingGraph* graph) {
         if (!graph) {
@@ -135,7 +152,7 @@ void init_graph_rt(py::module m) {
             sinputs.emplace_back(i);
         }
         static_assert(!std::is_reference<decltype(callback)>::value);
-        auto soutputs = opr::InputCallback::make(*graph, std::move(callback), comp_node, dtype, sinputs);
+        auto soutputs = opr::InputCallback::make(*graph, std::move(callback), comp_node, dtype, shape, sinputs);
         std::vector<VarNode*> outputs;
         outputs.reserve(soutputs.size());
         for (auto i : soutputs) {
@@ -144,26 +161,40 @@ void init_graph_rt(py::module m) {
         return outputs;
     };
 
+    m.def("make_shared", [](cg::ComputingGraph* graph, const DeviceTensorND& data) {
+            return opr::SharedDeviceTensor::make(*graph, std::make_shared<DeviceTensorND>(data)).node();
+        });
+
+    m.def("make_const", [](cg::ComputingGraph* graph, py::array data, CompNode cn, DType dtype) {
+            if (!cn.valid()) {
+                throw py::type_error("device must not be None");
+            }
+            auto hv = npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype);
+            opr::ImmutableTensor::make(*graph, hv, OperatorNodeConfig(cn)).node();
+        });
+
     m.def("input_callback", [input_callback](std::function<DeviceTensorND(void)> callback,
                                              const CompNode& comp_node,
                                              const DType& dtype,
+                                             const TensorShape& shape,
                                              const std::vector<cg::VarNode*>& inputs,
                                              cg::ComputingGraph* graph) {
-            return input_callback([f=std::move(callback)](){py::gil_scoped_acquire _; return f();}, comp_node, dtype, inputs, graph);
+            return input_callback([f=std::move(callback)](){py::gil_scoped_acquire _; return f();}, comp_node, dtype, shape, inputs, graph);
         },
-        py::arg(), py::arg(), py::arg(), py::arg() = py::tuple(), py::arg("graph") = py::none());
+        py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(), py::arg("graph") = py::none());
 
     m.def("input_callback", [input_callback](std::shared_ptr<Rendezvous<DeviceTensorND>> p,
                                              const CompNode& comp_node,
                                              const DType& dtype,
+                                             const TensorShape& shape,
                                              const std::vector<cg::VarNode*>& inputs,
                                              cg::ComputingGraph* graph) {
             auto f = [p]() -> DeviceTensorND {
                 return p->get();
             };
-            return input_callback(std::move(f), comp_node, dtype, inputs, graph);
+            return input_callback(std::move(f), comp_node, dtype, shape, inputs, graph);
         },
-        py::arg(), py::arg(), py::arg(), py::arg() = py::tuple(), py::arg("graph") = py::none());
+        py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(), py::arg("graph") = py::none());
 
     auto output_callback = [](auto callback, const std::vector<cg::VarNode*>& inputs, bool borrow = false) {
         SymbolVarArray sinputs;
@@ -191,6 +222,17 @@ void init_graph_rt(py::module m) {
             p->set(std::move(dv));
         };
         return output_callback(std::move(f), std::move(inputs));
+    });
+
+    m.def("value_output_callback", [output_callback](std::shared_ptr<Rendezvous<HostNDWithEvent>> p, std::vector<cg::VarNode*> inputs) {
+        auto f = [p](DeviceTensorND dv) {
+            HostNDWithEvent hv_with_event;
+            hv_with_event.first.copy_from(dv);
+            hv_with_event.second = dv.comp_node().create_event();
+            hv_with_event.second->record();
+            p->set(std::move(hv_with_event));
+        };
+        return output_callback(std::move(f), std::move(inputs), true);
     });
 
     m.def("attr_output_callback", [output_callback](std::shared_ptr<Rendezvous<TensorAttr>> p, std::vector<cg::VarNode*> inputs) {

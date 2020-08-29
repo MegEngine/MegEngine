@@ -17,6 +17,7 @@
 #include "megbrain/opr/internal/param_tag_defs.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/param_defs.h"
+#include "megbrain/serialization/sereg.h"
 
 #include "megdnn/oprs/utils.h"
 
@@ -33,17 +34,24 @@ public:
     InputCallback(cg::ComputingGraph& graph,
                   callback_t callback,
                   const VarNodeArray& inputs,
+                  const TensorShape& output_shape,
                   const OperatorNodeConfig &config);
     static SymbolVarArray make(cg::ComputingGraph& graph,
                                callback_t callback,
                                CompNode comp_node,
                                DType dtype,
+                               const TensorShape& shape,
                                const SymbolVarArray& inputs = {});
+    static cg::OperatorNodeBase* shallow_copy(
+            const serialization::OprShallowCopyContext &ctx,
+            const cg::OperatorNodeBase &opr_, const VarNodeArray &inputs,
+            const OperatorNodeConfig &config);
 protected:
     void scn_do_execute() override;
     void init_output_static_infer_desc() override;
     NodeProp* do_make_node_prop() const override;
 private:
+    TensorShape m_output_shape;
     callback_t m_callback;
 };
 
@@ -63,6 +71,10 @@ public:
                           SymbolVar input) {
         return make(std::move(param), SymbolVarArray{input});
     }
+    static cg::OperatorNodeBase* shallow_copy(
+            const serialization::OprShallowCopyContext &ctx,
+            const cg::OperatorNodeBase &opr_, const VarNodeArray &inputs,
+            const OperatorNodeConfig &config);
 protected:
     void scn_do_execute() override;
     void init_output_static_infer_desc() override;

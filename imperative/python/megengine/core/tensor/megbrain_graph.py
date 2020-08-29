@@ -17,15 +17,31 @@ from ..ops.builtin import OpDef
 from .core import OpBase, TensorBase, apply
 
 
-class CompiledFunction:
-    def __init__(self, graph, function):
-        self._graph = graph
-        self._function = function
+class Graph(_imperative_rt.ComputingGraph):
+    def __init__(self):
+        super().__init__()
+        self._var_cache = weakref.WeakKeyDictionary()
+        self._op_cache = weakref.WeakKeyDictionary()
+        self._executor = ThreadPoolExecutor(1)
+        self._function = None
         self._future = None
+
+    def _wrap(self, obj):
+        if type(obj) is _imperative_rt.VarNode:
+            wrapper, cache = VarNode, self._var_cache
+        elif type(obj) is _imperative_rt.OperatorNode:
+            wrapper, cache = OpNode, self._op_cache
+        if obj not in cache:
+            cache[obj] = wrapper(obj)
+        return cache[obj]
+
+    def compile(self, *args):
+        self._function = super().compile(_unwrap(args))
+        return self
 
     def execute(self, *args):
         assert self._future is None
-        self._future = self._graph._executor.submit(self._function.execute, *args)
+        self._future = self._executor.submit(self._function.execute, *args)
 
     def wait(self):
         assert self._future is not None
@@ -40,30 +56,23 @@ class CompiledFunction:
         self.execute(*args)
         return self.wait()
 
+    def make_const(self, data, dtype=None, device=None):
+        if isinstance(data, _imperative_rt.DeviceTensorND):
+            assert dtype is None and device is None
+            return self._wrap(_imperative_rt.make_shared(self, data))
+        else:
+            device = as_device(device).to_c()
+            return self._wrap(_imperative_rt.make_const(self, data, device, dtype))
 
-class Graph(_imperative_rt.ComputingGraph):
-    def __init__(self):
-        super().__init__()
-        self._var_cache = weakref.WeakKeyDictionary()
-        self._op_cache = weakref.WeakKeyDictionary()
-        self._executor = ThreadPoolExecutor(1)
-
-    def _wrap(self, obj):
-        if type(obj) is _imperative_rt.VarNode:
-            wrapper, cache = VarNode, self._var_cache
-        elif type(obj) is _imperative_rt.OperatorNode:
-            wrapper, cache = OpNode, self._op_cache
-        if obj not in cache:
-            cache[obj] = wrapper(obj)
-        return cache[obj]
-
-    def compile(self, *args):
-        return CompiledFunction(self, super().compile(_unwrap(args)))
+    def make_input(self, *args: "VarNode", device=None, dtype=None, shape=None):
+        opnode = InputNode(*args, device=device, dtype=dtype, shape=shape, graph=self)
+        return opnode.outputs[0]
 
 
 class VarNode(TensorBase):
     def __init__(self, node: _imperative_rt.VarNode):
         self._node = node
+        self.graph._var_cache[node] = self
 
     @property
     def graph(self) -> Graph:
@@ -81,10 +90,15 @@ class VarNode(TensorBase):
     def device(self):
         return as_device(self._node.comp_node)
 
+    @property
+    def shape(self):
+        return self._node.shape
+
 
 class OpNode:
     def __init__(self, node: _imperative_rt.OperatorNode):
         self._node = node
+        self.graph._op_cache[node] = self
 
     @property
     def graph(self) -> Graph:
@@ -117,21 +131,21 @@ def _(op: OpDef, *args: VarNode):
     return _wrap(outputs)
 
 
-def input_callback(callback, *args, device=None, dtype=None, graph=None):
+def input_callback(callback, *args, device=None, dtype=None, shape=None, graph=None):
     outputs = _imperative_rt.input_callback(
-        callback, as_device(device).to_c(), dtype, _unwrap(args), graph=graph
+        callback, as_device(device).to_c(), dtype, shape, _unwrap(args), graph=graph
     )
     value, dummy = _wrap(outputs)
     return value, dummy
 
 
 class InputNode(OpNode):
-    def __init__(self, *args: VarNode, device=None, dtype=None, graph=None):
+    def __init__(self, *args: VarNode, device=None, dtype=None, shape=None, graph=None):
         r = _imperative_rt.DeviceTensorNDRendezvous()
         if device is not None:
             device = as_device(device).to_c()
         outputs = _imperative_rt.input_callback(
-            r, device, dtype, _unwrap(args), graph=graph
+            r, device, dtype, shape, _unwrap(args), graph=graph
         )
         super().__init__(outputs[0].owner)
         self._rendezvous = r
@@ -169,6 +183,29 @@ class OutputNode(OpNode):
     def get_value(self):
         return self._rendezvous.get()
 
+    def drop_value(self):
+        self._rendezvous.drop()
+
+    def reset(self):
+        self._rendezvous.reset()
+
+
+class ValueOutputNode(OpNode):
+    def __init__(self, var, *args):
+        args = (var,) + args
+        r = _imperative_rt.HostTensorNDRendezvous()
+        dummy = _imperative_rt.value_output_callback(r, _unwrap(args))
+        super().__init__(dummy.owner)
+        self._rendezvous = r
+
+    def get_value(self):
+        hostnd, event = self._rendezvous.get()
+        event.wait()
+        return hostnd.numpy()
+
+    def drop_value(self):
+        self._rendezvous.drop()
+
     def reset(self):
         self._rendezvous.reset()
 
@@ -191,6 +228,9 @@ class AttrOutputNode(OpNode):
     def get_value(self):
         attr = self._rendezvous.get()
         return TensorAttr(attr.shape, attr.dtype, as_device(attr.comp_node))
+
+    def drop_value(self):
+        self._rendezvous.drop()
 
     def reset(self):
         self._rendezvous.reset()

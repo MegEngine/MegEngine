@@ -63,6 +63,7 @@ void init_imperative_rt(py::module m) {
                     return self.put(npy::np2tensor(data.ptr(), npy::Meth::copy_into(&ret), dtype));
                 }
             }, py::arg(), py::arg("dtype") = py::none(), py::arg("device") = py::none())
+        .def("put", py::overload_cast<const DeviceTensorND&>(&Interpreter::Channel::put))
         .def("delete", [](Interpreter::Channel& self, Interpreter::Handle handle) {
                 return self.del(handle);
             })

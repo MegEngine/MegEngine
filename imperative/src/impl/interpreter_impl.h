@@ -55,6 +55,7 @@ struct ChannelImpl : Interpreter::Channel {
     ~ChannelImpl() override;
 
     Handle put(const HostTensorND& value) override;
+    Handle put(const DeviceTensorND& value) override;
 
     void del(Handle) override;
 

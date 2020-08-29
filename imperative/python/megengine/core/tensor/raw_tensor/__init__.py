@@ -31,11 +31,13 @@ class RawTensor(TensorBase):
 
     _init_cb = None
     _del_cb = None
+    _handle = None
 
-    def __init__(self, handle):
+    def __init__(self, handle=None):
         self._handle = handle
-        if self._init_cb:
-            self._init_cb()
+        if handle is not None:
+            if self._init_cb:
+                self._init_cb()
 
     @property
     def dtype(self):
@@ -61,9 +63,10 @@ class RawTensor(TensorBase):
         )
 
     def __del__(self):
-        if self._del_cb:
-            self._del_cb()
-        delete(self._handle)
+        if self._handle is not None:
+            if self._del_cb:
+                self._del_cb()
+            delete(self._handle)
 
 
 @apply.register()
@@ -87,6 +90,11 @@ def as_raw_tensor(obj, dtype=None, device=None):
     if obj.dtype == np.int64:
         obj = obj.astype(np.int32)
     return as_raw_tensor(obj, device=device)
+
+
+@as_raw_tensor.register(DeviceTensorND)
+def _(data: DeviceTensorND):
+    return RawTensor(put(data))
 
 
 @as_raw_tensor.register(np.ndarray)

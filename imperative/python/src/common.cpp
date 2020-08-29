@@ -23,10 +23,29 @@ namespace py = pybind11;
 using namespace mgb;
 using namespace imperative;
 
+namespace {
+
+template<typename XTensorND>
+auto def_TensorND(py::object parent, const char* name) {
+    return py::class_<XTensorND>(parent, name)
+        .def_property_readonly("shape", py::overload_cast<>(&XTensorND::shape, py::const_))
+        .def_property_readonly("dtype", py::overload_cast<>(&XTensorND::dtype, py::const_))
+        .def_property_readonly("comp_node", py::overload_cast<>(&XTensorND::comp_node, py::const_))
+        .def("copy_from", &XTensorND::template copy_from<DeviceTensorStorage>)
+        .def("copy_from", &XTensorND::template copy_from<HostTensorStorage>)
+        .def("copy_from_fixlayout", py::overload_cast<const DeviceTensorND&>(
+            &XTensorND::template copy_from_fixlayout<DeviceTensorStorage>))
+        .def("copy_from_fixlayout", py::overload_cast<const HostTensorND&>(
+            &XTensorND::template copy_from_fixlayout<HostTensorStorage>));
+}
+
+} // namespace
+
 void init_common(py::module m) {
-    py::class_<CompNode>(m, "CompNode")
+    auto&& PyCompNode = py::class_<CompNode>(m, "CompNode")
         .def(py::init())
         .def(py::init(py::overload_cast<const std::string&>(&CompNode::load)))
+        .def("create_event", &CompNode::create_event, py::arg("flags") = 0ul)
         .def("__str__", &CompNode::to_string_logical)
         .def_static("_sync_all", &CompNode::sync_all)
         .def(py::self == py::self)
@@ -40,17 +59,28 @@ void init_common(py::module m) {
                     return CompNode::load(cn);
                 }));
 
+    py::class_<CompNode::Event, std::shared_ptr<CompNode::Event>>(PyCompNode, "Event")
+        .def("record", &CompNode::Event::record)
+        .def("wait", &CompNode::Event::host_wait);
+
     py::implicitly_convertible<std::string, CompNode>();
 
-    py::class_<DeviceTensorND>(m, "DeviceTensorND")
-        .def(py::init())
-        .def_property_readonly("shape", py::overload_cast<>(&DeviceTensorND::shape, py::const_))
-        .def_property_readonly("dtype", py::overload_cast<>(&DeviceTensorND::dtype, py::const_))
-        .def_property_readonly("comp_node", py::overload_cast<>(&DeviceTensorND::comp_node, py::const_))
+    def_TensorND<DeviceTensorND>(m, "DeviceTensorND")
         .def("numpy", [](const DeviceTensorND& self) {
                 HostTensorND hv;
                 hv.copy_from(self).sync();
                 return py::handle(npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
+            });
+
+    def_TensorND<HostTensorND>(m, "HostTensorND")
+        .def(py::init([](py::array data, CompNode cn, DType dtype) {
+                if (!cn.valid()) {
+                    throw py::type_error("device must not be None");
+                }
+                return npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype);
+            }))
+        .def("numpy", [](const HostTensorND& self) {
+                return py::reinterpret_steal<py::object>(npy::ndarray_from_tensor(self, npy::ShareType::TRY_SHARE));
             });
 
     py::class_<cg::OperatorNodeConfig>(m, "OperatorNodeConfig")

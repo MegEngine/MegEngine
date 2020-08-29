@@ -280,8 +280,11 @@ namespace detail {
     public:
         bool load(handle src, bool convert) {
             auto obj = reinterpret_steal<object>(src);
-            if (!isinstance<tuple>(obj)) {
+            if (!convert && !isinstance<tuple>(obj)) {
                 return false;
+            }
+            if (obj.is_none()) {
+                return true;
             }
             value.ndim = len(obj);
             mgb_assert(value.ndim <= mgb::TensorShape::MAX_NDIM);

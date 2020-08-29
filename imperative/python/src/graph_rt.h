@@ -39,6 +39,7 @@ template<typename R>
 class Rendezvous {
     std::mutex m_lock;
     int m_read_ahead = 0;
+    bool m_drop_next = false;
     std::promise<R> m_promise;
 public:
     Rendezvous() = default;
@@ -47,6 +48,7 @@ public:
     Rendezvous& operator=(const Rendezvous& rhs) = delete;
     Rendezvous& operator=(Rendezvous&& rhs) {
         MGB_LOCK_GUARD(m_lock);
+        m_drop_next = rhs.m_drop_next;
         m_read_ahead = rhs.m_read_ahead;
         m_promise = std::move(rhs.m_promise);
         return *this;
@@ -67,12 +69,28 @@ public:
         return f.get();
     }
 
+    void drop() {
+        MGB_LOCK_GUARD(m_lock);
+        mgb_assert(m_read_ahead <= 0);
+        mgb_assert(m_read_ahead >= -1);
+        if (m_read_ahead == -1) {
+            m_promise = {};
+        } else {
+            m_drop_next = true;
+        }
+        ++m_read_ahead;
+    }
+
     template<typename T>
     void set(T&& value) {
         MGB_LOCK_GUARD(m_lock);
         mgb_assert(m_read_ahead >= 0);
         mgb_assert(m_read_ahead <= 1);
-        m_promise.set_value(std::forward<T>(value));
+        if (m_drop_next) {
+            m_drop_next = false;
+        } else {
+            m_promise.set_value(std::forward<T>(value));
+        }
         if (m_read_ahead == 1) {
             m_promise = {};
         }
@@ -83,6 +101,7 @@ public:
         MGB_LOCK_GUARD(m_lock);
         m_promise = {};
         m_read_ahead = 0;
+        m_drop_next = false;
     }
 };
 

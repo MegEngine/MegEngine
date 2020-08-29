@@ -24,6 +24,12 @@ constexpr bool has_fastcall = true;
 constexpr bool has_fastcall = false;
 #endif
 
+#ifdef _Py_TPFLAGS_HAVE_VECTORCALL
+constexpr bool has_vectorcall = true;
+#else
+constexpr bool has_vectorcall = false;
+#endif
+
 template<typename... Args>
 struct invocable_with {
     template<typename T>
@@ -55,6 +61,9 @@ private:
 public:
     PyObject_HEAD
     std::aligned_storage_t<sizeof(T), alignof(T)> storage;
+    #ifdef _Py_TPFLAGS_HAVE_VECTORCALL
+    PyObject* vectorcall_slot;
+    #endif
 
     inline T* inst() {
         return reinterpret_cast<T*>(&storage);
@@ -155,6 +164,51 @@ private:
 
     // polyfills
 
+    struct tp_vectorcall {
+        static constexpr bool valid = HAS_MEMBER(T, tp_vectorcall);
+        static constexpr bool haskw = [](){if constexpr (valid)
+                                               if constexpr (std::is_invocable_v<T::tp_vectorcall, T, PyObject*const*, size_t, PyObject*>)
+                                                   return true;
+                                           return false;}();
+
+        template<typename = void>
+        static PyObject* impl(PyObject* self, PyObject*const* args, size_t nargsf, PyObject *kwnames) {
+            auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+            if constexpr (haskw) {
+                CVT_RET_PYOBJ(inst->tp_vectorcall(args, nargsf, kwnames));
+            } else {
+                if (kwnames && PyTuple_GET_SIZE(kwnames)) {
+                    PyErr_SetString(PyExc_TypeError, "expect no keyword argument");
+                    return nullptr;
+                }
+                CVT_RET_PYOBJ(inst->tp_vectorcall(args, nargsf));
+            }
+        }
+
+        static constexpr Py_ssize_t offset = []() {if constexpr (valid) return offsetof(wrap_t, vectorcall_slot);
+                                                   else return 0;}();
+    };
+
+    struct tp_call {
+        static constexpr bool provided = HAS_MEMBER(T, tp_call);
+        static constexpr bool static_form = invocable_with<T, PyObject*, PyObject*, PyObject*>{}(
+            [](auto&& t, auto... args) -> decltype(std::decay_t<decltype(t)>::tp_call(args...)) {});
+        static constexpr bool valid = provided || tp_vectorcall::valid;
+
+        template<typename = void>
+        static PyObject* impl(PyObject* self, PyObject* args, PyObject* kwargs) {
+            auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+            CVT_RET_PYOBJ(inst->tp_call(args, kwargs));
+        }
+
+        static constexpr ternaryfunc value = []() {if constexpr (static_form) return T::tp_call;
+                                                   else if constexpr (provided) return impl<>;
+                                                   #ifdef _Py_TPFLAGS_HAVE_VECTORCALL
+                                                   else if constexpr (valid) return PyVectorcall_Call;
+                                                   #endif
+                                                   else return nullptr;}();
+    };
+
     struct tp_new {
         static constexpr bool provided = HAS_MEMBER(T, tp_new);
         static constexpr bool varkw = std::is_constructible_v<T, PyObject*, PyObject*>;
@@ -163,11 +217,14 @@ private:
         template<typename = void>
         static PyObject* impl(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
             auto* self = type->tp_alloc(type, 0);
-            auto* ptr = reinterpret_cast<wrap_t*>(self)->inst();
+            auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+            if constexpr (has_vectorcall && tp_vectorcall::valid) {
+                reinterpret_cast<wrap_t*>(self)->vectorcall_slot = &tp_vectorcall::template impl<>;
+            }
             if constexpr (varkw) {
-                new(ptr) T(args, kwargs);
+                new(inst) T(args, kwargs);
             } else {
-                new(ptr) T();
+                new(inst) T();
             }
             return self;
         }
@@ -188,22 +245,6 @@ private:
 
         static constexpr destructor value = []() {if constexpr (provided) return T::tp_dealloc;
                                                   else return impl<>;}();
-    };
-
-    struct tp_call {
-        static constexpr bool valid = HAS_MEMBER(T, tp_call);
-        static constexpr bool static_form = invocable_with<T, PyObject*, PyObject*, PyObject*>{}(
-            [](auto&& t, auto... args) -> decltype(std::decay_t<decltype(t)>::tp_call(args...)) {});
-
-        template<typename = void>
-        static PyObject* impl(PyObject* self, PyObject* args, PyObject* kwargs) {
-            auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
-            CVT_RET_PYOBJ(inst->tp_call(args, kwargs));
-        }
-
-        static constexpr ternaryfunc value = []() {if constexpr (static_form) return T::tp_call;
-                                                   else if constexpr (valid) return impl<>;
-                                                   else return nullptr;}();
     };
 
 public:
@@ -228,9 +269,17 @@ public:
                 m_type.tp_name = T::tp_name;
             }
             m_type.tp_dealloc = tp_dealloc::value;
+            #ifdef _Py_TPFLAGS_HAVE_VECTORCALL
+            m_type.tp_vectorcall_offset = tp_vectorcall::offset;
+            #endif
             m_type.tp_call = tp_call::value;
             m_type.tp_basicsize = sizeof(wrap_t);
             m_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+            #ifdef _Py_TPFLAGS_HAVE_VECTORCALL
+            if constexpr (tp_vectorcall::valid) {
+                m_type.tp_flags |= _Py_TPFLAGS_HAVE_VECTORCALL;
+            }
+            #endif
             m_type.tp_new = tp_new::value;
         }
 

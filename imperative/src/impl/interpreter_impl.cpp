@@ -37,6 +37,15 @@ void* ChannelImpl::put(const HostTensorND& value) {
     return info;
 }
 
+void* ChannelImpl::put(const DeviceTensorND& data) {
+    auto info = alloc();
+    info->desc.layout = data.layout();
+    info->desc.comp_node = data.comp_node();
+    info->ptr = Tensor::make(data);
+    m_valid_handle.insert(info);
+    return info;
+}
+
 void ChannelImpl::del(void* handle) {
     mgb_assert(m_valid_handle.erase(handle), "invalid handle: %p", handle);
     m_worker.add_task(Del{reinterpret_cast<TensorInfo*>(handle)});

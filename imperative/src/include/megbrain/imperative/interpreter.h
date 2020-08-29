@@ -22,6 +22,7 @@ struct Interpreter {
         virtual ~Channel() = default;
 
         virtual Handle put(const HostTensorND& value) = 0;
+        virtual Handle put(const DeviceTensorND& value) = 0;
 
         virtual void del(Handle) = 0;
 
