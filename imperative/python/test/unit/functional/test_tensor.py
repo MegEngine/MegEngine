@@ -314,3 +314,42 @@ def test_device():
     y5 = F.full((3, 2), 4, device=x.device)
     y6 = F.full((3, 2), 4, device="xpux")
     np.testing.assert_almost_equal(y5.numpy(), y6.numpy())
+
+
+def copy_test(dst, src):
+    data = np.random.random((2, 3)).astype(np.float32)
+    x = tensor(data, device=src)
+    y = F.copy(x, dst)
+    assert np.allclose(data, y.numpy())
+
+
+@pytest.mark.skipif(not is_cuda_available(), reason="CUDA is disabled")
+def test_copy_h2d():
+    copy_test("cpu0", "gpu0")
+
+
+@pytest.mark.skipif(not is_cuda_available(), reason="CUDA is disabled")
+def test_copy_d2h():
+    copy_test("gpu0", "cpu0")
+
+
+@pytest.mark.skipif(not is_cuda_available(), reason="CUDA is disabled")
+def test_copy_d2d():
+    copy_test("gpu0", "gpu1")
+    copy_test("gpu0:0", "gpu0:1")
+
+
+def test_param_pack_split():
+    a = tensor(np.ones((10,), np.int32))
+    b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
+    assert np.allclose(b.numpy(), a.numpy()[1])
+    assert np.allclose(c.numpy(), a.numpy()[1:].reshape(3, 3))
+
+
+def test_param_pack_concat():
+    a = tensor(np.ones((1,), np.int32))
+    b = tensor(np.ones((3, 3), np.int32))
+    offsets_val = [0, 1, 1, 10]
+    offsets = tensor(offsets_val, np.int32)
+    c = F.param_pack_concat([a, b], offsets, offsets_val)
+    assert np.allclose(np.concatenate([a.numpy(), b.numpy().flatten()]), c.numpy())

@@ -980,9 +980,9 @@ def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
     Returns concat Tensor, only used for parampack.
 
     :param inps: Input tensors
-    :param offsets: offsets of inputs, length of 2 * n,
+    :param offsets: device value of offsets
+    :param offsets_val: offsets of inputs, length of 2 * n,
             format [begin0, end0, begin1, end1].
-    :param offsets_val: device value of offsets
     :return: split tensors
 
     Examples:
@@ -995,8 +995,8 @@ def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
 
         a = tensor(np.ones((1,), np.int32))
         b = tensor(np.ones((3, 3), np.int32))
-        offsets = [0, 1, 1, 10]
-        offsets_val = tensor(offsets, np.int32)
+        offsets_val = [0, 1, 1, 10]
+        offsets = tensor(offsets, np.int32)
         c = F.param_pack_concat([a, b], offsets, offsets_val)
         print(c.numpy())
 

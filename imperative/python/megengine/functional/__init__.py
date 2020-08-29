@@ -25,7 +25,7 @@ from .math import *
 from .nn import *
 from .quantized import conv_bias_activation
 from .tensor import *
-from .utils import accuracy, zero_grad
+from .utils import accuracy, copy, zero_grad
 
 # delete namespace
 # pylint: disable=undefined-variable
