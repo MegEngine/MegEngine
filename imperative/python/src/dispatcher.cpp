@@ -132,7 +132,7 @@ public:
 
     PyObject* tp_vectorcall(PyObject*const* args, Py_ssize_t nargs) {
         if (!prepare_call(args, nargs)) return nullptr;
-        return do_call([=](PyObject* func){return _PyObject_FastCall(func, args, nargs);});
+        return do_call([=](PyObject* func){return _PyObject_FastCall(func, const_cast<PyObject**>(args), nargs);});
     }
 
     PyObject* tp_call(PyObject* args, PyObject* kwargs) {
@@ -146,7 +146,7 @@ public:
             return nullptr;
         }
         stack.emplace_back(stack.back()).mro_offset++;
-        return do_call([=](PyObject* func){return _PyObject_FastCall(func, args, nargs);});
+        return do_call([=](PyObject* func){return _PyObject_FastCall(func, const_cast<PyObject**>(args), nargs);});
     }
 
     void enable(PyObject* func) {
