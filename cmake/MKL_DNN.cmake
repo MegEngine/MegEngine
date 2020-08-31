@@ -10,7 +10,7 @@ option(DNNL_BUILD_TESTS "" OFF)
 option(DNNL_BUILD_EXAMPLES "" OFF)
 # we do not want to use OMP now, so config to CPU mode
 # if set to OMP, some dnnl algo will be more fast
-set(DNNL_CPU_RUNTIME DNNL_RUNTIME_SEQ CACHE STRING "config dnnl to DNNL_RUNTIME_SEQ")
+set(DNNL_CPU_RUNTIME "SEQ" CACHE STRING "config dnnl to DNNL_RUNTIME_SEQ")
 if(MGE_BLAS STREQUAL "MKL")
     option(_DNNL_USE_MKL "" ON)
     set(MKLROOT ${MKL_ROOT_DIR} CACHE STRING "MKL ROOT FOR DNNL")
