@@ -81,6 +81,18 @@ public:
         return m_graph;
     }
 
+    bool is_same_st(const Hashable& rhs) const override {
+        if (!rhs.same_type<BackwardGraph>()) {
+            return false;
+        }
+        auto& other = rhs.cast_final_safe<BackwardGraph>();
+        if (this == &other) {
+            return true;
+        }
+        // FIXME
+        return false;
+    }
+
 private:
     InternalGraph m_graph;
 };

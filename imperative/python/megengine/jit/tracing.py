@@ -254,6 +254,7 @@ class trace:
 
     def _compile(self):
         graph = self._graph = G.Graph()
+        graph.options.no_force_inplace = True
         # graph.options.graph_opt_level = 0
         need_reset_nodes = self._need_reset_nodes = []
         # links enforce ordering of I/O nodes

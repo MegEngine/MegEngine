@@ -105,6 +105,7 @@ void init_graph_rt(py::module m) {
         DEF_READWRITE(enable_grad_var_static_reshape)
         DEF_READWRITE(enable_memory_swap)
         DEF_READWRITE(comp_node_seq_record_level)
+        DEF_READWRITE(no_force_inplace)
         // DEF_READWRITE(eager_evaluation)
         // DEF_READWRITE(imperative_proxy_graph)
         // DEF_READWRITE(extra_vardeps)
