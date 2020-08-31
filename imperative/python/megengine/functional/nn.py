@@ -209,7 +209,7 @@ def conv_transpose2d(
         dilate_w=dilate_w,
         strategy=get_conv_execution_strategy(),
     )
-    (output,) = apply(op, inp, weight)
+    (output,) = apply(op, weight, inp)
     if bias is not None:
         output += bias
     return output
@@ -241,7 +241,7 @@ def local_conv2d(
         pad_w=pad_w,
         dilate_h=dilate_h,
         dilate_w=dilate_w,
-        strategy=get_conv_execution_strategy(),
+        # strategy=get_conv_execution_strategy(),
     )
     (output,) = apply(op, inp, weight)
     if bias is not None:
@@ -724,7 +724,7 @@ def sync_batch_norm(
     """
     assert eps_mode in {"MAX", "ADDITIVE"}, "unknown eps_mode: {}".format(eps_mode)
     _channels = input.shape[1]
-    _ndim = len(input.shape)
+    _ndim = input.ndim
     _param_shape = (1, _channels) + (1,) * (_ndim - 2)
 
     if training:

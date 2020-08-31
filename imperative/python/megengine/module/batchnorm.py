@@ -12,7 +12,7 @@ import numpy as np
 
 from ..distributed.group import WORLD, Group
 from ..functional import batch_norm2d, sync_batch_norm
-from ..tensor_nn import Buffer, Parameter
+from ..tensor_nn import Buffer, Parameter, Tensor
 from . import init
 from .module import Module
 
@@ -74,12 +74,12 @@ class _BatchNorm(Module):
 
         _ndims = len(inp.shape)
         if _ndims != 4:
-            origin_shape = inp.shapeof()
+            origin_shape = inp.shape
             if _ndims == 2:
-                n, c = inp.shapeof(0), inp.shapeof(1)
+                n, c = inp.shape[0], inp.shape[1]
                 new_shape = (n, c, 1, 1)
             elif _ndims == 3:
-                n, c, h = inp.shapeof(0), inp.shapeof(1), inp.shapeof(2)
+                n, c, h = inp.shape[0], inp.shape[1], inp.shape[2]
                 new_shape = (n, c, h, 1)
 
             inp = inp.reshape(new_shape)
@@ -127,7 +127,7 @@ class SyncBatchNorm(_BatchNorm):
         affine=True,
         track_running_stats=True,
         freeze=False,
-        group: Optional[Group] = None,
+        group: Optional[Group] = WORLD,
     ) -> None:
         super().__init__(
             num_features, eps, momentum, affine, track_running_stats, freeze
@@ -145,13 +145,16 @@ class SyncBatchNorm(_BatchNorm):
 
         _ndims = len(inp.shape)
         if _ndims != 4:
-            origin_shape = inp.shapeof()
+            new_shape = Tensor([1, 1, 1, 1], device=inp.device)
+            origin_shape = inp.shape
             if _ndims == 2:
-                n, c = inp.shape[0], inp.shape[1]
-                new_shape = (n, c, 1, 1)
+                new_shape[:2] = origin_shape[:2]
             elif _ndims == 3:
-                n, c, h = inp.shape[0], inp.shape[1], inp.shape[2]
-                new_shape = (n, c, h, 1)
+                new_shape[:3] = origin_shape[:3]
+            else:
+                raise ValueError(
+                    "expected 2D, 3D or 4D input (got {}D input)".format(len(inp.shape))
+                )
 
             inp = inp.reshape(new_shape)
 

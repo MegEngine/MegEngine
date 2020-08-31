@@ -376,7 +376,13 @@ class LocalConv2d(Conv2d):
 
     def forward(self, inp):
         return local_conv2d(
-            inp, self.weight, self.stride, self.padding, self.dilation, self.conv_mode
+            inp,
+            self.weight,
+            None,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.conv_mode,
         )
 
 
