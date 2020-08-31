@@ -40,6 +40,37 @@ public:
 
         SmallVector<LogicalTensorDesc>
         infer_attrs(const SmallVector<LogicalTensorDesc>& inputs) const;
+
+        template <typename T, typename F, typename C>
+        SmallVector<T> interpret(F&& f, C&& c, const SmallVector<T>& inputs) const {
+            ThinHashMap<size_t, T> node2tensor;
+            auto&& input_nodes = this->inputs;
+            mgb_assert(inputs.size() == input_nodes.size());
+            for (size_t i = 0; i < inputs.size(); ++ i) {
+                node2tensor[input_nodes[i]] = inputs[i];
+            }
+            for (auto &&i : constants) {
+                node2tensor[i.first] = c(i.second);
+            }
+            for (size_t i = 0; i < exprs.size(); ++ i) {
+                auto&& expr = exprs[i];
+                SmallVector<T> inputs;
+                for (auto &&in : std::get<1>(expr)) {
+                    inputs.push_back(node2tensor.at(in));
+                }
+                auto&& outputs = f(*std::get<0>(expr), std::move(inputs));
+                auto&& output_nodes = std::get<2>(expr);
+                mgb_assert(outputs.size() == output_nodes.size());
+                for (size_t i = 0; i < outputs.size(); ++ i) {
+                    node2tensor[output_nodes[i]] = std::move(outputs[i]);
+                }
+            }
+            SmallVector<T> ret;
+            for (auto &&i : outputs) {
+                ret.push_back(node2tensor.at(i));
+            }
+            return ret;
+        }
     };
 
     const InternalGraph& graph() const {

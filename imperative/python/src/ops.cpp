@@ -40,6 +40,18 @@ void init_ops(py::module m) {
                 attr.param.insert(attr.param.end(), s.begin(), s.end());
             });
 
+    py::class_<BackwardGraph, std::shared_ptr<BackwardGraph>, OpDef>(m, "BackwardGraph")
+        .def("interpret", [](BackwardGraph& self, py::object pyf, py::object pyc,
+                             const mgb::SmallVector<py::object>& inputs) {
+                auto f = [pyf](OpDef& op, const mgb::SmallVector<py::object>& inputs) {
+                    return py::cast<mgb::SmallVector<py::object>>(pyf(op.copy(), inputs));
+                };
+                auto c = [pyc](const TensorPtr& tensor) {
+                    return pyc(tensor->dev_tensor());
+                };
+                return self.graph().interpret<py::object>(f, c, inputs);
+            });
+
     py::class_<GetVarShape, std::shared_ptr<GetVarShape>, OpDef>(m, "GetVarShape")
         .def(py::init());
 
@@ -98,7 +110,6 @@ void init_ops(py::module m) {
         .def(py::init<>())
         .def_readwrite("offsets", &ParamPackConcat::offsets);
 
-    py::class_<BackwardGraph, std::shared_ptr<BackwardGraph>, OpDef>(m, "BackwardGraph");
     py::class_<CondTake, std::shared_ptr<CondTake>, OpDef>(m, "CondTake")
         .def(py::init<>());
 

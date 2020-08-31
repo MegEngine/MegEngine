@@ -18,34 +18,10 @@ namespace imperative {
 SmallVector<TensorPtr>
 BackwardGraph::InternalGraph::apply(
         const SmallVector<TensorPtr>& inputs) const {
-    ThinHashMap<size_t, TensorPtr> node2tensor;
-    auto&& input_nodes = this->inputs;
-    mgb_assert(inputs.size() == input_nodes.size());
-    for (size_t i = 0; i < inputs.size(); ++ i) {
-        node2tensor[input_nodes[i]] = inputs[i];
-    }
-    for (auto &&i : constants) {
-        node2tensor[i.first] = i.second;
-    }
-    for (size_t i = 0; i < exprs.size(); ++ i) {
-        auto&& expr = exprs[i];
-        SmallVector<TensorPtr> inputs;
-        for (auto &&in : std::get<1>(expr)) {
-            inputs.push_back(node2tensor.at(in));
-        }
-        auto outputs = OpDef::apply_on_physical_tensor(
-                *std::get<0>(expr), inputs);
-        auto output_nodes = std::get<2>(expr);
-        mgb_assert(outputs.size() == output_nodes.size());
-        for (size_t i = 0; i < outputs.size(); ++ i) {
-            node2tensor[output_nodes[i]] = outputs[i];
-        }
-    }
-    SmallVector<TensorPtr> ret;
-    for (auto &&i : outputs) {
-        ret.push_back(node2tensor.at(i));
-    }
-    return ret;
+    return interpret<TensorPtr>(
+        &OpDef::apply_on_physical_tensor,
+        [](const TensorPtr& x) {return x;},
+        inputs);
 }
 
 SmallVector<LogicalTensorDesc>

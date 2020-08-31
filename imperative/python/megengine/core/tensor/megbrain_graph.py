@@ -12,6 +12,7 @@ import weakref
 from concurrent.futures import Future, ThreadPoolExecutor
 
 from .. import _imperative_rt
+from .._imperative_rt.ops import BackwardGraph
 from .._wrap import device as as_device
 from ..ops.builtin import OpDef
 from .core import OpBase, TensorBase, apply
@@ -129,6 +130,13 @@ def _unwrap(x):
 def _(op: OpDef, *args: VarNode):
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)
+
+
+@apply.register()
+def _(op: BackwardGraph, *args: VarNode):
+    assert args
+    graph = args[0].graph
+    return op.interpret(lambda op, args: apply(op, *args), graph.make_const, args)
 
 
 def input_callback(callback, *args, device=None, dtype=None, shape=None, graph=None):
