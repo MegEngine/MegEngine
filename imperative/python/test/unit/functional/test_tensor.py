@@ -125,8 +125,6 @@ def test_stack():
 
 
 def test_split():
-    if use_tensor_shape():  # XXX: please fix me
-        return
     data = np.random.random((2, 3, 4, 5)).astype(np.float32)
     mge_out1 = F.split(tensor(data), 2, axis=3)
     mge_out2 = F.split(tensor(data), [3, 5], axis=3)

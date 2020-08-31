@@ -1126,11 +1126,8 @@ def interpolate(
     if mode == "LINEAR":
         inp = add_axis(inp, 3)
 
-    if not isinstance(inp.shape, inp.__class__):
-        if len(inp.shape) != 4:
-            raise ValueError(
-                "shape of input tensor must correspond to the operartion mode"
-            )
+    if inp.ndim != 4:
+        raise ValueError("shape of input tensor must correspond to the operartion mode")
 
     if size is None:
         if scale_factor is None:

@@ -19,13 +19,13 @@ def test_abs():
         np.abs(np.array([-3.0, -4.0, -5.0], dtype=np.float32)),
     )
 
-    # assertTensorClose(F.abs(-3.0), np.abs(np.float32(-3.0)))
+    assertTensorClose(F.abs(-3.0).numpy(), np.abs(np.float32(-3.0)))
 
 
 def test_multiply():
-    # assertTensorClose(
-    #     F.mul(-3.0, -4.0), np.multiply(np.float32(-3.0), np.float32(-4.0))
-    # )
+    assertTensorClose(
+        F.mul(-3.0, -4.0).numpy(), np.multiply(np.float32(-3.0), np.float32(-4.0))
+    )
 
     assertTensorClose(
         F.mul(tensor([3.0, 4.0]), 4.0).numpy(),

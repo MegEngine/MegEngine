@@ -194,9 +194,6 @@ def test_matmul():
 
 
 def test_interpolate():
-    if use_tensor_shape():  # XXX: please fix me
-        return
-
     def linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 

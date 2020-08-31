@@ -317,7 +317,7 @@ def split(inp, nsplits_or_sections, axis=0):
     def swapaxis(inp, src, dst):
         if src == dst:
             return inp
-        shape = [i for i in range(len(inp.shape))]
+        shape = [i for i in range(inp.ndim)]
         shape[src] = dst
         shape[dst] = src
         return inp.transpose(shape)
@@ -325,9 +325,11 @@ def split(inp, nsplits_or_sections, axis=0):
     inp = swapaxis(inp, 0, axis)
 
     if isinstance(nsplits_or_sections, int):
-        incr_step = math.ceil(inp.shape[0] / nsplits_or_sections)
-        while incr_step < inp.shape[0]:
-            sections.append(incr_step)
+        incr_step = ceil(inp.shape[0] / nsplits_or_sections)
+        nsplits = nsplits_or_sections
+        while nsplits > 0:
+            nsplits -= 1
+            sections.append(incr_step.astype("int32"))
             incr_step += nsplits_or_sections
     else:
         sections = nsplits_or_sections

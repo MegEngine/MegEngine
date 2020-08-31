@@ -31,7 +31,9 @@ def dtype_promotion(raw_inputs):
     ]
     inputs = [i for i in raw_inputs if hasattr(i, "dtype")]
     assert len(scalar_inputs + inputs) > 0
-    dtype = np.result_type(*inputs)
+    dtype = None
+    if len(inputs) > 0:
+        dtype = np.result_type(*inputs)
     dtype_all = np.result_type(*(inputs + scalar_inputs))
     assert (
         dtype != np.float64 and dtype != np.int64
