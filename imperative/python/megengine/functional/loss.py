@@ -176,15 +176,15 @@ def cross_entropy_with_softmax(
     num_classes = pred.shape[axis]
 
     # Denominator of the softmax
-    offset = pred.max(axis=axis).detach()
+    offset = pred.max(axis=axis, keepdims=True).detach()
     pred = pred - offset
-    down = exp(pred).sum(axis=axis)
+    down = exp(pred).sum(axis=axis, keepdims=True)
 
     up = indexing_one_hot(pred, label, axis)
 
     if label_smooth != 0:
         factor = label_smooth / num_classes
-        up = up * (1 - label_smooth) + pred.sum(axis=axis) * factor
+        up = up * (1 - label_smooth) + pred.sum(axis=axis, keepdims=True) * factor
 
     return (log(down) - up).mean()
 

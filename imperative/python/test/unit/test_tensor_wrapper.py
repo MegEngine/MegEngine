@@ -38,7 +38,7 @@ def test_reduce():
     for m in ["sum", "prod", "min", "max", "mean"]:
         x_np = np.random.rand(10).astype("float32")
         x = TensorWrapper(x_np)
-        y = getattr(x, m)(-1)
+        y = getattr(x, m)(axis=-1, keepdims=True)
         np.testing.assert_almost_equal(y.numpy(), getattr(x_np, m)(-1), decimal=6)
 
 

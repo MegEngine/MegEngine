@@ -134,15 +134,54 @@ def _logical_binary_elwise(mode, rev=False):
     return f
 
 
-def _reduce(mode):
-    def f(self, axis=None):
-        inp = self
+def _remove_axis(inp: Tensor, axis) -> Tensor:
+    Param = builtin.AxisAddRemove.Param
+
+    def get_axes():
         if axis is None:
-            inp = self.flatten()
-            axis = 0
-        op = builtin.Reduce(mode=mode, axis=axis)
-        (result,) = utils.convert_inputs(inp)
-        (result,) = apply(op, result)
+            return [i for i, s in enumerate(inp.shape) if s == 1]
+        try:
+            return [int(axis)]
+        except (TypeError, ValueError):
+            pass
+        return list(map(int, axis))
+
+    axis = get_axes()
+    axis = sorted(i + inp.ndim if i < 0 else i for i in axis)
+    axis = [a - i for i, a in enumerate(axis)]
+
+    param = Param(*map(builtin.AxisAddRemove.AxisDesc.make_remove, axis))
+    op = builtin.AxisAddRemove(param=param)
+    (result,) = apply(op, inp)
+    return result
+
+
+def _reduce(mode):
+    def f(self, axis=None, keepdims: bool = False):
+        data = self
+        (data,) = utils.convert_inputs(data)
+        if axis is None:
+            data = data.reshape(-1)
+            assert not keepdims, "can not set axis=None and keepdims=True"
+
+            op = builtin.Reduce(mode=mode, axis=0)
+            (result,) = apply(op, data)
+        elif isinstance(axis, collections.Iterable):
+            axis = list(axis)
+            axis.sort(reverse=True)
+
+            for ai in axis:
+                op = builtin.Reduce(mode=mode, axis=ai)
+                (data,) = apply(op, data)
+                if not keepdims:
+                    data = _remove_axis(data, ai)
+            result = data
+        else:
+            op = builtin.Reduce(mode=mode, axis=axis)
+            (result,) = apply(op, data)
+
+            if not keepdims:
+                result = _remove_axis(result, axis)
         return result
 
     return f

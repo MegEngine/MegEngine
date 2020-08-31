@@ -117,40 +117,6 @@ def sign(inp: Tensor):
     raise NotImplementedError
 
 
-def _reduce(
-    data,
-    *,
-    mode,
-    axis: Optional[Union[int, Sequence[int]]] = None,
-    keepdims: bool = False
-):
-    (data,) = utils.convert_inputs(data)
-    if axis is None:
-        data = data.reshape(-1)
-        assert not keepdims, "can not set axis=None and keepdims=True"
-
-        op = builtin.Reduce(mode=mode, axis=0)
-        (result,) = apply(op, data)
-    elif isinstance(axis, collections.Iterable):
-        axis = list(axis)
-        axis.sort(reverse=True)
-
-        for ai in axis:
-            op = builtin.Reduce(mode=mode, axis=ai)
-            (data,) = apply(op, data)
-            if not keepdims:
-                data = remove_axis(data, ai)
-        result = data
-    else:
-        op = builtin.Reduce(mode=mode, axis=axis)
-        (result,) = apply(op, data)
-
-        if not keepdims:
-            result = remove_axis(result, axis)
-
-    return result
-
-
 def sum(
     inp: Tensor,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -182,7 +148,7 @@ def sum(
         [21]
 
     """
-    return _reduce(inp, mode="SUM", axis=axis, keepdims=keepdims)
+    return inp.sum(axis=axis, keepdims=keepdims)
 
 
 def prod(
@@ -215,7 +181,7 @@ def prod(
         [720]
 
     """
-    return _reduce(inp, mode="PRODUCT", axis=axis, keepdims=keepdims)
+    return inp.prod(axis=axis, keepdims=keepdims)
 
 
 def mean(
@@ -248,7 +214,7 @@ def mean(
         [3.5]
 
     """
-    return _reduce(inp, mode="MEAN", axis=axis, keepdims=keepdims)
+    return inp.astype("float32").mean(axis=axis, keepdims=keepdims)
 
 
 def median(
@@ -362,7 +328,7 @@ def min(
         [1]
 
     """
-    return _reduce(inp, mode="MIN", axis=axis, keepdims=keepdims)
+    return inp.min(axis=axis, keepdims=keepdims)
 
 
 def max(
@@ -394,7 +360,7 @@ def max(
         [6]
 
     """
-    return _reduce(inp, mode="MAX", axis=axis, keepdims=keepdims)
+    return inp.max(axis=axis, keepdims=keepdims)
 
 
 def norm(

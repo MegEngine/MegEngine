@@ -580,7 +580,7 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     """
     if axis is None:
         axis = _get_softmax_axis(len(inp.shape))
-    offset = inp.max(axis=axis).detach()
+    offset = inp.max(axis=axis, keepdims=True).detach()
     cached = exp(inp - offset)
     down = sum(cached, axis=axis, keepdims=True)
     return cached / down
