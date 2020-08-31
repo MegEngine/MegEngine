@@ -92,6 +92,7 @@ MGB_DEFINE_CLS_WITH_SUPER(ReshapeBrdcastHelper,
     void scn_do_execute() override final;
     void add_input_layout_constraint() override final;
     void init_output_static_infer_desc() override;
+    NodeProp* do_make_node_prop() const override;
 
     protected:
         using Super::Super;
@@ -199,11 +200,14 @@ MGB_DEFINE_CLS_WITH_SUPER(AxisManipOprBase,
     void mem_plan_fwd_in2out_readonly() override final;
     void scn_do_execute() override final;
     void init_output_static_infer_desc() override final;
+    NodeProp* do_make_node_prop() const override;
 
     protected:
         using Super::Super;
         virtual TensorLayout axis_manip_get_output_layout(
                 const TensorLayout &inp_layout) const = 0;
+
+        void axis_manip_init(VarNode* inp);
 };
 
 }
@@ -319,8 +323,6 @@ MGB_DEFINE_OPR_CLASS(AxisAddRemove, intl::AxisManipOprBase) // {
 
         TensorLayout axis_manip_get_output_layout(
                 const TensorLayout &inp_layout) const override;
-
-        NodeProp* do_make_node_prop() const override;
 };
 
 namespace intl {

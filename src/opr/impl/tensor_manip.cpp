@@ -237,7 +237,8 @@ void GetVarShape::record_execute_deps(ExecDependencyArray& deps) {
 
 void ReshapeBrdcastHelper::reshapebrdcast_init(VarNode *inp, VarNode *tshp) {
     add_input({inp, tshp});
-    add_output(None)->dtype(inp->dtype());
+    add_output(None)->dtype(inp->dtype())
+                    .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     if (reshapebrdcast_output_shape_need_input_shape())
         outshape_by_symvar_enable(1, 1);
     else
@@ -340,6 +341,14 @@ void ReshapeBrdcastHelper::init_output_static_infer_desc() {
             infer_value});
 }
 
+ReshapeBrdcastHelper::NodeProp*
+ReshapeBrdcastHelper::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
+}
+
 // f}}}
 
 /* f{{{ ======================= Reshape ======================= */
@@ -394,7 +403,7 @@ Maybe<TensorLayout> Reshape::reshapebrdcast_get_dest_layout(
     }
     auto tot_nr_elem = src.total_nr_elems();
     actual_tshape.shape[unspec] = 0;
-    mgb_throw_if(tot_nr_elem % rem_nr_elem, TensorReshapeError,
+    mgb_throw_if(!rem_nr_elem || tot_nr_elem % rem_nr_elem, TensorReshapeError,
             "could not reshape: src=%s tshape=%s unspec_axis=%zd",
             static_cast<const TensorShape&>(src).to_string().c_str(),
             actual_tshape.to_string().c_str(),
@@ -484,6 +493,17 @@ void AxisManipOprBase::init_output_static_infer_desc() {
             {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_value});
 }
 
+AxisManipOprBase::NodeProp* AxisManipOprBase::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
+}
+
+void AxisManipOprBase::axis_manip_init(VarNode* inp) {
+    add_input({inp});
+    add_output(None)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+}
 
 // f}}}
 
@@ -504,8 +524,7 @@ Dimshuffle::Dimshuffle(VarNode *inp, const std::vector<int> &pattern,
         mgb_throw_if(i < -1 || i >= int(ndim), GraphError,
                 "bad Dimshuffle pattern");
     }
-    add_input({inp});
-    add_output(None);
+    axis_manip_init(inp);
     add_equivalence_component<PODHash<int>>(m_pattern.data(), m_pattern.size());
 }
 
@@ -587,8 +606,7 @@ AxisAddRemove::AxisAddRemove(
 {
     mgb_throw_if(desc.empty(), GraphError,
             "desc for AxisAddRemove could not be empty");
-    add_input({inp});
-    add_output(None)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    axis_manip_init(inp);
     add_equivalence_component<PODHash<AxisDesc>>(m_desc.data(), m_desc.size());
 }
 
@@ -629,13 +647,6 @@ TensorLayout AxisAddRemove::axis_manip_get_output_layout(
         }
     }
     return layout;
-}
-
-AxisAddRemove::NodeProp* AxisAddRemove::do_make_node_prop() const {
-    auto ret = Super::do_make_node_prop();
-    ret->add_dep_type_existing_var(input(0),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
-    return ret;
 }
 
 #ifdef MGB_ENABLE_GRAD
