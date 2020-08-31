@@ -550,16 +550,6 @@ class AlgoChooser {
                 ImplAlgo algo, double& timeout) const;
 
     private:
-        /*!
-         * \brief modify param passed to prof_impl by weights preprcess.
-         *
-         * \param param: param passed.
-         *
-         * \warning invoke when is_weights_persistent is true.
-         */
-        void modify_param_with_weights_preprocessed(
-                typename TimedProfiler<Opr>::Param& param) const {}
-        
         Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const {
             Maybe<PreprocessFilter<Opr>> result = None;
             if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
@@ -778,60 +768,6 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
     MIDOUT_E
 }
 
-template <>
-void AlgoChooser<megdnn::ConvBias>::ExeContext::
-        modify_param_with_weights_preprocessed(
-                typename TimedProfiler<megdnn::ConvBias>::Param& param) const {
-    if (param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW ||
-        param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW44 ||
-        param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW88) {
-        auto winograd_param =
-                megdnn::ConvBias::parse_winograd_name(param.algo_name);
-        if (winograd_param == megdnn::ConvBias::INVALID_WINOGRAD_PARAM) {
-            return;
-        }
-        ConvBiasForward::check_winograd_param_valid(winograd_param,
-                                                    m_layouts[1].dtype);
-        auto winograd_preprocess_opr =
-                intl::create_megdnn_opr<megdnn::WinogradFilterPreprocess>(
-                        m_mgb_opr->output(0)->comp_node());
-        winograd_preprocess_opr->param().format =
-                ConvBiasForward::get_matmul_format(winograd_param);
-        winograd_preprocess_opr->param().output_block_size =
-                winograd_param.output_block_size;
-        //! When filter input is qint8 and Matmul format is MK4, the winograd
-        //! compute type is float
-        if (m_layouts[1].dtype.enumv() == DTypeEnum::QuantizedS8 &&
-            param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW44) {
-            if (winograd_preprocess_opr->param().format ==
-                megdnn::param::MatrixMul::Format::MK4) {
-                winograd_preprocess_opr->param().compute_mode =
-                        ConvBias::Param::ComputeMode::FLOAT32;
-                param.opr_param.compute_mode =
-                        ConvBias::Param::ComputeMode::FLOAT32;
-            }
-        }
-        TensorLayout filter_transform_layout;
-        winograd_preprocess_opr->deduce_layout(m_layouts[1],
-                                               filter_transform_layout);
-        param.shapes[1] = filter_transform_layout;
-        param.dtypes[1] = filter_transform_layout.dtype.enumv();
-        if (param.opr_param.format == megdnn::ConvBias::Param::Format::NCHW) {
-            param.opr_param.format =
-                    megdnn::ConvBias::Param::Format::NCHW_WINOGRAD;
-        } else if (param.opr_param.format ==
-                   megdnn::ConvBias::Param::Format::NCHW44) {
-            param.opr_param.format =
-                    megdnn::ConvBias::Param::Format::NCHW44_WINOGRAD;
-        } else if (param.opr_param.format ==
-                   megdnn::ConvBias::Param::Format::NCHW88) {
-            param.opr_param.format =
-                    megdnn::ConvBias::Param::Format::NCHW88_WINOGRAD;
-        }
-        param.opr_param.output_block_size = winograd_param.output_block_size;
-    }
-}
-
 template <typename Opr>
 Maybe<AlgoChooserProfileCache::ResultEntry>
 AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
@@ -861,10 +797,6 @@ AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
         param.shapes[i] = m_layouts[i];
     param.opr_param = m_megdnn_opr->param();
     param.allow_weight_preprocess = m_allow_weight_preprocess;
-
-    if (m_allow_weight_preprocess) {
-        modify_param_with_weights_preprocessed(param);
-    }
 
     auto rst = TimedProfiler<Opr>::profile(param, timeout);
     // MIOpen conv profiles all available algos when a specfic shape is
