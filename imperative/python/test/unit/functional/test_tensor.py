@@ -6,6 +6,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import platform
+
 import numpy as np
 import pytest
 
@@ -13,6 +15,7 @@ import megengine.functional as F
 from megengine import Buffer, Parameter, is_cuda_available, tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.tensor.utils import astensor1d
+from megengine.distributed.helper import get_device_count_by_fork
 from megengine.test import assertTensorClose
 
 
@@ -323,17 +326,35 @@ def copy_test(dst, src):
     assert np.allclose(data, y.numpy())
 
 
-@pytest.mark.skipif(not is_cuda_available(), reason="CUDA is disabled")
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
+@pytest.mark.skipif(get_device_count_by_fork("gpu") == 0, reason="CUDA is disabled")
 def test_copy_h2d():
     copy_test("cpu0", "gpu0")
 
 
-@pytest.mark.skipif(not is_cuda_available(), reason="CUDA is disabled")
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
+@pytest.mark.skipif(get_device_count_by_fork("gpu") == 0, reason="CUDA is disabled")
 def test_copy_d2h():
     copy_test("gpu0", "cpu0")
 
 
-@pytest.mark.skipif(not is_cuda_available(), reason="CUDA is disabled")
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+)
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 def test_copy_d2d():
     copy_test("gpu0", "gpu1")
     copy_test("gpu0:0", "gpu0:1")

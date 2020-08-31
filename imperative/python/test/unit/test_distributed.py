@@ -14,6 +14,7 @@ import pytest
 
 import megengine as mge
 import megengine.distributed as dist
+from megengine.distributed.helper import get_device_count_by_fork
 
 
 def _assert_q_empty(q):
@@ -36,6 +37,7 @@ def _assert_q_val(q, val):
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_init_process_group():
     world_size = 2
@@ -43,8 +45,6 @@ def test_init_process_group():
     server = dist.Server(port)
 
     def worker(rank, backend):
-        if mge.get_device_count("gpu") < world_size:
-            return
         dist.init_process_group("localhost", port, world_size, rank, rank, backend)
         assert dist.is_distributed() == True
         assert dist.get_rank() == rank
@@ -82,6 +82,7 @@ def test_init_process_group():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_new_group():
     world_size = 3
@@ -90,8 +91,6 @@ def test_new_group():
     server = dist.Server(port)
 
     def worker(rank):
-        if mge.get_device_count("gpu") < world_size:
-            return
         dist.init_process_group("localhost", port, world_size, rank, rank)
         if rank in ranks:
             group = dist.new_group(ranks)
@@ -117,6 +116,7 @@ def test_new_group():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_group_barrier():
     world_size = 2
@@ -124,8 +124,6 @@ def test_group_barrier():
     server = dist.Server(port)
 
     def worker(rank, q):
-        if mge.get_device_count("gpu") < world_size:
-            return
         dist.init_process_group("localhost", port, world_size, rank, rank)
         dist.group_barrier()
         if rank == 0:
@@ -154,6 +152,7 @@ def test_group_barrier():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_synchronized():
     world_size = 2
@@ -165,8 +164,6 @@ def test_synchronized():
         q.put(rank)
 
     def worker(rank, q):
-        if mge.get_device_count("gpu") < world_size:
-            return
         dist.init_process_group("localhost", port, world_size, rank, rank)
         dist.group_barrier()
         if rank == 0:

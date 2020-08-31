@@ -10,6 +10,14 @@ import platform
 
 import pytest
 
+import megengine as mge
+import megengine.distributed as dist
+from megengine import tensor
+from megengine.distributed.group import Group
+from megengine.distributed.helper import get_device_count_by_fork
+from megengine.module import SyncBatchNorm
+from megengine.test import assertTensorClose
+
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
@@ -17,6 +25,7 @@ import pytest
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 4, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_syncbn():
     import numpy as np
@@ -39,15 +48,6 @@ def test_syncbn():
     port = server.py_server_port
 
     def worker(rank, data, yv_expect, running_mean, running_var):
-        import megengine as mge
-        import megengine.distributed as dist
-        from megengine import tensor
-        from megengine.module import SyncBatchNorm
-        from megengine.distributed.group import Group
-        from megengine.test import assertTensorClose
-
-        if mge.get_device_count("gpu") < nr_ranks:
-            return
         dist.init_process_group("localhost", port, nr_ranks, rank, rank)
         group = Group([i for i in range(nr_ranks)])
         bn = SyncBatchNorm(nr_chan, eps=eps, momentum=momentum, group=group)

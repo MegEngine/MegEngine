@@ -7,7 +7,10 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import functools
+import multiprocessing as mp
 from typing import Callable
+
+from megengine.device import get_device_count
 
 from .group import group_barrier, is_distributed
 
@@ -26,3 +29,16 @@ def synchronized(func: Callable):
         return ret
 
     return wrapper
+
+
+def get_device_count_by_fork(device_type: str):
+    q = mp.Queue()
+
+    def worker(queue):
+        num = get_device_count(device_type)
+        queue.put(num)
+
+    p = mp.Process(target=worker, args=(q,))
+    p.start()
+    p.join()
+    return q.get()

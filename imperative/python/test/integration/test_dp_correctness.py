@@ -21,6 +21,7 @@ import megengine as mge
 import megengine.distributed as dist
 import megengine.functional as F
 from megengine.device import get_default_device, set_default_device
+from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.debug_param import set_conv_execution_strategy
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
@@ -196,6 +197,7 @@ def run_test(
         assert p.exitcode == 0
 
 
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 4, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
