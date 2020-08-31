@@ -87,12 +87,14 @@ OpTraitRegistry& OpTraitRegistry::finalize() {
     CHECK(infer_output_attrs);
     CHECK(make_backward_graph);
     #undef CHECK
+    #ifdef DEBUG
     if (msg.tellp() > 0) {
         mgb_log_warn(
             "%s op trait missing: %s",
             trait->name ? trait->name : "(anonymous)",
             msg.str().c_str() + 2 /* skip first ", " */);
     }
+    #endif
     return *this;
 }
 

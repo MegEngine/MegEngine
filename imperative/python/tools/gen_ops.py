@@ -52,6 +52,7 @@ class Context:
         self.indent = 0
         self.generated = []
         self.skipped = []
+        self.generated_signature = set()
 
     def write(self, text, *fmt, indent=0):
         text = textwrap.dedent(text)
@@ -183,6 +184,13 @@ class Context:
         if body:
             self.skipped.append(name)
             return
+
+        signature = (name, params if isinstance(params, str) else frozenset(params), has_out_dtype, version)
+        if signature in self.generated_signature:
+            self.skipped.append(name)
+            return
+        else:
+            self.generated_signature.add(signature)
 
         body = body or []
         if isinstance(params, str):
