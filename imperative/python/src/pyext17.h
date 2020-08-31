@@ -264,8 +264,8 @@ public:
         TypeBuilder& operator=(const TypeBuilder&) = delete;
 
         TypeBuilder() : m_type{PyVarObject_HEAD_INIT(nullptr, 0)} {
-            // static_assert(HAS_MEMBER(T, tp_name));
-            if constexpr (HAS_MEMBER(T, tp_name)) {
+            constexpr auto has_tp_name = HAS_MEMBER(T, tp_name);
+            if constexpr (has_tp_name) {
                 m_type.tp_name = T::tp_name;
             }
             m_type.tp_dealloc = tp_dealloc::value;
