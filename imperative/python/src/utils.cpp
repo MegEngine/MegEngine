@@ -23,6 +23,7 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/imperative/blob_manager.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/imperative/tensor_sanity_check.h"
 #include "megbrain/serialization/helper.h"
 
 #if MGB_ENABLE_OPR_MM
@@ -224,6 +225,19 @@ void init_utils(py::module m) {
                     }
                 },
                 py::arg("path") = std::optional<std::string>());
+
+    using mgb::imperative::TensorSanityCheck;
+    py::class_<TensorSanityCheck>(m, "TensorSanityCheckImpl")
+            .def(py::init<>())
+            .def("enable", 
+                [](TensorSanityCheck& checker) -> TensorSanityCheck& {
+                    checker.enable();
+                    return checker;
+                })
+            .def("disable",
+                [](TensorSanityCheck& checker) {
+                    checker.disable();
+                });
 
 #if MGB_ENABLE_OPR_MM
     m.def("create_mm_server", &create_zmqrpc_server, py::arg("addr"),
