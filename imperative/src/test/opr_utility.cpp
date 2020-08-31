@@ -25,7 +25,7 @@ TEST(TestOprUtility, InputCallback) {
     dv.copy_from(*hv).sync();
     auto graph = ComputingGraph::make();
     auto callback = [dv]() {return dv;};
-    auto outputs = opr::InputCallback::make(*graph, callback, dv.comp_node(), dv.dtype());
+    auto outputs = opr::InputCallback::make(*graph, callback, dv.comp_node(), dv.dtype(), {2, 3});
 
     HostTensorND hout;
     ComputingGraph::OutputSpec outspec{make_callback_copy(outputs[0], hout)};
@@ -99,7 +99,7 @@ TEST(TestOprUtility, CallbackChain) {
             dev_x.storage({});
             return ret;
         };
-        auto out = opr::InputCallback::make(*graph, callback, cn, dev_x.dtype());
+        auto out = opr::InputCallback::make(*graph, callback, cn, dev_x.dtype(), {2, 3});
         x = out[0];
         dummy = out[1];
     }
