@@ -14,6 +14,7 @@ import pytest
 
 import megengine as mge
 import megengine.distributed as dist
+import megengine.functional as F
 from megengine.core._imperative_rt import TensorAttr, imperative
 from megengine.core._imperative_rt.imperative import sync
 from megengine.core.autodiff.grad import Grad
@@ -229,3 +230,86 @@ def test_elemwise_relu_backward_fn():
     result = imperative.make_backward_graph(op, [attr], [True], [True])
     backward_graph, save_for_backward_mask, input_has_grad = result
     assert save_for_backward_mask == [False, True, True], save_for_backward_mask
+
+
+def test_reshape():
+    x_np = np.random.rand(2, 5).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = x.reshape(5, 2)
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((2, 5), dtype=np.float32), x.grad.numpy())
+
+
+def test_subtensor():
+    x_np = np.random.rand(3, 3).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = x[1:-1, :2]
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(
+        np.array([[0, 0, 0], [1, 1, 0], [0, 0, 0]], dtype=np.float32), x.grad.numpy()
+    )
+
+
+def test_IndexingMultiAxisVec():
+    x_np = np.random.rand(3, 3).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = x[[0, 2], [0, 2]]
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(
+        np.array([[1, 0, 0], [0, 0, 0], [0, 0, 1]], dtype=np.float32), x.grad.numpy()
+    )
+
+
+def test_AxisAddRemove():
+    x_np = np.random.rand(1, 5).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = F.remove_axis(F.add_axis(x, 2), 0)
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(
+        np.array([[1, 1, 1, 1, 1]], dtype=np.float32), x.grad.numpy()
+    )
+
+
+def test_Broadcast():
+    x_np = np.random.rand(3, 3, 1).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = F.broadcast(x, (3, 3, 10))
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((3, 3, 1), dtype=np.float32) * 10, x.grad.numpy())
+
+
+def test_Reduce_sum():
+    x_np = np.random.rand(3, 3).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = x.sum(axis=0)
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((3, 3), dtype=np.float32), x.grad.numpy())
+
+
+def test_Reduce_mean():
+    x_np = np.random.rand(3, 3).astype("float32")
+    x = TensorWrapper(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = x.mean(axis=0)
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((3, 3), dtype=np.float32) / 3, x.grad.numpy())
