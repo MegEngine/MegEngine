@@ -40,7 +40,7 @@ BatchNormForward::BatchNormForward(VarNode *x,
     Super{x->owner_graph(), config, "batch_norm",
           {x, scale, bias, mean, variance}}
 {
-    if(owner_graph()->options().imperative_proxy_graph) {
+    if(owner_graph()->options().no_force_inplace) {
         m_force_inplace = false;
     }
 

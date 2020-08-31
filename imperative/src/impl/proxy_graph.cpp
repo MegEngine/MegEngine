@@ -376,6 +376,7 @@ public:
 
     ProxyGraphImpl(ProxyGraph* owner) : m_owner(owner) {
         options().imperative_proxy_graph = true;
+        options().no_force_inplace = true;
         options().log_level = 0;
         m_var_receiver_info.dev_value = 1;
         m_var_receiver_info.allow_empty_value = 1;

@@ -464,6 +464,17 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
 
             bool imperative_proxy_graph = false;
 
+            /*!
+             * Request that operators should not force update their inputs.
+             *
+             * THIS FLAG IS RESERVED FOR INTERNAL USE
+             *
+             * When this flag is set, operators like AddUpdate and BatchNorm
+             * will still attempt to inplace update their inputs, but failing
+             * to do so will not be considered as an error.
+             */
+            bool no_force_inplace = false;
+
             //! add extra deps for the comp seq if a specific var is dependent
             ThinHashMap<VarNode*, VarNodeArray> extra_vardeps;
 
