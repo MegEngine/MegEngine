@@ -116,11 +116,11 @@ bool _config::set_comp_graph_option(
     SET_CG_OPTION(allocate_static_mem_after_graph_compile);
     SET_CG_OPTION(log_level);
     SET_CG_OPTION(enable_sublinear_memory_opt);
-    SET_CG_OPTION(sublinear_mem_cofig.lb_memory);
-    SET_CG_OPTION(sublinear_mem_cofig.genetic_nr_iter);
-    SET_CG_OPTION(sublinear_mem_cofig.genetic_pool_size);
-    SET_CG_OPTION(sublinear_mem_cofig.thresh_nr_try);
-    SET_CG_OPTION(sublinear_mem_cofig.num_worker);
+    SET_CG_OPTION(sublinear_mem_config.lb_memory);
+    SET_CG_OPTION(sublinear_mem_config.genetic_nr_iter);
+    SET_CG_OPTION(sublinear_mem_config.genetic_pool_size);
+    SET_CG_OPTION(sublinear_mem_config.thresh_nr_try);
+    SET_CG_OPTION(sublinear_mem_config.num_worker);
     SET_CG_OPTION(enable_var_mem_defragment);
     SET_CG_OPTION(eager_evaluation);
     SET_CG_OPTION(enable_memory_swap);

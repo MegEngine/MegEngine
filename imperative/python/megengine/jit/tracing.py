@@ -7,6 +7,7 @@ from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.core import OpBase, apply
 from ..core.tensor.raw_tensor import OpDef, RawTensor, as_raw_tensor
+from .sublinear_memory_config import SublinearMemoryConfig
 
 
 class TraceMismatchError(RuntimeError):
@@ -72,11 +73,18 @@ class trace:
         self.__init__(*args, **kwargs)
         return self
 
-    def __init__(self, function, symbolic=False, capture_as_const=False):
+    def __init__(
+        self,
+        function,
+        symbolic=False,
+        capture_as_const=False,
+        sublinear_memory_config: SublinearMemoryConfig = None,
+    ):
         self.__wrapped__ = function
         self._symbolic = symbolic
         self._capture_as_const = capture_as_const
         self._capture_static_shape = False
+        self._sublinear_memory_config = sublinear_memory_config
 
         self._untraced = True
         self._tinfo = []  # handle -> TensorInfo
@@ -227,6 +235,7 @@ class trace:
                         G.OutputNode(x._LazyEvalTensor__varnode).outputs[0]
                         for x in lazy_eval_tensors
                     ]
+                    self._apply_graph_options(self._lazy_eval_graph)
                     self._lazy_eval_graph.compile(*readers)
                     self._lazy_eval_graph()
                     for r, x in zip(readers, lazy_eval_tensors):
@@ -259,9 +268,26 @@ class trace:
                 info.exported = True
                 info.data_read = True
 
+    def _apply_graph_options(self, graph):
+
+        # sublinear
+        if self._sublinear_memory_config is not None:
+            graph.options.enable_sublinear_memory_opt = True
+            sublinear_config = graph.options.sublinear_mem_config
+            sublinear_config.lb_memory = self._sublinear_memory_config.lb_memory
+            sublinear_config.genetic_nr_iter = (
+                self._sublinear_memory_config.genetic_nr_iter
+            )
+            sublinear_config.genetic_pool_size = (
+                self._sublinear_memory_config.genetic_pool_size
+            )
+            sublinear_config.thresh_nr_try = self._sublinear_memory_config.thresh_nr_try
+            sublinear_config.num_worker = self._sublinear_memory_config.num_worker
+
     def _compile(self):
         graph = self._graph = G.Graph()
         graph.options.no_force_inplace = True
+        self._apply_graph_options(graph)
         # graph.options.graph_opt_level = 0
         need_reset_nodes = self._need_reset_nodes = []
         # links enforce ordering of I/O nodes

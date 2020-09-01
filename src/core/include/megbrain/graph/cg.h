@@ -409,7 +409,7 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                 int genetic_pool_size = 20;
                 int lb_memory = 0;
                 int num_worker = sys::get_cpu_count() / 2;
-            } sublinear_mem_cofig;
+            } sublinear_mem_config;
 
             //! do not re-profile to select best impl algo when input shape
             //! changes (use previous algo)

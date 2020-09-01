@@ -522,7 +522,7 @@ TEST(TestSublinearMemory, BadOpr) {
        set_priority(z, 3);
        graph->options().graph_opt_level = 0;
        graph->options().enable_sublinear_memory_opt = 1;
-       graph->options().sublinear_mem_cofig.genetic_nr_iter = 50;
+       graph->options().sublinear_mem_config.genetic_nr_iter = 50;
        auto func = graph->compile({{y, {}}, {z, {}}});
        auto&& results = static_cast<cg::ComputingGraphImpl*>(graph.get())
            ->seq_modifier_for_sublinear_memory().prev_min_bottleneck();

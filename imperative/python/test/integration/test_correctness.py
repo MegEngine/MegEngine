@@ -19,6 +19,7 @@ import megengine.functional as F
 from megengine import jit
 from megengine.core._trace_option import set_tensor_shape
 from megengine.functional.debug_param import set_conv_execution_strategy
+from megengine.jit import SublinearMemoryConfig
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
 from megengine.tensor import Tensor
@@ -217,14 +218,14 @@ def test_correctness():
     set_conv_execution_strategy("HEURISTIC_REPRODUCIBLE")
 
     run_train(model_path, False, False, max_err=1e-5)
-    # run_test(model_path, True, False)
-    # run_test(model_path, True, True)
+    run_train(model_path, True, False, max_err=1e-5)
+    run_train(model_path, True, True, max_err=1e-5)
 
     # sublinear
-    # config = SublinearMemoryConfig(genetic_nr_iter=10)
-    # run_test(
-    #     model_path, True, True, sublinear_memory_config=config, max_err=1e-5,
-    # )
+    config = SublinearMemoryConfig(genetic_nr_iter=10)
+    run_train(
+        model_path, True, True, sublinear_memory_config=config, max_err=1e-5,
+    )
 
     run_eval(model_path, False, max_err=1e-7)
-    # run_eval(model_path, True, max_err=1e-7) # XXX: fix me
+    run_eval(model_path, True, max_err=1e-7)

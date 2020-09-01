@@ -298,23 +298,23 @@ class trace:
         if self._sublinear_memory_config is not None:
             cg.set_option("enable_sublinear_memory_opt", True)
             cg.set_option(
-                "sublinear_mem_cofig.lb_memory",
+                "sublinear_mem_config.lb_memory",
                 self._sublinear_memory_config.lb_memory,
             )
             cg.set_option(
-                "sublinear_mem_cofig.genetic_nr_iter",
+                "sublinear_mem_config.genetic_nr_iter",
                 self._sublinear_memory_config.genetic_nr_iter,
             )
             cg.set_option(
-                "sublinear_mem_cofig.genetic_pool_size",
+                "sublinear_mem_config.genetic_pool_size",
                 self._sublinear_memory_config.genetic_pool_size,
             )
             cg.set_option(
-                "sublinear_mem_cofig.thresh_nr_try",
+                "sublinear_mem_config.thresh_nr_try",
                 self._sublinear_memory_config.thresh_nr_try,
             )
             cg.set_option(
-                "sublinear_mem_cofig.num_worker",
+                "sublinear_mem_config.num_worker",
                 self._sublinear_memory_config.num_worker,
             )
         # pack allreduce

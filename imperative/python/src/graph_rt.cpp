@@ -119,6 +119,7 @@ void init_graph_rt(py::module m) {
         DEF_READWRITE(enable_memory_swap)
         DEF_READWRITE(comp_node_seq_record_level)
         DEF_READWRITE(no_force_inplace)
+        DEF_READWRITE(sublinear_mem_config)
         // DEF_READWRITE(eager_evaluation)
         // DEF_READWRITE(imperative_proxy_graph)
         // DEF_READWRITE(extra_vardeps)
@@ -142,6 +143,16 @@ void init_graph_rt(py::module m) {
 
 #undef CURRENT_CLASS
 
+#define CURRENT_CLASS cg::ComputingGraph::Options::SublinearMemConfig
+
+    py::class_<cg::ComputingGraph::Options::SublinearMemConfig>(PyComputingGraphOptions, "SublinearMemConfig")
+        DEF_READWRITE(thresh_nr_try)
+        DEF_READWRITE(genetic_nr_iter)
+        DEF_READWRITE(genetic_pool_size)
+        DEF_READWRITE(lb_memory)
+        DEF_READWRITE(num_worker);
+
+#undef CURRENT_CLASS
     auto common = rel_import("common", m, 1);
 
     common.def("invoke_op", [](const OpDef& def, const std::vector<cg::VarNode*> inputs, cg::ComputingGraph* graph) {
