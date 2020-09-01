@@ -131,7 +131,7 @@ struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 2, oc_block, 1> {
         const int ld_weight_oc = oc_step * filter_height * filter_width * ic;
         constexpr int c_dim = OCHelper<oc_block>::val;
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             const int8_t* nchw_src_ptr = src_ptr + ic_idx * ic_stride;
@@ -178,7 +178,7 @@ struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 3, oc_block, 1> {
         const int ld_weight_oc = oc_step * filter_height * filter_width * ic;
         constexpr int c_dim = OCHelper<oc_block>::val;
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             const int8_t* nchw_src_ptr = src_ptr + ic_idx * ic_stride;
@@ -232,7 +232,7 @@ struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 5, oc_block, 1> {
         const int ld_weight_oc = oc_step * filter_height * filter_width * ic;
         constexpr int c_dim = OCHelper<oc_block>::val;
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             const int8_t* nchw_src_ptr = src_ptr + ic_idx * ic_stride;
@@ -279,7 +279,7 @@ struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 7, oc_block, 1> {
         const int ld_weight_oc = oc_step * filter_height * filter_width * ic;
         constexpr int c_dim = OCHelper<oc_block>::val;
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             const int8_t* nchw_src_ptr = src_ptr + ic_idx * ic_stride;

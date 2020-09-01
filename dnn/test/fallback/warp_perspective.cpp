@@ -76,6 +76,9 @@ TEST_F(FALLBACK, WARP_PERSPECTIVE) {
         checker.set_param(param);
         checker.exec({{1000, 2, 10, 11}, {1000, 3, 3}, {1000, 2, 12, 13}});
     }
+#if MEGDNN_TEST_ASAN
+//! asan detect nan will make test failed
+#else
     // resize nan case
     UniformFloatRNG rng_zero(0, 0);
     checker.set_rng(1, &rng_zero);
@@ -85,6 +88,7 @@ TEST_F(FALLBACK, WARP_PERSPECTIVE) {
         checker.set_param(param);
         checker.exec({{1000, 2, 10, 11}, {1000, 3, 3}, {1000, 2, 12, 13}});
     }
+#endif
 }
 
 TEST_F(FALLBACK, WARP_PERSPECTIVE_MAT_IDX) {

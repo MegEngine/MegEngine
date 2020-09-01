@@ -24,82 +24,75 @@ using namespace megdnn;
 using namespace arm_common;
 namespace {
 
-template <int src_idx, int weight_idx, int c_dim, int ow_block, typename T,
-          typename T2, typename T3, typename T4>
+template <int src_idx, int weight_idx, int c_dim, int ow_block, int remain_w,
+          typename T, typename T2, typename T3, typename T4>
 struct ShiftCalHelper {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight);
 };
 
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
-struct ShiftCalHelper<src_idx, weight_idx, 2, 8, T, T2, T3, T4> {
-    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step, lane)                                             \
-    c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][lane],      \
-                                 src[(step + src_idx) % 8], lane); \
-    c[1][step] = vfmaq_laneq_f32(c[1][step], weight[1][lane],      \
-                                 src[(step + src_idx) % 8], lane);
-
-        UNROLL_CALL_RAW(8, cb, 0);
-        UNROLL_CALL_RAW(8, cb, 1);
-        UNROLL_CALL_RAW(8, cb, 2);
-        UNROLL_CALL_RAW(8, cb, 3);
-#undef cb
-    }
-};
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
-struct ShiftCalHelper<src_idx, weight_idx, 2, 4, T, T2, T3, T4> {
-    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step, lane)                                             \
-    c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][lane],      \
-                                 src[(step + src_idx) % 4], lane); \
-    c[1][step] = vfmaq_laneq_f32(c[1][step], weight[1][lane],      \
-                                 src[(step + src_idx) % 4], lane);
-
-        UNROLL_CALL_RAW(4, cb, 0);
-        UNROLL_CALL_RAW(4, cb, 1);
-        UNROLL_CALL_RAW(4, cb, 2);
-        UNROLL_CALL_RAW(4, cb, 3);
-#undef cb
-    }
-};
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
-struct ShiftCalHelper<src_idx, weight_idx, 1, 8, T, T2, T3, T4> {
-    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step, lane)                                        \
-    c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][lane], \
-                                 src[(step + src_idx) % 8], lane);
-
-        UNROLL_CALL_RAW(8, cb, 0);
-        UNROLL_CALL_RAW(8, cb, 1);
-        UNROLL_CALL_RAW(8, cb, 2);
-        UNROLL_CALL_RAW(8, cb, 3);
-#undef cb
-    }
-};
-template <int src_idx, int weight_idx, typename T, typename T2, typename T3,
-          typename T4>
-struct ShiftCalHelper<src_idx, weight_idx, 1, 4, T, T2, T3, T4> {
-    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step, lane)                                        \
-    c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][lane], \
-                                 src[(step + src_idx) % 4], lane);
-
-        UNROLL_CALL_RAW(4, cb, 0);
-        UNROLL_CALL_RAW(4, cb, 1);
-        UNROLL_CALL_RAW(4, cb, 2);
-        UNROLL_CALL_RAW(4, cb, 3);
-#undef cb
-    }
-};
-
 template <int src_idx, int weight_idx, int c_dim, int ow_block, typename T,
-          typename T2, typename T3>
+          typename T2, typename T3, typename T4>
+struct ShiftCalHelper<src_idx, weight_idx, c_dim, ow_block, 0, T, T2, T3, T4> {
+    static MEGDNN_ALWAYS_INLINE void impl(T&, T2&, T3&) {}
+};
+
+#define cb2(step, lane, ow_block)                                         \
+    c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][lane],             \
+                                 src[(step + src_idx) % ow_block], lane); \
+    c[1][step] = vfmaq_laneq_f32(c[1][step], weight[1][lane],             \
+                                 src[(step + src_idx) % ow_block], lane);
+
+#define cb(step, lane, ow_block)                              \
+    c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][lane], \
+                                 src[(step + src_idx) % ow_block], lane);
+
+#define SHIFT_CAL_HELPER(ow_block, remain_w)                                 \
+    template <int src_idx, int weight_idx, typename T, typename T2,          \
+              typename T3, typename T4>                                      \
+    struct ShiftCalHelper<src_idx, weight_idx, 2, ow_block, remain_w, T, T2, \
+                          T3, T4> {                                          \
+        static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {   \
+            UNROLL_CALL_RAW(remain_w, cb2, 0, ow_block);                     \
+            UNROLL_CALL_RAW(remain_w, cb2, 1, ow_block);                     \
+            UNROLL_CALL_RAW(remain_w, cb2, 2, ow_block);                     \
+            UNROLL_CALL_RAW(remain_w, cb2, 3, ow_block);                     \
+        }                                                                    \
+    };                                                                       \
+    template <int src_idx, int weight_idx, typename T, typename T2,          \
+              typename T3, typename T4>                                      \
+    struct ShiftCalHelper<src_idx, weight_idx, 1, ow_block, remain_w, T, T2, \
+                          T3, T4> {                                          \
+        static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {   \
+            UNROLL_CALL_RAW(remain_w, cb, 0, ow_block);                      \
+            UNROLL_CALL_RAW(remain_w, cb, 1, ow_block);                      \
+            UNROLL_CALL_RAW(remain_w, cb, 2, ow_block);                      \
+            UNROLL_CALL_RAW(remain_w, cb, 3, ow_block);                      \
+        }                                                                    \
+    };
+
+SHIFT_CAL_HELPER(8, 1);
+SHIFT_CAL_HELPER(8, 2);
+SHIFT_CAL_HELPER(8, 3);
+SHIFT_CAL_HELPER(8, 4);
+SHIFT_CAL_HELPER(8, 5);
+SHIFT_CAL_HELPER(8, 6);
+SHIFT_CAL_HELPER(8, 7);
+SHIFT_CAL_HELPER(8, 8);
+
+SHIFT_CAL_HELPER(4, 1);
+SHIFT_CAL_HELPER(4, 2);
+SHIFT_CAL_HELPER(4, 3);
+SHIFT_CAL_HELPER(4, 4);
+
+#undef SHIFT_CAL_HELPER
+#undef cb
+#undef cb2
+
+template <int src_idx, int weight_idx, int c_dim, int ow_block, int remain_w,
+          typename T, typename T2, typename T3>
 MEGDNN_ALWAYS_INLINE void cal_helper(T& c, T2& src, T3& weight) {
-    ShiftCalHelper<src_idx, weight_idx, c_dim, ow_block, T, T2, T3, int>::impl(
-            c, src, weight);
+    ShiftCalHelper<src_idx, weight_idx, c_dim, ow_block, remain_w, T, T2, T3,
+                   int>::impl(c, src, weight);
 };
 template <int oc>
 struct OCHelper {
@@ -151,7 +144,7 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][ow_block];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
@@ -162,11 +155,11 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 2, oc_block, ow_block> {
                                                                  0);
                 load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<0, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
                 load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<1, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src_ptr += ld_src_iw;
                 weight_ptr += ld_weight_fh;
             }
@@ -196,7 +189,7 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][ow_block];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
@@ -207,15 +200,15 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 3, oc_block, ow_block> {
                                                                  0);
                 load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<0, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
                 load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<1, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src[1] = vld1q_f32(src_ptr + (ow_block + 1) * ic_step);
                 load_helper<ic_step, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<2, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src_ptr += ld_src_iw;
                 weight_ptr += ld_weight_fh;
             }
@@ -244,7 +237,7 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][ow_block];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
@@ -255,27 +248,27 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 5, oc_block, ow_block> {
                                                                  0);
                 load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<0, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
                 load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<1, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[1] = vld1q_f32(src_ptr + (ow_block + 1) * ic_step);
                 load_helper<ic_step, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<2, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[2] = vld1q_f32(src_ptr + (ow_block + 2) * ic_step);
                 load_helper<ic_step, 3 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<3, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<3, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[3] = vld1q_f32(src_ptr + (ow_block + 3) * ic_step);
                 load_helper<ic_step, 4 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<4, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<4, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src_ptr += ld_src_iw;
                 weight_ptr += ld_weight_fh;
             }
@@ -305,7 +298,7 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
         const int ld_src_iw = iw * oc_step;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][ow_block];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             const float* src_ptr = src_ptr_origin + ic_idx * ld_src_ic;
@@ -316,37 +309,37 @@ struct KerNeonXXs1Nchw44FP32<bias_mode, Op, remain_w, 7, oc_block, ow_block> {
                                                                  0);
                 load_helper<ic_step, 0, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<0, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<0, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[0] = vld1q_f32(src_ptr + (ow_block)*ic_step);
                 load_helper<ic_step, 1 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<1, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<1, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[1] = vld1q_f32(src_ptr + (ow_block + 1) * ic_step);
                 load_helper<ic_step, 2 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<2, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<2, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[2] = vld1q_f32(src_ptr + (ow_block + 2) * ic_step);
                 load_helper<ic_step, 3 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<3, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<3, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[3] = vld1q_f32(src_ptr + (ow_block + 3) * ic_step);
                 load_helper<ic_step, 4 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<4, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<4, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[4] = vld1q_f32(src_ptr + (ow_block + 4) * ic_step);
                 load_helper<ic_step, 5 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<5, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<5, 0, c_dim, ow_block, remain_w>(c, src, weight);
 
                 src[5] = vld1q_f32(src_ptr + (ow_block + 5) * ic_step);
                 load_helper<ic_step, 6 * ld_weight, oc_step, c_dim, Vld1q_f32>(
                         weight, weight_ptr, ld_weight_oc);
-                cal_helper<6, 0, c_dim, ow_block>(c, src, weight);
+                cal_helper<6, 0, c_dim, ow_block, remain_w>(c, src, weight);
                 src_ptr += ld_src_iw;
                 weight_ptr += ld_weight_fh;
             }

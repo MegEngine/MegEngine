@@ -643,128 +643,95 @@ __ai int32x4_t neon_vld1q(const int* ptr) {
 __ai int16x8_t neon_vld1q(const int16_t* ptr) {
     return vld1q_s16(ptr);
 }
-
-template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
+template <typename T>
+struct NeonLdqSimd;
+template <>
+struct NeonLdqSimd<float> {
+    static constexpr int simd_len = 4;
+};
+template <>
+struct NeonLdqSimd<int> {
+    static constexpr int simd_len = 4;
+};
+template <>
+struct NeonLdqSimd<int16_t> {
+    static constexpr int simd_len = 8;
+};
+template <int c_dim, BiasMode bias_mode, int ow_remain, typename T, typename T2>
 struct InitOcxOw8 {
     static __ai void impl(T& c, const T2* bias_ptr, int oc_step);
 };
-template <typename T, typename T2>
-struct InitOcxOw8<2, BiasMode::NO_BIAS, 8, T, T2> {
-    static __ai void impl(T& c, const T2*, int) {
-#define BAIS_INIT(step)                            \
-    c[0][step] = neon_vdupq_n(static_cast<T2>(0)); \
-    c[1][step] = neon_vdupq_n(static_cast<T2>(0));
-        UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<2, BiasMode::NO_BIAS, 4, T, T2> {
-    static __ai void impl(T& c, const T2*, int) {
-#define BAIS_INIT(step)                            \
-    c[0][step] = neon_vdupq_n(static_cast<T2>(0)); \
-    c[1][step] = neon_vdupq_n(static_cast<T2>(0));
-        UNROLL_CALL_RAW(4, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<2, BiasMode::BROADCAST_CHANNEL_BIAS, 8, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {
-#define BAIS_INIT(step)                \
-    c[0][step] = neon_vld1q(bias_ptr); \
-    c[1][step] = neon_vld1q(bias_ptr + oc_step);
-        UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<2, BiasMode::BROADCAST_CHANNEL_BIAS, 4, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {
-#define BAIS_INIT(step)                \
-    c[0][step] = neon_vld1q(bias_ptr); \
-    c[1][step] = neon_vld1q(bias_ptr + oc_step);
-        UNROLL_CALL_RAW(4, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<2, BiasMode::BIAS, 8, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {
-        constexpr int simd_len = 4;
-#define BAIS_INIT(step)                                  \
-    c[0][step] = neon_vld1q(bias_ptr + step * simd_len); \
-    c[1][step] = neon_vld1q(bias_ptr + oc_step + step * simd_len);
-        UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<2, BiasMode::BIAS, 4, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {
-        constexpr int simd_len = 4;
-#define BAIS_INIT(step)                                  \
-    c[0][step] = neon_vld1q(bias_ptr + step * simd_len); \
-    c[1][step] = neon_vld1q(bias_ptr + oc_step + step * simd_len);
-        UNROLL_CALL_RAW(4, BAIS_INIT);
-#undef BAIS_INIT
-    }
+template <int c_dim, BiasMode bias_mode, typename T, typename T2>
+struct InitOcxOw8<c_dim, bias_mode, 0, T, T2> {
+    static __ai void impl(T&, const T2*, int) {}
 };
 
-template <typename T, typename T2>
-struct InitOcxOw8<1, BiasMode::NO_BIAS, 8, T, T2> {
-    static __ai void impl(T& c, const T2*, int) {
-#define BAIS_INIT(step) c[0][step] = neon_vdupq_n(static_cast<T2>(0));
-        UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<1, BiasMode::NO_BIAS, 4, T, T2> {
-    static __ai void impl(T& c, const T2*, int) {
-#define BAIS_INIT(step) c[0][step] = neon_vdupq_n(static_cast<T2>(0));
-        UNROLL_CALL_RAW(4, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<1, BiasMode::BROADCAST_CHANNEL_BIAS, 8, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int) {
-#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr);
-        UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<1, BiasMode::BROADCAST_CHANNEL_BIAS, 4, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int) {
-#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr);
-        UNROLL_CALL_RAW(4, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<1, BiasMode::BIAS, 8, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int) {
-        constexpr int simd_len = 4;
-#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
-        UNROLL_CALL_RAW(8, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
-template <typename T, typename T2>
-struct InitOcxOw8<1, BiasMode::BIAS, 4, T, T2> {
-    static __ai void impl(T& c, const T2* bias_ptr, int) {
-        constexpr int simd_len = 4;
-#define BAIS_INIT(step) c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
-        UNROLL_CALL_RAW(4, BAIS_INIT);
-#undef BAIS_INIT
-    }
-};
+#define BAIS_INIT_NO_BIAS_C2(step)                 \
+    c[0][step] = neon_vdupq_n(static_cast<T2>(0)); \
+    c[1][step] = neon_vdupq_n(static_cast<T2>(0));
+#define BAIS_INIT_NO_BIAS_C1(step) \
+    c[0][step] = neon_vdupq_n(static_cast<T2>(0));
 
-template <int c_dim, BiasMode bias_mode, int ow_block, typename T, typename T2>
+#define BAIS_INIT_BROADCAST_C2(step)   \
+    c[0][step] = neon_vld1q(bias_ptr); \
+    c[1][step] = neon_vld1q(bias_ptr + oc_step);
+#define BAIS_INIT_BROADCAST_C1(step) c[0][step] = neon_vld1q(bias_ptr);
+
+#define BAIS_INIT_BIAS_C2(step)                          \
+    c[0][step] = neon_vld1q(bias_ptr + step * simd_len); \
+    c[1][step] = neon_vld1q(bias_ptr + oc_step + step * simd_len);
+
+#define BAIS_INIT_BIAS_C1(step) \
+    c[0][step] = neon_vld1q(bias_ptr + step * simd_len);
+
+#define INSTANCE_InitOcxOw8(ow_remain, cdim)                                \
+    template <typename T, typename T2>                                      \
+    struct InitOcxOw8<cdim, BiasMode::NO_BIAS, ow_remain, T, T2> {          \
+        static __ai void impl(T& c, const T2*, int) {                       \
+            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_NO_BIAS_C##cdim);          \
+        }                                                                   \
+    };                                                                      \
+    template <typename T, typename T2>                                      \
+    struct InitOcxOw8<cdim, BiasMode::BROADCAST_CHANNEL_BIAS, ow_remain, T, \
+                      T2> {                                                 \
+        static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {      \
+            (void)oc_step;                                                  \
+            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_BROADCAST_C##cdim);        \
+        }                                                                   \
+    };                                                                      \
+    template <typename T, typename T2>                                      \
+    struct InitOcxOw8<cdim, BiasMode::BIAS, ow_remain, T, T2> {             \
+        static __ai void impl(T& c, const T2* bias_ptr, int oc_step) {      \
+            constexpr int simd_len = NeonLdqSimd<T2>::simd_len;             \
+            (void)oc_step;                                                  \
+            UNROLL_CALL_RAW(ow_remain, BAIS_INIT_BIAS_C##cdim);             \
+        }                                                                   \
+    };
+#define INSTANCE_InitOcxOw8_C(ow_remain) \
+    INSTANCE_InitOcxOw8(ow_remain, 2);   \
+    INSTANCE_InitOcxOw8(ow_remain, 1);
+
+INSTANCE_InitOcxOw8_C(1);
+INSTANCE_InitOcxOw8_C(2);
+INSTANCE_InitOcxOw8_C(3);
+INSTANCE_InitOcxOw8_C(4);
+INSTANCE_InitOcxOw8_C(5);
+INSTANCE_InitOcxOw8_C(6);
+INSTANCE_InitOcxOw8_C(7);
+INSTANCE_InitOcxOw8_C(8);
+
+#undef INSTANCE_InitOcxOw8
+#undef INSTANCE_InitOcxOw8_C
+#undef BAIS_INIT_BIAS_C1
+#undef BAIS_INIT_BIAS_C2
+#undef BAIS_INIT_BROADCAST_C1
+#undef BAIS_INIT_BROADCAST_C2
+#undef BAIS_INIT_NO_BIAS_C1
+#undef BAIS_INIT_NO_BIAS_C2
+
+template <int c_dim, BiasMode bias_mode, int ow_remain, typename T, typename T2>
 __ai void init_ocx_ow8(T& c, const T2* bias_ptr, int oc_step) {
-    InitOcxOw8<c_dim, bias_mode, ow_block, T, T2>::impl(c, bias_ptr, oc_step);
+    InitOcxOw8<c_dim, bias_mode, ow_remain, T, T2>::impl(c, bias_ptr, oc_step);
 }
 /////////////////////init_ocx_ow4/////////////////////
 template <int c_dim, BiasMode bias_mode, typename T>

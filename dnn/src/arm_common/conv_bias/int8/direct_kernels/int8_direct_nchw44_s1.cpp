@@ -45,7 +45,7 @@ static void ker_neon_dirctconv_2x2s1_oc8_ow8(const int8_t* src_ptr,
     int8x16_t src[8 + 1];
     int16x8_t temp_c[4];
 
-    init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+    init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
         for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -135,7 +135,7 @@ static void ker_neon_dirctconv_2x2s1_oc4_ow8(const int8_t* src_ptr,
     int8x16_t weight[1][2];
     int8x16_t src[8 + 1];
     int16x8_t temp_c[2];
-    init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+    init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
         for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -224,7 +224,7 @@ struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 3, c_dim, DstType> {
         int8x16_t weight[3];
         int8x16_t src[8 + 2];
         int16x8_t temp_c[2];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -306,7 +306,7 @@ struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 5, c_dim, DstType> {
         int8x16_t weight[5];
         int8x16_t src[8 + 2];
         int16x8_t temp_c[2];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -409,7 +409,7 @@ struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 7, c_dim, DstType> {
         int8x16_t weight[7];
         int8x16_t src[8 + 2];
         int16x8_t temp_c[2];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -569,7 +569,7 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
                         (oh_idx * iw + ow_idx) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
-                ker_neon_dirctconv_2x2s1_oc8_ow8<bias_mode, Op, 0, filter_size,
+                ker_neon_dirctconv_2x2s1_oc8_ow8<bias_mode, Op, ow_step, filter_size,
                                                  2, DstType>(
                         src + src_offset, filter + weight_offset, bias + oc_idx,
                         dst + dst_offset, ic, ih, iw, ld_oc, op);
@@ -594,7 +594,7 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
                         (oh_idx * iw + ow_idx) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
-                ker_neon_dirctconv_2x2s1_oc4_ow8<bias_mode, Op, 0, filter_size,
+                ker_neon_dirctconv_2x2s1_oc4_ow8<bias_mode, Op, ow_step, filter_size,
                                                  1, DstType>(
                         src + src_offset, filter + weight_offset, bias + oc_idx,
                         dst + dst_offset, ic, ih, iw, ld_oc, op);

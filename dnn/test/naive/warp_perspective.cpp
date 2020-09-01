@@ -352,6 +352,9 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_FORWARD_HWCD4) {
             checker.execs({{22, 10, 1, 11, 4}, {22, 3, 3}, {22, 11, 1, 12, 4}});
         }
     }
+#if MEGDNN_TEST_ASAN
+//! asan detect nan will make test failed
+#else
     // nan case
     NanMatRNG rng_nan;
     UniformFloatRNG rng_zero(0, 0);
@@ -369,6 +372,7 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_FORWARD_HWCD4) {
         checker.set_param(param);
         checker.exec({{10, 10, 1, 11, 4}, {10, 3, 3}, {10, 12, 1, 13, 4}});
     }
+#endif
 }
 
 #if MEGDNN_WITH_BENCHMARK

@@ -69,7 +69,7 @@ struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 2, oc_block, ow_block,
         constexpr int c_dim = OCHelper<oc_block>::val;
 
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             int8x16_t src[src_reg];
             int8x16_t weight[c_dim][weight_reg];
@@ -117,7 +117,7 @@ struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 3, oc_block, ow_block,
         constexpr int c_dim = OCHelper<oc_block>::val;
 
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             int8x16_t src[src_reg];
             int8x16_t weight[c_dim][weight_reg];
@@ -171,7 +171,7 @@ struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 5, oc_block, ow_block,
         constexpr int c_dim = OCHelper<oc_block>::val;
 
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             int8x16_t src[src_reg];
@@ -220,7 +220,7 @@ struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 7, oc_block, ow_block,
         constexpr int c_dim = OCHelper<oc_block>::val;
 
         int32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, ow_block>(c, bias_ptr, ld_bias);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
             int8x16_t src[src_reg];

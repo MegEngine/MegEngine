@@ -39,16 +39,18 @@ namespace {
  *\tparam T2 is type of src regs
  *\tparam T3 is type of weight regs
  */
-template <int src_idx, int weight_idx, int c_dim, int stride, typename T,
-          typename T2, typename T3>
+template <int src_idx, int weight_idx, int c_dim, int stride, int remain_w,
+          typename T, typename T2, typename T3>
 struct ShiftCalHelper {
     static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight);
 };
 
-template <int src_idx, int weight_idx, int stride, typename T, typename T2,
-          typename T3>
-struct ShiftCalHelper<src_idx, weight_idx, 2, stride, T, T2, T3> {
-    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
+template <int src_idx, int weight_idx, int c_dim, int stride, typename T,
+          typename T2, typename T3>
+struct ShiftCalHelper<src_idx, weight_idx, c_dim, stride, 0, T, T2, T3> {
+    static MEGDNN_ALWAYS_INLINE void impl(T&, T2&, T3&) {}
+};
+
 #define cb(step)                                                     \
     c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][weight_idx],  \
                                  src[(step * stride + src_idx) / 4], \
@@ -57,29 +59,47 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, stride, T, T2, T3> {
                                  src[(step * stride + src_idx) / 4], \
                                  (step * stride + src_idx) % 4);
 
-        UNROLL_CALL_RAW(8, cb);
-#undef cb
-    }
-};
-template <int src_idx, int weight_idx, int stride, typename T, typename T2,
-          typename T3>
-struct ShiftCalHelper<src_idx, weight_idx, 1, stride, T, T2, T3> {
-    static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {
-#define cb(step)                                                     \
+#define cb2(step)                                                    \
     c[0][step] = vfmaq_laneq_f32(c[0][step], weight[0][weight_idx],  \
                                  src[(step * stride + src_idx) / 4], \
                                  (step * stride + src_idx) % 4);
 
-        UNROLL_CALL_RAW(8, cb);
-#undef cb
-    }
-};
+#define SHIFT_CAL_HELPER(ow_remain)                                         \
+    template <int src_idx, int weight_idx, int stride, typename T,          \
+              typename T2, typename T3>                                     \
+    struct ShiftCalHelper<src_idx, weight_idx, 2, stride, ow_remain, T, T2, \
+                          T3> {                                             \
+        static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {  \
+            UNROLL_CALL_RAW(ow_remain, cb);                                 \
+        }                                                                   \
+    };                                                                      \
+    template <int src_idx, int weight_idx, int stride, typename T,          \
+              typename T2, typename T3>                                     \
+    struct ShiftCalHelper<src_idx, weight_idx, 1, stride, ow_remain, T, T2, \
+                          T3> {                                             \
+        static MEGDNN_ALWAYS_INLINE void impl(T& c, T2& src, T3& weight) {  \
+            UNROLL_CALL_RAW(ow_remain, cb2);                                \
+        }                                                                   \
+    };
 
-template <int src_idx, int weight_idx, int c_dim, int stride, typename T,
-          typename T2, typename T3>
+SHIFT_CAL_HELPER(1)
+SHIFT_CAL_HELPER(2)
+SHIFT_CAL_HELPER(3)
+SHIFT_CAL_HELPER(4)
+SHIFT_CAL_HELPER(5)
+SHIFT_CAL_HELPER(6)
+SHIFT_CAL_HELPER(7)
+SHIFT_CAL_HELPER(8)
+
+#undef SHIFT_CAL_HELPER
+#undef cb
+#undef cb2
+
+template <int src_idx, int weight_idx, int c_dim, int stride, int remain_w,
+          typename T, typename T2, typename T3>
 MEGDNN_ALWAYS_INLINE void cal_helper(T& c, T2& src, T3& weight) {
-    ShiftCalHelper<src_idx, weight_idx, c_dim, stride, T, T2, T3>::impl(c, src,
-                                                                        weight);
+    ShiftCalHelper<src_idx, weight_idx, c_dim, stride, remain_w, T, T2,
+                   T3>::impl(c, src, weight);
 };
 enum CpuTag {
     DEFAULT_CPU_TAG = 0,
@@ -134,7 +154,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 7, oc_block, stride,
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -145,13 +165,13 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 7, oc_block, stride,
             src, src_ptr + step * iw, 0);                            \
     load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(          \
             weight, weight_ptr + step * ld_weight_fw, ld_weight_oc); \
-    cal_helper<0, 0, c_dim, stride>(c, src, weight);                 \
-    cal_helper<1, 1, c_dim, stride>(c, src, weight);                 \
-    cal_helper<2, 2, c_dim, stride>(c, src, weight);                 \
-    cal_helper<3, 3, c_dim, stride>(c, src, weight);                 \
-    cal_helper<4, 4, c_dim, stride>(c, src, weight);                 \
-    cal_helper<5, 5, c_dim, stride>(c, src, weight);                 \
-    cal_helper<6, 6, c_dim, stride>(c, src, weight);
+    cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<2, 2, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<3, 3, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<4, 4, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<5, 5, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<6, 6, c_dim, stride, remain_w>(c, src, weight);
 
             UNROLL_CALL_RAW(7, KERNEL_CB)
 #undef KERNEL_CB
@@ -185,7 +205,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 5, oc_block, stride,
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -196,11 +216,11 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 5, oc_block, stride,
             src, src_ptr + step * iw, 0);                            \
     load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(          \
             weight, weight_ptr + step * ld_weight_fw, ld_weight_oc); \
-    cal_helper<0, 0, c_dim, stride>(c, src, weight);                 \
-    cal_helper<1, 1, c_dim, stride>(c, src, weight);                 \
-    cal_helper<2, 2, c_dim, stride>(c, src, weight);                 \
-    cal_helper<3, 3, c_dim, stride>(c, src, weight);                 \
-    cal_helper<4, 4, c_dim, stride>(c, src, weight);
+    cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<2, 2, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<3, 3, c_dim, stride, remain_w>(c, src, weight);       \
+    cal_helper<4, 4, c_dim, stride, remain_w>(c, src, weight);
             UNROLL_CALL_RAW(5, KERNEL_CB)
 #undef KERNEL_CB
 
@@ -233,7 +253,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 3, oc_block, stride,
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -243,27 +263,27 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 3, oc_block, stride,
                                                                  0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(
                     weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, stride>(c, src, weight);
-            cal_helper<1, 1, c_dim, stride>(c, src, weight);
-            cal_helper<2, 2, c_dim, stride>(c, src, weight);
+            cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<2, 2, c_dim, stride, remain_w>(c, src, weight);
 
             // row 1
             load_helper<src_reg_size, 0, simd_len, 0, Vld1q_f32>(
                     src, src_ptr + iw, 0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(
                     weight, weight_ptr + 1 * ld_weight_fw, ld_weight_oc);
-            cal_helper<0, 0, c_dim, stride>(c, src, weight);
-            cal_helper<1, 1, c_dim, stride>(c, src, weight);
-            cal_helper<2, 2, c_dim, stride>(c, src, weight);
+            cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<2, 2, c_dim, stride, remain_w>(c, src, weight);
 
             // row 2
             load_helper<src_reg_size, 0, simd_len, 0, Vld1q_f32>(
                     src, src_ptr + 2 * iw, 0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(
                     weight, weight_ptr + 2 * ld_weight_fw, ld_weight_oc);
-            cal_helper<0, 0, c_dim, stride>(c, src, weight);
-            cal_helper<1, 1, c_dim, stride>(c, src, weight);
-            cal_helper<2, 2, c_dim, stride>(c, src, weight);
+            cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<2, 2, c_dim, stride, remain_w>(c, src, weight);
 
             src_ptr += ld_src_ic;
             weight_ptr += ld_weight_ic;
@@ -634,7 +654,7 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 2, oc_block, stride,
         const int ld_src_ic = ih * iw;
         constexpr int c_dim = OCHelper<oc_block>::val;
         float32x4_t c[c_dim][8];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             float32x4_t src[src_reg_size];
@@ -644,16 +664,16 @@ struct KerNeonXXs2NchwNchw44FP32<bias_mode, Op, remain_w, 2, oc_block, stride,
                                                                  0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(
                     weight, weight_ptr, ld_weight_oc);
-            cal_helper<0, 0, c_dim, stride>(c, src, weight);
-            cal_helper<1, 1, c_dim, stride>(c, src, weight);
+            cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);
 
             // row 1
             load_helper<src_reg_size, 0, simd_len, 0, Vld1q_f32>(
                     src, src_ptr + iw, 0);
             load_helper<filter_size, 0, oc_step, c_dim, Vld1q_f32>(
                     weight, weight_ptr + 1 * ld_weight_fw, ld_weight_oc);
-            cal_helper<0, 0, c_dim, stride>(c, src, weight);
-            cal_helper<1, 1, c_dim, stride>(c, src, weight);
+            cal_helper<0, 0, c_dim, stride, remain_w>(c, src, weight);
+            cal_helper<1, 1, c_dim, stride, remain_w>(c, src, weight);
 
             src_ptr += ld_src_ic;
             weight_ptr += ld_weight_ic;

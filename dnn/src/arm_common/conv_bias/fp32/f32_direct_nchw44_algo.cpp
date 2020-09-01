@@ -126,7 +126,8 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
                                     ? oh_idx * oh_block * ow * pack_c
                                     : oc_idx;
     const float* bptr =
-            kern_param.bias<dt_float32>(batch_id, group_id) + bias_offset;
+            kern_param.bias<dt_float32>(batch_id, group_id, oc_idx, 1, pack_c) +
+            bias_offset;
 
     Op op;
     conv_bias::conv_direct_fp32_nchw44<bias_mode, Op, filter, stride>(

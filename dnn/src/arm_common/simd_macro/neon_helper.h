@@ -18,6 +18,8 @@
 #define MEGDNN_SIMD_TYPE float32x4_t
 #define MEGDNN_SIMD_TYPE2 float32x4x2_t
 #define MEGDNN_SIMD_LOADU(addr) vld1q_f32(addr)
+#define MEGDNN_SIMD_LOADU_2(addr) vcombine_f32(vld1_f32(addr), vdup_n_f32(0.f))
+#define MEGDNN_SIMD_LOADU_3(addr) vld1q_lane_f32(addr + 2, vcombine_f32(vld1_f32(addr), vdup_n_f32(0.f)), 2)
 #define MEGDNN_SIMD_STOREU(addr, reg) vst1q_f32(addr, reg)
 #define MEGDNN_SIMD_SETZERO() vdupq_n_f32(0.0f)
 #define MEGDNN_SIMD_SET1(num) vdupq_n_f32(num)

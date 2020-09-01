@@ -23,6 +23,20 @@
 #include <regex>
 #include <unordered_map>
 
+// clang-format off
+#if defined(__has_feature) 
+    #if __has_feature(address_sanitizer)
+        #define MEGDNN_TEST_ASAN 1
+    #else
+        #define MEGDNN_TEST_ASAN 0
+    #endif
+#elif defined(__SANITIZE_ADDRESS__) 
+    #define MEGDNN_TEST_ASAN 1
+#else 
+    #define MEGDNN_TEST_ASAN 0
+#endif
+// clang-format on
+
 namespace megdnn {
 namespace test {
 

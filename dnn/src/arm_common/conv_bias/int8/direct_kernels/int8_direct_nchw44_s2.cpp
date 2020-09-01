@@ -54,7 +54,7 @@ static void ker_neon_dirctconv_2x2s2_oc8_ow8(const int8_t* src_ptr,
     int8x16_t src[8 + 1];
     int16x8_t temp_c[4];
 
-    init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+    init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
         for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -151,7 +151,7 @@ static void ker_neon_dirctconv_2x2s2_oc4_ow8(const int8_t* src_ptr,
     int8x16_t weight[2];
     int8x16_t src[8 + 1];
     int16x8_t temp_c[2];
-    init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+    init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
         for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -239,7 +239,7 @@ struct KerNeonDirectStride2Int8<bias_mode, Op, remain_w, 3, c_dim, DstType> {
         int8x16_t weight[3];
         int8x16_t src[8 + 2];
         int16x8_t temp_c[4];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
 
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
@@ -327,7 +327,7 @@ struct KerNeonDirectStride2Int8<bias_mode, Op, remain_w, 5, c_dim, DstType> {
         int8x16_t weight[5];
         int8x16_t src[8 + 2];
         int16x8_t temp_c[4];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
                 const int8_t* src_ic_0_3 = src_ptr + ic_idx * ic_stride +
@@ -435,7 +435,7 @@ struct KerNeonDirectStride2Int8<bias_mode, Op, remain_w, 7, c_dim, DstType> {
         int8x16_t weight[7];
         int8x16_t src[8 + 2];
         int16x8_t temp_c[4];
-        init_ocx_ow8<c_dim, bias_mode, 8>(c, bias_ptr, oc_step);
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
         for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
             for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
                 const int8_t* src_ic_0_3 = src_ptr + ic_idx * ic_stride +

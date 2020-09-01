@@ -6,14 +6,15 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include <algorithm>
 
 #include "src/arm_common/conv_bias/fp32/do_conv_stride1.h"
-#include "src/arm_common/simd_macro/neon_helper.h"
 #include "src/arm_common/conv_bias/postprocess_helper.h"
+#include "src/arm_common/simd_macro/neon_helper.h"
 
 #include "midout.h"
 
@@ -27,10 +28,9 @@ using namespace conv_stride1;
 using NCBKernSizeParam = fallback::ConvBiasImpl::NCBKernSizeParam;
 using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
 
-
-void conv_stride1::do_conv_2x2_stride1(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride1::do_conv_2x2_stride1(const float* src, const float* filter,
+                                       float* dst, size_t IH, size_t IW,
+                                       size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
     //! unroll of 2
     size_t ic = 0;
@@ -143,9 +143,9 @@ void conv_stride1::do_conv_2x2_stride1(const float* src, const float* filter, fl
     }
 }
 
-void conv_stride1::do_conv_3x3_stride1(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride1::do_conv_3x3_stride1(const float* src, const float* filter,
+                                       float* dst, size_t IH, size_t IW,
+                                       size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
 
     rep(ic, IC) {
@@ -193,7 +193,7 @@ void conv_stride1::do_conv_3x3_stride1(const float* src, const float* filter, fl
                 MEGDNN_SIMD_TYPE _r22 = MEGDNN_SIMD_EXT(_r20, _r20n, 2);
 
                 MEGDNN_SIMD_TYPE _r30 = MEGDNN_SIMD_LOADU(r3);
-                MEGDNN_SIMD_TYPE _r30n = MEGDNN_SIMD_LOADU(r3 + 4);
+                MEGDNN_SIMD_TYPE _r30n = MEGDNN_SIMD_LOADU_2(r3 + 4);
                 MEGDNN_SIMD_TYPE _r31 = MEGDNN_SIMD_EXT(_r30, _r30n, 1);
                 MEGDNN_SIMD_TYPE _r32 = MEGDNN_SIMD_EXT(_r30, _r30n, 2);
 
@@ -290,9 +290,9 @@ void conv_stride1::do_conv_3x3_stride1(const float* src, const float* filter, fl
     }
 }
 
-void conv_stride1::do_conv_5x5_stride1(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride1::do_conv_5x5_stride1(const float* src, const float* filter,
+                                       float* dst, size_t IH, size_t IW,
+                                       size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
 
     rep(ic, IC) {
@@ -530,9 +530,9 @@ void conv_stride1::do_conv_5x5_stride1(const float* src, const float* filter, fl
     }
 }
 
-void conv_stride1::do_conv_7x7_stride1(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride1::do_conv_7x7_stride1(const float* src, const float* filter,
+                                       float* dst, size_t IH, size_t IW,
+                                       size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
 
     rep(ic, IC) {
@@ -688,7 +688,7 @@ void conv_stride1::do_conv_7x7_stride1(const float* src, const float* filter, fl
                 _sum = MEGDNN_SIMD_FMA_LANE(_sum, _r56, _k39404142, 2);
 
                 MEGDNN_SIMD_TYPE _k42434445 = MEGDNN_SIMD_LOADU(k6);
-                MEGDNN_SIMD_TYPE _k46474849 = MEGDNN_SIMD_LOADU(k6 + 4);
+                MEGDNN_SIMD_TYPE _k46474849 = MEGDNN_SIMD_LOADU_3(k6 + 4);
 
                 MEGDNN_SIMD_TYPE _r60 = MEGDNN_SIMD_LOADU(r6);
                 MEGDNN_SIMD_TYPE _r64 = MEGDNN_SIMD_LOADU(r6 + 4);
