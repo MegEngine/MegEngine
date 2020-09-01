@@ -181,10 +181,10 @@ void init_graph_rt(py::module m) {
 
     m.def("make_const", [](cg::ComputingGraph* graph, py::array data, CompNode cn, DType dtype) {
             if (!cn.valid()) {
-                throw py::type_error("device must not be None");
+                cn = CompNode::load("xpux");
             }
             auto hv = npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype);
-            opr::ImmutableTensor::make(*graph, hv, OperatorNodeConfig(cn)).node();
+            return opr::ImmutableTensor::make(*graph, hv, OperatorNodeConfig(cn)).node();
         });
 
     m.def("input_callback", [input_callback](std::function<DeviceTensorND(void)> callback,
