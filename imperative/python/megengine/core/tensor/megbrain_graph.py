@@ -95,6 +95,10 @@ class VarNode(TensorBase):
     def shape(self):
         return self._node.shape
 
+    @property
+    def value(self):
+        return self._node.value
+
 
 class OpNode:
     def __init__(self, node: _imperative_rt.OperatorNode):

@@ -399,7 +399,7 @@ class LazyEvalTensor(RawTensor):
         return self.__varnode.shape
 
     def numpy(self):
-        raise RuntimeError("cannot read value during symbolic tracing")
+        return self.__varnode.value
 
     def _dev_tensor(self):
         raise RuntimeError("cannot access data during symbolic tracing")

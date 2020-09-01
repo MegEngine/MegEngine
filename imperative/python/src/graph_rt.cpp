@@ -58,6 +58,19 @@ void init_graph_rt(py::module m) {
                     return nullptr;
                 }
                 return mgr.infer_shape_fallible(v);
+            })
+        .def_property_readonly("value", [](cg::VarNode* v) -> py::object {
+                auto&& mgr = v->owner_graph()->static_infer_manager();
+                auto&& type = mgr.get_infer_type(v);
+                using InferType = cg::static_infer::InferType;
+                if (!(type.value & (InferType::CONST | InferType::RT_STATIC))) {
+                    return py::none();
+                }
+                auto* val = mgr.infer_value_fallible(v);
+                if (!val) {
+                    return py::none();
+                }
+                return py::cast(*val).attr("numpy")();
             });
 
     py::class_<cg::OperatorNodeBase, GraphNodePtr<cg::OperatorNodeBase>>(m, "OperatorNode")
