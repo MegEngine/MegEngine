@@ -119,6 +119,7 @@ function cmake_build() {
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
     cd $BUILD_DIR
+    unset IFS
     cmake -G "$MAKEFILE_TYPE Makefiles" \
         -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
         -DANDROID_NDK="$NDK_ROOT" \

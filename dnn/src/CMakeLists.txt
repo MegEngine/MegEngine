@@ -36,6 +36,9 @@ if(NOT ${MGE_ARCH} STREQUAL "naive")
     endif()
 endif()
 
+if(MGE_WITH_MIDOUT_PROFILE)
+    list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/third_party/midout/src/midout.cpp)
+endif()
 
 ###############################################################################
 # HIP_COMPILE

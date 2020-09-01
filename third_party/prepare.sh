@@ -15,6 +15,7 @@ git submodule foreach --recursive git reset --hard
 git submodule foreach --recursive git clean -fd
 
 
+git submodule update --init midout
 git submodule update --init intel-mkl-dnn
 git submodule update --init Halide
 git submodule update --init protobuf

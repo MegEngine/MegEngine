@@ -471,8 +471,11 @@ def main():
         assert not testcase, 'extra inputs provided in testcase: {}'.format(
             testcase.keys()
         )
-        mgb.serialize_comp_graph_to_file(args.output, output_mgbvars, append=True)
-
+        mgb.serialize_comp_graph_to_file(
+            args.output,
+            output_mgbvars,
+            append=True,
+            output_strip_info=args.output_strip_info)
 
 if __name__ == '__main__':
     main()

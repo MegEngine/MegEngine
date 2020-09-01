@@ -25,6 +25,9 @@ if(MGE_WITH_CUDA)
     list(APPEND SOURCES ${CUSOURCES})
 endif()
 
+if(MGE_WITH_MIDOUT_PROFILE)
+    list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/third_party/midout/src/midout.cpp)
+endif()
 
 if(MGE_WITH_CAMBRICON)
     file(GLOB_RECURSE SOURCES_ cambricon/*.cpp)
