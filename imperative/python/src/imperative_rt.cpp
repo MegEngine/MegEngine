@@ -75,7 +75,7 @@ void init_imperative_rt(py::module m) {
         .def("get_shape", &Interpreter::Channel::get_shape)
         .def("_get_dev_tensor", &Interpreter::Channel::get_dev_tensor)
         .def("apply_op", &Interpreter::Channel::apply_op)
-        .def("sync", &Interpreter::Channel::sync);
+        .def("sync", &Interpreter::Channel::sync, py::call_guard<py::gil_scoped_release>());
 
     std::unique_ptr<Interpreter::Channel> ch = Interpreter::inst().create_channel();
     m.attr("interpreter") = py::detail::make_caster<decltype(ch)>::cast(
@@ -86,6 +86,7 @@ void init_imperative_rt(py::module m) {
 
     m.def("sync", [m]() {
             m.attr("interpreter").attr("sync")();
+            py::gil_scoped_release _;
             py_task_q.wait_all_task_finish();
          });
 
