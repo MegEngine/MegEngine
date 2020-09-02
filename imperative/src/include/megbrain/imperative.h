@@ -13,6 +13,5 @@
 
 #include "megbrain/imperative/physical_tensor.h"
 #include "megbrain/imperative/op_def.h"
-#include "megbrain/imperative/opdef/all.h"
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

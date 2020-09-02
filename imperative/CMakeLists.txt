@@ -45,30 +45,6 @@ add_custom_command(
 
 add_custom_target(gen_opr_py DEPENDS ${GEN_OPS_FILE})
 
-##################### generate opdef c header and python binding ##############
-
-set(OP_DEF_HEADER_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/src/include)
-file(MAKE_DIRECTORY ${OP_DEF_HEADER_OUT_DIR}/megbrain/imperative/opdef)
-set(OP_DEF_HEADER ${OP_DEF_HEADER_OUT_DIR}/megbrain/imperative/opdef/all.h)
-set(OP_DEF_PYTHON_BINDING_OUT_DIR ${MEGENGINE_DIR}/${PACKAGE_NAME}/src)
-file(MAKE_DIRECTORY ${OP_DEF_PYTHON_BINDING_OUT_DIR})
-set(OP_DEF_PYTHON_BINDING ${OP_DEF_PYTHON_BINDING_OUT_DIR}/opdef.inl)
-set(OP_PARAM_DEF ${CMAKE_CURRENT_BINARY_DIR}/opr_param_defs.py)
-set(GEN_OP_DEF_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/python/tools/gen_op_defs.py)
-
-add_custom_command(
-    OUTPUT ${OP_DEF_HEADER} ${OP_DEF_PYTHON_BINDING}
-    COMMAND ${PYTHON_EXECUTABLE} ${GEN_OP_DEF_SCRIPT} ${OP_PARAM_DEF} ${OP_DEF_HEADER}
-    COMMAND ${PYTHON_EXECUTABLE} ${GEN_OP_DEF_SCRIPT} -t py ${OP_PARAM_DEF} ${OP_DEF_PYTHON_BINDING}
-    DEPENDS ${GEN_OP_DEF_SCRIPT} ${OP_PARAM_DEF}
-    VERBATIM
-)
-
-add_custom_target(gen_op_def_internal DEPENDS ${OP_DEF_HEADER} ${OP_DEF_PYTHON_BINDING})
-add_library(gen_op_def INTERFACE)
-target_include_directories(gen_op_def INTERFACE ${OP_DEF_HEADER_OUT_DIR} ${OP_DEF_PYTHON_BINDING_OUT_DIR})
-add_dependencies(gen_op_def gen_op_def_internal)
-
 ##################### end of opdef generation #########################
 
 set(VERSION_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/src/version.ld)
@@ -77,9 +53,9 @@ add_custom_target(_version_ld SOURCES ${VERSION_SCRIPT})
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/pybind11 ${PROJECT_BINARY_DIR}/third_party/pybind11)
 pybind11_add_module(${MODULE_NAME} NO_EXTRAS ${SRCS})
 if (APPLE OR MSVC OR WIN32)
-    target_link_libraries(${MODULE_NAME} PRIVATE gen_op_def megbrain megdnn)
+    target_link_libraries(${MODULE_NAME} PRIVATE megbrain megdnn)
 else()
-    target_link_libraries(${MODULE_NAME} PRIVATE gen_op_def megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
+    target_link_libraries(${MODULE_NAME} PRIVATE megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
 endif()
 if (MGE_WITH_DISTRIBUTED)
     message("Imperative configured to link megray")

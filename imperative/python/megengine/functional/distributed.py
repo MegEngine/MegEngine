@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Optional, Tuple
 
-from ..core._imperative_rt.ops import CollectiveCommDefModeEnum
+from ..core._imperative_rt.ops import CollectiveCommMode
 from ..core.autodiff.builtin_op_utils import builtin_op_get_backward_fn
 from ..core.autodiff.grad import (
     Tracer,
@@ -135,7 +135,7 @@ def reduce_sum(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.REDUCE_SUM
+    mode = CollectiveCommMode.REDUCE_SUM
     return collective_comm(inp, mode, group, device)
 
 
@@ -148,7 +148,7 @@ def broadcast(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.BROADCAST
+    mode = CollectiveCommMode.BROADCAST
     return collective_comm(inp, mode, group, device)
 
 
@@ -161,7 +161,7 @@ def all_gather(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.ALL_GATHER
+    mode = CollectiveCommMode.ALL_GATHER
     return collective_comm(inp, mode, group, device)
 
 
@@ -174,7 +174,7 @@ def reduce_scatter_sum(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.REDUCE_SCATTER_SUM
+    mode = CollectiveCommMode.REDUCE_SCATTER_SUM
     return collective_comm(inp, mode, group, device)
 
 
@@ -187,7 +187,7 @@ def all_reduce_sum(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.ALL_REDUCE_SUM
+    mode = CollectiveCommMode.ALL_REDUCE_SUM
     return collective_comm(inp, mode, group, device)
 
 
@@ -200,7 +200,7 @@ def all_reduce_max(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.ALL_REDUCE_MAX
+    mode = CollectiveCommMode.ALL_REDUCE_MAX
     return collective_comm(inp, mode, group, device)
 
 
@@ -213,7 +213,7 @@ def all_reduce_min(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.ALL_REDUCE_MIN
+    mode = CollectiveCommMode.ALL_REDUCE_MIN
     return collective_comm(inp, mode, group, device)
 
 
@@ -226,7 +226,7 @@ def gather(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.GATHER
+    mode = CollectiveCommMode.GATHER
     return collective_comm(inp, mode, group, device)
 
 
@@ -239,7 +239,7 @@ def scatter(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.SCATTER
+    mode = CollectiveCommMode.SCATTER
     return collective_comm(inp, mode, group, device)
 
 
@@ -252,7 +252,7 @@ def all_to_all(
     :param group: communication group
     :param device: execute placement
     """
-    mode = CollectiveCommDefModeEnum.ALL_TO_ALL
+    mode = CollectiveCommMode.ALL_TO_ALL
     return collective_comm(inp, mode, group, device)
 
 

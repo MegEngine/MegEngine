@@ -23,7 +23,7 @@
 namespace py = pybind11;
 
 void init_ops(py::module m) {
-    #include "opdef.inl"
+    using namespace mgb::imperative;
 
     py::class_<OprAttr, std::shared_ptr<OprAttr>, OpDef>(m, "OprAttr")
         .def(py::init<>())
@@ -42,6 +42,21 @@ void init_ops(py::module m) {
 
     py::class_<GetVarShape, std::shared_ptr<GetVarShape>, OpDef>(m, "GetVarShape")
         .def(py::init());
+
+#define V(m) .value(#m, CollectiveComm::Mode::m)
+    py::enum_<CollectiveComm::Mode>(m, "CollectiveCommMode")
+        V(REDUCE_SUM)
+        V(BROADCAST)
+        V(ALL_GATHER)
+        V(REDUCE_SCATTER_SUM)
+        V(ALL_REDUCE_SUM)
+        V(ALL_REDUCE_MAX)
+        V(ALL_REDUCE_MIN)
+        V(ALL_REDUCE_PROD)
+        V(GATHER)
+        V(SCATTER)
+        V(ALL_TO_ALL);
+#undef V
 
     py::class_<CollectiveComm, std::shared_ptr<CollectiveComm>, OpDef>(m, "CollectiveComm")
         .def(py::init<>())

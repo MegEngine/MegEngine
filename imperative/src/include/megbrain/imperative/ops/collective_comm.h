@@ -21,11 +21,13 @@ class CollectiveComm : public OpDefImplBase<CollectiveComm> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
 public:
+    using Mode = megdnn::param::CollectiveComm::Mode;
+
     CollectiveComm() = default;
     CollectiveComm(const std::string& key_, size_t nr_devices_,
                       uint32_t rank_, bool is_root_, bool local_grad_,
                       const std::string& addr_, uint32_t port_,
-                      const megdnn::param::CollectiveComm::Mode& mode_,
+                      const Mode& mode_,
                       const DType& dtype_, const std::string& backend_,
                       const std::string& comp_node_)
             : key(key_),
@@ -46,7 +48,7 @@ public:
     bool local_grad;
     std::string addr;
     uint32_t port;
-    megdnn::param::CollectiveComm::Mode mode;
+    Mode mode;
     DType dtype;
     std::string backend;
     std::string comp_node;
