@@ -27,7 +27,6 @@ from megengine.test import assertTensorClose
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
-@pytest.mark.skipif(use_tensor_shape(), reason="syncbn doesnot support symbolic shape")
 @pytest.mark.isolated_distributed
 def test_syncbn():
     nr_chan = 8
@@ -154,7 +153,6 @@ def test_batchnorm():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
-@pytest.mark.skipif(use_tensor_shape(), reason="syncbn doesnot support symbolic shape")
 @pytest.mark.isolated_distributed
 def test_syncbn1d():
     nr_chan = 8
@@ -257,7 +255,6 @@ def test_batchnorm2d():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
-@pytest.mark.skipif(use_tensor_shape(), reason="syncbn doesnot support symbolic shape")
 @pytest.mark.isolated_distributed
 def test_syncbn2d():
     nr_chan = 8
@@ -336,7 +333,6 @@ def test_batchnorm_no_stats():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
-@pytest.mark.skipif(use_tensor_shape(), reason="syncbn doesnot support symbolic shape")
 @pytest.mark.isolated_distributed
 def test_syncbn_no_stats():
     nr_chan = 8
@@ -393,7 +389,6 @@ def test_batchnorm2d_no_stats():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
-@pytest.mark.skipif(use_tensor_shape(), reason="syncbn doesnot support symbolic shape")
 @pytest.mark.isolated_distributed
 def test_syncbn2d_no_stats():
     nr_chan = 8
