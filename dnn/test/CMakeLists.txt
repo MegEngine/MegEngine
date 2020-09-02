@@ -49,6 +49,7 @@ target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS})
 
 if (MGE_WITH_CUDA)
     target_link_libraries(megdnn_test cutlass)
+    target_include_directories(megdnn_test PRIVATE ${CUDNN_INCLUDE_DIR})
 endif()
 
 target_include_directories(megdnn_test
