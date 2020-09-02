@@ -64,7 +64,7 @@ def test_reduce_sum():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -106,7 +106,7 @@ def test_gather():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -144,7 +144,7 @@ def test_broadcast():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -186,7 +186,7 @@ def test_scatter():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (100, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -226,7 +226,7 @@ def test_all_to_all():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (100, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -265,7 +265,7 @@ def test_all_gather():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -308,7 +308,7 @@ def test_reduce_scatter_sum():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 4), (8, 10), (88, 44)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -347,7 +347,7 @@ def test_all_reduce_sum():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -386,7 +386,7 @@ def test_all_reduce_max():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -425,7 +425,7 @@ def test_all_reduce_min():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)
 
 
@@ -463,5 +463,5 @@ def test_bcast_param():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     for shape in [(2, 3), (8, 10), (99, 77)]:
-        for backend in ["nccl", "ucx"]:
+        for backend in ["nccl"]:
             check(shape, backend)

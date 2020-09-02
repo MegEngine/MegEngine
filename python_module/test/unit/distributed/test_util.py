@@ -102,7 +102,6 @@ def test_init_process_group():
         assert p0.exitcode == 0 and p1.exitcode == 0
 
     check("nccl")
-    check("ucx")
 
 
 @pytest.mark.skipif(
