@@ -231,6 +231,9 @@ def concat(
          [ 9. 10. 11.]]
 
     """
+    if len(inps) == 1:
+        return inps[0]
+
     dtype = dtype_promotion(inps)
     device = get_device(inps)
 
