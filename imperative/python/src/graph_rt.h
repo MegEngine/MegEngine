@@ -44,15 +44,8 @@ class Rendezvous {
 public:
     Rendezvous() = default;
     Rendezvous(const Rendezvous& rhs) = delete;
-    Rendezvous(Rendezvous&& rhs) = default;
+    Rendezvous(Rendezvous&& rhs) = delete;
     Rendezvous& operator=(const Rendezvous& rhs) = delete;
-    Rendezvous& operator=(Rendezvous&& rhs) {
-        MGB_LOCK_GUARD(m_lock);
-        m_drop_next = rhs.m_drop_next;
-        m_read_ahead = rhs.m_read_ahead;
-        m_promise = std::move(rhs.m_promise);
-        return *this;
-    }
 
     R get() {
         std::future<R> f;

@@ -123,6 +123,7 @@ OutputCallback::OutputCallback(Param param, const VarNodeArray& inputs,
             ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
             .add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
             .dtype(DType::from_enum(DTypeEnum::Byte));
+    add_equivalence_component<ScalarHash<void*>>(this);
 }
 
 SymbolVar OutputCallback::make(Param param, const SymbolVarArray& inputs) {
