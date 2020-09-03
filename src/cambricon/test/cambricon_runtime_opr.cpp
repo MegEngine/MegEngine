@@ -11,6 +11,7 @@
 
 #include "megbrain/comp_node_env.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/plugin/profiler.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/test/helper.h"
@@ -557,6 +558,92 @@ TEST(TestCambriconRuntimeOpr, Profiling) {
     profiler.to_json_full(func.get())
             ->writeto_fpath(output_file("cambricon_runtime_opr_profile.json"));
 }
+
+TEST(TestCambriconRuntimeOpr, CrossCNCopy) {
+    REQUIRE_CAMBRICON_DEVICE(1);
+    auto cn = CompNode::load("cambricon0");
+    CnmlModelContext ctx{cn, true};
+
+    // prepare parameter for addpad and conv
+    size_t ni = 16, ci = 64, hi = 32, wi = 32;
+    size_t no = 16, co = 64, ho = 32, wo = 32;
+
+    // count tensor nums
+    int conv_input_count = ni * hi * wi * ci;
+    int relu_output_count = no * ho * wo * co;
+
+    // prepare cpu origin data
+    std::vector<float> conv_input_cpu_data(conv_input_count);
+    std::vector<float> relu_output_cpu_data(relu_output_count);
+
+    // prepare input data for addpad
+    unsigned int seed = time(0);
+    for (int index = 0; index < conv_input_count; ++index) {
+        conv_input_cpu_data[index] = ((rand_r(&seed) % 100 / 100.0) - 0.5) / 2;
+    }
+
+    // prepare cpu data to converts to mlu memory
+    std::vector<int16_t> conv_input_cpu(conv_input_count);
+    std::vector<int16_t> relu_output_cpu(relu_output_count);
+    MGB_CNRT_CHECK(cnrtCastDataType(conv_input_cpu_data.data(), CNRT_FLOAT32,
+                                    conv_input_cpu.data(), CNRT_FLOAT16,
+                                    conv_input_count, nullptr));
+
+    auto mlu_deleter = [](void* p) { MGB_CNRT_CHECK(cnrtFree(p)); };
+    void* input_mlu_ptr;
+    void* output_mlu_ptr;
+
+    // malloc mlu mem for fusion input and output
+    MGB_CNRT_CHECK(
+            cnrtMalloc(&input_mlu_ptr, conv_input_count * sizeof(int16_t)));
+    MGB_CNRT_CHECK(
+            cnrtMalloc(&output_mlu_ptr, relu_output_count * sizeof(int16_t)));
+    // memory copy cpu->mlu
+    MGB_CNRT_CHECK(cnrtMemcpy(input_mlu_ptr, conv_input_cpu.data(),
+                              conv_input_count * sizeof(int16_t),
+                              CNRT_MEM_TRANS_DIR_HOST2DEV));
+    std::unique_ptr<void, decltype(mlu_deleter)> input_holder{input_mlu_ptr,
+                                                              mlu_deleter};
+    std::unique_ptr<void, decltype(mlu_deleter)> output_holder{output_mlu_ptr,
+                                                               mlu_deleter};
+
+    ctx.do_inference(&input_mlu_ptr, &output_mlu_ptr);
+
+    // result memory copy cnml->cpu
+    // memory copy cpu->mlu
+    MGB_CNRT_CHECK(cnrtMemcpy(relu_output_cpu.data(), output_mlu_ptr,
+                              relu_output_count * sizeof(int16_t),
+                              CNRT_MEM_TRANS_DIR_DEV2HOST));
+    MGB_CNRT_CHECK(cnrtCastDataType(relu_output_cpu.data(), CNRT_FLOAT16,
+                                    relu_output_cpu_data.data(), CNRT_FLOAT32,
+                                    relu_output_count, nullptr));
+    auto cn_cpu = CompNode::load("cpu0");
+    // cnml inference finished
+    auto buf = ctx.get_serialized_model();
+    std::shared_ptr<HostTensorND> input = std::make_shared<HostTensorND>(
+            cn_cpu, TensorLayout{{ni, ci, hi, wi}, dtype::Float16()});
+    memcpy(reinterpret_cast<void*>(input->ptr<dt_float16>()),
+           conv_input_cpu.data(), conv_input_count * sizeof(int16_t));
+    auto graph = ComputingGraph::make();
+    auto host_x = opr::Host2DeviceCopy::make(*graph, input, {cn_cpu});
+    auto x = opr::Copy::make(host_x, {cn});
+    auto y = opr::CambriconRuntimeOpr::make(buf.data(), buf.size(), "subnet0",
+                                            {x}, true)[0];
+    HostTensorND output(CompNode::default_cpu(), {no, co, ho, wo},
+                        dtype::Float16());
+    auto func = graph->compile({make_callback_copy(y, output)});
+    func->execute();
+    HostTensorND out_cnml(cn_cpu, {no, co, ho, wo}, dtype::Float32()),
+            out_mgb(cn_cpu, {no, co, ho, wo}, dtype::Float32());
+    memcpy(out_cnml.ptr<float>(), relu_output_cpu_data.data(),
+           relu_output_count * sizeof(float));
+    MGB_CNRT_CHECK(
+            cnrtCastDataType(reinterpret_cast<void*>(output.ptr<dt_float16>()),
+                             CNRT_FLOAT16, out_mgb.ptr<float>(), CNRT_FLOAT32,
+                             relu_output_count, nullptr));
+    MGB_ASSERT_TENSOR_NEAR(out_cnml, out_mgb, 1e-4);
+}
+
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

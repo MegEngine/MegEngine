@@ -677,7 +677,13 @@ void mgb::dev_tensor_memset(const DeviceTensorND& tensor, int val) {
 #endif
            break;
 #endif
-        case CompNode::DeviceType::CPU: {
+#if MGB_CAMBRICON
+       case CompNode::DeviceType::CAMBRICON:
+           MGB_CNRT_CHECK(cnrtSyncQueue(env.cnrt_env().queue));
+           MGB_CNRT_CHECK(cnrtMemset(ptr, val, size));
+           break;
+#endif
+       case CompNode::DeviceType::CPU: {
             auto fill = [ptr, size, val]() { std::memset(ptr, val, size); };
             env.cpu_env().dispatch(fill);
         } break;

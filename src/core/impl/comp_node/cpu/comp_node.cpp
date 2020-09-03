@@ -397,7 +397,16 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
                               "Atlas comp_node used but "
                               "MGB_ATLAS not enabled");
 #endif
-
+                } else if (dest_impl->env().property().type ==
+                           DeviceType::CAMBRICON) {
+#if MGB_CAMBRICON
+                    dest_impl->copy_to_device(dest, src, size);
+                    return;
+#else
+                    mgb_throw(MegBrainError,
+                              "Cambricon comp_node used but "
+                              "MGB_CAMBRICON not enabled");
+#endif
 
                 } else {
                     mgb_assert(locator().device == Locator::DEVICE_CPU_DEFAULT,
@@ -912,12 +921,13 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
 
     {
         auto type = cn_impl->env().property().type;
-        mgb_throw_if(type != CompNode::DeviceType::CPU
-                             && type != CompNode::DeviceType::CUDA
-                             && type != CompNode::DeviceType::ATLAS
-                             ,
-                     MegBrainError,
-                     "currently CPU can only wait for CPU, CUDA, ATLAS"
+        mgb_throw_if(
+                type != CompNode::DeviceType::CPU &&
+                        type != CompNode::DeviceType::CUDA
+                        && type != CompNode::DeviceType::ATLAS &&
+                        type != CompNode::DeviceType::CAMBRICON,
+                MegBrainError,
+                "currently CPU can only wait for CPU, CUDA, ATLAS, CAMBRICON"
         );
     }
 
@@ -927,6 +937,13 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
 #else
         mgb_throw(MegBrainError,
                   "Atlas comp_node used but MGB_ATLAS not enabled");
+#endif
+    } else if (cn_impl->env().property().type == CompNode::DeviceType::CAMBRICON) {
+#if MGB_CAMBRICON
+        return m_comp_node_impl->sync();
+#else
+        mgb_throw(MegBrainError,
+                  "Cambricon comp_node used but MGB_CAMBRICON not enabled");
 #endif
 
     }
