@@ -308,6 +308,14 @@ class CompNode {
          */
         static void try_coalesce_all_free_memory();
 
+        /*
+        * \brief specifies how to pre-allocate from raw dev allocator
+        *
+        */
+        static void set_prealloc_config(size_t alignment, size_t min_req,
+                                        size_t max_overhead, double growth_factor,
+                                        DeviceType device_type);
+
         /* =================== synchronization ======================== */
 
         class Event;

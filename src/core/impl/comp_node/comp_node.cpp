@@ -12,6 +12,8 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/comp_node_env.h"
 #include "megbrain/graph/exc_extra_info.h"
+#include "megbrain/common.h"
+#include "megbrain/comp_node/alloc.h"
 
 #include "./cuda/comp_node.h"
 #include "./cpu/comp_node.h"
@@ -418,6 +420,21 @@ std::shared_ptr<void> CompNodeDepedentObject::callback() {
 
 void CompNode::activate() const {
     static_cast<Impl*>(m_impl)->env().activate();
+}
+
+void CompNode::set_prealloc_config(
+    size_t alignment, 
+    size_t min_req, 
+    size_t max_overhead, 
+    double growth_factor, 
+    DeviceType device_type) {
+    switch (device_type) {
+        case DeviceType::CUDA:
+            CudaCompNode::set_prealloc_config(alignment, min_req, max_overhead, growth_factor);
+            break;
+        default:
+            mgb_log_warn("unsupported device type for set_prealloc_config");
+    };
 }
 
 void* CompNode::alloc_device(size_t size) const {

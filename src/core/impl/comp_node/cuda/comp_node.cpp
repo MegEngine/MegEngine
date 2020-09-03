@@ -825,15 +825,16 @@ void CudaCompNode::set_prealloc_config(size_t alignment, size_t min_req,
             using T = CudaCompNodeImpl::StaticData;
             static std::aligned_storage_t<sizeof(T), alignof(T)> storage;
             sdptr = new(&storage)T;
-            MGB_LOCK_GUARD(sdptr->mtx);
             sdptr->prealloc_config.alignment = alignment;
             sdptr->prealloc_config.min_req = min_req;
             sdptr->prealloc_config.growth_factor = growth_factor;
             sdptr->prealloc_config.max_overhead = max_overhead;
         } else {
             mgb_log_warn(
-                "failed to invoke set_prealloc_config; fallback to default configuration; "
-                "prealloc_config should be specified before any invocation of load_cuda");
+                "invalid call to set_prealloc_config, will fallback to "
+                "default config; "
+                "prealloc_config should be specified before any CUDA "
+                "memory allocation");
         }
     }
 }
@@ -857,6 +858,10 @@ CudaCompNode::Impl* CudaCompNode::load_cuda(const Locator&, const Locator&) {
 }
 void CudaCompNode::sync_all() {
 }
+
+void CudaCompNode::set_prealloc_config(size_t alignment, size_t min_req, 
+                                       size_t max_overhead,
+                                       double growth_factor) {}
 
 #undef err
 

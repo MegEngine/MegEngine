@@ -9,6 +9,7 @@
 import os
 
 from .core._imperative_rt.common import CompNode, DeviceType
+from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
 
 __all__ = [
     "is_cuda_available",
@@ -16,6 +17,7 @@ __all__ = [
     "get_default_device",
     "set_default_device",
     "set_prealloc_config",
+    "DeviceType",
 ]
 
 
@@ -94,15 +96,15 @@ def set_prealloc_config(
     alignment: int = 1,
     min_req: int = 32 * 1024 * 1024,
     max_overhead: int = 0,
-    growth_factor: float = 2.0,
-    device_type: str = "gpu",
+    growth_factor=2.0,
+    device_type=DeviceType.CUDA,
 ):
-    """specifies how to pre-allocate from raw device allocator
+    """specifies how to pre-allocate from raw dev allocator
 
-    :param alignment: specifies the alignment in byte
-    :param min_req: min request size in byte
-    :param max_overhead: max overhead above required size in byte
-    :growth_factor: request size = growth_factor * current allocated size
+    :param alignment: specifies the alignment in bytes.
+    :param min_req: min request size in bytes.
+    :param max_overhead: max overhead above required size in bytes.
+    :growth_factor: request size / cur allocated
     :device_type: the device type
 
     """
@@ -110,5 +112,4 @@ def set_prealloc_config(
     assert min_req > 0
     assert max_overhead >= 0
     assert growth_factor >= 1
-    t = _str2device_type(device_type)
-    _set_prealloc_config(alignment, min_req, max_overhead, growth_factor, t)
+    _set_prealloc_config(alignment, min_req, max_overhead, growth_factor, device_type)

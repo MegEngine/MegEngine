@@ -165,6 +165,9 @@ void init_common(py::module m) {
             .value("MULTITHREAD", CompNode::DeviceType::MULTITHREAD)
             .value("MAX_DEVICE_ID", CompNode::DeviceType::MAX_DEVICE_ID);
 
+    m.def("set_prealloc_config", &CompNode::set_prealloc_config, 
+        "specifies how to pre-allocate from raw dev allocator");
+
     init_npy_num_bfloat16(m);
     init_npy_num_intbx(m);
 }
