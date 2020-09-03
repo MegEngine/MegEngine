@@ -126,7 +126,10 @@ class trace:
         record = self._seq[self._pc]
         op_, ihandles, ohandles = record
         if op != op_:
-            raise TraceMismatchError("op different from last time")
+            if op.type == "UniformRNG":
+                pass
+            else:
+                raise TraceMismatchError("op different from last time")
         if len(ihandles) != len(args):
             raise TraceMismatchError("op input size different from last time")
 
