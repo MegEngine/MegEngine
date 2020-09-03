@@ -78,6 +78,14 @@ class Graph(_imperative_rt.ComputingGraph):
         opnode = InputNode(*args, device=device, dtype=dtype, shape=shape, graph=self)
         return opnode.outputs[0]
 
+    def make_h2d(self, *, dtype, device):
+        device = as_device(device).to_c()
+        return self._wrap(_imperative_rt.make_h2d(self, device, dtype))
+
+
+def dump(*args):
+    return _imperative_rt.dump_graph([i._node for i in args])
+
 
 class VarNode(TensorBase):
     def __init__(self, node: _imperative_rt.VarNode):
@@ -91,6 +99,14 @@ class VarNode(TensorBase):
     @property
     def op(self):
         return self.graph._wrap(self._node.owner)
+
+    @property
+    def name(self):
+        return self._node.name
+
+    @name.setter
+    def name(self, name):
+        self._node.name = name
 
     @property
     def dtype(self):
@@ -117,6 +133,14 @@ class OpNode:
     @property
     def graph(self) -> Graph:
         return self._node.graph
+
+    @property
+    def name(self):
+        return self._node.name
+
+    @name.setter
+    def name(self, name):
+        self._node.name = name
 
     @property
     def inputs(self):
