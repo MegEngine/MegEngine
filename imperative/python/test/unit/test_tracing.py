@@ -1,3 +1,5 @@
+import io
+
 import numpy as np
 
 from megengine.core.ops import builtin as ops
@@ -63,3 +65,20 @@ def test_print_in_trace():
             buf = None
             np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
             np.testing.assert_equal(z, buf)
+
+
+def test_dump():
+    @trace(symbolic=True, capture_as_const=True)
+    def f(x):
+        op = ops.Elemwise(mode="negate")
+        (y,) = apply(op, x)
+        return y
+
+    x = as_raw_tensor([1]).numpy()
+    y = f.__wrapped__(as_raw_tensor(x)).numpy()
+
+    for i in range(3):
+        np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+
+    file = io.BytesIO()
+    f.dump(file)
