@@ -17,8 +17,6 @@ __all__ = [
     "set_default_device",
 ]
 
-_default_device = os.getenv("MGE_DEFAULT_DEVICE", "xpux")
-
 
 def _valid_device(inp):
     if isinstance(inp, str) and len(inp) == 4:
@@ -76,9 +74,8 @@ def set_default_device(device: str = "xpux"):
 
         It can also be set by environmental variable `MGE_DEFAULT_DEVICE`.
     """
-    global _default_device  # pylint: disable=global-statement
     assert _valid_device(device), "Invalid device name {}".format(device)
-    _default_device = device
+    CompNode._set_default_device(device)
 
 
 def get_default_device() -> str:
@@ -86,4 +83,7 @@ def get_default_device() -> str:
 
     It returns the value set by :func:`~.set_default_device`.
     """
-    return _default_device
+    return CompNode._get_default_device()
+
+
+set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))

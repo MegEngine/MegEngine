@@ -19,6 +19,7 @@
 #include "megbrain/imperative.h"
 #include "./helper.h"
 #include "megbrain/plugin/profiler.h"
+#include "./common.h"
 
 namespace py = pybind11;
 
@@ -230,7 +231,7 @@ void init_graph_rt(py::module m) {
 
     m.def("make_const", [](cg::ComputingGraph* graph, py::array data, CompNode cn, DType dtype) {
             if (!cn.valid()) {
-                cn = CompNode::load("xpux");
+                cn = CompNode::load(get_default_device());
             }
             auto hv = npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype);
             return opr::ImmutableTensor::make(*graph, hv, OperatorNodeConfig(cn)).node();

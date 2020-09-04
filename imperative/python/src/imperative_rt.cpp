@@ -21,6 +21,7 @@
 #include "megbrain/imperative/interpreter.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "./helper.h"
+#include "./common.h"
 
 namespace py = pybind11;
 
@@ -53,7 +54,7 @@ void init_imperative_rt(py::module m) {
     py::class_<Interpreter::Channel>(m, "Interpreter")
         .def("put", [](Interpreter::Channel& self, py::array data, DType dtype, CompNode cn) {
                 if (!cn.valid()) {
-                    cn = CompNode::load("xpux");
+                    cn = CompNode::load(get_default_device());
                 }
                 constexpr int size_threshhold = TensorShape::MAX_NDIM;
                 if (data.size() > size_threshhold) {

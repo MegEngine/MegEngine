@@ -39,13 +39,25 @@ auto def_TensorND(py::object parent, const char* name) {
             &XTensorND::template copy_from_fixlayout<HostTensorStorage>));
 }
 
+std::string default_device = "xpux";
+
 } // namespace
+
+void set_default_device(const std::string &device) {
+    default_device = device;
+}
+
+std::string get_default_device() {
+    return default_device;
+}
 
 void init_common(py::module m) {
     auto&& PyCompNode = py::class_<CompNode>(m, "CompNode")
         .def(py::init())
         .def(py::init(py::overload_cast<const std::string&>(&CompNode::load)))
         .def("create_event", &CompNode::create_event, py::arg("flags") = 0ul)
+        .def("_set_default_device", &set_default_device)
+        .def("_get_default_device", &get_default_device)
         .def("__str__", &CompNode::to_string_logical)
         .def_static("_sync_all", &CompNode::sync_all)
         .def(py::self == py::self)
