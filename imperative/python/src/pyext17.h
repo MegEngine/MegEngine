@@ -62,7 +62,7 @@ public:
     PyObject_HEAD
     std::aligned_storage_t<sizeof(T), alignof(T)> storage;
     #ifdef _Py_TPFLAGS_HAVE_VECTORCALL
-    PyObject* vectorcall_slot;
+    PyObject* (*vectorcall_slot)(PyObject*, PyObject*const*, size_t, PyObject*);
     #endif
 
     inline T* inst() {
@@ -167,7 +167,7 @@ private:
     struct tp_vectorcall {
         static constexpr bool valid = HAS_MEMBER(T, tp_vectorcall);
         static constexpr bool haskw = [](){if constexpr (valid)
-                                               if constexpr (std::is_invocable_v<T::tp_vectorcall, T, PyObject*const*, size_t, PyObject*>)
+                                               if constexpr (std::is_invocable_v<decltype(&T::tp_vectorcall), T, PyObject*const*, size_t, PyObject*>)
                                                    return true;
                                            return false;}();
 
