@@ -52,12 +52,6 @@ class SGD(Optimizer):
         momentum = param_group["momentum"]
 
         for param in param_group["params"]:
-
-            if not isinstance(param.grad, Buffer):
-                raise TypeError(
-                    "grad must be a Buffer, maybe you forget to call backward()?"
-                )
-
             if not param.requires_grad:
                 continue
 
