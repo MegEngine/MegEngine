@@ -19,6 +19,15 @@ class CondTake : public OpDefImplBase<CondTake> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 public:
     CondTake() = default;
+
+    size_t hash() const override {
+        return reinterpret_cast<std::uintptr_t>(dyn_typeinfo());
+    }
+
+    bool is_same_st(const Hashable& rhs) const override {
+        return rhs.dyn_typeinfo() == dyn_typeinfo();
+    }
+
 };
 
 } // namespace mgb::imperative

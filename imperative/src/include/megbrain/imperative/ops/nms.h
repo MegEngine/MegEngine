@@ -23,6 +23,20 @@ public:
     NMSKeep() = default;
     NMSKeep(float iou_thresh_, uint32_t max_output_):
         iou_thresh(iou_thresh_), max_output(max_output_) {}
+
+    size_t hash() const override {
+        return hash_pair_combine(
+                hash_pair_combine(mgb::hash(iou_thresh), mgb::hash(max_output)),
+                reinterpret_cast<std::uintptr_t>(dyn_typeinfo()));
+    }
+
+    bool is_same_st(const Hashable& rhs_) const override {
+        auto&& rhs = static_cast<const NMSKeep&>(rhs_);
+        return rhs.dyn_typeinfo() == dyn_typeinfo()
+            && rhs.iou_thresh == iou_thresh
+            && rhs.max_output == max_output;
+    }
+
 };
 
 } // namespace mgb::imperative
