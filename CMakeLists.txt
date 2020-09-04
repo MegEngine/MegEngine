@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14.4)
+cmake_minimum_required(VERSION 3.15.2)
 
 include (cmake/FetchMegBrainVersion.cmake)
 project(MegEngine LANGUAGES C CXX VERSION ${MGB_VER_STRING})

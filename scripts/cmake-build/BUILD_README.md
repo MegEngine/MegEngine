@@ -39,7 +39,7 @@
     ```
 ### linux host build
     ```
-    1: cmake, which version > 3.14.4
+    1: cmake, which version > 3.15.2
     2: gcc/g++, which version > 6, (gcc/g++ >= 7, if need build training)
     3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl 
     4: zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool:
@@ -48,7 +48,7 @@
     ```
 ### macos host build
     ```
-    1: cmake, which version > 3.14.4
+    1: cmake, which version > 3.15.2
     2: install brew: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     3: brew install python python3 swig coreutils
     4: install at least xcode command line tool: https://developer.apple.com/xcode/

@@ -74,12 +74,12 @@ function install_cmake() {
             mkdir -p ${CMAKE_INSTALL_DIR}
         fi
 
-        rm -rf ${CMAKE_INSTALL_DIR}/src/cmake-3.14.4.tar.gz
+        rm -rf ${CMAKE_INSTALL_DIR}/src/cmake-3.15.2.tar.gz
         mkdir ${CMAKE_INSTALL_DIR}/src
         cd ${CMAKE_INSTALL_DIR}/src
-        wget https://cmake.org/files/v3.14/cmake-3.14.4.tar.gz
-        tar -xvf cmake-3.14.4.tar.gz
-        cd cmake-3.14.4
+        wget https://cmake.org/files/v3.15/cmake-3.15.2.tar.gz
+        tar -xvf cmake-3.15.2.tar.gz
+        cd cmake-3.15.2
         mkdir build
         cd build
         ../configure --prefix=${CMAKE_INSTALL_DIR}/install
