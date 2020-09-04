@@ -125,9 +125,7 @@ public:
     template<typename T> static ComputingGraphImpl* downcast(T* ptr) = delete;
 
     inline static ComputingGraphImpl* downcast(ComputingGraph* graph) {
-        #ifdef MGB_ENABLE_IMPERATIVE_RUNTIME
         mgb_assert(!graph->options().imperative_proxy_graph);
-        #endif
         return static_cast<ComputingGraphImpl*>(graph);
     }
 

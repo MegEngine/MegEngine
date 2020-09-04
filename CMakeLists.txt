@@ -295,7 +295,6 @@ if(MGE_WITH_TEST)
 endif()
 
 if(MGE_BUILD_IMPERATIVE_RT)
-    add_compile_definitions(MGB_ENABLE_IMPERATIVE_RUNTIME)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
@@ -711,7 +710,6 @@ endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 
-set(MGB_ENABLE_IMPERATIVE ${MGE_BUILD_IMPERATIVE_RT})
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)

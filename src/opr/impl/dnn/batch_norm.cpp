@@ -140,7 +140,6 @@ void BatchNormForward::scn_do_execute() {
     auto &&y = output(4)->dev_tensor();
     mgb_assert(x.layout().is_contiguous() &&
                y.layout().is_contiguous());
-#if MGB_ENABLE_IMPERATIVE
     if (input().size() == 5) { // need running mean/variance
         auto &&o0 = output(0)->dev_tensor(),
              &&o1 = output(1)->dev_tensor(),
@@ -163,7 +162,6 @@ void BatchNormForward::scn_do_execute() {
                     && o1.raw_ptr() == i1.raw_ptr());
         }
     }
-#endif
     auto scale = input(1)->dev_tensor().as_megdnn();
     auto bias = input(2)->dev_tensor().as_megdnn();
     auto mean = output(0)->dev_tensor().as_megdnn();
