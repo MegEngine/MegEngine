@@ -45,8 +45,8 @@ public:
 
     std::string repr() const;
 
-    bool is_same_st(const Hashable& rhs) const;
-    size_t hash() const;
+    bool is_same_st(const Hashable& rhs) const override;
+    size_t hash() const override;
 };
 
 } // namespace imperative

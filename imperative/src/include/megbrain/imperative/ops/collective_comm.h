@@ -52,6 +52,15 @@ public:
     DType dtype;
     std::string backend;
     std::string comp_node;
+
+    size_t hash() const override;
+
+    bool is_same_st(const Hashable& another) const override;
+    auto as_tuple() const{
+        return std::tuple(key, nr_devices, rank, is_root,
+            local_grad, addr, port, mode, dtype, 
+            backend, comp_node);
+    }
 };
 
 }  // namespace imperative
