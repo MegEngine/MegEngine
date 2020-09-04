@@ -260,13 +260,9 @@ class Grad:
                     cache[v] = g
                 if last_written_to[v] == (seqno, i):
                     if v.callback:
-                        grad = v.callback(
+                        v.callback(
                             v.owner(), Wrapper(cache[v]) if Wrapper else cache[v]
                         )
-                    if getattr(v.owner(), "grad", None) is None:
-                        v.owner().grad = grad
-                    else:
-                        v.owner().grad += grad
                     if v.opnode is None:
                         # won't read by backward, mark consumed
                         cache[v] = None

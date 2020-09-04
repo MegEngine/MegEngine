@@ -9,8 +9,8 @@
 from bisect import bisect_right
 from typing import Iterable as Iter
 
-from .optimizer import Optimizer
 from .lr_scheduler import LRScheduler
+from .optimizer import Optimizer
 
 
 class MultiStepLR(LRScheduler):

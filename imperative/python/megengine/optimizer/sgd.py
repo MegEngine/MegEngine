@@ -53,10 +53,6 @@ class SGD(Optimizer):
 
         for param in param_group["params"]:
 
-            if param.__wrapped__ in self._grad_skip:
-                self._grad_skip.remove(param.__wrapped__)
-                continue
-
             if not isinstance(param.grad, Buffer):
                 raise TypeError(
                     "grad must be a Buffer, maybe you forget to call backward()?"
@@ -76,5 +72,3 @@ class SGD(Optimizer):
                 self._state[param]["momentum_buffer"]._reset(v)
             else:
                 param -= lr * grad
-
-        assert len(self._grad_skip) == 0
