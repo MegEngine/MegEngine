@@ -15,6 +15,7 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 from megengine import Parameter, Tensor, tensor
+from megengine.device import get_default_device, set_default_device
 from megengine.functional.distributed import (
     all_gather,
     all_reduce_max,
@@ -449,7 +450,8 @@ def test_io_remote():
             assert y.numpy()[0] == 0
         else:  # remote recv
             dist.init_process_group("localhost", port, world_size, rank, rank)
-            y = remote_recv(0, val.shape, val.dtype, cn="gpu1")
+            y = remote_recv(0, val.shape, val.dtype)
+            assert y.device == "gpu1"
             np.testing.assert_almost_equal(val, y.numpy())
 
     procs = []

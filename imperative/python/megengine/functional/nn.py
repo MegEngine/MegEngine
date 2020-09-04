@@ -1447,7 +1447,7 @@ def indexing_one_hot(
         src, (TensorWrapperBase, TensorBase)
     ), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
-    index = utils.convert_single_value(index, (src,), dtype="int32")
+    index = utils.convert_single_value(index, (src,), dtype="int32", device=src.device)
     (result,) = apply(op, src, index)
     if not keepdims:
         result = remove_axis(result, axis)
