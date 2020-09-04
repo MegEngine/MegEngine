@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <variant>
+
 #include "megbrain/comp_node.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/utils/json.h"
@@ -18,37 +20,59 @@
 
 #include "megbrain/imperative/op_def.h"
 
+#include "megbrain/imperative/function_hook.h"
+
 namespace mgb {
 namespace imperative {
 
-class ProfilerPrivate;
+struct ProfileEntry{
+    using TimeClosure = std::function<double()>;
+    std::shared_ptr<OpDef> op;
+    std::tuple<double, double> host;
+    std::vector<std::tuple<CompNode, TimeClosure, TimeClosure>> device_list;
+    void wait_device(){
+        for(auto& [cn, begin, end]: device_list){
+            MGB_MARK_USED_VAR(cn);
+            begin = [begin=begin()]{ return begin; };
+            end  = [end = end()]{ return end; };
+        }
+    }
+};
 
-using OpDefPrinter = thin_function<std::string(const OpDef&)>;
+using Profile = std::vector<ProfileEntry>;
+
+class DeviceTimer {
+public:
+    using SharedEvent = std::shared_ptr<CompNode::Event>;
+    DeviceTimer() = default;
+    void reset(thin_function<double()> host_timer);
+    thin_function<double()> get_device_time(CompNode device);
+
+private:
+    CompNode::UnorderedMap<std::tuple<SharedEvent, double>> m_base_event_table;
+};
 
 class Profiler {
+public:
+    Profiler(Profile* profile = nullptr) {
+        if (!profile) {
+            m_owned_profile = std::make_unique<Profile>();
+            profile = m_owned_profile.get();
+        }
+        m_profile = profile;
+    }
+    void start();
+    void stop();
+    Profile& get_profile() { return *m_profile; }
+
 private:
-    std::unique_ptr<ProfilerPrivate> m_private;
-
-public:
-    enum EventKind { OprBegin, OprEnd };
-
-public:
-    Profiler();
-    Profiler(const std::string& path);
-    ~Profiler();
-    void enable();
-    void disable();
-    void dump();
-    void dump(const std::string& path);
-    void record_host(size_t id, std::string name, EventKind type,
-                     double host_time);
-    void record_device(size_t id, std::string name, EventKind type,
-                       double host_time, CompNode comp_node);
-    double get_device_time(CompNode::Event& event);
-    size_t get_dump_count();
-    std::unique_ptr<CompNode::Event> create_event(CompNode comp_node);
-    double get_host_time_now();
-    std::string print_op(const OpDef& def);
+    DeviceTimer m_device_timer;
+    RealTimer m_host_timer;
+    Profile* m_profile;
+    std::unique_ptr<Profile> m_owned_profile;
+    std::vector<FunctionHooker<decltype(OpDef::apply_on_physical_tensor)>>
+            m_hooker_list;
 };
+
 }  // namespace imperative
 }  // namespace mgb

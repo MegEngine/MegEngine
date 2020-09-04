@@ -643,9 +643,10 @@ class CompNode::EventPool {
     std::vector<std::unique_ptr<CompNode::Event>> m_allocated;
     std::vector<CompNode::Event*> m_free;
     Spinlock m_lock;
+    size_t m_flags;
 
     public:
-        explicit EventPool(CompNode cn);
+        explicit EventPool(CompNode cn, size_t flags = 0);
         ~EventPool();
 
         CompNode::Event* alloc();

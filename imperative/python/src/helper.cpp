@@ -651,9 +651,14 @@ PyObject* npy::dtype_mgb2np(mgb::DType dtype) {
     // https://docs.scipy.org/doc/numpy/reference/c-api.array.html#c.PyArray_TypeObjectFromType
     // the following is equivalent to PyArray_TypeObjectFromType for built-in
     // types.
+    if(!dtype.valid()){
+        Py_XINCREF(Py_None);
+        return Py_None;
+    }
     auto descr = dtype_mgb2np_descr(dtype);
     if (descr == nullptr) {
-        return nullptr;
+        Py_XINCREF(Py_None);
+        return Py_None;
     }
     if (dtype.has_param()) {
         return reinterpret_cast<PyObject*>(descr.release());

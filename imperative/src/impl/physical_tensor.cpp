@@ -11,6 +11,7 @@
 
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/blob_manager.h"
+#include "./event_pool.h"
 #include <mutex>
 
 namespace mgb {
@@ -18,86 +19,31 @@ namespace imperative {
 
 namespace {
 
-class EventPool : CompNodeDepedentObject {
-    CompNode::UnorderedMap<CompNode::EventPool> m_cn2pool;
-    Spinlock m_lock;
-
-    EventPool() = default;
-public:
-    static EventPool& inst() {
-        static Spinlock lock;
-        static std::unique_ptr<EventPool> ptr;
-        MGB_LOCK_GUARD(lock);
-        if (!ptr || ptr->is_finalized()) {
-            ptr.reset(new EventPool());
-        }
-        return *ptr;
-    }
-    CompNode::Event* alloc(CompNode cn) {
-        CompNode::EventPool *pool;
-        {
-            MGB_LOCK_GUARD(m_lock);
-            auto iter = m_cn2pool.find(cn);
-            if (iter == m_cn2pool.end()) {
-                iter = m_cn2pool.emplace(
-                        std::piecewise_construct,
-                        std::forward_as_tuple(cn),
-                        std::forward_as_tuple(cn)).first;
-            }
-            pool = &iter->second;
-        }
-        return pool->alloc();
-    }
-    void free(CompNode::Event* event) {
-        CompNode::EventPool* pool;
-        {
-            MGB_LOCK_GUARD(m_lock);
-            pool = &m_cn2pool.at(event->comp_node());
-        }
-        pool->free(event);
-    }
-    std::shared_ptr<void> on_comp_node_finalize() override {
-        MGB_LOCK_GUARD(m_lock);
-        for (auto&& i : m_cn2pool) {
-            i.second.assert_all_freed();
-        }
-        return {};
-    }
-    ~EventPool() {
-        for (auto&& i : m_cn2pool) {
-            i.second.assert_all_freed();
-        }
-    }
-};
-
 class AsyncReleaser : public CompNodeDepedentObject {
     struct WaiterParam {
         CompNode cn;
-        CompNode::Event *event;
+        CompNode::Event* event;
         BlobPtr blob;
         HostTensorStorage::RawStorage storage;
     };
-    class Waiter final: public AsyncQueueSC<WaiterParam, Waiter> {
-        AsyncReleaser *m_par_releaser;
+    class Waiter final : public AsyncQueueSC<WaiterParam, Waiter> {
+        AsyncReleaser* m_par_releaser;
 
-        public:
-            Waiter(AsyncReleaser *releaser):
-                m_par_releaser(releaser)
-            {
+    public:
+        Waiter(AsyncReleaser* releaser) : m_par_releaser(releaser) {}
+
+        void process_one_task(WaiterParam& param) {
+            if (param.event->finished()) {
+                param.blob.reset();
+                param.storage.reset();
+                EventPool::without_timer().free(param.event);
+                return;
             }
 
-            void process_one_task(WaiterParam &param) {
-                if (param.event->finished()) {
-                    param.blob.reset();
-                    param.storage.reset();
-                    EventPool::inst().free(param.event);
-                    return;
-                }
-
-                using namespace std::literals;
-                std::this_thread::sleep_for(1us);
-                add_task(std::move(param));
-            }
+            using namespace std::literals;
+            std::this_thread::sleep_for(1us);
+            add_task(std::move(param));
+        }
     };
     Waiter m_waiter{this};
 
@@ -113,20 +59,17 @@ public:
         return &releaser;
     }
 
-    ~AsyncReleaser() {
-        m_waiter.wait_task_queue_empty();
-    }
+    ~AsyncReleaser() { m_waiter.wait_task_queue_empty(); }
 
-    void add(BlobPtr blob, CompNode cn) {
-        add(cn, std::move(blob), {});
-    }
+    void add(BlobPtr blob, CompNode cn) { add(cn, std::move(blob), {}); }
 
     void add(const HostTensorND& hv) {
         add(hv.comp_node(), {}, hv.storage().raw_storage());
     }
 
-    void add(CompNode cn, BlobPtr blob, HostTensorStorage::RawStorage storage = {}) {
-        auto event = EventPool::inst().alloc(cn);
+    void add(CompNode cn, BlobPtr blob,
+             HostTensorStorage::RawStorage storage = {}) {
+        auto event = EventPool::without_timer().alloc(cn);
         event->record();
         m_waiter.add_task({cn, event, std::move(blob), std::move(storage)});
     }
@@ -290,10 +233,10 @@ struct MultiCNConstTensorCache : CompNodeDepedentObject {
 
 MultiCNConstTensorCache const_tensor_cache;
 
-} // namespace
+}  // namespace
 
 void EventDeleter::operator()(CompNode::Event* event) {
-    EventPool::inst().free(event);
+    EventPool::without_timer().free(event);
 }
 
 Blob::Blob(const DeviceTensorStorage& s):
@@ -373,7 +316,7 @@ void Tensor::fetch_value() {
     MGB_LOCK_GUARD(m_mtx);
     if (m_value.empty()) {
         m_value.copy_from(dev_tensor());
-        m_value_ready.reset(EventPool::inst().alloc(comp_node()));
+        m_value_ready.reset(EventPool::without_timer().alloc(comp_node()));
         m_value_ready->record();
     }
 }
@@ -421,7 +364,7 @@ CompNode::Event* Tensor::get_or_create_event() {
     return e;
 }
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

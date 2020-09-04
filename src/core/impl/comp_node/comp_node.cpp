@@ -89,8 +89,8 @@ namespace {
 
 /* ==================== EventPool ==================== */
 
-CompNode::EventPool::EventPool(CompNode cn):
-    m_cn{cn}
+CompNode::EventPool::EventPool(CompNode cn, size_t flags):
+    m_cn{cn}, m_flags{flags}
 {
 }
 
@@ -105,7 +105,7 @@ CompNode::Event* CompNode::EventPool::alloc() {
         m_free.pop_back();
         return rst;
     }
-    m_allocated.push_back(m_cn.create_event());
+    m_allocated.push_back(m_cn.create_event(m_flags));
     return m_allocated.back().get();
 }
 

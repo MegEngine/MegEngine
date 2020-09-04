@@ -199,32 +199,22 @@ void init_utils(py::module m) {
     m.def("_get_device_count", &mgb::CompNode::get_device_count,
           "Get total number of specific devices on this system");
 
-    using mgb::imperative::Profiler;
+    using mgb::imperative::ProfileEntry;
 
-    py::class_<Profiler>(m, "ProfilerImpl")
+    py::class_<ProfileEntry>(m, "ProfileEntry")
+            .def_readwrite("op", &ProfileEntry::op)
+            .def_readwrite("host", &ProfileEntry::host)
+            .def_readwrite("device_list", &ProfileEntry::device_list);
+
+    py::class_<mgb::imperative::Profiler>(m, "ProfilerImpl")
             .def(py::init<>())
-            .def(py::init<const std::string&>())
-            .def("enable",
-                 [](Profiler& profiler) -> Profiler& {
-                     profiler.enable();
-                     return profiler;
-                 })
-            .def("disable",
-                 [](Profiler& profiler) {
-                     if (profiler.get_dump_count() == 0) {
-                         profiler.dump();
-                     }
-                     profiler.disable();
-                 })
-            .def("dump",
-                [](Profiler& profiler, std::optional<std::string> path) {
-                    if (path.has_value()) {
-                        profiler.dump(path.value());
-                    } else {
-                        profiler.dump();
-                    }
-                },
-                py::arg("path") = std::optional<std::string>());
+            .def("start",
+                 [](mgb::imperative::Profiler& profiler) { profiler.start(); })
+            .def("stop",
+                 [](mgb::imperative::Profiler& profiler) { profiler.stop(); })
+            .def("dump", [](mgb::imperative::Profiler& profiler) {
+                return profiler.get_profile();
+            });
 
     using mgb::imperative::TensorSanityCheck;
     py::class_<TensorSanityCheck>(m, "TensorSanityCheckImpl")
