@@ -82,3 +82,22 @@ def test_dump():
 
     file = io.BytesIO()
     f.dump(file)
+
+
+def test_trace_profiler():
+    for symbolic in [False, True]:
+
+        @trace(symbolic=symbolic, profiling=True)
+        def f(x):
+            op = ops.Elemwise(mode="negate")
+            (y,) = apply(op, x)
+            return y
+
+        x = as_raw_tensor([1]).numpy()
+        y = f.__wrapped__(as_raw_tensor(x)).numpy()
+
+        f(as_raw_tensor(x))
+        f(as_raw_tensor(x))  # XXX: has to run twice
+
+        out = f.get_profile()
+        assert out.get("profiler")

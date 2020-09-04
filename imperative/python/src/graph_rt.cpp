@@ -11,18 +11,38 @@
 
 #include "./graph_rt.h"
 
+#include "megbrain/graph/cg.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/imperative/opr_utility.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/imperative.h"
 #include "./helper.h"
+#include "megbrain/plugin/profiler.h"
 
 namespace py = pybind11;
 
 using namespace mgb;
 using namespace imperative;
 
+namespace {
+class _CompGraphProfilerImpl {
+    std::shared_ptr<ComputingGraph> m_comp_graph;
+    GraphProfiler m_profiler;
+    public:
+        _CompGraphProfilerImpl(std::shared_ptr<ComputingGraph> cg):
+            m_comp_graph{cg},
+            m_profiler{m_comp_graph.get()}
+        {
+        }
+
+        std::string _get_result() {
+            auto json = m_profiler.to_json_full(
+                    m_comp_graph->current_comp_seq());
+            return json->to_string();
+        }
+};
+}
 #define DEF_READWRITE(name) .def_readwrite(#name, &CURRENT_CLASS::name)
 
 template<typename T>
@@ -101,6 +121,12 @@ void init_graph_rt(py::module m) {
                 return graph.compile(spec);
             })
         .def_property_readonly("options", py::overload_cast<>(&cg::ComputingGraph::options));
+
+    py::class_<_CompGraphProfilerImpl, std::shared_ptr<_CompGraphProfilerImpl>>(m, "GraphProfiler")
+        .def(py::init([](std::shared_ptr<ComputingGraph> graph) {
+                return std::make_shared<_CompGraphProfilerImpl>(graph);
+                }))
+        .def("get", [](_CompGraphProfilerImpl& profiler) { return profiler._get_result(); });
 
     m.def("dump_graph", [](const std::vector<VarNode*>& dest_vars) {
         using namespace mgb::serialization;

@@ -2,12 +2,14 @@ import collections
 import contextlib
 import functools
 import itertools
+import json
 import typing
 import warnings
 import weakref
 
 import numpy as np
 
+from ..core._imperative_rt import GraphProfiler
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
@@ -85,11 +87,14 @@ class trace:
         symbolic=False,
         capture_as_const=False,
         sublinear_memory_config: SublinearMemoryConfig = None,
+        profiling: bool = False,
     ):
         self.__wrapped__ = function
         self._symbolic = symbolic
         self._capture_as_const = capture_as_const
         self._sublinear_memory_config = sublinear_memory_config
+        self._profiling = profiling
+        self._profiler = None
 
         self._untraced = True
         self._tinfo = []  # handle -> TensorInfo
@@ -308,6 +313,8 @@ class trace:
             )
             sublinear_config.thresh_nr_try = self._sublinear_memory_config.thresh_nr_try
             sublinear_config.num_worker = self._sublinear_memory_config.num_worker
+        if self._profiling:
+            self._profiler = GraphProfiler(graph)
 
     def _compile(self):
         graph = self._graph = G.Graph()
@@ -580,6 +587,16 @@ class trace:
                         "retval[%s] is a different tensor than last time"
                         % (output_names and output_names[i] or i)
                     )
+
+    def get_profile(self):
+        """
+        Get profiling result for compiled trace.
+
+        :return: a json compatible object.
+        """
+        if not self._profiler:
+            raise RuntimeError("trace is not set with profiling=True")
+        return json.loads(self._profiler.get())
 
 
 class CompiledTensorProxy(RawTensor):
