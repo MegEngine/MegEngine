@@ -122,6 +122,17 @@ std::string PersistentCache::make_category_from_comp_node(CompNode comp_node) {
             break;
         }
 #endif
+#if MGB_ROCM
+        case CompNode::DeviceType::ROCM: {
+            int drv = -1, hip_rt = -1;
+            MGB_ROCM_CHECK(hipDriverGetVersion(&drv));
+            MGB_ROCM_CHECK(hipRuntimeGetVersion(&hip_rt));
+            auto&& prop = env.rocm_env().device_prop;
+            return ssprintf("plat=rocm;dev=%s;cap=%d.%d,drv=%d;runtime=%d",
+                            prop.name, prop.major, prop.minor, drv, hip_rt);
+            break;
+        }
+#endif
         case CompNode::DeviceType::CPU:
             return "plat=cpu";
         default:

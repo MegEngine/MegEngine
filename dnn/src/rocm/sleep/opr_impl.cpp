@@ -22,7 +22,7 @@ void SleepForwardImpl::exec() {
     double seconds = m_param.time;
     megdnn_assert(seconds > 0);
     auto hdl = static_cast<HandleImpl*>(handle());
-    sleep(hdl->stream(), hdl->device_prop().clockRate * 18.01 * seconds);
+    sleep(hdl->stream(), hdl->device_prop().clockRate * 1000 * seconds);
 }
 
 } // namespace rocm
