@@ -47,10 +47,9 @@ option(MGE_DEBUG_UTIL "Enable debug utility" ON)
 option(MGE_ENABLE_EXCEPTIONS "Build with exceptions" ON)
 option(MGE_WITH_TEST "Enable test for MegEngine." OFF)
 option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
-option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt.so instead of _mgb.so " OFF)
+option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt Python Module " ON)
 option(MGE_BUILD_SDK "Build load_and_run" ON)
 option(MGE_INFERENCE_ONLY "Build inference only library." OFF)
-option(MGE_WITH_PYTHON_MODULE "Build MegEngine Python Module." ON)
 option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
 option(MGE_WITH_ROCM "Enable ROCM support" OFF)
 
@@ -256,8 +255,8 @@ endif()
 if(MGE_INFERENCE_ONLY)
     message("-- Disable distributed support for inference only build.")
     set(MGE_WITH_DISTRIBUTED OFF)
-    message("-- Disable python module for inference only build.")
-    set(MGE_WITH_PYTHON_MODULE OFF)
+    message("-- Disable imperative_rt python module for inference only build.")
+    set(MGE_BUILD_IMPERATIVE_RT OFF)
 endif()
 
 if(MGE_WITH_DISTRIBUTED)
@@ -694,43 +693,18 @@ if(MGE_BUILD_SDK)
     add_subdirectory(sdk/load-and-run)
 endif()
 
-if(MGE_WITH_PYTHON_MODULE)
-    if(MGE_BUILD_IMPERATIVE_RT)
-        add_subdirectory(imperative)
-        message("-- Enable imperative python wrapper runtime")
-    else()
-        add_subdirectory(python_module)
-        message("-- Enable legacy python wrapper runtime")
-    endif()
+
+if(MGE_BUILD_IMPERATIVE_RT)
+    add_subdirectory(imperative)
+    message("-- Enable imperative python wrapper runtime")
 endif()
 
 if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)
     add_subdirectory(test)
 endif()
 
-if(TARGET mgb)
-    add_custom_target(
-        develop
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/$<TARGET_FILE_NAME:mgb>
-          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/$<TARGET_FILE_NAME:mgb>
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/mgb.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/mgb.py
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/opr.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/opr.py
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/opr_param_defs.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/opr_param_defs.py
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/python_module/megengine/_internal/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/python_module/megengine/_internal/include
 
-        DEPENDS mgb
-        VERBATIM
-    )
-elseif(TARGET _imperative_rt)
+if(TARGET _imperative_rt)
     add_custom_target(
         develop
         COMMAND ${CMAKE_COMMAND} -E create_symlink

@@ -7,9 +7,8 @@
 
     ```
     1: enable rootless docker env, refs: https://docs.docker.com/engine/security/rootless/
-    2: cd ./scripts/whl/linux/manylinux2010
-    3: ./build_image.sh cpu
-    4: ./build_image.sh cuda
+    2: cd ./scripts/whl/manylinux2010
+    3: ./build_image.sh
 
     ```
 
@@ -60,12 +59,10 @@
     MegBrain delivers `wheel` package with `manylinux2010` tag defined in [PEP-571](https://www.python.org/dev/peps/pep-0571/).
 
     ```
-    ./build_wheel.sh cpu
-    
-    CUDA_ROOT_DIR=/path/to/cuda \
-    CUDNN_ROOT_DIR=/path/to/cudnn \
-    TENSORRT_ROOT_DIR=/path/to/tensorrt \
-    ./build_wheel.sh cuda
+    export CUDA_ROOT_DIR=/path/to/cuda
+    export CUDNN_ROOT_DIR=/path/to/cudnn
+    export TENSORRT_ROOT_DIR=/path/to/tensorrt
+    ./scripts/whl/manylinux2010/build_wheel.sh
     ```
 
     And you can find all of the outputs in `output` directory.
@@ -73,10 +70,14 @@
     If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
 
     ```
-    ALL_PYTHON=35m ./build_wheel.sh cpu
+    ALL_PYTHON=35m ./scripts/whl/manylinux2010/build_wheel.sh
+    ```
+    If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
+
+    ```
+    BUILD_WHL_CPU_ONLY=ON ALL_PYTHON=35m ./scripts/whl/manylinux2010/build_wheel.sh
     ```
 
-    Please append `imperative`  to `build_wheel.sh` to use the new runtime, e.g., `./build_wheel.sh cpu imperative`.
 ## build for macos
     ```
     ./scripts/whl/macos/macos_build_whl.sh
@@ -85,11 +86,6 @@
 
     ```
     ALL_PYTHON=3.5.9 ./scripts/whl/macos/macos_build_whl.sh
-    ```
-    If you want to build with imperative rt, set env BUILD_IMPERATIVE="ON", eg:
-
-    ```
-    ALL_PYTHON=3.5.9 BUILD_IMPERATIVE="ON" ./scripts/whl/macos/macos_build_whl.sh
     ```
 ## build for windows
     ```
@@ -100,10 +96,8 @@
     ```
     ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
     ```
-    If you want to build windows whl with cuda, also a specific Python verison. eg:
+    If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
 
     ```
-    WINDOWS_WHL_WITH_CUDA="ON" ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
+    BUILD_WHL_CPU_ONLY='ON' ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
     ```
-    If you want to build with imperative rt, set env BUILD_IMPERATIVE="ON", eg:
-    BUILD_IMPERATIVE="ON" WINDOWS_WHL_WITH_CUDA="ON" ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh

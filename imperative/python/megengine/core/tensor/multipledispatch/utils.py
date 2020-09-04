@@ -183,25 +183,16 @@ def typename(type):
 
 
 # parse typing.Union
-if sys.version_info < (3, 6):
-
-    def parse_union(ann):
+def parse_union(ann):
+    if hasattr(typing, "UnionMeta"):
         if type(ann) is not typing.UnionMeta:
             return
         return ann.__union_params__
-
-
-elif sys.version_info < (3, 7):
-
-    def parse_union(ann):
+    elif hasattr(typing, "_Union"):
         if type(ann) is not typing._Union:
             return
         return ann.__args__
-
-
-elif sys.version_info < (3, 8):
-
-    def parse_union(ann):
+    elif hasattr(typing, "_GenericAlias"):
         if type(ann) is not typing._GenericAlias:
             if type(ann) is not typing.Union:
                 return
@@ -209,11 +200,9 @@ elif sys.version_info < (3, 8):
             if ann.__origin__ is not typing.Union:
                 return
         return ann.__args__
-
-
-else:
-
-    def parse_union(ann):
+    elif hasattr(typing, "Union"):
         if typing.get_origin(ann) is not typing.Union:
             return
         return typing.get_args(ann)
+    else:
+        raise NotImplementedError("unsupported Python version")

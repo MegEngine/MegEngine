@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
 import os
 import re
 import pathlib
@@ -55,10 +56,12 @@ package_data = [
     str(f.relative_to('megengine'))
     for f in pathlib.Path('megengine', 'core', 'include').glob('**/*')
 ]
+
 package_data += [
     str(f.relative_to('megengine'))
     for f in pathlib.Path('megengine', 'core', 'lib').glob('**/*')
 ]
+
 
 with open('requires.txt') as f:
     requires = f.read().splitlines()
@@ -67,6 +70,7 @@ with open('requires-style.txt') as f:
 with open('requires-test.txt') as f:
     requires_test = f.read().splitlines()
 
+prebuild_modules=[PrecompiledExtesion('megengine.core._imperative_rt')]
 setup_kwargs = dict(
     name=package_name,
     version=__version__,
@@ -78,7 +82,7 @@ setup_kwargs = dict(
     package_data={
         'megengine': package_data,
     },
-    ext_modules=[PrecompiledExtesion('megengine.core._imperative_rt')],
+    ext_modules=prebuild_modules,
     install_requires=requires,
     extras_require={
         'dev': requires_style + requires_test,
@@ -86,6 +90,7 @@ setup_kwargs = dict(
     },
     cmdclass={'build_ext': build_ext},
 )
+
 
 setup_kwargs.update(dict(
     classifiers=[

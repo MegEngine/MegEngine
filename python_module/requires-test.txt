@@ -1,3 +1,0 @@
-pytest==5.3.0
-pytest-sphinx>=0.2.2
-pytest-json-report>=1.2.1

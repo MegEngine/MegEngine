@@ -58,9 +58,10 @@ function config_python_env() {
     PYTHON_INCLUDE_DIR=${PYTHON_DIR}/include
 }
 
-if [[ -z ${WINDOWS_WHL_WITH_CUDA} ]]
+BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY}
+if [[ -z ${BUILD_WHL_CPU_ONLY} ]]
 then
-    WINDOWS_WHL_WITH_CUDA="OFF"
+    BUILD_WHL_CPU_ONLY="OFF"
 fi
 
 
@@ -86,31 +87,22 @@ function depend_real_copy() {
 
 function copy_more_dll() {
     # for python whl real use
-    if [ ${BUILD_IMPERATIVE} = "ON" ]; then
-        echo "config BUILD_IMPERATIVE core lib dir"
-        CP_WHL_DST=${BUILD_DIR}/staging/megengine/core/lib
-    else
-        echo "config legacy python lib dir"
-        CP_WHL_DST=${BUILD_DIR}/staging/megengine/_internal/lib
-    fi
-    rm -rf ${CP_WHL_DST}
-    mkdir ${CP_WHL_DST}
+    echo "config BUILD_IMPERATIVE core lib dir"
+    CP_WHL_DST_IMP=${BUILD_DIR}/staging/megengine/core/lib
+    rm -rf ${CP_WHL_DST_IMP}
+    mkdir ${CP_WHL_DST_IMP}
+
     # workround for cpu-only version import failed, use a
     # empty.file to triger setup.py to create a null empty
-    echo "empty" > ${CP_WHL_DST}/empty.file
+    echo "empty" > ${CP_WHL_DST_IMP}/empty.file
 
 
-    if [ ${WINDOWS_WHL_WITH_CUDA} = "ON" ]; then
+    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "copy nvidia lib to whl use...."
-        depend_real_copy ${CP_WHL_DST}
+        depend_real_copy ${CP_WHL_DST_IMP}
 
     fi
 }
-
-if [[ -z ${BUILD_IMPERATIVE} ]]
-then
-    BUILD_IMPERATIVE="OFF"
-fi
 
 function do_build() {
     for ver in ${ALL_PYTHON}
@@ -144,14 +136,8 @@ function do_build() {
         #-r to remove build cache after a new ver build, which
         #will be more slow build than without -r
         BUILD_ARGS=" -t -r"
-        if [ ${BUILD_IMPERATIVE} = "ON" ]; then
-            echo "build whl with IMPERATIVE python rt"
-            BUILD_ARGS="${BUILD_ARGS} -n "
-        else
-            echo "build whl with legacy python rt"
-        fi
 
-        if [ ${WINDOWS_WHL_WITH_CUDA} = "ON" ]; then
+        if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
             echo "build windows whl with cuda"
             BUILD_ARGS="${BUILD_ARGS} -c "
         else
@@ -161,39 +147,27 @@ function do_build() {
         echo "host_build.sh BUILD_ARGS: ${BUILD_ARGS}"
         ${SRC_DIR}/scripts/cmake-build/host_build.sh ${BUILD_ARGS}
 
-        #call setup.py
         BUILD_DIR=${SRC_DIR}/build_dir/host/build/
         cd ${BUILD_DIR}
 
-        if [ -d "staging" ]; then
-            echo "remove old build cache file"
-            rm -rf staging
-        fi
+        rm -rf staging
         mkdir -p staging
-
-        if [ ${BUILD_IMPERATIVE} = "ON" ]; then
-            echo "build whl with IMPERATIVE python rt"
-            cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
-            cd ${BUILD_DIR}/staging/megengine/core
-            rt_file=`ls _imperative_rt.*.pyd`
-            echo "rt file is: ${rt_file}"
-            if [[ -z ${rt_file} ]]
-            then
-                echo "ERR: can not find valid rt file"
-                exit -1
-            fi
-            llvm-strip -s ${rt_file}
-            mv ${rt_file} _imperative_rt.pyd
-        else
-            echo "build whl with legacy python rt"
-
-            cp -a python_module/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
-            cd ${BUILD_DIR}/staging/megengine/_internal
-            llvm-strip -s _mgb.pyd
+        cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
+        cd ${BUILD_DIR}/staging/megengine/core
+        rt_file=`ls _imperative_rt.*.pyd`
+        echo "rt file is: ${rt_file}"
+        if [[ -z ${rt_file} ]]
+        then
+            echo "ERR: can not find valid rt file"
+            exit -1
         fi
+        llvm-strip -s ${rt_file}
+        mv ${rt_file} _imperative_rt.pyd
+
 
         copy_more_dll
         cd ${BUILD_DIR}/staging
+        echo "call setup.py now"
         ${PYTHON_DIR}/python3 setup.py bdist_wheel
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${WINDOWS_WHL_HOME}/
 

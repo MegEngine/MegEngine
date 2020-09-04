@@ -1,8 +1,0 @@
-/megbrain/_mgb.so
-/megbrain/_mgb.*.so
-/MegBrain.egg-info/
-/dist
-/dist_cuda
-/dist_nocuda
-/wheel_dist
-.cache

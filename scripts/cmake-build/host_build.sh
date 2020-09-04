@@ -9,7 +9,6 @@ function usage() {
     echo "-t : Build with training mode, default inference only"
     echo "-m : Build with m32 mode(only for windows build), default m64"
     echo "-r : remove old build dir before make, default off"
-    echo "-n : enable new python runtime(valid when training mode with -t, default is legacy runtime)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
@@ -23,10 +22,9 @@ MGE_WINDOWS_BUILD_ARCH=x64
 MGE_WINDOWS_BUILD_MARCH=m64
 MGE_ARCH=x86_64
 REMOVE_OLD_BUILD=false
-MGE_BUILD_IMPERATIVE_RT=OFF
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
-while getopts "rhdctmn" arg
+while getopts "rhdctm" arg
 do
     case $arg in
         d)
@@ -54,10 +52,6 @@ do
             MGE_WINDOWS_BUILD_ARCH=x86
             MGE_WINDOWS_BUILD_MARCH=m32
             MGE_ARCH=i386
-            ;;
-        n)
-            echo "Enable imperative python wrapper runtime"
-            MGE_BUILD_IMPERATIVE_RT=ON
             ;;
         ?)
             echo "unkonw argument"
@@ -107,7 +101,6 @@ function cmake_build() {
     cmake \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
-        -DMGE_BUILD_IMPERATIVE_RT=${MGE_BUILD_IMPERATIVE_RT} \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
         ${EXTRA_CMAKE_ARGS} \
@@ -244,7 +237,6 @@ function cmake_build_windows() {
         vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && cmake  -G "Ninja" \
         -DMGE_ARCH=$MGE_ARCH \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
-        -DMGE_BUILD_IMPERATIVE_RT=${MGE_BUILD_IMPERATIVE_RT} \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIR  \
@@ -256,12 +248,6 @@ function cmake_build_windows() {
         echo \"start Ninja build log to build.log, may take serval min...\" && \
         ${WINDOWS_BUILD_TARGET}"
 }
-
-if [ ${MGE_BUILD_IMPERATIVE_RT} = "ON" ] && [ ${MGE_INFERENCE_ONLY} = "ON" ]; then
-    echo "ERR: MGE_BUILD_IMPERATIVE_RT(-n) only valid when enable training mode(-t)"
-    echo "pls remove -n or add -t"
-    exit -1
-fi
 
 if [[ $OS =~ "NT" ]]; then
     if [ ${MGE_ARCH} = "i386" ] && [ ${MGE_INFERENCE_ONLY} = "OFF" ]; then
