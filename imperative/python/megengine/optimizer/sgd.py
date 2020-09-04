@@ -9,10 +9,10 @@
 from typing import Iterable, Union
 
 from ..tensor_nn import Buffer, Parameter
-from .distributed_optimizer import DistributedOptimizer
+from .optimizer import Optimizer
 
 
-class SGD(DistributedOptimizer):
+class SGD(Optimizer):
     r"""Implements stochastic gradient descent.
 
     Nesterov momentum is based on the formula from
@@ -31,7 +31,6 @@ class SGD(DistributedOptimizer):
         lr: float,
         momentum: float = 0.0,
         weight_decay: float = 0.0,
-        **kwargs
     ):
         assert lr >= 0.0, "Invalid learning rate: {}".format(lr)
         assert momentum >= 0.0, "Invalid momentum value: {}".format(momentum)
@@ -40,7 +39,7 @@ class SGD(DistributedOptimizer):
         )
 
         defaults = dict(lr=lr, momentum=momentum, weight_decay=weight_decay)
-        super().__init__(params, defaults, **kwargs)
+        super().__init__(params, defaults)
 
     def _create_state(self, param_group):
         if param_group["momentum"] != 0.0:

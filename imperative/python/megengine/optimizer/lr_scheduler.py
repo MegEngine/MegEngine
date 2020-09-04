@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from abc import ABCMeta
 
-from .distributed_optimizer import DistributedOptimizer
+from .optimizer import Optimizer
 
 
 class LRScheduler(metaclass=ABCMeta):
@@ -19,9 +19,9 @@ class LRScheduler(metaclass=ABCMeta):
     """
 
     def __init__(  # pylint: disable=too-many-branches
-        self, optimizer: DistributedOptimizer, current_epoch: int = -1
+        self, optimizer: Optimizer, current_epoch: int = -1
     ):
-        if not isinstance(optimizer, DistributedOptimizer):
+        if not isinstance(optimizer, Optimizer):
             raise TypeError(
                 "optimizer argument given to the lr_scheduler should be Optimizer"
             )

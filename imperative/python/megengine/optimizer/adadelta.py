@@ -12,10 +12,10 @@ import numpy as np
 
 from ..functional import sqrt
 from ..tensor_nn import Buffer, Parameter
-from .distributed_optimizer import DistributedOptimizer
+from .optimizer import Optimizer
 
 
-class Adadelta(DistributedOptimizer):
+class Adadelta(Optimizer):
     r"""Implements Adadelta algorithm.
 
     It has been proposed in `"ADADELTA: An Adaptive Learning Rate Method" <https://arxiv.org/abs/1212.5701>`_.
@@ -38,7 +38,6 @@ class Adadelta(DistributedOptimizer):
         rho: float = 0.9,
         eps: float = 1e-6,
         weight_decay: float = 0.0,
-        **kwargs
     ):
         assert lr >= 0.0, "Invalid learning rate: {}".format(lr)
         assert rho >= 0.0 and rho <= 1.0, "Invalid rho value: {}".format(rho)
@@ -48,7 +47,7 @@ class Adadelta(DistributedOptimizer):
         )
 
         defaults = dict(lr=lr, rho=rho, eps=eps, weight_decay=weight_decay)
-        super().__init__(params, defaults, **kwargs)
+        super().__init__(params, defaults)
 
     def _create_state(self, param_group):
         for param in param_group["params"]:

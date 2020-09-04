@@ -12,10 +12,10 @@ import numpy as np
 
 from ..functional import sqrt
 from ..tensor_nn import Buffer, Parameter
-from .distributed_optimizer import DistributedOptimizer
+from .optimizer import Optimizer
 
 
-class Adagrad(DistributedOptimizer):
+class Adagrad(Optimizer):
     r"""Implements Adagrad algorithm.
 
     It has been proposed in `"Adaptive Subgradient Methods for Online Learning
@@ -38,7 +38,6 @@ class Adagrad(DistributedOptimizer):
         lr_decay: float = 0.0,
         eps: float = 1e-10,
         weight_decay: float = 0.0,
-        **kwargs
     ):
         assert lr >= 0.0, "Invalid learning rate: {}".format(lr)
         assert lr_decay >= 0, "Invalid learning rate decay: {}".format(lr_decay)
@@ -48,7 +47,7 @@ class Adagrad(DistributedOptimizer):
         )
 
         defaults = dict(lr=lr, lr_decay=lr_decay, eps=eps, weight_decay=weight_decay)
-        super().__init__(params, defaults, **kwargs)
+        super().__init__(params, defaults)
 
     def _create_state(self, param_group):
         for param in param_group["params"]:

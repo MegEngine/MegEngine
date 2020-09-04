@@ -9,10 +9,10 @@
 from typing import Iterable, Tuple, Union
 
 from ..tensor_nn import Buffer, Parameter
-from .distributed_optimizer import DistributedOptimizer
+from .optimizer import Optimizer
 
 
-class Adam(DistributedOptimizer):
+class Adam(Optimizer):
     r"""Implements Adam algorithm proposed in `"Adam: A Method for Stochastic Optimization" <https://arxiv.org/abs/1412.6980>`_.
 
     :param params: iterable of parameters to optimize or dicts defining
@@ -32,7 +32,6 @@ class Adam(DistributedOptimizer):
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-8,
         weight_decay: float = 0.0,
-        **kwargs
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
@@ -44,7 +43,7 @@ class Adam(DistributedOptimizer):
             raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
 
         defaults = dict(lr=lr, weight_decay=weight_decay, betas=betas, eps=eps)
-        super().__init__(params, defaults, **kwargs)
+        super().__init__(params, defaults)
 
     def _create_state(self, param_group):
         for param in param_group["params"]:

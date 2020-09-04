@@ -9,7 +9,7 @@
 from bisect import bisect_right
 from typing import Iterable as Iter
 
-from .distributed_optimizer import DistributedOptimizer
+from .optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
@@ -25,7 +25,7 @@ class MultiStepLR(LRScheduler):
 
     def __init__(
         self,
-        optimizer: DistributedOptimizer,
+        optimizer: Optimizer,
         milestones: Iter[int],
         gamma: float = 0.1,
         current_epoch: int = -1,
