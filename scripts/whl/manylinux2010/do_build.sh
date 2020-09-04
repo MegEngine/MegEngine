@@ -16,9 +16,15 @@ BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Rel
 if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_ON/MGE_INFERENCE_ONLY_OFF/Release/build/
 fi
-SO_NAME=_imperative_rt
-SO_PATH=megengine/core
 NEW_LIB_PATH=core/lib
+
+function handle_strip() {
+    echo "now handle strip $1"
+    objcopy --only-keep-debug $1 $1.dbg
+    strip -s $1
+    objcopy --add-gnu-debuglink=$1.dbg $1
+    rm $1.dbg
+}
 
 for ver in ${ALL_PYTHON}
 do
@@ -26,7 +32,6 @@ do
     MAJOR=${python_ver:0:1}
     MINOR=${ver:1}
     PYTHON_DIR=/opt/python/cp${python_ver}-cp${ver}/
-    EXT_NAME=${SO_NAME}.cpython-${ver}-x86_64-linux-gnu.so
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_PREFIX_PATH=${PYTHON_DIR}"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_EXECUTABLE=${PYTHON_DIR}/bin/python3"
@@ -51,17 +56,15 @@ do
         ln -sf libcuda.so libcuda.so.1
     fi
 
-    cd ${BUILD_DIR}/staging/${SO_PATH}
-    SO_NAME_EXT=${SO_NAME}.so
-    objcopy --only-keep-debug ${SO_NAME_EXT} ${EXT_NAME}.dbg
-    strip -s ${SO_NAME_EXT}
-    objcopy --add-gnu-debuglink=${EXT_NAME}.dbg ${SO_NAME_EXT}
+    handle_strip ${BUILD_DIR}/src/libmegengine_export.so
+
+    cd ${BUILD_DIR}/staging/megengine/core
+    handle_strip _imperative_rt.so
+
     mkdir -p lib/ucx
 
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         cp -L /usr/local/cuda/lib*/libnvrtc-builtins.so lib
-        cp -L ${BUILD_DIR}/third_party/MegRay/third_party/ucx/lib/ucx/*.so lib/ucx/
-        strip -s lib/ucx/*.so
     fi
 
     cd ${BUILD_DIR}/staging/

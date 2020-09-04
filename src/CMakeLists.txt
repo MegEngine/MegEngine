@@ -174,6 +174,16 @@ else()
     set (_VER_FILE ${PROJECT_SOURCE_DIR}/imperative/src/version.ld)
 endif()
 
+if(MGE_BUILD_IMPERATIVE_RT
+        )
+    message("-- create a export SHARED lib for python use")
+    add_library(megengine_export SHARED)
+    target_link_libraries(megengine_export PUBLIC megbrain megdnn)
+    if (MGE_WITH_DISTRIBUTED)
+        message("megengine_export configured to link megray")
+        target_link_libraries(megengine_export PUBLIC megray)
+    endif()
+endif()
 # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
 add_library(megengine)
 target_link_libraries(megengine PUBLIC megbrain megdnn)

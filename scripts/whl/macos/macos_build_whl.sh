@@ -84,6 +84,13 @@ function config_python_env() {
     fi
 }
 
+MEGENGINE_LIB="${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/src/libmegengine_export.dylib"
+function depend_real_copy() {
+    REAL_DST=$1
+    echo "real copy lib to $1"
+    cp "${MEGENGINE_LIB}" ${REAL_DST}
+}
+
 function do_build() {
     for ver in ${ALL_PYTHON}
     do
@@ -142,6 +149,15 @@ function do_build() {
             echo "valid..."
         fi
 
+        #handle dlopen path
+        install_name_tool -change @rpath/libmegengine_export.dylib @loader_path/lib/libmegengine_export.dylib _imperative_rt.so
+
+
+        #copy megbrain_export lib
+        DEPEND_LIB=${BUILD_DIR}/staging/megengine/core/lib/
+        rm -rf ${DEPEND_LIB}
+        mkdir ${DEPEND_LIB}
+        depend_real_copy ${DEPEND_LIB}
 
         cd ${BUILD_DIR}/staging
         ${PYTHON_DIR}/bin/python3 setup.py bdist_wheel

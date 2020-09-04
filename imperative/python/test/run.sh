@@ -8,7 +8,7 @@ if [[ "$TEST_PLAT" == cpu ]]; then
 elif [[ "$TEST_PLAT" == cuda ]]; then
     echo "test both cpu and gpu pytest"
 else
-    log "Argument must cpu or cuda"
+    echo "Argument must cpu or cuda"
     exit 1
 fi
 
