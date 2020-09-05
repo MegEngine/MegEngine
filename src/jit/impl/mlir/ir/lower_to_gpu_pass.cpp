@@ -266,9 +266,6 @@ public:
         target.addLegalDialect<gpu::GPUDialect>();
         target.addIllegalDialect<MgbDialect>();
 
-        patterns.insert<AddOpLowering, AssignOpLowering, ReturnOpLowering>(
-                &getContext(), &launch_op);
-
 #define cb(_op, _) _op##Lowering,
         patterns.insert<MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(
                                 cb) MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)

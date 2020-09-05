@@ -137,7 +137,7 @@ void run_mlir(CompNode cn) {
          b = opr::Host2DeviceCopy::make(*graph, host_x1),
          c = opr::Host2DeviceCopy::make(*graph, host_x2);
 
-    auto y = a + b + c;
+    auto y = a + b * c;
 
     auto ig_gen =
             std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
@@ -273,6 +273,20 @@ TYPED_TEST(TestJITMlirUnaryElemwise, run) {
     run_mlir_mode<TypeParam, 1>(cn);
 }
 
+#define SKIP_MODE(_mode)                                 \
+    if (TypeParam::mode == opr::Elemwise::Mode::_mode) { \
+        printf("skip\n");                                \
+        return;                                          \
+    }
+TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+
+    SKIP_MODE(SIN);
+
+    run_mlir_mode<TypeParam, 1>(cn);
+}
+
 ///////////////////////// binary ///////////////////////////////
 // clang-format off
 #define FOREACH_BINARY_MODE(cb) \
@@ -319,6 +333,12 @@ TYPED_TEST(TestJITMlirBinaryElemwise, run) {
     run_mlir_mode<TypeParam, 2>(cn);
 }
 
+TYPED_TEST(TestJITMlirBinaryElemwise, runGpu) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    run_mlir_mode<TypeParam, 2>(cn);
+}
+
 ///////////////////////// ternary ///////////////////////////////
 // clang-format off
 #define FOREACH_TERNARY_MODE(cb) \
@@ -344,6 +364,14 @@ TYPED_TEST(TestJITMlirTernaryElemwise, run) {
     auto cn = CompNode::load("cpu0");
     run_mlir_mode<TypeParam, 3>(cn);
 }
+
+TYPED_TEST(TestJITMlirTernaryElemwise, runGpu) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    run_mlir_mode<TypeParam, 3>(cn);
+}
+
+#undef SKIP_MODE
 
 #endif
 

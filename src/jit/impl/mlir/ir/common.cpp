@@ -66,7 +66,6 @@ mlir::Value ValueBuilderHelper::const_val(float val) {
     }
 
 cb(neg, NegFOp);
-cb(abs, AbsFOp);
 cb(ceil, CeilFOp);
 cb(cos, CosOp);
 cb(exp, ExpOp);
@@ -78,6 +77,10 @@ cb(sin, SinOp);
 cb(sqrt, SqrtOp);
 cb(tanh, TanhOp);
 #undef cb
+
+mlir::Value ValueBuilderHelper::abs(mlir::Value lhs) {
+    return max(lhs, const_val(0.f));
+}
 
 mlir::Value ValueBuilderHelper::floor(mlir::Value lhs) {
     //! FIXME use standard floor when upgrade llvm
