@@ -279,7 +279,7 @@ namespace detail {
         PYBIND11_TYPE_CASTER(mgb::TensorShape, _("TensorShape"));
     public:
         bool load(handle src, bool convert) {
-            auto obj = reinterpret_steal<object>(src);
+            auto obj = reinterpret_borrow<object>(src);
             if (!convert && !isinstance<tuple>(obj)) {
                 return false;
             }
