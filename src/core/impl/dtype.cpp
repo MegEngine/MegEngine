@@ -136,6 +136,7 @@ void mgb::static_cast_dtype(T* dest, DType src_type, const void* storage,
                 nr_elem, src_type);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
 #undef cb
 #define cb(_name, _bits)                                                    \
     case DTypeTrait<dtype::_name##_bits>::enumv:                            \
