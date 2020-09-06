@@ -332,6 +332,7 @@ class trace:
         need_reset_nodes = self._need_reset_nodes = []
         # links enforce ordering of I/O nodes
         links = ()
+        readers = []
 
         if self._capture_as_const:
             for h in itertools.chain(self._arg_bindings, self._kwarg_bindings.values()):
@@ -345,7 +346,6 @@ class trace:
 
         for op, ihandles, ohandles in self._seq:
             ivars = []
-            readers = []
             for h in ihandles:
                 info = self._tinfo[h]
                 if not hasattr(info, "varnode"):
@@ -431,11 +431,19 @@ class trace:
         if output_names and not isinstance(output_names, collections.Sequence):
             output_names = (output_names,)
         if output_names and len(output_names) != len(self._output_bindings):
-            raise ValueError("wrong number of output_names")
+            raise ValueError(
+                "wrong number of output_names, should be {} values".format(
+                    len(self._output_bindings)
+                )
+            )
         if arg_names and not isinstance(arg_names, collections.Sequence):
             arg_names = (arg_names,)
         if arg_names and len(arg_names) != len(self._arg_bindings):
-            raise ValueError("wrong number of arg_names")
+            raise ValueError(
+                "wrong number of arg_names, should be {} values".format(
+                    len(self._arg_bindings)
+                )
+            )
         output_names = output_names or self._output_names
 
         h2v = {}

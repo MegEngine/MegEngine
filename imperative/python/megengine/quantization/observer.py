@@ -118,8 +118,8 @@ class MinMaxObserver(Observer):
             # stop gradient
             x = x_orig.detach()
             # find max and min
-            self.min_val = F.minimum(self.min_val, x.min())
-            self.max_val = F.maximum(self.max_val, x.max())
+            self.min_val.set_value(F.minimum(self.min_val, x.min()))
+            self.max_val.set_value(F.maximum(self.max_val, x.max()))
         return x_orig
 
 
@@ -144,11 +144,11 @@ class ExponentialMovingAverageObserver(MinMaxObserver):
             # stop gradient
             x = x_orig.detach()
             # Exponential Moving Average
-            self.min_val = (
+            self.min_val.set_value(
                 self.min_val * self.runtime_momentum
                 + (1 - self.runtime_momentum) * x.min()
             )
-            self.max_val = (
+            self.max_val.set_value(
                 self.max_val * self.runtime_momentum
                 + (1 - self.runtime_momentum) * x.max()
             )
