@@ -569,7 +569,7 @@ class trace:
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"
             file = open(file, permission)
-        file.write(G.dump(*dest_vars))
+        file.write(G.dump_graph(*dest_vars))
 
     def _process_inputs(self, *args, **kwargs):
         if self._untraced:

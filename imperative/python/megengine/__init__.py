@@ -76,6 +76,7 @@ from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save
 from .tensor import Parameter, Tensor, tensor
 from .version import __version__
+from .core import cgtools
 
 _set_fork_exec_path_for_timed_func(
     sys.executable,

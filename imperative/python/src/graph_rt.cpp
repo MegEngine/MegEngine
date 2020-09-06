@@ -64,7 +64,60 @@ auto def_rendezvous(py::object m, const char* name) {
 using TensorAttr = LogicalTensorDesc;
 using HostNDWithEvent = std::pair<HostTensorND, std::shared_ptr<CompNode::Event>>;
 
+std::vector<mgb::cg::VarNode*>  _replace_vars(const std::vector<mgb::cg::VarNode*>& repl_src,
+                                 const std::vector<mgb::cg::VarNode*>& repl_dst,
+                                 const std::vector<mgb::cg::VarNode*>& vars) {
+        mgb::ThinHashMap<SymbolVar, SymbolVar> varmap;
+        for (size_t i = 0; i < repl_src.size(); ++i) {
+            varmap[SymbolVar(repl_src[i])] = SymbolVar(repl_dst[i]);
+        }
+        SymbolVarArray symvars(vars.begin(), vars.end());
+        auto sym_result = mgb::cg::replace_vars(symvars, varmap);
+        std::vector<mgb::cg::VarNode*> result;
+        for (auto symvar : sym_result){
+            result.push_back(symvar.node());
+        }
+        return result;
+    }
+
+typedef std::vector<mgb::cg::OperatorNodeBase*> OperatorArray;
+std::vector<mgb::cg::VarNode*> _replace_oprs(const OperatorArray& repl_src,
+                                 const OperatorArray& repl_dst,
+                                 const std::vector<mgb::cg::VarNode*>& vars) {
+        mgb::ThinHashMap<mgb::cg::OperatorNodeBase*, mgb::cg::OperatorNodeBase*>
+                oprmap;
+        for (size_t i = 0; i < repl_src.size(); ++i) {
+            oprmap[repl_src[i]] = repl_dst[i];
+        }
+        const SymbolVarArray symvars(vars.begin(), vars.end());
+        auto sym_result = mgb::cg::replace_oprs(symvars, oprmap);
+        std::vector<mgb::cg::VarNode*> result;
+        for (auto symvar : sym_result){
+            result.push_back(symvar.node());
+        }
+        return result;
+    }
+
+
+
+void _set_priority_to_id(const std::vector<mgb::cg::VarNode*>& dest_vars) {
+        auto on_opr = [](mgb::cg::OperatorNodeBase* opr) {
+            if (opr->node_prop().attribute().priority == 0) {
+                opr->node_prop().attribute().priority = opr->id();
+            }
+        };
+        mgb::cg::DepOprIter dep_iter{on_opr};
+        for (const auto& var : dest_vars) {
+            dep_iter.add(SymbolVar(var));
+        }
+}
+
+
+
 void init_graph_rt(py::module m) {
+
+   static const std::unique_ptr<mgb::OprFootprint> _imperative_sm_opr_footprint_ptr{std::make_unique<mgb::OprFootprint>()};
+
     def_rendezvous<DeviceTensorND>(m, "DeviceTensorNDRendezvous");
 
     def_rendezvous<HostNDWithEvent>(m, "HostTensorNDRendezvous");
@@ -99,7 +152,10 @@ void init_graph_rt(py::module m) {
                     return py::none();
                 }
                 return py::cast(*val).attr("numpy")();
-            });
+            })
+        .def_property_readonly("id",[](cg::VarNode* v){
+            return (v->id());
+        });
 
     py::class_<cg::OperatorNodeBase, GraphNodePtr<cg::OperatorNodeBase>>(m, "OperatorNode")
         .def_property_readonly("graph", [](cg::OperatorNodeBase* opr) {return opr->owner_graph();})
@@ -110,7 +166,17 @@ void init_graph_rt(py::module m) {
             })
         .def_property_readonly("outputs", [](cg::OperatorNodeBase* opr) {
                 return to_tuple(opr->usable_output());
-            });
+            })
+        .def_property_readonly("id",[](cg::OperatorNodeBase* opr){
+            return opr->id();
+        })
+        .def_property_readonly("params",[](cg::OperatorNodeBase* opr){
+            return _imperative_sm_opr_footprint_ptr->calc_footprint(opr).param->to_string();
+        })
+        .def_property_readonly("type",[](cg::OperatorNodeBase* opr){
+            return opr->dyn_typeinfo()->name;
+        });
+
 
     py::class_<cg::AsyncExecutable>(m, "AsyncExecutable")
         .def("execute", &cg::AsyncExecutable::execute, py::call_guard<py::gil_scoped_release>())
@@ -173,6 +239,44 @@ void init_graph_rt(py::module m) {
         return vars;
     });
 
+
+    m.def("load_graph", [](std::string& buf, py::list& _output_var_map, py::list& _output_var_list) {
+        using namespace mgb::serialization;
+        auto file = InputFile::make_mem_proxy(buf.c_str(), buf.length());
+        auto format = GraphLoader::identify_graph_dump_format(*file);
+        auto loader = GraphLoader::make(std::move(file), format.val());
+        GraphLoader::LoadConfig config;
+        auto rst = loader->load(config);
+        std::vector<std::pair<std::string, SymbolVar>> output_var_map;
+        SymbolVarArray output_var_list;
+        output_var_map = {rst.output_var_map.begin(), rst.output_var_map.end()};
+        output_var_list = std::move(rst.output_var_list);
+        for (auto i : output_var_list){
+            _output_var_list.append(i.node());
+        }
+        for (auto i : output_var_map){
+            _output_var_map.append(py::make_tuple(i.first,i.second.node()));
+        }
+        std::unordered_map<HostTensorND*, const std::string*> tensor2name;
+        for (const auto& pair : rst.tensor_map) {
+            tensor2name[pair.second.get()] = &pair.first;
+        }
+        auto cb = [&tensor2name, graph=rst.graph](cg::OperatorNodeBase* opr) {
+            if (!opr->same_type<opr::Host2DeviceCopy>())
+                return;
+            auto& h2d = opr->cast_final_safe<opr::Host2DeviceCopy>();
+            auto it = tensor2name.find(h2d.host_data().get());
+            mgb_throw_if(it == tensor2name.end(), GraphError,
+                        "unbound Host2DeviceCopy in loaded graph");
+            h2d.output(0)->name(*it->second);
+        };
+        cg::DepOprIter iter{cb};
+        for (const auto& var : output_var_list) {
+            iter.add(var.node()->owner_opr());
+        }
+        return rst.graph;
+
+    });
 
 #define CURRENT_CLASS cg::ComputingGraph::Options
 
@@ -286,6 +390,10 @@ void init_graph_rt(py::module m) {
             }
             return opr::Host2DeviceCopy::make(graph, std::make_shared<HostTensorND>(cn, shape, dtype), config).node();
         }, py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::none());
+
+    m.def("_replace_vars", &_replace_vars,py::arg(),py::arg(),py::arg());
+    m.def("_replace_oprs", &_replace_oprs,py::arg(),py::arg(),py::arg());
+    m.def("_set_priority_to_id",&_set_priority_to_id,py::arg());
 
     m.def("input_callback", [input_callback](std::function<DeviceTensorND(void)> callback,
                                              const CompNode& comp_node,

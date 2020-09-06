@@ -16,7 +16,7 @@
 #include <memory>
 #include <mutex>
 #include <future>
-
+#include "megbrain/plugin/opr_footprint.h"
 #include "megbrain/graph.h"
 
 template<typename T>

@@ -13,12 +13,39 @@ import numpy as np
 import pytest
 
 from megengine import tensor
+import megengine
+import megengine.core.tensor.megbrain_graph as mgb_graph
+import megengine.module as M
+from megengine import cgtools
 from megengine.core.ops import builtin as ops
 from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.functional import exp, log
 from megengine.jit import exclude_from_trace, trace
+
+
+def load_and_inference(file, inp_data):
+    cg, _, out_list = mgb_graph.load_graph(file)
+    inputs = cgtools.get_dep_vars(out_list, "Host2DeviceCopy")
+    replace_dict = {}
+    inp_node_list = []
+    for i in inputs:
+        inp_node = mgb_graph.InputNode(
+            device="xpux", dtype=inputs[0].dtype, graph=inputs[0].graph
+        )
+        replace_dict[i] = inp_node.outputs[0]
+        inp_node_list.append(inp_node)
+    new_out = cgtools.replace_vars(out_list, replace_dict)
+    out_node_list = [mgb_graph.OutputNode(i) for i in new_out]
+    new_out_list = [i.outputs[0] for i in out_node_list]
+    new_cg = new_out_list[0].graph
+    func = new_cg.compile(new_out_list)
+    for node, value in zip(inp_node_list, inp_data):
+        node.set_value(as_raw_tensor(value)._dev_tensor())
+    func.execute()
+    out_data_list = [o.get_value().numpy() for o in out_node_list]
+    return out_data_list
 
 
 def test_trace():
@@ -82,12 +109,35 @@ def test_print_in_trace():
 
 def test_dump():
     @trace(symbolic=True, capture_as_const=True)
-    def f(x):
-        op = ops.Elemwise(mode="negate")
-        (y,) = apply(op, x)
+    def f(a, b):
+        op = ops.Elemwise(mode="add")
+        (y,) = apply(op, a, b)
         return y
 
-    x = as_raw_tensor([1]).numpy()
+    a = as_raw_tensor([2]).numpy()
+    b = as_raw_tensor([4]).numpy()
+    y = f.__wrapped__(as_raw_tensor(a), as_raw_tensor(b)).numpy()
+
+    for i in range(3):
+        np.testing.assert_equal(f(as_raw_tensor(a), as_raw_tensor(b)).numpy(), y)
+
+    file = io.BytesIO()
+    f.dump(file)
+    file.seek(0)
+    result = load_and_inference(file, [a, b])
+    np.testing.assert_equal(result[0], y)
+
+
+def test_capture_dump():
+    a = as_raw_tensor([2])
+
+    @trace(symbolic=True, capture_as_const=True)
+    def f(x):
+        op = ops.Elemwise(mode="mul")
+        (y,) = apply(op, x, a)
+        return y
+
+    x = as_raw_tensor([3]).numpy()
     y = f.__wrapped__(as_raw_tensor(x)).numpy()
 
     for i in range(3):
@@ -95,6 +145,35 @@ def test_dump():
 
     file = io.BytesIO()
     f.dump(file)
+    file.seek(0)
+    result = load_and_inference(file, [x])
+    np.testing.assert_equal(result[0], y)
+
+
+def test_dump_volatile():
+    p = as_raw_tensor([2])
+
+    @trace(symbolic=True, capture_as_const=True)
+    def f(x):
+        op = ops.Elemwise(mode="mul")
+        (y,) = apply(op, x, p)
+        return y
+
+    x = as_raw_tensor([3]).numpy()
+    y = f.__wrapped__(as_raw_tensor(x)).numpy()
+
+    for i in range(3):
+        np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+
+    file = io.BytesIO()
+    f.dump(file)
+    file.seek(0)
+    cg, _, outputs = mgb_graph.load_graph(file)
+    (out,) = outputs
+    assert (
+        cgtools.get_owner_opr_type(cgtools.get_owner_opr_inputs(out)[1])
+        == "SharedDeviceTensor"
+    )
 
 
 def test_trace_profiler():

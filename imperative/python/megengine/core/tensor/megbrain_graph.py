@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
+import json
 import threading
 import weakref
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -162,14 +163,42 @@ def optimize_for_inference(dest_vars, **kwargs):
     return [VarNode(i) for i in res_vars]
 
 
-def dump(*args):
+def dump_graph(*args):
     return _imperative_rt.dump_graph([i._node for i in args])
+
+
+CompGraphLoadResult = collections.namedtuple(
+    "CompGraphLoadResult", ["graph", "output_vars_dict", "output_vars_list"]
+)
+
+
+def load_graph(fpath):
+    """Load a serialized computing graph from file.
+
+    :parma fpath: Path or Handle for the output file
+    :return: An instance of namedtuple :class:`CompGraphLoadResult`,
+        whose fields are:
+
+            * ``graph`` loaded CompGraph
+            * ``output_vars_dict`` A Python dict, mapping name to output SymbolVar
+            * ``output_vars_list`` A Python list, containing output vars in the
+                                   order passed to serialize_comp_graph_to_file
+    """
+    output_vars_map = []
+    output_vars_list = []
+    if isinstance(fpath, str):
+        buf = open(fpath, "rb").read()
+    else:
+        buf = fpath.read()
+    cg = _imperative_rt.load_graph(buf, output_vars_map, output_vars_list)
+    return CompGraphLoadResult(cg, dict(output_vars_map), output_vars_list)
 
 
 class VarNode(TensorBase):
     def __init__(self, node: _imperative_rt.VarNode):
         self._node = node
-        self.graph._var_cache[node] = self
+        if hasattr(self.graph, "_var_cache"):
+            self.graph._var_cache[node] = self
 
     @property
     def graph(self) -> Graph:
@@ -177,11 +206,18 @@ class VarNode(TensorBase):
 
     @property
     def op(self):
-        return self.graph._wrap(self._node.owner)
+        if hasattr(self.graph, "_wrap"):
+            return self.graph._wrap(self._node.owner)
+        else:
+            return self._node.owner
 
     @property
     def name(self):
         return self._node.name
+
+    @property
+    def id(self):
+        return self._node.id
 
     @name.setter
     def name(self, name):
@@ -207,7 +243,8 @@ class VarNode(TensorBase):
 class OpNode:
     def __init__(self, node: _imperative_rt.OperatorNode):
         self._node = node
-        self.graph._op_cache[node] = self
+        if hasattr(self.graph, "_op_cache"):
+            self.graph._op_cache[node] = self
 
     @property
     def graph(self) -> Graph:
@@ -217,29 +254,53 @@ class OpNode:
     def name(self):
         return self._node.name
 
+    @property
+    def id(self):
+        return self._node.id
+
     @name.setter
     def name(self, name):
         self._node.name = name
 
     @property
     def inputs(self):
-        return tuple(map(self.graph._wrap, self._node.inputs))
+        if hasattr(self.graph, "_wrap"):
+            return tuple(map(self.graph._wrap, self._node.inputs))
+        else:
+            return self._node.inputs
 
     @property
     def outputs(self):
-        return tuple(map(self.graph._wrap, self._node.outputs))
+        if hasattr(self.graph, "_wrap"):
+            return tuple(map(self.graph._wrap, self._node.outputs))
+        else:
+            return self._node.outputs
+
+    @property
+    def params(self):
+        return json.loads(self._node.params)
+
+    @property
+    def type(self):
+        return self._node.type
 
 
 def _wrap(x):
     if isinstance(x, collections.abc.Sequence):
         return type(x)(map(_wrap, x))
-    return x.graph._wrap(x)
+    if hasattr(x.graph, "_wrap"):
+        return x.graph._wrap(x)
+    else:
+        return x
 
 
 def _unwrap(x):
     if isinstance(x, collections.abc.Sequence):
         return type(x)(map(_unwrap, x))
-    return x._node
+    if isinstance(x, VarNode):
+        return x._node
+    else:
+        return x
 
 
 @apply.register()
