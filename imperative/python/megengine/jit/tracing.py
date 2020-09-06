@@ -11,6 +11,7 @@ import numpy as np
 
 from ..core._imperative_rt import GraphProfiler
 from ..core._imperative_rt.ops import OprAttr
+from ..core._trace_option import set_tensor_shape
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
@@ -76,6 +77,22 @@ class TensorInfo:
 
 
 class trace:
+    """
+    Wraps a callable and provide:
+
+    * tracing via :meth:`.trace` and :meth:`.dump`
+    * accelerated evalutaion via :meth:`.__call__`
+
+    :param function: the function will be traced.
+    :param symbolic: whether to apply symbolic execution for tracing. Default: False
+    :param capture_as_const: capture global vars or closures as const value. Default: False
+    :param sublinear_memory_config: configuration for sublinear memory optimization.
+        If not None, it enables sublinear memory optimization with given setting.
+    :param profiling: whether to profile compiled trace. Default: False
+    :param opt_level: optimization level for compiling trace.
+    :param symbolic_shape: whether to use symbolic shape for tracing. Default: True
+    """
+
     def __new__(cls, *args, **kwargs):
         if not args:
             return functools.partial(cls, **kwargs)
@@ -88,6 +105,8 @@ class trace:
         capture_as_const=False,
         sublinear_memory_config: SublinearMemoryConfig = None,
         profiling: bool = False,
+        opt_level: int = None,
+        tensor_shape: bool = True,
     ):
         self.__wrapped__ = function
         self._symbolic = symbolic
@@ -95,6 +114,8 @@ class trace:
         self._sublinear_memory_config = sublinear_memory_config
         self._profiling = profiling
         self._profiler = None
+        self._graph_opt_level = opt_level
+        self._tensor_shape = tensor_shape
 
         self._untraced = True
         self._tinfo = []  # handle -> TensorInfo
@@ -111,6 +132,8 @@ class trace:
         self._kwarg_bindings = None
         self._output_bindings = None
         self._output_names = None
+
+        set_tensor_shape(self._tensor_shape)
 
     def _new_handle(self):
         handle = len(self._tinfo)
@@ -307,6 +330,9 @@ class trace:
     def _apply_graph_options(self, graph):
 
         graph.options.seq_opt.enable_seq_comp_node_opt = False
+        # graph opt level
+        if self._graph_opt_level is not None:
+            graph.options.graph_opt_level = self._graph_opt_level
         # sublinear
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True
@@ -320,6 +346,7 @@ class trace:
             )
             sublinear_config.thresh_nr_try = self._sublinear_memory_config.thresh_nr_try
             sublinear_config.num_worker = self._sublinear_memory_config.num_worker
+        # profile
         if self._profiling:
             self._profiler = GraphProfiler(graph)
 
@@ -416,7 +443,55 @@ class trace:
                 self._process_outputs(outputs)
             return outputs
 
-    def dump(self, file, *, arg_names=None, output_names=None):
+    def dump(self, file, *, arg_names=None, output_names=None, append=False, **kwargs):
+        r"""Serializes trace to file system.
+
+        :param file: output file, could be file object or filename.
+        :param arg_names: names of the input tensors in the traced function.
+        :param output_names: names of the output tensors in the traced function,
+            use the default name if not specified.
+        :param append: whether output is appended to ``file``.
+            Only works when ``file`` is str.
+
+        :Keyword Arguments:
+
+            * enable_io16xc32 --
+                whether to use float16 for I/O between oprs and use
+                float32 as internal computation precision. Note the output var would be
+                changed to float16.
+            * enable_ioc16 --
+                whether to use float16 for both I/O and computation
+                precision.
+
+            * enable_hwcd4 --
+                whether to use NHWCD4 data layout. This is faster on some
+                OpenCL backend.
+            * enable_nchw88 --
+                whether to use NCHW88 data layout, currently
+                used in X86 AVX backend.
+            * enable_nchw44 --
+                whether to use NCHW44 data layout, currently
+                used in arm backend.
+            * enable_nchw44_dot --
+                whether to use NCHW44_dot data layout, currently
+                used in armv8.2+dotprod backend.
+            * enable_nchw4 --
+                whether to use NCHW4 data layout, currently
+                used in nvidia backend(based on cudnn).
+            * enable_nchw32 --
+                whether to use NCHW32 data layout, currently
+                used in nvidia backend with tensorcore(based on cudnn).
+            * enable_chwn4 --
+                whether to use CHWN4 data layout, currently
+                used in nvidia backend with tensorcore.
+
+            * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+                into one opr.
+            * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+                input for inference on nvidia backend(this optimization pass will
+                result in mismatch of the precision of output of training and
+                inference)
+        """
         if not self._capture_as_const:
             raise ValueError(
                 "you must specify capture_as_const=True at __init__ to use dump"
@@ -482,8 +557,11 @@ class trace:
                 v.name = output_names[i]
             dest_vars.append(v)
 
+        dest_vars = G.optimize_for_inference(dest_vars, **kwargs)
+
         if isinstance(file, str):
-            file = open(file, "wb")
+            permission = "wb" if append == False else "ab"
+            file = open(file, permission)
         file.write(G.dump(*dest_vars))
 
     def _process_inputs(self, *args, **kwargs):

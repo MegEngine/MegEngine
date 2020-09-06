@@ -14,6 +14,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 import numpy as np
 
 from .. import _imperative_rt
+from .._imperative_rt import GraphOptimizeOptions
 from .._imperative_rt.ops import BackwardGraph
 from .._wrap import device as as_device
 from ..ops.builtin import OpDef
@@ -81,6 +82,84 @@ class Graph(_imperative_rt.ComputingGraph):
     def make_h2d(self, *, dtype, device, shape=None, name=None):
         device = as_device(device).to_c()
         return self._wrap(_imperative_rt.make_h2d(self, device, dtype, shape, name))
+
+
+def optimize_for_inference(dest_vars, **kwargs):
+    r"""Applies optimize_for_inference pass for computing graph.
+
+        :param dest_vars: list of output vars in the computing graph
+
+        :Keyword Arguments:
+
+            * enable_io16xc32 --
+                whether to use float16 for I/O between oprs and use
+                float32 as internal computation precision. Note the output var would be
+                changed to float16.
+            * enable_ioc16 --
+                whether to use float16 for both I/O and computation
+                precision.
+
+            * enable_hwcd4 --
+                whether to use NHWCD4 data layout. This is faster on some
+                OpenCL backend.
+            * enable_nchw88 --
+                whether to use NCHW88 data layout, currently
+                used in X86 AVX backend.
+            * enable_nchw44 --
+                whether to use NCHW44 data layout, currently
+                used in arm backend.
+            * enable_nchw44_dot --
+                whether to use NCHW44_dot data layout, currently
+                used in armv8.2+dotprod backend.
+            * enable_nchw4 --
+                whether to use NCHW4 data layout, currently
+                used in nvidia backend(based on cudnn).
+            * enable_nchw32 --
+                whether to use NCHW32 data layout, currently
+                used in nvidia backend with tensorcore(based on cudnn).
+            * enable_chwn4 --
+                whether to use CHWN4 data layout, currently
+                used in nvidia backend with tensorcore.
+
+            * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+                into one opr.
+            * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+                input for inference on nvidia backend(this optimization pass will
+                result in mismatch of the precision of output of training and
+                inference)
+    """
+    inference_options = GraphOptimizeOptions()
+    if optimize_for_inference:
+        inference_optimize_layout_transform_map = {
+            "enable_hwcd4": GraphOptimizeOptions.LayoutTransform.NHWCD4,
+            "enable_nchw4": GraphOptimizeOptions.LayoutTransform.NCHW4,
+            "enable_nchw88": GraphOptimizeOptions.LayoutTransform.NCHW88,
+            "enable_nchw32": GraphOptimizeOptions.LayoutTransform.NCHW32,
+            "enable_nchw44": GraphOptimizeOptions.LayoutTransform.NCHW44,
+            "enable_nchw44_dot": GraphOptimizeOptions.LayoutTransform.NCHW44_DOT,
+            "enable_chwn4": GraphOptimizeOptions.LayoutTransform.CHWN4,
+        }
+
+        for k, v in inference_optimize_layout_transform_map.items():
+            if kwargs.pop(k, False):
+                inference_options.layout_transform = v
+
+        if kwargs.pop("enable_io16xc32", False):
+            inference_options.f16_io_f32_comp = True
+        if kwargs.pop("enable_ioc16", False):
+            inference_options.f16_io_comp = True
+        if kwargs.pop("enable_fuse_conv_bias_nonlinearity", False):
+            inference_options.fuse_conv_bias_nonlinearity = True
+        if kwargs.pop("enable_fuse_conv_bias_with_z", False):
+            inference_options.fuse_conv_bias_with_z = True
+
+        if kwargs:
+            raise ValueError("unknown options: %s" % list(kwargs))
+
+    res_vars = _imperative_rt.optimize_for_inference(
+        [i._node for i in dest_vars], inference_options
+    )
+    return [VarNode(i) for i in res_vars]
 
 
 def dump(*args):

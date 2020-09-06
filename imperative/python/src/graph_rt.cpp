@@ -20,11 +20,16 @@
 #include "./helper.h"
 #include "megbrain/plugin/profiler.h"
 #include "./common.h"
+#include "megbrain/gopt/inference.h"
+
 
 namespace py = pybind11;
 
 using namespace mgb;
 using namespace imperative;
+
+using _OptimizeForInferenceOptions = mgb::gopt::OptimizeForInferenceOptions;
+using _LayoutTransform = _OptimizeForInferenceOptions::LayoutTransform;
 
 namespace {
 class _CompGraphProfilerImpl {
@@ -137,6 +142,37 @@ void init_graph_rt(py::module m) {
         dumper->dump(symvars);
         return py::bytes(reinterpret_cast<const char*>(&buf[0]), buf.size());
     });
+
+    auto GraphOptimizeOptions = py::class_<_OptimizeForInferenceOptions>(m, "GraphOptimizeOptions")
+        .def(py::init())
+        .def_readwrite("f16_io_f32_comp", &_OptimizeForInferenceOptions::f16_io_f32_comp)
+        .def_readwrite("f16_io_comp", &_OptimizeForInferenceOptions::f16_io_comp)
+        .def_readwrite("fuse_conv_bias_nonlinearity", &_OptimizeForInferenceOptions::fuse_conv_bias_nonlinearity)
+        .def_readwrite("fuse_conv_bias_with_z", &_OptimizeForInferenceOptions::fuse_conv_bias_with_z)
+        .def_readwrite("layout_transform", &_OptimizeForInferenceOptions::layout_transform)
+        ;
+
+    py::enum_<_LayoutTransform>(GraphOptimizeOptions, "LayoutTransform")
+        .value("DEFAULT", _LayoutTransform::DEFAULT)
+        .value("NCHW4", _LayoutTransform::NCHW4)
+        .value("NHWCD4", _LayoutTransform::NHWCD4)
+        .value("NCHW88", _LayoutTransform::NCHW88)
+        .value("NCHW44", _LayoutTransform::NCHW44)
+        .value("NCHW44_DOT", _LayoutTransform::NCHW44_DOT)
+        .value("NCHW32", _LayoutTransform::NCHW32)
+        .value("CHWN4", _LayoutTransform::CHWN4)
+        .export_values()
+        ;
+
+    m.def("optimize_for_inference", [](const VarNodeArray& dest_vars, const _OptimizeForInferenceOptions& opt) {
+        SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
+        auto res_symvars = mgb::gopt::optimize_for_inference(symvars, opt);
+        VarNodeArray vars;
+        for (auto& si: res_symvars)
+            vars.push_back(si.node());
+        return vars;
+    });
+
 
 #define CURRENT_CLASS cg::ComputingGraph::Options
 
