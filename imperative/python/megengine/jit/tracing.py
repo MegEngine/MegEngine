@@ -51,6 +51,7 @@ class TensorInfo:
         "value_read",
         "device",
         "dtype",
+        "shape",
         "bound_data",
         # resources for execution
         "varnode",
@@ -107,8 +108,8 @@ class trace:
         self._active_tensors = weakref.WeakSet()
         self._tensor_remaps = None
         self._inputs_to_restore = None
-        self._args_bindings = None
-        self._kwargs_bindings = None
+        self._arg_bindings = None
+        self._kwarg_bindings = None
         self._output_bindings = None
         self._output_names = None
 
@@ -329,9 +330,7 @@ class trace:
         links = ()
 
         if self._capture_as_const:
-            for h in itertools.chain(
-                self._args_bindings, self._kwargs_bindings.values()
-            ):
+            for h in itertools.chain(self._arg_bindings, self._kwarg_bindings.values()):
                 info = self._tinfo[h]
                 opnode = info.data_setter = G.InputNode(
                     device=info.device, dtype=info.dtype, graph=graph
@@ -434,15 +433,19 @@ class trace:
         h2v = {}
         graph = G.Graph()
 
-        for i, h in enumerate(self._args_bindings):
+        for i, h in enumerate(self._arg_bindings):
             info = self._tinfo[h]
-            h2v[h] = graph.make_h2d(dtype=info.dtype, device=info.device)
-            if arg_names:
-                h2v[h].name = arg_names[i]
-        for k, h in self._kwargs_bindings.items():
+            h2v[h] = graph.make_h2d(
+                dtype=info.dtype,
+                device=info.device,
+                shape=info.shape,
+                name=arg_names[i] if arg_names else None,
+            )
+        for k, h in self._kwarg_bindings.items():
             info = self._tinfo[h]
-            h2v[h] = graph.make_h2d(dtype=info.dtype, device=info.device)
-            h2v[h].name = k
+            h2v[h] = graph.make_h2d(
+                dtype=info.dtype, device=info.device, shape=info.shape, name=k
+            )
 
         for op, ihandles, ohandles in self._seq:
             ivars = []
@@ -479,11 +482,12 @@ class trace:
                 info.external = False
                 info.device = x.device
                 info.dtype = x.dtype
+                info.shape = x.shape
                 TraceMixin._TraceMixin__inject(x, h)
                 self._inputs_to_restore.append(x)
                 return h
 
-            self._args_bindings = []
+            self._arg_bindings = []
             for i, x in enumerate(args):
                 x = find_raw_tensor(x)
                 if x is None:
@@ -491,20 +495,20 @@ class trace:
                         "positional arguments should all be tensor "
                         "but args[%d] cannot be recognized as one" % i
                     )
-                self._args_bindings.append(record_input(x))
+                self._arg_bindings.append(record_input(x))
 
-            self._kwargs_bindings = {}
+            self._kwarg_bindings = {}
             for k, x in kwargs.items():
                 x = find_raw_tensor(x)
                 if x is not None:
-                    self._kwargs_bindings[k] = record_input(x)
+                    self._kwarg_bindings[k] = record_input(x)
         else:
-            if len(args) != len(self._args_bindings):
+            if len(args) != len(self._arg_bindings):
                 raise TraceMismatchError("positional argument length mismatch")
 
             self._tensor_remaps = {}
 
-            for i, (h, x) in enumerate(zip(self._args_bindings, args)):
+            for i, (h, x) in enumerate(zip(self._arg_bindings, args)):
                 x = find_raw_tensor(x)
                 if x is None:
                     raise TypeError(
@@ -524,9 +528,9 @@ class trace:
                 x = find_raw_tensor(x)
                 if x is not None:
                     kwargs_tensors[k] = x
-            if set(kwargs_tensors) != set(self._kwargs_bindings):
-                too_many = set(kwargs_tensors) - set(self._kwargs_bindings)
-                too_few = set(self._kwargs_bindings) - set(kwargs_tensors)
+            if set(kwargs_tensors) != set(self._kwarg_bindings):
+                too_many = set(kwargs_tensors) - set(self._kwarg_bindings)
+                too_few = set(self._kwarg_bindings) - set(kwargs_tensors)
                 if too_many:
                     raise TraceMismatchError(
                         "keyword arguments found to be tensor this time "
@@ -537,7 +541,7 @@ class trace:
                         "keyword arguments found to be non-tensor this time "
                         "but were tensor previously: %s" % " ".join(too_few)
                     )
-            for k, h in self._kwargs_bindings.items():
+            for k, h in self._kwarg_bindings.items():
                 x = kwargs_tensors[k]
                 info = self._tinfo[h]
                 if x.dtype != info.dtype:

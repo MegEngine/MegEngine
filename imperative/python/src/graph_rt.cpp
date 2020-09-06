@@ -237,7 +237,7 @@ void init_graph_rt(py::module m) {
             return opr::ImmutableTensor::make(*graph, hv, OperatorNodeConfig(cn)).node();
         });
 
-    m.def("make_h2d", [](cg::ComputingGraph& graph, CompNode cn, DType dtype, std::optional<std::string> name) {
+    m.def("make_h2d", [](cg::ComputingGraph& graph, CompNode cn, DType dtype, TensorShape shape, std::optional<std::string> name) {
             if (!cn.valid()) {
                 throw py::type_error("device must be valid");
             }
@@ -248,8 +248,8 @@ void init_graph_rt(py::module m) {
             if (name) {
                 config.name(*name);
             }
-            return opr::Host2DeviceCopy::make(graph, std::make_shared<HostTensorND>(cn, dtype), config).node();
-        }, py::arg(), py::arg(), py::arg(), py::arg() = py::none());
+            return opr::Host2DeviceCopy::make(graph, std::make_shared<HostTensorND>(cn, shape, dtype), config).node();
+        }, py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::none());
 
     m.def("input_callback", [input_callback](std::function<DeviceTensorND(void)> callback,
                                              const CompNode& comp_node,

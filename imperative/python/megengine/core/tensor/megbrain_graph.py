@@ -78,9 +78,9 @@ class Graph(_imperative_rt.ComputingGraph):
         opnode = InputNode(*args, device=device, dtype=dtype, shape=shape, graph=self)
         return opnode.outputs[0]
 
-    def make_h2d(self, *, dtype, device):
+    def make_h2d(self, *, dtype, device, shape=None, name=None):
         device = as_device(device).to_c()
-        return self._wrap(_imperative_rt.make_h2d(self, device, dtype))
+        return self._wrap(_imperative_rt.make_h2d(self, device, dtype, shape, name))
 
 
 def dump(*args):
