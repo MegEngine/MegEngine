@@ -10,6 +10,7 @@ import numpy as np
 
 import megengine.functional as F
 from megengine import Parameter, optimizer
+from megengine.jit import trace
 from megengine.module import Linear, Module
 from megengine.tensor import TensorDict, tensor
 
@@ -65,6 +66,37 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
         opt.step()
         step += 1
         check_func(ori_params, net.parameters(), step)
+
+    # static graph
+    for symbolic in (False, True):
+
+        @trace(symbolic=symbolic)
+        def train_func(data, *, opt=None):
+            opt.zero_grad()
+            with opt.record():
+                pred = net(data)
+                loss = pred.sum()
+                opt.backward(loss)
+            opt.step()
+
+        # reset net and opt
+        net = Simple()
+        opt = getattr(optimizer, opt_str)(net.parameters(), **test_case)
+        check_func = check_class(net, **test_case)
+        step = 0
+        for i in range(iter_num):
+            if update_lr and i == 1:  # change learning rate
+                for group in opt.param_groups:
+                    group["lr"] += 0.01
+                check_func.lr += 0.01
+
+            ori_params = TensorDict()
+            for param in net.parameters():
+                ori_params[param] = np.copy(param.numpy())
+
+            train_func(np.random.random(data_shape).astype(np.float32), opt=opt)
+            step += 1
+            check_func(ori_params, net.parameters(), step)
 
 
 def test_sgd():
