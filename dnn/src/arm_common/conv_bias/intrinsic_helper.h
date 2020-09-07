@@ -20,6 +20,8 @@
 namespace megdnn {
 namespace {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
 ////////////////////Store_OC4_OW8_Remain/////////////////////////
 template <int ow_remain, typename Op>
 struct Store_OC4_OW8_Remain {
@@ -589,6 +591,7 @@ __ai void store_oc8_ow8_remain_static(T& c, const Op& op, T2 dst_ptr,
                                       int ld_dst_oc) {
     Store_OC8_OW8_Remain<ow_remain, Op>::impl(c, op, dst_ptr, ld_dst_oc);
 }
+#pragma GCC diagnostic pop
 
 //////////////////////////////////////
 template <BiasMode bias_mode>
