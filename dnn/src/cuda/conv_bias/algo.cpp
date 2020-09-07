@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/cuda/conv_bias/algo.h"
@@ -47,7 +48,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     conv_algos.reserve(conv_algos.size() * 2);
     //! add gconv algos by AlgoGroupConvGeneral
     size_t algo_size = conv_algos.size();
-    for (size_t i = 3; i < algo_size; ++ i) {
+    for (size_t i = 3; i < algo_size; ++i) {
         gconv_refhold.emplace_back(new AlgoGroupConvGeneral(conv_algos[i]));
         algo2gconv[conv_algos[i]] = gconv_refhold.back().get();
         conv_algos.push_back(gconv_refhold.back().get());

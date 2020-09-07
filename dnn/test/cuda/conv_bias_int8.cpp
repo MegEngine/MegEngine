@@ -1076,6 +1076,7 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
 }
 
 
+
 #if CUDA_VERSION >= 10020
 /// \note: we only check several cases and block sizes in megdnn_test, the full
 /// testcases are written in cutlass repository
