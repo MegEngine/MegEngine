@@ -99,7 +99,9 @@ MemoryOptimizerHelper::split_into_cn2oprseq(const OprNodeArray& oprseq,
 
         auto&& infer_mgr = m_owner_graph->static_infer_manager();
         for (auto j : i->output()) {
-            if (!j->contain_flag(BAD_VAR_FLAG) && is_static_var_shape(j)) {
+            if (!j->contain_flag(BAD_VAR_FLAG)) {
+                // omit infer type check
+                // inferred shape will be used as-is
                 if (auto shape = infer_mgr.infer_shape_fallible(j)) {
                     have_static_shape_out = true;
                     m_var_memsize[j] = j->dtype().size(shape->total_nr_elems());

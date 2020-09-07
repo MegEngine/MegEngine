@@ -210,6 +210,7 @@ class trace:
                 info.external = True
                 info.device = x.device
                 info.dtype = x.dtype
+                info.shape = x.shape
                 if self._capture_as_const:
                     info.bound_data = x
 
@@ -338,7 +339,7 @@ class trace:
             for h in itertools.chain(self._arg_bindings, self._kwarg_bindings.values()):
                 info = self._tinfo[h]
                 opnode = info.data_setter = G.InputNode(
-                    device=info.device, dtype=info.dtype, graph=graph
+                    device=info.device, dtype=info.dtype, shape=info.shape, graph=graph
                 )
                 need_reset_nodes.append(opnode)
                 info.varnode = opnode.outputs[0]
@@ -355,7 +356,11 @@ class trace:
                         info.varnode = graph.make_const(info.bound_data._dev_tensor())
                     else:
                         opnode = info.data_setter = G.InputNode(
-                            *links, device=info.device, dtype=info.dtype, graph=graph
+                            *links,
+                            device=info.device,
+                            dtype=info.dtype,
+                            shape=info.shape,
+                            graph=graph,
                         )
                         need_reset_nodes.append(opnode)
                         info.varnode, *links = opnode.outputs
