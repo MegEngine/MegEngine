@@ -77,6 +77,16 @@ private:
     mlir::Location m_location;
 };
 
+template <typename Op>
+mlir::Value get_operand(mlir::OpBuilder& builder, const mlir::Location& loc,
+                        const mlir::Value& val, const mlir::ValueRange& index) {
+    if (val.getType().isa<mlir::MemRefType>()) {
+        return builder.create<Op>(loc, val, index);
+    } else {
+        return val;
+    }
+}
+
 }  // namespace jit
 }  // namespace mgb
 

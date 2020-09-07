@@ -14,6 +14,7 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "megbrain/jit/mlir/ir/dialect.h"
+#include "./types.h"
 
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/OpImplementation.h>

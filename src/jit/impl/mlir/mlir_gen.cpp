@@ -137,6 +137,27 @@ private:
                 return;
             }
 
+            if (opr->same_type<opr::ImmutableTensor>()) {
+                auto imm = SymbolVar{opr->output(0)}.as_immutable_scalar();
+                if (imm.valid()) {
+                    auto dtype = imm->dtype();
+                    float scalar_value;
+                    if (dtype == dtype::Float32()) {
+                        scalar_value = imm->get<float>();
+                    } else {
+                        mgb_throw(InternalError,
+                                  "mlir backend currently only support f32 "
+                                  "dtype, but got %s",
+                                  dtype.name());
+                    }
+                    auto&& out = m_builder.create<jit::ConstantScalarOp>(
+                            m_builder.getUnknownLoc(), m_builder.getF32Type(),
+                            m_builder.getF32FloatAttr(scalar_value));
+                    mgb_assert(mlir::succeeded(
+                            declare(opr->output(0)->name(), out)));
+                }
+            }
+
             if (opr->same_type<opr::Elemwise>()) {
                 auto&& out = gen_op(opr->cast_final<opr::Elemwise>());
                 mgb_assert(

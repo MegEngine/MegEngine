@@ -10,7 +10,6 @@
  * implied.
  */
 
-#include "llvm/Pass.h"
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
@@ -40,6 +39,7 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/Pass.h>
 
 #include <dlfcn.h>
 #include <dirent.h>

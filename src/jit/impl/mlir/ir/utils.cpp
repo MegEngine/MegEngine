@@ -49,6 +49,9 @@ mlir::Type jit::deduce_result_type(mlir::ValueRange operands) {
     megdnn::TensorShape dst;
     megdnn::DType dst_type;
     for (auto operand : operands) {
+        if (operand.getType().isa<mlir::FloatType>()) {
+            continue;
+        }
         auto type = operand.getType().dyn_cast_or_null<mlir::MemRefType>();
         mgb_assert(type, "currently only support MemRefType");
 

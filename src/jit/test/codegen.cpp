@@ -137,7 +137,7 @@ void run_mlir(CompNode cn) {
          b = opr::Host2DeviceCopy::make(*graph, host_x1),
          c = opr::Host2DeviceCopy::make(*graph, host_x2);
 
-    auto y = a + b * c;
+    auto y = a + b * c + 0.3f;
 
     auto ig_gen =
             std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());

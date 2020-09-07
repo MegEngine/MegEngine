@@ -17,6 +17,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 include "./interfaces.td"
+include "./predicates.td"
 
 def Mgb_Dialect : Dialect {
   let name = "mgb";
@@ -90,7 +91,7 @@ def RoundOp : ElemwiseUnaryOp<"round", [NoSideEffect]>;
 class ElemwiseBinaryOp<string mnemonic, list<OpTrait> traits = [NoSideEffect]> :
   ElemwiseOp<mnemonic, traits> {
 
-  let arguments = (ins F32MemRef:$lhs, F32MemRef:$rhs);
+  let arguments = (ins ElemwiseFloatAny:$lhs, ElemwiseFloatAny:$rhs);
   let results = (outs F32MemRef);
 
   let builders = [OpBuilder<
@@ -141,7 +142,7 @@ def FuseAddHswishOp : ElemwiseBinaryOp<"fuse_add_hswish", [NoSideEffect]>;
 class ElemwiseTernaryOp<string mnemonic, list<OpTrait> traits = [NoSideEffect]> :
   ElemwiseOp<mnemonic, traits> {
 
-  let arguments = (ins F32MemRef:$x, F32MemRef:$y, F32MemRef:$z);
+  let arguments = (ins ElemwiseFloatAny:$x, ElemwiseFloatAny:$y, ElemwiseFloatAny:$z);
   let results = (outs F32MemRef);
 
   let builders = [OpBuilder<
@@ -174,6 +175,25 @@ def ReturnOp : GenericOp<"return",
   let description = [{
     The "return" operation represents a return operation within a function.
     The operation takes an no tensor operand and produces no results.
+  }];
+
+}
+
+def ConstantScalarOp: GenericOp<"sconst", [NoSideEffect]> {
+  let summary = "scalar constant";
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs F32:$result);
+
+  let builders = [OpBuilder<
+    "Builder* builder, OperationState& result, float value", [{
+      result.addAttribute("value", builder->getF32FloatAttr(value));
+      result.addTypes(builder->getF32Type());
+    }]
+  >];
+
+  let extraClassDeclaration = [{
+    Attribute getValue() { return getAttr("value"); }
+    FloatAttr getFloatAttr() { return getAttrOfType<FloatAttr>("value"); }
   }];
 
 }

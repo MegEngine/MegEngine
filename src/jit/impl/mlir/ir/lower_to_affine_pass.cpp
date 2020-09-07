@@ -74,8 +74,8 @@ struct UnaryOpLowering : public ConversionPattern {
                     typename Op::Adaptor binary_adaptor(memref_operands);
                     LoweredOp lower_op;
 
-                    auto loaded_lhs = builder.create<AffineLoadOp>(
-                            loc, binary_adaptor.lhs(), loop_ivs);
+                    auto loaded_lhs = get_operand<AffineLoadOp>(
+                            builder, loc, binary_adaptor.lhs(), loop_ivs);
 
                     return lower_op(builder, loc, {loaded_lhs});
                 });
@@ -104,10 +104,10 @@ struct BinaryOpLowering : public ConversionPattern {
                     typename Op::Adaptor binary_adaptor(memref_operands);
                     LoweredOp lower_op;
 
-                    auto loaded_lhs = builder.create<AffineLoadOp>(
-                            loc, binary_adaptor.lhs(), loop_ivs);
-                    auto loaded_rhs = builder.create<AffineLoadOp>(
-                            loc, binary_adaptor.rhs(), loop_ivs);
+                    auto loaded_lhs = get_operand<AffineLoadOp>(
+                            builder, loc, binary_adaptor.lhs(), loop_ivs);
+                    auto loaded_rhs = get_operand<AffineLoadOp>(
+                            builder, loc, binary_adaptor.rhs(), loop_ivs);
 
                     return lower_op(builder, loc, {loaded_lhs, loaded_rhs});
                 });
@@ -136,12 +136,12 @@ struct TernaryOpLowering : public ConversionPattern {
                     typename Op::Adaptor ternary_adaptor(memref_operands);
                     LoweredOp lower_op;
 
-                    auto loaded_x = builder.create<AffineLoadOp>(
-                            loc, ternary_adaptor.x(), loop_ivs);
-                    auto loaded_y = builder.create<AffineLoadOp>(
-                            loc, ternary_adaptor.y(), loop_ivs);
-                    auto loaded_z = builder.create<AffineLoadOp>(
-                            loc, ternary_adaptor.z(), loop_ivs);
+                    auto loaded_x = get_operand<AffineLoadOp>(
+                            builder, loc, ternary_adaptor.x(), loop_ivs);
+                    auto loaded_y = get_operand<AffineLoadOp>(
+                            builder, loc, ternary_adaptor.y(), loop_ivs);
+                    auto loaded_z = get_operand<AffineLoadOp>(
+                            builder, loc, ternary_adaptor.z(), loop_ivs);
 
                     return lower_op(builder, loc,
                                     {loaded_x, loaded_y, loaded_z});
@@ -193,6 +193,19 @@ struct ReturnOpLowering : public OpRewritePattern<jit::ReturnOp> {
     }
 };
 
+struct ConstantScalarOpLowering
+        : public OpRewritePattern<jit::ConstantScalarOp> {
+    using OpRewritePattern<jit::ConstantScalarOp>::OpRewritePattern;
+
+    LogicalResult matchAndRewrite(jit::ConstantScalarOp op,
+                                  PatternRewriter& rewriter) const final {
+        ConstantScalarOpAdaptor constant_scalar_adaptor(op);
+        rewriter.replaceOpWithNewOp<mlir::ConstantOp>(
+                op, constant_scalar_adaptor.value());
+        return success();
+    }
+};
+
 class MgbToAffineLoweringPass
         : public PassWrapper<MgbToAffineLoweringPass, FunctionPass> {
 public:
@@ -207,7 +220,8 @@ public:
                                 cb) MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
                                 MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
                                         ReturnOpLowering,
-                        AssignOpLowering>(&getContext());
+                        AssignOpLowering, ConstantScalarOpLowering>(
+                &getContext());
 #undef cb
 
         if (failed(applyPartialConversion(getFunction(), target, patterns))) {

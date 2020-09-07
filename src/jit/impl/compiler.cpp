@@ -101,9 +101,9 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
                     compiler = std::make_unique<CudaCompiler>();
                     break;
                 }
-#endif
                 mgb_throw(InternalError, "No compiler support for cuda");
                 break;
+#endif
             case CompNode::DeviceType::CPU:
 #if MGB_JIT_MLIR
                 if (!backend || !strcmp(backend, "MLIR")) {

@@ -20,6 +20,10 @@
 
 #if MGB_JIT
 
+#if MGB_JIT_MLIR
+#include "./mlir/ir/each_mode.h"
+#endif
+
 using namespace mgb;
 using namespace gopt;
 using namespace jit;
@@ -339,35 +343,76 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
         return false;
     }
 
+    //! As MLIR backend has some contraints
+    auto backend = MGB_GETENV("MGB_JIT_BACKEND");
     // float elemwise
     if (auto elem = gopt::try_cast_as_op<opr::Elemwise>(opr)) {
-        return ast_c::check_elem_mode(elem->param().mode) &&
+        bool ret = true;
+#if MGB_JIT_MLIR
+        if (!strcmp(backend, "MLIR")) {
+            switch (elem->param().mode) {
+#define cb(_, _mode)                 \
+    case opr::Elemwise::Mode::_mode: \
+        ret = true;                  \
+        break;
+
+                MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(cb)
+                MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
+                MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
+                default:
+                    ret = false;
+#undef cb
+            }
+#define FOREACH_ELEMWISE_SKIP_MODE(cb) cb(SIN)
+
+            //! FIXME mlir on cuda does't support sin currently.
+            if (opr->output(0)->comp_node().device_type() ==
+                CompNode::DeviceType::CUDA) {
+                switch (elem->param().mode) {
+#define cb(_mode)                    \
+    case opr::Elemwise::Mode::_mode: \
+        ret = false;                 \
+        break;
+
+                    FOREACH_ELEMWISE_SKIP_MODE(cb)
+                    default:
+                        break;
+#undef cb
+                }
+            }
+
+#undef FOREACH_ELEMWISE_SKIP_MODE
+        }
+#endif  // MGB_JIT_MLIR
+        return ret && ast_c::check_elem_mode(elem->param().mode) &&
                elem->output(0)->dtype().category() == DTypeCategory::FLOAT;
     }
 
-    if (opr->same_type<opr::PowC>()) {
-        return true;
-    }
+    if (strcmp(backend, "MLIR")) {
+        if (opr->same_type<opr::PowC>()) {
+            return true;
+        }
 
-    // float typecvt (e.g. used in f16 training)
-    if (opr->same_type<opr::TypeCvt>()) {
-        auto category = opr->input(0)->dtype().category();
-        if (category != opr->output(0)->dtype().category())
-            return false;
-        return category == DTypeCategory::FLOAT;
-    }
+        // float typecvt (e.g. used in f16 training)
+        if (opr->same_type<opr::TypeCvt>()) {
+            auto category = opr->input(0)->dtype().category();
+            if (category != opr->output(0)->dtype().category())
+                return false;
+            return category == DTypeCategory::FLOAT;
+        }
 
-    // float reduce
-    if ((m_feature_bits & JITFeatureBits::REDUCE) &&
-        opr->same_type<opr::Reduce>()) {
-        return opr->output(0)->dtype().category() == DTypeCategory::FLOAT;
-    }
+        // float reduce
+        if ((m_feature_bits & JITFeatureBits::REDUCE) &&
+            opr->same_type<opr::Reduce>()) {
+            return opr->output(0)->dtype().category() == DTypeCategory::FLOAT;
+        }
 
-    // dimshuffle
-    if ((m_feature_bits & JITFeatureBits::DIMSHUFFLE) &&
-        opr->same_type<opr::Dimshuffle>()) {
-        auto param = opr->cast_final_safe<opr::Dimshuffle>().param();
-        return param.pattern_len <= 4;
+        // dimshuffle
+        if ((m_feature_bits & JITFeatureBits::DIMSHUFFLE) &&
+            opr->same_type<opr::Dimshuffle>()) {
+            auto param = opr->cast_final_safe<opr::Dimshuffle>().param();
+            return param.pattern_len <= 4;
+        }
     }
 
     // existing JITExecutor

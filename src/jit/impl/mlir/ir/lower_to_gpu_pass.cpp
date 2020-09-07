@@ -38,16 +38,6 @@ using namespace jit;
 
 namespace {
 
-mlir::Value get_operand(ConversionPatternRewriter& rewriter,
-                        const mlir::Location& loc, const mlir::Value& val,
-                        const mlir::Value& index) {
-    if (val.getType().isa<mlir::MemRefType>()) {
-        return rewriter.create<LoadOp>(loc, val, index);
-    } else {
-        return val;
-    }
-}
-
 mlir::Value get_tid(ConversionPatternRewriter& rewriter, const Location& loc) {
     auto thread_idx = rewriter.create<gpu::ThreadIdOp>(
             loc, rewriter.getIndexType(), rewriter.getStringAttr("x"));
@@ -64,7 +54,7 @@ mlir::Value get_tid(ConversionPatternRewriter& rewriter, const Location& loc) {
 
 template <typename Op, typename LoweredOp>
 struct UnaryOpLowering : public ConversionPattern {
-    UnaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+    UnaryOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
             : ConversionPattern(Op::getOperationName(), 1, ctx),
               m_launch_op{launch_op} {}
 
@@ -74,11 +64,11 @@ struct UnaryOpLowering : public ConversionPattern {
         auto loc = op->getLoc();
 
         typename Op::Adaptor binary_adaptor(operands);
-        rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
+        rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
         auto index = get_tid(rewriter, loc);
         auto loaded_lhs =
-                get_operand(rewriter, loc, binary_adaptor.lhs(), index);
+                get_operand<LoadOp>(rewriter, loc, binary_adaptor.lhs(), index);
 
         LoweredOp lower_op;
 
@@ -87,7 +77,7 @@ struct UnaryOpLowering : public ConversionPattern {
     }
 
 private:
-    gpu::LaunchOp* m_launch_op;
+    gpu::LaunchOp& m_launch_op;
 };
 
 #define cb(_op, _) \
@@ -97,7 +87,7 @@ MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(cb)
 
 template <typename Op, typename LoweredOp>
 struct BinaryOpLowering : public ConversionPattern {
-    BinaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+    BinaryOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
             : ConversionPattern(Op::getOperationName(), 1, ctx),
               m_launch_op{launch_op} {}
 
@@ -107,13 +97,13 @@ struct BinaryOpLowering : public ConversionPattern {
         auto loc = op->getLoc();
 
         typename Op::Adaptor binary_adaptor(operands);
-        rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
+        rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
         auto index = get_tid(rewriter, loc);
         auto loaded_lhs =
-                get_operand(rewriter, loc, binary_adaptor.lhs(), index);
+                get_operand<LoadOp>(rewriter, loc, binary_adaptor.lhs(), index);
         auto loaded_rhs =
-                get_operand(rewriter, loc, binary_adaptor.rhs(), index);
+                get_operand<LoadOp>(rewriter, loc, binary_adaptor.rhs(), index);
 
         LoweredOp lower_op;
 
@@ -123,7 +113,7 @@ struct BinaryOpLowering : public ConversionPattern {
     }
 
 private:
-    gpu::LaunchOp* m_launch_op;
+    gpu::LaunchOp& m_launch_op;
 };
 
 #define cb(_op, _) \
@@ -133,7 +123,7 @@ MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
 
 template <typename Op, typename LoweredOp>
 struct TernaryOpLowering : public ConversionPattern {
-    TernaryOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+    TernaryOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
             : ConversionPattern(Op::getOperationName(), 1, ctx),
               m_launch_op{launch_op} {}
 
@@ -143,15 +133,15 @@ struct TernaryOpLowering : public ConversionPattern {
         auto loc = op->getLoc();
 
         typename Op::Adaptor ternary_adaptor(operands);
-        rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
+        rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
         auto index = get_tid(rewriter, loc);
         auto loaded_x =
-                get_operand(rewriter, loc, ternary_adaptor.x(), index);
+                get_operand<LoadOp>(rewriter, loc, ternary_adaptor.x(), index);
         auto loaded_y =
-                get_operand(rewriter, loc, ternary_adaptor.y(), index);
+                get_operand<LoadOp>(rewriter, loc, ternary_adaptor.y(), index);
         auto loaded_z =
-                get_operand(rewriter, loc, ternary_adaptor.z(), index);
+                get_operand<LoadOp>(rewriter, loc, ternary_adaptor.z(), index);
 
         LoweredOp lower_op;
 
@@ -161,7 +151,7 @@ struct TernaryOpLowering : public ConversionPattern {
     }
 
 private:
-    gpu::LaunchOp* m_launch_op;
+    gpu::LaunchOp& m_launch_op;
 };
 
 #define cb(_op, _)        \
@@ -171,7 +161,7 @@ MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
 #undef cb
 
 struct ReturnOpLowering : public ConversionPattern {
-    ReturnOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+    ReturnOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
             : ConversionPattern(jit::ReturnOp::getOperationName(), 1, ctx),
               m_launch_op{launch_op} {}
 
@@ -182,10 +172,10 @@ struct ReturnOpLowering : public ConversionPattern {
         auto loc = op->getLoc();
 
         //! remove the first gpu.terminator
-        m_launch_op->body().front().front().erase();
+        m_launch_op.body().front().front().erase();
 
         //! if (tid >= nr_tid) {return;} in the begin of the block
-        rewriter.setInsertionPointToStart(&(m_launch_op->body().front()));
+        rewriter.setInsertionPointToStart(&(m_launch_op.body().front()));
         Block* cond_block = rewriter.getInsertionBlock();
         Block::iterator op_position = rewriter.getInsertionPoint();
         Block* remaining_ops_block =
@@ -195,7 +185,7 @@ struct ReturnOpLowering : public ConversionPattern {
         auto index = get_tid(rewriter, loc);
         auto comparison = rewriter.create<mlir::CmpIOp>(
                 loc, CmpIPredicate::sge, index,
-                m_launch_op->getParentOfType<mlir::FuncOp>()
+                m_launch_op.getParentOfType<mlir::FuncOp>()
                         .getArguments()
                         .back());
 
@@ -216,11 +206,31 @@ struct ReturnOpLowering : public ConversionPattern {
     }
 
 private:
-    gpu::LaunchOp* m_launch_op;
+    gpu::LaunchOp& m_launch_op;
+};
+
+struct ConstantScalarOpLowering
+        : public OpRewritePattern<jit::ConstantScalarOp> {
+    ConstantScalarOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
+            : OpRewritePattern<jit::ConstantScalarOp>(ctx),
+              m_launch_op{launch_op} {}
+
+    LogicalResult matchAndRewrite(jit::ConstantScalarOp op,
+                                  PatternRewriter& rewriter) const final {
+        ConstantScalarOpAdaptor constant_scalar_adaptor(op);
+        rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
+
+        rewriter.replaceOpWithNewOp<mlir::ConstantOp>(
+                op, constant_scalar_adaptor.value());
+        return success();
+    }
+
+private:
+    gpu::LaunchOp& m_launch_op;
 };
 
 struct AssignOpLowering : public ConversionPattern {
-    AssignOpLowering(MLIRContext* ctx, gpu::LaunchOp* launch_op)
+    AssignOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
             : ConversionPattern(jit::AssignOp::getOperationName(), 2, ctx),
               m_launch_op{launch_op} {}
 
@@ -230,12 +240,12 @@ struct AssignOpLowering : public ConversionPattern {
         auto loc = op->getLoc();
 
         AssignOpAdaptor assign_adaptor(operands);
-        rewriter.setInsertionPointToEnd(&(m_launch_op->body().front()));
+        rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
         auto index = get_tid(rewriter, loc);
 
         auto loaded_lhs =
-                get_operand(rewriter, loc, assign_adaptor.lhs(), index);
+                get_operand<LoadOp>(rewriter, loc, assign_adaptor.lhs(), index);
         rewriter.create<StoreOp>(loc, loaded_lhs, assign_adaptor.rhs(), index);
 
         rewriter.eraseOp(op);
@@ -243,7 +253,7 @@ struct AssignOpLowering : public ConversionPattern {
     }
 
 private:
-    gpu::LaunchOp* m_launch_op;
+    gpu::LaunchOp& m_launch_op;
 };
 
 class MgbToGpuLoweringPass
@@ -271,7 +281,8 @@ public:
                                 cb) MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
                                 MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
                                         ReturnOpLowering,
-                        AssignOpLowering>(&getContext(), &launch_op);
+                        ConstantScalarOpLowering, AssignOpLowering>(
+                &getContext(), launch_op);
 #undef cb
 
         if (failed(applyPartialConversion(func_op, target, patterns))) {
