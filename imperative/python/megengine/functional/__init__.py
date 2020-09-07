@@ -7,7 +7,6 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=redefined-builtin
-from . import distributed
 from .elemwise import *
 from .graph import add_update
 from .loss import (
@@ -26,6 +25,8 @@ from .nn import *
 from .quantized import conv_bias_activation
 from .tensor import *
 from .utils import accuracy, copy, zero_grad
+
+from . import distributed  # isort:skip
 
 # delete namespace
 # pylint: disable=undefined-variable

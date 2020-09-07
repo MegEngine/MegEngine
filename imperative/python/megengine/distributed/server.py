@@ -16,25 +16,7 @@ from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
 
 from ..core._imperative_rt.utils import create_mm_server
-from .util import get_free_ports
-
-
-class Future:
-    def __init__(self, ack=True):
-        self.ready = threading.Event()
-        self.ack = threading.Event() if ack else None
-
-    def set(self, value):
-        self.value = value
-        self.ready.set()
-        if self.ack:
-            self.ack.wait()
-
-    def get(self):
-        self.ready.wait()
-        if self.ack:
-            self.ack.set()
-        return self.value
+from .util import Future, get_free_ports
 
 
 class Methods:
