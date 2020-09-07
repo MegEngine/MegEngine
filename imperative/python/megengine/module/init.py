@@ -12,6 +12,8 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 
+from ..functional import full
+from ..random import gaussian, uniform
 from ..tensor import Tensor
 
 
@@ -21,7 +23,7 @@ def fill_(tensor: Tensor, val: Union[float, int]) -> None:
     :param tensor: An n-dimentional tensor to be initialized
     :param val: The value to be filled throughout the tensor
     """
-    tensor.set_value(np.full(tensor.shape, val, tensor.dtype))
+    tensor.set_value(full(shape=tensor.shape, value=val, dtype=tensor.dtype))
 
 
 def zeros_(tensor: Tensor) -> None:
@@ -48,7 +50,7 @@ def uniform_(tensor: Tensor, a: float = 0.0, b: float = 1.0) -> None:
     :param a: Lower bound of the sampling interval
     :param b: Upper bound of the sampling interval
     """
-    tensor.set_value(np.random.uniform(a, b, tensor.shape).astype(tensor.dtype))
+    tensor.set_value(uniform(tensor.shape, low=a, high=b).astype(tensor.dtype))
 
 
 def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
@@ -59,7 +61,7 @@ def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
     :param mean: The mean of the normal distribution
     :param std: The standard deviation of the normal distribution
     """
-    tensor.set_value(np.random.normal(mean, std, tensor.shape).astype(np.float32))
+    tensor.set_value(gaussian(tensor.shape, mean=mean, std=std).astype(tensor.dtype))
 
 
 def calculate_gain(
