@@ -29,6 +29,7 @@ class GradManager:
 
     def register_after_backward_callback(self, callback):
         self._after_backward_callback.append(callback)
+        return self
 
     def backward(self, ys, dys=None):
         global backwarding_grad_manager

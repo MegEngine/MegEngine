@@ -9,6 +9,7 @@
 import numpy as np
 
 import megengine
+import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.module import Module
@@ -27,14 +28,15 @@ class Simple(Module):
 def test_ai():
     net = Simple()
 
+    gm = ad.GradManager().register(net.parameters())
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
 
     dshape = (10, 10)
     data = tensor(np.ones(dshape).astype(np.float32))
-    with optim.record():
+    with gm.record():
         loss = net(data).sum()
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
     np.testing.assert_almost_equal(
         net.a.numpy(), np.array([1.0 - dshape[0]]).astype(np.float32)

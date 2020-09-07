@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import megengine
+import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.module import BatchNorm2d
@@ -24,13 +25,14 @@ def test_frozen_bn():
     saved_wt = m.weight.numpy()
     saved_bias = m.bias.numpy()
 
+    gm = ad.GradManager().register(m.parameters())
     optim = optimizer.SGD(m.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with optim.record():
+    with gm.record():
         loss = m(data).mean()
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
 
     np.testing.assert_equal(m.running_var.numpy(), saved_var)
@@ -44,13 +46,14 @@ def test_bn_no_track_stat():
     nchannel = 3
     m = BatchNorm2d(nchannel, track_running_stats=False)
 
+    gm = ad.GradManager().register(m.parameters())
     optim = optimizer.SGD(m.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with optim.record():
+    with gm.record():
         loss = m(data).sum()
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
 
 
@@ -65,13 +68,14 @@ def test_bn_no_track_stat2():
     saved_mean = m.running_mean.numpy()
     assert saved_mean is not None
 
+    gm = ad.GradManager().register(m.parameters())
     optim = optimizer.SGD(m.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with optim.record():
+    with gm.record():
         loss = m(data).sum()
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
 
     np.testing.assert_equal(m.running_var.numpy(), saved_var)

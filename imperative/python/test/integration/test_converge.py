@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import Tensor
 from megengine.module import Linear, Module
@@ -76,12 +77,13 @@ def test_training_converge():
     opt = SGD(
         net.parameters(requires_grad=True), lr=0.01, momentum=0.9, weight_decay=5e-4
     )
+    gm = ad.GradManager().register(net.parameters())
 
     def train(data, label):
-        with opt.record():
+        with gm.record():
             pred = net(data)
             loss = F.cross_entropy_with_softmax(pred, label)
-            opt.backward(loss)
+            gm.backward(loss)
         return loss
 
     def infer(data):
@@ -93,7 +95,7 @@ def test_training_converge():
     for data, label in itertools.islice(train_dataset, 2000):
         data = Tensor(data, dtype=np.float32)
         label = Tensor(label, dtype=np.int32)
-        opt.zero_grad()
+        opt.clear_grad()
         loss = train(data, label)
         opt.step()
         losses.append(loss.numpy())

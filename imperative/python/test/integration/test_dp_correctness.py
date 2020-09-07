@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.autodiff as ad
 import megengine.distributed as dist
 import megengine.functional as F
 from megengine.device import get_default_device, set_default_device
@@ -94,11 +95,13 @@ class MnistNet(Module):
         return x
 
 
-def train(data, label, net, opt):
-    with opt.record():
+def train(data, label, net, opt, gm):
+    opt.clear_grad()
+    with gm.record():
         pred = net(data)
         loss = F.cross_entropy_with_softmax(pred, label)
-        opt.backward(loss)
+        gm.backward(loss)
+    opt.step()
     return loss
 
 
@@ -111,7 +114,7 @@ def update_model(model_path):
 
     .. code-block:: python
 
-        from test_correctness import update_model
+        from test_dp_correctness import update_model
         update_model('mnist_model_with_test.mge') # for gpu
         update_model('mnist_model_with_test_cpu.mge') # for cpu
 
@@ -121,6 +124,11 @@ def update_model(model_path):
     net.load_state_dict(checkpoint["net_init"])
     lr = checkpoint["sgd_lr"]
     opt = SGD(net.parameters(), lr=lr)
+
+    gm = ad.GradManager()
+    gm.register(
+        net.parameters(), callbacks=[dist.make_allreduce_cb("MEAN", dist.WORLD)]
+    )
 
     data = Tensor(checkpoint["data"], dtype=np.float32)
     label = Tensor(checkpoint["label"], dtype=np.int32)
@@ -158,24 +166,23 @@ def run_test(
 
     def worker(rank, max_err):
         dist.init_process_group("localhost", port, p_num, rank, rank)
-        set_default_device(device="gpu{}".format(dist.get_rank()))
         net = MnistNet(has_bn=True)
         net.load_state_dict(checkpoint["net_init"])
         lr = checkpoint["sgd_lr"]
-        opt = SGD(net.parameters(), reduce_method="mean", lr=lr)
+        opt = SGD(net.parameters(), lr=lr)
+
+        gm = ad.GradManager()
+        gm.register(
+            net.parameters(), callbacks=[dist.make_allreduce_cb("MEAN", dist.WORLD)]
+        )
 
         # use same data and label for all gpu's
         # such that the result does not depend on number of gpu
         data_train = Tensor(data)
         label_train = Tensor(label)
 
-        train_func = train
+        loss = train(data_train, label_train, net, opt, gm)
 
-        opt.zero_grad()
-        loss = train_func(data_train, label_train, net=net, opt=opt)
-        opt.step()
-
-        print("{} loss {}".format(get_default_device(), loss.numpy()[0]))
         assertTensorClose(loss.numpy(), checkpoint["loss"], max_err=max_err)
 
         if dist.get_rank():

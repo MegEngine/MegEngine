@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import jit
 from megengine.core._trace_option import set_tensor_shape
@@ -89,11 +90,11 @@ class MnistNet(Module):
         return x
 
 
-def train(data, label, net, opt):
-    with opt.record():
+def train(data, label, net, opt, gm):
+    with gm.record():
         pred = net(data)
         loss = F.cross_entropy_with_softmax(pred, label)
-        opt.backward(loss)
+        gm.backward(loss)
     return loss
 
 
@@ -116,12 +117,13 @@ def update_model(model_path):
     net.load_state_dict(checkpoint["net_init"])
     lr = checkpoint["sgd_lr"]
     opt = SGD(net.parameters(), lr=lr)
+    gm = ad.GradManager().register(net.parameters())
 
     data = Tensor(checkpoint["data"], dtype=np.float32)
     label = Tensor(checkpoint["label"], dtype=np.int32)
 
-    opt.zero_grad()
-    loss = train(data, label, net=net, opt=opt)
+    opt.clear_grad()
+    loss = train(data, label, net, opt, gm)
     opt.step()
 
     xpu_name = get_xpu_name()
@@ -150,6 +152,7 @@ def run_train(
     net.load_state_dict(checkpoint["net_init"])
     lr = checkpoint["sgd_lr"]
     opt = SGD(net.parameters(), lr=lr)
+    gm = ad.GradManager().register(net.parameters())
 
     data = Tensor(checkpoint["data"], dtype=np.float32)
     label = Tensor(checkpoint["label"], dtype=np.int32)
@@ -165,8 +168,8 @@ def run_train(
             sublinear_memory_config=sublinear_memory_config,
         )
 
-    opt.zero_grad()
-    loss = train_func(data, label, net=net, opt=opt)
+    opt.clear_grad()
+    loss = train_func(data, label, net, opt, gm)
     opt.step()
 
     assertTensorClose(loss.numpy(), checkpoint["loss"], max_err=max_err)

@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Union
 
-from ..tensor_nn import Buffer, Parameter
+from ..tensor_nn import Parameter
 from .optimizer import Optimizer
 
 
@@ -52,7 +52,7 @@ class SGD(Optimizer):
         momentum = param_group["momentum"]
 
         for param in param_group["params"]:
-            if not param.requires_grad:
+            if not param.requires_grad or "grad" not in param.__dict__:
                 continue
 
             grad = param.grad

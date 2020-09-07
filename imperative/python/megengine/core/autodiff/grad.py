@@ -177,6 +177,13 @@ class Grad:
         dys = aslist(dys)
         assert len(ys) == len(dys)
 
+        ids = [i for i, y in enumerate(ys) if self in y._extra_data.keys()]
+        if len(ids) == 0:
+            return
+
+        ys = [y for i, y in enumerate(ys) if i in ids]
+        dys = [dy for i, dy in enumerate(dys) if i in ids]
+
         # ys is changed to a list of VariableNode which contains more information
         # such as OpNode, callback, etc.
         ys = [i._extra_data[self].node for i in ys]

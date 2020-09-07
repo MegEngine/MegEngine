@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 import megengine
+import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.module import Module
@@ -31,12 +32,13 @@ def test_hello_world():
     net = Simple()
 
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
+    gm = ad.GradManager().register(net.parameters())
 
     data = tensor([2.34])
-    with optim.record():
+    with gm.record():
         loss = net(data)
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
     np.testing.assert_almost_equal(
         net.a.numpy(), np.array([1.23 - 2.34]).astype(np.float32)

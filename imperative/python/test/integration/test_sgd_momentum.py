@@ -9,6 +9,7 @@
 import numpy as np
 
 import megengine
+import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.jit import trace
@@ -29,14 +30,15 @@ def test_sgd_momentum():
     net = Simple()
 
     optim = optimizer.SGD(net.parameters(), lr=1.0, momentum=0.9)
-    optim.zero_grad()
+    optim.clear_grad()
+    gm = ad.GradManager().register(net.parameters())
 
     data = tensor([2.34])
 
     # do a step of train
-    with optim.record():
+    with gm.record():
         loss = net(data)
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
 
     np.testing.assert_almost_equal(optim._state[net.a]["momentum_buffer"].numpy(), 2.34)
@@ -48,10 +50,10 @@ def test_sgd_momentum():
     np.testing.assert_almost_equal(optim._state[net.a]["momentum_buffer"].numpy(), 2.34)
 
     # do a step of train
-    optim.zero_grad()
-    with optim.record():
+    optim.clear_grad()
+    with gm.record():
         loss = net(data)
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
 
     np.testing.assert_almost_equal(loss.numpy(), 2.34 * (1.23 - 2.34), 5)

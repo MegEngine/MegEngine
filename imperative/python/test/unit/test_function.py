@@ -9,6 +9,7 @@ import copy
 
 import numpy as np
 
+import megengine.autodiff as ad
 import megengine.functional as F
 import megengine.optimizer as optimizer
 from megengine import Parameter
@@ -41,13 +42,14 @@ def test_single_input():
             return x
 
     net = Simple(av)
-    optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    gm = ad.GradManager().register(net.parameters())
+    opt = optimizer.SGD(net.parameters(), lr=1.0)
 
-    with optim.record():
+    opt.clear_grad()
+    with gm.record():
         loss = net()
-        optim.backward(loss.sum())
-    optim.step()
+        gm.backward(loss.sum())
+    opt.step()
 
     np.testing.assert_almost_equal(loss.numpy(), (av * 10))
     np.testing.assert_almost_equal(net.a.numpy(), (av - 10))
@@ -79,13 +81,14 @@ def test_multi_input():
             return x
 
     net = Simple(av, bv)
-    optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    gm = ad.GradManager().register(net.parameters())
+    opt = optimizer.SGD(net.parameters(), lr=1.0)
 
-    with optim.record():
+    opt.clear_grad()
+    with gm.record():
         loss = net()
-        optim.backward(loss.sum())
-    optim.step()
+        gm.backward(loss.sum())
+    opt.step()
 
     np.testing.assert_almost_equal(loss.numpy(), (av * bv))
     np.testing.assert_almost_equal(net.a.numpy(), (av - 2 * bv))
@@ -118,13 +121,14 @@ def test_multi_output():
             return x + y
 
     net = Simple(av, bv)
-    optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    gm = ad.GradManager().register(net.parameters())
+    opt = optimizer.SGD(net.parameters(), lr=1.0)
 
-    with optim.record():
+    opt.clear_grad()
+    with gm.record():
         loss = net()
-        optim.backward(loss.sum())
-    optim.step()
+        gm.backward(loss.sum())
+    opt.step()
 
     np.testing.assert_almost_equal(loss.numpy(), (av * bv + av + bv), decimal=6)
     np.testing.assert_almost_equal(net.a.numpy(), (av - bv - 1), decimal=6)

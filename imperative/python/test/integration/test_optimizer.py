@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
+import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import Parameter, optimizer
 from megengine.jit import trace
@@ -43,6 +44,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
     net = Simple()
     opt = getattr(optimizer, opt_str)(net.parameters(), **test_case)
     check_func = check_class(net, **test_case)
+    gm = ad.GradManager().register(net.parameters())
 
     step = 0
     data_shape = (2, 28)
@@ -54,11 +56,11 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
             check_func.lr += 0.01
         data = tensor(np.random.random(data_shape).astype(np.float32))
 
-        opt.zero_grad()
-        with opt.record():
+        opt.clear_grad()
+        with gm.record():
             pred = net(data)
             loss = pred.sum()
-            opt.backward(loss)
+            gm.backward(loss)
 
         ori_params = TensorDict()
         for param in net.parameters():

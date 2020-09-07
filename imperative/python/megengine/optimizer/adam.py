@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Tuple, Union
 
-from ..tensor_nn import Buffer, Parameter
+from ..tensor_nn import Parameter
 from .optimizer import Optimizer
 
 
@@ -59,17 +59,8 @@ class Adam(Optimizer):
 
         for param in param_group["params"]:
 
-            if param.__wrapped__ in self._grad_skip:
-                self._grad_skip.remove(param.__wrapped__)
+            if not param.requires_grad or "grad" not in param.__dict__:
                 continue
-
-            if not param.requires_grad:
-                continue
-
-            if not isinstance(param.grad, Buffer):
-                raise TypeError(
-                    "grad must be a Buffer, maybe you forget to call backward()?"
-                )
 
             grad = param.grad
             if weight_decay != 0.0:
@@ -91,5 +82,3 @@ class Adam(Optimizer):
             # not inplace change, need to update underlying tensor handler in state
             states["exp_avg"]._reset(exp_avg)
             states["exp_avg_sq"]._reset(exp_avg_sq)
-
-        assert len(self._grad_skip) == 0

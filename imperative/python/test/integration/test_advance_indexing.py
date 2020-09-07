@@ -9,6 +9,7 @@
 import numpy as np
 
 import megengine
+import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.module import Module
@@ -37,8 +38,9 @@ class Simple2(Module):
 def test_advance_indexing():
     net = Simple()
 
+    gm = ad.GradManager().register(net.parameters())
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
 
     dshape = (10, 10)
     raw_data = np.arange(100).reshape(dshape).astype(np.float32)
@@ -46,9 +48,9 @@ def test_advance_indexing():
     data = tensor(raw_data)
     mask = tensor(raw_mask)
     answer = 1.0 - raw_data[raw_mask].sum()
-    with optim.record():
+    with gm.record():
         loss = net(data, mask).sum()
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
     np.testing.assert_almost_equal(net.a.numpy(), np.array([answer]).astype(np.float32))
 
@@ -56,15 +58,16 @@ def test_advance_indexing():
 def test_advance_indexing_with_subtensor():
     net = Simple2()
 
+    gm = ad.GradManager().register(net.parameters())
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    optim.zero_grad()
+    optim.clear_grad()
 
     dshape = (2, 3, 4, 3, 4, 2)
     raw_data = np.arange(576).reshape(dshape).astype(np.float32)
     data = tensor(raw_data)
     answer = 1.0 - raw_data[1, ..., :, 0:4:2, 0:2].sum()
-    with optim.record():
+    with gm.record():
         loss = net(data).sum()
-        optim.backward(loss)
+        gm.backward(loss)
     optim.step()
     np.testing.assert_almost_equal(net.a.numpy(), np.array([answer]).astype(np.float32))

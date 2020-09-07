@@ -11,7 +11,7 @@ from typing import Iterable, Union
 import numpy as np
 
 from ..functional import sqrt
-from ..tensor_nn import Buffer, Parameter
+from ..tensor_nn import Parameter
 from .optimizer import Optimizer
 
 
@@ -63,16 +63,7 @@ class Adadelta(Optimizer):
 
         for param in param_group["params"]:
 
-            if param.__wrapped__ in self._grad_skip:
-                self._grad_skip.remove(param.__wrapped__)
-                continue
-
-            if not isinstance(param.grad, Buffer):
-                raise TypeError(
-                    "grad must be a Buffer, maybe you forget to call backward()?"
-                )
-
-            if not param.requires_grad:
+            if not param.requires_grad or "grad" not in param.__dict__:
                 continue
 
             states = self._state[param]
@@ -91,5 +82,3 @@ class Adadelta(Optimizer):
             acc_delta = rho * acc_delta + (1 - rho) * delta ** 2
             states["square_avg"]._reset(square_avg)
             states["acc_delta"]._reset(acc_delta)
-
-        assert len(self._grad_skip) == 0

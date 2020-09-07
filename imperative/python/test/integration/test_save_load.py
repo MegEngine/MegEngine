@@ -1,6 +1,7 @@
 import numpy as np
 
 import megengine as mge
+import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.core.tensor.raw_tensor import RawTensor
@@ -21,13 +22,14 @@ def test_save_load():
     net = Simple()
 
     optim = optimizer.SGD(net.parameters(), lr=1.0, momentum=0.9)
-    optim.zero_grad()
+    optim.clear_grad()
+    gm = ad.GradManager().register(net.parameters())
 
     data = tensor([2.34])
 
-    with optim.record():
+    with gm.record():
         loss = net(data)
-        optim.backward(loss)
+        gm.backward(loss)
 
     optim.step()
 
@@ -53,9 +55,9 @@ def test_save_load():
     optim.load_state_dict(checkpoint["opt_state"])
     print("load done")
 
-    with optim.record():
+    with gm.record():
         loss = net([1.23])
-        optim.backward(loss)
+        gm.backward(loss)
 
     optim.step()
     # Restore device
