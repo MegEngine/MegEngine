@@ -70,12 +70,12 @@
     If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
 
     ```
-    ALL_PYTHON=35m ./scripts/whl/manylinux2010/build_wheel.sh
+    ALL_PYTHON="36m" ./scripts/whl/manylinux2010/build_wheel.sh
     ```
     If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
 
     ```
-    BUILD_WHL_CPU_ONLY=ON ALL_PYTHON=35m ./scripts/whl/manylinux2010/build_wheel.sh
+    BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="36m" ./scripts/whl/manylinux2010/build_wheel.sh
     ```
 
 ## build for macos
@@ -85,7 +85,7 @@
     If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
 
     ```
-    ALL_PYTHON=3.5.9 ./scripts/whl/macos/macos_build_whl.sh
+    ALL_PYTHON="3.7.7" ./scripts/whl/macos/macos_build_whl.sh
     ```
 ## build for windows
     ```
@@ -94,10 +94,10 @@
     If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
 
     ```
-    ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
+    ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh
     ```
     If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
 
     ```
-    BUILD_WHL_CPU_ONLY='ON' ALL_PYTHON=3.5.4 ./scripts/whl/windows/windows_build_whl.sh
+    BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh
     ```

@@ -100,4 +100,4 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     fi
 fi
 
-docker run -it --rm $TMPFS_ARGS -e UID=${USERID} -e LOCAL_VERSION=${LOCAL_VERSION} -e BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY} -e ALL_PYTHON=${ALL_PYTHON} -v ${CUDA_ROOT_DIR}:/usr/local/cuda -v ${CUDNN_ROOT_DIR}:/opt/cudnn -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt -v ${BASEDIR}:/home/code -v ${OUTPUTDIR}:/home/output:rw env_manylinux2010:latest /home/code/scripts/whl/manylinux2010/do_build.sh
+docker run -it --rm $TMPFS_ARGS -e UID=${USERID} -e LOCAL_VERSION=${LOCAL_VERSION} -e BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY} -e ALL_PYTHON="${ALL_PYTHON}" -v ${CUDA_ROOT_DIR}:/usr/local/cuda -v ${CUDNN_ROOT_DIR}:/opt/cudnn -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt -v ${BASEDIR}:/home/code -v ${OUTPUTDIR}:/home/output:rw env_manylinux2010:latest /home/code/scripts/whl/manylinux2010/do_build.sh
