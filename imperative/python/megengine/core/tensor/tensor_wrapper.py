@@ -211,7 +211,18 @@ def _expand_args(args):
 
 class ArrayMethodMixin(abc.ABC):
 
-    __array_priority__ = 233333
+    # enable tensor to be converted to numpy array
+    __array_priority__ = 1001
+
+    def __array__(self, dtype=None):
+        if dtype == None:
+            return self.numpy()
+        return self.numpy().astype(dtype)
+
+    def __array_wrap__(self, array):
+        return TensorWrapper(
+            as_raw_tensor(array, dtype=array.dtype, device=self.device)
+        )
 
     @abc.abstractmethod
     def _reset(self, other):

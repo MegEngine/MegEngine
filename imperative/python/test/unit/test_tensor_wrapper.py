@@ -50,3 +50,13 @@ def test_set_subtensor():
     np.testing.assert_almost_equal(x.numpy(), [3, 1, 2], decimal=6)
     x[1:3] = [4, 5]
     np.testing.assert_almost_equal(x.numpy(), [3, 4, 5], decimal=6)
+
+
+def test_computing_with_numpy_array():
+    x = np.array([1, 2, 3], dtype=np.int32)
+    xx = TensorWrapper(x, device="cpu0")
+    y = np.array([1, 0, 3], dtype=np.int32)
+    assert np.add(xx, y).device == xx.device
+    np.testing.assert_equal(np.add(xx, y).numpy(), np.add(x, y))
+    np.testing.assert_equal(np.equal(xx, y).numpy(), np.equal(x, y))
+    np.testing.assert_equal(np.equal(xx, xx).numpy(), np.equal(x, x))
