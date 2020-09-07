@@ -794,7 +794,7 @@ void AlgoChooser<megdnn::ConvBias>::ExeContext::
             param.opr_param.format =
                     megdnn::ConvBias::Param::Format::NCHW44_WINOGRAD;
         } else if (param.opr_param.format ==
-                   megdnn::ConvBias::Param::Format::NCHW) {
+                   megdnn::ConvBias::Param::Format::NCHW88) {
             param.opr_param.format =
                     megdnn::ConvBias::Param::Format::NCHW88_WINOGRAD;
         }
