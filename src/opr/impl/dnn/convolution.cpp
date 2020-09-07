@@ -522,7 +522,7 @@ class AlgoChooser {
             size_t result;
             if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
                 auto&& opr = _(m_megdnn_opr);
-                auto prep = construct_fake_preprocess_filter();
+                auto prep = this->construct_fake_preprocess_filter();
                 PreprocessFilter<Opr>* prep_ptr =
                         prep.valid() ? &prep.val() : nullptr;
                 result = std::max(
