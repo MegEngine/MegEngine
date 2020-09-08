@@ -570,10 +570,10 @@ void ParamFusePass::apply(OptState &state) const {
                     *var->owner_graph(), hv, var_namer.name(var));
         } else {
             if (is_default_format) {
-                new_var = opr::SharedDeviceTensor::make(
+                new_var = opr::SharedDeviceTensor::make_const(
                         *var->owner_graph(), inferred_val, var_namer.name(var));
             } else {
-                new_var = opr::SharedDeviceTensorWithFormat::make(
+                new_var = opr::SharedDeviceTensorWithFormat::make_const(
                         *var->owner_graph(), inferred_val, var_namer.name(var));
             }
         }

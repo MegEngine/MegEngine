@@ -75,19 +75,22 @@ class DeviceTensorHolder: public HostIONodeBase {
  */
 MGB_DEFINE_CLS_WITH_SUPER(SharedDeviceTensorBase, DeviceTensorHolder) // {
     std::shared_ptr<DeviceTensorND> m_dev_data;
+    DeviceTensorND m_static_infer;
+    bool m_const_value;
 
     const TensorShape& get_output_shape() override;
 
-    bool fill_in_static_infer(DeviceTensorND* dest) override {
-        MGB_MARK_USED_VAR(dest);
-        return false;
-    }
+    bool fill_in_static_infer(DeviceTensorND* dest) override;
 
     void init_output_comp_node() override;
 
     public:
+        //! const_value marks whether the device value of this operator should
+        //! be treated as constant during graph execution. Should be false in
+        //! most cases.
         SharedDeviceTensorBase(ComputingGraph &graph,
                 const std::shared_ptr<DeviceTensorND> &dev_data,
+                bool const_value,
                 const OperatorNodeConfig &config);
 
         const DeviceTensorND& get_dev_tensor() const override {
@@ -97,6 +100,8 @@ MGB_DEFINE_CLS_WITH_SUPER(SharedDeviceTensorBase, DeviceTensorHolder) // {
         const std::shared_ptr<DeviceTensorND>& dev_data() const {
             return m_dev_data;
         }
+
+        bool const_value() const { return m_const_value; }
 };
 
 /*!
@@ -104,6 +109,7 @@ MGB_DEFINE_CLS_WITH_SUPER(SharedDeviceTensorBase, DeviceTensorHolder) // {
  * device tensors
  *
  * This opr is used to speed up inference by packing params together.
+ * This operator assumes the device tensors are constant.
  */
 MGB_DEFINE_CLS_WITH_SUPER(MultipleDeviceTensorHolderBase,
                           cg::OperatorNodeBase)  // {
@@ -125,6 +131,8 @@ private:
     void init_output_comp_node() override;
     void init_output_static_infer_desc() override;
     NodeProp* do_make_node_prop() const override;
+
+    SmallVector<DeviceTensorND> m_host_values;
 };
 
 } // namespace intl
@@ -249,16 +257,43 @@ MGB_DEFINE_OPR_CLASS(SharedDeviceTensor, intl::SharedDeviceTensorBase) // {
     public:
         using Super::Super;
 
-        static SymbolVar make(ComputingGraph &graph,
-                const std::shared_ptr<DeviceTensorND> &dev_data,
-                const OperatorNodeConfig &config = {});
+        static SymbolVar make(ComputingGraph& graph,
+                              const std::shared_ptr<DeviceTensorND>& dev_data,
+                              bool const_value,
+                              const OperatorNodeConfig& config);
+
+        static SymbolVar make(ComputingGraph& graph,
+                              const std::shared_ptr<DeviceTensorND>& dev_data,
+                              const OperatorNodeConfig& config = {}) {
+            return make(graph, dev_data, false, config);
+        }
+
+        static SymbolVar make_const(
+                ComputingGraph& graph,
+                const std::shared_ptr<DeviceTensorND>& dev_data,
+                const OperatorNodeConfig& config = {}) {
+            return make(graph, dev_data, true, config);
+        }
 
         /*!
          * \brief make a SharedDeviceTensor by first coping from host to device
+         *
+         * See SharedDeviceTensorBase::SharedDeviceTensorBase for const_value.
          */
-        static SymbolVar make(ComputingGraph &graph,
-                const HostTensorND &value,
-                const OperatorNodeConfig &config = {});
+        static SymbolVar make(ComputingGraph& graph, const HostTensorND& value,
+                              bool const_value,
+                              const OperatorNodeConfig& config);
+
+        static SymbolVar make(ComputingGraph& graph, const HostTensorND& value,
+                              const OperatorNodeConfig& config = {}) {
+            return make(graph, value, false, config);
+        }
+
+        static SymbolVar make_const(ComputingGraph& graph,
+                                    const HostTensorND& value,
+                                    const OperatorNodeConfig& config = {}) {
+            return make(graph, value, false, config);
+        }
 };
 
 /*!
@@ -276,7 +311,19 @@ public:
 
     static SymbolVar make(ComputingGraph& graph,
                           const std::shared_ptr<DeviceTensorND>& dev_data,
-                          const OperatorNodeConfig& config = {});
+                          bool const_value, const OperatorNodeConfig& config);
+
+    static SymbolVar make(ComputingGraph& graph,
+                          const std::shared_ptr<DeviceTensorND>& dev_data,
+                          const OperatorNodeConfig& config = {}) {
+        return make(graph, dev_data, false, config);
+    }
+
+    static SymbolVar make_const(ComputingGraph& graph,
+                                const std::shared_ptr<DeviceTensorND>& dev_data,
+                                const OperatorNodeConfig& config = {}) {
+        return make(graph, dev_data, true, config);
+    }
 };
 
 /*!
@@ -297,6 +344,15 @@ MGB_DEFINE_OPR_CLASS(
         static SymbolVar make(ComputingGraph &graph,
                 const std::shared_ptr<DeviceTensorND> &dev_data,
                 const OperatorNodeConfig &config = {});
+
+        //! adapter for io.sereg.h: opr_shallow_copy_shared_device_tensor
+        static SymbolVar make(ComputingGraph& graph,
+                              const std::shared_ptr<DeviceTensorND>& dev_data,
+                              bool const_value,
+                              const OperatorNodeConfig& config) {
+            mgb_assert(!const_value);
+            return make(graph, dev_data, false, config);
+        }
 };
 
 /*!

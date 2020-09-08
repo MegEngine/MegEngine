@@ -281,11 +281,11 @@ void Host2DeviceCopy::record_execute_deps(ExecDependencyArray& deps) {
 /* ===================== SharedDeviceTensor related ===================== */
 
 intl::SharedDeviceTensorBase::SharedDeviceTensorBase(
-        ComputingGraph &graph, const std::shared_ptr<DeviceTensorND> &dev_data,
-        const OperatorNodeConfig &config):
-    Super{&graph, config, "shared", {}},
-    m_dev_data{dev_data}
-{
+        ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
+        bool const_value, const OperatorNodeConfig& config)
+        : Super{&graph, config, "shared", {}},
+          m_dev_data{dev_data},
+          m_const_value(const_value) {
     if (config.has_comp_node_set()) {
         mgb_assert(config.get_single_comp_node() == dev_data->comp_node());
     }
@@ -307,26 +307,42 @@ void intl::SharedDeviceTensorBase::init_output_comp_node() {
     comp_node(m_dev_data->comp_node());
 }
 
+bool intl::SharedDeviceTensorBase::fill_in_static_infer(DeviceTensorND* dest) {
+    if (m_const_value) {
+        if (dest) {
+            if (m_static_infer.empty()) {
+                m_static_infer.comp_node(CompNode::default_cpu())
+                        .copy_from(*m_dev_data);
+            }
+            *dest = m_static_infer;
+        }
+        return true;
+    }
+    return false;
+}
+
 cg::static_infer::SourceType SharedDeviceTensor::static_infer_src_type() const {
     return cg::static_infer::SourceType::CONSTANT;
 }
 
 SymbolVar SharedDeviceTensor::make(ComputingGraph &graph,
         const std::shared_ptr<DeviceTensorND> &dev_data,
+        bool const_value,
         const OperatorNodeConfig &config) {
     return graph.insert_opr(std::make_unique<SharedDeviceTensor>(
-                graph, dev_data, config))->output(0);
+                graph, dev_data, const_value, config))->output(0);
 }
 
 SymbolVar SharedDeviceTensor::make(ComputingGraph &graph,
         const HostTensorND &value,
+        bool const_value,
         const OperatorNodeConfig &config) {
     auto cn = value.comp_node();
     if (config.has_comp_node_set())
         cn = config.get_single_comp_node();
     auto dev_v = std::make_shared<DeviceTensorND>();
     dev_v->comp_node(cn).copy_from(value).sync();
-    return make(graph, dev_v, config);
+    return make(graph, dev_v, const_value, config);
 }
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SharedDeviceTensor);
@@ -342,7 +358,7 @@ SymbolVar VolatileSharedDeviceTensor::make(ComputingGraph &graph,
         const std::shared_ptr<DeviceTensorND> &dev_data,
         const OperatorNodeConfig &config) {
     return graph.insert_opr(std::make_unique<VolatileSharedDeviceTensor>(
-                graph, dev_data, config))->output(0);
+                graph, dev_data, false, config))->output(0);
 }
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(VolatileSharedDeviceTensor);
@@ -354,10 +370,10 @@ void SharedDeviceTensorWithFormat::init_output_format() {
 
 SymbolVar SharedDeviceTensorWithFormat::make(
         ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
-        const OperatorNodeConfig& config) {
+        bool const_value, const OperatorNodeConfig& config) {
     auto&& opr =
             graph.insert_opr(std::make_unique<SharedDeviceTensorWithFormat>(
-                                     graph, dev_data, config))
+                                     graph, dev_data, const_value, config))
                     ->cast_final_safe<SharedDeviceTensorWithFormat>();
     return opr.output(0);
 }
@@ -870,6 +886,24 @@ void intl::MultipleDeviceTensorHolderBase::init_output_static_infer_desc() {
         };
         mgr.register_shape_infer(output(i),
                                  {SourceType::CONSTANT, {}, infer_shp});
+
+        auto infer_val = [this, i](DeviceTensorND& dest, const InpVal&) {
+            if (m_host_values.empty()) {
+                m_host_values.resize(m_values.size());
+            }
+            if (m_host_values[i].empty()) {
+                m_host_values[i]
+                        .comp_node(CompNode::default_cpu())
+                        .copy_from(*m_values[i]);
+            }
+            if (!m_host_values[i].empty()) {
+                dest = m_host_values[i];
+                return true;
+            }
+            return false;
+        };
+        mgr.register_value_infer(output(i),
+                                 {SourceType::CONSTANT, {}, infer_val});
     }
 }
 

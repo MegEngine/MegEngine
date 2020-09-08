@@ -79,6 +79,10 @@ namespace serialization {
             HostTensorND val;
             val.copy_from(opr.get_dev_tensor()).sync();
             ctx.dump_tensor(opr.name(), val, Meth::VALUE_SHARED);
+            // Note that we don't persist opr.m_const_value, because it does not
+            // affect correctness, and SharedDeviceTensor will be bundled
+            // together as MultipleDeviceTensorHolder in optimize_for_inference
+            // before being dumped.
         }
 
         static cg::OperatorNodeBase* load(
@@ -280,9 +284,10 @@ namespace opr {
             const OperatorNodeConfig &config) {
         mgb_assert(inputs.empty());
         auto &&opr = opr_.cast_final_safe<Opr>();
-        return Opr::make(
-                *ctx.owner_graph(opr, inputs), opr.dev_data(), config).
-            node()->owner_opr();
+        return Opr::make(*ctx.owner_graph(opr, inputs), opr.dev_data(),
+                         opr.const_value(), config)
+                .node()
+                ->owner_opr();
     }
 
     cg::OperatorNodeBase* opr_shallow_copy_immutable_tensor(
