@@ -10,7 +10,7 @@
  */
 
 #include "megbrain/imperative/opr_utility.h"
-#include "./mgb_core_impl/graph/cg_impl.h"
+#include "./mgb_cg_impl.h"
 
 // FIXME; setup_config_cn is copied from src/opr/impl/utility.cpp
 namespace {
