@@ -28,7 +28,7 @@ class GradManager:
                 self._call_back_dict[id(p)].append(cb)
         return self
 
-    def register_after_backward_callback(self, callback):
+    def _register_after_backward_callback(self, callback):
         self._after_backward_callback.append(callback)
         return self
 
