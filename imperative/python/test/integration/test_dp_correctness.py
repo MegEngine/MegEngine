@@ -133,7 +133,7 @@ def update_model(model_path):
     data = Tensor(checkpoint["data"], dtype=np.float32)
     label = Tensor(checkpoint["label"], dtype=np.int32)
 
-    opt.zero_grad()
+    opt.clear_grad()
     loss = train(data, label, net=net, opt=opt)
     opt.step()
 

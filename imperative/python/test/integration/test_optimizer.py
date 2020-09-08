@@ -73,17 +73,18 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
     for symbolic in (False, True):
 
         @trace(symbolic=symbolic)
-        def train_func(data, *, opt=None):
-            opt.zero_grad()
-            with opt.record():
+        def train_func(data, *, opt=None, gm=None):
+            opt.clear_grad()
+            with gm.record():
                 pred = net(data)
                 loss = pred.sum()
-                opt.backward(loss)
+                gm.backward(loss)
             opt.step()
 
         # reset net and opt
         net = Simple()
         opt = getattr(optimizer, opt_str)(net.parameters(), **test_case)
+        gm = ad.GradManager().register(net.parameters())
         check_func = check_class(net, **test_case)
         step = 0
         for i in range(iter_num):
@@ -96,7 +97,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
             for param in net.parameters():
                 ori_params[param] = np.copy(param.numpy())
 
-            train_func(np.random.random(data_shape).astype(np.float32), opt=opt)
+            train_func(np.random.random(data_shape).astype(np.float32), opt=opt, gm=gm)
             step += 1
             check_func(ori_params, net.parameters(), step)
 

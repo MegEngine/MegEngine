@@ -17,6 +17,7 @@ import megengine.functional as F
 import megengine.module as M
 import megengine.optimizer as optim
 from megengine import tensor
+from megengine.autodiff import GradManager
 from megengine.jit import trace
 
 
@@ -61,17 +62,18 @@ class XORNet(M.Module):
 def test_xornet_trace_dump():
     net = XORNet()
     opt = optim.SGD(net.parameters(requires_grad=True), lr=0.01, momentum=0.9)
+    gm = GradManager().register(net.parameters(requires_grad=True))
     batch_size = 64
     train_dataset = minibatch_generator(batch_size)
     val_dataset = minibatch_generator(batch_size)
 
     @trace
     def train_fun(data, label):
-        with opt.record():
+        with gm.record():
             net.train()
             pred = net(data)
             loss = F.cross_entropy_with_softmax(pred, label)
-            opt.backward(loss)
+            gm.backward(loss)
         return pred, loss
 
     @trace
@@ -95,7 +97,7 @@ def test_xornet_trace_dump():
             break
         data = tensor(minibatch["data"])
         label = tensor(minibatch["label"])
-        opt.zero_grad()
+        opt.clear_grad()
         _, loss = train_fun(data, label)
         train_loss.append((step, loss.numpy()))
         if step % 50 == 0:
