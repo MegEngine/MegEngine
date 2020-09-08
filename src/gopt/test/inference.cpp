@@ -710,6 +710,33 @@ TEST(TestGoptInference, Float16IOFloat32Compute) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, Float16IOFloat32ComputeDeConv) {
+    constexpr size_t INP_H = 10, INP_W = 10;
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
+    };
+    graph->options().graph_opt_level = 0;
+
+    auto s0 = mkvar("s0", {5, 5, 3, 3}),
+         s1 = mkvar("s1", {1, 5, INP_H, INP_W});
+    auto y = opr::ConvolutionBackwardData::make(s0, s1, {}, {});
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_f32_comp();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    ASSERT_EQ(find_opr<opr::ConvolutionBackwardData>(y_opt).param().compute_mode,
+              opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
+    ASSERT_EQ(y_opt.dtype(), dtype::Float32());
+
+    HostTensorND host_y, host_y_opt;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-2);
+}
+
 TEST(TestGoptInference, Float16IOFloat32ComputeWarpPerspective) {
     constexpr size_t INP_H = 10, INP_W = 10, N = 2;
     HostTensorGenerator<> gen;
