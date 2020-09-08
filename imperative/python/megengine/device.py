@@ -70,7 +70,7 @@ def set_default_device(device: str = "xpux"):
         multi-threading parallelism at the operator level. For example,
         'multithread4' will compute with 4 threads. which implements
 
-        The default value is 'xpux' to specify any device available.
+        The default value is 'xpux' to specify any device available. The priority of using gpu is higher when both gpu and cpu are available.
 
         It can also be set by environmental variable `MGE_DEFAULT_DEVICE`.
     """

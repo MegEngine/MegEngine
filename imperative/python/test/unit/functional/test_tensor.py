@@ -322,6 +322,8 @@ def copy_test(dst, src):
     x = tensor(data, device=src)
     y = F.copy(x, dst)
     assert np.allclose(data, y.numpy())
+    z = x.to(dst)
+    assert np.allclose(data, z.numpy())
 
 
 @pytest.mark.skipif(
