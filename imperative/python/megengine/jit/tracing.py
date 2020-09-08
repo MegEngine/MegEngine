@@ -79,9 +79,7 @@ class trace:
     def __new__(cls, *args, **kwargs):
         if not args:
             return functools.partial(cls, **kwargs)
-        self = super().__new__(cls)
-        self.__init__(*args, **kwargs)
-        return self
+        return super().__new__(cls)
 
     def __init__(
         self,
