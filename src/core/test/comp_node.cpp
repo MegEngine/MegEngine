@@ -290,6 +290,12 @@ TEST(TestCompNodeCuda, Uid) {
     ASSERT_NE(cn00.get_uid(), cn1.get_uid());
 }
 
+TEST(TestCompNodeCuda, set_prealloc_config) {
+    CompNode::set_prealloc_config(
+        1024, 1024, 256 * 1024 * 1024,
+        4, CompNode::DeviceType::CUDA);
+}
+
 
 #if MGB_CAMBRICON
 TEST(TestCompNodeCambricon, MemNode) {

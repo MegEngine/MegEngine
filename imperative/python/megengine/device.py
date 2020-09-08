@@ -15,6 +15,7 @@ __all__ = [
     "get_device_count",
     "get_default_device",
     "set_default_device",
+    "set_prealloc_config",
 ]
 
 
@@ -33,7 +34,7 @@ def _str2device_type(type_str: str, allow_unspec: bool = True):
     elif type_str == "GPU" or type_str == "CUDA":
         return DeviceType.CUDA
     else:
-        assert allow_unspec and str == "XPU", "bad device type"
+        assert allow_unspec and str == "XPU", "device type can only be cpu, gpu or xpu"
         return DeviceType.UNSPEC
 
 
@@ -87,3 +88,27 @@ def get_default_device() -> str:
 
 
 set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))
+
+
+def set_prealloc_config(
+    alignment: int = 1,
+    min_req: int = 32 * 1024 * 1024,
+    max_overhead: int = 0,
+    growth_factor: float = 2.0,
+    device_type: str = "gpu",
+):
+    """specifies how to pre-allocate from raw device allocator
+
+    :param alignment: specifies the alignment in byte
+    :param min_req: min request size in byte
+    :param max_overhead: max overhead above required size in byte
+    :growth_factor: request size = growth_factor * current allocated size
+    :device_type: the device type
+
+    """
+    assert alignment > 0
+    assert min_req > 0
+    assert max_overhead >= 0
+    assert growth_factor >= 1
+    t = _str2device_type(device_type)
+    _set_prealloc_config(alignment, min_req, max_overhead, growth_factor, t)
