@@ -46,6 +46,7 @@ InputCallback::InputCallback(cg::ComputingGraph& graph, callback_t callback,
             ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
             .add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
             .dtype(DType::from_enum(DTypeEnum::Byte));
+    add_equivalence_component<ScalarHash<void*>>(this);
 }
 
 SymbolVarArray InputCallback::make(cg::ComputingGraph& graph,
@@ -178,6 +179,7 @@ NopCallback::NopCallback(cg::ComputingGraph& graph, callback_t callback,
             ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
             .add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
             .dtype(DType::from_enum(DTypeEnum::Byte));
+    add_equivalence_component<ScalarHash<void*>>(this);
 }
 
 SymbolVar NopCallback::make(cg::ComputingGraph& graph, callback_t callback,
