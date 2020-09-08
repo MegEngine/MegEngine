@@ -178,8 +178,6 @@ class Grad:
         assert len(ys) == len(dys)
 
         ids = [i for i, y in enumerate(ys) if self in y._extra_data.keys()]
-        if len(ids) == 0:
-            return
 
         ys = [y for i, y in enumerate(ys) if i in ids]
         dys = [dy for i, dy in enumerate(dys) if i in ids]

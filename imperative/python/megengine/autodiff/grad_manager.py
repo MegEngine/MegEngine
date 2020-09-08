@@ -2,8 +2,8 @@ from collections import defaultdict
 from contextlib import contextmanager
 
 from ..core.autodiff.grad import Grad
-from ..distributed.util import Future
 from ..tensor import tensor
+from ..utils.future import Future
 
 backwarding_grad_manager = None
 
@@ -26,6 +26,7 @@ class GradManager:
             self._param_dict[id(p)] = p
             for cb in callbacks:
                 self._call_back_dict[id(p)].append(cb)
+        return self
 
     def register_after_backward_callback(self, callback):
         self._after_backward_callback.append(callback)
@@ -45,7 +46,7 @@ class GradManager:
         if not isinstance(ys, (tuple, list)):
             ys = [ys]
         if dys is None:
-            dys = [tensor(1.0) for y in ys]
+            dys = [tensor(1.0).broadcast(y.shape) for y in ys]
         if not isinstance(dys, (tuple, list)):
             dys = [dys]
         try:

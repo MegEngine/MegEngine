@@ -16,7 +16,8 @@ from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
 
 from ..core._imperative_rt.utils import create_mm_server
-from .util import Future, get_free_ports
+from ..utils.future import Future
+from .util import get_free_ports
 
 
 class Methods:

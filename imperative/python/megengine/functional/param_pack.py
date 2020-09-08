@@ -8,8 +8,8 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..functional.distributed import all_reduce_sum
 from ..tensor import Tensor
+from .distributed import all_reduce_sum
 from .tensor import param_pack_concat, param_pack_split
 
 
@@ -29,6 +29,6 @@ def pack_allreduce_split(pack_list, shapes, group, reduce_method):
     packed_grads = param_pack_concat(pack_list, offsets, offsets_val)
     packed_grads = all_reduce_sum(packed_grads, group, group.comp_node)
     if reduce_method == "mean":
-        packed_grads /= dist_group.size
+        packed_grads /= group.size
     grads = param_pack_split(packed_grads, offsets_val, shapes)
     return grads
