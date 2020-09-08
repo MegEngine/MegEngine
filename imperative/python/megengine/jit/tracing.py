@@ -155,9 +155,7 @@ class trace:
                             "last time, got an internal tensor this time"
                         )
                     if x._handle != info.bound_data._handle:
-                        if not np.array_equal(
-                            x.numpy(), info.bound_data.numpy(), equal_nan=True
-                        ):
+                        if not np.array_equal(x.numpy(), info.bound_data.numpy()):
                             raise TraceMismatchError(
                                 "const capture violated: got "
                                 "a different tensor this time"
