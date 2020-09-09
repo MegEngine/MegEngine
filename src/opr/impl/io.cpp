@@ -307,20 +307,6 @@ void intl::SharedDeviceTensorBase::init_output_comp_node() {
     comp_node(m_dev_data->comp_node());
 }
 
-bool intl::SharedDeviceTensorBase::fill_in_static_infer(DeviceTensorND* dest) {
-    if (m_const_value) {
-        if (dest) {
-            if (m_static_infer.empty()) {
-                m_static_infer.comp_node(CompNode::default_cpu())
-                        .copy_from(*m_dev_data);
-            }
-            *dest = m_static_infer;
-        }
-        return true;
-    }
-    return false;
-}
-
 cg::static_infer::SourceType SharedDeviceTensor::static_infer_src_type() const {
     return cg::static_infer::SourceType::CONSTANT;
 }
@@ -886,24 +872,6 @@ void intl::MultipleDeviceTensorHolderBase::init_output_static_infer_desc() {
         };
         mgr.register_shape_infer(output(i),
                                  {SourceType::CONSTANT, {}, infer_shp});
-
-        auto infer_val = [this, i](DeviceTensorND& dest, const InpVal&) {
-            if (m_host_values.empty()) {
-                m_host_values.resize(m_values.size());
-            }
-            if (m_host_values[i].empty()) {
-                m_host_values[i]
-                        .comp_node(CompNode::default_cpu())
-                        .copy_from(*m_values[i]);
-            }
-            if (!m_host_values[i].empty()) {
-                dest = m_host_values[i];
-                return true;
-            }
-            return false;
-        };
-        mgr.register_value_infer(output(i),
-                                 {SourceType::CONSTANT, {}, infer_val});
     }
 }
 

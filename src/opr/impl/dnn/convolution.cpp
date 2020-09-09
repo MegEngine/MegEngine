@@ -963,11 +963,21 @@ void mixin::WeightPreprocessExecutor::record_preprocessed_weight(
 
 bool mixin::WeightPreprocessExecutor::mixin_allow_weight_preprocess(
         const cg::OperatorNodeBase& opr) const {
-    bool param_merged = opr.input(1)
-                                ->owner_opr()
-                                ->same_type<opr::MultipleDeviceTensorHolder>();
-    return opr.input(1)->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE) &&
-           (cg::is_const_var_value(opr.input(1)) || param_merged);
+    if (!opr.input(1)->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE))
+        return false;
+    if (cg::is_const_var_value(opr.input(1)))
+        return true;
+    auto* input_opr = opr.input(1)->owner_opr();
+    if (input_opr->same_type<opr::MultipleDeviceTensorHolder>() ||
+        input_opr->same_type<opr::MultipleDeviceTensorWithFormatHolder>())
+        return true;
+    auto* sdt = input_opr->try_cast_final<opr::SharedDeviceTensor>();
+    if (sdt && sdt->const_value())
+        return true;
+    auto* sdtf = input_opr->try_cast_final<opr::SharedDeviceTensorWithFormat>();
+    if (sdtf && sdtf->const_value())
+        return true;
+    return false;
 }
 
 /* ==================== ConvolutionForward  ==================== */

@@ -75,12 +75,14 @@ class DeviceTensorHolder: public HostIONodeBase {
  */
 MGB_DEFINE_CLS_WITH_SUPER(SharedDeviceTensorBase, DeviceTensorHolder) // {
     std::shared_ptr<DeviceTensorND> m_dev_data;
-    DeviceTensorND m_static_infer;
     bool m_const_value;
 
     const TensorShape& get_output_shape() override;
 
-    bool fill_in_static_infer(DeviceTensorND* dest) override;
+    bool fill_in_static_infer(DeviceTensorND* dest) override {
+        MGB_MARK_USED_VAR(dest);
+        return false;
+    }
 
     void init_output_comp_node() override;
 
@@ -131,8 +133,6 @@ private:
     void init_output_comp_node() override;
     void init_output_static_infer_desc() override;
     NodeProp* do_make_node_prop() const override;
-
-    SmallVector<DeviceTensorND> m_host_values;
 };
 
 } // namespace intl
