@@ -591,7 +591,7 @@ MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
     TensorShapeArray m_shapes;
     std::vector<dt_int32> m_offsets;
 
-    void scn_do_execute() override{};
+    void scn_do_execute() override;
     void init_output_static_infer_desc() override;
     bool infer_shape(size_t index, TensorShape &dest,
             const cg::static_infer::InpVal &inp);
@@ -615,6 +615,8 @@ public:
     const TensorShapeArray& get_output_shapes() const {
         return m_shapes;
     }
+
+    void init_rt_force_dynamic_mem_alloc_imply_chain() override;
 };
 
 /*!

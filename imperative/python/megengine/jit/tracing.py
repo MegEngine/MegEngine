@@ -308,6 +308,7 @@ class trace:
 
     def _apply_graph_options(self, graph):
 
+        graph.options.seq_opt.enable_seq_comp_node_opt = False
         # sublinear
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True
