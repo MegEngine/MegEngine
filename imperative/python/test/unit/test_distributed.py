@@ -14,6 +14,7 @@ import pytest
 
 import megengine as mge
 import megengine.distributed as dist
+from megengine.core.ops.builtin import CollectiveComm, ParamPackConcat, ParamPackSplit
 from megengine.distributed.helper import get_device_count_by_fork
 
 
@@ -187,3 +188,10 @@ def test_synchronized():
     for p in procs:
         p.join(20)
         assert p.exitcode == 0
+
+
+def test_oprmm_hashable():
+    lhs = (CollectiveComm(), ParamPackConcat(), ParamPackSplit())
+    rhs = (CollectiveComm(), ParamPackConcat(), ParamPackSplit())
+    assert lhs == rhs
+    assert hash(lhs) == hash(rhs)

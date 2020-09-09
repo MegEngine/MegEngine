@@ -71,7 +71,7 @@ OP_TRAIT_REG(CollectiveComm, CollectiveComm, opr::CollectiveComm)
     .make_from_op_node(make_from_op_node)
     .fallback();
 } // anonymous namespace
-
+#endif // MGB_ENABLE_OPR_MM
 
 bool CollectiveComm::is_same_st(const Hashable& another) const{
     auto* comm_opr = another.try_cast_final<CollectiveComm>();
@@ -99,18 +99,6 @@ size_t CollectiveComm::hash() const{
     append(comp_node);
     return xxhash.digest();
 }
-
-#else
-
-bool CollectiveComm::is_same_st(const Hashable& another) const{
-    return OpDef::is_same_st(another);
-}
-
-size_t CollectiveComm::hash() const{
-    return OpDef::hash();
-}
-
-#endif // MGB_ENABLE_OPR_MM
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CollectiveComm);
 

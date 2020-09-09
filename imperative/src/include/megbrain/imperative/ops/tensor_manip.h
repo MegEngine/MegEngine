@@ -64,11 +64,8 @@ public:
     }
 
     bool is_same_st(const Hashable& rhs) const override {
-        auto* pps = rhs.try_cast_final<ParamPackSplit>();
-        if(pps == nullptr){
-            return false;
-        }
-        return offsets == pps->offsets && shapes == pps->shapes;
+        auto&& pps = rhs.cast_final_safe<ParamPackSplit>();
+        return offsets == pps.offsets && shapes == pps.shapes;
     }
 };
 
@@ -94,11 +91,8 @@ public:
     }
 
     bool is_same_st(const Hashable& rhs) const override {
-        auto* ppc = rhs.try_cast_final<ParamPackConcat>();
-        if(ppc == nullptr){
-            return false;
-        }
-        return offsets == ppc->offsets;
+        auto&& ppc = rhs.cast_final_safe<ParamPackConcat>();
+        return offsets == ppc.offsets;
     }
 };
 
