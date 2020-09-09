@@ -10,6 +10,7 @@ import functools
 import multiprocessing as mp
 from collections import defaultdict
 from typing import Callable
+from weakref import WeakSet
 
 import numpy as np
 
@@ -23,7 +24,7 @@ from .functional import all_reduce_sum, broadcast
 from .group import WORLD, group_barrier, is_distributed
 
 
-class FakeTensor(Future):
+class TensorFuture(Future):
     def device(self):
         raise "Sorry, this tensor is not ready"
 
@@ -77,7 +78,7 @@ class AllreduceCallback:
         assert reduce_method in ["sum", "mean"]
         self._reduce_method = reduce_method
         self._group = group
-        self._marked_gm = set()
+        self._marked_gm = WeakSet()
         self._param_pack_thd = 10 * 1024 * 1024
         self._reset()
 
@@ -107,7 +108,7 @@ class AllreduceCallback:
             gm._register_after_backward_callback(self._flush)
             self._marked_gm.add(gm)
         self._params.append(param)
-        self._futures_dict[param] = FakeTensor(ack=False)
+        self._futures_dict[param] = TensorFuture(ack=False)
         self._gradients_dict[param] = grad
         self._grad_origin_device[param] = str(grad.device)
 

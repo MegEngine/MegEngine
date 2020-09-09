@@ -140,7 +140,7 @@ class Optimizer(metaclass=ABCMeta):
                 params.append(param)
         return params
 
-    def step(self):
+    def step(self, clear_grad=False):
         r"""Performs a single optimization step.
 
         """
@@ -152,6 +152,8 @@ class Optimizer(metaclass=ABCMeta):
                     "Please use a list instead."
                 )
             self._updates(group)
+        if clear_grad:
+            self.clear_grad()
 
     def clear_grad(self):
         r"""Clear the grad buffer.
