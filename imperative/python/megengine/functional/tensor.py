@@ -14,6 +14,7 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ..core._imperative_rt import CompNode
+from ..core._wrap import device as as_device
 from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
@@ -30,31 +31,32 @@ from ..tensor import Tensor
 from .elemwise import ceil
 
 __all__ = [
-    "add_axis",  # expand_dims
+    "add_axis",
     "arange",
     "broadcast",
     "concat",
     "cond_take",
-    "dimshuffle",  # transpose, permute
+    "dimshuffle",
     "expand_dims",
+    "eye",
     "full",
     "full_like",
     "gather",
-    "eye",
     "linspace",
     "ones",
     "ones_like",
-    "remove_axis",  # squeeze
+    "param_pack_concat",
+    "param_pack_split",
+    "reshape",
+    "remove_axis",
     "split",
     "squeeze",
     "stack",
-    "reshape",
     "scatter",
+    "transpose",
     "where",
     "zeros",
     "zeros_like",
-    "param_pack_split",
-    "param_pack_concat",
 ]
 
 
@@ -97,6 +99,8 @@ def eye(n: int, *, dtype=None, device: Optional[CompNode] = None) -> Tensor:
 
 
 def full(shape, value, dtype="float32", device=None):
+    if isinstance(shape, int):
+        shape = (shape,)
     if device is None:
         device = get_default_device()
     (x,) = Const(value, dtype=dtype, device=device)(
@@ -196,16 +200,13 @@ def broadcast(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
     return result
 
 
-def concat(
-    inps: Iterable[Tensor], axis: int = 0, device: Optional[CompNode] = None,
-) -> Tensor:
+def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
     r"""
     Concat some tensors
 
     :param inps: Input tensors to concat
     :param axis: the dimension over which the tensors are concatenated. Default: 0
     :param device: The comp node output on. Default: None
-    :param comp_graph: The graph in which output is. Default: None
     :return: The output tensor
 
     Examples:
@@ -235,7 +236,9 @@ def concat(
         return inps[0]
 
     dtype = dtype_promotion(inps)
-    device = get_device(inps)
+    if device is None:
+        device = get_device(inps)
+    device = as_device(device)
 
     def convert(x):
         return convert_single_value(x, inps, dtype=dtype)
@@ -245,12 +248,13 @@ def concat(
     return result
 
 
-def stack(inps, axis=0):
+def stack(inps, axis=0, device=None):
     """Concats a sequence of tensors along a new axis.
     The input tensors must have the same shape.
 
     :param inps: The input tensors.
     :param axis: Which axis will be concatenated.
+    :param device: The comp node output on. Default: None
     :return: The output concatenated tensor.
 
     Examples:
@@ -283,7 +287,7 @@ def stack(inps, axis=0):
             raise ValueError("All input tensors must have the same shape")
 
     inps = [add_axis(inp, axis=axis) for inp in inps]
-    return concat(inps, axis=axis)
+    return concat(inps, axis=axis, device=device)
 
 
 def split(inp, nsplits_or_sections, axis=0):
@@ -609,7 +613,10 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
 
 def cond_take(mask: Tensor, x: Tensor) -> Tensor:
     r"""
-    Take elements from data if specific condition is satisfied on mask. This operator has two outputs: the first is the elements taken, and the second is the indices corresponding to those elements; they are both 1-dimensional. High-dimension input would first be flattened.
+    Take elements from data if specific condition is satisfied on mask.
+    This operator has two outputs: the first is the elements taken,
+    and the second is the indices corresponding to those elements;
+    they are both 1-dimensional. High-dimension input would first be flattened.
 
     :param mask: condition param; must be the same shape with data
     :param x: input tensor from which to take elements
@@ -692,6 +699,9 @@ def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
     return result
 
 
+transpose = dimshuffle
+
+
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
     r"""
     Reshape a tensor to given target shape; total number of logical elements must
@@ -748,9 +758,6 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
     return x
 
 
-transpose = dimshuffle
-
-
 AxisAddRemove = builtin.AxisAddRemove
 AxisDesc = AxisAddRemove.AxisDesc
 
@@ -803,12 +810,14 @@ def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
 expand_dims = add_axis
 
 
-def remove_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
+def remove_axis(
+    inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None
+) -> Tensor:
     r"""
     Remove dimension of shape 1.
 
     :param inp: Input tensor
-    :param axis: Place of axis to be removed
+    :param axis: Place of axis to be removed, if None, all axis=1 will be removed. Default: None
     :return: The output tensor
 
     Examples:
@@ -897,8 +906,8 @@ def linspace(
 
 
 def arange(
-    start: Union[int, float, Tensor],
-    end: Union[int, float, Tensor],
+    start: Union[int, float, Tensor] = 0,
+    end: Optional[Union[int, float, Tensor]] = None,
     step: Union[int, float, Tensor] = 1,
     dtype="float32",
     device: Optional[CompNode] = None,
@@ -919,7 +928,7 @@ def arange(
         import numpy as np
         import megengine.functional as F
 
-        a = F.arange(1, 5, 1)
+        a = F.arange(5)
         print(a.numpy())
 
     .. testoutput::
@@ -927,6 +936,9 @@ def arange(
         [1. 2. 3. 4.]
 
     """
+    if end is None:
+        start, end = 0, start
+
     if isinstance(start, Tensor):
         start = start.astype("float32")
     if isinstance(end, Tensor):

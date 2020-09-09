@@ -25,10 +25,6 @@ __all__ = [
     "asinh",
     "acosh",
     "atanh",
-    "bitwise_and",  # TODO
-    "bitwise_not",  # TODO
-    "bitwise_or",  # TODO
-    "bitwise_xor",  # TODO
     "ceil",
     "clamp",
     "cos",
@@ -337,22 +333,6 @@ def left_shift(x, y):
 
 def right_shift(x, y):
     return _elwise(x, y, mode="shl")
-
-
-def bitwise_and(x, y):
-    raise NotImplementedError
-
-
-def bitwise_not(x):
-    raise NotImplementedError
-
-
-def bitwise_or(x, y):
-    raise NotImplementedError
-
-
-def bitwise_xor(x, y):
-    raise NotImplementedError
 
 
 # logical functions

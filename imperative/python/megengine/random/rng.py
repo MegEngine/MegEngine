@@ -17,11 +17,11 @@ def _random_seed_generator():
     if _rng is None:
         from ..distributed.group import get_rank
 
-        manual_seed(seed=int(time.time()) + get_rank())
+        seed(seed=int(time.time()) + get_rank())
     while True:
         yield _rng.random_raw()
 
 
-def manual_seed(seed: int):
+def seed(seed: int):
     global _rng  # pylint: disable=global-statement
     _rng = MT19937(seed=seed)

@@ -9,17 +9,7 @@
 # pylint: disable=redefined-builtin
 from .elemwise import *
 from .graph import add_update
-from .loss import (
-    binary_cross_entropy,
-    cross_entropy,
-    cross_entropy_with_softmax,
-    hinge_loss,
-    l1_loss,
-    nll_loss,
-    smooth_l1_loss,
-    square_loss,
-    triplet_margin_loss,
-)
+from .loss import *
 from .math import *
 from .nn import *
 from .quantized import conv_bias_activation

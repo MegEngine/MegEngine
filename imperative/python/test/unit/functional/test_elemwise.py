@@ -55,14 +55,20 @@ def test_clamp():
     assertTensorClose(F.clamp(tensor(x) - 3, -6, 0).numpy(), np.clip(x - 3, -6, 0))
 
 
-# def test_isnan():
-#     for case in [[1, float("nan"), 0]]:
-#         assertTensorClose(F.isnan(tensor(case)), np.isnan(case).astype("uint8"))
+def test_isnan():
+    for case in [[1, float("nan"), 0]]:
+        assertTensorClose(F.isnan(tensor(case)).numpy(), np.isnan(case))
 
 
 def test_isinf():
     for case in [[1, float("inf"), 0]]:
-        assertTensorClose(F.isinf(tensor(case)).numpy(), np.isinf(case).astype("uint8"))
+        assertTensorClose(F.isinf(tensor(case)).numpy(), np.isinf(case))
+
+
+def test_sign():
+    for case in [[1, -1, 0]]:
+        x = tensor(case)
+        assertTensorClose(F.sign(x).numpy(), np.sign(case).astype(x.dtype))
 
 
 def test_cosh():

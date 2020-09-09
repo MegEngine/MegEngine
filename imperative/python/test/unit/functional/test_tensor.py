@@ -110,6 +110,14 @@ def test_concat():
     opr_test(cases, run, ref_fn=lambda x, y: np.concatenate([x, y]))
 
 
+def test_concat_device():
+    data1 = tensor(np.random.random((3, 2, 2)).astype("float32"), device="cpu0")
+    data2 = tensor(np.random.random((2, 2, 2)).astype("float32"), device="cpu1")
+
+    out = F.concat([data1, data2], device="cpu0")
+    assert str(out.device).split(":")[0] == "cpu0"
+
+
 def test_stack():
     data1 = np.random.random((3, 2, 2)).astype("float32")
     data2 = np.random.random((3, 2, 2)).astype("float32")

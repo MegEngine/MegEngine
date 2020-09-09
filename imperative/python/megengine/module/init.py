@@ -13,7 +13,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 from ..functional import full
-from ..random import gaussian, uniform
+from ..random import normal, uniform
 from ..tensor import Tensor
 
 
@@ -50,7 +50,7 @@ def uniform_(tensor: Tensor, a: float = 0.0, b: float = 1.0) -> None:
     :param a: Lower bound of the sampling interval
     :param b: Upper bound of the sampling interval
     """
-    tensor._reset(uniform(tensor.shape, low=a, high=b).astype(tensor.dtype))
+    tensor._reset(uniform(size=tensor.shape, low=a, high=b).astype(tensor.dtype))
 
 
 def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
@@ -61,7 +61,7 @@ def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
     :param mean: The mean of the normal distribution
     :param std: The standard deviation of the normal distribution
     """
-    tensor._reset(gaussian(tensor.shape, mean=mean, std=std).astype(tensor.dtype))
+    tensor._reset(normal(size=tensor.shape, mean=mean, std=std).astype(tensor.dtype))
 
 
 def calculate_gain(

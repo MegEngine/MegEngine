@@ -21,45 +21,24 @@ from .elemwise import clamp, exp, log, log1p
 from .tensor import remove_axis, reshape
 
 __all__ = [
-    "all",  # TODO
-    "all_close",  # TODO
-    "any",  # TODO
     "argmax",
     "argmin",
     "argsort",
     "isinf",
-    "isnan",  # TODO
+    "isnan",
     "max",
     "mean",
-    "median",  # TODO
     "min",
     "norm",
     "normalize",
     "prod",
-    "sign",  # TODO
+    "sign",
     "sort",
     "std",
     "sum",
     "topk",
-    "unique",  # TODO
     "var",
 ]
-
-
-def all(inp):
-    raise NotImplementedError
-
-
-def all_close(inp):
-    raise NotImplementedError
-
-
-def any(inp):
-    raise NotImplementedError
-
-
-def unique(inp):
-    raise NotImplementedError
 
 
 def isnan(inp: Tensor) -> Tensor:
@@ -77,15 +56,14 @@ def isnan(inp: Tensor) -> Tensor:
 
         x = tensor([1, float("nan"), 0])
 
-        print(F.isnan(x))
+        print(F.isnan(x).numpy())
 
     .. testoutput::
 
-        Tensor([0 1 0], dtype=uint8)
+        [False  True False]
 
     """
-    raise NotImplementedError
-    # return (inp != inp).astype("uint8")
+    return inp != inp
 
 
 def isinf(inp: Tensor) -> Tensor:
@@ -103,18 +81,39 @@ def isinf(inp: Tensor) -> Tensor:
 
         x = tensor([1, float("inf"), 0])
 
-        print(F.isinf(x))
+        print(F.isinf(x).numpy())
 
     .. testoutput::
 
-        Tensor([0 1 0], dtype=uint8)
+        [False  True False]
 
     """
-    return (abs(inp).astype("float32") == float("inf")).astype("uint8")
+    return abs(inp).astype("float32") == float("inf")
 
 
 def sign(inp: Tensor):
-    raise NotImplementedError
+    r"""Returns sign of each element in the input tensor.
+
+    :param: inp
+    :return: a sign tensor.
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, -1, 0])
+
+        print(F.sign(x).numpy())
+
+    .. testoutput::
+
+        [ 1 -1  0]
+
+    """
+    return (inp > 0).astype(inp.dtype) - (inp < 0).astype(inp.dtype)
 
 
 def sum(

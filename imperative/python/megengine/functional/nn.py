@@ -623,7 +623,7 @@ def batch_norm2d(
         Default: True
 
     """
-    from .tensor import expand_dims, squeeze, broadcast
+    from .tensor import add_axis, remove_axis, broadcast
 
     def full(value):
         C = data.shape[1]
@@ -633,7 +633,7 @@ def batch_norm2d(
     def expand_or_full(x, value):
         if x is None:
             return full(value)
-        return expand_dims(x, [0, 2, 3])
+        return add_axis(x, [0, 2, 3])
 
     def make_full_if_none(x, value):
         if x is None:
@@ -1229,14 +1229,14 @@ def interpolate(
     return ret
 
 
-def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
+def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
     """
     Returns a new tensor where each of the elements are randomly set to zero
     with probability P = ``drop_prob``. Optionally rescale the output tensor.
 
     :param inp: The input tensor
     :param drop_prob: The probability to drop (set to zero) a single element
-    :param rescale: The default behavior of ``dropout`` during training is to rescale the output,
+    :param training: The default behavior of ``dropout`` during training is to rescale the output,
         then it can be replaced by an :class:`~.Identity` during inference, default to True.
     :return: The output tensor
 
@@ -1266,7 +1266,7 @@ def dropout(inp: Tensor, drop_prob: float, rescale: bool = True) -> Tensor:
     rv = uniform(inp.shape)
     mask = rv > drop_prob
     inp *= mask.astype(inp.dtype)
-    if rescale:
+    if training:
         inp *= 1 / (1 - drop_prob)
     return inp
 
