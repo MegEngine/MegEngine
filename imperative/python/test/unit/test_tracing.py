@@ -12,11 +12,10 @@ from tempfile import mkstemp
 import numpy as np
 import pytest
 
-from megengine import tensor
 import megengine
-import megengine.core.tensor.megbrain_graph as mgb_graph
+import megengine.core.tensor.megbrain_graph as G
 import megengine.module as M
-from megengine import cgtools
+from megengine import cgtools, tensor
 from megengine.core.ops import builtin as ops
 from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.core import apply
