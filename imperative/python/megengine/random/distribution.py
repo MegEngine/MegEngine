@@ -50,11 +50,11 @@ def normal(
     """
     if size is None:
         size = (1,)
-    seed = _random_seed_generator().__next__()
-    op = GaussianRNG(seed=seed, mean=mean, std=std)
+    op = GaussianRNG(mean, std)
     _ref = Tensor([], dtype="int32")
-    size = utils.astensor1d(size, _ref, dtype="int32")
-    (output,) = apply(op, size)
+    shape = utils.astensor1d(size, _ref, dtype="int32")
+    shape = Tensor(shape, dtype="int32")
+    (output,) = apply(op, shape)
     return output
 
 
@@ -92,10 +92,10 @@ def uniform(
 
     if size is None:
         size = (1,)
-    seed = _random_seed_generator().__next__()
-    op = UniformRNG(seed=seed)
+    op = UniformRNG()
     _ref = Tensor([], dtype="int32")
-    size = utils.astensor1d(size, _ref, dtype="int32")
-    (output,) = apply(op, size)
+    shape = utils.astensor1d(size, _ref, dtype="int32")
+    shape = Tensor(shape, dtype="int32")
+    (output,) = apply(op, shape)
 
     return low + (high - low) * output
