@@ -49,8 +49,26 @@ cg::OperatorNodeBase* apply_on_var_node(
             dev_buffer_arr, config, disable));
 }
 
+std::tuple<std::string, std::string> split_address(const std::string& address_and_port){
+    auto index = address_and_port.find_last_of(':');
+    mgb_assert(index != std::string::npos, "missing ':' in server address");
+    return {address_and_port.substr(0, index), address_and_port.substr(index+1)};
+}
+
+std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node) {
+    auto&& comm = node->cast_final_safe<opr::CollectiveComm>();
+    auto&& group_client = comm.group_client();
+    auto [addr, port] = split_address(group_client->get_addr());
+    auto comp_node = node->config().get_single_comp_node().to_string_logical();
+    return std::make_shared<CollectiveComm>(
+            comm.key(), comm.nr_devices(), comm.rank(), comm.is_root(),
+            comm.local_grad(), addr, std::stoi(port), comm.param().mode,
+            comm.dtype(), comm.backend(), comp_node);
+}
+
 OP_TRAIT_REG(CollectiveComm, CollectiveComm, opr::CollectiveComm)
     .apply_on_var_node(apply_on_var_node)
+    .make_from_op_node(make_from_op_node)
     .fallback();
 } // anonymous namespace
 
