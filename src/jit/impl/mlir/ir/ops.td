@@ -177,6 +177,12 @@ def ReturnOp : GenericOp<"return",
     The operation takes an no tensor operand and produces no results.
   }];
 
+  // The return operation takes an optional input operand to return. This
+  // value must match the return type of the enclosing function.
+  let arguments = (ins);
+
+  // The return operation only emits the input in the format if it is present.
+  let assemblyFormat = "attr-dict";
 }
 
 def ConstantScalarOp: GenericOp<"sconst", [NoSideEffect]> {

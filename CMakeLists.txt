@@ -831,3 +831,8 @@ if(MSVC OR WIN32)
         endif()
     endforeach()
 endif()
+
+if(MGE_WITH_JIT_MLIR)
+    add_subdirectory(tools/mlir/mgb-opt)
+    add_subdirectory(tools/mlir/mgb-file-check)
+endif()

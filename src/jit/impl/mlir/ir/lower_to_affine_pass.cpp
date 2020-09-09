@@ -20,12 +20,11 @@
 
 #include "./each_mode.h"
 
+#include <llvm/ADT/Sequence.h>
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
 #include <mlir/Pass/Pass.h>
 #include <mlir/Transforms/DialectConversion.h>
 #include "mlir/IR/StandardTypes.h"
-
-#include <llvm/ADT/Sequence.h>
 
 using namespace mgb;
 using namespace jit;
@@ -188,6 +187,7 @@ struct ReturnOpLowering : public OpRewritePattern<jit::ReturnOp> {
 
     LogicalResult matchAndRewrite(jit::ReturnOp op,
                                   PatternRewriter& rewriter) const final {
+        // We lower "mgb.return" directly to "std.return".
         rewriter.replaceOpWithNewOp<mlir::ReturnOp>(op);
         return success();
     }
@@ -212,6 +212,7 @@ public:
     void runOnFunction() override final {
         ConversionTarget target(getContext());
         target.addLegalDialect<AffineDialect, StandardOpsDialect>();
+        // target.addLegalDialect<AffineDialect>();
         target.addIllegalDialect<MgbDialect>();
 
         OwningRewritePatternList patterns;
@@ -236,6 +237,16 @@ std::unique_ptr<mlir::Pass> mgb::jit::create_lower_to_affine_pass() {
     return std::make_unique<MgbToAffineLoweringPass>();
 }
 
+namespace mgb {
+namespace jit {
+void register_test_mgb_to_affine_lowering_pass() {
+    PassRegistration<MgbToAffineLoweringPass>(
+            "mgb-convert-to-affine",
+            "Perform conversion from MGB Dialect to Affine Dialect ",
+            [] { return std::make_unique<MgbToAffineLoweringPass>(); });
+}
+}  // namespace jit
+}  // namespace mgb
 #endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

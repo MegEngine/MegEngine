@@ -44,6 +44,7 @@
 
 using namespace mlir;
 
+namespace {
 template <typename OpTy>
 static void createForAllDimensions(OpBuilder& builder, Location loc,
                                    SmallVectorImpl<Value>& values) {
@@ -80,7 +81,7 @@ static bool isSinkingBeneficiary(Operation* op) {
     return isa<ConstantOp, DimOp>(op);
 }
 
-LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
+LogicalResult sink_operations_into_launch_op(gpu::LaunchOp launchOp) {
     Region& launchOpBody = launchOp.body();
 
     // Identify uses from values defined outside of the scope of the launch
@@ -232,7 +233,6 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
     launchOp.erase();
 }
 
-namespace {
 /// Pass that moves the kernel of each LaunchOp into its separate nested module.
 ///
 /// This pass moves the kernel code of each LaunchOp into a function created
@@ -258,7 +258,7 @@ public:
                                 .str();
 
                 // Pull in instructions that can be sunk
-                if (failed(sinkOperationsIntoLaunchOp(op)))
+                if (failed(sink_operations_into_launch_op(op)))
                     return WalkResult::interrupt();
                 gpu::GPUFuncOp outlinedFunc =
                         outlineKernelFuncImpl(op, kernelFnName, operands);
@@ -327,7 +327,6 @@ private:
         return kernelModule;
     }
 };
-
 }  // namespace
 
 std::unique_ptr<mlir::Pass> mgb::jit::create_gpu_kernel_outlining_pass() {
