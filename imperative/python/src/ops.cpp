@@ -16,6 +16,7 @@
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/ops/rng.h"
 
 #include <Python.h>
 #include <unordered_map>
@@ -489,4 +490,22 @@ void init_ops(py::module m) {
     _init_py_backward_graph(m);
     _init_py_op_base(m);
     INIT_ALL_OP(m)
+
+    m.def("new_rng_handle", &RNGMixin::new_handle);
+    // FIXME: RNG op might execute after handle released due to async dispatch,
+    // which would cause memory leak or use-after-free
+    m.def("delete_rng_handle", &RNGMixin::delete_handle);
+    m.def("set_rng_seed", &set_rng_seed);
+
+    py::class_<UniformRNG, std::shared_ptr<UniformRNG>, OpDef>(m, "UniformRNG")
+        .def(py::init<>())
+        .def(py::init<mgb::CompNode>())
+        .def(py::init<RNGMixin::Handle>());
+
+    py::class_<GaussianRNG, std::shared_ptr<GaussianRNG>, OpDef>(m, "GaussianRNG")
+        .def(py::init<>())
+        .def(py::init<mgb::CompNode>())
+        .def(py::init<float ,float>())
+        .def(py::init<float ,float, mgb::CompNode>())
+        .def(py::init<float ,float, RNGMixin::Handle>());
 }
