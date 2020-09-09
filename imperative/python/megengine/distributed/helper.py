@@ -67,7 +67,7 @@ def get_device_count_by_fork(device_type: str):
     return q.get()
 
 
-def bcast_params_(params, group):
+def bcast_list_(params, group):
     for p in params:
         p._reset(broadcast(p, group))
 
