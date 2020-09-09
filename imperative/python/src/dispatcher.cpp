@@ -104,6 +104,10 @@ struct Dispatcher {
         auto& frame = stack.back();
         auto& mro = *frame.mro;
         auto& i = frame.mro_offset;
+        if (!mro.size()) {
+            PyErr_SetString(PyExc_NotImplementedError, "function not registered in dispatcher");
+            return nullptr;
+        }
         for (; i < mro.size(); ++i) {
             if (mro[i]->enabled) {
                 auto ret = caller(mro[i]->func);
