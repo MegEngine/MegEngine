@@ -313,6 +313,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
         megdnn_throw(
                 "Only naive and opencl handle support "
                 "Image2DPack4TensorFormat, try to export MGB_USE_MEGDNN_DBG=2 "
+                "and also export CUDA_VISIBLE_DEVICES=\'\' at CUDA env"
                 "to enable naive handle");
     }
 #undef CHECK_SRC
