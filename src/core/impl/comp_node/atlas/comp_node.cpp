@@ -104,9 +104,14 @@ public:
     void copy_to_host(void* host_ptr, const void* device_ptr,
                       size_t size) override {
         activate();
+#if MGB_USE_ATLAS_ASYNC_API
         MGB_ATLAS_CHECK(aclrtMemcpyAsync(host_ptr, size, device_ptr, size,
                                          ACL_MEMCPY_DEVICE_TO_HOST,
                                          m_env.atlas_env().stream));
+#else
+        MGB_ATLAS_CHECK(aclrtMemcpy(host_ptr, size, device_ptr, size,
+                                    ACL_MEMCPY_DEVICE_TO_HOST));
+#endif
     }
 
     void copy_to_device(void* device_ptr, const void* host_ptr,
@@ -225,9 +230,14 @@ void AtlasCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
         auto&& src_env = m_env.atlas_env();
         activate();
         if (dst_env.device == src_env.device) {
-            MGB_ATLAS_CHECK(aclrtMemcpyAsync(dest, size, src, size,
-                                             ACL_MEMCPY_DEVICE_TO_DEVICE,
-                                             dst_env.stream));
+#if MGB_USE_ATLAS_ASYNC_API
+        MGB_ATLAS_CHECK(aclrtMemcpyAsync(dest, size, src, size,
+                                         ACL_MEMCPY_DEVICE_TO_DEVICE,
+                                         dst_env.stream));
+#else
+            MGB_ATLAS_CHECK(aclrtMemcpy(dest, size, src, size,
+                                             ACL_MEMCPY_DEVICE_TO_DEVICE));
+#endif
         } else {
             mgb_throw(MegBrainError,
                       "Atlas does not support peer copy between differents "
@@ -239,12 +249,18 @@ void AtlasCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
     mgb_assert(dest_impl->env().property().type == DeviceType::CPU,
                "cuda peer_copy_to only implemented for CPU");
     auto copy = [this, dest, src, size]() {
-        auto stream = m_env.atlas_env().stream;
         m_env.atlas_env().activate();
+
+#if MGB_USE_ATLAS_ASYNC_API
+        auto stream = m_env.atlas_env().stream;
         MGB_ATLAS_CHECK(aclrtMemcpyAsync(dest, size, src, size,
                                          ACL_MEMCPY_DEVICE_TO_HOST,
                                          m_env.atlas_env().stream));
         MGB_ATLAS_CHECK(aclrtSynchronizeStream(stream));
+#else
+        MGB_ATLAS_CHECK(
+                aclrtMemcpy(dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST));
+#endif
     };
     dest_impl->env().cpu_env().dispatch(copy);
 
