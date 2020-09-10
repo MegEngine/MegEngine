@@ -308,6 +308,8 @@ void AtlasRuntimeOpr::scn_do_execute() {
         for (size_t i = 0; i < input().size(); i++) {
             auto value_pair = input_getter.get(batch, i);
             auto input_size = aclmdlGetInputSizeByIndex(m_model_desc, i);
+            //! FIXME iff enable dynamic batchsize and dynamic aipp, the input
+            //! size should be the size of aclmdlGetInputSizeByIndex.
             if (enable_dynamic_batch) {
                 mgb_assert(input_size == value_pair.second / batch *
                                                  m_dyn_batch_choices[0],
@@ -345,8 +347,12 @@ void AtlasRuntimeOpr::scn_do_execute() {
                    "failed to create atlas output dataset.");
         for (size_t i = 0; i < nr_outputs; i++) {
             auto value_pair = output_getter.get(batch, i);
+            size_t output_size = value_pair.second;
+            if (enable_dynamic_batch) {
+                output_size = aclmdlGetOutputSizeByIndex(m_model_desc, i);
+            }
             aclDataBuffer* output_db =
-                    aclCreateDataBuffer(value_pair.first, value_pair.second);
+                    aclCreateDataBuffer(value_pair.first, output_size);
             mgb_assert(output_db != nullptr,
                        "failed to create atlas output data buffer for output "
                        "%zu:%s.",
