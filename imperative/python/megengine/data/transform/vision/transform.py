@@ -194,9 +194,9 @@ class Compose(VisionTransform):
         will be random shuffled, the 2nd and 4th transform will also be shuffled.
     :param order: The same with :class:`VisionTransform`
 
-    Example:
+    Examples:
 
-    ..testcode::
+    .. testcode::
 
         from megengine.data.transform import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, ToMode, Compose
 

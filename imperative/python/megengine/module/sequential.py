@@ -17,23 +17,25 @@ class Sequential(Module):
     Alternatively, an ordered dict of modules can also be passed in.
 
     To make it easier to understand, here is a small example:
-
+    
+    Examples:
+    
     .. testcode::
 
         import numpy as np
-        import megengine.nn as nn
-        import megengine.nn.functional as F
+        from megengine import tensor
+        import megengine.functional as F
 
         batch_size = 64
-        data = nn.Input("data", shape=(batch_size, 1, 28, 28), dtype=np.float32, value=np.zeros((batch_size, 1, 28, 28)))
-        label = nn.Input("label", shape=(batch_size,), dtype=np.int32, value=np.zeros(batch_size,))
+        data = tensor(np.zeros((batch_size, 1, 28, 28)), dtype=np.float32)
+        label = tensor(np.zeros(batch_size,), dtype=np.int32)
 
         data = data.reshape(batch_size, -1)
-        net = nn.Sequential(
-                nn.Linear(28 * 28, 320),
-                nn.Linear(320, 500),
-                nn.Linear(500, 320),
-                nn.Linear(320, 10)
+        net = M.Sequential(
+                M.Linear(28 * 28, 320),
+                M.Linear(320, 500),
+                M.Linear(500, 320),
+                M.Linear(320, 10)
             )
         pred = net(data)
 

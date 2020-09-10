@@ -60,7 +60,7 @@ __all__ = [
 ]
 
 
-def eye(n: int, *, dtype=None, device: Optional[CompNode] = None) -> Tensor:
+def eye(n: int, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor:
     """
     Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
@@ -80,7 +80,7 @@ def eye(n: int, *, dtype=None, device: Optional[CompNode] = None) -> Tensor:
 
         data_shape = (4, 6)
         n, m = data_shape
-        out = F.eye(n, m, dtype=np.float32)
+        out = F.eye([n, m], dtype=np.float32)
         print(out.numpy())
 
     Outputs:
@@ -135,6 +135,8 @@ def zeros_like(inp: Tensor) -> Tensor:
         out = F.zeros_like(inp)
         print(out.numpy())
 
+    Outputs:
+    
     .. testoutput::
 
         [[0 0 0]
@@ -638,7 +640,7 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
 
     .. testoutput::
 
-        Tensor([1. 4.]) Tensor([0 3], dtype=int32)
+        [1. 4.] [0 3]
 
     """
     if not isinstance(x, (TensorWrapperBase, TensorBase)):
@@ -888,6 +890,8 @@ def linspace(
         a = F.linspace(3,10,5)
         print(a.numpy())
 
+    Outputs:
+    
     .. testoutput::
 
         [ 3.    4.75  6.5   8.25 10.  ]
@@ -930,6 +934,8 @@ def arange(
 
         a = F.arange(5)
         print(a.numpy())
+    
+    Outputs:
 
     .. testoutput::
 
@@ -977,7 +983,9 @@ def param_pack_split(inp: Tensor, offsets: List, shapes: List) -> Tensor:
         b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
         print(b.numpy())
         print(c.numpy())
-
+    
+    Outputs:
+    
     .. testoutput::
 
         [1]
@@ -1000,7 +1008,7 @@ def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
     :param offsets: device value of offsets
     :param offsets_val: offsets of inputs, length of 2 * n,
             format [begin0, end0, begin1, end1].
-    :return: split tensors
+    :return: concat tensors
 
     Examples:
 
@@ -1013,10 +1021,12 @@ def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
         a = tensor(np.ones((1,), np.int32))
         b = tensor(np.ones((3, 3), np.int32))
         offsets_val = [0, 1, 1, 10]
-        offsets = tensor(offsets, np.int32)
+        offsets = tensor(offsets_val, np.int32)
         c = F.param_pack_concat([a, b], offsets, offsets_val)
         print(c.numpy())
-
+    
+    Outputs:
+    
     .. testoutput::
 
         [1 1 1 1 1 1 1 1 1 1]

@@ -37,7 +37,9 @@ def normal(
 
         x = rand.normal(mean=0, std=1, size=(2, 2))
         print(x.numpy())
-
+    
+    Outputs:
+    
     .. testoutput::
         :options: +SKIP
 
@@ -73,7 +75,9 @@ def uniform(
 
         x = rand.uniform(size=(2, 2))
         print(x.numpy())
-
+    
+    Outputs:
+    
     .. testoutput::
         :options: +SKIP
 

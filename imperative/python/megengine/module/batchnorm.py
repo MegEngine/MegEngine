@@ -267,15 +267,17 @@ class BatchNorm2d(_BatchNorm):
         m = M.BatchNorm2d(4)
         inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
         oup = m(inp)
-        print(m.weight, m.bias)
+        print(m.weight.numpy(), m.bias.numpy())
         # Without Learnable Parameters
         m = M.BatchNorm2d(4, affine=False)
         oup = m(inp)
         print(m.weight, m.bias)
-
+    
+    Outputs:
+    
     .. testoutput::
 
-        Tensor([1. 1. 1. 1.]) Tensor([0. 0. 0. 0.])
+        [1. 1. 1. 1.] [0. 0. 0. 0.]
         None None
     """
 

@@ -372,10 +372,12 @@ def softplus(inp: Tensor) -> Tensor:
         x = tensor(np.arange(-3, 3, dtype=np.float32))
         y = F.softplus(x)
         print(y.numpy())
+    
+    Outputs:
+    
+    .. testoutput::
 
-    .. output::
-
-        [0.04858735 0.126928   0.3132617  0.6931472  1.3132617  2.126928  ]
+        [0.0486 0.1269 0.3133 0.6931 1.3133 2.1269]
 
     """
     return log1p(exp(-abs(inp))) + relu(inp)
@@ -411,10 +413,12 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         y = F.log_softmax(x, axis=1)
         print(y.numpy())
 
-    .. output::
+    Outputs:
+    
+    .. testoutput::
 
-        [[-4.4519143 -3.4519143 -2.4519143 -1.4519144 -0.4519144]
-         [-4.4519143 -3.4519143 -2.4519143 -1.4519144 -0.4519144]]
+        [[-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]
+         [-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]]
 
     """
     return inp - logsumexp(inp, axis, keepdims=True)
@@ -432,6 +436,7 @@ def logsigmoid(inp: Tensor) -> Tensor:
     :param inp: The input tensor
 
     Examples:
+
     .. testcode::
 
         import numpy as np
@@ -442,9 +447,12 @@ def logsigmoid(inp: Tensor) -> Tensor:
         y = F.logsigmoid(x)
         print(y.numpy())
 
-    .. output::
+    Outputs:
 
-        [-5.0067153  -4.01815    -3.0485873  -2.126928   -1.3132617  -0.6931472  -0.3132617  -0.126928   -0.04858735 -0.01814993]
+    .. testoutput::
+
+        [-5.0067 -4.0181 -3.0486 -2.1269 -1.3133 -0.6931 -0.3133 -0.1269 -0.0486
+         -0.0181]
 
     """
     return -softplus(-inp)
@@ -478,6 +486,7 @@ def logsumexp(
     :param keepdims: whether to retain :attr:`axis` or not for the output tensor.
 
     Examples:
+    
     .. testcode::
 
         import numpy as np
@@ -488,9 +497,11 @@ def logsumexp(
         y = F.logsumexp(x, axis=1, keepdims=False)
         print(y.numpy())
 
-    .. output::
+    Outputs:
 
-        [-0.5480856  4.4519143]
+    .. testoutput::
+
+        [-0.5481  4.4519]
 
     """
     max_value = max(inp, axis, keepdims=True)
@@ -577,8 +588,9 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     Outputs:
 
     .. testoutput::
-        [[0.01165623 0.03168492 0.08612854 0.23412167 0.6364086 ]
-         [0.01165623 0.03168492 0.08612854 0.23412167 0.6364086 ]]
+
+        [[0.0117 0.0317 0.0861 0.2341 0.6364]
+         [0.0117 0.0317 0.0861 0.2341 0.6364]]
 
     """
     if axis is None:
@@ -1026,7 +1038,7 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
     Examples:
 
-    .. teestcode::
+    .. testcode::
 
         import numpy as np
         from megengine import tensor
@@ -1039,9 +1051,10 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
     Outputs:
 
+    .. testoutput::
+
         [55.]
 
-    .. testoutputs::
     """
     op = builtin.Dot()
     inp1, inp2 = utils.convert_inputs(inp1, inp2)
@@ -1058,7 +1071,7 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
 
     Examples:
 
-    .. teestcode::
+    .. testcode::
 
         import numpy as np
         from megengine import tensor
@@ -1070,7 +1083,9 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
 
     Outputs:
 
-        [7.348, 1.]
+    .. testoutput::
+    
+        [7.3485 1.    ]
 
     """
     op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
@@ -1445,6 +1460,8 @@ def indexing_one_hot(
         val = F.indexing_one_hot(src, index)
         print(val.numpy())
 
+    Outputs:
+    
     .. testoutput::
 
         [1.]

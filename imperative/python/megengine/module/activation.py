@@ -219,7 +219,7 @@ class LeakyReLU(Module):
 
     .. testoutput::
 
-        [-0.08   -0.12  6.   10.  ]
+        [-0.08 -0.12  6.   10.  ]
 
     """
 

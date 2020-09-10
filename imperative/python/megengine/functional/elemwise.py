@@ -197,8 +197,8 @@ def sqrt(inp: Tensor) -> Tensor:
 
     .. testoutput::
 
-        [[0.      1.     1.4142]
-         [1.7321  2.     2.2361 ]]
+        [[0.     1.     1.4142]
+         [1.7321 2.     2.2361]]
 
     """
     return inp ** 0.5
@@ -227,8 +227,8 @@ def square(inp: Tensor) -> Tensor:
 
     .. testoutput::
 
-        [[0.      1.     4.]
-         [9.      16.    25.]]
+        [[ 0.  1.  4.]
+         [ 9. 16. 25.]]
 
     """
     return inp ** 2
@@ -437,7 +437,7 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
     :param lower: lower-bound of the range to be clamped to
     :param upper: upper-bound of the range to be clamped to
 
-    Example:
+    Examples:
 
     .. testcode::
 
@@ -451,6 +451,8 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
         print(F.clamp(a, lower=3).numpy())
 
         print(F.clamp(a, upper=3).numpy())
+
+    Outputs:
 
     .. testoutput::
 

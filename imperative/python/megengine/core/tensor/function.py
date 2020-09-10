@@ -31,7 +31,7 @@ class Function:
                 self.y = y
                 return y
 
-            def backward(self. output_grads):
+            def backward(self, output_grads):
                 y = self.y
                 return output_grads * y * (1-y)
 

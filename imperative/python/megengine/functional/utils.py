@@ -63,19 +63,6 @@ def accuracy(
     return accs
 
 
-def zero_grad(inp: Tensor) -> Tensor:
-    r"""
-    Returns a tensor which is treated as constant during backward gradient calcuation,
-    i.e. its gradient is zero.
-
-    :param inp: Input tensor.
-
-    See implementation of :func:`~.softmax` for example.
-    """
-    print("zero_grad is obsoleted, please use detach instead")
-    raise NotImplementedError
-
-
 def copy(inp, cn):
     r"""
     Copy tensor to another device.

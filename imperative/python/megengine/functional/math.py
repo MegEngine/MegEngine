@@ -58,6 +58,8 @@ def isnan(inp: Tensor) -> Tensor:
 
         print(F.isnan(x).numpy())
 
+    Outputs:
+
     .. testoutput::
 
         [False  True False]
@@ -83,6 +85,8 @@ def isinf(inp: Tensor) -> Tensor:
 
         print(F.isinf(x).numpy())
 
+    Outputs:
+    
     .. testoutput::
 
         [False  True False]
@@ -141,7 +145,9 @@ def sum(
         data = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
         out = F.sum(data)
         print(out.numpy())
-
+    
+    Outputs:
+    
     .. testoutput::
 
         [21]
@@ -208,6 +214,8 @@ def mean(
         out = F.mean(data)
         print(out.numpy())
 
+    Outputs:
+
     .. testoutput::
 
         [3.5]
@@ -250,9 +258,11 @@ def var(
         out = F.var(data)
         print(out.numpy())
 
+    Outputs:
+
     .. testoutput::
 
-        [2.9166667]
+        [2.9167]
     """
     if axis is None:
         m = mean(inp, axis=axis, keepdims=False)
@@ -288,9 +298,11 @@ def std(
         out = F.std(data, axis=1)
         print(out.numpy())
 
+    Outputs:
+
     .. testoutput::
 
-        [0.8164966 0.8164966]
+        [0.8165 0.8165]
     """
     return var(inp, axis=axis, keepdims=keepdims) ** 0.5
 
@@ -354,6 +366,8 @@ def max(
         y = F.max(x)
         print(y.numpy())
 
+    Outputs:
+
     .. testoutput::
 
         [6]
@@ -388,9 +402,11 @@ def norm(
         y = F.norm(x)
         print(y.numpy())
 
+    Outputs:
+
     .. testoutput::
 
-        [4.358899]
+        [4.3589]
 
     """
     if p == 0:
@@ -425,6 +441,8 @@ def argmin(
         x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
         y = F.argmin(x)
         print(y.numpy())
+
+    Outputs:
 
     .. testoutput::
 
@@ -479,6 +497,8 @@ def argmax(
         x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
         y = F.argmax(x)
         print(y.numpy())
+ 
+    Outputs:
 
     .. testoutput::
 
