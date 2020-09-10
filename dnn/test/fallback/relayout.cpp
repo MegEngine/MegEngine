@@ -31,7 +31,7 @@ TYPED_TEST(FALLBACK_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle());
 }
 }
-
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_RELAYOUT_CV) {
     relayout::run_cv_benchmark(handle());
 }
@@ -160,5 +160,6 @@ TEST_F(FALLBACK, BENCHMARK_RELAYOUT) {
         }
     }
 }
+#endif
 
 // vim: syntax=cpp.doxygen

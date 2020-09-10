@@ -27,7 +27,7 @@ TYPED_TEST_CASE(FALLBACK_ELEMWISE, elemwise::test_types);
 TYPED_TEST(FALLBACK_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }
-
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_ELEMWISE) {
     auto naive_handle = create_cpu_handle(2);
     auto run = [&](const TensorShape &shp0, const TensorShape &shp1) {
@@ -72,6 +72,7 @@ TEST_F(FALLBACK, BENCHMARK_ELEMWISE) {
     // non-contig, fallback to naive
     run({1024, 1024, 32}, {1024, 1, 32});
 }
+#endif
 
 // vim: syntax=cpp.doxygen
 

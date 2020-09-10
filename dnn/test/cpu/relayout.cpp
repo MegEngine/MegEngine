@@ -31,6 +31,7 @@ TYPED_TEST(CPU_RELAYOUT, run) {
 }
 }
 
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(CPU, BENCHMARK_RELAYOUT_CV) {
     relayout::run_cv_benchmark(handle());
 }
@@ -55,6 +56,6 @@ TEST_F(CPU, BENCHMARK_RELAYOUT) {
         ASSERT_LE(cpu_time * 5, naive_time);
     }
 }
-
+#endif
 
 // vim: syntax=cpp.doxygen

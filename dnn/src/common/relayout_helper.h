@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -42,8 +43,12 @@ namespace transpose_fallback {
 
 #if MEGDNN_X86
 constexpr size_t BLOCK_LINE_SIZE_BYTES = 64;
-#elif MEGDNN_AARCH64 || MEGDNN_ARMV7 
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7 /*BEGIN-INLINE-INTERNAL*/ || \
+        MEGDNN_MIPS /*END-INLINE-INTERNAL*/
 constexpr size_t BLOCK_LINE_SIZE_BYTES = 32;
+#elif MEGDNN_RISCV64
+//! ref U54-MC arch
+constexpr size_t BLOCK_LINE_SIZE_BYTES = 64;
 #else
 #error "unknown megdnn arch"
 #endif

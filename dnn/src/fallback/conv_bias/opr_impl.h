@@ -50,6 +50,7 @@ public:
               _megdnn_tensor_in bias, _megdnn_tensor_in z,
               _megdnn_tensor_out dst, const PreprocessedFilter*,
               _megdnn_workspace workspace) override;
+    bool is_thread_safe() const override { return true; }
 
     void exec_preprocess(const TensorLayout& src_layout,
                          _megdnn_tensor_in filter,

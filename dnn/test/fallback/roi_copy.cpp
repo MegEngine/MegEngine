@@ -34,7 +34,7 @@ TEST_F(FALLBACK, ROICOPY) {
     }
 
 }
-
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_ROICOPY) {
     auto run = [&](const TensorShapeArray& shapes) {
         Benchmarker<ROICopy> benchmarker(handle());
@@ -62,6 +62,7 @@ TEST_F(FALLBACK, BENCHMARK_ROICOPY) {
 
     run(shapes);
 }
+#endif
 
 
 }  // namespace test

@@ -17,6 +17,7 @@
 
 using namespace megdnn;
 using namespace test;
+#if MEGDNN_WITH_BENCHMARK
 namespace {
 
 void sgemm_sgemv_like(const float* __restrict A, const float* __restrict B,
@@ -70,6 +71,7 @@ TEST_F(CPU, BENCHMARK_MATRIX_MUL) {
             run(m, nk, nk);
         }
 }
+#endif
 
 TEST_F(CPU, MATRIX_MUL) {
     matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},

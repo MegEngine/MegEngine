@@ -16,6 +16,8 @@
 #include "src/x86/conv_bias/postprocess_helper.h"
 #elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
 #include "src/arm_common/conv_bias/postprocess_helper.h"
+#else
+#include "src/common/postprocess_helper.h"
 #endif
 using namespace megdnn;
 #if MEGDNN_X86

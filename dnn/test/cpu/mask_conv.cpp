@@ -25,9 +25,11 @@ TEST_F(CPU, MASK_CONV) {
     mask_conv_test(handle());
 }
 
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(CPU, MASK_CONV_BENCHMARK) {
     mask_conv_benchmark(handle());
 }
+#endif
 
 TEST_F(CPU, MASK_PROPAGATE) {
     param::MaskPropagate mask_param;

@@ -74,6 +74,10 @@ public:
             }
 #endif
 
+//! As we haven't riscv64 postprocess yet, im2col and conv1x1 can not pass ci
+//! test. so we just disable all im2col and conv1x1 in riscv64
+//! FIXME: remove it when impl postprocess for riscv64
+#if !MEGDNN_RISCV64
             for (size_t ohw_tile_size : {192, 384, 96, 48, 24}) {
                 refhold.emplace_back(new AlgoIm2col(
                         static_cast<MatrixMulImpl::AlgoBase*>(algo),
@@ -86,6 +90,8 @@ public:
                         oc_tile_size));
                 all_algos.emplace_back(refhold.back().get());
             }
+#endif
+
 #if 0
         //! As these algos maybe very slow, it will make fastrun search slow, so
         //! we disable it, but for the test of strategyhelper, we just keep it.

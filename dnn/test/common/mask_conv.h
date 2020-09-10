@@ -74,7 +74,7 @@ void mask_conv_test(Handle* handle) {
             arg[8], arg[9], arg[10], arg[11], arg[12]);
     }
 }
-
+#if MEGDNN_WITH_BENCHMARK
 void mask_conv_benchmark(Handle* handle) {
     auto benchmark = [&](size_t N, size_t IC, size_t OC, size_t IH, size_t IW,
                          size_t FH, size_t FW, size_t SH, size_t SW, size_t PH,
@@ -113,5 +113,6 @@ void mask_conv_benchmark(Handle* handle) {
                   arg[7], arg[8], arg[9], arg[10], arg[11], arg[12]);
     }
 }
+#endif
 
 }  // namespace

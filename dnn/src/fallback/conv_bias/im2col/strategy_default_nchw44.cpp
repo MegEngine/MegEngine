@@ -12,10 +12,10 @@
 #include "src/fallback/convolution/img2col_helper.h"
 #if MEGDNN_X86
 #include "src/x86/conv_bias/postprocess_helper.h"
-#endif
-
-#if (MEGDNN_ARMV7 || MEGDNN_AARCH64)
+#elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
 #include "src/arm_common/conv_bias/postprocess_helper.h"
+#else
+#include "src/common/postprocess_helper.h"
 #endif
 
 using namespace megdnn;

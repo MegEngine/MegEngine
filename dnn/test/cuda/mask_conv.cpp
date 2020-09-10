@@ -22,10 +22,11 @@ using namespace test;
 TEST_F(CUDA, MASK_CONV) {
     mask_conv_test(handle_cuda());
 }
-
+#if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, MASK_CONV_BENCHMARK) {
     mask_conv_benchmark(handle_cuda());
 }
+#endif
 
 TEST_F(CUDA, MASK_PROPAGATE) {
     Checker<MaskPropagate> checker(handle_cuda());

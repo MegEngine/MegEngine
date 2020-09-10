@@ -24,6 +24,8 @@
 #include "src/x86/conv_bias/postprocess_helper.h"
 #elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
 #include "src/arm_common/conv_bias/postprocess_helper.h"
+#else
+#include "src/common/postprocess_helper.h"
 #endif
 
 #include "midout.h"
@@ -106,7 +108,7 @@ ConvBiasImpl::AlgoConv1x1::get_kerns_according_packmode(
 
     WorkspaceBundle whole_bundle = get_bundle_according_packmode(param);
     //! NO_PACK not implement get_bundle
-    WorkspaceBundle matmul_bundle ={nullptr,{}};
+    WorkspaceBundle matmul_bundle = {nullptr, {}};
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
         matmul_bundle = {nullptr,
                          {0, 0, m_matmul_algo->get_workspace(matmul_param)}};
@@ -280,7 +282,6 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
     MIDOUT_END();
     return false;
 }
-
 
 bool ConvBiasImpl::AlgoConv1x1::is_preferred(
         const NCBKernSizeParam& param) const {

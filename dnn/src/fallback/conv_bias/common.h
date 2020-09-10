@@ -6,12 +6,14 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
 #include <stdint.h>
 #include "megdnn/oprs.h"
+#include "src/common/postprocess.h"
 #include "src/common/utils.h"
 
 namespace megdnn {
@@ -157,13 +159,6 @@ private:                                                                       \
     mutable std::string m_name;                                                \
     uint32_t m_tile_size;
 
-enum class PostprocessMode : uint8_t {
-    FLOAT = 0,   ///< support all biasmode and no_nonlinemode
-    NO_PROCESS,  ///< support  non bias and identity
-    QUANTIZED,   ///< support  NOBIAS ,BROADCAST_CHANNEL_BIAS and relu hswish
-                 ///< identify nonline mode
-    ADD_BIAS,    ///< only add bias
-};
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

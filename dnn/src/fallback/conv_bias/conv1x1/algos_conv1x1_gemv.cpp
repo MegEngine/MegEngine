@@ -25,9 +25,11 @@
 #include "src/x86/conv_bias/postprocess_helper.h"
 #elif (MEGDNN_ARMV7 || MEGDNN_AARCH64)
 #include "src/arm_common/conv_bias/postprocess_helper.h"
-#include "src/arm_common/matrix_mul/fp32/exec_sgemv.h"
 #include "src/arm_common/matrix_mul/fp16/hgemv.h"
+#include "src/arm_common/matrix_mul/fp32/exec_sgemv.h"
 #include "src/arm_common/matrix_mul/int8/gemv.h"
+#else
+#include "src/common/postprocess_helper.h"
 #endif
 
 #include "midout.h"
@@ -249,7 +251,7 @@ size_t ConvBiasImpl::AlgoConv1x1Gemv::get_oc_tile_size_heuristic(
 }
 
 size_t ConvBiasImpl::AlgoConv1x1Gemv::get_workspace(
-         const NCBKernSizeParam& param) const {
+        const NCBKernSizeParam& param) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1_gemv,
                  midout_iv("AlgoConv1x1Gemv::get_workspace"_hash)) {
         size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
@@ -335,7 +337,8 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
 #else
 #if !MEGDNN_DISABLE_FLOAT16
             cb1(param::ConvBias::Format::NCHW, dt_float16, dt_float16,
-                PostprocessMode::NO_PROCESS, "NCHW::GEMV::FLOAT16_FLOAT16"_hash);
+                PostprocessMode::NO_PROCESS,
+                "NCHW::GEMV::FLOAT16_FLOAT16"_hash);
 #endif
 #endif
             cb3(param::ConvBias::Format::NCHW, dt_int8, dt_int32, dt_int32,
@@ -361,7 +364,7 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
                 dt_uint8, PostprocessMode::QUANTIZED,
                 "NCHW::GEMV::QUINT8x8x32_QUINT8"_hash);
             break;
-        //!no support nchw44 8x8x16
+        //! no support nchw44 8x8x16
         case param::ConvBias::Format::NCHW44:
             cb1(param::ConvBias::Format::NCHW44, dt_float32, dt_float32,
                 PostprocessMode::FLOAT, "NCHW44::GEMV::FLOAT"_hash);
@@ -377,7 +380,7 @@ ConvBiasImpl::AlgoConv1x1Gemv::dispatch_kerns(
                 dt_int8, PostprocessMode::QUANTIZED,
                 "NCHW44::GEMV::QINT8x8x32_QINT8"_hash);
             break;
-        //!no support nchw44-dot 8x8x16
+        //! no support nchw44-dot 8x8x16
         case param::ConvBias::Format::NCHW44_DOT:
             cb3(param::ConvBias::Format::NCHW44_DOT, dt_int8, dt_int32,
                 dt_int32, dt_int8, dt_int32, dt_int32,
