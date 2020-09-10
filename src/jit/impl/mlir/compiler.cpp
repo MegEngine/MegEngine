@@ -222,9 +222,6 @@ void MLIRCompiler::run_lowering_pass(mlir::OwningModuleRef& module,
 
 std::unique_ptr<Executable> MLIRCompiler::do_compile(
         const InternalGraph& graph, const JITExecutor::Args& args) {
-    MGB_MARK_USED_VAR(graph);
-    MGB_MARK_USED_VAR(args);
-
     mlir::MLIRContext ctx;
     ctx.printStackTraceOnDiagnostic(true);
     ctx.printOpOnDiagnostic(true);

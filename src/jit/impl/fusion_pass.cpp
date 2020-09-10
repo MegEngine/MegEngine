@@ -291,8 +291,27 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
              cond_cn = opr->output(0)->comp_node() ==
                        ig_gen->output()->comp_node(),
              cond_shp = check_shape(opr, ig_gen),
-             cond_nr_inp = ig_gen->get_cnt_input_if_add(opr) <= max_nr_input;
-        if (cond_readers && cond_cn && cond_shp && cond_nr_inp) {
+             cond_nr_inp = ig_gen->get_cnt_input_if_add(opr) <= max_nr_input,
+             cond_mlir_specific = true;
+
+#if MGB_JIT_MLIR
+        //! FIXME mlir does't support broadcast currently.
+        auto backend = MGB_GETENV("MGB_JIT_BACKEND");
+        if (!strcmp(backend, "MLIR")) {
+            for (VarNode* var : opr->input()) {
+                if (!SymbolVar{var}.as_immutable_scalar().valid()) {
+                    if (opr->node_prop().dep_map().at(var) &
+                        DepType::DEV_VALUE) {
+                        if (!var->shape().eq_shape(opr->output(0)->shape())) {
+                            cond_mlir_specific = false;
+                        }
+                    }
+                }
+            }
+        }
+#endif
+        if (cond_readers && cond_cn && cond_shp && cond_nr_inp &&
+            cond_mlir_specific) {
             ig_gen->add_opr(opr);
         } else {
             if (opr->same_type<opr::Dimshuffle>()) {
@@ -344,7 +363,10 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
     }
 
     //! As MLIR backend has some contraints
-    auto backend = MGB_GETENV("MGB_JIT_BACKEND");
+    const char* backend = MGB_GETENV("MGB_JIT_BACKEND");
+    if (!backend) {
+        backend = "DEFAULT";
+    }
     // float elemwise
     if (auto elem = gopt::try_cast_as_op<opr::Elemwise>(opr)) {
         bool ret = true;

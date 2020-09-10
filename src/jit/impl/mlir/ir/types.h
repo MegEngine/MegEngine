@@ -19,7 +19,7 @@
 namespace mgb {
 namespace jit {
 
-inline bool is_elemwise_float(const mlir::Type& dt) {
+inline const bool is_elemwise_float(const mlir::Type& dt) {
     if (auto cast = dt.dyn_cast_or_null<mlir::MemRefType>()) {
         if (cast.getElementType().getKind() == mlir::StandardTypes::F32) {
             return true;

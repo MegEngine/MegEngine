@@ -1553,6 +1553,48 @@ TEST(TestJITExecutor, GradBehavior) {
     }
 }
 
+#if MGB_JIT_MLIR
+
+void run_mlir(CompNode cn) {
+    set_backend(Backend::MLIR);
+
+    HostTensorGenerator<> gen;
+    auto host_x0 = gen({23, 42}, cn), host_x1 = gen({23, 1}, cn),
+         host_x2 = gen({1, 42}, cn), host_x3 = gen({23, 42}, cn),
+         host_x4 = gen({1, 42}, cn), host_x5 = gen({23, 1}, cn);
+
+    auto make_dst = [&](ComputingGraph& graph) {
+        auto a = opr::Host2DeviceCopy::make(graph, host_x0),
+         b = opr::Host2DeviceCopy::make(graph, host_x1),
+         c = opr::Host2DeviceCopy::make(graph, host_x2),
+         d = opr::Host2DeviceCopy::make(graph, host_x3),
+         e = opr::Host2DeviceCopy::make(graph, host_x4);
+        return a + opr::max(b, c) + opr::max(d, e);
+    };
+    HostTensorND host_y1, host_y2;
+    auto funcs = make_func_pair(host_y1, host_y2, make_dst, 2);
+
+    funcs.first->execute();
+    funcs.second->execute();
+    MGB_ASSERT_TENSOR_EQ(host_y1, host_y2);
+
+    JITExecutor* jit;
+    unpack_vector(find_oprs<JITExecutor>(*funcs.second), jit);
+    ASSERT_EQ(2u, find_oprs<opr::Elemwise>(*funcs.second).size());
+    ASSERT_EQ(3u, jit->input().size());
+}
+
+TEST(TestJITExecutor, TestJITMlirFusion) {
+    run_mlir(CompNode::load("cpu0"));
+}
+
+TEST(TestJITExecutor, TestJITMlirFusionGpu) {
+    REQUIRE_GPU(1);
+    run_mlir(CompNode::load("gpu0"));
+}
+
+#endif // MGB_JIT_MLIR
+
 #endif  // MGB_JIT
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
