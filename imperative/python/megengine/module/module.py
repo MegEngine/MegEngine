@@ -5,6 +5,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
@@ -14,8 +15,8 @@ import numpy as np
 from ..core.tensor.dtype import is_quantize
 from ..core.tensor.utils import make_shape_tuple
 from ..logger import get_logger
-from ..tensor import Tensor
-from ..tensor_nn import Buffer, Parameter
+from ..tensor import Parameter, Tensor
+from ..utils.deprecation import deprecated
 from ..utils.hook import HookHandler
 
 logger = get_logger(__name__)
@@ -48,7 +49,7 @@ def _is_parameter(obj):
 
 
 def _is_buffer(obj):
-    return isinstance(obj, Buffer)
+    return isinstance(obj, Tensor) and not isinstance(obj, Parameter)
 
 
 def _is_module(obj):
@@ -163,49 +164,43 @@ class Module(metaclass=ABCMeta):
                         seen=seen,
                     )
 
-    def parameters(
-        self, requires_grad: Optional[bool] = None, recursive: bool = True, **kwargs
-    ) -> Iterable[Parameter]:
+    def parameters(self, recursive: bool = True, **kwargs) -> Iterable[Parameter]:
         r"""Returns an iterable for the :class:`~.Parameter` of the module.
 
-        :param requires_grad: Limitation over the :attr:`~.Parameter.requires_grad`
-            attribute of returned :class:`.Parameter`. ``None`` for no limitation.
         :param recursive: If ``True``, returns all :class:`~.Parameter` within this
             module, else only returns :class:`~.Parameter` that are direct attributes
             of this module.
         """
 
+        if "requires_grad" in kwargs:
+            del kwargs["requires_grad"]
+            warnings.warn("passing requires_grad has no effect currently")
+
         def predicate(obj) -> bool:
-            return _is_parameter(obj) and (
-                requires_grad is None or obj.requires_grad == requires_grad
-            )
+            return _is_parameter(obj)
 
         yield from self._flatten(
             with_key=False, predicate=predicate, recursive=recursive, **kwargs
         )
 
     def named_parameters(
-        self,
-        requires_grad: Optional[bool] = None,
-        prefix: Optional[str] = None,
-        recursive: bool = True,
-        **kwargs
+        self, prefix: Optional[str] = None, recursive: bool = True, **kwargs
     ) -> Iterable[Tuple[str, Parameter]]:
         """Returns an iterable for key :class:`~.Parameter` pairs of the module, where
         ``key`` is the dotted path from this module to the :class:`~.Parameter` .
 
-        :param requires_grad: Limitation over the :attr:`~.Parameter.requires_grad`
-            attribute of returned :class:`~.Parameter` . ``None`` for no limitation.
         :param prefix: The prefix prepended to the keys.
         :param recursive: If ``True``, returns all :class:`~.Parameter` within this
             module, else only returns :class:`~.Parameter` that are direct attributes
             of this module.
         """
 
+        if "requires_grad" in kwargs:
+            del kwargs["requires_grad"]
+            warnings.warn("passing requires_grad has no effect currently")
+
         def predicate(obj) -> bool:
-            return _is_parameter(obj) and (
-                requires_grad is None or obj.requires_grad == requires_grad
-            )
+            return _is_parameter(obj)
 
         yield from self._flatten(
             with_key=True,
@@ -215,11 +210,13 @@ class Module(metaclass=ABCMeta):
             **kwargs,
         )
 
-    def buffers(self, recursive: bool = True, **kwargs) -> Iterable[Buffer]:
-        """Returns an iterable for the :class:`~.Buffer` of the module.
+    def buffers(self, recursive: bool = True, **kwargs) -> Iterable[Tensor]:
+        """Returns an iterable for the buffers of the module.
 
-        :param recursive: If ``True``, returns all :class:`~.Buffer` within this
-            module, else only returns :class:`~.Buffer` that are direct attributes
+        Buffer is defined to be :class:`~.Tensor` excluding :class:`~.Parameter`.
+
+        :param recursive: If ``True``, returns all buffers within this
+            module, else only returns buffers that are direct attributes
             of this module.
         """
         yield from self._flatten(
@@ -228,13 +225,15 @@ class Module(metaclass=ABCMeta):
 
     def named_buffers(
         self, prefix: Optional[str] = None, recursive: bool = True, **kwargs
-    ) -> Iterable[Tuple[str, Buffer]]:
-        """Returns an iterable for key :class:`~.Buffer` pairs of the module, where
-        ``key`` is the dotted path from this module to the :class:`~.Buffer` .
+    ) -> Iterable[Tuple[str, Tensor]]:
+        """Returns an iterable for key buffer pairs of the module, where
+        ``key`` is the dotted path from this module to the buffer.
+
+        Buffer is defined to be :class:`~.Tensor` excluding :class:`~.Parameter`.
 
         :param prefix: The prefix prepended to the keys.
-        :param recursive: If ``True``, returns all :class:`~.Buffer` within this
-            module, else only returns :class:`~.Buffer` that are direct attributes
+        :param recursive: If ``True``, returns all buffers within this
+            module, else only returns buffers that are direct attributes
             of this module.
         """
         yield from self._flatten(
@@ -297,6 +296,7 @@ class Module(metaclass=ABCMeta):
         for it in self.modules():
             fn(it)
 
+    @deprecated(version="1.0")
     def zero_grad(self) -> None:
         """Set all parameters' grads to zero
         """
@@ -505,7 +505,7 @@ class Module(metaclass=ABCMeta):
             # scale/zero_points maybe invalid, use pretrained dtype instead.
             if is_quantize(to_be_load.dtype) and is_quantize(var.dtype):
                 var = var.astype(to_be_load.dtype)
-            var.set_value(to_be_load)
+            var._reset(to_be_load)
             loaded.append(k)
 
         return set(loaded), set(skipped)

@@ -28,13 +28,13 @@ class Simple(Module):
 def test_ai():
     net = Simple()
 
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim = optimizer.SGD(net.parameters(), lr=1.0)
     optim.clear_grad()
 
     dshape = (10, 10)
     data = tensor(np.ones(dshape).astype(np.float32))
-    with gm.record():
+    with gm:
         loss = net(data).sum()
         gm.backward(loss)
     optim.step()

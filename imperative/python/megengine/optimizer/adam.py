@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Tuple, Union
 
-from ..tensor_nn import Parameter
+from ..tensor import Parameter
 from .optimizer import Optimizer
 
 
@@ -59,7 +59,7 @@ class Adam(Optimizer):
 
         for param in param_group["params"]:
 
-            if not param.requires_grad or "grad" not in param.__dict__:
+            if param.grad is None:
                 continue
 
             grad = param.grad

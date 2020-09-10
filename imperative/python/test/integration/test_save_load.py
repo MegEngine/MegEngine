@@ -23,11 +23,11 @@ def test_save_load():
 
     optim = optimizer.SGD(net.parameters(), lr=1.0, momentum=0.9)
     optim.clear_grad()
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     data = tensor([2.34])
 
-    with gm.record():
+    with gm:
         loss = net(data)
         gm.backward(loss)
 
@@ -55,7 +55,7 @@ def test_save_load():
     optim.load_state_dict(checkpoint["opt_state"])
     print("load done")
 
-    with gm.record():
+    with gm:
         loss = net([1.23])
         gm.backward(loss)
 

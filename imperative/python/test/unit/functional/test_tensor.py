@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 import megengine.functional as F
-from megengine import Buffer, Parameter, is_cuda_available, tensor
+from megengine import tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork

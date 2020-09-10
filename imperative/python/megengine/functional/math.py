@@ -432,7 +432,7 @@ def argmin(
         [0]
 
     """
-    if isinstance(axis, collections.Iterable):
+    if isinstance(axis, collections.abc.Iterable):
         axis = list(axis)
         axis.sort(reverse=True)
 
@@ -486,7 +486,7 @@ def argmax(
         [5]
 
     """
-    if isinstance(axis, collections.Iterable):
+    if isinstance(axis, collections.abc.Iterable):
         axis = list(axis)
         axis.sort(reverse=True)
 

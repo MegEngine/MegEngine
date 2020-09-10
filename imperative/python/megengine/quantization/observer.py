@@ -13,7 +13,7 @@ import numpy as np
 from .. import functional as F
 from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
 from ..module import Module
-from ..tensor_nn import Buffer
+from ..tensor import Tensor
 from .utils import QuantMode, Round, get_qparam_dict
 
 
@@ -82,8 +82,8 @@ class MinMaxObserver(Observer):
     ):
         super().__init__(dtype, narrow_range)
         self.mode = mode
-        self.min_val = Buffer(np.finfo(np.float32).max, dtype=np.float32)
-        self.max_val = Buffer(np.finfo(np.float32).min, dtype=np.float32)
+        self.min_val = Tensor(np.finfo(np.float32).max, dtype=np.float32)
+        self.max_val = Tensor(np.finfo(np.float32).min, dtype=np.float32)
         self.scale_limit = eps
 
     def _calculate_qparams(self, inp_min_val, inp_max_val):
@@ -118,8 +118,8 @@ class MinMaxObserver(Observer):
             # stop gradient
             x = x_orig.detach()
             # find max and min
-            self.min_val.set_value(F.minimum(self.min_val, x.min()))
-            self.max_val.set_value(F.maximum(self.max_val, x.max()))
+            self.min_val._reset(F.minimum(self.min_val, x.min()))
+            self.max_val._reset(F.maximum(self.max_val, x.max()))
         return x_orig
 
 
@@ -133,22 +133,22 @@ class ExponentialMovingAverageObserver(MinMaxObserver):
         narrow_range: bool = False,
     ):
         super().__init__(mode, eps, dtype, narrow_range)
-        self.momentum = Buffer(momentum)
-        self.runtime_momentum = Buffer(0.0)
+        self.momentum = Tensor(momentum)
+        self.runtime_momentum = Tensor(0.0)
 
     def set_momentum(self, momentum):
-        self.momentum.set_value(momentum)
+        self.momentum._reset(momentum)
 
     def forward(self, x_orig):
         if self.enabled:
             # stop gradient
             x = x_orig.detach()
             # Exponential Moving Average
-            self.min_val.set_value(
+            self.min_val._reset(
                 self.min_val * self.runtime_momentum
                 + (1 - self.runtime_momentum) * x.min()
             )
-            self.max_val.set_value(
+            self.max_val._reset(
                 self.max_val * self.runtime_momentum
                 + (1 - self.runtime_momentum) * x.max()
             )
@@ -171,7 +171,7 @@ class HistogramObserver(MinMaxObserver):
         self.bins = bins
         self.upsample_rate = upsample_rate
         self.dst_nbins = _metadata_dict[dtype].qmax - _metadata_dict[dtype].qmin + 1
-        self.histogram = Buffer([-1] + [0.0] * (bins - 1))
+        self.histogram = Tensor([-1] + [0.0] * (bins - 1))
 
     def _non_linear_param_search(self):
         r"""Non-linear parameter search.
@@ -395,9 +395,9 @@ class HistogramObserver(MinMaxObserver):
                     self.bins,
                 )
 
-        self.histogram.set_value(new_histogram)
-        self.min_val.set_value(new_min)
-        self.max_val.set_value(new_max)
+        self.histogram._reset(new_histogram)
+        self.min_val._reset(new_min)
+        self.max_val._reset(new_max)
 
     def forward(self, x_orig):
         self.sideeffect_forward(x_orig)

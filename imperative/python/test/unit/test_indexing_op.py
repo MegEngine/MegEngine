@@ -38,7 +38,7 @@ def cvt_to_shape_desc(val, inpvar, config=None):
     if isinstance(val, RawTensor):
         return as_tensor(val, device)
 
-    if not isinstance(val, collections.Iterable):
+    if not isinstance(val, collections.abc.Iterable):
         val = [val]
 
     components = []

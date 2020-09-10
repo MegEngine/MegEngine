@@ -91,7 +91,7 @@ class MnistNet(Module):
 
 
 def train(data, label, net, opt, gm):
-    with gm.record():
+    with gm:
         pred = net(data)
         loss = F.cross_entropy_with_softmax(pred, label)
         gm.backward(loss)
@@ -117,7 +117,7 @@ def update_model(model_path):
     net.load_state_dict(checkpoint["net_init"])
     lr = checkpoint["sgd_lr"]
     opt = SGD(net.parameters(), lr=lr)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     data = Tensor(checkpoint["data"], dtype=np.float32)
     label = Tensor(checkpoint["label"], dtype=np.int32)
@@ -152,7 +152,7 @@ def run_train(
     net.load_state_dict(checkpoint["net_init"])
     lr = checkpoint["sgd_lr"]
     opt = SGD(net.parameters(), lr=lr)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     data = Tensor(checkpoint["data"], dtype=np.float32)
     label = Tensor(checkpoint["label"], dtype=np.int32)

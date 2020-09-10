@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
-from megengine import tensor
+from megengine import Tensor
 from megengine.module import Module
 
 
@@ -35,12 +35,12 @@ def test_cambricon_module():
     with open(model, "rb") as f:
         data = f.read()
         m = MyModule(data)
-        inputs = []
-        inputs.append(tensor(data=[], dtype=np.float16, device="cambricon0"))
-        inputs[0].set_value(np.random.normal(size=(1, 64, 32, 32)).astype(np.float16))
+        inp = Tensor(
+            np.random.normal((1, 64, 32, 32)).astype(np.float16), device="cambricon0"
+        )
 
         def inference(inps):
             pred = m(inps)
             return pred
 
-        pred = inference(inputs)
+        pred = inference([inp])

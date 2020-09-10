@@ -66,7 +66,7 @@ def main():
         mge.set_default_device("cpux")
 
     net = XORNet()
-    opt = optim.SGD(net.parameters(requires_grad=True), lr=0.01, momentum=0.9)
+    opt = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
     batch_size = 64
     train_dataset = minibatch_generator(batch_size)
     val_dataset = minibatch_generator(batch_size)

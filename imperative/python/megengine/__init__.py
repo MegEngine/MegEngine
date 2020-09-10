@@ -74,8 +74,7 @@ from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .device import *
 from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save
-from .tensor import Tensor, tensor
-from .tensor_nn import Buffer, Parameter
+from .tensor import Parameter, Tensor, tensor
 from .version import __version__
 
 _set_fork_exec_path_for_timed_func(

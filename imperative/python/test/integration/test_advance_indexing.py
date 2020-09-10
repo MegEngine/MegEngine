@@ -38,7 +38,7 @@ class Simple2(Module):
 def test_advance_indexing():
     net = Simple()
 
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim = optimizer.SGD(net.parameters(), lr=1.0)
     optim.clear_grad()
 
@@ -48,7 +48,7 @@ def test_advance_indexing():
     data = tensor(raw_data)
     mask = tensor(raw_mask)
     answer = 1.0 - raw_data[raw_mask].sum()
-    with gm.record():
+    with gm:
         loss = net(data, mask).sum()
         gm.backward(loss)
     optim.step()
@@ -58,7 +58,7 @@ def test_advance_indexing():
 def test_advance_indexing_with_subtensor():
     net = Simple2()
 
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim = optimizer.SGD(net.parameters(), lr=1.0)
     optim.clear_grad()
 
@@ -66,7 +66,7 @@ def test_advance_indexing_with_subtensor():
     raw_data = np.arange(576).reshape(dshape).astype(np.float32)
     data = tensor(raw_data)
     answer = 1.0 - raw_data[1, ..., :, 0:4:2, 0:2].sum()
-    with gm.record():
+    with gm:
         loss = net(data).sum()
         gm.backward(loss)
     optim.step()

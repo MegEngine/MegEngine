@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 
 from ..functional import embedding as embedding_func
-from ..tensor_nn import Parameter
+from ..tensor import Parameter
 from . import init
 from .module import Module
 
@@ -72,6 +72,7 @@ class Embedding(Module):
         max_norm: Optional[float] = None,
         norm_type: Optional[float] = None,
         initial_weight: Parameter = None,
+        freeze: bool = False,
     ):
         super().__init__()
         if padding_idx is not None:
@@ -83,6 +84,7 @@ class Embedding(Module):
         self.norm_type = norm_type
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
+        self.freeze = freeze
         if initial_weight is None:
             self.weight = Parameter(
                 np.random.uniform(
@@ -101,7 +103,11 @@ class Embedding(Module):
         init.normal_(self.weight)
 
     def forward(self, inputs):
-        return embedding_func(inputs, self.weight)
+        if self.freeze:
+            weight = self.weight.detach()
+        else:
+            weight = self.weight
+        return embedding_func(inputs, weight)
 
     @classmethod
     def from_pretrained(
@@ -166,6 +172,6 @@ class Embedding(Module):
             padding_idx=padding_idx,
             max_norm=max_norm,
             norm_type=norm_type,
+            freeze=freeze,
         )
-        embedding.weight.requires_grad = not freeze
         return embedding

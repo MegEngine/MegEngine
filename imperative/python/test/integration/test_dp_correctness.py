@@ -97,7 +97,7 @@ class MnistNet(Module):
 
 def train(data, label, net, opt, gm):
     opt.clear_grad()
-    with gm.record():
+    with gm:
         pred = net(data)
         loss = F.cross_entropy_with_softmax(pred, label)
         gm.backward(loss)
@@ -125,8 +125,7 @@ def update_model(model_path):
     lr = checkpoint["sgd_lr"]
     opt = SGD(net.parameters(), lr=lr)
 
-    gm = ad.GradManager()
-    gm.register(
+    gm = ad.GradManager().attach(
         net.parameters(), callbacks=[dist.make_allreduce_cb("MEAN", dist.WORLD)]
     )
 
@@ -171,8 +170,7 @@ def run_test(
         lr = checkpoint["sgd_lr"]
         opt = SGD(net.parameters(), lr=lr)
 
-        gm = ad.GradManager()
-        gm.register(
+        gm = ad.GradManager().attach(
             net.parameters(), callbacks=[dist.make_allreduce_cb("MEAN", dist.WORLD)]
         )
 

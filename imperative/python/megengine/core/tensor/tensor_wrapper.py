@@ -166,7 +166,7 @@ def _reduce(mode):
 
             op = builtin.Reduce(mode=mode, axis=0)
             (result,) = apply(op, data)
-        elif isinstance(axis, collections.Iterable):
+        elif isinstance(axis, collections.abc.Iterable):
             axis = list(axis)
             axis.sort(reverse=True)
 
@@ -204,7 +204,9 @@ def _todo(*_):
 
 def _expand_args(args):
     if len(args) == 1:
-        if isinstance(args[0], (collections.Sequence, TensorBase, TensorWrapperBase)):
+        if isinstance(
+            args[0], (collections.abc.Sequence, TensorBase, TensorWrapperBase)
+        ):
             args = args[0]
     return args
 

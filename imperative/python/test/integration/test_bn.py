@@ -25,12 +25,12 @@ def test_frozen_bn():
     saved_wt = m.weight.numpy()
     saved_bias = m.bias.numpy()
 
-    gm = ad.GradManager().register(m.parameters())
+    gm = ad.GradManager().attach(m.parameters())
     optim = optimizer.SGD(m.parameters(), lr=1.0)
     optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with gm.record():
+    with gm:
         loss = m(data).mean()
         gm.backward(loss)
     optim.step()
@@ -46,12 +46,12 @@ def test_bn_no_track_stat():
     nchannel = 3
     m = BatchNorm2d(nchannel, track_running_stats=False)
 
-    gm = ad.GradManager().register(m.parameters())
+    gm = ad.GradManager().attach(m.parameters())
     optim = optimizer.SGD(m.parameters(), lr=1.0)
     optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with gm.record():
+    with gm:
         loss = m(data).sum()
         gm.backward(loss)
     optim.step()
@@ -68,12 +68,12 @@ def test_bn_no_track_stat2():
     saved_mean = m.running_mean.numpy()
     assert saved_mean is not None
 
-    gm = ad.GradManager().register(m.parameters())
+    gm = ad.GradManager().attach(m.parameters())
     optim = optimizer.SGD(m.parameters(), lr=1.0)
     optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with gm.record():
+    with gm:
         loss = m(data).sum()
         gm.backward(loss)
     optim.step()

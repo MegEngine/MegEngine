@@ -61,15 +61,15 @@ class XORNet(M.Module):
 
 def test_xornet_trace_dump():
     net = XORNet()
-    opt = optim.SGD(net.parameters(requires_grad=True), lr=0.01, momentum=0.9)
-    gm = GradManager().register(net.parameters(requires_grad=True))
+    opt = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    gm = GradManager().attach(net.parameters())
     batch_size = 64
     train_dataset = minibatch_generator(batch_size)
     val_dataset = minibatch_generator(batch_size)
 
     @trace
     def train_fun(data, label):
-        with gm.record():
+        with gm:
             net.train()
             pred = net(data)
             loss = F.cross_entropy_with_softmax(pred, label)

@@ -9,7 +9,7 @@ import numpy as np
 
 from ... import functional as F
 from ...core.tensor import dtype
-from ...tensor_nn import Parameter
+from ...tensor import Parameter
 from ..qat import linear as QAT
 from .module import QuantizedModule
 

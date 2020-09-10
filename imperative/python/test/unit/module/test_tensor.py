@@ -13,7 +13,7 @@ import pytest
 
 import megengine as mge
 import megengine.functional as F
-from megengine import Buffer, Parameter
+from megengine import Parameter, Tensor
 from megengine.module import Conv2d
 from megengine.test import assertTensorClose
 
@@ -33,7 +33,7 @@ def test_set_value():
 
 @pytest.mark.skip(reason="fill unsupported")
 def test_fill():
-    a = Buffer(np.zeros((2, 3), dtype=np.float32))
+    a = Tensor(np.zeros((2, 3), dtype=np.float32))
     a.fill(3)
     assertTensorClose(a.numpy(), np.full((2, 3), 3, dtype=np.float32))
     a.fill(124.568)
@@ -80,7 +80,7 @@ def test_fill():
 # def test_shape_warning():
 #     with Graph() as cg:
 #         cg.set_option("eager_evaluation", False)
-#         b = Buffer(np.ones((2, 3)).astype(np.float32))
+#         b = Tensor(np.ones((2, 3)).astype(np.float32))
 #         with pytest.warns(None) as record:
 #             print(b.shape)
 #         if len(record) != 0:

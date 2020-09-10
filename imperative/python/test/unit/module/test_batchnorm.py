@@ -14,10 +14,9 @@ import pytest
 
 import megengine as mge
 import megengine.distributed as dist
-from megengine import tensor
+from megengine import Tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
-from megengine.tensor import Tensor
 from megengine.test import assertTensorClose
 
 
@@ -45,10 +44,8 @@ def test_syncbn():
             return
         dist.init_process_group("localhost", port, nr_ranks, rank, rank)
         bn = SyncBatchNorm(nr_chan, momentum=momentum, eps=eps)
-        data_tensor = tensor([])
         for i in range(steps):
-            data_tensor.set_value(data[i])
-            yv = bn(data_tensor)
+            yv = bn(Tensor(data[i]))
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
         assertTensorClose(running_mean, bn.running_mean.numpy(), max_err=5e-6)
@@ -105,7 +102,6 @@ def test_batchnorm():
     bn = BatchNorm1d(nr_chan, momentum=momentum)
     running_mean = np.zeros((1, nr_chan, 1), dtype=np.float32)
     running_var = np.ones((1, nr_chan, 1), dtype=np.float32)
-    data = tensor([])
     for i in range(3):
         xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
         mean = np.mean(np.mean(xv, axis=0, keepdims=True), axis=2, keepdims=True)
@@ -120,8 +116,7 @@ def test_batchnorm():
         running_mean = running_mean * momentum + mean * (1 - momentum)
         running_var = running_var * momentum + var_unbiased * (1 - momentum)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -137,7 +132,7 @@ def test_batchnorm():
     var_backup = bn.running_var.numpy()
     bn.training = False
     xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
-    data.set_value(xv)
+    data = Tensor(xv)
     yv1 = bn(data)
     yv2 = bn(data)
     assertTensorClose(yv1.numpy(), yv2.numpy(), max_err=0)
@@ -161,7 +156,6 @@ def test_syncbn1d():
     bn = SyncBatchNorm(nr_chan, momentum=momentum)
     running_mean = np.zeros((1, nr_chan, 1), dtype=np.float32)
     running_var = np.ones((1, nr_chan, 1), dtype=np.float32)
-    data = tensor([])
     for i in range(3):
         xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
         mean = np.mean(np.mean(xv, axis=0, keepdims=True), axis=2, keepdims=True)
@@ -176,8 +170,7 @@ def test_syncbn1d():
         running_mean = running_mean * momentum + mean * (1 - momentum)
         running_var = running_var * momentum + var_unbiased * (1 - momentum)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -193,7 +186,7 @@ def test_syncbn1d():
     var_backup = bn.running_var.numpy()
     bn.training = False
     xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
-    data.set_value(xv)
+    data = Tensor(xv)
     yv1 = bn(data)
     yv2 = bn(data)
     assertTensorClose(yv1.numpy(), yv2.numpy(), max_err=0)
@@ -210,7 +203,6 @@ def test_batchnorm2d():
     bn = BatchNorm2d(nr_chan, momentum=momentum)
     running_mean = np.zeros((1, nr_chan, 1, 1), dtype=np.float32)
     running_var = np.ones((1, nr_chan, 1, 1), dtype=np.float32)
-    data = tensor([])
     for i in range(3):
         xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
         xv_transposed = np.transpose(xv, [0, 2, 3, 1]).reshape(
@@ -226,8 +218,7 @@ def test_batchnorm2d():
         running_mean = running_mean * momentum + mean * (1 - momentum)
         running_var = running_var * momentum + var_unbiased * (1 - momentum)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -239,7 +230,7 @@ def test_batchnorm2d():
     var_backup = bn.running_var.numpy()
     bn.training = False
     xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
-    data.set_value(xv)
+    data = Tensor(xv)
     yv1 = bn(data)
     yv2 = bn(data)
     assertTensorClose(yv1.numpy(), yv2.numpy(), max_err=0)
@@ -263,7 +254,6 @@ def test_syncbn2d():
     bn = SyncBatchNorm(nr_chan, momentum=momentum)
     running_mean = np.zeros((1, nr_chan, 1, 1), dtype=np.float32)
     running_var = np.ones((1, nr_chan, 1, 1), dtype=np.float32)
-    data = tensor([])
     for i in range(3):
         xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
         xv_transposed = np.transpose(xv, [0, 2, 3, 1]).reshape(
@@ -279,8 +269,7 @@ def test_syncbn2d():
         running_mean = running_mean * momentum + mean * (1 - momentum)
         running_var = running_var * momentum + var_unbiased * (1 - momentum)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -292,7 +281,7 @@ def test_syncbn2d():
     var_backup = bn.running_var.numpy()
     bn.training = False
     xv = np.random.normal(loc=2.3, size=data_shape).astype(np.float32)
-    data.set_value(xv)
+    data = Tensor(xv)
     yv1 = bn(data)
     yv2 = bn(data)
     assertTensorClose(yv1.numpy(), yv2.numpy(), max_err=0)
@@ -306,7 +295,6 @@ def test_batchnorm_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 4)
     bn = BatchNorm1d(8, track_running_stats=False)
-    data = tensor([])
     for i in range(4):
         if i == 2:
             bn.training = False
@@ -320,8 +308,7 @@ def test_batchnorm_no_stats():
         ).reshape((1, nr_chan, 1))
         sd = np.sqrt(var + bn.eps)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -338,7 +325,6 @@ def test_syncbn_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 4)
     bn = SyncBatchNorm(8, track_running_stats=False)
-    data = tensor([])
     for i in range(4):
         if i == 2:
             bn.training = False
@@ -352,8 +338,7 @@ def test_syncbn_no_stats():
         ).reshape((1, nr_chan, 1))
         sd = np.sqrt(var + bn.eps)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -363,7 +348,6 @@ def test_batchnorm2d_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 16, 16)
     bn = BatchNorm2d(8, track_running_stats=False)
-    data = tensor([])
     for i in range(4):
         if i == 2:
             bn.training = False
@@ -376,8 +360,7 @@ def test_batchnorm2d_no_stats():
         var = np.var(xv_transposed, axis=0).reshape((1, nr_chan, 1, 1))
         sd = np.sqrt(var + bn.eps)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)
@@ -394,7 +377,6 @@ def test_syncbn2d_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 16, 16)
     bn = SyncBatchNorm(8, track_running_stats=False)
-    data = tensor([])
     for i in range(4):
         if i == 2:
             bn.training = False
@@ -407,8 +389,7 @@ def test_syncbn2d_no_stats():
         var = np.var(xv_transposed, axis=0).reshape((1, nr_chan, 1, 1))
         sd = np.sqrt(var + bn.eps)
 
-        data.set_value(xv)
-        yv = bn(data)
+        yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
         assertTensorClose(yv_expect, yv.numpy(), max_err=5e-6)

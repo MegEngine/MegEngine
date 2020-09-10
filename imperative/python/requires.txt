@@ -5,3 +5,4 @@ requests
 tabulate
 tqdm
 redispy
+deprecated

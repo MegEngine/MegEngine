@@ -13,7 +13,7 @@ import numpy as np
 from ..core.ops._internal import param_defs as P
 from ..functional import conv2d, conv_transpose2d, local_conv2d, relu
 from ..functional.types import _pair, _pair_nonzero
-from ..tensor_nn import Parameter
+from ..tensor import Parameter
 from . import init
 from .module import Module
 

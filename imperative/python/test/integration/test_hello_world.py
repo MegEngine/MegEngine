@@ -33,10 +33,10 @@ def test_hello_world():
 
     optim = optimizer.SGD(net.parameters(), lr=1.0)
     optim.clear_grad()
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     data = tensor([2.34])
-    with gm.record():
+    with gm:
         loss = net(data)
         gm.backward(loss)
     optim.step()

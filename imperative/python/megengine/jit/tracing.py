@@ -502,7 +502,7 @@ class trace:
             raise TypeError(
                 "cannot specify output_names when output is already in dict format"
             )
-        if output_names and not isinstance(output_names, collections.Sequence):
+        if output_names and not isinstance(output_names, collections.abc.Sequence):
             output_names = (output_names,)
         if output_names and len(output_names) != len(self._output_bindings):
             raise ValueError(
@@ -510,7 +510,7 @@ class trace:
                     len(self._output_bindings)
                 )
             )
-        if arg_names and not isinstance(arg_names, collections.Sequence):
+        if arg_names and not isinstance(arg_names, collections.abc.Sequence):
             arg_names = (arg_names,)
         if arg_names and len(arg_names) != len(self._arg_bindings):
             raise ValueError(
@@ -646,9 +646,9 @@ class trace:
 
     def _process_outputs(self, outputs):
         output_names = None
-        if isinstance(outputs, collections.Mapping):
+        if isinstance(outputs, collections.abc.Mapping):
             output_names, outputs = zip(*sorted(outputs.items()))
-        elif not isinstance(outputs, collections.Sequence):
+        elif not isinstance(outputs, collections.abc.Sequence):
             outputs = (outputs,)
 
         if not self._untraced:

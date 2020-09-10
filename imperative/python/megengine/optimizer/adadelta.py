@@ -11,7 +11,7 @@ from typing import Iterable, Union
 import numpy as np
 
 from ..functional import sqrt
-from ..tensor_nn import Parameter
+from ..tensor import Parameter
 from .optimizer import Optimizer
 
 
@@ -63,7 +63,7 @@ class Adadelta(Optimizer):
 
         for param in param_group["params"]:
 
-            if not param.requires_grad or "grad" not in param.__dict__:
+            if param.grad is None:
                 continue
 
             states = self._state[param]

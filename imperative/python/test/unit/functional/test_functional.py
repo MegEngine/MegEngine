@@ -14,7 +14,7 @@ import pytest
 import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
-from megengine import Buffer, Parameter, is_cuda_available, tensor
+from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
@@ -330,7 +330,7 @@ def test_roi_pooling():
 def test_add_update():
     shape = (2, 3)
     v = np.random.random(shape).astype(np.float32)
-    b = Buffer(v)
+    b = Tensor(v)
 
     u = F.add_update(b, 1)
     assertTensorClose(u.numpy(), v + 1)
@@ -347,7 +347,7 @@ def test_add_update():
 
 def test_add_update_params():
     b = np.random.random((2, 3)).astype(np.float32)
-    y = Buffer(b)
+    y = Tensor(b)
 
     # @jit.trace
     def f(x):
@@ -355,7 +355,7 @@ def test_add_update_params():
 
     f(np.zeros((2, 3)).astype(np.float32))
 
-    z = Buffer(np.zeros((2, 3)).astype(np.float32))
+    z = Tensor(np.zeros((2, 3)).astype(np.float32))
     F.add_update(y, z, beta=0.1)
 
     res = f(np.ones((2, 3)).astype(np.float32))

@@ -12,7 +12,7 @@ import numpy as np
 
 from ..distributed.group import WORLD, Group
 from ..functional import batch_norm2d, sync_batch_norm
-from ..tensor_nn import Buffer, Parameter, Tensor
+from ..tensor import Parameter, Tensor
 from . import init
 from .module import Module
 
@@ -45,8 +45,8 @@ class _BatchNorm(Module):
         tshape = (1, self.num_features, 1, 1)
 
         if self.track_running_stats:
-            self.running_mean = Buffer(np.zeros(tshape, dtype=np.float32))
-            self.running_var = Buffer(np.ones(tshape, dtype=np.float32))
+            self.running_mean = Tensor(np.zeros(tshape, dtype=np.float32))
+            self.running_var = Tensor(np.ones(tshape, dtype=np.float32))
         else:
             self.running_mean = None
             self.running_var = None

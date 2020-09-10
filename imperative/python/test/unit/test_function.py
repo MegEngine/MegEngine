@@ -42,11 +42,11 @@ def test_single_input():
             return x
 
     net = Simple(av)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     opt = optimizer.SGD(net.parameters(), lr=1.0)
 
     opt.clear_grad()
-    with gm.record():
+    with gm:
         loss = net()
         gm.backward(loss.sum())
     opt.step()
@@ -81,11 +81,11 @@ def test_multi_input():
             return x
 
     net = Simple(av, bv)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     opt = optimizer.SGD(net.parameters(), lr=1.0)
 
     opt.clear_grad()
-    with gm.record():
+    with gm:
         loss = net()
         gm.backward(loss.sum())
     opt.step()
@@ -121,11 +121,11 @@ def test_multi_output():
             return x + y
 
     net = Simple(av, bv)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     opt = optimizer.SGD(net.parameters(), lr=1.0)
 
     opt.clear_grad()
-    with gm.record():
+    with gm:
         loss = net()
         gm.backward(loss.sum())
     opt.step()
@@ -163,9 +163,9 @@ def test_skip_invalid_grad():
 
     net = Simple(av, bv)
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim.clear_grad()
-    with gm.record():
+    with gm:
         loss = net().sum()
         gm.backward(loss)
     optim.step()
@@ -198,10 +198,10 @@ def test_ste():
     av = np.random.random(data_shape).astype(np.float32)
     net = Simple(av)
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim.clear_grad()
 
-    with gm.record():
+    with gm:
         loss = net()
         gm.backward(loss.sum())
     optim.step()
@@ -256,9 +256,9 @@ def test_none_in_out_grad():
     b = tensor(np.array([2.0], dtype=np.float32))
     net = Simple(a, b)
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim.clear_grad()
-    with gm.record():
+    with gm:
         loss, _ = net()
         gm.backward(loss)
     optim.step()
@@ -293,10 +293,10 @@ def test_zero_grad():
     a = tensor(np.array([1.0], dtype=np.float32))
     net = Simple(a)
     optim = optimizer.SGD(net.parameters(), lr=1.0)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
     optim.clear_grad()
 
-    with gm.record():
+    with gm:
         loss = net()
         gm.backward(loss.sum())
     optim.step()

@@ -31,12 +31,12 @@ def test_sgd_momentum():
 
     optim = optimizer.SGD(net.parameters(), lr=1.0, momentum=0.9)
     optim.clear_grad()
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     data = tensor([2.34])
 
     # do a step of train
-    with gm.record():
+    with gm:
         loss = net(data)
         gm.backward(loss)
     optim.step()
@@ -51,7 +51,7 @@ def test_sgd_momentum():
 
     # do a step of train
     optim.clear_grad()
-    with gm.record():
+    with gm:
         loss = net(data)
         gm.backward(loss)
     optim.step()
@@ -69,7 +69,7 @@ def test_sgd_momentum_trace():
         @trace(symbolic=symbolic)
         def train_func(data, *, model=None, optim=None, gm=None):
             optim.clear_grad()
-            with gm.record():
+            with gm:
                 loss = net(data)
                 gm.backward(loss)
             optim.step()
@@ -82,7 +82,7 @@ def test_sgd_momentum_trace():
 
         net = Simple()
         optim = optimizer.SGD(net.parameters(), lr=1.0, momentum=0.9)
-        gm = ad.GradManager().register(net.parameters())
+        gm = ad.GradManager().attach(net.parameters())
         data = tensor([2.34])
         train_func(data, model=net, optim=optim, gm=gm)
         np.testing.assert_almost_equal(

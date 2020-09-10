@@ -231,13 +231,13 @@ class OpNode:
 
 
 def _wrap(x):
-    if isinstance(x, collections.Sequence):
+    if isinstance(x, collections.abc.Sequence):
         return type(x)(map(_wrap, x))
     return x.graph._wrap(x)
 
 
 def _unwrap(x):
-    if isinstance(x, collections.Sequence):
+    if isinstance(x, collections.abc.Sequence):
         return type(x)(map(_unwrap, x))
     return x._node
 

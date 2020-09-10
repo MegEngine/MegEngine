@@ -16,7 +16,7 @@ import pytest
 
 import megengine as mge
 import megengine.functional as F
-from megengine import Buffer, Parameter, Tensor, tensor
+from megengine import Parameter, Tensor, tensor
 from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
@@ -196,7 +196,7 @@ class MyModule(Module):
         self.i = self.InnerModule()
         self.bn = BatchNorm2d(4)
         self.param = Parameter(np.ones(1, dtype=np.float32))
-        self.buff = Buffer(np.ones(1, dtype=np.float32))
+        self.buff = Tensor(np.ones(1, dtype=np.float32))
 
     def forward(self, x):
         x = self.i(x)
@@ -464,8 +464,7 @@ def test_sequential_named_children():
 
 def test_state_dict():
     data_shape = (2, 28)
-    data = tensor([])
-    data.set_value(np.random.random(data_shape))
+    data = tensor(np.random.random(data_shape))
     mlp = MLP()
     pred0 = mlp(data)
 
@@ -542,8 +541,7 @@ def test_shared_param():
 
 def test_pickle_module():
     data_shape = (2, 28)
-    data = tensor([])
-    data.set_value(np.random.random(data_shape))
+    data = tensor(np.random.random(data_shape))
     mlp = MLP()
     # pickle before forward
     with BytesIO() as fout:
@@ -568,8 +566,7 @@ def test_pickle_module():
 @pytest.mark.skip(reason="under development")
 def test_dump_model():
     data_shape = (2, 28)
-    data = tensor([])
-    data.set_value(np.random.random(data_shape))
+    data = Tensor(np.random.random(data_shape))
     mlp = MLP()
     pred = mlp(data)
     f = tempfile.NamedTemporaryFile(delete=False)

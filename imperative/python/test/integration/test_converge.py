@@ -74,13 +74,11 @@ class XORNet(Module):
 
 def test_training_converge():
     net = XORNet()
-    opt = SGD(
-        net.parameters(requires_grad=True), lr=0.01, momentum=0.9, weight_decay=5e-4
-    )
-    gm = ad.GradManager().register(net.parameters())
+    opt = SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+    gm = ad.GradManager().attach(net.parameters())
 
     def train(data, label):
-        with gm.record():
+        with gm:
             pred = net(data)
             loss = F.cross_entropy_with_softmax(pred, label)
             gm.backward(loss)

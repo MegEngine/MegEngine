@@ -32,11 +32,11 @@ def test_detach():
 
     optim = optimizer.SGD(net.parameters(), lr=1.0)
     optim.clear_grad()
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     dshape = (10, 10)
     data = tensor(np.ones(dshape).astype(np.float32))
-    with gm.record():
+    with gm:
         loss = net(data).sum()
         gm.backward(loss)
     optim.step()

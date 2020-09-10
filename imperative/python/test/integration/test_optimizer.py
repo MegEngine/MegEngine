@@ -13,7 +13,7 @@ import megengine.functional as F
 from megengine import Parameter, optimizer
 from megengine.jit import trace
 from megengine.module import Linear, Module
-from megengine.tensor import TensorDict, tensor
+from megengine.tensor import tensor
 
 
 class MLP(Module):
@@ -44,7 +44,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
     net = Simple()
     opt = getattr(optimizer, opt_str)(net.parameters(), **test_case)
     check_func = check_class(net, **test_case)
-    gm = ad.GradManager().register(net.parameters())
+    gm = ad.GradManager().attach(net.parameters())
 
     step = 0
     data_shape = (2, 28)
@@ -57,12 +57,12 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
         data = tensor(np.random.random(data_shape).astype(np.float32))
 
         opt.clear_grad()
-        with gm.record():
+        with gm:
             pred = net(data)
             loss = pred.sum()
             gm.backward(loss)
 
-        ori_params = TensorDict()
+        ori_params = {}
         for param in net.parameters():
             ori_params[param] = np.copy(param.numpy())
         opt.step()
@@ -75,7 +75,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
         @trace(symbolic=symbolic)
         def train_func(data, *, opt=None, gm=None):
             opt.clear_grad()
-            with gm.record():
+            with gm:
                 pred = net(data)
                 loss = pred.sum()
                 gm.backward(loss)
@@ -84,7 +84,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
         # reset net and opt
         net = Simple()
         opt = getattr(optimizer, opt_str)(net.parameters(), **test_case)
-        gm = ad.GradManager().register(net.parameters())
+        gm = ad.GradManager().attach(net.parameters())
         check_func = check_class(net, **test_case)
         step = 0
         for i in range(iter_num):
@@ -93,7 +93,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
                     group["lr"] += 0.01
                 check_func.lr += 0.01
 
-            ori_params = TensorDict()
+            ori_params = {}
             for param in net.parameters():
                 ori_params[param] = np.copy(param.numpy())
 
@@ -105,7 +105,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
 def test_sgd():
     class CheckValue:
         def __init__(self, net, **kwarg):
-            self.slots = TensorDict()
+            self.slots = {}
             for param in net.parameters():
                 self.slots[param] = np.zeros(param.shape).astype(np.float32)
             for k, v in kwarg.items():
@@ -134,8 +134,8 @@ def test_sgd():
 def test_adam():
     class CheckValue:
         def __init__(self, net, **kwarg):
-            self.m_slots = TensorDict()
-            self.v_slots = TensorDict()
+            self.m_slots = {}
+            self.v_slots = {}
             for param in net.parameters():
                 self.m_slots[param] = np.zeros(param.shape).astype(np.float32)
                 self.v_slots[param] = np.zeros(param.shape).astype(np.float32)
@@ -175,7 +175,7 @@ def test_adam():
 def test_adagrad():
     class CheckValue:
         def __init__(self, net, **kwarg):
-            self.s_slots = TensorDict()
+            self.s_slots = {}
             for param in net.parameters():
                 self.s_slots[param] = np.zeros(param.shape).astype(np.float32)
             for k, v in kwarg.items():
@@ -207,8 +207,8 @@ def test_adagrad():
 def test_adadelta():
     class CheckValue:
         def __init__(self, net, **kwarg):
-            self.s_slots = TensorDict()
-            self.a_slots = TensorDict()
+            self.s_slots = {}
+            self.a_slots = {}
             for param in net.parameters():
                 self.s_slots[param] = np.zeros(param.shape).astype(np.float32)
                 self.a_slots[param] = np.zeros(param.shape).astype(np.float32)

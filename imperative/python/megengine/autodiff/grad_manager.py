@@ -22,7 +22,7 @@ class GradManager:
         self._after_backward_callback = []
         self._gradients = dict()
 
-    def register(self, params, callbacks=None):
+    def attach(self, params, callbacks=None):
         if callbacks is None:
             callbacks = []
         if isinstance(callbacks, Callable):
@@ -62,7 +62,7 @@ class GradManager:
                 if isinstance(grad, Future):
                     grad = grad.get()
                 param = self._param_dict[p]
-                if getattr(param, "grad", None) is None:
+                if param.grad is None:
                     param.grad = grad
                 else:
                     param.grad += grad
@@ -70,9 +70,9 @@ class GradManager:
             self._stop_record()
             backwarding_grad_manager = cache
 
-    def __enter__(self):
+    def record(self):
         if self._recording:
-            return self
+            raise RuntimeError("already recording")
         grad = Grad()
         self._recording = True
         self._grad = grad
@@ -88,12 +88,11 @@ class GradManager:
 
             grad.wrt(param_wrapper, callback=callback)
         grad.__enter__()
-        return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def release(self):
+        if not self._recording:
+            raise RuntimeError("not recording")
         self._stop_record()
-
-    record = __enter__
 
     def _stop_record(self):
         if self._grad is not None:
@@ -101,3 +100,10 @@ class GradManager:
         self._recording = False
         self._grad = None
         self._gradients = dict()
+
+    def __enter__(self):
+        self.record()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stop_record()

@@ -9,7 +9,7 @@
 import numpy as np
 
 from ..functional import leaky_relu, prelu, relu, sigmoid, softmax
-from ..tensor_nn import Parameter
+from ..tensor import Parameter
 from .module import Module
 
 

@@ -7,7 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from abc import ABCMeta, abstractmethod
-from collections import Iterable
+from collections.abc import Iterable
 from contextlib import contextmanager
 from typing import Dict
 from typing import Iterable as Iter
@@ -15,8 +15,7 @@ from typing import Union
 
 import numpy as np
 
-from ..tensor import Tensor, TensorDict
-from ..tensor_nn import Buffer, Parameter
+from ..tensor import Parameter, Tensor
 
 
 class _RequiredParameter:
@@ -37,7 +36,7 @@ class Optimizer(metaclass=ABCMeta):
     def __init__(  # pylint: disable=too-many-branches
         self, params: Union[Iter[Parameter], dict], defaults: dict,
     ):
-        self._state = TensorDict()
+        self._state = dict()
         self._defaults = defaults
 
         if isinstance(params, (Parameter, dict)):
@@ -93,10 +92,6 @@ class Optimizer(metaclass=ABCMeta):
                     "optimizer can only optimize Parameters, but one of the params is "
                     + type(param)
                 )
-            if not param.requires_grad:
-                raise ValueError(
-                    "optimizer can only optimize Parameters with requires_grad=True"
-                )
 
         for name, default in self._defaults.items():
             if default is required and name not in param_group:
@@ -122,7 +117,7 @@ class Optimizer(metaclass=ABCMeta):
             initializer = np.zeros(param.shape, dtype=np.float32)
         state_dict = self._state.setdefault(param, {})
         assert state_name not in state_dict
-        state = Buffer(initializer)
+        state = Tensor(initializer)
         state_dict[state_name] = state
 
     @abstractmethod
@@ -140,7 +135,7 @@ class Optimizer(metaclass=ABCMeta):
                 params.append(param)
         return params
 
-    def step(self, clear_grad=False):
+    def step(self):
         r"""Performs a single optimization step.
 
         """
@@ -152,8 +147,7 @@ class Optimizer(metaclass=ABCMeta):
                     "Please use a list instead."
                 )
             self._updates(group)
-        if clear_grad:
-            self.clear_grad()
+        return self
 
     def clear_grad(self):
         r"""Clear the grad buffer.
@@ -161,8 +155,7 @@ class Optimizer(metaclass=ABCMeta):
         """
         for param_group in self.param_groups:
             for param in param_group["params"]:
-                if getattr(param, "grad", None) is not None:
-                    param.grad = None
+                param.grad = None
 
     def state_dict(self) -> Dict:
         r"""Export the optimizer state.
@@ -171,7 +164,7 @@ class Optimizer(metaclass=ABCMeta):
         """
         param_groups = []
         state = dict()
-        param2id = TensorDict()
+        param2id = dict()
 
         cur_id = 0
         for group in self.param_groups:
@@ -213,8 +206,9 @@ class Optimizer(metaclass=ABCMeta):
                 p = param_new
                 self._state[p] = state["state"][param_saved].copy()
                 for k, v in self._state[p].items():
-                    if isinstance(v, Buffer):
-                        self._state[p][k] = Buffer(v.numpy())
+                    if isinstance(v, Tensor):
+                        # TODO: maybe a more efficient way?
+                        self._state[p][k] = Tensor(v.numpy())
 
             if set(group_new.keys()) != set(group_saved.keys()):
                 raise ValueError(

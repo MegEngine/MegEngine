@@ -8,7 +8,7 @@
 import numpy as np
 
 from ..functional import linear
-from ..tensor_nn import Parameter
+from ..tensor import Parameter
 from . import init
 from .module import Module
 

@@ -15,7 +15,7 @@ def get_ndtuple(value, *, n, allow_zero=True):
 
     :type allow_zero: bool
     :param allow_zero: whether to allow zero tuple value"""
-    if not isinstance(value, collections.Iterable):
+    if not isinstance(value, collections.abc.Iterable):
         value = int(value)
         value = tuple([value for i in range(n)])
     else:

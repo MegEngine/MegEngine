@@ -14,8 +14,7 @@ from .. import functional as F
 from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
 from ..core.tensor.function import Function
 from ..module import Module
-from ..tensor import Tensor
-from ..tensor_nn import Parameter
+from ..tensor import Parameter, Tensor
 from .utils import QuantMode, fake_quant_tensor, get_qparam_dict
 
 

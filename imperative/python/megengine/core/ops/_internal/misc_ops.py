@@ -70,7 +70,7 @@ class Dimshuffle(PodOpVisitor):
             return bytes(ctypes.c_uint32(0)) + bytes(self)
 
     def __init__(self, pattern, ndim=0):
-        assert isinstance(pattern, collections.Iterable)
+        assert isinstance(pattern, collections.abc.Iterable)
         assert len(pattern) <= TensorShape.MAX_NDIM
         pattern_array = Dimshuffle.Pattern.Pattern_Array()
         for idx, v in enumerate(pattern):

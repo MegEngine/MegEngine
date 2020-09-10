@@ -143,7 +143,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
             (x,) = Const(x, dtype=dtype, device=device)(*reference)
         return x
 
-    if not isinstance(x, collections.Sequence):
+    if not isinstance(x, collections.abc.Sequence):
         raise TypeError
 
     if any(isinstance(i, (TensorBase, TensorWrapperBase)) for i in x):
