@@ -2128,6 +2128,8 @@ TEST(TestOprDNN, ConvolutionMultiCompNode) {
 
 }  // anonymous namespace
 
+#ifndef _WIN32
+
 namespace mgb {
 namespace opr {
 namespace testing {
@@ -2346,5 +2348,6 @@ TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
 
 }  // anonymous namespace
 
->>>>>>> 11c3561ca... feat(opr): use weight preprocess feature of MegDNN
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
