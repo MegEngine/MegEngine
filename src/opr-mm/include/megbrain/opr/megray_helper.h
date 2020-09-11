@@ -13,12 +13,15 @@
 
 #include <mutex>
 
-#include "megbrain/utils/metahelper.h"
 #include "megbrain/opr/group_manager.h"
 #include "megray.h"
 
 namespace mgb {
 namespace opr {
+
+MegRay::DType get_megray_dtype(megdnn::DType);
+
+MegRay::Backend get_megray_backend(const std::string& backend);
 
 /*!
  * gather MegRay unique ids and build communicator, use hash for deduplication

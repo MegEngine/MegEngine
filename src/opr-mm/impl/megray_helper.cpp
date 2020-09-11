@@ -14,6 +14,33 @@
 using namespace mgb;
 using namespace opr;
 
+MegRay::DType mgb::opr::get_megray_dtype(megdnn::DType dtype) {
+    switch(dtype.enumv()) {
+        case DTypeEnum::Int8:
+            return MegRay::DType::MEGRAY_INT8;
+        case DTypeEnum::Int32:
+            return MegRay::DType::MEGRAY_INT32;
+        case DTypeEnum::Float32:
+            return MegRay::DType::MEGRAY_FLOAT32;
+#ifndef MEGDNN_DISABLE_FLOAT16
+        case DTypeEnum::Float16:
+            return MegRay::DType::MEGRAY_FLOAT16;
+#endif
+        default:
+            mgb_throw(MegBrainError, "bad CollectiveComm dtype");
+    }
+}
+
+MegRay::Backend mgb::opr::get_megray_backend(const std::string& backend) {
+    if (backend == "nccl") {
+        return MegRay::MEGRAY_NCCL;
+    } else if (backend == "ucx") {
+        return MegRay::MEGRAY_UCX;
+    } else {
+        mgb_throw(MegBrainError, "back CollectiveComm backend");
+    }
+}
+
 bool MegRayCommBuilder::find(uint64_t hash, std::shared_ptr<MegRay::Communicator>& comm) {
     std::unique_lock<std::mutex> lk(m_map_mtx);
     auto it = m_megray_comms.find(hash);
