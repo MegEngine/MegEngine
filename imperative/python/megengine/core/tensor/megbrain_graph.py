@@ -11,6 +11,7 @@ import json
 import threading
 import weakref
 from concurrent.futures import Future, ThreadPoolExecutor
+from typing import Dict, List, Union
 
 import numpy as np
 
@@ -83,114 +84,6 @@ class Graph(_imperative_rt.ComputingGraph):
     def make_h2d(self, *, dtype, device, shape=None, name=None):
         device = as_device(device).to_c()
         return self._wrap(_imperative_rt.make_h2d(self, device, dtype, shape, name))
-
-
-def optimize_for_inference(dest_vars, **kwargs):
-    r"""Applies optimize_for_inference pass for computing graph.
-
-        :param dest_vars: list of output vars in the computing graph
-
-        :Keyword Arguments:
-
-            * enable_io16xc32 --
-                whether to use float16 for I/O between oprs and use
-                float32 as internal computation precision. Note the output var would be
-                changed to float16.
-            * enable_ioc16 --
-                whether to use float16 for both I/O and computation
-                precision.
-
-            * enable_hwcd4 --
-                whether to use NHWCD4 data layout. This is faster on some
-                OpenCL backend.
-            * enable_nchw88 --
-                whether to use NCHW88 data layout, currently
-                used in X86 AVX backend.
-            * enable_nchw44 --
-                whether to use NCHW44 data layout, currently
-                used in arm backend.
-            * enable_nchw44_dot --
-                whether to use NCHW44_dot data layout, currently
-                used in armv8.2+dotprod backend.
-            * enable_nchw4 --
-                whether to use NCHW4 data layout, currently
-                used in nvidia backend(based on cudnn).
-            * enable_nchw32 --
-                whether to use NCHW32 data layout, currently
-                used in nvidia backend with tensorcore(based on cudnn).
-            * enable_chwn4 --
-                whether to use CHWN4 data layout, currently
-                used in nvidia backend with tensorcore.
-
-            * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
-                into one opr.
-            * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
-                input for inference on nvidia backend(this optimization pass will
-                result in mismatch of the precision of output of training and
-                inference)
-    """
-    inference_options = GraphOptimizeOptions()
-    inference_optimize_layout_transform_map = {
-        "enable_hwcd4": GraphOptimizeOptions.LayoutTransform.NHWCD4,
-        "enable_nchw4": GraphOptimizeOptions.LayoutTransform.NCHW4,
-        "enable_nchw88": GraphOptimizeOptions.LayoutTransform.NCHW88,
-        "enable_nchw32": GraphOptimizeOptions.LayoutTransform.NCHW32,
-        "enable_nchw44": GraphOptimizeOptions.LayoutTransform.NCHW44,
-        "enable_nchw44_dot": GraphOptimizeOptions.LayoutTransform.NCHW44_DOT,
-        "enable_chwn4": GraphOptimizeOptions.LayoutTransform.CHWN4,
-    }
-
-    for k, v in inference_optimize_layout_transform_map.items():
-        if kwargs.pop(k, False):
-            inference_options.layout_transform = v
-
-    if kwargs.pop("enable_io16xc32", False):
-        inference_options.f16_io_f32_comp = True
-    if kwargs.pop("enable_ioc16", False):
-        inference_options.f16_io_comp = True
-    if kwargs.pop("enable_fuse_conv_bias_nonlinearity", False):
-        inference_options.fuse_conv_bias_nonlinearity = True
-    if kwargs.pop("enable_fuse_conv_bias_with_z", False):
-        inference_options.fuse_conv_bias_with_z = True
-
-    if kwargs:
-        raise ValueError("unknown options: %s" % list(kwargs))
-
-    res_vars = _imperative_rt.optimize_for_inference(
-        [i._node for i in dest_vars], inference_options
-    )
-    return [VarNode(i) for i in res_vars]
-
-
-def dump_graph(*args):
-    return _imperative_rt.dump_graph([i._node for i in args])
-
-
-CompGraphLoadResult = collections.namedtuple(
-    "CompGraphLoadResult", ["graph", "output_vars_dict", "output_vars_list"]
-)
-
-
-def load_graph(fpath):
-    """Load a serialized computing graph from file.
-
-    :parma fpath: Path or Handle for the output file
-    :return: An instance of namedtuple :class:`CompGraphLoadResult`,
-        whose fields are:
-
-            * ``graph`` loaded CompGraph
-            * ``output_vars_dict`` A Python dict, mapping name to output SymbolVar
-            * ``output_vars_list`` A Python list, containing output vars in the
-                                   order passed to serialize_comp_graph_to_file
-    """
-    output_vars_map = []
-    output_vars_list = []
-    if isinstance(fpath, str):
-        buf = open(fpath, "rb").read()
-    else:
-        buf = fpath.read()
-    cg = _imperative_rt.load_graph(buf, output_vars_map, output_vars_list)
-    return CompGraphLoadResult(cg, dict(output_vars_map), output_vars_list)
 
 
 class VarNode(TensorBase):
@@ -282,6 +175,206 @@ class OpNode:
     @property
     def type(self):
         return self._node.type
+
+
+def optimize_for_inference(dest_vars, **kwargs):
+    r"""Applies optimize_for_inference pass for computing graph.
+
+        :param dest_vars: list of output vars in the computing graph
+
+        :Keyword Arguments:
+
+            * enable_io16xc32 --
+                whether to use float16 for I/O between oprs and use
+                float32 as internal computation precision. Note the output var would be
+                changed to float16.
+            * enable_ioc16 --
+                whether to use float16 for both I/O and computation
+                precision.
+
+            * enable_hwcd4 --
+                whether to use NHWCD4 data layout. This is faster on some
+                OpenCL backend.
+            * enable_nchw88 --
+                whether to use NCHW88 data layout, currently
+                used in X86 AVX backend.
+            * enable_nchw44 --
+                whether to use NCHW44 data layout, currently
+                used in arm backend.
+            * enable_nchw44_dot --
+                whether to use NCHW44_dot data layout, currently
+                used in armv8.2+dotprod backend.
+            * enable_nchw4 --
+                whether to use NCHW4 data layout, currently
+                used in nvidia backend(based on cudnn).
+            * enable_nchw32 --
+                whether to use NCHW32 data layout, currently
+                used in nvidia backend with tensorcore(based on cudnn).
+            * enable_chwn4 --
+                whether to use CHWN4 data layout, currently
+                used in nvidia backend with tensorcore.
+
+            * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+                into one opr.
+            * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+                input for inference on nvidia backend(this optimization pass will
+                result in mismatch of the precision of output of training and
+                inference)
+    """
+    inference_options = GraphOptimizeOptions()
+    inference_optimize_layout_transform_map = {
+        "enable_hwcd4": GraphOptimizeOptions.LayoutTransform.NHWCD4,
+        "enable_nchw4": GraphOptimizeOptions.LayoutTransform.NCHW4,
+        "enable_nchw88": GraphOptimizeOptions.LayoutTransform.NCHW88,
+        "enable_nchw32": GraphOptimizeOptions.LayoutTransform.NCHW32,
+        "enable_nchw44": GraphOptimizeOptions.LayoutTransform.NCHW44,
+        "enable_nchw44_dot": GraphOptimizeOptions.LayoutTransform.NCHW44_DOT,
+        "enable_chwn4": GraphOptimizeOptions.LayoutTransform.CHWN4,
+    }
+
+    for k, v in inference_optimize_layout_transform_map.items():
+        if kwargs.pop(k, False):
+            inference_options.layout_transform = v
+
+    if kwargs.pop("enable_io16xc32", False):
+        inference_options.f16_io_f32_comp = True
+    if kwargs.pop("enable_ioc16", False):
+        inference_options.f16_io_comp = True
+    if kwargs.pop("enable_fuse_conv_bias_nonlinearity", False):
+        inference_options.fuse_conv_bias_nonlinearity = True
+    if kwargs.pop("enable_fuse_conv_bias_with_z", False):
+        inference_options.fuse_conv_bias_with_z = True
+
+    if kwargs:
+        raise ValueError("unknown options: %s" % list(kwargs))
+
+    res_vars = _imperative_rt.optimize_for_inference(
+        [i._node for i in dest_vars], inference_options
+    )
+    return [VarNode(i) for i in res_vars]
+
+
+CompGraphDumpResult = collections.namedtuple(
+    "CompGraphDumpResult",
+    [
+        "nr_opr",
+        "tot_bytes",
+        "tensor_value_bytes",
+        "content_hash",
+        "inputs",
+        "outputs",
+        "params",
+    ],
+)
+
+
+def dump_graph(
+    output_vars: Union[Dict[str, VarNode], List[VarNode]],
+    *,
+    keep_var_name: int = 1,
+    keep_param_name: bool = False,
+    keep_opr_priority: bool = False,
+    strip_info_file=None,
+):
+    """serialize the computing graph of `output_vars` and get byte result.
+
+    :param output_vars: output variables which are the graph's end point.
+
+        .. note::
+
+            The underlying C++ API only accepts a var list. If a dict is given,
+            the vars would be renamed to the given names.
+
+    :param keep_var_name: level for keeping variable names:
+
+        * 0: none of the names are kept
+        * 1: (default)keep names of output vars
+        * 2: keep names of all (output and internal) vars
+    :param keep_param_name: whether to keep param names, so param values can be
+        easily manipulated after loading model
+    :param keep_opr_priority: whether to keep priority setting for operators
+    :param strip_info_file: a string for path or a file handler. if is not None,
+        then the dump information for code strip would be written to ``strip_info_file``
+    :return: dump result as byte string, and an instance of namedtuple
+        :class:`CompGraphDumpResult`, whose fields are:
+
+            * ``nr_opr`` number of operators dumped
+            * ``tot_bytes`` total bytes for the whole graph
+            * ``tensor_value_bytes`` bytes consumed for dumping tensor values
+            * ``inputs`` names of input tensors
+            * ``params`` list of names of dumped params
+            * ``outputs`` names of output vars
+    """
+    ov = []
+    if isinstance(output_vars, dict):
+        used_vars = set()
+        for name, var in output_vars.items():
+            assert isinstance(var, VarNode), "bad output var: {!r}".format(var)
+            assert var.id not in used_vars, (
+                "var name is associated with a var object, so we can not have "
+                "two names given to the same var: {}".format(var)
+            )
+            used_vars.add(var.id)
+            var.name = name
+            ov.append(var._node)
+    else:
+        for var in output_vars:
+            assert isinstance(var, VarNode), "bad output var: {!r}".format(var)
+            ov.append(var._node)
+
+    stat = []
+    inputs = []
+    outputs = []
+    params = []
+
+    dump_content = _imperative_rt.dump_graph(
+        ov,
+        keep_var_name,
+        keep_param_name,
+        keep_opr_priority,
+        stat,
+        inputs,
+        outputs,
+        params,
+    )
+
+    dump_info = CompGraphDumpResult(*stat, inputs, outputs, params)
+
+    if strip_info_file is not None:
+        if isinstance(strip_info_file, str):
+            strip_info_file = open(strip_info_file, "w")
+        strip_info = json.loads(_imperative_rt.get_info_for_strip(ov))
+        strip_info["hash"] = dump_info.content_hash
+        json.dump(strip_info, strip_info_file)
+
+    return dump_content, dump_info
+
+
+CompGraphLoadResult = collections.namedtuple(
+    "CompGraphLoadResult", ["graph", "output_vars_dict", "output_vars_list"]
+)
+
+
+def load_graph(fpath):
+    """Load a serialized computing graph from file.
+
+    :parma fpath: Path or Handle for the output file
+    :return: An instance of namedtuple :class:`CompGraphLoadResult`,
+        whose fields are:
+
+            * ``graph`` loaded CompGraph
+            * ``output_vars_dict`` A Python dict, mapping name to output SymbolVar
+            * ``output_vars_list`` A Python list, containing output vars in the
+                                   order passed to serialize_comp_graph_to_file
+    """
+    output_vars_map = []
+    output_vars_list = []
+    if isinstance(fpath, str):
+        buf = open(fpath, "rb").read()
+    else:
+        buf = fpath.read()
+    cg = _imperative_rt.load_graph(buf, output_vars_map, output_vars_list)
+    return CompGraphLoadResult(cg, dict(output_vars_map), output_vars_list)
 
 
 def _wrap(x):

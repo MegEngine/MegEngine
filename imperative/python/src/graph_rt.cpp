@@ -27,6 +27,7 @@ namespace py = pybind11;
 
 using namespace mgb;
 using namespace imperative;
+namespace ser = mgb::serialization;
 
 using _OptimizeForInferenceOptions = mgb::gopt::OptimizeForInferenceOptions;
 using _LayoutTransform = _OptimizeForInferenceOptions::LayoutTransform;
@@ -183,7 +184,6 @@ void init_graph_rt(py::module m) {
             return "Opr:" + opr->name();
         });
 
-
     py::class_<cg::AsyncExecutable>(m, "AsyncExecutable")
         .def("execute", &cg::AsyncExecutable::execute, py::call_guard<py::gil_scoped_release>())
         .def("wait", &cg::AsyncExecutable::wait, py::call_guard<py::gil_scoped_release>());
@@ -205,15 +205,6 @@ void init_graph_rt(py::module m) {
                 return std::make_shared<_CompGraphProfilerImpl>(graph);
                 }))
         .def("get", [](_CompGraphProfilerImpl& profiler) { return profiler._get_result(); });
-
-    m.def("dump_graph", [](const std::vector<VarNode*>& dest_vars) {
-        using namespace mgb::serialization;
-        std::vector<uint8_t> buf;
-        auto dumper = GraphDumper::make(OutputFile::make_vector_proxy(&buf));
-        SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
-        dumper->dump(symvars);
-        return py::bytes(reinterpret_cast<const char*>(&buf[0]), buf.size());
-    });
 
     auto GraphOptimizeOptions = py::class_<_OptimizeForInferenceOptions>(m, "GraphOptimizeOptions")
         .def(py::init())
@@ -245,23 +236,91 @@ void init_graph_rt(py::module m) {
         return vars;
     });
 
+    m.def("get_info_for_strip", [](const std::vector<VarNode*>& dest_vars) {
+        std::unordered_set<const char*> opr_types, dtype_names, elemwise_modes;
+        auto on_opr = [&](cg::OperatorNodeBase *opr) {
+            if (ser::GraphDumper::should_remove_in_dump(opr))
+                return;
+            opr_types.insert(opr->dyn_typeinfo()->name);
+            for (auto i : opr->output())
+                dtype_names.insert(i->dtype().name());
+            if (opr->same_type<opr::Elemwise>()) {
+                auto mode = opr->cast_final<opr::Elemwise>().param().mode;
+                elemwise_modes.insert(
+                        megdnn::Elemwise::ModeTrait::from_mode(mode).name);
+            }
+        };
+        cg::DepOprIter opr_iter{on_opr};
+        for (auto i : dest_vars)
+            opr_iter.add(i->owner_opr());
 
-    m.def("load_graph", [](std::string& buf, py::list& _output_var_map, py::list& _output_var_list) {
-        using namespace mgb::serialization;
-        auto file = InputFile::make_mem_proxy(buf.c_str(), buf.length());
-        auto format = GraphLoader::identify_graph_dump_format(*file);
-        auto loader = GraphLoader::make(std::move(file), format.val());
-        GraphLoader::LoadConfig config;
-        auto rst = loader->load(config);
-        std::vector<std::pair<std::string, SymbolVar>> output_var_map;
-        SymbolVarArray output_var_list;
-        output_var_map = {rst.output_var_map.begin(), rst.output_var_map.end()};
-        output_var_list = std::move(rst.output_var_list);
-        for (auto i : output_var_list){
-            _output_var_list.append(i.node());
+        auto to_json = [](const std::unordered_set<const char*> &v) {
+            std::vector<std::string> vs(v.begin(), v.end());
+            std::sort(vs.begin(), vs.end());
+            auto ret = json::Array::make();
+            for (auto &&i : vs)
+                ret->add(json::String::make(i));
+            return ret;
+        };
+
+        return json::Object::make({
+            {"opr_types", to_json(opr_types)},
+            {"dtypes", to_json(dtype_names)},
+            {"elemwise_modes", to_json(elemwise_modes)},
+        });
+    });
+
+    m.def("dump_graph", [](
+        const std::vector<VarNode*>& dest_vars,
+        int keep_var_name,
+        bool keep_param_name,
+        bool keep_opr_priority,
+        py::list& stat,
+        py::list& inputs,
+        py::list& outputs,
+        py::list& params
+    ) {
+        std::vector<uint8_t> buf;
+        auto dumper = ser::GraphDumper::make(ser::OutputFile::make_vector_proxy(&buf));
+        SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
+
+        ser::GraphDumper::DumpConfig config{keep_var_name, keep_param_name,
+                                       keep_opr_priority};
+
+        auto rst = dumper->dump(symvars, config);
+        for (auto i : rst.inputs) {
+            inputs.append(py::cast(i));
         }
-        for (auto i : output_var_map){
-            _output_var_map.append(py::make_tuple(i.first,i.second.node()));
+        for (auto i : rst.outputs) {
+            outputs.append(py::cast(i));
+        }
+        for (auto i : rst.params) {
+            params.append(py::cast(i));
+        }
+        auto rst_stat = std::vector{
+            rst.nr_opr, rst.tot_bytes, rst.tensor_value_bytes, rst.content_hash
+        };
+        for (auto i : rst_stat) {
+            stat.append(py::cast(i));
+        }
+        return py::bytes(reinterpret_cast<const char*>(&buf[0]), buf.size());
+    });
+
+    m.def("load_graph", [](
+        std::string& buf,
+        py::list& output_var_map,
+        py::list& output_var_list
+    ) {
+        auto file = ser::InputFile::make_mem_proxy(buf.c_str(), buf.length());
+        auto format = ser::GraphLoader::identify_graph_dump_format(*file);
+        auto loader = ser::GraphLoader::make(std::move(file), format.val());
+        ser::GraphLoader::LoadConfig config;
+        auto rst = loader->load(config);
+        for (auto i : rst.output_var_map) {
+            output_var_map.append(py::make_tuple(i.first, i.second.node()));
+        }
+        for (auto i : rst.output_var_list) {
+            output_var_list.append(i.node());
         }
         std::unordered_map<HostTensorND*, const std::string*> tensor2name;
         for (const auto& pair : rst.tensor_map) {
@@ -277,8 +336,8 @@ void init_graph_rt(py::module m) {
             h2d.output(0)->name(*it->second);
         };
         cg::DepOprIter iter{cb};
-        for (const auto& var : output_var_list) {
-            iter.add(var.node()->owner_opr());
+        for (const auto& var : rst.output_var_list) {
+            iter.add(var);
         }
         return rst.graph;
 

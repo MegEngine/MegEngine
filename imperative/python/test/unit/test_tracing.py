@@ -12,12 +12,10 @@ from tempfile import mkstemp
 import numpy as np
 import pytest
 
-import megengine
-import megengine.module as M
+import megengine.core.tensor.megbrain_graph as G
 from megengine import cgtools, tensor
 from megengine.core._trace_option import set_tensor_shape
 from megengine.core.ops import builtin as ops
-from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.functional import exp, log
@@ -121,7 +119,10 @@ def test_dump():
         np.testing.assert_equal(f(as_raw_tensor(a), as_raw_tensor(b)).numpy(), y)
 
     file = io.BytesIO()
-    f.dump(file)
+    dump_info = f.dump(file)
+    assert dump_info.nr_opr == 3
+    np.testing.assert_equal(dump_info.inputs, ["h2d[0]", "h2d[2]"])
+    np.testing.assert_equal(dump_info.outputs, ["ADD(h2d[0],h2d[2])[4]"])
     file.seek(0)
     result = load_and_inference(file, [a, b])
     np.testing.assert_equal(result[0], y)

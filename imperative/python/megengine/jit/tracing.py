@@ -589,7 +589,9 @@ class trace:
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"
             file = open(file, permission)
-        file.write(G.dump_graph(*dest_vars))
+        dump_content, dump_info = G.dump_graph(dest_vars)
+        file.write(dump_content)
+        return dump_info
 
     def _process_inputs(self, *args, **kwargs):
         if self._untraced:
