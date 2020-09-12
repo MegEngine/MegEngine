@@ -28,6 +28,25 @@ class Linear(Module):
     :param bias: If set to ``False``, the layer will not learn an additive bias.
         Default: ``True``
 
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        m = M.Linear(in_features=3, out_features=1)
+        inp = mge.tensor(np.arange(0, 6).astype("float32").reshape(2, 3))
+        oup = m(inp)
+        print(oup.shape)
+
+    Outputs:
+
+    .. testoutput::
+
+        (2, 1)
+
     """
 
     def __init__(

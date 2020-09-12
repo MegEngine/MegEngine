@@ -83,48 +83,6 @@ def opr_test(cases, func, compare_fn=_default_compare_fn, ref_fn=None, **kwargs)
     check_results(results, outp)
 
 
-def test_flatten():
-    data0_shape = (2, 3, 4, 5)
-    data1_shape = (4, 5, 6, 7)
-    data0 = np.random.random(data0_shape).astype(np.float32)
-    data1 = np.random.random(data1_shape).astype(np.float32)
-
-    def compare_fn(x, y):
-        assert x.numpy().shape == y
-
-    output0 = (2 * 3 * 4 * 5,)
-    output1 = (4 * 5 * 6 * 7,)
-    cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
-    ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn)
-
-    output0 = (2, 3 * 4 * 5)
-    output1 = (4, 5 * 6 * 7)
-    cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
-    ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1)
-
-    output0 = (2, 3, 4 * 5)
-    output1 = (4, 5, 6 * 7)
-    cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
-    ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=2)
-
-    output0 = (2, 3 * 4, 5)
-    output1 = (4, 5 * 6, 7)
-    cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
-    ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1, end_axis=2)
-
-
 def test_where():
     maskv0 = np.array([[1, 0], [0, 1]], dtype=np.bool_)
     xv0 = np.array([[1, np.inf], [np.nan, 4]], dtype=np.float32)
@@ -153,45 +111,6 @@ def test_where():
         {"input": [maskv3, xv3, yv3]},
     ]
     opr_test(cases, F.where, ref_fn=np.where)
-
-
-def test_matmul():
-    shape1 = 3
-    shape2 = 3
-    shape3 = (3, 5)
-    shape4 = (5, 6)
-    data1 = np.random.random(shape1).astype("float32")
-    data2 = np.random.random(shape2).astype("float32")
-    data3 = np.random.random(shape3).astype("float32")
-    data4 = np.random.random(shape4).astype("float32")
-
-    cases = [
-        {"input": [data1, data2]},
-        {"input": [data2, data3]},
-        {"input": [data3, data4]},
-    ]
-    opr_test(cases, F.matmul, ref_fn=np.matmul)
-
-    batch_size = 10
-    shape1 = (batch_size, 2, 3)
-    shape2 = (batch_size, 3, 4)
-    shape3 = (batch_size, 10, 4, 5)
-    data1 = np.random.random(shape1).astype("float32")
-    data2 = np.random.random(shape2).astype("float32")
-    data3 = np.random.random(shape3).astype("float32")
-
-    cases = [{"input": [data1, data2]}, {"input": [data2, data3]}]
-    for i in range(0, batch_size):
-
-        def compare_fn(x, y):
-            x.numpy()[i, ...] == y
-
-        opr_test(
-            cases,
-            F.matmul,
-            compare_fn=compare_fn,
-            ref_fn=lambda x, y: np.matmul(x[i, ...], y[i, ...]),
-        )
 
 
 def test_interpolate():
@@ -303,28 +222,28 @@ def test_roi_pooling():
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
-# def test_one_hot():
-#     def onehot_low_dimension():
-#         inp = tensor(np.arange(1, 4, dtype=np.int32))
-#         out = F.one_hot(inp, num_classes=4)
+def test_one_hot():
+    def onehot_low_dimension():
+        inp = tensor(np.arange(1, 4, dtype=np.int32))
+        out = F.one_hot(inp, num_classes=4)
 
-#         assertTensorClose(
-#             out.numpy(), np.eye(4, dtype=np.int32)[np.arange(1, 4, dtype=np.int32)]
-#         )
+        assertTensorClose(
+            out.numpy(), np.eye(4, dtype=np.int32)[np.arange(1, 4, dtype=np.int32)]
+        )
 
+    def onehot_high_dimension():
+        arr = np.array(
+            [[3, 2, 4, 4, 2, 4, 0, 4, 4, 1], [4, 1, 1, 3, 2, 2, 4, 2, 4, 3]],
+            dtype=np.int32,
+        )
 
-#     def onehot_high_dimension():
-#         arr = np.array(
-#             [[3, 2, 4, 4, 2, 4, 0, 4, 4, 1], [4, 1, 1, 3, 2, 2, 4, 2, 4, 3]], dtype=np.int32
-#         )
+        inp = tensor(arr)
+        out = F.one_hot(inp, 10)
 
-#         inp = tensor(arr)
-#         out = F.one_hot(inp, 10)
+        assertTensorClose(out.numpy(), np.eye(10, dtype=np.int32)[arr])
 
-#         assertTensorClose(out.numpy(), np.eye(10, dtype=np.int32)[arr])
-
-#     onehot_low_dimension()
-#     onehot_high_dimension()
+    onehot_low_dimension()
+    onehot_high_dimension()
 
 
 def test_add_update():
@@ -554,7 +473,7 @@ def test_conv_bias():
             var = F.reshape(
                 var, (var.shape[0], var.shape[1] // 4, 4, var.shape[2], var.shape[3])
             )
-            var = F.dimshuffle(var, (0, 1, 3, 4, 2))
+            var = F.transpose(var, (0, 1, 3, 4, 2))
             return var
 
         def run_conv2d(inp, w, b):
@@ -591,7 +510,7 @@ def test_conv_bias():
             "float32"
         )
         if format == "NCHW4":
-            result = F.dimshuffle(result, (0, 1, 4, 2, 3))
+            result = F.transpose(result, (0, 1, 4, 2, 3))
         expected = F.flatten(expected)
         result = F.flatten(result)
         assertTensorClose(result.numpy(), expected.numpy(), max_err=outp_scale)
@@ -606,22 +525,6 @@ def test_conv_bias():
 
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
-
-
-# def test_softplus():
-#     x = np.arange(1000).astype(np.float32)
-#     out = F.softplus(tensor(x))
-#     mask = x <= 20
-#     with np.errstate(over="ignore"):
-#         expected = np.where(mask, np.log(1 + np.exp(x)), x)
-#     assertTensorClose(out, expected)
-#     beta = 2
-#     out = F.softplus(tensor(x), beta=beta, threshold=30)
-#     mask = beta * x <= 30
-#     # ignore overflow
-#     with np.errstate(over="ignore"):
-#         expected = np.where(mask, np.log(1 + np.exp(x * beta)) / beta, x)
-#     assertTensorClose(out, expected)
 
 
 def test_condtake():

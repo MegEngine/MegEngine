@@ -33,6 +33,7 @@ __all__ = [
     "eq",
     "exp",
     "expm1",
+    "fast_tanh",
     "floor",
     "floor_div",
     "gt",
@@ -67,7 +68,6 @@ __all__ = [
     "sub",
     "tan",
     "tanh",
-    "fast_tanh",
 ]
 
 
@@ -108,13 +108,37 @@ def _elemwise_multi_type(*args, mode, **kwargs):
 def add(x, y):
     """Element-wise addition.
     At least one operand should be tensor.
-    same for sub/mul/div/floor_div/pow/mod/atan2/eq/ne/lt/le/gt/ge/maximum/minmium.
+    Same for sub/mul/div/floor_div/pow/mod/atan2/eq/ne/lt/le/gt/ge/maximum/minmium.
+
+    :param x: input tensor.
+    :return: computed tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        out = F.add(x, y)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[ 0.  2.  4.]
+         [ 6.  8. 10.]]
+
     """
     return _elwise(x, y, mode="add")
 
 
 def sub(x, y):
-    """Element-wise subtract."""
+    """Element-wise subtraction."""
     return _elwise(x, y, mode="sub")
 
 
@@ -173,24 +197,23 @@ def log1p(x):
     return _elwise(x, mode="log1p")
 
 
-def sqrt(inp: Tensor) -> Tensor:
-    """
-    Return a new tensor with the square-root of the elements of ``inp``.
-    For negative value, return nan.
+def sqrt(x: Tensor) -> Tensor:
+    """Element-wise sqrt.
+    For negative input value, return ``NaN``.
 
-    :param inp: The input tensor
-    :return: The computed tensor
+    :param x: input tensor.
+    :return: computed tensor.
 
     Examples:
 
     .. testcode::
 
         import numpy as np
-        import megengine as mge
+        from megengine import tensor
         import megengine.functional as F
 
-        data = mge.tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.sqrt(data)
+        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        out = F.sqrt(x)
         print(out.numpy())
 
     Outputs:
@@ -201,12 +224,12 @@ def sqrt(inp: Tensor) -> Tensor:
          [1.7321 2.     2.2361]]
 
     """
-    return inp ** 0.5
+    return x ** 0.5
 
 
-def square(inp: Tensor) -> Tensor:
+def square(x: Tensor) -> Tensor:
     """
-    Return a new tensor with the square of the elements of ``inp``
+    Return a new tensor with the square of the elements of input tensor.
 
     :param inp: The input tensor
     :return: The computed tensor
@@ -231,184 +254,22 @@ def square(inp: Tensor) -> Tensor:
          [ 9. 16. 25.]]
 
     """
-    return inp ** 2
+    return x ** 2
 
 
 def round(x):
-    """Round tensor to int element-wise."""
+    """Element-wise rounding to int."""
     return _elwise(x, mode="round")
 
 
 def ceil(x):
-    """Return the ceil of the input, element-wise."""
+    """Element-wise ceiling."""
     return _elwise(x, mode="ceil")
 
 
 def floor(x):
-    """Calculate the floor element-wise"""
+    """Element-wise floor."""
     return _elwise(x, mode="floor")
-
-
-# trigonometric functions
-
-
-def cos(x):
-    """Cosine, element-wise."""
-    return _elwise(x, mode="cos")
-
-
-def sin(x):
-    """Sine, element-wise."""
-    return _elwise(x, mode="sin")
-
-
-def tan(x):
-    return sin(x) / cos(x)
-
-
-def acos(x):
-    """Inverse cosine, element-wise."""
-    return _elwise(x, mode="acos")
-
-
-def asin(x):
-    """Inverse sine, element-wise."""
-    return _elwise(x, mode="asin")
-
-
-def atan(x):
-    return _elwise(x, 1, mode="atan2")
-
-
-def atan2(y, x):
-    return _elwise(y, x, mode="atan2")
-
-
-def cosh(x):
-    r"""Compute element-wise hyperbolic cosine."""
-    return 0.5 * (exp(x) + exp(-x))
-
-
-def sinh(x):
-    r"""Compute element-wise hyperbolic sine."""
-    u = expm1(x)
-    return 0.5 * u / (u + 1) * (u + 2)
-
-
-def tanh(x):
-    r"""Compute element-wise hyperbolic tangent."""
-    return _elwise(x, mode="tanh")
-
-
-def asinh(x):
-    r"""Compute element-wise inverse hyperbolic sine."""
-    return log(x + (x ** 2 + 1) ** 0.5)
-
-
-def acosh(x):
-    r"""Compute element-wise inverse hyperbolic cosine."""
-    return log(x + (x ** 2 - 1) ** 0.5)
-
-
-def atanh(x):
-    r"""Compute element-wise inverse hyperbolic tangent."""
-    return log1p(2 * x / (1 - x)) / 2
-
-
-def fast_tanh(x):
-    r"""Compute element-wise fast tanh; this is an approximation:
-
-    .. math::
-        \text{fast_tanh}(x) = x * (27. + x * x) / (27. + 9. * x * x)
-    """
-    return _elwise(x, mode="fast_tanh")
-
-
-# bit-twiddling functions
-
-
-def left_shift(x, y):
-    return _elwise(x, y, mode="shl")
-
-
-def right_shift(x, y):
-    return _elwise(x, y, mode="shl")
-
-
-# logical functions
-
-
-def logical_and(x, y):
-    return _elwise(x, y, mode="AND")
-
-
-def logical_not(x):
-    return _elwise(x, mode="NOT")
-
-
-def logical_or(x, y):
-    return _elwise(x, y, mode="OR")
-
-
-def logical_xor(x, y):
-    return _elwise(x, y, mode="XOR")
-
-
-# comparison functions
-
-
-def eq(x, y):
-    """Return (x == y) element-wise."""
-    return _elwise(x, y, mode="eq")
-
-
-def ne(x, y):
-    return x != y
-
-
-def lt(x, y):
-    """Return (x < y) element-wise."""
-    return _elwise(x, y, mode="lt")
-
-
-def le(x, y):
-    """Return (x =< y) element-wise."""
-    return _elwise(x, y, mode="leq")
-
-
-def gt(x, y):
-    """Return (x > y) element-wise."""
-    return _elwise(y, x, mode="lt")
-
-
-def ge(x, y):
-    """Return (x >= y) element-wise"""
-    return _elwise(y, x, mode="leq")
-
-
-def hswish(x):
-    """Return x * relu6(x + 3) / 6 element-wise"""
-    return _elwise(x, mode="h_swish")
-
-
-def hsigmoid(x):
-    """Return relu6(x + 3) / 6 element-wise"""
-    return relu6(x + 3) / 6
-
-
-def relu(x):
-    """Return `max(x, 0)` element-wise."""
-    return _elwise(x, mode="relu")
-
-
-def relu6(x):
-    """Return min(max(x, 0), 6) element-wise."""
-    return minimum(maximum(x, 0), 6)
-
-
-def sigmoid(x):
-    """Return 1 / ( 1 + exp( -x ) ) element-wise."""
-    return _elwise(x, mode="sigmoid")
 
 
 def maximum(x, y):
@@ -421,9 +282,279 @@ def minimum(x, y):
     return _elwise(x, y, mode="min")
 
 
-def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
-    r"""
-    Clamp all elements in :attr:`inp` into the range `[` :attr:`lower`, :attr:`upper` `]` and return
+# trigonometric functions
+
+
+def cos(x):
+    """Element-wise cosine.
+
+    :param x: input tensor.
+    :return: computed tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        out = F.cos(x)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[ 1.      0.5403 -0.4161]
+         [-0.99   -0.6536  0.2837]]
+
+    """
+    return _elwise(x, mode="cos")
+
+
+def sin(x):
+    """Element-wise sine."""
+    return _elwise(x, mode="sin")
+
+
+def tan(x):
+    """Element-wise tangent."""
+    return sin(x) / cos(x)
+
+
+def acos(x):
+    """Element-wise inverse cosine."""
+    return _elwise(x, mode="acos")
+
+
+def asin(x):
+    """Element-wise inverse sine."""
+    return _elwise(x, mode="asin")
+
+
+def atan(x):
+    """Element-wise inverse tangent."""
+    return _elwise(x, 1, mode="atan2")
+
+
+def atan2(y, x):
+    """Element-wise 2-argument arctangent."""
+    return _elwise(y, x, mode="atan2")
+
+
+def cosh(x):
+    r"""Element-wise hyperbolic cosine."""
+    return 0.5 * (exp(x) + exp(-x))
+
+
+def sinh(x):
+    r"""Element-wise hyperbolic sine."""
+    u = expm1(x)
+    return 0.5 * u / (u + 1) * (u + 2)
+
+
+def tanh(x):
+    r"""Element-wise hyperbolic tangent."""
+    return _elwise(x, mode="tanh")
+
+
+def asinh(x):
+    r"""Element-wise inverse hyperbolic sine."""
+    return log(x + (x ** 2 + 1) ** 0.5)
+
+
+def acosh(x):
+    r"""Element-wise inverse hyperbolic cosine."""
+    return log(x + (x ** 2 - 1) ** 0.5)
+
+
+def atanh(x):
+    r"""Element-wise inverse hyperbolic tangent."""
+    return log1p(2 * x / (1 - x)) / 2
+
+
+def fast_tanh(x):
+    r"""Element-wise fast tanh; this is an approximation:
+
+    .. math::
+        \text{fast_tanh}(x) = x * (27. + x * x) / (27. + 9. * x * x)
+    """
+    return _elwise(x, mode="fast_tanh")
+
+
+# bit-twiddling functions
+
+
+def left_shift(x, y):
+    """Element-wise bitwise binary: x << y.
+
+    :param x: input tensor, should be int.
+    :param y: how many bits to be left-shifted.
+    :return: computed tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(0, 6, dtype=np.int32).reshape(2, 3))
+        out = F.left_shift(x, 2)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[ 0  4  8]
+         [12 16 20]]
+
+    """
+    return _elwise(x, y, mode="shl")
+
+
+def right_shift(x, y):
+    """Element-wise bitwise binary: x >> y."""
+    return _elwise(x, y, mode="shr")
+
+
+# logical functions
+
+
+def logical_and(x, y):
+    """Element-wise logical and: x && y."""
+    return _elwise(x, y, mode="AND")
+
+
+def logical_not(x):
+    """Element-wise logical not: ~x."""
+    return _elwise(x, mode="NOT")
+
+
+def logical_or(x, y):
+    """Element-wise logical or: x || y."""
+    return _elwise(x, y, mode="OR")
+
+
+def logical_xor(x, y):
+    """Element-wise logical xor: x ^ y."""
+    return _elwise(x, y, mode="XOR")
+
+
+# comparison functions
+
+
+def eq(x, y):
+    """Element-wise (x == y).
+
+    :param x: input tensor 1.
+    :param y: input tensor 2.
+    :return: computed tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        out = F.eq(x, y)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[1. 1. 1.]
+         [1. 1. 1.]]
+
+    """
+    return _elwise(x, y, mode="eq")
+
+
+def ne(x, y):
+    """Element-wise (x != y)."""
+    return x != y
+
+
+def lt(x, y):
+    """Element-wise (x < y)."""
+    return _elwise(x, y, mode="lt")
+
+
+def le(x, y):
+    """Element-wise (x <= y)."""
+    return _elwise(x, y, mode="leq")
+
+
+def gt(x, y):
+    """Element-wise (x > y)."""
+    return _elwise(y, x, mode="lt")
+
+
+def ge(x, y):
+    """Element-wise (x >= y)."""
+    return _elwise(y, x, mode="leq")
+
+
+# other functions
+
+
+def hswish(x):
+    """Element-wise x * relu6(x + 3) / 6.
+
+    :param x: input tensor.
+    :return: computed tensor.
+
+    Example:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(5).astype(np.float32))
+        out = F.hswish(x)
+        print(out.numpy())
+
+    .. testoutput::
+
+        [0.     0.6667 1.6667 3.     4.    ]
+
+    """
+    return _elwise(x, mode="h_swish")
+
+
+def hsigmoid(x):
+    """Element-wise relu6(x + 3) / 6."""
+    return relu6(x + 3) / 6
+
+
+def relu(x):
+    """Element-wise `max(x, 0)`."""
+    return _elwise(x, mode="relu")
+
+
+def relu6(x):
+    """Element-wise min(max(x, 0), 6)."""
+    return minimum(maximum(x, 0), 6)
+
+
+def sigmoid(x):
+    """Element-wise 1 / ( 1 + exp( -x ) )."""
+    return _elwise(x, mode="sigmoid")
+
+
+def clamp(x: Tensor, lower=None, upper=None) -> Tensor:
+    r"""Clamps all elements in input tensor into the range `[` :attr:`lower`, :attr:`upper` `]` and returns
     a resulting tensor:
 
     .. math::
@@ -433,9 +564,10 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
             \text{upper} & \text{if } x_i > \text{upper}
         \end{cases}
 
-    :param inp: the input tensor.
-    :param lower: lower-bound of the range to be clamped to
-    :param upper: upper-bound of the range to be clamped to
+    :param x: input tensor.
+    :param lower: lower-bound of the range to be clamped to.
+    :param upper: upper-bound of the range to be clamped to.
+    :return: output clamped tensor.
 
     Examples:
 
@@ -444,12 +576,10 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
+
         a = tensor(np.arange(5).astype(np.int32))
-
         print(F.clamp(a, 2, 4).numpy())
-
         print(F.clamp(a, lower=3).numpy())
-
         print(F.clamp(a, upper=3).numpy())
 
     Outputs:
@@ -467,8 +597,8 @@ def clamp(inp: Tensor, lower=None, upper=None) -> Tensor:
     if lower is not None:
         if upper is not None:
             assert lower <= upper, "clamp lower bound is bigger that upper bound"
-            return minimum(maximum(inp, lower), upper)
+            return minimum(maximum(x, lower), upper)
         else:
-            return maximum(inp, lower)
+            return maximum(x, lower)
     else:
-        return minimum(inp, upper)
+        return minimum(x, upper)

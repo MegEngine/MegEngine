@@ -234,32 +234,33 @@ class BatchNorm2d(_BatchNorm):
         less than 4D.
     :type eps: float
     :param eps: a value added to the denominator for numerical stability.
-        Default: 1e-5.
+        Default: 1e-5
     :type momentum: float
     :param momentum: the value used for the `running_mean` and `running_var`
         computation.
         Default: 0.9
     :type affine: bool
-    :param affine: a boolean value that when set to ``True``, this module has
-        learnable affine parameters. Default: ``True``
+    :param affine: a boolean value that when set to True, this module has
+        learnable affine parameters. Default: True
     :type track_running_stats: bool
-    :param track_running_stats: when set to ``True``, this module tracks the
-        running mean and variance. When set to ``False``, this module does not
+    :param track_running_stats: when set to True, this module tracks the
+        running mean and variance. When set to False, this module does not
         track such statistics and always uses batch statistics in both training
-        and eval modes. Default: ``True``.
+        and eval modes. Default: True
 
     :type freeze: bool
-    :param freeze: when set to ``True``, this module does not update the
+    :param freeze: when set to True, this module does not update the
         running mean and variance, and uses the running mean and variance instead of
         the batch mean and batch variance to normalize the input. The parameter takes effect
-        only when the module is initilized with ``track_running_stats`` as ``True`` and
+        only when the module is initilized with track_running_stats as True and
         the module is in training mode.
-        Default: ``False``.
+        Default: False
 
     Examples:
 
     .. testcode::
 
+        import numpy as np
         import megengine as mge
         import megengine.module as M
 
@@ -268,13 +269,13 @@ class BatchNorm2d(_BatchNorm):
         inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
         oup = m(inp)
         print(m.weight.numpy(), m.bias.numpy())
-        # Without Learnable Parameters
+        # Without L`e`arnable Parameters
         m = M.BatchNorm2d(4, affine=False)
         oup = m(inp)
         print(m.weight, m.bias)
-    
+
     Outputs:
-    
+
     .. testoutput::
 
         [1. 1. 1. 1.] [0. 0. 0. 0.]

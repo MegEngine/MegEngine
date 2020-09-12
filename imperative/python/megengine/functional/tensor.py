@@ -36,12 +36,14 @@ __all__ = [
     "broadcast",
     "concat",
     "cond_take",
-    "dimshuffle",
-    "expand_dims",
+    "transpose",
+    "add_axis",
     "eye",
+    "flatten",
     "full",
     "full_like",
     "gather",
+    "identity",
     "linspace",
     "ones",
     "ones_like",
@@ -50,7 +52,6 @@ __all__ = [
     "reshape",
     "remove_axis",
     "split",
-    "squeeze",
     "stack",
     "scatter",
     "transpose",
@@ -60,16 +61,14 @@ __all__ = [
 ]
 
 
-def eye(n: int, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor:
-    """
-    Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
+def eye(shape, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor:
+    """Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
-    :param n: The number of rows
-    :param m: The number of columns. Default: None
-    :param dtype: The data type. Default: None
-    :param device: Compute node of the matrix. Default: None
-    :param comp_graph: Compute graph of the matrix. Default: None
-    :return: The eye matrix
+    :param shape: expected shape of otuput tensor.
+    :param m: number of columns. Default: None
+    :param dtype: data type. Default: None
+    :param device: compute node of the matrix. Default: None
+    :return: eye matrix.
 
     Examples:
 
@@ -79,8 +78,7 @@ def eye(n: int, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor
         import megengine.functional as F
 
         data_shape = (4, 6)
-        n, m = data_shape
-        out = F.eye([n, m], dtype=np.float32)
+        out = F.eye(data_shape, dtype=np.float32)
         print(out.numpy())
 
     Outputs:
@@ -94,11 +92,13 @@ def eye(n: int, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor
 
     """
     op = builtin.Eye(k=0, dtype=dtype, comp_node=device)
-    (result,) = apply(op, Tensor(n, dtype="int32", device=device))
+    (result,) = apply(op, Tensor(shape, dtype="int32", device=device))
     return result
 
 
 def full(shape, value, dtype="float32", device=None):
+    """Returns a tensor with given shape and value.
+    """
     if isinstance(shape, int):
         shape = (shape,)
     if device is None:
@@ -110,18 +110,42 @@ def full(shape, value, dtype="float32", device=None):
 
 
 def ones(shape, dtype="float32", device=None):
+    """Returns a ones tensor with given shape.
+
+    :param inp: input tensor.
+    :return: output zero tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import megengine.functional as F
+
+        out = F.ones((2, 1))
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[1.]
+         [1.]]
+
+    """
     return full(shape, 1.0, dtype=dtype, device=device)
 
 
 def zeros(shape, dtype="float32", device=None):
+    """Returns a zero tensor with given shape.
+    """
     return full(shape, 0.0, dtype=dtype, device=device)
 
 
 def zeros_like(inp: Tensor) -> Tensor:
-    r"""
-    Returns a zero tensor with the same shape as input tensor
+    """Returns a zero tensor with the same shape as input tensor.
 
-    :param inp: input tensor
+    :param inp: input tensor.
+    :return: output zero tensor.
 
     Examples:
 
@@ -147,26 +171,36 @@ def zeros_like(inp: Tensor) -> Tensor:
 
 
 def ones_like(inp: Tensor) -> Tensor:
-    r"""
-    Returns a identity tensor with the same shape as input tensor
+    """Returns a identity tensor with the same shape as input tensor.
     """
     return ones(inp.shape, dtype=inp.dtype, device=inp.device)
 
 
 def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
-    r"""
-    Returns a tensor filled with value val with the same shape as input tensor
+    """Returns a tensor filled with given value with the same shape as input tensor.
     """
     return full(inp.shape, value, dtype=inp.dtype, device=inp.device)
 
 
+def identity(inp: Tensor) -> Tensor:
+    """Applies an identity transform to the input tensor.
+
+    :param inp: input tensor.
+    :return: output tensor.
+    """
+    op = builtin.Identity()
+    (data,) = utils.convert_inputs(inp)
+    (output,) = apply(op, data)
+    return output
+
+
 def broadcast(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
     """
-    Broadcast a tensor to ``shape``
+    Broadcasts a tensor to given shape.
 
-    :param inp: The input tensor
-    :param shape: The target shape
-    :return: The output tensor
+    :param inp: input tensor.
+    :param shape: target shape.
+    :return: output tensor.
 
     Examples:
 
@@ -206,10 +240,10 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
     r"""
     Concat some tensors
 
-    :param inps: Input tensors to concat
-    :param axis: the dimension over which the tensors are concatenated. Default: 0
-    :param device: The comp node output on. Default: None
-    :return: The output tensor
+    :param inps: input tensors to concat.
+    :param axis: dimension over which the tensors are concatenated. Default: 0
+    :param device: comp node output on. Default: None
+    :return: output tensor.
 
     Examples:
 
@@ -254,10 +288,10 @@ def stack(inps, axis=0, device=None):
     """Concats a sequence of tensors along a new axis.
     The input tensors must have the same shape.
 
-    :param inps: The input tensors.
-    :param axis: Which axis will be concatenated.
+    :param inps: input tensors.
+    :param axis: which axis will be concatenated.
     :param device: The comp node output on. Default: None
-    :return: The output concatenated tensor.
+    :return: output concatenated tensor.
 
     Examples:
 
@@ -296,10 +330,10 @@ def split(inp, nsplits_or_sections, axis=0):
     """Splits the input tensor into several smaller tensors.
     When nsplits_or_sections is int, the last tensor may be smaller than others.
 
-    :param inp: The input tensor.
-    :param nsplits_or_sections: Number of sub tensors or section information list.
-    :param axis: Which axis will be splited.
-    :return: The output tensor list.
+    :param inp: input tensor.
+    :param nsplits_or_sections: number of sub tensors or section information list.
+    :param axis: which axis will be splited.
+    :return: output tensor list.
 
     Examples:
 
@@ -377,8 +411,7 @@ def _get_idx(index, axis):
 
 
 def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
-    r"""
-    Gather data from :attr:`inp` on :attr:`axis` using :attr:`index`.
+    r"""Gathers data from inp on axis using index.
 
     For a 3-D tensor, the output is specified by::
 
@@ -386,16 +419,16 @@ def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
         out[i][j][k] = inp[i][index[i][j][k]][k] # if axis == 1
         out[i][j][k] = inp[i][j][index[i][j][k]] # if axis == 2
 
-    if :attr:`inp` is an n-dimensional tensor with size
+    if inp is an n-dimensional tensor with size
     :math:`(x_0,x_1,...,x_{i-1},x_i,x_{i+1},...,x_{n-1})` and axis=i,
-    then :attr:`index` must be an n-dimensional tensor with size
+    then index must be an n-dimensional tensor with size
     :math:`(x_0,x_1,...,x_{i-1},y,x_{i+1},...,x_{n-1})` where :math:`y\ge 1` and
-    output will have the same size as :attr:`index`.
+    output will have the same size as index.
 
-
-    :param inp: the source tensor
-    :param axis: the axis along which to index
-    :param index: the indices of elements to gather
+    :param inp: input tensor.
+    :param axis: axis along which to index.
+    :param index: indices of elements to gather.
+    :return: output tensor.
 
     Examples:
 
@@ -449,25 +482,25 @@ def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
 
 
 def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
-    r"""
-    Writes all values from the tensor :attr:`source` into :attr:`inp` at the indices specified in the :attr:`index` tensor.
+    r"""Writes all values from the tensor source into inp 
+    at the indices specified in the index tensor.
 
-    For each value in :attr:`source`, its output index is specified by its index
-    in :attr:`source` for ``axis != dimension`` and by the corresponding value in
-    :attr:`index` for ``axis = dimension``.
+    For each value in source, its output index is specified by its index
+    in source for ``axis != dimension`` and by the corresponding value in
+    index for ``axis = dimension``.
 
-    For a 3-D tensor, :attr:`inp` is updated as::
+    For a 3-D tensor, inp is updated as::
 
         inp[index[i][j][k]][j][k] = source[i][j][k]  # if axis == 0
         inp[i][index[i][j][k]][k] = source[i][j][k]  # if axis == 1
         inp[i][j][index[i][j][k]] = source[i][j][k]  # if axis == 2
 
-    :attr:`inp`, :attr:`index` and :attr:`source` should have same number of dimensions.
+    inp, index and source should have same number of dimensions.
 
     It is also required that ``source.shape(d) <= inp.shape(d)`` and ``index.shape(d) == source.shape(d)``
     for all dimensions ``d``.
 
-    Moreover, the values of :attr:`index` must be between ``0`` and ``inp.shape(axis) - 1`` inclusive.
+    Moreover, the values of index must be between ``0`` and ``inp.shape(axis) - 1`` inclusive.
 
     .. note::
         Please notice that, due to performance issues, the result is uncertain on the GPU device
@@ -478,10 +511,11 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
         from source[0][2] which value is 0.2256 or source[1][2] which value is 0.5339
         if set the index[1][2] from 1 to 0.
 
-    :param inp: the inp tensor which to be scattered
-    :param axis: the axis along which to index
-    :param index: the indices of elements to scatter
-    :param source: the source element(s) to scatter
+    :param inp: inp tensor which to be scattered.
+    :param axis: axis along which to index.
+    :param index: indices of elements to scatter.
+    :param source: source element(s) to scatter.
+    :return: output tensor.
 
     Examples:
 
@@ -553,16 +587,16 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
 
 
 def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
-    r"""
-    Select elements either from Tensor x or Tensor y, according to mask.
+    r"""Selects elements either from Tensor x or Tensor y, according to mask.
 
     .. math::
 
         \textrm{out}_i = x_i \textrm{ if } \textrm{mask}_i \textrm{ is True else } y_i
 
-    :param mask: a mask used for choosing x or y
-    :param x: the first choice
-    :param y: the second choice
+    :param mask: a mask used for choosing x or y.
+    :param x: first choice.
+    :param y: second choice.
+    :return: output tensor.
 
     Examples:
 
@@ -620,8 +654,8 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
     and the second is the indices corresponding to those elements;
     they are both 1-dimensional. High-dimension input would first be flattened.
 
-    :param mask: condition param; must be the same shape with data
-    :param x: input tensor from which to take elements
+    :param mask: condition param; must be the same shape with data.
+    :param x: input tensor from which to take elements.
 
     Examples:
 
@@ -657,12 +691,13 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
     return v, index
 
 
-def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
+def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
     r"""
-    Swap shapes and strides according to given pattern
+    Swaps shapes and strides according to given pattern.
 
-    :param inp: Input tensor
-    :param pattern: a list of integers including 0, 1, ... , ``ndim``-1, and any number of ``'x'`` char in dimensions where this tensor should be broadcasted. For examples:
+    :param inp: input tensor.
+    :param pattern: a list of integers including 0, 1, ... , ``ndim``-1, 
+    and any number of ``'x'`` char in dimensions where this tensor should be broadcasted. For examples:
 
         * (``'x'``) -> make a 0d (scalar) into a 1d vector
         * (0, 1) -> identity for 2d vectors
@@ -674,7 +709,7 @@ def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
         * (1, ``'x'``, 0) -> AxB to Bx1xA
         * (1,) -> This remove dimensions 0. It must be a broadcastable dimension (1xA to A)
 
-    :return: The output tensor
+    :return: output tensor.
 
     Examples:
 
@@ -684,7 +719,7 @@ def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
         from megengine import tensor
         import megengine.functional as F
         x = tensor(np.array([[1, 1], [0, 0]], dtype=np.int32))
-        out = F.dimshuffle(x, (1, 0))
+        out = F.transpose(x, (1, 0))
         print(out.numpy())
 
     Outputs:
@@ -701,15 +736,15 @@ def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
     return result
 
 
-transpose = dimshuffle
+dimshuffle = transpose
 
 
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
     r"""
-    Reshape a tensor to given target shape; total number of logical elements must
+    Reshapes a tensor to given target shape; total number of logical elements must
     remain unchanged
 
-    :param inp: Input tensor
+    :param inp: input tensor.
     :param target_shape: target shape, the components would be concatenated to form the
         target shape, and it can contain an element of -1 representing unspec_axis.
 
@@ -764,13 +799,13 @@ AxisAddRemove = builtin.AxisAddRemove
 AxisDesc = AxisAddRemove.AxisDesc
 
 
-def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
-    r"""
-    Add dimension before given axis.
+def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
+    r"""Reshapes the tensor by flattening the sub-tensor from dimension ``start_axis`` to dimension ``end_axis``.
 
-    :param inp: Input tensor
-    :param axis: Place of new axes
-    :return: The output tensor
+    :param inp: input tensor.
+    :param start_axis: start dimension that the sub-tensor to be flattened. Default: 0
+    :param end_axis: end dimension that the sub-tensor to be flattened. Default: -1
+    :return: output tensor.
 
     Examples:
 
@@ -779,6 +814,45 @@ def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
+
+        inp_shape = (2, 2, 3, 3)
+        x = tensor(
+            np.arange(36, dtype=np.int32).reshape(inp_shape),
+        )
+        out = F.flatten(x, 2)
+        print(x.numpy().shape)
+        print(out.numpy().shape)
+
+    Outputs:
+
+    .. testoutput::
+
+        (2, 2, 3, 3)
+        (2, 2, 9)
+
+    """
+    target_shape = tuple(inp.shape[i] for i in range(start_axis)) + (-1,)
+    if end_axis != -1:
+        target_shape += (*inp.shape[end_axis + 1 :],)
+    return inp.reshape(*target_shape)
+
+
+def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
+    r"""
+    Adds dimension before given axis.
+
+    :param inp: input tensor.
+    :param axis: place of new axes.
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
         x = tensor([1, 2])
         out = F.add_axis(x, 0)
         print(out.shape)
@@ -790,7 +864,7 @@ def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         (1, 2)
 
     """
-    Param = AxisAddRemove.Param
+    Param = builtin.AxisAddRemove.Param
 
     def get_axes():
         try:
@@ -803,24 +877,24 @@ def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     ndim = inp.ndim + len(axis)
     axis = sorted(i + ndim if i < 0 else i for i in axis)
 
-    param = Param(*map(AxisDesc.make_add, axis))
-    op = AxisAddRemove(param=param)
+    param = Param(*map(builtin.AxisAddRemove.AxisDesc.make_add, axis))
+    op = builtin.AxisAddRemove(param=param)
     (result,) = apply(op, inp)
     return result
 
 
-expand_dims = add_axis
+add_axis = add_axis
 
 
 def remove_axis(
     inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None
 ) -> Tensor:
     r"""
-    Remove dimension of shape 1.
+    Removes dimension of shape 1.
 
-    :param inp: Input tensor
-    :param axis: Place of axis to be removed, if None, all axis=1 will be removed. Default: None
-    :return: The output tensor
+    :param inp: input tensor.
+    :param axis: place of axis to be removed.
+    :return: output tensor.
 
     Examples:
 
@@ -829,6 +903,7 @@ def remove_axis(
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
+
         x = tensor(np.array([1, 2], dtype=np.int32).reshape(1, 1, 2, 1))
         out = F.remove_axis(x, 3)
         print(out.shape)
@@ -840,7 +915,7 @@ def remove_axis(
         (1, 1, 2)
 
     """
-    Param = AxisAddRemove.Param
+    Param = builtin.AxisAddRemove.Param
 
     def get_axes():
         if axis is None:
@@ -855,13 +930,10 @@ def remove_axis(
     axis = sorted(i + inp.ndim if i < 0 else i for i in axis)
     axis = [a - i for i, a in enumerate(axis)]
 
-    param = Param(*map(AxisDesc.make_remove, axis))
-    op = AxisAddRemove(param=param)
+    param = Param(*map(builtin.AxisAddRemove.AxisDesc.make_remove, axis))
+    op = builtin.AxisAddRemove(param=param)
     (result,) = apply(op, inp)
     return result
-
-
-squeeze = remove_axis
 
 
 def linspace(
@@ -871,14 +943,13 @@ def linspace(
     dtype="float32",
     device: Optional[CompNode] = None,
 ) -> Tensor:
-    r"""
-    Return equally spaced numbers over a specified interval
+    r"""Returns equally spaced numbers over a specified interval.
 
-    :param start: Starting value of the squence, shoule be scalar
-    :param stop: The last value of the squence, shoule be scalar
-    :param num: number of values to generate
-    :param dtype: result data type
-    :return: The generated tensor
+    :param start: starting value of the squence, shoule be scalar.
+    :param stop: last value of the squence, shoule be scalar.
+    :param num: number of values to generate.
+    :param dtype: result data type.
+    :return: generated tensor.
 
     Examples:
 
@@ -916,14 +987,13 @@ def arange(
     dtype="float32",
     device: Optional[CompNode] = None,
 ) -> Tensor:
-    r"""
-    Returns a Tensor with values from `start` to `end` with adjacent interval `step`
+    r"""Returns a Tensor with values from start to end with adjacent interval step.
 
-    :param start: starting value of the squence, shoule be scalar
-    :param end: ending value of the squence, shoule be scalar
-    :param step: the gap between each pair of adjacent values. Default 1
-    :param dtype: result data type
-    :return: The generated tensor
+    :param start: starting value of the squence, shoule be scalar.
+    :param end: ending value of the squence, shoule be scalar.
+    :param step: gap between each pair of adjacent values. Default: 1
+    :param dtype: result data type.
+    :return: generated tensor.
 
     Examples:
 
@@ -937,9 +1007,11 @@ def arange(
     
     Outputs:
 
+    Outputs:
+
     .. testoutput::
 
-        [1. 2. 3. 4.]
+        [0. 1. 2. 3. 4.]
 
     """
     if end is None:
@@ -964,12 +1036,12 @@ def param_pack_split(inp: Tensor, offsets: List, shapes: List) -> Tensor:
     Returns split Tensor to Tensor list as offsets and shapes described,
             only used for parampack.
 
-    :param inp: Input tensor
+    :param inp: input tensor.
     :param offsets: offsets of outputs, length of 2 * n,
             while n is tensor nums you want to split,
-            format [begin0, end0, begin1, end1].
-    :param shapes: tensor shapes of outputs
-    :return: split tensors
+            format `[begin0, end0, begin1, end1]`.
+    :param shapes: tensor shapes of outputs.
+    :return: split tensors.
 
     Examples:
 
@@ -1004,8 +1076,8 @@ def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
     r"""
     Returns concat Tensor, only used for parampack.
 
-    :param inps: Input tensors
-    :param offsets: device value of offsets
+    :param inps: input tensors.
+    :param offsets: device value of offsets.
     :param offsets_val: offsets of inputs, length of 2 * n,
             format [begin0, end0, begin1, end1].
     :return: concat tensors

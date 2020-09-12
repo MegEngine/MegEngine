@@ -15,7 +15,7 @@ from ..core.ops.builtin import Copy
 from ..core.tensor import Tensor
 from ..core.tensor.core import apply
 from .math import topk as _topk
-from .tensor import dimshuffle as _dimshuffle
+from .tensor import transpose as _transpose
 
 
 def accuracy(
@@ -24,11 +24,11 @@ def accuracy(
     r"""
     Calculate the classification accuracy given predicted logits and ground-truth labels.
 
-    :param logits: Model predictions of shape [batch_size, num_classes],
+    :param logits: model predictions of shape `[batch_size, num_classes]`,
         representing the probability (likelyhood) of each class.
-    :param target: Ground-truth labels, 1d tensor of int32
-    :param topk: Specifies the topk values, could be an int or tuple of ints. Default: 1
-    :return: Tensor(s) of classification accuracy between 0.0 and 1.0
+    :param target: ground-truth labels, 1d tensor of int32.
+    :param topk: specifies the topk values, could be an int or tuple of ints. Default: 1
+    :return: tensor(s) of classification accuracy between 0.0 and 1.0.
 
     Examples:
 
@@ -54,7 +54,7 @@ def accuracy(
     _, pred = _topk(logits, k=max(topk), descending=True)
     accs = []
     for k in topk:
-        correct = pred[:, :k].detach() == _dimshuffle(target, (0, "x")).broadcast(
+        correct = pred[:, :k].detach() == _transpose(target, (0, "x")).broadcast(
             target.shape[0], k
         )
         accs.append(correct.astype(np.float32).sum() / target.shape[0])
@@ -63,12 +63,25 @@ def accuracy(
     return accs
 
 
+def zero_grad(inp: Tensor) -> Tensor:
+    r"""
+    Returns a tensor which is treated as constant during backward gradient calcuation,
+    i.e. its gradient is zero.
+
+    :param inp: Input tensor.
+
+    See implementation of :func:`~.softmax` for example.
+    """
+    print("zero_grad is obsoleted, please use detach instead")
+    raise NotImplementedError
+
+
 def copy(inp, cn):
     r"""
     Copy tensor to another device.
 
-    :param inp: Input tensor.
-    :param cn: device that you copy to
+    :param inp: input tensor.
+    :param cn: device that you copy to.
 
     Examples:
 

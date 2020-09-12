@@ -23,12 +23,13 @@ class Sequential(Module):
     .. testcode::
 
         import numpy as np
-        from megengine import tensor
+        import megengine as mge
+        import megengine.module as M
         import megengine.functional as F
 
         batch_size = 64
-        data = tensor(np.zeros((batch_size, 1, 28, 28)), dtype=np.float32)
-        label = tensor(np.zeros(batch_size,), dtype=np.int32)
+        data = mge.tensor(np.zeros((batch_size, 1, 28, 28)), dtype=np.float32)
+        label = mge.tensor(np.zeros(batch_size,), dtype=np.int32)
 
         data = data.reshape(batch_size, -1)
         net = M.Sequential(

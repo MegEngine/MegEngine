@@ -78,7 +78,7 @@ def calculate_gain(
     Sigmoid           :math:`1`
     Tanh              :math:`\frac{5}{3}`
     ReLU              :math:`\sqrt{2}`
-    Leaky Relu        :math:`\sqrt{\frac{2}{1 + \text{negative_{slope}}^2}}`
+    Leaky Relu        :math:`\sqrt{\frac{2}{1 + {\text{negative}_\text{slope}}^2}}`
     ================= ====================================================
 
     :param nonlinearity: Name of the non-linear function

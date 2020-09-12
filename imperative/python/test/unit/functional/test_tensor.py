@@ -165,7 +165,7 @@ def test_squeeze():
 
     for axis in [None, 3, -4, (3, -4)]:
         y = np.squeeze(x, axis)
-        yy = F.squeeze(xx, axis)
+        yy = F.remove_axis(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
 
 
@@ -175,7 +175,7 @@ def test_expand_dims():
 
     for axis in [2, -3, (3, -4), (1, -4)]:
         y = np.expand_dims(x, axis)
-        yy = F.expand_dims(xx, axis)
+        yy = F.add_axis(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
 
 
@@ -256,6 +256,48 @@ def test_round():
 
     cases = [{"input": data1}, {"input": data2}]
     opr_test(cases, F.round, ref_fn=np.round)
+
+
+def test_flatten():
+    data0_shape = (2, 3, 4, 5)
+    data1_shape = (4, 5, 6, 7)
+    data0 = np.random.random(data0_shape).astype(np.float32)
+    data1 = np.random.random(data1_shape).astype(np.float32)
+
+    def compare_fn(x, y):
+        assert x.numpy().shape == y[0]
+
+    output0 = (2 * 3 * 4 * 5,)
+    output1 = (4 * 5 * 6 * 7,)
+    cases = [
+        {"input": data0, "output": (output0,)},
+        {"input": data1, "output": (output1,)},
+    ]
+    opr_test(cases, F.flatten, compare_fn=compare_fn)
+
+    output0 = (2, 3 * 4 * 5)
+    output1 = (4, 5 * 6 * 7)
+    cases = [
+        {"input": data0, "output": (output0,)},
+        {"input": data1, "output": (output1,)},
+    ]
+    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1)
+
+    output0 = (2, 3, 4 * 5)
+    output1 = (4, 5, 6 * 7)
+    cases = [
+        {"input": data0, "output": (output0,)},
+        {"input": data1, "output": (output1,)},
+    ]
+    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=2)
+
+    output0 = (2, 3 * 4, 5)
+    output1 = (4, 5 * 6, 7)
+    cases = [
+        {"input": data0, "output": (output0,)},
+        {"input": data1, "output": (output1,)},
+    ]
+    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1, end_axis=2)
 
 
 def test_broadcast():

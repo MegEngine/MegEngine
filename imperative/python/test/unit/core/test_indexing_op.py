@@ -192,7 +192,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
     return inp, tensors, items
 
 
-def dimshuffle(*args, **kwargs):
+def transpose(*args, **kwargs):
     op = all_ops.Dimshuffle(**kwargs).to_c()
     return invoke_op(op, args)
 
@@ -274,10 +274,10 @@ def batched_incr_mesh_indexing(input, value, tuple_val):
     return invoke_op(op, (input, value, *tensors))
 
 
-def test_dimshuffle():
+def test_transpose():
     x = np.arange(10).reshape(2, 5).astype("int32")
     xx = as_raw_tensor(x)
-    (yy,) = dimshuffle(xx, pattern="1x0")
+    (yy,) = transpose(xx, pattern="1x0")
     np.testing.assert_equal(np.expand_dims(x.transpose(), axis=1), yy.numpy())
 
 

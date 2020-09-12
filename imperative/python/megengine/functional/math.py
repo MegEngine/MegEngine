@@ -18,7 +18,7 @@ from ..core.tensor import utils
 from ..core.tensor.core import apply
 from ..tensor import Tensor
 from .elemwise import clamp, exp, log, log1p
-from .tensor import remove_axis, reshape
+from .tensor import add_axis, remove_axis, reshape
 
 __all__ = [
     "argmax",
@@ -42,10 +42,10 @@ __all__ = [
 
 
 def isnan(inp: Tensor) -> Tensor:
-    r"""Returns a new tensor representing if each element is NaN or not.
+    r"""Returns a new tensor representing if each element is ``NaN`` or not.
 
-    :param: inp
-    :return: a new tensor representing if each element in :attr:`inp` is NaN or not.
+    :param inp: input tensor.
+    :return: a new tensor representing if each element in inp is NaN or not.
 
     Examples:
 
@@ -55,7 +55,6 @@ def isnan(inp: Tensor) -> Tensor:
         import megengine.functional as F
 
         x = tensor([1, float("nan"), 0])
-
         print(F.isnan(x).numpy())
 
     Outputs:
@@ -69,10 +68,10 @@ def isnan(inp: Tensor) -> Tensor:
 
 
 def isinf(inp: Tensor) -> Tensor:
-    r"""Returns a new tensor representing if each element is Inf or not.
+    r"""Returns a new tensor representing if each element is ``Inf`` or not.
 
-    :param: inp
-    :return: a new tensor representing if each element in :attr:`inp` is Inf or not.
+    :param inp: input tensor.
+    :return: a new tensor representing if each element in inp is Inf or not.
 
     Examples:
 
@@ -82,7 +81,6 @@ def isinf(inp: Tensor) -> Tensor:
         import megengine.functional as F
 
         x = tensor([1, float("inf"), 0])
-
         print(F.isinf(x).numpy())
 
     Outputs:
@@ -96,10 +94,10 @@ def isinf(inp: Tensor) -> Tensor:
 
 
 def sign(inp: Tensor):
-    r"""Returns sign of each element in the input tensor.
+    r"""Returns a new tensor representing the sign of each element in input tensor.
 
-    :param: inp
-    :return: a sign tensor.
+    :param: input tensor.
+    :return: the sign of input tensor.
 
     Examples:
 
@@ -109,8 +107,9 @@ def sign(inp: Tensor):
         import megengine.functional as F
 
         x = tensor([1, -1, 0])
-
         print(F.sign(x).numpy())
+    
+    Outputs:
 
     .. testoutput::
 
@@ -125,14 +124,15 @@ def sum(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the sum of each row of the ``inp`` tensor in the given ``axis``.
+    r"""Returns the sum of input tensor along given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor.
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced.
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced.
         Default: None
-    :param keepdims: Whether the output tensor has ``axis`` retained or not.
+    :param keepdims: whether the output tensor has axis retained or not.
         Default: False
-    :return: The output tensor
+    :return: output tensor.
 
     Examples:
 
@@ -142,12 +142,12 @@ def sum(
         from megengine import tensor
         import megengine.functional as F
 
-        data = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
-        out = F.sum(data)
+        x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+        out = F.sum(x)
         print(out.numpy())
-    
+
     Outputs:
-    
+
     .. testoutput::
 
         [21]
@@ -159,13 +159,13 @@ def sum(
 def prod(
     inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None, keepdims=False
 ) -> Tensor:
-    r"""
-    Returns the element product of input tensor along given *axis*.
+    r"""Returns the product of input tensor along given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: ``None``
-    :param keepdims: Whether the output tensor has *axis* retained or not. Default: ``False``
-    :return: The output tensor
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -175,8 +175,8 @@ def prod(
         from megengine import tensor
         import megengine.functional as F
 
-        data = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
-        out = F.prod(data)
+        x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+        out = F.prod(x)
         print(out.numpy())
 
     Outputs:
@@ -194,13 +194,14 @@ def mean(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    """Returns the mean value of each row of the ``inp`` tensor in
-    the given ``axis``. If axis is a list of dimensions,
+    """Returns the mean value of input tensor along
+    given axis. If axis is a list of dimensions,
     reduce over all of them.
 
-    :param inp: The input tensor
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: None
-    :param keepdims: Whether the output tensor has ``axis`` retained or not. Default: False
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -210,8 +211,8 @@ def mean(
         from megengine import tensor
         import megengine.functional as F
 
-        data = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
-        out = F.mean(data)
+        x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2, 3))
+        out = F.mean(x)
         print(out.numpy())
 
     Outputs:
@@ -224,27 +225,19 @@ def mean(
     return inp.astype("float32").mean(axis=axis, keepdims=keepdims)
 
 
-def median(
-    inp: Tensor,
-    axis: Optional[Union[int, Sequence[int]]] = None,
-    keepdims: bool = False,
-) -> Tensor:
-    raise NotImplementedError
-
-
 def var(
     inp: Tensor,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
     """Returns the variance value of input tensor along
-    given ``axis``. If axis is a list of dimensions,
+    given axis. If axis is a list of dimensions,
     reduce over all of them.
 
-    :param inp: The input tensor.
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: ``None``.
-    :param keepdims: Whether the output tensor has ``axis`` retained or not. Default: ``False``.
-    :return: The output tensor.
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -278,13 +271,13 @@ def std(
     keepdims: bool = False,
 ) -> Tensor:
     """Returns the standard deviation of input tensor along
-    given ``axis``. If axis is a list of dimensions,
+    given axis. If axis is a list of dimensions,
     reduce over all of them.
 
-    :param inp: The input tensor.
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: ``None``.
-    :param keepdims: Whether the output tensor has ``axis`` retained or not. Default: ``False``.
-    :return: The output tensor.
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -312,13 +305,14 @@ def min(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""
-    Returns the min value of input tensor along given *axis*.
+    r"""Returns the min value of input tensor along
+    given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: None
-    :param keepdims: Whether the output tensor has *axis* retained or not. Default: False
-    :return: The output tensor
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -329,8 +323,8 @@ def min(
         import megengine.functional as F
 
         x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-        y = F.min(x)
-        print(y.numpy())
+        out = F.min(x)
+        print(out.numpy())
 
     Outputs:
 
@@ -347,12 +341,14 @@ def max(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the max value of the input tensor along given *axis*.
+    r"""Returns the max value of the input tensor along
+    given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: None
-    :param keepdims: Whether the output tensor has *axis* retained or not. Default: False
-    :return: The output tensor
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -363,8 +359,8 @@ def max(
         import megengine.functional as F
 
         x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-        y = F.max(x)
-        print(y.numpy())
+        out = F.max(x)
+        print(out.numpy())
 
     Outputs:
 
@@ -382,13 +378,15 @@ def norm(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims=False,
 ):
-    """Calculate ``p``-norm of input tensor along certain axis.
+    """Calculates ``p``-norm of input tensor along
+    given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor
-    :param p: power of value ``p`` applied to ``inp``. Default: 2
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: None
-    :param keepdims: Whether the output tensor has ``axis`` retained or not. Default: False
-    :return: The output tensor
+    :param inp: input tensor.
+    :param p: power of value applied to inp. Default: 2
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -399,8 +397,8 @@ def norm(
         import megengine.functional as F
 
         x = tensor(np.arange(-3, 3, dtype=np.float32).reshape(2,3))
-        y = F.norm(x)
-        print(y.numpy())
+        out = F.norm(x)
+        print(out.numpy())
 
     Outputs:
 
@@ -423,12 +421,14 @@ def argmin(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the indices of the minimum values along an axis
+    r"""Returns the indices of the minimum values along
+    given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: None
-    :param keepdims: Whether the output tensor has *axis* retained or not. Default: False
-    :return: The output tensor
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -439,8 +439,8 @@ def argmin(
         import megengine.functional as F
 
         x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-        y = F.argmin(x)
-        print(y.numpy())
+        out = F.argmin(x)
+        print(out.numpy())
 
     Outputs:
 
@@ -479,12 +479,14 @@ def argmax(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the indices of the maximum values along an axis
+    r"""Returns the indices of the maximum values along
+    given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    :param inp: The input tensor
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced. Default: None
-    :param keepdims: Whether the output tensor has *axis* retained or not. Default: False
-    :return: The output tensor
+    :param inp: input tensor.
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param keepdims: whether the output tensor has axis retained or not. Default: False
+    :return: output tensor.
 
     Examples:
 
@@ -495,9 +497,9 @@ def argmax(
         import megengine.functional as F
 
         x = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
-        y = F.argmax(x)
-        print(y.numpy())
- 
+        out = F.argmax(x)
+        print(out.numpy())
+
     Outputs:
 
     .. testoutput::
@@ -536,21 +538,22 @@ def normalize(
     axis: Optional[Union[int, Sequence[int]]] = None,
     eps: float = 1e-12,
 ) -> Tensor:
-    r"""Perform :math:`L_p` normalization of input tensor along certain axis.
+    r"""Performs :math:`L_p` normalization of input tensor along
+    given axis. If axis is a list of dimensions,
+    reduce over all of them.
 
-    For a tensor :attr:`inp` of shape :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
+    For a tensor inp of shape :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
     :math:`n_{dim}` -element vector :math:`v` along dimension :attr:`axis` is transformed as:
 
     .. math::
         v = \frac{v}{\max(\lVert v \rVert_p, \epsilon)}.
 
-    :param inp: the input tensor
-    :param p: power of value ``p`` applied to ``inp``. Default: 2
-    :param axis: The dimension to reduce. If None, all the dimensions will be reduced
+    :param inp: input tensor.
+    :param p: power of value applied to inp. Default: 2
+    :param axis: dimension to reduce. If None, all the dimensions will be reduced
         to calculate the norm. Default: None
     :param eps: a small value to avoid division by zero. Default: 1e-12
-    :return: the normalized output tensor
-
+    :return: normalized output tensor.
     """
     if axis is None:
         return inp / clamp(norm(inp, p, axis), lower=eps)
@@ -559,12 +562,11 @@ def normalize(
 
 
 def argsort(inp: Tensor, descending: bool = False) -> Tensor:
-    r"""
-    Sort the target 2d matrix by row, return both the sorted tensor and indices.
+    r"""Sorts the target 2d matrix by row, return both the sorted tensor and indices.
 
-    :param inp: The input tensor, if 2d, each row will be sorted
-    :param descending: Sort in descending order, where the largest comes first. Default: ``False``
-    :return: Tuple of two tensors (sorted_tensor, indices_of_int32)
+    :param inp: input tensor, if 2d, each row will be sorted.
+    :param descending: Sort in descending order, where the largest comes first. Default: False
+    :return: Tuple of two tensors `(sorted_tensor, indices_of_int32)`.
 
     Examples:
 
@@ -573,8 +575,9 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
-        data = tensor(np.array([1,2], dtype=np.float32))
-        indices = F.argsort(data)
+
+        x = tensor(np.array([1,2], dtype=np.float32))
+        indices = F.argsort(x)
         print(indices.numpy())
 
     Outputs:
@@ -622,15 +625,14 @@ def topk(
     kth_only: bool = False,
     no_sort: bool = False,
 ) -> Tuple[Tensor, Tensor]:
-    r"""
-    Selected the Top-K (by default) smallest elements of 2d matrix by row.
+    r"""Selects the ``Top-K(by default)`` smallest elements of 2d matrix by row.
 
-    :param inp: The input tensor, if 2d, each row will be sorted
-    :param k: The number of elements needed
-    :param descending: If true, return the largest elements instead. Default: ``False``
-    :param kth_only: If true, only the k-th element will be returned. Default: ``False``
-    :param no_sort: If true, the returned elements can be unordered. Default: ``False``
-    :return: Tuple of two tensors (topk_tensor, indices_of_int32)
+    :param inp: input tensor, if 2d, each row will be sorted.
+    :param k: number of elements needed.
+    :param descending: if true, return the largest elements instead. Default: False
+    :param kth_only: if true, only the k-th element will be returned. Default: False
+    :param no_sort: if true, the returned elements can be unordered. Default: False
+    :return: tuple of two tensors `(topk_tensor, indices_of_int32)`.
 
     Examples:
 
@@ -639,8 +641,9 @@ def topk(
         import numpy as np
         from megengine import tensor
         import  megengine.functional as F
-        data = tensor(np.array([2, 4, 6, 8, 7, 5, 3, 1], dtype=np.float32))
-        top, indices = F.topk(data, 5)
+
+        x = tensor(np.array([2, 4, 6, 8, 7, 5, 3, 1], dtype=np.float32))
+        top, indices = F.topk(x, 5)
         print(top.numpy(), indices.numpy())
 
     Outputs:

@@ -67,6 +67,10 @@ class Elemwise(Module):
         * "H_SWISH": h_swish
         * "FUSE_ADD_H_SWISH": h_swish(x+y)
         * "H_SWISH_GRAD": h_swish_grad
+        * "AND": bool binary: x && y
+        * "OR": bool binary: x || y
+        * "XOR": bool binary: x ^ y
+        * "NOT": bool unary: ~x
     """
 
     _elemwise_mode_type = P.Elemwise.Mode

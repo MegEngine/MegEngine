@@ -9,7 +9,7 @@
 import collections
 from typing import Iterable, Optional, Union
 
-from ..core.tensor import Tensor
+from ..tensor import Tensor
 
 
 def add_update(
@@ -20,7 +20,7 @@ def add_update(
     beta: Union[Tensor, float, int] = 1.0,
     bias: Union[Tensor, float, int] = 0.0
 ):
-    r"""Inplace modify ``dest`` as follows:
+    r"""Modify ``dest`` inplace as follows:
 
     .. math::
         dest = alpha * dest +  beta * delta + bias

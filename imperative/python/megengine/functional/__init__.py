@@ -14,7 +14,7 @@ from .math import *
 from .nn import *
 from .quantized import conv_bias_activation
 from .tensor import *
-from .utils import accuracy, copy, zero_grad
+from .utils import accuracy, copy
 
 from . import distributed  # isort:skip
 

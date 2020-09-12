@@ -48,8 +48,29 @@ class MaxPool2d(_PoolNd):
     both sides for :attr:`padding` number of points.
 
     :param kernel_size: the size of the window to take a max over.
-    :param stride: the stride of the window. Default value is ``kernel_size``.
+    :param stride: the stride of the window. Default value is kernel_size.
     :param padding: implicit zero padding to be added on both sides.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        m = M.MaxPool2d(kernel_size=3, stride=1, padding=0)
+        inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+        oup = m(inp)
+        print(oup.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[[[10. 11.]
+           [14. 15.]]]]
+
     """
 
     def forward(self, inp):
@@ -72,8 +93,29 @@ class AvgPool2d(_PoolNd):
     both sides for :attr:`padding` number of points.
 
     :param kernel_size: the size of the window.
-    :param stride: the stride of the window. Default value is ``kernel_size``.
+    :param stride: the stride of the window. Default value is kernel_size。
     :param padding: implicit zero padding to be added on both sides.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        m = M.AvgPool2d(kernel_size=3, stride=1, padding=0)
+        inp = mge.tensor(np.arange(0, 16).astype("float32").reshape(1, 1, 4, 4))
+        oup = m(inp)
+        print(oup.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[[[ 5.  6.]
+           [ 9. 10.]]]]
+
     """
 
     def forward(self, inp):

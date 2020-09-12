@@ -14,8 +14,6 @@ import megengine.functional as F
 from megengine import tensor
 from megengine.test import assertTensorClose
 
-# from helpers import opr_test
-
 
 def _default_compare_fn(x, y):
     assertTensorClose(x.numpy(), y)
@@ -205,6 +203,45 @@ def test_normalize():
     cases[0]["input"][0, 0, 0, :] = 0
     cases[1]["input"][0, 0, 0, :] = 0
     opr_test(cases, partial(F.normalize, axis=3), ref_fn=partial(np_normalize, axis=3))
+
+
+def test_matmul():
+    shape1 = 3
+    shape2 = 3
+    shape3 = (3, 5)
+    shape4 = (5, 6)
+    data1 = np.random.random(shape1).astype("float32")
+    data2 = np.random.random(shape2).astype("float32")
+    data3 = np.random.random(shape3).astype("float32")
+    data4 = np.random.random(shape4).astype("float32")
+
+    cases = [
+        {"input": [data1, data2]},
+        {"input": [data2, data3]},
+        {"input": [data3, data4]},
+    ]
+    opr_test(cases, F.matmul, ref_fn=np.matmul)
+
+    batch_size = 10
+    shape1 = (batch_size, 2, 3)
+    shape2 = (batch_size, 3, 4)
+    shape3 = (batch_size, 10, 4, 5)
+    data1 = np.random.random(shape1).astype("float32")
+    data2 = np.random.random(shape2).astype("float32")
+    data3 = np.random.random(shape3).astype("float32")
+
+    cases = [{"input": [data1, data2]}, {"input": [data2, data3]}]
+    for i in range(0, batch_size):
+
+        def compare_fn(x, y):
+            x.numpy()[i, ...] == y
+
+        opr_test(
+            cases,
+            F.matmul,
+            compare_fn=compare_fn,
+            ref_fn=lambda x, y: np.matmul(x[i, ...], y[i, ...]),
+        )
 
 
 # def test_logsumexp():

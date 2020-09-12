@@ -12,7 +12,6 @@ import megengine.functional as F
 from megengine import tensor
 
 
-# XXX need to test label_smooth
 def test_cross_entropy_with_softmax():
     data = tensor([1, 100]).astype(np.float32).reshape((1, 2))
     label = tensor([1]).astype(np.int32)
