@@ -113,6 +113,52 @@ def test_where():
     opr_test(cases, F.where, ref_fn=np.where)
 
 
+def test_dropout():
+    data = tensor(np.ones(10, dtype=np.float32))
+    out = F.dropout(data, 1.0 / 3.0, training=False)
+
+    assert out.numpy().sum() >= 0.0
+
+
+def test_matmul():
+    shape1 = 3
+    shape2 = 3
+    shape3 = (3, 5)
+    shape4 = (5, 6)
+    data1 = np.random.random(shape1).astype("float32")
+    data2 = np.random.random(shape2).astype("float32")
+    data3 = np.random.random(shape3).astype("float32")
+    data4 = np.random.random(shape4).astype("float32")
+
+    cases = [
+        {"input": [data1, data2]},
+        {"input": [data2, data3]},
+        {"input": [data3, data4]},
+    ]
+    opr_test(cases, F.matmul, ref_fn=np.matmul)
+
+    batch_size = 10
+    shape1 = (batch_size, 2, 3)
+    shape2 = (batch_size, 3, 4)
+    shape3 = (batch_size, 10, 4, 5)
+    data1 = np.random.random(shape1).astype("float32")
+    data2 = np.random.random(shape2).astype("float32")
+    data3 = np.random.random(shape3).astype("float32")
+
+    cases = [{"input": [data1, data2]}, {"input": [data2, data3]}]
+    for i in range(0, batch_size):
+
+        def compare_fn(x, y):
+            x.numpy()[i, ...] == y
+
+        opr_test(
+            cases,
+            F.matmul,
+            compare_fn=compare_fn,
+            ref_fn=lambda x, y: np.matmul(x[i, ...], y[i, ...]),
+        )
+
+
 def test_interpolate():
     def linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
@@ -281,48 +327,6 @@ def test_add_update_params():
     assertTensorClose(res.numpy(), b + 1)
 
 
-# def test_cross_entropy_with_softmax():
-#     data1_shape = (1, 2)
-#     label1_shape = (1,)
-#     data2_shape = (1, 3)
-#     label2_shape = (1,)
-
-#     data1 = np.array([1, 0.5], dtype=np.float32).reshape(data1_shape)
-#     label1 = np.array([1], dtype=np.int32).reshape(label1_shape)
-#     expect1 = F.cross_entropy(F.softmax(tensor(data1)), tensor(label1)).numpy()
-
-#     data2 = np.array([0.3, 0.4, 0.3], dtype=np.float32).reshape(data2_shape)
-#     label2 = np.array([1], dtype=np.int32).reshape(label2_shape)
-#     expect2 = F.cross_entropy(F.softmax(tensor(data2)), tensor(label2)).numpy()
-
-#     cases = [
-#         {"input": [data1, label1], "output": expect1,},
-#         {"input": [data2, label2], "output": expect2,},
-#     ]
-#     opr_test(cases, F.cross_entropy_with_softmax)
-
-
-# def test_cross_entropy():
-#     data1_shape = (1, 2)
-#     label1_shape = (1,)
-#     data2_shape = (1, 3)
-#     label2_shape = (1,)
-
-#     data1 = np.array([0.5, 0.5], dtype=np.float32).reshape(data1_shape)
-#     label1 = np.array([1], dtype=np.int32).reshape(label1_shape)
-#     expect1 = np.array([-np.log(0.5)], dtype=np.float32)
-
-#     data2 = np.array([0.3, 0.4, 0.3], dtype=np.float32).reshape(data2_shape)
-#     label2 = np.array([1], dtype=np.int32).reshape(label2_shape)
-#     expect2 = np.array([-np.log(0.4)], dtype=np.float32)
-
-#     cases = [
-#         {"input": [data1, label1], "output": expect1,},
-#         {"input": [data2, label2], "output": expect2,},
-#     ]
-#     opr_test(cases, F.cross_entropy)
-
-
 def test_binary_cross_entropy():
     data1_shape = (2, 2)
     label1_shape = (2, 2)
@@ -411,19 +415,6 @@ def test_batched_nms():
     idxs = tensor([0, 1, 0, 1, 0, 1], dtype=np.int32)
     results = F.batched_nms(inp, scores=scores, idxs=idxs, iou_thresh=0.5)
     np.testing.assert_equal(results.numpy(), np.array([1, 4, 5], dtype=np.int32))
-
-
-# def test_smooth_l1_loss():
-#     np.random.seed(123)
-#     cases = []
-#     for shape in [(2, 2), (2, 3)]:
-#         data = np.random.uniform(size=shape).astype(np.float32)
-#         label = np.random.uniform(size=shape).astype(np.float32)
-#         diff = np.abs(data - label)
-#         expect = np.where(diff < 1, 0.5 * diff ** 2, diff - 0.5).mean()
-#         cases.append({"input": [data, label], "output": tensor(expect)})
-
-#     opr_test(cases, F.smooth_l1_loss)
 
 
 def test_conv_bias():

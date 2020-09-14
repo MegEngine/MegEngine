@@ -25,6 +25,6 @@ class Dropout(Module):
 
     def forward(self, inputs):
         if self.training:
-            return dropout(inputs, self.drop_prob, rescale=True)
+            return dropout(inputs, self.drop_prob, training=True)
         else:
             return inputs
