@@ -27,7 +27,7 @@ def pack_allreduce_split(pack_list, shapes, group, reduce_method):
     offsets_val = get_offsets(shapes)
     offsets = Tensor(offsets_val)
     packed_grads = param_pack_concat(pack_list, offsets, offsets_val)
-    packed_grads = all_reduce_sum(packed_grads, group, group.comp_node)
+    packed_grads = all_reduce_sum(packed_grads, group)
     if reduce_method == "mean":
         packed_grads /= group.size
     grads = param_pack_split(packed_grads, offsets_val, shapes)
