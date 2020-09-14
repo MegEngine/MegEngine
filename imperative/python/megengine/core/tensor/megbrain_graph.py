@@ -130,32 +130,31 @@ def optimize_for_inference(dest_vars, **kwargs):
                 inference)
     """
     inference_options = GraphOptimizeOptions()
-    if optimize_for_inference:
-        inference_optimize_layout_transform_map = {
-            "enable_hwcd4": GraphOptimizeOptions.LayoutTransform.NHWCD4,
-            "enable_nchw4": GraphOptimizeOptions.LayoutTransform.NCHW4,
-            "enable_nchw88": GraphOptimizeOptions.LayoutTransform.NCHW88,
-            "enable_nchw32": GraphOptimizeOptions.LayoutTransform.NCHW32,
-            "enable_nchw44": GraphOptimizeOptions.LayoutTransform.NCHW44,
-            "enable_nchw44_dot": GraphOptimizeOptions.LayoutTransform.NCHW44_DOT,
-            "enable_chwn4": GraphOptimizeOptions.LayoutTransform.CHWN4,
-        }
+    inference_optimize_layout_transform_map = {
+        "enable_hwcd4": GraphOptimizeOptions.LayoutTransform.NHWCD4,
+        "enable_nchw4": GraphOptimizeOptions.LayoutTransform.NCHW4,
+        "enable_nchw88": GraphOptimizeOptions.LayoutTransform.NCHW88,
+        "enable_nchw32": GraphOptimizeOptions.LayoutTransform.NCHW32,
+        "enable_nchw44": GraphOptimizeOptions.LayoutTransform.NCHW44,
+        "enable_nchw44_dot": GraphOptimizeOptions.LayoutTransform.NCHW44_DOT,
+        "enable_chwn4": GraphOptimizeOptions.LayoutTransform.CHWN4,
+    }
 
-        for k, v in inference_optimize_layout_transform_map.items():
-            if kwargs.pop(k, False):
-                inference_options.layout_transform = v
+    for k, v in inference_optimize_layout_transform_map.items():
+        if kwargs.pop(k, False):
+            inference_options.layout_transform = v
 
-        if kwargs.pop("enable_io16xc32", False):
-            inference_options.f16_io_f32_comp = True
-        if kwargs.pop("enable_ioc16", False):
-            inference_options.f16_io_comp = True
-        if kwargs.pop("enable_fuse_conv_bias_nonlinearity", False):
-            inference_options.fuse_conv_bias_nonlinearity = True
-        if kwargs.pop("enable_fuse_conv_bias_with_z", False):
-            inference_options.fuse_conv_bias_with_z = True
+    if kwargs.pop("enable_io16xc32", False):
+        inference_options.f16_io_f32_comp = True
+    if kwargs.pop("enable_ioc16", False):
+        inference_options.f16_io_comp = True
+    if kwargs.pop("enable_fuse_conv_bias_nonlinearity", False):
+        inference_options.fuse_conv_bias_nonlinearity = True
+    if kwargs.pop("enable_fuse_conv_bias_with_z", False):
+        inference_options.fuse_conv_bias_with_z = True
 
-        if kwargs:
-            raise ValueError("unknown options: %s" % list(kwargs))
+    if kwargs:
+        raise ValueError("unknown options: %s" % list(kwargs))
 
     res_vars = _imperative_rt.optimize_for_inference(
         [i._node for i in dest_vars], inference_options

@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 
 import megengine
-import megengine.core.tensor.megbrain_graph as G
 import megengine.module as M
 from megengine import cgtools, tensor
 from megengine.core._trace_option import set_tensor_shape
@@ -150,7 +149,6 @@ def test_capture_dump():
     np.testing.assert_equal(result[0], y)
 
 
-@pytest.mark.skip(reason="get MultipleDeviceTensorHolder instead of SharedDeviceTensor")
 def test_dump_volatile():
     p = as_raw_tensor([2])
 
@@ -167,7 +165,7 @@ def test_dump_volatile():
         np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
 
     file = io.BytesIO()
-    f.dump(file)
+    f.dump(file, optimize_for_inference=False)
     file.seek(0)
     cg, _, outputs = G.load_graph(file)
     (out,) = outputs
@@ -196,26 +194,7 @@ def test_trace_profiler():
         assert out.get("profiler")
 
 
-@pytest.mark.skip(reason="eq_to_unit failed in inplace.cpp")
-def test_goptions_div_zero():
-    @trace(symbolic=True, opt_level=0)
-    def f(x):
-        return x / x
-
-    @trace(symbolic=True, opt_level=1)
-    def g(x):
-        return x / x
-
-    out = f(tensor(0.0))
-    if out == out:
-        raise ValueError("actual result should be nan")
-
-    out = g(tensor(0.0))
-    if out != out:
-        raise ValueError("actual result should be 1")
-
-
-@pytest.mark.skip(reason="cast to Elemwise failed in inplace.cpp")
+@pytest.mark.skip(reason="could not disable opt_level")
 def test_goptions_log_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x):
@@ -227,19 +206,19 @@ def test_goptions_log_exp():
 
     f(tensor(1.0))
     _, out = mkstemp()
-    f.dump(out)
-    *_, outputs = G.load_comp_graph_from_file(out)
+    f.dump(out, optimize_for_inference=False)
+    *_, outputs = G.load_graph(out)
     oprs_1 = cgtools.get_oprs_seq(outputs)
 
     g(tensor(1.0))
-    g.dump(out)
-    *_, outputs = G.load_comp_graph_from_file(out)
+    g.dump(out, optimize_for_inference=False)
+    *_, outputs = G.load_graph(out)
     oprs_2 = cgtools.get_oprs_seq(outputs)
 
     assert len(oprs_1) - len(oprs_2) == 2
 
 
-@pytest.mark.skip(reason="need cgtools to check final oprs")
+@pytest.mark.skip(reason="could not disable opt_level")
 def test_goptions_log_sum_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x, y):
@@ -251,19 +230,18 @@ def test_goptions_log_sum_exp():
 
     f(tensor(1.0), tensor(2.0))
     _, out = mkstemp()
-    f.dump(out)
-    *_, outputs = G.load_comp_graph_from_file(out)
+    f.dump(out, optimize_for_inference=False)
+    *_, outputs = G.load_graph(out)
     oprs_1 = cgtools.get_oprs_seq(outputs)
 
     g(tensor(1.0), tensor(2.0))
-    g.dump(out)
-    *_, outputs = G.load_comp_graph_from_file(out)
+    g.dump(out, optimize_for_inference=False)
+    *_, outputs = G.load_graph(out)
     oprs_2 = cgtools.get_oprs_seq(outputs)
 
     assert len(oprs_1) - len(oprs_2) == 2
 
 
-@pytest.mark.skip(reason="need cgtools to check computing input dtype")
 def test_optimize_for_inference():
     @trace(symbolic=True, capture_as_const=True)
     def f(x):
@@ -271,9 +249,9 @@ def test_optimize_for_inference():
 
     _, out = mkstemp()
     f(tensor(5.0))
-    f.dump(out, optimize_for_inference=True, optimize_options={"enable_io16xc32": True})
+    f.dump(out, enable_io16xc32=True)
 
-    res = G.load_comp_graph_from_file(out)
+    res = G.load_graph(out)
     computing_input = res.output_vars_list[0].owner.inputs[0]
     assert computing_input.dtype == np.float16
 

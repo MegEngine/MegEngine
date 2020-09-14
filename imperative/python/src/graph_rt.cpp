@@ -155,6 +155,9 @@ void init_graph_rt(py::module m) {
             })
         .def_property_readonly("id",[](cg::VarNode* v){
             return (v->id());
+        })
+        .def("__repr__", [](cg::VarNode* v) {
+            return "Var:" + v->name();
         });
 
     py::class_<cg::OperatorNodeBase, GraphNodePtr<cg::OperatorNodeBase>>(m, "OperatorNode")
@@ -175,6 +178,9 @@ void init_graph_rt(py::module m) {
         })
         .def_property_readonly("type",[](cg::OperatorNodeBase* opr){
             return opr->dyn_typeinfo()->name;
+        })
+        .def("__repr__", [](cg::OperatorNodeBase* opr){
+            return "Opr:" + opr->name();
         });
 
 

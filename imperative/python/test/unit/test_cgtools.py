@@ -67,7 +67,6 @@ def test_replace_oprs():
     np.testing.assert_equal(res, np.array([5.0 * 5.0 * 1.25]))
 
 
-@pytest.mark.skip(reason="Please check opr index")
 def test_graph_traversal():
     net = M.Conv2d(3, 32, 3)
 
@@ -77,11 +76,11 @@ def test_graph_traversal():
         return x
 
     data = np.random.random([1, 3, 224, 224]).astype(np.float32)
-    for i in range(3):
+    for _ in range(3):
         fun(megengine.tensor(data))
 
     file = io.BytesIO()
-    fun.dump(file)
+    fun.dump(file, optimize_for_inference=False)
     file.seek(0)
     cg, _, outputs = mgb_graph.load_graph(file)
 

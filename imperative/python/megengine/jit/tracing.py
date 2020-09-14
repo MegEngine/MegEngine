@@ -458,7 +458,16 @@ class trace:
                 self._process_outputs(outputs)
             return outputs
 
-    def dump(self, file, *, arg_names=None, output_names=None, append=False, **kwargs):
+    def dump(
+        self,
+        file,
+        *,
+        arg_names=None,
+        output_names=None,
+        append=False,
+        optimize_for_inference=True,
+        **kwargs
+    ):
         r"""Serializes trace to file system.
 
         :param file: output file, could be file object or filename.
@@ -467,6 +476,8 @@ class trace:
             use the default name if not specified.
         :param append: whether output is appended to ``file``.
             Only works when ``file`` is str.
+        :param optimize_for_inference: enbale optmizations,
+            will skip all optimize options if this is False. Default: True
 
         :Keyword Arguments:
 
@@ -572,7 +583,8 @@ class trace:
                 v.name = output_names[i]
             dest_vars.append(v)
 
-        dest_vars = G.optimize_for_inference(dest_vars, **kwargs)
+        if optimize_for_inference:
+            dest_vars = G.optimize_for_inference(dest_vars, **kwargs)
 
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"
