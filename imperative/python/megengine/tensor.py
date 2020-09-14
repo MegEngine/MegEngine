@@ -13,6 +13,7 @@ import collections
 from .core import Tensor as _Tensor
 from .core.ops.builtin import Copy
 from .core.tensor.core import apply
+from .core.tensor.raw_tensor import as_device
 from .device import get_default_device
 from .utils.deprecation import deprecated
 
@@ -35,7 +36,8 @@ class Tensor(_Tensor):
     def reset_zero(self):
         self *= 0
 
-    def to(self, cn):
+    def to(self, device):
+        cn = as_device(device).to_c()
         return apply(Copy(comp_node=cn), self)[0]
 
     @property

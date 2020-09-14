@@ -16,6 +16,7 @@ from typing import Union
 import numpy as np
 
 from ..tensor import Parameter, Tensor
+from ..utils.deprecation import deprecated
 
 
 class _RequiredParameter:
@@ -149,8 +150,15 @@ class Optimizer(metaclass=ABCMeta):
             self._updates(group)
         return self
 
+    @deprecated(version="1.0", reason="use clear_grad instead")
+    def zero_grad(self):
+        for param_group in self.param_groups:
+            for param in param_group["params"]:
+                if param.grad is not None:
+                    param.grad.reset_zero()
+
     def clear_grad(self):
-        r"""Clear the grad buffer.
+        r"""Set the grad attribute to None for all parameters.
 
         """
         for param_group in self.param_groups:
@@ -224,3 +232,9 @@ class Optimizer(metaclass=ABCMeta):
                 "loaded state dict contains a state that doesn't match "
                 "the size of optimizer's state"
             )
+
+    def backward(self, loss):
+        raise NotImplementedError("use autodiff.GradManager instead")
+
+    def bcast_param(self):
+        raise NotImplementedError("use distributed.bcast_list_ instead")

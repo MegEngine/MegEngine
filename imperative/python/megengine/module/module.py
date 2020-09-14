@@ -174,7 +174,11 @@ class Module(metaclass=ABCMeta):
 
         if "requires_grad" in kwargs:
             del kwargs["requires_grad"]
-            warnings.warn("passing requires_grad has no effect currently")
+            warnings.warn(
+                "Tensor currently has no requires_grad attribute "
+                "so requires_grad argument is ignored here",
+                DeprecationWarning,
+            )
 
         def predicate(obj) -> bool:
             return _is_parameter(obj)
@@ -197,7 +201,11 @@ class Module(metaclass=ABCMeta):
 
         if "requires_grad" in kwargs:
             del kwargs["requires_grad"]
-            warnings.warn("passing requires_grad has no effect currently")
+            warnings.warn(
+                "Tensor currently has no requires_grad attribute "
+                "so requires_grad argument is ignored here",
+                DeprecationWarning,
+            )
 
         def predicate(obj) -> bool:
             return _is_parameter(obj)
@@ -339,6 +347,7 @@ class Module(metaclass=ABCMeta):
 
         self.apply(fn)
 
+    @deprecated(version="1.0")
     def replace_param(
         self, params: dict, start_pos: int, seen: Optional[Set[int]] = None
     ):

@@ -725,6 +725,12 @@ class trace:
             raise RuntimeError("trace is not set with profiling=True")
         return json.loads(self._profiler.get())
 
+    def trace(self, *args, **kwargs):
+        raise NotImplementedError(
+            "trace is deemed unbeneficial with the new "
+            "tracing mechanism. You should alwasy use __call__."
+        )
+
 
 class CompiledTensorProxy(RawTensor):
     """
