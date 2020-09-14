@@ -60,3 +60,9 @@ def test_computing_with_numpy_array():
     np.testing.assert_equal(np.add(xx, y).numpy(), np.add(x, y))
     np.testing.assert_equal(np.equal(xx, y).numpy(), np.equal(x, y))
     np.testing.assert_equal(np.equal(xx, xx).numpy(), np.equal(x, x))
+
+
+def test_transpose():
+    x = np.random.rand(2, 5).astype("float32")
+    xx = TensorWrapper(x)
+    np.testing.assert_almost_equal(xx.T.numpy(), x.T)

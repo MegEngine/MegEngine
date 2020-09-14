@@ -371,7 +371,7 @@ class ArrayMethodMixin(abc.ABC):
 
     def transpose(self, *args):
         if not args:
-            args = reversed(range(self.ndim))
+            args = range(self.ndim)[::-1]
         return _transpose(self, _expand_args(args))
 
     def flatten(self):
