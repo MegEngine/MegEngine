@@ -214,6 +214,11 @@ public:
 
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const NCBKernSizeParam& param, fallback::MatrixMulImpl::AlgoBase*) {
+        if (param.filter_meta.format != param::ConvBias::Format::NCHW &&
+            param.filter_meta.format != param::ConvBias::Format::NCHW88 &&
+            param.filter_meta.format != param::ConvBias::Format::NCHW44) {
+            return {};
+        }
         size_t OC = param.filter_meta.ocpg;
         size_t IC = param.filter_meta.icpg;
         size_t GROUP = param.filter_meta.group;
