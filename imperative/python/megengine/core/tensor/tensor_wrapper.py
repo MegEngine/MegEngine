@@ -74,9 +74,7 @@ def _reshape(x, shape):
                 raise ValueError("multiple -1 in shape: {} & {}".format(unspec_axis, i))
             unspec_axis = i
 
-    if not isinstance(shape, (TensorBase, TensorWrapperBase)):
-        # TODO: device should be None (cpu)
-        (shape,) = Const(shape, dtype=np.int32, device=x.device)(x)
+    shape = utils.astensor1d(shape, x, dtype="int32", device=x.device)
 
     if unspec_axis is None:
         op = builtin.Reshape()
