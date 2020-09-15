@@ -36,3 +36,5 @@ pushd MegRay/third_party >/dev/null
     git submodule update --init gdrcopy
     git submodule update --init ucx
 popd >/dev/null
+
+git submodule update --init pybind11
