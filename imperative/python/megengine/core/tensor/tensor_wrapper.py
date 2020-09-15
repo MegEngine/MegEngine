@@ -210,7 +210,8 @@ def _todo(*_):
 def _expand_args(args):
     if len(args) == 1:
         if isinstance(
-            args[0], (collections.abc.Sequence, TensorBase, TensorWrapperBase)
+            args[0],
+            (collections.abc.Sequence, TensorBase, TensorWrapperBase, np.ndarray),
         ):
             args = args[0]
     return args

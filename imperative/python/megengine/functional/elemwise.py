@@ -88,13 +88,6 @@ def _elwise(*args, mode):
     return result
 
 
-def _logical(*args, mode):
-    op = builtin.CondExecPredLogical(mode=mode)
-    args = utils.convert_inputs(*args)
-    (result,) = apply(op, *args)
-    return result
-
-
 def _elemwise_multi_type(*args, mode, **kwargs):
     op = builtin.ElemwiseMultiType(mode=mode, **kwargs)
     args = utils.convert_inputs(*args)
