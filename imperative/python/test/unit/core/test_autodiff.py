@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import gc
 import platform
 import weakref
 
@@ -156,6 +157,37 @@ def test_grad_with_tensor_wrapper():
 
     grad(y, TensorWrapper(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
+
+
+def test_release():
+    def check(f):
+        n = 0
+        d = None
+        for i in range(3):
+            f()
+            m = len(gc.get_objects())
+            d = m - n
+            n = m
+        assert d == 0
+
+    x = TensorWrapper([0.0])
+    dy = TensorWrapper(np.ones_like(x.numpy()))
+
+    @check
+    def _():
+        g = Grad().wrt(x)
+        y = x * x
+        g(y, dy)
+
+    @check
+    def _():
+        with Grad().wrt(x) as g:
+            pass
+
+    @check
+    def _():
+        with Grad().wrt(x) as g:
+            y = x * x
 
 
 def test_grad_inplace():
