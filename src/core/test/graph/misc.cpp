@@ -1085,6 +1085,22 @@ TEST(TestGraph, DynShapeDepCrossCN) {
     ASSERT_EQ(24.f, host_b.ptr<int>()[0]);
 }
 
+namespace {
+void check_wait(SymbolVar dest, SymbolVar dep) {
+    if (!dep.node()) {
+        ASSERT_EQ(0u,
+                dest.node()->owner_opr()->input_waiting_spec().size());
+        return;
+    }
+    cg::OperatorNodeBase::InputWaitingSpecElem ws;
+    unpack_vector(dest.node()->owner_opr()->input_waiting_spec(), ws);
+    ASSERT_EQ(ws.comp_node, dest.node()->comp_node());
+    VarNode *get;
+    unpack_vector(ws.dev_ready, get);
+    ASSERT_EQ(dep, get);
+};
+}
+
 TEST(TestGraph, InputWaitingSpec) {
     auto cns = load_multiple_xpus(2);
     constexpr size_t SIZE = 12345;
@@ -1115,24 +1131,38 @@ TEST(TestGraph, InputWaitingSpec) {
         MGB_ASSERT_FLOAT_EQ(px[i] + 1, pz0[i]);
         MGB_ASSERT_FLOAT_EQ(px[i] + 2, pz1[i]);
     }
-
-    auto check_wait = [](SymbolVar dest, SymbolVar dep) {
-        if (!dep.node()) {
-            ASSERT_EQ(0u,
-                    dest.node()->owner_opr()->input_waiting_spec().size());
-            return;
-        }
-        cg::OperatorNodeBase::InputWaitingSpecElem ws;
-        unpack_vector(dest.node()->owner_opr()->input_waiting_spec(), ws);
-        ASSERT_EQ(ws.comp_node, dest.node()->comp_node());
-        VarNode *get;
-        unpack_vector(ws.dev_ready, get);
-        ASSERT_EQ(dep, get);
-    };
     check_wait(y0, x);
     check_wait(y1, x + 1);
     check_wait(z1, y1 + 1);
     check_wait(z0, {});
+}
+
+TEST(TestGraph, InputWaitingSpecMultiOut) {
+    auto cn0 = CompNode::load("xpu0:0"), cn1 = CompNode::load("xpu0:1");
+    HostTensorGenerator<> gen;
+    auto graph = cg::ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    graph->options().var_sanity_check_first_run = 0;
+    graph->options().async_exec_level = 0b100;
+    graph->options().seq_opt.enable_seq_comp_node_opt = false;
+    size_t nr_out = 1024, length = 32;
+    auto hv = gen({nr_out * length}, cn0);
+    auto x = opr::Host2DeviceCopy::make(*graph, hv);
+    auto outs = opr::Split::make(x, opr::Split::Options::make_average(0, nr_out));
+    cg::ComputingGraph::OutputSpec output_spec;
+    for (size_t i = 0; i < nr_out; ++ i) {
+        auto y = opr::Copy::make(outs[i], cn1);
+        y.node()->owner_opr()->node_prop().attribute().priority = i ? nr_out - i : 0;
+        output_spec.push_back({y, {}});
+    }
+    auto func = graph->compile(output_spec);
+    func->execute().wait();
+
+    check_wait(output_spec[0].first, outs[0]);
+    check_wait(output_spec[nr_out - 1].first, outs[nr_out - 1]);
+    for (size_t i = 1; i < nr_out - 1; ++ i) {
+        check_wait(output_spec[i].first, {});
+    }
 }
 
 TEST(TestGraph, GradStaticShape) {

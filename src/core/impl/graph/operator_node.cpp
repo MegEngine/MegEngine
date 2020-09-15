@@ -45,6 +45,10 @@ class PostExecActions {
         }
     };
     CompNode m_comp_node;
+    // VarNodes in m_items should be listed in the same order as in the
+    // output of the owner_opr, because opr would generate input_wating_spec()
+    // according to this order
+    // see `SeqCompNodeOptimizerImpl::init_ready_event()` for more details
     SmallVector<Item> m_items;
     MGB_IF_COND_EXEC(ExecutionMask* m_mask = nullptr);
 

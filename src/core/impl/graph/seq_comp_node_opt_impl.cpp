@@ -216,16 +216,19 @@ void SeqCompNodeOptimizerImpl::init_ready_event(
     }
     m_cnpair2opr_step.clear();
 
+    // opr step, idx of output
+    using VarStep = std::pair<size_t, size_t>;
+
     // cn0 -> (cn1 -> step): step on cn1 is known to have finished for current
     // opr on cn0
-    CompNode::UnorderedMap<CompNode::UnorderedMap<size_t>> cnpair2step;
+    CompNode::UnorderedMap<CompNode::UnorderedMap<VarStep>> cnpair2step;
 
     // vars to be waited on for current opr; only the latest var needs to be
     // waited for each comp node
     CompNode::UnorderedMap<VarNode*> vars_to_wait;
 
     CompNode::UnorderedSet cur_used_cn;
-    ThinHashMap<OperatorNodeBase*, size_t> opr2step;
+    ThinHashMap<VarNode*, VarStep> var2step;
     size_t cur_step = 0;
 
     using OprNodeProp = OperatorNodeBase::NodeProp;
@@ -266,7 +269,7 @@ void SeqCompNodeOptimizerImpl::init_ready_event(
                 }
                 if ((OprNodeProp::is_device_comp_order_dep(i.second) &&
                         i.first->comp_node() != cn) || pdv_need_sync_host) {
-                    auto step = opr2step.at(i.first->owner_opr());
+                    auto step = var2step.at(i.first);
                     auto ins = dep2step.insert({i.first->comp_node(), step});
                     // only wait for var if it is beyond currently known
                     // synchronized step
@@ -290,16 +293,25 @@ void SeqCompNodeOptimizerImpl::init_ready_event(
 
                 auto&& record = m_cnpair2opr_step[cn];
                 for (auto&& i : vars_to_wait) {
-                    auto step_done = opr2step.at(i.second->owner_opr());
+                    auto step_done = var2step.at(i.second).first;
                     auto&& seq = record[i.first];
-                    mgb_assert(seq.empty() || step_done > seq.back().second);
-                    seq.emplace_back(cur_step, step_done);
+                    // for multi-output operator, there might be multiple other
+                    // operators which depand on different output varnodes, and
+                    // those output vars share the same opr step number
+                    mgb_assert(seq.empty() || step_done >= seq.back().second);
+                    if (seq.empty() || step_done > seq.back().second) {
+                        seq.emplace_back(cur_step, step_done);
+                    }
                 }
             }
         }
 
         opr->input_waiting_spec(std::move(waiting_spec));
-        opr2step[opr] = cur_step ++;
+        auto&& usable_output = opr->usable_output();
+        for (size_t i = 0; i < usable_output.size(); ++ i) {
+            var2step[usable_output[i]] = {cur_step, i};
+        }
+        cur_step ++;
     }
     mgb_assert(cur_step == seq.size());
 }
