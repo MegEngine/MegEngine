@@ -351,7 +351,7 @@ MGB_DEFINE_OPR_CLASS(
                               bool const_value,
                               const OperatorNodeConfig& config) {
             mgb_assert(!const_value);
-            return make(graph, dev_data, false, config);
+            return make(graph, dev_data, config);
         }
 };
 
