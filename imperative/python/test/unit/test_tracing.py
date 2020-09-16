@@ -150,7 +150,7 @@ def test_dump_volatile():
     (out,) = outputs
     assert (
         cgtools.get_owner_opr_type(cgtools.get_owner_opr_inputs(out)[1])
-        == "SharedDeviceTensor"
+        == "ImmutableTensor"
     )
 
 
@@ -233,6 +233,18 @@ def test_optimize_for_inference():
     res = G.load_graph(out)
     computing_input = res.output_vars_list[0].owner.inputs[0]
     assert computing_input.dtype == np.float16
+
+
+def test_optimize_for_inference_broadcast():
+    a = tensor(np.ones(1, dtype=np.float32))
+
+    @trace(capture_as_const=True, tensor_shape=True)
+    def f():
+        (b,) = apply(ops.Broadcast(), a, tensor([1, 10], dtype=np.int32))
+        return b
+
+    f()
+    f.dump(io.BytesIO())
 
 
 def test_trace_cvt_bool():

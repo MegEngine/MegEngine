@@ -570,7 +570,9 @@ class trace:
                 if h not in h2v:
                     assert info.external
                     assert info.bound_data
-                    h2v[h] = graph.make_const(info.bound_data._dev_tensor())
+                    h2v[h] = graph.make_const(
+                        info.bound_data.numpy(), dtype=info.dtype, device=info.device
+                    )
                 ivars.append(h2v[h])
             ovars = apply(op, *ivars)
             assert len(ovars) == len(ohandles)

@@ -561,7 +561,7 @@ void ParamFusePass::apply(OptState &state) const {
         }
 
         SymbolVar new_var;
-        bool is_default_format = var->layout().format.is_default();
+        bool is_default_format = var->format().is_default();
         if (cg::is_static_var_value(var) && is_default_format) {
             // use ImmutableTensor for inferable vars
             HostTensorND hv;
