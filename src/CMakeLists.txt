@@ -64,6 +64,7 @@ target_include_directories(megbrain
     PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE ${PROJECT_SOURCE_DIR}/third_party/midout/src
 )
+
 foreach (INCPATH IN LISTS MGB_INC)
     target_include_directories(megbrain
         PUBLIC $<BUILD_INTERFACE:${INCPATH}>

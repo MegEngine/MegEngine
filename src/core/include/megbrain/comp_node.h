@@ -119,6 +119,7 @@ class CompNode {
              *
              * device == -1 means logical default device (maps to 0 by default,
              * and can be changed by set_device_map)
+             *
              */
             int device = -1;
 

@@ -481,7 +481,6 @@ void test_peer_copy_from_device(const char* comp_node) {
     opr::Sleep::sleep(cn_gpu, 0.1);
     dev_a.copy_from(dev_c);
     wait_event->record();
-
     cn_cpu.device_wait_event(*wait_event);
     dev_b.copy_from(dev_a);
 
