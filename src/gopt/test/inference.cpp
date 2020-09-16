@@ -2816,7 +2816,7 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
         unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     }
 
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4,
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
               find_opr<opr::ConvBias>(y_opt).param().format);
 
     graph->compile({{y_opt, {}}})
