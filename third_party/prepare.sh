@@ -21,6 +21,7 @@ git submodule update --init Halide
 git submodule update --init protobuf
 git submodule update --init flatbuffers
 git submodule update --init gtest
+git submodule update --init cutlass
 
 git submodule update --init cpuinfo
 source ./apply-patches.sh
