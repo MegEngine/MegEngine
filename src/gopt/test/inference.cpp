@@ -1404,7 +1404,7 @@ TEST(TestGoptInference, ConvertBatchNormPass) {
     auto func = graph->compile({make_callback_copy(y, host_y),
                                 make_callback_copy(y_opt, host_y_opt)});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-2);
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
 }
 
 TEST(TestGoptInference, ConvBiasNonlinearityFusePass) {
