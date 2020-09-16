@@ -189,7 +189,7 @@ def identity(inp: Tensor) -> Tensor:
     :return: output tensor.
     """
     op = builtin.Identity()
-    (data,) = utils.convert_inputs(inp)
+    (data,) = convert_inputs(inp)
     (output,) = apply(op, data)
     return output
 

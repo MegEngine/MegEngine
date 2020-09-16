@@ -367,6 +367,12 @@ def test_device():
     np.testing.assert_almost_equal(y5.numpy(), y6.numpy())
 
 
+def test_identity():
+    x = tensor(np.random.random((5, 10)).astype(np.float32))
+    y = F.identity(x)
+    np.testing.assert_equal(y.numpy(), x)
+
+
 def copy_test(dst, src):
     data = np.random.random((2, 3)).astype(np.float32)
     x = tensor(data, device=src)
