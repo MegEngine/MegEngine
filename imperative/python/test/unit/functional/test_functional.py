@@ -417,6 +417,7 @@ def test_batched_nms():
     np.testing.assert_equal(results.numpy(), np.array([1, 4, 5], dtype=np.int32))
 
 
+@pytest.mark.skip(reason="cuda does not support nchw int8")
 def test_conv_bias():
     inp_scale = 1.5
     w_scale = 2.5
