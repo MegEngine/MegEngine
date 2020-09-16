@@ -26,6 +26,6 @@ jobs:
       - name: Build MegEngine
         run: ./ci/cmake.sh cuda
       - name: Python test
-        run: ./ci/run_python_test.sh
+        run: ./ci/run_python_test.sh cuda
       - name: C++ test
         run: ./ci/run_cpp_test.sh cuda
