@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-test_dirs="test"
+test_dirs="test megengine"
 TEST_PLAT=$1
 
 if [[ "$TEST_PLAT" == cpu ]]; then
