@@ -192,6 +192,19 @@ public:
     MEGDNN_DECL_ALGO_TYPE(AARCH64_INT8X8X16_K4X4X16)
 };
 
+class MatrixMulImpl::AlgoInt4x4x16K8x8x8 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "AARCH64_INT4X4X16_K8X8X8"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    PackMode packmode() const override { return PackMode::DEFAULT; }
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(AARCH64_INT4X4X16_K8X8X8)
+};
+
 class MatrixMulImpl::AlgoInt8x8x16MK4_16x12x4 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }

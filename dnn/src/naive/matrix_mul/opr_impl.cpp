@@ -26,7 +26,8 @@ size_t MatrixMulForwardImpl::get_workspace_in_bytes(const TensorLayout& A,
     MIDOUT_BEGIN(
             megdnn_naive_matmul,
             midout_iv("MatrixMulForwardImpl::get_workspace_in_bytes"_hash)) {
-        if (A.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        if (A.dtype.enumv() == DTypeEnum::Quantized4Asymm ||
+            A.dtype.enumv() == DTypeEnum::QuantizedS4) {
             return (A.span().dist_elem() + B.span().dist_elem()) *
                    sizeof(uint8_t);
         }
@@ -103,6 +104,11 @@ void dispatch_ta_tb(_megdnn_tensor_in A, _megdnn_tensor_in B,
                C.layout.dtype.enumv() == DTypeEnum::QuantizedS32 &&
                param.format == param::MatrixMul::Format::DEFAULT) {
         exec_matrix_mul_quint4x4x32_helper<TA, TB>(A, B, C, workspace, param);
+        return;
+    } else if (A.layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
+               C.layout.dtype.enumv() == DTypeEnum::QuantizedS16 &&
+               param.format == param::MatrixMul::Format::DEFAULT) {
+        exec_matrix_mul_qint4x4x16_helper<TA, TB>(A, B, C, workspace, param);
         return;
     }
 #undef cb

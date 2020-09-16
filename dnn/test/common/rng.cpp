@@ -183,6 +183,34 @@ void IIDRNG::gen(const TensorND& tensor) {
         }
         return;
     }
+    if (tensor.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
+        auto ptr = static_cast<int8_t*>(tensor.raw_ptr);
+        if (output_is_float()) {
+            for (size_t i = 0; i < nr_elems; i += 2) {
+                int8_t val0 =
+                        tensor.layout.dtype.param<dt_qint4>()
+                                .quantize(static_cast<float>(gen_single_val()))
+                                .as_int8();
+                int8_t val1 =
+                        tensor.layout.dtype.param<dt_qint4>()
+                                .quantize(static_cast<float>(gen_single_val()))
+                                .as_int8();
+                ptr[(offset + i) / 2] = (val0 & 0xF) | (val1 << 4);
+            }
+        } else {
+            for (size_t i = 0; i < nr_elems; i += 2) {
+                int8_t val0 = static_cast<int8_t>(gen_single_val());
+                int8_t val1 = static_cast<int8_t>(gen_single_val());
+
+                val0 = std::min(val0,DTypeTrait<dtype::QuantizedS4>::max());
+                val0 = std::max(val0,DTypeTrait<dtype::QuantizedS4>::min());
+                val1 = std::min(val1,DTypeTrait<dtype::QuantizedS4>::max());
+                val1 = std::max(val1,DTypeTrait<dtype::QuantizedS4>::min());
+                ptr[(offset + i) / 2] = (val0 & 0xF) | (val1 << 4);
+            }
+        }
+        return;
+    }
     megdnn_assert(0, "IIDRNG does not know how to generate value for DType %s",
                   tensor.layout.dtype.name());
 }

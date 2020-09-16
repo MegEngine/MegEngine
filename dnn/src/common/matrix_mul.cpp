@@ -33,6 +33,8 @@ void MatrixMulForward::deduce_dtype(DType A, DType B, DType& C) {
         C_candi = dtype::QuantizedS32(mul_scale(A, B));
     } else if (A.enumv() == DTypeEnum::Quantized4Asymm) {
         C_candi = dtype::QuantizedS32(mul_scale(A, B));
+    } else if (A.enumv() == DTypeEnum::QuantizedS4) {
+        C_candi = dtype::QuantizedS16(mul_scale(A, B));
     }
     if (!C.valid()) {
         C = C_candi;
@@ -169,6 +171,8 @@ void MatrixMulForward::check_exec(const TensorLayout& A, const TensorLayout& B,
                A.dtype.enumv() == DTypeEnum::Quantized8Asymm ||
                A.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
         megdnn_assert(C.dtype.enumv() == DTypeEnum::QuantizedS32);
+    } else if(A.dtype.enumv() == DTypeEnum::QuantizedS4){
+        megdnn_assert(C.dtype.enumv() == DTypeEnum::QuantizedS16);
     }
     megdnn_assert(param().compute_mode !=
                           Param::ComputeMode::FLOAT32 MEGDNN_INC_FLOAT16(

@@ -50,6 +50,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 #else
     AlgoQuint8K8x8x8 quint8_k8x8x8;
 #endif
+    AlgoInt4x4x16K8x8x8 int4x4x16_k8x8x8;
 
     SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
     fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
@@ -87,6 +88,7 @@ public:
 #else
         m_all_algos.emplace_back(&quint8_k8x8x8);
 #endif
+        m_all_algos.emplace_back(&int4x4x16_k8x8x8);
 
         for (auto&& algo : m_all_algos) {
             m_all_algos_map.emplace(algo->info().desc, algo);

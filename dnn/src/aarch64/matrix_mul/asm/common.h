@@ -925,6 +925,42 @@ static inline void interleave_8x8_1_b(const T*& inptr0, const T*& inptr1,
             : "v0", "v1", "v2", "v3", "memory");
 }
 
+
+template <typename T>
+static inline void interleave_8x4_1_b_with_shift(
+        const T*& inptr0, const T*& inptr1, const T*& inptr2, const T*& inptr3,
+        const T*& inptr4, const T*& inptr5, const T*& inptr6, const T*& inptr7,
+        T* outptr) {
+    static_assert(sizeof(T) == 1, "only support size == 1");
+    asm volatile(
+            "ld1 {v0.s}[0], [%[inptr0]], #4\n"
+            "ld1 {v0.s}[1], [%[inptr1]], #4\n"
+            "ld1 {v0.s}[2], [%[inptr2]], #4\n"
+            "ld1 {v0.s}[3], [%[inptr3]], #4\n"
+            "ld1 {v1.s}[0], [%[inptr4]], #4\n"
+            "ld1 {v1.s}[1], [%[inptr5]], #4\n"
+            "ld1 {v1.s}[2], [%[inptr6]], #4\n"
+            "ld1 {v1.s}[3], [%[inptr7]], #4\n"
+            "shl  v2.16b, v0.16b,        #4\n"
+            "shl  v5.16b, v1.16b,        #4\n"
+            "sshr v3.16b, v0.16b,        #4\n"  // hig
+            "sshr v4.16b, v2.16b,        #4\n"  // low
+            "sshr v6.16b, v1.16b,        #4\n"  // hig
+            "sshr v7.16b, v5.16b,        #4\n"  // low
+            "zip1 v8.16b, v4.16b,    v3.16b\n"
+            "zip2 v9.16b, v4.16b,    v3.16b\n"
+            "zip1 v10.16b, v7.16b,   v6.16b\n"
+            "zip2 v11.16b, v7.16b,   v6.16b\n"
+            "st1 {v8.16b-v11.16b},[%[outptr]],#64"
+            : [ inptr0 ] "+r"(inptr0), [ inptr1 ] "+r"(inptr1),
+              [ inptr2 ] "+r"(inptr2), [ inptr3 ] "+r"(inptr3),
+              [ inptr4 ] "+r"(inptr4), [ inptr5 ] "+r"(inptr5),
+              [ inptr6 ] "+r"(inptr6), [ inptr7 ] "+r"(inptr7),
+              [ outptr ] "+r"(outptr)
+            :
+            : "v0", "v1","v2","v3","v4","v5","v6","v7","v8","v9","v10","v11","memory");
+}
+
 template <typename T>
 static inline void interleave_8x8_1_h(const T*& inptr0, const T*& inptr1,
                                       const T*& inptr2, const T*& inptr3,
@@ -1058,6 +1094,7 @@ static inline void interleave_4x16_1_b(const T*& inptr0, const T*& inptr1,
             :
             : "v0", "v1", "v2", "v3", "v4", "cc", "memory");
 }
+
 
 template <typename T>
 static inline void interleave_4x16_1_s(const T*& inptr0, const T*& inptr1,
@@ -1772,6 +1809,54 @@ static inline void transpose_8x4_1_b(const T*& inptr0, const T*& inptr1,
             : "v0", "v1", "v2", "v3", "v4", "v5", "memory");
 }
 
+template <typename T>
+static inline void transpose_4x8_1_b_with_shift(const T*& inptr0, const T*& inptr1,
+                                     const T*& inptr2, const T*& inptr3,
+                                     const T*& inptr4, const T*& inptr5,
+                                     const T*& inptr6, const T*& inptr7,
+                                     T*& outptr) {
+
+    static int8x16_t shuffle_idx = {0, 4, 8,  12, 1, 5, 9,  13,
+                                    2, 6, 10, 14, 3, 7, 11, 15};
+    static_assert(
+            std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
+            "transpose_8x4_1_b only support uint8_t and int8_t");
+    asm volatile(
+            "ld1 {v0.s}[0],  [%[inptr0]], #4\n"  // A1A2A3A4
+            "ld1 {v0.s}[1],  [%[inptr1]], #4\n"  // B1B2B3B4
+            "ld1 {v0.s}[2],  [%[inptr2]], #4\n"  // C1C2C3C4
+            "ld1 {v0.s}[3],  [%[inptr3]], #4\n"  // D1D2D3D4
+            "ld1 {v1.s}[0],  [%[inptr4]], #4\n"  // E1E2E3E4
+            "ld1 {v1.s}[1],  [%[inptr5]], #4\n"  // F1F2F3F4
+            "ld1 {v1.s}[2],  [%[inptr6]], #4\n"  // G1G2G3G4
+            "ld1 {v1.s}[3],  [%[inptr7]], #4\n"  // H1H2H3H4
+
+            "tbl v2.16b, {v0.16b}, %[shuffle_idx].16b \n" // A1B1C1D1A2B2C2D2A3B3C3D3A4B4C4D4
+            "tbl v3.16b, {v1.16b}, %[shuffle_idx].16b \n" // E1F1G1H1E2F2G2H2E3F3G3H3E4F4G4H4
+
+            "zip1 v4.4s, v2.4s, v3.4s\n"  // A1B1C1D1E1F1G1H1 A2B2C2D2E2F2G2H2
+            "zip2 v5.4s, v2.4s, v3.4s\n"  // A3B3C3D3E3F3G3H3 A4B4C4D4E4F4G4H4
+
+            "shl  v6.16b, v4.16b,        #4\n"
+            "sshr v7.16b, v4.16b,        #4\n"  // hig
+            "sshr v8.16b, v6.16b,        #4\n"  // low
+            "shl  v9.16b, v5.16b,        #4\n"
+            "sshr v10.16b, v5.16b,        #4\n"  // hig
+            "sshr v11.16b, v9.16b,        #4\n"  // low
+            "zip1 v0.2d,v8.2d,v7.2d\n"
+            "zip2 v1.2d,v8.2d,v7.2d\n"
+            "zip1 v2.2d,v11.2d,v10.2d\n"
+            "zip2 v3.2d,v11.2d,v10.2d\n"
+            "st1 {v0.2d-v3.2d},[%[outptr]],#64\n"
+
+            : [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1),
+              [inptr2] "+r"(inptr2), [inptr3] "+r"(inptr3),
+              [inptr4] "+r"(inptr4), [inptr5] "+r"(inptr5),
+              [inptr6] "+r"(inptr6), [inptr7] "+r"(inptr7), [shuffle_idx]"+w"(shuffle_idx),
+              [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5","v6","v7","v8","v9","v10","v11","memory");
+}
 template <typename T>
 static inline void transpose_8x8_1_b(const T*& inptr0, const T*& inptr1,
                                      const T*& inptr2, const T*& inptr3,

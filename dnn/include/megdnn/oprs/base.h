@@ -88,6 +88,7 @@ enum class AlgoDataType : uint32_t {
     QUINT8X8X32 = 1 << 3,
     INT8X8X16 = 1 << 4,
     INT16X16X32 = 1 << 5,
+    INT4X4X16 = 1 << 6,
 };
 
 /*!

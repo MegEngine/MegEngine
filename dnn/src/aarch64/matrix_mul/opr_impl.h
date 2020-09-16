@@ -66,8 +66,8 @@ private:
 #else
     class AlgoQuint8K8x8x8;         // Aarch64 Quint8 Kernel 8x8x8
 #endif
-    class AlgoInt8x8x16MK4_K8x8x8;  // Aarch64 Int4x4x16 Kernel 4x4x16
-
+    class AlgoInt8x8x16MK4_K8x8x8;  // Aarch64 Int8x8x16 Kernel 4x4x16
+    class AlgoInt4x4x16K8x8x8;      // Aarch64 Int4x4x16 Kernel 4x4x16
     class AlgoPack;
 public:
     static const AlgoPack& algo_pack();

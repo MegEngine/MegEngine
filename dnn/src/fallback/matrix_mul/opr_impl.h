@@ -154,6 +154,7 @@ public:
             AARCH64_QUINT8_K8X8X4_DOTPROD,
             AARCH64_QUINT8_GEMV_DOTPROD,
             AARCH64_QUINT8_K8X8X8,
+            AARCH64_INT4X4X16_K8X8X8,
 #else
             ARMV7_F32 = 1 << 16,
             ARMV7_F32_MK4_PACK_4X12,

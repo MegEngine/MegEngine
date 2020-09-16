@@ -164,6 +164,55 @@ TEST_F(AARCH64, MATRIX_MUL_INT8x8x16_K4x4x16) {
                                  handle(), "AARCH64_INT8X8X16_K4X4X16");
 }
 
+TEST_F(AARCH64, MATRIX_MUL_INT4x4x16_K8x8x8_QUANTIZEDS4) {
+    param::MatrixMul param;
+    param.transposeA = false;
+    param.transposeB = false;
+
+    Checker<MatrixMul> checker(handle());
+    checker.set_dtype(0, dtype::QuantizedS4{0.6})
+            .set_dtype(1, dtype::QuantizedS4{0.5})
+            .set_dtype(2, dtype::QuantizedS16{0.6 * 0.5})
+            .set_param(param);
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("AARCH64_INT4X4X16_K8X8X8"));
+
+    auto run = [&](size_t M, size_t N, size_t K) {
+        printf("M N K %zu %zu %zu \n", M, N, K);
+        TensorShape A, B;
+        if (param.transposeA) {
+            A = TensorShape{K, M};
+        } else {
+            A = TensorShape{M, K};
+        }
+        if (param.transposeB) {
+            B = TensorShape{N, K};
+        } else {
+            B = TensorShape{K, N};
+        }
+        checker.exec({A, B, {}});
+    };
+
+    for (size_t m : {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20})
+        for (size_t n : {2, 4, 6, 8, 10, 12, 14, 16, 24})
+            for (size_t k : {2, 4, 6, 8, 10, 12, 14, 16, 32})
+                run(m, n, k);
+
+    for (size_t k = 4; k <= 256; k *= 8) {
+        for (size_t m = 4; m <= 256; m *= 4) {
+            for (size_t n = 4; n <= 256; n *= 4) {
+                run(m, n, k);
+            }
+        }
+    }
+    param.transposeA = true;
+    run(8,8,8);
+    run(16,8,16);
+    param.transposeB = true;
+    run(8,8,8);
+    run(16,16,16);
+}
+
 TEST_F(AARCH64, MATRIX_MUL_INT16x16x32_K12X8X1) {
     matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
                                  handle(), "AARCH64_INT16X16X32_K12X8X1");
@@ -408,6 +457,63 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_MK4_8x8x16) {
     };
 
     run(384, 384, 384);
+}
+
+TEST_F(AARCH64, BENCHMARK_4x4x16_vs_8x8x16) {
+    constexpr size_t RUNS = 50;
+    param::MatrixMul param;
+    param.transposeA = false;
+    param.transposeB = false;
+    Benchmarker<MatrixMul> benchmarker(handle());
+    Benchmarker<MatrixMul> benchmarker_int4_4x4x16(handle());
+    benchmarker_int4_4x4x16.set_times(RUNS)
+            .set_dtype(0, dtype::QuantizedS4{0.3})
+            .set_dtype(1, dtype::QuantizedS4{0.3})
+            .set_dtype(2, dtype::QuantizedS16{0.09})
+            .set_param(param)
+            .set_display(false);
+    benchmarker.set_times(RUNS)
+            .set_dtype(0, dtype::Int8{})
+            .set_dtype(1, dtype::Int8{})
+            .set_dtype(2, dtype::Int16{})
+            .set_param(param)
+            .set_display(false);
+    benchmarker.set_before_exec_callback(
+            AlgoChecker<MatrixMul>("AARCH64_INT8X8X16_K4X4X16"));
+
+    auto run = [&](size_t M, size_t N, size_t K) {
+        auto default_used = benchmarker.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto int4416_used =
+                benchmarker_int4_4x4x16.exec({{M, K}, {K, N}, {}}) / RUNS;
+        float computations = 2.f * M * K * N * 1e-6;
+        printf("run: {%zu{M} %zu{K} %zu{N}} normal 8x8x16 used: %f ms %f "
+               "Gflops int4416 used %f int4416_gflops %f speedup %f\n",
+               M, K, N, default_used, computations / default_used, int4416_used,
+               computations / int4416_used, default_used / int4416_used);
+    };
+
+    for (int m = 32; m <= 1024; m += 32)
+        for (int n = 32; n <= 1024; n += 32)
+            for (int k = 32; k <= 512; k += 32)
+                run(m, n, k);
+
+    run(32, 32, 32);
+    run(32, 32, 8);
+    run(32, 32, 16);
+    run(32, 32, 24);
+    run(32 * 2, 32 * 2, 32);
+    run(32 * 4, 32 * 4, 32);
+    run(32 * 6, 32 * 6, 32);
+    run(32 * 8, 32 * 8, 32);
+    run(32 * 2, 32 * 2, 32 * 2);
+    run(32 * 4, 32 * 4, 32 * 3);
+    run(32 * 6, 32 * 6, 32 * 4);
+    run(32 * 8, 32 * 8, 32 * 5);
+    run(32 * 10, 32 * 10, 32 * 10);
+    run(384, 384, 384);
+    run(256, 256, 384);
+    run(512, 512, 384);
+    run(1024, 1024, 384);
 }
 
 TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_MK4_8x8x8_8x8x16_vs_4x4x16_8x8x16) {

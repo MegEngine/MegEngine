@@ -179,6 +179,42 @@ void exec_matrix_mul_quint4x4x32_helper(_megdnn_tensor_in A,
             C.compatible_ptr<dt_int32>(), M, N, K, LDA, LDB, LDC,
             nA.layout.dtype, nB.layout.dtype);
 }
+template <bool transA, bool transB>
+void exec_matrix_mul_qint4x4x16_helper(_megdnn_tensor_in A, _megdnn_tensor_in B,
+                                       _megdnn_tensor_out C,
+                                       _megdnn_workspace workspace,
+                                       const param::MatrixMul& param) {
+    auto convert_layout = [](const TensorLayout& layout) {
+        auto ret = layout;
+        auto param = layout.dtype.param<dtype::QuantizedS4>();
+        ret.dtype = dtype::QuantizedS8(param.scale);
+        return ret;
+    };
+    TensorND nA = {workspace.raw_ptr, convert_layout(A.layout)};
+    TensorND nB = {workspace.raw_ptr + nA.layout.span().dist_byte(),
+                   convert_layout(B.layout)};
+    auto convert_4to8 = [](const TensorND& in, const TensorND& out) {
+        auto ptr = static_cast<int8_t*>(in.raw_ptr) + in.layout.span().low_byte;
+        auto out_ptr =
+                out.compatible_ptr<int8_t>() + out.layout.span().low_byte;
+        for (size_t i = 0; i < in.layout.span().dist_elem(); i += 2) {
+            int8_t cur = ptr[i / 2];
+            out_ptr[i] = cur << 4;
+            out_ptr[i] = out_ptr[i] >> 4;
+            out_ptr[i + 1] = cur >> 4;
+        }
+    };
+    convert_4to8(A, nA);
+    convert_4to8(B, nB);
+    auto M = C.layout.shape[0], N = C.layout.shape[1];
+    auto K = A.layout.shape[param.transposeA ? 0 : 1];
+    auto LDA = A.layout.stride[0], LDB = B.layout.stride[0],
+         LDC = C.layout.stride[0];
+    run_matrix_mul_tpl<int8_t, dt_int16, transA, transB, dt_int16>(
+            nA.compatible_ptr<int8_t>(), nB.compatible_ptr<int8_t>(),
+            C.compatible_ptr<dt_int16>(), M, N, K, LDA, LDB, LDC,
+            nA.layout.dtype, nB.layout.dtype);
+}
 
 }  // namespace naive
 }  // namespace megdnn

@@ -203,6 +203,67 @@ TEST_F(NAIVE, MATRIX_MUL_QUANTIZED4x4x32) {
             });
 }
 
+TEST_F(NAIVE, MATRIX_MUL_QUANTIZEDS4_4x4x16) {
+    Checker<MatrixMul> checker(handle(), /* check_dispatch */ false);
+    auto GenTensorValueQuint4 = [](const TensorShape& shape,
+                                   dtype::QuantizedS4 dtype,
+                                   const std::vector<int>& values) {
+        TensorND tensor;
+        tensor.layout = {shape, dtype};
+        tensor.raw_ptr =
+                static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+        uint8_t* ptr = static_cast<uint8_t*>(tensor.raw_ptr);
+        megdnn_assert(values.size() == tensor.layout.span().dist_elem());
+        for (size_t i = 0; i < tensor.layout.span().dist_elem(); i += 2) {
+            int val0 = values[i], val1 = values[i + 1];
+            ptr[i / 2] =(val0 & 0xF) | (val1 << 4);
+        }
+        return tensor;
+    };
+    using Param = MatrixMul::Param;
+    Param param;
+    checker.set_param(param);
+    checker.set_dtype(2, dtype::QuantizedS16(0.3f * 0.3f));
+    checker.exect(
+            Testcase{
+                    GenTensorValueQuint4(
+                            {8, 8}, dtype::QuantizedS4(0.3f),
+                            {-8,  7,  2,  1,  2,   3,  2, 7,
+                              2,  5,  3,  3,  7,   4, -7,  1,
+                             -5,  7, -4, -1, -1,   2,  4,  1,
+                              7,  2, -6, -2, -6,   3,  4,  4,
+                             -2,  2,  3,  0,  6,   5,  3,  4,  
+                             -1, -1, -5,  5,  2,   5,  1,  4,
+                              6,  2,  0,  0,  3,   2,  2,  1,
+                             -4, -3,  7,  5,  0,   3,  2,  3}),
+                    GenTensorValueQuint4(
+                            {8, 8}, dtype::QuantizedS4(0.3f),
+                            {5,  -8, -7, -6,   4,  7, -5, -5,
+                            -4,   7, -3, -2,   5,  6,  4,  2,
+                             3,  -1,  2,  2,   7,  3,  6,  0,
+                             5,   4,  0,  2,   2,  3,  3,  2,
+                             1,  -8, -7, -6,   0, -5, -4,  4,
+                            -3,   7,  1,  6,  -2,  2, -1,  5,  
+                             2,   0,  7,  6,   5,  4,  3,  2,
+                             0,   0,  1,  0,   5,  2,  2,  6}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValue(
+                            {8, 8}, dtype::QuantizedS16(0.3f * 0.3f),
+                            {-60, 120,   49,   58,  58,  13,  92, 125,
+                              -5,   0, -116,  -70,  22,   9, -14,  46,
+                             -69, 111,   44,   48,   6,  19,  42,  57,
+                              -8,  25,   10,   16,  26,  97, -28, -12,
+                             -12,  14,    2,   26,  48,   7,  24,  93,
+                              -2,  45,    2,   32, -19,  -1, -16,  72,
+                              23, -44,  -52,  -34,  45,  53, -28,   6,
+                              33,  45,   71,   84,  47,  10,  74,  61})
+
+            });
+}
+
 TEST_F(NAIVE, MATRIX_MUL_QUANTIZED8x8x32) {
     Checker<MatrixMul> checker(handle(), /* check_dispatch */ false);
     MatrixMul::Param param;
