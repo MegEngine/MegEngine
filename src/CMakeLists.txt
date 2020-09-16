@@ -181,11 +181,7 @@ if(ANDROID)
     target_link_libraries(megbrain PUBLIC log)
 endif()
 
-if(MGE_BUILD_IMPERATIVE_RT)
-    set (_VER_FILE ${PROJECT_SOURCE_DIR}/python_module/src/version.ld)
-else()
-    set (_VER_FILE ${PROJECT_SOURCE_DIR}/imperative/src/version.ld)
-endif()
+set (_VER_FILE ${PROJECT_SOURCE_DIR}/imperative/src/version.ld)
 
 if(MGE_BUILD_IMPERATIVE_RT
         )
