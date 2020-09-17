@@ -297,9 +297,9 @@ void init_graph_rt(py::module m) {
         for (auto i : rst.params) {
             params.append(py::cast(i));
         }
-        auto rst_stat = std::vector{
-            rst.nr_opr, rst.tot_bytes, rst.tensor_value_bytes, rst.content_hash
-        };
+        auto rst_stat =
+                std::vector{rst.nr_opr, rst.tot_bytes, rst.tensor_value_bytes,
+                            static_cast<size_t>(rst.content_hash)};
         for (auto i : rst_stat) {
             stat.append(py::cast(i));
         }
