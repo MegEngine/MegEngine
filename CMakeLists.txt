@@ -152,6 +152,14 @@ if(${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} S
 endif()
 
 if(MSVC OR WIN32)
+    # for cmake after 3.15.2
+    cmake_policy(SET CMP0091 NEW)
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+    else()
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    endif()
+
     add_compile_definitions(NOMINMAX=1 _USE_MATH_DEFINES=1 WIN32=1)
     message("-- into windows build...")
     message("-- CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
