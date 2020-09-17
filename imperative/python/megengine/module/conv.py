@@ -340,7 +340,7 @@ class ConvTranspose2d(_ConvNd):
 
 
 class LocalConv2d(Conv2d):
-    r"""Applies a spatial convolution with unshared kernels over an input 4D tensor.
+    r"""Applies a spatial convolution with untied kernels over an groupped channeled input 4D tensor.
     It is also known as the locally connected layer.
 
     :param in_channels: number of input channels.

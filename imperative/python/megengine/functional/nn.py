@@ -221,16 +221,16 @@ def local_conv2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     conv_mode="CROSS_CORRELATION",
-) -> Tensor:
-    """Applies spatial 2D convolution over an image with unshared kernels.
-
-    Refer to :class:`~.LocalConv2d` for more information.
+):
+    """Applies spatial 2D convolution over an groupped channeled image with untied kernels.
     """
     assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
+
+    Sparse = P.Convolution.Sparse
 
     op = builtin.GroupLocal(
         stride_h=stride_h,
@@ -239,7 +239,9 @@ def local_conv2d(
         pad_w=pad_w,
         dilate_h=dilate_h,
         dilate_w=dilate_w,
-        # strategy=get_conv_execution_strategy(),
+        mode=conv_mode,
+        compute_mode="DEFAULT",
+        sparse=Sparse.DENSE,
     )
     inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
