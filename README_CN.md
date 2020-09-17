@@ -1,6 +1,8 @@
 # MegEngine
 
-![MegEngine Logo](logo.png)
+<p align="center">
+  <img width="250" height="109" src="logo.png">
+</p>
 
 [English](README.md) | 中文
 
@@ -11,14 +13,14 @@ MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深�
 
 ## 安装说明
 
-**注意:** MegEngine 现在仅支持 Linux 平台安装，以及 Python3.5 及以上的版本（不支持 Python2 ）。对于 Windows 10 用户，可以通过安装 [WSL(Windows Subsystem for Linux)](https://docs.microsoft.com/en-us/windows/wsl) 进行体验。
+**注意:** MegEngine 现在支持 Linux-64bit/Windows-64bit/macos-10.14及其以上 (MacOS只支持cpu) 平台安装，支持Python3.5 到 Python3.8。对于 Windows 10 用户，可以通过安装 [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl) 进行体验，同时我们也原生支持Windows。
 
 ### 通过包管理器安装
 
 通过 pip 安装的命令如下：
 
 ```bash
-pip3 install megengine -f https://megengine.org.cn/whl/mge.html
+python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 ```
 
 ## 通过源码编译安装
@@ -34,69 +36,41 @@ $ ./third_party/install-mkl.sh
 
 但是有一些依赖需要手动安装：
 
-* [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) ，如果需要编译支持 CUDA 的版本（默认开启）
-* [TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/index.html)(>=5.1.5) ，如果需要编译支持 TensorRT 的版本（默认开启）
-* LLVM/Clang(>=6.0) ，如果需要编译支持 Halide JIT 的版本（默认开启）
-* Python(>=3.5), Numpy, SWIG(>=3.0) ，如果需要编译生成 Python 模块（默认开启）
+* [CUDA](https://developer.nvidia.com/cuda-toolkit-archive)(>=10.1), [cuDNN](https://developer.nvidia.com/cudnn)(>=7.6) ，如果需要编译支持 CUDA 的版本。
+* [TensorRT](https://docs.nvidia.com/deeplearning/sdk/tensorrt-archived/index.html)(>=5.1.5) ，如果需要编译支持 TensorRT 的版本。
+* LLVM/Clang(>=6.0) ，如果需要编译支持 Halide JIT 的版本（默认开启）。
+* Python(>=3.5), Numpy, SWIG(>=3.0) ，如果需要编译生成 Python 模块。
 
 ### 开始编译
 
-MegEngine 遵循“源外构建”（[Out-of-Source Build](https://zh.m.wikibooks.org/zh-hans/CMake_%E5%85%A5%E9%96%80/Out-of-source_Build)）原则，并且使用静态编译方式。编译的具体流程如下：
+MegEngine使用CMake作为构建工具。我们提供以下脚本来帮助编译:
 
-1. 创建用于编译的目录：
-    ```bash
-    mkdir -p build
-    cd build
-    ```
+* [host_build.sh](scripts/cmake-build/host_build.sh) 用于本地编译。
+参数 -h 可用于查询脚本支持的参数:
+  
+  ```
+  scripts/cmake-build/host_build.sh -h
+  ```
+* [cross_build_android_arm_inference.sh](scripts/cmake-build/cross_build_android_arm_inference.sh) 用于ARM-安卓交叉编译。
+参数 -h 可用于查询脚本支持的参数:
+  
+  ```
+  scripts/cmake-build/cross_build_android_arm_inference.sh -h
+  ```
+* [cross_build_linux_arm_inference.sh](scripts/cmake-build/cross_build_linux_arm_inference.sh) 用于ARM-Linux交叉编译。
+参数 -h 可用于查询脚本支持的参数:
+  
+  ```
+  scripts/cmake-build/cross_build_linux_arm_inference.sh -h
+  ```
+* [cross_build_ios_arm_inference.sh](scripts/cmake-build/cross_build_ios_arm_inference.sh) 用于IOS交叉编译。
+  参数 -h 可用于查询脚本支持的参数:
 
-2. 使用 `CMake` 生成编译配置：
+  ```
+  scripts/cmake-build/cross_build_ios_arm_inference.sh
+  ```
+  更多细节请参考 [BUILD_README.md](scripts/cmake-build/BUILD_README.md)
 
-    生成支持 CUDA 环境的配置：
-    ```bash
-    cmake .. -DMGE_WITH_TEST=ON
-    ```
-
-    生成仅支持 CPU 环境的配置，使用 `-DMGE_WITH_CUDA=OFF` 选项：
-    ```bash
-    cmake .. -DMGE_WITH_CUDA=OFF -DMGE_WITH_TEST=ON
-    ```
-
-    生成仅用于 C++ 环境部署的配置，使用 `-DMGE_INFERENCE_ONLY=ON` ，并可用 `-DMGE_WITH_TEST=OFF` 关闭测试：
-    ```bash
-    cmake .. -DMGE_INFERENCE_ONLY=ON -DMGE_WITH_TEST=OFF
-    ```
-
-    可以使用 `-DCMAKE_INSTALL_PREFIX=YOUR_PATH` 指定具体安装目录。
-
-3. 开始编译：
-
-    ```bash
-    make -j$(nproc)
-    ```
-
-4. [可选] 如果需要用于部署，可以安装 MegEngine 的 C++ 库：
-
-    ```bash
-    make install
-    ```
-
-以下是其它常用编译选项：
-
-* `MGE_ARCH` 指定编译的目标平台（默认自动检测当前平台）
-* `MGE_WITH_DISTRIBUTED` 是否开启多机分布式支持（默认开启）
-* `MGE_WITH_PYTHON_MODULE` 是否编译生成 Python 模块（默认开启）
-* `MGE_BLAS` 选择 BLAS 的后端实现，可以是 `MKL` 或 `OpenBLAS` （默认 `MKL`）
-* `MGE_CUDA_GENCODE` 指定提供给 `nvcc` 的 `-gencode` 选项（默认不指定）
-* `MGE_DISABLE_FLOAT16` 是否不提供 `float16` 类型支持（默认关闭）
-* `MGE_ENABLE_EXCEPTIONS` 是否开启 C++ 报错支持（默认开启）
-* `MGE_ENABLE_LOGGING` 是否开启 MegEngine 日志信息（默认自动检测）
-
-更多选项可以通过以下命令查看：
-
-```bash
-cd build
-cmake -LAH .. 2>/dev/null| grep -B 1 'MGE_' | less
-```
 
 ## 如何参与贡献
 
