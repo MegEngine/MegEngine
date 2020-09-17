@@ -91,6 +91,7 @@ protected:
     bool mixin_allow_weight_preprocess(const OperatorNodeBase& opr) const;
     virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout() = 0;
     virtual void scn_do_execute_preprocess() = 0;
+    virtual ~WeightPreprocessExecutor() = default;
 };
 
 } // namespace mixin
