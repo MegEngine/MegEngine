@@ -2,9 +2,16 @@
 
 cd $(dirname $0)
 
+# force use /usr/bin/sort on windows, /c/Windows/system32/sort do not support -V
+OS=$(uname -s)
+SORT=sort
+if [[ $OS =~ "NT" ]]; then
+    SORT=/usr/bin/sort
+fi
+
 requiredGitVersion="1.8.4"
 currentGitVersion="$(git --version | awk '{print $3}')"
-if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | sort -V | head -n1)" = "$currentGitVersion" ]; then
+if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | ${SORT} -V | head -n1)" = "$currentGitVersion" ]; then
     echo "Please update your Git version. (foud version $currentGitVersion, required version >= $requiredGitVersion)"
     exit -1
 fi
