@@ -189,7 +189,7 @@ if(MGE_BUILD_IMPERATIVE_RT
     add_library(megengine_export SHARED)
     target_link_libraries(megengine_export PUBLIC megbrain megdnn)
     if (MGE_WITH_DISTRIBUTED)
-        message("megengine_export configured to link megray")
+        message("-- megengine_export configured to link megray")
         target_link_libraries(megengine_export PUBLIC megray)
     endif()
 endif()
