@@ -269,13 +269,13 @@ TEST(TestOprBasicArith, AddUpdateOtherStream) {
     };
 
     std::shared_ptr<HostTensorND> host_val = gen({SIZE});
-    auto cn_nccl = CompNode::load("gpu0").change_stream(CompNode::Stream::NCCL);
+    auto cn1 = CompNode::load("gpu0:0").change_stream(1);
     auto param = opr::SharedDeviceTensor::make(*graph, *host_val);
     param.node()->owner_opr()->node_prop().attribute().priority =
             std::numeric_limits<int>::max();
-    auto copy = opr::Copy::make(param, cn_nccl);
+    auto copy = opr::Copy::make(param, cn1);
     auto add = (copy + 3) * 5;
-    auto add_update = opr::AddUpdate::make(param, add, {}, {cn_nccl});
+    auto add_update = opr::AddUpdate::make(param, add, {}, {cn1});
 
     auto callback = opr::CallbackInjector::make(add_update, set_flag);
 

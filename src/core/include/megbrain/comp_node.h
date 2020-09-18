@@ -207,8 +207,7 @@ class CompNode {
             static constexpr int
                 COPY = -1,
                 REMOTE_SEND = -2,
-                LOOP_SWAP = -3,
-                NCCL = -4;
+                LOOP_SWAP = -3;
         };
 
         CompNode() = default;

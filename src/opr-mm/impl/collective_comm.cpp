@@ -630,11 +630,7 @@ void CollectiveComm::get_output_var_shape(const TensorShapeArray& inp_shape,
                                   inp_shape, out_shape);
 }
 
-void CollectiveComm::init_output_comp_node() {
-    mgb_assert(output().size() == 1, "exactly one output expected, got %zu", output().size());
-    owner_graph()->seq_comp_node_optimizer().register_stream_var(output()[0],
-        {CompNode::Stream::NCCL, cg::SeqCompNodeOptimizer::StreamPropType::WEAK});
-}
+void CollectiveComm::init_output_comp_node() {}
 
 void CollectiveComm::init_output_mem_plan(bool dynamic) {
     for (size_t i = 0; i < output().size(); i++) {

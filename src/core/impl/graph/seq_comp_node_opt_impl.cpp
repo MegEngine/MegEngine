@@ -109,11 +109,8 @@ void SeqCompNodeOptimizerImpl::change_to_specific_stream(
             type = any_strong_changed ?
                 StreamPropType::STRONG : StreamPropType::WEAK;
             int copy_stream = CompNode::Stream::COPY;
-            int nccl_stream = CompNode::Stream::NCCL;
             if (inp_streams.count(copy_stream))
                 stream = copy_stream;
-            else if (inp_streams.count(nccl_stream))
-                stream = nccl_stream;
             mgb_assert(type != StreamPropType::NONE && stream != 0);
         }
         return prop_type_storage.second = StreamPropType{stream, type};
@@ -188,8 +185,7 @@ void SeqCompNodeOptimizerImpl::register_stream_var(
     mgb_assert(var->owner_graph() == m_owner_graph &&
             (prop_type == StreamPropType::WEAK ||
              prop_type == StreamPropType::STRONG));
-    mgb_assert(stream == CompNode::Stream::COPY || stream ==
-            CompNode::Stream::NCCL);
+    mgb_assert(stream == CompNode::Stream::COPY);
 
     auto ins = m_var2prop_type.insert({var, {stream, prop_type}});
     if (!ins.second) {
