@@ -32,10 +32,6 @@
     if u do not do 4d/4e/4f, CUDA runtime can not find dll
     5: install python3 (DFT 3.8.3) to /c/Users/${USER}/mge_whl_python_env/3.8.3 and
     put it to PATH env and run python3 -m pip install numpy (if u want to build with training mode or build python whl)
-    6: install swig from install gui (if u want to build with training mode or build python whl)
-       a: download swig: https://nchc.dl.sourceforge.net/project/swig/swigwin/swigwin-4.0.2/swigwin-4.0.2.zip
-       b: install swig to /c/Users/${USER}/swigwin-4.0.2
-       c: apply scripts/whl/windows/fix-ptr-define-issue.patch to c/Users/${USER}/swigwin-4.0.2
     ```
 ### linux host build
     ```
