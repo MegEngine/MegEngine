@@ -683,6 +683,53 @@ protected:
 };
 
 /**
+ * \brief base class for AdaptivePooling
+ */
+class AdaptivePoolingBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(AdaptivePoolingBase, OperatorBase);
+    DEF_OPR_PARAM(AdaptivePooling);
+
+protected:
+    param::Pooling deduce_pooling_param(const TensorLayout& src,
+                                        const TensorLayout& dst);
+};
+
+class AdaptivePoolingForward : public AdaptivePoolingBase {
+    DEF_OPR_IMPL(AdaptivePoolingForward, AdaptivePoolingBase, 1, 1);
+
+public:
+    /**
+     * \param[in] src input tensor
+     * \param[out] dst output tensor
+     */
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+                      _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
+                                          const TensorLayout& dst) = 0;
+};
+
+using AdaptivePooling = AdaptivePoolingForward;
+
+class AdaptivePoolingBackward : public AdaptivePoolingBase {
+    DEF_OPR_IMPL(AdaptivePoolingBackward, AdaptivePoolingBase, 3, 1);
+
+public:
+    /**
+     * \param[in] src the `src' parameter in AdaptivePoolingForward::exec
+     * \param[in] dst the `dst' parameter in AdaptivePoolingForward::exec
+     * \param[in] diff the backpropagated gradient wrt. dst
+     * \param[out] grad the backpropagated gradient wrt. src
+     */
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
+                      _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                      _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
+                                          const TensorLayout& dst,
+                                          const TensorLayout& diff,
+                                          const TensorLayout& grad) = 0;
+};
+
+/**
  * \brief base class for Local
  */
 class LocalBase : public OperatorBase {
