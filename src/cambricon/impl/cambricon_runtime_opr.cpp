@@ -72,8 +72,14 @@ cnrtDataType_t mgb_dtype_to_cnrt_dtype(DType data_type) {
             return CNRT_FLOAT32;
         case DTypeEnum::QuantizedS8:
             return CNRT_QUANT8;
+        case DTypeEnum::Quantized8Asymm:
+            return CNRT_QUANT8;
+        case DTypeEnum::Int8:
+            return CNRT_INT8;
         case DTypeEnum::Int32:
             return CNRT_INT32;
+        case DTypeEnum::Uint8:
+            return CNRT_UINT8;
         default:
             mgb_throw(MegBrainError,
                       "megbrain data type %s is not supported by cnrt.",
