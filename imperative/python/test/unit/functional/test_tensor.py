@@ -6,10 +6,12 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
 import platform
 
 import numpy as np
 import pytest
+from utils import opr_test
 
 import megengine.functional as F
 from megengine import tensor
@@ -17,72 +19,6 @@ from megengine.core._trace_option import use_tensor_shape
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.test import assertTensorClose
-
-
-def _default_compare_fn(x, y):
-    assertTensorClose(x.numpy(), y)
-
-
-def opr_test(cases, func, compare_fn=_default_compare_fn, ref_fn=None, **kwargs):
-    """
-    func: the function to run opr.
-    compare_fn: the function to compare the result and expected, use assertTensorClose if None.
-    ref_fn: the function to generate expected data, should assign output if None.
-    cases: the list which have dict element, the list length should be 2 for dynamic shape test.
-           and the dict should have input,
-           and should have output if ref_fn is None.
-           should use list for multiple inputs and outputs for each case.
-    kwargs: The additional kwargs for opr func.
-
-    simple examples:
-
-        dtype = np.float32
-        cases = [{"input": [10, 20]}, {"input": [20, 30]}]
-        opr_test(cases,
-                 F.eye,
-                 ref_fn=lambda n, m: np.eye(n, m).astype(dtype),
-                 dtype=dtype)
-
-    """
-
-    def check_results(results, expected):
-        if not isinstance(results, tuple):
-            results = (results,)
-        for r, e in zip(results, expected):
-            compare_fn(r, e)
-
-    def get_param(cases, idx):
-        case = cases[idx]
-        inp = case.get("input", None)
-        outp = case.get("output", None)
-        if inp is None:
-            raise ValueError("the test case should have input")
-        if not isinstance(inp, list):
-            inp = (inp,)
-        else:
-            inp = tuple(inp)
-        if ref_fn is not None and callable(ref_fn):
-            outp = ref_fn(*inp)
-        if outp is None:
-            raise ValueError("the test case should have output or reference function")
-        if not isinstance(outp, list):
-            outp = (outp,)
-        else:
-            outp = tuple(outp)
-
-        return inp, outp
-
-    if len(cases) == 0:
-        raise ValueError("should give one case at least")
-
-    if not callable(func):
-        raise ValueError("the input func should be callable")
-
-    inp, outp = get_param(cases, 0)
-    inp_tensor = [tensor(inpi) for inpi in inp]
-
-    results = func(*inp_tensor, **kwargs)
-    check_results(results, outp)
 
 
 def test_eye():
@@ -265,37 +201,37 @@ def test_flatten():
     data1 = np.random.random(data1_shape).astype(np.float32)
 
     def compare_fn(x, y):
-        assert x.numpy().shape == y[0]
+        assert x.shape[0] == y
 
     output0 = (2 * 3 * 4 * 5,)
     output1 = (4 * 5 * 6 * 7,)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn)
 
     output0 = (2, 3 * 4 * 5)
     output1 = (4, 5 * 6 * 7)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1)
 
     output0 = (2, 3, 4 * 5)
     output1 = (4, 5, 6 * 7)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=2)
 
     output0 = (2, 3 * 4, 5)
     output1 = (4, 5 * 6, 7)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1, end_axis=2)
 
@@ -310,7 +246,7 @@ def test_broadcast():
     data2 = np.random.random(input2_shape).astype(np.float32)
 
     def compare_fn(x, y):
-        assert x.numpy().shape == y
+        assert x.shape[0] == y
 
     cases = [
         {"input": [data1, output1_shape], "output": output1_shape},
