@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/common/conv_bias.h"
 #include "megdnn/opr_param_defs.h"
@@ -413,7 +414,7 @@ std::vector<TestArg> get_int8_nchw44_args(size_t kernel_size, size_t pack_size,
     megdnn_assert(kernel_size > 0, "not support kernel_size");
     using NLMode = param::ConvBias::NonlineMode;
 
-    //// clang-format off
+    // clang-format off
     for (auto nlmode : {NLMode::IDENTITY, NLMode::RELU}) {
     for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
     for (size_t b : {1,2}) {
@@ -795,7 +796,7 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
         return z;
     };
     megdnn_assert(rng != nullptr && bias_rng != nullptr);
-    checker.set_rng(0,  rng.get())
+    checker.set_rng(0, rng.get())
             .set_rng(1, rng.get())
             .set_rng(2, rng.get())
             .set_rng(3, rng.get());
@@ -1152,8 +1153,7 @@ void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
             handle->create_operator<WinogradFilterPreprocess>();
     winograd_preprocess_opr->param().output_block_size = m;
     winograd_preprocess_opr->param().format = format;
-    winograd_preprocess_opr->param().compute_mode =
-            param.compute_mode;
+    winograd_preprocess_opr->param().compute_mode = param.compute_mode;
     TensorLayout filter_transform_layout;
     winograd_preprocess_opr->deduce_layout(tensors[1].layout,
                                            filter_transform_layout);

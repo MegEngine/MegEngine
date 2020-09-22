@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/cuda/utils.cuh"
 #include "src/cuda/utils.h"
@@ -30,49 +31,48 @@ struct DevicePropRec {
 constexpr int MAX_NR_DEVICE = 32;
 DevicePropRec device_prop_rec[MAX_NR_DEVICE];
 
-const char *cublasGetErrorString(cublasStatus_t error) {
-	switch (error)
-	{
-		case CUBLAS_STATUS_SUCCESS:
-			return "CUBLAS_STATUS_SUCCESS";
-		case CUBLAS_STATUS_NOT_INITIALIZED:
-			return "CUBLAS_STATUS_NOT_INITIALIZED";
-		case CUBLAS_STATUS_ALLOC_FAILED:
-			return "CUBLAS_STATUS_ALLOC_FAILED";
-		case CUBLAS_STATUS_INVALID_VALUE:
-			return "CUBLAS_STATUS_INVALID_VALUE";
-		case CUBLAS_STATUS_ARCH_MISMATCH:
-			return "CUBLAS_STATUS_ARCH_MISMATCH";
-		case CUBLAS_STATUS_MAPPING_ERROR:
-			return "CUBLAS_STATUS_MAPPING_ERROR";
-		case CUBLAS_STATUS_EXECUTION_FAILED:
-			return "CUBLAS_STATUS_EXECUTION_FAILED";
-		case CUBLAS_STATUS_INTERNAL_ERROR:
-			return "CUBLAS_STATUS_INTERNAL_ERROR";
-		case CUBLAS_STATUS_LICENSE_ERROR:
-			return "CUBLAS_STATUS_LICENSE_ERROR";
-		case CUBLAS_STATUS_NOT_SUPPORTED:
-			return "CUBLAS_STATUS_NOT_SUPPORTED";
-	}
-	return "Unknown CUBLAS error";
+const char* cublasGetErrorString(cublasStatus_t error) {
+    switch (error) {
+        case CUBLAS_STATUS_SUCCESS:
+            return "CUBLAS_STATUS_SUCCESS";
+        case CUBLAS_STATUS_NOT_INITIALIZED:
+            return "CUBLAS_STATUS_NOT_INITIALIZED";
+        case CUBLAS_STATUS_ALLOC_FAILED:
+            return "CUBLAS_STATUS_ALLOC_FAILED";
+        case CUBLAS_STATUS_INVALID_VALUE:
+            return "CUBLAS_STATUS_INVALID_VALUE";
+        case CUBLAS_STATUS_ARCH_MISMATCH:
+            return "CUBLAS_STATUS_ARCH_MISMATCH";
+        case CUBLAS_STATUS_MAPPING_ERROR:
+            return "CUBLAS_STATUS_MAPPING_ERROR";
+        case CUBLAS_STATUS_EXECUTION_FAILED:
+            return "CUBLAS_STATUS_EXECUTION_FAILED";
+        case CUBLAS_STATUS_INTERNAL_ERROR:
+            return "CUBLAS_STATUS_INTERNAL_ERROR";
+        case CUBLAS_STATUS_LICENSE_ERROR:
+            return "CUBLAS_STATUS_LICENSE_ERROR";
+        case CUBLAS_STATUS_NOT_SUPPORTED:
+            return "CUBLAS_STATUS_NOT_SUPPORTED";
+    }
+    return "Unknown CUBLAS error";
 }
-} // anonymous namespace
+}  // anonymous namespace
 
-void cuda::__throw_cuda_error__(cudaError_t err, const char *msg) {
+void cuda::__throw_cuda_error__(cudaError_t err, const char* msg) {
     auto s = ssprintf("cuda error %s(%d) occurred; expr: %s",
-            cudaGetErrorString(err), int(err), msg);
+                      cudaGetErrorString(err), int(err), msg);
     megdnn_throw(s.c_str());
 }
 
-void cuda::__throw_cudnn_error__(cudnnStatus_t err, const char *msg) {
+void cuda::__throw_cudnn_error__(cudnnStatus_t err, const char* msg) {
     auto s = ssprintf("cudnn error %s(%d) occurred; expr: %s",
-            cudnnGetErrorString(err), int(err), msg);
+                      cudnnGetErrorString(err), int(err), msg);
     megdnn_throw(s.c_str());
 }
 
-void cuda::__throw_cublas_error__(cublasStatus_t err, const char *msg) {
+void cuda::__throw_cublas_error__(cublasStatus_t err, const char* msg) {
     auto s = ssprintf("cublas error %s(%d) occurred; expr: %s",
-            cublasGetErrorString(err), int(err), msg);
+                      cublasGetErrorString(err), int(err), msg);
     megdnn_throw(s.c_str());
 }
 
@@ -92,17 +92,17 @@ void cuda::__throw_cutlass_error__(cutlass::Status err, const char* msg) {
     megdnn_throw(s.c_str());
 }
 
-void cuda::report_error(const char *msg) {
+void cuda::report_error(const char* msg) {
     megdnn_throw(msg);
     MEGDNN_MARK_USED_VAR(msg);
 }
 
 uint32_t cuda::safe_size_in_kern(size_t size) {
     if (!size || size > Uint32Fastdiv::MAX_DIVIDEND) {
-        megdnn_throw(ssprintf(
-                    "invalid size for element-wise kernel: %zu; "
-                    "max supported size is %u",
-                    size, Uint32Fastdiv::MAX_DIVIDEND));
+        megdnn_throw(
+                ssprintf("invalid size for element-wise kernel: %zu; "
+                         "max supported size is %u",
+                         size, Uint32Fastdiv::MAX_DIVIDEND));
     }
     return size;
 }
@@ -111,7 +111,7 @@ cudaDeviceProp cuda::current_device_prop() {
     int dev;
     cuda_check(cudaGetDevice(&dev));
     megdnn_assert(dev < MAX_NR_DEVICE, "device number too large: %d", dev);
-    auto &&rec = device_prop_rec[dev];
+    auto&& rec = device_prop_rec[dev];
     if (!rec.init) {
         std::lock_guard<std::mutex> lock(rec.mtx);
         if (!rec.init) {
@@ -137,6 +137,19 @@ size_t cuda::max_batch_x_channel_size() {
     return current_device_prop().maxGridSize[2];
 }
 
+uint32_t cuda::param_buffer_start_address() {
+    auto&& device_prop = current_device_prop();
+    int cap = 10 * device_prop.major + device_prop.minor;
+    // maxwell and pascal: 0x140
+    if (cap >= 50 && cap < 70)
+        return 0x140;
+    // volta ~ ampere: 0x160
+    else if (cap >= 70)
+        return 0x160;
+    megdnn_throw(
+            ssprintf("unsupported cuda compute capability %d", cap).c_str());
+}
+
 const char* cuda::current_device_arch_name() {
     auto&& device_prop = current_device_prop();
     int cap = 10 * device_prop.major + device_prop.minor;
@@ -155,4 +168,3 @@ const char* cuda::current_device_arch_name() {
 }
 
 // vim: syntax=cpp.doxygen
-
