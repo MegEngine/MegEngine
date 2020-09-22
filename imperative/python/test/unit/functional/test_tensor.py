@@ -240,7 +240,7 @@ def test_broadcast():
     output1_shape = (30, 20, 30)
     data1 = np.random.random(input1_shape).astype(np.float32)
 
-    input2_shape = (10, 20)
+    input2_shape = (10, 1)
     output2_shape = (20, 10, 20)
     data2 = np.random.random(input2_shape).astype(np.float32)
 
@@ -252,6 +252,16 @@ def test_broadcast():
         {"input": [data2, output2_shape], "output": output2_shape},
     ]
     opr_test(cases, F.broadcast, compare_fn=compare_fn)
+
+    x = F.ones((2, 1, 3))
+    with pytest.raises(ValueError):
+        F.broadcast(x, (2, 3, 4))
+
+    with pytest.raises(ValueError):
+        F.broadcast(x, (4, 1, 3))
+
+    with pytest.raises(ValueError):
+        F.broadcast(x, (1, 3))
 
 
 def test_utils_astensor1d():

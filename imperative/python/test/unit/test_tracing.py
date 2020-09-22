@@ -340,3 +340,20 @@ def test_raise_on_trace():
         step_count += 1
 
     assert catch_count == 1
+
+
+def test_trace_broadcast():
+    for symbolic in [False, True]:
+        set_tensor_shape(True)
+        x1 = tensor(np.random.randn(3, 1, 1))
+        x2 = tensor(np.random.randn(1, 4, 1))
+        x3 = tensor(np.random.randn(1, 1, 5))
+
+        @trace(symbolic=symbolic, capture_as_const=True)
+        def f(x):
+            y = x.broadcast((3, 4, 5))
+            return y
+
+        f(x1)
+        f(x2)
+        f(x3)
