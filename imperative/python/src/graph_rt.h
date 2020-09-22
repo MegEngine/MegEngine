@@ -25,7 +25,7 @@ class GraphNodePtr {
     T* m_node;
 public:
     GraphNodePtr(T* node) :
-        m_graph(node ? nullptr : node->owner_graph()->shared_from_this()),
+        m_graph(node ? node->owner_graph()->shared_from_this() : nullptr),
         m_node(node) {}
     T* operator->() {return m_node;}
     T& operator*() {return *m_node;}
