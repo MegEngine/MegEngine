@@ -95,6 +95,7 @@ r"""
 """))
 
 decl_opr('Local',
+         pyname='local',
          inputs=[Doc('src',
                      'input image in (batch, channel, row, col) format'),
                  Doc('filter',
@@ -105,6 +106,19 @@ decl_opr('Local',
          desc='batched convolution on channeled 2D images, but kernels are '
          'not shared across different output positions')
 
+decl_opr('Local',
+         pyname='local_v1',
+         inputs=[Doc('src',
+                     'input image in (batch, channel, row, col) format'),
+                 Doc('filter',
+                     'convolution kernel in '
+                     '(out row, out col, in channel, '
+                     'kern row, kern col, out channel) format')],
+         params='Convolution',
+         desc='batched convolution on channeled 2D images, but kernels are '
+         'not shared across different output positions',
+         version=1)
+
 decl_opr('GroupLocal',
          inputs=[Doc('src',
                      'input image in (batch, channel, row, col) format'),
@@ -113,7 +127,7 @@ decl_opr('GroupLocal',
                      '(group, out row, out col, in channel / group, '
                      'kern row, kern col, out channel / group) format')],
          params=[('param', 'Convolution')],
-		 desc='batched convolution on groupped channeled 2D images, but '
+         desc='batched convolution on groupped channeled 2D images, but '
          'kernels are not shared across different output positions',
          version=1)
 
