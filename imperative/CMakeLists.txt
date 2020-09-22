@@ -47,8 +47,7 @@ add_custom_target(gen_opr_py DEPENDS ${GEN_OPS_FILE})
 
 ##################### end of opdef generation #########################
 
-set(VERSION_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/src/version.ld)
-add_custom_target(_version_ld SOURCES ${VERSION_SCRIPT})
+add_custom_target(_version_ld SOURCES ${MGE_VERSION_SCRIPT})
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/pybind11 ${PROJECT_BINARY_DIR}/third_party/pybind11)
 pybind11_add_module(${MODULE_NAME} NO_EXTRAS ${SRCS})
@@ -62,11 +61,11 @@ elseif (MSVC OR WIN32)
 else()
     if (MGE_WITH_PYTHON_MODULE)
         # use to fix runtime crash when build both mgb(MGE_WITH_PYTHON_MODULE) and imperative(MGE_BUILD_IMPERATIVE_RT)
-        target_link_libraries(${MODULE_NAME} PRIVATE megengine_export -Wl,--version-script=${VERSION_SCRIPT})
+        target_link_libraries(${MODULE_NAME} PRIVATE megengine_export -Wl,--version-script=${MGE_VERSION_SCRIPT})
     else()
         # use to reduce whl size by depend on megbrain/dnn directly, caused by cmake create two cuda fatbin
         # elf section on both megengine_export and target which depend on megengine_export
-        target_link_libraries(${MODULE_NAME} PRIVATE megbrain megdnn -Wl,--version-script=${VERSION_SCRIPT})
+        target_link_libraries(${MODULE_NAME} PRIVATE megbrain megdnn -Wl,--version-script=${MGE_VERSION_SCRIPT})
         if (MGE_WITH_DISTRIBUTED)
             message("-- Imperative configured to link megray")
             target_link_libraries(${MODULE_NAME} PRIVATE megray)

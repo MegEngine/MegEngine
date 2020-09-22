@@ -710,6 +710,8 @@ endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 
+set(MGE_VERSION_SCRIPT ${PROJECT_SOURCE_DIR}/src/version.ld CACHE INTERNAL "Path to linker version script")
+
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)

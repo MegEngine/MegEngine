@@ -181,7 +181,7 @@ if(ANDROID)
     target_link_libraries(megbrain PUBLIC log)
 endif()
 
-set (_VER_FILE ${PROJECT_SOURCE_DIR}/imperative/src/version.ld)
+set (_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)
 
 if(MGE_BUILD_IMPERATIVE_RT
         )
