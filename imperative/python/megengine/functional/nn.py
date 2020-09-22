@@ -1071,13 +1071,12 @@ def interpolate(
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
-        from megengine.test import assertTensorClose
 
         x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
         out = F.interpolate(x, [4, 4], align_corners=False)
         print(out.numpy())
         out2 = F.interpolate(x, scale_factor=2.)
-        assertTensorClose(out.numpy(), out2.numpy())
+        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     Outputs:
 

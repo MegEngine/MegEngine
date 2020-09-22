@@ -12,7 +12,6 @@ import numpy as np
 
 from megengine import Parameter, tensor
 from megengine.module import ConvTranspose2d, LocalConv2d
-from megengine.test import assertTensorClose
 
 
 def test_conv_transpose2d():
@@ -49,7 +48,7 @@ def test_conv_transpose2d():
         conv_transpose2d.bias = Parameter(bias, dtype=np.float32)
     y = conv_transpose2d(tensor(inp))
 
-    assertTensorClose(out, y.numpy(), max_err=2e-6)
+    np.testing.assert_allclose(out, y.numpy(), atol=2e-6)
 
 
 def test_local_conv2d():
@@ -107,4 +106,4 @@ def test_local_conv2d():
             * weights[0, oh, ow, :, :, :, oc]
         )
 
-    assertTensorClose(outputs.numpy(), expected, max_err=1e-5)
+    np.testing.assert_allclose(outputs.numpy(), expected, atol=1e-5)

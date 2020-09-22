@@ -13,7 +13,6 @@ from utils import opr_test
 
 import megengine.functional as F
 from megengine import tensor
-from megengine.test import assertTensorClose
 
 
 def common_test_reduce(opr, ref_opr):

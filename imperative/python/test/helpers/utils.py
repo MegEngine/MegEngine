@@ -14,7 +14,8 @@ def opr_test(cases, func, compare_fn=_default_compare_fn, ref_fn=None, **kwargs)
            and should have output if ref_fn is None.
            should use list for multiple inputs and outputs for each case.
     :param func: the function to run opr.
-    :param compare_fn: the function to compare the result and expected, use assertTensorClose if None.
+    :param compare_fn: the function to compare the result and expected, use
+        ``np.testing.assert_allclose`` if None.
     :param ref_fn: the function to generate expected data, should assign output if None.
 
     Examples:

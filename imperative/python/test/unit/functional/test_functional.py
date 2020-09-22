@@ -19,7 +19,6 @@ from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
-from megengine.test import assertTensorClose
 
 
 def test_where():
@@ -105,10 +104,10 @@ def test_interpolate():
         out = F.interpolate(inp, scale_factor=2.0, mode="LINEAR")
         out2 = F.interpolate(inp, 4, mode="LINEAR")
 
-        assertTensorClose(
+        np.testing.assert_allclose(
             out.numpy(), np.array([[[1.0, 1.25, 1.75, 2.0]]], dtype=np.float32)
         )
-        assertTensorClose(
+        np.testing.assert_allclose(
             out2.numpy(), np.array([[[1.0, 1.25, 1.75, 2.0]]], dtype=np.float32)
         )
 
@@ -118,7 +117,7 @@ def test_interpolate():
         out = F.interpolate(inp, [4, 4])
         out2 = F.interpolate(inp, scale_factor=2.0)
 
-        assertTensorClose(out.numpy(), out2.numpy())
+        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     def assign_corner_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
@@ -126,7 +125,7 @@ def test_interpolate():
         out = F.interpolate(inp, [4, 4], align_corners=True)
         out2 = F.interpolate(inp, scale_factor=2.0, align_corners=True)
 
-        assertTensorClose(out.numpy(), out2.numpy())
+        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     def error_shape_linear_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
@@ -212,7 +211,7 @@ def test_one_hot():
         inp = tensor(np.arange(1, 4, dtype=np.int32))
         out = F.one_hot(inp, num_classes=4)
 
-        assertTensorClose(
+        np.testing.assert_allclose(
             out.numpy(), np.eye(4, dtype=np.int32)[np.arange(1, 4, dtype=np.int32)]
         )
 
@@ -225,7 +224,7 @@ def test_one_hot():
         inp = tensor(arr)
         out = F.one_hot(inp, 10)
 
-        assertTensorClose(out.numpy(), np.eye(10, dtype=np.int32)[arr])
+        np.testing.assert_allclose(out.numpy(), np.eye(10, dtype=np.int32)[arr])
 
     onehot_low_dimension()
     onehot_high_dimension()
@@ -237,16 +236,16 @@ def test_add_update():
     b = Tensor(v)
 
     u = F.add_update(b, 1)
-    assertTensorClose(u.numpy(), v + 1)
+    np.testing.assert_allclose(u.numpy(), v + 1, atol=1e-6)
     u = F.add_update(b, 1)
-    assertTensorClose(u.numpy(), v + 2)
+    np.testing.assert_allclose(u.numpy(), v + 2, atol=1e-6)
 
     x = np.ones((2, 2), dtype=np.float32)
     y = x * 0.5
     dest = tensor(x)
     delta = tensor(y)
     r = F.add_update(dest, delta, alpha=0.9, beta=0.1, bias=0.1)
-    assertTensorClose(r.numpy(), x * 0.9 + y * 0.1 + 0.1)
+    np.testing.assert_allclose(r.numpy(), x * 0.9 + y * 0.1 + 0.1, atol=1e-6)
 
 
 def test_add_update_params():
@@ -263,7 +262,7 @@ def test_add_update_params():
     F.add_update(y, z, beta=0.1)
 
     res = f(np.ones((2, 3)).astype(np.float32))
-    assertTensorClose(res.numpy(), b + 1)
+    np.testing.assert_allclose(res.numpy(), b + 1)
 
 
 def test_binary_cross_entropy():
@@ -276,7 +275,7 @@ def test_binary_cross_entropy():
         return 1 / (1 + np.exp(-x))
 
     def compare_fn(x, y):
-        assertTensorClose(x.numpy(), y, max_err=5e-4)
+        np.testing.assert_allclose(x.numpy(), y, atol=5e-4)
 
     np.random.seed(123)
     data1 = sigmoid(np.random.uniform(size=data1_shape).astype(np.float32))
@@ -444,7 +443,7 @@ def test_conv_bias():
             result = F.transpose(result, (0, 1, 4, 2, 3))
         expected = F.flatten(expected)
         result = F.flatten(result)
-        assertTensorClose(result.numpy(), expected.numpy(), max_err=outp_scale)
+        np.testing.assert_allclose(result.numpy(), expected.numpy(), atol=outp_scale)
 
     run(1, 4, 4, 24, 33, 1, 1, 2, 3, 1, 1, False)
     run(10, 12, 24, 46, 46, 1, 1, 2, 1, 3, 1, False)

@@ -11,7 +11,6 @@ from concurrent.futures import Future
 import numpy as np
 
 import megengine.functional as F
-from megengine.core._imperative_rt import DeviceTensorND
 from megengine.core.tensor import megbrain_graph as mgb_graph
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 

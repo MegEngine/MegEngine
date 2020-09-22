@@ -29,7 +29,6 @@ from megengine.module import (
     Softmax,
 )
 from megengine.quantization.quantize import quantize, quantize_qat
-from megengine.test import assertTensorClose
 
 
 class MLP(Module):
@@ -87,7 +86,7 @@ def graph_mode(*modes):
 
 
 def _default_compare_fn(x, y):
-    assertTensorClose(x.numpy(), y)
+    np.testing.assert_allclose(x.numpy(), y, rtol=1e-6)
 
 
 def opr_test(
@@ -102,7 +101,7 @@ def opr_test(
     mode: the list of test mode which are eager, static and dynamic_shape
           will test all the cases if None.
     func: the function to run opr.
-    compare_fn: the function to compare the result and expected, use assertTensorClose if None.
+    compare_fn: the function to compare the result and expected, use np.testing.assert_allclose if None.
     ref_fn: the function to generate expected data, should assign output if None.
     cases: the list which have dict element, the list length should be 2 for dynamic shape test.
            and the dict should have input,
@@ -331,17 +330,17 @@ def test_module_api_hooks():
     bn1 = F.batch_norm2d(
         x + 3, mean1, Parameter(np.ones(shape), dtype=np.float32), training=True
     )
-    assertTensorClose(
+    np.testing.assert_allclose(
         net.i.bn.running_mean.numpy(), mean1.numpy(),
     )
     mean2 = Parameter(np.zeros(shape), dtype=np.float32)
     bn2 = F.batch_norm2d(
         bn1 + 3, mean2, Parameter(np.ones(shape), dtype=np.float32), training=True
     )
-    assertTensorClose(
+    np.testing.assert_allclose(
         net.bn.running_mean.numpy(), mean2.numpy(),
     )
-    assertTensorClose((bn2 + 2).numpy(), y.numpy())
+    np.testing.assert_allclose((bn2 + 2).numpy(), y.numpy())
 
     assert len(hooks) == 8
     for handler in hooks:
@@ -479,7 +478,7 @@ def test_state_dict():
         mlp1 = MLP()
         mlp1.load_state_dict(state_dict, strict=False)
         pred1 = mlp1(data)
-        assertTensorClose(pred0.numpy(), pred1.numpy(), max_err=5e-6)
+        np.testing.assert_allclose(pred0.numpy(), pred1.numpy(), atol=5e-6)
         with pytest.raises(KeyError):
             mlp1.load_state_dict(state_dict)
         del state_dict["extra"]
@@ -520,13 +519,13 @@ def test_shared_param():
     net = Simple()
     assert net.conv0.weight is net.conv1.weight
     data = tensor(np.random.random((1, 1, 8, 8)).astype(np.float32))
-    assertTensorClose(net.conv0(data).numpy(), net.conv1(data).numpy())
+    np.testing.assert_allclose(net.conv0(data).numpy(), net.conv1(data).numpy())
     with BytesIO() as f:
         mge.save(net, f)
         f.seek(0)
         net1 = mge.load(f)
     assert net1.conv0.weight is net1.conv1.weight
-    assertTensorClose(net1.conv0(data).numpy(), net1.conv1(data).numpy())
+    np.testing.assert_allclose(net1.conv0(data).numpy(), net1.conv1(data).numpy())
 
     with BytesIO() as f:
         mge.save(net.conv0, f)
@@ -539,7 +538,7 @@ def test_shared_param():
         conv1 = mge.load(f)
 
     assert conv0.weight is not conv1.weight
-    assertTensorClose(conv0(data).numpy(), conv1(data).numpy())
+    np.testing.assert_allclose(conv0(data).numpy(), conv1(data).numpy())
 
 
 def test_pickle_module():
@@ -562,8 +561,8 @@ def test_pickle_module():
         mlp1 = mge.load(fout)
         pred2 = mlp1(data)
 
-    assertTensorClose(pred0.numpy(), pred1.numpy(), max_err=5e-6)
-    assertTensorClose(pred0.numpy(), pred2.numpy(), max_err=5e-6)
+    np.testing.assert_allclose(pred0.numpy(), pred1.numpy(), atol=5e-6)
+    np.testing.assert_allclose(pred0.numpy(), pred2.numpy(), atol=5e-6)
 
 
 @pytest.mark.skip(reason="under development")
@@ -609,8 +608,8 @@ def test_load_quantized():
         mlp.load_state_dict(checkpoint)
         pred1 = mlp(data)
 
-    assertTensorClose(
-        pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), max_err=5e-6
+    np.testing.assert_allclose(
+        pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), atol=5e-6
     )
 
 

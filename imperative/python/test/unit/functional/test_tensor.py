@@ -18,14 +18,13 @@ from megengine import tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
-from megengine.test import assertTensorClose
 
 
 def test_eye():
     dtype = np.float32
     cases = [{"input": [10, 20]}, {"input": [20, 30]}]
     for case in cases:
-        assertTensorClose(
+        np.testing.assert_allclose(
             F.eye(case["input"], dtype=dtype).numpy(),
             np.eye(*case["input"]).astype(dtype),
         )
