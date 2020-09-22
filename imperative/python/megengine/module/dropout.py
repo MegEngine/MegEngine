@@ -28,3 +28,6 @@ class Dropout(Module):
             return dropout(inputs, self.drop_prob, training=True)
         else:
             return inputs
+
+    def _module_info_string(self) -> str:
+        return "drop_prob={drop_prob}".format(drop_prob=self.drop_prob)

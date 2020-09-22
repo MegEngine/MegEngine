@@ -70,6 +70,21 @@ class _ConvNd(Module):
     def _infer_bias_shape(self):
         pass
 
+    def _module_info_string(self):
+        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+
+        if self.stride != (1,) * len(self.stride):
+            s += ", stride={stride}"
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        return s.format(**self.__dict__)
+
 
 class Conv2d(_ConvNd):
     r"""Applies a 2D convolution over an input tensor.

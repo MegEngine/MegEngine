@@ -55,6 +55,9 @@ class Softmax(Module):
     def forward(self, inputs):
         return softmax(inputs, self.axis)
 
+    def _module_info_string(self) -> str:
+        return "axis={axis}".format(axis=self.axis)
+
 
 class Sigmoid(Module):
     r"""

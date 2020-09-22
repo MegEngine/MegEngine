@@ -113,6 +113,13 @@ class _BatchNorm(Module):
 
         return output
 
+    def _module_info_string(self) -> str:
+        s = (
+            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
+            "track_running_stats={track_running_stats}"
+        )
+        return s.format(**self.__dict__)
+
 
 class SyncBatchNorm(_BatchNorm):
     r"""

@@ -21,9 +21,12 @@ from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
     Conv2d,
+    Dropout,
     Linear,
+    MaxPool2d,
     Module,
     Sequential,
+    Softmax,
 )
 from megengine.quantization.quantize import quantize, quantize_qat
 from megengine.test import assertTensorClose
@@ -609,3 +612,111 @@ def test_load_quantized():
     assertTensorClose(
         pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), max_err=5e-6
     )
+
+
+def test_repr_basic():
+    # test whether __repr__ can output correct information
+    class ConvModel(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, stride=2, bias=False)
+            self.conv2 = Conv2d(3, 128, 3, padding=1, bias=False)
+            self.conv3 = Conv2d(3, 128, 3, dilation=2, bias=False)
+            self.bn1 = BatchNorm2d(128)
+            self.bn2 = BatchNorm1d(128)
+            self.dropout = Dropout(drop_prob=0.1)
+            self.softmax = Softmax(axis=100)
+            self.pooling = MaxPool2d(kernel_size=2, padding=0)
+            self.submodule1 = Sequential(Dropout(drop_prob=0.1), Softmax(axis=100),)
+            self.fc1 = Linear(512, 1024)
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel(\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), stride=(2, 2), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1), bias=False)\n"
+        "  (conv3): Conv2d(3, 128, kernel_size=(3, 3), dilation=(2, 2), bias=False)\n"
+        "  (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
+        "  (bn2): BatchNorm1d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
+        "  (dropout): Dropout(drop_prob=0.1)\n  (softmax): Softmax(axis=100)\n"
+        "  (pooling): MaxPool2d(kernel_size=2, stride=2, padding=0)\n"
+        "  (submodule1): Sequential(\n"
+        "    (0): Dropout(drop_prob=0.1)\n"
+        "    (1): Softmax(axis=100)\n  )\n"
+        "  (fc1): Linear(in_features=512, out_features=1024, bias=True)\n"
+        ")"
+    )
+    net = ConvModel()
+    output = net.__repr__()
+    assert output == ground_truth
+
+
+def test_repr_module_reassign():
+    # test whether __repr__ can deal with module reassign
+    class ConvModel1(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, bias=False)
+            self.conv2 = Conv2d(3, 128, 3, padding=1, bias=False)
+            self.conv1 = Conv2d(3, 256, 3, dilation=2, bias=False)
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel1(\n"
+        "  (conv1): Conv2d(3, 256, kernel_size=(3, 3), dilation=(2, 2), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1), bias=False)\n"
+        ")"
+    )
+    net = ConvModel1()
+    output = net.__repr__()
+    assert output == ground_truth
+
+
+def test_repr_module_rereference():
+    # test whether __repr__ can deal with module re-reference
+    class ConvModel2(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, bias=False)
+            self.conv2 = self.conv1
+            self.conv3 = self.conv1
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel2(\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        "  (conv3): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        ")"
+    )
+    net = ConvModel2()
+    output = net.__repr__()
+    assert output == ground_truth
+
+
+def test_repr_module_delete():
+    # test whether __repr__ can deal with module delete
+    class ConvModel3(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, bias=False)
+            self.softmax = Softmax(100)
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel3(\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        ")"
+    )
+    net = ConvModel3()
+    del net.softmax
+    output = net.__repr__()
+    assert output == ground_truth

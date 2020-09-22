@@ -78,3 +78,8 @@ class Linear(Module):
 
     def forward(self, x):
         return self._calc_linear(x, self.weight, self.bias)
+
+    def _module_info_string(self) -> str:
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )

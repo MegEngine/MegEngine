@@ -69,6 +69,8 @@ class Module(metaclass=ABCMeta):
         self._forward_pre_hooks = OrderedDict()
         self._forward_hooks = OrderedDict()
 
+        self._modules = []
+
     @abstractmethod
     def forward(self, inputs):
         pass
@@ -518,3 +520,57 @@ class Module(metaclass=ABCMeta):
             loaded.append(k)
 
         return set(loaded), set(skipped)
+
+    def __setattr__(self, name: str, value):
+        if _is_module(value):
+            modules = self.__dict__.get("_modules")
+            if modules is None:
+                raise AttributeError(
+                    "cannot assign module before Module.__init__() call"
+                )
+            if name not in self.__dict__:
+                modules.append(name)
+        super().__setattr__(name, value)
+
+    def __delattr__(self, name: str):
+        if name in self.__dict__ and _is_module(self.__dict__[name]):
+            modules = self.__dict__.get("_modules")
+            modules.remove(name)
+        super().__delattr__(name)
+
+    def _module_info_string(self) -> str:
+        r"""Set the extra representation of the module.
+        """
+        return ""
+
+    def __repr__(self):
+        def add_indent(repr_str, num_spaces):
+            s = repr_str.split("\n")
+            # don't do anything for single-line stuff
+            if len(s) == 1:
+                return repr_str
+            first = s.pop(0)
+            s = [(num_spaces * " ") + line for line in s]
+            s = "\n".join(s)
+            s = first + "\n" + s
+            return s
+
+        extra_lines = []
+        extra_repr = self._module_info_string()
+        if extra_repr:
+            extra_lines = extra_repr.split("\n")
+        child_lines = [
+            "(" + name + "): " + add_indent(repr(self.__dict__[name]), 2)
+            for name in self._modules
+        ]
+        lines = extra_lines + child_lines
+        main_str = self.__class__.__name__ + "("
+        if lines:
+            # simple one-liner info, which most builtin Modules will use
+            if len(extra_lines) == 1 and not child_lines:
+                main_str += extra_lines[0]
+            else:
+                main_str += "\n  " + "\n  ".join(lines) + "\n"
+
+        main_str += ")"
+        return main_str
