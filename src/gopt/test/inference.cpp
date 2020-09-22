@@ -3009,9 +3009,8 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     //! no supported hybrid nchw44
     opr::ConvBias::Param param_conv_bias_pad0;
     param_conv_bias_pad0.pad_h = param_conv_bias_pad0.pad_w = 0;
-    auto b1 = mkcvar("b1", {1, 8, 1, 1});
     auto w1_f1 = mkcvar("w1_1", {8, 3, 1, 1});
-    auto conv1_f1 = opr::ConvBias::make(x, w1_f1, b1, param_conv_bias_pad0, {},
+    auto conv1_f1 = opr::ConvBias::make(x, w1_f1, param_conv_bias_pad0, {},
                                         OperatorNodeConfig("conv1_f1"));
 
     auto conv1_add = conv1_f1 * conv1;
@@ -3263,9 +3262,8 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
     auto w1_2 = mkcvar_dtype("w1_2", {8, 8, 3, 3}, dtype::QuantizedS8(2.5f));
-    auto b1_2 = mkcvar_dtype("b1_2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
     auto conv_1_2 = opr::ConvBias::make(
-            conv_1_q8, w1_2, b1_2, param_conv_bias, {},
+            conv_1_q8, w1_2, param_conv_bias, {},
             OperatorNodeConfig{"conv_1_2", cn, dtype::QuantizedS8{6.25f}});
     auto conv_1_2_fp32 = opr::TypeCvt::make(conv_1_2, dtype::Float32());
 
