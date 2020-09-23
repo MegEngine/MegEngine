@@ -1579,3 +1579,9 @@ def batched_nms(
     indices = indices[0][: count.item()]
     keep_inds = sorted_idx[indices]
     return keep_inds
+
+
+
+
+from .loss import *  # isort:skip
+from .quantized import conv_bias_activation  # isort:skip
