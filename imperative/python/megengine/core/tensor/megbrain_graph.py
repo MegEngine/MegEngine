@@ -50,7 +50,16 @@ class Graph(_imperative_rt.ComputingGraph):
 
     def execute(self, *args):
         assert self._future is None
-        self._future = self._executor.submit(self._function.execute, *args)
+
+        def wrapped(*args):
+            try:
+                self._function.execute(*args)
+            except Exception as exc:
+                for i in self._function._all_rendezvous:
+                    i.set_exception(str(exc))
+                raise exc
+
+        self._future = self._executor.submit(wrapped, *args)
 
     def wait(self):
         assert self._future is not None
