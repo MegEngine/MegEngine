@@ -15,6 +15,7 @@ from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
 from ..core.tensor import utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
+from ..core.tensor.utils import astensor1d
 from ..distributed import WORLD, is_distributed
 from ..random import uniform
 from ..tensor import Tensor
@@ -868,7 +869,8 @@ def warp_perspective(
         imode=interp_mode, bmode=border_mode, format="NCHW", border_val=border_val
     )
     inp, M = utils.convert_inputs(inp, M)
-    (result,) = apply(op, inp, M, Tensor(dsize))
+    dsize = astensor1d(dsize, inp, dtype="int32", device=inp.device)
+    (result,) = apply(op, inp, M, dsize)
     return result
 
 
