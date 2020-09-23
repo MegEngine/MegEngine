@@ -43,7 +43,7 @@ class DataLoader:
     ):
         r"""Provides a convenient way to iterate on a given dataset.
 
-        `DataLoader` combines a dataset with sampler, transform and collator,
+        `DataLoader` combines a dataset with `sampler`, `transform` and `collator`,
         make it flexible to get minibatch continually from a dataset.
 
         :type dataset: Dataset
@@ -53,21 +53,21 @@ class DataLoader:
             If specified, :attr:`shuffle` must be ``False``.
         :type transform: Transform
         :param transform: defined the transforming strategy for a sampled batch.
-            (default: ``None``)
+            Default: None
         :type collator: Collator
         :param collator: defined the merging strategy for a transformed batch.
-            (default: ``None``)
+            Default: None
         :type num_workers: int
         :param num_workers: the number of sub-process to load, transform and collate
-            the batch. ``0`` means using single-process. (default: ``0``)
+            the batch. ``0`` means using single-process. Default: 0
         :type timeout: int
         :param timeout: if positive, means the timeout value(second) for collecting a
-            batch from workers. (default: 0)
+            batch from workers. Default: 0
         :type divide: bool
         :param divide: define the paralleling strategy in multi-processing mode.
             ``True`` means one batch is divided into :attr:`num_workers` pieces, and
             the workers will process these pieces parallelly. ``False`` means
-            different sub-process will process different batch. (default: ``False``)
+            different sub-process will process different batch. Default: False
 
         """
 

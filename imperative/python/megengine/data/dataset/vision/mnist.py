@@ -22,12 +22,12 @@ logger = get_logger(__name__)
 
 
 class MNIST(VisionDataset):
-    r""" ``Dataset`` for MNIST meta data
+    r""" ``Dataset`` for MNIST meta data.
     """
 
     url_path = "http://yann.lecun.com/exdb/mnist/"
     """
-    url prefix for downloading raw file
+    Url prefix for downloading raw file.
     """
     raw_file_name = [
         "train-images-idx3-ubyte.gz",
@@ -36,7 +36,7 @@ class MNIST(VisionDataset):
         "t10k-labels-idx1-ubyte.gz",
     ]
     """
-    raw file names of both training set and test set (10k)
+    Raw file names of both training set and test set (10k).
     """
     raw_file_md5 = [
         "f68b3c2dcbeaaa9fbdd348bbdeb94873",
@@ -45,7 +45,7 @@ class MNIST(VisionDataset):
         "ec29112dd5afa0611ce80d1b7f02629c",
     ]
     """
-    md5 for checking raw files
+    Md5 for checking raw files.
     """
 
     def __init__(
@@ -57,10 +57,10 @@ class MNIST(VisionDataset):
     ):
         r"""
         :param root: path for mnist dataset downloading or loading, if ``None``,
-            set ``root`` to the ``_default_root``
-        :param train: if ``True``, loading trainingset, else loading test set
+            set ``root`` to the ``_default_root``.
+        :param train: if ``True``, loading trainingset, else loading test set.
         :param download: if raw files do not exists and download sets to ``True``,
-            download raw files and process, otherwise raise ValueError, default is True
+            download raw files and process, otherwise raise ValueError, default is True.
 
         """
         super().__init__(root, order=("image", "image_category"))

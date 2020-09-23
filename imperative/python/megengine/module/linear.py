@@ -25,7 +25,7 @@ class Linear(Module):
 
     :param in_features: size of each input sample.
     :param out_features: size of each output sample.
-    :param bias: If set to ``False``, the layer will not learn an additive bias.
+    :param bias: if it's ``False``, the layer will not learn an additional ``bias``.
         Default: ``True``
 
     Examples:

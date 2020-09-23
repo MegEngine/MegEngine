@@ -94,24 +94,24 @@ def _init_hub(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ):
-    """Imports hubmodule like python import
+    """Imports hubmodule like python import.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
         tag/branch. The default branch is ``master`` if not specified.
         Example: ``"brain_sdk/MegBrain[:hub]"``
     :param git_host:
-        host address of git repo
+        host address of git repo.
         Example: github.com
     :param use_cache:
-        whether to use locally cached code or completely re-fetch
+        whether to use locally cached code or completely re-fetch.
     :param commit:
-        commit id on github or gitlab
+        commit id on github or gitlab.
     :param protocol:
         which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
         The value should be one of HTTPS, SSH.
     :return:
-        hubconf.py as a python module
+        a python module.
     """
     cache_dir = os.path.expanduser(os.path.join(_get_megengine_home(), "hub"))
     os.makedirs(cache_dir, exist_ok=True)
@@ -137,24 +137,24 @@ def list(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ) -> List[str]:
-    """Lists all entrypoints available in repo hubconf
+    """Lists all entrypoints available in repo hubconf.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
         tag/branch. The default branch is ``master`` if not specified.
         Example: ``"brain_sdk/MegBrain[:hub]"``
     :param git_host:
-        host address of git repo
+        host address of git repo.
         Example: github.com
     :param use_cache:
-        whether to use locally cached code or completely re-fetch
+        whether to use locally cached code or completely re-fetch.
     :param commit:
-        commit id on github or gitlab
+        commit id on github or gitlab.
     :param protocol:
         which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
         The value should be one of HTTPS, SSH.
     :return:
-        all entrypoint names of the model
+        all entrypoint names of the model.
     """
     hubmodule = _init_hub(repo_info, git_host, use_cache, commit, protocol)
 
@@ -182,14 +182,14 @@ def load(
         tag/branch. The default branch is ``master`` if not specified.
         Example: ``"brain_sdk/MegBrain[:hub]"``
     :param entry:
-        an entrypoint defined in hubconf
+        an entrypoint defined in hubconf.
     :param git_host:
-        host address of git repo
+        host address of git repo.
         Example: github.com
     :param use_cache:
-        whether to use locally cached code or completely re-fetch
+        whether to use locally cached code or completely re-fetch.
     :param commit:
-        commit id on github or gitlab
+        commit id on github or gitlab.
     :param protocol:
         which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
         The value should be one of HTTPS, SSH.
@@ -217,9 +217,9 @@ def help(
 ) -> str:
     """This function returns docstring of entrypoint ``entry`` by following steps:
 
-    1. Pull the repo code specified by git and repo_info
+    1. Pull the repo code specified by git and repo_info.
     2. Load the entry defined in repo's hubconf.py
-    3. Return docstring of function entry
+    3. Return docstring of function entry.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -228,17 +228,17 @@ def help(
     :param entry:
         an entrypoint defined in hubconf.py
     :param git_host:
-        host address of git repo
+        host address of git repo.
         Example: github.com
     :param use_cache:
-        whether to use locally cached code or completely re-fetch
+        whether to use locally cached code or completely re-fetch.
     :param commit:
-        commit id on github or gitlab
+        commit id on github or gitlab.
     :param protocol:
         which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
         The value should be one of HTTPS, SSH.
     :return:
-        docstring of entrypoint ``entry``
+        docstring of entrypoint ``entry``.
     """
     hubmodule = _init_hub(repo_info, git_host, use_cache, commit, protocol)
 
@@ -255,10 +255,10 @@ def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
     If the object is already present in ``model_dir``, it's deserialized and
     returned. If no ``model_dir`` is specified, it will be ``MGE_HOME/serialized``.
 
-    :param url: url to serialized object
-    :param model_dir: dir to cache target serialized file
+    :param url: url to serialized object.
+    :param model_dir: dir to cache target serialized file.
 
-    :return: loaded object
+    :return: loaded object.
     """
     if model_dir is None:
         model_dir = os.path.join(_get_megengine_home(), "serialized")

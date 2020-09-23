@@ -16,7 +16,7 @@ import numpy as np
 
 class NonExistNum:
     """An object that behaves like a number but means a field does not exist; It is
-    always greater than any real number
+    always greater than any real number.
     """
 
     def __truediv__(self, _):
@@ -69,12 +69,12 @@ class OprProfRst:
 
     footprint = None
     """A mapping from ``"memory"`` or ``"computation"`` to the actual number
-    of corresponding operations"""
+    of corresponding operations."""
 
     def __init__(self, entry: dict):
         """Opr profiling initialization, which sets up name, type and id of opr_info.
 
-        :param entry: profiling json exec_graph items
+        :param entry: profiling json exec_graph items.
         """
         assert isinstance(entry, dict)
         self.opr_info = collections.OrderedDict()
@@ -84,7 +84,7 @@ class OprProfRst:
         self.footprint = collections.defaultdict(NonExistNum)
 
     def update_device_prof_info(self, dev_time: dict):
-        """Updates device profiling info
+        """Updates device profiling info.
 
         :param dev_time: device time for single opr,
             is an attribute of profiling result.
@@ -93,7 +93,7 @@ class OprProfRst:
         self.time_dict["device"].append(copy.deepcopy(dev_time))
 
     def update_host_prof_info(self, host_time: dict):
-        """Updates host profiling info
+        """Updates host profiling info.
 
         :param host_time: host time for single opr,
             is an attribute of profiling result.
@@ -102,7 +102,7 @@ class OprProfRst:
         self.time_dict["host"].append(copy.deepcopy(host_time))
 
     def update_footprint(self, footprint: dict):
-        """Updates opr footprint
+        """Updates opr footprint.
 
         :param footprint: footprint for single opr,
             is an attribute of profiling result.
@@ -128,7 +128,7 @@ class Record:
     ]
 
     def __init__(self, time: float, info: dict, footprint: dict):
-        """Initializes single record
+        """Initializes single record.
 
         :param time: opr running time, evaluated by applying users providing
             function to OprProfRst.
@@ -153,7 +153,7 @@ class Record:
             self.opr_id = int(self.opr_id)
 
     def get_column_by_name(self, name: str = None):
-        """extracts column value by its column name
+        """Extracts column value by its column name.
 
         :param name: column name, None for time.
         """
@@ -165,7 +165,7 @@ class Record:
 
 class ProfileAnalyzer:
     def __init__(self, obj: dict, opr_filter: Callable = lambda opr, inp, out: True):
-        """Initializes ProfileAnalyzer
+        """Initializes ProfileAnalyzer.
 
         :param obj: dict dumped from json str.
         :param opr_filter: function that filter oprs.
@@ -202,11 +202,11 @@ class ProfileAnalyzer:
     def _aggregate(
         self, records: List[Record], aop: Union[str, Callable], atype: Optional[str]
     ) -> List[Record]:
-        """Aggregate operation
-
-        :param records: selected records
+        """Aggregate operation.
+    
+        :param records: selected records.
         :param aop: aggregate operation, if aop is str, we would replace it
-            with associated numpy function wth aop name"
+            with associated numpy function wth aop name".
         :param atype: the type aggregated by, None for aggregating all into single
             record.
         """
@@ -247,10 +247,10 @@ class ProfileAnalyzer:
         return rst
 
     def _sort(self, records: List[Record], sort_by: str) -> List[Record]:
-        """sort operation
+        """Sort operation.
 
         :param records: the records after aggregate operation.
-        :param sort_by: keyword for sorting the list
+        :param sort_by: keyword for sorting the list.
         """
         if sort_by is None:
             return records
@@ -271,14 +271,14 @@ class ProfileAnalyzer:
         sort_by: str = None,
         top_k: int = 0,
     ) -> List[Record]:
-        """Select operation
+        """Select operation.
 
         :param time_func: time_func provided by user, would apply to every
-            OprProfRst
+            OprProfRst.
         :param opr_filter: filter satisfied operatiors.
         :param aggregate: function that apply to list of records which are
-            aggregated by atype
-        :param aggregate_by: the type aggregated by
+            aggregated by atype.
+        :param aggregate_by: the type aggregated by.
         :param sort_by: keyword for sorting all records.
         :param top_k: specify the maximum number of records.
         :return: the records that go through select, aggregate, sort.
@@ -304,18 +304,18 @@ class TimeFuncHelper:
 
     @staticmethod
     def _eval_time(prof_type, end_key, func, opr_prof):
-        """Eval time
+        """Eval time.
 
         :type prof_type: str
-        :param prof_type: 'host' or 'device'
+        :param prof_type: 'host' or 'device'.
         :type end_key: str
-        :param end_key: 'kern' or 'end'
+        :param end_key: 'kern' or 'end'.
         :type func: function
         :param func: apply to list of all ``thread`` of ``gpu`` time.
         :type opr_prof: `class OprProfRst`
-        :param opr_prof: operator profiling result
+        :param opr_prof: operator profiling result.
         :rtype: float
-        :return: time
+        :return: time.
         """
 
         if prof_type not in opr_prof.time_dict:
@@ -327,10 +327,10 @@ class TimeFuncHelper:
     def eval_time_func(prof_type: str, end_key: str, func: Callable) -> float:
         """Eval oprerator profile time.
 
-        :param prof_type: 'host' or 'device'
-        :param end_key: 'kern' or 'end'
+        :param prof_type: 'host' or 'device'.
+        :param end_key: 'kern' or 'end'.
         :param func: apply to list of all ``thread`` of ``gpu`` time.
-        :return: Eval time results
+        :return: eval time results.
         """
         return functools.partial(TimeFuncHelper._eval_time, prof_type, end_key, func)
 
@@ -338,18 +338,18 @@ class TimeFuncHelper:
     def _min_start(
         prof_type, end_key, func, opr_prof
     ):  # pylint: disable=unused-argument
-        """Eval minimum start time
+        """Eval minimum start time.
 
         :type prof_type: str
-        :param prof_type: 'host' or 'device'
+        :param prof_type: 'host' or 'device'.
         :type end_key: str
-        :param end_key: 'kern' or 'end'
+        :param end_key: 'kern' or 'end'.
         :type func: function
         :param func: apply to list of all ``thread`` of ``gpu`` time.
         :type opr_prof: `class OprProfRst`
-        :param opr_prof: operator profiling result
+        :param opr_prof: operator profiling result.
         :rtype: float
-        :return: time
+        :return: time.
         """
         if prof_type not in opr_prof.time_dict:
             return None
@@ -360,12 +360,12 @@ class TimeFuncHelper:
     def min_start_func(
         prof_type: str, end_key: str, func: Callable
     ) -> float:  # pylint: disable=unused-argument
-        """Eval oprerator profile min start time
+        """Eval oprerator profile min start time.
 
-        :param prof_type: 'host' or 'device'
-        :param end_key: 'kern' or 'end'
+        :param prof_type: 'host' or 'device'.
+        :param end_key: 'kern' or 'end'.
         :param func: apply to list of all ``thread`` of ``gpu`` time.
-        :return: Eval time results
+        :return: eval time results.
         """
         return functools.partial(TimeFuncHelper._min_start, prof_type, end_key, func)
 
@@ -374,15 +374,15 @@ class TimeFuncHelper:
         """Eval maximum end time
 
         :type prof_type: str
-        :param prof_type: 'host' or 'device'
+        :param prof_type: 'host' or 'device'.
         :type end_key: str
-        :param end_key: 'kern' or 'end'
+        :param end_key: 'kern' or 'end'.
         :type func: function
         :param func: apply to list of all ``thread`` of ``gpu`` time.
         :type opr_prof: `class OprProfRst`
-        :param opr_prof: operator profiling result
+        :param opr_prof: operator profiling result.
         :rtype: float
-        :return: time
+        :return: time.
         """
         if prof_type not in opr_prof.time_dict:
             return None
@@ -391,11 +391,11 @@ class TimeFuncHelper:
 
     @staticmethod
     def max_end_func(prof_type: str, end_key: str, func: Callable) -> float:
-        """Eval oprerator profile max end time
+        """Eval oprerator profile max end time.
 
-        :param prof_type: 'host' or 'device'
-        :param end_key: 'kern' or 'end'
+        :param prof_type: 'host' or 'device'.
+        :param end_key: 'kern' or 'end'.
         :param func: apply to list of all ``thread`` of ``gpu`` time.
-        :return: Eval time results
+        :return: eval time results.
         """
         return functools.partial(TimeFuncHelper._max_end, prof_type, end_key, func)

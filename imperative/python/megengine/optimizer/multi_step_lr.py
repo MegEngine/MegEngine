@@ -17,10 +17,12 @@ class MultiStepLR(LRScheduler):
     r"""Decays the learning rate of each parameter group by gamma once the
         number of epoch reaches one of the milestones.
 
-    :param optimizer: Wrapped optimizer.
-    :param milestones (list): List of epoch indices. Must be increasing.
-    :param gamma (float): Multiplicative factor of learning rate decay. Default: 0.1.
-    :param current_epoch: The index of current epoch. Default: -1.
+    :param optimizer: wrapped optimizer.
+    :type milestones: list
+    :param milestones: list of epoch indices which should be increasing.
+    :type gamma: float
+    :param gamma: multiplicative factor of learning rate decay. Default: 0.1
+    :param current_epoch: the index of current epoch. Default: -1
     """
 
     def __init__(
@@ -55,7 +57,8 @@ class MultiStepLR(LRScheduler):
     def load_state_dict(self, state_dict):
         r"""Loads the schedulers state.
 
-        :param state_dict (dict): scheduler state.
+        :type state_dict: dict
+        :param state_dict: scheduler state.
         """
         tmp_dict = {}
         for key in ["milestones", "gamma", "current_epoch"]:

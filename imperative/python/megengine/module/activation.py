@@ -20,10 +20,10 @@ class Softmax(Module):
     .. math::
             \text{Softmax}(x_{i}) = \frac{exp(x_i)}{\sum_j exp(x_j)}
 
-    It is applied to an n-dimensional input Tensor and rescaling them so that the elements of the
-    n-dimensional output Tensor lie in the range of `[0, 1]` and sum to 1.
+    It is applied to all elements along axis, and rescales elements so that
+    they stay in the range `[0, 1]` and sum to 1.
 
-    :param axis: An axis along which softmax will be applied. By default,
+    :param axis: Along which axis softmax will be applied. By default,
         softmax will apply along the highest ranked axis.
 
     Examples:
@@ -141,8 +141,7 @@ class PReLU(Module):
         \end{cases}
 
     Here :math:`a` is a learnable parameter. When called without arguments, `PReLU()` uses
-    a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`,
-    a seperate :math:`a` is used for each input channle.
+    a single paramter :math:`a` across all input channel. If called with `PReLU(num_of_channels)`, each input channle will has it's own :math:`a`.
 
     :param num_parameters: number of :math:`a` to learn, there is only two
         values are legitimate: 1, or the number of channels at input. Default: 1

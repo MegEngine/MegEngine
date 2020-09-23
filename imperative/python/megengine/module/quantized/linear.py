@@ -15,7 +15,7 @@ from .module import QuantizedModule
 
 
 class Linear(QuantizedModule):
-    r"""quantized version of :class:`~.qat.linear.Linear`."""
+    r"""Quantized version of :class:`~.qat.linear.Linear`."""
 
     def __init__(
         self, dtype: np.dtype = None,
@@ -40,7 +40,7 @@ class Linear(QuantizedModule):
     @classmethod
     def from_qat_module(cls, qat_module: QAT.Linear):
         r"""
-        return a :class:`~.QuantizedModule` instance converted from a
+        Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
         output_dtype = qat_module.get_activation_dtype()

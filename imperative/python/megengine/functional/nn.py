@@ -107,19 +107,18 @@ def conv2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a ``grouped convolution``. When groups is not 1,
-        in_channels and out_channels must be divisible by groups,
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
-    :type conv_mode: string or :class:`P.Convolution.Mode`.
+    :type conv_mode: string or :class:`P.Convolution.Mode`
     :param conv_mode: supports "CROSS_CORRELATION" or "CONVOLUTION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`.
+        :class:`P.Convolution.ComputeMode`
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
-        Float32 would be used for accumulator and intermediate result, but only
+        "Float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
     :return: output tensor.
     """
@@ -168,24 +167,23 @@ def conv_transpose2d(
 
     :param inp: feature map of the convolution operation.
     :param weight: convolution kernel.
-    :param bias: bias added to the result of convolution (if given)
+    :param bias: bias added to the result of convolution (if given).
     :param stride: stride of the 2D convolution operation. Default: 1
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a ``grouped convolution``. When groups is not 1,
-        in_channels and out_channels must be divisible by groups,
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by groups,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
-    :type conv_mode: string or :class:`P.Convolution.Mode`.
+    :type conv_mode: string or :class:`P.Convolution.Mode`
     :param conv_mode: supports "CROSS_CORRELATION" or "CONVOLUTION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`.
+        :class:`P.Convolution.ComputeMode`
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
-        Float32 would be used for accumulator and intermediate result, but only
+        "Float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
     :return: output tensor.
     """
@@ -224,7 +222,7 @@ def local_conv2d(
     dilation: Union[int, Tuple[int, int]] = 1,
     conv_mode="CROSS_CORRELATION",
 ) -> Tensor:
-    """Applies spatial 2D convolution over an image with untied kernels.
+    """Applies spatial 2D convolution over an image with unshared kernels.
 
     Refer to :class:`~.LocalConv2d` for more information.
     """
@@ -264,7 +262,7 @@ def max_pool2d(
     :param kernel_size: size of the window.
     :param stride: stride of the window. If not provided, its value is set to kernel_size.
         Default: None
-    :param padding: implicit zero padding to be added on both sides. Default: 0
+    :param padding: implicit zero padding added on both sides. Default: 0
     :return: output tensor.
     """
     if stride is None:
@@ -293,15 +291,15 @@ def avg_pool2d(
     padding: Union[int, Tuple[int, int]] = 0,
     mode: str = "AVERAGE_COUNT_EXCLUDE_PADDING",
 ) -> Tensor:
-    """Applies a 2D average pooling over an input tensor.
+    """Applies 2D average pooling over an input tensor.
 
     Refer to :class:`~.AvgPool2d` for more information.
 
     :param inp: input tensor.
     :param kernel_size: size of the window.
-    :param stride: stride of the window. If not provided, its value is set to kernel_size.
+    :param stride: stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
-    :param padding: implicit zero padding to be added on both sides. Default: 0
+    :param padding: implicit zero padding added on both sides. Default: 0
     :param mode: whether to count padding values. Default: "AVERAGE_COUNT_EXCLUDE_PADDING"
     :return: output tensor.
     """
@@ -349,7 +347,7 @@ def softplus(inp: Tensor) -> Tensor:
         \text{softplus}(x) = \log(1 + \exp(x))
     
     softplus is a smooth approximation to the ReLU function and can be used
-    to constrain the output of a machine to always be positive.
+    to constrain the output to be always positive.
     For numerical stability the implementation follows this transformation:
 
     .. math::
@@ -357,7 +355,7 @@ def softplus(inp: Tensor) -> Tensor:
                            = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0) 
                            = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
 
-    :param inp: The input tensor
+    :param inp: input tensor.
 
     Examples:
 
@@ -396,8 +394,8 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         = x - \log (\sum_{i}(\exp (x_{i})))
         = x - logsumexp(x)
     
-    :param inp: The input tensor
-    :param axis: An axis along which log_softmax will be applied.
+    :param inp: input tensor.
+    :param axis: axis along which log_softmax will be applied.
 
     Examples:
 
@@ -431,7 +429,7 @@ def logsigmoid(inp: Tensor) -> Tensor:
         = - \log(1 + exp(-x))
         = - \text{softplus}(-x)
 
-    :param inp: The input tensor
+    :param inp: input tensor.
 
     Examples:
 
@@ -460,8 +458,7 @@ def logsumexp(
     inp: Tensor, axis: Union[int, Sequence[int]], keepdims: bool = False
 ) -> Tensor:
     r"""
-    Compute the log of the sum of exponentials of inputs along the given :attr:`axis`. 
-    The computation is numerically stabilized.
+    Calculates the logarithm of the inputs' exponential sum along the given :attr:`axis`.
     
     .. math::
         
@@ -479,8 +476,8 @@ def logsumexp(
     .. math::
         b = \max(x_j)
 
-    :param inp: The input tensor.
-    :param axis: Axis over which the sum is taken. It can be a single axis or a list of axes.
+    :param inp: input tensor.
+    :param axis: axis over which the sum is taken. It could be single axis or list of axes.
     :param keepdims: whether to retain :attr:`axis` or not for the output tensor.
 
     Examples:
@@ -524,13 +521,13 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     .. math::
             \text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
 
-    It is applied to all elements along axis, and will re-scale them so that
-    the elements lie in the range `[0, 1]` and sum to 1.
+    It is applied to all elements along axis, and rescales elements so that
+    they stay in the range `[0, 1]` and sum to 1.
 
     See :class:`~megengine.module.activation.Softmax` for more details.
 
-    :param inp: The input tensor.
-    :param axis: An axis along which softmax will be applied. By default,
+    :param inp: input tensor.
+    :param axis: an axis along which softmax will be applied. By default,
         softmax will apply along the highest ranked axis.
 
     Examples:
@@ -573,7 +570,7 @@ def batch_norm2d(
     eps: float = 1e-5,
     inplace: bool = True
 ):
-    """Applies batch normalization to the input.
+    r"""Applies batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
@@ -585,13 +582,13 @@ def batch_norm2d(
     :param bias: bias tensor in the learnable affine parameters.
         See :math:`\beta` in :class:`~.BatchNorm2d`.
     :param training: a boolean value to indicate whether batch norm is performed
-        in traning mode. Default: False
+        in training mode. Default: False
     :param momentum: value used for the ``running_mean`` and ``running_var``
         computation.
         Default: 0.9
     :param eps: a value added to the denominator for numerical stability.
         Default: 1e-5
-    :param inplace: whether to update running_mean and running_var inplace or return new tensors 
+    :param inplace: whether to update ``running_mean`` and ``running_var`` inplace or return new tensors
         Default: True
     :return: output tensor.
     """
@@ -677,7 +674,7 @@ def sync_batch_norm(
     eps_mode="ADDITIVE",
     group=WORLD,
 ) -> Tensor:
-    """Applies synchronized batch normalization to the input.
+    r"""Applies synchronized batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
@@ -887,19 +884,18 @@ def matmul(
 
     With different inputs dim, this function behaves differently:
 
-    - Both 1-D tensor, simply forward to dot.
+    - Both 1-D tensor, simply forward to ``dot``.
     - Both 2-D tensor, normal matrix multiplication.
     - If one input tensor is 1-D, matrix vector multiplication.
-    - If at least one tensor are 3-dimensional or >3-dimensional, the batched matrix-matrix is returned, and the tensor with smaller dimension will
+    - If at least one tensor are 3-dimensional or >3-dimensional, the other tensor should have dim >= 2, the batched matrix-matrix is returned, and the tensor with smaller dimension will
       be broadcasted. For example:
-        - inp1: `(k, m)`, inp2: `(m, p)`, return: `(k, p)`
         - inp1: `(n, k, m)`, inp2: `(n, m, p)`, return: `(n, k, p)`
         - inp1: `(n, k, m)`, inp2: `(m, p)`, return: `(n, k, p)`
         - inp1: `(n, j, k, m)`, inp2: `(n, j, m, p)`, return: `(n, j, k, p)`
 
-    :param inp1: The first matrix to be multiplied
-    :param inp2: The second matrix to be multiplied
-    :return: The output tensor
+    :param inp1: first matrix to be multiplied.
+    :param inp2: second matrix to be multiplied.
+    :return: output tensor.
 
     Examples:
 
@@ -983,12 +979,12 @@ def matmul(
 
 def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
     """
-    Compute dot-product of two vectors ``inp1`` and ``inp2``.
+    Computes dot-product of two vectors ``inp1`` and ``inp2``.
     inputs must be 1-dimensional, scalar input can be automatically broadcasted.
 
-    :param inp1: The first vector
-    :param inp2: The second vector
-    :return: The output value
+    :param inp1: first vector.
+    :param inp2: second vector.
+    :return: output value.
 
     Examples:
 
@@ -1018,10 +1014,10 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
 def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     """
-    Compute the singular value decompositions of input matrix ``inp``.
+    Computes the singular value decompositions of input matrix.
 
-    :param inp: The input matrix, must has shape ``[..., M, N]``
-    :return: The output matrices, U, sigma, V
+    :param inp: input matrix, must has shape `[..., M, N]`.
+    :return: output matrices, `(U, sigma, V)`.
 
     Examples:
 
@@ -1054,8 +1050,7 @@ def interpolate(
     mode: str = "BILINEAR",
     align_corners: bool = None,
 ) -> Tensor:
-    r"""Down/up samples the input tensor to either the given size or the given
-    scale_factor.
+    r"""Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
 
     :param inp: input tensor.
     :param size: size of the output tensor. Default: None
@@ -1198,12 +1193,12 @@ def interpolate(
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
     """Returns a new tensor where each of the elements are randomly set to zero
-    with probability P = ``drop_prob``. Optionally rescale the output tensor.
+    with probability P = ``drop_prob``. Optionally rescale the output tensor if ``training`` is True.
 
     :param inp: input tensor.
     :param drop_prob: probability to drop (set to zero) a single element.
     :param training: the default behavior of ``dropout`` during training is to rescale the output,
-        then it can be replaced by an :class:`~.Identity` during inference, default to True.
+        then it can be replaced by an :class:`~.Identity` during inference. Default: True
     :return: the output tensor
 
     Examples:
@@ -1245,10 +1240,10 @@ def embedding(
     """Applies lookup table for embedding.
 
     :param inp: tensor with indices.
-    :param weight: learnable weights which embedding from.
-    :param padding_idx: should be set to None, not support now.
-    :param max_norm: should be set to None, not support now.
-    :param norm_type: should be set to None, not support now.
+    :param weight: learnable weights which embeds from.
+    :param padding_idx: should be set to None, not supported now.
+    :param max_norm: should be set to None, not supported now.
+    :param norm_type: should be set to None, not supported now.
     :return: output tensor.
 
     Refer to :class:`~.Embedding` for more information.
@@ -1324,14 +1319,14 @@ def roi_align(
 ) -> Tensor:
     """Applies roi align on input feature.
 
-    :param inp: tensor that represents the input feature, `(N, C, H, W)` images.
-    :param rois: `(N, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
+    :param inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
+    :param rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
     :param output_shape: `(height, width)` shape of output rois feature.
     :param mode: "max" or "average", use max/average align just like max/average pooling. Default: "average"
     :param spatial_scale: scale the input boxes by this number. Default: 1.0
     :param sample_points: number of inputs samples to take for each output sample.
         0 to take samples densely. Default: 2
-    :param aligned: wheather align the input feature, with `aligned=True`,
+    :param aligned: wheather to align the input feature, with `aligned=True`,
         we first appropriately scale the ROI and then shift it by -0.5. Default: True
     :return: output tensor.
 
@@ -1384,7 +1379,7 @@ def roi_align(
 def indexing_one_hot(
     src: Tensor, index: Tensor, axis: int = 1, keepdims=False
 ) -> Tensor:
-    r"""One-hot indexing for some axis.
+    r"""One-hot indexing for some axes.
 
     :param src: input tensor.
     :param index: index tensor.
@@ -1427,7 +1422,7 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
     Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union(IoU).
 
     :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
-    :param iou_thresh: iou threshold for overlapping.
+    :param iou_thresh: IoU threshold for overlapping.
     :param scores: tensor of shape `(N,)`, the score of boxes.
     :return: indices of the elements that have been kept by NMS.
     
@@ -1483,11 +1478,11 @@ def batched_nms(
     r"""
     Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union (IoU).
 
-    :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format
-    :param iou_thresh: iou threshold for overlapping
+    :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
+    :param iou_thresh: ``IoU`` threshold for overlapping.
     :param idxs: tensor of shape `(N,)`, the class indexs of boxes in the batch.
     :param scores: tensor of shape `(N,)`, the score of boxes.
-    :return: indices and the number of the elements that have been kept by NMS
+    :return: indices of the elements that have been kept by NMS.
 
     Examples:
 

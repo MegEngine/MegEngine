@@ -83,12 +83,12 @@ def init_process_group(
 ) -> None:
     """Initialize the distributed process group and specify the device used in the current process
 
-    :param master_ip: IP address of the master node
-    :param port: Port available for all processes to communicate
-    :param world_size: Total number of processes participating in the job
-    :param rank: Rank of the current process
-    :param device: The GPU device id to bind this process to
-    :param backend: Communicator backend, currently support 'nccl' and 'ucx'
+    :param master_ip: ip address of the master node.
+    :param port: port available for all processes to communicate.
+    :param world_size: total number of processes participating in the job.
+    :param rank: rank of the current process.
+    :param device: the GPU device id to bind this process to.
+    :param backend: communicator backend, currently support 'nccl' and 'ucx'.
     """
     if not isinstance(master_ip, str):
         raise TypeError("Expect type str but got {}".format(type(master_ip)))
@@ -127,50 +127,50 @@ def init_process_group(
 
 
 def is_distributed() -> bool:
-    """Return True if the distributed process group has been initialized"""
+    """Return True if the distributed process group has been initialized."""
     return _sd is not None
 
 
 def get_rank() -> int:
-    """Get the rank of the current process"""
+    """Get the rank of the current process."""
     return _sd.proc_rank if _sd is not None else 0
 
 
 def get_world_size() -> int:
-    """Get the total number of processes participating in the job"""
+    """Get the total number of processes participating in the job."""
     return _sd.world_size if _sd is not None else 1
 
 
 def get_backend() -> str:
-    """Get the backend str"""
+    """Get the backend str."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.backend if _sd is not None else None
 
 
 def get_py_server_addr() -> Tuple[str, int]:
-    """Get master_ip and port of python XML RPC server"""
+    """Get master_ip and port of python XML RPC server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.master_ip, _sd.py_server_port
 
 
 def get_mm_server_addr() -> Tuple[str, int]:
-    """Get master_ip and port of C++ mm_server"""
+    """Get master_ip and port of C++ mm_server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.master_ip, _sd.mm_server_port
 
 
 def get_client() -> Client:
-    """Get client of python XML RPC server"""
+    """Get client of python XML RPC server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.client
 
 
 def new_group(proc_ranks: List[int]) -> Group:
-    """Build a subgroup containing certain ranks"""
+    """Build a subgroup containing certain ranks."""
     return Group(proc_ranks)
 
 
 def group_barrier(group: Optional[Group] = WORLD) -> None:
-    """Block until all ranks in the group reach this barrier"""
+    """Block until all ranks in the group reach this barrier."""
     assert isinstance(group, Group)
     _sd.client.group_barrier(group.key, group.size)

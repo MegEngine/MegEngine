@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 
 class ImageNet(ImageFolder):
     r"""
-    Load ImageNet from raw files or folder, expected folder looks like
+    Load ImageNet from raw files or folder. Expected folder looks like:
 
     .. code-block:: bash
 
@@ -60,25 +60,25 @@ class ImageNet(ImageFolder):
 
     def __init__(self, root: str = None, train: bool = True, **kwargs):
         r"""
-        initialization:
+        Initialization:
 
-        * if ``root`` contains ``self.target_folder`` depent on ``train``:
+        * if ``root`` contains ``self.target_folder`` depending on ``train``:
 
-          * initialize ImageFolder with target_folder
+          * initialize ImageFolder with target_folder.
 
         * else:
 
           * if all raw files are in ``root``:
 
-            * parse ``self.target_folder`` from raw files
-            * initialize ImageFolder with ``self.target_folder``
+            * parse ``self.target_folder`` from raw files.
+            * initialize ImageFolder with ``self.target_folder``.
 
           * else:
 
-            * raise error
+            * raise error.
 
-        :param root: root directory of imagenet data, if root is ``None``, used default_dataset_root
-        :param train: if ``True``, load the train split, otherwise load the validation split
+        :param root: root directory of imagenet data, if root is ``None``, use default_dataset_root.
+        :param train: if ``True``, load the train split, otherwise load the validation split.
         """
 
         # process the root path

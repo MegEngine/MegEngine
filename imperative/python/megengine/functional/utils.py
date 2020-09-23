@@ -22,7 +22,7 @@ def accuracy(
     logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
 ) -> Union[Tensor, Iterable[Tensor]]:
     r"""
-    Calculate the classification accuracy given predicted logits and ground-truth labels.
+    Calculates the classification accuracy given predicted logits and ground-truth labels.
 
     :param logits: model predictions of shape `[batch_size, num_classes]`,
         representing the probability (likelyhood) of each class.
@@ -63,25 +63,12 @@ def accuracy(
     return accs
 
 
-def zero_grad(inp: Tensor) -> Tensor:
-    r"""
-    Returns a tensor which is treated as constant during backward gradient calcuation,
-    i.e. its gradient is zero.
-
-    :param inp: Input tensor.
-
-    See implementation of :func:`~.softmax` for example.
-    """
-    print("zero_grad is obsoleted, please use detach instead")
-    raise NotImplementedError
-
-
 def copy(inp, cn):
     r"""
-    Copy tensor to another device.
+    Copies tensor to another device.
 
     :param inp: input tensor.
-    :param cn: device that you copy to.
+    :param cn: destination device.
 
     Examples:
 

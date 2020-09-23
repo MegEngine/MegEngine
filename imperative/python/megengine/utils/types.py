@@ -11,10 +11,10 @@ import functools
 
 
 def get_ndtuple(value, *, n, allow_zero=True):
-    r"""Converts possibly 1D tuple to nd tuple
+    r"""Converts possibly 1D tuple to nd tuple.
 
     :type allow_zero: bool
-    :param allow_zero: whether to allow zero tuple value"""
+    :param allow_zero: whether to allow zero tuple value."""
     if not isinstance(value, collections.abc.Iterable):
         value = int(value)
         value = tuple([value for i in range(n)])

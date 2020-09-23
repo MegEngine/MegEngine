@@ -99,8 +99,9 @@ def _elemwise_multi_type(*args, mode, **kwargs):
 
 
 def add(x, y):
-    """Element-wise addition.
+    """Element-wise `addition`.
     At least one operand should be tensor.
+
     Same for sub/mul/div/floor_div/pow/mod/atan2/eq/ne/lt/le/gt/ge/maximum/minmium.
 
     :param x: input tensor.
@@ -131,68 +132,68 @@ def add(x, y):
 
 
 def sub(x, y):
-    """Element-wise subtraction."""
+    """Element-wise `subtraction`."""
     return _elwise(x, y, mode="sub")
 
 
 def mul(x, y):
-    """Element-wise multiplication."""
+    """Element-wise `multiplication`."""
     return _elwise(x, y, mode="mul")
 
 
 def div(x, y):
-    """Element-wise (x / y)."""
+    """Element-wise `(x / y)`."""
     return _elwise(x, y, mode="true_div")
 
 
 def floor_div(x, y):
-    """Element-wise floor(x / y)."""
+    """Element-wise `floor(x / y)`."""
     return _elwise(x, y, mode="floor_divide")
 
 
 def neg(x):
-    """Element-wise negation."""
+    """Element-wise `negation`."""
     return _elwise(x, mode="negate")
 
 
 def pow(x, y):
-    """Element-wise power."""
+    """Element-wise `power`."""
     return _elwise(x, y, mode="pow")
 
 
 def mod(x, y):
-    """Element-wise remainder of division."""
+    """Element-wise `remainder of division`."""
     return _elwise(x, y, mode="mod")
 
 
 def abs(x):
-    """Element-wise absolute value."""
+    """Element-wise `absolute value`."""
     return _elwise(x, mode="abs")
 
 
 def exp(x):
-    """Element-wise exponential."""
+    """Element-wise `exponential`."""
     return _elwise(x, mode="exp")
 
 
 def expm1(x):
-    """Element-wise exp(x)-1."""
+    """Element-wise `exp(x)-1`."""
     return _elwise(x, mode="expm1")
 
 
 def log(x):
-    """Element-wise logarithm (base `e`)."""
+    """Element-wise `logarithm (base e)`."""
     return _elwise(x, mode="log")
 
 
 def log1p(x):
-    """Element-wise log(x+1) (base `e`)."""
+    """Element-wise `log(x+1) (base e)`."""
     return _elwise(x, mode="log1p")
 
 
 def sqrt(x: Tensor) -> Tensor:
-    """Element-wise sqrt.
-    For negative input value, return ``NaN``.
+    """Element-wise `sqrt`.
+    Returns ``NaN`` for negative input value.
 
     :param x: input tensor.
     :return: computed tensor.
@@ -222,7 +223,7 @@ def sqrt(x: Tensor) -> Tensor:
 
 def square(x: Tensor) -> Tensor:
     """
-    Return a new tensor with the square of the elements of input tensor.
+    Returns a new tensor with the square of the elements of input tensor.
 
     :param inp: The input tensor
     :return: The computed tensor
@@ -251,27 +252,27 @@ def square(x: Tensor) -> Tensor:
 
 
 def round(x):
-    """Element-wise rounding to int."""
+    """Element-wise `rounding to int`."""
     return _elwise(x, mode="round")
 
 
 def ceil(x):
-    """Element-wise ceiling."""
+    """Element-wise `ceiling`."""
     return _elwise(x, mode="ceil")
 
 
 def floor(x):
-    """Element-wise floor."""
+    """Element-wise `floor`."""
     return _elwise(x, mode="floor")
 
 
 def maximum(x, y):
-    """Element-wise maximum of array elements."""
+    """Element-wise `maximum of array elements`."""
     return _elwise(x, y, mode="max")
 
 
 def minimum(x, y):
-    """Element-wise minimum of array elements."""
+    """Element-wise `minimum of array elements`."""
     return _elwise(x, y, mode="min")
 
 
@@ -279,7 +280,7 @@ def minimum(x, y):
 
 
 def cos(x):
-    """Element-wise cosine.
+    """Element-wise `cosine`.
 
     :param x: input tensor.
     :return: computed tensor.
@@ -308,68 +309,68 @@ def cos(x):
 
 
 def sin(x):
-    """Element-wise sine."""
+    """Element-wise `sine`."""
     return _elwise(x, mode="sin")
 
 
 def tan(x):
-    """Element-wise tangent."""
+    """Element-wise `tangent`."""
     return sin(x) / cos(x)
 
 
 def acos(x):
-    """Element-wise inverse cosine."""
+    """Element-wise `inverse cosine`."""
     return _elwise(x, mode="acos")
 
 
 def asin(x):
-    """Element-wise inverse sine."""
+    """Element-wise `inverse sine`."""
     return _elwise(x, mode="asin")
 
 
 def atan(x):
-    """Element-wise inverse tangent."""
+    """Element-wise `inverse tangent`."""
     return _elwise(x, 1, mode="atan2")
 
 
 def atan2(y, x):
-    """Element-wise 2-argument arctangent."""
+    """Element-wise `2-argument arctangent`."""
     return _elwise(y, x, mode="atan2")
 
 
 def cosh(x):
-    r"""Element-wise hyperbolic cosine."""
+    r"""Element-wise `hyperbolic cosine`."""
     return 0.5 * (exp(x) + exp(-x))
 
 
 def sinh(x):
-    r"""Element-wise hyperbolic sine."""
+    r"""Element-wise `hyperbolic sine`."""
     u = expm1(x)
     return 0.5 * u / (u + 1) * (u + 2)
 
 
 def tanh(x):
-    r"""Element-wise hyperbolic tangent."""
+    r"""Element-wise `hyperbolic tangent`."""
     return _elwise(x, mode="tanh")
 
 
 def asinh(x):
-    r"""Element-wise inverse hyperbolic sine."""
+    r"""Element-wise `inverse hyperbolic sine`."""
     return log(x + (x ** 2 + 1) ** 0.5)
 
 
 def acosh(x):
-    r"""Element-wise inverse hyperbolic cosine."""
+    r"""Element-wise `inverse hyperbolic cosine`."""
     return log(x + (x ** 2 - 1) ** 0.5)
 
 
 def atanh(x):
-    r"""Element-wise inverse hyperbolic tangent."""
+    r"""Element-wise `inverse hyperbolic tangent`."""
     return log1p(2 * x / (1 - x)) / 2
 
 
 def fast_tanh(x):
-    r"""Element-wise fast tanh; this is an approximation:
+    r"""Element-wise `fast tanh`; this is an approximation:
 
     .. math::
         \text{fast_tanh}(x) = x * (27. + x * x) / (27. + 9. * x * x)
@@ -381,7 +382,7 @@ def fast_tanh(x):
 
 
 def left_shift(x, y):
-    """Element-wise bitwise binary: x << y.
+    """Element-wise `bitwise binary: x << y`.
 
     :param x: input tensor, should be int.
     :param y: how many bits to be left-shifted.
@@ -411,7 +412,7 @@ def left_shift(x, y):
 
 
 def right_shift(x, y):
-    """Element-wise bitwise binary: x >> y."""
+    """Element-wise `bitwise binary: x >> y`."""
     return _elwise(x, y, mode="shr")
 
 
@@ -419,22 +420,22 @@ def right_shift(x, y):
 
 
 def logical_and(x, y):
-    """Element-wise logical and: x && y."""
+    """Element-wise `logical and: x && y`."""
     return _elwise(x, y, mode="AND")
 
 
 def logical_not(x):
-    """Element-wise logical not: ~x."""
+    """Element-wise `logical not: ~x`."""
     return _elwise(x, mode="NOT")
 
 
 def logical_or(x, y):
-    """Element-wise logical or: x || y."""
+    """Element-wise `logical or: x || y`."""
     return _elwise(x, y, mode="OR")
 
 
 def logical_xor(x, y):
-    """Element-wise logical xor: x ^ y."""
+    """Element-wise `logical xor: x ^ y`."""
     return _elwise(x, y, mode="XOR")
 
 
@@ -442,7 +443,7 @@ def logical_xor(x, y):
 
 
 def eq(x, y):
-    """Element-wise (x == y).
+    """Element-wise `(x == y)`.
 
     :param x: input tensor 1.
     :param y: input tensor 2.
@@ -473,27 +474,27 @@ def eq(x, y):
 
 
 def ne(x, y):
-    """Element-wise (x != y)."""
+    """Element-wise `(x != y)`."""
     return x != y
 
 
 def lt(x, y):
-    """Element-wise (x < y)."""
+    """Element-wise `(x < y)`."""
     return _elwise(x, y, mode="lt")
 
 
 def le(x, y):
-    """Element-wise (x <= y)."""
+    """Element-wise `(x <= y)`."""
     return _elwise(x, y, mode="leq")
 
 
 def gt(x, y):
-    """Element-wise (x > y)."""
+    """Element-wise `(x > y)`."""
     return _elwise(y, x, mode="lt")
 
 
 def ge(x, y):
-    """Element-wise (x >= y)."""
+    """Element-wise `(x >= y)`."""
     return _elwise(y, x, mode="leq")
 
 
@@ -501,7 +502,7 @@ def ge(x, y):
 
 
 def hswish(x):
-    """Element-wise x * relu6(x + 3) / 6.
+    """Element-wise `x * relu6(x + 3) / 6`.
 
     :param x: input tensor.
     :return: computed tensor.
@@ -527,7 +528,7 @@ def hswish(x):
 
 
 def hsigmoid(x):
-    """Element-wise relu6(x + 3) / 6."""
+    """Element-wise `relu6(x + 3) / 6`."""
     return relu6(x + 3) / 6
 
 
@@ -537,12 +538,12 @@ def relu(x):
 
 
 def relu6(x):
-    """Element-wise min(max(x, 0), 6)."""
+    """Element-wise `min(max(x, 0), 6)`."""
     return minimum(maximum(x, 0), 6)
 
 
 def sigmoid(x):
-    """Element-wise 1 / ( 1 + exp( -x ) )."""
+    """Element-wise `1 / ( 1 + exp( -x ) )`."""
     return _elwise(x, mode="sigmoid")
 
 

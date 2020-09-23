@@ -220,8 +220,8 @@ class BatchNorm2d(_BatchNorm):
     of 0.9.
 
     If :attr:`track_running_stats` is set to ``False``, this layer will not
-    keep running estimates, and batch statistics are instead used during
-    evaluation time.
+    keep running estimates, batch statistics is used during
+    evaluation time instead.
 
     .. note::
         This :attr:`momentum` argument is different from one used in optimizer
@@ -236,15 +236,14 @@ class BatchNorm2d(_BatchNorm):
     Spatial Batch Normalization.
 
     :type num_features: int
-    :param num_features: usually the :math:`C` from an input of size
-        :math:`(N, C, H, W)` or the highest ranked dimension of an input with
+    :param num_features: usually :math:`C` from an input of shape
+        :math:`(N, C, H, W)` or the highest ranked dimension of an input
         less than 4D.
     :type eps: float
     :param eps: a value added to the denominator for numerical stability.
         Default: 1e-5
     :type momentum: float
-    :param momentum: the value used for the `running_mean` and `running_var`
-        computation.
+    :param momentum: the value used for the ``running_mean`` and ``running_var`` computation.
         Default: 0.9
     :type affine: bool
     :param affine: a boolean value that when set to True, this module has

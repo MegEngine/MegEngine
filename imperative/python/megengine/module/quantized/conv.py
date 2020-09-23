@@ -18,10 +18,10 @@ from .module import QuantizedModule
 
 
 class Conv2d(Float.Conv2d, QuantizedModule):
-    r"""quantized version of :class:`~.qat.conv.Conv2d`."""
-    r"""Applies a 2D convolution over an quantized input tensor, inference only.
+    r"""Quantized version of :class:`~.qat.conv.Conv2d`."""
+    r"""Applies a 2D convolution over a quantized input tensor, used for inference only.
 
-    The parameter is same with :class: `~.Conv2d`
+    The parameter is same with :class: `~.Conv2d`.
     """
 
     def __init__(
@@ -101,7 +101,7 @@ class Conv2d(Float.Conv2d, QuantizedModule):
 
 
 class ConvRelu2d(Conv2d):
-    r"""quantized version of :class:`~.qat.conv.ConvRelu2d`."""
+    r"""Quantized version of :class:`~.qat.conv.ConvRelu2d`."""
 
     def forward(self, inp):
         return self.calc_conv_quantized(inp, nonlinear_mode="RELU")

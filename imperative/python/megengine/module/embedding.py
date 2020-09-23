@@ -26,9 +26,9 @@ class Embedding(Module):
 
     :param num_embeddings: size of embedding dictionary.
     :param embedding_dim: size of each embedding vector.
-    :param padding_idx: should be set to None, not support now.
-    :param max_norm: should be set to None, not support now.
-    :param norm_type: should be set to None, not support now.
+    :param padding_idx: should be set to None, not supportted now.
+    :param max_norm: should be set to None, not supportted now.
+    :param norm_type: should be set to None, not supportted now.
     :param initial_weight: the learnable weights of the module of shape (num_embeddings, embedding_dim).
 
     Examples:
@@ -121,8 +121,8 @@ class Embedding(Module):
         r"""
         Creates Embedding instance from given 2-dimensional FloatTensor.
 
-        :param embeddings: Tensor contained weight for the embedding.
-        :param freeze: If ``True``, the weight does not get updated during the learning process. Default: ``True``.
+        :param embeddings: tensor contained weight for the embedding.
+        :param freeze: if ``True``, the weight does not get updated during the learning process. Default: True.
         :param padding_idx: should be set to None, not support Now.
         :param max_norm: should be set to None, not support Now.
         :param norm_type: should be set to None, not support Now.

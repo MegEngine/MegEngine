@@ -11,15 +11,15 @@ from .conv import Conv2d
 
 
 class _ConvBnActivation2d(Conv2d):
-    r"""Applies a 2D convolution over an quantized input tensor, inference only.
+    r"""Applies a 2D convolution over a quantized input tensor, used for inference only.
 
-    The parameter is same with :class: `~.Conv2d`
+    The parameter is same with :class: `~.Conv2d`.
     """
 
     @classmethod
     def from_qat_module(cls, qat_module: QAT._ConvBnActivation2d):
         r"""
-        return a :class:`~.QuantizedModule` instance converted from a
+        Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
         output_dtype = qat_module.get_activation_dtype()
@@ -43,14 +43,14 @@ class _ConvBnActivation2d(Conv2d):
 
 
 class ConvBn2d(_ConvBnActivation2d):
-    r"""quantized version of :class:`~.qat.conv_bn.ConvBn2d`."""
+    r"""Quantized version of :class:`~.qat.conv_bn.ConvBn2d`."""
 
     def forward(self, inp):
         return self.calc_conv_quantized(inp, nonlinear_mode="IDENTITY")
 
 
 class ConvBnRelu2d(_ConvBnActivation2d):
-    r"""quantized version of :class:`~.qat.conv_bn.ConvBnRelu2d`."""
+    r"""Quantized version of :class:`~.qat.conv_bn.ConvBnRelu2d`."""
 
     def forward(self, inp):
         return self.calc_conv_quantized(inp, nonlinear_mode="RELU")

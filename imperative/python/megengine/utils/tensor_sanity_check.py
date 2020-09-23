@@ -7,17 +7,15 @@ class TensorSanityCheck:
     
     Examples:
 
-    .. testcode::
+    .. code-block:: python
+
         from megengine import tensor
         from megengine.utils.tensor_sanity_check import TensorSanityCheck
         with TensorSanityCheck() as checker:
             a = tensor([1, 2])
             b = tensor([3, 4])
             c = a + b
-            print(c.numpy())
-    
-    .. testoutput::
-        [4 6]
+
     """
 
     def __init__(self):

@@ -22,10 +22,10 @@ class _FakeQuantize(Module):
     r"""
     A Basic Fake Quant module.
 
-    :param dtype: A string indicating the target quantization type of input.
-    :param narrow_range: Whether the absolute value of ``qmin`` is the same as ``qmax``,
+    :param dtype: a string indicating the target quantization type of input.
+    :param narrow_range: whether the absolute value of ``qmin`` is the same as ``qmax``,
         instead of 1 greater. Usually True for weight and False for activation.
-    :param enable: Whether do ``normal_forward`` or ``fake_quant_forward``.
+    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
     def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):

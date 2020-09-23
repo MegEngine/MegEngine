@@ -50,8 +50,8 @@ class Function:
         """
         Applies operations to ``inputs`` and returns results. It must be overriden by all subclasses.
 
-        :param input: Input tensors.
-        :return: A tuple of Tensor or a single Tensor.
+        :param input: input tensors.
+        :return: a tuple of Tensor or a single Tensor.
 
         .. note::
 
@@ -64,7 +64,7 @@ class Function:
         """
         Compute the gradient of the forward function. It must be overriden by all subclasses.
 
-        :param output_grads: gradients of outputs that are returned by :meth:`~.function.Function.forward`
+        :param output_grads: gradients of outputs that are returned by :meth:`~.function.Function.forward`.
 
             .. note::
 

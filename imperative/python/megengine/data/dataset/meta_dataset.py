@@ -12,7 +12,7 @@ from typing import Tuple
 
 class Dataset(ABC):
     r"""
-    An abstract class for all Datasets
+    An abstract class for all Datasets.
     """
 
     @abstractmethod
@@ -22,8 +22,8 @@ class Dataset(ABC):
 
 class MapDataset(Dataset):
     r"""
-    An abstract class for map data
-    __getitem__ and __len__ method are aditionally needed
+    An abstract class for map data.
+    __getitem__ and __len__ method are aditionally needed.
     """
 
     @abstractmethod
@@ -41,8 +41,8 @@ class MapDataset(Dataset):
 
 class StreamDataset(Dataset):
     r"""
-    An abstract class for stream data
-    __iter__ method is aditionally needed
+    An abstract class for stream data.
+    __iter__ method is aditionally needed.
     """
 
     @abstractmethod

@@ -23,7 +23,7 @@ class Profiler:
     Profile graph execution in imperative mode.
 
     :type path: Optional[str]
-    :param path: default path for profiler to dump
+    :param path: default path for profiler to dump.
 
     Examples:
 

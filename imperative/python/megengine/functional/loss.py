@@ -132,7 +132,7 @@ def cross_entropy_with_softmax(
     .. math:: y^{LS}_{k}=y_{k}\left(1-\alpha\right)+\alpha/K
 
     where :math:`y^{LS}` and :math:`y` are new label distribution and origin label distribution respectively.
-    k is the index of label distribution. :math:`\alpha` is label_smooth and :math:`K` is the number of classes.
+    k is the index of label distribution. :math:`\alpha` is ``label_smooth`` and :math:`K` is the number of classes.
 
     :param pred: input tensor representing the predicted probability.
     :param label: input tensor representing the classification label.
@@ -188,7 +188,7 @@ def cross_entropy_with_softmax(
 def binary_cross_entropy(pred: Tensor, label: Tensor) -> Tensor:
     r"""Function that measures the Binary Cross Entropy between the target and the prediction.
 
-    :param pred: `(N, *)` where `*` means any number of additional dimensions.
+    :param pred: `(N, *)`, where `*` means any number of additional dimensions.
     :param label: `(N, *)`, same shape as the input.
     :return: loss value.
 
@@ -216,7 +216,7 @@ def binary_cross_entropy(pred: Tensor, label: Tensor) -> Tensor:
 
 
 def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
-    r"""Caculate the hinge loss which is often used in SVMs.
+    r"""Caculates the hinge loss which is often used in SVM.
 
     The hinge loss can be described as:
 
