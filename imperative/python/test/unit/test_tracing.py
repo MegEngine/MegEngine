@@ -307,3 +307,36 @@ def test_trace_warp_perspective():
 
     for i in range(1):
         f(x, M)
+
+
+def test_raise_on_trace():
+    step_count = 0
+    catch_count = 0
+    bad_step = 10
+
+    class CatchMe(Exception):
+        pass
+
+    a = tensor([1, 2, 3, 4])
+    b = tensor([5, 6, 7, 8])
+    c = tensor([9, 0, 1, 2])
+
+    @trace
+    def add_abc(a, b, c):
+        print("Hello")
+        ps = a + b
+        result = ps + c
+        if step_count == bad_step:
+            raise CatchMe("catch me")
+        return result
+
+    for i in range(100):
+        try:
+            d = add_abc(a, b, c)
+        except CatchMe as e:
+            catch_count += 1
+        else:
+            np.testing.assert_equal(d.numpy(), (a + b + c).numpy())
+        step_count += 1
+
+    assert catch_count == 1
