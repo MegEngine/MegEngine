@@ -8,8 +8,12 @@
 import collections
 from typing import Dict, List
 
-from .. import _imperative_rt
-from .._imperative_rt import OperatorNode, VarNode
+import numpy
+
+from ..core import _imperative_rt
+from ..core._imperative_rt import OperatorNode, VarNode
+from ..core.tensor import megbrain_graph as G
+from ..core.tensor.raw_tensor import as_raw_tensor
 
 
 def get_dep_vars(var: VarNode, var_type: str = None) -> List[VarNode]:
@@ -251,3 +255,33 @@ def set_priority_to_id(dest_vars):
         assert isinstance(i, VarNode)
         dest_vec.append(i)
     _imperative_rt.graph._set_priority_to_id(dest_vec)
+
+
+def load_and_inference(file, inp_data_list: List[numpy.ndarray]) -> List[numpy.ndarray]:
+    """Load a serialized computing graph and run inference with input data.
+
+    :param file: Path or Handle of the input file.
+    :param inp_data_list: List of input data.
+    :return: List of inference results.
+
+    """
+    *_, out_list = G.load_graph(file)
+    inputs = get_dep_vars(out_list, "Host2DeviceCopy")
+    replace_dict = {}
+    inp_node_list = []
+    for i in inputs:
+        inp_node = G.InputNode(
+            device="xpux", dtype=inputs[0].dtype, graph=inputs[0].graph
+        )
+        replace_dict[i] = inp_node.outputs[0]
+        inp_node_list.append(inp_node)
+    new_out = replace_vars(out_list, replace_dict)
+    out_node_list = [G.OutputNode(i) for i in new_out]
+    new_out_list = [i.outputs[0] for i in out_node_list]
+    cg = new_out_list[0].graph
+    func = cg.compile(new_out_list)
+    for node, value in zip(inp_node_list, inp_data_list):
+        node.set_value(as_raw_tensor(value)._dev_tensor())
+    func.execute()
+    out_data_list = [o.get_value().numpy() for o in out_node_list]
+    return out_data_list

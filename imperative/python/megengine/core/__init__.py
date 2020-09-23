@@ -11,4 +11,3 @@ import sys
 
 from .tensor import Tensor
 from .tensor.megbrain_graph import Graph
-from .utils import comp_graph_tools as cgtools

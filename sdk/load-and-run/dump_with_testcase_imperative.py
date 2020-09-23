@@ -17,6 +17,7 @@ import numpy as np
 import megengine as mge
 import megengine.core._imperative_rt as rt
 import megengine.core.tensor.megbrain_graph as G
+from megengine.core.tensor.megbrain_graph import VarNode
 from megengine import cgtools
 from megengine.core.ops import builtin
 from megengine.core.tensor.core import apply
@@ -488,7 +489,8 @@ def main():
     with open(args.output, "wb") as fout:
         fout.write(b"mgbtest0")
         fout.write(struct.pack("I", len(feeds["testcases"])))
-        fout.write(rt.dump_graph(output_mgbvars))
+        dump_content, _ = G.dump_graph([VarNode(i) for i in output_mgbvars])
+        fout.write(dump_content)
 
     def make_dev_tensor(value, dtype=None, device=None):
         return as_raw_tensor(value, dtype=dtype, device=device)._dev_tensor()
@@ -507,7 +509,8 @@ def main():
             testcase.keys()
         )
         with open(args.output, "ab") as fout:
-            fout.write(G.dump_graph(*output_mgbvars))
+            dump_content, _ = G.dump_graph(output_mgbvars)
+            fout.write(dump_content)
 
 
 

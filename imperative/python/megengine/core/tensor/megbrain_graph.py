@@ -358,7 +358,7 @@ CompGraphLoadResult = collections.namedtuple(
 def load_graph(fpath):
     """Load a serialized computing graph from file.
 
-    :parma fpath: Path or Handle for the output file
+    :param fpath: Path or Handle of the input file
     :return: An instance of namedtuple :class:`CompGraphLoadResult`,
         whose fields are:
 
