@@ -2225,6 +2225,7 @@ protected:
                            iw = ih;
         comp_node = CompNode::load("cpux");
         graph = ComputingGraph::make();
+        graph->options().graph_opt.weight_preprocess = is_weight_preprocess();
         TensorShape x_shape{1, ic, ih, iw}, w_shape{oc, ic, fh, fh};
         x_host = std::make_shared<HostTensorND>(comp_node, x_shape);
         auto x = opr::Host2DeviceCopy::make(*graph, x_host);
@@ -2246,6 +2247,8 @@ protected:
     }
 
     void run() { func->execute().wait(); }
+
+    virtual bool is_weight_preprocess() { return true; }
 
     void TearDown() override {
         func.reset();
@@ -2343,6 +2346,33 @@ TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
                     }));
             run();
         }
+    }
+}
+
+class TestNoWeightPreprocess : public TestWeightPreprocess {
+    bool is_weight_preprocess() override { return false; }
+};
+
+TEST_F(TestNoWeightPreprocess, NoPreprocess) {
+    using ::testing::_;
+    using ::testing::Return;
+    auto& mock = mock_conv();
+
+    MockAlgorithm algo;
+    EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+            .WillRepeatedly(Return(&algo));
+    EXPECT_CALL(mock, get_workspace_in_bytes(_, _, _, _))
+            .WillRepeatedly(Return(0));
+    EXPECT_CALL(mock, get_preprocess_workspace_in_bytes(_, _, _))
+            .WillRepeatedly(Return(0));
+
+    {
+        ::testing::InSequence seq;
+        // Return empty preprocess filters, indicating no need to preprocess
+        EXPECT_CALL(mock, deduce_preprocessed_filter_layout(_, _, _)).Times(0);
+        EXPECT_CALL(mock, exec_preprocess(_, _, _, _, _)).Times(0);
+        EXPECT_CALL(mock, exec(_, _, _, nullptr, _));
+        run();
     }
 }
 
