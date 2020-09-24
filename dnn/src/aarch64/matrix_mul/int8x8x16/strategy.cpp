@@ -13,6 +13,7 @@
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/aarch64/matrix_mul/int8x8x16/kernel_4x4x16.h"
 #include "src/aarch64/matrix_mul/int8x8x16/kernel_8x8x8.h"
+#include "src/aarch64/matrix_mul/int8x8x16/kernel_mk4_8x8x8.h"
 #include "src/aarch64/matrix_mul/int8x8x16/kernel_mk4_16x12x4_a53.h"
 #include "src/aarch64/matrix_mul/int8x8x16/kernel_mk4_4x4x8_a72.h"
 #include "src/aarch64/matrix_mul/int8x8x16/strategy.h"
@@ -354,6 +355,83 @@ void gemm_s8x8x16_mk4_4x4_a72::kern(const dt_int8* packA, const dt_int8* packB,
             cur_packB += pack_n * packed_k;
         }
         packA += pack_m * packed_k;
+    }
+}
+
+// ===========================gemm_s8x8x16_mk4_8x8x8==================================
+MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_s8x8x16_mk4_8x8x8);
+
+void gemm_s8x8x16_mk4_8x8x8::pack_A(dt_int8* out, const dt_int8* in,
+                                        int ldin, int y0, int ymax, int k0,
+                                        int kmax, bool) const {
+    matmul_mk4_8x8x8::gemm_s8x8x16_mk4_8x8x8_pack_A(out, in, ldin, y0,
+                                                          ymax, k0, kmax);
+}
+
+void gemm_s8x8x16_mk4_8x8x8::pack_B(dt_int8* out, const dt_int8* in,
+                                        int ldin, int x0, int xmax, int k0,
+                                        int kmax, bool) const {
+    matmul_mk4_8x8x8::gemm_s8x8x16_mk4_8x8x8_pack_B(out, in, ldin, x0,
+                                                          xmax, k0, kmax);
+}
+
+void gemm_s8x8x16_mk4_8x8x8::kern(const dt_int8* packA, const dt_int8* packB,
+                                  size_t M, size_t N, size_t K, dt_int16* C,
+                                  size_t LDC, bool is_first_k, const dt_int16*,
+                                  dt_int16*) const {
+    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
+                  C_dtype.enumv() == DTypeEnum::Int16 &&
+                  A_dtype.enumv() == DTypeEnum::Int8);
+    megdnn_assert(is_first_k == true, "only impl is_first_k");
+    MEGDNN_MARK_USED_VAR(A_dtype);
+    MEGDNN_MARK_USED_VAR(B_dtype);
+    MEGDNN_MARK_USED_VAR(C_dtype);
+    megdnn_assert(M % 4 == 0 && K % 4 == 0, "M and K must be time of 4");
+
+    constexpr size_t pack_size = 4;
+    constexpr size_t pack_m = 8;
+    constexpr size_t pack_n = 8;
+    const size_t remain_n = N % pack_n;
+    size_t remain_m = M % pack_m;
+    K = round_up<size_t>(K, 8);
+    size_t KSIZE8 = K * pack_n;
+    size_t m_idx = 0;
+    for (; m_idx + pack_m <= M; m_idx += pack_m) {
+        int16_t* output = C + (m_idx / pack_size * LDC);
+
+        size_t n_idx = 0;
+        const int8_t* cur_packB = packB;
+        for (; n_idx + pack_n <= N; n_idx += pack_n) {
+            matmul_mk4_8x8x8::kern_8x8(packA, cur_packB, K, output, LDC,
+                                       is_first_k, pack_m, pack_n);
+            output += pack_n * pack_size;
+            cur_packB += KSIZE8;
+        }
+        if (remain_n > 0) {
+            matmul_mk4_8x8x8::kern_8x8_remain(packA, cur_packB, K, output, LDC,
+                                              is_first_k, pack_m, remain_n);
+            output += remain_n * pack_size;
+            cur_packB += KSIZE8;
+        }
+        packA += KSIZE8;
+    }
+
+    if (remain_m == 4) {
+        int16_t* output = C + (m_idx / pack_size * LDC);
+        size_t n_idx = 0;
+        const int8_t* cur_packB = packB;
+        for (; n_idx + pack_n <= N; n_idx += pack_n) {
+            matmul_mk4_8x8x8::kern_4x8(packA, cur_packB, K, output, LDC,
+                                       is_first_k, 4, pack_n);
+            output += pack_n * pack_size;
+            cur_packB += pack_n * K;
+        }
+        if (remain_n > 0) {
+            matmul_mk4_8x8x8::kern_4x8_remain(packA, cur_packB, K, output, LDC,
+                                              is_first_k, 4, remain_n);
+            output += remain_n * pack_size;
+            cur_packB += pack_n * K;
+        }
     }
 }
 

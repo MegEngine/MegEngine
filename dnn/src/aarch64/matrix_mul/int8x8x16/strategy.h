@@ -26,6 +26,8 @@ MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int16, dt_int16, 4, 4, 8, false, false,
 MEGDNN_REG_GEMM_STRATEGY_WITH_PACK_A_TYPE(dt_int8, dt_int16, dt_int16, dt_int16,
                                           16, 12, 4, false, false,
                                           gemm_s8x8x16_mk4_16x12_a53);
+MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int16, dt_int16, 8, 8, 8, false, false,
+                         gemm_s8x8x16_mk4_8x8x8);
 
 }  // namespace matmul
 }  // namespace aarch64

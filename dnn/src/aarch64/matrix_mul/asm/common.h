@@ -2101,6 +2101,62 @@ static inline void transpos_12x4_s8(const int8_t* inptr0, int8_t* outptr) {
                    vreinterpretq_s32_s8(input2), 3);
 }
 
+
+template <typename T>
+static inline void interleave_8x8_mk4_b(const T*& inptr0, const T*& inptr1,
+                                     T*& outptr) {
+
+    static_assert(
+            std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
+            "transpose_8x4_1_b only support uint8_t and int8_t");
+    asm volatile(
+            "ld1 {v0.4s},  [%[inptr0]], #16\n"
+            "ld1 {v1.4s},  [%[inptr1]], #16\n"
+            "ld1 {v2.4s},  [%[inptr0]], #16\n"
+            "ld1 {v3.4s},  [%[inptr1]], #16\n"
+
+            "zip1 v4.4s, v0.4s, v1.4s \n"
+            "zip2 v5.4s, v0.4s, v1.4s \n"
+
+            "zip1 v6.4s, v2.4s, v3.4s\n"
+            "zip2 v7.4s, v2.4s, v3.4s\n"
+
+            "st1 {v4.4s},[%[outptr]],#16\n"
+            "st1 {v5.4s},[%[outptr]],#16\n"
+            "st1 {v6.4s},[%[outptr]],#16\n"
+            "st1 {v7.4s},[%[outptr]],#16\n"
+
+            : [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1),
+              [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5","v6","v7","memory");
+}
+
+template <typename T>
+static inline void transpose_8x8_mk4_b(const T*& inptr0, const T*& inptr1,
+                                     T* outptr) {
+
+    static_assert(
+            std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
+            "transpose_8x4_1_b only support uint8_t and int8_t");
+    asm volatile(
+            "ld4 {v0.8b-v3.8b},  [%[inptr0]], #32\n"
+            "ld4 {v4.8b-v7.8b},  [%[inptr1]], #32\n"
+            "st1 {v0.2s},[%[outptr]],#8\n"
+            "st1 {v1.2s},[%[outptr]],#8\n"
+            "st1 {v2.2s},[%[outptr]],#8\n"
+            "st1 {v3.2s},[%[outptr]],#8\n"
+            "st1 {v4.2s},[%[outptr]],#8\n"
+            "st1 {v5.2s},[%[outptr]],#8\n"
+            "st1 {v6.2s},[%[outptr]],#8\n"
+            "st1 {v7.2s},[%[outptr]],#8\n"
+
+            : [inptr0] "+r"(inptr0), [inptr1] "+r"(inptr1),
+              [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5","v6","v7","memory");
+}
+
 }  // namespace aarch64
 }  // namespace megdnn
 
