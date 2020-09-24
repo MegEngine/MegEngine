@@ -460,9 +460,9 @@ def test_sequential_named_children():
     modules["name2"] = Linear(5, 1)
     m = Sequential(modules)
     l = list(m.named_children())
-    assert l[0][0] == "layer_values.0"
-    assert l[1][0] == "layer_values.1"
-    assert l[2][0] == "layer_values.2"
+    assert l[0][0] == "name0"
+    assert l[1][0] == "name1"
+    assert l[2][0] == "name2"
 
 
 def test_state_dict():
