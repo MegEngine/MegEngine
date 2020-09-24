@@ -204,17 +204,27 @@ void init_utils(py::module m) {
     py::class_<ProfileEntry>(m, "ProfileEntry")
             .def_readwrite("op", &ProfileEntry::op)
             .def_readwrite("host", &ProfileEntry::host)
-            .def_readwrite("device_list", &ProfileEntry::device_list);
+            .def_readwrite("device_list", &ProfileEntry::device_list)
+            .def_readwrite("inputs", &ProfileEntry::inputs)
+            .def_readwrite("outputs", &ProfileEntry::outputs)
+            .def_readwrite("id", &ProfileEntry::id)
+            .def_readwrite("parent", &ProfileEntry::parent)
+            .def_readwrite("memory", &ProfileEntry::memory)
+            .def_readwrite("computation", &ProfileEntry::computation)
+            .def_property_readonly("param", [](ProfileEntry& self)->std::string{
+                if(self.param){
+                    return self.param->to_string();
+                } else {
+                    return {};
+                }
+            });
 
     py::class_<mgb::imperative::Profiler>(m, "ProfilerImpl")
             .def(py::init<>())
-            .def("start",
-                 [](mgb::imperative::Profiler& profiler) { profiler.start(); })
-            .def("stop",
-                 [](mgb::imperative::Profiler& profiler) { profiler.stop(); })
-            .def("dump", [](mgb::imperative::Profiler& profiler) {
-                return profiler.get_profile();
-            });
+            .def("start", &mgb::imperative::Profiler::start)
+            .def("stop", &mgb::imperative::Profiler::stop)
+            .def("clear", &mgb::imperative::Profiler::clear)
+            .def("dump", &mgb::imperative::Profiler::get_profile);
 
     using mgb::imperative::TensorSanityCheck;
     py::class_<TensorSanityCheck>(m, "TensorSanityCheckImpl")
