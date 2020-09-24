@@ -36,6 +36,7 @@
 #endif
 
 
+
 using namespace mgb;
 
 /* =================== MegDNNHandle =================== */
@@ -232,6 +233,7 @@ void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
 }
 #endif
 
+
 #if MGB_ATLAS
 
 void mgb::_on_atlas_error(const char* expr, int err, const char* file,
@@ -421,6 +423,7 @@ void CompNodeEnv::fini() {
         MGB_CUDA_CHECK(cudaStreamDestroy(m_cuda_env.stream));
     }
 #endif
+
 #if MGB_ROCM
     if (m_property.type == DeviceType::ROCM) {
         m_rocm_env.activate();
@@ -440,6 +443,7 @@ void CompNodeEnv::fini() {
         MGB_ATLAS_CHECK(aclrtDestroyStream(m_atlas_env.stream));
     }
 #endif
+
 }
 
 #if MGB_ENABLE_COMP_NODE_ASYNC_INIT

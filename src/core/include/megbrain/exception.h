@@ -139,6 +139,11 @@ public:
     CudaError(const std::string& msg);
 };
 
+class EnFlameError final : public SystemError {
+public:
+    EnFlameError(const std::string& msg);
+};
+
 class AtlasError final: public SystemError {
 public:
     AtlasError(const std::string& msg);

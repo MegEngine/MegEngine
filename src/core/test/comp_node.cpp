@@ -166,6 +166,7 @@ TEST(TestCompNode, Load) {
     ASSERT_NE(atlas0, atlas1);
 #endif
 
+
 }
 
 TEST(TestCompNode, FreeAfterFinalize) {
@@ -753,6 +754,7 @@ TEST(TestCompNodeCambricon, P2PCopy) {
 }
 #endif
 #endif // MGB_CAMBRICON
+
 
 #if MGB_ATLAS
 

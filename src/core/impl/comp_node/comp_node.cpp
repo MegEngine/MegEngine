@@ -182,7 +182,8 @@ CompNode::Locator CompNode::Locator::parse(const std::string &id) {
             }
             dev_type = DeviceType::MULTITHREAD;
             ptr += 11;
-    } else {
+    }
+    else {
         if (ptr[1] != 'p' || ptr[2] != 'u') {
             err();
         }
@@ -237,7 +238,7 @@ CompNode::Locator CompNode::Locator::parse(const std::string &id) {
         //! num_steam store the nr_thread
         std::swap(num_dev, num_stream);
     }
-
+    
     return {dev_type, num_dev, {num_stream}};
 }
 

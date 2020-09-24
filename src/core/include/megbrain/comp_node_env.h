@@ -63,6 +63,7 @@
 #endif //MGB_ENABLE_LOGGING
 #endif //MGB_CUDA
 
+
 #if MGB_ATLAS
 #include "megcore_atlas.h"
 #include <atomic>
@@ -203,6 +204,7 @@ namespace mgb {
                                     const char* file, const char* func,
                                     int line);
 #endif
+
 
 
 #if MGB_ROCM
@@ -368,6 +370,7 @@ public:
     void init_cuda_async(int dev, CompNode comp_node,
                          const ContinuationCtx<cudaStream_t>& cont);
 #endif
+
 
 #if MGB_ATLAS
     struct AtlasEnv {

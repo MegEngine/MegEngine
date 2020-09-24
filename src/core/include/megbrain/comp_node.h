@@ -82,7 +82,7 @@ class CompNode {
             CAMBRICON = 3,
             ROCM = 8,
             ATLAS = 9,
-            MULTITHREAD,
+            MULTITHREAD = 11,
             MAX_DEVICE_ID,
         };
         static constexpr size_t NR_DEVICE_TYPE =
