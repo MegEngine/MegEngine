@@ -577,6 +577,7 @@ public:
     virtual void exit_fake_exec(const CompNode& comp_node) = 0;
 
     virtual void stop(const CompNode& comp_node) = 0;
+
     virtual void replay() = 0;
 };
 

@@ -106,13 +106,11 @@ class CpuCompNode::SeqRecorderImpl final : public CompNodeSeqRecorder {
     std::vector<TaskElem> m_tasks;
     ThreadPool* m_thread_pool = nullptr;
     const CompNode m_record_compnode;
-
     /*!
      * \brief use to check the all ther recording tasks are its self CompNode
      * related task, void hook other CompNode related task to the recorder.
      */
     void check_the_same_comp_node(const CompNode& comp_node) const;
-
 public:
     SeqRecorderImpl(SeqRecorderImpl** self_pointer, ThreadPool* thread_pool,
                     const CompNode& comp_node)
