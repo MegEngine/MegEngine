@@ -471,6 +471,37 @@ void run<shape_dep_const_shape>(CompNode cn) {
     MGB_ASSERT_TENSOR_EQ(y_expect, host_y);
 }
 
+//! single thread multi recorder run interleave
+template <>
+void run<multi_recorder_run>(CompNode cn) {
+    using ConvParam = opr::Convolution::Param;
+    ConvParam param;
+    param.sparse = ConvParam::Sparse::GROUP;
+    HostTensorGenerator<> gen;
+    std::vector<HostTensorND> host_z_v(2, HostTensorND());
+    std::vector<std::unique_ptr<mgb::cg::AsyncExecutable>> funcs;
+    auto host_x = gen({3, 4, 10, 8}, cn), host_y = gen({2, 3, 2, 3, 3}, cn);
+    auto gen_graph =
+            [&](int graph_id) -> std::unique_ptr<mgb::cg::AsyncExecutable> {
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Host2DeviceCopy::make(*graph, host_y),
+             z = opr::Convolution::make(x, y, param);
+        graph->options().comp_node_seq_record_level = 1;
+        return graph->compile({make_callback_copy(z, host_z_v[graph_id])});
+    };
+    funcs.push_back(gen_graph(0));
+    funcs.push_back(gen_graph(1));
+    for (int iter = 0; iter < 10; ++iter) {
+        host_x->copy_from_fixlayout(*gen(host_x->shape(), cn));
+        funcs[0]->execute();
+        funcs[1]->execute();
+        auto expect = eval_conv_cpu<opr::Convolution>(*host_x, *host_y, param);
+        MGB_ASSERT_TENSOR_NEAR(expect, host_z_v[0], 1e-3) << "iter " << iter;
+        MGB_ASSERT_TENSOR_NEAR(expect, host_z_v[1], 1e-3) << "iter " << iter;
+    }
+}
+
 template <>
 void run<void>(CompNode) {}
 
