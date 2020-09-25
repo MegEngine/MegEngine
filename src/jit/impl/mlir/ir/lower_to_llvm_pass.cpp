@@ -21,6 +21,8 @@
 #include <mlir/Conversion/SCFToStandard/SCFToStandard.h>
 #include <mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h>
 #include <mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h>
+#include <mlir/Dialect/LLVMIR/LLVMDialect.h>
+#include <mlir/Dialect/SCF/SCF.h>
 #include <mlir/Dialect/StandardOps/Transforms/Passes.h>
 
 using namespace mgb;
@@ -30,6 +32,12 @@ namespace {
 
 class AffineToLLVMLoweringPass : public PassWrapper<AffineToLLVMLoweringPass,
                                                     OperationPass<ModuleOp>> {
+public:
+    void getDependentDialects(mlir::DialectRegistry& registry) const override {
+        registry.insert<mlir::LLVM::LLVMDialect>();
+        registry.insert<mlir::scf::SCFDialect>();
+    }
+
     void runOnOperation() final {
         LLVMConversionTarget target(getContext());
         target.addLegalOp<ModuleOp, ModuleTerminatorOp>();

@@ -209,6 +209,11 @@ struct ConstantScalarOpLowering
 class MgbToAffineLoweringPass
         : public PassWrapper<MgbToAffineLoweringPass, FunctionPass> {
 public:
+    void getDependentDialects(mlir::DialectRegistry& registry) const override {
+        registry.insert<mlir::AffineDialect>();
+        registry.insert<mlir::StandardOpsDialect>();
+    }
+
     void runOnFunction() override final {
         ConversionTarget target(getContext());
         target.addLegalDialect<AffineDialect, StandardOpsDialect>();

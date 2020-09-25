@@ -24,7 +24,8 @@
 using namespace mgb;
 using namespace jit;
 
-MgbDialect::MgbDialect(mlir::MLIRContext* ctx) : mlir::Dialect("mgb", ctx) {
+MgbDialect::MgbDialect(mlir::MLIRContext* ctx)
+        : mlir::Dialect("mgb", ctx, mlir::TypeID::get<MgbDialect>()) {
     addOperations<
 #define GET_OP_LIST
 #include "megbrain/jit/mlir/ir/ops.cpp.inc"

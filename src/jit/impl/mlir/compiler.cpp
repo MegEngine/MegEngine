@@ -67,8 +67,8 @@ mlir::OwnedBlob compile_ptx_to_cubin(const std::string ptx, mlir::Location,
 }
 
 std::unique_ptr<llvm::Module> translate_module_to_nvvm_ir_and_link_device(
-        Operation* m) {
-    std::unique_ptr<llvm::Module> module = mlir::translateModuleToNVVMIR(m);
+        Operation* m, llvm::LLVMContext& llvmContext, llvm::StringRef name) {
+    std::unique_ptr<llvm::Module> module = mlir::translateModuleToNVVMIR(m, llvmContext);
     auto get_device_path = []() -> std::string {
         auto cuda_path = getenv("CUDA_BIN_PATH");
         std::string device_dir;
@@ -223,6 +223,7 @@ void MLIRCompiler::run_lowering_pass(mlir::OwningModuleRef& module,
 std::unique_ptr<Executable> MLIRCompiler::do_compile(
         const InternalGraph& graph, const JITExecutor::Args& args) {
     mlir::MLIRContext ctx;
+    ctx.getOrLoadDialect<MgbDialect>();
     ctx.printStackTraceOnDiagnostic(true);
     ctx.printOpOnDiagnostic(true);
 

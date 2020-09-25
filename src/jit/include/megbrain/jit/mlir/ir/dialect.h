@@ -34,12 +34,12 @@ public:
     static llvm::StringRef getDialectNamespace() { return "mgb::jit"; }
 };
 
+}  // namespace jit
+}  // namespace mgb
+
 #define GET_OP_CLASSES
 using namespace mlir;
 #include "megbrain/jit/mlir/ir/ops.h.inc"
-
-}  // namespace jit
-}  // namespace mgb
 
 #endif  // MGB_JIT && MGB_JIT_MLIR
 

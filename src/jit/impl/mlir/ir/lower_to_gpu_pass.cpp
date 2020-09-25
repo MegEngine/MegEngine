@@ -259,6 +259,11 @@ private:
 class MgbToGpuLoweringPass
         : public PassWrapper<MgbToGpuLoweringPass, FunctionPass> {
 public:
+    void getDependentDialects(mlir::DialectRegistry& registry) const override {
+        registry.insert<mlir::gpu::GPUDialect>();
+        registry.insert<mlir::StandardOpsDialect>();
+    }
+
     void runOnFunction() override final {
         auto func_op = getFunction();
         Location loc = func_op.getLoc();

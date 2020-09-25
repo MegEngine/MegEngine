@@ -82,13 +82,12 @@ megdnn::DType jit::mlir_type_to_dtype(mlir::Type type) {
     if (auto cast = type.dyn_cast_or_null<mlir::MemRefType>()) {
         element_type = cast.getElementType();
     }
-    switch (element_type.getKind()) {
-        case mlir::StandardTypes::F32:
-            return megdnn::dtype::Float32{};
-        default:
-            mgb_throw(InternalError,
-                      "Unsupport mlir type for MemRefType, got: %s\n",
-                      mlir_type_to_string(type).c_str());
+    if (element_type.isF32()) {
+        return megdnn::dtype::Float32{};
+    } else {
+        mgb_throw(InternalError,
+                  "Unsupport mlir type for MemRefType, got: %s\n",
+                  mlir_type_to_string(type).c_str());
     }
     return {};
 }
