@@ -100,6 +100,8 @@ def _(data: DeviceTensorND):
 @as_raw_tensor.register(np.ndarray)
 def _(array: np.ndarray, dtype=None, device=None):
     device = None if device is None else as_device(device).to_c()
+    if 0 in array.strides:
+        array = array.squeeze().reshape(array.shape)
     return RawTensor(put(array, dtype=dtype, device=device))
 
 

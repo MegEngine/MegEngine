@@ -458,6 +458,15 @@ def test_conv_bias():
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
 
 
+def test_zero_stride_numpy_array():
+    inp = np.random.randn(3, 224, 224).astype(np.float32)
+    inp = inp[np.newaxis, :]
+
+    inp = tensor(inp, dtype=np.float32)
+    weight = tensor(np.random.randn(16, 3, 3, 3), dtype=np.float32)
+    out = F.conv2d(inp, weight, None, (2, 2), (3, 3), (1, 1), 1)
+
+
 def test_condtake():
     x = np.array([[1, 2, 3], [4, 5, 6]])
     y = np.array([[True, False, True], [False, True, True]])
