@@ -22,11 +22,13 @@ class Device:
         else:
             self._cn = CompNode(device)
 
+        self.logical_name = self._cn.logical_name
+
     def to_c(self):
         return self._cn
 
     def __repr__(self):
-        return "{}({})".format(type(self).__qualname__, self)
+        return "{}({})".format(type(self).__qualname__, repr(self._cn))
 
     def __str__(self):
         return str(self._cn)

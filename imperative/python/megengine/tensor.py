@@ -67,7 +67,7 @@ class Tensor(_Tensor):
 
         state = {
             "data": self.numpy(),
-            "device": str(self.device),
+            "device": self.device.logical_name,
             "dtype": self.dtype,
             "qdict": self.q_dict,
         }
@@ -75,13 +75,13 @@ class Tensor(_Tensor):
 
     def __setstate__(self, state):
         data = state.pop("data")
-        device = state.pop("device")
+        logical_device = state.pop("device")
         if self.dmap_callback is not None:
-            assert isinstance(device, str)
-            device = self.dmap_callback(device)
+            assert isinstance(logical_device, str)
+            logical_device = self.dmap_callback(logical_device)
         dtype = state.pop("dtype")
         self.q_dict = state.pop("qdict")
-        super().__init__(data, dtype=dtype, device=device)
+        super().__init__(data, dtype=dtype, device=logical_device)
 
     def detach(self):
         r"""

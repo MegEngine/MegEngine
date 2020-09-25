@@ -55,10 +55,16 @@ void init_common(py::module m) {
     auto&& PyCompNode = py::class_<CompNode>(m, "CompNode")
         .def(py::init())
         .def(py::init(py::overload_cast<const std::string&>(&CompNode::load)))
+        .def_property_readonly("logical_name", [](const CompNode& cn) {
+            return cn.to_string_logical();
+        })
         .def("create_event", &CompNode::create_event, py::arg("flags") = 0ul)
         .def("_set_default_device", &set_default_device)
         .def("_get_default_device", &get_default_device)
         .def("__str__", &CompNode::to_string_logical)
+        .def("__repr__", [](const CompNode& cn) {
+            return py::str("\"" + cn.to_string() + "\" from \"" + cn.to_string_logical() + "\"");
+        })
         .def_static("_sync_all", &CompNode::sync_all)
         .def(py::self == py::self)
         .def_static("_get_device_count", &CompNode::get_device_count,
