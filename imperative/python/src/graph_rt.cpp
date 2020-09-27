@@ -483,13 +483,13 @@ void init_graph_rt(py::module m) {
         },
         py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(), py::arg("graph") = py::none());
 
-    auto output_callback = [](auto callback, const std::vector<cg::VarNode*>& inputs, bool borrow = false) {
+    auto output_callback = [](auto callback, const std::vector<cg::VarNode*>& inputs, bool borrow = false, bool prefer_host_value = false) {
         SymbolVarArray sinputs;
         for (auto i : inputs) {
             sinputs.emplace_back(i);
         }
         static_assert(!std::is_reference<decltype(callback)>::value);
-        opr::OutputCallback::Param param{std::move(callback), borrow};
+        opr::OutputCallback::Param param{std::move(callback), borrow, prefer_host_value};
         auto output = opr::OutputCallback::make(std::move(param), sinputs);
         return output.node();
     };
@@ -519,7 +519,7 @@ void init_graph_rt(py::module m) {
             hv_with_event.second->record();
             p->set(std::move(hv_with_event));
         };
-        return output_callback(std::move(f), std::move(inputs), true);
+        return output_callback(std::move(f), std::move(inputs), true, true);
     });
 
     m.def("attr_output_callback", [output_callback](std::shared_ptr<Rendezvous<TensorAttr>> p, std::vector<cg::VarNode*> inputs) {
