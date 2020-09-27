@@ -368,6 +368,7 @@ class trace:
     def _compile(self):
         graph = self._graph = G.Graph()
         graph.options.no_force_inplace = True
+        graph.options.async_exec_level = 0b100
         self._apply_graph_options(graph)
         # graph.options.graph_opt_level = 0
         need_reset_nodes = self._need_reset_nodes = []
