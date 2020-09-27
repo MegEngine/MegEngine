@@ -267,7 +267,7 @@ void init_graph_rt(py::module m) {
             {"opr_types", to_json(opr_types)},
             {"dtypes", to_json(dtype_names)},
             {"elemwise_modes", to_json(elemwise_modes)},
-        });
+        })->to_string();
     });
 
     m.def("dump_graph", [](
