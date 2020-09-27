@@ -243,7 +243,16 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
     class CompSeqRecEventImpl;
     class CpuEventImpl;
 
+//! TODO: because the x-code bug, see
+//! https://github.com/tensorflow/tensorflow/issues/18356
+//! thread local is no support on IOS,
+//! When update x-xode, this code should be deleted
+#ifndef IOS
     static thread_local SeqRecorderImpl* sm_cur_recorder;
+#else
+    SeqRecorderImpl* sm_cur_recorder = nullptr;
+#endif
+
     std::shared_ptr<WorkerQueue> m_worker_queue;
     Locator m_locator, m_locator_logical;
     std::unique_ptr<ThreadPool> m_thread_pool;
@@ -444,8 +453,12 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
                                                      m_thread_pool.get(), this);
         }
 
-        //! current sequence recorder
-        SeqRecorderImpl* cur_recorder() const { return sm_cur_recorder; }
+        //! current sequence recorder of this thread
+#ifndef IOS
+        static SeqRecorderImpl* cur_recorder() { return sm_cur_recorder; }
+#else
+        SeqRecorderImpl* cur_recorder() { return sm_cur_recorder; }
+#endif
 
         void add_callback(Task &&task) override {
             if (!check_global_finalized("add_callback()")) {
@@ -457,8 +470,10 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CpuCompNodeImpl);
 CpuCompNodeImpl* CpuCompNodeImpl::sm_default_cpu_comp_node_ptr;
+#ifndef IOS
 thread_local CpuCompNode::SeqRecorderImpl* CpuCompNodeImpl::sm_cur_recorder =
         nullptr;
+#endif
 
 void CpuCompNode::SeqRecorderImpl::check_the_same_comp_node(
         const CompNode& comp_node) const {

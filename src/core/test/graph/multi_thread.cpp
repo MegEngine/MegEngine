@@ -196,7 +196,7 @@ TEST(TestGraph, ParallelRun) {
     for (auto&& i : workers)
         i.join();
 }
-
+#ifndef IOS
 TEST(TestGraph, MultiThreadRecorder) {
     using ConvParam = opr::Convolution::Param;
     ConvParam param;
@@ -227,5 +227,6 @@ TEST(TestGraph, MultiThreadRecorder) {
     for (auto&& i : workers)
         i.join();
 }
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
