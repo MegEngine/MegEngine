@@ -40,6 +40,8 @@
 #  All Megvii Modifications are Copyright (C) 2014-2020 Megvii Inc. All rights reserved.
 # --------------------------------------------------------------------------------------
 
+from collections import OrderedDict
+
 from .utils import _toposort, groupby
 from .variadic import isvariadic
 
@@ -159,5 +161,5 @@ def ordering(signatures):
     for s in signatures:
         if s not in edges:
             edges[s] = []
-    edges = dict((k, [b for a, b in v]) for k, v in edges.items())
+    edges = OrderedDict((k, [b for a, b in v]) for k, v in edges.items())
     return _toposort(edges)

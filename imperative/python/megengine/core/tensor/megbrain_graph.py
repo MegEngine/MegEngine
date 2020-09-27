@@ -274,7 +274,7 @@ def dump_graph(
     keep_var_name: int = 1,
     keep_param_name: bool = False,
     keep_opr_priority: bool = False,
-    strip_info_file=None,
+    strip_info_file=None
 ):
     """serialize the computing graph of `output_vars` and get byte result.
 

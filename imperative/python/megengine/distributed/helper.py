@@ -54,14 +54,14 @@ def synchronized(func: Callable):
     return wrapper
 
 
+def worker(queue, device_type):
+    num = get_device_count(device_type)
+    queue.put(num)
+
+
 def get_device_count_by_fork(device_type: str):
     q = mp.Queue()
-
-    def worker(queue):
-        num = get_device_count(device_type)
-        queue.put(num)
-
-    p = mp.Process(target=worker, args=(q,))
+    p = mp.Process(target=worker, args=(q, device_type))
     p.start()
     p.join()
     return q.get()

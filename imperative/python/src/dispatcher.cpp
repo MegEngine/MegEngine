@@ -151,16 +151,19 @@ struct Dispatcher {
 public:
     static constexpr auto tp_name = "Dispatcher";
 
-    PyObject* tp_vectorcall(PyObject*const* args, Py_ssize_t nargs) {
-        if (!prepare_call(args, nargs)) return nullptr;
-        return do_call([=](PyObject* func){return _PyObject_FastCall(func, const_cast<PyObject**>(args), nargs);});
-    }
-
     PyObject* tp_call(PyObject* args, PyObject* kwargs) {
         if (!prepare_call(&PyTuple_GET_ITEM(args, 0), PyTuple_GET_SIZE(args))) return nullptr;
         return do_call([=](PyObject* func){return PyObject_Call(func, args, kwargs);});
     }
 
+#if PY_MINOR_VERSION >= 6
+    PyObject* tp_vectorcall(PyObject*const* args, Py_ssize_t nargs) {
+        if (!prepare_call(args, nargs)) return nullptr;
+        return do_call([=](PyObject* func){return _PyObject_FastCall(func, const_cast<PyObject**>(args), nargs);});
+    }
+#endif
+
+#if PY_MINOR_VERSION >= 6
     PyObject* super(PyObject*const* args, Py_ssize_t nargs) {
         if (stack.empty()) {
             PyErr_SetString(PyExc_RuntimeError, "super called at top level");
@@ -169,6 +172,16 @@ public:
         stack.emplace_back_safely(stack.back()).mro_offset++;
         return do_call([=](PyObject* func){return _PyObject_FastCall(func, const_cast<PyObject**>(args), nargs);});
     }
+#else
+    PyObject* super(PyObject* args, PyObject* kwargs) {
+        if (stack.empty()) {
+            PyErr_SetString(PyExc_RuntimeError, "super called at top level");
+            return nullptr;
+        }
+        stack.emplace_back_safely(stack.back()).mro_offset++;
+        return do_call([=](PyObject* func){return PyObject_Call(func, args, kwargs);});
+    }
+#endif
 
     void enable(PyObject* func) {
         auto obj = py::reinterpret_borrow<py::object>(func);
@@ -204,7 +217,11 @@ void init_dispatcher(py::module m) {
         .def<&Dispatcher::enable>("enable")
         .def<&Dispatcher::disable>("disable")
         .def<&Dispatcher::clear_cache>("clear_cache")
+#if PY_MINOR_VERSION >= 6
         .def<&Dispatcher::tp_vectorcall>("call")
+#else
+        .def<&Dispatcher::tp_call>("call")
+#endif
         .def<&Dispatcher::super>("super")
         .finalize();
     if (!dispatcher_type) throw py::error_already_set();
