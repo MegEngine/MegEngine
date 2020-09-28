@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
+import re
 
 from .core._imperative_rt.common import CompNode, DeviceType
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
@@ -22,10 +23,8 @@ __all__ = [
 
 
 def _valid_device(inp):
-    if isinstance(inp, str) and len(inp) == 4:
-        if inp[0] in {"x", "c", "g"} and inp[1:3] == "pu":
-            if inp[3] == "x" or inp[3].isdigit():
-                return True
+    if isinstance(inp, str) and re.match("^[cxg]pu(\d+|\d+:\d+|x)$", inp):
+        return True
     return False
 
 
