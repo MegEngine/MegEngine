@@ -206,6 +206,66 @@ def test_roi_pooling():
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
+def test_adaptive_avg_pool2d():
+    inp = tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
+    oshp = (2, 2)
+    grad = Grad().wrt(inp, callback=_save_to(inp))
+    outp = F.adaptive_avg_pool2d(inp, oshp,)
+    assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
+    np.testing.assert_equal(
+        outp.numpy(), np.array([[[[2.5, 4.5], [10.5, 12.5]]]], dtype=np.float32)
+    )
+
+    grad(outp, tensor(F.ones_like(outp)))
+    assert make_shape_tuple(inp.grad.shape) == make_shape_tuple(inp.shape)
+    np.testing.assert_equal(
+        inp.grad.numpy(),
+        np.array(
+            [
+                [
+                    [
+                        [0.25, 0.25, 0.25, 0.25],
+                        [0.25, 0.25, 0.25, 0.25],
+                        [0.25, 0.25, 0.25, 0.25],
+                        [0.25, 0.25, 0.25, 0.25],
+                    ]
+                ]
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+
+def test_adaptive_max_pool2d():
+    inp = tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
+    oshp = (2, 2)
+    grad = Grad().wrt(inp, callback=_save_to(inp))
+    outp = F.adaptive_max_pool2d(inp, oshp,)
+    assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
+    np.testing.assert_equal(
+        outp.numpy(), np.array([[[[5, 7], [13, 15]]]], dtype=np.float32)
+    )
+
+    grad(outp, tensor(F.ones_like(outp)))
+    assert make_shape_tuple(inp.grad.shape) == make_shape_tuple(inp.shape)
+    np.testing.assert_equal(
+        inp.grad.numpy(),
+        np.array(
+            [
+                [
+                    [
+                        [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 1.0],
+                        [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 1.0],
+                    ]
+                ]
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+
 def test_one_hot():
     def onehot_low_dimension():
         inp = tensor(np.arange(1, 4, dtype=np.int32))

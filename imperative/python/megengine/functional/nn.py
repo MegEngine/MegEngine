@@ -13,7 +13,7 @@ from ..core._imperative_rt import CompNode
 from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
-from ..core.tensor import utils
+from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..core.tensor.utils import astensor1d
 from ..distributed import WORLD, is_distributed
@@ -27,6 +27,8 @@ from .tensor import add_axis, broadcast, concat, full, ones, remove_axis, reshap
 from .types import _pair, _pair_nonzero
 
 __all__ = [
+    "adaptive_avg_pool2d",
+    "adaptive_max_pool2d",
     "avg_pool2d",
     "batched_nms",
     "batch_norm2d",
@@ -321,6 +323,48 @@ def avg_pool2d(
         mode=mode,
     )
     (output,) = apply(op, inp)
+    return output
+
+
+def adaptive_max_pool2d(
+    inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
+) -> Tensor:
+    """Applies a 2D max adaptive pooling over an input.
+
+    Refer to :class:`~.MaxAdaptivePool2d` for more information.
+
+    :param inp: The input tensor.
+    :param oshp: (OH, OW) size of the output shape.
+    :return: output tensor.
+    """
+    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
+    if isinstance(oshp, int):
+        oshp = (oshp, oshp)
+
+    op = builtin.AdaptivePooling(mode="MAX", format="NCHW",)
+    oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
+    (output,) = apply(op, inp, oshp)
+    return output
+
+
+def adaptive_avg_pool2d(
+    inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
+) -> Tensor:
+    """Applies a 2D average adaptive pooling over an input.
+
+    Refer to :class:`~.AvgAdaptivePool2d` for more information.
+
+    :param inp: The input tensor.
+    :param oshp: (OH, OW) size of the output shape.
+    :return: output tensor.
+    """
+    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
+    if isinstance(oshp, int):
+        oshp = (oshp, oshp)
+
+    op = builtin.AdaptivePooling(mode="AVERAGE", format="NCHW",)
+    oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
+    (output,) = apply(op, inp, oshp)
     return output
 
 
