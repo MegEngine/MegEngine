@@ -12,7 +12,7 @@ import os
 import sys
 
 _all_loggers = []
-_default_level_name = os.getenv("MEGENGINE_LOGGING_LEVEL", "ERROR")
+_default_level_name = os.getenv("MEGENGINE_LOGGING_LEVEL", "INFO")
 _default_level = logging.getLevelName(_default_level_name.upper())
 
 

@@ -62,7 +62,7 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
     if (node->config().comp_node().size() ||
             node->config().output_dtype().valid() ||
             node->param().axis != opr::GetVarShape::Param::INVALID_AXIS) {
-        mgb_log_warn("weird GetVarShape");
+        mgb_log_debug("weird GetVarShape");
         return OpTrait::find_by_typeinfo(OprAttr::typeinfo())->make_from_op_node(node);
     }
     return GetVarShape::make();
