@@ -57,6 +57,7 @@ __all__ = [
     "max_pool2d",
     "one_hot",
     "prelu",
+    "remap",
     "softmax",
     "softplus",
     "svd",
@@ -892,7 +893,7 @@ def warp_perspective(
     border_mode: str = "REPLICATE",
     border_val: float = 0.0,
     interp_mode: str = "LINEAR",
-):
+) -> Tensor:
     r"""
     Applies perspective transformation to batched 2D images.
 
@@ -907,9 +908,12 @@ def warp_perspective(
     :param inp: input image.
     :param M: `(batch, 3, 3)` transformation matrix.
     :param dsize: `(h, w)` size of the output image.
-    :param border_mode: pixel extrapolation method. Default: "REPLICATE"
+    :param border_mode: pixel extrapolation method.
+        Default: "REPLICATE". Currently also support "CONSTANT", "REFLECT",
+        "REFLECT_101", "WRAP".
     :param border_val: value used in case of a constant border. Default: 0
-    :param interp_mode: interpolation methods. Default: "LINEAR"
+    :param interp_mode: interpolation methods.
+        Default: "LINEAR". Currently only support "LINEAR" mode.
     :return: output tensor.
 
     Note:
@@ -948,6 +952,62 @@ def warp_perspective(
     inp, M = utils.convert_inputs(inp, M)
     dsize = astensor1d(dsize, inp, dtype="int32", device=inp.device)
     (result,) = apply(op, inp, M, dsize)
+    return result
+
+
+def remap(
+    inp: Tensor,
+    map_xy: Tensor,
+    border_mode: str = "REPLICATE",
+    scalar: float = 0.0,
+    interp_mode: str = "LINEAR",
+) -> Tensor:
+    r"""
+    Applies remap transformation to batched 2D images.
+
+    The input images are transformed to the output images by the tensor map_xy.
+    The output's H and W are same as map_xy's H and W.
+
+    :param inp: input image
+    :param map_xy: (batch, oh, ow, 2) transformation matrix
+    :param border_mode: pixel extrapolation method.
+        Default: "REPLICATE". Currently also support "CONSTANT", "REFLECT",
+        "REFLECT_101", "WRAP".
+    :param scalar: value used in case of a constant border. Default: 0
+    :param interp_mode: interpolation methods.
+        Default: "LINEAR". Currently only support "LINEAR" mode.
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+        inp_shape = (1, 1, 4, 4)
+        inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+        map_xy_shape = (1, 2, 2, 2)
+        map_xy = tensor(np.array([[[1., 0.],[0., 1.]],
+                            [[0., 1.],[0., 1.]]],
+                             dtype=np.float32).reshape(map_xy_shape))
+        out = F.remap(inp, map_xy)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[[[1. 4.]
+           [4. 4.]]]]
+
+    """
+
+    op = builtin.Remap(
+        imode=interp_mode, border_type=border_mode, format="NCHW", scalar=scalar
+    )
+    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
+    (result,) = apply(op, inp, map_xy)
     return result
 
 
@@ -1534,7 +1594,7 @@ def nms(
     :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
     :param iou_thresh: IoU threshold for overlapping.
     :param scores: tensor of shape `(N,)`, the score of boxes.
-    :param max_output: the maximum number of boxes to keep; it is optional if this operator is not traced 
+    :param max_output: the maximum number of boxes to keep; it is optional if this operator is not traced
         otherwise it required to be specified; if it is not specified, all boxes are kept.
     :return: indices of the elements that have been kept by NMS.
 
