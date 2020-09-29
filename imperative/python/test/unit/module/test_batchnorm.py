@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import functools
 import multiprocessing as mp
 import platform
 
@@ -17,6 +18,8 @@ import megengine.distributed as dist
 from megengine import Tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
+
+_assert_allclose = functools.partial(np.testing.assert_allclose, atol=5e-6, rtol=5e-6)
 
 
 @pytest.mark.skipif(
@@ -46,9 +49,9 @@ def test_syncbn():
         for i in range(steps):
             yv = bn(Tensor(data[i]))
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
-        np.testing.assert_allclose(bn.running_mean.numpy(), running_mean, atol=5e-6)
-        np.testing.assert_allclose(bn.running_var.numpy(), running_var, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)
+        _assert_allclose(bn.running_mean.numpy(), running_mean)
+        _assert_allclose(bn.running_var.numpy(), running_var)
 
     xv = []
     for i in range(steps):
@@ -118,13 +121,9 @@ def test_batchnorm():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
-        np.testing.assert_allclose(
-            bn.running_mean.numpy().reshape(-1), running_mean.reshape(-1), atol=5e-6
-        )
-        np.testing.assert_allclose(
-            bn.running_var.numpy().reshape(-1), running_var.reshape(-1), atol=5e-6
-        )
+        _assert_allclose(yv.numpy(), yv_expect)
+        _assert_allclose(bn.running_mean.numpy().reshape(-1), running_mean.reshape(-1))
+        _assert_allclose(bn.running_var.numpy().reshape(-1), running_var.reshape(-1))
 
     # test set 'training' flag to False
     mean_backup = bn.running_mean.numpy()
@@ -138,7 +137,7 @@ def test_batchnorm():
     np.testing.assert_equal(mean_backup, bn.running_mean.numpy())
     np.testing.assert_equal(var_backup, bn.running_var.numpy())
     yv_expect = (xv - running_mean) / np.sqrt(running_var + bn.eps)
-    np.testing.assert_allclose(yv1.numpy(), yv_expect, atol=5e-6)
+    _assert_allclose(yv1.numpy(), yv_expect)
 
 
 @pytest.mark.skipif(
@@ -172,13 +171,9 @@ def test_syncbn1d():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
-        np.testing.assert_allclose(
-            bn.running_mean.numpy().reshape(-1), running_mean.reshape(-1), atol=5e-6
-        )
-        np.testing.assert_allclose(
-            bn.running_var.numpy().reshape(-1), running_var.reshape(-1), atol=5e-6
-        )
+        _assert_allclose(yv.numpy(), yv_expect)
+        _assert_allclose(bn.running_mean.numpy().reshape(-1), running_mean.reshape(-1))
+        _assert_allclose(bn.running_var.numpy().reshape(-1), running_var.reshape(-1))
 
     # test set 'training' flag to False
     mean_backup = bn.running_mean.numpy()
@@ -192,7 +187,7 @@ def test_syncbn1d():
     np.testing.assert_equal(mean_backup, bn.running_mean.numpy())
     np.testing.assert_equal(var_backup, bn.running_var.numpy())
     yv_expect = (xv - running_mean) / np.sqrt(running_var + bn.eps)
-    np.testing.assert_allclose(yv1.numpy(), yv_expect, atol=5e-6)
+    _assert_allclose(yv1.numpy(), yv_expect)
 
 
 def test_batchnorm2d():
@@ -220,9 +215,9 @@ def test_batchnorm2d():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
-        np.testing.assert_allclose(bn.running_mean.numpy(), running_mean, atol=5e-6)
-        np.testing.assert_allclose(bn.running_var.numpy(), running_var, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)
+        _assert_allclose(bn.running_mean.numpy(), running_mean)
+        _assert_allclose(bn.running_var.numpy(), running_var)
 
     # test set 'training' flag to False
     mean_backup = bn.running_mean.numpy()
@@ -236,7 +231,7 @@ def test_batchnorm2d():
     np.testing.assert_equal(mean_backup, bn.running_mean.numpy())
     np.testing.assert_equal(var_backup, bn.running_var.numpy())
     yv_expect = (xv - running_mean) / np.sqrt(running_var + bn.eps)
-    np.testing.assert_allclose(yv1.numpy(), yv_expect, atol=5e-6)
+    _assert_allclose(yv1.numpy(), yv_expect)
 
 
 @pytest.mark.skipif(
@@ -271,9 +266,9 @@ def test_syncbn2d():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
-        np.testing.assert_allclose(bn.running_mean.numpy(), running_mean, atol=5e-6)
-        np.testing.assert_allclose(bn.running_var.numpy(), running_var, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)
+        _assert_allclose(bn.running_mean.numpy(), running_mean)
+        _assert_allclose(bn.running_var.numpy(), running_var)
 
     # test set 'training' flag to False
     mean_backup = bn.running_mean.numpy()
@@ -287,7 +282,7 @@ def test_syncbn2d():
     np.testing.assert_equal(mean_backup, bn.running_mean.numpy())
     np.testing.assert_equal(var_backup, bn.running_var.numpy())
     yv_expect = (xv - running_mean) / np.sqrt(running_var + bn.eps)
-    np.testing.assert_allclose(yv1.numpy(), yv_expect, atol=5e-6)
+    _assert_allclose(yv1.numpy(), yv_expect)
 
 
 def test_batchnorm_no_stats():
@@ -310,7 +305,7 @@ def test_batchnorm_no_stats():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)
 
 
 @pytest.mark.skipif(
@@ -340,7 +335,7 @@ def test_syncbn_no_stats():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)
 
 
 def test_batchnorm2d_no_stats():
@@ -362,7 +357,7 @@ def test_batchnorm2d_no_stats():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)
 
 
 @pytest.mark.skipif(
@@ -391,4 +386,4 @@ def test_syncbn2d_no_stats():
         yv = bn(Tensor(xv))
         yv_expect = (xv - mean) / sd
 
-        np.testing.assert_allclose(yv.numpy(), yv_expect, atol=5e-6)
+        _assert_allclose(yv.numpy(), yv_expect)

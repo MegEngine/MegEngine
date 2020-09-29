@@ -60,7 +60,10 @@ def test_TQT():
 
     def check_inp(a, b, c, a_np, b_np, c_np):
         np.testing.assert_allclose(
-            f.forward(a, b).numpy(), nf.forward(a_np, b_np).astype("float32"), rtol=1e-6
+            f.forward(a, b).numpy(),
+            nf.forward(a_np, b_np).astype("float32"),
+            rtol=1e-6,
+            atol=1e-6,
         )
         c1, c2 = f.backward(c)
         c1_np, c2_np = nf.backward(c_np)
