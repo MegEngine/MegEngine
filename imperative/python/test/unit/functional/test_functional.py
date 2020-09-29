@@ -308,6 +308,37 @@ def test_one_hot():
     onehot_high_dimension()
 
 
+def test_warp_perspective():
+    inp_shape = (1, 1, 4, 4)
+    x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+    M_shape = (1, 3, 3)
+    # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
+    M = tensor(
+        np.array(
+            [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0], [0.0, 0.0, 1.0]], dtype=np.float32
+        ).reshape(M_shape)
+    )
+    outp = F.warp_perspective(x, M, (2, 2))
+    np.testing.assert_equal(
+        outp.numpy(), np.array([[[[5.0, 6.0], [9.0, 10.0]]]], dtype=np.float32)
+    )
+
+
+def test_remap():
+    inp_shape = (1, 1, 4, 4)
+    inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+    map_xy_shape = (1, 2, 2, 2)
+    map_xy = tensor(
+        np.array(
+            [[[1.0, 0.0], [0.0, 1.0]], [[0.0, 1.0], [0.0, 1.0]]], dtype=np.float32
+        ).reshape(map_xy_shape)
+    )
+    outp = F.remap(inp, map_xy)
+    np.testing.assert_equal(
+        outp.numpy(), np.array([[[[1.0, 4.0], [4.0, 4.0]]]], dtype=np.float32)
+    )
+
+
 def test_binary_cross_entropy():
     data1_shape = (2, 2)
     label1_shape = (2, 2)
