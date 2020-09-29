@@ -36,6 +36,13 @@ active_trace = None
 skip_tracing = False
 
 
+def is_tracing():
+    if active_trace is None:
+        return False
+    else:
+        return not skip_tracing
+
+
 @contextlib.contextmanager
 def exclude_from_trace():
     global skip_tracing

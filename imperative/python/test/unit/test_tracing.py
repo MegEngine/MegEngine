@@ -357,3 +357,25 @@ def test_trace_broadcast():
         f(x1)
         f(x2)
         f(x3)
+
+
+def test_trace_nms():
+    def make_inputs(n):
+        boxes = np.zeros((n, 4))
+        boxes[:, :2] = np.random.rand(n, 2) * 100
+        boxes[:, 2:] = np.random.rand(n, 2) * 100 + 100
+
+        scores = np.random.rand(n)
+
+        return tensor(boxes), tensor(scores)
+
+    @trace(symbolic=False)
+    def f(boxes, scores):
+        results = F.nn.nms(boxes, scores=scores, iou_thresh=0.5, max_output=20)
+        with exclude_from_trace():
+            _ = F.nn.nms(boxes, scores=scores, iou_thresh=0.5)
+        return results
+
+    f(*make_inputs(10))
+    f(*make_inputs(20))
+    f(*make_inputs(30))
