@@ -51,10 +51,6 @@ class Tensor(_Tensor, ArrayMethodMixin):
                 cn = device._cn
 
         if isinstance(data, _Tensor):
-            if dtype is not None:
-                logger.warning(
-                    "dtype does not work when creating a new Tensor with another Tensor"
-                )
             obj = _Tensor.__new__(cls, data)
         else:
             if isinstance(data, np.ndarray):

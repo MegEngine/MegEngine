@@ -279,8 +279,8 @@ class GradManager:
                         tensor.grad = grad
                     else:
                         tensor.grad += grad
-                    if tensor.isscalar() and tensor.grad is not None:
-                        tensor.grad.setscalar()
+                    if tensor._isscalar() and tensor.grad is not None:
+                        tensor.grad._setscalar()
         finally:
             self.release()
             backwarding_grad_manager = cache

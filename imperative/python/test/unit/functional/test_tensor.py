@@ -406,3 +406,53 @@ def test_copy_d2h():
 def test_copy_d2d():
     copy_test("gpu0", "gpu1")
     copy_test("gpu0:0", "gpu0:1")
+
+
+@pytest.mark.parametrize(
+    "shape, repeats, axis",
+    [
+        ((2,), 2, 0),
+        ((2, 3, 4, 5), 3, 0),
+        ((2, 3, 4, 5), 4, 3),
+        ((2,), 2, None),
+        ((2, 3, 4, 5), 3, None),
+        ((), 1, None),
+        ((), 10, None),
+    ],
+)
+def test_repeat(shape, repeats, axis):
+    def repeat_func(inp):
+        return F.repeat(inp=inp, repeats=repeats, axis=axis)
+
+    if shape != ():
+        cases = [
+            {"input": np.random.randn(*shape).astype("float32")},
+        ]
+    else:
+        cases = [{"input": np.array(1.23)}]
+
+    opr_test(
+        cases, repeat_func, ref_fn=lambda inp: np.repeat(inp, repeats, axis),
+    )
+
+
+@pytest.mark.parametrize(
+    "shape, reps",
+    [
+        ((2,), (2,)),
+        ((2, 3, 4, 5), (1, 1, 1, 1)),
+        ((2, 3, 4, 5), (1, 2, 3, 4)),
+        ((2, 3, 4, 5), (2, 2, 2, 2, 2, 2, 2)),
+    ],
+)
+def test_tile(shape, reps):
+    def tile_func(inp):
+        return F.tile(inp=inp, reps=reps)
+
+    cases = [
+        {"input": np.random.randn(*shape).astype("float32")},
+    ]
+
+    opr_test(
+        cases, tile_func, ref_fn=lambda inp: np.tile(inp, reps),
+    )

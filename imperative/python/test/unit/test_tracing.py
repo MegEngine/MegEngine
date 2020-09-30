@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import io
+import itertools
 from tempfile import mkstemp
 
 import numpy as np
@@ -359,7 +360,7 @@ def test_trace_warp_perspective():
         np.testing.assert_equal(out.shape.numpy(), np.array([1, 1, 2, 2]))
         return out
 
-    for i in range(1):
+    for i in range(3):
         f(x, M)
 
 

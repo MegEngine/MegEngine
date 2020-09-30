@@ -51,10 +51,10 @@ def concatenate(inputs, axis=0, *, device=None):
 def astype(x, dtype):
     dtype = np.dtype(dtype)
     if not is_dtype_equal(x.dtype, dtype):
-        isscalar = x.isscalar()
+        isscalar = x._isscalar()
         (x,) = apply(builtin.TypeCvt(dtype=dtype), x)
         if isscalar:
-            x.setscalar()
+            x._setscalar()
     return x
 
 
@@ -98,14 +98,14 @@ def result_type(*args):
 def isscalar(x):
 
     if isinstance(x, Tensor):
-        return x.isscalar()
+        return x._isscalar()
 
     return np.isscalar(x)
 
 
 def setscalar(x):
     if isinstance(x, Tensor):
-        x.setscalar()
+        x._setscalar()
     else:
         raise NotImplementedError("Unsupport type {}".format(type(x)))
 

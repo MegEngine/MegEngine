@@ -557,6 +557,11 @@ void TensorWrapper::setscalar() {
 }
 
 
+void TensorWrapper::unsetscalar() {
+    m_tensor->m_flags &= ~Tensor::Flags::SCALAR;
+}
+
+
 struct TensorWeakRef {
     std::weak_ptr<Tensor> wptr;
 
@@ -794,8 +799,9 @@ void init_tensor(py::module m) {
         .def_getset<&TensorWrapper::dtype>("dtype")
         .def_getset<&TensorWrapper::device>("device")
         .def<&TensorWrapper::reset>("_reset")
-        .def<&TensorWrapper::isscalar>("isscalar")
-        .def<&TensorWrapper::setscalar>("setscalar")
+        .def<&TensorWrapper::isscalar>("_isscalar")
+        .def<&TensorWrapper::setscalar>("_setscalar")
+        .def<&TensorWrapper::unsetscalar>("_unsetscalar")
         .def<&TensorWrapper::detach>("detach")
         .def<&TensorWrapper::_dev_tensor>("_dev_tensor")
         .def<&TensorWrapper::_swap_out>("_swap_out")

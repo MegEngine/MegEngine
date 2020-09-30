@@ -153,6 +153,7 @@ struct TensorWrapper {
     PyObject* detach();
     PyObject* isscalar();
     void setscalar();
+    void unsetscalar();
     PyObject* _dev_tensor();
     void _swap_in();
     void _swap_out();

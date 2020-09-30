@@ -225,7 +225,7 @@ def getitem(tensor, index):
         op = builtin.IndexingMultiAxisVec(items=items)
     (result,) = apply(op, tensor, *tensors)
     if ret_scalar:
-        result.setscalar()
+        result._setscalar()
     return result
 
 

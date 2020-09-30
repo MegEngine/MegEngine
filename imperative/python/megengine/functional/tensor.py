@@ -44,11 +44,13 @@ __all__ = [
     "linspace",
     "ones",
     "ones_like",
+    "repeat",
     "reshape",
     "split",
     "squeeze",
     "stack",
     "scatter",
+    "tile",
     "transpose",
     "where",
     "zeros",
@@ -987,3 +989,144 @@ def arange(
     if np.dtype(dtype) == np.int32:
         return result.astype(dtype)
     return result
+
+
+def repeat(inp: Tensor, repeats: int, axis: Optional[int] = None):
+    """
+    Repeat elements of an array.
+
+    :param inp: input tensor.
+    :param repeats: the number of repetitions for each element.
+    :param axis: the axis along which to repeat values. By default, use the
+                 flattened input array, and return a flat output array.
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+        from megengine import tensor
+
+        x = tensor([[1, 2], [3, 4]], np.int32)
+        y = F.repeat(x, 2, axis=0)
+        print(y.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[1 2]
+         [1 2]
+         [3 4]
+         [3 4]]
+
+    """
+    if axis is None:
+        inp = inp.reshape(-1)  # flatten
+        axis = 0
+    if inp._isscalar():
+        inp._unsetscalar()
+    shape = astensor1d(inp.shape, inp, dtype="int32", device=inp.device)
+    # assume inp.ndim is not changed during trace
+    max_axis = len(shape) - 1
+    assert axis >= 0 and axis <= max_axis
+    assert repeats >= 1
+
+    base_shape, bcast_shape, target_shape = [], [], []
+    if axis != 0:
+        target_shape.append(shape[:axis])
+    base_shape.extend([shape[: axis + 1], [1,]])
+    bcast_shape.extend([shape[: axis + 1], [repeats,]])
+    target_shape.extend(
+        [shape[axis] * repeats,]
+    )
+    if axis + 1 <= max_axis:
+        base_shape.append(shape[axis + 1 :])
+        bcast_shape.append(shape[axis + 1 :])
+        target_shape.append(shape[axis + 1 :])
+
+    out = broadcast_to(inp.reshape(concat(base_shape)), concat(bcast_shape)).reshape(
+        concat(target_shape)
+    )
+    return out
+
+
+def _tile_one_dim(inp, rep, axis):
+    shape = astensor1d(inp.shape, inp, dtype="int32", device=inp.device)
+    # assume inp.ndim is not changed during trace
+    max_axis = len(shape) - 1
+
+    base_shape, bcast_shape, target_shape = [], [], []
+
+    if axis != 0:
+        base_shape.append(shape[:axis])
+        bcast_shape.append(shape[:axis])
+        target_shape.append(shape[:axis])
+    base_shape.extend([[1,], shape[axis:]])
+    bcast_shape.extend([rep, shape[axis:]])
+    target_shape.append(shape[axis] * rep)
+    if axis + 1 <= max_axis:
+        target_shape.append(shape[axis + 1 :])
+
+    out = broadcast_to(inp.reshape(concat(base_shape)), concat(bcast_shape)).reshape(
+        concat(target_shape)
+    )
+    return out
+
+
+def tile(inp: Tensor, reps: Iterable[int]):
+    """
+    Construct an array by repeating ``inp`` the number of times given by ``reps``. If reps has length d,
+    the result will have dimension of ``max(d, inp.ndim)``. It is required that ``d >= inp.dim``. If ``inp.ndim < d``,
+    ``inp`` is promoted to be ``d``-dimensional by prepending new axis.
+
+    :param inp: input tensor.
+    :param reps: The number of repetitions of inp along each axis.
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+        from megengine import tensor
+
+        x = tensor([[1, 2], [3, 4]], np.int32)
+        y = F.tile(x, (2,1))
+        print(y.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[1 2]
+        [3 4]
+        [1 2]
+        [3 4]]
+
+    """
+    shape = astensor1d(inp.shape, inp, dtype="int32", device=inp.device)
+    reps = astensor1d(reps, inp, dtype="int32", device=inp.device)
+    l_shape = len(shape)
+    l_reps = len(reps)
+    assert (
+        l_reps >= l_shape
+    ), "Number of dimensions of tiled dims can not be smaller than number of dimensions of tensor"
+
+    for i in range(l_shape):
+        rep = reps[i + (l_reps - l_shape)]
+        inp = _tile_one_dim(inp, rep, i)
+
+    if l_reps > l_shape:
+        shape = inp.shape
+        extra = reps[:-l_shape]
+        extra_ones = ones_like(extra)
+        base_shape = concat([extra_ones, shape])
+        bcast_shape = concat([extra, shape])
+        target_shape = concat([extra, shape])
+        inp = broadcast_to(inp.reshape(base_shape), bcast_shape).reshape(target_shape)
+
+    return inp
