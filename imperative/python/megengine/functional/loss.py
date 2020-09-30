@@ -63,7 +63,7 @@ def l1_loss(pred: Tensor, label: Tensor) -> Tensor:
 
     .. testoutput::
 
-        [2.75]
+        2.75
 
     """
     diff = pred - label
@@ -115,7 +115,7 @@ def square_loss(pred: Tensor, label: Tensor) -> Tensor:
 
     .. testoutput::
 
-        [9.75]
+        9.75
 
     """
     diff = pred - label
@@ -170,7 +170,7 @@ def cross_entropy(
 
     .. testoutput::
 
-        [0.6931]
+        0.6931
 
     """
     n0 = pred.ndim
@@ -226,7 +226,7 @@ def binary_cross_entropy(
 
     .. testoutput::
 
-        [0.6931]
+        0.6931
 
     """
     if not with_logits:
@@ -265,7 +265,7 @@ def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
 
     .. testoutput::
 
-        [1.5]
+        1.5
 
     """
     assert norm in ["L1", "L2"], "norm must be L1 or L2"

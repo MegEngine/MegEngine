@@ -46,9 +46,9 @@ class Observer(Module):
 
     def get_dtype(self):
         q_dict = self.get_qparams()
-        numpy_scale = None if "scale" not in q_dict else q_dict["scale"].numpy()[0]
+        numpy_scale = None if "scale" not in q_dict else q_dict["scale"].numpy()
         numpy_zero_point = (
-            None if "zero_point" not in q_dict else q_dict["zero_point"].numpy()[0]
+            None if "zero_point" not in q_dict else q_dict["zero_point"].numpy()
         )
         return get_quantized_dtype(self.dtype, numpy_scale, numpy_zero_point)
 

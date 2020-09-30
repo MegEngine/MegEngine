@@ -168,8 +168,6 @@ class trace:
         self._output_bindings = None
         self._output_names = None
 
-        set_symbolic_shape(self._symbolic_shape)
-
     def _new_handle(self):
         handle = len(self._tinfo)
         info = TensorInfo()
@@ -368,6 +366,7 @@ class trace:
         interrupted = False
 
         def do_enter():
+            self._save_symbolic_shape = set_symbolic_shape(self._symbolic_shape)
             self._set_active(True)
             if self._untraced:
                 self._init_trace(self._symbolic)
@@ -423,6 +422,8 @@ class trace:
             apply.disable(apply_compiled_mode)
             apply.disable(apply_const_compiled_mode)
             self._set_active(False)
+            # Restore global variable
+            set_symbolic_shape(self._save_symbolic_shape)
 
         def do_exit():
             if not self._untraced and self._pc != len(self._seq):
@@ -498,7 +499,7 @@ class trace:
                 opnode = info.data_setter = G.InputNode(
                     device=info.device,
                     dtype=info.dtype,
-                    shape=info.shape,
+                    shape=info.shape or (1,),
                     graph=graph,
                     use_static_shape=_input_node_use_static_shape(),
                 )
@@ -544,7 +545,7 @@ class trace:
                             *links,
                             device=info.device,
                             dtype=info.dtype,
-                            shape=info.shape,
+                            shape=info.shape or (1,),
                             graph=graph,
                             use_static_shape=_input_node_use_static_shape(),
                         )
@@ -719,13 +720,13 @@ class trace:
             h2v[h] = graph.make_h2d(
                 dtype=info.dtype,
                 device=dumped_device,
-                shape=info.shape,
+                shape=info.shape or (1,),
                 name=arg_names[i] if arg_names else None,
             )
         for k, h in self._kwarg_bindings.items():
             info = self._tinfo[h]
             h2v[h] = graph.make_h2d(
-                dtype=info.dtype, device=dumped_device, shape=info.shape, name=k
+                dtype=info.dtype, device=dumped_device, shape=info.shape or (1,), name=k
             )
 
         for op, ihandles, ohandles in self._seq:
@@ -919,6 +920,7 @@ class CompiledTensorProxy(RawTensor):
 
     def __init__(self, handle):
         self.__handle = handle
+        self._isscalar = False
         self.__info = active_trace._tinfo[handle]
         self.__shape = None
         self.__data = None
@@ -934,6 +936,8 @@ class CompiledTensorProxy(RawTensor):
 
     @property
     def shape(self):
+        if self._isscalar:
+            return ()
         if self.__shape is None:
             if self.__info.shape_read:
                 self.__shape = self.__info.shape_reader.get_value().shape
@@ -951,6 +955,8 @@ class CompiledTensorProxy(RawTensor):
                 self.__value = self._dev_tensor().numpy()
             else:
                 raise TraceMismatchError("value of this tensor is not read in trace")
+            if self._isscalar:
+                self.__value = self.__value.squeeze()
         return self.__value
 
     def _dev_tensor(self):
@@ -970,9 +976,10 @@ class CompiledTensorProxy(RawTensor):
 
 
 class LazyEvalTensor(RawTensor):
-    def __init__(self, varnode):
-        super(LazyEvalTensor, self).__init__()
+    def __init__(self, varnode, isscalar=False):
+        super().__init__()
         self.__varnode = varnode
+        self._isscalar = isscalar
 
     @property
     def dtype(self):
@@ -984,10 +991,15 @@ class LazyEvalTensor(RawTensor):
 
     @property
     def shape(self):
+        if self._isscalar:
+            return ()
         return self.__varnode.shape
 
     def numpy(self):
-        return self.__varnode.value
+        ret = self.__varnode.value
+        if self._isscalar:
+            ret = ret.squeeze()
+        return ret
 
     def _dev_tensor(self):
         raise RuntimeError("cannot access data during symbolic tracing")
@@ -1041,10 +1053,12 @@ class TracedLazyTensor(TraceMixin, LazyEvalTensor):
 
 def assign_raw_tensor(lhs, rhs):
     handle = rhs._handle
+    # Keep isscalar of lhs
+    isscalar = lhs._isscalar
     rhs.__dict__.clear()
     lhs.__dict__.clear()
     lhs.__class__ = RawTensor
-    lhs.__init__(handle)
+    lhs.__init__(handle, isscalar=isscalar)
 
 
 # this hook turns RawTensor into LazyEvalTensor
@@ -1060,7 +1074,7 @@ def apply_symbolic_mode(op: OpDef, *args: RawTensor):
             data_setter = G.InputNode(
                 device=x.device,
                 dtype=x.dtype,
-                shape=x.shape,
+                shape=x.shape or (1,),
                 graph=graph,
                 use_static_shape=True,
             )
@@ -1091,7 +1105,9 @@ apply.disable(apply_symbolic_mode)
 @apply.register()
 def apply_const_symbolic_mode(op: Const, *args: RawTensor):
     graph = active_trace._lazy_eval_graph
-    ret = LazyEvalTensor(graph.make_const(op.value, dtype=op.dtype, device=op.device))
+    ret = LazyEvalTensor(
+        graph.make_const(op.value, dtype=op.dtype, device=op.device), isscalar=True
+    )
     active_trace._lazy_eval_tensors.add(ret)
     return (ret,)
 

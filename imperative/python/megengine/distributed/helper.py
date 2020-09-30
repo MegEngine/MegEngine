@@ -63,8 +63,12 @@ def param_pack_split(inp: Tensor, offsets: list, shapes: list):
     """
     op = ParamPackSplit()
     op.offsets = offsets
-    op.shapes = shapes
-    return apply(op, inp)
+    op.shapes = [s or (1,) for s in shapes]
+    outputs = apply(op, inp)
+    for s, x in zip(shapes, outputs):
+        if not s:
+            x._isscalar = True
+    return outputs
 
 
 def param_pack_concat(inps: list, offsets: Tensor, offsets_val: list):

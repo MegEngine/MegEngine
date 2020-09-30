@@ -102,8 +102,9 @@ class Graph(_imperative_rt.ComputingGraph):
 
 
 class VarNode(TensorBase):
-    def __init__(self, node: _imperative_rt.VarNode):
+    def __init__(self, node: _imperative_rt.VarNode, isscalar=False):
         self._node = node
+        self._isscalar = isscalar
         if hasattr(self.graph, "_var_cache"):
             self.graph._var_cache[node] = self
 

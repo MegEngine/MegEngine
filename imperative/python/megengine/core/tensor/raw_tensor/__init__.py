@@ -33,8 +33,9 @@ class RawTensor(TensorBase):
     _del_cb = None
     _handle = None
 
-    def __init__(self, handle=None):
+    def __init__(self, handle=None, isscalar=False):
         self._handle = handle
+        self._isscalar = isscalar
         if handle is not None:
             if self._init_cb:
                 self._init_cb()
@@ -49,10 +50,15 @@ class RawTensor(TensorBase):
 
     @property
     def shape(self):
+        if self._isscalar:
+            return ()
         return get_shape(self._handle)
 
     def numpy(self):
-        return get_value(self._handle)
+        ret = get_value(self._handle)
+        if self._isscalar:
+            ret = ret.squeeze()
+        return ret
 
     def _dev_tensor(self):
         return _get_dev_tensor(self._handle)
@@ -102,7 +108,7 @@ def _(array: np.ndarray, dtype=None, device=None):
     device = None if device is None else as_device(device).to_c()
     if 0 in array.strides:
         array = array.squeeze().reshape(array.shape)
-    return RawTensor(put(array, dtype=dtype, device=device))
+    return RawTensor(put(array, dtype=dtype, device=device), isscalar=(array.ndim == 0))
 
 
 @as_raw_tensor.register(RawTensor)

@@ -26,4 +26,6 @@ def set_symbolic_shape(option: bool):
     """ Sets whether tensor.shape returns a tensor instead of a tuple
     """
     global _use_symbolic_shape
+    _org = _use_symbolic_shape
     _use_symbolic_shape = option
+    return _org

@@ -21,7 +21,9 @@ from .indexing import getitem as _getitem
 from .indexing import setitem as _setitem
 from .raw_tensor import RawTensor, as_raw_tensor
 from .tensor import Tensor
+from .utils import isscalar
 from .utils import make_shape_tuple as _make_shape_tuple
+from .utils import setscalar
 
 _ElwMod = Elemwise.Mode
 
@@ -39,6 +41,13 @@ def _elwise(*args, mode):
         )
     args = utils.convert_inputs(*args)
     (result,) = apply(op, *args)
+    _isscalar = True
+    for i in args:
+        if isscalar(i) == False:
+            _isscalar = False
+            break
+    if _isscalar:
+        setscalar(result)
     return result
 
 
@@ -153,6 +162,8 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
     param = Param(*map(builtin.AxisAddRemove.AxisDesc.make_remove, axis))
     op = builtin.AxisAddRemove(param=param)
     (result,) = apply(op, inp)
+    if len(axis) == inp.ndim:
+        setscalar(result)
     return result
 
 
@@ -189,6 +200,8 @@ def _reduce(mode):
         if self.dtype == np.bool_:
             if mode in ["MIN", "MAX"]:
                 result = result.astype("bool")
+        if axis is None or self.ndim == 1:
+            setscalar(result)
         return result
 
     return f
@@ -321,9 +334,7 @@ class ArrayMethodMixin(abc.ABC):
     __complex__ = lambda self: complex(self.item())
 
     def __len__(self):
-        shape = self.shape
-        if use_symbolic_shape():
-            shape = shape.numpy()
+        shape = self.__wrapped__.shape
         if shape:
             return int(shape[0])
         raise TypeError("ndim is 0")
@@ -344,18 +355,17 @@ class ArrayMethodMixin(abc.ABC):
 
     @property
     def ndim(self):
-        shape = self.shape
-        if isinstance(shape, self.__class__):
-            # XXX: assume ndim is not changed during trace
-            ndim = shape.__wrapped__.shape[0]
-            return ndim
+        shape = self.__wrapped__.shape
+        if shape is None:
+            raise ValueError("unkown ndim")
         return len(shape)
 
     @property
     def size(self):
-        if use_symbolic_shape():
-            return self.shape.prod()
-        return np.prod(self.shape).item()
+        shape = self.shape
+        if shape.__class__ is tuple:
+            return np.prod(self.shape).item()
+        return shape.prod()
 
     @property
     def T(self):
@@ -416,8 +426,8 @@ class ArrayMethodMixin(abc.ABC):
 
         .. testoutput::
 
-            [2]
-            [10.]
+            2
+            10.
 
         """
         return _reduce("SUM")(self, axis, keepdims)
@@ -444,10 +454,10 @@ class GenericTensorWrapper(ArrayMethodMixin, TensorWrapperBase):
 
     @property
     def shape(self):
-        if use_symbolic_shape():
-            return apply(GetVarShape(), self)[0]
-        else:
-            return self.__wrapped__.shape
+        shape = self.__wrapped__.shape
+        if shape == () or not use_symbolic_shape():
+            return shape
+        return apply(GetVarShape(), self)[0]
 
     @property
     def device(self):

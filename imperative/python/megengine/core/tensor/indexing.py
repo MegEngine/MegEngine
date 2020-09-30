@@ -14,7 +14,7 @@ from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.special import Const
 from .core import TensorBase, TensorWrapperBase, apply
-from .utils import astensor1d, make_shape_tuple
+from .utils import astensor1d, isscalar, make_shape_tuple
 
 
 def remove_ellipsis(tensor, tuple_val):
@@ -89,9 +89,13 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
     if not isinstance(tuple_val, tuple):
         tuple_val = (tuple_val,)
     ndim_indexed = 0
+    ndim_indexed_scalar = 0
     for i in tuple_val:
         if not i is Ellipsis:
             ndim_indexed += 1 if not hasattr(i, "ndim") else i.ndim
+            if isscalar(i):
+                ndim_indexed_scalar += 1
+
     if ndim_indexed > inp.ndim:
         raise IndexError(
             "too many indices for tensor: tensor is {}-dimensional, but {} were indexed".format(
@@ -102,15 +106,6 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
     tuple_val = remove_ellipsis(inp, tuple_val)
     use_subtensor = True
     inp, tuple_val = check_bool_index(inp, tuple_val)
-
-    def is_scalar(d):
-        if isinstance(i, int):
-            return True
-        if type(d).__module__ == np.__name__:
-            return np.isscalar(d)
-        # if isinstance(d, (TensorBase, TensorWrapperBase)):
-        #     return d.shape == (1,)
-        return False
 
     new_axes = []
     tensors = []
@@ -134,7 +129,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
             continue
 
         if (
-            not is_scalar(i)
+            not isscalar(i)
             and not i is np.newaxis
             and not i is Ellipsis
             and not isinstance(i, slice)
@@ -191,7 +186,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
         items.append(item)
     if new_axes:
         raise IndexError("newaxis is not allowed here")
-    return inp, tensors, items, use_subtensor
+    return inp, tensors, items, use_subtensor, ndim_indexed_scalar == inp.ndim
 
 
 def try_condtake(tensor, index):
@@ -217,11 +212,11 @@ def getitem(tensor, index):
     try_result = try_condtake(tensor, index)
     if len(try_result) == 2:
         return try_result[0]
-    tensor, tensors, items, use_subtensor = unpack_getitem(tensor, index)
+    tensor, tensors, items, use_subtensor, ret_scalar = unpack_getitem(tensor, index)
     for v in tensors:
         if isinstance(v.shape, v.__class__):
             break
-        if v.shape[0] == 0:
+        if len(v.shape) > 0 and v.shape[0] == 0:
             (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)(
                 tensor
             )
@@ -231,6 +226,8 @@ def getitem(tensor, index):
     else:
         op = builtin.IndexingMultiAxisVec(items=items)
     (result,) = apply(op, tensor, *tensors)
+    if ret_scalar:
+        result.__wrapped__._data._isscalar = True
     return result
 
 
@@ -245,9 +242,9 @@ def setitem(tensor, index, value):
     if not isinstance(value, (TensorBase, TensorWrapperBase)):
         op = Const(value, dtype=tensor.dtype, device=tensor.device)
         (value,) = op(tensor)
-    tensor, tensors, items, use_subtensor = unpack_getitem(tensor, index)
+    tensor, tensors, items, use_subtensor, _ = unpack_getitem(tensor, index)
     for v in tensors:
-        if v.shape[0] == 0:
+        if len(v.shape) > 0 and v.shape[0] == 0:
             return tensor
     if use_subtensor:
         op = builtin.Subtensor(items=items)

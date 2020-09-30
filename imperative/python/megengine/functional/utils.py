@@ -53,7 +53,7 @@ def topk_accuracy(
 
     .. testoutput::
 
-        [0.] [0.375]
+        0.0 0.375
     """
     if isinstance(topk, int):
         topk = (topk,)

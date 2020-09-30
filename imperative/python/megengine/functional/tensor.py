@@ -111,6 +111,8 @@ def full(shape, value, dtype="float32", device=None):
     (x,) = Const(value, dtype=dtype, device=device)(
         Tensor(value, dtype=dtype, device=device)
     )
+    if len(shape) == 0:  # scalar
+        return x
     return broadcast_to(x, shape)
 
 

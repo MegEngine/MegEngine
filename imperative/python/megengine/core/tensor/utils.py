@@ -133,7 +133,9 @@ def concatenate(inputs, axis=0, *, device=None):
 def astype(x, dtype):
     dtype = np.dtype(dtype)
     if not is_equal(x.dtype, dtype):
+        isscalar = x.__wrapped__._data._isscalar
         (x,) = apply(builtin.TypeCvt(param=dtype), x)
+        x.__wrapped__._data._isscalar = isscalar
     return x
 
 
@@ -176,11 +178,27 @@ def result_type(*args):
 
 
 def isscalar(x):
-    try:
-        return x.ndim == 0
-    except:
-        pass
+    if isinstance(x, TensorWrapperBase):
+        x = x.__wrapped__
+
+    if hasattr(x, "_isscalar"):
+        return x._isscalar
+    if isinstance(x, TensorBase):
+        return x._data._isscalar
+
     return np.isscalar(x)
+
+
+def setscalar(x):
+    if isinstance(x, TensorWrapperBase):
+        x = x.__wrapped__
+
+    if hasattr(x, "_isscalar"):
+        x._isscalar = True
+    elif isinstance(x, TensorBase):
+        x._data._isscalar = True
+    else:
+        raise NotImplementedError("Unsupport type {}".format(type(x)))
 
 
 def astensor1d(x, *reference, dtype=None, device=None):
@@ -195,8 +213,8 @@ def astensor1d(x, *reference, dtype=None, device=None):
     except AttributeError:
         pass
     else:
-        if ndim != 1:
-            raise ValueError("ndim != 1: %d" % ndim)
+        if ndim != 0 and ndim != 1:
+            raise ValueError("ndim != 1 or 0, get : %d" % ndim)
         if not isinstance(x, (TensorBase, TensorWrapperBase)):
             (x,) = Const(x, dtype=dtype, device=device)(*reference)
         return x
@@ -216,7 +234,11 @@ def astensor1d(x, *reference, dtype=None, device=None):
 
 def _expand_int(s, i):
     if isinstance(i, (TensorBase, TensorWrapperBase)):
-        s += list(i.numpy())
+        i_np = i.numpy()
+        if i_np.ndim == 0:
+            s.append(int(i_np))
+        else:
+            s += list(i_np)
         return
     if isinstance(i, Iterable):
         for ii in i:

@@ -18,8 +18,8 @@ from megengine.module import Module
 class Simple(Module):
     def __init__(self):
         super().__init__()
-        self.a = Parameter(1.0, dtype=np.float32)
-        self.b = Parameter(1.0, dtype=np.float32)
+        self.a = Parameter([1.0], dtype=np.float32)
+        self.b = Parameter([1.0], dtype=np.float32)
 
     def forward(self, x):
         x = x * self.a

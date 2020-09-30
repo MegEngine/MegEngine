@@ -449,7 +449,7 @@ def test_advance_indexing_high_level():
     y = np.array([1, 2])
     yy = Tensor(y)
     np.testing.assert_equal(x[:, y[0]], xx[:, y[0]].numpy())
-    # np.testing.assert_equal(x[:, y[0]], xx[:, yy[0]].numpy()) # FIXME
+    np.testing.assert_equal(x[:, y[0]], xx[:, yy[0]].numpy())
     np.testing.assert_equal(x[:, y], xx[:, y].numpy())
     np.testing.assert_equal(x[:, y], xx[:, yy].numpy())
 
@@ -469,10 +469,9 @@ def test_advance_indexing_high_level():
     y = np.array([1])
     yy = Tensor(y)
     np.testing.assert_equal(x[:, y[0]], xx[:, y[0]].numpy())
-    # np.testing.assert_equal(x[:, y[0]], xx[:, yy[0]].numpy()) # FIXME
+    np.testing.assert_equal(x[:, y[0]], xx[:, yy[0]].numpy())
     np.testing.assert_equal(x[:, y], xx[:, y].numpy())
 
-    # XXX: no way to tell whether yy is scalar or ndim=1 array
     np.testing.assert_equal(x[:, y], xx[:, yy].numpy())
 
     x = np.arange(9).reshape(3, 3).astype("int32")

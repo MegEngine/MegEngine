@@ -21,6 +21,7 @@ from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import as_raw_tensor
+from megengine.core.tensor.utils import isscalar
 from megengine.functional import exp, log
 from megengine.jit import exclude_from_trace, trace
 from megengine.random import normal, uniform
@@ -263,20 +264,21 @@ def test_optimize_for_inference_broadcast():
 
 
 def test_trace_cvt_bool():
-    set_symbolic_shape(True)
     x = tensor([0], dtype=np.int32)
 
     @trace(symbolic=True)
     def f(x):
-        return x.shape[0] == 0
+        a = x.shape
+        b = a[0]
+        assert isscalar(b)
+        return b == 0
 
     for i in range(3):
-        np.testing.assert_equal(f(x).numpy()[0], False)
+        np.testing.assert_equal(f(x).numpy(), False)
 
 
 def test_trace_reshape():
     for symbolic in [False, True]:
-        set_symbolic_shape(True)
         x1 = tensor(np.random.randn(2, 10, 10))
         x2 = tensor(np.random.randn(4, 10, 10))
         x3 = tensor(np.random.randn(8, 10, 10))
@@ -359,7 +361,6 @@ def test_raise_on_trace():
 
 def test_trace_broadcast():
     for symbolic in [False, True]:
-        set_symbolic_shape(True)
         x1 = tensor(np.random.randn(3, 1, 1))
         x2 = tensor(np.random.randn(1, 4, 1))
         x3 = tensor(np.random.randn(1, 1, 5))
@@ -397,7 +398,6 @@ def test_trace_nms():
 
 
 def test_trace_valid_broadcast():
-    set_symbolic_shape(True)
     x1 = tensor(np.random.randn(1, 1))
     x2 = tensor(np.random.randn(1, 2))
     shape = (tensor([2]), tensor([2]))

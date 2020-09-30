@@ -18,7 +18,7 @@ from megengine.module import Module
 class Simple(Module):
     def __init__(self):
         super().__init__()
-        self.a = Parameter(1.0, dtype=np.float32)
+        self.a = Parameter([1.0], dtype=np.float32)
 
     def forward(self, x, y):
         x = x[y] * self.a
@@ -28,7 +28,7 @@ class Simple(Module):
 class Simple2(Module):
     def __init__(self):
         super().__init__()
-        self.a = Parameter(1.0, dtype=np.float32)
+        self.a = Parameter([1.0], dtype=np.float32)
 
     def forward(self, x):
         x = x[1, ..., :, 0:4:2, 0:2] * self.a

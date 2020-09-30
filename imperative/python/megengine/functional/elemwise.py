@@ -13,6 +13,7 @@ from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.core import apply
+from ..core.tensor.utils import isscalar, setscalar
 from ..device import get_default_device
 from ..jit.tracing import is_tracing
 from ..tensor import Tensor
@@ -105,7 +106,14 @@ def _elwise(*args, mode):
         args = utils.convert_inputs(*args)
     if mode in ("true_div", "exp", "pow", "log", "expm1", "log1p"):
         args = tuple(map(lambda x: x.astype("float32"), args))
+    _isscalar = True
+    for i in args:
+        if isscalar(i) == False:
+            _isscalar = False
+            break
     (result,) = apply(op, *args)
+    if _isscalar:
+        setscalar(result)
     return result
 
 

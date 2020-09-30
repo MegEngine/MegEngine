@@ -155,7 +155,7 @@ def sum(
 
     .. testoutput::
 
-        [21]
+        21
 
     """
     return inp.sum(axis=axis, keepdims=keepdims)
@@ -189,7 +189,7 @@ def prod(
 
     .. testoutput::
 
-        [720]
+        720
 
     """
     return inp.prod(axis=axis, keepdims=keepdims)
@@ -226,7 +226,7 @@ def mean(
 
     .. testoutput::
 
-        [3.5]
+        3.5
 
     """
     return inp.mean(axis=axis, keepdims=keepdims)
@@ -263,7 +263,7 @@ def var(
 
     .. testoutput::
 
-        [2.9167]
+        2.9167
     """
     if axis is None:
         m = mean(inp, axis=axis, keepdims=False)
@@ -340,7 +340,7 @@ def min(
 
     .. testoutput::
 
-        [1]
+        1
 
     """
     return inp.min(axis=axis, keepdims=keepdims)
@@ -377,7 +377,7 @@ def max(
 
     .. testoutput::
 
-        [6]
+        6
 
     """
     return inp.max(axis=axis, keepdims=keepdims)
@@ -412,7 +412,7 @@ def norm(
 
     .. testoutput::
 
-        [4.3589]
+        4.3589
 
     """
     if axis is None:
@@ -460,7 +460,7 @@ def argmin(
 
     .. testoutput::
 
-        [0]
+        0
 
     """
     if isinstance(axis, collections.abc.Iterable):
@@ -519,7 +519,7 @@ def argmax(
 
     .. testoutput::
 
-        [5]
+        5
 
     """
     if isinstance(axis, collections.abc.Iterable):
