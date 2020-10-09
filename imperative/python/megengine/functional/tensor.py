@@ -36,7 +36,6 @@ __all__ = [
     "broadcast",
     "concat",
     "cond_take",
-    "dimshuffle",
     "expand_dims",
     "eye",
     "flatten",
@@ -728,12 +727,6 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
 
     """
     return inp.transpose(pattern)
-
-
-def dimshuffle(inp: Tensor, pattern: Iterable[int]) -> Tensor:
-    r"""Same as :func:`~.transpose`.
-    """
-    return transpose(inp, pattern)
 
 
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
