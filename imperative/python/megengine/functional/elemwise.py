@@ -30,19 +30,19 @@ __all__ = [
     "cos",
     "cosh",
     "div",
-    "eq",
+    "equal",
     "exp",
     "expm1",
     "fast_tanh",
     "floor",
     "floor_div",
-    "gt",
-    "ge",
+    "greater",
+    "greater_equal",
     "hswish",
     "hsigmoid",
     "left_shift",
-    "lt",
-    "le",
+    "less",
+    "less_equal",
     "log",
     "log1p",
     "logical_and",
@@ -54,7 +54,7 @@ __all__ = [
     "mod",
     "mul",
     "neg",
-    "ne",
+    "not_equal",
     "pow",
     "relu",
     "relu6",
@@ -102,7 +102,7 @@ def add(x, y):
     """Element-wise `addition`.
     At least one operand should be tensor.
 
-    Same for sub/mul/div/floor_div/pow/mod/atan2/eq/ne/lt/le/gt/ge/maximum/minmium.
+    Same for sub/mul/div/floor_div/pow/mod/atan2/equal/not_equal/less/less_equal/greater/greater_equal/maximum/minmium.
 
     :param x: input tensor.
     :return: computed tensor.
@@ -442,7 +442,7 @@ def logical_xor(x, y):
 # comparison functions
 
 
-def eq(x, y):
+def equal(x, y):
     """Element-wise `(x == y)`.
 
     :param x: input tensor 1.
@@ -459,7 +459,7 @@ def eq(x, y):
 
         x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
         y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.eq(x, y)
+        out = F.equal(x, y)
         print(out.numpy())
 
     Outputs:
@@ -473,27 +473,27 @@ def eq(x, y):
     return _elwise(x, y, mode="eq")
 
 
-def ne(x, y):
+def not_equal(x, y):
     """Element-wise `(x != y)`."""
     return x != y
 
 
-def lt(x, y):
+def less(x, y):
     """Element-wise `(x < y)`."""
     return _elwise(x, y, mode="lt")
 
 
-def le(x, y):
+def less_equal(x, y):
     """Element-wise `(x <= y)`."""
     return _elwise(x, y, mode="leq")
 
 
-def gt(x, y):
+def greater(x, y):
     """Element-wise `(x > y)`."""
     return _elwise(y, x, mode="lt")
 
 
-def ge(x, y):
+def greater_equal(x, y):
     """Element-wise `(x >= y)`."""
     return _elwise(y, x, mode="leq")
 

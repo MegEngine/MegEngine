@@ -10,7 +10,7 @@ import numpy as np
 
 from ..core.tensor.utils import make_shape_tuple
 from ..tensor import Tensor
-from .elemwise import abs, eq, exp, log, maximum, pow, relu
+from .elemwise import abs, equal, exp, log, maximum, pow, relu
 from .nn import indexing_one_hot
 from .tensor import where
 

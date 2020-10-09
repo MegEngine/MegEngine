@@ -56,9 +56,9 @@ class Elemwise(Module):
         * "SIGMOID_GRAD": sigmoid_grad
         * "SWITCH_GT0": switch_gt0
         * "TANH_GRAD": tanh_grad
-        * "LT": lt
+        * "LT": less
         * "LEQ": leq
-        * "EQ": eq
+        * "EQ": equal
         * "POW": pow
         * "LOG_SUM_EXP": log_sum_exp
         * "FAST_TANH_GRAD": fast_tanh_grad
