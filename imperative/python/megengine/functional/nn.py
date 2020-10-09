@@ -23,7 +23,7 @@ from .debug_param import get_conv_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import exp, floor, log, log1p, maximum, minimum, relu
 from .math import argsort, max, sum
-from .tensor import add_axis, broadcast, concat, full, ones, remove_axis, reshape, zeros
+from .tensor import broadcast, concat, expand_dims, full, ones, reshape, squeeze, zeros
 from .types import _pair, _pair_nonzero
 
 __all__ = [
@@ -542,7 +542,7 @@ def logsumexp(
     if keepdims:
         return max_value + log(sum(exp(inp - max_value), axis, keepdims))
     else:
-        return remove_axis(max_value, axis=None) + log(
+        return squeeze(max_value, axis=None) + log(
             sum(exp(inp - max_value), axis, keepdims)
         )
 
@@ -640,7 +640,7 @@ def batch_norm2d(
     def expand_or_full(x, value):
         if x is None:
             return full_value(value)
-        return add_axis(x, [0, 2, 3])
+        return expand_dims(x, [0, 2, 3])
 
     def make_full_if_none(x, value):
         if x is None:
@@ -998,10 +998,10 @@ def matmul(
     else:
         if dim1 == 1:
             shp = (inp2.shape[1],)
-            inp1 = add_axis(inp1, 0)
+            inp1 = expand_dims(inp1, 0)
         if dim2 == 1:
             shp = (inp1.shape[0],)
-            inp2 = add_axis(inp2, 1)
+            inp2 = expand_dims(inp2, 1)
         op = builtin.MatrixMul(
             transposeA=transpose_a,
             transposeB=transpose_b,
@@ -1135,7 +1135,7 @@ def interpolate(
             align_corners = False
 
     if mode == "LINEAR":
-        inp = add_axis(inp, 3)
+        inp = expand_dims(inp, 3)
 
     if inp.ndim != 4:
         raise ValueError("shape of input tensor must correspond to the operartion mode")
@@ -1452,7 +1452,7 @@ def indexing_one_hot(
     index = utils.convert_single_value(index, (src,), dtype="int32", device=src.device)
     (result,) = apply(op, src, index)
     if not keepdims:
-        result = remove_axis(result, axis)
+        result = squeeze(result, axis)
     return result
 
 

@@ -100,7 +100,7 @@ def test_squeeze():
 
     for axis in [None, 3, -4, (3, -4)]:
         y = np.squeeze(x, axis)
-        yy = F.remove_axis(xx, axis)
+        yy = F.squeeze(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
 
 
@@ -110,7 +110,7 @@ def test_expand_dims():
 
     for axis in [2, -3, (3, -4), (1, -4)]:
         y = np.expand_dims(x, axis)
-        yy = F.add_axis(xx, axis)
+        yy = F.expand_dims(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
 
 

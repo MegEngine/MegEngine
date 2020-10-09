@@ -32,12 +32,12 @@ from ..tensor import Tensor
 from .elemwise import ceil
 
 __all__ = [
-    "add_axis",
     "arange",
     "broadcast",
     "concat",
     "cond_take",
     "dimshuffle",
+    "expand_dims",
     "eye",
     "flatten",
     "full",
@@ -50,7 +50,6 @@ __all__ = [
     "param_pack_concat",
     "param_pack_split",
     "reshape",
-    "remove_axis",
     "split",
     "squeeze",
     "stack",
@@ -160,7 +159,7 @@ def zeros_like(inp: Tensor) -> Tensor:
         print(out.numpy())
 
     Outputs:
-    
+
     .. testoutput::
 
         [[0 0 0]
@@ -320,7 +319,7 @@ def stack(inps, axis=0, device=None):
         if len(shapes) != 1:
             raise ValueError("All input tensors must have the same shape")
 
-    inps = [add_axis(inp, axis=axis) for inp in inps]
+    inps = [expand_dims(inp, axis=axis) for inp in inps]
     return concat(inps, axis=axis, device=device)
 
 
@@ -480,7 +479,7 @@ def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
 
 
 def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
-    r"""Writes all values from the tensor source into input tensor 
+    r"""Writes all values from the tensor source into input tensor
     at the indices specified in the index tensor.
 
     For each value in source, its output index is specified by its index
@@ -694,7 +693,7 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
     Swaps shapes and strides according to given pattern.
 
     :param inp: input tensor.
-    :param pattern: a list of integers including 0, 1, ... , ``ndim``-1, 
+    :param pattern: a list of integers including 0, 1, ... , ``ndim``-1,
     and any number of ``'x'`` char in dimensions where this tensor should be broadcasted. For examples:
 
         * (``'x'``) -> make a 0d (scalar) into a 1d vector
@@ -815,7 +814,7 @@ def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
     return inp.reshape(*target_shape)
 
 
-def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
+def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     r"""
     Adds dimension before given axis.
 
@@ -832,7 +831,7 @@ def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         import megengine.functional as F
 
         x = tensor([1, 2])
-        out = F.add_axis(x, 0)
+        out = F.expand_dims(x, 0)
         print(out.shape)
 
     Outputs:
@@ -861,12 +860,7 @@ def add_axis(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     return result
 
 
-expand_dims = add_axis
-
-
-def remove_axis(
-    inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None
-) -> Tensor:
+def squeeze(inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None) -> Tensor:
     r"""
     Removes dimension of shape 1.
 
@@ -883,7 +877,7 @@ def remove_axis(
         import megengine.functional as F
 
         x = tensor(np.array([1, 2], dtype=np.int32).reshape(1, 1, 2, 1))
-        out = F.remove_axis(x, 3)
+        out = F.squeeze(x, 3)
         print(out.shape)
 
     Outputs:
@@ -894,9 +888,6 @@ def remove_axis(
 
     """
     return _remove_axis(inp, axis)
-
-
-squeeze = remove_axis
 
 
 def linspace(
@@ -925,7 +916,7 @@ def linspace(
         print(a.numpy())
 
     Outputs:
-    
+
     .. testoutput::
 
         [ 3.    4.75  6.5   8.25 10.  ]
@@ -967,7 +958,7 @@ def arange(
 
         a = F.arange(5)
         print(a.numpy())
-    
+
     Outputs:
 
     Outputs:
@@ -1018,9 +1009,9 @@ def param_pack_split(inp: Tensor, offsets: List, shapes: List) -> Tensor:
         b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
         print(b.numpy())
         print(c.numpy())
-    
+
     Outputs:
-    
+
     .. testoutput::
 
         [1]
@@ -1059,9 +1050,9 @@ def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
         offsets = tensor(offsets_val, np.int32)
         c = F.param_pack_concat([a, b], offsets, offsets_val)
         print(c.numpy())
-    
+
     Outputs:
-    
+
     .. testoutput::
 
         [1 1 1 1 1 1 1 1 1 1]

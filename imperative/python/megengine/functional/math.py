@@ -19,7 +19,7 @@ from ..core.tensor import utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..tensor import Tensor
 from .elemwise import clip, exp, log, log1p
-from .tensor import add_axis, remove_axis, reshape
+from .tensor import reshape, squeeze
 
 __all__ = [
     "argmax",
@@ -459,7 +459,7 @@ def argmin(
             (inp,) = apply(op, inp)
 
             if not keepdims:
-                inp = remove_axis(inp, ai)
+                inp = squeeze(inp, ai)
 
         return inp
 
@@ -471,7 +471,7 @@ def argmin(
     op = builtin.Argmin(axis=axis)
     (result,) = apply(op, inp)
     if not keepdims:
-        result = remove_axis(result, axis)
+        result = squeeze(result, axis)
     return result
 
 
@@ -517,7 +517,7 @@ def argmax(
             (inp,) = apply(op, inp)
 
             if not keepdims:
-                inp = remove_axis(inp, ai)
+                inp = squeeze(inp, ai)
 
         return inp
 
@@ -529,7 +529,7 @@ def argmax(
     op = builtin.Argmax(axis=axis)
     (result,) = apply(op, inp)
     if not keepdims:
-        result = remove_axis(result, axis)
+        result = squeeze(result, axis)
     return result
 
 
