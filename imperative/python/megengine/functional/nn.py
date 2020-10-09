@@ -35,7 +35,6 @@ __all__ = [
     "conv_transpose2d",
     "dot",
     "dropout",
-    "embedding",
     "indexing_one_hot",
     "interpolate",
     "leaky_relu",

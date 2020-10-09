@@ -10,7 +10,7 @@ from typing import Optional
 
 import numpy as np
 
-from ..functional import embedding as embedding_func
+from ..functional.nn import embedding as embedding_func
 from ..tensor import Parameter
 from . import init
 from .module import Module
