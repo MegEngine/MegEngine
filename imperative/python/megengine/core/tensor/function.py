@@ -66,10 +66,10 @@ class Function:
 
         :param output_grads: gradients of outputs that are returned by :meth:`~.function.Function.forward`.
 
-            .. note::
+        .. note::
 
-                In case when some tensors of outputs are not related to loss function, the corresponding
-                values in ``output_grads`` would be ``None``.
+            In case when some tensors of outputs are not related to loss function, the corresponding
+            values in ``output_grads`` would be ``None``.
 
         .. note::
 

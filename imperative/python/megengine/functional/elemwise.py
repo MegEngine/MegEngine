@@ -225,8 +225,8 @@ def square(x: Tensor) -> Tensor:
     """
     Returns a new tensor with the square of the elements of input tensor.
 
-    :param inp: The input tensor
-    :return: The computed tensor
+    :param inp: input tensor.
+    :return: computed tensor.
 
     Examples:
 

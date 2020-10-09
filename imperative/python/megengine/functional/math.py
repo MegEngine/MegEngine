@@ -72,7 +72,7 @@ def isinf(inp: Tensor) -> Tensor:
     r"""Returns a new tensor representing if each element is ``Inf`` or not.
 
     :param inp: input tensor.
-    :return: c.
+    :return: result tensor.
 
     Examples:
 
