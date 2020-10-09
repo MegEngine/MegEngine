@@ -47,14 +47,14 @@ def test_multiply():
 
 def test_clamp():
     """Fix an issue when `lower` or `upper` is 0, it will be recognized as `False` and
-    `F.clamp` will fall into wrong conditions unexpectedly.
+    `F.clip` will fall into wrong conditions unexpectedly.
     """
     x = np.linspace(-6, 6, dtype="float32")
     np.testing.assert_allclose(
-        F.clamp(tensor(x) + 3, 0, 6).numpy(), np.clip(x + 3, 0, 6)
+        F.clip(tensor(x) + 3, 0, 6).numpy(), np.clip(x + 3, 0, 6)
     )
     np.testing.assert_allclose(
-        F.clamp(tensor(x) - 3, -6, 0).numpy(), np.clip(x - 3, -6, 0)
+        F.clip(tensor(x) - 3, -6, 0).numpy(), np.clip(x - 3, -6, 0)
     )
 
 

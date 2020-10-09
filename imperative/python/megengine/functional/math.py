@@ -18,7 +18,7 @@ from ..core.ops.special import Const
 from ..core.tensor import utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..tensor import Tensor
-from .elemwise import clamp, exp, log, log1p
+from .elemwise import clip, exp, log, log1p
 from .tensor import add_axis, remove_axis, reshape
 
 __all__ = [
@@ -85,7 +85,7 @@ def isinf(inp: Tensor) -> Tensor:
         print(F.isinf(x).numpy())
 
     Outputs:
-    
+
     .. testoutput::
 
         [False  True False]
@@ -109,7 +109,7 @@ def sign(inp: Tensor):
 
         x = tensor([1, -1, 0])
         print(F.sign(x).numpy())
-    
+
     Outputs:
 
     .. testoutput::
@@ -557,9 +557,9 @@ def normalize(
     :return: normalized output tensor.
     """
     if axis is None:
-        return inp / clamp(norm(inp, p, axis), lower=eps)
+        return inp / clip(norm(inp, p, axis), lower=eps)
     else:
-        return inp / clamp(norm(inp, p, axis, keepdims=True), lower=eps)
+        return inp / clip(norm(inp, p, axis, keepdims=True), lower=eps)
 
 
 def argsort(inp: Tensor, descending: bool = False) -> Tensor:

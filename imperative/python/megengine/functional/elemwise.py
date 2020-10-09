@@ -26,7 +26,7 @@ __all__ = [
     "acosh",
     "atanh",
     "ceil",
-    "clamp",
+    "clip",
     "cos",
     "cosh",
     "div",
@@ -547,7 +547,7 @@ def sigmoid(x):
     return _elwise(x, mode="sigmoid")
 
 
-def clamp(x: Tensor, lower=None, upper=None) -> Tensor:
+def clip(x: Tensor, lower=None, upper=None) -> Tensor:
     r"""Clamps all elements in input tensor into the range `[` :attr:`lower`, :attr:`upper` `]` and returns
     a resulting tensor:
 
@@ -572,9 +572,9 @@ def clamp(x: Tensor, lower=None, upper=None) -> Tensor:
         import megengine.functional as F
 
         a = tensor(np.arange(5).astype(np.int32))
-        print(F.clamp(a, 2, 4).numpy())
-        print(F.clamp(a, lower=3).numpy())
-        print(F.clamp(a, upper=3).numpy())
+        print(F.clip(a, 2, 4).numpy())
+        print(F.clip(a, lower=3).numpy())
+        print(F.clip(a, upper=3).numpy())
 
     Outputs:
 
@@ -590,7 +590,7 @@ def clamp(x: Tensor, lower=None, upper=None) -> Tensor:
     ), "At least one of 'lower' or 'upper' must not be None"
     if lower is not None:
         if upper is not None:
-            assert lower <= upper, "clamp lower bound is bigger that upper bound"
+            assert lower <= upper, "clip lower bound is bigger that upper bound"
             return minimum(maximum(x, lower), upper)
         else:
             return maximum(x, lower)
