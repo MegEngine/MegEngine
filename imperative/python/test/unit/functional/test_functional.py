@@ -290,41 +290,6 @@ def test_one_hot():
     onehot_high_dimension()
 
 
-def test_add_update():
-    shape = (2, 3)
-    v = np.random.random(shape).astype(np.float32)
-    b = Tensor(v)
-
-    u = F.add_update(b, 1)
-    np.testing.assert_allclose(u.numpy(), v + 1, atol=1e-6)
-    u = F.add_update(b, 1)
-    np.testing.assert_allclose(u.numpy(), v + 2, atol=1e-6)
-
-    x = np.ones((2, 2), dtype=np.float32)
-    y = x * 0.5
-    dest = tensor(x)
-    delta = tensor(y)
-    r = F.add_update(dest, delta, alpha=0.9, beta=0.1, bias=0.1)
-    np.testing.assert_allclose(r.numpy(), x * 0.9 + y * 0.1 + 0.1, atol=1e-6)
-
-
-def test_add_update_params():
-    b = np.random.random((2, 3)).astype(np.float32)
-    y = Tensor(b)
-
-    # @jit.trace
-    def f(x):
-        return F.add_update(y, x)
-
-    f(np.zeros((2, 3)).astype(np.float32))
-
-    z = Tensor(np.zeros((2, 3)).astype(np.float32))
-    F.add_update(y, z, beta=0.1)
-
-    res = f(np.ones((2, 3)).astype(np.float32))
-    np.testing.assert_allclose(res.numpy(), b + 1)
-
-
 def test_binary_cross_entropy():
     data1_shape = (2, 2)
     label1_shape = (2, 2)

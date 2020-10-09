@@ -410,7 +410,7 @@ class ArrayMethodMixin(abc.ABC):
     def sum(self, axis=None, keepdims: bool = False):
         r"""Returns the sum of each row of the input tensor in the given dimension ``axis``.
         If ``axis`` is a list of axises, reduce over all of them.
-        
+
         If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor, except in the dimension(s) ``axis`` where it is of size 1. Otherwise, ``axis`` is squeezed(see :meth:`~.functional.tensor.remove_axis`).
 
         Same for prod/mean/max/min.
