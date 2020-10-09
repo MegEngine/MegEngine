@@ -33,7 +33,6 @@ __all__ = [
     "equal",
     "exp",
     "expm1",
-    "fast_tanh",
     "floor",
     "floor_div",
     "greater",
@@ -367,15 +366,6 @@ def acosh(x):
 def atanh(x):
     r"""Element-wise `inverse hyperbolic tangent`."""
     return log1p(2 * x / (1 - x)) / 2
-
-
-def fast_tanh(x):
-    r"""Element-wise `fast tanh`; this is an approximation:
-
-    .. math::
-        \text{fast_tanh}(x) = x * (27. + x * x) / (27. + 9. * x * x)
-    """
-    return _elwise(x, mode="fast_tanh")
 
 
 # bit-twiddling functions

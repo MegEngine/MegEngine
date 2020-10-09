@@ -113,14 +113,6 @@ def test_atanh():
     np.testing.assert_almost_equal(y_np, y_mge, decimal=5)
 
 
-def test_fast_tanh():
-    np.random.seed(42)
-    x = np.random.randn(100).astype("float32")
-    y_np = x * (27.0 + x * x) / (27.0 + 9.0 * x * x)
-    y_mge = F.fast_tanh(tensor(x)).numpy()
-    np.testing.assert_almost_equal(y_np, y_mge, decimal=6)
-
-
 def test_hswish():
     np.random.seed(42)
     x = np.random.randn(100).astype("float32")

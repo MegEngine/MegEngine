@@ -34,7 +34,7 @@ class Elemwise(Module):
         * "EXP": exp(x)
         * "TANH": tanh(x)
         * "FUSE_MUL_ADD3": x * y + z
-        * "FAST_TANH": fast_tanh(x)
+        * "FAST_TANH": x * (27. + x * x) / (27. + 9. * x * x)
         * "NEGATE": -x
         * "ACOS": acos(x)
         * "ASIN": asin(x)
