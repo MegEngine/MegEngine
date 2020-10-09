@@ -40,7 +40,7 @@ __all__ = [
     "local_conv2d",
     "logsigmoid",
     "logsumexp",
-    "log_softmax",
+    "logsoftmax",
     "matmul",
     "max_pool2d",
     "nms",
@@ -421,7 +421,7 @@ def softplus(inp: Tensor) -> Tensor:
     return log1p(exp(-abs(inp))) + relu(inp)
 
 
-def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
+def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
     input Tensor. The LogSoftmax formulation can be simplified as:
 
@@ -437,7 +437,7 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         = x - logsumexp(x)
 
     :param inp: input tensor.
-    :param axis: axis along which log_softmax will be applied.
+    :param axis: axis along which logsoftmax will be applied.
 
     Examples:
 
@@ -448,7 +448,7 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         import megengine.functional as F
 
         x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-        y = F.log_softmax(x, axis=1)
+        y = F.logsoftmax(x, axis=1)
         print(y.numpy())
 
     Outputs:
