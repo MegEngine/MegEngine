@@ -170,7 +170,7 @@ def test_roi_align():
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
 
     output_shape = (7, 7)
-    out_feat = F.roi_align(
+    out_feat = F.nn.roi_align(
         inp_feat,
         rois,
         output_shape=output_shape,

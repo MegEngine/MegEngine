@@ -45,7 +45,6 @@ __all__ = [
     "max_pool2d",
     "one_hot",
     "prelu",
-    "roi_align",
     "roi_pooling",
     "softmax",
     "softplus",
@@ -1382,7 +1381,7 @@ def roi_align(
             np.random.seed(42)
             inp = tensor(np.random.randn(1, 1, 128, 128))
             rois = tensor(np.random.random((4, 5)))
-            y = F.roi_align(inp, rois, (2, 2))
+            y = F.nn.roi_align(inp, rois, (2, 2))
             print(y.numpy()[0])
 
     Outputs:
