@@ -357,7 +357,7 @@ def test_nms():
     )
     inp = tensor(x)
     scores = tensor([0.5, 0.8, 0.9, 0.6], dtype=np.float32)
-    result = F.nms(inp, scores=scores, iou_thresh=0.5)
+    result = F.nn.nms(inp, scores=scores, iou_thresh=0.5)
     np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
 
 

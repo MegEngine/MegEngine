@@ -43,7 +43,6 @@ __all__ = [
     "logsoftmax",
     "matmul",
     "max_pool2d",
-    "nms",
     "one_hot",
     "prelu",
     "roi_align",
@@ -1482,7 +1481,7 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
         x[:,2:] = np.random.rand(100,2)*20 + 100
         scores = tensor(np.random.rand(100))
         inp = tensor(x)
-        result = F.nms(inp, scores, iou_thresh=0.7)
+        result = F.nn.nms(inp, scores, iou_thresh=0.7)
         print(result.numpy())
 
     Outputs:
