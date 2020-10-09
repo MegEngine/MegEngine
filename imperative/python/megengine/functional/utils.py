@@ -15,7 +15,7 @@ from ..core.ops.builtin import Copy
 from ..core.tensor import Tensor
 from ..core.tensor.core import apply
 from .math import topk as _topk
-from .tensor import transpose as _transpose
+from .tensor import broadcast_to, transpose
 
 
 def accuracy(
@@ -54,8 +54,8 @@ def accuracy(
     _, pred = _topk(logits, k=max(topk), descending=True)
     accs = []
     for k in topk:
-        correct = pred[:, :k].detach() == _transpose(target, (0, "x")).broadcast(
-            target.shape[0], k
+        correct = pred[:, :k].detach() == broadcast_to(
+            transpose(target, (0, "x")), (target.shape[0], k)
         )
         accs.append(correct.astype(np.float32).sum() / target.shape[0])
     if len(topk) == 1:  # type: ignore[arg-type]

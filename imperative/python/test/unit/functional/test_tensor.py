@@ -251,17 +251,17 @@ def test_broadcast():
         {"input": [data1, output1_shape], "output": output1_shape},
         {"input": [data2, output2_shape], "output": output2_shape},
     ]
-    opr_test(cases, F.broadcast, compare_fn=compare_fn)
+    opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
 
     x = F.ones((2, 1, 3))
     with pytest.raises(ValueError):
-        F.broadcast(x, (2, 3, 4))
+        F.broadcast_to(x, (2, 3, 4))
 
     with pytest.raises(ValueError):
-        F.broadcast(x, (4, 1, 3))
+        F.broadcast_to(x, (4, 1, 3))
 
     with pytest.raises(ValueError):
-        F.broadcast(x, (1, 3))
+        F.broadcast_to(x, (1, 3))
 
 
 def test_utils_astensor1d():

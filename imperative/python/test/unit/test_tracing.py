@@ -351,7 +351,7 @@ def test_trace_broadcast():
 
         @trace(symbolic=symbolic, capture_as_const=True)
         def f(x):
-            y = x.broadcast((3, 4, 5))
+            y = F.broadcast_to(x, (3, 4, 5))
             return y
 
         f(x1)

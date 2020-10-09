@@ -23,7 +23,16 @@ from .debug_param import get_conv_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import exp, floor, log, log1p, maximum, minimum, relu
 from .math import argsort, max, sum
-from .tensor import broadcast, concat, expand_dims, full, ones, reshape, squeeze, zeros
+from .tensor import (
+    broadcast_to,
+    concat,
+    expand_dims,
+    full,
+    ones,
+    reshape,
+    squeeze,
+    zeros,
+)
 from .types import _pair, _pair_nonzero
 
 __all__ = [
@@ -635,7 +644,7 @@ def batch_norm2d(
     def full_value(value):
         C = inp.shape[1]
         (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
-        return broadcast(x, [1, C, 1, 1])
+        return broadcast_to(x, [1, C, 1, 1])
 
     def expand_or_full(x, value):
         if x is None:
@@ -754,7 +763,7 @@ def sync_batch_norm(
 
         if is_distributed():
             # reduce all nodes' data to calculate mean and variance
-            reduce_size = broadcast(Tensor(reduce_size, dtype=_dtype), [1] * _ndim)
+            reduce_size = broadcast_to(Tensor(reduce_size, dtype=_dtype), [1] * _ndim)
             stat = concat(
                 [reduce_size.astype(_dtype), channel_x1s, channel_x2s], axis=1
             )
@@ -968,10 +977,10 @@ def matmul(
         if dim1 != dim2:
             if dim1 < dim2:
                 shape1 = shape2[: dim2 - dim1] + shape1
-                inp1 = inp1.broadcast(*shape1)
+                inp1 = broadcast_to(inp1, shape1)
             else:
                 shape2 = shape1[: dim1 - dim2] + shape2
-                inp2 = inp2.broadcast(*shape2)
+                inp2 = broadcast_to(inp2, shape2)
         reshaped_batch_size = 1
         for i in shape1[:-2]:
             reshaped_batch_size *= i
@@ -986,9 +995,9 @@ def matmul(
         shp = shape1[:-1] + shape2[-1:]
     elif dim1 == 3 or dim2 == 3:
         if dim2 < 3:
-            inp2 = inp2.broadcast(*(inp1.shape[:1] + inp2.shape))
+            inp2 = broadcast_to(inp2, inp1.shape[:1] + inp2.shape)
         elif dim1 < 3:
-            inp1 = inp1.broadcast(*(inp2.shape[:1] + inp1.shape))
+            inp1 = broadcast_to(inp1, inp2.shape[:1] + inp1.shape)
         op = builtin.BatchedMatrixMul(
             transposeA=transpose_a,
             transposeB=transpose_b,
@@ -1205,7 +1214,7 @@ def interpolate(
             [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
             axis=0,
         ).reshape(1, 3, 3)
-        weight = broadcast(weight, (inp.shape[0], 3, 3))
+        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
     else:
         hscale = 1.0 * ih / oh
         wscale = 1.0 * iw / ow
@@ -1221,7 +1230,7 @@ def interpolate(
             [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
             axis=0,
         ).reshape(1, 3, 3)
-        weight = broadcast(weight, (inp.shape[0], 3, 3))
+        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
 
     weight = weight.astype("float32")
     ret = warp_perspective(inp, weight, dsize, interp_mode="LINEAR")

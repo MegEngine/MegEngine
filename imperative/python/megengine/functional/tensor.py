@@ -19,7 +19,7 @@ from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
-from ..core.tensor.tensor_wrapper import _remove_axis
+from ..core.tensor.tensor_wrapper import _broadcast, _remove_axis
 from ..core.tensor.utils import (
     astensor1d,
     convert_inputs,
@@ -33,7 +33,7 @@ from .elemwise import ceil
 
 __all__ = [
     "arange",
-    "broadcast",
+    "broadcast_to",
     "concat",
     "cond_take",
     "expand_dims",
@@ -104,7 +104,7 @@ def full(shape, value, dtype="float32", device=None):
     (x,) = Const(value, dtype=dtype, device=device)(
         Tensor(value, dtype=dtype, device=device)
     )
-    return broadcast(x, shape)
+    return broadcast_to(x, shape)
 
 
 def ones(shape, dtype="float32", device=None):
@@ -192,7 +192,7 @@ def identity(inp: Tensor) -> Tensor:
     return output
 
 
-def broadcast(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
+def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
     """
     Broadcasts a tensor to given shape.
 
@@ -209,7 +209,7 @@ def broadcast(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
         import megengine.functional as F
 
         data = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.broadcast(data, (4, 2, 3))
+        out = F.broadcast_to(data, (4, 2, 3))
         print(out.numpy())
 
     Outputs:
@@ -229,7 +229,7 @@ def broadcast(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
           [3. 4. 5.]]]
 
     """
-    return inp.broadcast(shape)
+    return _broadcast(inp, shape)
 
 
 def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
@@ -395,8 +395,7 @@ def _get_idx(index, axis):
                 0, index.shape[i] - 1, index.shape[i], device=index.device,
             )
             arange = (
-                arange.reshape(*shape)
-                .broadcast(index.shape)
+                broadcast_to(arange.reshape(*shape), index.shape)
                 .reshape(-1)
                 .astype(np.int32)
             )

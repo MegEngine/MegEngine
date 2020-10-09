@@ -100,6 +100,8 @@ class GradManager:
         :param ys: outputs of forward operators, e.g., the loss tensor
         :param dys: derivatives of ys
         """
+        from ..functional import ones_like
+
         global backwarding_grad_manager
         cache = backwarding_grad_manager
         backwarding_grad_manager = self
@@ -113,7 +115,7 @@ class GradManager:
         if not isinstance(ys, (tuple, list)):
             ys = [ys]
         if dys is None:
-            dys = [tensor(1.0).broadcast(y.shape) for y in ys]
+            dys = [ones_like(y) for y in ys]
         if not isinstance(dys, (tuple, list)):
             dys = [dys]
         try:

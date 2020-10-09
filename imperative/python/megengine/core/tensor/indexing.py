@@ -267,7 +267,7 @@ def setitem(tensor, index, value):
                         value.shape, tmp_result.shape
                     )
                 )
-        value = value.broadcast(tmp_result.shape)
+        value = value._broadcast(tmp_result.shape)
     if use_subtensor:
         op = builtin.SetSubtensor(items=items)
     else:

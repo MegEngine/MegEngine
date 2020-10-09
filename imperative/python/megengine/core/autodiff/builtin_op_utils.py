@@ -160,7 +160,7 @@ def subtensor_grad_fn(op, inputs, outputs, input_requires_grad):
     def make_grad(grad_op, dy):
         grad = (
             TensorWrapper(0, dtype=dy.dtype, device=dy.device)
-            .broadcast(TensorWrapper(input_shape))
+            ._broadcast(TensorWrapper(input_shape))
             .__wrapped__
         )
         (dx,) = apply(grad_op, grad, dy, *params)
@@ -186,7 +186,7 @@ def indexingMultiAxisVec_grad_fn(op, inputs, outputs, input_requires_grad):
     def make_grad(grad_op, dy):
         grad = (
             TensorWrapper(0, dtype=dy.dtype, device=dy.device)
-            .broadcast(TensorWrapper(input_shape))
+            ._broadcast(TensorWrapper(input_shape))
             .__wrapped__
         )
         (dx,) = apply(grad_op, grad, dy, *params)

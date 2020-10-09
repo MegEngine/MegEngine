@@ -396,7 +396,8 @@ class ArrayMethodMixin(abc.ABC):
     def reshape(self, *args):
         return _reshape(self, _expand_args(args))
 
-    def broadcast(self, *args):
+    # FIXME: remove this method
+    def _broadcast(self, *args):
         return _broadcast(self, _expand_args(args))
 
     def transpose(self, *args):
