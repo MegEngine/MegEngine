@@ -36,7 +36,6 @@ __all__ = [
     "dot",
     "dropout",
     "indexing_one_hot",
-    "interpolate",
     "leaky_relu",
     "linear",
     "local_conv2d",
@@ -1112,9 +1111,9 @@ def interpolate(
         import megengine.functional as F
 
         x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
-        out = F.interpolate(x, [4, 4], align_corners=False)
+        out = F.nn.interpolate(x, [4, 4], align_corners=False)
         print(out.numpy())
-        out2 = F.interpolate(x, scale_factor=2.)
+        out2 = F.nn.interpolate(x, scale_factor=2.)
         np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     Outputs:
