@@ -37,7 +37,6 @@ __all__ = [
     "dropout",
     "indexing_one_hot",
     "leaky_relu",
-    "linear",
     "local_conv2d",
     "logsigmoid",
     "logsumexp",

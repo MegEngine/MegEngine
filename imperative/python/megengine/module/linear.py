@@ -7,7 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..functional import linear
+from ..functional.nn import linear
 from ..tensor import Parameter
 from . import init
 from .module import Module
