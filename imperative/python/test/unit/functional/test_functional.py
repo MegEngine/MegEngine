@@ -193,7 +193,7 @@ def test_roi_pooling():
     inp_feat, rois = _gen_roi_inp()
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
     output_shape = (7, 7)
-    out_feat = F.roi_pooling(
+    out_feat = F.nn.roi_pooling(
         inp_feat, rois, output_shape=output_shape, mode="max", scale=1.0 / 4,
     )
     assert make_shape_tuple(out_feat.shape) == (
