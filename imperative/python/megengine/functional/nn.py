@@ -30,7 +30,6 @@ __all__ = [
     "adaptive_avg_pool2d",
     "adaptive_max_pool2d",
     "avg_pool2d",
-    "batched_nms",
     "batch_norm2d",
     "conv2d",
     "conv_transpose2d",
@@ -391,14 +390,14 @@ def softplus(inp: Tensor) -> Tensor:
 
     .. math::
         \text{softplus}(x) = \log(1 + \exp(x))
-    
+
     softplus is a smooth approximation to the ReLU function and can be used
     to constrain the output to be always positive.
     For numerical stability the implementation follows this transformation:
 
     .. math::
-        \text{softplus}(x) = \log(1 + \exp(x)) 
-                           = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0) 
+        \text{softplus}(x) = \log(1 + \exp(x))
+                           = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0)
                            = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
 
     :param inp: input tensor.
@@ -414,9 +413,9 @@ def softplus(inp: Tensor) -> Tensor:
         x = tensor(np.arange(-3, 3, dtype=np.float32))
         y = F.softplus(x)
         print(y.numpy())
-    
+
     Outputs:
-    
+
     .. testoutput::
 
         [0.0486 0.1269 0.3133 0.6931 1.3133 2.1269]
@@ -435,11 +434,11 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     For numerical stability the implementation follows this transformation:
 
     .. math::
-        \operatorname{logsoftmax}(x) 
+        \operatorname{logsoftmax}(x)
         = \log (\frac{\exp (x)}{\sum_{i}(\exp (x_{i}))})
         = x - \log (\sum_{i}(\exp (x_{i})))
         = x - logsumexp(x)
-    
+
     :param inp: input tensor.
     :param axis: axis along which log_softmax will be applied.
 
@@ -456,7 +455,7 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         print(y.numpy())
 
     Outputs:
-    
+
     .. testoutput::
 
         [[-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]
@@ -505,9 +504,9 @@ def logsumexp(
 ) -> Tensor:
     r"""
     Calculates the logarithm of the inputs' exponential sum along the given :attr:`axis`.
-    
+
     .. math::
-        
+
         \operatorname{logsumexp}(\boldsymbol{x})= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
 
     For numerical stability, the implementation follows this transformation:
@@ -516,7 +515,7 @@ def logsumexp(
 
         \operatorname{logsumexp}(\boldsymbol{x})= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
         = \operatorname{logsumexp}(\boldsymbol{x})=b+\log \sum_{j=1}^{n} \exp \left(x_{j}-b\right)
-    
+
     where
 
     .. math::
@@ -527,7 +526,7 @@ def logsumexp(
     :param keepdims: whether to retain :attr:`axis` or not for the output tensor.
 
     Examples:
-    
+
     .. testcode::
 
         import numpy as np
@@ -1080,7 +1079,7 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     Outputs:
 
     .. testoutput::
-    
+
         [7.3485 1.    ]
 
     """
@@ -1471,7 +1470,7 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
     :param iou_thresh: IoU threshold for overlapping.
     :param scores: tensor of shape `(N,)`, the score of boxes.
     :return: indices of the elements that have been kept by NMS.
-    
+
     Examples:
 
     .. testcode::
@@ -1492,7 +1491,7 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
     Outputs:
 
     .. testoutput::
-    
+
         [75 69]
 
     """
@@ -1506,69 +1505,6 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
 
     boxes = boxes.detach()
     scores = scores.detach()
-    sorted_idx = argsort(scores, descending=True)
-    boxes = boxes[sorted_idx]
-    max_output = boxes.shape[0]
-
-    op = builtin.NMSKeep(iou_thresh, max_output)
-    inp = utils.convert_inputs(boxes.reshape(1, -1, 4))
-    indices, count = apply(op, *inp)
-    indices = indices[0][: count.item()]
-    keep_inds = sorted_idx[indices]
-    return keep_inds
-
-
-def batched_nms(
-    boxes: Tensor, scores: Tensor, idxs: Tensor, iou_thresh: float,
-) -> Tensor:
-    r"""
-    Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union (IoU).
-
-    :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
-    :param iou_thresh: ``IoU`` threshold for overlapping.
-    :param idxs: tensor of shape `(N,)`, the class indexs of boxes in the batch.
-    :param scores: tensor of shape `(N,)`, the score of boxes.
-    :return: indices of the elements that have been kept by NMS.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = np.zeros((100,4))
-        np.random.seed(42)
-        x[:,:2] = np.random.rand(100,2)*20
-        x[:,2:] = np.random.rand(100,2)*20 + 100
-        scores = tensor(np.random.rand(100))
-        idxs =  tensor(np.random.randint(0, 10, 100))
-        inp = tensor(x)
-        result = F.batched_nms(inp, scores, idxs, iou_thresh=0.6)
-        print(result.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [75 41 99 98 69 64 11 27 35 18]
-
-    """
-    assert (
-        boxes.ndim == 2 and boxes.shape[1] == 4
-    ), "the expected shape of boxes is (N, 4)"
-    assert scores.ndim == 1, "the expected shape of scores is (N,)"
-    assert idxs.ndim == 1, "the expected shape of idxs is (N,)"
-    assert boxes.shape[0] == scores.shape[0] == idxs.shape[0]
-
-    boxes = boxes.detach()
-    scores = scores.detach()
-    idxs = idxs.detach()
-    max_coordinate = boxes.max()
-    offsets = idxs.astype("float32") * (max_coordinate + 1)
-    boxes = boxes + offsets.reshape(-1, 1).broadcast(boxes.shape[0], 4)
-
     sorted_idx = argsort(scores, descending=True)
     boxes = boxes[sorted_idx]
     max_output = boxes.shape[0]

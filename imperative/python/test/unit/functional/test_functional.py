@@ -361,25 +361,6 @@ def test_nms():
     np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
 
 
-def test_batched_nms():
-    x = np.array(
-        [
-            [0, 0, 100, 100],
-            [0.5, 0.5, 1.5, 1.5],
-            [20, 20, 100, 100],
-            [0.5, 0.5, 1.0, 1.0],
-            [10, 10, 100, 100],
-            [0.5, 0.5, 1.0, 1.0],
-        ],
-        dtype=np.float32,
-    )
-    inp = tensor(x)
-    scores = tensor([0.6, 0.9, 0.5, 0.6, 0.8, 0.7], dtype=np.float32)
-    idxs = tensor([0, 1, 0, 1, 0, 1], dtype=np.int32)
-    results = F.batched_nms(inp, scores=scores, idxs=idxs, iou_thresh=0.5)
-    np.testing.assert_equal(results.numpy(), np.array([1, 4, 5], dtype=np.int32))
-
-
 @pytest.mark.skip(reason="cuda does not support nchw int8")
 def test_conv_bias():
     inp_scale = 1.5
