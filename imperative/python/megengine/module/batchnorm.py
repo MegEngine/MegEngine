@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 
 from ..distributed.group import WORLD, Group
-from ..functional import batch_norm2d, sync_batch_norm
+from ..functional.nn import batch_norm2d, sync_batch_norm
 from ..tensor import Parameter, Tensor
 from . import init
 from .module import Module

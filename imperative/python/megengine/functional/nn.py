@@ -57,7 +57,6 @@ __all__ = [
     "softmax",
     "softplus",
     "svd",
-    "sync_batch_norm",
     "warp_perspective",
 ]
 
