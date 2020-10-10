@@ -14,7 +14,7 @@
 
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
-
+#include "megbrain/tensor.h"
 #include <mlir/Dialect/StandardOps/IR/Ops.h>
 #include <mlir/IR/OperationSupport.h>
 #include <mlir/IR/Value.h>
@@ -39,9 +39,11 @@ public:
     cb(sub);
     cb(mul);
     cb(div);
+    cb(divI);
     cb(max);
     cb(min);
     cb(mod);
+    cb(modI);
     cb(gt);
     cb(ge);
     cb(lt);
@@ -51,6 +53,7 @@ public:
     cb(bit_or);
 #undef cb
     mlir::Value const_val(float val);
+    mlir::Value constI(int32_t val);
 
 #define cb(name)                                                              \
     mlir::Value name(mlir::ValueRange operands) { return name(operands[0]); } \
@@ -88,6 +91,15 @@ mlir::Value get_operand(mlir::OpBuilder& builder, const mlir::Location& loc,
         return val;
     }
 }
+
+mlir::AffineMap get_affinemap(mlir::OpBuilder& builder, const mlir::Value& val,
+                              const TensorLayout& layout);
+
+mlir::Value get_affine_load_op(mlir::OpBuilder& builder,
+                               const mlir::Location& loc,
+                               const mlir::Value& val,
+                               const mlir::ValueRange& index,
+                               const TensorLayout& dst);
 
 }  // namespace jit
 }  // namespace mgb

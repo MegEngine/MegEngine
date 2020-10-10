@@ -42,8 +42,8 @@ void lower_op_to_loops(Operation* op, ValueRange operands,
 
     auto alloc = jit::insert_alloc_and_dealloc(memref_type, loc, rewriter);
 
-    SmallVector<int64_t, 4> lower_bounds(memref_type.getRank(), 0);
-    SmallVector<int64_t, 4> steps(memref_type.getRank(), 1);
+    llvm::SmallVector<int64_t, 4> lower_bounds(memref_type.getRank(), 0);
+    llvm::SmallVector<int64_t, 4> steps(memref_type.getRank(), 1);
     buildAffineLoopNest(
             rewriter, loc, lower_bounds, memref_type.getShape(), steps,
             [&](OpBuilder& nested_builder, Location loc, ValueRange ivs) {
@@ -96,17 +96,23 @@ struct BinaryOpLowering : public ConversionPattern {
             Operation* op, ArrayRef<Value> operands,
             ConversionPatternRewriter& rewriter) const final {
         auto loc = op->getLoc();
+        auto dst_memref_type = (*op->result_type_begin()).cast<MemRefType>();
+        megdnn::TensorLayout dst_layout = mlir_type_to_layout(dst_memref_type);
+        dst_layout.init_contiguous_stride();
         lower_op_to_loops(
                 op, operands, rewriter,
-                [loc](OpBuilder& builder, ValueRange memref_operands,
-                      ValueRange loop_ivs) {
+                [dst_layout, loc, this](OpBuilder& builder,
+                                         ValueRange memref_operands,
+                                         ValueRange loop_ivs) {
                     typename Op::Adaptor binary_adaptor(memref_operands);
                     LoweredOp lower_op;
 
-                    auto loaded_lhs = get_operand<AffineLoadOp>(
-                            builder, loc, binary_adaptor.lhs(), loop_ivs);
-                    auto loaded_rhs = get_operand<AffineLoadOp>(
-                            builder, loc, binary_adaptor.rhs(), loop_ivs);
+                    auto loaded_lhs = get_affine_load_op(builder, loc,
+                                                         binary_adaptor.lhs(),
+                                                         loop_ivs, dst_layout);
+                    auto loaded_rhs = get_affine_load_op(builder, loc,
+                                                         binary_adaptor.rhs(),
+                                                         loop_ivs, dst_layout);
 
                     return lower_op(builder, loc, {loaded_lhs, loaded_rhs});
                 });
@@ -128,19 +134,26 @@ struct TernaryOpLowering : public ConversionPattern {
             Operation* op, ArrayRef<Value> operands,
             ConversionPatternRewriter& rewriter) const final {
         auto loc = op->getLoc();
+        auto dst_memref_type = (*op->result_type_begin()).cast<MemRefType>();
+        megdnn::TensorLayout dst_layout = mlir_type_to_layout(dst_memref_type);
+        dst_layout.init_contiguous_stride();
         lower_op_to_loops(
                 op, operands, rewriter,
-                [loc](OpBuilder& builder, ValueRange memref_operands,
-                      ValueRange loop_ivs) {
+                [dst_layout, loc](OpBuilder& builder,
+                                  ValueRange memref_operands,
+                                  ValueRange loop_ivs) {
                     typename Op::Adaptor ternary_adaptor(memref_operands);
                     LoweredOp lower_op;
 
-                    auto loaded_x = get_operand<AffineLoadOp>(
-                            builder, loc, ternary_adaptor.x(), loop_ivs);
-                    auto loaded_y = get_operand<AffineLoadOp>(
-                            builder, loc, ternary_adaptor.y(), loop_ivs);
-                    auto loaded_z = get_operand<AffineLoadOp>(
-                            builder, loc, ternary_adaptor.z(), loop_ivs);
+                    auto loaded_x = get_affine_load_op(builder, loc,
+                                                       ternary_adaptor.x(),
+                                                       loop_ivs, dst_layout);
+                    auto loaded_y = get_affine_load_op(builder, loc,
+                                                       ternary_adaptor.y(),
+                                                       loop_ivs, dst_layout);
+                    auto loaded_z = get_affine_load_op(builder, loc,
+                                                       ternary_adaptor.z(),
+                                                       loop_ivs, dst_layout);
 
                     return lower_op(builder, loc,
                                     {loaded_x, loaded_y, loaded_z});
@@ -166,8 +179,8 @@ struct AssignOpLowering : public ConversionPattern {
         auto memref_type = operands[0].getType().cast<MemRefType>();
         AssignOpAdaptor assign_adaptor(operands);
 
-        SmallVector<int64_t, 4> lower_bounds(memref_type.getRank(), 0);
-        SmallVector<int64_t, 4> steps(memref_type.getRank(), 1);
+        llvm::SmallVector<int64_t, 4> lower_bounds(memref_type.getRank(), 0);
+        llvm::SmallVector<int64_t, 4> steps(memref_type.getRank(), 1);
         buildAffineLoopNest(
                 rewriter, loc, lower_bounds, memref_type.getShape(), steps,
                 [&](OpBuilder& nested_builder, Location loc, ValueRange ivs) {

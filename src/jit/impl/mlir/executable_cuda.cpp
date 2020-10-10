@@ -57,23 +57,23 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
         }
     };
     for (const auto& arg : args.inputs) {
-        set_params(arg.from->dev_tensor().raw_ptr(), arg.layout);
+        set_params(arg.from->dev_tensor().raw_ptr(), arg.from->layout());
     }
     int64_t nr_elements = 0;
     for (const auto& arg : args.outputs) {
         if (nr_elements == 0) {
-            nr_elements = arg.layout.total_nr_elems();
+            nr_elements = arg.from->layout().total_nr_elems();
         } else {
             mgb_assert(static_cast<size_t>(nr_elements) ==
                                arg.layout.total_nr_elems(),
                        "The number of elements of outputs mismatch, expected: "
                        "%zu got: %zu(%s)",
                        static_cast<size_t>(nr_elements),
-                       arg.layout.total_nr_elems(),
-                       arg.layout.to_string().c_str());
+                       arg.from->layout().total_nr_elems(),
+                       arg.from->layout().to_string().c_str());
         }
 
-        set_params(arg.from->dev_tensor().raw_ptr(), arg.layout);
+        set_params(arg.from->dev_tensor().raw_ptr(), arg.from->layout());
     }
     const CompNodeEnv& env =
             CompNodeEnv::from_comp_node(fusion_opr->comp_node());
@@ -134,8 +134,8 @@ void MLIRCUDAExecutable::FuncCache::exec(const JITExecutor* fusion_opr,
     mgb_assert(fusion_opr->args().outputs.size() == 1,
                "Currently only support 1 outputs, got %zu",
                fusion_opr->args().outputs.size());
-    int out_dim = fusion_opr->args().outputs[0].layout.ndim;
-    DType dtype = fusion_opr->args().outputs[0].layout.dtype;
+    int out_dim = fusion_opr->args().outputs[0].from->layout().ndim;
+    DType dtype = fusion_opr->args().outputs[0].from->layout().dtype;
 #define cb_outdim(_ndim, _dtype)                                \
     if (_ndim == out_dim) {                                     \
         setup_and_launch<_ndim, _dtype>(fusion_opr, func->func, \

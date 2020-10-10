@@ -130,14 +130,51 @@ void run_mlir(CompNode cn) {
     auto graph = ComputingGraph::make();
     HostTensorGenerator<dtype::Float32> gen;
 
-    auto host_x0 = gen({23, 42}, cn), host_x1 = gen({23, 42}, cn),
-         host_x2 = gen({23, 42}, cn), host_x3 = gen({23, 42}, cn);
+    auto host_x0 = gen({23, 42}, cn), host_x1 = gen({23, 1}, cn),
+         host_x2 = gen({23, 42}, cn);
 
     auto a = opr::Host2DeviceCopy::make(*graph, host_x0),
          b = opr::Host2DeviceCopy::make(*graph, host_x1),
          c = opr::Host2DeviceCopy::make(*graph, host_x2);
 
     auto y = a + b * c + 0.3f;
+
+    auto ig_gen =
+            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+
+    for (auto i : get_rev_topo_order(y)) {
+        if (!i->same_type<opr::Host2DeviceCopy>()) {
+            ig_gen->add_opr(i);
+        }
+    }
+
+    auto igraph = ig_gen->generate();
+    auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
+
+    HostTensorND host_y, host_y_jit;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_jit, host_y_jit)});
+    func->execute();
+
+    MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
+}
+
+void run_mlir_broadcast(CompNode cn) {
+    set_backend(Backend::MLIR);
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<dtype::Float32> gen;
+
+    auto host_x0 = gen({10, 20, 5, 6}, cn), host_x1 = gen({1, 20, 1, 1}, cn),
+         host_x2 = gen({10, 1, 5, 1}, cn), host_x3 = gen({10, 1, 1, 1}, cn);
+
+    auto a = opr::Host2DeviceCopy::make(*graph, host_x0),
+         b = opr::Host2DeviceCopy::make(*graph, host_x1),
+         c = opr::Host2DeviceCopy::make(*graph, host_x2),
+         d = opr::Host2DeviceCopy::make(*graph, host_x3);
+
+    auto y =
+            opr::Elemwise::make({a, b, c}, opr::Elemwise::Mode::FUSE_MUL_ADD3) +
+            opr::Elemwise::make({d}, opr::Elemwise::Mode::ABS) - 0.3f;
 
     auto ig_gen =
             std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
@@ -252,12 +289,14 @@ TYPED_TEST(TestJITNvrtcCodeGen, run) {
 TEST(TestJITMlirCodeGen, Basic) {
     auto cn = CompNode::load("cpu0");
     run_mlir(cn);
+    run_mlir_broadcast(cn);
 }
 
 TEST(TestJITMlirCodeGen, BasicGPU) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     run_mlir(cn);
+    run_mlir_broadcast(cn);
 }
 
 ///////////////////////// unary ///////////////////////////////

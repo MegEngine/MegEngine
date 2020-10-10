@@ -73,10 +73,10 @@ private:
                 m_symbol_table);
         std::vector<mlir::Type> func_args;
         for (auto&& arg : args.inputs) {
-            func_args.push_back(get_type(arg.layout));
+            func_args.push_back(get_type(arg.from->layout()));
         }
         for (auto&& arg : args.outputs) {
-            func_args.push_back(get_type(arg.layout));
+            func_args.push_back(get_type(arg.from->layout()));
         }
         //! the last arg is nr_elements
         func_args.push_back(m_builder.getIndexType());

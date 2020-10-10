@@ -44,7 +44,6 @@ megdnn::TensorLayout mlir_type_to_layout(mlir::Type type);
 megdnn::DType mlir_type_to_dtype(mlir::Type type);
 mlir::MemRefType layout_to_mlir_type(const megdnn::TensorLayout& layout,
                                      mlir::Builder& builder);
-
 }  // namespace jit
 }  // namespace mgb
 
