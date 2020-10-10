@@ -39,7 +39,7 @@ __all__ = [
     "adaptive_avg_pool2d",
     "adaptive_max_pool2d",
     "avg_pool2d",
-    "batch_norm2d",
+    "batch_norm",
     "conv2d",
     "conv_transpose2d",
     "dot",
@@ -605,7 +605,7 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     return cached / down
 
 
-def batch_norm2d(
+def batch_norm(
     inp: Tensor,
     running_mean: Tensor = None,
     running_var: Tensor = None,
@@ -639,6 +639,8 @@ def batch_norm2d(
         Default: True
     :return: output tensor.
     """
+    if inp.ndim != 4:
+        raise NotImplementedError("batch_norm for ndim != 4")
 
     def full_value(value):
         C = inp.shape[1]

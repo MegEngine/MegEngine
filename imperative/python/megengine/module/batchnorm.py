@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 
 from ..distributed.group import WORLD, Group
-from ..functional.nn import batch_norm2d, sync_batch_norm
+from ..functional.nn import batch_norm, sync_batch_norm
 from ..tensor import Parameter, Tensor
 from . import init
 from .module import Module
@@ -96,7 +96,7 @@ class _BatchNorm(Module):
         else:
             exponential_average_factor = 0.0  # useless
 
-        output = batch_norm2d(
+        output = batch_norm(
             inp,
             self.running_mean if self.track_running_stats else None,
             self.running_var if self.track_running_stats else None,
