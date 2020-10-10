@@ -884,6 +884,10 @@ def warp_perspective(
     :param interp_mode: interpolation methods. Default: "LINEAR"
     :return: output tensor.
 
+    Note:
+
+    The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
+
     Examples:
 
     .. testcode::
