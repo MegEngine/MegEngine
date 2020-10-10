@@ -10,12 +10,17 @@ import multiprocessing as mp
 import platform
 import queue
 
+import numpy as np
 import pytest
 
 import megengine as mge
 import megengine.distributed as dist
 from megengine.core.ops.builtin import CollectiveComm, ParamPackConcat, ParamPackSplit
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine.distributed.helper import (
+    get_device_count_by_fork,
+    param_pack_concat,
+    param_pack_split,
+)
 
 
 def _assert_q_empty(q):
@@ -195,3 +200,19 @@ def test_oprmm_hashable():
     rhs = (CollectiveComm(), ParamPackConcat(), ParamPackSplit())
     assert lhs == rhs
     assert hash(lhs) == hash(rhs)
+
+
+def test_param_pack_split():
+    a = mge.Tensor(np.ones((10,), np.int32))
+    b, c = param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
+    assert np.allclose(b.numpy(), a.numpy()[1])
+    assert np.allclose(c.numpy(), a.numpy()[1:].reshape(3, 3))
+
+
+def test_param_pack_concat():
+    a = mge.Tensor(np.ones((1,), np.int32))
+    b = mge.Tensor(np.ones((3, 3), np.int32))
+    offsets_val = [0, 1, 1, 10]
+    offsets = mge.Tensor(offsets_val, np.int32)
+    c = param_pack_concat([a, b], offsets, offsets_val)
+    assert np.allclose(np.concatenate([a.numpy(), b.numpy().flatten()]), c.numpy())

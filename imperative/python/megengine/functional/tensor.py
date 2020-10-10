@@ -46,8 +46,6 @@ __all__ = [
     "linspace",
     "ones",
     "ones_like",
-    "param_pack_concat",
-    "param_pack_split",
     "reshape",
     "split",
     "squeeze",
@@ -975,81 +973,3 @@ def arange(
     if np.dtype(dtype) == np.int32:
         return result.astype(dtype)
     return result
-
-
-def param_pack_split(inp: Tensor, offsets: List, shapes: List) -> Tensor:
-    r"""
-    Returns split tensor to tensor list as offsets and shapes described,
-            only used for ``parampack``.
-
-    :param inp: input tensor.
-    :param offsets: offsets of outputs, length of `2 * n`,
-            while n is tensor nums you want to split,
-            format `[begin0, end0, begin1, end1]`.
-    :param shapes: tensor shapes of outputs.
-    :return: splitted tensors.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        import megengine.functional as F
-        from megengine import tensor
-
-        a = tensor(np.ones((10,), np.int32))
-        b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
-        print(b.numpy())
-        print(c.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [1]
-        [[1 1 1]
-         [1 1 1]
-         [1 1 1]]
-
-    """
-    op = builtin.ParamPackSplit()
-    op.offsets = offsets
-    op.shapes = shapes
-    return apply(op, inp)
-
-
-def param_pack_concat(inps: List, offsets: Tensor, offsets_val: List) -> Tensor:
-    r"""
-    Returns concated tensor, only used for ``parampack``.
-
-    :param inps: input tensors.
-    :param offsets: device value of offsets.
-    :param offsets_val: offsets of inputs, length of `2 * n`,
-            format `[begin0, end0, begin1, end1]`.
-    :return: concated tensor.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        import megengine.functional as F
-        from megengine import tensor
-
-        a = tensor(np.ones((1,), np.int32))
-        b = tensor(np.ones((3, 3), np.int32))
-        offsets_val = [0, 1, 1, 10]
-        offsets = tensor(offsets_val, np.int32)
-        c = F.param_pack_concat([a, b], offsets, offsets_val)
-        print(c.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [1 1 1 1 1 1 1 1 1 1]
-
-    """
-    op = builtin.ParamPackConcat()
-    op.offsets = offsets_val
-    return apply(op, *inps, offsets)[0]

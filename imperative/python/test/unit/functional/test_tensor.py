@@ -359,19 +359,3 @@ def test_copy_d2h():
 def test_copy_d2d():
     copy_test("gpu0", "gpu1")
     copy_test("gpu0:0", "gpu0:1")
-
-
-def test_param_pack_split():
-    a = tensor(np.ones((10,), np.int32))
-    b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
-    assert np.allclose(b.numpy(), a.numpy()[1])
-    assert np.allclose(c.numpy(), a.numpy()[1:].reshape(3, 3))
-
-
-def test_param_pack_concat():
-    a = tensor(np.ones((1,), np.int32))
-    b = tensor(np.ones((3, 3), np.int32))
-    offsets_val = [0, 1, 1, 10]
-    offsets = tensor(offsets_val, np.int32)
-    c = F.param_pack_concat([a, b], offsets, offsets_val)
-    assert np.allclose(np.concatenate([a.numpy(), b.numpy().flatten()]), c.numpy())
