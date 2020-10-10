@@ -22,10 +22,18 @@ from megengine.distributed.helper import get_device_count_by_fork
 
 def test_eye():
     dtype = np.float32
-    cases = [{"input": [10, 20]}, {"input": [20, 30]}]
+    cases = [{"input": [10, 20]}, {"input": [30]}]
     for case in cases:
         np.testing.assert_allclose(
             F.eye(case["input"], dtype=dtype).numpy(),
+            np.eye(*case["input"]).astype(dtype),
+        )
+        np.testing.assert_allclose(
+            F.eye(*case["input"], dtype=dtype).numpy(),
+            np.eye(*case["input"]).astype(dtype),
+        )
+        np.testing.assert_allclose(
+            F.eye(tensor(case["input"]), dtype=dtype).numpy(),
             np.eye(*case["input"]).astype(dtype),
         )
 
