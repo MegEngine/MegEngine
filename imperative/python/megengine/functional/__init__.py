@@ -13,7 +13,7 @@ from .math import *
 from .nn import *
 from .quantized import conv_bias_activation
 from .tensor import *
-from .utils import accuracy, copy
+from .utils import *
 
 from . import distributed  # isort:skip
 

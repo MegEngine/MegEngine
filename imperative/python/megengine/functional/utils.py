@@ -18,8 +18,13 @@ from ..core.tensor.core import apply
 from .math import topk as _topk
 from .tensor import broadcast_to, transpose
 
+__all__ = [
+    "topk_accuracy",
+    "copy",
+]
 
-def accuracy(
+
+def topk_accuracy(
     logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
 ) -> Union[Tensor, Iterable[Tensor]]:
     r"""
@@ -41,7 +46,7 @@ def accuracy(
 
         logits = tensor(np.arange(80, dtype=np.int32).reshape(8,10))
         target = tensor(np.arange(8, dtype=np.int32))
-        top1, top5 = F.accuracy(logits, target, (1, 5))
+        top1, top5 = F.topk_accuracy(logits, target, (1, 5))
         print(top1.numpy(), top5.numpy())
 
     Outputs:
