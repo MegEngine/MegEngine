@@ -88,6 +88,7 @@ void dispatch_exec(HandleImpl *handle,
     }
     switch (data.layout.dtype.enumv()) {
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
         default:
             megdnn_throw(megdnn_mangle("bad dtype"));
     }

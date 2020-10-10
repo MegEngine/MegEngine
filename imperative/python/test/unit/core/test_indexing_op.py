@@ -519,6 +519,18 @@ def test_advance_indexing_with_bool():
     np.testing.assert_equal(a[b], aa[bb].numpy())
     np.testing.assert_equal(a[:, [True, False]], aa[:, [True, False]].numpy())
 
+    a = np.array([[True, False], [False, True]])
+    b = np.array([1])
+    aa = Tensor(a)
+    bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[bb].numpy())
+    b = np.array([[True, True], [False, True]])
+    bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[bb].numpy())
+    a[b] = False
+    aa[bb] = False
+    np.testing.assert_equal(a, aa.numpy())
+
     # XXX: trace does not expect empty condtake tensor
     if not use_tensor_shape():
         a = np.ones((2, 2), dtype=np.int32)
