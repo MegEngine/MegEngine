@@ -98,7 +98,7 @@ def train(data, label, net, opt, gm):
     opt.clear_grad()
     with gm:
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.cross_entropy(pred, label)
         gm.backward(loss)
     opt.step()
     return loss

@@ -80,7 +80,7 @@ def test_training_converge():
     def train(data, label):
         with gm:
             pred = net(data)
-            loss = F.cross_entropy_with_softmax(pred, label)
+            loss = F.cross_entropy(pred, label)
             gm.backward(loss)
         return loss
 

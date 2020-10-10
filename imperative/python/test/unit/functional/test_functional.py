@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import itertools
+from functools import partial
 
 import numpy as np
 import pytest
@@ -303,12 +304,12 @@ def test_binary_cross_entropy():
         np.testing.assert_allclose(x.numpy(), y, atol=5e-4)
 
     np.random.seed(123)
-    data1 = sigmoid(np.random.uniform(size=data1_shape).astype(np.float32))
+    data1 = np.random.uniform(size=data1_shape).astype(np.float32)
     label1 = np.random.uniform(size=label1_shape).astype(np.float32)
     expect1 = np.array([0.6361], dtype=np.float32)
 
     np.random.seed(123)
-    data2 = sigmoid(np.random.uniform(size=data2_shape).astype(np.float32))
+    data2 = np.random.uniform(size=data2_shape).astype(np.float32)
     label2 = np.random.uniform(size=label2_shape).astype(np.float32)
     expect2 = np.array([0.6750], dtype=np.float32)
 
@@ -317,6 +318,14 @@ def test_binary_cross_entropy():
         {"input": [data2, label2], "output": expect2,},
     ]
     opr_test(cases, F.binary_cross_entropy, compare_fn=compare_fn)
+
+    cases = [
+        {"input": [sigmoid(data1), label1], "output": expect1,},
+        {"input": [sigmoid(data2), label2], "output": expect2,},
+    ]
+    opr_test(
+        cases, partial(F.binary_cross_entropy, with_logits=False), compare_fn=compare_fn
+    )
 
 
 def test_hinge_loss():

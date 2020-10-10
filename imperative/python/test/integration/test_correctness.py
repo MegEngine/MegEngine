@@ -92,7 +92,7 @@ class MnistNet(Module):
 def train(data, label, net, opt, gm):
     with gm:
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.cross_entropy(pred, label)
         gm.backward(loss)
     return loss
 

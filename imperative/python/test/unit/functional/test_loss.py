@@ -12,15 +12,34 @@ import megengine.functional as F
 from megengine import tensor
 
 
-def test_cross_entropy_with_softmax():
+def test_cross_entropy_with_logits():
     data = tensor([1, 100]).astype(np.float32).reshape((1, 2))
     label = tensor([1]).astype(np.int32)
-    loss = F.cross_entropy_with_softmax(data, label)
+    loss = F.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 0.0)
     label = tensor([0]).astype(np.int32)
-    loss = F.cross_entropy_with_softmax(data, label)
+    loss = F.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 100 - 1)
 
     label = np.array([1])
-    loss = F.cross_entropy_with_softmax(data, label)
+    loss = F.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 0.0)
+
+
+def test_cross_entropy():
+    def softmax(x):
+        x = np.exp(x)
+        x /= x.sum(1, keepdims=True)
+        return x
+
+    def ref(x, y):
+        return np.mean([-np.log(x[i, y[i]]) for i in range(len(y))])
+
+    x = (np.random.rand(5, 10) - 0.5) * 4
+    y = np.random.randint(10, size=(5,))
+    for i in range(len(x)):
+        x[i, y[i]] += np.random.rand() * 2
+    x = softmax(x)
+    l_ref = ref(x, y)
+    l = F.cross_entropy(tensor(x, "float32"), tensor(y, "int32"), with_logits=False)
+    np.testing.assert_allclose(l.numpy(), l_ref)

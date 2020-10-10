@@ -72,7 +72,7 @@ def test_xornet_trace_dump():
         with gm:
             net.train()
             pred = net(data)
-            loss = F.cross_entropy_with_softmax(pred, label)
+            loss = F.cross_entropy(pred, label)
             gm.backward(loss)
         return pred, loss
 
@@ -80,7 +80,7 @@ def test_xornet_trace_dump():
     def val_fun(data, label):
         net.eval()
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.cross_entropy(pred, label)
         return pred, loss
 
     @trace(symbolic=True, capture_as_const=True)
