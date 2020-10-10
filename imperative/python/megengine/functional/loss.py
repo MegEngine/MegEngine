@@ -55,7 +55,7 @@ def l1_loss(pred: Tensor, label: Tensor) -> Tensor:
 
         ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
         tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
-        loss = F.l1_loss(ipt, tgt)
+        loss = F.nn.l1_loss(ipt, tgt)
         print(loss.numpy())
 
     Outputs:
@@ -106,7 +106,7 @@ def square_loss(pred: Tensor, label: Tensor) -> Tensor:
 
         ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
         tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
-        loss = F.square_loss(ipt, tgt)
+        loss = F.nn.square_loss(ipt, tgt)
         print(loss.numpy())
 
     Outputs:
@@ -159,7 +159,7 @@ def cross_entropy(
         label_shape = (1, )
         pred = tensor(np.array([0, 0], dtype=np.float32).reshape(data_shape))
         label = tensor(np.ones(label_shape, dtype=np.int32))
-        loss = F.cross_entropy(pred, label)
+        loss = F.nn.cross_entropy(pred, label)
         print(loss.numpy())
 
     Outputs:
@@ -226,7 +226,7 @@ def binary_cross_entropy(
 
         pred = tensor(np.array([0, 0], dtype=np.float32).reshape(1, 2))
         label = tensor(np.ones((1, 2), dtype=np.float32))
-        loss = F.binary_cross_entropy(pred, label)
+        loss = F.nn.binary_cross_entropy(pred, label)
         print(loss.numpy())
 
     Outputs:
@@ -264,7 +264,7 @@ def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
 
         pred = tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]], dtype="float32")
         label = tensor([[1, -1, -1], [-1, 1, 1]], dtype="float32")
-        loss = F.hinge_loss(pred, label)
+        loss = F.nn.hinge_loss(pred, label)
         print(loss.numpy())
 
     Outputs:

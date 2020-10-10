@@ -317,14 +317,16 @@ def test_binary_cross_entropy():
         {"input": [data1, label1], "output": expect1,},
         {"input": [data2, label2], "output": expect2,},
     ]
-    opr_test(cases, F.binary_cross_entropy, compare_fn=compare_fn)
+    opr_test(cases, F.nn.binary_cross_entropy, compare_fn=compare_fn)
 
     cases = [
         {"input": [sigmoid(data1), label1], "output": expect1,},
         {"input": [sigmoid(data2), label2], "output": expect2,},
     ]
     opr_test(
-        cases, partial(F.binary_cross_entropy, with_logits=False), compare_fn=compare_fn
+        cases,
+        partial(F.nn.binary_cross_entropy, with_logits=False),
+        compare_fn=compare_fn,
     )
 
 
@@ -338,7 +340,7 @@ def test_hinge_loss():
         expect = np.clip(0, np.inf, 1 - data * label).sum(axis=1).mean()
         cases.append({"input": [data, label], "output": expect})
 
-    opr_test(cases, F.hinge_loss)
+    opr_test(cases, F.nn.hinge_loss)
 
     # cases with L2 norm
     cases = []
@@ -349,7 +351,7 @@ def test_hinge_loss():
         cases.append({"input": [data, label], "output": expect})
 
     def hinge_loss_with_l2_norm(pred, label):
-        return F.hinge_loss(pred, label, "L2")
+        return F.nn.hinge_loss(pred, label, "L2")
 
     opr_test(cases, hinge_loss_with_l2_norm)
 

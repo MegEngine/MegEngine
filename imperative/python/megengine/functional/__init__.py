@@ -8,7 +8,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=redefined-builtin
 from .elemwise import *
-from .loss import *
 from .math import *
 from .nn import *
 from .quantized import conv_bias_activation

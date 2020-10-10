@@ -1522,5 +1522,4 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
 
 
 
-from .loss import *  # isort:skip
-from .quantized import conv_bias_activation  # isort:skip
+from .loss import *
