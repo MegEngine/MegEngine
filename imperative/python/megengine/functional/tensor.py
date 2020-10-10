@@ -42,7 +42,6 @@ __all__ = [
     "full",
     "full_like",
     "gather",
-    "identity",
     "linspace",
     "ones",
     "ones_like",
@@ -176,18 +175,6 @@ def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
     """Returns a tensor filled with given value with the same shape as input tensor.
     """
     return full(inp.shape, value, dtype=inp.dtype, device=inp.device)
-
-
-def identity(inp: Tensor) -> Tensor:
-    """Applies an identity transformation to input tensor.
-
-    :param inp: input tensor.
-    :return: output tensor.
-    """
-    op = builtin.Identity()
-    (data,) = convert_inputs(inp)
-    (output,) = apply(op, data)
-    return output
 
 
 def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:

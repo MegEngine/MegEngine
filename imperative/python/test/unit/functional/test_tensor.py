@@ -314,7 +314,7 @@ def test_device():
 
 def test_identity():
     x = tensor(np.random.random((5, 10)).astype(np.float32))
-    y = F.identity(x)
+    y = F.copy(x)
     np.testing.assert_equal(y.numpy(), x)
 
 
