@@ -294,22 +294,6 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
              cond_nr_inp = ig_gen->get_cnt_input_if_add(opr) <= max_nr_input,
              cond_mlir_specific = true;
 
-#if MGB_JIT_MLIR
-        //! FIXME mlir does't support broadcast currently.
-        auto backend = MGB_GETENV("MGB_JIT_BACKEND");
-        if (backend && !strcmp(backend, "MLIR")) {
-            for (VarNode* var : opr->input()) {
-                if (!SymbolVar{var}.as_immutable_scalar().valid()) {
-                    if (opr->node_prop().dep_map().at(var) &
-                        DepType::DEV_VALUE) {
-                        if (!var->shape().eq_shape(opr->output(0)->shape())) {
-                            cond_mlir_specific = false;
-                        }
-                    }
-                }
-            }
-        }
-#endif
         if (cond_readers && cond_cn && cond_shp && cond_nr_inp &&
             cond_mlir_specific) {
             ig_gen->add_opr(opr);

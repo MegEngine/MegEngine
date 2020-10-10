@@ -52,6 +52,54 @@ mlir::Value get_tid(ConversionPatternRewriter& rewriter, const Location& loc) {
     return index;
 }
 
+megdnn::TensorLayout output_layout(gpu::LaunchOp& launch_op) {
+    auto func_op = launch_op.getParentOfType<mlir::FuncOp>();
+    mgb_assert(func_op, "Unexpexted launch op.");
+    for (auto block_iter = func_op.rbegin(); block_iter != func_op.rend();
+         block_iter++) {
+        for (auto op_iter = block_iter->rbegin(); op_iter != block_iter->rend();
+             op_iter++) {
+            auto op = llvm::dyn_cast_or_null<AssignOp>(&(*op_iter));
+            if (op && op.getNumOperands() > 0) {
+                return mlir_type_to_layout(*(op.operand_type_begin()));
+            }
+        }
+    }
+    mgb_throw(MegBrainError, "Unexpexted launch op.");
+}
+
+std::vector<mlir::Value> get_multidim_tid(ConversionPatternRewriter& rewriter,
+                                          const Location& loc,
+                                          const mlir::Value& val,
+                                          const megdnn::TensorLayout& dst) {
+    Value index = get_tid(rewriter, loc);
+
+    auto type = val.getType().dyn_cast_or_null<mlir::MemRefType>();
+    if (type) {
+        ValueBuilderHelper helper(rewriter, loc);
+        std::vector<mlir::Value> idxs;
+        idxs.resize(dst.ndim);
+        mlir::Value dim_index = index;
+        for (int i = dst.ndim - 1; i >= 0; i--) {
+            auto cur_index = helper.modI(dim_index, helper.constI(dst[i]));
+            idxs[i] = cur_index;
+            dim_index = helper.divI(dim_index, helper.constI(dst[i]));
+        }
+
+        megdnn::TensorLayout src_layout = mlir_type_to_layout(type);
+        src_layout.init_contiguous_stride();
+        for (int i = 0; i < type.getRank(); ++i) {
+            if (src_layout[i] == 1) {
+                idxs[i] = helper.constI(0);
+            }
+        }
+        return idxs;
+    } else {
+        return {index};
+    }
+
+}
+
 template <typename Op, typename LoweredOp>
 struct UnaryOpLowering : public ConversionPattern {
     UnaryOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
@@ -66,7 +114,9 @@ struct UnaryOpLowering : public ConversionPattern {
         typename Op::Adaptor binary_adaptor(operands);
         rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
-        auto index = get_tid(rewriter, loc);
+        auto dst_layout = output_layout(m_launch_op);
+        auto index = get_multidim_tid(rewriter, loc, binary_adaptor.lhs(),
+                                      dst_layout);
         auto loaded_lhs =
                 get_operand<LoadOp>(rewriter, loc, binary_adaptor.lhs(), index);
 
@@ -99,11 +149,15 @@ struct BinaryOpLowering : public ConversionPattern {
         typename Op::Adaptor binary_adaptor(operands);
         rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
-        auto index = get_tid(rewriter, loc);
-        auto loaded_lhs =
-                get_operand<LoadOp>(rewriter, loc, binary_adaptor.lhs(), index);
-        auto loaded_rhs =
-                get_operand<LoadOp>(rewriter, loc, binary_adaptor.rhs(), index);
+        auto dst_layout = output_layout(m_launch_op);
+        auto lhs_index = get_multidim_tid(rewriter, loc, binary_adaptor.lhs(),
+                                          dst_layout);
+        auto rhs_index = get_multidim_tid(rewriter, loc, binary_adaptor.rhs(),
+                                          dst_layout);
+        auto loaded_lhs = get_operand<LoadOp>(rewriter, loc,
+                                              binary_adaptor.lhs(), lhs_index);
+        auto loaded_rhs = get_operand<LoadOp>(rewriter, loc,
+                                              binary_adaptor.rhs(), rhs_index);
 
         LoweredOp lower_op;
 
@@ -135,13 +189,19 @@ struct TernaryOpLowering : public ConversionPattern {
         typename Op::Adaptor ternary_adaptor(operands);
         rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
-        auto index = get_tid(rewriter, loc);
-        auto loaded_x =
-                get_operand<LoadOp>(rewriter, loc, ternary_adaptor.x(), index);
-        auto loaded_y =
-                get_operand<LoadOp>(rewriter, loc, ternary_adaptor.y(), index);
-        auto loaded_z =
-                get_operand<LoadOp>(rewriter, loc, ternary_adaptor.z(), index);
+        auto dst_layout = output_layout(m_launch_op);
+        auto index_x = get_multidim_tid(rewriter, loc, ternary_adaptor.x(),
+                                        dst_layout);
+        auto index_y = get_multidim_tid(rewriter, loc, ternary_adaptor.y(),
+                                        dst_layout);
+        auto index_z = get_multidim_tid(rewriter, loc, ternary_adaptor.z(),
+                                        dst_layout);
+        auto loaded_x = get_operand<LoadOp>(rewriter, loc, ternary_adaptor.x(),
+                                            index_x);
+        auto loaded_y = get_operand<LoadOp>(rewriter, loc, ternary_adaptor.y(),
+                                            index_y);
+        auto loaded_z = get_operand<LoadOp>(rewriter, loc, ternary_adaptor.z(),
+                                            index_z);
 
         LoweredOp lower_op;
 
@@ -242,7 +302,9 @@ struct AssignOpLowering : public ConversionPattern {
         AssignOpAdaptor assign_adaptor(operands);
         rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
 
-        auto index = get_tid(rewriter, loc);
+        auto dst_layout = output_layout(m_launch_op);
+        auto index = get_multidim_tid(rewriter, loc, assign_adaptor.rhs(),
+                                      dst_layout);
 
         auto loaded_lhs =
                 get_operand<LoadOp>(rewriter, loc, assign_adaptor.lhs(), index);

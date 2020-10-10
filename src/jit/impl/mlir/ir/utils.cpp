@@ -98,7 +98,6 @@ mlir::MemRefType jit::layout_to_mlir_type(const megdnn::TensorLayout& layout,
     for (size_t i = 0; i < layout.ndim; i++) {
         shape.push_back(layout[i]);
     }
-
     switch (layout.dtype.enumv()) {
         case megdnn::DTypeEnum::Float32:
             return mlir::MemRefType::get(shape, builder.getF32Type());

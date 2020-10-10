@@ -1580,8 +1580,8 @@ void run_mlir(CompNode cn) {
 
     JITExecutor* jit;
     unpack_vector(find_oprs<JITExecutor>(*funcs.second), jit);
-    ASSERT_EQ(2u, find_oprs<opr::Elemwise>(*funcs.second).size());
-    ASSERT_EQ(3u, jit->input().size());
+    ASSERT_EQ(0u, find_oprs<opr::Elemwise>(*funcs.second).size());
+    ASSERT_EQ(5u, jit->input().size());
 }
 
 TEST(TestJITExecutor, TestJITMlirFusion) {
