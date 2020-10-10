@@ -10,7 +10,6 @@
 from .elemwise import *
 from .math import *
 from .nn import *
-from .quantized import conv_bias_activation
 from .tensor import *
 from .utils import *
 

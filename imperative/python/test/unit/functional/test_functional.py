@@ -438,7 +438,7 @@ def test_conv_bias():
                 inp = convert_to_nchw4(inp)
                 w = convert_to_nchw4(w)
                 b = convert_to_nchw4(b)
-            return F.conv_bias_activation(
+            return F.nn.conv_bias_activation(
                 inp,
                 w,
                 b,

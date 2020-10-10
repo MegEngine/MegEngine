@@ -11,7 +11,7 @@ import numpy as np
 
 from ... import module as Float
 from ...core.tensor import dtype
-from ...functional import conv_bias_activation
+from ...functional.nn import conv_bias_activation
 from ...tensor import Parameter
 from ..qat import conv as QAT
 from .module import QuantizedModule
