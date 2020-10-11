@@ -83,7 +83,8 @@ size_t TensorRecorder::record_tensor(const TensorPtr& tensor) {
         return id;
     } else {
         auto id = m_next_id++;
-        m_tensor_map.insert({tensor.get(), {std::weak_ptr{tensor}, id}});
+        m_tensor_map.insert(
+                {tensor.get(), {std::weak_ptr<Tensor>{tensor}, id}});
         return id;
     }
 }

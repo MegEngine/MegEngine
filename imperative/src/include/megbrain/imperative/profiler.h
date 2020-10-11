@@ -40,8 +40,8 @@ struct ProfileEntry {
     std::vector<std::tuple<CompNode, TimeClosure, TimeClosure>> device_list;
     std::vector<ProfileTensor> inputs;
     std::vector<ProfileTensor> outputs;
-    ssize_t memory = 0;
-    ssize_t computation = 0;
+    long long memory = 0;
+    long long computation = 0;
 #if MGB_ENABLE_JSON
     std::shared_ptr<json::Value> param;
 #endif
