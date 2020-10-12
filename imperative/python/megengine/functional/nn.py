@@ -546,7 +546,7 @@ def logsumexp(
         [-0.5481  4.4519]
 
     """
-    max_value = max(inp, axis, keepdims=True)
+    max_value = max(inp.detach(), axis, keepdims=True)
     if keepdims:
         return max_value + log(sum(exp(inp - max_value), axis, keepdims))
     else:
