@@ -374,18 +374,14 @@ def max(
 
 
 def norm(
-    inp: Tensor,
-    p: int = 2,
-    axis: Optional[Union[int, Sequence[int]]] = None,
-    keepdims=False,
+    inp: Tensor, ord: float = None, axis: int = None, keepdims=False,
 ):
     """Calculates ``p``-norm of input tensor along
-    given axis. If axis is a list of dimensions,
-    reduce over all of them.
+    given axis.
 
     :param inp: input tensor.
-    :param p: power of value applied to inp. Default: 2
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param ord: power of value applied to inp. Default: 2
+    :param axis: dimension to reduce. If None, input must be a vector. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -397,7 +393,7 @@ def norm(
         from megengine import tensor
         import megengine.functional as F
 
-        x = tensor(np.arange(-3, 3, dtype=np.float32).reshape(2,3))
+        x = tensor(np.arange(-3, 3, dtype=np.float32))
         out = F.norm(x)
         print(out.numpy())
 
@@ -408,13 +404,18 @@ def norm(
         [4.3589]
 
     """
-    if p == 0:
+    if axis is None:
+        if inp.ndim != 1:
+            raise TypeError("axis is required unless input is a vector")
+    if ord is None:
+        ord = 2
+    if ord == 0:
         return sum(inp != 0, axis=axis, keepdims=keepdims)
-    if p == math.inf:
+    if ord == math.inf:
         return max(abs(inp))
-    if p == -math.inf:
+    if ord == -math.inf:
         return min(abs(inp))
-    return sum(abs(inp) ** p, axis=axis, keepdims=keepdims) ** (1.0 / p)
+    return sum(abs(inp) ** ord, axis=axis, keepdims=keepdims) ** (1.0 / ord)
 
 
 def argmin(
@@ -534,14 +535,10 @@ def argmax(
 
 
 def normalize(
-    inp: Tensor,
-    p: int = 2,
-    axis: Optional[Union[int, Sequence[int]]] = None,
-    eps: float = 1e-12,
+    inp: Tensor, ord: float = None, axis: int = None, eps: float = 1e-12,
 ) -> Tensor:
     r"""Performs :math:`L_p` normalization of input tensor along
-    given axis. If axis is a list of dimensions,
-    reduce over all of them.
+    given axis.
 
     For a tensor of shape :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
     :math:`n_{dim}` -element vector :math:`v` along dimension :attr:`axis` is transformed as:
@@ -550,16 +547,15 @@ def normalize(
         v = \frac{v}{\max(\lVert v \rVert_p, \epsilon)}.
 
     :param inp: input tensor.
-    :param p: power of value applied to input tensor. Default: 2
-    :param axis: dimension to reduce. If None, all dimensions will be reduced
-        to calculate the norm. Default: None
+    :param ord: power of value applied to input tensor. Default: 2
+    :param axis: dimension to reduce.If None, input must be a vector. Default: None
     :param eps: a small value to avoid division by zero. Default: 1e-12
     :return: normalized output tensor.
     """
     if axis is None:
-        return inp / clip(norm(inp, p, axis), lower=eps)
+        return inp / clip(norm(inp, ord, axis), lower=eps)
     else:
-        return inp / clip(norm(inp, p, axis, keepdims=True), lower=eps)
+        return inp / clip(norm(inp, ord, axis, keepdims=True), lower=eps)
 
 
 def argsort(inp: Tensor, descending: bool = False) -> Tensor:
