@@ -379,3 +379,18 @@ def test_trace_nms():
     f(*make_inputs(10))
     f(*make_inputs(20))
     f(*make_inputs(30))
+
+
+def test_trace_valid_broadcast():
+    set_tensor_shape(True)
+    x1 = tensor(np.random.randn(1, 1))
+    x2 = tensor(np.random.randn(1, 2))
+    shape = (tensor([2]), tensor([2]))
+
+    @trace(symbolic=False)
+    def f(x, shape):
+        y = F.broadcast_to(x, shape)
+        return y
+
+    f(x1, shape)
+    f(x2, shape)

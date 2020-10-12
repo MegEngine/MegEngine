@@ -173,7 +173,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
                 item.append(True)
                 v = get_index(v)
                 assert np.issubdtype(v.dtype, np.integer) or np.issubdtype(
-                    v.dtype, np.bool
+                    v.dtype, np.bool_
                 ), "var type in the subscript must be int or bool"
                 tensors.append(v)
 
