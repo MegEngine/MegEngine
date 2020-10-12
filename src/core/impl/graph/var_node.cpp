@@ -576,10 +576,10 @@ VarNode& VarNode::add_flag(Flag flag) {
 
 void VarNode::modify_flag(Flag delta, Flag new_flag) {
     if (contain_flag(Flag::FLAG_FREEZED)) {
-        mgb_assert((delta & (
-                    Flag::NO_MEM_RECLAIM |
-                    Flag::NO_SYS_STATIC_MEM_ALLOC |
-                    Flag::RT_FORCE_DYNAMIC_MEM_ALLOC)) == delta);
+        mgb_assert(
+                (delta & (Flag::NO_MEM_RECLAIM | Flag::NO_SYS_STATIC_MEM_ALLOC |
+                          Flag::RT_FORCE_DYNAMIC_MEM_ALLOC)) == delta ||
+                (new_flag & Flag::MEMORY_NO_NEED));
 
         mgb_assert(!ComputingGraphImpl::downcast(owner_graph())->
                 var_node_mem_manager().optimize_started(),

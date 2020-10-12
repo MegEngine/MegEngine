@@ -1920,4 +1920,236 @@ TEST(TestGraph, NaiveRecord2NCHW44) {
     func->execute().wait();
 }
 
+namespace {
+template <typename DnnOp, typename... Args>
+typename DnnOp::Algorithm* try_find_any_weight_preprocess_algo(
+        DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
+        Args&& ...args) {
+    if (found.valid()) {
+        if (found.val()) {
+            return dnn_op->execution_policy().algorithm;
+        } else {
+            return nullptr;
+        }
+    }
+    for (auto&& algo : dnn_op->get_all_algorithms(
+            std::forward<Args>(args)...)) {
+        dnn_op->execution_policy().algorithm = algo;
+        auto layouts = dnn_op->deduce_preprocessed_filter_layout(
+                std::forward<Args>(args)...);
+        if (layouts.empty()) continue;
+        bool valid = false;
+        for (auto&& l: layouts) {
+            if (!l.is_empty()) {
+                valid = true;
+                break;
+            }
+        }
+        if (valid) {
+            found.emplace(true);
+            return algo;
+        }
+    }
+    found.emplace(false);
+    mgb_log_warn("Can't find weight preprocess algo for op %s", mgb_info);
+    return nullptr;
+}
+
+void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt.weight_preprocess = true;
+    graph->options().comp_node_seq_record_level = record_level;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+    auto x = mkvar("x", {1, 32, 16, 16});
+    // ConvBias test dense
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 0;
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    auto w1 = mkcvar("w1", {32, 32, 1, 1}), b1 = mkcvar("b1", {1, 32, 1, 1});
+    auto conv1 = opr::ConvBias::make(x, w1, b1, param_conv_bias);
+    Maybe<bool> wp1, wp2;
+    conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>()
+        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
+            return try_find_any_weight_preprocess_algo(
+                opr->cast_final_safe<opr::ConvBias>().megdnn_opr(),
+                opr->cname(), wp1,
+                opr->input(0)->layout(), opr->input(1)->layout(),
+                opr->input(2)->layout(), TensorLayout{},
+                opr->output(0)->layout());
+    });
+    // Convolution
+    opr::Convolution::Param param_conv;
+    param_conv.pad_h = param_conv.pad_w = 0;
+    param_conv.sparse = opr::Convolution::Param::Sparse::DENSE;
+    auto w2 = mkcvar("w2", {32, 32, 1, 1});
+    auto y = opr::Convolution::make(conv1, w2, param_conv);
+    y.node()->owner_opr()->cast_final_safe<opr::Convolution>()
+        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
+            return try_find_any_weight_preprocess_algo(
+                opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
+                opr->cname(), wp2,
+                opr->input(0)->layout(), opr->input(1)->layout(),
+                opr->output(0)->layout());
+    });
+
+    HostTensorND host_y;
+    auto func =graph->compile({make_callback_copy(y, host_y)});
+    //!flag the no need memory of var
+    func->execute();
+    //!free the no need memory of var
+    func->execute();
+    auto check = [&](SymbolVar v) {
+        ASSERT_TRUE(v.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
+        ASSERT_TRUE(v.node()->dev_tensor().empty());
+        ASSERT_TRUE(v.node()->owner_opr()
+                ->cast_final_safe<opr::SharedDeviceTensor>()
+                .get_dev_tensor()
+                .empty());
+    };
+    ASSERT_TRUE(wp1.valid() && wp2.valid());
+    if (wp1.val()) {
+        check(w1);
+    }
+    if (wp2.val()) {
+        check(w2);
+    }
+}
+} // anonymous namespace
+
+TEST(TestGraph, FreeMemoryInWeightPreprocess) {
+    test_free_memory_in_weight_preprocess(0, CompNode::load("xpu0"));
+}
+
+TEST(TestGraph, RecordFreeMemoryInWeightPreprocess) {
+    test_free_memory_in_weight_preprocess(1, CompNode::load("cpu0"));
+}
+
+namespace {
+MGB_DEFINE_OPR_CLASS(HostValueReader, cg::SingleCNOutshapePureByInshapeOprBase) // {
+    void scn_do_execute() override {
+        auto&& hv = owner_graph()->static_infer_manager().infer_value(input(0));
+        MGB_MARK_USED_VAR(hv);
+    }
+
+    NodeProp* do_make_node_prop() const override {
+        auto ret = Super::do_make_node_prop();
+        ret->dep_map()[input(0)] = NodeProp::DepType::HOST_VALUE;
+        return ret;
+    }
+
+    void get_output_var_shape(
+            const TensorShapeArray &,
+            TensorShapeArray &out_shape) const override {
+        out_shape.at(0) = {};
+    }
+
+    public:
+        HostValueReader(VarNode* inp)
+            : Super{inp->owner_graph(), {}, "host_value_reader", {inp}} {
+            add_input({inp});
+            using F = VarNode::Flag;
+            add_output(None)
+                    ->add_flag(F::ALLOW_EMPTY_SHAPE)
+                    .add_flag(F::VOLATILE_CONTENT);
+        }
+
+        static SymbolVar make(SymbolVar inp) {
+            return inp.node()->owner_graph()->insert_opr(
+                std::make_unique<HostValueReader>(inp.node()))->output(0);
+        }
+};
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(HostValueReader);
+}
+
+TEST(TestGraph, FreeMemoryInWeightPreprocessWithValueInfer) {
+    HostTensorGenerator<> gen;
+    CompNode cn = CompNode::load("xpux");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt.weight_preprocess = true;
+    graph->options().var_sanity_check_first_run = false;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+    auto x = mkvar("x", {1, 32, 16, 16});
+    auto w = mkcvar("w", {32, 32, 1, 1});
+    auto y = opr::Convolution::make(x, w);
+    Maybe<bool> found;
+    y.node()->owner_opr()->cast_final_safe<opr::Convolution>()
+        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
+            return try_find_any_weight_preprocess_algo(
+                opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
+                opr->cname(), found,
+                opr->input(0)->layout(), opr->input(1)->layout(),
+                opr->output(0)->layout());
+    });
+    auto reader = HostValueReader::make(w);
+
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y), {reader, {}}});
+    func->execute();
+    // FIXME: failed on second execution due to requiring host value of the empty
+    // tensor which was freed in weight preprocess
+    func->execute();
+    ASSERT_FALSE(w.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
+    ASSERT_FALSE(w.node()->dev_tensor().empty());
+    ASSERT_FALSE(w.node()->owner_opr()
+                         ->cast_final_safe<opr::SharedDeviceTensor>()
+                         .get_dev_tensor()
+                         .empty());
+}
+
+TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
+    HostTensorGenerator<> gen;
+    CompNode cn = CompNode::load("xpux");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt.weight_preprocess = true;
+    graph->options().var_sanity_check_first_run = false;
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+    auto x = mkvar("x", {1, 32, 16, 16});
+    auto w = mkcvar("w", {32, 32, 1, 1});
+    auto y = opr::Convolution::make(x, w);
+    Maybe<bool> found;
+    y.node()->owner_opr()->cast_final_safe<opr::Convolution>()
+        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
+            return try_find_any_weight_preprocess_algo(
+                opr->cast_final_safe<opr::Convolution>().megdnn_opr(),
+                opr->cname(), found,
+                opr->input(0)->layout(), opr->input(1)->layout(),
+                opr->output(0)->layout());
+    });
+    auto y1 = w * 2 + 1;
+
+    HostTensorND host_y, host_y1;
+    auto func = graph->compile({
+        make_callback_copy(y, host_y), make_callback_copy(y1, host_y1)});
+    func->execute();
+    // FIXME: failed on second execution due to calculate expression
+    // (w * 2 + 1) with empty tensor
+    func->execute();
+    ASSERT_FALSE(w.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
+    ASSERT_FALSE(w.node()->dev_tensor().empty());
+    ASSERT_FALSE(w.node()->owner_opr()
+                        ->cast_final_safe<opr::SharedDeviceTensor>()
+                        .get_dev_tensor()
+                        .empty());
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

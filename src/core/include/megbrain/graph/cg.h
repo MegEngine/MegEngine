@@ -98,7 +98,8 @@ struct GraphCommonOptimizeOptions {
     //! whether to enable fast-run profiled winograd opr replace
     bool weight_winograd_transform = false;
     //! whether to enable weight preprocess, if enabled it may use more
-    //! memory, default disable now
+    //! memory, default disable now, when weight preprocess is enabled, the
+    //! input shape should no change
     bool weight_preprocess = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,

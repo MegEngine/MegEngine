@@ -24,6 +24,8 @@
 #include "megbrain/utils/timer.h"
 #include "megbrain/utils/arith_helper.h"
 
+#include "megbrain/opr/io.h"
+
 #include <chrono>
 
 using namespace mgb;
@@ -36,7 +38,6 @@ void call_mem_status_changed(cg::OperatorNodeBase* opr) {
     if (cb.on_mem_status_changed.valid())
         cb.on_mem_status_changed.val()();
 }
-
 }  // namespace
 
 /* ==================== StaticDeviceMemoryManager ==================== */
@@ -393,11 +394,12 @@ bool VarNodeMemManager::alloc_var_node_mem_static() {
 
 bool VarNodeMemManager::update_static_alloc_plan() {
     // check whether unchanged
+    bool free_no_need_memory = free_combine_memory_no_need_var();
     if (!m_owner_graph->static_infer_comp_seq_manager()
                  .update_static_check_shape_change() &&
         !m_first_static_plan_run &&
         !m_impure_mem_plan_mgr.check_need_realloc()) {
-        return false;
+        return false || free_no_need_memory;
     }
 
     if (m_first_static_plan_run)
@@ -492,6 +494,96 @@ bool VarNodeMemManager::make_static_var_tensor_from_alloc_plan() {
 
     m_static_mem_refholder_dev_mem_mgr_version = cur_version;
     return true;
+}
+
+bool VarNodeMemManager::free_combine_memory_no_need_var() {
+    if (!m_owner_graph->options().graph_opt.weight_preprocess ||
+        m_already_free_no_need_mem) {
+        return false;
+    }
+    bool reordered = false;
+    //! free no need storage
+    for (auto opr : *m_opr_seq) {
+        if (opr->try_cast_final<opr::SharedDeviceTensor>() ||
+            opr->try_cast_final<opr::SharedDeviceTensorWithFormat>()) {
+            auto opr_base = static_cast<opr::intl::SharedDeviceTensorBase*>(opr);
+            auto var = opr_base->output(0);
+            if (var->contain_flag(VarNode::Flag::MEMORY_NO_NEED) &&
+                var->dev_tensor_valid() && !var->dev_tensor().empty()) {
+                //! Only the tensor share count is 1, it can be free
+                if (opr_base->dev_data().use_count() == 1) {
+                    auto layout = var->layout();
+                    var->m_dev_tensor.reset(
+                            DeviceTensorStorage{var->comp_node()}, layout);
+                    opr_base->free_dev_data();
+                    mgb_log_debug(
+                            "preprocessed weight is freed, var name = %s, "
+                            "var layout = %s",
+                            var->name().c_str(), layout.to_string().c_str());
+                }
+                m_already_free_no_need_mem = true;
+            }
+        }
+        bool memory_need_reorder = false;
+        if (opr->try_cast_final<opr::MultipleDeviceTensorHolder>() ||
+            opr->try_cast_final<opr::MultipleDeviceTensorWithFormatHolder>()) {
+            auto opr_base =
+                    static_cast<opr::intl::MultipleDeviceTensorHolderBase*>(
+                            opr);
+            for (size_t index = 0; index < opr_base->output().size(); index++) {
+                auto var = opr_base->output(index);
+                if (var->contain_flag(VarNode::Flag::MEMORY_NO_NEED) &&
+                    var->dev_tensor_valid() && !var->dev_tensor().empty()) {
+                    //! Only the tensor share count is 1, it can be free
+                    if (opr_base->values()[index].use_count() == 1) {
+                        auto layout = var->layout();
+                        var->m_dev_tensor.reset(
+                                DeviceTensorStorage{var->comp_node()}, layout);
+                        opr_base->mutable_values()[index]->reset(
+                                DeviceTensorStorage{var->comp_node()}, layout);
+                        memory_need_reorder = true;
+                        mgb_log_debug(
+                                "preprocessed weight is freed, var name "
+                                "= %s, var layout = %s",
+                                var->name().c_str(),
+                                layout.to_string().c_str());
+                    }
+                    m_already_free_no_need_mem = true;
+                }
+            }
+        }
+        //! recorder the other needed outputs, because they share the
+        //! same chunk of mem in device with no needed var, see
+        //! BatchedDeviceValueLoader
+        if (memory_need_reorder) {
+            auto opr_base =
+                    static_cast<opr::intl::MultipleDeviceTensorHolderBase*>(
+                            opr);
+            auto comp_node = opr_base->output(0)->comp_node();
+            bool is_device_opr =
+                    comp_node.mem_node() != CompNode::default_cpu().mem_node();
+            if (memory_need_reorder && is_device_opr) {
+                for (size_t index = 0; index < opr_base->output().size();
+                     index++) {
+                    auto var = opr_base->output(index);
+                    if (!var->contain_flag(VarNode::Flag::MEMORY_NO_NEED)) {
+                        DeviceTensorStorage storage(var->comp_node());
+                        size_t size = var->layout().span().dist_byte();
+                        storage.ensure_size(size);
+                        storage.copy_from(var->m_dev_tensor.storage(), size);
+
+                        var->m_dev_tensor.reset(storage, var->layout());
+                        opr_base->mutable_values()[index]->reset(storage,
+                                                                var->layout());
+                        reordered = true;
+                    }
+                }
+                //! sync to make sure memcopy is finished
+                comp_node.sync();
+            }
+        }
+    }
+    return reordered;
 }
 
 void VarNodeMemManager::init_dynamic_alloc_opr_info() {

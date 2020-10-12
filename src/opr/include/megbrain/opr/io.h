@@ -99,6 +99,11 @@ MGB_DEFINE_CLS_WITH_SUPER(SharedDeviceTensorBase, DeviceTensorHolder) // {
             return *m_dev_data;
         }
 
+        void free_dev_data() {
+            m_dev_data->reset(DeviceTensorStorage{m_dev_data->comp_node()},
+                              m_dev_data->layout());
+        }
+
         const std::shared_ptr<DeviceTensorND>& dev_data() const {
             return m_dev_data;
         }
@@ -121,6 +126,10 @@ public:
     MultipleDeviceTensorHolderBase(ComputingGraph& graph, ValueArray values,
                                    const OperatorNodeConfig& config);
     const ValueArray& values() const { return m_values; }
+
+    ValueArray& mutable_values() {
+        return m_values;
+    }
 
 protected:
     ValueArray m_values;
@@ -292,7 +301,7 @@ MGB_DEFINE_OPR_CLASS(SharedDeviceTensor, intl::SharedDeviceTensorBase) // {
         static SymbolVar make_const(ComputingGraph& graph,
                                     const HostTensorND& value,
                                     const OperatorNodeConfig& config = {}) {
-            return make(graph, value, false, config);
+            return make(graph, value, true, config);
         }
 };
 

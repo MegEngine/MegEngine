@@ -449,7 +449,11 @@ DEF(resize, &)(const TensorShape& shape) {
 }
 
 DEF(reset, &)(TensorStorage storage, const TensorLayout &layout) {
-    mgb_assert(!layout.ndim || storage.valid_span(layout.span()));
+    //! The storage to be reset is either satisfy the layout or empty.
+    //! Empty storage is used after weight preprocess for saving memory and
+    //! checking layout when running
+    mgb_assert(!layout.ndim || storage.valid_span(layout.span()) ||
+               storage.empty());
     m_storage = std::move(storage);
     m_layout = layout;
     return static_cast<ChainReturnType&>(*this);

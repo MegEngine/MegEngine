@@ -138,39 +138,36 @@ public:
 
 void mixin::WeightPreprocessExecutor::mixin_update_preprocessed_filter(
         cg::OperatorNodeBase& opr) {
-    if (!mixin_allow_weight_preprocess(opr))
+    if (!mixin_allow_weight_preprocess(opr)) {
         return;
-
+    }
     auto new_layout = deduce_preprocessed_filter_layout();
-    if (new_layout.empty()) {
-        // Weight preprocess was needed before, but no longer needed.
-        if (m_preprocessed_filter) {
-            m_preprocessed_filter.reset();
-            m_filter_storage.clear();
-        }
-        return;
-    }
-
-    bool should_update = false;
     size_t new_size = new_layout.size();
-    if (!m_preprocessed_filter ||
-        m_preprocessed_filter->tensors.size() != new_size) {
-        should_update = true;
-    } else {
-        for (size_t i = 0; i < new_size; i++) {
-            if (!new_layout[i].eq_layout(
-                        m_preprocessed_filter->tensors[i].layout)) {
-                should_update = true;
-                break;
-            }
+    //! No preprocess layout means no need weight preprocess
+    if (new_layout.empty()) {
+        return;
+    }
+    //! all layouts arm empty means no need weight preprocess
+    bool layout_valid = false;
+    for (auto&& layout : new_layout) {
+        if (!layout.is_empty()) {
+            layout_valid = true;
         }
     }
-    if (!should_update)
+    if (!layout_valid) {
         return;
-
-    if (!m_preprocessed_filter) {
-        m_preprocessed_filter.reset(new PreprocessedFilter{});
     }
+
+    if (m_preprocessed_filter) {
+        for (size_t i = 0; i < new_size; i++) {
+            mgb_assert(new_layout[i].eq_layout(
+                               m_preprocessed_filter->tensors[i].layout),
+                       "weight preprocess layout changed, please keep input "
+                       "shape unchanged when weight preprocess is enabled");
+        }
+        return;
+    }
+    m_preprocessed_filter.reset(new PreprocessedFilter{});
     m_preprocessed_filter->tensors.resize(new_size);
     m_filter_storage.resize(new_size);
     m_preprocessed_filter->algorithm_id = nullptr;
@@ -327,6 +324,14 @@ void ConvolutionForward::scn_do_execute_preprocess() {
             input(0)->layout(), input(1)->dev_tensor().as_megdnn(),
             output(0)->layout(), preprocessed_filter(),
             intl::get_megdnn_workspace_from_var(output().back()));
+    //! Flag the input(1) no use later, which can be freed when no other
+    //! var depend on its dev_value, host_value and shape.
+    auto receiver_info =
+            input(1)->owner_graph()->var_receiver_in_current_comp_seq(input(1));
+    if (receiver_info.dev_value == 1 && receiver_info.host_value == 0 &&
+        receiver_info.shape == 0) {
+        input(1)->add_flag(VarNode::Flag::MEMORY_NO_NEED);
+    }
 }
 
 /* ==================== ConvolutionBackwardData  ==================== */
@@ -959,6 +964,14 @@ void ConvBiasForward::scn_do_execute_preprocess() {
             input(0)->layout(), input(1)->dev_tensor().as_megdnn(), bias_layout,
             z_layout, output(0)->layout(), preprocessed_filter(),
             intl::get_megdnn_workspace_from_var(output().back()));
+    //! Flag the input(1) no use later, which can be freed when no other
+    //! var depend on its dev_value, host_value and shape.
+    auto receiver_info =
+            input(1)->owner_graph()->var_receiver_in_current_comp_seq(input(1));
+    if (receiver_info.dev_value == 1 && receiver_info.host_value == 0 &&
+        receiver_info.shape == 0) {
+        input(1)->add_flag(VarNode::Flag::MEMORY_NO_NEED);
+    }
 }
 
 /* ===================== LocalShareForward ==================== */

@@ -589,7 +589,7 @@ class VarNode final: public GraphNodeBase {
         friend class imperative::ProxyGraph;
 };
 
-enum class VarNode::Flag: uint32_t {
+enum class VarNode::Flag : uint32_t {
     //! do not allocate memory by the system allocator even if shape could be
     //! inferred
     NO_SYS_MEM_ALLOC = 1 << 0,
@@ -667,6 +667,12 @@ enum class VarNode::Flag: uint32_t {
      * after FLAG_FREEZED is present.
      */
     FLAG_FREEZED = 1 << 10,
+
+    /*!
+     * this flag indicates that data of this var has been processed and no need
+     * later, it can be freed, this is used in weight preprocess for memory save
+     */
+    MEMORY_NO_NEED = 1 << 11,
 };
 
 MGB_DEF_ENUM_CLASS_BIT_OPR(VarNode::Flag)

@@ -174,6 +174,14 @@ class VarNodeMemManager {
         bool alloc_var_node_mem_static();
 
         /*!
+         * \brief free the memory of var with MEMORY_NO_NEED flag
+         *
+         * \return whether memory of MEMORY_NO_NEED var or related other var
+         * memory changed
+         */
+        bool free_combine_memory_no_need_var();
+
+        /*!
          * \brief initialize static memory allocation plan
          *
          * This can be used with custom StaticDeviceMemoryAllocator so static
@@ -407,7 +415,8 @@ class VarNodeMemManager {
             bool check_need_realloc();
         };
 
-        bool m_first_static_plan_run = true, m_optimize_started = false;
+        bool m_first_static_plan_run = true, m_optimize_started = false,
+             m_already_free_no_need_mem = false;
         ComputingGraphImpl *m_owner_graph;
         ThinHashMap<VarNode*, VarNodeMemTrait> m_node_mem_trait;
         NullableHashMap<OperatorNodeBase*, DynamicAllocOprInfo>

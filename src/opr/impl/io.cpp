@@ -142,8 +142,10 @@ void intl::DeviceTensorHolder::add_output(DType dtype) {
 }
 
 void intl::DeviceTensorHolder::record_execute_deps(ExecDependencyArray& deps) {
-    deps.emplace_back(
-            std::make_unique<DevValueExecDep>(get_dev_tensor().storage()));
+    if (!output(0)->contain_flag(VarNode::Flag::MEMORY_NO_NEED)) {
+        deps.emplace_back(
+                std::make_unique<DevValueExecDep>(get_dev_tensor().storage()));
+    }
 }
 
 /* ===================== Host2DeviceCopy ===================== */
@@ -801,13 +803,18 @@ class intl::MultipleDeviceTensorHolderBase::DevValuesExecDep final
     SmallVector<DeviceTensorStorage> m_vals;
 
 public:
-    explicit DevValuesExecDep(const ValueArray& vals) {
-        for (auto&& val : vals) {
-            m_vals.emplace_back(std::move(val->storage()));
+    explicit DevValuesExecDep(const ValueArray& vals,
+                              MultipleDeviceTensorHolderBase* opr) {
+        mgb_assert(vals.size() == opr->output().size(),
+                   "the output value size is diff from output var size");
+        for (size_t index = 0; index < vals.size(); index++) {
+            if (!opr->output(index)->contain_flag(
+                        VarNode::Flag::MEMORY_NO_NEED)) {
+                m_vals.emplace_back(std::move(vals[index]->storage()));
+            }
         }
     }
 };
-
 
 intl::MultipleDeviceTensorHolderBase::MultipleDeviceTensorHolderBase(
         ComputingGraph& graph, ValueArray values,
@@ -887,8 +894,7 @@ intl::MultipleDeviceTensorHolderBase::do_make_node_prop() const {
 
 void intl::MultipleDeviceTensorHolderBase::record_execute_deps(
         ExecDependencyArray& deps) {
-    deps.emplace_back(
-            std::make_unique<DevValuesExecDep>(values()));
+    deps.emplace_back(std::make_unique<DevValuesExecDep>(values(), this));
 }
 
 /* ===================== MultipleDeviceTensorHolder ===================== */

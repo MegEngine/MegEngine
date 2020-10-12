@@ -25,6 +25,9 @@ namespace mixin {
 class Convolution {
     public:
         using ExecutionPolicy = megdnn::param::ExecutionPolicy;
+        using Algorithm = megdnn::detail::Algorithm;
+        using AlgoChooserHook =
+                std::function<Algorithm*(const OperatorNodeBase*)>;
 
         const ExecutionPolicy& execution_policy() const {
             if (!m_policy_accessed) {
@@ -55,6 +58,16 @@ class Convolution {
 
         virtual std::pair<const void*, size_t> param_blob() const = 0;
 
+        /*!
+         * \brief register a hook to implement custom algo chooser
+         */
+        void setup_algo_chooser(AlgoChooserHook&& func) {
+            m_algo_chooser = func;
+        }
+        AlgoChooserHook algo_chooser() const {
+            return m_algo_chooser;
+        }
+
     protected:
         ~Convolution();
 
@@ -62,6 +75,8 @@ class Convolution {
         ExecutionPolicy m_policy;
 
         std::unique_ptr<AlgoChooserProfileCache> m_profile_cache;
+
+        AlgoChooserHook m_algo_chooser;
 
         virtual void init_profile_cache() = 0;
 

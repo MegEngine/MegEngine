@@ -173,9 +173,15 @@ size_t AlgoChooser<Opr>::setup_algo(const ConvTensorLayouts& layouts,
         return 0;
     }
 
+    ImplAlgo algo = nullptr;
     ExeContext ctx(layouts, megdnn_opr, mgb_opr, allow_weight_preprocess);
 
-    auto algo = get_algo(ctx);
+    if (auto algo_choose_hook = mgb_opr->algo_chooser()) {
+        algo = algo_choose_hook(mgb_opr);
+    }
+    if (!algo) {
+        algo = get_algo(ctx);
+    }
     size_t workspace = ctx.get_workspace_size_bytes(algo);
     mgb_log_debug(
             "%s: tensor layouts(%s %s, %s %s) -> (%s %s): algo=%s "
@@ -360,16 +366,29 @@ AlgoChooser<Opr>::ExeContext::construct_fake_preprocess_filter() const {
         if (!m_allow_weight_preprocess)
             return;
         auto opr = _(m_megdnn_opr);
-        auto layout = APPLY(opr->deduce_preprocessed_filter_layout(args...),
-                            m_layouts);
-        if (layout.empty())
+        auto layouts = APPLY(opr->deduce_preprocessed_filter_layout(args...),
+                             m_layouts);
+        //! No preprocess layout means no need weight preprocess
+        if (layouts.empty()) {
             return;
+        }
+        //! all layouts arm empty means no need weight preprocess
+        bool layout_valid = false;
+        for (auto&& layout : layouts) {
+            if (!layout.is_empty()) {
+                layout_valid = true;
+            }
+        }
+        if (!layout_valid) {
+            return;
+        }
+
         result = PreprocessFilter<Opr>{};
         auto& res = result.val();
         res.algorithm_id = nullptr;
-        res.tensors.resize(layout.size());
-        for (size_t i = 0; i < layout.size(); i++) {
-            res.tensors[i] = megdnn::TensorND(nullptr, layout[i]);
+        res.tensors.resize(layouts.size());
+        for (size_t i = 0; i < layouts.size(); i++) {
+            res.tensors[i] = megdnn::TensorND(nullptr, layouts[i]);
         }
     });
     return result;
