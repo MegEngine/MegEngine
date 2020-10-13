@@ -10,6 +10,7 @@ import os
 import sys
 import platform
 import ctypes
+import atexit
 
 if sys.platform == "win32":
     lib_path = os.path.join(os.path.dirname(__file__), "core/lib")
@@ -71,6 +72,7 @@ if sys.platform == "win32":
     kernel32.SetErrorMode(old_error_mode)
 
 from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
+from .core._imperative_rt.imperative import sync
 from .device import *
 from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save
@@ -83,4 +85,7 @@ _set_fork_exec_path_for_timed_func(
     os.path.join(os.path.dirname(__file__), "utils", "_timed_func_fork_exec_entry.py"),
 )
 
+atexit.register(sync)
+
+del sync
 del _set_fork_exec_path_for_timed_func

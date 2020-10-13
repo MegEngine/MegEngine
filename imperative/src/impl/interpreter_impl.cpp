@@ -175,7 +175,9 @@ void ChannelImpl::free(TensorInfo* ptr) {
     m_pool.free(ptr);
 }
 
-ChannelImpl::~ChannelImpl() {}
+ChannelImpl::~ChannelImpl() {
+    close();
+}
 
 void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     MGB_LOCK_GUARD(m_mutex);
