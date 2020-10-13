@@ -127,9 +127,10 @@ def cross_entropy(
     with_logits: bool = True,
     label_smooth: float = 0,
 ) -> Tensor:
-    r"""Compute the multi-class cross entropy loss (using logits by default).
+    r"""Computes the multi-class cross entropy loss (using logits by default).
 
-    By default, prediction is assumed to be logits, whose softmax gives probabilities.
+    By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
+    class probabilities are given by softmax.
 
     It has better numerical stability compared with sequential calls to :func:`~.softmax` and :func:`~.cross_entropy`.
 
@@ -194,9 +195,10 @@ def cross_entropy(
 def binary_cross_entropy(
     pred: Tensor, label: Tensor, with_logits: bool = True
 ) -> Tensor:
-    r"""Compute the binary cross entropy loss (using logits by default).
+    r"""Computes the binary cross entropy loss (using logits by default).
 
-    By default, prediction is assumed to be logits, whose sigmoid gives probabilities.
+    By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
+    class probabilities are given by sigmoid.
 
     :param pred: `(N, *)`, where `*` means any number of additional dimensions.
     :param label: `(N, *)`, same shape as the input.

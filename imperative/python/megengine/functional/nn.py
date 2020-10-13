@@ -335,8 +335,8 @@ def adaptive_max_pool2d(
 
     Refer to :class:`~.MaxAdaptivePool2d` for more information.
 
-    :param inp: The input tensor.
-    :param oshp: (OH, OW) size of the output shape.
+    :param inp: input tensor.
+    :param oshp: `(OH, OW)` size of the output shape.
     :return: output tensor.
     """
     assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
@@ -356,8 +356,8 @@ def adaptive_avg_pool2d(
 
     Refer to :class:`~.AvgAdaptivePool2d` for more information.
 
-    :param inp: The input tensor.
-    :param oshp: (OH, OW) size of the output shape.
+    :param inp: input tensor.
+    :param oshp: `(OH, OW)` size of the output shape.
     :return: output tensor.
     """
     assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"

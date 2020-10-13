@@ -351,7 +351,7 @@ class Module(metaclass=ABCMeta):
     def replace_param(
         self, params: dict, start_pos: int, seen: Optional[Set[int]] = None
     ):
-        """Replaces module's parameters with `params`, used by :class:`~.ParamPack` to
+        """Replaces module's parameters with ``params``, used by :class:`~.ParamPack` to
         speedup multimachine training.
         """
         offset = 0
@@ -411,7 +411,7 @@ class Module(metaclass=ABCMeta):
         If ``strict`` is ``True``, the keys of :func:`state_dict` must exactly match the keys
         returned by :func:`state_dict`.
 
-        Users can also pass a closure: `Function[key: str, var: Tensor] -> Optional[np.ndarray]`
+        Users can also pass a closure: ``Function[key: str, var: Tensor] -> Optional[np.ndarray]``
         as a `state_dict`, in order to handle complex situations. For example, load everything
         except for the final linear classifier:
 
@@ -423,7 +423,7 @@ class Module(metaclass=ABCMeta):
                 for k, v in state_dict.items()
             }, strict=False)
 
-        Here returning `None` means skipping parameter `k`.
+        Here returning ``None`` means skipping parameter ``k``.
 
         To prevent shape mismatch (e.g. load PyTorch weights), we can reshape before loading:
 
@@ -485,9 +485,8 @@ class Module(metaclass=ABCMeta):
                 )
 
     def _load_state_dict_with_closure(self, closure):
-        """Advance state_dict load through callable `closure` whose signature is
-
-            `closure(key: str, var: Tensor) -> Union[np.ndarry, None]`
+        """Advance state_dict load through callable ``closure`` whose signature is
+        ``closure(key: str, var: Tensor) -> Union[np.ndarry, None]``
         """
         assert callable(closure), "closure must be a function"
 

@@ -50,7 +50,6 @@ class DataLoader:
         :param dataset: dataset from which to load the minibatch.
         :type sampler: Sampler
         :param sampler: defines the strategy to sample data from the dataset.
-            If specified, :attr:`shuffle` must be ``False``.
         :type transform: Transform
         :param transform: defined the transforming strategy for a sampled batch.
             Default: None

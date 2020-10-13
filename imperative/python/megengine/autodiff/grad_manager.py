@@ -20,42 +20,42 @@ class GradManager:
     the forward operations start and when all resources should be released. A typical usage of
     GradManager is as follows:
 
-        .. code-block::
+    .. code-block::
 
-            gm = GradManager()
-            gm.attach(model.parameters())
-            with gm:
-                # forward operations
-                ...
-                # backward gradients
-                gm.backward(loss)
-
-    You can also use `record()` and `release()` method instead of `with` context:
-
-        .. code-block::
-
-            gm = GradManager()
-            gm.attach(model.parameters())
-
-            gm.record()
-
+        gm = GradManager()
+        gm.attach(model.parameters())
+        with gm:
             # forward operations
             ...
             # backward gradients
             gm.backward(loss)
 
-            gm.release()
+    You can also use ``record()`` and ``release()`` method instead of ``with`` context:
+
+    .. code-block::
+
+        gm = GradManager()
+        gm.attach(model.parameters())
+
+        gm.record()
+
+        # forward operations
+        ...
+        # backward gradients
+        gm.backward(loss)
+
+        gm.release()
 
     Typically, in data parallel, we would like to average the gradients across
     processes. Users will finally get the averaged gradients if an "AllReduce"
     callback is registered as follows:
 
-        .. code-block::
+    .. code-block::
 
-            import megengine.distributed as dist
+        import megengine.distributed as dist
 
-            gm = GradManager()
-            gm.attach(model.parameters(), callback=dist.make_allreduce_cb("MEAN"))
+        gm = GradManager()
+        gm.attach(model.parameters(), callback=dist.make_allreduce_cb("MEAN"))
 
     """
 

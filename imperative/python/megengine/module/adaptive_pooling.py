@@ -40,10 +40,10 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
                 \text{stride[1]} \times w + n)
         \end{aligned}
 
-    Kernel_size and stride can be inferred from input shape and out shape:
-    padding: (0, 0)
-    stride: (floor(IH / OH), floor(IW / OW))
-    kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
+    ``kernel_size`` and ``stride`` can be inferred from input shape and out shape:
+    * padding: (0, 0)
+    * stride: (floor(IH / OH), floor(IW / OW))
+    * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
     Examples:
 
@@ -83,10 +83,10 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
         out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
                                input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
 
-    Kernel_size and stride can be inferred from input shape and out shape:
-    padding: (0, 0)
-    stride: (floor(IH / OH), floor(IW / OW))
-    kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
+    ``kernel_size`` and ``stride`` can be inferred from input shape and out shape:
+    * padding: (0, 0)
+    * stride: (floor(IH / OH), floor(IW / OW))
+    * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
     Examples:
 
