@@ -394,3 +394,15 @@ def test_trace_valid_broadcast():
 
     f(x1, shape)
     f(x2, shape)
+
+
+def test_clip():
+    x = tensor(np.random.randn(10, 10))
+
+    @trace(symbolic=True)
+    def f(x, lower, upper):
+        y = F.clip(x, lower, upper)
+        return y
+
+    for i in range(3):
+        f(x, tensor([0]), tensor([1]))

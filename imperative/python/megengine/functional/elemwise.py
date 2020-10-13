@@ -13,6 +13,7 @@ from ..core.ops import builtin
 from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.core import apply
 from ..device import get_default_device
+from ..jit.tracing import is_tracing
 from ..tensor import Tensor
 
 __all__ = [
@@ -580,7 +581,8 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
     ), "At least one of 'lower' or 'upper' must not be None"
     if lower is not None:
         if upper is not None:
-            assert lower <= upper, "clip lower bound is bigger that upper bound"
+            if not is_tracing():
+                assert lower <= upper, "clip lower bound is bigger that upper bound"
             return minimum(maximum(x, lower), upper)
         else:
             return maximum(x, lower)
