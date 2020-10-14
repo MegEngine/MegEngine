@@ -22,13 +22,13 @@ class Adadelta(Optimizer):
 
     :param params: iterable of parameters to optimize or dicts defining
         parameter groups.
-    :param lr: coefficient that scale delta before it is applied
-        to the parameters (default: 1.0).
+    :param lr: coefficient that scales delta before it is applied
+        to the parameters. Default: 1.0
     :param rho: coefficient used for computing a running average
-        of squared gradients (default: 0.9).
+        of squared gradients. Default: 0.9
     :param eps: term added to the denominator to improve
-        numerical stability (default: 1e-6).
-    :param weight_decay: weight decay (L2 penalty) (default: 0).
+        numerical stability. Default: 1e-6
+    :param weight_decay: weight decay (L2 penalty). Default: 0
     """
 
     def __init__(

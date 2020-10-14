@@ -72,6 +72,7 @@ namespace indexing_multi_axis_vec {
 #define cb0(_dtype) \
     MEGDNN_FOREACH_TENSOR_NDIM(INST, DTypeTrait<_dtype>::ctype)
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb0)
+    cb0(::megdnn::dtype::Bool)
 #undef cb0
 #undef INST
 

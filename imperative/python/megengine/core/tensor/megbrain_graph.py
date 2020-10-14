@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
 import json
+import os
 import threading
 import weakref
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -49,7 +50,16 @@ class Graph(_imperative_rt.ComputingGraph):
 
     def execute(self, *args):
         assert self._future is None
-        self._future = self._executor.submit(self._function.execute, *args)
+
+        def wrapped(*args):
+            try:
+                self._function.execute(*args)
+            except Exception as exc:
+                for i in self._function._all_rendezvous:
+                    i.set_exception(str(exc))
+                raise exc
+
+        self._future = self._executor.submit(wrapped, *args)
 
     def wait(self):
         assert self._future is not None
@@ -275,6 +285,7 @@ def dump_graph(
     keep_param_name: bool = False,
     keep_opr_priority: bool = False,
     strip_info_file=None,
+    append_json=False
 ):
     """serialize the computing graph of `output_vars` and get byte result.
 
@@ -295,6 +306,9 @@ def dump_graph(
     :param keep_opr_priority: whether to keep priority setting for operators
     :param strip_info_file: a string for path or a file handler. if is not None,
         then the dump information for code strip would be written to ``strip_info_file``
+    :param append_json: will be check when `strip_info_file` is not None. if set
+        true, the information for code strip will be append to strip_info_file.
+        if set false, will rewrite strip_info_file
     :return: dump result as byte string, and an instance of namedtuple
         :class:`CompGraphDumpResult`, whose fields are:
 
@@ -342,10 +356,25 @@ def dump_graph(
 
     if strip_info_file is not None:
         if isinstance(strip_info_file, str):
-            strip_info_file = open(strip_info_file, "w")
-        strip_info = json.loads(_imperative_rt.get_info_for_strip(ov))
-        strip_info["hash"] = dump_info.content_hash
-        json.dump(strip_info, strip_info_file)
+            if not os.path.exists(strip_info_file):
+                os.mknod(strip_info_file)
+            strip_info_file = open(strip_info_file, "r+")
+        new_strip_dict = json.loads(_imperative_rt.get_info_for_strip(ov))
+        ori_strip_dict = new_strip_dict
+        json_content = strip_info_file.read()
+        if append_json and len(json_content) != 0:
+            # if there are contents in json file. Read them first and then append new information
+            ori_strip_dict = json.loads(json_content)
+            for k in ori_strip_dict:
+                new_strip_dict_v = new_strip_dict.get(k)
+                if new_strip_dict_v is not None:
+                    for value in new_strip_dict_v:
+                        if not value in ori_strip_dict[k]:
+                            ori_strip_dict[k].append(value)
+        ori_strip_dict["hash"] = dump_info.content_hash
+        strip_info_file.seek(0)
+        strip_info_file.truncate()
+        json.dump(ori_strip_dict, strip_info_file)
 
     return dump_content, dump_info
 
@@ -358,7 +387,7 @@ CompGraphLoadResult = collections.namedtuple(
 def load_graph(fpath):
     """Load a serialized computing graph from file.
 
-    :parma fpath: Path or Handle for the output file
+    :param fpath: Path or Handle of the input file
     :return: An instance of namedtuple :class:`CompGraphLoadResult`,
         whose fields are:
 

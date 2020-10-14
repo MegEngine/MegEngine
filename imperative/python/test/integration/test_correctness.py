@@ -24,7 +24,6 @@ from megengine.jit import SublinearMemoryConfig
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
 from megengine.tensor import Tensor
-from megengine.test import assertTensorClose
 
 
 def get_gpu_name():
@@ -93,7 +92,7 @@ class MnistNet(Module):
 def train(data, label, net, opt, gm):
     with gm:
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.nn.cross_entropy(pred, label)
         gm.backward(loss)
     return loss
 
@@ -172,13 +171,13 @@ def run_train(
     loss = train_func(data, label, net, opt, gm)
     opt.step()
 
-    assertTensorClose(loss.numpy(), checkpoint["loss"], max_err=max_err)
+    np.testing.assert_allclose(loss.numpy(), checkpoint["loss"], atol=max_err)
 
     for param, param_ref in zip(
         net.state_dict().items(), checkpoint["net_updated"].items()
     ):
         assert param[0] == param_ref[0]
-        assertTensorClose(param[1], param_ref[1], max_err=max_err)
+        np.testing.assert_allclose(param[1], param_ref[1], atol=max_err)
 
 
 def run_eval(
@@ -209,7 +208,7 @@ def run_eval(
 
     for _ in range(3):
         new_value = eval_fun(data, net=net)
-        assertTensorClose(new_value.numpy(), refer_value.numpy(), max_err=max_err)
+        np.testing.assert_allclose(new_value.numpy(), refer_value.numpy(), atol=max_err)
 
 
 def test_correctness():

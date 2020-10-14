@@ -21,12 +21,14 @@ from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
     Conv2d,
+    Dropout,
     Linear,
+    MaxPool2d,
     Module,
     Sequential,
+    Softmax,
 )
 from megengine.quantization.quantize import quantize, quantize_qat
-from megengine.test import assertTensorClose
 
 
 class MLP(Module):
@@ -84,7 +86,7 @@ def graph_mode(*modes):
 
 
 def _default_compare_fn(x, y):
-    assertTensorClose(x.numpy(), y)
+    np.testing.assert_allclose(x.numpy(), y, rtol=1e-6)
 
 
 def opr_test(
@@ -99,7 +101,7 @@ def opr_test(
     mode: the list of test mode which are eager, static and dynamic_shape
           will test all the cases if None.
     func: the function to run opr.
-    compare_fn: the function to compare the result and expected, use assertTensorClose if None.
+    compare_fn: the function to compare the result and expected, use np.testing.assert_allclose if None.
     ref_fn: the function to generate expected data, should assign output if None.
     cases: the list which have dict element, the list length should be 2 for dynamic shape test.
            and the dict should have input,
@@ -325,20 +327,20 @@ def test_module_api_hooks():
     assert pre_hook_num == 4
     assert post_hook_num == 4
     mean1 = Parameter(np.zeros(shape), dtype=np.float32)
-    bn1 = F.batch_norm2d(
+    bn1 = F.batch_norm(
         x + 3, mean1, Parameter(np.ones(shape), dtype=np.float32), training=True
     )
-    assertTensorClose(
+    np.testing.assert_allclose(
         net.i.bn.running_mean.numpy(), mean1.numpy(),
     )
     mean2 = Parameter(np.zeros(shape), dtype=np.float32)
-    bn2 = F.batch_norm2d(
+    bn2 = F.batch_norm(
         bn1 + 3, mean2, Parameter(np.ones(shape), dtype=np.float32), training=True
     )
-    assertTensorClose(
+    np.testing.assert_allclose(
         net.bn.running_mean.numpy(), mean2.numpy(),
     )
-    assertTensorClose((bn2 + 2).numpy(), y.numpy())
+    np.testing.assert_allclose((bn2 + 2).numpy(), y.numpy())
 
     assert len(hooks) == 8
     for handler in hooks:
@@ -457,9 +459,9 @@ def test_sequential_named_children():
     modules["name2"] = Linear(5, 1)
     m = Sequential(modules)
     l = list(m.named_children())
-    assert l[0][0] == "layer_values.0"
-    assert l[1][0] == "layer_values.1"
-    assert l[2][0] == "layer_values.2"
+    assert l[0][0] == "name0"
+    assert l[1][0] == "name1"
+    assert l[2][0] == "name2"
 
 
 def test_state_dict():
@@ -476,7 +478,7 @@ def test_state_dict():
         mlp1 = MLP()
         mlp1.load_state_dict(state_dict, strict=False)
         pred1 = mlp1(data)
-        assertTensorClose(pred0.numpy(), pred1.numpy(), max_err=5e-6)
+        np.testing.assert_allclose(pred0.numpy(), pred1.numpy(), atol=5e-6)
         with pytest.raises(KeyError):
             mlp1.load_state_dict(state_dict)
         del state_dict["extra"]
@@ -517,13 +519,13 @@ def test_shared_param():
     net = Simple()
     assert net.conv0.weight is net.conv1.weight
     data = tensor(np.random.random((1, 1, 8, 8)).astype(np.float32))
-    assertTensorClose(net.conv0(data).numpy(), net.conv1(data).numpy())
+    np.testing.assert_allclose(net.conv0(data).numpy(), net.conv1(data).numpy())
     with BytesIO() as f:
         mge.save(net, f)
         f.seek(0)
         net1 = mge.load(f)
     assert net1.conv0.weight is net1.conv1.weight
-    assertTensorClose(net1.conv0(data).numpy(), net1.conv1(data).numpy())
+    np.testing.assert_allclose(net1.conv0(data).numpy(), net1.conv1(data).numpy())
 
     with BytesIO() as f:
         mge.save(net.conv0, f)
@@ -536,7 +538,7 @@ def test_shared_param():
         conv1 = mge.load(f)
 
     assert conv0.weight is not conv1.weight
-    assertTensorClose(conv0(data).numpy(), conv1(data).numpy())
+    np.testing.assert_allclose(conv0(data).numpy(), conv1(data).numpy())
 
 
 def test_pickle_module():
@@ -559,8 +561,8 @@ def test_pickle_module():
         mlp1 = mge.load(fout)
         pred2 = mlp1(data)
 
-    assertTensorClose(pred0.numpy(), pred1.numpy(), max_err=5e-6)
-    assertTensorClose(pred0.numpy(), pred2.numpy(), max_err=5e-6)
+    np.testing.assert_allclose(pred0.numpy(), pred1.numpy(), atol=5e-6)
+    np.testing.assert_allclose(pred0.numpy(), pred2.numpy(), atol=5e-6)
 
 
 @pytest.mark.skip(reason="under development")
@@ -606,6 +608,114 @@ def test_load_quantized():
         mlp.load_state_dict(checkpoint)
         pred1 = mlp(data)
 
-    assertTensorClose(
-        pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), max_err=5e-6
+    np.testing.assert_allclose(
+        pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), atol=5e-6
     )
+
+
+def test_repr_basic():
+    # test whether __repr__ can output correct information
+    class ConvModel(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, stride=2, bias=False)
+            self.conv2 = Conv2d(3, 128, 3, padding=1, bias=False)
+            self.conv3 = Conv2d(3, 128, 3, dilation=2, bias=False)
+            self.bn1 = BatchNorm2d(128)
+            self.bn2 = BatchNorm1d(128)
+            self.dropout = Dropout(drop_prob=0.1)
+            self.softmax = Softmax(axis=100)
+            self.pooling = MaxPool2d(kernel_size=2, padding=0)
+            self.submodule1 = Sequential(Dropout(drop_prob=0.1), Softmax(axis=100),)
+            self.fc1 = Linear(512, 1024)
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel(\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), stride=(2, 2), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1), bias=False)\n"
+        "  (conv3): Conv2d(3, 128, kernel_size=(3, 3), dilation=(2, 2), bias=False)\n"
+        "  (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
+        "  (bn2): BatchNorm1d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
+        "  (dropout): Dropout(drop_prob=0.1)\n  (softmax): Softmax(axis=100)\n"
+        "  (pooling): MaxPool2d(kernel_size=2, stride=2, padding=0)\n"
+        "  (submodule1): Sequential(\n"
+        "    (0): Dropout(drop_prob=0.1)\n"
+        "    (1): Softmax(axis=100)\n  )\n"
+        "  (fc1): Linear(in_features=512, out_features=1024, bias=True)\n"
+        ")"
+    )
+    net = ConvModel()
+    output = net.__repr__()
+    assert output == ground_truth
+
+
+def test_repr_module_reassign():
+    # test whether __repr__ can deal with module reassign
+    class ConvModel1(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, bias=False)
+            self.conv2 = Conv2d(3, 128, 3, padding=1, bias=False)
+            self.conv1 = Conv2d(3, 256, 3, dilation=2, bias=False)
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel1(\n"
+        "  (conv1): Conv2d(3, 256, kernel_size=(3, 3), dilation=(2, 2), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1), bias=False)\n"
+        ")"
+    )
+    net = ConvModel1()
+    output = net.__repr__()
+    assert output == ground_truth
+
+
+def test_repr_module_rereference():
+    # test whether __repr__ can deal with module re-reference
+    class ConvModel2(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, bias=False)
+            self.conv2 = self.conv1
+            self.conv3 = self.conv1
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel2(\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        "  (conv3): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        ")"
+    )
+    net = ConvModel2()
+    output = net.__repr__()
+    assert output == ground_truth
+
+
+def test_repr_module_delete():
+    # test whether __repr__ can deal with module delete
+    class ConvModel3(Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = Conv2d(3, 128, 3, bias=False)
+            self.softmax = Softmax(100)
+
+        def forward(self, inputs):
+            pass
+
+    ground_truth = (
+        "ConvModel3(\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), bias=False)\n"
+        ")"
+    )
+    net = ConvModel3()
+    del net.softmax
+    output = net.__repr__()
+    assert output == ground_truth

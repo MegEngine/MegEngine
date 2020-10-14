@@ -710,6 +710,33 @@ TEST(TestGoptInference, Float16IOFloat32Compute) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, Float16IOFloat32ComputeDeConv) {
+    constexpr size_t INP_H = 10, INP_W = 10;
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
+    };
+    graph->options().graph_opt_level = 0;
+
+    auto s0 = mkvar("s0", {5, 5, 3, 3}),
+         s1 = mkvar("s1", {1, 5, INP_H, INP_W});
+    auto y = opr::ConvolutionBackwardData::make(s0, s1, {}, {});
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_f16_io_f32_comp();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    ASSERT_EQ(find_opr<opr::ConvolutionBackwardData>(y_opt).param().compute_mode,
+              opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
+    ASSERT_EQ(y_opt.dtype(), dtype::Float32());
+
+    HostTensorND host_y, host_y_opt;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-2);
+}
+
 TEST(TestGoptInference, Float16IOFloat32ComputeWarpPerspective) {
     constexpr size_t INP_H = 10, INP_W = 10, N = 2;
     HostTensorGenerator<> gen;
@@ -2816,7 +2843,7 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
         unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
     }
 
-    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4,
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW,
               find_opr<opr::ConvBias>(y_opt).param().format);
 
     graph->compile({{y_opt, {}}})
@@ -3009,9 +3036,8 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     //! no supported hybrid nchw44
     opr::ConvBias::Param param_conv_bias_pad0;
     param_conv_bias_pad0.pad_h = param_conv_bias_pad0.pad_w = 0;
-    auto b1 = mkcvar("b1", {1, 8, 1, 1});
     auto w1_f1 = mkcvar("w1_1", {8, 3, 1, 1});
-    auto conv1_f1 = opr::ConvBias::make(x, w1_f1, b1, param_conv_bias_pad0, {},
+    auto conv1_f1 = opr::ConvBias::make(x, w1_f1, param_conv_bias_pad0, {},
                                         OperatorNodeConfig("conv1_f1"));
 
     auto conv1_add = conv1_f1 * conv1;
@@ -3263,9 +3289,8 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     opr::ConvBias::Param param_conv_bias;
     param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
     auto w1_2 = mkcvar_dtype("w1_2", {8, 8, 3, 3}, dtype::QuantizedS8(2.5f));
-    auto b1_2 = mkcvar_dtype("b1_2", {1, 8, 1, 1}, dtype::QuantizedS32(6.25f));
     auto conv_1_2 = opr::ConvBias::make(
-            conv_1_q8, w1_2, b1_2, param_conv_bias, {},
+            conv_1_q8, w1_2, param_conv_bias, {},
             OperatorNodeConfig{"conv_1_2", cn, dtype::QuantizedS8{6.25f}});
     auto conv_1_2_fp32 = opr::TypeCvt::make(conv_1_2, dtype::Float32());
 

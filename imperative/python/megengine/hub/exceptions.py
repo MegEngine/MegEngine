@@ -19,12 +19,12 @@ class InvalidGitHost(FetcherError):
 
 
 class GitPullError(FetcherError):
-    """A git pull error occurred"""
+    """A git pull error occurred."""
 
 
 class GitCheckoutError(FetcherError):
-    """A git checkout error occurred"""
+    """A git checkout error occurred."""
 
 
 class InvalidProtocol(FetcherError):
-    """The protocol provided was somehow invalid"""
+    """The protocol provided was somehow invalid."""

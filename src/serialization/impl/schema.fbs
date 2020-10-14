@@ -28,6 +28,7 @@ table Blob {
 }
 
 table Reserved0 {}
+table Reserved1 {}
 
 union OperatorParam {
     param.Empty = 1,
@@ -99,6 +100,8 @@ union OperatorParam {
     DType = 67,
     param.Remap = 68,
     param.NMSKeep = 69,
+    param.AdaptivePooling = 70,
+    Reserved1 = 71,
 }
 
 table Operator {

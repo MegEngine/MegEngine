@@ -60,7 +60,8 @@ public:
     using callback_t = thin_function<void(DeviceTensorND)>;
     struct Param {
         callback_t callback;
-        bool borrow = false;
+        bool borrow = false; // do not obtain shared ownership on DeviceTensorND
+        bool prefer_host_value = false; // use host value when possible
     };
     OutputCallback(Param param,
                    const VarNodeArray& inputs,
@@ -81,6 +82,7 @@ protected:
     NodeProp* do_make_node_prop() const override;
 private:
     Param m_param;
+    mutable bool m_use_host_value;
 };
 
 MGB_DEFINE_OPR_CLASS(NopCallback, cg::OperatorNodeBase) // {

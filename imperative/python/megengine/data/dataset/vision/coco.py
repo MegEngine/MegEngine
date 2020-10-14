@@ -118,7 +118,7 @@ class COCO(VisionDataset):
             self.ids = ids
 
         self.json_category_id_to_contiguous_id = {
-            v: i + 1 for i, v in enumerate(self.cats.keys())
+            v: i + 1 for i, v in enumerate(sorted(self.cats.keys()))
         }
 
         self.contiguous_category_id_to_json_id = {

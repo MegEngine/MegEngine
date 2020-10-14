@@ -963,6 +963,9 @@ void mixin::WeightPreprocessExecutor::record_preprocessed_weight(
 
 bool mixin::WeightPreprocessExecutor::mixin_allow_weight_preprocess(
         const cg::OperatorNodeBase& opr) const {
+    if (!opr.owner_graph()->options().graph_opt.weight_preprocess) {
+        return false;
+    }
     if (!opr.input(1)->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE))
         return false;
     if (cg::is_const_var_value(opr.input(1)))

@@ -181,7 +181,7 @@ if(ANDROID)
     target_link_libraries(megbrain PUBLIC log)
 endif()
 
-set (_VER_FILE ${PROJECT_SOURCE_DIR}/imperative/src/version.ld)
+set (_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)
 
 if(MGE_BUILD_IMPERATIVE_RT
         )
@@ -189,7 +189,7 @@ if(MGE_BUILD_IMPERATIVE_RT
     add_library(megengine_export SHARED)
     target_link_libraries(megengine_export PUBLIC megbrain megdnn)
     if (MGE_WITH_DISTRIBUTED)
-        message("megengine_export configured to link megray")
+        message("-- megengine_export configured to link megray")
         target_link_libraries(megengine_export PUBLIC megray)
     endif()
 endif()

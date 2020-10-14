@@ -22,10 +22,10 @@ class _FakeQuantize(Module):
     r"""
     A Basic Fake Quant module.
 
-    :param dtype: A string indicating the target quantization type of input.
-    :param narrow_range: Whether the absolute value of ``qmin`` is the same as ``qmax``,
+    :param dtype: a string indicating the target quantization type of input.
+    :param narrow_range: whether the absolute value of ``qmin`` is the same as ``qmax``,
         instead of 1 greater. Usually True for weight and False for activation.
-    :param enable: Whether do ``normal_forward`` or ``fake_quant_forward``.
+    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
     def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):
@@ -127,7 +127,7 @@ class TQT(_FakeQuantize):
             # when disable, TQT will do normal forward, initialize scale weight
             tmp_scale = F.maximum(F.abs(q_dict["min_val"]), F.abs(q_dict["max_val"]))
             tmp_scale = F.log(tmp_scale / 127) / math.log(2)
-            F.add_update(self.scale, tmp_scale, alpha=0.0, beta=1.0, bias=0.0)
+            self.scale[...] = tmp_scale
         return inp
 
     def get_qparams(self):

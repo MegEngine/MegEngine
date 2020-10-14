@@ -11,6 +11,7 @@
 
 #include "src/common/handle_impl.h"
 
+#include "src/cuda/adaptive_pooling/opr_impl.h"
 #include "src/cuda/add_update/opr_impl.h"
 #include "src/cuda/argmxx/opr_impl.h"
 #include "src/cuda/argsort/opr_impl.h"

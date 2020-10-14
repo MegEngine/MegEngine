@@ -13,7 +13,6 @@ import megengine as mge
 from megengine import tensor
 from megengine.quantization.fake_quant import TQT_Function
 from megengine.quantization.internal_fake_quant import *
-from megengine.test import assertTensorClose
 
 
 class numpy_TQT_Function:
@@ -60,13 +59,16 @@ def test_TQT():
     nf = numpy_TQT_Function(-127, 127)
 
     def check_inp(a, b, c, a_np, b_np, c_np):
-        assertTensorClose(
-            f.forward(a, b).numpy(), nf.forward(a_np, b_np).astype("float32")
+        np.testing.assert_allclose(
+            f.forward(a, b).numpy(),
+            nf.forward(a_np, b_np).astype("float32"),
+            rtol=1e-6,
+            atol=1e-6,
         )
         c1, c2 = f.backward(c)
         c1_np, c2_np = nf.backward(c_np)
-        assertTensorClose(c1.numpy(), c1_np.astype("float32"))
-        assertTensorClose(c2.numpy(), c2_np.astype("float32"))
+        np.testing.assert_allclose(c1.numpy(), c1_np.astype("float32"), rtol=1e-6)
+        np.testing.assert_allclose(c2.numpy(), c2_np.astype("float32"), rtol=1e-6)
 
     a_np = np.random.random((4, 3)).astype("float32")
     b_np = np.random.random((1)).astype("float32")

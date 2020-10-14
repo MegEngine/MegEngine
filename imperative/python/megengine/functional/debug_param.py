@@ -26,14 +26,14 @@ def set_conv_execution_strategy(option: str):
         Available values:
 
         * 'HEURISTIC' uses heuristic to choose the fastest algorithm.
-        * 'PROFILE' runs possible algorithms on real device to find the best.
-        * 'PROFILE_HEURISTIC' uses profile result and heuristic to choose the fastest algorithm.
-        * 'PROFILE_REPRODUCIBLE' uses the fastest of profile result that is also reproducible.
+        * 'PROFILE' runs possible algorithms on real device to find the best one.
+        * 'PROFILE_HEURISTIC' uses profiling result and heuristic to choose the fastest algorithm.
+        * 'PROFILE_REPRODUCIBLE' uses the fastest of profiling result that is also reproducible.
         * 'HEURISTIC_REPRODUCIBLE' uses heuristic to choose the fastest algorithm that is also reproducible.
 
         The default strategy is 'HEURISTIC'.
 
-        It can also be set through the environmental variable 'MEGENGINE_CONV_EXECUTION_STRATEGY'.
+        It can also be set through the environment variable 'MEGENGINE_CONV_EXECUTION_STRATEGY'.
     """
     valid_option = (
         "HEURISTIC",

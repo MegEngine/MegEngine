@@ -112,6 +112,10 @@ function do_build() {
         export EXTRA_CMAKE_ARGS="-DCMAKE_PREFIX_PATH=${PYTHON_DIR} -DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} "
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
         export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
+        #we use std::visit in src, so set osx version minimum to 10.14, but 10.14 have objdump
+        #issue, so we now config to 10.15, whl name to 10.14
+        #TODO: can set to 10.12 after remove use std::visit
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 "
 
         #call build and install
         #FIXME: cmake do not triger update python config, after
@@ -164,9 +168,7 @@ function do_build() {
         cd ${BUILD_DIR}/staging/dist/
         org_whl_name=`ls Meg*.whl`
         index=`awk -v a="${org_whl_name}" -v b="-macosx" 'BEGIN{print index(a,b)}'`
-        #compat for osx version from 10.5(Leopard)
-        #FIXME: same no need at -macosx-version-min=10.5 for build so
-        compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_5_x86_64.whl
+        compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_14_x86_64.whl
         echo "org whl name: ${org_whl_name}"
         echo "comapt whl name: ${compat_whl_name}"
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}

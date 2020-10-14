@@ -20,7 +20,7 @@ class GradManager:
     the forward operations start and when all resources should be released. A typical usage of
     GradManager is as follows:
 
-        .. codeblock::
+        .. code-block::
 
             gm = GradManager()
             gm.attach(model.parameters())
@@ -32,7 +32,7 @@ class GradManager:
 
     You can also use `record()` and `release()` method instead of `with` context:
 
-        .. codeblock::
+        .. code-block::
 
             gm = GradManager()
             gm.attach(model.parameters())
@@ -50,7 +50,7 @@ class GradManager:
     processes. Users will finally get the averaged gradients if an "AllReduce"
     callback is registered as follows:
 
-        .. codeblock::
+        .. code-block::
 
             import megengine.distributed as dist
 
@@ -71,7 +71,7 @@ class GradManager:
         r"""Registers parameters that gradients should be calculated with respect to.
         Callback Functions should have a signature like this:
 
-            .. codeblock::
+            .. code-block::
 
                 def cb(param: Tensor, grad: Tensor) -> Tensor:
                     # do something
@@ -100,6 +100,8 @@ class GradManager:
         :param ys: outputs of forward operators, e.g., the loss tensor
         :param dys: derivatives of ys
         """
+        from ..functional import ones_like
+
         global backwarding_grad_manager
         cache = backwarding_grad_manager
         backwarding_grad_manager = self
@@ -113,7 +115,7 @@ class GradManager:
         if not isinstance(ys, (tuple, list)):
             ys = [ys]
         if dys is None:
-            dys = [tensor(1.0).broadcast(y.shape) for y in ys]
+            dys = [ones_like(y) for y in ys]
         if not isinstance(dys, (tuple, list)):
             dys = [dys]
         try:

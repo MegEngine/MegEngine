@@ -94,6 +94,7 @@ MGB_DEFINE_OPR_CLASS(Cumsum, cg::SingleCNOperatorNodeBaseT<
         void init_output_static_infer_desc() override;
 };
 
+
 namespace intl {
 using CondTakeBase =
         cg::SingleCNOperatorNode<cg::OperatorNodeBase,

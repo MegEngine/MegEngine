@@ -12,7 +12,7 @@ from typing import Sequence, Tuple
 
 class Transform(ABC):
     """
-    rewrite apply method in subclass
+    Rewrite apply method in subclass.
     """
 
     def apply_batch(self, inputs: Sequence[Tuple]):

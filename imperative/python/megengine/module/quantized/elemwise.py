@@ -13,7 +13,7 @@ from .module import QuantizedModule
 
 
 class Elemwise(QuantizedModule):
-    r"""quantized version of :class:`~.qat.elemwise.Elemwise`."""
+    r"""Quantized version of :class:`~.qat.elemwise.Elemwise`."""
 
     _elemwise_multi_type_mode = P.ElemwiseMultiType.Mode
 
@@ -30,7 +30,7 @@ class Elemwise(QuantizedModule):
     @classmethod
     def from_qat_module(cls, qat_module: QAT.Elemwise):
         r"""
-        return a :class:`~.QuantizedModule` instance converted from a
+        Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
         return cls(qat_module.method.name, qat_module.get_activation_dtype())

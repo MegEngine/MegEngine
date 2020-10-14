@@ -38,19 +38,19 @@
        d: mv /c/Users/${USER}/mge_whl_python_env/3.8.3/python.exe /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe
     4: install needed package for build python whl package
        a0: /c/Users/${USER}/mge_whl_python_env/3.5.4/python3.exe -m pip install --upgrade pip
-       a1: /c/Users/${USER}/mge_whl_python_env/3.5.4/python3.exe -m pip install -r python_module/requires-test.txt
+       a1: /c/Users/${USER}/mge_whl_python_env/3.5.4/python3.exe -m pip install -r imperative/python/requires-test.txt
        a2: /c/Users/${USER}/mge_whl_python_env/3.5.4/python3.exe -m pip install numpy wheel requests tqdm tabulate
 
        b0: /c/Users/${USER}/mge_whl_python_env/3.6.8/python3.exe -m pip install --upgrade pip
-       b1: /c/Users/${USER}/mge_whl_python_env/3.6.8/python3.exe -m pip install -r python_module/requires-test.txt
+       b1: /c/Users/${USER}/mge_whl_python_env/3.6.8/python3.exe -m pip install -r imperative/python/requires-test.txt
        b2: /c/Users/${USER}/mge_whl_python_env/3.6.8/python3.exe -m pip install numpy wheel requests tqdm tabulate
 
        c0: /c/Users/${USER}/mge_whl_python_env/3.7.7/python3.exe -m pip install --upgrade pip
-       c1: /c/Users/${USER}/mge_whl_python_env/3.7.7/python3.exe -m pip install -r python_module/requires-test.txt
+       c1: /c/Users/${USER}/mge_whl_python_env/3.7.7/python3.exe -m pip install -r imperative/python/requires-test.txt
        c2: /c/Users/${USER}/mge_whl_python_env/3.7.7/python3.exe -m pip install numpy wheel requests tqdm tabulate
 
        d0: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install --upgrade pip
-       d1: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install -r python_module/requires-test.txt
+       d1: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install -r imperative/python/requires-test.txt
        d2: /c/Users/${USER}/mge_whl_python_env/3.8.3/python3.exe -m pip install numpy wheel requests tqdm tabulate
     ```
 

@@ -7,7 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..functional import linear
+from ..functional.nn import linear
 from ..tensor import Parameter
 from . import init
 from .module import Module
@@ -25,7 +25,7 @@ class Linear(Module):
 
     :param in_features: size of each input sample.
     :param out_features: size of each output sample.
-    :param bias: If set to ``False``, the layer will not learn an additive bias.
+    :param bias: if it's ``False``, the layer will not learn an additional ``bias``.
         Default: ``True``
 
     Examples:
@@ -78,3 +78,8 @@ class Linear(Module):
 
     def forward(self, x):
         return self._calc_linear(x, self.weight, self.bias)
+
+    def _module_info_string(self) -> str:
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )

@@ -20,6 +20,7 @@ import megengine.core.tensor.megbrain_graph as G
 from megengine import cgtools
 from megengine.core.ops import builtin
 from megengine.core.tensor.core import apply
+from megengine.core.tensor.megbrain_graph import VarNode
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 
 logger = mge.get_logger(__name__)
@@ -484,11 +485,29 @@ def main():
         sereg_kwargs = dict(keep_var_name=0, keep_param_name=False)
     else:
         sereg_kwargs = dict(keep_var_name=2, keep_param_name=True)
+    
+    
+    strip_info_file = args.output + '.json' if args.output_strip_info else None
 
     with open(args.output, "wb") as fout:
         fout.write(b"mgbtest0")
         fout.write(struct.pack("I", len(feeds["testcases"])))
-        fout.write(rt.dump_graph(output_mgbvars))
+        if isinstance(output_mgbvars, dict):
+            wrap_output_vars = dict([(i,VarNode(j)) for i,j in output_mgbvars])
+        else:
+            wrap_output_vars = [VarNode(i) for i in output_mgbvars]
+        dump_content, stat = G.dump_graph(
+            wrap_output_vars,
+            append_json=True,
+            strip_info_file=strip_info_file,
+            **sereg_kwargs)
+        fout.write(dump_content)
+
+        logger.info(
+            'graph dump sizes: tot_size={:.3f}KiB overhead={:.3f}KiB'.format(
+                stat.tot_bytes / 1024, (stat.tot_bytes - stat.tensor_value_bytes) / 1024
+            )
+        )
 
     def make_dev_tensor(value, dtype=None, device=None):
         return as_raw_tensor(value, dtype=dtype, device=device)._dev_tensor()
@@ -507,7 +526,11 @@ def main():
             testcase.keys()
         )
         with open(args.output, "ab") as fout:
-            fout.write(G.dump_graph(*output_mgbvars))
+            dump_content, _ = G.dump_graph(
+                output_mgbvars,
+                strip_info_file = strip_info_file,
+                append_json=True)
+            fout.write(dump_content)      
 
 
 

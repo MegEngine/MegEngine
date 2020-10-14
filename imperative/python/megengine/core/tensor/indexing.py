@@ -173,7 +173,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
                 item.append(True)
                 v = get_index(v)
                 assert np.issubdtype(v.dtype, np.integer) or np.issubdtype(
-                    v.dtype, np.bool
+                    v.dtype, np.bool_
                 ), "var type in the subscript must be int or bool"
                 tensors.append(v)
 
@@ -267,7 +267,7 @@ def setitem(tensor, index, value):
                         value.shape, tmp_result.shape
                     )
                 )
-        value = value.broadcast(tmp_result.shape)
+        value = value._broadcast(tmp_result.shape)
     if use_subtensor:
         op = builtin.SetSubtensor(items=items)
     else:

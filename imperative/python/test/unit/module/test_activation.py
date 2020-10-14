@@ -10,7 +10,6 @@ import numpy as np
 
 import megengine as mge
 from megengine.module import LeakyReLU
-from megengine.test import assertTensorClose
 
 
 def test_leaky_relu():
@@ -21,4 +20,4 @@ def test_leaky_relu():
     output = leaky_relu(mge.tensor(data))
 
     np_output = np.maximum(0, data) + negative_slope * np.minimum(0, data)
-    assertTensorClose(output.numpy(), np_output, max_err=0)
+    np.testing.assert_equal(output.numpy(), np_output)

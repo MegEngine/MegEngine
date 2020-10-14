@@ -47,13 +47,17 @@ class XORNet(M.Module):
         self.num_class = 2
         super().__init__()
         self.fc0 = M.Linear(self.num_class, self.mid_dim, bias=True)
+        self.bn0 = M.BatchNorm1d(self.mid_dim)
         self.fc1 = M.Linear(self.mid_dim, self.mid_dim, bias=True)
+        self.bn1 = M.BatchNorm1d(self.mid_dim)
         self.fc2 = M.Linear(self.mid_dim, self.num_class, bias=True)
 
     def forward(self, x):
         x = self.fc0(x)
+        x = self.bn0(x)
         x = F.tanh(x)
         x = self.fc1(x)
+        x = self.bn1(x)
         x = F.tanh(x)
         x = self.fc2(x)
         return x
@@ -72,7 +76,7 @@ def test_xornet_trace_dump():
         with gm:
             net.train()
             pred = net(data)
-            loss = F.cross_entropy_with_softmax(pred, label)
+            loss = F.nn.cross_entropy(pred, label)
             gm.backward(loss)
         return pred, loss
 
@@ -80,7 +84,7 @@ def test_xornet_trace_dump():
     def val_fun(data, label):
         net.eval()
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.nn.cross_entropy(pred, label)
         return pred, loss
 
     @trace(symbolic=True, capture_as_const=True)

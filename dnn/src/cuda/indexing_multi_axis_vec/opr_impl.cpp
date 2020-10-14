@@ -120,6 +120,7 @@ void ExecImpl<Opr>::dispatch_exec() {
         case DTypeTrait<_dtype>::enumv: \
             return dispatch_exec_ctype<DTypeTrait<_dtype>::ctype>();
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+        cb(::megdnn::dtype::Bool)
 #undef cb
         default:
             megdnn_throw("bad dtype");

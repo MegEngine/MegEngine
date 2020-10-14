@@ -106,20 +106,20 @@ class GitSSHFetcher(RepoFetcherBase):
 
         :param git_host:
             host address of git repo.
-            example: github.com
+            Example: github.com
         :param repo_info:
             a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
             tag/branch. The default branch is ``master`` if not specified.
-            example: ``"brain_sdk/MegBrain[:hub]"``
+            Example: ``"brain_sdk/MegBrain[:hub]"``
         :param use_cache:
-            whether to use locally fetched code or completely re-fetch
+            whether to use locally fetched code or completely re-fetch.
         :param commit:
-            commit id on github or gitlab
+            commit id on github or gitlab.
         :param silent:
             whether to accept the stdout and stderr of the subprocess with PIPE, instead of
-            displaying on the screen
+            displaying on the screen.
         :return:
-            directory where the repo code is stored
+            directory where the repo code is stored.
         """
         if not cls._check_git_host(git_host):
             raise InvalidGitHost("git_host: '{}' is malformed.".format(git_host))
@@ -215,24 +215,24 @@ class GitHTTPSFetcher(RepoFetcherBase):
         silent: bool = True,
     ) -> str:
         """
-        Fetches git repo by HTTPS protocol
+        Fetches git repo by HTTPS protocol.
 
         :param git_host:
-            host address of git repo
-            example: github.com
+            host address of git repo.
+            Example: github.com
         :param repo_info:
             a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
             tag/branch. The default branch is ``master`` if not specified.
-            example: ``"brain_sdk/MegBrain[:hub]"``
+            Example: ``"brain_sdk/MegBrain[:hub]"``
         :param use_cache:
-            whether to use locally cached code or completely re-fetch
+            whether to use locally cached code or completely re-fetch.
         :param commit:
-            commit id on github or gitlab
+            commit id on github or gitlab.
         :param silent:
             whether to accept the stdout and stderr of the subprocess with PIPE, instead of
-            displaying on the screen
+            displaying on the screen.
         :return:
-            directory where the repo code is stored
+            directory where the repo code is stored.
         """
         if not cls._check_git_host(git_host):
             raise InvalidGitHost("git_host: '{}' is malformed.".format(git_host))

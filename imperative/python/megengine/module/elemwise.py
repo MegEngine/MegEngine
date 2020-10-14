@@ -34,7 +34,7 @@ class Elemwise(Module):
         * "EXP": exp(x)
         * "TANH": tanh(x)
         * "FUSE_MUL_ADD3": x * y + z
-        * "FAST_TANH": fast_tanh(x)
+        * "FAST_TANH": x * (27. + x * x) / (27. + 9. * x * x)
         * "NEGATE": -x
         * "ACOS": acos(x)
         * "ASIN": asin(x)
@@ -56,9 +56,9 @@ class Elemwise(Module):
         * "SIGMOID_GRAD": sigmoid_grad
         * "SWITCH_GT0": switch_gt0
         * "TANH_GRAD": tanh_grad
-        * "LT": lt
+        * "LT": less
         * "LEQ": leq
-        * "EQ": eq
+        * "EQ": equal
         * "POW": pow
         * "LOG_SUM_EXP": log_sum_exp
         * "FAST_TANH_GRAD": fast_tanh_grad

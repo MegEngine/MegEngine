@@ -15,7 +15,7 @@ from .util import get_free_ports
 
 
 def _run_wrapped(func, master_ip, port, world_size, rank, dev, args, kwargs):
-    """init distributed process group and run wrapped function"""
+    """Init distributed process group and run wrapped function."""
     init_process_group(
         master_ip=master_ip, port=port, world_size=world_size, rank=rank, device=dev
     )
@@ -23,7 +23,7 @@ def _run_wrapped(func, master_ip, port, world_size, rank, dev, args, kwargs):
 
 
 def launcher(func):
-    """decorator for launching multiple processes in single-machine multi-gpu training"""
+    """Decorator for launching multiple processes in single-machine multi-gpu training."""
 
     n_gpus = get_device_count_by_fork("gpu")
 

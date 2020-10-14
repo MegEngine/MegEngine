@@ -18,7 +18,7 @@ class Linear(Float.Linear, QATModule):
     :param in_features: size of each input sample.
     :param out_features: size of each output sample.
     :param bias: If set to ``False``, the layer will not learn an additive bias.
-        Default: ``True``
+        Default: True
 
     """
 

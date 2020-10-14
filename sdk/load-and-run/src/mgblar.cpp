@@ -194,6 +194,26 @@ R"__usage__(
     Execute operators with kernels implemented in MegDNN with CHWN4 tensor format. Can only be used
     on Nvidia GPUs, whose compute capability is above 6.1.
 )__usage__"
+R"__usage__(
+  --enable-nchw44
+    Execute operators with kernels implemented in MegDNN with NCHW44 tensor format. This can only
+    be used on arm of armv7 and arm64, support data tyep of float32, qint8 and int8x8x16.
+)__usage__"
+R"__usage__(
+  --enable-nhw88
+    Execute operators with kernels implemented in MegDNN with NCHW88 tensor format. This can only
+    be used on x86 with data type float.
+)__usage__"
+R"__usage__(
+  --enable-nhw44-dot
+    Execute operators with kernels implemented in MegDNN with NCHW44-DOT tensor format. This Can
+    only be used on arm32 and arm64 with dot-product supported, and only support qint8 model
+)__usage__"
+R"__usage__(
+  --weight-preprocess
+    Execute operators with weight preprocess, which can optimize the operator execution time with
+    algo of winograd, im2col ,etc., but it may consume more memory.
+)__usage__"
 
 ;
 
@@ -1224,6 +1244,11 @@ Args Args::from_argv(int argc, char **argv) {
         if (!strcmp(argv[i], "--winograd-transform")) {
             mgb_log_warn("enable winograd transform");
             graph_opt.graph_opt.weight_winograd_transform = true;
+            continue;
+        }
+        if (!strcmp(argv[i], "--weight-preprocess")) {
+            mgb_log_warn("enable weight-preprocess optimization");
+            graph_opt.graph_opt.enable_weight_preprocess();
             continue;
         }
 

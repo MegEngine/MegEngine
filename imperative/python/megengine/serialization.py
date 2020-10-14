@@ -88,9 +88,9 @@ def load(f, map_location=None, pickle_module=pickle):
     :type map_location: str, dict or a function specifying the map rules
     :param map_location: Default: ``None``.
 
-        .. note::
+    .. note::
 
-            map_location defines device mapping. See examples for usage.
+        map_location defines device mapping. See examples for usage.
 
     :type pickle_module:
     :param pickle_module: Default: ``pickle``.

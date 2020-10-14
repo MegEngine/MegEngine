@@ -306,7 +306,7 @@ def test_AxisAddRemove():
     x = TensorWrapper(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
-    y = F.remove_axis(F.add_axis(x, 2), 0)
+    y = F.squeeze(F.expand_dims(x, 2), 0)
 
     grad(y, F.ones_like(y))
     np.testing.assert_equal(
@@ -319,7 +319,7 @@ def test_Broadcast():
     x = TensorWrapper(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
-    y = F.broadcast(x, (3, 3, 10))
+    y = F.broadcast_to(x, (3, 3, 10))
 
     grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3, 1), dtype=np.float32) * 10, x.grad.numpy())

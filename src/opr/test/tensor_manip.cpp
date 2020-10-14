@@ -17,6 +17,7 @@
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/utility.h"
+#include "megbrain/opr/misc.h"
 #include "megbrain/utils/arith_helper.h"
 
 using namespace mgb;
@@ -138,7 +139,7 @@ TEST(TestTensorManip, Reshape) {
         auto &&dep_map = opr0_reshp.node()->owner_opr()->node_prop().dep_map();
         using DT = cg::OperatorNodeBase::NodeProp::DepType;
         ASSERT_EQ(2u, dep_map.size());
-        ASSERT_EQ(DT::DEV_VALUE, dep_map.at(op->input(0)));
+        ASSERT_EQ(DT::DEV_VALUE | DT::VALUE_ALLOW_EMPTY, dep_map.at(op->input(0)));
         ASSERT_EQ(DT::HOST_VALUE, dep_map.at(op->input(1)));
     }
 
@@ -318,6 +319,39 @@ TEST(TestTensorManip, ReshapeInferShapeForDynamicInput) {
     run({23, 12, 5});
 }
 
+TEST(TestTensorManip, ReshapeEmptyShape) {
+    HostTensorGenerator<> gen;
+    constexpr size_t x_length = 233;
+    auto host_x = gen({x_length}),
+         host_v = gen({2, 3, 3, 3});
+    for (size_t i = 0; i < x_length; ++ i) {
+        host_x->ptr<float>()[i] = 1.f;
+    }
+    constexpr auto INVALID_AXIS = opr::Reshape::Param::INVALID_AXIS;
+    for (auto unspec_axis: {INVALID_AXIS, 0, 1, 3}) {
+        auto graph = ComputingGraph::make();
+        graph->options().graph_opt_level = 0;
+        TensorShape tshape{2, 3, 3, 3};
+        auto zero_axis = unspec_axis;
+        if (unspec_axis == INVALID_AXIS) {
+            tshape[zero_axis = 2] = 0;
+        }
+        using CondTakeMode = opr::CondTake::Param::Mode;
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             x_empty = opr::CondTake::make(x, x, {CondTakeMode::EQ, 0.f})[0],
+             v = opr::Host2DeviceCopy::make(*graph, host_v),
+             x_reshape = opr::Reshape::make(x_empty, tshape, {unspec_axis}),
+             y = opr::Concat::make({x_reshape, v}, zero_axis);
+        HostTensorND host_empty, host_y;
+        auto func = graph->compile({
+            make_callback_copy(x_reshape, host_empty),
+            make_callback_copy(y, host_y)});
+        func->execute().wait();
+        ASSERT_TRUE(host_empty.layout().is_empty());
+        MGB_ASSERT_TENSOR_EQ(*host_v, host_y);
+    }
+}
+
 TEST(TestTensorManip, ReshapeWithNegativeUnspec) {
     HostTensorGenerator<> gen;
     auto host_x = gen({4, 8});
@@ -365,6 +399,26 @@ TEST(TestTensorManip, Broadcast) {
     }
 }
 
+TEST(TestTensorManip, BroadcastEmptyShape) {
+    HostTensorGenerator<> gen;
+    for (auto&& arg:
+        {std::make_pair(TensorShape{1}, TensorShape{0}),
+         {{1, 2, 3}, {0, 2, 3}},
+         {{2, 3}, {1, 0, 2, 3}},
+         {{1, 0, 2, 3}, {4, 0, 2, 3}},
+         {{0, 1, 2, 3}, {3, 0, 4, 2, 3}}}) {
+        auto host_x = gen(arg.first);
+        auto graph = ComputingGraph::make();
+        graph->options().graph_opt_level = 0;
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Broadcast::make(x, arg.second);
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_TRUE(host_y.shape().eq_shape(arg.second));
+    }
+}
+
 TEST(TestTensorManip, Dimshuffle) {
     HostTensorGenerator<> gen;
     constexpr size_t S0 = 8, S1 = 3;
@@ -393,6 +447,34 @@ TEST(TestTensorManip, Dimshuffle) {
                 ssprintf("failed at (%zd, %zd): x=%g prod=%g gx=%g",
                         i, j, x, prod, gx);
         }
+}
+
+TEST(TestTensorManip, DimshuffleEmptyShape) {
+    HostTensorGenerator<> gen;
+    for (auto&& arg:
+        {std::make_pair(
+            TensorShape{3, 0},
+            std::vector<int>{1, -1, 0, -1}),
+         {{3, 1, 0, 4}, {-1, 3, -1, 0, 2}},
+         {{2, 0, 3, 0}, {1, 0, 2, 3}}}) {
+        auto host_x = gen(arg.first);
+        auto graph = ComputingGraph::make();
+        graph->options().graph_opt_level = 0;
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Dimshuffle::make(x, arg.second);
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        auto&& y_shape = host_y.shape();
+        for(size_t idx = 0; idx < arg.second.size(); ++ idx) {
+            auto elem = arg.second[idx];
+            if (elem == -1) {
+                ASSERT_EQ(y_shape[idx], 1u);
+            } else {
+                ASSERT_EQ(arg.first[elem], y_shape[idx]);
+            }
+        }
+    }
 }
 
 TEST(TestTensorManip, DimshuffleCombined) {

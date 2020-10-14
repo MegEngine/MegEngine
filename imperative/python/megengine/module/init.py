@@ -18,48 +18,48 @@ from ..tensor import Tensor
 
 
 def fill_(tensor: Tensor, val: Union[float, int]) -> None:
-    """Fill the given ``tensor`` with value ``val``.
+    """Fills the given ``tensor`` with value ``val``.
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param val: The value to be filled throughout the tensor
+    :param tensor: tensor to be initialized.
+    :param val: value to be filled throughout the tensor.
     """
     tensor._reset(full(shape=tensor.shape, value=val, dtype=tensor.dtype))
 
 
 def zeros_(tensor: Tensor) -> None:
-    """Fill the given ``tensor`` with scalar value `0`.
+    """Fills the given ``tensor`` with scalar value `0`.
 
-    :param tensor: An n-dimentional tensor to be initialized
+    :param tensor: tensor to be initialized.
     """
     fill_(tensor, 0)
 
 
 def ones_(tensor: Tensor) -> None:
-    """Fill the given ``tensor`` with the scalar value `1`.
+    """Fills the given ``tensor`` with the scalar value `1`.
 
-    :param tensor: An n-dimentional tensor to be initialized
+    :param tensor: tensor to be initialized.
     """
     fill_(tensor, 1)
 
 
 def uniform_(tensor: Tensor, a: float = 0.0, b: float = 1.0) -> None:
-    r"""Fill the given ``tensor`` with random value sampled from uniform distribution
+    r"""Fills the given ``tensor`` with random value sampled from uniform distribution
     :math:`\mathcal{U}(\text{a}, \text{b})`.
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param a: Lower bound of the sampling interval
-    :param b: Upper bound of the sampling interval
+    :param tensor: tensor to be initialized.
+    :param a: lower bound of the sampling interval.
+    :param b: upper bound of the sampling interval.
     """
     tensor._reset(uniform(size=tensor.shape, low=a, high=b).astype(tensor.dtype))
 
 
 def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
-    r"""Fill the given ``tensor`` with random value sampled from normal distribution
+    r"""Fills the given ``tensor`` with random value sampled from normal distribution
     :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param mean: The mean of the normal distribution
-    :param std: The standard deviation of the normal distribution
+    :param tensor: tensor to be initialized.
+    :param mean: mean of the normal distribution.
+    :param std: standard deviation of the normal distribution.
     """
     tensor._reset(normal(size=tensor.shape, mean=mean, std=std).astype(tensor.dtype))
 
@@ -67,7 +67,7 @@ def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
 def calculate_gain(
     nonlinearity: str, param: Optional[Union[int, float]] = None
 ) -> float:
-    r"""Return a recommended gain value (see the table below) for the given nonlinearity
+    r"""Returns a recommended gain value (see the table below) for the given nonlinearity
     function.
 
     ================= ====================================================
@@ -81,8 +81,8 @@ def calculate_gain(
     Leaky Relu        :math:`\sqrt{\frac{2}{1 + {\text{negative}_\text{slope}}^2}}`
     ================= ====================================================
 
-    :param nonlinearity: Name of the non-linear function
-    :param param: Optional parameter for leaky_relu. Only effective when
+    :param nonlinearity: name of the non-linear function.
+    :param param: optional parameter for leaky_relu. Only effective when
         ``nonlinearity`` is "leaky_relu".
 
     """
@@ -119,10 +119,10 @@ def calculate_gain(
 
 def calculate_fan_in_and_fan_out(tensor: Tensor) -> Tuple[float, float]:
     """
-    Calculate fan_in / fan_out value for given weight tensor. This function assumes
-    input tensor is stored in NCHW format.
+    Calculates fan_in / fan_out value for given weight tensor. This function assumes
+    input tensor is stored in ``NCHW`` format.
 
-    :param tensor: Weight tensor in NCHW format
+    :param tensor: weight tensor in ``NCHW`` format.
     """
     shape = tensor.shape
     ndim = len(shape)
@@ -148,13 +148,13 @@ def calculate_fan_in_and_fan_out(tensor: Tensor) -> Tuple[float, float]:
 
 def calculate_correct_fan(tensor: Tensor, mode: str) -> float:
     """
-    Calculate fan_in or fan_out value for given weight tensor, depending on given
+    Calculates fan_in / fan_out value for given weight tensor, depending on given
     ``mode``.
 
     See :func:`calculate_fan_in_and_fan_out` for details.
 
-    :param tensor: Weight tensor in NCHW format
-    :param mode: ``'fan_in'`` or ``'fan_out'``
+    :param tensor: weight tensor in ``NCHW`` format.
+    :param mode: "fan_in" or "fan_out".
     """
     mode = mode.lower()
     valid_modes = ["fan_in", "fan_out"]
@@ -168,7 +168,7 @@ def calculate_correct_fan(tensor: Tensor, mode: str) -> float:
 
 
 def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
-    r"""Fill ``tensor`` with random values sampled from :math:`\mathcal{U}(-a, a)`
+    r"""Fills tensor with random values sampled from :math:`\mathcal{U}(-a, a)`
     where
 
     .. math::
@@ -178,8 +178,8 @@ def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
     `Understanding the difficulty of training deep feedforward neural networks` -
     Glorot, X. & Bengio, Y. (2010).
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param gain: Scaling factor for :math:`a`.
+    :param tensor: tensor to be initialized.
+    :param gain: scaling factor for :math:`a`.
     """
     fan_in, fan_out = calculate_fan_in_and_fan_out(tensor)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
@@ -188,7 +188,7 @@ def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
 
 
 def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
-    r"""Fill ``tensor`` with random values sampled from
+    r"""Fills tensor with random values sampled from
     :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
@@ -198,8 +198,8 @@ def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
     `Understanding the difficulty of training deep feedforward neural networks` -
     Glorot, X. & Bengio, Y. (2010).
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param gain: Scaling factor for :math:`std`.
+    :param tensor: tensor to be initialized.
+    :param gain: scaling factor for :math:`std`.
     """
     fan_in, fan_out = calculate_fan_in_and_fan_out(tensor)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
@@ -209,7 +209,7 @@ def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
 def msra_uniform_(
     tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
 ) -> None:
-    r"""Fill ``tensor`` wilth random values sampled from
+    r"""Fills tensor wilth random values sampled from
     :math:`\mathcal{U}(-\text{bound}, \text{bound})` where
 
     .. math::
@@ -219,13 +219,13 @@ def msra_uniform_(
     `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
     classification`
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param a: Optional parameter for calculating gain for leaky_relu. See
+    :param tensor: tensor to be initialized.
+    :param a: optional parameter for calculating gain for leaky_relu. See
         :func:`calculate_gain` for details.
-    :param mode: ``'fan_in'`` or ``'fan_out'``, used to calculate :math:`gain`, the
+    :param mode: "fan_in" or "fan_out", used to calculate :math:`gain`, the
         scaling factor for :math:`bound`. See :func:`calculate_fan_in_and_fan_out` for
         details.
-    :param nonlinearity: Name of the non-linear function used to calculate :math:`gain`.
+    :param nonlinearity: name of the non-linear function used to calculate :math:`gain`.
         See :func:`calculate_gain` for details.
     """
     fan = calculate_correct_fan(tensor, mode)
@@ -238,7 +238,7 @@ def msra_uniform_(
 def msra_normal_(
     tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
 ) -> None:
-    r"""Fill ``tensor`` wilth random values sampled from
+    r"""Fills tensor wilth random values sampled from
     :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
@@ -248,13 +248,13 @@ def msra_normal_(
     `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
     classification`
 
-    :param tensor: An n-dimentional tensor to be initialized
-    :param a: Optional parameter for calculating gain for leaky_relu. See
+    :param tensor: tensor to be initialized
+    :param a: optional parameter for calculating gain for leaky_relu. See
         :func:`calculate_gain` for details.
-    :param mode: ``'fan_in'`` or ``'fan_out'``, used to calculate :math:`gain`, the
+    :param mode: "fan_in" or "fan_out", used to calculate :math:`gain`, the
         scaling factor for :math:`gain`. See :func:`calculate_fan_in_and_fan_out` for
         details.
-    :param nonlinearity: Name of the non-linear function used to calculate :math:`gain`.
+    :param nonlinearity: name of the non-linear function used to calculate :math:`gain`.
         See :func:`calculate_gain` for details.
     """
     fan = calculate_correct_fan(tensor, mode)

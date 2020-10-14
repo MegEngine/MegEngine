@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 
 
 class CIFAR10(VisionDataset):
-    r""" ``Dataset`` for CIFAR10 meta data
+    r""" ``Dataset`` for CIFAR10 meta data.
     """
 
     url_path = "http://www.cs.utoronto.ca/~kriz/"

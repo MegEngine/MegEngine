@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 import megengine.core.tensor.megbrain_graph as G
+import megengine.functional as F
 from megengine import cgtools, tensor
 from megengine.core._trace_option import set_tensor_shape
 from megengine.core.ops import builtin as ops
@@ -20,29 +21,6 @@ from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.functional import exp, log
 from megengine.jit import exclude_from_trace, trace
-
-
-def load_and_inference(file, inp_data):
-    cg, _, out_list = G.load_graph(file)
-    inputs = cgtools.get_dep_vars(out_list, "Host2DeviceCopy")
-    replace_dict = {}
-    inp_node_list = []
-    for i in inputs:
-        inp_node = G.InputNode(
-            device="xpux", dtype=inputs[0].dtype, graph=inputs[0].graph
-        )
-        replace_dict[i] = inp_node.outputs[0]
-        inp_node_list.append(inp_node)
-    new_out = cgtools.replace_vars(out_list, replace_dict)
-    out_node_list = [G.OutputNode(i) for i in new_out]
-    new_out_list = [i.outputs[0] for i in out_node_list]
-    new_cg = new_out_list[0].graph
-    func = new_cg.compile(new_out_list)
-    for node, value in zip(inp_node_list, inp_data):
-        node.set_value(as_raw_tensor(value)._dev_tensor())
-    func.execute()
-    out_data_list = [o.get_value().numpy() for o in out_node_list]
-    return out_data_list
 
 
 def test_trace():
@@ -124,7 +102,7 @@ def test_dump():
     np.testing.assert_equal(dump_info.inputs, ["h2d[0]", "h2d[2]"])
     np.testing.assert_equal(dump_info.outputs, ["ADD(h2d[0],h2d[2])[4]"])
     file.seek(0)
-    result = load_and_inference(file, [a, b])
+    result = cgtools.load_and_inference(file, [a, b])
     np.testing.assert_equal(result[0], y)
 
 
@@ -146,7 +124,7 @@ def test_capture_dump():
     file = io.BytesIO()
     f.dump(file)
     file.seek(0)
-    result = load_and_inference(file, [x])
+    result = cgtools.load_and_inference(file, [x])
     np.testing.assert_equal(result[0], y)
 
 
@@ -172,7 +150,7 @@ def test_dump_volatile():
     (out,) = outputs
     assert (
         cgtools.get_owner_opr_type(cgtools.get_owner_opr_inputs(out)[1])
-        == "SharedDeviceTensor"
+        == "ImmutableTensor"
     )
 
 
@@ -257,6 +235,18 @@ def test_optimize_for_inference():
     assert computing_input.dtype == np.float16
 
 
+def test_optimize_for_inference_broadcast():
+    a = tensor(np.ones(1, dtype=np.float32))
+
+    @trace(capture_as_const=True, tensor_shape=True)
+    def f():
+        (b,) = apply(ops.Broadcast(), a, tensor([1, 10], dtype=np.int32))
+        return b
+
+    f()
+    f.dump(io.BytesIO())
+
+
 def test_trace_cvt_bool():
     set_tensor_shape(True)
     x = tensor([0], dtype=np.int32)
@@ -284,3 +274,123 @@ def test_trace_reshape():
         f(x1)
         f(x2)
         f(x3)
+
+
+def test_trace_topk():
+    x = tensor([5, 2, 7, 1, 0, 3, 2])
+
+    @trace(symbolic=True)
+    def f(x):
+        y = F.topk(x, 3)
+        np.testing.assert_equal(y[0].shape.numpy(), np.array([3,]))
+        return y
+
+    for i in range(3):
+        f(x)
+
+
+def test_trace_warp_perspective():
+    inp_shape = (1, 1, 4, 4)
+    x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+    M_shape = (1, 3, 3)
+    M = tensor(
+        np.array(
+            [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0], [0.0, 0.0, 1.0]], dtype=np.float32
+        ).reshape(M_shape)
+    )
+
+    @trace(symbolic=True)
+    def f(x, M):
+        out = F.warp_perspective(x, M, (2, 2))
+        np.testing.assert_equal(out.shape.numpy(), np.array([1, 1, 2, 2]))
+        return out
+
+    for i in range(1):
+        f(x, M)
+
+
+def test_raise_on_trace():
+    step_count = 0
+    catch_count = 0
+    bad_step = 10
+
+    class CatchMe(Exception):
+        pass
+
+    a = tensor([1, 2, 3, 4])
+    b = tensor([5, 6, 7, 8])
+    c = tensor([9, 0, 1, 2])
+
+    @trace
+    def add_abc(a, b, c):
+        print("Hello")
+        ps = a + b
+        result = ps + c
+        if step_count == bad_step:
+            raise CatchMe("catch me")
+        return result
+
+    for i in range(100):
+        try:
+            d = add_abc(a, b, c)
+        except CatchMe as e:
+            catch_count += 1
+        else:
+            np.testing.assert_equal(d.numpy(), (a + b + c).numpy())
+        step_count += 1
+
+    assert catch_count == 1
+
+
+def test_trace_broadcast():
+    for symbolic in [False, True]:
+        set_tensor_shape(True)
+        x1 = tensor(np.random.randn(3, 1, 1))
+        x2 = tensor(np.random.randn(1, 4, 1))
+        x3 = tensor(np.random.randn(1, 1, 5))
+
+        @trace(symbolic=symbolic, capture_as_const=True)
+        def f(x):
+            y = F.broadcast_to(x, (3, 4, 5))
+            return y
+
+        f(x1)
+        f(x2)
+        f(x3)
+
+
+def test_trace_nms():
+    def make_inputs(n):
+        boxes = np.zeros((n, 4))
+        boxes[:, :2] = np.random.rand(n, 2) * 100
+        boxes[:, 2:] = np.random.rand(n, 2) * 100 + 100
+
+        scores = np.random.rand(n)
+
+        return tensor(boxes), tensor(scores)
+
+    @trace(symbolic=False)
+    def f(boxes, scores):
+        results = F.nn.nms(boxes, scores=scores, iou_thresh=0.5, max_output=20)
+        with exclude_from_trace():
+            _ = F.nn.nms(boxes, scores=scores, iou_thresh=0.5)
+        return results
+
+    f(*make_inputs(10))
+    f(*make_inputs(20))
+    f(*make_inputs(30))
+
+
+def test_trace_valid_broadcast():
+    set_tensor_shape(True)
+    x1 = tensor(np.random.randn(1, 1))
+    x2 = tensor(np.random.randn(1, 2))
+    shape = (tensor([2]), tensor([2]))
+
+    @trace(symbolic=False)
+    def f(x, shape):
+        y = F.broadcast_to(x, shape)
+        return y
+
+    f(x1, shape)
+    f(x2, shape)

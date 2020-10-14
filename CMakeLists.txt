@@ -53,8 +53,10 @@ option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
 option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt Python Module " ON)
 option(MGE_BUILD_SDK "Build load_and_run" ON)
 option(MGE_INFERENCE_ONLY "Build inference only library." OFF)
+option(MGE_WITH_PYTHON_MODULE "Build MegEngine legacy Python Module." OFF)
 option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
 option(MGE_WITH_ROCM "Enable ROCM support" OFF)
+
 
 if(NOT ${MGE_BIN_REDUCE} STREQUAL "")
     message("build with BIN REDUCE")
@@ -152,6 +154,14 @@ if(${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} S
 endif()
 
 if(MSVC OR WIN32)
+    # for cmake after 3.15.2
+    cmake_policy(SET CMP0091 NEW)
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+    else()
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    endif()
+
     add_compile_definitions(NOMINMAX=1 _USE_MATH_DEFINES=1 WIN32=1)
     message("-- into windows build...")
     message("-- CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
@@ -285,7 +295,6 @@ if(MGE_WITH_TEST)
 endif()
 
 if(MGE_BUILD_IMPERATIVE_RT)
-    add_compile_definitions(MGB_ENABLE_IMPERATIVE_RUNTIME)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
@@ -701,7 +710,8 @@ endif()
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MARCH}")
 
-set(MGB_ENABLE_IMPERATIVE ${MGE_BUILD_IMPERATIVE_RT})
+set(MGE_VERSION_SCRIPT ${PROJECT_SOURCE_DIR}/src/version.ld CACHE INTERNAL "Path to linker version script")
+
 # Write out megbrain_build_config.h
 # It defines macros needed by both megbrain and dnn
 configure_file(src/megbrain_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/megbrain_build_config.h)
@@ -830,4 +840,9 @@ if(MSVC OR WIN32)
             message("MSVC flags: ${CompilerFlag}:${${CompilerFlag}}")
         endif()
     endforeach()
+endif()
+
+if(MGE_WITH_JIT_MLIR)
+    add_subdirectory(tools/mlir/mgb-opt)
+    add_subdirectory(tools/mlir/mgb-file-check)
 endif()

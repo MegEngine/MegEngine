@@ -10,34 +10,33 @@ import numpy as np
 
 import megengine.functional as F
 from megengine import tensor
-from megengine.test import assertTensorClose
 
 
 def test_abs():
-    assertTensorClose(
+    np.testing.assert_allclose(
         F.abs(tensor([-3.0, -4.0, -5.0])).numpy(),
         np.abs(np.array([-3.0, -4.0, -5.0], dtype=np.float32)),
     )
 
-    assertTensorClose(F.abs(-3.0).numpy(), np.abs(np.float32(-3.0)))
+    np.testing.assert_allclose(F.abs(-3.0).numpy(), np.abs(np.float32(-3.0)))
 
 
 def test_multiply():
-    assertTensorClose(
+    np.testing.assert_allclose(
         F.mul(-3.0, -4.0).numpy(), np.multiply(np.float32(-3.0), np.float32(-4.0))
     )
 
-    assertTensorClose(
+    np.testing.assert_allclose(
         F.mul(tensor([3.0, 4.0]), 4.0).numpy(),
         np.multiply(np.array([3.0, 4.0], dtype=np.float32), 4.0),
     )
 
-    assertTensorClose(
+    np.testing.assert_allclose(
         F.mul(4.0, tensor([3.0, 4.0])).numpy(),
         np.multiply(4.0, np.array([3.0, 4.0], dtype=np.float32)),
     )
 
-    assertTensorClose(
+    np.testing.assert_allclose(
         F.mul(tensor([3.0, 4.0]), tensor([3.0, 4.0])).numpy(),
         np.multiply(
             np.array([3.0, 4.0], dtype=np.float32),
@@ -48,27 +47,31 @@ def test_multiply():
 
 def test_clamp():
     """Fix an issue when `lower` or `upper` is 0, it will be recognized as `False` and
-    `F.clamp` will fall into wrong conditions unexpectedly.
+    `F.clip` will fall into wrong conditions unexpectedly.
     """
     x = np.linspace(-6, 6, dtype="float32")
-    assertTensorClose(F.clamp(tensor(x) + 3, 0, 6).numpy(), np.clip(x + 3, 0, 6))
-    assertTensorClose(F.clamp(tensor(x) - 3, -6, 0).numpy(), np.clip(x - 3, -6, 0))
+    np.testing.assert_allclose(
+        F.clip(tensor(x) + 3, 0, 6).numpy(), np.clip(x + 3, 0, 6)
+    )
+    np.testing.assert_allclose(
+        F.clip(tensor(x) - 3, -6, 0).numpy(), np.clip(x - 3, -6, 0)
+    )
 
 
 def test_isnan():
     for case in [[1, float("nan"), 0]]:
-        assertTensorClose(F.isnan(tensor(case)).numpy(), np.isnan(case))
+        np.testing.assert_allclose(F.isnan(tensor(case)).numpy(), np.isnan(case))
 
 
 def test_isinf():
     for case in [[1, float("inf"), 0]]:
-        assertTensorClose(F.isinf(tensor(case)).numpy(), np.isinf(case))
+        np.testing.assert_allclose(F.isinf(tensor(case)).numpy(), np.isinf(case))
 
 
 def test_sign():
     for case in [[1, -1, 0]]:
         x = tensor(case)
-        assertTensorClose(F.sign(x).numpy(), np.sign(case).astype(x.dtype))
+        np.testing.assert_allclose(F.sign(x).numpy(), np.sign(case).astype(x.dtype))
 
 
 def test_cosh():
@@ -108,14 +111,6 @@ def test_atanh():
     y_np = np.arctanh(x)
     y_mge = F.atanh(tensor(x)).numpy()
     np.testing.assert_almost_equal(y_np, y_mge, decimal=5)
-
-
-def test_fast_tanh():
-    np.random.seed(42)
-    x = np.random.randn(100).astype("float32")
-    y_np = x * (27.0 + x * x) / (27.0 + 9.0 * x * x)
-    y_mge = F.fast_tanh(tensor(x)).numpy()
-    np.testing.assert_almost_equal(y_np, y_mge, decimal=6)
 
 
 def test_hswish():

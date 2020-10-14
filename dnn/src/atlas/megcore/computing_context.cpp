@@ -55,8 +55,12 @@ void AtlasComputingContext::memcpy(void* dst, const void* src,
         default:
             megdnn_throw("bad atlas memcpy kind");
     }
+#if MGB_USE_ATLAS_ASYNC_API
     acl_check(aclrtMemcpyAsync(dst, size_in_bytes, src, size_in_bytes,
                                atlas_kind, m_ctx.stream));
+#else
+    acl_check(aclrtMemcpy(dst, size_in_bytes, src, size_in_bytes, atlas_kind));
+#endif
 }
 
 void AtlasComputingContext::memset(void* dst, int value, size_t size_in_bytes) {
@@ -65,7 +69,11 @@ void AtlasComputingContext::memset(void* dst, int value, size_t size_in_bytes) {
 }
 
 void AtlasComputingContext::synchronize() {
+#if MGB_USE_ATLAS_ASYNC_API
     acl_check(aclrtSynchronizeStream(m_ctx.stream));
+#else
+    return;
+#endif
 }
 
 // vim: syntax=cpp.doxygen

@@ -75,6 +75,8 @@ class PascalVOC(VisionDataset):
         else:
             raise NotImplementedError
 
+        self.img_infos = dict()
+
     def __getitem__(self, index):
         target = []
         for k in self.order:
@@ -107,9 +109,8 @@ class PascalVOC(VisionDataset):
                 mask = mask[:, :, np.newaxis]
                 target.append(mask)
             elif k == "info":
-                if image is None:
-                    image = cv2.imread(self.images[index], cv2.IMREAD_COLOR)
-                info = [image.shape[0], image.shape[1], self.file_names[index]]
+                info = self.get_img_info(index, image)
+                info = [info["height"], info["width"], info["file_name"]]
                 target.append(info)
             else:
                 raise NotImplementedError
@@ -118,6 +119,17 @@ class PascalVOC(VisionDataset):
 
     def __len__(self):
         return len(self.images)
+
+    def get_img_info(self, index, image=None):
+        if index not in self.img_infos:
+            if image is None:
+                image = cv2.imread(self.images[index], cv2.IMREAD_COLOR)
+            self.img_infos[index] = dict(
+                height=image.shape[0],
+                width=image.shape[1],
+                file_name=self.file_names[index],
+            )
+        return self.img_infos[index]
 
     def _trans_mask(self, mask):
         label = np.ones(mask.shape[:2]) * 255
@@ -171,25 +183,3 @@ class PascalVOC(VisionDataset):
         "train",
         "tvmonitor",
     )
-    class_colors = [
-        [0, 0, 128],
-        [0, 128, 0],
-        [0, 128, 128],
-        [128, 0, 0],
-        [128, 0, 128],
-        [128, 128, 0],
-        [128, 128, 128],
-        [0, 0, 64],
-        [0, 0, 192],
-        [0, 128, 64],
-        [0, 128, 192],
-        [128, 0, 64],
-        [128, 0, 192],
-        [128, 128, 64],
-        [128, 128, 192],
-        [0, 64, 0],
-        [0, 64, 128],
-        [0, 192, 0],
-        [0, 192, 128],
-        [128, 64, 0],
-    ]

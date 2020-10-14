@@ -144,13 +144,24 @@ cg::OperatorNodeBase::NodeProp* OutputCallback::do_make_node_prop() const {
     prop->add_flag(NodeProp::Flag::NO_AUTOMATIC_DUP);
     SmallVector<NodeProp::DepType> dep_types(input().size(),
                                              NodeProp::DepType::DEV_COMP_ORDER);
-    dep_types[0] = NodeProp::DepType::DEV_VALUE;
+    using IT = cg::static_infer::InferType;
+    auto host_value_avail = [&]() -> bool {
+        auto inp = input(0);
+        auto it = owner_graph()->static_infer_manager().get_infer_type(inp).value;
+        return it & (IT::CONST | IT::RT_STATIC | IT::MISSING_INP);
+    };
+    m_use_host_value = m_param.prefer_host_value && host_value_avail();
+    dep_types[0] = m_use_host_value ? NodeProp::DepType::HOST_VALUE : NodeProp::DepType::DEV_VALUE;
     prop->reset_dep_type(input(), dep_types);
     return prop;
 }
 
 void OutputCallback::scn_do_execute() {
-    m_param.callback(input(0)->dev_tensor());
+    if (m_use_host_value) {
+        m_param.callback(owner_graph()->static_infer_manager().infer_value(input(0)));
+    } else {
+        m_param.callback(input(0)->dev_tensor());
+    }
 }
 
 cg::OperatorNodeBase* OutputCallback::shallow_copy(

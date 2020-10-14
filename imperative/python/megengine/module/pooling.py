@@ -29,6 +29,11 @@ class _PoolNd(Module):
     def forward(self, inp):
         pass
 
+    def _module_info_string(self) -> str:
+        return "kernel_size={kernel_size}, stride={stride}, padding={padding}".format(
+            **self.__dict__
+        )
+
 
 class MaxPool2d(_PoolNd):
     r"""Applies a 2D max pooling over an input.

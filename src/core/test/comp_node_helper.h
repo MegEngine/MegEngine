@@ -56,7 +56,7 @@ namespace seq_rec {
     cb(dyn_elemwise_fake_exec)                                                 \
     cb(level2) cb(level2_multi_holder) cb(level2_share_storage)                \
     cb(level2_exec_check) cb(sync_from_func) cb(cb_non_contig)                 \
-    cb(shape_dep_const_shape)
+    cb(shape_dep_const_shape) cb(multi_recorder_run)
 // clang-format on
 
 #define def_tags(name) \

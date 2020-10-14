@@ -53,6 +53,16 @@ std::unique_ptr<mlir::Pass> mgb::jit::create_lower_to_llvm_pass() {
     return std::make_unique<AffineToLLVMLoweringPass>();
 }
 
+namespace mgb {
+namespace jit {
+void register_test_affine_to_llvm_lowering_pass() {
+    PassRegistration<AffineToLLVMLoweringPass>(
+            "mgb-codegen-convert-affine-to-llvm",
+            "Perform final conversion from Affine to LLVMIR ",
+            [] { return std::make_unique<AffineToLLVMLoweringPass>(); });
+}
+}  // namespace jit
+}  // namespace mgb
 #endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen

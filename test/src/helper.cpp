@@ -113,6 +113,20 @@ dtype, RandomDistribution::CONSTANT>::operator ()(
     return ret;
 }
 
+template<typename dtype>
+std::shared_ptr<HostTensorND> HostTensorGenerator<
+dtype, RandomDistribution::CONSECUTIVE>::operator ()(
+        const TensorShape &shape, CompNode cn) {
+    if (!cn.valid())
+        cn = CompNode::load("xpu0");
+    std::shared_ptr<HostTensorND> ret =
+        std::make_shared<HostTensorND>(cn, shape, dtype());
+    auto ptr = ret->ptr<ctype>();
+    for (size_t i = 0, it = shape.total_nr_elems(); i < it; ++ i) {
+        ptr[i] = m_val + i * m_delta;
+    }
+    return ret;
+}
 
 // explicit instantialization of HostTensorGenerator
 namespace mgb {
@@ -123,11 +137,15 @@ namespace mgb {
     template class HostTensorGenerator<
         dtype::Float32, RandomDistribution::CONSTANT>;
     template class HostTensorGenerator<
+        dtype::Float32, RandomDistribution::CONSECUTIVE>;
+    template class HostTensorGenerator<
         dtype::Float16, RandomDistribution::GAUSSIAN>;
     template class HostTensorGenerator<
         dtype::Int8, RandomDistribution::UNIFORM>;
     template class HostTensorGenerator<
         dtype::Int8, RandomDistribution::CONSTANT>;
+    template class HostTensorGenerator<
+        dtype::Int8, RandomDistribution::CONSECUTIVE>;
     template class HostTensorGenerator<
         dtype::Uint8, RandomDistribution::UNIFORM>;
     template class HostTensorGenerator<

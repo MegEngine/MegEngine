@@ -11,18 +11,24 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from ..core.ops.builtin import Copy
+from ..core._wrap import device as as_device
+from ..core.ops.builtin import Copy, Identity
 from ..core.tensor import Tensor
 from ..core.tensor.core import apply
 from .math import topk as _topk
-from .tensor import transpose as _transpose
+from .tensor import broadcast_to, transpose
+
+__all__ = [
+    "topk_accuracy",
+    "copy",
+]
 
 
-def accuracy(
+def topk_accuracy(
     logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
 ) -> Union[Tensor, Iterable[Tensor]]:
     r"""
-    Calculate the classification accuracy given predicted logits and ground-truth labels.
+    Calculates the classification accuracy given predicted logits and ground-truth labels.
 
     :param logits: model predictions of shape `[batch_size, num_classes]`,
         representing the probability (likelyhood) of each class.
@@ -40,7 +46,7 @@ def accuracy(
 
         logits = tensor(np.arange(80, dtype=np.int32).reshape(8,10))
         target = tensor(np.arange(8, dtype=np.int32))
-        top1, top5 = F.accuracy(logits, target, (1, 5))
+        top1, top5 = F.topk_accuracy(logits, target, (1, 5))
         print(top1.numpy(), top5.numpy())
 
     Outputs:
@@ -54,8 +60,8 @@ def accuracy(
     _, pred = _topk(logits, k=max(topk), descending=True)
     accs = []
     for k in topk:
-        correct = pred[:, :k].detach() == _transpose(target, (0, "x")).broadcast(
-            target.shape[0], k
+        correct = pred[:, :k].detach() == broadcast_to(
+            transpose(target, (0, "x")), (target.shape[0], k)
         )
         accs.append(correct.astype(np.float32).sum() / target.shape[0])
     if len(topk) == 1:  # type: ignore[arg-type]
@@ -63,25 +69,12 @@ def accuracy(
     return accs
 
 
-def zero_grad(inp: Tensor) -> Tensor:
+def copy(inp, device=None):
     r"""
-    Returns a tensor which is treated as constant during backward gradient calcuation,
-    i.e. its gradient is zero.
-
-    :param inp: Input tensor.
-
-    See implementation of :func:`~.softmax` for example.
-    """
-    print("zero_grad is obsoleted, please use detach instead")
-    raise NotImplementedError
-
-
-def copy(inp, cn):
-    r"""
-    Copy tensor to another device.
+    Copies tensor to another device.
 
     :param inp: input tensor.
-    :param cn: device that you copy to.
+    :param device: destination device.
 
     Examples:
 
@@ -101,4 +94,6 @@ def copy(inp, cn):
 
         [1 2 3]
     """
-    return apply(Copy(comp_node=cn), inp)[0]
+    if device is None:
+        return apply(Identity(), inp)[0]
+    return apply(Copy(comp_node=as_device(device).to_c()), inp)[0]

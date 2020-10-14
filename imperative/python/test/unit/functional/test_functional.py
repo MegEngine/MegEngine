@@ -7,9 +7,11 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import itertools
+from functools import partial
 
 import numpy as np
 import pytest
+from utils import opr_test
 
 import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
@@ -18,69 +20,6 @@ from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
-from megengine.test import assertTensorClose
-
-
-def _default_compare_fn(x, y):
-    assertTensorClose(x.numpy(), y)
-
-
-def opr_test(cases, func, compare_fn=_default_compare_fn, ref_fn=None, **kwargs):
-    """
-    func: the function to run opr.
-    compare_fn: the function to compare the result and expected, use assertTensorClose if None.
-    ref_fn: the function to generate expected data, should assign output if None.
-    cases: the list which have dict element, the list length should be 2 for dynamic shape test.
-           and the dict should have input,
-           and should have output if ref_fn is None.
-           should use list for multiple inputs and outputs for each case.
-    kwargs: The additional kwargs for opr func.
-
-    simple examples:
-
-        dtype = np.float32
-        cases = [{"input": [10, 20]}, {"input": [20, 30]}]
-        opr_test(cases,
-                 F.eye,
-                 ref_fn=lambda n, m: np.eye(n, m).astype(dtype),
-                 dtype=dtype)
-
-    """
-
-    def check_results(results, expected):
-        if not isinstance(results, (tuple, list)):
-            results = (results,)
-        for r, e in zip(results, expected):
-            compare_fn(r, e)
-
-    def get_param(cases, idx):
-        case = cases[idx]
-        inp = case.get("input", None)
-        outp = case.get("output", None)
-        if inp is None:
-            raise ValueError("the test case should have input")
-        if not isinstance(inp, (tuple, list)):
-            inp = (inp,)
-        if ref_fn is not None and callable(ref_fn):
-            outp = ref_fn(*inp)
-        if outp is None:
-            raise ValueError("the test case should have output or reference function")
-        if not isinstance(outp, (tuple, list)):
-            outp = (outp,)
-
-        return inp, outp
-
-    if len(cases) == 0:
-        raise ValueError("should give one case at least")
-
-    if not callable(func):
-        raise ValueError("the input func should be callable")
-
-    inp, outp = get_param(cases, 0)
-    inp_tensor = [tensor(inpi) for inpi in inp]
-
-    results = func(*inp_tensor, **kwargs)
-    check_results(results, outp)
 
 
 def test_where():
@@ -163,43 +102,43 @@ def test_interpolate():
     def linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 
-        out = F.interpolate(inp, scale_factor=2.0, mode="LINEAR")
-        out2 = F.interpolate(inp, 4, mode="LINEAR")
+        out = F.nn.interpolate(inp, scale_factor=2.0, mode="LINEAR")
+        out2 = F.nn.interpolate(inp, 4, mode="LINEAR")
 
-        assertTensorClose(
+        np.testing.assert_allclose(
             out.numpy(), np.array([[[1.0, 1.25, 1.75, 2.0]]], dtype=np.float32)
         )
-        assertTensorClose(
+        np.testing.assert_allclose(
             out2.numpy(), np.array([[[1.0, 1.25, 1.75, 2.0]]], dtype=np.float32)
         )
 
     def many_batch_interpolate():
         inp = tensor(np.arange(1, 9, dtype=np.float32).reshape(2, 1, 2, 2))
 
-        out = F.interpolate(inp, [4, 4])
-        out2 = F.interpolate(inp, scale_factor=2.0)
+        out = F.nn.interpolate(inp, [4, 4])
+        out2 = F.nn.interpolate(inp, scale_factor=2.0)
 
-        assertTensorClose(out.numpy(), out2.numpy())
+        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     def assign_corner_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
 
-        out = F.interpolate(inp, [4, 4], align_corners=True)
-        out2 = F.interpolate(inp, scale_factor=2.0, align_corners=True)
+        out = F.nn.interpolate(inp, [4, 4], align_corners=True)
+        out2 = F.nn.interpolate(inp, scale_factor=2.0, align_corners=True)
 
-        assertTensorClose(out.numpy(), out2.numpy())
+        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     def error_shape_linear_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
 
         with pytest.raises(ValueError):
-            F.interpolate(inp, scale_factor=2.0, mode="LINEAR")
+            F.nn.interpolate(inp, scale_factor=2.0, mode="LINEAR")
 
     def inappropriate_scale_linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 
         with pytest.raises(ValueError):
-            F.interpolate(inp, scale_factor=[2.0, 3.0], mode="LINEAR")
+            F.nn.interpolate(inp, scale_factor=[2.0, 3.0], mode="LINEAR")
 
     linear_interpolate()
     many_batch_interpolate()
@@ -232,7 +171,7 @@ def test_roi_align():
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
 
     output_shape = (7, 7)
-    out_feat = F.roi_align(
+    out_feat = F.nn.roi_align(
         inp_feat,
         rois,
         output_shape=output_shape,
@@ -255,7 +194,7 @@ def test_roi_pooling():
     inp_feat, rois = _gen_roi_inp()
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
     output_shape = (7, 7)
-    out_feat = F.roi_pooling(
+    out_feat = F.nn.roi_pooling(
         inp_feat, rois, output_shape=output_shape, mode="max", scale=1.0 / 4,
     )
     assert make_shape_tuple(out_feat.shape) == (
@@ -268,12 +207,72 @@ def test_roi_pooling():
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
+def test_adaptive_avg_pool2d():
+    inp = tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
+    oshp = (2, 2)
+    grad = Grad().wrt(inp, callback=_save_to(inp))
+    outp = F.adaptive_avg_pool2d(inp, oshp,)
+    assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
+    np.testing.assert_equal(
+        outp.numpy(), np.array([[[[2.5, 4.5], [10.5, 12.5]]]], dtype=np.float32)
+    )
+
+    grad(outp, tensor(F.ones_like(outp)))
+    assert make_shape_tuple(inp.grad.shape) == make_shape_tuple(inp.shape)
+    np.testing.assert_equal(
+        inp.grad.numpy(),
+        np.array(
+            [
+                [
+                    [
+                        [0.25, 0.25, 0.25, 0.25],
+                        [0.25, 0.25, 0.25, 0.25],
+                        [0.25, 0.25, 0.25, 0.25],
+                        [0.25, 0.25, 0.25, 0.25],
+                    ]
+                ]
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+
+def test_adaptive_max_pool2d():
+    inp = tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
+    oshp = (2, 2)
+    grad = Grad().wrt(inp, callback=_save_to(inp))
+    outp = F.adaptive_max_pool2d(inp, oshp,)
+    assert make_shape_tuple(outp.shape) == (inp.shape[0], inp.shape[1], *oshp,)
+    np.testing.assert_equal(
+        outp.numpy(), np.array([[[[5, 7], [13, 15]]]], dtype=np.float32)
+    )
+
+    grad(outp, tensor(F.ones_like(outp)))
+    assert make_shape_tuple(inp.grad.shape) == make_shape_tuple(inp.shape)
+    np.testing.assert_equal(
+        inp.grad.numpy(),
+        np.array(
+            [
+                [
+                    [
+                        [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 1.0],
+                        [0.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 1.0],
+                    ]
+                ]
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+
 def test_one_hot():
     def onehot_low_dimension():
         inp = tensor(np.arange(1, 4, dtype=np.int32))
         out = F.one_hot(inp, num_classes=4)
 
-        assertTensorClose(
+        np.testing.assert_allclose(
             out.numpy(), np.eye(4, dtype=np.int32)[np.arange(1, 4, dtype=np.int32)]
         )
 
@@ -286,45 +285,10 @@ def test_one_hot():
         inp = tensor(arr)
         out = F.one_hot(inp, 10)
 
-        assertTensorClose(out.numpy(), np.eye(10, dtype=np.int32)[arr])
+        np.testing.assert_allclose(out.numpy(), np.eye(10, dtype=np.int32)[arr])
 
     onehot_low_dimension()
     onehot_high_dimension()
-
-
-def test_add_update():
-    shape = (2, 3)
-    v = np.random.random(shape).astype(np.float32)
-    b = Tensor(v)
-
-    u = F.add_update(b, 1)
-    assertTensorClose(u.numpy(), v + 1)
-    u = F.add_update(b, 1)
-    assertTensorClose(u.numpy(), v + 2)
-
-    x = np.ones((2, 2), dtype=np.float32)
-    y = x * 0.5
-    dest = tensor(x)
-    delta = tensor(y)
-    r = F.add_update(dest, delta, alpha=0.9, beta=0.1, bias=0.1)
-    assertTensorClose(r.numpy(), x * 0.9 + y * 0.1 + 0.1)
-
-
-def test_add_update_params():
-    b = np.random.random((2, 3)).astype(np.float32)
-    y = Tensor(b)
-
-    # @jit.trace
-    def f(x):
-        return F.add_update(y, x)
-
-    f(np.zeros((2, 3)).astype(np.float32))
-
-    z = Tensor(np.zeros((2, 3)).astype(np.float32))
-    F.add_update(y, z, beta=0.1)
-
-    res = f(np.ones((2, 3)).astype(np.float32))
-    assertTensorClose(res.numpy(), b + 1)
 
 
 def test_binary_cross_entropy():
@@ -337,15 +301,15 @@ def test_binary_cross_entropy():
         return 1 / (1 + np.exp(-x))
 
     def compare_fn(x, y):
-        assertTensorClose(x.numpy(), y, max_err=5e-4)
+        np.testing.assert_allclose(x.numpy(), y, atol=5e-4)
 
     np.random.seed(123)
-    data1 = sigmoid(np.random.uniform(size=data1_shape).astype(np.float32))
+    data1 = np.random.uniform(size=data1_shape).astype(np.float32)
     label1 = np.random.uniform(size=label1_shape).astype(np.float32)
     expect1 = np.array([0.6361], dtype=np.float32)
 
     np.random.seed(123)
-    data2 = sigmoid(np.random.uniform(size=data2_shape).astype(np.float32))
+    data2 = np.random.uniform(size=data2_shape).astype(np.float32)
     label2 = np.random.uniform(size=label2_shape).astype(np.float32)
     expect2 = np.array([0.6750], dtype=np.float32)
 
@@ -353,7 +317,17 @@ def test_binary_cross_entropy():
         {"input": [data1, label1], "output": expect1,},
         {"input": [data2, label2], "output": expect2,},
     ]
-    opr_test(cases, F.binary_cross_entropy, compare_fn=compare_fn)
+    opr_test(cases, F.nn.binary_cross_entropy, compare_fn=compare_fn)
+
+    cases = [
+        {"input": [sigmoid(data1), label1], "output": expect1,},
+        {"input": [sigmoid(data2), label2], "output": expect2,},
+    ]
+    opr_test(
+        cases,
+        partial(F.nn.binary_cross_entropy, with_logits=False),
+        compare_fn=compare_fn,
+    )
 
 
 def test_hinge_loss():
@@ -366,7 +340,7 @@ def test_hinge_loss():
         expect = np.clip(0, np.inf, 1 - data * label).sum(axis=1).mean()
         cases.append({"input": [data, label], "output": expect})
 
-    opr_test(cases, F.hinge_loss)
+    opr_test(cases, F.nn.hinge_loss)
 
     # cases with L2 norm
     cases = []
@@ -377,7 +351,7 @@ def test_hinge_loss():
         cases.append({"input": [data, label], "output": expect})
 
     def hinge_loss_with_l2_norm(pred, label):
-        return F.hinge_loss(pred, label, "L2")
+        return F.nn.hinge_loss(pred, label, "L2")
 
     opr_test(cases, hinge_loss_with_l2_norm)
 
@@ -394,27 +368,8 @@ def test_nms():
     )
     inp = tensor(x)
     scores = tensor([0.5, 0.8, 0.9, 0.6], dtype=np.float32)
-    result = F.nms(inp, scores=scores, iou_thresh=0.5)
+    result = F.nn.nms(inp, scores=scores, iou_thresh=0.5)
     np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
-
-
-def test_batched_nms():
-    x = np.array(
-        [
-            [0, 0, 100, 100],
-            [0.5, 0.5, 1.5, 1.5],
-            [20, 20, 100, 100],
-            [0.5, 0.5, 1.0, 1.0],
-            [10, 10, 100, 100],
-            [0.5, 0.5, 1.0, 1.0],
-        ],
-        dtype=np.float32,
-    )
-    inp = tensor(x)
-    scores = tensor([0.6, 0.9, 0.5, 0.6, 0.8, 0.7], dtype=np.float32)
-    idxs = tensor([0, 1, 0, 1, 0, 1], dtype=np.int32)
-    results = F.batched_nms(inp, scores=scores, idxs=idxs, iou_thresh=0.5)
-    np.testing.assert_equal(results.numpy(), np.array([1, 4, 5], dtype=np.int32))
 
 
 @pytest.mark.skip(reason="cuda does not support nchw int8")
@@ -483,7 +438,7 @@ def test_conv_bias():
                 inp = convert_to_nchw4(inp)
                 w = convert_to_nchw4(w)
                 b = convert_to_nchw4(b)
-            return F.conv_bias_activation(
+            return F.nn.conv_bias_activation(
                 inp,
                 w,
                 b,
@@ -505,7 +460,7 @@ def test_conv_bias():
             result = F.transpose(result, (0, 1, 4, 2, 3))
         expected = F.flatten(expected)
         result = F.flatten(result)
-        assertTensorClose(result.numpy(), expected.numpy(), max_err=outp_scale)
+        np.testing.assert_allclose(result.numpy(), expected.numpy(), atol=outp_scale)
 
     run(1, 4, 4, 24, 33, 1, 1, 2, 3, 1, 1, False)
     run(10, 12, 24, 46, 46, 1, 1, 2, 1, 3, 1, False)
@@ -517,6 +472,15 @@ def test_conv_bias():
 
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
+
+
+def test_zero_stride_numpy_array():
+    inp = np.random.randn(3, 224, 224).astype(np.float32)
+    inp = inp[np.newaxis, :]
+
+    inp = tensor(inp, dtype=np.float32)
+    weight = tensor(np.random.randn(16, 3, 3, 3), dtype=np.float32)
+    out = F.conv2d(inp, weight, None, (2, 2), (3, 3), (1, 1), 1)
 
 
 def test_condtake():
@@ -544,3 +508,5 @@ def test_nms_is_same():
     assert op1 != op3
     assert op1 != op4
     assert op3 != op4
+
+

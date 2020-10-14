@@ -11,7 +11,6 @@ from concurrent.futures import Future
 import numpy as np
 
 import megengine.functional as F
-from megengine.core._imperative_rt import DeviceTensorND
 from megengine.core.tensor import megbrain_graph as mgb_graph
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 
@@ -83,3 +82,20 @@ def test_op():
     f()
 
     np.testing.assert_equal(x.numpy(), -y.result().numpy())
+
+
+def test_exception():
+    err_msg = "QwQ"
+
+    def throw_exc():
+        raise RuntimeError(err_msg)
+
+    g = mgb_graph.Graph()
+    x, _ = mgb_graph.input_callback(throw_exc, device="xpux", dtype="float32", graph=g)
+    y = mgb_graph.OutputNode(F.neg(x))
+    f = g.compile(y.outputs[0])
+    try:
+        f.execute()
+        y.get_value()
+    except Exception as exc:
+        assert err_msg in str(exc)

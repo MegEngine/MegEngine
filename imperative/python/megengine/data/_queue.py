@@ -26,7 +26,7 @@ def _clear_plasma_store():
     # `_PlasmaStoreManager.__del__` will not be called automaticly in subprocess,
     # so this function should be called explicitly
     global MGE_PLASMA_STORE_MANAGER
-    if MGE_PLASMA_STORE_MANAGER is not None:
+    if MGE_PLASMA_STORE_MANAGER is not None and MGE_PLASMA_STORE_MANAGER.refcount == 0:
         del MGE_PLASMA_STORE_MANAGER
         MGE_PLASMA_STORE_MANAGER = None
 
@@ -50,6 +50,7 @@ class _PlasmaStoreManager:
             stderr=None if debug_flag else subprocess.DEVNULL,
         )
         self.__initialized = True
+        self.refcount = 1
 
     def __del__(self):
         if self.__initialized and self.plasma_store.returncode is None:
@@ -83,6 +84,8 @@ class PlasmaShmQueue:
                     "Exception happened in starting plasma_store: {}\n"
                     "Tips: {}".format(str(e), err_info)
                 )
+        else:
+            MGE_PLASMA_STORE_MANAGER.refcount += 1
 
         self.socket_name = MGE_PLASMA_STORE_MANAGER.socket_name
 
@@ -133,6 +136,8 @@ class PlasmaShmQueue:
     def close(self):
         self.queue.close()
         self.disconnect_client()
+        global MGE_PLASMA_STORE_MANAGER
+        MGE_PLASMA_STORE_MANAGER.refcount -= 1
         _clear_plasma_store()
 
     def cancel_join_thread(self):

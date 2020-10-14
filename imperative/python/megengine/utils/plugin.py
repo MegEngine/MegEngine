@@ -12,13 +12,13 @@ import numpy as np
 
 
 def load_tensor_binary(fobj):
-    """load a tensor dumped by the :class:`BinaryOprIODump` plugin; the actual
+    """Load a tensor dumped by the :class:`BinaryOprIODump` plugin; the actual
     tensor value dump is implemented by ``mgb::debug::dump_tensor``.
 
     Multiple values can be compared by ``tools/compare_binary_iodump.py``.
 
-    :param fobj: file object, or a string that contains the file name
-    :return: tuple ``(tensor_value, tensor_name)``
+    :param fobj: file object, or a string that contains the file name.
+    :return: tuple ``(tensor_value, tensor_name)``.
     """
     if isinstance(fobj, str):
         with open(fobj, "rb") as fin:

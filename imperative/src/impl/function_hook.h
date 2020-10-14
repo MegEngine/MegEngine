@@ -15,6 +15,7 @@
 
 namespace mgb {
 namespace imperative {
+
 template <typename TFunction>
 class FunctionHooker;
 
@@ -22,13 +23,18 @@ template <typename TRet, typename... TArgs>
 class FunctionHooker<TRet(TArgs...)> {
 public:
     using FunctionType = thin_function<TRet(TArgs&&...)>;
+    //Type of hooks. Hook should accept a real function as argument
+    //and invoke it on an appropriate time
     using HookType = thin_function<TRet(FunctionType, TArgs&&...)>;
-    explicit FunctionHooker(FunctionType* fptr) : m_fptr{fptr} {}
+    explicit FunctionHooker(FunctionType* fptr) : m_fptr{fptr} {
+        m_backup = {nullptr, [](FunctionType*){}};
+    }
 
 public:
     FunctionHooker& apply_hook(HookType&& hook) {
         if (!m_backup) {
             FunctionType* backup = new FunctionType(*m_fptr);
+            //Restore hooked function, would be invoked when destructed
             std::function<void(FunctionType*)> restorer =
                     [fptr = m_fptr](FunctionType* bkp) -> void {
                 *fptr = *bkp;
@@ -36,9 +42,11 @@ public:
             };
             m_backup = decltype(m_backup)(backup, restorer);
         }
+        //Replace with hooked version
         *m_fptr = [func = *m_fptr, hook](TArgs&&... args) -> TRet {
             return hook(func, std::forward<TArgs>(args)...);
         };
+        //Convinent for chain call
         return *this;
     }
 
@@ -47,9 +55,15 @@ private:
     std::unique_ptr<FunctionType, std::function<void(FunctionType*)>> m_backup;
 };
 
+//Helps to deduce template args
 template <typename TRet, typename... TArgs>
 FunctionHooker(thin_function<TRet(TArgs...)>* f)
         ->FunctionHooker<TRet(TArgs...)>;
-}  // namespace imperative
 
+template<typename TSignature>
+auto make_shared_hook(thin_function<TSignature>* fptr){
+    return std::make_shared<FunctionHooker<TSignature>>(fptr);
+}
+
+}  // namespace imperative
 }  // namespace mgb

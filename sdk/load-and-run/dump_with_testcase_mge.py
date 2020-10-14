@@ -475,7 +475,8 @@ def main():
             args.output,
             output_mgbvars,
             append=True,
-            output_strip_info=args.output_strip_info)
+            output_strip_info=args.output_strip_info,
+            append_json=True)
 
 if __name__ == '__main__':
     main()

@@ -12,7 +12,6 @@ from megengine.module import (
     QuantStub,
 )
 from megengine.quantization.quantize import disable_fake_quant, quantize_qat
-from megengine.test import assertTensorClose
 
 
 def test_qat_convbn2d():
@@ -31,22 +30,24 @@ def test_qat_convbn2d():
         # import pdb
         # pdb.set_trace()
         qat_outputs = qat_module(inputs)
-        assertTensorClose(normal_outputs.numpy(), qat_outputs.numpy(), max_err=5e-6)
-        assertTensorClose(
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+        )
+        np.testing.assert_allclose(
             module.bn.running_mean.numpy(),
             qat_module.bn.running_mean.numpy(),
-            max_err=5e-8,
+            atol=5e-8,
         )
-        assertTensorClose(
-            module.bn.running_var.numpy(),
-            qat_module.bn.running_var.numpy(),
-            max_err=5e-7,
+        np.testing.assert_allclose(
+            module.bn.running_var.numpy(), qat_module.bn.running_var.numpy(), atol=5e-7,
         )
         module.eval()
         normal_outputs = module(inputs)
         qat_module.eval()
         qat_outputs = qat_module(inputs)
-        assertTensorClose(normal_outputs.numpy(), qat_outputs.numpy(), max_err=5e-6)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
+        )
 
 
 def test_qat_conv():
@@ -82,10 +83,10 @@ def test_qat_conv():
         disable_fake_quant(qat_net)
         normal_outputs = net(inputs)
         qat_outputs = qat_net(inputs)
-        assertTensorClose(normal_outputs.numpy(), qat_outputs.numpy())
+        np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())
 
         net.eval()
         normal_outputs = net(inputs)
         qat_net.eval()
         qat_outputs = qat_net(inputs)
-        assertTensorClose(normal_outputs.numpy(), qat_outputs.numpy())
+        np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())

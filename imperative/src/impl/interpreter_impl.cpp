@@ -187,6 +187,7 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
 }
 
 void ChannelImpl::process_one_task(Command& cmd) {
+    //TODO: remove std::visit for support osx 10.12
     std::visit([this](auto& cmd) {
         using T = std::remove_reference_t<decltype(cmd)>;
         try {

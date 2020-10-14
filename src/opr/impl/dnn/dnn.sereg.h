@@ -13,6 +13,7 @@
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/local.h"
@@ -387,6 +388,9 @@ namespace opr {
 
     MGB_SEREG_OPR(Pooling, 1);
     MGB_SEREG_OPR(PoolingBackward, 3);
+
+    MGB_SEREG_OPR(AdaptivePooling, 2);
+    MGB_SEREG_OPR(AdaptivePoolingBackward, 4);
 
     MGB_SEREG_OPR(ROIPooling, 3);
     MGB_SEREG_OPR(ROIPoolingBackward, 4);

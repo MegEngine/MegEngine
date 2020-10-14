@@ -297,7 +297,7 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
 #if MGB_JIT_MLIR
         //! FIXME mlir does't support broadcast currently.
         auto backend = MGB_GETENV("MGB_JIT_BACKEND");
-        if (!strcmp(backend, "MLIR")) {
+        if (backend && !strcmp(backend, "MLIR")) {
             for (VarNode* var : opr->input()) {
                 if (!SymbolVar{var}.as_immutable_scalar().valid()) {
                     if (opr->node_prop().dep_map().at(var) &

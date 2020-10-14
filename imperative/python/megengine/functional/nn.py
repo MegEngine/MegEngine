@@ -13,46 +13,51 @@ from ..core._imperative_rt import CompNode
 from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
-from ..core.tensor import utils
+from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
+from ..core.tensor.utils import astensor1d
 from ..distributed import WORLD, is_distributed
+from ..jit.tracing import is_tracing
 from ..random import uniform
 from ..tensor import Tensor
 from .debug_param import get_conv_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import exp, floor, log, log1p, maximum, minimum, relu
 from .math import argsort, max, sum
-from .tensor import add_axis, broadcast, concat, full, ones, remove_axis, reshape, zeros
+from .tensor import (
+    broadcast_to,
+    concat,
+    expand_dims,
+    full,
+    ones,
+    reshape,
+    squeeze,
+    zeros,
+)
 from .types import _pair, _pair_nonzero
 
 __all__ = [
+    "adaptive_avg_pool2d",
+    "adaptive_max_pool2d",
     "avg_pool2d",
-    "batched_nms",
-    "batch_norm2d",
+    "batch_norm",
     "conv2d",
     "conv_transpose2d",
     "dot",
     "dropout",
-    "embedding",
     "indexing_one_hot",
-    "interpolate",
     "leaky_relu",
-    "linear",
     "local_conv2d",
     "logsigmoid",
     "logsumexp",
-    "log_softmax",
+    "logsoftmax",
     "matmul",
     "max_pool2d",
-    "nms",
     "one_hot",
     "prelu",
-    "roi_align",
-    "roi_pooling",
     "softmax",
     "softplus",
     "svd",
-    "sync_batch_norm",
     "warp_perspective",
 ]
 
@@ -106,19 +111,18 @@ def conv2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a ``grouped convolution``. When groups is not 1,
-        in_channels and out_channels must be divisible by groups,
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
-    :type conv_mode: string or :class:`P.Convolution.Mode`.
+    :type conv_mode: string or :class:`P.Convolution.Mode`
     :param conv_mode: supports "CROSS_CORRELATION" or "CONVOLUTION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`.
+        :class:`P.Convolution.ComputeMode`
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
-        Float32 would be used for accumulator and intermediate result, but only
+        "Float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
     :return: output tensor.
     """
@@ -167,24 +171,23 @@ def conv_transpose2d(
 
     :param inp: feature map of the convolution operation.
     :param weight: convolution kernel.
-    :param bias: bias added to the result of convolution (if given)
+    :param bias: bias added to the result of convolution (if given).
     :param stride: stride of the 2D convolution operation. Default: 1
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a ``grouped convolution``. When groups is not 1,
-        in_channels and out_channels must be divisible by groups,
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by groups,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
-    :type conv_mode: string or :class:`P.Convolution.Mode`.
+    :type conv_mode: string or :class:`P.Convolution.Mode`
     :param conv_mode: supports "CROSS_CORRELATION" or "CONVOLUTION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`.
+        :class:`P.Convolution.ComputeMode`
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
-        Float32 would be used for accumulator and intermediate result, but only
+        "Float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of Float16 dtype.
     :return: output tensor.
     """
@@ -222,16 +225,16 @@ def local_conv2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     conv_mode="CROSS_CORRELATION",
-) -> Tensor:
-    """Applies spatial 2D convolution over an image with untied kernels.
-
-    Refer to :class:`~.LocalConv2d` for more information.
+):
+    """Applies spatial 2D convolution over an groupped channeled image with untied kernels.
     """
     assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
+
+    Sparse = P.Convolution.Sparse
 
     op = builtin.GroupLocal(
         stride_h=stride_h,
@@ -240,7 +243,9 @@ def local_conv2d(
         pad_w=pad_w,
         dilate_h=dilate_h,
         dilate_w=dilate_w,
-        # strategy=get_conv_execution_strategy(),
+        mode=conv_mode,
+        compute_mode="DEFAULT",
+        sparse=Sparse.DENSE,
     )
     inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
@@ -263,7 +268,7 @@ def max_pool2d(
     :param kernel_size: size of the window.
     :param stride: stride of the window. If not provided, its value is set to kernel_size.
         Default: None
-    :param padding: implicit zero padding to be added on both sides. Default: 0
+    :param padding: implicit zero padding added on both sides. Default: 0
     :return: output tensor.
     """
     if stride is None:
@@ -292,15 +297,15 @@ def avg_pool2d(
     padding: Union[int, Tuple[int, int]] = 0,
     mode: str = "AVERAGE_COUNT_EXCLUDE_PADDING",
 ) -> Tensor:
-    """Applies a 2D average pooling over an input tensor.
+    """Applies 2D average pooling over an input tensor.
 
     Refer to :class:`~.AvgPool2d` for more information.
 
     :param inp: input tensor.
     :param kernel_size: size of the window.
-    :param stride: stride of the window. If not provided, its value is set to kernel_size.
+    :param stride: stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
-    :param padding: implicit zero padding to be added on both sides. Default: 0
+    :param padding: implicit zero padding added on both sides. Default: 0
     :param mode: whether to count padding values. Default: "AVERAGE_COUNT_EXCLUDE_PADDING"
     :return: output tensor.
     """
@@ -320,6 +325,48 @@ def avg_pool2d(
         mode=mode,
     )
     (output,) = apply(op, inp)
+    return output
+
+
+def adaptive_max_pool2d(
+    inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
+) -> Tensor:
+    """Applies a 2D max adaptive pooling over an input.
+
+    Refer to :class:`~.MaxAdaptivePool2d` for more information.
+
+    :param inp: The input tensor.
+    :param oshp: (OH, OW) size of the output shape.
+    :return: output tensor.
+    """
+    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
+    if isinstance(oshp, int):
+        oshp = (oshp, oshp)
+
+    op = builtin.AdaptivePooling(mode="MAX", format="NCHW",)
+    oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
+    (output,) = apply(op, inp, oshp)
+    return output
+
+
+def adaptive_avg_pool2d(
+    inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
+) -> Tensor:
+    """Applies a 2D average adaptive pooling over an input.
+
+    Refer to :class:`~.AvgAdaptivePool2d` for more information.
+
+    :param inp: The input tensor.
+    :param oshp: (OH, OW) size of the output shape.
+    :return: output tensor.
+    """
+    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
+    if isinstance(oshp, int):
+        oshp = (oshp, oshp)
+
+    op = builtin.AdaptivePooling(mode="AVERAGE", format="NCHW",)
+    oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
+    (output,) = apply(op, inp, oshp)
     return output
 
 
@@ -346,17 +393,17 @@ def softplus(inp: Tensor) -> Tensor:
 
     .. math::
         \text{softplus}(x) = \log(1 + \exp(x))
-    
+
     softplus is a smooth approximation to the ReLU function and can be used
-    to constrain the output of a machine to always be positive.
+    to constrain the output to be always positive.
     For numerical stability the implementation follows this transformation:
 
     .. math::
-        \text{softplus}(x) = \log(1 + \exp(x)) 
-                           = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0) 
+        \text{softplus}(x) = \log(1 + \exp(x))
+                           = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0)
                            = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
 
-    :param inp: The input tensor
+    :param inp: input tensor.
 
     Examples:
 
@@ -369,9 +416,9 @@ def softplus(inp: Tensor) -> Tensor:
         x = tensor(np.arange(-3, 3, dtype=np.float32))
         y = F.softplus(x)
         print(y.numpy())
-    
+
     Outputs:
-    
+
     .. testoutput::
 
         [0.0486 0.1269 0.3133 0.6931 1.3133 2.1269]
@@ -380,7 +427,7 @@ def softplus(inp: Tensor) -> Tensor:
     return log1p(exp(-abs(inp))) + relu(inp)
 
 
-def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
+def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
     input Tensor. The LogSoftmax formulation can be simplified as:
 
@@ -390,13 +437,13 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     For numerical stability the implementation follows this transformation:
 
     .. math::
-        \operatorname{logsoftmax}(x) 
+        \operatorname{logsoftmax}(x)
         = \log (\frac{\exp (x)}{\sum_{i}(\exp (x_{i}))})
         = x - \log (\sum_{i}(\exp (x_{i})))
         = x - logsumexp(x)
-    
-    :param inp: The input tensor
-    :param axis: An axis along which log_softmax will be applied.
+
+    :param inp: input tensor.
+    :param axis: axis along which logsoftmax will be applied.
 
     Examples:
 
@@ -407,11 +454,11 @@ def log_softmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         import megengine.functional as F
 
         x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-        y = F.log_softmax(x, axis=1)
+        y = F.logsoftmax(x, axis=1)
         print(y.numpy())
 
     Outputs:
-    
+
     .. testoutput::
 
         [[-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]
@@ -430,7 +477,7 @@ def logsigmoid(inp: Tensor) -> Tensor:
         = - \log(1 + exp(-x))
         = - \text{softplus}(-x)
 
-    :param inp: The input tensor
+    :param inp: input tensor.
 
     Examples:
 
@@ -459,11 +506,10 @@ def logsumexp(
     inp: Tensor, axis: Union[int, Sequence[int]], keepdims: bool = False
 ) -> Tensor:
     r"""
-    Compute the log of the sum of exponentials of inputs along the given :attr:`axis`. 
-    The computation is numerically stabilized.
-    
+    Calculates the logarithm of the inputs' exponential sum along the given :attr:`axis`.
+
     .. math::
-        
+
         \operatorname{logsumexp}(\boldsymbol{x})= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
 
     For numerical stability, the implementation follows this transformation:
@@ -472,18 +518,18 @@ def logsumexp(
 
         \operatorname{logsumexp}(\boldsymbol{x})= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
         = \operatorname{logsumexp}(\boldsymbol{x})=b+\log \sum_{j=1}^{n} \exp \left(x_{j}-b\right)
-    
+
     where
 
     .. math::
         b = \max(x_j)
 
-    :param inp: The input tensor.
-    :param axis: Axis over which the sum is taken. It can be a single axis or a list of axes.
+    :param inp: input tensor.
+    :param axis: axis over which the sum is taken. It could be single axis or list of axes.
     :param keepdims: whether to retain :attr:`axis` or not for the output tensor.
 
     Examples:
-    
+
     .. testcode::
 
         import numpy as np
@@ -501,11 +547,11 @@ def logsumexp(
         [-0.5481  4.4519]
 
     """
-    max_value = max(inp, axis, keepdims=True)
+    max_value = max(inp.detach(), axis, keepdims=True)
     if keepdims:
         return max_value + log(sum(exp(inp - max_value), axis, keepdims))
     else:
-        return remove_axis(max_value, axis=None) + log(
+        return squeeze(max_value, axis=None) + log(
             sum(exp(inp - max_value), axis, keepdims)
         )
 
@@ -523,13 +569,13 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     .. math::
             \text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
 
-    It is applied to all elements along axis, and will re-scale them so that
-    the elements lie in the range `[0, 1]` and sum to 1.
+    It is applied to all elements along axis, and rescales elements so that
+    they stay in the range `[0, 1]` and sum to 1.
 
     See :class:`~megengine.module.activation.Softmax` for more details.
 
-    :param inp: The input tensor.
-    :param axis: An axis along which softmax will be applied. By default,
+    :param inp: input tensor.
+    :param axis: an axis along which softmax will be applied. By default,
         softmax will apply along the highest ranked axis.
 
     Examples:
@@ -560,7 +606,7 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     return cached / down
 
 
-def batch_norm2d(
+def batch_norm(
     inp: Tensor,
     running_mean: Tensor = None,
     running_var: Tensor = None,
@@ -572,7 +618,7 @@ def batch_norm2d(
     eps: float = 1e-5,
     inplace: bool = True
 ):
-    """Applies batch normalization to the input.
+    r"""Applies batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
@@ -584,26 +630,28 @@ def batch_norm2d(
     :param bias: bias tensor in the learnable affine parameters.
         See :math:`\beta` in :class:`~.BatchNorm2d`.
     :param training: a boolean value to indicate whether batch norm is performed
-        in traning mode. Default: False
+        in training mode. Default: False
     :param momentum: value used for the ``running_mean`` and ``running_var``
         computation.
         Default: 0.9
     :param eps: a value added to the denominator for numerical stability.
         Default: 1e-5
-    :param inplace: whether to update running_mean and running_var inplace or return new tensors 
+    :param inplace: whether to update ``running_mean`` and ``running_var`` inplace or return new tensors
         Default: True
     :return: output tensor.
     """
+    if inp.ndim != 4:
+        raise NotImplementedError("batch_norm for ndim != 4")
 
     def full_value(value):
         C = inp.shape[1]
         (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
-        return broadcast(x, [1, C, 1, 1])
+        return broadcast_to(x, [1, C, 1, 1])
 
     def expand_or_full(x, value):
         if x is None:
             return full_value(value)
-        return add_axis(x, [0, 2, 3])
+        return expand_dims(x, [0, 2, 3])
 
     def make_full_if_none(x, value):
         if x is None:
@@ -676,7 +724,7 @@ def sync_batch_norm(
     eps_mode="ADDITIVE",
     group=WORLD,
 ) -> Tensor:
-    """Applies synchronized batch normalization to the input.
+    r"""Applies synchronized batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
@@ -717,7 +765,7 @@ def sync_batch_norm(
 
         if is_distributed():
             # reduce all nodes' data to calculate mean and variance
-            reduce_size = broadcast(Tensor(reduce_size, dtype=_dtype), [1] * _ndim)
+            reduce_size = broadcast_to(Tensor(reduce_size, dtype=_dtype), [1] * _ndim)
             stat = concat(
                 [reduce_size.astype(_dtype), channel_x1s, channel_x2s], axis=1
             )
@@ -838,6 +886,10 @@ def warp_perspective(
     :param interp_mode: interpolation methods. Default: "LINEAR"
     :return: output tensor.
 
+    Note:
+
+    The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
+
     Examples:
 
     .. testcode::
@@ -868,7 +920,8 @@ def warp_perspective(
         imode=interp_mode, bmode=border_mode, format="NCHW", border_val=border_val
     )
     inp, M = utils.convert_inputs(inp, M)
-    (result,) = apply(op, inp, M, Tensor(dsize))
+    dsize = astensor1d(dsize, inp, dtype="int32", device=inp.device)
+    (result,) = apply(op, inp, M, dsize)
     return result
 
 
@@ -885,19 +938,18 @@ def matmul(
 
     With different inputs dim, this function behaves differently:
 
-    - Both 1-D tensor, simply forward to dot.
+    - Both 1-D tensor, simply forward to ``dot``.
     - Both 2-D tensor, normal matrix multiplication.
     - If one input tensor is 1-D, matrix vector multiplication.
-    - If at least one tensor are 3-dimensional or >3-dimensional, the batched matrix-matrix is returned, and the tensor with smaller dimension will
+    - If at least one tensor are 3-dimensional or >3-dimensional, the other tensor should have dim >= 2, the batched matrix-matrix is returned, and the tensor with smaller dimension will
       be broadcasted. For example:
-        - inp1: `(k, m)`, inp2: `(m, p)`, return: `(k, p)`
         - inp1: `(n, k, m)`, inp2: `(n, m, p)`, return: `(n, k, p)`
         - inp1: `(n, k, m)`, inp2: `(m, p)`, return: `(n, k, p)`
         - inp1: `(n, j, k, m)`, inp2: `(n, j, m, p)`, return: `(n, j, k, p)`
 
-    :param inp1: The first matrix to be multiplied
-    :param inp2: The second matrix to be multiplied
-    :return: The output tensor
+    :param inp1: first matrix to be multiplied.
+    :param inp2: second matrix to be multiplied.
+    :return: output tensor.
 
     Examples:
 
@@ -931,10 +983,10 @@ def matmul(
         if dim1 != dim2:
             if dim1 < dim2:
                 shape1 = shape2[: dim2 - dim1] + shape1
-                inp1 = inp1.broadcast(*shape1)
+                inp1 = broadcast_to(inp1, shape1)
             else:
                 shape2 = shape1[: dim1 - dim2] + shape2
-                inp2 = inp2.broadcast(*shape2)
+                inp2 = broadcast_to(inp2, shape2)
         reshaped_batch_size = 1
         for i in shape1[:-2]:
             reshaped_batch_size *= i
@@ -949,9 +1001,9 @@ def matmul(
         shp = shape1[:-1] + shape2[-1:]
     elif dim1 == 3 or dim2 == 3:
         if dim2 < 3:
-            inp2 = inp2.broadcast(*(inp1.shape[:1] + inp2.shape))
+            inp2 = broadcast_to(inp2, inp1.shape[:1] + inp2.shape)
         elif dim1 < 3:
-            inp1 = inp1.broadcast(*(inp2.shape[:1] + inp1.shape))
+            inp1 = broadcast_to(inp1, inp2.shape[:1] + inp1.shape)
         op = builtin.BatchedMatrixMul(
             transposeA=transpose_a,
             transposeB=transpose_b,
@@ -961,10 +1013,10 @@ def matmul(
     else:
         if dim1 == 1:
             shp = (inp2.shape[1],)
-            inp1 = add_axis(inp1, 0)
+            inp1 = expand_dims(inp1, 0)
         if dim2 == 1:
             shp = (inp1.shape[0],)
-            inp2 = add_axis(inp2, 1)
+            inp2 = expand_dims(inp2, 1)
         op = builtin.MatrixMul(
             transposeA=transpose_a,
             transposeB=transpose_b,
@@ -981,12 +1033,12 @@ def matmul(
 
 def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
     """
-    Compute dot-product of two vectors ``inp1`` and ``inp2``.
+    Computes dot-product of two vectors ``inp1`` and ``inp2``.
     inputs must be 1-dimensional, scalar input can be automatically broadcasted.
 
-    :param inp1: The first vector
-    :param inp2: The second vector
-    :return: The output value
+    :param inp1: first vector.
+    :param inp2: second vector.
+    :return: output value.
 
     Examples:
 
@@ -1016,10 +1068,10 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
 def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     """
-    Compute the singular value decompositions of input matrix ``inp``.
+    Computes the singular value decompositions of input matrix.
 
-    :param inp: The input matrix, must has shape ``[..., M, N]``
-    :return: The output matrices, U, sigma, V
+    :param inp: input matrix, must has shape `[..., M, N]`.
+    :return: output matrices, `(U, sigma, V)`.
 
     Examples:
 
@@ -1036,7 +1088,7 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     Outputs:
 
     .. testoutput::
-    
+
         [7.3485 1.    ]
 
     """
@@ -1052,8 +1104,7 @@ def interpolate(
     mode: str = "BILINEAR",
     align_corners: bool = None,
 ) -> Tensor:
-    r"""Down/up samples the input tensor to either the given size or the given
-    scale_factor.
+    r"""Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
 
     :param inp: input tensor.
     :param size: size of the output tensor. Default: None
@@ -1069,13 +1120,12 @@ def interpolate(
         import numpy as np
         from megengine import tensor
         import megengine.functional as F
-        from megengine.test import assertTensorClose
 
         x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
-        out = F.interpolate(x, [4, 4], align_corners=False)
+        out = F.nn.interpolate(x, [4, 4], align_corners=False)
         print(out.numpy())
-        out2 = F.interpolate(x, scale_factor=2.)
-        assertTensorClose(out.numpy(), out2.numpy())
+        out2 = F.nn.interpolate(x, scale_factor=2.)
+        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     Outputs:
 
@@ -1100,7 +1150,7 @@ def interpolate(
             align_corners = False
 
     if mode == "LINEAR":
-        inp = add_axis(inp, 3)
+        inp = expand_dims(inp, 3)
 
     if inp.ndim != 4:
         raise ValueError("shape of input tensor must correspond to the operartion mode")
@@ -1170,7 +1220,7 @@ def interpolate(
             [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
             axis=0,
         ).reshape(1, 3, 3)
-        weight = broadcast(weight, (inp.shape[0], 3, 3))
+        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
     else:
         hscale = 1.0 * ih / oh
         wscale = 1.0 * iw / ow
@@ -1186,7 +1236,7 @@ def interpolate(
             [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
             axis=0,
         ).reshape(1, 3, 3)
-        weight = broadcast(weight, (inp.shape[0], 3, 3))
+        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
 
     weight = weight.astype("float32")
     ret = warp_perspective(inp, weight, dsize, interp_mode="LINEAR")
@@ -1197,12 +1247,12 @@ def interpolate(
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
     """Returns a new tensor where each of the elements are randomly set to zero
-    with probability P = ``drop_prob``. Optionally rescale the output tensor.
+    with probability P = ``drop_prob``. Optionally rescale the output tensor if ``training`` is True.
 
     :param inp: input tensor.
     :param drop_prob: probability to drop (set to zero) a single element.
     :param training: the default behavior of ``dropout`` during training is to rescale the output,
-        then it can be replaced by an :class:`~.Identity` during inference, default to True.
+        then it can be replaced by an :class:`~.Identity` during inference. Default: True
     :return: the output tensor
 
     Examples:
@@ -1244,10 +1294,10 @@ def embedding(
     """Applies lookup table for embedding.
 
     :param inp: tensor with indices.
-    :param weight: learnable weights which embedding from.
-    :param padding_idx: should be set to None, not support now.
-    :param max_norm: should be set to None, not support now.
-    :param norm_type: should be set to None, not support now.
+    :param weight: learnable weights which embeds from.
+    :param padding_idx: should be set to None, not supported now.
+    :param max_norm: should be set to None, not supported now.
+    :param norm_type: should be set to None, not supported now.
     :return: output tensor.
 
     Refer to :class:`~.Embedding` for more information.
@@ -1288,7 +1338,7 @@ def roi_pooling(
             np.random.seed(42)
             inp = tensor(np.random.randn(1, 1, 128, 128))
             rois = tensor(np.random.random((4, 5)))
-            y = F.roi_pooling(inp, rois, (2, 2))
+            y = F.nn.roi_pooling(inp, rois, (2, 2))
             print(y.numpy()[0])
 
     Outputs:
@@ -1323,14 +1373,14 @@ def roi_align(
 ) -> Tensor:
     """Applies roi align on input feature.
 
-    :param inp: tensor that represents the input feature, `(N, C, H, W)` images.
-    :param rois: `(N, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
+    :param inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
+    :param rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
     :param output_shape: `(height, width)` shape of output rois feature.
     :param mode: "max" or "average", use max/average align just like max/average pooling. Default: "average"
     :param spatial_scale: scale the input boxes by this number. Default: 1.0
     :param sample_points: number of inputs samples to take for each output sample.
         0 to take samples densely. Default: 2
-    :param aligned: wheather align the input feature, with `aligned=True`,
+    :param aligned: wheather to align the input feature, with `aligned=True`,
         we first appropriately scale the ROI and then shift it by -0.5. Default: True
     :return: output tensor.
 
@@ -1345,7 +1395,7 @@ def roi_align(
             np.random.seed(42)
             inp = tensor(np.random.randn(1, 1, 128, 128))
             rois = tensor(np.random.random((4, 5)))
-            y = F.roi_align(inp, rois, (2, 2))
+            y = F.nn.roi_align(inp, rois, (2, 2))
             print(y.numpy()[0])
 
     Outputs:
@@ -1383,7 +1433,7 @@ def roi_align(
 def indexing_one_hot(
     src: Tensor, index: Tensor, axis: int = 1, keepdims=False
 ) -> Tensor:
-    r"""One-hot indexing for some axis.
+    r"""One-hot indexing for some axes.
 
     :param src: input tensor.
     :param index: index tensor.
@@ -1417,19 +1467,23 @@ def indexing_one_hot(
     index = utils.convert_single_value(index, (src,), dtype="int32", device=src.device)
     (result,) = apply(op, src, index)
     if not keepdims:
-        result = remove_axis(result, axis)
+        result = squeeze(result, axis)
     return result
 
 
-def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
+def nms(
+    boxes: Tensor, scores: Tensor, iou_thresh: float, max_output: Optional[int] = None
+) -> Tensor:
     r"""
     Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union(IoU).
 
     :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
-    :param iou_thresh: iou threshold for overlapping.
+    :param iou_thresh: IoU threshold for overlapping.
     :param scores: tensor of shape `(N,)`, the score of boxes.
+    :param max_output: the maximum number of boxes to keep; it is optional if this operator is not traced 
+        otherwise it required to be specified; if it is not specified, all boxes are kept.
     :return: indices of the elements that have been kept by NMS.
-    
+
     Examples:
 
     .. testcode::
@@ -1444,13 +1498,13 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
         x[:,2:] = np.random.rand(100,2)*20 + 100
         scores = tensor(np.random.rand(100))
         inp = tensor(x)
-        result = F.nms(inp, scores, iou_thresh=0.7)
+        result = F.nn.nms(inp, scores, iou_thresh=0.7)
         print(result.numpy())
 
     Outputs:
 
     .. testoutput::
-    
+
         [75 69]
 
     """
@@ -1466,74 +1520,24 @@ def nms(boxes: Tensor, scores: Tensor, iou_thresh: float) -> Tensor:
     scores = scores.detach()
     sorted_idx = argsort(scores, descending=True)
     boxes = boxes[sorted_idx]
-    max_output = boxes.shape[0]
+
+    if is_tracing():
+        assert (
+            max_output is not None and max_output > 0
+        ), "max_output should be specified under tracing"
+
+    if max_output is None:
+        max_output = boxes.shape[0]
 
     op = builtin.NMSKeep(iou_thresh, max_output)
     inp = utils.convert_inputs(boxes.reshape(1, -1, 4))
     indices, count = apply(op, *inp)
-    indices = indices[0][: count.item()]
+    indices = indices[0][: count[0]]
     keep_inds = sorted_idx[indices]
     return keep_inds
 
 
-def batched_nms(
-    boxes: Tensor, scores: Tensor, idxs: Tensor, iou_thresh: float,
-) -> Tensor:
-    r"""
-    Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union (IoU).
 
-    :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format
-    :param iou_thresh: iou threshold for overlapping
-    :param idxs: tensor of shape `(N,)`, the class indexs of boxes in the batch.
-    :param scores: tensor of shape `(N,)`, the score of boxes.
-    :return: indices and the number of the elements that have been kept by NMS
 
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = np.zeros((100,4))
-        np.random.seed(42)
-        x[:,:2] = np.random.rand(100,2)*20
-        x[:,2:] = np.random.rand(100,2)*20 + 100
-        scores = tensor(np.random.rand(100))
-        idxs =  tensor(np.random.randint(0, 10, 100))
-        inp = tensor(x)
-        result = F.batched_nms(inp, scores, idxs, iou_thresh=0.6)
-        print(result.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [75 41 99 98 69 64 11 27 35 18]
-
-    """
-    assert (
-        boxes.ndim == 2 and boxes.shape[1] == 4
-    ), "the expected shape of boxes is (N, 4)"
-    assert scores.ndim == 1, "the expected shape of scores is (N,)"
-    assert idxs.ndim == 1, "the expected shape of idxs is (N,)"
-    assert boxes.shape[0] == scores.shape[0] == idxs.shape[0]
-
-    boxes = boxes.detach()
-    scores = scores.detach()
-    idxs = idxs.detach()
-    max_coordinate = boxes.max()
-    offsets = idxs.astype("float32") * (max_coordinate + 1)
-    boxes = boxes + offsets.reshape(-1, 1).broadcast(boxes.shape[0], 4)
-
-    sorted_idx = argsort(scores, descending=True)
-    boxes = boxes[sorted_idx]
-    max_output = boxes.shape[0]
-
-    op = builtin.NMSKeep(iou_thresh, max_output)
-    inp = utils.convert_inputs(boxes.reshape(1, -1, 4))
-    indices, count = apply(op, *inp)
-    indices = indices[0][: count.item()]
-    keep_inds = sorted_idx[indices]
-    return keep_inds
+from .loss import *  # isort:skip
+from .quantized import conv_bias_activation  # isort:skip

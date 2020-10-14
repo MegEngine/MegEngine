@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 from .activation import LeakyReLU, PReLU, ReLU, Sigmoid, Softmax
+from .adaptive_pooling import AdaptiveAvgPool2d, AdaptiveMaxPool2d
 from .batchnorm import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 from .concat import Concat
 from .conv import Conv2d, ConvRelu2d, ConvTranspose2d, LocalConv2d

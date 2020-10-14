@@ -15,7 +15,6 @@ import megengine as mge
 import megengine.functional as F
 from megengine import Parameter, Tensor
 from megengine.module import Conv2d
-from megengine.test import assertTensorClose
 
 
 def test_set_value():
@@ -23,21 +22,21 @@ def test_set_value():
     param = Parameter(v0)
     v1 = np.random.random((2, 3)).astype(np.float32)
     param.set_value(v1)
-    assertTensorClose(param.numpy(), v1, max_err=5e-6)
+    np.testing.assert_allclose(param.numpy(), v1, atol=5e-6)
     v2 = np.random.random((3, 3)).astype(np.float32)
     # TODO: add this
     # with pytest.raises(ValueError):
     #     param.set_value(v2)
-    assertTensorClose(param.numpy(), v1, max_err=5e-6)
+    np.testing.assert_allclose(param.numpy(), v1, atol=5e-6)
 
 
 @pytest.mark.skip(reason="fill unsupported")
 def test_fill():
     a = Tensor(np.zeros((2, 3), dtype=np.float32))
     a.fill(3)
-    assertTensorClose(a.numpy(), np.full((2, 3), 3, dtype=np.float32))
+    np.testing.assert_allclose(a.numpy(), np.full((2, 3), 3, dtype=np.float32))
     a.fill(124.568)
-    assertTensorClose(a.numpy(), np.full((2, 3), 124.568, dtype=np.float32))
+    np.testing.assert_allclose(a.numpy(), np.full((2, 3), 124.568, dtype=np.float32))
 
 
 # TODO: remove or rewrite following test
@@ -51,11 +50,11 @@ def test_fill():
 #         f = compile(v, None)
 
 #     out, = f()
-#     assertTensorClose(out, p_ * 2)
+#     np.testing.assert_allclose(out, p_ * 2)
 
 #     F.add_update(p, p)
 #     out, = f()
-#     assertTensorClose(out, p_ * 4)
+#     np.testing.assert_allclose(out, p_ * 4)
 
 
 # TODO: remove or rewrite following test
@@ -74,7 +73,7 @@ def test_fill():
 #     data1 = Input("data", value=v)
 #     out1 = net(data1)
 
-#     assertTensorClose(out0, out1.numpy())
+#     np.testing.assert_allclose(out0, out1.numpy())
 
 
 # def test_shape_warning():

@@ -69,14 +69,14 @@ class Module(metaclass=ABCMeta):
         self._forward_pre_hooks = OrderedDict()
         self._forward_hooks = OrderedDict()
 
+        self._modules = []
+
     @abstractmethod
     def forward(self, inputs):
         pass
 
     def register_forward_pre_hook(self, hook: Callable) -> HookHandler:
-        """Register a hook to handle forward inputs. `hook` should be a function
-
-        Note that `inputs` keyword inputs
+        """Registers a hook to handle forward inputs. `hook` should be a function.
 
         :param hook: a function that receive `module` and `inputs`, then return
         a modified `inputs` or `None`.
@@ -85,7 +85,7 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_pre_hooks, hook)
 
     def register_forward_hook(self, hook: Callable) -> HookHandler:
-        """Register a hook to handle forward results. `hook` should be a function that
+        """Registers a hook to handle forward results. `hook` should be a function that
         receive `module`, `inputs` and `outputs`, then return a modified `outputs` or `None`.
 
         This method return a handler with :meth:`~.HookHandler.remove` interface to delete the hook.
@@ -124,12 +124,12 @@ class Module(metaclass=ABCMeta):
         returned iterable is guaranteed to be identical, as long as all the involved
         module objects' ``__dict__`` does not change thoughout those calls.
 
-        :param recursive: Whether to recursively scan all the submodules.
-        :param with_key: Whether to yield keys along with yielded objects.
-        :param with_parent: Whether to yield ``self`` along with yielded objects.
-        :param prefix: The prefix appended to the yielded keys.
-        :param predicate: The predicate function applied to scanned objects.
-        :param seen: A dict that records whether a module has been traversed yet.
+        :param recursive: whether to recursively scan all the submodules.
+        :param with_key: whether to yield keys along with yielded objects.
+        :param with_parent: whether to yield ``self`` along with yielded objects.
+        :param prefix: prefix appended to the yielded keys.
+        :param predicate: the predication function applied to scanned objects.
+        :param seen: a dict that records whether a module has been traversed yet.
         """
         if seen is None:
             seen = set([id(self)])
@@ -191,10 +191,10 @@ class Module(metaclass=ABCMeta):
         self, prefix: Optional[str] = None, recursive: bool = True, **kwargs
     ) -> Iterable[Tuple[str, Parameter]]:
         """Returns an iterable for key :class:`~.Parameter` pairs of the module, where
-        ``key`` is the dotted path from this module to the :class:`~.Parameter` .
+        ``key`` is the dotted path from this module to the :class:`~.Parameter`.
 
-        :param prefix: The prefix prepended to the keys.
-        :param recursive: If ``True``, returns all :class:`~.Parameter` within this
+        :param prefix: prefix prepended to the keys.
+        :param recursive: if ``True``, returns all :class:`~.Parameter` within this
             module, else only returns :class:`~.Parameter` that are direct attributes
             of this module.
         """
@@ -223,7 +223,7 @@ class Module(metaclass=ABCMeta):
 
         Buffer is defined to be :class:`~.Tensor` excluding :class:`~.Parameter`.
 
-        :param recursive: If ``True``, returns all buffers within this
+        :param recursive: if ``True``, returns all buffers within this
             module, else only returns buffers that are direct attributes
             of this module.
         """
@@ -239,8 +239,8 @@ class Module(metaclass=ABCMeta):
 
         Buffer is defined to be :class:`~.Tensor` excluding :class:`~.Parameter`.
 
-        :param prefix: The prefix prepended to the keys.
-        :param recursive: If ``True``, returns all buffers within this
+        :param prefix: prefix prepended to the keys.
+        :param recursive: if ``True``, returns all buffers within this
             module, else only returns buffers that are direct attributes
             of this module.
         """
@@ -285,7 +285,7 @@ class Module(metaclass=ABCMeta):
         module, including itself, where 'key' is the dotted path from this module to the
         submodules.
 
-        :param prefix: The prefix prepended to the path.
+        :param prefix: prefix prepended to the path.
         """
         if "with_parent" in kwargs and kwargs["with_parent"]:
             yield ("" if prefix is None else prefix), self, None
@@ -296,24 +296,24 @@ class Module(metaclass=ABCMeta):
         )
 
     def apply(self, fn: "Callable[[Module], Any]") -> None:
-        """Apply function ``fn`` to all the modules within this module, including
+        """Applies function ``fn`` to all the modules within this module, including
         itself.
 
-        :param fn: The function to be applied on modules.
+        :param fn: the function to be applied on modules.
         """
         for it in self.modules():
             fn(it)
 
     @deprecated(version="1.0")
     def zero_grad(self) -> None:
-        """Set all parameters' grads to zero
+        """Sets all parameters' grads to zero
         """
         for param in self.parameters():
             if param.grad is not None:
                 param.grad.reset_zero()
 
     def train(self, mode: bool = True, recursive: bool = True) -> None:
-        """Set training mode of all the modules within this module (including itself) to
+        """Sets training mode of all the modules within this module (including itself) to
         ``mode``. This effectively sets the ``training`` attributes of those modules
         to ``mode``, but only has effect on certain modules (e.g.
         :class:`~.BatchNorm2d`, :class:`~.Dropout`, :class:`~.Observer`)
@@ -331,14 +331,14 @@ class Module(metaclass=ABCMeta):
         self.apply(fn)
 
     def eval(self) -> None:
-        """Set training mode of all the modules within this module (including itself) to
+        """Sets training mode of all the modules within this module (including itself) to
         ``False``. See :meth:`~.Module.train` for details.
         """
         self.train(False)
 
     def disable_quantize(self, value=True):
         r"""
-        Set ``module``'s ``quantize_disabled`` attribute and return ``module``.
+        Sets ``module``'s ``quantize_disabled`` attribute and return ``module``.
         Could be used as a decorator.
         """
 
@@ -351,7 +351,7 @@ class Module(metaclass=ABCMeta):
     def replace_param(
         self, params: dict, start_pos: int, seen: Optional[Set[int]] = None
     ):
-        """Replace module's parameters with `params`, used by :class:`~.ParamPack` to
+        """Replaces module's parameters with `params`, used by :class:`~.ParamPack` to
         speedup multimachine training.
         """
         offset = 0
@@ -407,7 +407,7 @@ class Module(metaclass=ABCMeta):
         state_dict: Union[dict, Callable[[str, Tensor], Optional[np.ndarray]]],
         strict=True,
     ):
-        r"""Load a given dictionary created by :func:`state_dict` into this module.
+        r"""Loads a given dictionary created by :func:`state_dict` into this module.
         If ``strict`` is ``True``, the keys of :func:`state_dict` must exactly match the keys
         returned by :func:`state_dict`.
 
@@ -518,3 +518,57 @@ class Module(metaclass=ABCMeta):
             loaded.append(k)
 
         return set(loaded), set(skipped)
+
+    def __setattr__(self, name: str, value):
+        if _is_module(value):
+            modules = self.__dict__.get("_modules")
+            if modules is None:
+                raise AttributeError(
+                    "cannot assign module before Module.__init__() call"
+                )
+            if name not in self.__dict__:
+                modules.append(name)
+        super().__setattr__(name, value)
+
+    def __delattr__(self, name: str):
+        if name in self.__dict__ and _is_module(self.__dict__[name]):
+            modules = self.__dict__.get("_modules")
+            modules.remove(name)
+        super().__delattr__(name)
+
+    def _module_info_string(self) -> str:
+        r"""Set the extra representation of the module.
+        """
+        return ""
+
+    def __repr__(self):
+        def add_indent(repr_str, num_spaces):
+            s = repr_str.split("\n")
+            # don't do anything for single-line stuff
+            if len(s) == 1:
+                return repr_str
+            first = s.pop(0)
+            s = [(num_spaces * " ") + line for line in s]
+            s = "\n".join(s)
+            s = first + "\n" + s
+            return s
+
+        extra_lines = []
+        extra_repr = self._module_info_string()
+        if extra_repr:
+            extra_lines = extra_repr.split("\n")
+        child_lines = [
+            "(" + name + "): " + add_indent(repr(self.__dict__[name]), 2)
+            for name in self._modules
+        ]
+        lines = extra_lines + child_lines
+        main_str = self.__class__.__name__ + "("
+        if lines:
+            # simple one-liner info, which most builtin Modules will use
+            if len(extra_lines) == 1 and not child_lines:
+                main_str += extra_lines[0]
+            else:
+                main_str += "\n  " + "\n  ".join(lines) + "\n"
+
+        main_str += ")"
+        return main_str

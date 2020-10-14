@@ -30,19 +30,18 @@ class ImageFolder(VisionDataset):
         r"""
         ImageFolder is a class for loading image data and labels from a organized folder.
 
-        the folder is expected to be organized as followed
-        root/cls/xxx.img_ext
+        The folder is expected to be organized as followed: root/cls/xxx.img_ext
 
-        labels are indices of sorted classes in the root directory
+        Labels are indices of sorted classes in the root directory.
 
-        :param root: root directory of an image folder
+        :param root: root directory of an image folder.
         :param loader: a function used to load image from path,
                        if ``None``, default function that loads
-                       images with PILwill be called
+                       images with PIL will be called.
         :param check_valid_func: a function used to check if files in folder are
                                  expected image files, if ``None``, default function
-                                 that checks file extensions will be called
-        :param class_name: if ``True``, return class name instead of class index
+                                 that checks file extensions will be called.
+        :param class_name: if ``True``, return class name instead of class index.
 
         """
         super().__init__(root, order=("image", "image_category"))

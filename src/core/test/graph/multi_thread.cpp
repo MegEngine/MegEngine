@@ -12,6 +12,7 @@
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/system.h"
+#include "megbrain/opr/dnn/convolution.h"
 
 #include "megbrain/test/helper.h"
 
@@ -19,6 +20,37 @@
 #include <thread>
 
 using namespace mgb;
+
+namespace{
+template <typename Opr>
+HostTensorND eval_conv(const std::shared_ptr<HostTensorND>& src,
+                       const std::shared_ptr<HostTensorND>& filter,
+                       const typename Opr::Param& param = {}) {
+    auto graph = ComputingGraph::make();
+    graph->options().log_level = 0;
+    SymbolVar x = opr::Host2DeviceCopy::make(*graph, src);
+    SymbolVar y = opr::Host2DeviceCopy::make(*graph, filter);
+    SymbolVar z = Opr::make(x, y, param);
+    HostTensorND host_z;
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    func->execute();
+
+    host_z.sync();
+    return host_z;
+}
+
+template <typename Opr>
+HostTensorND eval_conv_cpu(const HostTensorND& xv, const HostTensorND& fv,
+                           const typename Opr::Param& param = {}) {
+    auto cn = CompNode::load("cpux");
+    auto src = std::make_shared<HostTensorND>(cn, xv.layout()),
+         filter = std::make_shared<HostTensorND>(cn, fv.layout());
+    memcpy(src->raw_ptr(), xv.raw_ptr(), xv.layout().span().dist_byte());
+    memcpy(filter->raw_ptr(), fv.raw_ptr(), fv.layout().span().dist_byte());
+    return eval_conv<Opr>(src, filter, param);
+}
+}  // namespace
+
 
 TEST(TestGraph, AsyncExecLevel) {
     REQUIRE_GPU(1);
@@ -164,5 +196,37 @@ TEST(TestGraph, ParallelRun) {
     for (auto&& i : workers)
         i.join();
 }
+#ifndef IOS
+TEST(TestGraph, MultiThreadRecorder) {
+    using ConvParam = opr::Convolution::Param;
+    ConvParam param;
+    param.sparse = ConvParam::Sparse::GROUP;
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpux");
+    auto host_x = gen({3, 4, 10, 8}, cn), host_y = gen({2, 3, 2, 3, 3}, cn);
+    auto worker = [&](int record_level) {
+        HostTensorND host_z;
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Host2DeviceCopy::make(*graph, host_y),
+             z = opr::Convolution::make(x, y, param);
+        graph->options().comp_node_seq_record_level = record_level;
+        graph->options().var_sanity_check_first_run = false;
+        auto func = graph->compile({make_callback_copy(z, host_z)});
+        for (int i = 0; i < 5; i++) {
+            func->execute();
+        }
+        auto expect = eval_conv_cpu<opr::Convolution>(*host_x, *host_y, param);
+        MGB_ASSERT_TENSOR_NEAR(expect, host_z, 1e-3);
+    };
+
+    std::vector<std::thread> workers;
+    for (size_t i = 0; i < 4; ++i)
+        workers.emplace_back(worker, i % 2);
+
+    for (auto&& i : workers)
+        i.join();
+}
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

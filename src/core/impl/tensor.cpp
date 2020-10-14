@@ -614,8 +614,12 @@ void mgb::dev_tensor_memset(const DeviceTensorND& tensor, int val) {
 #endif
 #if MGB_ATLAS
        case CompNode::DeviceType::ATLAS:
+#if MGB_USE_ATLAS_ASYNC_API
            MGB_ATLAS_CHECK(aclrtMemsetAsync(ptr, -1, val, size,
                                             env.atlas_env().stream));
+#else
+           MGB_ATLAS_CHECK(aclrtMemset(ptr, -1, val, size));
+#endif
            break;
 #endif
         case CompNode::DeviceType::CPU: {

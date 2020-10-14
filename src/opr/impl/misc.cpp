@@ -159,6 +159,7 @@ void Cumsum::init_output_static_infer_desc() {
             {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_workspace});
 }
 
+
 /* ================= CondTake =================  */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondTake);
 

@@ -179,6 +179,11 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum_alias('Format', 'ConvolutionV0')
  )
 
+(pdef('AdaptivePooling').
+ add_enum_alias('Mode', 'Pooling').
+ add_enum_alias('Format', 'ConvolutionV0')
+ )
+
 (pdef('LRN',
       'see ImageNet Classification with Deep Convolutional Neural Networks for'
       ' meaning of the fields').

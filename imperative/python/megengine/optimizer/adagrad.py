@@ -23,12 +23,12 @@ class Adagrad(Optimizer):
 
     :param params: iterable of parameters to optimize or dicts defining
         parameter groups.
-    :param lr: coefficient that scale delta before it is applied
-        to the parameters (default: 1e-2).
-    :param lr_decay: learning rate decay (default: 0)
+    :param lr: coefficient that scales delta before it is applied
+        to the parameters. Default: 1e-2
+    :param lr_decay: learning rate decay. Default: 0
     :param eps: term added to the denominator to improve
-        numerical stability (default: 1e-10).
-    :param weight_decay: weight decay (L2 penalty) (default: 0).
+        numerical stability. Default: 1e-10
+    :param weight_decay: weight decay (L2 penalty). Default: 0
     """
 
     def __init__(

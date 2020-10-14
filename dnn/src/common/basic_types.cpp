@@ -392,8 +392,6 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
         TensorLayout result{dtype, format};
         result.ndim = tshape.ndim;
         for (size_t i = 0; i < tshape.ndim; i++) {
-            megdnn_throw_if(!tshape.shape[i], tensor_reshape_error,
-                            megdnn_mangle("target shape is 0"));
             result.shape[i] = tshape.shape[i];
             result.stride[i] = (tshape.shape[i] == 1);
         }
@@ -409,8 +407,6 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
     for (size_t i = 0; i < tshape.ndim; ++i) {
         int target_idx = tshape.ndim - i - 1;
         int cur_idx = ndim - i - 1;
-        megdnn_throw_if(!tshape.shape[target_idx], tensor_reshape_error,
-                        megdnn_mangle("target shape is 0"));
         size_t cur_shape = (cur_idx >= 0 ? shape[cur_idx] : 1),
                cur_stride = (cur_idx >= 0 ? stride[cur_idx] : 0);
         if (tshape.shape[target_idx] != cur_shape) {
@@ -434,10 +430,16 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
 bool TensorLayout::try_reshape(TensorLayout& result,
                                const TensorShape& tshp) const {
     megdnn_assert(tshp.ndim);
+
+    bool is_empty_shape = false;
     for (size_t i = 0; i < tshp.ndim; ++i) {
-        megdnn_throw_if(!tshp.shape[i], tensor_reshape_error,
-                        megdnn_mangle(ssprintf("bad target tshp: %s",
-                                               tshp.to_string().c_str())));
+        if (!tshp.shape[i]) {
+            megdnn_throw_if(!format.is_default(), tensor_reshape_error,
+                megdnn_mangle(ssprintf("bad target tshp: %s",
+                                tshp.to_string().c_str())));
+            is_empty_shape = true;
+            break;
+        }
     }
 
     megdnn_throw_if(
@@ -453,6 +455,11 @@ bool TensorLayout::try_reshape(TensorLayout& result,
     result.dtype = this->dtype;
     result.format = this->format;
     result.TensorShape::operator=(tshp);
+
+    if (is_empty_shape) {
+        result.init_contiguous_stride();
+        return true;
+    }
 
     size_t sdim = 0, prod = 1, cont_sdim = 0;
     for (size_t i = 0; i < tshp.ndim; ++i) {

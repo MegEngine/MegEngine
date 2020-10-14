@@ -70,6 +70,7 @@ namespace opr {
     using CumsumV1 = opr::Cumsum;
     MGB_SEREG_OPR(CumsumV1, 1);
 
+
 } // namespace opr
 } // namespace mgb
 

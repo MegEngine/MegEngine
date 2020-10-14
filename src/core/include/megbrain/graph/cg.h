@@ -97,6 +97,9 @@ struct GraphCommonOptimizeOptions {
     bool fuse_conv_bias_with_z = false;
     //! whether to enable fast-run profiled winograd opr replace
     bool weight_winograd_transform = false;
+    //! whether to enable weight preprocess, if enabled it may use more
+    //! memory, default disable now
+    bool weight_preprocess = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,
         NCHW4,       ///< compute using NCHW4 tensor format
@@ -127,6 +130,7 @@ struct GraphCommonOptimizeOptions {
     SET(fuse_conv_bias_nonlinearity);
     SET(fuse_conv_bias_with_z);
     SET(weight_winograd_transform);
+    SET(weight_preprocess);
 #undef SET
 #define SET(_trans, _trans_capital)                                 \
     GraphCommonOptimizeOptions& enable_##_trans() {                 \

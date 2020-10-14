@@ -70,6 +70,21 @@ class _ConvNd(Module):
     def _infer_bias_shape(self):
         pass
 
+    def _module_info_string(self):
+        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+
+        if self.stride != (1,) * len(self.stride):
+            s += ", stride={stride}"
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        return s.format(**self.__dict__)
+
 
 class Conv2d(_ConvNd):
     r"""Applies a 2D convolution over an input tensor.
@@ -84,8 +99,8 @@ class Conv2d(_ConvNd):
         \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)
 
     where :math:`\star` is the valid 2D cross-correlation operator,
-    :math:`N` is a batch size, :math:`C` denotes a number of channels,
-    :math:`H` is a height of input planes in pixels, and :math:`W` is
+    :math:`N` is batch size, :math:`C` denotes number of channels,
+    :math:`H` is height of input planes in pixels, and :math:`W` is
     width in pixels.
 
     When `groups == in_channels` and `out_channels == K * in_channels`,
@@ -105,9 +120,8 @@ class Conv2d(_ConvNd):
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a "grouped convolution". When groups is not 1,
-        in_channels and out_channels must be divisible by groups,
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be `(groups,
         out_channel // groups, in_channels // groups, *kernel_size)`.
@@ -115,9 +129,9 @@ class Conv2d(_ConvNd):
         True
     :param conv_mode: Supports `CROSS_CORRELATION` or `CONVOLUTION`. Default:
         `CROSS_CORRELATION`
-    :param compute_mode: When set to `DEFAULT`, no special requirements will be
-        placed on the precision of intermediate results. When set to `FLOAT32`,
-        float32 would be used for accumulator and intermediate result, but only
+    :param compute_mode: When set to "DEFAULT", no special requirements will be
+        placed on the precision of intermediate results. When set to "FLOAT32",
+        "Float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of float16 dtype.
 
     Examples:
@@ -221,7 +235,7 @@ class ConvTranspose2d(_ConvNd):
     r"""Applies a 2D transposed convolution over an input tensor.
 
     This module is also known as a deconvolution or a fractionally-strided convolution.
-    :class:`ConvTranspose2d` can ben seen as the gradient of :class:`Conv2d` operation
+    :class:`ConvTranspose2d` can be seen as the gradient of :class:`Conv2d` operation
     with respect to its input.
 
     Convolution usually reduces the size of input, while transposed convolution works
@@ -237,8 +251,7 @@ class ConvTranspose2d(_ConvNd):
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be ``(groups,
@@ -247,9 +260,9 @@ class ConvTranspose2d(_ConvNd):
         True
     :param conv_mode: Supports `CROSS_CORRELATION` or `CONVOLUTION`. Default:
         `CROSS_CORRELATION`
-    :param compute_mode: When set to `DEFAULT`, no special requirements will be
-        placed on the precision of intermediate results. When set to `FLOAT32`,
-        float32 would be used for accumulator and intermediate result, but only
+    :param compute_mode: When set to "DEFAULT", no special requirements will be
+        placed on the precision of intermediate results. When set to "FLOAT32",
+        "Float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of float16 dtype.
     """
 
@@ -327,7 +340,7 @@ class ConvTranspose2d(_ConvNd):
 
 
 class LocalConv2d(Conv2d):
-    r"""Applies a spatial convolution with untied kernels over an input 4D tensor.
+    r"""Applies a spatial convolution with untied kernels over an groupped channeled input 4D tensor.
     It is also known as the locally connected layer.
 
     :param in_channels: number of input channels.
@@ -340,9 +353,9 @@ class LocalConv2d(Conv2d):
     :param stride: stride of the 2D convolution operation. Default: 1
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a "grouped convolution". When groups is not 1,
-        in_channels and out_channels must be divisible by groups.
+    :param groups: number of groups into which the input and output channels are divided,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``.
         The shape of weight is `(groups, output_height, output_width,
         in_channels // groups, *kernel_size, out_channels // groups)`.
     """

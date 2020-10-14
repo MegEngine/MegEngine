@@ -39,6 +39,11 @@ __device__ void atomicAdd(megdnn::dt_int16 *, megdnn::dt_int16) {
     ((int*)0)[0] = 1;
 }
 
+__device__ void atomicAdd(megdnn::dt_bool *, megdnn::dt_bool) {
+    __trap();
+    ((int*)0)[0] = 1;
+}
+
 #define KERN_APPLY_OPR_OPR \
     ::megdnn::cuda::indexing_multi_axis_vec::OprAtomicIncr
 #include "./kern_apply_opr_impl.cuinl"

@@ -6,91 +6,34 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
 import platform
 
 import numpy as np
 import pytest
+from utils import opr_test
 
 import megengine.functional as F
 from megengine import tensor
 from megengine.core._trace_option import use_tensor_shape
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
-from megengine.test import assertTensorClose
-
-
-def _default_compare_fn(x, y):
-    assertTensorClose(x.numpy(), y)
-
-
-def opr_test(cases, func, compare_fn=_default_compare_fn, ref_fn=None, **kwargs):
-    """
-    func: the function to run opr.
-    compare_fn: the function to compare the result and expected, use assertTensorClose if None.
-    ref_fn: the function to generate expected data, should assign output if None.
-    cases: the list which have dict element, the list length should be 2 for dynamic shape test.
-           and the dict should have input,
-           and should have output if ref_fn is None.
-           should use list for multiple inputs and outputs for each case.
-    kwargs: The additional kwargs for opr func.
-
-    simple examples:
-
-        dtype = np.float32
-        cases = [{"input": [10, 20]}, {"input": [20, 30]}]
-        opr_test(cases,
-                 F.eye,
-                 ref_fn=lambda n, m: np.eye(n, m).astype(dtype),
-                 dtype=dtype)
-
-    """
-
-    def check_results(results, expected):
-        if not isinstance(results, tuple):
-            results = (results,)
-        for r, e in zip(results, expected):
-            compare_fn(r, e)
-
-    def get_param(cases, idx):
-        case = cases[idx]
-        inp = case.get("input", None)
-        outp = case.get("output", None)
-        if inp is None:
-            raise ValueError("the test case should have input")
-        if not isinstance(inp, list):
-            inp = (inp,)
-        else:
-            inp = tuple(inp)
-        if ref_fn is not None and callable(ref_fn):
-            outp = ref_fn(*inp)
-        if outp is None:
-            raise ValueError("the test case should have output or reference function")
-        if not isinstance(outp, list):
-            outp = (outp,)
-        else:
-            outp = tuple(outp)
-
-        return inp, outp
-
-    if len(cases) == 0:
-        raise ValueError("should give one case at least")
-
-    if not callable(func):
-        raise ValueError("the input func should be callable")
-
-    inp, outp = get_param(cases, 0)
-    inp_tensor = [tensor(inpi) for inpi in inp]
-
-    results = func(*inp_tensor, **kwargs)
-    check_results(results, outp)
 
 
 def test_eye():
     dtype = np.float32
-    cases = [{"input": [10, 20]}, {"input": [20, 30]}]
+    cases = [{"input": [10, 20]}, {"input": [30]}]
     for case in cases:
-        assertTensorClose(
+        np.testing.assert_allclose(
             F.eye(case["input"], dtype=dtype).numpy(),
+            np.eye(*case["input"]).astype(dtype),
+        )
+        np.testing.assert_allclose(
+            F.eye(*case["input"], dtype=dtype).numpy(),
+            np.eye(*case["input"]).astype(dtype),
+        )
+        np.testing.assert_allclose(
+            F.eye(tensor(case["input"]), dtype=dtype).numpy(),
             np.eye(*case["input"]).astype(dtype),
         )
 
@@ -165,7 +108,7 @@ def test_squeeze():
 
     for axis in [None, 3, -4, (3, -4)]:
         y = np.squeeze(x, axis)
-        yy = F.remove_axis(xx, axis)
+        yy = F.squeeze(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
 
 
@@ -175,7 +118,7 @@ def test_expand_dims():
 
     for axis in [2, -3, (3, -4), (1, -4)]:
         y = np.expand_dims(x, axis)
-        yy = F.add_axis(xx, axis)
+        yy = F.expand_dims(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
 
 
@@ -265,37 +208,37 @@ def test_flatten():
     data1 = np.random.random(data1_shape).astype(np.float32)
 
     def compare_fn(x, y):
-        assert x.numpy().shape == y[0]
+        assert x.shape[0] == y
 
     output0 = (2 * 3 * 4 * 5,)
     output1 = (4 * 5 * 6 * 7,)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn)
 
     output0 = (2, 3 * 4 * 5)
     output1 = (4, 5 * 6 * 7)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1)
 
     output0 = (2, 3, 4 * 5)
     output1 = (4, 5, 6 * 7)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=2)
 
     output0 = (2, 3 * 4, 5)
     output1 = (4, 5 * 6, 7)
     cases = [
-        {"input": data0, "output": (output0,)},
-        {"input": data1, "output": (output1,)},
+        {"input": data0, "output": output0},
+        {"input": data1, "output": output1},
     ]
     opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1, end_axis=2)
 
@@ -305,18 +248,28 @@ def test_broadcast():
     output1_shape = (30, 20, 30)
     data1 = np.random.random(input1_shape).astype(np.float32)
 
-    input2_shape = (10, 20)
+    input2_shape = (10, 1)
     output2_shape = (20, 10, 20)
     data2 = np.random.random(input2_shape).astype(np.float32)
 
     def compare_fn(x, y):
-        assert x.numpy().shape == y
+        assert x.shape[0] == y
 
     cases = [
         {"input": [data1, output1_shape], "output": output1_shape},
         {"input": [data2, output2_shape], "output": output2_shape},
     ]
-    opr_test(cases, F.broadcast, compare_fn=compare_fn)
+    opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
+
+    x = F.ones((2, 1, 3))
+    with pytest.raises(ValueError):
+        F.broadcast_to(x, (2, 3, 4))
+
+    with pytest.raises(ValueError):
+        F.broadcast_to(x, (4, 1, 3))
+
+    with pytest.raises(ValueError):
+        F.broadcast_to(x, (1, 3))
 
 
 def test_utils_astensor1d():
@@ -369,7 +322,7 @@ def test_device():
 
 def test_identity():
     x = tensor(np.random.random((5, 10)).astype(np.float32))
-    y = F.identity(x)
+    y = F.copy(x)
     np.testing.assert_equal(y.numpy(), x)
 
 
@@ -414,19 +367,3 @@ def test_copy_d2h():
 def test_copy_d2d():
     copy_test("gpu0", "gpu1")
     copy_test("gpu0:0", "gpu0:1")
-
-
-def test_param_pack_split():
-    a = tensor(np.ones((10,), np.int32))
-    b, c = F.param_pack_split(a, [0, 1, 1, 10], [(1,), (3, 3)])
-    assert np.allclose(b.numpy(), a.numpy()[1])
-    assert np.allclose(c.numpy(), a.numpy()[1:].reshape(3, 3))
-
-
-def test_param_pack_concat():
-    a = tensor(np.ones((1,), np.int32))
-    b = tensor(np.ones((3, 3), np.int32))
-    offsets_val = [0, 1, 1, 10]
-    offsets = tensor(offsets_val, np.int32)
-    c = F.param_pack_concat([a, b], offsets, offsets_val)
-    assert np.allclose(np.concatenate([a.numpy(), b.numpy().flatten()]), c.numpy())

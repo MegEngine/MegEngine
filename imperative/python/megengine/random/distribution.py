@@ -21,12 +21,12 @@ __all__ = ["normal", "uniform"]
 def normal(
     mean: float = 0, std: float = 1, size: Optional[Iterable[int]] = None
 ) -> Tensor:
-    r"""Random variable with Gaussian distribution $N(\mu, \sigma)$
+    r"""Random variable with Gaussian distribution :math:`N(\mu, \sigma)`.
 
-    :param size: Output tensor size
-    :param mean: The mean or expectation of the distribution
-    :param std: The standard deviation of the distribution (variance = $\sigma ^ 2$)
-    :return: The output tensor
+    :param size: output tensor size.
+    :param mean: the mean or expectation of the distribution.
+    :param std: the standard deviation of the distribution (variance = :math:`\sigma ^ 2`).
+    :return: the output tensor.
 
     Examples:
 
@@ -59,12 +59,12 @@ def normal(
 def uniform(
     low: float = 0, high: float = 1, size: Optional[Iterable[int]] = None
 ) -> Tensor:
-    r"""Random variable with uniform distribution $U(0, 1)$
+    r"""Random variable with uniform distribution $U(0, 1)$.
 
-    :param size: Output tensor size
-    :param low: Lower range
-    :param high: Upper range
-    :return: The output tensor
+    :param size: output tensor size.
+    :param low: lower range.
+    :param high: upper range.
+    :return: the output tensor.
 
     Examples:
 

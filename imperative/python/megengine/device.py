@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
+import re
 
 from .core._imperative_rt.common import CompNode, DeviceType
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
@@ -22,10 +23,8 @@ __all__ = [
 
 
 def _valid_device(inp):
-    if isinstance(inp, str) and len(inp) == 4:
-        if inp[0] in {"x", "c", "g"} and inp[1:3] == "pu":
-            if inp[3] == "x" or inp[3].isdigit():
-                return True
+    if isinstance(inp, str) and re.match("^[cxg]pu(\d+|\d+:\d+|x)$", inp):
+        return True
     return False
 
 
@@ -71,11 +70,11 @@ def set_default_device(device: str = "xpux"):
 
         'multithread' device type is avaliable when inference, which implements
         multi-threading parallelism at the operator level. For example,
-        'multithread4' will compute with 4 threads. which implements
+        'multithread4' will compute with 4 threads.
 
         The default value is 'xpux' to specify any device available. The priority of using gpu is higher when both gpu and cpu are available.
 
-        It can also be set by environmental variable `MGE_DEFAULT_DEVICE`.
+        It can also be set by environment variable `MGE_DEFAULT_DEVICE`.
     """
     assert _valid_device(device), "Invalid device name {}".format(device)
     CompNode._set_default_device(device)
@@ -99,13 +98,13 @@ def set_prealloc_config(
     growth_factor=2.0,
     device_type=DeviceType.CUDA,
 ):
-    """specifies how to pre-allocate from raw dev allocator
+    """Specifies how to pre-allocate from raw device allocator.
 
     :param alignment: specifies the alignment in bytes.
     :param min_req: min request size in bytes.
     :param max_overhead: max overhead above required size in bytes.
-    :growth_factor: request size / cur allocated
-    :device_type: the device type
+    :param growth_factor: `request size / cur allocated`
+    :param device_type: the device type
 
     """
     assert alignment > 0

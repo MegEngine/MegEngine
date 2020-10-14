@@ -27,7 +27,6 @@ from megengine.functional.debug_param import set_conv_execution_strategy
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
 from megengine.tensor import Tensor
-from megengine.test import assertTensorClose
 
 p_num = 4
 
@@ -99,7 +98,7 @@ def train(data, label, net, opt, gm):
     opt.clear_grad()
     with gm:
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.nn.cross_entropy(pred, label)
         gm.backward(loss)
     opt.step()
     return loss
@@ -181,7 +180,7 @@ def run_test(
 
         loss = train(data_train, label_train, net, opt, gm)
 
-        assertTensorClose(loss.numpy(), checkpoint["loss"], max_err=max_err)
+        np.testing.assert_allclose(loss.numpy(), checkpoint["loss"], atol=max_err)
 
         if dist.get_rank():
             return
@@ -189,7 +188,7 @@ def run_test(
             net.state_dict().items(), checkpoint["net_updated"].items()
         ):
             assert param[0] == param_ref[0]
-            assertTensorClose(param[1], param_ref[1], max_err=max_err)
+            np.testing.assert_allclose(param[1], param_ref[1], atol=max_err)
 
     procs = []
     for rank in range(p_num):

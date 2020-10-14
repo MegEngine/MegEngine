@@ -15,7 +15,7 @@ from .module import QuantizedModule
 
 class Concat(QuantizedModule):
     r"""
-    A :class:`~.QuantizedModule` to do quantized concat, inference only.
+    A :class:`~.QuantizedModule` to do quantized concat, used for inference only.
     """
 
     def __init__(self, dtype=None):
@@ -29,7 +29,7 @@ class Concat(QuantizedModule):
     @classmethod
     def from_qat_module(cls, qat_module: QAT.Concat):
         r"""
-        return a :class:`~.QuantizedModule` instance converted from a
+        Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
         return cls(qat_module.get_activation_dtype())

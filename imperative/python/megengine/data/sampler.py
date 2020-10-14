@@ -28,25 +28,25 @@ class Sampler(ABC):
         seed=None,
     ):
         r"""
-        An abstract class for all sampler
+        An abstract class for all sampler.
 
         :type dataset: `dataset`
-        :param dataset: dataset to sample from
+        :param dataset: dataset to sample from.
         :type batch_size: positive integer
-        :param batch_size: batch size for batch method
+        :param batch_size: batch size for batch method.
         :type drop_last: bool
         :param drop_last: set ``True`` to drop the last incomplete batch,
             if the dataset size is not divisible by the batch size. If ``False`` and 
             the size of dataset is not divisible by the batch_size, then the last batch will
-            be smaller. (default: ``False``)
+            be smaller. Default: False
         :type num_samples: positive integer
-        :param num_samples: number of samples assigned to one rank
+        :param num_samples: number of samples assigned to one rank.
         :type world_size: positive integer
-        :param world_size: number of ranks
+        :param world_size: number of ranks.
         :type rank: non-negative integer within 0 and world_size
-        :param rank: rank id, non-negative interger within 0 and ``world_size``
+        :param rank: rank id, non-negative interger within 0 and ``world_size``.
         :type seed: non-negative integer
-        :param seed: seed for random operators
+        :param seed: seed for random operators.
         """
         if (
             not isinstance(batch_size, int)
@@ -103,15 +103,15 @@ class Sampler(ABC):
 
     def sample(self):
         """
-        return a list contains all sample indices
+        Return a list contains all sample indices.
         """
         raise NotImplementedError
 
     def scatter(self, indices) -> List:
         r"""
-        scatter method is used for splitting indices into subset, each subset
+        Scatter method is used for splitting indices into subset, each subset
         will be assigned to a rank. Indices are evenly splitted by default.
-        If customized indices assignment method is needed, please rewrite this method
+        If customized indices assignment method is needed, please rewrite this method.
         """
         total_size = self.num_samples * self.world_size
 
@@ -127,7 +127,7 @@ class Sampler(ABC):
 
     def batch(self) -> Iterator[List[Any]]:
         r"""
-        batch method provides a batch indices generator
+        Batch method provides a batch indices generator.
         """
         indices = list(self.sample())
 
@@ -156,7 +156,7 @@ class SequentialSampler(Sampler):
         rank=None,
     ):
         r"""
-        Sample elements sequentially
+        Sample elements sequentially.
         """
         super().__init__(dataset, batch_size, drop_last, None, world_size, rank)
         if indices is not None and not isinstance(indices, collections.abc.Sequence):
@@ -168,7 +168,7 @@ class SequentialSampler(Sampler):
 
     def sample(self) -> Iterator[Any]:
         r"""
-        return a generator 
+        Return a generator.
         """
         if self.indices is None:
             return iter(range(len(self.dataset)))
@@ -188,7 +188,7 @@ class RandomSampler(Sampler):
         seed=None,
     ):
         r"""
-        Sample elements randomly without replacement
+        Sample elements randomly without replacement.
         """
         super().__init__(dataset, batch_size, drop_last, None, world_size, rank, seed)
         if indices is not None and not isinstance(indices, collections.abc.Sequence):
@@ -218,10 +218,10 @@ class ReplacementSampler(Sampler):
         seed=None,
     ):
         r"""
-        Sample elements randomly with replacement
+        Sample elements randomly with replacement.
 
         :type weights: List
-        :param weights: weights for sampling indices, it could be unnormalized weights
+        :param weights: weights for sampling indices, it could be unnormalized weights.
         """
         super().__init__(
             dataset, batch_size, drop_last, num_samples, world_size, rank, seed
@@ -250,7 +250,7 @@ class ReplacementSampler(Sampler):
 
 
 class Infinite(Sampler):
-    r"""Infinite Sampler warper for basic sampler"""
+    r"""Infinite Sampler warper for basic sampler."""
 
     def sample(self):
         raise NotImplementedError("sample method not supported in Infinite")

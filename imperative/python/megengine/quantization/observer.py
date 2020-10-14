@@ -21,8 +21,8 @@ class Observer(Module):
     r"""
     A base class for Observer Module.
 
-    :param dtype: a string indicating to collect scale and zero_point of which dtype
-    :param narrow_range: Whether the absolute value of ``qmin`` is the same as ``qmax``,
+    :param dtype: a string indicating to collect scale and zero_point of which dtype.
+    :param narrow_range: whether the absolute value of ``qmin`` is the same as ``qmax``,
         instead of 1 greater. Usually True for weight and False for activation.
     """
 

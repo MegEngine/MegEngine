@@ -89,3 +89,12 @@ def test_graph_traversal():
     _, var_idx = var2oprs[input_var.id][0]
 
     assert var_idx == 0
+
+
+def test_load_refcnt():
+    graph = mgb_graph.Graph()
+    varnode = graph.make_const(0)
+    buf, _ = mgb_graph.dump_graph([varnode])
+    graph, _, (varnode,) = mgb_graph.load_graph(io.BytesIO(buf))
+    del graph
+    varnode.owner

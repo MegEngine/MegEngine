@@ -64,9 +64,8 @@ namespace mgb {
 
     //! implement Event on CpuDispatchableBase comp nodes
     class CpuCompNode::CpuDispatchableBase::EventImpl: public EventImplHelper {
-
+    protected:
         TimeSpec m_prev_finish_time;
-
 #if MGB_HAVE_THREAD
         std::atomic_size_t
             m_record_nr_req{0}, m_record_nr_finish{0},
@@ -83,22 +82,21 @@ namespace mgb {
 
         void host_wait_cv() override;
 
-        protected:
-            void do_record() override;
+        void do_record() override;
 
-            //! incr m_record_nr_req; this is used in do_record()
-            void incr_nr_req() {
+        //! incr m_record_nr_req; this is used in do_record()
+        void incr_nr_req() {
 #if MGB_HAVE_THREAD
-                m_record_nr_req.fetch_add(1, std::memory_order_relaxed);
+            m_record_nr_req.fetch_add(1, std::memory_order_relaxed);
 #endif
-            }
+        }
 
-            //! callback to be dispatched to comp node
-            void on_finish();
+        //! callback to be dispatched to comp node
+        void on_finish();
 
-        public:
-            using EventImplHelper::EventImplHelper;
-            ~EventImpl() noexcept;
+    public:
+        using EventImplHelper::EventImplHelper;
+        ~EventImpl() noexcept;
     };
 }
 

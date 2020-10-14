@@ -14,8 +14,8 @@ from .optimizer import Optimizer
 class LRScheduler(metaclass=ABCMeta):
     r"""Base class for all learning rate based schedulers.
 
-    :param optimizer: Wrapped optimizer.
-    :param current_epoch: The index of current epoch. Default: -1
+    :param optimizer: wrapped optimizer.
+    :param current_epoch: the index of current epoch. Default: -1
     """
 
     def __init__(  # pylint: disable=too-many-branches
@@ -53,7 +53,8 @@ class LRScheduler(metaclass=ABCMeta):
     def load_state_dict(self, state_dict):
         r"""Loads the schedulers state.
 
-        :param state_dict (dict): scheduler state.
+        :type state_dict: dict
+        :param state_dict: scheduler state.
         """
         raise NotImplementedError
 

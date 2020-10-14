@@ -14,11 +14,12 @@ from typing import Optional, Sequence, Tuple, Union
 
 from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
+from ..core.ops.special import Const
 from ..core.tensor import utils
-from ..core.tensor.core import apply
+from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..tensor import Tensor
-from .elemwise import clamp, exp, log, log1p
-from .tensor import add_axis, remove_axis, reshape
+from .elemwise import clip, exp, log, log1p
+from .tensor import reshape, squeeze
 
 __all__ = [
     "argmax",
@@ -45,7 +46,7 @@ def isnan(inp: Tensor) -> Tensor:
     r"""Returns a new tensor representing if each element is ``NaN`` or not.
 
     :param inp: input tensor.
-    :return: a new tensor representing if each element in inp is NaN or not.
+    :return: result tensor.
 
     Examples:
 
@@ -71,7 +72,7 @@ def isinf(inp: Tensor) -> Tensor:
     r"""Returns a new tensor representing if each element is ``Inf`` or not.
 
     :param inp: input tensor.
-    :return: a new tensor representing if each element in inp is Inf or not.
+    :return: result tensor.
 
     Examples:
 
@@ -84,7 +85,7 @@ def isinf(inp: Tensor) -> Tensor:
         print(F.isinf(x).numpy())
 
     Outputs:
-    
+
     .. testoutput::
 
         [False  True False]
@@ -108,7 +109,7 @@ def sign(inp: Tensor):
 
         x = tensor([1, -1, 0])
         print(F.sign(x).numpy())
-    
+
     Outputs:
 
     .. testoutput::
@@ -128,7 +129,7 @@ def sum(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced.
+    :param axis: dimension to reduce. If None, all dimensions will be reduced.
         Default: None
     :param keepdims: whether the output tensor has axis retained or not.
         Default: False
@@ -163,7 +164,7 @@ def prod(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -199,7 +200,7 @@ def mean(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -235,7 +236,7 @@ def var(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -275,7 +276,7 @@ def std(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -310,7 +311,7 @@ def min(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -346,7 +347,7 @@ def max(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -373,18 +374,14 @@ def max(
 
 
 def norm(
-    inp: Tensor,
-    p: int = 2,
-    axis: Optional[Union[int, Sequence[int]]] = None,
-    keepdims=False,
+    inp: Tensor, ord: float = None, axis: int = None, keepdims=False,
 ):
     """Calculates ``p``-norm of input tensor along
-    given axis. If axis is a list of dimensions,
-    reduce over all of them.
+    given axis.
 
     :param inp: input tensor.
-    :param p: power of value applied to inp. Default: 2
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param ord: power of value applied to inp. Default: 2
+    :param axis: dimension to reduce. If None, input must be a vector. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -396,7 +393,7 @@ def norm(
         from megengine import tensor
         import megengine.functional as F
 
-        x = tensor(np.arange(-3, 3, dtype=np.float32).reshape(2,3))
+        x = tensor(np.arange(-3, 3, dtype=np.float32))
         out = F.norm(x)
         print(out.numpy())
 
@@ -407,13 +404,18 @@ def norm(
         [4.3589]
 
     """
-    if p == 0:
+    if axis is None:
+        if inp.ndim != 1:
+            raise TypeError("axis is required unless input is a vector")
+    if ord is None:
+        ord = 2
+    if ord == 0:
         return sum(inp != 0, axis=axis, keepdims=keepdims)
-    if p == math.inf:
+    if ord == math.inf:
         return max(abs(inp))
-    if p == -math.inf:
+    if ord == -math.inf:
         return min(abs(inp))
-    return sum(abs(inp) ** p, axis=axis, keepdims=keepdims) ** (1.0 / p)
+    return sum(abs(inp) ** ord, axis=axis, keepdims=keepdims) ** (1.0 / ord)
 
 
 def argmin(
@@ -426,7 +428,7 @@ def argmin(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -458,7 +460,7 @@ def argmin(
             (inp,) = apply(op, inp)
 
             if not keepdims:
-                inp = remove_axis(inp, ai)
+                inp = squeeze(inp, ai)
 
         return inp
 
@@ -470,7 +472,7 @@ def argmin(
     op = builtin.Argmin(axis=axis)
     (result,) = apply(op, inp)
     if not keepdims:
-        result = remove_axis(result, axis)
+        result = squeeze(result, axis)
     return result
 
 
@@ -484,7 +486,7 @@ def argmax(
     reduce over all of them.
 
     :param inp: input tensor.
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced. Default: None
+    :param axis: dimension to reduce. If None, all dimensions will be reduced. Default: None
     :param keepdims: whether the output tensor has axis retained or not. Default: False
     :return: output tensor.
 
@@ -516,7 +518,7 @@ def argmax(
             (inp,) = apply(op, inp)
 
             if not keepdims:
-                inp = remove_axis(inp, ai)
+                inp = squeeze(inp, ai)
 
         return inp
 
@@ -528,45 +530,40 @@ def argmax(
     op = builtin.Argmax(axis=axis)
     (result,) = apply(op, inp)
     if not keepdims:
-        result = remove_axis(result, axis)
+        result = squeeze(result, axis)
     return result
 
 
 def normalize(
-    inp: Tensor,
-    p: int = 2,
-    axis: Optional[Union[int, Sequence[int]]] = None,
-    eps: float = 1e-12,
+    inp: Tensor, ord: float = None, axis: int = None, eps: float = 1e-12,
 ) -> Tensor:
     r"""Performs :math:`L_p` normalization of input tensor along
-    given axis. If axis is a list of dimensions,
-    reduce over all of them.
+    given axis.
 
-    For a tensor inp of shape :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
+    For a tensor of shape :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
     :math:`n_{dim}` -element vector :math:`v` along dimension :attr:`axis` is transformed as:
 
     .. math::
         v = \frac{v}{\max(\lVert v \rVert_p, \epsilon)}.
 
     :param inp: input tensor.
-    :param p: power of value applied to inp. Default: 2
-    :param axis: dimension to reduce. If None, all the dimensions will be reduced
-        to calculate the norm. Default: None
+    :param ord: power of value applied to input tensor. Default: 2
+    :param axis: dimension to reduce.If None, input must be a vector. Default: None
     :param eps: a small value to avoid division by zero. Default: 1e-12
     :return: normalized output tensor.
     """
     if axis is None:
-        return inp / clamp(norm(inp, p, axis), lower=eps)
+        return inp / clip(norm(inp, ord, axis), lower=eps)
     else:
-        return inp / clamp(norm(inp, p, axis, keepdims=True), lower=eps)
+        return inp / clip(norm(inp, ord, axis, keepdims=True), lower=eps)
 
 
 def argsort(inp: Tensor, descending: bool = False) -> Tensor:
-    r"""Sorts the target 2d matrix by row, return both the sorted tensor and indices.
+    r"""Returns the indices that would sort the input tensor.
 
-    :param inp: input tensor, if 2d, each row will be sorted.
-    :param descending: Sort in descending order, where the largest comes first. Default: False
-    :return: Tuple of two tensors `(sorted_tensor, indices_of_int32)`.
+    :param inp: input tensor. If it's 2d, the result would be array of indices show how to sort each row in the input tensor.
+    :param descending: sort in descending order, where the largest comes first. Default: False
+    :return: indices of int32 indicates how to sort the input.
 
     Examples:
 
@@ -603,6 +600,31 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
 
 
 def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
+    r"""Returns sorted tensor and the indices would sort the input tensor.
+
+    :param inp: input tensor. If it's 2d, the result would be sorted by row.
+    :param descending: sort in descending order, where the largest comes first. Default: False
+    :return: tuple of two tensors `(sorted_tensor, indices_of_int32)`.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.array([1,2], dtype=np.float32))
+        out, indices = F.sort(x)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [1. 2.]
+
+    """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
         order = P.Argsort.Order.DESCENDING
@@ -625,13 +647,13 @@ def topk(
     kth_only: bool = False,
     no_sort: bool = False,
 ) -> Tuple[Tensor, Tensor]:
-    r"""Selects the ``Top-K(by default)`` smallest elements of 2d matrix by row.
+    r"""Selects the ``Top-K``(by default) smallest elements of 2d matrix by row.
 
-    :param inp: input tensor, if 2d, each row will be sorted.
+    :param inp: input tensor. If input tensor is 2d, each row will be sorted.
     :param k: number of elements needed.
-    :param descending: if true, return the largest elements instead. Default: False
-    :param kth_only: if true, only the k-th element will be returned. Default: False
-    :param no_sort: if true, the returned elements can be unordered. Default: False
+    :param descending: if True, return the largest elements instead. Default: False
+    :param kth_only: if True, only the k-th element will be returned. Default: False
+    :param no_sort: if True, the returned elements can be unordered. Default: False
     :return: tuple of two tensors `(topk_tensor, indices_of_int32)`.
 
     Examples:
@@ -665,15 +687,18 @@ def topk(
         mode = Mode.VALUE_IDX_SORTED
     op = builtin.TopK(mode=mode)
 
+    if not isinstance(k, (TensorBase, TensorWrapperBase)):
+        (k,) = Const(k, dtype="int32", device=inp.device)(inp)
+
     if len(inp.shape) == 1:
         inp = inp.reshape(1, -1)
-        res = apply(op, inp, Tensor(k, dtype="int32"))
+        res = apply(op, inp, k)
         if kth_only:
             tns = res[0]
         else:
             tns, ind = res[0][0], res[1][0]
     else:
-        res = apply(op, inp, Tensor(k, dtype="int32"))
+        res = apply(op, inp, k)
         if kth_only:
             tns = res
         else:
