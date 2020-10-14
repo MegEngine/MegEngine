@@ -9,6 +9,7 @@
 import collections
 import math
 import multiprocessing
+import platform
 import queue
 import random
 import time
@@ -113,6 +114,11 @@ class DataLoader:
         self.__initialized = True
 
     def __iter__(self):
+        if platform.system() == "Windows":
+            print(
+                "pyarrow.plasma does not support ParallelDataLoader on windows, changing num_workers to be zero"
+            )
+            self.num_workers = 0
         if self.num_workers == 0:
             return _SerialDataLoaderIter(self)
         else:

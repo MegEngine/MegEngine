@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
+import platform
 import time
 
 import numpy as np
@@ -89,6 +90,10 @@ def test_dataloader_parallel():
         assert label.shape == (4,)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
 def test_dataloader_parallel_timeout():
     dataset = init_dataset()
 
@@ -112,6 +117,10 @@ def test_dataloader_parallel_timeout():
         batch_data = next(data_iter)
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
 def test_dataloader_parallel_worker_exception():
     dataset = init_dataset()
 
