@@ -154,6 +154,9 @@ static inline size_t mgb_get_dtype_size(MGBDType dtype) {
             return 4;
         case MGB_DTYPE_UINT8:
             return 1;
+        case MGB_DTYPE_FLOAT16:
+        case MGB_DTYPE_INT16:
+            return 2;
         default:
             __builtin_trap();
             return -1;
