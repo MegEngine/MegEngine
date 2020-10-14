@@ -17,7 +17,7 @@ import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
 from megengine import Parameter, Tensor, is_cuda_available, tensor
-from megengine.core._trace_option import use_tensor_shape
+from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
 

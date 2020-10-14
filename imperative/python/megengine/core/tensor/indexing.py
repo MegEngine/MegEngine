@@ -10,7 +10,7 @@ from typing import Iterable
 
 import numpy as np
 
-from .._trace_option import use_tensor_shape
+from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.special import Const
 from .core import TensorBase, TensorWrapperBase, apply
@@ -58,7 +58,7 @@ def check_bool_index(tensor, tuple_val):
                             )
                         )
                 i = i.reshape(-1)
-                if not use_tensor_shape():
+                if not use_symbolic_shape():
                     cur_shape = (
                         cur_shape[:idx]
                         + (i.shape[0],)
@@ -76,7 +76,7 @@ def check_bool_index(tensor, tuple_val):
                 offset += 1
                 tensor = tensor.reshape(cur_shape)
                 tdim += tot
-                if use_tensor_shape():
+                if use_symbolic_shape():
                     cur_shape = make_shape_tuple(cur_shape)
             new_tuple_val.append(i)
         else:

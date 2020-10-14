@@ -15,7 +15,7 @@ from utils import opr_test
 
 import megengine.functional as F
 from megengine import tensor
-from megengine.core._trace_option import use_tensor_shape
+from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
 

@@ -13,7 +13,7 @@ import pytest
 
 import megengine.core.ops.builtin
 import megengine.core.tensor.raw_tensor
-from megengine.core._trace_option import use_tensor_shape
+from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops._internal import all_ops
 from megengine.core.tensor import Tensor
 from megengine.core.tensor.core import apply
@@ -532,7 +532,7 @@ def test_advance_indexing_with_bool():
     np.testing.assert_equal(a, aa.numpy())
 
     # XXX: trace does not expect empty condtake tensor
-    if not use_tensor_shape():
+    if not use_symbolic_shape():
         a = np.ones((2, 2), dtype=np.int32)
         b = np.array([[False, False], [False, False]])
         aa = Tensor(a)

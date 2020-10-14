@@ -15,7 +15,7 @@ import pytest
 import megengine.core.tensor.megbrain_graph as G
 import megengine.functional as F
 from megengine import cgtools, tensor
-from megengine.core._trace_option import set_tensor_shape
+from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.ops import builtin as ops
 from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import as_raw_tensor
@@ -238,7 +238,7 @@ def test_optimize_for_inference():
 def test_optimize_for_inference_broadcast():
     a = tensor(np.ones(1, dtype=np.float32))
 
-    @trace(capture_as_const=True, tensor_shape=True)
+    @trace(capture_as_const=True, symbolic_shape=True)
     def f():
         (b,) = apply(ops.Broadcast(), a, tensor([1, 10], dtype=np.int32))
         return b
@@ -248,7 +248,7 @@ def test_optimize_for_inference_broadcast():
 
 
 def test_trace_cvt_bool():
-    set_tensor_shape(True)
+    set_symbolic_shape(True)
     x = tensor([0], dtype=np.int32)
 
     @trace(symbolic=True)
@@ -261,7 +261,7 @@ def test_trace_cvt_bool():
 
 def test_trace_reshape():
     for symbolic in [False, True]:
-        set_tensor_shape(True)
+        set_symbolic_shape(True)
         x1 = tensor(np.random.randn(2, 10, 10))
         x2 = tensor(np.random.randn(4, 10, 10))
         x3 = tensor(np.random.randn(8, 10, 10))
@@ -344,7 +344,7 @@ def test_raise_on_trace():
 
 def test_trace_broadcast():
     for symbolic in [False, True]:
-        set_tensor_shape(True)
+        set_symbolic_shape(True)
         x1 = tensor(np.random.randn(3, 1, 1))
         x2 = tensor(np.random.randn(1, 4, 1))
         x3 = tensor(np.random.randn(1, 1, 5))
@@ -382,7 +382,7 @@ def test_trace_nms():
 
 
 def test_trace_valid_broadcast():
-    set_tensor_shape(True)
+    set_symbolic_shape(True)
     x1 = tensor(np.random.randn(1, 1))
     x2 = tensor(np.random.randn(1, 2))
     shape = (tensor([2]), tensor([2]))

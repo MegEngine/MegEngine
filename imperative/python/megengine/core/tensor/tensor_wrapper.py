@@ -11,7 +11,7 @@ import collections
 
 import numpy as np
 
-from .._trace_option import use_tensor_shape
+from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.builtin import GetVarShape
 from ..ops.special import Const
@@ -342,7 +342,7 @@ class ArrayMethodMixin(abc.ABC):
 
     def __len__(self):
         shape = self.shape
-        if use_tensor_shape():
+        if use_symbolic_shape():
             shape = shape.numpy()
         if shape:
             return int(shape[0])
@@ -372,7 +372,7 @@ class ArrayMethodMixin(abc.ABC):
 
     @property
     def size(self):
-        if use_tensor_shape():
+        if use_symbolic_shape():
             return self.shape.prod()
         return np.prod(self.shape).item()
 
@@ -462,7 +462,7 @@ class GenericTensorWrapper(ArrayMethodMixin, TensorWrapperBase):
 
     @property
     def shape(self):
-        if use_tensor_shape():
+        if use_symbolic_shape():
             return apply(GetVarShape(), self)[0]
         else:
             return self.__wrapped__.shape

@@ -19,7 +19,7 @@ import numpy as np
 
 from ..core._imperative_rt import GraphProfiler
 from ..core._imperative_rt.ops import OprAttr
-from ..core._trace_option import set_tensor_shape
+from ..core._trace_option import set_symbolic_shape
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
@@ -121,7 +121,7 @@ class trace:
         sublinear_memory_config: SublinearMemoryConfig = None,
         profiling: bool = False,
         opt_level: int = None,
-        tensor_shape: bool = True,
+        symbolic_shape: bool = True,
     ):
         self.__wrapped__ = function
         self._symbolic = symbolic
@@ -130,7 +130,7 @@ class trace:
         self._profiling = profiling
         self._profiler = None
         self._graph_opt_level = opt_level
-        self._tensor_shape = tensor_shape
+        self._symbolic_shape = symbolic_shape
 
         self._reset()
 
@@ -152,7 +152,7 @@ class trace:
         self._output_bindings = None
         self._output_names = None
 
-        set_tensor_shape(self._tensor_shape)
+        set_symbolic_shape(self._symbolic_shape)
 
     def _new_handle(self):
         handle = len(self._tinfo)

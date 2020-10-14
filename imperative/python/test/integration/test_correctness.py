@@ -18,7 +18,7 @@ import megengine as mge
 import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import jit
-from megengine.core._trace_option import set_tensor_shape
+from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.functional.debug_param import set_conv_execution_strategy
 from megengine.jit import SublinearMemoryConfig

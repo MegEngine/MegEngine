@@ -9,20 +9,20 @@
 
 import os
 
-_use_tensor_shape = False
-if os.environ.get("MEGENGINE_USE_TENSOR_SHAPE"):
-    _use_tensor_shape = True
+_use_symbolic_shape = False
+if os.environ.get("MEGENGINE_USE_SYMBOLIC_SHAPE"):
+    _use_symbolic_shape = True
 
 
-def use_tensor_shape() -> bool:
+def use_symbolic_shape() -> bool:
     """Returns whether tensor.shape returns a tensor instead of a tuple
 
     """
-    return _use_tensor_shape
+    return _use_symbolic_shape
 
 
-def set_tensor_shape(option: bool):
+def set_symbolic_shape(option: bool):
     """ Sets whether tensor.shape returns a tensor instead of a tuple
     """
-    global _use_tensor_shape
-    _use_tensor_shape = option
+    global _use_symbolic_shape
+    _use_symbolic_shape = option
