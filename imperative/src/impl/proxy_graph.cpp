@@ -364,6 +364,7 @@ class ProxyGraph::ProxyGraphImpl : public cg::ComputingGraph {
     ProxyGraph* m_owner;
     MemPool<VarNode> m_var_node_pool;
     std::vector<std::unique_ptr<OperatorNodeBase>> m_opr_refkeeper;
+    std::mutex m_opr_refkeeper_mtx;
     CompNode::UnorderedSet m_used_comp_node;
     VarReceiverInfo m_var_receiver_info;
 public:
@@ -431,7 +432,7 @@ public:
     }
 
     std::shared_ptr<void> on_comp_node_finalize() override {
-        // FIXME: mutex
+        MGB_LOCK_GUARD(m_opr_refkeeper_mtx);
         mgb_assert(!m_owner->m_cur_opr);
         // finalize would do sync first
         m_opr_refkeeper.clear();
