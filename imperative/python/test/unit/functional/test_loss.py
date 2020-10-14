@@ -13,15 +13,15 @@ from megengine import tensor
 
 
 def test_cross_entropy_with_logits():
-    data = tensor([1, 100]).astype(np.float32).reshape((1, 2))
-    label = tensor([1]).astype(np.int32)
+    data = tensor([[0, 50], [0, -150]]).astype(np.float32)
+    label = tensor([1, 0]).astype(np.int32)
     loss = F.nn.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 0.0)
-    label = tensor([0]).astype(np.int32)
+    label = tensor([0, 1]).astype(np.int32)
     loss = F.nn.cross_entropy(data, label)
-    np.testing.assert_allclose(loss.numpy(), 100 - 1)
+    np.testing.assert_allclose(loss.numpy(), 100)
 
-    label = np.array([1])
+    label = np.array([1, 0])
     loss = F.nn.cross_entropy(data, label)
     np.testing.assert_allclose(loss.numpy(), 0.0)
 
