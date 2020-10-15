@@ -1720,9 +1720,15 @@ void FuseConvBiasNonlinPass::apply(OptState& state) const {
         auto dst_shape = conv->output(0)->shape();
         auto filter_shape = conv->input(1)->shape();
         auto bias_shape = bias->shape();
-        if (dst_shape.eq_shape(bias_shape)) {
+
+        //! pay attention: make sure bias node is not const provider when
+        //! batch > 1 cause shape assert problem in convbias
+        //! if you resize the input shape, can not update the bias shape too.
+        //! so do not fuse conv bias in this situation
+        if (dst_shape.eq_shape(bias_shape) && !cg::is_const_var_shape(bias)) {
             return valid_bias_shape;
         }
+
         size_t OC = filter_shape[0];
         if (conv->param().sparse == Sparse::GROUP) {
             OC *= filter_shape[1];

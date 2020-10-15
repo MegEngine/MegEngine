@@ -1482,6 +1482,61 @@ TEST(TestGoptInference, ConvBiasNonlinearityFusePass) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-4);
 }
 
+TEST(TestGoptInference, ConvBiasNonlinearityFusePass_FullBias) {
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    for (int i = 0; i < 2; i++) {
+        auto graph = ComputingGraph::make();
+        auto cn = CompNode::load("cpu0");
+        HostTensorGenerator<> gen;
+        auto mkImvar = [&](const char* name, const TensorShape& shp) {
+            return opr::ImmutableTensor::make(*graph, *gen(shp, cn))
+                    .rename(name);
+        };
+
+        graph->options().graph_opt_level = 0;
+        auto mkcvar = [&](const char* name, const TensorShape& shp) {
+            return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                    .rename(name);
+        };
+        opr::Convolution::Param param;
+        auto host_x = gen({1, 8, 16, 24}, cn);
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             w1 = mkcvar("w1", {4, 8, 1, 1}), w2 = mkcvar("w2", {4, 8, 3, 3}),
+             w3 = mkcvar("w3", {4, 4, 1, 1}),
+             b = i == 0 ? mkcvar("b", {1, 4, 16, 24})
+                        : mkImvar("bias", {1, 4, 16, 24}),
+             y_cut0 = opr::Convolution::make(x, w1, param);
+        param.pad_w = param.pad_h = 1;
+        auto y_cut1 = opr::Convolution::make(x, w2, param);
+        auto y1 = opr::Elemwise::make({y_cut0 + y_cut1},
+                                      opr::Elemwise::Param::Mode::RELU);
+        param.pad_w = param.pad_h = 0;
+        auto y2 = opr::Convolution::make(y1, w3, param);
+        auto y =
+                opr::Elemwise::make({y2 + b}, opr::Elemwise::Param::Mode::RELU);
+        SymbolVar y_opt;
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+        ASSERT_EQ(3u, find_opr<opr::ConvBias>(y_opt).input().size());
+        graph->compile({{y_opt, {}}})
+                ->to_json()
+                ->writeto_fpath(
+                        output_file("TestGoptInference.FuseConvBiasNonlinPass_"
+                                    "FulBias.json"));
+        HostTensorND host_y, host_y_opt;
+        auto func = graph->compile({make_callback_copy(y, host_y),
+                                    make_callback_copy(y_opt, host_y_opt)});
+        func->execute();
+        MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-4);
+        *host_x = *gen({4, 8, 16, 24}, cn);
+        func->execute();
+        MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-4);
+    }
+}
+
+
 TEST(TestGoptInference, ParamMerge) {
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;
