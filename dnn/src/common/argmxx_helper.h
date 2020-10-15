@@ -56,7 +56,7 @@ struct ArgmxxOp {
     ArgmxxOp(stype_ *src, dt_int32 *dst, uint32_t A, uint32_t B, uint32_t C):
         src(src), dst(dst), A(A), B(B), C(C),
         INIT(wtype(is_max ? DTypeTrait<stype_>::min() :
-                    DTypeTrait<stype_>::max(), -1))
+                    DTypeTrait<stype_>::max(), 0))
     {
     }
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx)

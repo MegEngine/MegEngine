@@ -45,7 +45,7 @@ void exec_forward(_megdnn_tensor_in src,
     reduce::get_ABC(src.layout, A, B, C, param.axis);
     for (size_t a = 0; a < A; ++a) for (size_t c = 0; c < C; ++c) {
         float best_val = traits<is_max>::init;
-        size_t best_arg = -1;
+        size_t best_arg = 0;
         for (size_t b = 0; b < B; ++b) {
             float curr_val = float(src.ptr<T>()[(a*B+b)*C+c]);
             if (traits<is_max>::better_than(curr_val, best_val)) {

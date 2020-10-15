@@ -527,3 +527,20 @@ def test_nms_is_same():
     assert op3 != op4
 
 
+
+
+def test_argmxx_on_inf():
+    def run_argmax():
+        x = F.zeros((100, 100))
+        x[:] = -float("inf")
+        idxs = F.argmax(x, axis=0)
+        return idxs
+
+    def run_argmin():
+        x = F.zeros((100, 100))
+        x[:] = float("inf")
+        idxs = F.argmin(x, axis=0)
+        return idxs
+
+    assert all(run_argmax() >= 0)
+    assert all(run_argmin() >= 0)
