@@ -17,4 +17,4 @@ from . import distributed  # isort:skip
 
 # delete namespace
 # pylint: disable=undefined-variable
-del elemwise, math, tensor, utils  # type: ignore[name-defined]
+# del elemwise, math, tensor, utils  # type: ignore[name-defined]
