@@ -254,7 +254,9 @@ AtlasRuntimeOpr::AtlasRuntimeOpr(SharedBuffer buf,
          * set the flag to SYS_MEM_ALLOC.
          */
         for (size_t i = 0; i < nr_outputs; ++i) {
-            output(i)->add_flag(F::NO_SYS_MEM_ALLOC);
+            output(i)
+                    ->add_flag(F::NO_SYS_MEM_ALLOC)
+                    .add_flag(F::NO_MEM_RECLAIM);
         }
     }
     add_equivalence_component<mgb::ScalarHash<const void*>>(m_buffer.data());
