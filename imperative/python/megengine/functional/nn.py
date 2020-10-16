@@ -1024,7 +1024,6 @@ def matmul(
             format=format,
         )
 
-    inp1, inp2 = utils.convert_inputs(inp1, inp2)
     (result,) = apply(op, inp1, inp2)
     if shp is not None:
         result = result.reshape(shp)
