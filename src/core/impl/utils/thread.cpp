@@ -67,6 +67,9 @@ namespace {
 
 /* =============== SCQueueSynchronizer ===============  */
 size_t SCQueueSynchronizer::cached_max_spin = 0;
+#ifdef WIN32
+bool SCQueueSynchronizer::is_into_atexit = false;
+#endif
 
 size_t SCQueueSynchronizer::max_spin() {
     if (cached_max_spin)

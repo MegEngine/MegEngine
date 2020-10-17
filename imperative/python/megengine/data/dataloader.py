@@ -114,7 +114,7 @@ class DataLoader:
         self.__initialized = True
 
     def __iter__(self):
-        if platform.system() == "Windows":
+        if platform.system() == "Windows" and self.num_workers > 0:
             print(
                 "pyarrow.plasma does not support ParallelDataLoader on windows, changing num_workers to be zero"
             )
