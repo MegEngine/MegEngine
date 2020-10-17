@@ -26,7 +26,7 @@ _assert_allclose = functools.partial(np.testing.assert_allclose, atol=5e-6, rtol
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.isolated_distributed
 def test_syncbn():
@@ -143,9 +143,6 @@ def test_batchnorm():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
-)
 @pytest.mark.isolated_distributed
 def test_syncbn1d():
     nr_chan = 8
@@ -237,9 +234,6 @@ def test_batchnorm2d():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
-)
 @pytest.mark.isolated_distributed
 def test_syncbn2d():
     nr_chan = 8
@@ -311,9 +305,6 @@ def test_batchnorm_no_stats():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
-)
 @pytest.mark.isolated_distributed
 def test_syncbn_no_stats():
     nr_chan = 8
@@ -362,9 +353,6 @@ def test_batchnorm2d_no_stats():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.isolated_distributed
 def test_syncbn2d_no_stats():

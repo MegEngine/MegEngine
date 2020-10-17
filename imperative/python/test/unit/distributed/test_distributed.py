@@ -41,7 +41,7 @@ def _assert_q_val(q, val):
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
@@ -85,7 +85,7 @@ def test_init_process_group():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
@@ -119,7 +119,7 @@ def test_new_group():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
@@ -155,7 +155,7 @@ def test_group_barrier():
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
 @pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed

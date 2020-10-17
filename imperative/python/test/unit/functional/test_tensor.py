@@ -338,9 +338,6 @@ def copy_test(dst, src):
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
-)
 @pytest.mark.skipif(get_device_count_by_fork("gpu") == 0, reason="CUDA is disabled")
 def test_copy_h2d():
     copy_test("cpu0", "gpu0")
@@ -349,9 +346,6 @@ def test_copy_h2d():
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
-)
 @pytest.mark.skipif(get_device_count_by_fork("gpu") == 0, reason="CUDA is disabled")
 def test_copy_d2h():
     copy_test("gpu0", "cpu0")
@@ -359,9 +353,6 @@ def test_copy_d2h():
 
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="do not imp GPU mode at Windows now"
 )
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 def test_copy_d2d():
