@@ -85,6 +85,16 @@ namespace gopt {
         void apply(OptState &opt) const override;
     };
 
+    class RemoveRedundantCopyPass final : public Pass {
+    private:
+        //! Remove the copy chain of form cpu -> cpu -> cpu,
+        //! cpu -> gpu -> cpu
+        static bool should_remove(const CompNode& A, const CompNode& B);
+    public:
+        const char * name() const override;
+        void apply(OptState &opt) const override;
+    };
+
     //! remove execution mask for const PPVs in conditional execution
     class CondExecConstPredicateFolding final : public Pass {
     public:

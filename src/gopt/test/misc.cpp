@@ -16,6 +16,7 @@
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/cond.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
 
@@ -409,6 +410,71 @@ TEST_PASS(RemoveRedundantTypeCvtPass, Basic) {
     auto x_q8_q8 = opr::TypeCvt::make(x_q8, dtype::QuantizedS8(2.f));
     check(x_q8, x_q8_fp32_q8);
     check(x_q8_q8, x_q8_fp32_q8_);
+}
+
+TEST_PASS(RemoveRedundantCopyPass, Basic) {
+    auto x = mkvar("x", {2, 3, 3}, CompNode::load("cpu0"));
+    {
+        auto x_cpu1 = opr::Copy::make(x, CompNode::load("cpu1"));
+        auto x_cpu0 = opr::Copy::make(x_cpu1, CompNode::load("cpu0"));
+        auto x_cpu2 = opr::Copy::make(x_cpu0, CompNode::load("cpu2"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("cpu2"));
+        check(x, x_cpu0);
+        check(x_expected, x_cpu2);
+    }
+
+    {
+        auto x_cpu1 = opr::Copy::make(x, CompNode::load("cpu1"));
+        auto x_cpu2 = opr::Copy::make(x_cpu1, CompNode::load("cpu2"));
+        auto x_cpu3 = opr::Copy::make(x_cpu2, CompNode::load("cpu3"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("cpu3"));
+        check(x_expected, x_cpu3);
+    }
+
+    {
+        auto x_cpu1 = opr::Copy::make(x, CompNode::load("cpu0:1"));
+        auto x_cpu2 = opr::Copy::make(x_cpu1, CompNode::load("cpu0:2"));
+        auto x_cpu3 = opr::Copy::make(x_cpu2, CompNode::load("cpu0:3"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("cpu0:3"));
+        check(x_expected, x_cpu3);
+    }
+
+    {
+        auto x_cpu1 = opr::Copy::make(x, CompNode::load("cpu0:1"));
+        auto x_mt = opr::Copy::make(x_cpu1, CompNode::load("multithread8:0"));
+        auto x_cpu3 = opr::Copy::make(x_mt, CompNode::load("cpu0:3"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("cpu0:3"));
+        check(x_expected, x_cpu3);
+    }
+
+#if MGB_ATLAS
+    {
+        auto x_atlas0 = opr::Copy::make(x, CompNode::load("atlas0"));
+        auto x_cpu2 = opr::Copy::make(x_atlas0, CompNode::load("cpu0:2"));
+        auto x_cpu3 = opr::Copy::make(x_cpu2, CompNode::load("cpu0:3"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("cpu0:3"));
+        check(x_expected, x_cpu3);
+    }
+#endif
+
+#if MGB_CUDA
+    {
+        auto x_cuda0 = opr::Copy::make(x, CompNode::load("gpu0"));
+        auto x_cpu2 = opr::Copy::make(x_cuda0, CompNode::load("cpu0:2"));
+        auto x_cpu3 = opr::Copy::make(x_cpu2, CompNode::load("cpu0:3"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("cpu0:3"));
+        check(x_expected, x_cpu3);
+    }
+
+    {
+        auto x_mt = opr::Copy::make(x, CompNode::load("multithread8:0"));
+        auto x_cpu2 = opr::Copy::make(x_mt , CompNode::load("gpu0:1"));
+        auto x_cpu3 = opr::Copy::make(x_cpu2, CompNode::load("multithread8:0"));
+        auto x_expected = opr::Copy::make(x, CompNode::load("multithread8:0"));
+        check(x_expected, x_cpu3);
+    }
+
+#endif
 }
 
 #if MGB_ENABLE_OPR_MM

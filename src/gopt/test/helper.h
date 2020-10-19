@@ -26,14 +26,16 @@ namespace mgb {
             HostTensorGenerator<> gen;
             std::shared_ptr<ComputingGraph> graph = ComputingGraph::make();
 
-            SymbolVar mkvar(const char *name, const TensorShape &shp = {1}) {
-                return opr::Host2DeviceCopy::make(
-                        *graph, gen(shp)).rename(name);
+            SymbolVar mkvar(const char* name, const TensorShape& shp = {1},
+                            CompNode cn = CompNode::load("xpu0")) {
+                return opr::Host2DeviceCopy::make(*graph, gen(shp), cn)
+                        .rename(name);
             }
 
-            SymbolVar mkcvar(const char *name, const TensorShape &shp = {1}) {
+            SymbolVar mkcvar(const char* name, const TensorShape& shp = {1},
+                             CompNode cn = CompNode::load("xpu0")) {
                 return opr::SharedDeviceTensor::make(
-                        *graph, *gen(shp)).rename(name);
+                        *graph, *gen(shp), cn).rename(name);
             }
 
             template<typename ...Args>
@@ -73,4 +75,3 @@ namespace mgb {
     TEST_F(TestGopt##pass, name)
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

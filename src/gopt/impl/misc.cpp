@@ -682,6 +682,69 @@ void RemoveRedundantTypeCvtPass::apply(OptState& opt) const {
     MIDOUT_E
 }
 
+/* ======================= RemoveRedundantCopyPass ====================== */
+
+const char* RemoveRedundantCopyPass::name() const {
+    return "remove_redundant_copy";
+}
+
+bool RemoveRedundantCopyPass::should_remove(const CompNode& A,
+                                            const CompNode& B) {
+    //! if A and B has the same memnode and cpu <-> atlas/cpu <-> cuda, as only
+    //! these two compnode support crosscncopy
+    if (A.mem_node() == B.mem_node() ||
+        ((A.device_type() == CompNode::DeviceType::CPU ||
+          A.device_type() == CompNode::DeviceType::MULTITHREAD) &&
+         (B.device_type() == CompNode::DeviceType::ATLAS ||
+          B.device_type() == CompNode::DeviceType::CUDA)) ||
+        ((B.device_type() == CompNode::DeviceType::CPU ||
+          B.device_type() == CompNode::DeviceType::MULTITHREAD) &&
+         (A.device_type() == CompNode::DeviceType::ATLAS ||
+          A.device_type() == CompNode::DeviceType::CUDA))) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void RemoveRedundantCopyPass::apply(OptState& opt) const {
+    MIDOUT_B("RemoveRedundantCopyPass::apply")
+    auto rewriter = opt.graph().make_rewriter();
+
+    auto on_opr = [&](OperatorNodeBase* opr) {
+        if (auto copy0 = try_cast_as_op<opr::Copy>(opr)) {
+            auto inp0 = rewriter.get_var(copy0->input(0));
+            if (auto copy1= try_cast_as_op<opr::Copy>(inp0)) {
+                auto inp1 = copy1->input(0);
+                if (should_remove(inp1->comp_node(),
+                                  copy0->output(0)->comp_node())) {
+                    mgb_assert(!rewriter.has_manual_replace(inp1));
+                    if (inp1->comp_node() == copy0->output(0)->comp_node()) {
+                        rewriter.replace_var(
+                                copy0->output(0), inp1,
+                                mgb_cstr_log("copy(copy(a0, a1), a0) -> "
+                                             "a0"));
+                        return;
+                    } else {
+                        auto fold = opr::Copy::make(
+                                inp1, copy0->output(0)->comp_node());
+                        rewriter.replace_var(
+                                copy0->output(0), fold.node(),
+                                mgb_cstr_log("copy(copy(a0, a1), a2) -> "
+                                             "copy(a0, a2)"));
+                        return;
+                    }
+                }
+            }
+        }
+        rewriter.auto_replace_outputs(opr);
+    };
+
+    opt.graph().iter(on_opr);
+    rewriter.apply_inplace();
+    MIDOUT_E
+}
+
 #if MGB_ENABLE_OPR_MM
 #include "megbrain/opr/collective_comm.h"
 

@@ -649,6 +649,7 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
     add_pass<ReorderArithChainPass>(cv_type);
     add_pass<FinalArithTransformPass>();
     add_pass<RemoveRedundantTypeCvtPass>();
+    add_pass<RemoveRedundantCopyPass>();
 
 #if MGB_JIT
     bool need_jit = false;
