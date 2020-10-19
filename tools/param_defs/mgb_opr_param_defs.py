@@ -144,3 +144,4 @@ pdef('PersistentOutputStorage').add_fields(
            )
  )
 
+(pdef('NvOf', 'opr Implements NVIDIA Optical Flow SDK.').add_fields('uint32', 'precision', 1))

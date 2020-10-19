@@ -1536,6 +1536,35 @@ def nms(
     return keep_inds
 
 
+def nvof(src: Tensor, precision: int = 1) -> Tensor:
+    r"""
+    Implements NVIDIA Optical Flow SDK.
+
+    :src shape: input tensor with shape (n, t, h, w, c4).
+    :src dtype: uint8.
+    :param precision: 0:NV_OF_PERF_LEVEL_SLOW 1:NV_OF_PERF_LEVEL_MEDIUM 2:NV_OF_PERF_LEVEL_FAST.
+    :output shape: (n, t-1, h//4, w//4, c2).
+    :output dtype: int16.
+
+    .. code-block:: python
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = np.random.random_integers(0, 255, (1,2,224,244,4)).astype("uint8")
+        src = tensor(x)
+        result = F.nn.nvof(src, precision=1)
+        print(result.numpy())
+
+    """
+    assert isinstance(src, (Tensor, megbrain_graph.VarNode)), "src must be Tensor type"
+    assert src.ndim == 5 and src.shape[4] == 4
+
+    src = src.detach()
+
+    op = builtin.NvOf(precision=precision)
+    return apply(op, src)[0]
 
 
 from .loss import *  # isort:skip

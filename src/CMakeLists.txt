@@ -2,7 +2,7 @@ if(MGE_WITH_JIT_MLIR)
     add_subdirectory(jit/impl/mlir/ir)
 endif()
 
-file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
+file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp opr/impl/nvof/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
 
 if(MGE_WITH_JIT)
     file(GLOB_RECURSE SOURCES_ jit/impl/*.cpp jit/impl/*.inl)

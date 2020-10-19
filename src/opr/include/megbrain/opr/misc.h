@@ -13,6 +13,10 @@
 
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/internal/out_shape_by_sym_var.h"
+#if MGB_CUDA
+#include "../../../impl/nvof/denseflownvidia.h"
+#include "megbrain/opr/param_defs.h"
+#endif
 #include "megdnn/oprs.h"
 
 #include <array>
@@ -94,6 +98,40 @@ MGB_DEFINE_OPR_CLASS(Cumsum, cg::SingleCNOperatorNodeBaseT<
         void init_output_static_infer_desc() override;
 };
 
+#if MGB_CUDA
+MGB_DEFINE_OPR_CLASS(NvOf, cg::SingleCNOperatorNodeBase) // {
+
+    public:
+        using Param = megdnn::param::NvOf;
+        NvOf(VarNode* src, const Param& param,
+             const OperatorNodeConfig& config);
+
+        // for serialization
+        static SymbolVar make(SymbolVar opr, const Param& param,
+                              const OperatorNodeConfig& config = {});
+
+        static SymbolVar make(SymbolVar opr,
+                              const OperatorNodeConfig& config = {}) {
+            return make(opr, {}, config);
+        }
+
+        Param param() const {
+            return m_param;
+        }
+
+    protected:
+        void init_output_dtype() override;
+        void scn_do_execute() override;
+        void init_output_static_infer_desc() override;
+
+    private:
+        std::shared_ptr<NVFlowExtractor> nv_flow_extractor;
+        std::vector<size_t> vshape;
+        Param m_param;
+        std::mutex m_lock;
+        bool init_flag = false;
+};
+#endif
 
 namespace intl {
 using CondTakeBase =

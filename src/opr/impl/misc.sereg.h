@@ -70,6 +70,9 @@ namespace opr {
     using CumsumV1 = opr::Cumsum;
     MGB_SEREG_OPR(CumsumV1, 1);
 
+#if MGB_CUDA
+    MGB_SEREG_OPR(NvOf, 1);
+#endif
 
 } // namespace opr
 } // namespace mgb

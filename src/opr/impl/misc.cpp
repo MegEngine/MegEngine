@@ -159,6 +159,91 @@ void Cumsum::init_output_static_infer_desc() {
             {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_workspace});
 }
 
+/* ================= NvOf =================  */
+
+#if MGB_CUDA
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(NvOf);
+
+NvOf::NvOf(VarNode* opr, const Param& param, const OperatorNodeConfig& config)
+        : Super{opr->owner_graph(), config, "NvOf", {opr}}, m_param{param} {
+    constexpr size_t NDIM = 5;
+    mgb_assert(opr->dtype() == dtype::Uint8());
+    add_input({opr});
+    //! NvOf hava only one output
+    add_output(None);
+
+    mgb_log_debug("init nvof engine with precision: %u", m_param.precision);
+    auto input_shape = this->input()[0]->shape();
+
+    //! nvof input format: nthwc4
+    mgb_assert(input_shape.ndim == NDIM);
+    //! now only support RGBA format channel data
+    mgb_assert(input_shape[4] == 4);
+
+    for (size_t i = 0; i < NDIM; i++) {
+        vshape.push_back(input_shape[i]);
+    }
+}
+
+void NvOf::init_output_dtype() {
+    output(0)->dtype(dtype::Int16());
+}
+
+SymbolVar NvOf::make(SymbolVar opr, const Param& param,
+                     const OperatorNodeConfig& config) {
+    return opr.insert_single_output_opr<NvOf>(opr.node(), param, config);
+}
+
+void NvOf::scn_do_execute() {
+    auto c = this->comp_node();
+    //! comp_node may init on CUDA or CPU, eg: lar with --cpu
+    //! if ON CUDA, need sync, caused by we use different stream
+    if (CompNode::DeviceType::CUDA == c.device_type()) {
+        c.sync();
+    } else {
+        mgb_log_warn(
+                "NvOf opr on non CUDA comp_node, which will triger H2D and "
+                "D2H!!");
+    }
+
+    //! create NvOF engine at same device id of comp_node, can not get
+    //! comp_node device id, when NvOf:NvOf, so init at scn_do_execute
+    std::lock_guard<std::mutex> lock(m_lock);
+    if (init_flag == false) {
+        //! nvof sdk do not imp p2p copy, so init nvof engine on the same
+        //! device with mgb comp_node
+        nv_flow_extractor = std::make_shared<NVFlowExtractor>(
+                c.locator().device, vshape, m_param.precision, true, true);
+        init_flag = true;
+    }
+
+    nv_flow_extractor->extract_flow(
+            static_cast<unsigned char*>(
+                    input(0)->dev_tensor().as_megdnn().raw_ptr),
+            vshape,
+            reinterpret_cast<int16_t*>(
+                    output(0)->dev_tensor().as_megdnn().raw_ptr));
+}
+
+void NvOf::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto infer_shape = [](TensorShape& dest, const InpVal& iv) {
+        auto ishp = iv.val.at(0).shape();
+        SmallVector<size_t> tv;
+        tv.push_back(ishp[0]);
+        tv.push_back(ishp[1] - 1);
+        tv.push_back(ishp[2] / 4);
+        tv.push_back(ishp[3] / 4);
+        tv.push_back(ishp[4] / 2);
+        dest = tv;
+
+        return true;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(0),
+            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+}
+#endif
 
 /* ================= CondTake =================  */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondTake);
