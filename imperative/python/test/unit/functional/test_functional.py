@@ -77,25 +77,42 @@ def test_matmul():
     opr_test(cases, F.matmul, ref_fn=np.matmul)
 
     batch_size = 10
-    shape1 = (batch_size, 2, 3)
-    shape2 = (batch_size, 3, 4)
-    shape3 = (batch_size, 10, 4, 5)
+    shape1 = (2,)
+    shape2 = (batch_size, 2, 3)
+    shape3 = (batch_size, 3, 4)
+    shape4 = (batch_size, 10, 4, 2)
+    shape5 = (batch_size, 10, 2, 4)
     data1 = np.random.random(shape1).astype("float32")
     data2 = np.random.random(shape2).astype("float32")
     data3 = np.random.random(shape3).astype("float32")
+    data4 = np.random.random(shape4).astype("float32")
+    data5 = np.random.random(shape5).astype("float32")
 
-    cases = [{"input": [data1, data2]}, {"input": [data2, data3]}]
-    for i in range(0, batch_size):
-
-        def compare_fn(x, y):
-            x.numpy()[i, ...] == y
-
+    cases = [
+        {"input": [data1, data2]},
+        {"input": [data2, data3]},
+        {"input": [data3, data4]},
+        {"input": [data4, data5]},
+    ]
+    for _ in range(0, batch_size):
         opr_test(
-            cases,
-            F.matmul,
-            compare_fn=compare_fn,
-            ref_fn=lambda x, y: np.matmul(x[i, ...], y[i, ...]),
+            cases, F.matmul, ref_fn=np.matmul,
         )
+
+    opr_test(
+        [{"input": [data1, data4]}],
+        F.matmul,
+        ref_fn=lambda x, y: np.matmul(x, y.transpose(0, 1, 3, 2)),
+        transpose_b=True,
+    )
+
+    opr_test(
+        [{"input": [data3, data2]}],
+        F.matmul,
+        ref_fn=lambda x, y: np.matmul(x.transpose(0, 2, 1), y.transpose(0, 2, 1)),
+        transpose_a=True,
+        transpose_b=True,
+    )
 
 
 def test_interpolate():
