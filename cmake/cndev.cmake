@@ -44,5 +44,5 @@ set_target_properties(libcndev PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${CNDEV_INCLUDE_DIR}
 )
 
-message("-- Found CNDEV: ${__found_cndev_root} (found version: ${CNDEV_VERSION_STRING})")
+message(STATUS "Found CNDEV: ${__found_cndev_root} (found version: ${CNDEV_VERSION_STRING})")
 

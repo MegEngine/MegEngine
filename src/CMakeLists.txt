@@ -186,11 +186,11 @@ set (_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)
 
 if(MGE_BUILD_IMPERATIVE_RT
         )
-    message("-- create a export SHARED lib for python use")
+    message(VERBOSE "create a export SHARED lib for python use")
     add_library(megengine_export SHARED)
     target_link_libraries(megengine_export PUBLIC megbrain megdnn)
     if (MGE_WITH_DISTRIBUTED)
-        message("-- megengine_export configured to link megray")
+        message(VERBOSE "megengine_export configured to link megray")
         target_link_libraries(megengine_export PUBLIC megray)
     endif()
 endif()

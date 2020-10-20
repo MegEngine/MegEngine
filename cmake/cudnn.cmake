@@ -63,4 +63,4 @@ set_target_properties(libcudnn PROPERTIES
     IMPORTED_LOCATION ${CUDNN_LIBRARY}
     INTERFACE_INCLUDE_DIRECTORIES ${CUDNN_INCLUDE_DIR})
 
-message("-- Found CuDNN: ${__found_cudnn_root} (found version: ${CUDNN_VERSION})")
+message(STATUS "Found CuDNN: ${__found_cudnn_root} (found version: ${CUDNN_VERSION})")

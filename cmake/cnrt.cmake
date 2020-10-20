@@ -40,5 +40,5 @@ set_target_properties(libcnrt PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${CNRT_INCLUDE_DIR}
 )
 
-message("-- Found CNRT: ${__found_cnrt_root} (found version: ${CNRT_VERSION_STRING})")
+message(STATUS "Found CNRT: ${__found_cnrt_root} (found version: ${CNRT_VERSION_STRING})")
 

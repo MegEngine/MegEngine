@@ -59,5 +59,5 @@ set_target_properties(libnvinfer PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${TRT_INCLUDE_DIR}
 )
 
-message("-- Found TensorRT: ${__found_trt_root} (found version: ${TRT_VERSION_STRING})")
+message(STATUS "Found TensorRT: ${__found_trt_root} (found version: ${TRT_VERSION_STRING})")
 

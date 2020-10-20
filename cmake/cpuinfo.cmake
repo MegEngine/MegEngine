@@ -1,6 +1,6 @@
 if (MGE_USE_SYSTEM_LIB)
     find_package(Cpuinfo)
-    message("Using system provided cpuinfo ${cpuinfo_VERSION}")
+    message(STATUS "Using system provided cpuinfo ${cpuinfo_VERSION}")
     add_library(libcpuinfo IMPORTED GLOBAL)
     set_target_properties(
         libcpuinfo PROPERTIES

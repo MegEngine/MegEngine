@@ -30,4 +30,4 @@ if (MGB_IS_DEV)
     set (MGB_VER_STRING "${MGB_VER_STRING}-dev")
 endif()
 
-message("-- Building MegBrain ${MGB_VER_STRING}")
+message(STATUS "Building MegBrain ${MGB_VER_STRING}")

@@ -1,7 +1,7 @@
 if (MGE_USE_SYSTEM_LIB)
     find_package(dnnl)
     if (dnnl_FOUND)
-        message("Using system provided MKL-DNN.")
+        message(STATUS "Using system provided MKL-DNN.")
         set (MGE_USE_SYSTEM_MKLDNN ON)
         return()
     endif()

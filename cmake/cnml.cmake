@@ -40,5 +40,5 @@ set_target_properties(libcnml PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${CNML_INCLUDE_DIR}
 )
 
-message("-- Found CNML: ${__found_cnml_root} (found version: ${CNML_VERSION_STRING})")
+message(STATUS "Found CNML: ${__found_cnml_root} (found version: ${CNML_VERSION_STRING})")
 

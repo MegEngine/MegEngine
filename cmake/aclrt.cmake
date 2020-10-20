@@ -31,5 +31,5 @@ set_target_properties(libascendcl PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${ACLRT_INCLUDE_DIR}
 )
 
-message("-- Found ACLRT: ${__found_aclrt_root}")
+message(STATUS "Found ACLRT: ${__found_aclrt_root}")
 

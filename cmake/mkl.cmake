@@ -13,7 +13,7 @@ find_path(MKL_ROOT_DIR
 if(${MKL_ROOT_DIR} STREQUAL "MKL_ROOT_DIR-NOTFOUND")
     message(FATAL_ERROR "Can not find MKL")
 endif()
-message("-- Build with MKL in ${MKL_ROOT_DIR}")
+message(STATUS "Build with MKL in ${MKL_ROOT_DIR}")
 
 find_path(MKL_INCLUDE_DIR
     mkl_cblas.h
