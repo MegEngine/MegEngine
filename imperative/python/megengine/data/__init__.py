@@ -14,4 +14,5 @@ from .sampler import (
     ReplacementSampler,
     Sampler,
     SequentialSampler,
+    StreamSampler,
 )

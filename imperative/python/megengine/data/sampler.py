@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections.abc
 import math
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Generator, Iterator, List, Union
 
 import numpy as np
@@ -17,6 +17,16 @@ import megengine.distributed as dist
 
 
 class Sampler(ABC):
+    r"""
+    An abstract class for all Sampler
+    """
+
+    @abstractmethod
+    def __init__(self):
+        pass
+
+
+class MapSampler(Sampler):
     def __init__(
         self,
         dataset,
@@ -145,7 +155,29 @@ class Sampler(ABC):
         return iter(batch_index)
 
 
-class SequentialSampler(Sampler):
+class StreamSampler(Sampler):
+    """
+    Sampler for stream dataset.
+
+    .. warning::
+
+        In the case of multiple workers, sampler should ensure that each worker gets
+        different data. But this class cannot do it yet, please build your own
+        dataset and sampler to achieve this goal.
+
+    """
+
+    def __init__(self, batch_size=1):
+        self.batch_size = batch_size
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return range(self.batch_size)
+
+
+class SequentialSampler(MapSampler):
     def __init__(
         self,
         dataset,
@@ -176,7 +208,7 @@ class SequentialSampler(Sampler):
             return self.indices
 
 
-class RandomSampler(Sampler):
+class RandomSampler(MapSampler):
     def __init__(
         self,
         dataset,
@@ -205,7 +237,7 @@ class RandomSampler(Sampler):
             return self.rng.permutation(self.indices).tolist()
 
 
-class ReplacementSampler(Sampler):
+class ReplacementSampler(MapSampler):
     def __init__(
         self,
         dataset,
@@ -249,7 +281,7 @@ class ReplacementSampler(Sampler):
             return self.rng.multinomial(n, self.weights, self.num_samples).tolist()
 
 
-class Infinite(Sampler):
+class Infinite(MapSampler):
     r"""Infinite Sampler warper for basic sampler."""
 
     def sample(self):
