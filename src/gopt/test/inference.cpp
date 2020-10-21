@@ -3443,4 +3443,49 @@ TEST(TestGoptInference, ConvertFormatNCHW44_DOT) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-1);
 }
 
+TEST(TestGoptInference, ConvertFormatCD4GroupOneConv) {
+    // hwcd4 is only supported in naive handle
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto x = mkvar("x", {1, 3, 128, 128});
+    // ConvBias
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    auto w1 = mkcvar("w1", {1, 16, 3, 3, 3}), b1 = mkcvar("b1", {1, 16, 1, 1});
+    auto conv1 = opr::ConvBias::make(x, w1, b1, param_conv_bias);
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    // Convolution
+    opr::Convolution::Param param_conv;
+    param_conv.pad_h = param_conv.pad_w = 1;
+    param_conv.sparse = opr::Convolution::Param::Sparse::GROUP;
+    auto w3 = mkcvar("w3", {1, 16, 16, 3, 3});
+    auto y = opr::Convolution::make(conv1, w3, param_conv);
+
+    SymbolVar y_opt;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nhwcd4();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
