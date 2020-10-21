@@ -20,6 +20,7 @@ from megengine import Parameter, Tensor, tensor
 from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
+    Conv1d,
     Conv2d,
     Dropout,
     Linear,
@@ -519,6 +520,43 @@ def test_shared_param():
     net = Simple()
     assert net.conv0.weight is net.conv1.weight
     data = tensor(np.random.random((1, 1, 8, 8)).astype(np.float32))
+    np.testing.assert_allclose(net.conv0(data).numpy(), net.conv1(data).numpy())
+    with BytesIO() as f:
+        mge.save(net, f)
+        f.seek(0)
+        net1 = mge.load(f)
+    assert net1.conv0.weight is net1.conv1.weight
+    np.testing.assert_allclose(net1.conv0(data).numpy(), net1.conv1(data).numpy())
+
+    with BytesIO() as f:
+        mge.save(net.conv0, f)
+        f.seek(0)
+        conv0 = mge.load(f)
+
+    with BytesIO() as f:
+        mge.save(net.conv1, f)
+        f.seek(0)
+        conv1 = mge.load(f)
+
+    assert conv0.weight is not conv1.weight
+    np.testing.assert_allclose(conv0(data).numpy(), conv1(data).numpy())
+
+
+class Simple2(Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = Conv1d(1, 1, kernel_size=3, bias=False)
+        self.conv0 = Conv1d(1, 1, kernel_size=3, bias=False)
+        self.conv1.weight = self.conv0.weight
+
+    def forward(self, inputs):
+        pass
+
+
+def test_shared_param_1d():
+    net = Simple2()
+    assert net.conv0.weight is net.conv1.weight
+    data = tensor(np.random.random((1, 1, 8)).astype(np.float32))
     np.testing.assert_allclose(net.conv0(data).numpy(), net.conv1(data).numpy())
     with BytesIO() as f:
         mge.save(net, f)

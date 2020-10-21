@@ -11,7 +11,7 @@ from typing import Tuple, Union
 import numpy as np
 
 from ..core.ops._internal import param_defs as P
-from ..functional import conv2d, conv_transpose2d, local_conv2d, relu
+from ..functional import conv1d, conv2d, conv_transpose2d, local_conv2d, relu
 from ..functional.types import _pair, _pair_nonzero
 from ..tensor import Parameter
 from . import init
@@ -86,6 +86,152 @@ class _ConvNd(Module):
         return s.format(**self.__dict__)
 
 
+class Conv1d(_ConvNd):
+
+    r"""
+    Applies a 1D convolution over an input tensor.
+
+    For instance, given an input of the size :math:`(N, C_{\text{in}}, H)`,
+    this layer generates an output of the size
+    :math:`(N, C_{\text{out}}, H_{\text{out}}})` through the
+    process described as below:
+
+    .. math::
+        \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+        \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)
+
+    where :math:`\star` is the valid 1D cross-correlation operator,
+    :math:`N` is batch size, :math:`C` denotes number of channels, and
+    :math:`H` is length of 1D data element.
+
+
+    When `groups == in_channels` and `out_channels == K * in_channels`,
+    where K is a positive integer, this operation is also known as depthwise
+    convolution.
+
+    In other words, for an input of size :math:`(N, C_{in}, H_{in})`,
+    a depthwise convolution with a depthwise multiplier `K`, can be constructed
+    by arguments :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
+
+    :param in_channels: number of input channels.
+    :param out_channels: number of output channels.
+    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
+        an :class:`int`, the actual kernel size would be
+        `(kernel_size, kernel_size)`. Default: 1
+    :param stride: stride of the 1D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 1D convolution operation. Default: 1
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and there would be an extra dimension at the beginning of the weight's
+        shape. Specifically, the shape of weight would be `(groups,
+        out_channel // groups, in_channels // groups, *kernel_size)`.
+    :param bias: whether to add a bias onto the result of convolution. Default:
+        True
+    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
+        `CROSS_CORRELATION`
+    :param compute_mode: When set to "DEFAULT", no special requirements will be
+        placed on the precision of intermediate results. When set to "FLOAT32",
+        "Float32" would be used for accumulator and intermediate result, but only
+        effective when input and output are of float16 dtype.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        m = M.Conv1d(in_channels=3, out_channels=1, kernel_size=3)
+        inp = mge.tensor(np.arange(0, 24).astype("float32").reshape(2, 3, 4))
+        oup = m(inp)
+        print(oup.numpy().shape)
+
+    Outputs:
+
+    .. testoutput::
+
+        (2, 1, 2)
+
+    """
+    _conv_mode_type = P.Convolution.Mode
+    _compute_mode_type = P.Convolution.ComputeMode
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        padding: int = 0,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
+        conv_mode: str = "CROSS_CORRELATION",
+        compute_mode: str = "DEFAULT",
+    ):
+        kernel_size = kernel_size
+        stride = stride
+        padding = padding
+        dilation = dilation
+        self.conv_mode = self._conv_mode_type.convert(conv_mode)
+        self.compute_mode = self._compute_mode_type.convert(compute_mode)
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+        )
+
+    def _get_fanin(self):
+        kh = self.kernel_size
+        ic = self.in_channels
+        return kh * ic
+
+    def _infer_weight_shape(self):
+        group = self.groups
+        ichl = self.in_channels
+        ochl = self.out_channels
+        kh = self.kernel_size
+        if group == 1:
+            # Assume format is NCH(W=1)
+            return (ochl, ichl, kh)
+
+        assert (
+            ichl % group == 0 and ochl % group == 0
+        ), "invalid config: input_channels={} output_channels={} group={}".format(
+            ichl, ochl, group
+        )
+        # Assume format is NCH(W=1)
+        return (group, ochl // group, ichl // group, kh)
+
+    def _infer_bias_shape(self):
+        # Assume format is NCH(W=1)
+        return (1, self.out_channels, 1)
+
+    def calc_conv(self, inp, weight, bias):
+        return conv1d(
+            inp,
+            weight,
+            bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.conv_mode,
+            self.compute_mode,
+        )
+
+    def forward(self, inp):
+        return self.calc_conv(inp, self.weight, self.bias)
+
+
 class Conv2d(_ConvNd):
     r"""
     Applies a 2D convolution over an input tensor.
@@ -128,7 +274,7 @@ class Conv2d(_ConvNd):
         out_channel // groups, in_channels // groups, *kernel_size)`.
     :param bias: whether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION` or `CONVOLUTION`. Default:
+    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
         `CROSS_CORRELATION`
     :param compute_mode: When set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
@@ -260,7 +406,7 @@ class ConvTranspose2d(_ConvNd):
         out_channels // groups, in_channels // groups, *kernel_size)``. Default: 1
     :param bias: wether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION` or `CONVOLUTION`. Default:
+    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
         `CROSS_CORRELATION`
     :param compute_mode: When set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",

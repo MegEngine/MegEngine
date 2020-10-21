@@ -62,6 +62,7 @@ __all__ = [
     "softplus",
     "svd",
     "warp_perspective",
+    "conv1d",
 ]
 
 
@@ -121,7 +122,7 @@ def conv2d(
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
     :type conv_mode: string or :class:`P.Convolution.Mode`
-    :param conv_mode: supports "CROSS_CORRELATION" or "CONVOLUTION". Default:
+    :param conv_mode: supports "CROSS_CORRELATION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
         :class:`P.Convolution.ComputeMode`
@@ -187,7 +188,7 @@ def conv_transpose2d(
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
     :type conv_mode: string or :class:`P.Convolution.Mode`
-    :param conv_mode: supports "CROSS_CORRELATION" or "CONVOLUTION". Default:
+    :param conv_mode: supports "CROSS_CORRELATION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
         :class:`P.Convolution.ComputeMode`
@@ -232,9 +233,7 @@ def local_conv2d(
     dilation: Union[int, Tuple[int, int]] = 1,
     conv_mode="CROSS_CORRELATION",
 ):
-    """
-    Applies spatial 2D convolution over an groupped channeled image with untied kernels.
-    """
+    """Applies spatial 2D convolution over an groupped channeled image with untied kernels."""
     assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
 
     stride_h, stride_w = expand_hw(stride)
@@ -1583,6 +1582,82 @@ def indexing_one_hot(
     if not keepdims:
         result = squeeze(result, axis)
     return result
+
+
+def conv1d(
+    inp: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: int = 1,
+    padding: int = 0,
+    dilation: int = 1,
+    groups: int = 1,
+    conv_mode="CROSS_CORRELATION",
+    compute_mode="DEFAULT",
+) -> Tensor:
+    """1D convolution operation.
+
+    Refer to :class:`~.Conv1d` for more information.
+
+    :param inp: The feature map of the convolution operation
+    :param weight: The convolution kernel
+    :param bias: The bias added to the result of convolution (if given)
+    :param stride: Stride of the 1D convolution operation. Default: 1
+    :param padding: Size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: Dilation of the 1D convolution operation. Default: 1
+    :param groups: number of groups to divide input and output channels into,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and the shape of weight should be ``(groups, out_channel // groups,
+        in_channels // groups, height, width)``.
+    :type conv_mode: string or :class:`mgb.opr_param_defs.Convolution.Mode`
+    :param conv_mode: Supports 'CROSS_CORRELATION'. Default:
+        'CROSS_CORRELATION'.
+    :type compute_mode: string or
+        :class:`mgb.opr_param_defs.Convolution.ComputeMode`
+    :param compute_mode: When set to 'DEFAULT', no special requirements will be
+        placed on the precision of intermediate results. When set to 'FLOAT32',
+        Float32 would be used for accumulator and intermediate result, but only
+        effective when input and output are of Float16 dtype.
+
+    """
+
+    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
+    assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
+    assert inp.ndim == 3, "the input dimension of conv1d should be 3"
+    assert weight.ndim == 3, "the weight dimension of conv1d should be 3"
+
+    inp = expand_dims(inp, 3)
+    weight = expand_dims(weight, 3)
+    if bias is not None:
+        assert bias.ndim == 3, "the bias dimension of conv1d should be 3"
+        bias = expand_dims(bias, 3)
+
+    stride_h = stride
+    pad_h = padding
+    dilate_h = dilation
+
+    Sparse = P.Convolution.Sparse
+    sparse_type = Sparse.DENSE if groups == 1 else Sparse.GROUP
+    op = builtin.Convolution(
+        stride_h=stride_h,
+        stride_w=1,
+        pad_h=pad_h,
+        pad_w=0,
+        dilate_h=dilate_h,
+        dilate_w=1,
+        strategy=get_conv_execution_strategy(),
+        mode=conv_mode,
+        compute_mode=compute_mode,
+        sparse=sparse_type,
+    )
+    inp, weight = utils.convert_inputs(inp, weight)
+    (output,) = apply(op, inp, weight)
+    if bias is not None:
+        output += bias
+    output = squeeze(output, 3)
+    return output
 
 
 def nms(

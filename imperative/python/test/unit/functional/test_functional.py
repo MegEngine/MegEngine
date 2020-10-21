@@ -531,6 +531,18 @@ def test_zero_stride_numpy_array():
     out = F.conv2d(inp, weight, None, (2, 2), (3, 3), (1, 1), 1)
 
 
+def test_conv1d():
+    inp = tensor(np.ones((16,), dtype=np.float32).reshape(2, 2, 4))
+    weight = tensor(np.ones((12,), dtype=np.float32).reshape(3, 2, 2))
+    out = F.conv1d(inp, weight, None, 2, 0, 1, 1)
+    np.testing.assert_equal(
+        out.numpy(),
+        np.array(
+            [[[4, 4], [4, 4], [4, 4]], [[4, 4], [4, 4], [4, 4]]], dtype=np.float32
+        ),
+    )
+
+
 def test_condtake():
     x = np.array([[1, 2, 3], [4, 5, 6]])
     y = np.array([[True, False, True], [False, True, True]])
