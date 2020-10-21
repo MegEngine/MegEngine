@@ -51,6 +51,7 @@ void AtlasComputingContext::memcpy(void* dst, const void* src,
                         ACL_MEMCPY_HOST_TO_DEVICE));
             break;
         case megcoreMemcpyDeviceToDevice:
+            // async d2d is always faster than sync d2d because of SDMA
             acl_check(aclrtMemcpyAsync(dst, size_in_bytes, src, size_in_bytes,
                 ACL_MEMCPY_DEVICE_TO_DEVICE, m_ctx.stream));
             break;

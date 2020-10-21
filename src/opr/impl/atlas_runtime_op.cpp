@@ -361,7 +361,6 @@ void AtlasRuntimeOpr::scn_do_execute() {
                        i, output(i)->cname());
             aclmdlAddDatasetBuffer(model_outputs, output_db);
         }
-
         MGB_ATLAS_CHECK(aclmdlExecute(m_model_id, model_inputs, model_outputs));
 
         for (size_t i = 0; i < nr_inputs; ++i) {

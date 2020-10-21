@@ -230,14 +230,10 @@ void AtlasCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
         auto&& src_env = m_env.atlas_env();
         activate();
         if (dst_env.device == src_env.device) {
-#if 1
+            // async d2d use SDMA which is faster than sync ctrl cpu d2d 
             MGB_ATLAS_CHECK(aclrtMemcpyAsync(dest, size, src, size,
                                              ACL_MEMCPY_DEVICE_TO_DEVICE,
                                              dst_env.stream));
-#else
-            MGB_ATLAS_CHECK(aclrtMemcpy(dest, size, src, size,
-                                             ACL_MEMCPY_DEVICE_TO_DEVICE));
-#endif
         } else {
             mgb_throw(MegBrainError,
                       "Atlas does not support peer copy between differents "
