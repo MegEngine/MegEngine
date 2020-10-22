@@ -18,6 +18,7 @@
 #include "megbrain/jit/mlir/ir/dialect.h"
 
 #include "./common.h"
+#include "./numerical.h"
 
 #include <mlir/Dialect/StandardOps/IR/Ops.h>
 #include <mlir/IR/Builders.h>
@@ -28,6 +29,8 @@
     cb(ReluOp, RELU) \
     cb(AbsOp, ABS) \
     cb(NegOp, NEGATE) \
+    cb(AcosOp, ACOS) \
+    cb(AsinOp, ASIN) \
     cb(CeilOp, CEIL) \
     cb(CosOp, COS) \
     cb(ExpOp, EXP) \
@@ -40,7 +43,11 @@
     cb(FastTanhOp, FAST_TANH) \
     cb(HswishOp, H_SWISH) \
     cb(ExpM1Op, EXPM1) \
-    cb(RoundOp, ROUND)
+    cb(RoundOp, ROUND) \
+    cb(ErfOp, ERF) \
+    cb(ErfInvOp, ERFINV) \
+    cb(ErfCOp, ERFC) \
+    cb(ErfCInvOp, ERFCINV)
 
 #define MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb) \
     cb(AbsGradOp, ABS_GRAD) \
@@ -52,6 +59,7 @@
     cb(SubOp, SUB) \
     cb(MulOp, MUL) \
     cb(TrueDivOp, TRUE_DIV) \
+    cb(PowOp, POW) \
     cb(SigmoidGradOp, SIGMOID_GRAD) \
     cb(SwishGt0Op, SWITCH_GT0) \
     cb(TanhGradOp, TANH_GRAD) \
@@ -64,7 +72,8 @@
     cb(FastTanhGradOp, FAST_TANH_GRAD) \
     cb(FuseAddSigmoidOp, FUSE_ADD_SIGMOID) \
     cb(HswishGradOp, H_SWISH_GRAD) \
-    cb(FuseAddHswishOp, FUSE_ADD_H_SWISH)
+    cb(FuseAddHswishOp, FUSE_ADD_H_SWISH) \
+    cb(Atan2Op, ATAN2)
 
 #define MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb) \
     cb(CondLeqMovOp, COND_LEQ_MOV) \
@@ -197,6 +206,79 @@ struct StandardOp<jit::RoundOp> {
     }
 };
 
+//! pi / 2 - arctan2(x, sqrt(1 - x * x))
+template <>
+struct StandardOp<jit::AcosOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        auto x = operands[0];
+        auto one_minus_x_2 = helper.sub(helper.const_val(1.f), helper.mul(x, x));
+        auto asin = atan2_approx(helper, x, helper.sqrt(one_minus_x_2));
+        auto pi_over_2 = helper.const_val(1.57079637f);
+        return helper.sub(pi_over_2, asin);
+    }
+};
+
+//! arctan2(x, sqrt(1 - x * x))
+template <>
+struct StandardOp<jit::AsinOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        auto x = operands[0];
+        auto one_minus_x_2 = helper.sub(helper.const_val(1.f), helper.mul(x, x));
+        return atan2_approx(helper, x, helper.sqrt(one_minus_x_2));
+    }
+};
+
+//! gauss error function
+template <>
+struct StandardOp<jit::ErfOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        return erf_approx(helper, operands[0]);
+    }
+};
+
+//! inverse of gauss error function
+//! https://github.com/scipy/scipy/blob/master/scipy/special/cephes/erfinv.c
+template <>
+struct StandardOp<jit::ErfInvOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        auto sqrt2 = helper.const_val(1.4142135623f);
+        auto x = helper.mul(helper.const_val(0.5f),
+                            helper.add(operands[0], helper.const_val(1.f)));
+        return helper.div(ndtri_approx(helper, x), sqrt2);
+    }
+};
+
+//! complementary error function
+template <>
+struct StandardOp<jit::ErfCOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        return helper.sub(helper.const_val(1.f), erf_approx(helper, operands[0]));
+    }
+};
+
+//! inverse of complementary gauss error function
+//! https://github.com/scipy/scipy/blob/master/scipy/special/cephes/erfinv.c
+template <>
+struct StandardOp<jit::ErfCInvOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        auto minus_sqrt2 = helper.const_val(-1.4142135623f);
+        auto x = helper.mul(helper.const_val(0.5f), operands[0]);
+        return helper.div(ndtri_approx(helper, x), minus_sqrt2);
+    }
+};
+
 /////////////////////////// binary op ///////////////////////////
 
 //! binary: x > 0 ? y : -y
@@ -207,6 +289,16 @@ struct StandardOp<jit::AbsGradOp> {
         ValueBuilderHelper helper(builder, loc);
         return helper.select(helper.gt(operands[0], helper.const_val(0.f)),
                              operands[1], helper.neg(operands[1]));
+    }
+};
+
+//! x^y = exp(y * log(x))
+template <>
+struct StandardOp<jit::PowOp> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        return helper.exp(helper.mul(operands[1], helper.log(operands[0])));
     }
 };
 
@@ -379,6 +471,16 @@ struct StandardOp<jit::FuseAddHswishOp> {
         return helper.div(
                 helper.mul(sum, helper.min(helper.max(tmp, const_0), const_6)),
                 const_6);
+    }
+};
+
+//! arctan
+template <>
+struct StandardOp<jit::Atan2Op> {
+    mlir::Value operator()(mlir::OpBuilder& builder, mlir::Location loc,
+                           ValueRange operands) {
+        ValueBuilderHelper helper(builder, loc);
+        return atan2_approx(helper, operands[0], operands[1]);
     }
 };
 

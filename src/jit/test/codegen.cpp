@@ -159,22 +159,48 @@ void run_mlir(CompNode cn) {
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
 }
 
+struct MlirTestOpt {
+    float low;
+    float high;
+    float maxerr;
+};
+
+struct MlirTestOpt get_mode_opt(opr::Elemwise::Mode mode) {
+    struct MlirTestOpt opt = {0, 1, 1e-6};
+    if (mode == opr::Elemwise::Mode::ABS) {
+        opt.low = -10;
+        opt.high = 10;
+    } else if (mode == opr::Elemwise::Mode::LOG) {
+        opt.low = 0.1;
+        opt.high = 4;
+    } else if (mode == opr::Elemwise::Mode::ERF or
+               mode == opr::Elemwise::Mode::ERFC) {
+        opt.low = -5;
+        opt.high = 5;
+    } else if (mode == opr::Elemwise::Mode::ERFINV) {
+        opt.low = -0.999;
+        opt.high = 0.999;
+        opt.maxerr = 1e-4;
+    } else if (mode == opr::Elemwise::Mode::ERFCINV) {
+        opt.low = 0.001;
+        opt.high = 1.999;
+        opt.maxerr = 1e-4;
+    }
+    return opt;
+}
+
 template <typename tag, int arity>
 void run_mlir_mode(CompNode cn) {
     set_backend(Backend::MLIR);
     auto graph = ComputingGraph::make();
-    float low = 0.f, high = 1.f;
-    if (tag::mode == opr::Elemwise::Mode::LOG) {
-        low = 0.1;
-        high = 4;
-    }
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen(low,
-                                                                         high);
+    auto opt = get_mode_opt(tag::mode);
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen(opt.low,
+                                                                         opt.high);
 
     SmallVector<std::shared_ptr<HostTensorND>> hosts;
     VarNodeArray input_vars;
     for (int i = 0; i < arity; i++) {
-        hosts.push_back(gen({23, 42}, cn));
+        hosts.push_back(gen({2323, 4242}, cn));
         input_vars.push_back(
                 opr::Host2DeviceCopy::make(*graph, hosts[i]).node());
     }
@@ -198,7 +224,7 @@ void run_mlir_mode(CompNode cn) {
                                 make_callback_copy(y_jit, host_y_jit)});
     func->execute();
 
-    MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_jit, opt.maxerr);
 }
 #endif
 
@@ -240,18 +266,25 @@ TEST(TestJITMlirCodeGen, BasicGPU) {
     cb(RELU) \
     cb(ABS) \
     cb(NEGATE) \
+    cb(ACOS) \
+    cb(ASIN) \
     cb(CEIL) \
     cb(EXP) \
     cb(FLOOR) \
     cb(LOG) \
     cb(LOG1P) \
     cb(SIN) \
+    cb(COS) \
     cb(TANH) \
     cb(FAST_TANH) \
     cb(H_SWISH) \
     cb(SIGMOID) \
     cb(EXPM1) \
-    cb(ROUND)
+    cb(ROUND) \
+    cb(ERF) \
+    cb(ERFINV) \
+    cb(ERFC) \
+    cb(ERFCINV)
 // clang-format on
 template <typename tag>
 class TestJITMlirUnaryElemwise : public ::testing::Test {};
@@ -268,21 +301,27 @@ FOREACH_UNARY_MODE(def_tag)
                 ::testing::Types<FOREACH_UNARY_MODE(t) ABS>;
 #undef t
 TYPED_TEST_CASE(TestJITMlirUnaryElemwise, mlir_elemwise_unary_types);
-TYPED_TEST(TestJITMlirUnaryElemwise, run) {
-    auto cn = CompNode::load("cpu0");
-    run_mlir_mode<TypeParam, 1>(cn);
-}
 
 #define SKIP_MODE(_mode)                                 \
     if (TypeParam::mode == opr::Elemwise::Mode::_mode) { \
         printf("skip\n");                                \
         return;                                          \
     }
+
+TYPED_TEST(TestJITMlirUnaryElemwise, run) {
+    auto cn = CompNode::load("cpu0");
+
+    SKIP_MODE(ROUND);
+
+    run_mlir_mode<TypeParam, 1>(cn);
+}
+
 TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
 
     SKIP_MODE(SIN);
+    SKIP_MODE(ROUND);
 
     run_mlir_mode<TypeParam, 1>(cn);
 }
@@ -298,6 +337,7 @@ TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
     cb(MOD) \
     cb(SUB) \
     cb(TRUE_DIV) \
+    cb(POW) \
     cb(ABS_GRAD) \
     cb(SIGMOID_GRAD) \
     cb(SWITCH_GT0) \
@@ -311,7 +351,8 @@ TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
     cb(FAST_TANH_GRAD) \
     cb(FUSE_ADD_SIGMOID) \
     cb(H_SWISH_GRAD) \
-    cb(FUSE_ADD_H_SWISH)
+    cb(FUSE_ADD_H_SWISH) \
+    cb(ATAN2)
 // clang-format on
 template <typename tag>
 class TestJITMlirBinaryElemwise : public ::testing::Test {};
@@ -336,6 +377,9 @@ TYPED_TEST(TestJITMlirBinaryElemwise, run) {
 TYPED_TEST(TestJITMlirBinaryElemwise, runGpu) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
+
+    SKIP_MODE(MOD);
+
     run_mlir_mode<TypeParam, 2>(cn);
 }
 
@@ -373,7 +417,7 @@ TYPED_TEST(TestJITMlirTernaryElemwise, runGpu) {
 
 #undef SKIP_MODE
 
-#endif
+#endif  // MGB_JIT_MLIR
 
 #endif  // MGB_JIT
 

@@ -47,6 +47,8 @@ public:
     cb(lt);
     cb(le);
     cb(eq);
+    cb(bit_and);
+    cb(bit_or);
 #undef cb
     mlir::Value const_val(float val);
 

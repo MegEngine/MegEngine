@@ -29,6 +29,8 @@ cb(sub, SubFOp);
 cb(mul, MulFOp);
 cb(div, DivFOp);
 cb(mod, RemFOp);
+cb(bit_and, AndOp);
+cb(bit_or, OrOp);
 #undef cb
 
 #define cb(name, mode)                                                       \
@@ -72,6 +74,7 @@ cb(exp, ExpOp);
 cb(exp2, Exp2Op);
 cb(log10, Log10Op);
 cb(log2, Log2Op);
+cb(log, LogOp);
 cb(rsqrt, RsqrtOp);
 cb(sin, SinOp);
 cb(sqrt, SqrtOp);
@@ -79,17 +82,13 @@ cb(tanh, TanhOp);
 #undef cb
 
 mlir::Value ValueBuilderHelper::abs(mlir::Value lhs) {
-    return max(lhs, const_val(0.f));
+    auto zero = const_val(0.f);
+    return select(ge(lhs, zero), lhs, sub(zero, lhs));
 }
 
 mlir::Value ValueBuilderHelper::floor(mlir::Value lhs) {
     //! FIXME use standard floor when upgrade llvm
     return neg(ceil(neg(lhs)));
-}
-
-mlir::Value ValueBuilderHelper::log(mlir::Value lhs) {
-    // math.log10(math.e) = 0.4342944819032518f
-    return div(log10(lhs), const_val(0.4342944819032518f));
 }
 
 mlir::Value ValueBuilderHelper::select(mlir::Value cond, mlir::Value true_val,

@@ -68,8 +68,8 @@ class ElemwiseUnaryOp<string mnemonic, list<OpTrait> traits = [NoSideEffect]> :
 def ReluOp : ElemwiseUnaryOp<"relu", [NoSideEffect]>;
 def AbsOp : ElemwiseUnaryOp<"abs", [NoSideEffect]>;
 def NegOp : ElemwiseUnaryOp<"negate", [NoSideEffect]>;
-/* ACOS */
-/* ASIN */
+def AcosOp : ElemwiseUnaryOp<"acos", [NoSideEffect]>;
+def AsinOp : ElemwiseUnaryOp<"asin", [NoSideEffect]>;
 def CeilOp : ElemwiseUnaryOp<"ceil", [NoSideEffect]>;
 def CosOp : ElemwiseUnaryOp<"cos", [NoSideEffect]>;
 def ExpOp : ElemwiseUnaryOp<"exp", [NoSideEffect]>;
@@ -83,10 +83,10 @@ def TanhOp : ElemwiseUnaryOp<"tanh", [NoSideEffect]>;
 def FastTanhOp : ElemwiseUnaryOp<"fast_tanh", [NoSideEffect]>;
 def HswishOp : ElemwiseUnaryOp<"hswish", [NoSideEffect]>;
 def RoundOp : ElemwiseUnaryOp<"round", [NoSideEffect]>;
-/* ERF */
-/* ERFINV */
-/* ERFC */
-/* ERFCINV */
+def ErfOp : ElemwiseUnaryOp<"erf", [NoSideEffect]>;
+def ErfInvOp : ElemwiseUnaryOp<"erfinv", [NoSideEffect]>;
+def ErfCOp : ElemwiseUnaryOp<"erfc", [NoSideEffect]>;
+def ErfCInvOp : ElemwiseUnaryOp<"erfcinv", [NoSideEffect]>;
 
 class ElemwiseBinaryOp<string mnemonic, list<OpTrait> traits = [NoSideEffect]> :
   ElemwiseOp<mnemonic, traits> {
@@ -130,14 +130,14 @@ def LeqOp :  ElemwiseBinaryOp<"leq", [NoSideEffect]>;
 def EqOp :  ElemwiseBinaryOp<"eq", [Commutative, NoSideEffect]>;
 def FuseAddReluOp :  ElemwiseBinaryOp<"fuse_add_relu", [NoSideEffect]>;
 def TrueDivOp : ElemwiseBinaryOp<"true_div", [NoSideEffect]>;
-/* POW */
+def PowOp : ElemwiseBinaryOp<"pow", [NoSideEffect]>;
 def LogSumExpOp : ElemwiseBinaryOp<"log_sum_exp", [Commutative, NoSideEffect]>;
 def FuseAddTanhOp :  ElemwiseBinaryOp<"fuse_add_tanh", [NoSideEffect]>;
 def FastTanhGradOp :  ElemwiseBinaryOp<"fast_tanh_grad", [NoSideEffect]>;
 def FuseAddSigmoidOp :  ElemwiseBinaryOp<"fuse_add_sigmoid", [NoSideEffect]>;
 def HswishGradOp :  ElemwiseBinaryOp<"hswish_grad", [NoSideEffect]>;
 def FuseAddHswishOp : ElemwiseBinaryOp<"fuse_add_hswish", [NoSideEffect]>;
-/* ATAN2 */
+def Atan2Op : ElemwiseBinaryOp<"atan2", [NoSideEffect]>;
 
 class ElemwiseTernaryOp<string mnemonic, list<OpTrait> traits = [NoSideEffect]> :
   ElemwiseOp<mnemonic, traits> {
