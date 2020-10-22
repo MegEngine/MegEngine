@@ -345,14 +345,14 @@ class PyWriter(IndentWriterBase):
         if not self._imperative:
             self._write(
                 'def _as_dtype_num(dtype):\n'
-                '    import megengine._internal.mgb as m\n'
+                '    import megbrain.mgb as m\n'
                 '    return m._get_dtype_num(dtype)\n'
                 '\n'
             )
 
             self._write(
                 'def _as_serialized_dtype(dtype):\n'
-                '    import megengine._internal.mgb as m\n'
+                '    import megbrain.mgb as m\n'
                 '    return m._get_serialized_dtype(dtype)\n'
                 '\n'
             )

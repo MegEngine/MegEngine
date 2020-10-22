@@ -1,5 +1,2 @@
 Makefile
 /test/imperative_test
-*.so
-/python/megengine/core/ops/_internal/generated_ops.py
-/python/megengine/core/ops/_internal/param_defs.py

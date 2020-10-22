@@ -52,12 +52,12 @@ if local_version:
     __version__ = '{}+{}'.format(__version__, local_version)
 
 packages = find_packages(exclude=['test'])
-package_data = [
+megengine_data = [
     str(f.relative_to('megengine'))
     for f in pathlib.Path('megengine', 'core', 'include').glob('**/*')
 ]
 
-package_data += [
+megengine_data += [
     str(f.relative_to('megengine'))
     for f in pathlib.Path('megengine', 'core', 'lib').glob('**/*')
 ]
@@ -80,7 +80,7 @@ setup_kwargs = dict(
     author_email=email,
     packages=packages,
     package_data={
-        'megengine': package_data,
+        'megengine': megengine_data,
     },
     ext_modules=prebuild_modules,
     install_requires=requires,
