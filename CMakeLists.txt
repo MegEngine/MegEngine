@@ -144,7 +144,7 @@ if(${MGE_ARCH} STREQUAL "AUTO")
     endif()
 endif()
 
-if(${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} STREQUAL "armv7" OR ${MGE_ARCH} STREQUAL "aarch64")
+if((${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} STREQUAL "armv7" OR ${MGE_ARCH} STREQUAL "aarch64") AND NOT APPLE)
     option(MGE_ENABLE_CPUINFO "Build cpuinfo library for check runtime." ON)
     if(MGE_ENABLE_CPUINFO)
         message("-- Enable cpuinfo runtime check and little kernel optimize.")
