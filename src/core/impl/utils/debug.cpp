@@ -10,9 +10,9 @@
  * implied.
  */
 
-#include "megbrain/utils/debug.h"
 #include <cerrno>
 #include <cmath>
+#include "megbrain/utils/debug.h"
 #include "megdnn/tensor_iter.h"
 
 using namespace mgb;
@@ -127,7 +127,7 @@ void get_mem_map(
 }
 
 #ifndef WIN32
-//FIXME: imp SigHandlerInit backtrace for windows
+// FIXME: imp SigHandlerInit backtrace for windows
 class SigHandlerInit {
     static void death_handler(int signum) {
         char msg0[] =
@@ -146,7 +146,7 @@ class SigHandlerInit {
             mgb_log_error("%s: caught deadly signal %d(%s)", msg0, signum,
                           strsignal(signum));
         }
-//FIXME: imp backtrace for macos
+// FIXME: imp backtrace for macos
 #ifndef __APPLE__
         std::string bp;
         debug::backtrace(2).fmt_to_str(bp);
@@ -279,7 +279,7 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
     recursive_call = false;
     return result;
 #else
-    //FIXME: imp Backtrace for windows
+    // FIXME: imp Backtrace for windows
     BacktraceResult result;
     return result;
 #endif
@@ -352,6 +352,16 @@ std::string num2str(float val) {
     return ret;
 }
 #endif
+template <typename dnn_ctype>
+struct RealCtype {
+    using ctype = dnn_ctype;
+    static dnn_ctype trans(dnn_ctype val) { return val; }
+};
+template <>
+struct RealCtype<dt_qint8> {
+    using ctype = int;
+    static int trans(dt_qint8 val) { return val.as_int8(); }
+};
 
 template <typename ctype>
 Maybe<std::string> do_compare_tensor_value(const char* expr0, const char* expr1,
@@ -361,7 +371,8 @@ Maybe<std::string> do_compare_tensor_value(const char* expr0, const char* expr1,
     auto it0 = megdnn::tensor_iter<ctype>(v0.as_megdnn()).begin(),
          it1 = megdnn::tensor_iter<ctype>(v1.as_megdnn()).begin();
     for (size_t i = 0, it = v0.shape().total_nr_elems(); i < it; ++i) {
-        ctype iv0 = *it0, iv1 = *it1;
+        typename RealCtype<ctype>::ctype iv0 = RealCtype<ctype>::trans(*it0),
+                                         iv1 = RealCtype<ctype>::trans(*it1);
         double err = std::abs(iv0 - iv1) /
                      std::max<double>(
                              1, std::min(std::abs(static_cast<double>(iv0)),
@@ -424,7 +435,8 @@ Maybe<std::string> debug::compare_tensor_value(const HostTensorND& v0,
         return do_compare_tensor_value<DTypeTrait<_dt>::ctype>( \
                 expr0, expr1, v0, v1, maxerr);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-        cb(::megdnn::dtype::Bool)
+        cb(::megdnn::dtype::QuantizedS8);
+        cb(::megdnn::dtype::Bool);
 #undef cb
         default:
             mgb_throw(MegBrainError, "unhandled dtype: %s", dtype.name());

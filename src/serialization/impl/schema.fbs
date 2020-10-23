@@ -101,6 +101,7 @@ union OperatorParam {
     param.NMSKeep = 69,
     param.AdaptivePooling = 70,
     param.NvOf = 71,
+    param.DctChannelSelect = 72,
 }
 
 table Operator {

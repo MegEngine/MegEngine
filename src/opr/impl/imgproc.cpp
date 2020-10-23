@@ -10,9 +10,9 @@
  * implied.
  */
 
-#include "megbrain/opr/imgproc.h"
 #include "./internal/megdnn_opr_wrapper.inl"
 #include "megbrain/graph/grad_impl.h"
+#include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/utility.h"
 
 using namespace mgb;
@@ -267,9 +267,10 @@ void WarpPerspectiveBackwardMat::scn_do_execute() {
     }
 }
 
-SymbolVar WarpPerspectiveBackwardMat::make(
-        SymbolVar i0, SymbolVar i1, SymbolVar i2, SymbolVar i3,
-        const Param& param, const OperatorNodeConfig& config) {
+SymbolVar WarpPerspectiveBackwardMat::make(SymbolVar i0, SymbolVar i1,
+                                           SymbolVar i2, SymbolVar i3,
+                                           const Param& param,
+                                           const OperatorNodeConfig& config) {
     intl::MegDNNOprInitInputsModifier<WarpPerspectiveBackwardMat>::apply(
             param, {&i0, &i1, &i2, &i3});
     return i0.insert_single_output_opr<WarpPerspectiveBackwardMat>(
@@ -447,14 +448,12 @@ void RemapForward::init_output_dtype() {
 MGB_IMPL_OPR_GRAD(RemapForward) {
     mgb_assert(opr.input().size() == 2);
     if (wrt_idx == 0) {
-        SymbolVar grad =
-                RemapBackwardData::make(opr.input(1), out_grad[0],
-                                        opr.input(0), opr.param());
+        SymbolVar grad = RemapBackwardData::make(opr.input(1), out_grad[0],
+                                                 opr.input(0), opr.param());
         return grad.node();
     } else if (wrt_idx == 1) {
-        SymbolVar grad = 
-                RemapBackwardMat::make(opr.input(0), opr.input(1),
-                                       out_grad[0], opr.param());
+        SymbolVar grad = RemapBackwardMat::make(opr.input(0), opr.input(1),
+                                                out_grad[0], opr.param());
         return grad.node();
     } else
         return InvalidGrad::make(opr, wrt_idx);
@@ -467,5 +466,74 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemapBackwardData);
 MEGDNN_OPR_INIT3(RemapBackwardData, "remap_bwd_data", 2, false);
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemapBackwardMat);
 MEGDNN_OPR_INIT3(RemapBackwardMat, "remap_bwd_mat", 1, true);
+
+/* ======================= DctChannelSelectForward ======================= */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(DctChannelSelectForward);
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<DctChannelSelectForward> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        if (opr.config().output_dtype().valid()) {
+            opr.output(0)->dtype(opr.config().output_dtype());
+        } else {
+            opr.output(0)->dtype(dtype::Float32());
+        }
+    }
+};
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+void DctChannelSelectForward::get_output_var_shape(
+        const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
+    auto mo = megdnn_opr();
+    TensorLayout dst;
+    dst.dtype = output(0)->dtype();
+    if (inp_shape.size() == 1) {
+        mo->deduce_layout({inp_shape[0], input(0)->dtype(), input(0)->format()},
+                          {}, {}, dst);
+    } else {
+        mgb_assert(inp_shape.size() == 3, "no support input tensor num %zu",
+                   inp_shape.size());
+        mo->deduce_layout({inp_shape[0], input(0)->dtype(), input(0)->format()},
+                          {inp_shape[1], input(1)->dtype(), input(1)->format()},
+                          {inp_shape[2], input(2)->dtype(), input(2)->format()},
+                          dst);
+    }
+    out_shape[0] = dst;
+}
+size_t DctChannelSelectForward::get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    auto mo = megdnn_opr();
+
+    return mo->get_workspace_in_bytes(
+            {input_shapes[0], input(0)->dtype(), input(0)->format()}, {}, {},
+            {output_shapes[0], output(0)->dtype(), output(0)->format()});
+}
+void DctChannelSelectForward::scn_do_execute() {
+    auto&& inp = input();
+    auto mo = megdnn_opr();
+    if (inp.size() == 1) {
+        mo->exec(inp[0]->dev_tensor().as_megdnn(), {}, {},
+                 output(0)->dev_tensor().as_megdnn(),
+                 intl::get_megdnn_workspace_from_var(output().back()));
+
+    } else {
+        mgb_assert(inp.size() == 3, "no support input tensor num %zu",
+                   inp.size());
+
+        mo->exec(inp[0]->dev_tensor().as_megdnn(),
+                 inp[1]->dev_tensor().as_megdnn(),
+                 inp[2]->dev_tensor().as_megdnn(),
+                 output(0)->dev_tensor().as_megdnn(),
+                 intl::get_megdnn_workspace_from_var(output().back()));
+    }
+}
+
+MEGDNN_OPR_INIT3(DctChannelSelectForward, "dct_channel_select")
+MEGDNN_OPR_INIT1(DctChannelSelectForward, "dct_channel_select")
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

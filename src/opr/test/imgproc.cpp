@@ -713,4 +713,94 @@ TEST(TestOprImgproc, Remap_NHWC) {
             .run({TensorShape{N, 20, 20, C}, TensorShape{N, 10, 10, 2}}, opt);
 }
 
+TEST(TestOprImgproc, DCT) {
+    REQUIRE_GPU(1);
+    using Checker3 = AutoOprChecker<3, 1>;
+    using Checker1 = AutoOprChecker<1, 1>;
+    opr::DctChannelSelectForward::Param param;
+    opr::DctChannelSelectForward::Param param_nchw4;
+    param_nchw4.format = opr::DctChannelSelectForward::Param::Format::NCHW4;
+    auto make_graph3 =
+            [&](const Checker3::SymInpArray& inputs) -> Checker3::SymOutArray {
+        return {opr::DctChannelSelectForward::make(inputs[0], inputs[1],
+                                                   inputs[2], param)};
+    };
+    auto fwd3 = [&](Checker3::NumOutArray& dest, Checker3::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()
+                           ->create_operator<megdnn::DctChannelSelectForward>();
+        auto& in_shape = inp[0]->shape();
+        TensorShape out_shp{in_shape[0], in_shape[1] * 64, in_shape[2] / 8,
+                            in_shape[3] / 8};
+        dest[0].comp_node(inp[0]->comp_node()).resize(out_shp);
+        opr->param() = param;
+        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), inp[2]->as_megdnn(),
+                  dest[0].as_megdnn(), {});
+    };
+    auto make_graph1 =
+            [&](const Checker1::SymInpArray& inputs) -> Checker1::SymOutArray {
+        return {opr::DctChannelSelectForward::make(inputs[0], param)};
+    };
+    auto make_graph1_s8 =
+            [&](const Checker1::SymInpArray& inputs) -> Checker1::SymOutArray {
+        return {opr::DctChannelSelectForward::make(
+                inputs[0], param_nchw4,
+                OperatorNodeConfig(dtype::QuantizedS8(10.f)))};
+    };
+    auto fwd1 = [&](Checker1::NumOutArray& dest, Checker1::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()
+                           ->create_operator<megdnn::DctChannelSelectForward>();
+        auto& in_shape = inp[0]->shape();
+        TensorShape out_shp{in_shape[0], in_shape[1] * 64, in_shape[2] / 8,
+                            in_shape[3] / 8};
+        dest[0].comp_node(inp[0]->comp_node()).resize(out_shp);
+        opr->param() = param;
+        opr->exec(inp[0]->as_megdnn(), {}, {}, dest[0].as_megdnn(), {});
+    };
+    auto fwd1_s8 = [&](Checker1::NumOutArray& dest, Checker1::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()
+                           ->create_operator<megdnn::DctChannelSelectForward>();
+        auto& in_shape = inp[0]->shape();
+        TensorShape out_shp{in_shape[0], in_shape[1] * 64 / 4, in_shape[2] / 8,
+                            in_shape[3] / 8, 4};
+        dest[0].comp_node(inp[0]->comp_node()).resize(out_shp);
+        opr->param() = param_nchw4;
+        opr->exec(inp[0]->as_megdnn(), {}, {}, dest[0].as_megdnn(), {});
+    };
+    Checker3::RunOptions opt3;
+    Checker1::RunOptions opt1;
+    Checker1::RunOptions opt1_qint8;
+    opt3.outputs_max_err = 1e-3;
+    opt1.outputs_max_err = 1e-3;
+    opt1_qint8.outputs_max_err = 1.001;
+
+    auto gen_input = [](HostTensorND& dest) {
+        HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM>
+                mask_generator{0, 255};
+        dest = *mask_generator(dest.shape(), dest.comp_node());
+    };
+    auto gen_mask = [](HostTensorND& dest) {
+        HostTensorGenerator<dtype::Int32, RandomDistribution::UNIFORM>
+                mask_generator{0, 8};
+        dest = *mask_generator(dest.shape(), dest.comp_node());
+    };
+    Checker1(make_graph1, fwd1, CompNode::load("gpu0"))
+            .disable_grad_check()
+            .set_input_generator(0, gen_input)
+            .set_input_dtype(0, dtype::Uint8())
+            .run({TensorShape{1, 1, 16, 16}}, opt1)
+            .run({TensorShape{1, 3, 256, 256}}, opt1)
+            .run({TensorShape{4, 3, 512, 512}}, opt1);
+
+    Checker1(make_graph1_s8, fwd1_s8, CompNode::load("gpu0"))
+            .disable_grad_check()
+            .set_input_generator(0, gen_input)
+            .set_input_dtype(0, dtype::Uint8())
+            .run({TensorShape{1, 1, 16, 16}}, opt1_qint8)
+            .run({TensorShape{1, 3, 256, 256}}, opt1_qint8)
+            .run({TensorShape{4, 3, 512, 512}}, opt1_qint8);
+
+    MGB_MARK_USED_VAR(make_graph3);
+    MGB_MARK_USED_VAR(fwd3);
+    MGB_MARK_USED_VAR(gen_mask);
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -259,6 +259,37 @@ void record_execute_deps(ExecDependencyArray& deps) override;
 };
 using WarpAffine = WarpAffineForward;
 
+/*!
+ * \brief apply DCT transformation to batched 2D images
+ */
+MGB_DEFINE_OPR_CLASS(
+        DctChannelSelectForward,
+        intl::MegDNNOprWrapperFwd<megdnn::DctChannelSelectForward>)  // {
+
+public:
+DctChannelSelectForward(VarNode* src, VarNode* mask_offset, VarNode* mask_val,
+                        const Param& param, const OperatorNodeConfig& config);
+
+static SymbolVar make(SymbolVar src, SymbolVar mask_offset, SymbolVar mask_val,
+                      const Param& param,
+                      const OperatorNodeConfig& config = {});
+
+DctChannelSelectForward(VarNode* src, const Param& param,
+                        const OperatorNodeConfig& config);
+
+static SymbolVar make(SymbolVar src, const Param& param,
+                      const OperatorNodeConfig& config = {});
+void get_output_var_shape(const TensorShapeArray& inp_shape,
+                          TensorShapeArray& out_shape) const override;
+
+size_t get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const override;
+void scn_do_execute() override;
+};
+
+using DctChannelSelect = DctChannelSelectForward;
+
 }  // opr
 }  // mgb
 

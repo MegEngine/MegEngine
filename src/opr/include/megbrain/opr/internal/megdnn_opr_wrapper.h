@@ -294,7 +294,7 @@ namespace intl {
             void scn_do_execute() override;
             void get_output_var_shape(
                     const TensorShapeArray &inp_shape,
-                    TensorShapeArray &out_shape) const override final;
+                    TensorShapeArray &out_shape) const override;
 
             void record_execute_deps(
                     cg::GraphExecutable::ExecDependencyArray& deps) override {

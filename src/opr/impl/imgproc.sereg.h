@@ -38,6 +38,26 @@ namespace serialization {
         }
     };
 
+    template <>
+    struct OprMaker<opr::DctChannelSelectForward, 0> {
+        using Opr = opr::DctChannelSelectForward;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                                          const cg::VarNodeArray& inputs,
+                                          ComputingGraph& graph,
+                                          const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if (inputs.size() == 3) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                mgb_assert(inputs.size() == 1);
+                return Opr::make(inputs[0], param, config).node()->owner_opr();
+            }
+        }
+    };
+
     template<>
     struct OprMaker<opr::WarpPerspectiveBackwardData, 0> {
         using Opr = opr::WarpPerspectiveBackwardData;
@@ -107,6 +127,8 @@ namespace opr {
     //! current resize version
     using ResizeV1 = opr::Resize;
     MGB_SEREG_OPR(ResizeV1, 2);
+
+    MGB_SEREG_OPR(DctChannelSelect, 0);
 } // namespace opr
 
 

@@ -90,4 +90,30 @@ decl_opr(
     desc='Remap transformation to batched 2D images; '
     'see https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=remap'
     'for details on remap transformations.')
+
+decl_raw_opr(
+    'dct_channel_select',
+    inputs=[
+        Doc('src', 'input image, uint8 data type with NCHW format'),
+        Doc('mask_offset', 'out channel offset array'),
+        Doc('mask_val', 'out index per channel'),
+        ], 
+    params='DctChannelSelect',   
+    body=[
+        'if mask_offset is None:',
+        '    all_inputs = _helper.canonize_input_vars([src], comp_graph=comp_graph, config=config)',
+        'else:',
+        '    all_inputs = _helper.canonize_input_vars([src, mask_offset, mask_val], comp_graph=comp_graph, config=config)',
+        'cvt_result_kwargs = {}',
+        'param = _helper.cvt_to_opr_param_def(param, _opr_param_defs.DctChannelSelect, kwargs)',
+        'assert not kwargs, "extra kwargs: {}".format(kwargs)',
+        'all_params = []',
+        'all_params.append(param.serialize())',
+        'output = _mgb._create_opr("DctChannelSelect", all_inputs, all_params, config)',
+    ],
+    has_out_dtype=True,
+    desc='DctChannelSelect do DCT with channel select'
+    'see https://docs.opencv.org/2.4/modules/core/doc/operations_on_arrays.html?highlight=dct#dct'
+    'for details on DCT transformations. It will output float32 or qint8')
+
 # vim: ft=python
