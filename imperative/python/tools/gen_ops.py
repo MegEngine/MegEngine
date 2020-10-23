@@ -257,7 +257,7 @@ class Context:
 
 
     def decl_raw_opr(self, name, *, inputs, inputs_cvt=[], body=None,
-                     desc=None, local_defs=[], have_config=True):
+                     desc=None, local_defs=[], have_config=True, params=None, has_out_dtype=False):
         self.skipped.append(name)
 
     def get_str(self):
