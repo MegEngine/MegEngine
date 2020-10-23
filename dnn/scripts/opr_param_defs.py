@@ -411,6 +411,9 @@ pdef('ElemwiseMultiType').add_enum(
 
 pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)
 
+(pdef('DctChannelSelect', '2d discrete cosine transform').add_enum_alias('Format', 'ConvolutionV0').
+ add_enum('FastImpl', 'NONE', 'FIX_32_MASK').add_fields('int32', 'dct_block_size', 8))
+
 (pdef('MatrixMul', version=0, is_legacy=True).
  add_fields('bool', 'transposeA', 'false', 'transposeB', 'false').
  add_enum('DataType',

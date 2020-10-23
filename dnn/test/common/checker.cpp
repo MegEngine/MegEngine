@@ -294,8 +294,6 @@ void CheckerHelper::do_exec_with_testcases(const TensorValueArray& testcase_in,
         ASSERT_TRUE(testcase_in[i].layout.ndim == 0 ||
                     testcase_out[i].layout.ndim == 0 ||
                     testcase_in[i].layout.eq_layout(testcase_out[i].layout));
-        ASSERT_TRUE(testcase_in[i].layout.ndim != 0 ||
-                    testcase_out[i].layout.ndim != 0);
         layouts.emplace_back(testcase_in[i].layout.ndim > 0
                                      ? testcase_in[i].layout
                                      : testcase_out[i].layout);

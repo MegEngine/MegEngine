@@ -26,6 +26,7 @@
 #include "src/cuda/convpooling/opr_impl.h"
 #include "src/cuda/cumsum/opr_impl.h"
 #include "src/cuda/cvt_color/opr_impl.h"
+#include "src/cuda/dct/opr_impl.h"
 #include "src/cuda/deformable_conv/opr_impl.h"
 #include "src/cuda/deformable_ps_roi_pooling/opr_impl.h"
 #include "src/cuda/dot/opr_impl.h"

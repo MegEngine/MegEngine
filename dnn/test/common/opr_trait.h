@@ -110,6 +110,7 @@ DEF(BatchConvBiasForward, 5, true, true);
 DEF(Remap, 3, true, true);
 DEF(RemapBackwardData, 3, true, false);
 DEF(RemapBackwardMat, 4, true, false);
+DEF(DctChannelSelectForward, 4, true, true);
 }  // namespace test
 }  // namespace megdnn
 

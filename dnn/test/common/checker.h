@@ -392,7 +392,8 @@ TensorND TensorValue(const TensorShape& shape, T dtype,
     tensor.layout = {shape, dtype};
     tensor.raw_ptr =
             static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
-    megdnn_assert(values.size() == tensor.layout.total_nr_elems());
+    megdnn_assert(values.size() == tensor.layout.total_nr_elems(), "%zu == %zu", values.size(), 
+            tensor.layout.total_nr_elems());
     auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
     for (const auto& v : values) {
         *ptr++ = typename DTypeTrait<T>::ctype(v);

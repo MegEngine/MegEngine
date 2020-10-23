@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/naive/handle.h"
@@ -29,6 +30,7 @@
 #include "src/naive/convpooling/opr_impl.h"
 #include "src/naive/cumsum/opr_impl.h"
 #include "src/naive/cvt_color/opr_impl.h"
+#include "src/naive/dct/opr_impl.h"
 #include "src/naive/deformable_conv/opr_impl.h"
 #include "src/naive/deformable_ps_roi_pooling/opr_impl.h"
 #include "src/naive/dot/opr_impl.h"
@@ -56,6 +58,7 @@
 #include "src/naive/reduce/opr_impl.h"
 #include "src/naive/relayout/opr_impl.h"
 #include "src/naive/relayout_format/opr_impl.h"
+#include "src/naive/remap/opr_impl.h"
 #include "src/naive/repeat/opr_impl.h"
 #include "src/naive/resize/opr_impl.h"
 #include "src/naive/rng/opr_impl.h"
@@ -76,7 +79,6 @@
 #include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_perspective/opr_impl.h"
 #include "src/naive/winograd_filter_preprocess/opr_impl.h"
-#include "src/naive/remap/opr_impl.h"
 
 static size_t g_image2d_pitch_alignment = 1;
 

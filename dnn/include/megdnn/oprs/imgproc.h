@@ -182,6 +182,48 @@ class WarpPerspectiveBackwardMat: public WarpPerspectiveBase {
                 size_t workspace_in_bytes);
 };
 
+class DctChannelSelectForward : public OperatorBase {
+    DEF_OPR_PARAM(DctChannelSelect);
+    DEF_OPR_IMPL(DctChannelSelectForward, OperatorBase, 3, 1);
+
+public:
+    /**
+     * \param[in] DctChannelSelectForward input, must be uint8 nchw tensor
+     * \param[in] mask_offset input, must be int32 nchw tensor
+     * \param[in] mask_val input, must be int32 nchw tensor
+     * \param[dst] DctChannelSelectForward output, default fp32 nchw tensor
+     * \param[out] workspace temporary workspace to perform forward
+     */
+    virtual void exec(_megdnn_tensor_in src, 
+                      _megdnn_tensor_in mask_offset, 
+                      _megdnn_tensor_in mask_val, 
+                      _megdnn_tensor_out dst, 
+                      _megdnn_workspace workspace) = 0;
+
+    void deduce_layout(const TensorLayout& src, 
+                       const TensorLayout& mask_offset,
+                       const TensorLayout& mask_val, 
+                       TensorLayout& dst);
+                       
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src, 
+                                          const TensorLayout& mask_offset,
+                                          const TensorLayout& mask_val, 
+                                          const TensorLayout& dst) = 0;
+
+protected:
+    void check_layout_fwd(const TensorLayout& src, 
+                          const TensorLayout& mask_offset,
+                          const TensorLayout& mask_val, 
+                          const TensorLayout& dst);
+                          
+    void deduce_layout_fwd(const TensorLayout& src, 
+                           const TensorLayout& mask_offset,
+                           const TensorLayout& mask_val, 
+                           TensorLayout& dst);
+
+    std::string param_msg() const;
+};
+
 } // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"
