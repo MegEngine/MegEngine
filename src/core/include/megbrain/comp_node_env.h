@@ -63,7 +63,6 @@
 #endif //MGB_ENABLE_LOGGING
 #endif //MGB_CUDA
 
-
 #if MGB_ATLAS
 #include "megcore_atlas.h"
 #include <atomic>
@@ -204,7 +203,6 @@ namespace mgb {
                                     const char* file, const char* func,
                                     int line);
 #endif
-
 
 
 #if MGB_ROCM
