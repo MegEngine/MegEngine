@@ -22,6 +22,16 @@ namespace {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"
+
+#ifdef __GNUC__
+#ifndef __has_warning
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#else
+#if __has_warning("-Wmaybe-uninitialized")
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+#endif
+#endif
 ////////////////////Store_OC4_OW8_Remain/////////////////////////
 template <int ow_remain, typename Op>
 struct Store_OC4_OW8_Remain {
