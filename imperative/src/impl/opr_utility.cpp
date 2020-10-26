@@ -156,6 +156,12 @@ cg::OperatorNodeBase::NodeProp* OutputCallback::do_make_node_prop() const {
     return prop;
 }
 
+void OutputCallback::add_input_layout_constraint() {
+    if (m_param.require_contiguous) {
+        input(0)->add_layout_constraint_contiguous();
+    }
+}
+
 void OutputCallback::scn_do_execute() {
     if (m_use_host_value) {
         m_param.callback(owner_graph()->static_infer_manager().infer_value(input(0)));

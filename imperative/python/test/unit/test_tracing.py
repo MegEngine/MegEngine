@@ -406,3 +406,16 @@ def test_clip():
 
     for i in range(3):
         f(x, tensor([0]), tensor([1]))
+
+
+# test returning noncontiguous tensor from trace
+def test_slice():
+    @trace
+    def f(x):
+        return x[:, 1::2]
+
+    x = F.arange(8).reshape(2, 4)
+    f(x)
+    y = f(x)
+    np.testing.assert_array_equal(y.numpy(), x.numpy()[:, 1::2])
+    y + y

@@ -62,6 +62,7 @@ public:
         callback_t callback;
         bool borrow = false; // do not obtain shared ownership on DeviceTensorND
         bool prefer_host_value = false; // use host value when possible
+        bool require_contiguous = true;
     };
     OutputCallback(Param param,
                    const VarNodeArray& inputs,
@@ -80,6 +81,7 @@ protected:
     void scn_do_execute() override;
     void init_output_static_infer_desc() override;
     NodeProp* do_make_node_prop() const override;
+    void add_input_layout_constraint() override;
 private:
     Param m_param;
     mutable bool m_use_host_value;
