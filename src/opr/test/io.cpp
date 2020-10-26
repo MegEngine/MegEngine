@@ -150,6 +150,36 @@ TEST(TestOprIO, ImmutableTensor) {
 
 }
 
+TEST(TestOprIO, ImmutableTensorHostvalue) {
+    HostTensorGenerator<> gen;
+    TensorShape shape({2, 3});
+    auto host_x = gen(shape);
+    auto graph = ComputingGraph::make();
+    auto x = opr::ImmutableTensor::make(*graph, *host_x);
+    auto y = x.node()->owner_opr()
+                     ->cast_final_safe<opr::ImmutableTensor>()
+                     .host_value();
+    for (size_t i = 0; i < shape.total_nr_elems(); ++i) {
+        ASSERT_EQ(host_x->ptr<float>()[i], y.ptr<float>()[i]);
+    }
+}
+
+TEST(TestOprIO, ImmutableTensorHostvalueGPU) {
+    REQUIRE_GPU(1);
+    auto gpu_cn = CompNode::load("gpu0");
+    HostTensorGenerator<> gen;
+    TensorShape shape({2, 3});
+    auto host_x = gen(shape);
+    auto graph = ComputingGraph::make();
+    auto x = opr::ImmutableTensor::make(*graph, *host_x, {gpu_cn});
+    auto y = x.node()->owner_opr()
+                     ->cast_final_safe<opr::ImmutableTensor>()
+                     .host_value();
+    for (size_t i = 0; i < shape.total_nr_elems(); ++i) {
+        ASSERT_EQ(host_x->ptr<float>()[i], y.ptr<float>()[i]);
+    }
+}
+
 TEST(TestOprIO, ImmutableTensorLarge) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1025});

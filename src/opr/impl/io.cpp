@@ -639,6 +639,9 @@ SymbolVar ImmutableTensor::make(ComputingGraph &graph, const DTypeScalar &val,
 const DeviceTensorND& ImmutableTensor::value() const {
     return m_value.dev();
 }
+const DeviceTensorND& ImmutableTensor::host_value()  {
+    return const_cast<Value*>(&m_value)->static_infer();
+}
 
 SymbolVar ImmutableTensor::make_from_value(
         ComputingGraph &graph,

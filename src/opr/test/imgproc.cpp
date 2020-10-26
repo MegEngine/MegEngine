@@ -803,4 +803,54 @@ TEST(TestOprImgproc, DCT) {
     MGB_MARK_USED_VAR(fwd3);
     MGB_MARK_USED_VAR(gen_mask);
 }
+
+TEST(TestOprImgproc, DCT_BAD_MASK) {
+    HostTensorGenerator<dtype::Uint8> gen_u8;
+    HostTensorGenerator<dtype::Int32> gen_s32;
+    TensorShape src_shape({1, 2, 256, 256}), mask_offset_shape({3}),
+            mask_val_shape({8});
+    opr::DctChannelSelectForward::Param param;
+
+    auto graph = ComputingGraph::make();
+
+    auto src_tensor = gen_u8(src_shape);
+    auto mask_offset_tensor = gen_s32(mask_offset_shape);
+    auto mask_val_tensor = gen_s32(mask_val_shape);
+    auto mask_offset_ptr = mask_offset_tensor->ptr<int32_t>();
+    auto mask_val_ptr = mask_val_tensor->ptr<int32_t>();
+    mask_offset_ptr[0] = 1;
+    mask_val_ptr[0] = 64;
+    auto src_sym = opr::ImmutableTensor::make(*graph, *src_tensor);
+    auto mask_offset_sym =
+            opr::ImmutableTensor::make(*graph, *mask_offset_tensor);
+    auto mask_val_sym = opr::ImmutableTensor::make(*graph, *mask_val_tensor);
+
+    ASSERT_THROW(opr::DctChannelSelect::make(src_sym, mask_offset_sym,
+                                             mask_val_sym, param),
+                 MegBrainError);
+
+    mask_offset_ptr[0] = 0;
+    mask_offset_ptr[1] = 2;
+    mask_offset_ptr[2] = 8;
+    mask_offset_sym = opr::ImmutableTensor::make(*graph, *mask_offset_tensor);
+    ASSERT_THROW(opr::DctChannelSelect::make(src_sym, mask_offset_sym,
+                                             mask_val_sym, param),
+                 MegBrainError);
+
+    mask_val_ptr[0] = 0;
+    mask_val_ptr[1] = 1;
+    mask_val_ptr[2] = 2;
+    mask_val_ptr[3] = 3;
+    mask_val_ptr[4] = 4;
+    mask_val_ptr[5] = 5;
+    mask_val_ptr[6] = 6;
+    mask_val_ptr[7] = 7;
+    mask_val_sym = opr::ImmutableTensor::make(*graph, *mask_val_tensor);
+    opr::DctChannelSelect::make(src_sym, mask_offset_sym, mask_val_sym, param);
+
+    param.format = opr::DctChannelSelect::Param::Format::NCHW4;
+    ASSERT_THROW(opr::DctChannelSelect::make(src_sym, mask_offset_sym,
+                                             mask_val_sym, param),
+                 MegBrainError);
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

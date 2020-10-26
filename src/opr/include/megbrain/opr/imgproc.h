@@ -286,6 +286,9 @@ size_t get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const override;
 void scn_do_execute() override;
+
+void valid_mask(const int* mask_offset, int mask_len, const int* mask_val,
+                int mask_val_len, const Param& param);
 };
 
 using DctChannelSelect = DctChannelSelectForward;

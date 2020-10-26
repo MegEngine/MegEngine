@@ -378,6 +378,8 @@ MGB_DEFINE_OPR_CLASS(ImmutableTensor, intl::DeviceTensorHolder) // {
         //! get underlying value on device
         const DeviceTensorND& value() const;
 
+        const DeviceTensorND& host_value();
+
         SymbolVar shallow_copy(
                 ComputingGraph &graph, const OperatorNodeConfig &config) const {
             return make_from_value(graph, m_value, m_value_refkeep, config);
