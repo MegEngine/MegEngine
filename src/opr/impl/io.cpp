@@ -766,7 +766,7 @@ Copy::NodeProp* Copy::do_make_node_prop() const {
     return rst;
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Copy) {
     mgb_assert(wrt_idx == 0);
     return Copy::make(out_grad[0],

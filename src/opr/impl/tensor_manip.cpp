@@ -165,7 +165,7 @@ void GetVarShape::init_output_static_infer_desc() {
     mgr.register_value_infer(output(0),
             {SourceType::DEP, deps, infer_value});
 }
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(GetVarShape) {
     MGB_MARK_USED_VAR(wrt_idx);
     MGB_MARK_USED_VAR(out_grad);
@@ -372,7 +372,7 @@ SymbolVar Reshape::make(SymbolVar inp, SymbolVar tshp,
             inp.node(), tshp.node(), unspec_axis, config);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Reshape) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -441,7 +441,7 @@ SymbolVar Broadcast::make(SymbolVar inp, SymbolVar tshp,
             inp.node(), tshp.node(), config);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Broadcast) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -586,7 +586,7 @@ VarNode* Dimshuffle::grad(
     return Dimshuffle::make(out_grad.at(0), back, m_pattern.size()).node();
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Dimshuffle) {
     return opr.grad(wrt_idx, out_grad);
 }
@@ -649,7 +649,7 @@ TensorLayout AxisAddRemove::axis_manip_get_output_layout(
     return layout;
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(AxisAddRemove) {
     MGB_MARK_USED_VAR(wrt_idx);
     return Reshape::make(out_grad[0], GetVarShape::make(opr.input(0))).node();
@@ -662,7 +662,7 @@ MGB_IMPL_OPR_GRAD(AxisAddRemove) {
 
 MGB_IMPL_FANCY_INDEXING_OPR_GET(Subtensor, "subtensor", true);
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Subtensor) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -806,7 +806,7 @@ void SetSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
     sub.copy_from_fixlayout(val);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(SetSubtensor) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -838,7 +838,7 @@ void IncrSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
     opr->exec(sub.as_megdnn(), val.as_megdnn());
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IncrSubtensor) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -1112,7 +1112,7 @@ void Split::do_execute(ExecEnv &env) {
     }
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Split) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -1265,7 +1265,7 @@ SymbolVar Concat::make(const VarNodeArrayView& inp, int axis,
                                                               axis, config);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Concat) {
     auto axis = opr.axis();
     mgb_assert(out_grad.size() == 1);
@@ -1549,7 +1549,7 @@ void ParamPackSplit::scn_do_execute() {
     mgb_assert(inp_size == m_offsets.back(), "input shape should match offsets");
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ParamPackSplit) {
     mgb_assert(out_grad.size() == opr.output().size());
     SmallVector<SymbolVar> grad;

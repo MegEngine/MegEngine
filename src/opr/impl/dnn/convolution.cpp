@@ -1012,7 +1012,7 @@ void ConvolutionForward::init_output_dtype() {
     output(0)->dtype(output_dtype);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ConvolutionForward) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
                "only float data type supported for grad");
@@ -1175,7 +1175,7 @@ void ConvolutionBackwardData::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output(1)));
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ConvolutionBackwardData) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1229,7 +1229,7 @@ size_t ConvolutionBackwardFilter::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ConvolutionBackwardFilter) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1285,7 +1285,7 @@ void Convolution3DForward::init_output_dtype() {
     }
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Convolution3DForward) {
     mgb_assert(opr.param().data_type ==
                        Convolution3DForward::Param::DataType::FLOAT,
@@ -1380,7 +1380,7 @@ void Convolution3DBackwardData::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output(1)));
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Convolution3DBackwardData) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1781,7 +1781,7 @@ size_t LocalShareForward::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareForward) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
             "only float data type supported for grad");
@@ -1862,7 +1862,7 @@ void LocalShareBackwardData::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output(1)));
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareBackwardData) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1919,7 +1919,7 @@ size_t LocalShareBackwardFilter::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareBackwardFilter) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
@@ -1998,7 +1998,7 @@ size_t DeformableConvForward::get_workspace_size_bytes(
             megdnn_opr(), this);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(DeformableConvForward) {
     mgb_assert(opr.input(0)->dtype() == dtype::Float32(),
                "only float data type supported for grad");

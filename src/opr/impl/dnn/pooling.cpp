@@ -19,7 +19,7 @@ using namespace opr;
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(PoolingForward);
 MEGDNN_OPR_INIT1(PoolingForward, "pooling")
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(PoolingForward) {
     mgb_assert(wrt_idx == 0);
     SymbolVar grad = PoolingBackward::make(

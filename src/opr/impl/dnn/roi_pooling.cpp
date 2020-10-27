@@ -84,7 +84,7 @@ size_t ROIPoolingForward::get_workspace_size_bytes(
             input_shapes, output_shapes);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ROIPoolingForward) {
     if (wrt_idx == 2) {
         return InvalidGrad::make(opr, wrt_idx);
@@ -148,7 +148,7 @@ SymbolVar DeformablePSROIPoolingForward::make(
     return all[0];
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(DeformablePSROIPooling) {
     mgb_assert(wrt_idx <= 2);  // wrt_idx = 0 or 1 or 2
 

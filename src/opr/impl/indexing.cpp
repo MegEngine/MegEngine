@@ -83,7 +83,7 @@ void IndexingOneHot::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingOneHot) {
     if (wrt_idx == 0) {
         return IndexingSetOneHot::make(
@@ -135,7 +135,7 @@ void IndexingSetOneHot::scn_do_execute() {
             intl::get_megdnn_workspace_from_var(output(1)));
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingSetOneHot) {
     SymbolVar index{opr.input(1)}, sub{opr.input(2)}, og{out_grad.at(0)};
     if (wrt_idx == 0) {
@@ -169,7 +169,7 @@ void IndexingRemap::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingRemap) {
     if (wrt_idx == 1)
         return InvalidGrad::make(opr, wrt_idx);
@@ -466,7 +466,7 @@ MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(
         IndexingIncrMultiAxisVec, "indexing_incr_multi_axis_vec", false);
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingMultiAxisVec) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
@@ -477,7 +477,7 @@ MGB_IMPL_OPR_GRAD(IndexingMultiAxisVec) {
 }
 #endif
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingSetMultiAxisVec) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -490,7 +490,7 @@ MGB_IMPL_OPR_GRAD(IndexingSetMultiAxisVec) {
 }
 #endif
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IndexingIncrMultiAxisVec) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -510,7 +510,7 @@ MGB_IMPL_FANCY_INDEXING_OPR_GET(
         BatchedMeshIndexing, "batched_mesh_indexing", false,
         output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE););
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(MeshIndexing) {
     if (wrt_idx != 0) {
         return InvalidGrad::make(opr, wrt_idx);
@@ -522,7 +522,7 @@ MGB_IMPL_OPR_GRAD(MeshIndexing) {
 }
 #endif
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchedMeshIndexing) {
     if (wrt_idx != 0) {
         return InvalidGrad::make(opr, wrt_idx);
@@ -539,7 +539,7 @@ MGB_IMPL_OPR_GRAD(BatchedMeshIndexing) {
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(IncrMeshIndexing, "incr_mesh_indexing",
                                    false);
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(IncrMeshIndexing) {
     if (wrt_idx > 2) {
         return opr::InvalidGrad::make(opr, wrt_idx);
@@ -553,7 +553,7 @@ MGB_IMPL_OPR_GRAD(IncrMeshIndexing) {
 
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(BatchedIncrMeshIndexing,
                                    "batched_incr_mesh_indexing", false);
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchedIncrMeshIndexing) {
     if (wrt_idx > 2) {
         return opr::InvalidGrad::make(opr, wrt_idx);
@@ -568,7 +568,7 @@ MGB_IMPL_OPR_GRAD(BatchedIncrMeshIndexing) {
 /* ======================== SetMeshIndexing =========================== */
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(SetMeshIndexing, "set_mesh_indexing", false);
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(SetMeshIndexing) {
     if (wrt_idx >= 2) {
         return opr::InvalidGrad::make(opr, wrt_idx);
@@ -587,7 +587,7 @@ MGB_IMPL_OPR_GRAD(SetMeshIndexing) {
 
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(BatchedSetMeshIndexing,
                                    "batched_set_mesh_indexing", false);
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchedSetMeshIndexing) {
     if (wrt_idx > 2) {
         return opr::InvalidGrad::make(opr, wrt_idx);

@@ -126,7 +126,7 @@ void WarpPerspectiveForward::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(WarpPerspectiveForward) {
     if (opr.input().size() == 4) {
         if (wrt_idx == 0) {
@@ -351,7 +351,7 @@ void ResizeForward::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ResizeForward) {
     mgb_assert(opr.input().size() == 2);
     if (wrt_idx == 0) {
@@ -443,7 +443,7 @@ void RemapForward::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(RemapForward) {
     mgb_assert(opr.input().size() == 2);
     if (wrt_idx == 0) {

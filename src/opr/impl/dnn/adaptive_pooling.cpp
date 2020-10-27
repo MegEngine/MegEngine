@@ -91,7 +91,7 @@ void AdaptivePoolingForward::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(AdaptivePoolingForward) {
     if (wrt_idx == 0) {
         // wrt src

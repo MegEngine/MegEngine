@@ -20,7 +20,7 @@ using namespace opr;
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(LRNForward);
 MEGDNN_OPR_INIT1(LRNForward, "lrn")
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LRNForward) {
     mgb_assert(wrt_idx == 0);
     SymbolVar grad = LRNBackward::make(

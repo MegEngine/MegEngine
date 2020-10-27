@@ -123,7 +123,7 @@ namespace opr {
 namespace intl {
 template class RNGOpr<::megdnn::GaussianRNG>;
 template class RNGOpr<::megdnn::UniformRNG>;
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 IMPL(GaussianRNG);
 IMPL(UniformRNG);
 #endif

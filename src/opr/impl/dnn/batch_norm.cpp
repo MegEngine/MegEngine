@@ -240,7 +240,7 @@ void BatchNormForward::mem_plan_fwd_in2out_writable() {
     }
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchNormForward) {
     mgb_assert(opr.param().fwd_mode == BatchNorm::Param::FwdMode::TRAINING,
         "batch norm could only take grad in training mode");

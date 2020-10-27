@@ -818,7 +818,7 @@ SymbolVar CondExecMark::mark_if_need(SymbolVar maybe_ppv, SymbolVar input,
     return input;
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondExecMark) {
     if (wrt_idx == opr.input().size() - 1 || !out_grad.at(wrt_idx)) {
         return nullptr;
@@ -1227,7 +1227,7 @@ CondExecMerge::NodeProp* CondExecMerge::do_make_node_prop() const {
     return ret;
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondExecMerge) {
     using Mode = CondExecMerge::Param::Mode;
     if (opr.param().mode == Mode::SUM_COND_OUT &&

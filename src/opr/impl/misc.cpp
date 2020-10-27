@@ -48,7 +48,7 @@ namespace intl {
 
 /* ================= Argmxx ================= */
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Argmax) {
     MGB_MARK_USED_VAR(out_grad);
     MGB_MARK_USED_VAR(opr);
@@ -60,7 +60,7 @@ MGB_IMPL_OPR_GRAD(Argmax) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Argmax);
 MEGDNN_OPR_INIT1(Argmax, "argmax")
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Argmin) {
     MGB_MARK_USED_VAR(out_grad);
     MGB_MARK_USED_VAR(opr);
@@ -87,7 +87,7 @@ std::array<SymbolVar, 2> ArgsortForward::make(
     return {node->output(0), node->output(1)};
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ArgsortForward) {
     mgb_assert(out_grad.size() == 3 && wrt_idx == 0 && !out_grad[2]);
     if (!out_grad[0])
@@ -112,7 +112,7 @@ Cumsum::Cumsum(VarNode* opr, const Param& param,
     add_input({opr}, AddInputSortType::CUR_ADDED);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Cumsum) {
     mgb_assert(out_grad[0] && !out_grad[1]);
     auto param = opr.param();
@@ -263,7 +263,7 @@ CondTake::CondTake(VarNode *data, VarNode *mask,
     }
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondTake) {
     mgb_assert(out_grad.size() == 3 && !out_grad[2]);
     if (wrt_idx == 0 && out_grad[0]) {
@@ -413,7 +413,7 @@ void TopK::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TopK) {
     if (opr.param().mode == TopK::Param::Mode::KTH_ONLY) {
         mgb_assert(out_grad[0] && !out_grad[1] && !out_grad[2]);

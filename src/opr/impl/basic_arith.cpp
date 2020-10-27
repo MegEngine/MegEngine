@@ -552,7 +552,7 @@ void Elemwise::call_megdnn_opr_exec(
     opr->exec(inp, out);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Elemwise) {
     SymbolVar i[5];
     SymbolVar i0(opr.input(0)), i1, i2, out(opr.output(0)),
@@ -822,7 +822,7 @@ TypeCvt::NodeProp* TypeCvt::do_make_node_prop() const {
     return ret;
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TypeCvt) {
     MGB_MARK_USED_VAR(wrt_idx);
     auto itype = opr.input(0)->dtype(), otype = opr.output(0)->dtype();
@@ -973,7 +973,7 @@ void AddUpdate::record_execute_deps(ExecDependencyArray& deps) {
     record_megdnn_opr(deps);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(AddUpdate) {
     // actually valid, just not implemented
     return InvalidGrad::make(opr, wrt_idx);
@@ -1712,7 +1712,7 @@ void Reduce::create_megdnn_opr() {
             create_operator<megdnn::Reduce>());
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Reduce) {
     for (size_t i = 1; i < opr.output().size(); ++ i)
         mgb_assert(!out_grad[i]);
@@ -1798,7 +1798,7 @@ void PowC::init_output_static_infer_desc() {
             {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_value});
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(PowC) {
     auto exp = opr.param().exp;
     return (exp * SymbolVar{out_grad[0]} *

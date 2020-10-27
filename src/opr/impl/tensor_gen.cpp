@@ -46,7 +46,7 @@ void Alloc::outshape_by_symvar_do_get_output_shape(
 void Alloc::scn_do_execute() {
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Alloc) {
     MGB_MARK_USED_VAR(wrt_idx);
     MGB_MARK_USED_VAR(out_grad);
@@ -125,7 +125,7 @@ void Linspace::record_execute_deps(ExecDependencyArray& deps) {
             std::make_unique<intl::MegDNNGraphDep>(std::move(m_megdnn_opr)));
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Linspace) {
     if (wrt_idx == 2)
         return InvalidGrad::make(opr, wrt_idx);
@@ -199,7 +199,7 @@ void Eye::record_execute_deps(ExecDependencyArray& deps) {
             std::make_unique<intl::MegDNNGraphDep>(std::move(m_megdnn_opr)));
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Eye) {
     return InvalidGrad::make(opr, wrt_idx);
 }

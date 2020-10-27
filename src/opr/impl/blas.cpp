@@ -106,7 +106,7 @@ void MatrixMul::scn_do_execute() {
     MGB_FINALLY({ tparam = this->param(); });
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(MatrixMul) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
                "only float data type supported for grad");
@@ -226,7 +226,7 @@ void BatchedMatrixMul::scn_do_execute() {
     MGB_FINALLY({ tparam = this->param(); });
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchedMatrixMul) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
             "only float data type supported for grad");
@@ -331,7 +331,7 @@ void Dot::add_input_layout_constraint() {
     input(1)->add_layout_constraint(check);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Dot) {
     auto other_input = opr.input(wrt_idx == 0 ? 1 : 0);
     auto ishp0 = opr::GetVarShape::make(opr.input(0)),
@@ -357,7 +357,7 @@ void Dot::record_execute_deps(ExecDependencyArray &deps) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MatrixInverse);
 MEGDNN_OPR_INIT1(MatrixInverse, "matrix_inv")
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(MatrixInverse) {
     SymbolVar a = opr.output(0);
     // TODO: use unified MatrixMul interface when we have it
@@ -395,7 +395,7 @@ SVD::SVD(VarNode* src, const Param& param, const OperatorNodeConfig& config) :
     }
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 namespace {
 
 /*!
@@ -489,7 +489,7 @@ OP(*, {}, {})
 }  // anonymous namespace
 #endif
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(SVD) {
     /**
      * The formula is copied from

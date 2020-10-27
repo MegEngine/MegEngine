@@ -21,7 +21,7 @@ using namespace opr;
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(LocalForward);
 MEGDNN_OPR_INIT2(LocalForward, "local")
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalForward) {
     return intl::conv_grad<LocalBackwardData, LocalBackwardFilter>(
             opr, wrt_idx, out_grad);
@@ -38,7 +38,7 @@ MEGDNN_OPR_INIT3(LocalBackwardFilter, "local_bwd_filter", 2, false);
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GroupLocalForward);
 MEGDNN_OPR_INIT2(GroupLocalForward, "glocal")
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(GroupLocalForward) {
     return intl::conv_grad<GroupLocalBackwardData, GroupLocalBackwardFilter>(
             opr, wrt_idx, out_grad);

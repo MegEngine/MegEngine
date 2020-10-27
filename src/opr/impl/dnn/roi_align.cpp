@@ -40,7 +40,7 @@ SymbolVar ROIAlignForward::make(SymbolVar src, SymbolVar rois,
             src.node(), rois.node(), param, config);
 }
 
-#ifdef MGB_ENABLE_GRAD
+#if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(ROIAlignForward) {
     if (wrt_idx == 0) {
         // wrt src
