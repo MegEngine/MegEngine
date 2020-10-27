@@ -27,7 +27,7 @@ from megengine.functional.distributed import remote_recv, remote_send
 
 
 def _elwise(mode):
-    op = Elemwise(mode=mode)
+    op = Elemwise(mode)
 
     def f(*args):
         (result,) = apply(op, *args)
@@ -36,10 +36,10 @@ def _elwise(mode):
     return f
 
 
-add = _elwise("add")
-mul = _elwise("mul")
-cos = _elwise("cos")
-relu = _elwise("relu")
+add = _elwise(Elemwise.Mode.ADD)
+mul = _elwise(Elemwise.Mode.MUL)
+cos = _elwise(Elemwise.Mode.COS)
+relu = _elwise(Elemwise.Mode.RELU)
 
 
 def as_tensor(x):
@@ -255,7 +255,7 @@ def test_elemwise_relu():
 
 
 def test_elemwise_relu_backward_fn():
-    op = Elemwise(mode="relu").to_c()
+    op = Elemwise(Elemwise.Mode.RELU)
     attr = TensorAttr()
     attr.dtype = "float32"
     attr.comp_node = "xpux"

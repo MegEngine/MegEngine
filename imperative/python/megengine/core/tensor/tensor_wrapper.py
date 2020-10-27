@@ -13,7 +13,7 @@ import numpy as np
 
 from .._trace_option import use_symbolic_shape
 from ..ops import builtin
-from ..ops.builtin import GetVarShape
+from ..ops.builtin import Elemwise, GetVarShape
 from ..ops.special import Const
 from . import utils
 from .core import OpBase, TensorBase, TensorWrapperBase, apply
@@ -23,10 +23,12 @@ from .raw_tensor import RawTensor, as_raw_tensor
 from .tensor import Tensor
 from .utils import make_shape_tuple as _make_shape_tuple
 
+_ElwMod = Elemwise.Mode
+
 
 def _elwise(*args, mode):
-    op = builtin.Elemwise(mode=mode)
-    if mode in ("TRUE_DIV", "POW"):
+    op = builtin.Elemwise(mode)
+    if mode in (_ElwMod.TRUE_DIV, _ElwMod.POW):
         args = tuple(
             map(
                 lambda x: x.astype("float32")
@@ -272,53 +274,53 @@ class ArrayMethodMixin(abc.ABC):
 
     __hash__ = None  # due to __eq__ diviates from python convention
 
-    __lt__ = lambda self, value: _elwise(self, value, mode="LT").astype("bool")
-    __le__ = lambda self, value: _elwise(self, value, mode="LEQ").astype("bool")
-    __gt__ = lambda self, value: _elwise(value, self, mode="LT").astype("bool")
-    __ge__ = lambda self, value: _elwise(value, self, mode="LEQ").astype("bool")
-    __eq__ = lambda self, value: _elwise(self, value, mode="EQ").astype("bool")
+    __lt__ = lambda self, value: _elwise(self, value, mode=_ElwMod.LT).astype("bool")
+    __le__ = lambda self, value: _elwise(self, value, mode=_ElwMod.LEQ).astype("bool")
+    __gt__ = lambda self, value: _elwise(value, self, mode=_ElwMod.LT).astype("bool")
+    __ge__ = lambda self, value: _elwise(value, self, mode=_ElwMod.LEQ).astype("bool")
+    __eq__ = lambda self, value: _elwise(self, value, mode=_ElwMod.EQ).astype("bool")
     __ne__ = lambda self, value: _elwise(
-        _elwise(self, value, mode="EQ").astype("bool"), mode="NOT"
+        _elwise(self, value, mode=_ElwMod.EQ).astype("bool"), mode=_ElwMod.NOT,
     )
 
-    __neg__ = _unary_elwise("NEGATE")
+    __neg__ = _unary_elwise(_ElwMod.NEGATE)
     __pos__ = lambda self: self
-    __abs__ = _unary_elwise("ABS")
-    __invert__ = _logical_unary_elwise("NOT")
-    __round__ = _unary_elwise("ROUND")
+    __abs__ = _unary_elwise(_ElwMod.ABS)
+    __invert__ = _logical_unary_elwise(_ElwMod.NOT)
+    __round__ = _unary_elwise(_ElwMod.ROUND)
     __trunc__ = _todo
-    __floor__ = _unary_elwise("FLOOR")
-    __ceil__ = _unary_elwise("CEIL")
+    __floor__ = _unary_elwise(_ElwMod.FLOOR)
+    __ceil__ = _unary_elwise(_ElwMod.CEIL)
 
-    __add__ = _binary_elwise("ADD")
-    __sub__ = _binary_elwise("SUB")
-    __mul__ = _binary_elwise("MUL")
+    __add__ = _binary_elwise(_ElwMod.ADD)
+    __sub__ = _binary_elwise(_ElwMod.SUB)
+    __mul__ = _binary_elwise(_ElwMod.MUL)
     __matmul__ = lambda self, other: _matmul(self, other)
-    __truediv__ = _binary_elwise("TRUE_DIV")
-    __floordiv__ = _binary_elwise("FLOOR_DIV")
-    __mod__ = _binary_elwise("MOD")
+    __truediv__ = _binary_elwise(_ElwMod.TRUE_DIV)
+    __floordiv__ = _binary_elwise(_ElwMod.FLOOR_DIV)
+    __mod__ = _binary_elwise(_ElwMod.MOD)
     # __divmode__
-    __pow__ = _binary_elwise("POW")
-    __lshift__ = _binary_elwise("SHL")
-    __rshift__ = _binary_elwise("SHR")
-    __and__ = _logical_binary_elwise("AND")
-    __or__ = _logical_binary_elwise("OR")
-    __xor__ = _logical_binary_elwise("XOR")
+    __pow__ = _binary_elwise(_ElwMod.POW)
+    __lshift__ = _binary_elwise(_ElwMod.SHL)
+    __rshift__ = _binary_elwise(_ElwMod.SHR)
+    __and__ = _logical_binary_elwise(_ElwMod.AND)
+    __or__ = _logical_binary_elwise(_ElwMod.OR)
+    __xor__ = _logical_binary_elwise(_ElwMod.XOR)
 
-    __radd__ = _binary_elwise("ADD", rev=1)
-    __rsub__ = _binary_elwise("SUB", rev=1)
-    __rmul__ = _binary_elwise("MUL", rev=1)
+    __radd__ = _binary_elwise(_ElwMod.ADD, rev=1)
+    __rsub__ = _binary_elwise(_ElwMod.SUB, rev=1)
+    __rmul__ = _binary_elwise(_ElwMod.MUL, rev=1)
     __rmatmul__ = lambda self, other: _matmul(other, self)
-    __rtruediv__ = _binary_elwise("TRUE_DIV", rev=1)
-    __rfloordiv__ = _binary_elwise("FLOOR_DIV", rev=1)
-    __rmod__ = _binary_elwise("MOD", rev=1)
+    __rtruediv__ = _binary_elwise(_ElwMod.TRUE_DIV, rev=1)
+    __rfloordiv__ = _binary_elwise(_ElwMod.FLOOR_DIV, rev=1)
+    __rmod__ = _binary_elwise(_ElwMod.MOD, rev=1)
     # __rdivmode__
-    __rpow__ = _binary_elwise("POW", rev=1)
-    __rlshift__ = _binary_elwise("SHL", rev=1)
-    __rrshift__ = _binary_elwise("SHR", rev=1)
-    __rand__ = _logical_binary_elwise("AND", rev=1)
-    __ror__ = _logical_binary_elwise("OR", rev=1)
-    __rxor__ = _logical_binary_elwise("XOR", rev=1)
+    __rpow__ = _binary_elwise(_ElwMod.POW, rev=1)
+    __rlshift__ = _binary_elwise(_ElwMod.SHL, rev=1)
+    __rrshift__ = _binary_elwise(_ElwMod.SHR, rev=1)
+    __rand__ = _logical_binary_elwise(_ElwMod.AND, rev=1)
+    __ror__ = _logical_binary_elwise(_ElwMod.OR, rev=1)
+    __rxor__ = _logical_binary_elwise(_ElwMod.XOR, rev=1)
 
     __iadd__ = _inplace(__add__)
     __isub__ = _inplace(__sub__)

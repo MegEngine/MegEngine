@@ -12,6 +12,7 @@ from typing import Optional, Sequence, Tuple, Union
 from ..core._imperative_rt import CompNode
 from ..core.ops import builtin
 from ..core.ops._internal import param_defs as P
+from ..core.ops.builtin import BatchNorm
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
@@ -643,19 +644,22 @@ def batch_norm(
     if inp.ndim != 4:
         raise NotImplementedError("batch_norm for ndim != 4")
 
-    def full_value(value):
-        C = inp.shape[1]
-        (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
-        return broadcast_to(x, [1, C, 1, 1])
-
-    def expand_or_full(x, value):
-        if x is None:
-            return full_value(value)
-        return expand_dims(x, [0, 2, 3])
+    C = inp.shape[1]
 
     def make_full_if_none(x, value):
         if x is None:
-            return full(shape=(1, inp.shape[1], 1, 1), value=value)
+            (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
+            shape = utils.astensor1d(
+                (1, C, 1, 1), inp, dtype="int32", device=inp.device
+            )
+            (result,) = apply(builtin.Broadcast(), x, shape)
+            return result
+        elif x.ndim == 1:
+            shape = utils.astensor1d(
+                (1, C, 1, 1), inp, dtype="int32", device=inp.device
+            )
+            (result,) = apply(builtin.Reshape(), x, shape)
+            return result
         return x
 
     has_mean = running_mean is not None
@@ -674,19 +678,25 @@ def batch_norm(
         inp, weight, bias, running_mean, running_var
     )
 
-    weight = expand_or_full(weight, 1)
-    bias = expand_or_full(bias, 0)
+    weight = make_full_if_none(weight, 1)
+    bias = make_full_if_none(bias, 0)
 
     if not training:
-        op = builtin.BatchNorm(fwd_mode="INFERENCE", epsilon=eps, param_dim="DIM_1C11")
+        op = builtin.BatchNorm(
+            BatchNorm.ParamDim.DIM_1C11, BatchNorm.FwdMode.INFERENCE, eps, 1.0, 1.0, 0.0
+        )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
         op = builtin.BatchNorm(
-            avg_factor=1 - momentum, epsilon=eps, param_dim="DIM_1C11"
+            BatchNorm.ParamDim.DIM_1C11,
+            BatchNorm.FwdMode.TRAINING,
+            eps,
+            1.0 - momentum,
+            1.0,
+            0.0,
         )
-
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
             running_var = make_full_if_none(running_var, 1)
@@ -708,7 +718,7 @@ def batch_norm(
             else:
                 return inp, new_mean, new_var
         else:
-            _, _, inp, = apply(op, inp, weight, bias)
+            (_, _, inp,) = apply(op, inp, weight, bias)
             return inp
 
 

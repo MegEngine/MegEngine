@@ -72,14 +72,15 @@ class _BatchNorm(Module):
                 self.track_running_stats == False
             ), "track_running_stats can not be initilized to False and changed to True later"
 
-        _ndims = len(inp.shape)
+        inp_shape = inp.shape
+        _ndims = len(inp_shape)
         if _ndims != 4:
-            origin_shape = inp.shape
+            origin_shape = inp_shape
             if _ndims == 2:
-                n, c = inp.shape[0], inp.shape[1]
+                n, c = inp_shape[0], inp_shape[1]
                 new_shape = (n, c, 1, 1)
             elif _ndims == 3:
-                n, c, h = inp.shape[0], inp.shape[1], inp.shape[2]
+                n, c, h = inp_shape[0], inp_shape[1], inp_shape[2]
                 new_shape = (n, c, h, 1)
 
             inp = inp.reshape(new_shape)
@@ -150,17 +151,18 @@ class SyncBatchNorm(_BatchNorm):
     def forward(self, inp):
         self._check_input_ndim(inp)
 
-        _ndims = len(inp.shape)
+        inp_shape = inp.shape
+        _ndims = len(inp_shape)
         if _ndims != 4:
             new_shape = Tensor([1, 1, 1, 1], device=inp.device)
-            origin_shape = inp.shape
+            origin_shape = inp_shape
             if _ndims == 2:
                 new_shape[:2] = origin_shape[:2]
             elif _ndims == 3:
                 new_shape[:3] = origin_shape[:3]
             else:
                 raise ValueError(
-                    "expected 2D, 3D or 4D input (got {}D input)".format(len(inp.shape))
+                    "expected 2D, 3D or 4D input (got {}D input)".format(len(inp_shape))
                 )
 
             inp = inp.reshape(new_shape)

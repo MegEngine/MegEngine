@@ -10,6 +10,7 @@
 import functools
 
 from ..core.ops import builtin
+from ..core.ops.builtin import Elemwise
 from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.core import apply
 from ..device import get_default_device
@@ -72,7 +73,7 @@ __all__ = [
 
 
 def _elwise(*args, mode):
-    op = builtin.Elemwise(mode=mode)
+    op = builtin.Elemwise(mode)
     tensor_args = list(
         filter(lambda x: isinstance(x, (Tensor, megbrain_graph.VarNode)), args)
     )
@@ -128,67 +129,67 @@ def add(x, y):
          [ 6.  8. 10.]]
 
     """
-    return _elwise(x, y, mode="add")
+    return _elwise(x, y, mode=Elemwise.Mode.ADD)
 
 
 def sub(x, y):
     """Element-wise `subtraction`."""
-    return _elwise(x, y, mode="sub")
+    return _elwise(x, y, mode=Elemwise.Mode.SUB)
 
 
 def mul(x, y):
     """Element-wise `multiplication`."""
-    return _elwise(x, y, mode="mul")
+    return _elwise(x, y, mode=Elemwise.Mode.MUL)
 
 
 def div(x, y):
     """Element-wise `(x / y)`."""
-    return _elwise(x, y, mode="true_div")
+    return _elwise(x, y, mode=Elemwise.Mode.TRUE_DIV)
 
 
 def floor_div(x, y):
     """Element-wise `floor(x / y)`."""
-    return _elwise(x, y, mode="floor_divide")
+    return _elwise(x, y, mode=Elemwise.Mode.FLOOR_DIVIDE)
 
 
 def neg(x):
     """Element-wise `negation`."""
-    return _elwise(x, mode="negate")
+    return _elwise(x, mode=Elemwise.Mode.NEGATE)
 
 
 def pow(x, y):
     """Element-wise `power`."""
-    return _elwise(x, y, mode="pow")
+    return _elwise(x, y, mode=Elemwise.Mode.POW)
 
 
 def mod(x, y):
     """Element-wise `remainder of division`."""
-    return _elwise(x, y, mode="mod")
+    return _elwise(x, y, mode=Elemwise.Mode.MOD)
 
 
 def abs(x):
     """Element-wise `absolute value`."""
-    return _elwise(x, mode="abs")
+    return _elwise(x, mode=Elemwise.Mode.ABS)
 
 
 def exp(x):
     """Element-wise `exponential`."""
-    return _elwise(x, mode="exp")
+    return _elwise(x, mode=Elemwise.Mode.EXP)
 
 
 def expm1(x):
     """Element-wise `exp(x)-1`."""
-    return _elwise(x, mode="expm1")
+    return _elwise(x, mode=Elemwise.Mode.EXPM1)
 
 
 def log(x):
     """Element-wise `logarithm (base e)`."""
-    return _elwise(x, mode="log")
+    return _elwise(x, mode=Elemwise.Mode.LOG)
 
 
 def log1p(x):
     """Element-wise `log(x+1) (base e)`."""
-    return _elwise(x, mode="log1p")
+    return _elwise(x, mode=Elemwise.Mode.LOG1P)
 
 
 def sqrt(x: Tensor) -> Tensor:
@@ -253,27 +254,27 @@ def square(x: Tensor) -> Tensor:
 
 def round(x):
     """Element-wise `rounding to int`."""
-    return _elwise(x, mode="round")
+    return _elwise(x, mode=Elemwise.Mode.ROUND)
 
 
 def ceil(x):
     """Element-wise `ceiling`."""
-    return _elwise(x, mode="ceil")
+    return _elwise(x, mode=Elemwise.Mode.CEIL)
 
 
 def floor(x):
     """Element-wise `floor`."""
-    return _elwise(x, mode="floor")
+    return _elwise(x, mode=Elemwise.Mode.FLOOR)
 
 
 def maximum(x, y):
     """Element-wise `maximum of array elements`."""
-    return _elwise(x, y, mode="max")
+    return _elwise(x, y, mode=Elemwise.Mode.MAX)
 
 
 def minimum(x, y):
     """Element-wise `minimum of array elements`."""
-    return _elwise(x, y, mode="min")
+    return _elwise(x, y, mode=Elemwise.Mode.MIN)
 
 
 # trigonometric functions
@@ -305,12 +306,12 @@ def cos(x):
          [-0.99   -0.6536  0.2837]]
 
     """
-    return _elwise(x, mode="cos")
+    return _elwise(x, mode=Elemwise.Mode.COS)
 
 
 def sin(x):
     """Element-wise `sine`."""
-    return _elwise(x, mode="sin")
+    return _elwise(x, mode=Elemwise.Mode.SIN)
 
 
 def tan(x):
@@ -320,22 +321,22 @@ def tan(x):
 
 def acos(x):
     """Element-wise `inverse cosine`."""
-    return _elwise(x, mode="acos")
+    return _elwise(x, mode=Elemwise.Mode.ACOS)
 
 
 def asin(x):
     """Element-wise `inverse sine`."""
-    return _elwise(x, mode="asin")
+    return _elwise(x, mode=Elemwise.Mode.ASIN)
 
 
 def atan(x):
     """Element-wise `inverse tangent`."""
-    return _elwise(x, 1, mode="atan2")
+    return _elwise(x, 1, mode=Elemwise.Mode.ATAN2)
 
 
 def atan2(y, x):
     """Element-wise `2-argument arctangent`."""
-    return _elwise(y, x, mode="atan2")
+    return _elwise(y, x, mode=Elemwise.Mode.ATAN2)
 
 
 def cosh(x):
@@ -351,7 +352,7 @@ def sinh(x):
 
 def tanh(x):
     r"""Element-wise `hyperbolic tangent`."""
-    return _elwise(x, mode="tanh")
+    return _elwise(x, mode=Elemwise.Mode.TANH)
 
 
 def asinh(x):
@@ -399,12 +400,12 @@ def left_shift(x, y):
          [12 16 20]]
 
     """
-    return _elwise(x, y, mode="shl")
+    return _elwise(x, y, mode=Elemwise.Mode.SHL)
 
 
 def right_shift(x, y):
     """Element-wise `bitwise binary: x >> y`."""
-    return _elwise(x, y, mode="shr")
+    return _elwise(x, y, mode=Elemwise.Mode.SHR)
 
 
 # logical functions
@@ -412,22 +413,22 @@ def right_shift(x, y):
 
 def logical_and(x, y):
     """Element-wise `logical and: x && y`."""
-    return _elwise(x, y, mode="AND")
+    return _elwise(x, y, mode=Elemwise.Mode.AND)
 
 
 def logical_not(x):
     """Element-wise `logical not: ~x`."""
-    return _elwise(x, mode="NOT")
+    return _elwise(x, mode=Elemwise.Mode.NOT)
 
 
 def logical_or(x, y):
     """Element-wise `logical or: x || y`."""
-    return _elwise(x, y, mode="OR")
+    return _elwise(x, y, mode=Elemwise.Mode.OR)
 
 
 def logical_xor(x, y):
     """Element-wise `logical xor: x ^ y`."""
-    return _elwise(x, y, mode="XOR")
+    return _elwise(x, y, mode=Elemwise.Mode.XOR)
 
 
 # comparison functions
@@ -461,7 +462,7 @@ def equal(x, y):
          [1. 1. 1.]]
 
     """
-    return _elwise(x, y, mode="eq")
+    return _elwise(x, y, mode=Elemwise.Mode.EQ)
 
 
 def not_equal(x, y):
@@ -471,22 +472,22 @@ def not_equal(x, y):
 
 def less(x, y):
     """Element-wise `(x < y)`."""
-    return _elwise(x, y, mode="lt")
+    return _elwise(x, y, mode=Elemwise.Mode.LT)
 
 
 def less_equal(x, y):
     """Element-wise `(x <= y)`."""
-    return _elwise(x, y, mode="leq")
+    return _elwise(x, y, mode=Elemwise.Mode.LEQ)
 
 
 def greater(x, y):
     """Element-wise `(x > y)`."""
-    return _elwise(y, x, mode="lt")
+    return _elwise(y, x, mode=Elemwise.Mode.LT)
 
 
 def greater_equal(x, y):
     """Element-wise `(x >= y)`."""
-    return _elwise(y, x, mode="leq")
+    return _elwise(y, x, mode=Elemwise.Mode.LEQ)
 
 
 # other functions
@@ -515,7 +516,7 @@ def hswish(x):
         [0.     0.6667 1.6667 3.     4.    ]
 
     """
-    return _elwise(x, mode="h_swish")
+    return _elwise(x, mode=Elemwise.Mode.H_SWISH)
 
 
 def hsigmoid(x):
@@ -525,7 +526,7 @@ def hsigmoid(x):
 
 def relu(x):
     """Element-wise `max(x, 0)`."""
-    return _elwise(x, mode="relu")
+    return _elwise(x, mode=Elemwise.Mode.RELU)
 
 
 def relu6(x):
@@ -535,7 +536,7 @@ def relu6(x):
 
 def sigmoid(x):
     """Element-wise `1 / ( 1 + exp( -x ) )`."""
-    return _elwise(x, mode="sigmoid")
+    return _elwise(x, mode=Elemwise.Mode.SIGMOID)
 
 
 def clip(x: Tensor, lower=None, upper=None) -> Tensor:

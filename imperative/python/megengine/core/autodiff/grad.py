@@ -47,7 +47,7 @@ def get_grad_managers():
 
 
 def add(a, b):
-    (c,) = apply(Elemwise(mode="add"), a, b)
+    (c,) = apply(Elemwise(Elemwise.Mode.ADD), a, b)
     return c
 
 

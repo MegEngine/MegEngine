@@ -30,7 +30,6 @@ from ..tensor.core import apply
 from ..tensor.function import Function
 from ..tensor.tensor_wrapper import TensorWrapper
 
-_elemwise_add_param = Elemwise(mode="add").to_c().param
 _reduce_sum_param = Reduce(mode="SUM").to_c().param[0]
 
 
@@ -44,12 +43,12 @@ def _(op: OpDef, inputs, outputs, input_requires_grad):
     if isinstance(op, OprAttr):
         grad_fn = _oprAttr_grad_fn.get(op.type, None)
         if grad_fn is None:
-            if op.type == Elemwise.name and op.param == _elemwise_add_param:
-                grad_fn = elemwise_add_grad_fn
-            elif op.type == Reduce.name and op.param[0] == _reduce_sum_param:
+            if op.type == Reduce.name and op.param[0] == _reduce_sum_param:
                 grad_fn = reduce_sum_grad_fn
             else:
                 grad_fn = default_grad_fn
+    elif isinstance(op, Elemwise) and op.mode == Elemwise.Mode.ADD:
+        grad_fn = elemwise_add_grad_fn
     else:
         grad_fn = default_grad_fn
     return grad_fn(op, inputs, outputs, input_requires_grad)
@@ -158,11 +157,8 @@ def subtensor_grad_fn(op, inputs, outputs, input_requires_grad):
     params = inputs[1:]
 
     def make_grad(grad_op, dy):
-        grad = (
-            TensorWrapper(0, dtype=dy.dtype, device=dy.device)
-            ._broadcast(TensorWrapper(input_shape))
-            .__wrapped__
-        )
+        (_z,) = Const(0, dtype=dy.dtype, device=dy.device)(dy)
+        (grad,) = apply(Broadcast(), _z, input_shape)
         (dx,) = apply(grad_op, grad, dy, *params)
         return dx
 
@@ -184,11 +180,8 @@ def indexingMultiAxisVec_grad_fn(op, inputs, outputs, input_requires_grad):
     params = inputs[1:]
 
     def make_grad(grad_op, dy):
-        grad = (
-            TensorWrapper(0, dtype=dy.dtype, device=dy.device)
-            ._broadcast(TensorWrapper(input_shape))
-            .__wrapped__
-        )
+        (_z,) = Const(0, dtype=dy.dtype, device=dy.device)(dy)
+        (grad,) = apply(Broadcast(), _z, input_shape)
         (dx,) = apply(grad_op, grad, dy, *params)
         return dx
 

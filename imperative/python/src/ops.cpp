@@ -19,6 +19,8 @@
 #include "megbrain/imperative/ops/io_remote.h"
 #include "megbrain/imperative/ops/cond_take.h"
 #include "megbrain/imperative/ops/nms.h"
+#include "megbrain/imperative/ops/elemwise.h"
+#include "megbrain/imperative/ops/batch_norm.h"
 
 namespace py = pybind11;
 
@@ -117,4 +119,91 @@ void init_ops(py::module m) {
         .def(py::init<float, uint32_t>())
         .def_readwrite("iou_thresh", &NMSKeep::iou_thresh)
         .def_readwrite("max_output", &NMSKeep::max_output);
+
+    py::class_<Elemwise, std::shared_ptr<Elemwise>, OpDef> elemwise(m, "Elemwise");
+        elemwise.def(py::init<Elemwise::Mode>())
+                .def_readwrite("mode", &Elemwise::mode);
+
+#define V(m) .value(#m, Elemwise::Mode::m)
+    py::enum_<Elemwise::Mode>(elemwise, "Mode")
+        V(RELU)
+        V(ABS)
+        V(ACOS)
+        V(ASIN)
+        V(CEIL)
+        V(COS)
+        V(EXP)
+        V(EXPM1)
+        V(FLOOR)
+        V(LOG)
+        V(LOG1P)
+        V(NEGATE)
+        V(SIGMOID)
+        V(SIN)
+        V(TANH)
+        V(ABS_GRAD)
+        V(ADD)
+        V(FLOOR_DIV)
+        V(MAX)
+        V(MIN)
+        V(MOD)
+        V(MUL)
+        V(POW)
+        V(SIGMOID_GRAD)
+        V(SUB)
+        V(SWITCH_GT0)
+        V(TANH_GRAD)
+        V(TRUE_DIV)
+        V(LOG_SUM_EXP)
+        V(LT)
+        V(LEQ)
+        V(EQ)
+        V(SHL)
+        V(SHR)
+        V(COND_LEQ_MOV)
+        V(FUSE_MUL_ADD3)
+        V(FUSE_MUL_ADD4)
+        V(FUSE_ADD_RELU)
+        V(FUSE_ADD_SIGMOID)
+        V(FUSE_ADD_TANH)
+        V(FAST_TANH)
+        V(FAST_TANH_GRAD)
+        V(ROUND)
+        V(RMULH)
+        V(ATAN2)
+        V(ERF)
+        V(ERFINV)
+        V(ERFC)
+        V(ERFCINV)
+        V(H_SWISH)
+        V(H_SWISH_GRAD)
+        V(FUSE_ADD_H_SWISH)
+        V(NOT)
+        V(AND)
+        V(OR)
+        V(XOR);
+#undef V
+
+    py::class_<BatchNorm, std::shared_ptr<BatchNorm>, OpDef> batchnorm(m, "BatchNorm");
+        batchnorm.def(py::init<const BatchNorm::Param::ParamDim&, const BatchNorm::Param::FwdMode&, double, double, float, float>())
+                 .def_readwrite("param_dim", &BatchNorm::param_dim)
+                 .def_readwrite("fwd_mode", &BatchNorm::fwd_mode)
+                 .def_readwrite("epsilon", &BatchNorm::epsilon)
+                 .def_readwrite("avg_factor", &BatchNorm::avg_factor)
+                 .def_readwrite("scale", &BatchNorm::scale)
+                 .def_readwrite("bias", &BatchNorm::bias);
+
+#define V(m) .value(#m, BatchNorm::Param::ParamDim::m)
+    py::enum_<BatchNorm::Param::ParamDim>(batchnorm, "ParamDim")
+        V(DIM_11HW)
+        V(DIM_1CHW)
+        V(DIM_1C11);
+#undef V
+
+#define V(m) .value(#m, BatchNorm::Param::FwdMode::m)
+    py::enum_<BatchNorm::Param::FwdMode>(batchnorm, "FwdMode")
+        V(TRAINING)
+        V(INFERENCE);
+#undef V
+
 }

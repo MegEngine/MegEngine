@@ -17,7 +17,7 @@ def elemwise(*args, mode):
     from megengine.core.ops.builtin import Elemwise
     from megengine.core._imperative_rt.imperative import apply_op
 
-    return apply_op(Elemwise(mode=mode).to_c(), args)
+    return apply_op(Elemwise(mode), args)
 
 
 def test_basic_interface():
@@ -37,13 +37,15 @@ def test_basic_interface():
 def test_opr_attr():
     from megengine.core.ops.builtin import Elemwise
 
-    assert Elemwise(mode="add") == Elemwise(mode="add")
+    assert Elemwise(Elemwise.Mode.ADD) == Elemwise(Elemwise.Mode.ADD)
 
 
 def test_simple_arith():
+    from megengine.core.ops.builtin import Elemwise
+
     x = np.random.rand(10).astype("float32")
     xx = megengine.core._imperative_rt.put(x)
-    (yy,) = elemwise(xx, xx, mode="mul")
+    (yy,) = elemwise(xx, xx, mode=Elemwise.Mode.MUL)
     np.testing.assert_allclose(x * x, megengine.core._imperative_rt.get_value(yy))
     megengine.core._imperative_rt.delete(xx)
     megengine.core._imperative_rt.delete(yy)
@@ -64,7 +66,7 @@ def test_raw_tensor():
 
     x = np.random.rand(10).astype("float32")
     xx = as_raw_tensor(x)
-    (yy,) = apply(Elemwise(mode="mul"), xx, xx)
+    (yy,) = apply(Elemwise(Elemwise.Mode.MUL), xx, xx)
     np.testing.assert_allclose(x * x, yy.numpy())
-    (yy,) = apply(Elemwise(mode="mul"), xx, xx)
+    (yy,) = apply(Elemwise(Elemwise.Mode.MUL), xx, xx)
     np.testing.assert_allclose(x * x, yy.numpy())

@@ -17,6 +17,7 @@ import megengine.functional as F
 from megengine import cgtools, tensor
 from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.ops import builtin as ops
+from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.functional import exp, log
@@ -28,7 +29,7 @@ def test_trace():
 
         @trace(symbolic=symbolic)
         def f(x):
-            op = ops.Elemwise(mode="negate")
+            op = ops.Elemwise(Elemwise.Mode.NEGATE)
             (y,) = apply(op, x)
             return y
 
@@ -44,7 +45,7 @@ def test_exclude_from_trace():
 
         @trace(symbolic=symbolic)
         def f(x):
-            neg = ops.Elemwise(mode="negate")
+            neg = ops.Elemwise(Elemwise.Mode.NEGATE)
             (x,) = apply(neg, x)
             with exclude_from_trace():
                 if i % 2:
@@ -65,7 +66,7 @@ def test_print_in_trace():
         @trace(symbolic=symbolic)
         def f(x):
             nonlocal buf
-            neg = ops.Elemwise(mode="negate")
+            neg = ops.Elemwise(Elemwise.Mode.NEGATE)
             (x,) = apply(neg, x)
             buf = x.numpy()
             (x,) = apply(neg, x)
@@ -85,7 +86,7 @@ def test_print_in_trace():
 def test_dump():
     @trace(symbolic=True, capture_as_const=True)
     def f(a, b):
-        op = ops.Elemwise(mode="add")
+        op = ops.Elemwise(Elemwise.Mode.ADD)
         (y,) = apply(op, a, b)
         return y
 
@@ -111,7 +112,7 @@ def test_capture_dump():
 
     @trace(symbolic=True, capture_as_const=True)
     def f(x):
-        op = ops.Elemwise(mode="mul")
+        op = ops.Elemwise(Elemwise.Mode.MUL)
         (y,) = apply(op, x, a)
         return y
 
@@ -133,7 +134,7 @@ def test_dump_volatile():
 
     @trace(symbolic=True, capture_as_const=True)
     def f(x):
-        op = ops.Elemwise(mode="mul")
+        op = ops.Elemwise(Elemwise.Mode.MUL)
         (y,) = apply(op, x, p)
         return y
 
@@ -159,7 +160,7 @@ def test_trace_profiler():
 
         @trace(symbolic=symbolic, profiling=True)
         def f(x):
-            op = ops.Elemwise(mode="negate")
+            op = ops.Elemwise(Elemwise.Mode.NEGATE)
             (y,) = apply(op, x)
             return y
 
