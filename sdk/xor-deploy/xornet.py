@@ -52,14 +52,14 @@ def main():
         opt.clear_grad()
         with gm:
             pred = net(data)
-            loss = F.cross_entropy_with_softmax(pred, label)
+            loss = F.loss.cross_entropy(pred, label)
             gm.backward(loss)
         opt.step()
         return pred, loss
 
     def val_fun(data, label):
         pred = net(data)
-        loss = F.cross_entropy_with_softmax(pred, label)
+        loss = F.loss.cross_entropy(pred, label)
         return pred, loss
 
     @trace(symbolic=True, capture_as_const=True)
