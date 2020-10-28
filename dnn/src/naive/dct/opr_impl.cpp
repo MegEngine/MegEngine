@@ -9,13 +9,14 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#include "src/naive/dct/opr_impl.h"
 #include <cmath>
 #include "megdnn/basic_types.h"
 #include "megdnn/dtype.h"
-#include "midout.h"
-#include "src/naive/dct/opr_impl.h"
 #include "src/naive/handle.h"
 #include "src/naive/matrix_mul/matrix_mul_helper.h"
+
+#include "midout.h"
 MIDOUT_DECL(megdnn_naive_dct_fwd)
 namespace megdnn {
 namespace naive {

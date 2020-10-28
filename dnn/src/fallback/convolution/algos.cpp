@@ -509,7 +509,7 @@ ConvolutionBackwardDataImpl::AlgoNaive::dispatch_kern(
             param.filter_type.enumv() == DTypeTrait<dt_src>::enumv && \
             param.grad_type.enumv() == DTypeTrait<dt_dst>::enumv) {   \
             MIDOUT_BEGIN(megdnn_fallback_deconv,                      \
-                         midout_iv(DTypeTrait<_dt>::enumv)) {         \
+                         midout_iv(DTypeTrait<dt_src>::enumv)) {      \
                 return kern_naive<DTypeTrait<dt_src>::ctype,          \
                                   DTypeTrait<dt_src>::ctype,          \
                                   DTypeTrait<dt_dst>::ctype>;         \
