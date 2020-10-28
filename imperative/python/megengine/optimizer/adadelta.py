@@ -10,8 +10,8 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from ..functional import sqrt
-from ..tensor import Parameter
+from ..core.tensor.tensor import Tensor
+from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
 
@@ -62,6 +62,16 @@ class Adadelta(Optimizer):
         rho = param_group["rho"]
         eps = param_group["eps"]
 
+        # since `conver_inputs` is disabled for param updates,
+        # scalar should be explicitly tansforred to tensor
+        _lr = tensor([lr])
+        _weight_decay = tensor([weight_decay])
+        _rho = tensor([rho])
+        _eps = tensor([eps])
+
+        c05 = tensor([0.5])
+        c1 = tensor([1.0])
+        c2 = tensor([2.0])
         for param in param_group["params"]:
 
             if param.grad is None:
@@ -69,17 +79,17 @@ class Adadelta(Optimizer):
 
             states = self._state[param]
             step = states["step"]
-            step += 1.0
+            step += c1
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * weight_decay
+                grad += param * _weight_decay
 
             square_avg = states["square_avg"]
             acc_delta = states["acc_delta"]
-            square_avg = rho * square_avg + (1 - rho) * grad ** 2
-            std = sqrt(square_avg + eps)
-            delta = sqrt(acc_delta + eps) / std * grad
-            param -= lr * delta
-            acc_delta = rho * acc_delta + (1 - rho) * delta ** 2
+            square_avg = _rho * square_avg + (c1 - _rho) * grad ** c2
+            std = (square_avg + _eps) ** c05
+            delta = (acc_delta + _eps) ** c05 / std * grad
+            param -= _lr * delta
+            acc_delta = _rho * acc_delta + (c1 - _rho) * delta ** c2
             states["square_avg"]._reset(square_avg)
             states["acc_delta"]._reset(acc_delta)

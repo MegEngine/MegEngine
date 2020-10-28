@@ -16,6 +16,25 @@ from ..ops.special import Const
 from ..tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
 from .dtype import is_equal, is_quantize
 
+_enable_convert_inputs = True
+
+
+def get_convert_inputs():
+    """ get the curerent state of `_enable_convert_inputs` """
+    return _enable_convert_inputs
+
+
+def set_convert_inputs(flag):
+    """ This function is a temporary workaround for reducing the overhead of operator
+    invocations. The function `convert_inputs` is disabled if the global state
+    `_enable_convert_inputs` is set to `False`, otherwise enabled. This function is for
+    internal use only, and should be removed when the tensor-like system is refactored.
+    """
+    global _enable_convert_inputs
+    backup = _enable_convert_inputs
+    _enable_convert_inputs = flag
+    return backup
+
 
 def dtype_promotion(inputs):
     """
@@ -129,6 +148,9 @@ def convert_single_value(v, inputs, *, dtype=None, device=None):
 
 
 def convert_inputs(*args: TensorBase):
+    if not _enable_convert_inputs:
+        return args
+
     dtype = dtype_promotion(args)
     device = get_device(args)
 

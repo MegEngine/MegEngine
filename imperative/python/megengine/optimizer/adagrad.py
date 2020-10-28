@@ -10,8 +10,8 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from ..functional import sqrt
-from ..tensor import Parameter
+from ..core.tensor.tensor import Tensor
+from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
 
@@ -61,6 +61,16 @@ class Adagrad(Optimizer):
         weight_decay = param_group["weight_decay"]
         eps = param_group["eps"]
 
+        # since `conver_inputs` is disabled for param updates,
+        # scalar should be explicitly tansforred to tensor
+        _lr = tensor([lr])
+        _lr_decay = tensor([lr_decay])
+        _weight_decay = tensor([weight_decay])
+        _eps = tensor([eps])
+
+        c05 = tensor([0.5])
+        c1 = tensor([1.0])
+        c2 = tensor([2.0])
         for param in param_group["params"]:
 
             if param.grad is None:
@@ -68,14 +78,14 @@ class Adagrad(Optimizer):
 
             states = self._state[param]
             step = states["step"]
-            step += 1.0
+            step += c1
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * weight_decay
+                grad += param * _weight_decay
 
             square_avg = states["square_avg"]
-            square_avg += grad ** 2
-            delta = grad / sqrt(square_avg + eps)
-            clr = lr / (1 + (step - 1) * lr_decay)
+            square_avg += grad ** c2
+            delta = grad / (square_avg + _eps) ** c05
+            clr = _lr / (c1 + (step - c1) * _lr_decay)
 
             param -= clr * delta

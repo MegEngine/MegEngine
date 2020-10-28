@@ -8,7 +8,8 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Tuple, Union
 
-from ..tensor import Parameter
+from ..core.tensor.tensor import Tensor
+from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
 
@@ -58,6 +59,15 @@ class Adam(Optimizer):
         eps = param_group["eps"]
         beta0, beta1 = param_group["betas"]
 
+        # since `conver_inputs` is disabled for param updates,
+        # scalar should be explicitly tansforred to tensor
+        _lr = tensor([lr])
+        _weight_decay = tensor([weight_decay])
+        _eps = tensor([eps])
+        _beta0, _beta1 = tensor([beta0]), tensor([beta1])
+
+        c1 = tensor([1.0])
+        c05 = tensor([0.5])
         for param in param_group["params"]:
 
             if param.grad is None:
@@ -65,20 +75,20 @@ class Adam(Optimizer):
 
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * weight_decay
+                grad += param * _weight_decay
 
             states = self._state[param]
             step = states["step"]
-            step += 1.0
+            step += c1
             exp_avg = states["exp_avg"]
             exp_avg_sq = states["exp_avg_sq"]
-            exp_avg = beta0 * exp_avg + grad * (1 - beta0)
-            exp_avg_sq = beta1 * exp_avg_sq + (1 - beta1) * (grad * grad)
+            exp_avg = _beta0 * exp_avg + grad * (c1 - _beta0)
+            exp_avg_sq = _beta1 * exp_avg_sq + (c1 - _beta1) * (grad * grad)
 
-            delta = (exp_avg / (1 - beta0 ** step)) / (
-                (exp_avg_sq / (1 - beta1 ** step)) ** 0.5 + eps
+            delta = (exp_avg / (c1 - _beta0 ** step)) / (
+                (exp_avg_sq / (c1 - _beta1 ** step)) ** c05 + _eps
             )
-            param -= lr * delta
+            param -= _lr * delta
 
             # not inplace change, need to update underlying tensor handler in state
             states["exp_avg"]._reset(exp_avg)

@@ -15,6 +15,7 @@ from typing import Union
 
 import numpy as np
 
+from ..core.tensor.utils import set_convert_inputs
 from ..tensor import Parameter, Tensor
 from ..utils.deprecation import deprecated
 
@@ -143,6 +144,9 @@ class Optimizer(metaclass=ABCMeta):
         Performs a single optimization step.
 
         """
+        # set the globle state `_enable_convert_inputs` to `False` to disable
+        # the `convert_inputs` for param updates
+        backup = set_convert_inputs(False)
         for group in self.param_groups:
             if isinstance(group["params"], set):
                 raise TypeError(
@@ -151,6 +155,8 @@ class Optimizer(metaclass=ABCMeta):
                     "Please use a list instead."
                 )
             self._updates(group)
+        # restore the globle state `_enable_convert_inputs`
+        set_convert_inputs(backup)
         return self
 
     @deprecated(version="1.0", reason="use clear_grad instead")

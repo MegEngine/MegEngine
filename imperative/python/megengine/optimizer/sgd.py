@@ -8,7 +8,8 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Union
 
-from ..tensor import Parameter
+from ..core.tensor.tensor import Tensor
+from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
 
@@ -52,18 +53,24 @@ class SGD(Optimizer):
         weight_decay = param_group["weight_decay"]
         momentum = param_group["momentum"]
 
+        # since `conver_inputs` is disabled for param updates,
+        # scalar should be explicitly tansforred to tensor
+        _lr = tensor([lr])
+        _weight_decay = tensor([weight_decay])
+        _momentum = tensor([momentum])
+
         for param in param_group["params"]:
             if param.grad is None:
                 continue
 
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * weight_decay
+                grad += param * _weight_decay
 
             if momentum:
                 v = self._state[param]["momentum_buffer"]
-                v = momentum * v + grad
-                param -= lr * v
+                v = _momentum * v + grad
+                param -= _lr * v
                 self._state[param]["momentum_buffer"]._reset(v)
             else:
-                param -= lr * grad
+                param -= _lr * grad
