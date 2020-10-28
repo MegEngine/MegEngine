@@ -85,11 +85,8 @@ class Tensor(_Tensor):
 
     def detach(self):
         r"""
-        Returns a new tensor which is treated as constant during backward gradient calcuation,
-        i.e. its gradient is zero.
-
-        :param inp: input tensor
-
+        Returns a new tensor sharing the same data memory, which is treated as a constant
+        during backward gradient calcuation, i.e. its gradient is zero.
         """
         Wrapper = type(self)
         Tensor = type(self.__wrapped__)

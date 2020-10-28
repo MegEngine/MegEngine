@@ -27,8 +27,6 @@ def test_qat_convbn2d():
         disable_fake_quant(qat_module)
         inputs = tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
         normal_outputs = module(inputs)
-        # import pdb
-        # pdb.set_trace()
         qat_outputs = qat_module(inputs)
         np.testing.assert_allclose(
             normal_outputs.numpy(), qat_outputs.numpy(), atol=5e-6
