@@ -303,9 +303,8 @@ void SeqCompNodeOptimizerImpl::init_ready_event(
         }
 
         opr->input_waiting_spec(std::move(waiting_spec));
-        auto&& usable_output = opr->usable_output();
-        for (size_t i = 0; i < usable_output.size(); ++ i) {
-            var2step[usable_output[i]] = {cur_step, i};
+        for (size_t i = 0; i < opr->output().size(); ++ i) {
+            var2step[opr->output(i)] = {cur_step, i};
         }
         cur_step ++;
     }
