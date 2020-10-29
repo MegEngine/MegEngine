@@ -807,13 +807,16 @@ void run_test_st(Args &env) {
             parser.feed(path);
         }
         auto inputs = parser.inputs;
-        for (auto& i : inputs) {
-            if (tensormap.find(i.first) == tensormap.end()) {
-                continue;
-            }
+        if (inputs.size() > 1) {
+            for (auto& i : inputs) {
+                mgb_assert(tensormap.find(i.first) != tensormap.end());
 
-            auto& in = tensormap.find(i.first)->second;
-            in->copy_from(i.second);
+                auto& in = tensormap.find(i.first)->second;
+                in->copy_from(i.second);
+            }
+        } else {
+            auto& in = tensormap.begin()->second;
+            in->copy_from(inputs.begin()->second);
         }
 
         warmup();
