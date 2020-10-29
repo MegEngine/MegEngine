@@ -25,6 +25,7 @@
 #include "megbrain/imperative/profiler.h"
 #include "megbrain/imperative/tensor_sanity_check.h"
 #include "megbrain/serialization/helper.h"
+#include "megbrain/utils/persistent_cache.h"
 
 #if MGB_ENABLE_OPR_MM
 #include "megbrain/opr/mm_handler.h"
@@ -262,4 +263,20 @@ void init_utils(py::module m) {
     m.def("_timed_func_exec_cb", [](const std::string& user_data){
         mgb::sys::TimedFuncInvoker::ins().fork_exec_impl_mainloop(user_data.c_str());
     });
+    using mgb::PersistentCache;
+    class PyPersistentCache: public mgb::PersistentCache{
+    public:
+        mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override {
+            PYBIND11_OVERLOAD_PURE(mgb::Maybe<Blob>, PersistentCache, get, category, key);
+        }
+        void put(const std::string& category, const Blob& key, const Blob& value) override {
+            PYBIND11_OVERLOAD_PURE(void, PersistentCache, put, category, key, value);
+        }
+
+    };
+    py::class_<PersistentCache, PyPersistentCache, std::shared_ptr<PersistentCache>>(m, "PersistentCache")
+        .def(py::init<>())
+        .def("get", &PersistentCache::get)
+        .def("put", &PersistentCache::put)
+        .def("reg", &PersistentCache::set_impl);
 }

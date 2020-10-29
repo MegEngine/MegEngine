@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/graph.h"
+#include "megbrain/utils/persistent_cache.h"
 
 #include <Python.h>
 #include <string>
@@ -327,6 +328,49 @@ namespace detail {
     };
 
     template<> struct type_caster<mgb::CompNode> : public from_none_caster<mgb::CompNode> {};
+
+    template <> struct type_caster<mgb::PersistentCache::Blob> {
+        PYBIND11_TYPE_CASTER(mgb::PersistentCache::Blob, _("Blob"));
+    public:
+        bool load(handle src, bool convert) {
+            if (!isinstance<bytes>(src)) {
+                return false;
+            }
+            value.ptr = PYBIND11_BYTES_AS_STRING(src.ptr());
+            value.size = PYBIND11_BYTES_SIZE(src.ptr());
+            return true;
+        }
+        static handle cast(mgb::PersistentCache::Blob blob, return_value_policy /* policy */, handle /* parent */) {
+            return bytes((const char*)blob.ptr, blob.size);
+        }
+    };
+
+    template <typename T> struct type_caster<mgb::Maybe<T>> {
+        using value_conv = make_caster<T>;
+        PYBIND11_TYPE_CASTER(mgb::Maybe<T>, _("Optional[") + value_conv::name + _("]"));
+    public:
+        bool load(handle src, bool convert) {
+            if(!src) {
+                return false;
+            }
+            if (src.is_none()) {
+                return true;
+            }
+            value_conv inner_caster;
+            if (!inner_caster.load(src, convert)) {
+                return false;
+            }
+            value.emplace(cast_op<T&&>(std::move(inner_caster)));
+            return true;
+        }
+
+        static handle cast(mgb::Maybe<T> src, return_value_policy policy, handle parent) {
+            if(!src.valid()) {
+                return none().inc_ref();
+            }
+            return pybind11::cast(src.val(), policy, parent);
+        }
+    };
 
 } // detail
 } // PYBIND11_NAMESPACE

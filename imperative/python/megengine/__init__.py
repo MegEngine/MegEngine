@@ -78,13 +78,18 @@ from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save
 from .tensor import Parameter, Tensor, tensor
 from .version import __version__
+from .utils import persistent_cache, comp_graph_tools as cgtools
 
 _set_fork_exec_path_for_timed_func(
     sys.executable,
     os.path.join(os.path.dirname(__file__), "utils", "_timed_func_fork_exec_entry.py"),
 )
 
+_persistent_cache_impl_ins = persistent_cache.PersistentCacheOnServer()
+_persistent_cache_impl_ins.reg()
+
 atexit.register(sync)
 
 del sync
 del _set_fork_exec_path_for_timed_func
+del _persistent_cache_impl_ins
