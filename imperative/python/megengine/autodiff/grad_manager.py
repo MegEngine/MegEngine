@@ -112,6 +112,14 @@ class GradManager:
             else:
                 logger.warning("params with index {} is not attached.".format(idx))
 
+    def clear_grad(self):
+        r"""
+        For advanced usage: set the grad attribute to None for registered parameters.
+        It could be more convenient when there is more than one Optimizer.
+        """
+        for param in self._param_dict.values():
+            param.grad = None
+
     def _register_after_backward_callback(self, callback):
         self._after_backward_callback.append(callback)
         return self

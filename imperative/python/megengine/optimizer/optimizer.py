@@ -91,7 +91,7 @@ class Optimizer(metaclass=ABCMeta):
             if not isinstance(param, Parameter):
                 raise TypeError(
                     "optimizer can only optimize Parameters, but one of the params is "
-                    + type(param)
+                    + str(type(param))
                 )
 
         for name, default in self._defaults.items():
@@ -159,7 +159,6 @@ class Optimizer(metaclass=ABCMeta):
 
     def clear_grad(self):
         r"""Set the grad attribute to None for all parameters.
-
         """
         for param_group in self.param_groups:
             for param in param_group["params"]:

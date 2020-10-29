@@ -29,8 +29,7 @@ def test_basic():
     np.testing.assert_equal(w.grad.numpy(), [[1], [3], [5]])
     np.testing.assert_equal(b.grad.numpy(), [1])
 
-    w.grad = None
-    b.grad = None
+    gm.clear_grad()
     with gm:
         p = F.matmul(x, w)
         y = p + b
