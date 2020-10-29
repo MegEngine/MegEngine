@@ -262,13 +262,13 @@ def test_broadcast():
     opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
 
     x = F.ones((2, 1, 3))
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         F.broadcast_to(x, (2, 3, 4))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         F.broadcast_to(x, (4, 1, 3))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         F.broadcast_to(x, (1, 3))
 
 

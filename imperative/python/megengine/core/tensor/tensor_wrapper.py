@@ -59,29 +59,7 @@ def _transpose(data, axes):
 
 
 def _broadcast(inp, shape):
-    def valid_broadcast(src, tar):
-        def failed():
-            raise ValueError(
-                "the input shape {} can not be broadcasted to target shape {}".format(
-                    src, tar
-                )
-            )
-
-        if isinstance(src, (TensorBase, TensorWrapperBase)):
-            src = src.numpy()
-
-        if isinstance(tar, (TensorBase, TensorWrapperBase)):
-            tar = tar.numpy()
-
-        if len(src) > len(tar):
-            failed()
-
-        for i in range(min(len(src), len(tar))):
-            if src[-i - 1] != 1 and src[-i - 1] != tar[-i - 1]:
-                failed()
-
     shape = utils.astensor1d(shape, inp, dtype="int32", device=inp.device)
-    valid_broadcast(inp.shape, shape)
     (result,) = apply(builtin.Broadcast(), inp, shape)
     return result
 

@@ -47,7 +47,9 @@ def _(op: OpDef, inputs, outputs, input_requires_grad):
                 grad_fn = reduce_sum_grad_fn
             else:
                 grad_fn = default_grad_fn
-    elif isinstance(op, Elemwise) and op.mode == Elemwise.Mode.ADD:
+    elif isinstance(op, Broadcast) or (
+        isinstance(op, Elemwise) and op.mode == Elemwise.Mode.ADD
+    ):
         grad_fn = elemwise_add_grad_fn
     else:
         grad_fn = default_grad_fn
@@ -212,5 +214,4 @@ _oprAttr_grad_fn = {
     Reshape.name: reshape_grad_fn,
     Subtensor.name: subtensor_grad_fn,
     IndexingMultiAxisVec.name: indexingMultiAxisVec_grad_fn,
-    Broadcast.name: elemwise_add_grad_fn,
 }

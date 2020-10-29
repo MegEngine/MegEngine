@@ -21,6 +21,7 @@
 #include "megbrain/imperative/ops/nms.h"
 #include "megbrain/imperative/ops/elemwise.h"
 #include "megbrain/imperative/ops/batch_norm.h"
+#include "megbrain/imperative/ops/broadcast.h"
 
 namespace py = pybind11;
 
@@ -205,5 +206,8 @@ void init_ops(py::module m) {
         V(TRAINING)
         V(INFERENCE);
 #undef V
+
+    py::class_<Broadcast, std::shared_ptr<Broadcast>, OpDef>(m, "Broadcast")
+        .def(py::init<>());
 
 }

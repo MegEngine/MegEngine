@@ -413,7 +413,7 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
             megdnn_throw_if(
                     cur_shape != 1 && cur_stride != 0, tensor_reshape_error,
                     megdnn_mangle(ssprintf(
-                            "brodcast on dim with shape not equal to 1: "
+                            "broadcast on dim with shape not equal to 1: "
                             "src_shape=%s dst_shape=%s",
                             to_string().c_str(), tshape.to_string().c_str())));
             result.shape[target_idx] = tshape.shape[target_idx];

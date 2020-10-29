@@ -32,8 +32,7 @@ public:
 
     bool is_same_st(const Hashable& rhs_) const override {
         auto&& rhs = static_cast<const NMSKeep&>(rhs_);
-        return rhs.dyn_typeinfo() == dyn_typeinfo()
-            && rhs.iou_thresh == iou_thresh
+        return rhs.iou_thresh == iou_thresh
             && rhs.max_output == max_output;
     }
 
