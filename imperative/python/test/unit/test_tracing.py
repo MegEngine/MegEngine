@@ -174,7 +174,41 @@ def test_trace_profiler():
         assert out.get("profiler")
 
 
-@pytest.mark.skip(reason="could not disable opt_level")
+def test_goptions():
+    @trace(symbolic=True, opt_level=0, capture_as_const=True)
+    def f(x):
+        # directly return x / x will not trigger gopt
+        # since there's no way to tell the two x are the same
+        y = 2.0 * x
+        return y / y
+
+    @trace(symbolic=True, opt_level=1, capture_as_const=True)
+    def g(x):
+        y = 2.0 * x
+        return y / y
+
+    d = tensor(0.0)
+    assert not np.isfinite(f(d).numpy())
+    np.testing.assert_equal(g(d).numpy().item(), 1.0)
+
+
+def test_goptions_log_sum_exp():
+    @trace(symbolic=True, opt_level=0, capture_as_const=True)
+    def f(x, y):
+        return log(exp(x) + exp(y))
+
+    @trace(symbolic=True, opt_level=1, capture_as_const=True)
+    def g(x, y):
+        return log(exp(x) + exp(y))
+
+    val = 1.0e4
+    d = tensor(val)
+    o = tensor(0.0)
+    assert not np.isfinite(f(d, o).numpy())
+    np.testing.assert_almost_equal(g(d, o), val)
+
+
+@pytest.mark.skip(reason="could not use opt_level=0 with dump")
 def test_goptions_log_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x):
@@ -191,30 +225,6 @@ def test_goptions_log_exp():
     oprs_1 = cgtools.get_oprs_seq(outputs)
 
     g(tensor(1.0))
-    g.dump(out, optimize_for_inference=False)
-    *_, outputs = G.load_graph(out)
-    oprs_2 = cgtools.get_oprs_seq(outputs)
-
-    assert len(oprs_1) - len(oprs_2) == 2
-
-
-@pytest.mark.skip(reason="could not disable opt_level")
-def test_goptions_log_sum_exp():
-    @trace(symbolic=True, opt_level=0, capture_as_const=True)
-    def f(x, y):
-        return log(exp(x) + exp(y))
-
-    @trace(symbolic=True, opt_level=1, capture_as_const=True)
-    def g(x, y):
-        return log(exp(x) + exp(y))
-
-    f(tensor(1.0), tensor(2.0))
-    _, out = mkstemp()
-    f.dump(out, optimize_for_inference=False)
-    *_, outputs = G.load_graph(out)
-    oprs_1 = cgtools.get_oprs_seq(outputs)
-
-    g(tensor(1.0), tensor(2.0))
     g.dump(out, optimize_for_inference=False)
     *_, outputs = G.load_graph(out)
     oprs_2 = cgtools.get_oprs_seq(outputs)

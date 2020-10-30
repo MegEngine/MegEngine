@@ -284,6 +284,7 @@ class trace:
             apply.enable(apply_symbolic_mode)
             apply.enable(apply_const_symbolic_mode)
             self._lazy_eval_graph = G.Graph()
+            self._apply_graph_options(self._lazy_eval_graph)
 
     def _take_escaped_tensors(self):
         escaped_tensors = tuple(self._active_tensors)
@@ -302,7 +303,6 @@ class trace:
             readers.append(reader)
             active_lazy_eval_tensors.append(x)
             visited.add(x)
-        self._apply_graph_options(lazy_eval_graph)
         lazy_eval_graph.compile(*readers)
         lazy_eval_graph()
         for r, x in zip(readers, active_lazy_eval_tensors):
@@ -599,6 +599,8 @@ class trace:
 
         h2v = {}
         graph = G.Graph()
+        # only graph_opt_level takes effect in dump
+        self._apply_graph_options(graph)
 
         for i, h in enumerate(self._arg_bindings):
             info = self._tinfo[h]
