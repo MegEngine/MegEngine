@@ -6,11 +6,14 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/search_policy/algo_chooser.h"
+#include "megbrain/opr/search_policy/profiler.h"
 
 #include "megbrain/graph/grad_impl.h"
 #include "megbrain/system.h"
@@ -19,27 +22,14 @@
 
 #include "megdnn/oprs/utils.h"
 
-//! TODO: here has to be know some megdnn::opr when there is produced midout.h
-//! fix it if there is another graceful way.
-#include "megdnn/oprs.h"
-
-#include "midout.h"
-
-MIDOUT_DECL(megbrain_opr_convolution)
-#define MIDOUT_B(...) \
-    MIDOUT_BEGIN(megbrain_opr_convolution, __VA_ARGS__) {
-#define MIDOUT_E \
-    }            \
-    MIDOUT_END();
-
-#include "../internal/megdnn_opr_wrapper.inl"
 #include "../internal/invoke.h"
+#include "../internal/megdnn_opr_wrapper.inl"
+#include "../search_policy/workspace_need_limit_getter.inl"
 
 #include <array>
 #include <chrono>
 #include <cstring>
 #include <thread>
-
 
 using namespace mgb;
 using namespace opr;
@@ -47,771 +37,6 @@ using namespace cg::static_infer;
 using intl::WorkspaceLimitGetter;
 
 #define CACHE_KEY_VERSION "v2"
-
-#define MGB_FOREACH_FASTRUN_OPR(cb)   \
-    cb(ConvolutionForward);           \
-    cb(ConvBiasForward);              \
-    cb(ConvolutionBackwardData);      \
-    cb(ConvolutionBackwardFilter);    \
-    cb(Convolution3DForward);         \
-    cb(Convolution3DBackwardData);    \
-    cb(Convolution3DBackwardFilter);  \
-    cb(LocalShareForward);            \
-    cb(LocalShareBackwardData);       \
-    cb(LocalShareBackwardFilter);     \
-    cb(DeformableConvForward);        \
-    cb(DeformableConvBackwardFilter); \
-    cb(DeformableConvBackwardData);   \
-    cb(BatchConvBiasForward);
-
-namespace mgb {
-namespace opr {
-namespace intl {
-
-#define cb(_Opr)                                           \
-    template <>                                            \
-    struct AutoAddWorkspaceNeedLimitGetter<megdnn::_Opr> { \
-        static constexpr bool val = true;                  \
-    };
-MGB_FOREACH_FASTRUN_OPR(cb)
-
-#undef cb
-
-}  // namespace intl
-}  // namespace opr
-}  // namespace mgb
-
-namespace {
-
-template <class MegDNNOpr>
-struct MegDNNOpr2MGBOpr;
-
-#define cb(_Opr)                            \
-    template <>                             \
-    struct MegDNNOpr2MGBOpr<megdnn::_Opr> { \
-        using MGBOpr = opr::_Opr;           \
-    };
-
-MGB_FOREACH_FASTRUN_OPR(cb)
-
-#undef cb
-
-template <typename Opr>
-struct OprArityTrait;
-
-template <typename Opr, int _arity_in, int _arity_out>
-struct OprArityTraitTmpl {
-    static constexpr int arity_in = _arity_in;
-    static constexpr int arity_out = _arity_out;
-    static constexpr int arity = arity_in + arity_out;
-};
-
-#define INST_ARITY(_Opr, _in, _out) \
-    template <>                     \
-    struct OprArityTrait<_Opr> : public OprArityTraitTmpl<_Opr, _in, _out> {};
-
-INST_ARITY(megdnn::ConvolutionBackwardData, 2, 1);
-INST_ARITY(megdnn::ConvolutionBackwardFilter, 2, 1);
-INST_ARITY(megdnn::Convolution3DForward, 2, 1);
-INST_ARITY(megdnn::Convolution3DBackwardData, 2, 1);
-INST_ARITY(megdnn::Convolution3DBackwardFilter, 2, 1);
-INST_ARITY(megdnn::LocalShareForward, 2, 1);
-INST_ARITY(megdnn::LocalShareBackwardData, 2, 1);
-INST_ARITY(megdnn::LocalShareBackwardFilter, 2, 1);
-INST_ARITY(megdnn::Convolution, 2, 1);
-INST_ARITY(megdnn::DeformableConvForward, 4, 1);
-INST_ARITY(megdnn::DeformableConvBackwardFilter, 4, 1);
-INST_ARITY(megdnn::BatchConvBiasForward, 4, 1);
-INST_ARITY(megdnn::ConvBias, 4, 1);
-INST_ARITY(megdnn::DeformableConvBackwardData, 5, 3);
-
-#undef INST_ARITY
-
-template <typename Opr>
-constexpr bool opr_supports_preprocess() {
-    return std::is_same<Opr, megdnn::ConvolutionForward>::value ||
-           std::is_same<Opr, megdnn::ConvBias>::value;
-}
-
-template <typename Opr, bool has_prep>
-struct PreprocessFilterImpl {
-    using T = union {};
-};
-
-template <typename Opr>
-struct PreprocessFilterImpl<Opr, true> {
-    using T = typename Opr::PreprocessedFilter;
-};
-
-template <typename Opr>
-using PreprocessFilter =
-        typename PreprocessFilterImpl<Opr, opr_supports_preprocess<Opr>()>::T;
-
-// timeout delta to be added with fastest known algorithm for new algos
-constexpr double TIMEOUT_TOLERANCE = 2;
-
-template <typename Opr>
-struct AlgoChooserFuncId {};
-
-#define DEF_FUNC_ID(func)                                                     \
-    template <>                                                               \
-    struct AlgoChooserFuncId<megdnn::func> {                                  \
-        __attribute__(                                                        \
-                (unused)) static constexpr sys::TimedFuncInvoker::FuncId ID = \
-                static_cast<sys::TimedFuncInvoker::FuncId>(                   \
-                        MGB_HASH_STR("megdnn::" #func));                      \
-    };
-
-MGB_FOREACH_FASTRUN_OPR(DEF_FUNC_ID)
-
-#undef DEF_FUNC_ID
-
-/* =================== TimedProfiler =================== */
-
-/*!
- * \brief profile a megdnn opr conv with given param
- *
- * This class only provides static methods, and the entry point is
- * TimedProfiler::profile; it would run profiler in a timed environment by
- * sys::TimedFuncInvoker
- *
- * \tparam Opr megdnn opr impl
- */
-template <typename Opr>
-class TimedProfiler {
-    static constexpr int arity_in = OprArityTrait<Opr>::arity_in;
-    static constexpr int arity_out = OprArityTrait<Opr>::arity_out;
-    static constexpr int arity = OprArityTrait<Opr>::arity;
-
-    using ConvTensorShapes = std::array<TensorShape, arity>;
-
-public:
-    struct Param {
-        char algo_name[128];
-        size_t workspace;
-        DTypeEnum dtypes[arity];
-        CompNode::Locator comp_node_loc;
-        ConvTensorShapes shapes;
-        typename Opr::Param opr_param;
-        bool allow_weight_preprocess;
-
-        //! filled by profile()
-        mutable double actual_timeout;
-    };
-
-    struct Result {
-        double time;
-    };
-
-    static Maybe<Result> profile(const Param& param, double& timeout) {
-        mgb_assert(timeout >= 0);
-        if (!timeout) {
-            timeout = timeout_setting;
-        } else if (timeout_setting) {
-            timeout = std::min(timeout, timeout_setting);
-        }
-        param.actual_timeout =
-                timeout ? timeout : std::numeric_limits<double>::infinity();
-        auto res = sys::TimedFuncInvoker::ins().invoke(
-                AlgoChooserFuncId<Opr>::ID,
-                TParam::from_pod(const_cast<Param&>(param)), timeout);
-        if (res.valid())
-            return res.val().template as_single_pod<Result>();
-        return None;
-    }
-private:
-    using TParam = sys::TimedFuncInvoker::Param;
-    using TResult = sys::TimedFuncInvoker::Result;
-
-    static const double timeout_setting;
-
-    static double init_timeout_setting();
-    static TResult prof_impl(const TParam& raw_param);
-    static void prof_init_device(const TParam& raw_param);
-};
-template <typename Opr>
-const double TimedProfiler<Opr>::timeout_setting =
-        TimedProfiler<Opr>::init_timeout_setting();
-
-template <typename Opr>
-double TimedProfiler<Opr>::init_timeout_setting() {
-#if MGB_ENABLE_FASTRUN
-    sys::TimedFuncInvoker::ins().register_func(
-            AlgoChooserFuncId<Opr>::ID, &TimedProfiler<Opr>::prof_impl,
-            &TimedProfiler<Opr>::prof_init_device);
-    auto to_set = MGB_GETENV("MGB_CONV_PROFILING_TIMEOUT");
-    if (to_set)
-        return std::stod(to_set);
-#endif
-    return 0;
-}
-
-#define APPLY(statement, ...)                                  \
-    mgb::apply([&](const auto&... args) { return statement; }, \
-               std::tuple_cat(__VA_ARGS__))
-
-template <typename Opr>
-typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
-        const TParam& raw_param) {
-    MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("TimedProfiler::prof_impl")))
-    auto&& param = raw_param.as_single_pod<Param>();
-    CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
-    auto megdnn_opr = intl::create_megdnn_opr<Opr>(cn);
-    std::array<TensorLayout, arity> layouts;
-
-    auto from_enum = [&](DTypeEnum enumv) -> DType {
-        switch (enumv) {
-
-#define cb(_dt)                  \
-    case DTypeTrait<_dt>::enumv: \
-        return _dt(1.0f, static_cast<uint8_t>(0))
-            cb(dtype::Quantized8Asymm);
-#undef cb
-
-#define cb(_dt)                  \
-    case DTypeTrait<_dt>::enumv: \
-        return _dt(1.0f)
-
-            cb(dtype::QuantizedS8);
-            cb(dtype::QuantizedS16);
-            cb(dtype::QuantizedS32);
-            default:
-                return DType::from_enum(enumv);
-#undef cb
-        }
-    };
-    for (int i = 0; i < arity; ++i) {
-        layouts[i] = {param.shapes[i], from_enum(param.dtypes[i])};
-    }
-
-    megdnn_opr->param() = param.opr_param;
-    {
-        typename Opr::Algorithm* algo = nullptr;
-        for (auto i : APPLY(megdnn_opr->get_all_algorithms(args...), layouts)) {
-            if (!strcmp(i->name(), param.algo_name)) {
-                algo = i;
-                break;
-            }
-        }
-        mgb_assert(algo, "algorithm %s not found", param.algo_name);
-        megdnn_opr->execution_policy() = {algo};
-    }
-
-    // Allocate preprocessed weight buffers.
-    TensorLayoutArray preprocessed_layout;
-    if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
-        if (param.allow_weight_preprocess) {
-            preprocessed_layout = APPLY(
-                    _(megdnn_opr)->deduce_preprocessed_filter_layout(args...),
-                    layouts);
-        }
-    });
-
-    {
-        // first allocate a whole chunk to avoid memory fragmentation (here we
-        // rely on memory allocator to reuse memory)
-        auto align = cn.get_mem_addr_alignment();
-        size_t tot_size = align;
-        for (int i = 0; i < arity; ++i) {
-            tot_size += layouts[i].span().high_byte + align;
-        }
-        for (const auto& layout : preprocessed_layout) {
-            tot_size += layout.span().high_byte + align;
-        }
-        tot_size += param.workspace;
-        DeviceTensorStorage storage{cn};
-        storage.ensure_size(tot_size);
-    }
-
-    // allocate input and output memory
-    std::array<DeviceTensorND, arity_in> inp_val;
-    std::array<DeviceTensorND, arity_out> out_val;
-    DeviceTensorND workspace;
-    for (int i = 0; i < arity_in; ++i) {
-        inp_val[i]
-                .comp_node(cn)
-                .dtype(layouts[i].dtype)
-                .resize(layouts[i]);
-    }
-    for (int i = 0; i < arity_out; ++i) {
-        out_val[i]
-                .comp_node(cn)
-                .dtype(layouts[arity_in + i].dtype)
-                .resize(layouts[arity_in + i]);
-    }
-    megdnn::Workspace mdn_workspace;
-
-    // allocate workspace
-    if (param.workspace) {
-        workspace.comp_node(cn).dtype(dtype::Byte()).resize({param.workspace});
-        mdn_workspace.size = param.workspace;
-        mdn_workspace.raw_ptr = workspace.raw_ptr();
-    }
-
-    // allocate storage for preprocessed filter
-    SmallVector<DeviceTensorND> flt_val(preprocessed_layout.size());
-    for (size_t i = 0; i < preprocessed_layout.size(); i++) {
-        flt_val[i] = {cn, preprocessed_layout[i], preprocessed_layout[i].dtype,
-                      preprocessed_layout[i].format};
-    }
-
-    for (int i = 0; i < arity_in; ++i) {
-        fill_zero_dev_tensor(inp_val[i]);
-    }
-
-    PreprocessFilter<Opr> prep_flt;
-    if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
-        if (!preprocessed_layout.empty()) {
-            auto&& pf = _(prep_flt);
-            pf.algorithm_id = nullptr;
-            pf.tensors.resize(flt_val.size());
-            for (size_t i = 0; i < flt_val.size(); i++) {
-                pf.tensors[i] = flt_val[i].as_megdnn();
-            }
-            APPLY(_(megdnn_opr)->exec_preprocess(args..., &pf, mdn_workspace),
-                  std::forward_as_tuple(layouts[0], inp_val[1].as_megdnn()),
-                  array_skip<2>(layouts));
-        }
-    });
-
-    RealTimer timer;
-    auto ev_start = cn.create_event(CompNode::Event::NEED_TIMER),
-         ev_end = cn.create_event(CompNode::Event::NEED_TIMER);
-    ev_start->record();
-    if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
-        auto&& opr = _(megdnn_opr);
-        PreprocessFilter<Opr>* pf =
-                preprocessed_layout.empty() ? nullptr : &prep_flt;
-        APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace), inp_val,
-              out_val);
-    }, /* else */ [&](auto _) {
-        APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace), inp_val,
-              out_val);
-    });
-    ev_end->record();
-
-    double next_report_time = 0.5;
-    while (!ev_end->finished()) {
-        if (timer.get_secs() >= next_report_time) {
-            mgb_log_warn(
-                    "profiling conv algo %s already took %.3f/%.3f secs"
-                    " (limit can be set by MGB_CONV_PROFILING_TIMEOUT) ",
-                    param.algo_name, timer.get_secs(), param.actual_timeout);
-            next_report_time = timer.get_secs() + 1;
-        }
-        using namespace std::literals;
-        std::this_thread::sleep_for(1000us);
-    }
-
-    mgb_assert(ev_start->finished());
-    return TResult::from_pod(Result{ev_start->elapsed_time_until(*ev_end)});
-    MIDOUT_E
-};
-
-template <typename Opr>
-void TimedProfiler<Opr>::prof_init_device(const TParam& raw_param) {
-    MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("TimedProfiler::prof_init_device")))
-    auto&& param = raw_param.as_single_pod<Param>();
-    CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
-    // wait for cuda init, so its time does not get accounted in timeout
-    cn.sync();
-    MIDOUT_E
-}
-
-/* =================== AlgoChooser =================== */
-/*!
- * \brief choose algorithm according to ExecutionPolicy
- *
- * This class only provides static methods, and the entry point is
- * AlgoChooser::setup_algo. When profiling is needed, it would first try to
- * retrive profiling stats from cache, and run TimedProfiler when necessary
- *
- * \tparam Opr megdnn operator impl
- */
-template <typename Opr>
-class AlgoChooser {
-    static constexpr int arity_in = OprArityTrait<Opr>::arity_in;
-    static constexpr int arity_out = OprArityTrait<Opr>::arity_out;
-    static constexpr int arity = OprArityTrait<Opr>::arity;
-
-    using ImplAlgo = typename Opr::Algorithm*;
-    using MGBOpr = typename MegDNNOpr2MGBOpr<Opr>::MGBOpr;
-    using ConvTensorLayouts = std::array<TensorLayout, arity>;
-
-    class ExeContext {
-        const ConvTensorLayouts& m_layouts;
-        Opr* m_megdnn_opr;
-        const MGBOpr* m_mgb_opr;
-        bool m_allow_weight_preprocess;
-
-    public:
-        ExeContext(const ConvTensorLayouts& layouts, Opr* megdnn_opr,
-                   const MGBOpr* mgb_opr, bool allow_weight_preprocess)
-                : m_layouts{layouts},
-                  m_megdnn_opr{megdnn_opr},
-                  m_mgb_opr{mgb_opr},
-                  m_allow_weight_preprocess{allow_weight_preprocess} {
-            mgb_assert(m_layouts.size() == layouts.size());
-            static_assert(
-                    std::tuple_size<ConvTensorLayouts>::value == 3 ||
-                            std::tuple_size<ConvTensorLayouts>::value == 5 ||
-                            std::tuple_size<ConvTensorLayouts>::value == 8,
-                    "Convolution AlgoChooser assumes arity = 3 , 5 or 8 (for "
-                    "deformable conv)");
-        }
-
-        Opr* megdnn_opr() const { return m_megdnn_opr; }
-
-        const MGBOpr* mgb_opr() const { return m_mgb_opr; }
-
-        const TensorLayout& inp_layout(size_t idx) const {
-            return m_layouts[idx];
-        }
-
-        const ConvTensorLayouts& layouts() const { return m_layouts; }
-
-        ImplAlgo choose_by_heuristic(bool reproducible = false) const {
-            auto opr = m_mgb_opr;
-            auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
-                    opr->owner_graph(), opr->comp_node(),
-                    opr->execution_policy().workspace_limit);
-            return APPLY(m_megdnn_opr->get_algorithm_heuristic(
-                                 args..., workspace_limit, reproducible),
-                         m_layouts);
-        }
-
-        //! get all candidate algos, and the one choose_by_heuristic() is
-        //! put first
-        std::vector<ImplAlgo> get_all_candidates() const {
-            auto heu = choose_by_heuristic();
-            auto&& ret =
-                    APPLY(m_megdnn_opr->get_all_algorithms(args...), m_layouts);
-            bool found = false;
-            for (size_t i = 0; i < ret.size(); ++i) {
-                if (ret[i] == heu) {
-                    found = true;
-                    std::swap(ret[i], ret[0]);
-                    break;
-                }
-            }
-            mgb_assert(found,
-                       "algo %s got by heuristic not found in "
-                       "candidate list",
-                       heu->name());
-            return std::move(ret);
-        }
-
-        //! get candidate algos with workspace limit.
-        std::vector<ImplAlgo> get_all_candidates_with_workspace_limit() const {
-            auto&& all_algos = get_all_candidates();
-            auto opr = m_mgb_opr;
-            auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
-                    opr->owner_graph(), opr->comp_node(),
-                    opr->execution_policy().workspace_limit);
-            std::vector<ImplAlgo> ret;
-            for (auto&& algo : all_algos) {
-                if (get_workspace_size_bytes(algo) <= workspace_limit) {
-                    ret.push_back(algo);
-                }
-            }
-            return ret;
-        }
-
-        //! get workspace size required for specific algo
-        size_t get_workspace_size_bytes(ImplAlgo algo) const {
-            m_megdnn_opr->execution_policy() = {algo};
-            size_t result;
-            if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
-                auto&& opr = _(m_megdnn_opr);
-                auto prep = this->construct_fake_preprocess_filter();
-                PreprocessFilter<Opr>* prep_ptr =
-                        prep.valid() ? &prep.val() : nullptr;
-                result = std::max(
-                        APPLY(opr->get_preprocess_workspace_in_bytes(args...),
-                              m_layouts),
-                        APPLY(opr->get_workspace_in_bytes(args..., prep_ptr),
-                              m_layouts));
-            }, /* else */ [&](auto _) {
-                result = APPLY(_(m_megdnn_opr)->get_workspace_in_bytes(args...),
-                               m_layouts);
-            });
-            return result;
-        }
-
-        /*!
-         * \brief profile a single algorithm
-         *
-         * This is actually a wrapper that constructs param and call
-         * TimedProfiler<Opr>::profile for the actual profiling
-         *
-         * \param[in,out] timeout set the timeout, and return the actual
-         *      timeout used during profiling
-         */
-        Maybe<AlgoChooserProfileCache::ResultEntry> profile_single_algo(
-                ImplAlgo algo, double& timeout) const;
-
-    private:
-        Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const {
-            Maybe<PreprocessFilter<Opr>> result = None;
-            if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
-                if (!m_allow_weight_preprocess)
-                    return;
-                auto opr = _(m_megdnn_opr);
-                auto layout =
-                        APPLY(opr->deduce_preprocessed_filter_layout(args...),
-                              m_layouts);
-                if (layout.empty())
-                    return;
-                result = PreprocessFilter<Opr>{};
-                auto& res = result.val();
-                res.algorithm_id = nullptr;
-                res.tensors.resize(layout.size());
-                for (size_t i = 0; i < layout.size(); i++) {
-                    res.tensors[i] = megdnn::TensorND(nullptr, layout[i]);
-                }
-            });
-            return result;
-        }
-    };
-
-    //! entrance for getting algorithm according to execution strategy
-    static ImplAlgo get_algo(ExeContext& ctx) {
-        using S = mixin::Convolution::ExecutionPolicy::Strategy;
-        MGB_MARK_USED_VAR(TIMEOUT_TOLERANCE);
-        switch (ctx.mgb_opr()->execution_policy().strategy) {
-            case S::HEURISTIC:
-                return ctx.choose_by_heuristic();
-            case S::HEURISTIC_REPRODUCIBLE:
-                return ctx.choose_by_heuristic(true);
-            case S::PROFILE_HEURISTIC: {
-                ImplAlgo algo = choose_by_profile(ctx, false, false);
-                if (algo == nullptr)
-                    algo = ctx.choose_by_heuristic();
-                return algo;
-            }
-#if MGB_ENABLE_FASTRUN
-            case S::PROFILE:
-                return choose_by_profile(ctx, false);
-            case S::PROFILE_REPRODUCIBLE:
-                return choose_by_profile(ctx, true);
-#endif
-            default:
-                mgb_throw(GraphError,
-                          "bad convolution ExecutionPolicy strategy");
-        }
-    }
-
-    static void get_origin_param_and_layouts(const ExeContext&,
-                                             ConvTensorLayouts&,
-                                             typename Opr::Param&) {}
-
-    //! get all profile result, either by retrieving cache or profiling
-    static AlgoChooserProfileCache::Result get_profile_result(
-            ExeContext& ctx, bool enable_update);
-
-    static ImplAlgo choose_by_profile(ExeContext& ctx,
-                                      bool require_reproducible,
-                                      bool enable_update = true);
-
-public:
-    /*!
-     * \brief setup algorithm and return workspace size
-     */
-    static size_t setup_algo(const ConvTensorLayouts& layouts, Opr* megdnn_opr,
-                             const MGBOpr* mgb_opr,
-                             bool allow_weight_preprocess = false) {
-        if (WorkspaceLimitGetter::is_prealloc_run(mgb_opr->owner_graph())) {
-            return 0;
-        }
-
-        ExeContext ctx(layouts, megdnn_opr, mgb_opr, allow_weight_preprocess);
-
-        auto algo = get_algo(ctx);
-        size_t workspace = ctx.get_workspace_size_bytes(algo);
-        mgb_log_debug(
-                "%s:tensor layouts (%s %s, %s %s)->(%s %s) :algo=%s "
-                "workspace=%.2fMiB reproducible=%d",
-                mgb_opr->dyn_typeinfo()->name,
-                layouts[0].to_string().c_str(),
-                layouts[0].dtype.name(),
-                layouts[1].to_string().c_str(),
-                layouts[1].dtype.name(),
-                layouts[layouts.size() - 1].to_string().c_str(),
-                layouts[layouts.size() - 1].dtype.name(), algo->name(),
-                workspace / (1024 * 1024.0), algo->is_reproducible());
-        megdnn_opr->execution_policy() = {algo};
-        return workspace;
-    }
-};
-
-template <typename Opr>
-AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
-        ExeContext& ctx, bool enable_update) {
-    AlgoChooserProfileCache& cache = ctx.mgb_opr()->profile_cache();
-
-    ConvTensorLayouts origin_layouts = ctx.layouts();
-    typename Opr::Param origin_param = ctx.mgb_opr()->param();
-    get_origin_param_and_layouts(ctx, origin_layouts, origin_param);
-    AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
-                                           origin_layouts.size(), &origin_param,
-                                           sizeof(origin_param)};
-    {
-        auto&& rst = cache.get(cache_key);
-        if (rst.valid())
-            return rst.val();
-    }
-
-    AlgoChooserProfileCache::Result prof_rst;
-    if (!enable_update)
-        return prof_rst;
-
-    std::string str_on_inp_shape = ssprintf(
-            "on input layouts (%s, %s)", ctx.layouts()[0].to_string().c_str(),
-            ctx.layouts()[1].to_string().c_str());
-    double cur_timeout = 0;
-    RealTimer timer;
-    for (auto algo : ctx.get_all_candidates_with_workspace_limit()) {
-        Maybe<AlgoChooserProfileCache::ResultEntry> cur_rst;
-        std::string msg = ssprintf("profiling %s algorithm %s %s",
-                                   ctx.mgb_opr()->dyn_typeinfo()->name,
-                                   algo->name(), str_on_inp_shape.c_str());
-        timer.reset();
-        MGB_TRY { cur_rst = ctx.profile_single_algo(algo, cur_timeout); }
-        MGB_CATCH(std::exception & exc, {
-            mgb_log_warn("caught exception during %s: %s", msg.c_str(),
-                         exc.what());
-            continue;
-        })
-        MGB_CATCH(..., {
-            mgb_log_warn("caught exception during %s", msg.c_str());
-            continue;
-        })
-        if (!cur_rst.valid()) {
-            mgb_log_warn("timeout when %s; timeout setting: %.3fsec",
-                         msg.c_str(), cur_timeout);
-            continue;
-        }
-        if (!cur_timeout) {
-            cur_timeout = timer.get_secs() + TIMEOUT_TOLERANCE;
-        } else {
-            cur_timeout =
-                    std::min(cur_timeout, timer.get_secs() + TIMEOUT_TOLERANCE);
-        }
-        auto&& rst = cur_rst.val();
-        mgb_log_debug("%s: workspace: %zu; time: %.3gsec", msg.c_str(),
-                      rst.workspace, rst.time);
-        prof_rst.push_back(rst);
-    }
-    mgb_assert(!prof_rst.empty(), "no usable convolution algorithm %s",
-               str_on_inp_shape.c_str());
-
-    cache.put(cache_key, prof_rst);
-    return prof_rst;
-}
-
-template <>
-void AlgoChooser<megdnn::ConvBias>::get_origin_param_and_layouts(
-        const ExeContext& ctx, ConvTensorLayouts& layouts,
-        megdnn::ConvBias::Param& param) {
-    auto format = static_cast<megdnn::param::ConvBias::Format>(
-            ctx.megdnn_opr()->param().format);
-    size_t output_block_size = ctx.megdnn_opr()->param().output_block_size;
-    megdnn::ConvBias::deduce_winograd_origin_layout_and_param(
-            format, output_block_size, ctx.layouts()[0], ctx.layouts()[1],
-            layouts[1], param);
-}
-
-template <typename Opr>
-typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
-        ExeContext& ctx, bool require_reproducible, bool enable_update) {
-    MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("AlgoChooser::choose_by_profile")))
-    auto opr = ctx.mgb_opr();
-    if (opr->owner_graph()->options().no_profiling_on_shape_change) {
-        auto algo = ctx.megdnn_opr()->execution_policy().algorithm;
-        if (algo)
-            return algo;
-    }
-
-    std::unordered_map<std::string, ImplAlgo> algo_map;
-    for (auto i : ctx.get_all_candidates()) {
-        auto ins = algo_map.emplace(i->name(), i);
-        mgb_assert(ins.second, "duplicated algo name: %s", i->name());
-    }
-
-    auto&& prof = get_profile_result(ctx, enable_update);
-    if (prof.empty())
-        return nullptr;
-    for (auto&& i : prof) {
-        if ((!require_reproducible || i.reproducible)) {
-            auto iter = algo_map.find(i.algo);
-            mgb_assert(
-                    iter != algo_map.end(),
-                    "algorithm %s exists in "
-                    "profiling result but not in algo_map; please report this "
-                    "bug; opr: %s{%s}, shapes: %s %s %s",
-                    ctx.mgb_opr()->cname(), ctx.mgb_opr()->dyn_typeinfo()->name,
-                    ctx.layouts()[0].TensorShape::to_string().c_str(),
-                    ctx.layouts()[1].TensorShape::to_string().c_str(),
-                    ctx.layouts()[2].TensorShape::to_string().c_str(),
-                    i.algo.c_str());
-            return iter->second;
-        }
-    }
-
-    mgb_log_error(
-            "Workspace requirement (%zu) could not be satisfied. Abort now to "
-            "avoid further problems",
-            WorkspaceLimitGetter::get_workspace_limit(
-                    opr->owner_graph(), opr->comp_node(),
-                    opr->execution_policy().workspace_limit));
-    mgb_trap();
-    MIDOUT_E
-}
-
-template <typename Opr>
-Maybe<AlgoChooserProfileCache::ResultEntry>
-AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
-                                                  double& timeout) const {
-    typename TimedProfiler<Opr>::Param param;
-    auto name = algo->name();
-    // force check copy size <= dest len-1 from gcc8 for safe
-    auto len = sizeof(param.algo_name);
-    strncpy(param.algo_name, name, len - 1);
-    param.algo_name[len - 1] = '\0';
-    mgb_assert(!param.algo_name[sizeof(param.algo_name) - 2],
-               "algo name too long: %s; len=%zu", name, strlen(name));
-    param.workspace = get_workspace_size_bytes(algo);
-    for (int i = 0; i < arity; ++i) {
-        auto&& src = m_layouts[i];
-        mgb_assert(src.format.is_default() &&
-                           (src.dtype.category() == DTypeCategory::FLOAT ||
-                            src.dtype.category() == DTypeCategory::INT ||
-                            src.dtype.category() == DTypeCategory::QUANTIZED),
-                   "unsupported layout in profiling: %s",
-                   src.to_string().c_str());
-        param.dtypes[i] = src.dtype.enumv();
-    }
-    param.comp_node_loc = m_mgb_opr->output(0)->comp_node().locator();
-    mgb_assert(param.shapes.size() == m_layouts.size());
-    for (size_t i = 0; i < param.shapes.size(); ++i)
-        param.shapes[i] = m_layouts[i];
-    param.opr_param = m_megdnn_opr->param();
-    param.allow_weight_preprocess = m_allow_weight_preprocess;
-
-    auto rst = TimedProfiler<Opr>::profile(param, timeout);
-    // MIOpen conv profiles all available algos when a specfic shape is
-    // provided for the first time, which probably adds to the result time.
-    // Therefore, a second profile execution is needed.
-    if (strncmp(name, "MIOpen", 6) == 0)
-        rst = TimedProfiler<Opr>::profile(param, timeout);
-    if (!rst.valid())
-        return None;
-    return AlgoChooserProfileCache::ResultEntry{
-            algo->name(), algo->is_reproducible(), rst.val().time,
-            param.workspace};
-}
-
-}  // anonymous namespace
 
 /* ==================== misc impl  ==================== */
 
@@ -913,7 +138,8 @@ public:
 
 void mixin::WeightPreprocessExecutor::mixin_update_preprocessed_filter(
         cg::OperatorNodeBase& opr) {
-    if (!mixin_allow_weight_preprocess(opr)) return;
+    if (!mixin_allow_weight_preprocess(opr))
+        return;
 
     auto new_layout = deduce_preprocessed_filter_layout();
     if (new_layout.empty()) {
@@ -939,7 +165,8 @@ void mixin::WeightPreprocessExecutor::mixin_update_preprocessed_filter(
             }
         }
     }
-    if (!should_update) return;
+    if (!should_update)
+        return;
 
     if (!m_preprocessed_filter) {
         m_preprocessed_filter.reset(new PreprocessedFilter{});
@@ -1665,8 +892,7 @@ void ConvBiasForward::init_output_format() {
 }
 
 void ConvBiasForward::check_winograd_param_valid(
-        const megdnn::ConvBias::WinogradParam& param,
-        const DType& dtype) {
+        const megdnn::ConvBias::WinogradParam& param, const DType& dtype) {
     if (dtype.enumv() == DTypeEnum::Float32) {
         mgb_assert(param.channel_block_size == 1 ||
                            param.channel_block_size == 4 ||
@@ -1784,20 +1010,20 @@ size_t LocalShareForward::get_workspace_size_bytes(
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(LocalShareForward) {
     mgb_assert(opr.input(0)->dtype().category() == DTypeCategory::FLOAT,
-            "only float data type supported for grad");
+               "only float data type supported for grad");
     mgb_assert(wrt_idx == 0 || wrt_idx == 1);
     mgb_assert(out_grad.size() == 2);
     if (wrt_idx == 0) {
         // data
-        SymbolVar grad = LocalShareBackwardData::make(
-                opr.input(1), out_grad[0], opr.input(0),
-                opr.param(), opr.execution_policy());
+        SymbolVar grad = LocalShareBackwardData::make(opr.input(1), out_grad[0],
+                                                      opr.input(0), opr.param(),
+                                                      opr.execution_policy());
         return grad.node();
     } else {
         // filter
         SymbolVar grad = LocalShareBackwardFilter::make(
-                opr.input(0), out_grad[0], opr.input(1),
-                opr.param(), opr.execution_policy());
+                opr.input(0), out_grad[0], opr.input(1), opr.param(),
+                opr.execution_policy());
         return grad.node();
     }
 }
@@ -1812,7 +1038,10 @@ LocalShareBackwardData::LocalShareBackwardData(VarNode* filter, VarNode* diff,
                                                const Param& param,
                                                const ExecutionPolicy& policy,
                                                const OperatorNodeConfig& config)
-        : Super{filter->owner_graph(), config, "local_share_bwd_data", {filter, diff}} {
+        : Super{filter->owner_graph(),
+                config,
+                "local_share_bwd_data",
+                {filter, diff}} {
     init_megdnn_opr(*this, param);
     m_policy = policy;
     add_input({filter, diff});
@@ -1897,25 +1126,23 @@ LocalShareBackwardFilter::LocalShareBackwardFilter(
     add_input({src, diff, filter});
 }
 
-SymbolVar LocalShareBackwardFilter::make(
-        SymbolVar src, SymbolVar diff, SymbolVar filter,
-        const Param &param,
-        const ExecutionPolicy &policy,
-        const OperatorNodeConfig &config) {
-
+SymbolVar LocalShareBackwardFilter::make(SymbolVar src, SymbolVar diff,
+                                         SymbolVar filter, const Param& param,
+                                         const ExecutionPolicy& policy,
+                                         const OperatorNodeConfig& config) {
     return src.insert_single_output_opr<LocalShareBackwardFilter>(
             src.node(), diff.node(), filter.node(), param, policy, config);
 }
 
 size_t LocalShareBackwardFilter::get_workspace_size_bytes(
-        const TensorShapeArray &input_shapes,
-        const TensorShapeArray &output_shapes) const {
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
     mgb_assert(input_shapes.size() == 3 && output_shapes.size() == 1);
     return AlgoChooser<megdnn::LocalShareBackwardFilter>::setup_algo(
             {TensorLayout{input_shapes[0], input(0)->dtype(),
                           input(0)->format()},
-            {input_shapes[1], input(1)->dtype(), input(1)->format()},
-            {output_shapes[0], output(0)->dtype(), output(0)->format()}},
+             {input_shapes[1], input(1)->dtype(), input(1)->format()},
+             {output_shapes[0], output(0)->dtype(), output(0)->format()}},
             megdnn_opr(), this);
 }
 
@@ -1924,12 +1151,14 @@ MGB_IMPL_OPR_GRAD(LocalShareBackwardFilter) {
     mgb_assert(!out_grad[1]);
     if (wrt_idx == 0) {
         return LocalShareBackwardData::make(out_grad[0], opr.input(1),
-                opr.input(0), opr.param(), opr.execution_policy()).node();
+                                            opr.input(0), opr.param(),
+                                            opr.execution_policy())
+                .node();
     }
     if (wrt_idx == 1) {
-        return LocalShare::make(
-                opr.input(0), out_grad[0], opr.param(), opr.execution_policy()).
-            node();
+        return LocalShare::make(opr.input(0), out_grad[0], opr.param(),
+                                opr.execution_policy())
+                .node();
     }
     return nullptr;
 }
