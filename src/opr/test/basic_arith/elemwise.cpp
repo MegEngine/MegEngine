@@ -593,10 +593,6 @@ namespace {
         struct enable_for_dtype_impl<dtype::Bool, Trait> {
             static constexpr bool value = Trait::ALLOW_BOOL;
         };
-        template<>
-        struct enable_for_dtype_impl<dtype::Bool, void> {
-            static constexpr bool value = false;
-        };
     }
 
     //! whether to enable test for specific dtype and Trait
