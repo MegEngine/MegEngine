@@ -41,6 +41,7 @@ struct Interpreter {
         virtual void close() = 0;
 
         virtual void config_async_level(int level) = 0;
+        virtual int get_async_level() = 0;
     };
 
     virtual std::unique_ptr<Channel> create_channel() = 0;

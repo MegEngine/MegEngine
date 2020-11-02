@@ -74,6 +74,7 @@ struct ChannelImpl : Interpreter::Channel {
     void close() override;
 
     void config_async_level(int level) override;
+    int get_async_level() override;
 
 private:
     TensorInfo* alloc();
@@ -101,7 +102,11 @@ private:
         ChannelImpl* m_owner;
     } m_worker;
 
-    int m_async_level = 2;
+    //! config whether raise error exactly when invoking op.
+    //! level 2: both device and user side errors are async;
+    //! level 1: user side errors are sync;
+    //! level 0: both sync.
+    int m_async_level = 1;
 };
 
 } // namespace mgb::imperative::interpreter::intl

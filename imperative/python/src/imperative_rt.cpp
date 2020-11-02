@@ -77,12 +77,14 @@ void init_imperative_rt(py::module m) {
         .def("get_shape", &Interpreter::Channel::get_shape)
         .def("_get_dev_tensor", &Interpreter::Channel::get_dev_tensor)
         .def("apply_op", &Interpreter::Channel::apply_op)
+        .def("config_async_level", &Interpreter::Channel::config_async_level)
+        .def("get_async_level", &Interpreter::Channel::get_async_level)
         .def("sync", &Interpreter::Channel::sync, py::call_guard<py::gil_scoped_release>());
 
     std::unique_ptr<Interpreter::Channel> ch = Interpreter::inst().create_channel();
     m.attr("interpreter") = py::detail::make_caster<decltype(ch)>::cast(
         std::move(ch), py::return_value_policy::move, {});
-    for (auto name : {"put", "delete", "get_value", "get_dtype", "get_device", "get_shape", "_get_dev_tensor", "apply_op"}) {
+    for (auto name : {"put", "delete", "get_value", "get_dtype", "get_device", "get_shape", "_get_dev_tensor", "apply_op", "config_async_level", "get_async_level"}) {
         m.attr(name) = m.attr("interpreter").attr(name);
     }
 
