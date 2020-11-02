@@ -57,40 +57,6 @@ set(MLIR_TRANSLATION_LIBS MLIRTargetLLVMIR MLIRTargetNVVMIR)
 set(MLIR_LIBS ${MLIR_CORE_LIBS} ${MLIR_DIALECT_LIBS} ${MLIR_CONVERSION_LIBS} ${MLIR_TRANSLATION_LIBS})
 set(MLIR_LLVM_LIBS ${LLVM_LIBS} ${MLIR_LIBS})
 
-if (MGE_USE_SYSTEM_LIB)
-    find_package(ZLIB)
-    find_package(MLIR REQUIRED CONFIG)
-    message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
-    message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-    list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-    include(TableGen)
-
-    set(MLIR_LLVM_INCLUDE_DIR ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
-
-    set(MLIR_LLVM_COMPONENTS Core;Support;X86CodeGen;OrcJIT;NVPTX)
-    llvm_map_components_to_libnames(MLIR_LLVM_LIBS ${MLIR_LLVM_COMPONENTS})
-    set(MLIR_LLVM_LIB_DIR ${MLIR_INSTALL_PREFIX}/lib)
-
-    function(find_mlir_llvm_lib lib)
-        find_library(${lib}
-            NAMES ${lib}
-            PATHS ${MLIR_LLVM_LIB_DIR}
-            NO_DEFAULT_PATH)
-        if(${${lib}} STREQUAL ${lib}-NOTFOUND)
-            message(FATAL_ERROR "${lib} not found, did you forget to build llvm-project?")
-        else()
-            list(APPEND MLIR_LLVM_LIBS ${lib})
-            set(MLIR_LLVM_LIBS "${MLIR_LLVM_LIBS}" PARENT_SCOPE)
-        endif()
-    endfunction(find_mlir_llvm_lib)
-
-    foreach(c ${MLIR_LIBS})
-        find_mlir_llvm_lib(${c})
-    endforeach()
-    return()
-endif()
-
 function(add_mge_mlir_src_dep llvm_monorepo_path)
     set(_CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
     string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
@@ -108,6 +74,7 @@ function(add_mge_mlir_src_dep llvm_monorepo_path)
     set(BUILD_SHARED_LIBS ${_CMAKE_BUILD_SHARED_LIBS} CACHE BOOL "Build shared libraries" FORCE)
 endfunction()
 
+# llvm build options
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LLVM_INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
 set(LLVM_INCLUDE_BENCHMARKS OFF CACHE BOOL "" FORCE)
