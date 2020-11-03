@@ -460,6 +460,8 @@ std::vector<CompNode> load_multiple_xpus(size_t num);
 //! check whether given number of GPUs is available
 bool check_gpu_available(size_t num);
 
+//! check whether given number of AMD GPUs is available
+bool check_amd_gpu_available(size_t num);
 
 //! check whether given number of cambricon devices is available
 bool check_cambricon_device_available(size_t num);

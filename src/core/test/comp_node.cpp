@@ -40,6 +40,10 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("cpu2:23"), make_lc(D::CPU, 2, 23));
     ASSERT_EQ(L::parse("cpu21:23"), make_lc(D::CPU, 21, 23));
 
+
+    ASSERT_EQ(L::parse("rocmx"), make_lc(D::ROCM, -1, 0));
+    ASSERT_EQ(L::parse("rocm2"), make_lc(D::ROCM, 2, 0));
+    ASSERT_EQ(L::parse("rocm2:3"), make_lc(D::ROCM, 2, 3));
     ASSERT_EQ(L::parse("cambriconx"), make_lc(D::CAMBRICON, -1, 0));
     ASSERT_EQ(L::parse("cambricon2"), make_lc(D::CAMBRICON, 2, 0));
     ASSERT_EQ(L::parse("cambricon2:3"), make_lc(D::CAMBRICON, 2, 3));
@@ -66,6 +70,7 @@ TEST(TestCompNode, Parse) {
     ASSERT_THROW(L::parse("cpu0:"), MegBrainError);
     ASSERT_THROW(L::parse("cpu0:x"), MegBrainError);
     ASSERT_THROW(L::parse("cpu2:23x"), MegBrainError);
+    ASSERT_THROW(L::parse("rcom0"), MegBrainError);
     ASSERT_THROW(L::parse("cmabricon0"), MegBrainError);
     ASSERT_THROW(L::parse("atlast0"), MegBrainError);
     ASSERT_THROW(L::parse("multithread"), MegBrainError);
@@ -296,6 +301,18 @@ TEST(TestCompNodeCuda, set_prealloc_config) {
         4, CompNode::DeviceType::CUDA);
 }
 
+#if MGB_ROCM
+TEST(TestCompNodeROCm, MemNode) {
+    REQUIRE_AMD_GPU(2);
+
+    auto cn00 = CompNode::load("rocm0"),
+         cn1 = CompNode::load("rocm1"),
+         cn01 = CompNode::load("rocm0:1");
+    ASSERT_EQ(cn00, CompNode::load("rocm0"));
+    ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
+    ASSERT_NE(cn00.mem_node(), cn1.mem_node());
+}
+#endif
 
 #if MGB_CAMBRICON
 TEST(TestCompNodeCambricon, MemNode) {
@@ -466,6 +483,10 @@ TEST(TestCompNodeCPU, PeerCopyFromCUDA) {
     test_peer_copy_from_device("gpux");
 }
 
+TEST(TestCompNodeCPU, PeerCopyFromROCm) {
+    REQUIRE_AMD_GPU(1);
+    test_peer_copy_from_device("rocmx");
+}
 
 #if MGB_CAMBRICON
 TEST(TestCompNodeCPU, PeerCopyFromCambricon) {
