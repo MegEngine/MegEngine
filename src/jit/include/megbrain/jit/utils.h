@@ -136,6 +136,8 @@ public:
 //! in this process
 std::string next_kernel_name();
 
+std::vector<std::string> get_cuda_include_opts();
+
 }  // namespace jit
 }  // namespace mgb
 
