@@ -1197,6 +1197,67 @@ TEST(TestGoptInference, ConvertFormatNHWCD4) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, ConvertFormatNHWCD4Elemwise) {
+    // hwcd4 is only supported in naive handle
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x = gen({8, 8, 8, 8}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 0;
+    auto w1 = mkcvar("w1", {8, 8, 3, 3}),
+         conv = opr::Convolution::make(x, w1, param);
+
+    auto b = mkvar("b", {1, 1, 1, 1}),
+         elem = opr::Elemwise::make({conv + b},
+                                    opr::Elemwise::Param::Mode::RELU);
+    param.pad_h = param.pad_w = 1;
+    auto w2 = mkcvar("w2", {8, 8, 3, 3}),
+         conv2 = opr::Convolution::make(elem, w2, param);
+
+    auto b_scaler = mkvar("b", {1}), elem2 = conv2 + b_scaler;
+
+    param.pad_h = param.pad_w = 1;
+    auto w3 = mkcvar("w2", {8, 8, 3, 3}),
+         y = opr::Convolution::make(elem2, w3, param);
+
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
+              find_opr<opr::Convolution>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.ConvertFormatNHWCD4Elemwise.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+
+    *host_x = *gen({8, 8, 16, 16}, cn);
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+
 TEST(TestGoptInference, ConvertFormatNHWCD4LOCAL) {
     // hwcd4 is only supported in naive handle
     NaiveMegDNNHandleScope naive_megdnn_handle;
@@ -3228,7 +3289,15 @@ TEST(TestGoptInference, ConvertFormatNCHW44MultiInput) {
          conv1 = opr::Convolution::make(x, w1, param_conv);
 
     auto b = mkvar("b", {1, 1, 16, 16}),
-         y = opr::Elemwise::make({conv1 + b}, opr::Elemwise::Param::Mode::RELU);
+         elem0 = opr::Elemwise::make({conv1 + b + b},
+                                 opr::Elemwise::Param::Mode::RELU);
+
+    auto w2 = mkcvar("w2", {8, 8, 3, 3}),
+         conv2 = opr::Convolution::make(elem0, w2, param_conv);
+
+    auto b1 = mkvar("b1", {1}),
+         y = opr::Elemwise::make({conv2 + b1 + b},
+                                     opr::Elemwise::Param::Mode::RELU);
 
     SymbolVar y_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
