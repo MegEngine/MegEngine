@@ -14,6 +14,10 @@
 
 #include "../internal/invoke.h"
 
+#if MGB_ROCM
+#include "hcc_detail/hcc_defs_prologue.h"
+#include "megcore_rocm.h"
+#endif
 
 //! TODO: here has to be know some megdnn::opr when there is produced midout.h
 //! fix it if there is another graceful way.
@@ -58,6 +62,11 @@ template <typename Opr>
 typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         const TParam& raw_param) {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("TimedProfiler::prof_impl")))
+#if MGB_ROCM
+    bool miopen_algo_search_enabled;
+    megcore::getMIOpenAlgoSearchStatus(&miopen_algo_search_enabled);
+    mgb_assert(miopen_algo_search_enabled, "MIOpen algo search not enabled");
+#endif
     auto&& param = raw_param.as_single_pod<Param>();
     CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
     auto megdnn_opr = intl::create_megdnn_opr<Opr>(cn);
@@ -234,6 +243,9 @@ Maybe<typename TimedProfiler<Opr>::Result> TimedProfiler<Opr>::profile(
 template <typename Opr>
 void TimedProfiler<Opr>::prof_init_device(const TParam& raw_param) {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("TimedProfiler::prof_init_device")))
+#if MGB_ROCM
+    megcore::enableMIOpenAlgoSearch(true);
+#endif
     auto&& param = raw_param.as_single_pod<Param>();
     CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
     // wait for cuda init, so its time does not get accounted in timeout

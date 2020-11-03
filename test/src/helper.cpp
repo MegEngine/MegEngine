@@ -327,6 +327,13 @@ bool mgb::check_gpu_available(size_t num) {
     return true;
 }
 
+bool mgb::check_amd_gpu_available(size_t num) {
+    if (CompNode::get_device_count(CompNode::DeviceType::ROCM) < num) {
+        mgb_log_warn("skip test case that requires %zu AMD GPU(s)", num);
+        return false;
+    }
+    return true;
+}
 
 bool mgb::check_cambricon_device_available(size_t num) {
     if (CompNode::get_device_count(CompNode::DeviceType::CAMBRICON) < num) {
