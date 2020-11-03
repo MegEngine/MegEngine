@@ -1561,15 +1561,26 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
         return new_opr;
     };
 
-    auto replace_elemwise_opr = [](OperatorNodeBase* opr,
-                                   const VarNodeArray& new_inp) {
+    auto replace_elemwise_opr = [&relayout_inp_to_chw](
+                                        OperatorNodeBase* opr,
+                                        const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         bool has_inp_changed = false;
+        bool can_exec_cd4 = true;
         for (size_t i = 0; i < opr->input().size(); i++) {
             if (!new_inp[i]->format().is_default()) {
                 has_inp_changed = true;
-                break;
+            } else if (new_inp[i]->shape().ndim == 4) {
+                if (new_inp[i]->shape()[1] % 4 != 0) {
+                    can_exec_cd4 = false;
+                }
+                //! cd4 elemwise with scaler is supported
+            } else if (!new_inp[i]->shape().is_scalar()) {
+                can_exec_cd4 = false;
             }
+        }
+        if (!can_exec_cd4) {
+            return relayout_inp_to_chw(opr, new_inp);
         }
         if (has_inp_changed) {
             // assumption: all inputs are changed from nchw to nhwcd4

@@ -2232,6 +2232,8 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
                 if (new_inp[i]->shape()[1] % pack_c_size != 0) {
                     can_exec_ncwxx = false;
                 }
+            } else if (!new_inp[i]->shape().is_scalar()) {
+                can_exec_ncwxx = false;
             }
         }
         if (has_inp_changed) {
