@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
+from megengine.core.tensor.dtype import get_scale, get_zero_point, qint8, quint8
 from megengine.core.tensor.tensor_wrapper import TensorWrapper
 
 
@@ -71,3 +72,17 @@ def test_transpose():
     x = np.random.rand(2, 5).astype("float32")
     xx = TensorWrapper(x)
     np.testing.assert_almost_equal(xx.T.numpy(), x.T)
+
+
+def test_as_type():
+    x = TensorWrapper([1, 2, 3], dtype=np.float32)
+    y = x.astype(qint8(0.1))
+    np.testing.assert_almost_equal(get_scale(y.dtype), 0.1)
+    z = y.astype(qint8(0.2))
+    np.testing.assert_almost_equal(get_scale(z.dtype), 0.2)
+    a = z.astype(quint8(0.3, 127))
+    np.testing.assert_almost_equal(get_scale(a.dtype), 0.3)
+    np.testing.assert_equal(get_zero_point(a.dtype), 127)
+    b = a.astype(quint8(0.3, 128))
+    np.testing.assert_almost_equal(get_scale(b.dtype), 0.3)
+    np.testing.assert_equal(get_zero_point(b.dtype), 128)

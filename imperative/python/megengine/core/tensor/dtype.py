@@ -62,6 +62,21 @@ def get_zero_point(dtype):
     return metadata["zero_point"]
 
 
+def is_equal(dt0, dt1):
+    def _get_zero_point(dtype):
+        assert is_quantize(dtype)
+        metadata = dtype.metadata["mgb_dtype"]
+        return metadata.get("zero_point")
+
+    if is_quantize(dt0) and is_quantize(dt1):
+        return get_scale(dt0) == get_scale(dt1) and _get_zero_point(
+            dt0
+        ) == _get_zero_point(dt1)
+    if not (is_quantize(dt0) or is_quantize(dt1)):
+        return dt0 == dt1
+    return False
+
+
 def _check_zero_point(zp: int, dtype_str: str):
     qmin = _metadata_dict[dtype_str].qmin
     qmax = _metadata_dict[dtype_str].qmax

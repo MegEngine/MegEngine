@@ -14,6 +14,7 @@ import numpy as np
 from ..ops import builtin
 from ..ops.special import Const
 from ..tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
+from .dtype import is_equal
 
 
 def dtype_promotion(inputs):
@@ -112,7 +113,7 @@ def concatenate(inputs, axis=0, *, device=None):
 
 def astype(x, dtype):
     dtype = np.dtype(dtype)
-    if x.dtype != dtype:
+    if not is_equal(x.dtype, dtype):
         (x,) = apply(builtin.TypeCvt(param=dtype), x)
     return x
 
