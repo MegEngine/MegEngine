@@ -27,7 +27,8 @@ def load_module(name: str, path: str) -> types.ModuleType:
 
 
 def check_module_exists(module: str) -> bool:
-    """Checks whether python module exists or not.
+    """
+    Checks whether python module exists or not.
 
     :param module: name of module.
     """
@@ -36,7 +37,8 @@ def check_module_exists(module: str) -> bool:
 
 @contextmanager
 def cd(target: str) -> Iterator[None]:
-    """Changes current directory to target.
+    """
+    Changes current directory to target.
 
     :param target: target directory.
     """

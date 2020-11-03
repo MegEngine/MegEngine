@@ -123,7 +123,8 @@ def collective_comm(inp, mode, group, device):
 def reduce_sum(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create reduce_sum operator for collective communication.
+    """
+    Create reduce_sum operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -136,7 +137,8 @@ def reduce_sum(
 def broadcast(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create broadcast operator for collective communication.
+    """
+    Create broadcast operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -149,7 +151,8 @@ def broadcast(
 def all_gather(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create all_gather operator for collective communication.
+    """
+    Create all_gather operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -162,7 +165,8 @@ def all_gather(
 def reduce_scatter_sum(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create reduce_scatter_sum operator for collective communication.
+    """
+    Create reduce_scatter_sum operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -175,7 +179,8 @@ def reduce_scatter_sum(
 def all_reduce_sum(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create all_reduce_sum operator for collective communication.
+    """
+    Create all_reduce_sum operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -188,7 +193,8 @@ def all_reduce_sum(
 def all_reduce_max(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create all_reduce_max operator for collective communication.
+    """
+    Create all_reduce_max operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -201,7 +207,8 @@ def all_reduce_max(
 def all_reduce_min(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create all_reduce_min operator for collective communication.
+    """
+    Create all_reduce_min operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -214,7 +221,8 @@ def all_reduce_min(
 def gather(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create gather operator for collective communication.
+    """
+    Create gather operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -227,7 +235,8 @@ def gather(
 def scatter(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create scatter operator for collective communication.
+    """
+    Create scatter operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -240,7 +249,8 @@ def scatter(
 def all_to_all(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
-    """Create all_to_all operator for collective communication.
+    """
+    Create all_to_all operator for collective communication.
 
     :param inp: input tensor.
     :param group: communication group.
@@ -251,7 +261,8 @@ def all_to_all(
 
 
 def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
-    """Send a Tensor to a remote process.
+    """
+    Send a Tensor to a remote process.
 
     :param inp: tensor to send.
     :param dest_rank: destination process rank.
@@ -266,7 +277,8 @@ def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
 def remote_recv(
     src_rank: int, shape: Tuple[int], dtype: type, device: Optional[str] = None
 ) -> Tensor:
-    """Receive a Tensor from a remote process.
+    """
+    Receive a Tensor from a remote process.
 
     :param src_rank: source process rank.
     :param shape: the shape of the tensor to receive.

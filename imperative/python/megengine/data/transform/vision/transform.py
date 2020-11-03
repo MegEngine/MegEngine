@@ -154,7 +154,8 @@ class VisionTransform(Transform):
 
 
 class ToMode(VisionTransform):
-    r"""Change input data to a target mode.
+    r"""
+    Change input data to a target mode.
     For example, most transforms use HWC mode image,
     while the neural network might use CHW mode input tensor.
 
@@ -301,7 +302,8 @@ class TorchTransformCompose(VisionTransform):
 
 
 class Pad(VisionTransform):
-    r"""Pad the input data.
+    r"""
+    Pad the input data.
 
     :param size: padding size of input image, it could be integer or sequence.
         If it is an integer, the input image will be padded in four directions.
@@ -348,7 +350,8 @@ class Pad(VisionTransform):
 
 
 class Resize(VisionTransform):
-    r"""Resize the input data.
+    r"""
+    Resize the input data.
 
     :param output_size: target size of image, with (height, width) shape.
     :param interpolation: interpolation method. All methods are listed below:
@@ -474,7 +477,8 @@ class ShortestEdgeResize(VisionTransform):
 
 
 class RandomResize(VisionTransform):
-    r"""Resize the input data randomly.
+    r"""
+    Resize the input data randomly.
 
     :param scale_range: range of scaling.
     :param order: the same with :class:`VisionTransform`.
@@ -518,7 +522,8 @@ class RandomResize(VisionTransform):
 
 
 class RandomCrop(VisionTransform):
-    r"""Crop the input data randomly. Before applying the crop transform,
+    r"""
+    Crop the input data randomly. Before applying the crop transform,
     pad the image first. If target size is still bigger than the size of
     padded image, pad the image size to target size.
 
@@ -575,7 +580,8 @@ class RandomCrop(VisionTransform):
 
 
 class RandomResizedCrop(VisionTransform):
-    r"""Crop the input data to random size and aspect ratio.
+    r"""
+    Crop the input data to random size and aspect ratio.
     A crop of random size (default: of 0.08 to 1.0) of the original size and a random
     aspect ratio (default: of 3/4 to 1.33) of the original aspect ratio is made.
     After applying crop transfrom, the input data will be resized to given size.
@@ -664,7 +670,8 @@ class RandomResizedCrop(VisionTransform):
 
 
 class CenterCrop(VisionTransform):
-    r"""Crops the given the input data at the center.
+    r"""
+    Crops the given the input data at the center.
 
     :param output_size: target size of output image, with (height, width) shape.
     :param order: the same with :class:`VisionTransform`.
@@ -707,7 +714,8 @@ class CenterCrop(VisionTransform):
 
 
 class RandomHorizontalFlip(VisionTransform):
-    r"""Horizontally flip the input data randomly with a given probability.
+    r"""
+    Horizontally flip the input data randomly with a given probability.
 
     :param p: probability of the input data being flipped. Default: 0.5
     :param order: the same with :class:`VisionTransform`.
@@ -739,7 +747,8 @@ class RandomHorizontalFlip(VisionTransform):
 
 
 class RandomVerticalFlip(VisionTransform):
-    r"""Vertically flip the input data randomly with a given probability.
+    r"""
+    Vertically flip the input data randomly with a given probability.
 
     :param p: probability of the input data being flipped. Default: 0.5
     :param order: the same with :class:`VisionTransform`.
@@ -771,7 +780,8 @@ class RandomVerticalFlip(VisionTransform):
 
 
 class Normalize(VisionTransform):
-    r"""Normalize the input data with mean and standard deviation.
+    r"""
+    Normalize the input data with mean and standard deviation.
     Given mean: ``(M1,...,Mn)`` and std: ``(S1,..,Sn)`` for ``n`` channels,
     this transform will normalize each channel of the input data.
     ``output[channel] = (input[channel] - mean[channel]) / std[channel]``
@@ -797,7 +807,8 @@ class Normalize(VisionTransform):
 
 
 class GaussianNoise(VisionTransform):
-    r"""Add random gaussian noise to the input data.
+    r"""
+    Add random gaussian noise to the input data.
     Gaussian noise is generated with given mean and std.
 
     :param mean: Gaussian mean used to generate noise.
@@ -824,7 +835,8 @@ class GaussianNoise(VisionTransform):
 
 
 class BrightnessTransform(VisionTransform):
-    r"""Adjust brightness of the input data.
+    r"""
+    Adjust brightness of the input data.
 
     :param value: how much to adjust the brightness. Can be any
         non negative number. 0 gives the original image.
@@ -855,7 +867,8 @@ class BrightnessTransform(VisionTransform):
 
 
 class ContrastTransform(VisionTransform):
-    r"""Adjust contrast of the input data.
+    r"""
+    Adjust contrast of the input data.
 
     :param value: how much to adjust the contrast. Can be any
         non negative number. 0 gives the original image.
@@ -886,7 +899,8 @@ class ContrastTransform(VisionTransform):
 
 
 class SaturationTransform(VisionTransform):
-    r"""Adjust saturation of the input data.
+    r"""
+    Adjust saturation of the input data.
 
     :param value: how much to adjust the saturation. Can be any
         non negative number. 0 gives the original image.
@@ -917,7 +931,8 @@ class SaturationTransform(VisionTransform):
 
 
 class HueTransform(VisionTransform):
-    r"""Adjust hue of the input data.
+    r"""
+    Adjust hue of the input data.
 
     :param value: how much to adjust the hue. Can be any number
         between 0 and 0.5, 0 gives the original image.
@@ -955,7 +970,8 @@ class HueTransform(VisionTransform):
 
 
 class ColorJitter(VisionTransform):
-    r"""Randomly change the brightness, contrast, saturation and hue of an image.
+    r"""
+    Randomly change the brightness, contrast, saturation and hue of an image.
 
     :param brightness: how much to jitter brightness.
         Chosen uniformly from [max(0, 1 - brightness), 1 + brightness]

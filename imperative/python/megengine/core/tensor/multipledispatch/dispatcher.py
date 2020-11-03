@@ -69,7 +69,8 @@ def ambiguity_warn(dispatcher, ambiguities):
 
 
 def variadic_signature_matches_iter(types, full_signature):
-    """Check if a set of input types matches a variadic signature.
+    """
+    Check if a set of input types matches a variadic signature.
 
     Notes
     -----
@@ -288,7 +289,8 @@ class Dispatcher(CDispatcher):
     __repr__ = __str__
 
     def dispatch(self, *types):
-        """Deterimine appropriate implementation for this type signature
+        """
+        Deterimine appropriate implementation for this type signature
 
         This method is internal.  Users should call this object as a function.
         Implementation resolution occurs within the ``__call__`` method.

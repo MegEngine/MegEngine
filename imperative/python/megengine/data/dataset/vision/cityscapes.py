@@ -23,7 +23,8 @@ from .meta_vision import VisionDataset
 
 
 class Cityscapes(VisionDataset):
-    r"""`Cityscapes <http://www.cityscapes-dataset.com/>`_ Dataset.
+    r"""
+    `Cityscapes <http://www.cityscapes-dataset.com/>`_ Dataset.
     """
 
     supported_order = (

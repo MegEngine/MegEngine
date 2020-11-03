@@ -24,7 +24,8 @@ from .meta_vision import VisionDataset
 
 
 class PascalVOC(VisionDataset):
-    r"""`Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Dataset.
+    r"""
+    `Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Dataset.
     """
 
     supported_order = (

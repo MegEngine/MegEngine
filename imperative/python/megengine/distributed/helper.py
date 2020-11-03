@@ -140,7 +140,8 @@ class TensorFuture(Future):
 
 
 def synchronized(func: Callable):
-    """Decorator. Decorated function will synchronize when finished.
+    """
+    Decorator. Decorated function will synchronize when finished.
     Specifically, we use this to prevent data race during hub.load"""
 
     @functools.wraps(func)
@@ -161,7 +162,8 @@ def _get_device_count_worker(queue, device_type):
 
 
 def get_device_count_by_fork(device_type: str):
-    """Get device count in fork thread.
+    """
+    Get device count in fork thread.
     See https://stackoverflow.com/questions/22950047/cuda-initialization-error-after-fork
     for more information.
     """
@@ -173,7 +175,8 @@ def get_device_count_by_fork(device_type: str):
 
 
 def bcast_list_(inps: list, group: Group = WORLD):
-    """Broadcast tensors between given group.
+    """
+    Broadcast tensors between given group.
 
     :param inps: input tensors.
     :param group: communication group.
@@ -183,7 +186,8 @@ def bcast_list_(inps: list, group: Group = WORLD):
 
 
 class AllreduceCallback:
-    """Allreduce Callback with tensor fusion optimization.
+    """
+    Allreduce Callback with tensor fusion optimization.
 
     :param reduce_method: the method to reduce gradiants.
     :param group: communication group.

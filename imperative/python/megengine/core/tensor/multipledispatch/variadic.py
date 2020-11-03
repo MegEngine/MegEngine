@@ -72,7 +72,8 @@ class VariadicSignatureType(type):
 
 
 def isvariadic(obj):
-    """Check whether the type `obj` is variadic.
+    """
+    Check whether the type `obj` is variadic.
 
     Parameters
     ----------
@@ -95,7 +96,8 @@ def isvariadic(obj):
 
 
 class VariadicSignatureMeta(type):
-    """A metaclass that overrides ``__getitem__`` on the class. This is used to
+    """
+    A metaclass that overrides ``__getitem__`` on the class. This is used to
     generate a new type for Variadic signatures. See the Variadic class for
     examples of how this behaves.
     """
@@ -117,7 +119,8 @@ class VariadicSignatureMeta(type):
 
 
 class Variadic(metaclass=VariadicSignatureMeta):
-    """A class whose getitem method can be used to generate a new type
+    """
+    A class whose getitem method can be used to generate a new type
     representing a specific variadic signature.
 
     Examples

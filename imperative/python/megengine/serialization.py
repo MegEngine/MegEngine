@@ -14,7 +14,8 @@ from .utils.max_recursion_limit import max_recursion_limit
 
 
 def save(obj, f, pickle_module=pickle, pickle_protocol=pickle.HIGHEST_PROTOCOL):
-    r"""Save an object to disk file.
+    r"""
+    Save an object to disk file.
 
     :type obj: object
     :param obj: object to save. Only ``module`` or ``state_dict`` are allowed.
@@ -81,7 +82,8 @@ def _get_callable_map_location(map_location):
 
 
 def load(f, map_location=None, pickle_module=pickle):
-    r"""Load an object saved with save() from a file.
+    r"""
+    Load an object saved with save() from a file.
 
     :type f: text file object
     :param f: a string of file name or a text file object from which to load.

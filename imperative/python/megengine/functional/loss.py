@@ -24,7 +24,8 @@ __all__ = [
 
 
 def l1_loss(pred: Tensor, label: Tensor) -> Tensor:
-    r"""Calculates the mean absolute error (MAE) between
+    r"""
+    Calculates the mean absolute error (MAE) between
     each element in the pred :math:`x` and label :math:`y`.
 
     The mean absolute error can be described as:
@@ -70,7 +71,8 @@ def l1_loss(pred: Tensor, label: Tensor) -> Tensor:
 
 
 def square_loss(pred: Tensor, label: Tensor) -> Tensor:
-    r"""Calculates the mean squared error (squared L2 norm) between
+    r"""
+    Calculates the mean squared error (squared L2 norm) between
     each element in the pred :math:`x` and label :math:`y`.
 
     The mean squared error can be described as:
@@ -127,7 +129,8 @@ def cross_entropy(
     with_logits: bool = True,
     label_smooth: float = 0,
 ) -> Tensor:
-    r"""Computes the multi-class cross entropy loss (using logits by default).
+    r"""
+    Computes the multi-class cross entropy loss (using logits by default).
 
     By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
     class probabilities are given by softmax.
@@ -161,7 +164,7 @@ def cross_entropy(
         pred = tensor(np.array([0, 0], dtype=np.float32).reshape(data_shape))
         label = tensor(np.ones(label_shape, dtype=np.int32))
         loss = F.nn.cross_entropy(pred, label)
-        print(loss.numpy())
+        print(loss.numpy().round(decimals=4))
 
     Outputs:
 
@@ -195,7 +198,8 @@ def cross_entropy(
 def binary_cross_entropy(
     pred: Tensor, label: Tensor, with_logits: bool = True
 ) -> Tensor:
-    r"""Computes the binary cross entropy loss (using logits by default).
+    r"""
+    Computes the binary cross entropy loss (using logits by default).
 
     By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
     class probabilities are given by sigmoid.
@@ -216,7 +220,7 @@ def binary_cross_entropy(
         pred = tensor(np.array([0, 0], dtype=np.float32).reshape(1, 2))
         label = tensor(np.ones((1, 2), dtype=np.float32))
         loss = F.nn.binary_cross_entropy(pred, label)
-        print(loss.numpy())
+        print(loss.numpy().round(decimals=4))
 
     Outputs:
 
@@ -233,7 +237,8 @@ def binary_cross_entropy(
 
 
 def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
-    r"""Caculates the hinge loss which is often used in SVM.
+    r"""
+    Caculates the hinge loss which is often used in SVM.
 
     The hinge loss can be described as:
 

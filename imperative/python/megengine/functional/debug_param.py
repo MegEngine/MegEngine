@@ -12,7 +12,8 @@ _conv_execution_strategy = os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY", "HEURI
 
 
 def get_conv_execution_strategy() -> str:
-    """Returns the execuation strategy of :class:`~.Conv2d`.
+    """
+    Returns the execuation strategy of :class:`~.Conv2d`.
 
     See :func:`~.set_conv_execution_strategy` for possible return values
     """
@@ -20,7 +21,8 @@ def get_conv_execution_strategy() -> str:
 
 
 def set_conv_execution_strategy(option: str):
-    """Sets the execuation strategy of :class:`~.Conv2d`.
+    """
+    Sets the execuation strategy of :class:`~.Conv2d`.
 
     :param option: Decides how :class:`~.Conv2d` algorithm is chosen.
         Available values:

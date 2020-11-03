@@ -17,7 +17,8 @@ from ..core.tensor.raw_tensor import as_raw_tensor
 
 
 def get_dep_vars(var: VarNode, var_type: str = None) -> List[VarNode]:
-    """Returns :class:`.tensor.core.megbrain_graph.VarNode` of type ``var_type`` that input ``var``
+    """
+    Returns :class:`.tensor.core.megbrain_graph.VarNode` of type ``var_type`` that input ``var``
     depands on. If ``var_type`` is None, returns all types.
     """
     outputs = []
@@ -46,14 +47,16 @@ def get_dep_vars(var: VarNode, var_type: str = None) -> List[VarNode]:
 
 
 def get_owner_opr_inputs(var: VarNode) -> List[VarNode]:
-    """Gets the inputs of owner opr of a variable.
+    """
+    Gets the inputs of owner opr of a variable.
     """
     assert isinstance(var, VarNode)
     return var.owner.inputs
 
 
 def get_owner_opr_type(var: VarNode) -> str:
-    """Gets the type of owner opr of a variable.
+    """
+    Gets the type of owner opr of a variable.
 
     """
     assert isinstance(var, VarNode)
@@ -61,14 +64,16 @@ def get_owner_opr_type(var: VarNode) -> str:
 
 
 def get_opr_type(opr: OperatorNode) -> str:
-    """Gets the type of an opr.
+    """
+    Gets the type of an opr.
     """
     assert isinstance(opr, OperatorNode)
     return opr.type
 
 
 def graph_traversal(outputs: VarNode):
-    """Helper function to traverse the computing graph and return enough useful information.
+    """
+    Helper function to traverse the computing graph and return enough useful information.
 
     :param outputs: model outputs.
     :return:  tuple (map_oprs, map_vars, var2oprs, opr2receivers, indegree2opr, opr2indegree)
@@ -124,7 +129,8 @@ def graph_traversal(outputs: VarNode):
 
 
 def get_oprs_seq(outputs: List[VarNode], prune_reshape=False) -> List[OperatorNode]:
-    """Gets oprs in some topological order for a dumped model.
+    """
+    Gets oprs in some topological order for a dumped model.
 
     :param outputs: model outputs.
     :param prune_reshape: whether to prune the useless operators during inference.
@@ -194,7 +200,8 @@ def get_oprs_seq(outputs: List[VarNode], prune_reshape=False) -> List[OperatorNo
 
 
 def replace_vars(dst: VarNode, varmap: Dict[VarNode, VarNode]) -> List[VarNode]:
-    """Replaces vars in the graph.
+    """
+    Replaces vars in the graph.
 
     :param dst: target vars representing the graph.
     :param varmap: the map that specifies how to replace the vars.
@@ -221,7 +228,8 @@ def replace_vars(dst: VarNode, varmap: Dict[VarNode, VarNode]) -> List[VarNode]:
 def replace_oprs(
     dst: List[VarNode], oprmap: Dict[OperatorNode, OperatorNode]
 ) -> List[VarNode]:
-    """Replaces operators in the graph.
+    """
+    Replaces operators in the graph.
 
     :param dst: target vars representing the graph.
     :param oprmap: the map that specifies how to replace the operators.
@@ -246,7 +254,8 @@ def replace_oprs(
 
 
 def set_priority_to_id(dest_vars):
-    """For all oprs in the subgraph constructed by dest_vars,
+    """
+    For all oprs in the subgraph constructed by dest_vars,
        sets its priority to id if its original priority is zero.
     :param dest_vars: target vars representing the graph.
     """
@@ -258,7 +267,8 @@ def set_priority_to_id(dest_vars):
 
 
 def load_and_inference(file, inp_data_list: List[numpy.ndarray]) -> List[numpy.ndarray]:
-    """Loads a serialized computing graph and run inference with input data.
+    """
+    Loads a serialized computing graph and run inference with input data.
 
     :param file: path or handle of the input file.
     :param inp_data_list: list of input data.

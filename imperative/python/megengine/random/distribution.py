@@ -21,7 +21,8 @@ __all__ = ["normal", "uniform"]
 def normal(
     mean: float = 0, std: float = 1, size: Optional[Iterable[int]] = None
 ) -> Tensor:
-    r"""Random variable with Gaussian distribution :math:`N(\mu, \sigma)`.
+    r"""
+    Random variable with Gaussian distribution :math:`N(\mu, \sigma)`.
 
     :param size: output tensor size.
     :param mean: the mean or expectation of the distribution.
@@ -59,7 +60,8 @@ def normal(
 def uniform(
     low: float = 0, high: float = 1, size: Optional[Iterable[int]] = None
 ) -> Tensor:
-    r"""Random variable with uniform distribution $U(0, 1)$.
+    r"""
+    Random variable with uniform distribution $U(0, 1)$.
 
     :param size: output tensor size.
     :param low: lower range.

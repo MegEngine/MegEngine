@@ -75,7 +75,8 @@ def expand_hw(x):
 
 
 def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
-    """Applies a linear transformation to the input tensor.
+    """
+    Applies a linear transformation to the input tensor.
 
     Refer to :class:`~.module.linear.Linear` for more information.
 
@@ -101,7 +102,8 @@ def conv2d(
     conv_mode="CROSS_CORRELATION",
     compute_mode="DEFAULT",
 ) -> Tensor:
-    """2D convolution operation.
+    """
+    2D convolution operation.
 
     Refer to :class:`~.Conv2d` for more information.
 
@@ -166,7 +168,8 @@ def conv_transpose2d(
     conv_mode="CROSS_CORRELATION",
     compute_mode="DEFAULT",
 ) -> Tensor:
-    """2D transposed convolution operation.
+    """
+    2D transposed convolution operation.
 
     Refer to :class:`~.ConvTranspose2d` for more information.
 
@@ -227,7 +230,8 @@ def local_conv2d(
     dilation: Union[int, Tuple[int, int]] = 1,
     conv_mode="CROSS_CORRELATION",
 ):
-    """Applies spatial 2D convolution over an groupped channeled image with untied kernels.
+    """
+    Applies spatial 2D convolution over an groupped channeled image with untied kernels.
     """
     assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
 
@@ -261,7 +265,8 @@ def max_pool2d(
     stride: Optional[Union[int, Tuple[int, int]]] = None,
     padding: Union[int, Tuple[int, int]] = 0,
 ) -> Tensor:
-    """Applies a 2D max pooling over an input tensor.
+    """
+    Applies a 2D max pooling over an input tensor.
 
     Refer to :class:`~.MaxPool2d` for more information.
 
@@ -298,7 +303,8 @@ def avg_pool2d(
     padding: Union[int, Tuple[int, int]] = 0,
     mode: str = "AVERAGE_COUNT_EXCLUDE_PADDING",
 ) -> Tensor:
-    """Applies 2D average pooling over an input tensor.
+    """
+    Applies 2D average pooling over an input tensor.
 
     Refer to :class:`~.AvgPool2d` for more information.
 
@@ -332,7 +338,8 @@ def avg_pool2d(
 def adaptive_max_pool2d(
     inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
 ) -> Tensor:
-    """Applies a 2D max adaptive pooling over an input.
+    """
+    Applies a 2D max adaptive pooling over an input.
 
     Refer to :class:`~.MaxAdaptivePool2d` for more information.
 
@@ -353,7 +360,8 @@ def adaptive_max_pool2d(
 def adaptive_avg_pool2d(
     inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
 ) -> Tensor:
-    """Applies a 2D average adaptive pooling over an input.
+    """
+    Applies a 2D average adaptive pooling over an input.
 
     Refer to :class:`~.AvgAdaptivePool2d` for more information.
 
@@ -390,7 +398,8 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
 
 
 def softplus(inp: Tensor) -> Tensor:
-    r"""Applies the element-wise function:
+    r"""
+    Applies the element-wise function:
 
     .. math::
         \text{softplus}(x) = \log(1 + \exp(x))
@@ -416,7 +425,7 @@ def softplus(inp: Tensor) -> Tensor:
 
         x = tensor(np.arange(-3, 3, dtype=np.float32))
         y = F.softplus(x)
-        print(y.numpy())
+        print(y.numpy().round(decimals=4))
 
     Outputs:
 
@@ -429,7 +438,8 @@ def softplus(inp: Tensor) -> Tensor:
 
 
 def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
-    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
+    r"""
+    Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
     input Tensor. The LogSoftmax formulation can be simplified as:
 
     .. math::
@@ -456,7 +466,7 @@ def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
 
         x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
         y = F.logsoftmax(x, axis=1)
-        print(y.numpy())
+        print(y.numpy().round(decimals=4))
 
     Outputs:
 
@@ -470,7 +480,8 @@ def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
 
 
 def logsigmoid(inp: Tensor) -> Tensor:
-    r"""Applies the element-wise function:
+    r"""
+    Applies the element-wise function:
 
     .. math::
         \text{logsigmoid}(x) = \log(\frac{ 1 }{ 1 + \exp(-x)})
@@ -490,13 +501,13 @@ def logsigmoid(inp: Tensor) -> Tensor:
 
         x = tensor(np.arange(-5, 5, dtype=np.float32))
         y = F.logsigmoid(x)
-        print(y.numpy())
+        print(y.numpy().round(decimals=4))
 
     Outputs:
 
     .. testoutput::
 
-        [-5.0067 -4.0181 -3.0486 -2.1269 -1.3133 -0.6931 -0.3133 -0.1269 -0.0486
+        [-5.0067 -4.0182 -3.0486 -2.1269 -1.3133 -0.6931 -0.3133 -0.1269 -0.0486
          -0.0181]
 
     """
@@ -539,7 +550,7 @@ def logsumexp(
 
         x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
         y = F.logsumexp(x, axis=1, keepdims=False)
-        print(y.numpy())
+        print(y.numpy().round(decimals=4))
 
     Outputs:
 
@@ -589,7 +600,7 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
 
         x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
         out = F.softmax(x)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -619,7 +630,8 @@ def batch_norm(
     eps: float = 1e-5,
     inplace: bool = True
 ):
-    r"""Applies batch normalization to the input.
+    r"""
+    Applies batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
@@ -734,7 +746,8 @@ def sync_batch_norm(
     eps_mode="ADDITIVE",
     group=WORLD,
 ) -> Tensor:
-    r"""Applies synchronized batch normalization to the input.
+    r"""
+    Applies synchronized batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
@@ -835,7 +848,8 @@ def sync_batch_norm(
 
 
 def one_hot(inp: Tensor, num_classes: int) -> Tensor:
-    r"""Performs one-hot encoding for the input tensor.
+    r"""
+    Performs one-hot encoding for the input tensor.
 
     :param inp: input tensor.
     :param num_classes: number of classes denotes the last dimension of the output tensor.
@@ -878,7 +892,8 @@ def warp_perspective(
     border_val: float = 0.0,
     interp_mode: str = "LINEAR",
 ):
-    r"""Applies perspective transformation to batched 2D images.
+    r"""
+    Applies perspective transformation to batched 2D images.
 
     The input images are transformed to the output images by the transformation matrix:
 
@@ -1094,13 +1109,13 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
 
         x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2,3))
         _, y, _ = F.svd(x)
-        print(y.numpy())
+        print(y.numpy().round(decimals=3))
 
     Outputs:
 
     .. testoutput::
 
-        [7.3485 1.    ]
+        [7.348 1.   ]
 
     """
     op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
@@ -1115,7 +1130,8 @@ def interpolate(
     mode: str = "BILINEAR",
     align_corners: bool = None,
 ) -> Tensor:
-    r"""Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
+    r"""
+    Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
 
     :param inp: input tensor.
     :param size: size of the output tensor. Default: None
@@ -1257,7 +1273,8 @@ def interpolate(
 
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
-    """Returns a new tensor where each of the elements are randomly set to zero
+    """
+    Returns a new tensor where each of the elements are randomly set to zero
     with probability P = ``drop_prob``. Optionally rescale the output tensor if ``training`` is True.
 
     :param inp: input tensor.
@@ -1302,7 +1319,8 @@ def embedding(
     max_norm: Optional[float] = None,
     norm_type: Optional[float] = None,
 ):
-    """Applies lookup table for embedding.
+    """
+    Applies lookup table for embedding.
 
     :param inp: tensor with indices.
     :param weight: learnable weights which embeds from.
@@ -1329,7 +1347,8 @@ def roi_pooling(
     mode: str = "max",
     scale: float = 1.0,
 ) -> Tensor:
-    """Applies roi pooling on input feature.
+    """
+    Applies roi pooling on input feature.
 
     :param inp: tensor that represents the input feature, `(N, C, H, W)` images.
     :param rois: `(K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
@@ -1350,7 +1369,7 @@ def roi_pooling(
             inp = tensor(np.random.randn(1, 1, 128, 128))
             rois = tensor(np.random.random((4, 5)))
             y = F.nn.roi_pooling(inp, rois, (2, 2))
-            print(y.numpy()[0])
+            print(y.numpy()[0].round(decimals=4))
 
     Outputs:
 
@@ -1382,7 +1401,8 @@ def roi_align(
     sample_points: Union[int, tuple, list] = 2,
     aligned: bool = True,
 ) -> Tensor:
-    """Applies roi align on input feature.
+    """
+    Applies roi align on input feature.
 
     :param inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
     :param rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
@@ -1407,7 +1427,7 @@ def roi_align(
             inp = tensor(np.random.randn(1, 1, 128, 128))
             rois = tensor(np.random.random((4, 5)))
             y = F.nn.roi_align(inp, rois, (2, 2))
-            print(y.numpy()[0])
+            print(y.numpy()[0].round(decimals=4))
 
     Outputs:
 
@@ -1444,7 +1464,8 @@ def roi_align(
 def indexing_one_hot(
     src: Tensor, index: Tensor, axis: int = 1, keepdims=False
 ) -> Tensor:
-    r"""One-hot indexing for some axes.
+    r"""
+    One-hot indexing for some axes.
 
     :param src: input tensor.
     :param index: index tensor.

@@ -87,7 +87,8 @@ class _ConvNd(Module):
 
 
 class Conv2d(_ConvNd):
-    r"""Applies a 2D convolution over an input tensor.
+    r"""
+    Applies a 2D convolution over an input tensor.
 
     For instance, given an input of the size :math:`(N, C_{\text{in}}, H, W)`,
     this layer generates an output of the size
@@ -145,7 +146,7 @@ class Conv2d(_ConvNd):
         m = M.Conv2d(in_channels=3, out_channels=1, kernel_size=3)
         inp = mge.tensor(np.arange(0, 96).astype("float32").reshape(2, 3, 4, 4))
         oup = m(inp)
-        print(oup.shape)
+        print(oup.numpy().shape)
 
     Outputs:
 
@@ -232,7 +233,8 @@ class Conv2d(_ConvNd):
 
 
 class ConvTranspose2d(_ConvNd):
-    r"""Applies a 2D transposed convolution over an input tensor.
+    r"""
+    Applies a 2D transposed convolution over an input tensor.
 
     This module is also known as a deconvolution or a fractionally-strided convolution.
     :class:`ConvTranspose2d` can be seen as the gradient of :class:`Conv2d` operation
@@ -340,7 +342,8 @@ class ConvTranspose2d(_ConvNd):
 
 
 class LocalConv2d(Conv2d):
-    r"""Applies a spatial convolution with untied kernels over an groupped channeled input 4D tensor.
+    r"""
+    Applies a spatial convolution with untied kernels over an groupped channeled input 4D tensor.
     It is also known as the locally connected layer.
 
     :param in_channels: number of input channels.

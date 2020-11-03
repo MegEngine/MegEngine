@@ -11,7 +11,8 @@ import functools
 
 
 def get_ndtuple(value, *, n, allow_zero: bool = True):
-    r"""Converts possibly 1D tuple to n-dim tuple.
+    r"""
+    Converts possibly 1D tuple to n-dim tuple.
 
     :param value: value will be filled in generated tuple.
     :param n: how many elements will the tuple have.

@@ -78,7 +78,8 @@ class auto:
 
 
 class _EnumDict(dict):
-    """Track enum member order and ensure member names are not reused.
+    """
+    Track enum member order and ensure member names are not reused.
 
     EnumMeta will use the names found in self._member_names as the
     enumeration member names.
@@ -91,7 +92,8 @@ class _EnumDict(dict):
         self._last_values = []
 
     def __setitem__(self, key, value):
-        """Changes anything not dundered or not a descriptor.
+        """
+        Changes anything not dundered or not a descriptor.
 
         If an enum member name is used twice, an error is raised; duplicate
         values are not checked for.
@@ -303,7 +305,8 @@ class EnumMeta(type):
     def __call__(
         cls, value, names=None, *, module=None, qualname=None, type=None, start=1
     ):
-        """Either returns an existing member, or creates a new enum class.
+        """
+        Either returns an existing member, or creates a new enum class.
 
         This method is used both when an enum class is given a value to match
         to an enumeration member (i.e. Color(3)) and for the functional API
@@ -353,7 +356,8 @@ class EnumMeta(type):
         ] + self._member_names_
 
     def __getattr__(cls, name):
-        """Return the enum member matching `name`
+        """
+        Return the enum member matching `name`
 
         We use __getattr__ instead of descriptors or inserting into the enum
         class' __dict__ in order to support `name` and `value` being both
@@ -379,7 +383,8 @@ class EnumMeta(type):
 
     @property
     def __members__(cls):
-        """Returns a mapping of member name->value.
+        """
+        Returns a mapping of member name->value.
 
         This mapping lists all enum members, including aliases. Note that this
         is a read-only view of the internal mapping.
@@ -394,7 +399,8 @@ class EnumMeta(type):
         return (cls._member_map_[name] for name in reversed(cls._member_names_))
 
     def __setattr__(cls, name, value):
-        """Block attempts to reassign Enum members.
+        """
+        Block attempts to reassign Enum members.
 
         A simple assignment to the class namespace only changes one of the
         several possible ways to get an Enum member from the Enum class,
@@ -409,7 +415,8 @@ class EnumMeta(type):
     def _create_(
         cls, class_name, names=None, *, module=None, qualname=None, type=None, start=1
     ):
-        """Convenience method to create a new Enum class.
+        """
+        Convenience method to create a new Enum class.
 
         `names` can be:
 
@@ -465,7 +472,8 @@ class EnumMeta(type):
 
     @staticmethod
     def _get_mixins_(bases):
-        """Returns the type for creating enum members, and the first inherited
+        """
+        Returns the type for creating enum members, and the first inherited
         enum class.
 
         bases: the tuple of bases that was given to __new__
@@ -510,7 +518,8 @@ class EnumMeta(type):
 
     @staticmethod
     def _find_new_(classdict, member_type, first_enum):
-        """Returns the __new__ to be used for creating the enum members.
+        """
+        Returns the __new__ to be used for creating the enum members.
 
         classdict: the class dictionary given to __new__
         member_type: the data type whose __new__ will be used by default
@@ -556,7 +565,8 @@ class EnumMeta(type):
 
 
 class Enum(metaclass=EnumMeta):
-    """Generic enumeration.
+    """
+    Generic enumeration.
 
     Derive from this class to define new enumerations.
 

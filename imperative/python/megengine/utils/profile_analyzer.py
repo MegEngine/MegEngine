@@ -15,7 +15,8 @@ import numpy as np
 
 
 class NonExistNum:
-    """An object that behaves like a number but means a field does not exist; It is
+    """
+    An object that behaves like a number but means a field does not exist; It is
     always greater than any real number.
     """
 
@@ -64,15 +65,18 @@ class OprProfRst:
     """A dict containing operator info:  name, id and type."""
 
     time_dict = None
-    """A mapping from ``"host"`` or ``"device"`` to list of profiling
+    """
+    A mapping from ``"host"`` or ``"device"`` to list of profiling
     results."""
 
     footprint = None
-    """A mapping from ``"memory"`` or ``"computation"`` to the actual number
+    """
+    A mapping from ``"memory"`` or ``"computation"`` to the actual number
     of corresponding operations."""
 
     def __init__(self, entry: dict):
-        """Opr profiling initialization, which sets up name, type and id of opr_info.
+        """
+        Opr profiling initialization, which sets up name, type and id of opr_info.
 
         :param entry: profiling json exec_graph items.
         """
@@ -84,7 +88,8 @@ class OprProfRst:
         self.footprint = collections.defaultdict(NonExistNum)
 
     def update_device_prof_info(self, dev_time: dict):
-        """Updates device profiling info.
+        """
+        Updates device profiling info.
 
         :param dev_time: device time for single opr,
             is an attribute of profiling result.
@@ -93,7 +98,8 @@ class OprProfRst:
         self.time_dict["device"].append(copy.deepcopy(dev_time))
 
     def update_host_prof_info(self, host_time: dict):
-        """Updates host profiling info.
+        """
+        Updates host profiling info.
 
         :param host_time: host time for single opr,
             is an attribute of profiling result.
@@ -102,7 +108,8 @@ class OprProfRst:
         self.time_dict["host"].append(copy.deepcopy(host_time))
 
     def update_footprint(self, footprint: dict):
-        """Updates opr footprint.
+        """
+        Updates opr footprint.
 
         :param footprint: footprint for single opr,
             is an attribute of profiling result.
@@ -128,7 +135,8 @@ class Record:
     ]
 
     def __init__(self, time: float, info: dict, footprint: dict):
-        """Initializes single record.
+        """
+        Initializes single record.
 
         :param time: opr running time, evaluated by applying users providing
             function to OprProfRst.
@@ -153,7 +161,8 @@ class Record:
             self.opr_id = int(self.opr_id)
 
     def get_column_by_name(self, name: str = None):
-        """Extracts column value by its column name.
+        """
+        Extracts column value by its column name.
 
         :param name: column name, None for time.
         """
@@ -165,7 +174,8 @@ class Record:
 
 class ProfileAnalyzer:
     def __init__(self, obj: dict, opr_filter: Callable = lambda opr, inp, out: True):
-        """Initializes ProfileAnalyzer.
+        """
+        Initializes ProfileAnalyzer.
 
         :param obj: dict dumped from json str.
         :param opr_filter: function that filter oprs.
@@ -202,7 +212,8 @@ class ProfileAnalyzer:
     def _aggregate(
         self, records: List[Record], aop: Union[str, Callable], atype: Optional[str]
     ) -> List[Record]:
-        """Aggregate operation.
+        """
+        Aggregate operation.
     
         :param records: selected records.
         :param aop: aggregate operation, if aop is str, we would replace it
@@ -247,7 +258,8 @@ class ProfileAnalyzer:
         return rst
 
     def _sort(self, records: List[Record], sort_by: str) -> List[Record]:
-        """Sort operation.
+        """
+        Sort operation.
 
         :param records: the records after aggregate operation.
         :param sort_by: keyword for sorting the list.
@@ -271,7 +283,8 @@ class ProfileAnalyzer:
         sort_by: str = None,
         top_k: int = 0,
     ) -> List[Record]:
-        """Select operation.
+        """
+        Select operation.
 
         :param time_func: time_func provided by user, would apply to every
             OprProfRst.
@@ -304,7 +317,8 @@ class TimeFuncHelper:
 
     @staticmethod
     def _eval_time(prof_type, end_key, func, opr_prof):
-        """Eval time.
+        """
+        Eval time.
 
         :type prof_type: str
         :param prof_type: 'host' or 'device'.
@@ -325,7 +339,8 @@ class TimeFuncHelper:
 
     @staticmethod
     def eval_time_func(prof_type: str, end_key: str, func: Callable) -> float:
-        """Eval oprerator profile time.
+        """
+        Eval oprerator profile time.
 
         :param prof_type: 'host' or 'device'.
         :param end_key: 'kern' or 'end'.
@@ -338,7 +353,8 @@ class TimeFuncHelper:
     def _min_start(
         prof_type, end_key, func, opr_prof
     ):  # pylint: disable=unused-argument
-        """Eval minimum start time.
+        """
+        Eval minimum start time.
 
         :type prof_type: str
         :param prof_type: 'host' or 'device'.
@@ -360,7 +376,8 @@ class TimeFuncHelper:
     def min_start_func(
         prof_type: str, end_key: str, func: Callable
     ) -> float:  # pylint: disable=unused-argument
-        """Eval oprerator profile min start time.
+        """
+        Eval oprerator profile min start time.
 
         :param prof_type: 'host' or 'device'.
         :param end_key: 'kern' or 'end'.
@@ -371,7 +388,8 @@ class TimeFuncHelper:
 
     @staticmethod
     def _max_end(prof_type, end_key, func, opr_prof):  # pylint: disable=unused-argument
-        """Eval maximum end time
+        """
+        Eval maximum end time
 
         :type prof_type: str
         :param prof_type: 'host' or 'device'.
@@ -391,7 +409,8 @@ class TimeFuncHelper:
 
     @staticmethod
     def max_end_func(prof_type: str, end_key: str, func: Callable) -> float:
-        """Eval oprerator profile max end time.
+        """
+        Eval oprerator profile max end time.
 
         :param prof_type: 'host' or 'device'.
         :param end_key: 'kern' or 'end'.

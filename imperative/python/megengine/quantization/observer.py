@@ -174,7 +174,8 @@ class HistogramObserver(MinMaxObserver):
         self.histogram = Tensor([-1] + [0.0] * (bins - 1), dtype="float32")
 
     def _non_linear_param_search(self):
-        r"""Non-linear parameter search.
+        r"""
+        Non-linear parameter search.
         An approximation for L2 error minimization for selecting min/max.
         By selecting new min/max, we filter out outliers in input distribution.
         """

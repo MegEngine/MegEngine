@@ -100,7 +100,8 @@ def _elemwise_multi_type(*args, mode, **kwargs):
 
 
 def add(x, y):
-    """Element-wise `addition`.
+    """
+    Element-wise `addition`.
     At least one operand should be tensor.
 
     Same for sub/mul/div/floor_div/pow/mod/atan2/equal/not_equal/less/less_equal/greater/greater_equal/maximum/minmium.
@@ -193,7 +194,8 @@ def log1p(x):
 
 
 def sqrt(x: Tensor) -> Tensor:
-    """Element-wise `sqrt`.
+    """
+    Element-wise `sqrt`.
     Returns ``NaN`` for negative input value.
 
     :param x: input tensor.
@@ -209,7 +211,7 @@ def sqrt(x: Tensor) -> Tensor:
 
         x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
         out = F.sqrt(x)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -239,7 +241,7 @@ def square(x: Tensor) -> Tensor:
 
         data = mge.tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
         out = F.square(data)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -281,7 +283,8 @@ def minimum(x, y):
 
 
 def cos(x):
-    """Element-wise `cosine`.
+    """
+    Element-wise `cosine`.
 
     :param x: input tensor.
     :return: computed tensor.
@@ -296,7 +299,7 @@ def cos(x):
 
         x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
         out = F.cos(x)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -374,7 +377,8 @@ def atanh(x):
 
 
 def left_shift(x, y):
-    """Element-wise `bitwise binary: x << y`.
+    """
+    Element-wise `bitwise binary: x << y`.
 
     :param x: input tensor, should be int.
     :param y: how many bits to be left-shifted.
@@ -435,7 +439,8 @@ def logical_xor(x, y):
 
 
 def equal(x, y):
-    """Element-wise `(x == y)`.
+    """
+    Element-wise `(x == y)`.
 
     :param x: input tensor 1.
     :param y: input tensor 2.
@@ -494,7 +499,8 @@ def greater_equal(x, y):
 
 
 def hswish(x):
-    """Element-wise `x * relu6(x + 3) / 6`.
+    """
+    Element-wise `x * relu6(x + 3) / 6`.
 
     :param x: input tensor.
     :return: computed tensor.
@@ -509,7 +515,7 @@ def hswish(x):
 
         x = tensor(np.arange(5).astype(np.float32))
         out = F.hswish(x)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     .. testoutput::
 
@@ -540,7 +546,8 @@ def sigmoid(x):
 
 
 def clip(x: Tensor, lower=None, upper=None) -> Tensor:
-    r"""Clamps all elements in input tensor into the range `[` :attr:`lower`, :attr:`upper` `]` and returns
+    r"""
+    Clamps all elements in input tensor into the range `[` :attr:`lower`, :attr:`upper` `]` and returns
     a resulting tensor:
 
     .. math::

@@ -43,7 +43,8 @@ def register_method_to_class(cls):
 
 
 class QuantMode(Enum):
-    """Quantization mode enumerate class.
+    """
+    Quantization mode enumerate class.
     """
 
     SYMMERTIC = 1
@@ -63,13 +64,15 @@ qparam_dict = {
 
 
 def get_qparam_dict(mode: QuantMode):
-    """Return the quantization parameters dictionary according to the mode.
+    """
+    Return the quantization parameters dictionary according to the mode.
     """
     return qparam_dict.get(mode, None)
 
 
 def fake_quant_tensor(inp: Tensor, qmin: int, qmax: int, q_dict: Dict) -> Tensor:
-    """Apply fake quantization to the inp tensor.
+    """
+    Apply fake quantization to the inp tensor.
 
     :param inp: the input tensor which need to be faked.
     :param qmin: the minimum value which the integer limit to.
@@ -91,7 +94,8 @@ def fake_quant_tensor(inp: Tensor, qmin: int, qmax: int, q_dict: Dict) -> Tensor
 
 
 def fake_quant_bias(bias: Tensor, inp: Tensor, w_qat: Tensor) -> Tensor:
-    """Apply fake quantization to bias, with the special scale from input tensor
+    """
+    Apply fake quantization to bias, with the special scale from input tensor
     and weight tensor, the quantized type set to qint32 also.
 
     :param bias: the bias tensor which need to be faked.

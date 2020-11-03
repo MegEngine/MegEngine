@@ -27,7 +27,8 @@ class _AdaptivePoolNd(Module):
 
 
 class AdaptiveMaxPool2d(_AdaptivePoolNd):
-    r"""Applies a 2D max adaptive pooling over an input.
+    r"""
+    Applies a 2D max adaptive pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     an output shape :math:`(OH, OW)`, this layer generates the output of
@@ -62,7 +63,7 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
 
     .. testoutput::
 
-        [[[[5.  7.]
+        [[[[ 5.  7.]
            [13. 15.]]]]
 
     """
@@ -72,7 +73,8 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
 
 
 class AdaptiveAvgPool2d(_AdaptivePoolNd):
-    r"""Applies a 2D average pooling over an input.
+    r"""
+    Applies a 2D average pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     an output shape :math:`(OH, OW)`, this layer generates the output of
@@ -105,7 +107,7 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
 
     .. testoutput::
 
-        [[[[2.5  4.5]
+        [[[[ 2.5  4.5]
            [10.5 12.5]]]]
 
     """

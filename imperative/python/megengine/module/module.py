@@ -57,7 +57,8 @@ def _is_module(obj):
 
 
 class Module(metaclass=ABCMeta):
-    """Base Module class.
+    """
+    Base Module class.
     """
 
     def __init__(self):
@@ -76,7 +77,8 @@ class Module(metaclass=ABCMeta):
         pass
 
     def register_forward_pre_hook(self, hook: Callable) -> HookHandler:
-        """Registers a hook to handle forward inputs. `hook` should be a function.
+        """
+        Registers a hook to handle forward inputs. `hook` should be a function.
 
         :param hook: a function that receive `module` and `inputs`, then return
         a modified `inputs` or `None`.
@@ -85,7 +87,8 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_pre_hooks, hook)
 
     def register_forward_hook(self, hook: Callable) -> HookHandler:
-        """Registers a hook to handle forward results. `hook` should be a function that
+        """
+        Registers a hook to handle forward results. `hook` should be a function that
         receive `module`, `inputs` and `outputs`, then return a modified `outputs` or `None`.
 
         This method return a handler with :meth:`~.HookHandler.remove` interface to delete the hook.
@@ -118,7 +121,8 @@ class Module(metaclass=ABCMeta):
         predicate: Callable[[Any], bool] = lambda _: True,
         seen: Optional[Set[int]] = None
     ) -> Union[Iterable[Any], Iterable[Tuple[str, Any]]]:
-        """Scans the module object and returns an iterable for the :class:`~.Tensor`
+        """
+        Scans the module object and returns an iterable for the :class:`~.Tensor`
         and :class:`~.Module` attributes that agree with the ``predicate``. For multiple
         calls of this function with same arguments, the order of objects within the
         returned iterable is guaranteed to be identical, as long as all the involved
@@ -165,7 +169,8 @@ class Module(metaclass=ABCMeta):
                     )
 
     def parameters(self, recursive: bool = True, **kwargs) -> Iterable[Parameter]:
-        r"""Returns an iterable for the :class:`~.Parameter` of the module.
+        r"""
+        Returns an iterable for the :class:`~.Parameter` of the module.
 
         :param recursive: If ``True``, returns all :class:`~.Parameter` within this
             module, else only returns :class:`~.Parameter` that are direct attributes
@@ -190,7 +195,8 @@ class Module(metaclass=ABCMeta):
     def named_parameters(
         self, prefix: Optional[str] = None, recursive: bool = True, **kwargs
     ) -> Iterable[Tuple[str, Parameter]]:
-        """Returns an iterable for key :class:`~.Parameter` pairs of the module, where
+        """
+        Returns an iterable for key :class:`~.Parameter` pairs of the module, where
         ``key`` is the dotted path from this module to the :class:`~.Parameter`.
 
         :param prefix: prefix prepended to the keys.
@@ -219,7 +225,8 @@ class Module(metaclass=ABCMeta):
         )
 
     def buffers(self, recursive: bool = True, **kwargs) -> Iterable[Tensor]:
-        """Returns an iterable for the buffers of the module.
+        """
+        Returns an iterable for the buffers of the module.
 
         Buffer is defined to be :class:`~.Tensor` excluding :class:`~.Parameter`.
 
@@ -234,7 +241,8 @@ class Module(metaclass=ABCMeta):
     def named_buffers(
         self, prefix: Optional[str] = None, recursive: bool = True, **kwargs
     ) -> Iterable[Tuple[str, Tensor]]:
-        """Returns an iterable for key buffer pairs of the module, where
+        """
+        Returns an iterable for key buffer pairs of the module, where
         ``key`` is the dotted path from this module to the buffer.
 
         Buffer is defined to be :class:`~.Tensor` excluding :class:`~.Parameter`.
@@ -253,7 +261,8 @@ class Module(metaclass=ABCMeta):
         )
 
     def children(self, **kwargs) -> "Iterable[Module]":
-        """Returns an iterable for all the submodules that are direct attributes of this
+        """
+        Returns an iterable for all the submodules that are direct attributes of this
         module.
         """
         yield from self._flatten(
@@ -261,7 +270,8 @@ class Module(metaclass=ABCMeta):
         )
 
     def named_children(self, **kwargs) -> "Iterable[Tuple[str, Module]]":
-        """Returns an iterable of key-submodule pairs for all the submodules that are
+        """
+        Returns an iterable of key-submodule pairs for all the submodules that are
         direct attributes of this module, where 'key' is the attribute name of
         submodules.
         """
@@ -270,7 +280,8 @@ class Module(metaclass=ABCMeta):
         )
 
     def modules(self, **kwargs) -> "Iterable[Module]":
-        """Returns an iterable for all the modules within this module, including itself.
+        """
+        Returns an iterable for all the modules within this module, including itself.
         """
         if "with_parent" in kwargs and kwargs["with_parent"]:
             yield self, None
@@ -281,7 +292,8 @@ class Module(metaclass=ABCMeta):
     def named_modules(
         self, prefix: Optional[str] = None, **kwargs
     ) -> "Iterable[Tuple[str, Module]]":
-        """Returns an iterable of key-module pairs for all the modules within this
+        """
+        Returns an iterable of key-module pairs for all the modules within this
         module, including itself, where 'key' is the dotted path from this module to the
         submodules.
 
@@ -296,7 +308,8 @@ class Module(metaclass=ABCMeta):
         )
 
     def apply(self, fn: "Callable[[Module], Any]") -> None:
-        """Applies function ``fn`` to all the modules within this module, including
+        """
+        Applies function ``fn`` to all the modules within this module, including
         itself.
 
         :param fn: the function to be applied on modules.
@@ -306,14 +319,16 @@ class Module(metaclass=ABCMeta):
 
     @deprecated(version="1.0")
     def zero_grad(self) -> None:
-        """Sets all parameters' grads to zero
+        """
+        Sets all parameters' grads to zero
         """
         for param in self.parameters():
             if param.grad is not None:
                 param.grad.reset_zero()
 
     def train(self, mode: bool = True, recursive: bool = True) -> None:
-        """Sets training mode of all the modules within this module (including itself) to
+        """
+        Sets training mode of all the modules within this module (including itself) to
         ``mode``. This effectively sets the ``training`` attributes of those modules
         to ``mode``, but only has effect on certain modules (e.g.
         :class:`~.BatchNorm2d`, :class:`~.Dropout`, :class:`~.Observer`)
@@ -331,7 +346,8 @@ class Module(metaclass=ABCMeta):
         self.apply(fn)
 
     def eval(self) -> None:
-        """Sets training mode of all the modules within this module (including itself) to
+        """
+        Sets training mode of all the modules within this module (including itself) to
         ``False``. See :meth:`~.Module.train` for details.
         """
         self.train(False)
@@ -351,7 +367,8 @@ class Module(metaclass=ABCMeta):
     def replace_param(
         self, params: dict, start_pos: int, seen: Optional[Set[int]] = None
     ):
-        """Replaces module's parameters with ``params``, used by :class:`~.ParamPack` to
+        """
+        Replaces module's parameters with ``params``, used by :class:`~.ParamPack` to
         speedup multimachine training.
         """
         offset = 0
@@ -377,7 +394,8 @@ class Module(metaclass=ABCMeta):
         return offset
 
     def state_dict(self, rst=None, prefix="", keep_var=False):
-        r"""Returns a dictionary containing whole states of the module.
+        r"""
+        Returns a dictionary containing whole states of the module.
         """
 
         def is_state(obj):
@@ -407,7 +425,8 @@ class Module(metaclass=ABCMeta):
         state_dict: Union[dict, Callable[[str, Tensor], Optional[np.ndarray]]],
         strict=True,
     ):
-        r"""Loads a given dictionary created by :func:`state_dict` into this module.
+        r"""
+        Loads a given dictionary created by :func:`state_dict` into this module.
         If ``strict`` is ``True``, the keys of :func:`state_dict` must exactly match the keys
         returned by :func:`state_dict`.
 
@@ -485,7 +504,8 @@ class Module(metaclass=ABCMeta):
                 )
 
     def _load_state_dict_with_closure(self, closure):
-        """Advance state_dict load through callable ``closure`` whose signature is
+        """
+        Advance state_dict load through callable ``closure`` whose signature is
         ``closure(key: str, var: Tensor) -> Union[np.ndarry, None]``
         """
         assert callable(closure), "closure must be a function"
@@ -536,7 +556,8 @@ class Module(metaclass=ABCMeta):
         super().__delattr__(name)
 
     def _module_info_string(self) -> str:
-        r"""Set the extra representation of the module.
+        r"""
+        Set the extra representation of the module.
         """
         return ""
 

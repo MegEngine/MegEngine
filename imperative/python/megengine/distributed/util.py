@@ -12,7 +12,8 @@ from typing import List
 
 
 def get_free_ports(num: int) -> List[int]:
-    """Get one or more free ports.
+    """
+    Get one or more free ports.
     """
     socks, ports = [], []
     for i in range(num):

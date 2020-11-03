@@ -16,7 +16,8 @@ from .optimizer import Optimizer
 
 
 class Adagrad(Optimizer):
-    r"""Implements Adagrad algorithm.
+    r"""
+    Implements Adagrad algorithm.
 
     It has been proposed in `"Adaptive Subgradient Methods for Online Learning
     and Stochastic Optimization" <http://jmlr.org/papers/v12/duchi11a.html>`_.

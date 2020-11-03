@@ -43,7 +43,8 @@ __all__ = [
 
 
 def isnan(inp: Tensor) -> Tensor:
-    r"""Returns a new tensor representing if each element is ``NaN`` or not.
+    r"""
+    Returns a new tensor representing if each element is ``NaN`` or not.
 
     :param inp: input tensor.
     :return: result tensor.
@@ -69,7 +70,8 @@ def isnan(inp: Tensor) -> Tensor:
 
 
 def isinf(inp: Tensor) -> Tensor:
-    r"""Returns a new tensor representing if each element is ``Inf`` or not.
+    r"""
+    Returns a new tensor representing if each element is ``Inf`` or not.
 
     :param inp: input tensor.
     :return: result tensor.
@@ -95,7 +97,8 @@ def isinf(inp: Tensor) -> Tensor:
 
 
 def sign(inp: Tensor):
-    r"""Returns a new tensor representing the sign of each element in input tensor.
+    r"""
+    Returns a new tensor representing the sign of each element in input tensor.
 
     :param: input tensor.
     :return: the sign of input tensor.
@@ -125,7 +128,8 @@ def sum(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the sum of input tensor along given axis. If axis is a list of dimensions,
+    r"""
+    Returns the sum of input tensor along given axis. If axis is a list of dimensions,
     reduce over all of them.
 
     :param inp: input tensor.
@@ -160,7 +164,8 @@ def sum(
 def prod(
     inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None, keepdims=False
 ) -> Tensor:
-    r"""Returns the product of input tensor along given axis. If axis is a list of dimensions,
+    r"""
+    Returns the product of input tensor along given axis. If axis is a list of dimensions,
     reduce over all of them.
 
     :param inp: input tensor.
@@ -195,7 +200,8 @@ def mean(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    """Returns the mean value of input tensor along
+    """
+    Returns the mean value of input tensor along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -231,7 +237,8 @@ def var(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    """Returns the variance value of input tensor along
+    """
+    Returns the variance value of input tensor along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -250,7 +257,7 @@ def var(
 
         data = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
         out = F.var(data)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -271,7 +278,8 @@ def std(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    """Returns the standard deviation of input tensor along
+    """
+    Returns the standard deviation of input tensor along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -290,7 +298,7 @@ def std(
 
         data = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
         out = F.std(data, axis=1)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -306,7 +314,8 @@ def min(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the min value of input tensor along
+    r"""
+    Returns the min value of input tensor along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -342,7 +351,8 @@ def max(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the max value of the input tensor along
+    r"""
+    Returns the max value of the input tensor along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -376,7 +386,8 @@ def max(
 def norm(
     inp: Tensor, ord: float = None, axis: int = None, keepdims=False,
 ):
-    """Calculates ``p``-norm of input tensor along
+    """
+    Calculates ``p``-norm of input tensor along
     given axis.
 
     :param inp: input tensor.
@@ -395,7 +406,7 @@ def norm(
 
         x = tensor(np.arange(-3, 3, dtype=np.float32))
         out = F.norm(x)
-        print(out.numpy())
+        print(out.numpy().round(decimals=4))
 
     Outputs:
 
@@ -423,7 +434,8 @@ def argmin(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the indices of the minimum values along
+    r"""
+    Returns the indices of the minimum values along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -481,7 +493,8 @@ def argmax(
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    r"""Returns the indices of the maximum values along
+    r"""
+    Returns the indices of the maximum values along
     given axis. If axis is a list of dimensions,
     reduce over all of them.
 
@@ -537,7 +550,8 @@ def argmax(
 def normalize(
     inp: Tensor, ord: float = None, axis: int = None, eps: float = 1e-12,
 ) -> Tensor:
-    r"""Performs :math:`L_p` normalization of input tensor along
+    r"""
+    Performs :math:`L_p` normalization of input tensor along
     given axis.
 
     For a tensor of shape :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
@@ -559,7 +573,8 @@ def normalize(
 
 
 def argsort(inp: Tensor, descending: bool = False) -> Tensor:
-    r"""Returns the indices that would sort the input tensor.
+    r"""
+    Returns the indices that would sort the input tensor.
 
     :param inp: input tensor. If it's 2d, the result would be array of indices show how to sort each row in the input tensor.
     :param descending: sort in descending order, where the largest comes first. Default: False
@@ -600,7 +615,8 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
 
 
 def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
-    r"""Returns sorted tensor and the indices would sort the input tensor.
+    r"""
+    Returns sorted tensor and the indices would sort the input tensor.
 
     :param inp: input tensor. If it's 2d, the result would be sorted by row.
     :param descending: sort in descending order, where the largest comes first. Default: False
@@ -647,7 +663,8 @@ def topk(
     kth_only: bool = False,
     no_sort: bool = False,
 ) -> Tuple[Tensor, Tensor]:
-    r"""Selects the ``Top-K``(by default) smallest elements of 2d matrix by row.
+    r"""
+    Selects the ``Top-K``(by default) smallest elements of 2d matrix by row.
 
     :param inp: input tensor. If input tensor is 2d, each row will be sorted.
     :param k: number of elements needed.

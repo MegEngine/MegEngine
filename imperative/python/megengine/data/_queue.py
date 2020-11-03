@@ -59,7 +59,8 @@ class _PlasmaStoreManager:
 
 class PlasmaShmQueue:
     def __init__(self, maxsize: int = 0):
-        r"""Use pyarrow in-memory plasma store to implement shared memory queue.
+        r"""
+        Use pyarrow in-memory plasma store to implement shared memory queue.
 
         Compared to native `multiprocess.Queue`, `PlasmaShmQueue` avoid pickle/unpickle
         and communication overhead, leading to better performance in multi-process

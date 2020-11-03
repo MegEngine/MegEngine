@@ -58,7 +58,8 @@ __all__ = [
 
 
 def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Tensor:
-    """Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
+    """
+    Returns a 2D tensor with ones on the diagonal and zeros elsewhere.
 
     :param shape: expected shape of output tensor.
     :param dtype: data type. Default: None
@@ -100,7 +101,8 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
 
 
 def full(shape, value, dtype="float32", device=None):
-    """Returns a tensor with given shape and value.
+    """
+    Returns a tensor with given shape and value.
     """
     if isinstance(shape, int):
         shape = (shape,)
@@ -113,7 +115,8 @@ def full(shape, value, dtype="float32", device=None):
 
 
 def ones(shape, dtype="float32", device=None):
-    """Returns a ones tensor with given shape.
+    """
+    Returns a ones tensor with given shape.
 
     :param inp: input tensor.
     :return: output zero tensor.
@@ -139,13 +142,15 @@ def ones(shape, dtype="float32", device=None):
 
 
 def zeros(shape, dtype="float32", device=None):
-    """Returns a zero tensor with given shape.
+    """
+    Returns a zero tensor with given shape.
     """
     return full(shape, 0.0, dtype=dtype, device=device)
 
 
 def zeros_like(inp: Tensor) -> Tensor:
-    """Returns a zero tensor with the same shape as input tensor.
+    """
+    Returns a zero tensor with the same shape as input tensor.
 
     :param inp: input tensor.
     :return: output zero tensor.
@@ -174,13 +179,15 @@ def zeros_like(inp: Tensor) -> Tensor:
 
 
 def ones_like(inp: Tensor) -> Tensor:
-    """Returns a ones tensor with the same shape as input tensor.
+    """
+    Returns a ones tensor with the same shape as input tensor.
     """
     return ones(inp.shape, dtype=inp.dtype, device=inp.device)
 
 
 def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
-    """Returns a tensor filled with given value with the same shape as input tensor.
+    """
+    Returns a tensor filled with given value with the same shape as input tensor.
     """
     return full(inp.shape, value, dtype=inp.dtype, device=inp.device)
 
@@ -274,7 +281,8 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
 
 
 def stack(inps, axis=0, device=None):
-    """Concats a sequence of tensors along a new axis.
+    """
+    Concats a sequence of tensors along a new axis.
     The input tensors must have the same shape.
 
     :param inps: input tensors.
@@ -316,7 +324,8 @@ def stack(inps, axis=0, device=None):
 
 
 def split(inp, nsplits_or_sections, axis=0):
-    """Splits the input tensor into several smaller tensors.
+    """
+    Splits the input tensor into several smaller tensors.
     When nsplits_or_sections is int, the last tensor may be smaller than others.
 
     :param inp: input tensor.
@@ -334,7 +343,7 @@ def split(inp, nsplits_or_sections, axis=0):
 
         x = tensor(np.random.random((2,3,4,5)), dtype=np.float32)
         out = F.split(x, 2, axis=3)
-        print(out[0].shape, out[1].shape)
+        print(out[0].numpy().shape, out[1].numpy().shape)
 
     Outputs:
 
@@ -400,7 +409,8 @@ def _get_idx(index, axis):
 
 def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
     # TODO: rewrite doc
-    r"""Gathers data from input tensor on axis using index.
+    r"""
+    Gathers data from input tensor on axis using index.
 
     For a 3-D tensor, the output is specified by::
 
@@ -472,7 +482,8 @@ def gather(inp: Tensor, axis: int, index: Tensor) -> Tensor:
 
 def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
     # TODO: rewrite doc
-    r"""Writes all values from the tensor source into input tensor
+    r"""
+    Writes all values from the tensor source into input tensor
     at the indices specified in the index tensor.
 
     For each value in source, its output index is specified by its index
@@ -577,7 +588,8 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
 
 
 def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
-    r"""Selects elements either from Tensor x or Tensor y, according to mask.
+    r"""
+    Selects elements either from Tensor x or Tensor y, according to mask.
 
     .. math::
 
@@ -764,7 +776,8 @@ AxisDesc = AxisAddRemove.AxisDesc
 
 
 def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
-    r"""Reshapes the tensor by flattening the sub-tensor from dimension ``start_axis`` to dimension ``end_axis``.
+    r"""
+    Reshapes the tensor by flattening the sub-tensor from dimension ``start_axis`` to dimension ``end_axis``.
 
     :param inp: input tensor.
     :param start_axis: start dimension that the sub-tensor to be flattened. Default: 0
@@ -819,7 +832,7 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
 
         x = tensor([1, 2])
         out = F.expand_dims(x, 0)
-        print(out.shape)
+        print(out.numpy().shape)
 
     Outputs:
 
@@ -865,7 +878,7 @@ def squeeze(inp: Tensor, axis: Optional[Union[int, Sequence[int]]] = None) -> Te
 
         x = tensor(np.array([1, 2], dtype=np.int32).reshape(1, 1, 2, 1))
         out = F.squeeze(x, 3)
-        print(out.shape)
+        print(out.numpy().shape)
 
     Outputs:
 
@@ -884,7 +897,8 @@ def linspace(
     dtype="float32",
     device: Optional[CompNode] = None,
 ) -> Tensor:
-    r"""Returns equally spaced numbers over a specified interval.
+    r"""
+    Returns equally spaced numbers over a specified interval.
 
     :param start: starting value of the squence, shoule be scalar.
     :param stop: last value of the squence, shoule be scalar.
@@ -928,7 +942,8 @@ def arange(
     dtype="float32",
     device: Optional[CompNode] = None,
 ) -> Tensor:
-    r"""Returns a tensor with values from start to stop with adjacent interval step.
+    r"""
+    Returns a tensor with values from start to stop with adjacent interval step.
 
     :param start: starting value of the squence, shoule be scalar.
     :param stop: ending value of the squence, shoule be scalar.

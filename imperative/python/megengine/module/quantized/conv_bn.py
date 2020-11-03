@@ -11,7 +11,8 @@ from .conv import Conv2d
 
 
 class _ConvBnActivation2d(Conv2d):
-    r"""Applies a 2D convolution over a quantized input tensor, used for inference only.
+    r"""
+    Applies a 2D convolution over a quantized input tensor, used for inference only.
 
     The parameter is same with :class: `~.Conv2d`.
     """

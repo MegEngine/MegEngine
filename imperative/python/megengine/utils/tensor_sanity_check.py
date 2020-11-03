@@ -3,7 +3,8 @@ from ..core._imperative_rt.imperative import sync
 
 
 class TensorSanityCheck:
-    r"""An object that checks whether the input tensors of each operator have changed before and after the operation.
+    r"""
+    An object that checks whether the input tensors of each operator have changed before and after the operation.
     
     Examples:
 

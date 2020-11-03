@@ -12,7 +12,8 @@ from .module import Module
 
 
 class Sequential(Module):
-    r"""A sequential container.
+    r"""
+    A sequential container.
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 
@@ -29,10 +30,9 @@ class Sequential(Module):
         from collections import OrderedDict
 
         batch_size = 64
-        data = mge.tensor(np.zeros((batch_size, 1, 28, 28)), dtype=np.float32)
+        data = mge.tensor(np.zeros((batch_size, 28 * 28)), dtype=np.float32)
         label = mge.tensor(np.zeros(batch_size,), dtype=np.int32)
 
-        data = data.reshape(batch_size, -1)
         net0 = M.Sequential(
                 M.Linear(28 * 28, 320),
                 M.Linear(320, 10)
@@ -40,10 +40,9 @@ class Sequential(Module):
         pred0 = net0(data)
 
         modules = OrderedDict()
-        modules["fc0"] = nn.Linear(28 * 28, 320)
-        modules["fc1"] = nn.Linear(320, 10)
-        net1 = nn.Sequential(modules)
-
+        modules["fc0"] = M.Linear(28 * 28, 320)
+        modules["fc1"] = M.Linear(320, 10)
+        net1 = M.Sequential(modules)
         pred1 = net1(data)
     """
 

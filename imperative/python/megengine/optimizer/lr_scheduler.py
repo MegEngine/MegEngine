@@ -12,7 +12,8 @@ from .optimizer import Optimizer
 
 
 class LRScheduler(metaclass=ABCMeta):
-    r"""Base class for all learning rate based schedulers.
+    r"""
+    Base class for all learning rate based schedulers.
 
     :param optimizer: wrapped optimizer.
     :param current_epoch: the index of current epoch. Default: -1
@@ -44,14 +45,16 @@ class LRScheduler(metaclass=ABCMeta):
         self.step()
 
     def state_dict(self):
-        r"""Returns the state of the scheduler as a :class:`dict`.
+        r"""
+        Returns the state of the scheduler as a :class:`dict`.
             It contains an entry for every variable in self.__dict__ which
             is not the optimizer.
         """
         raise NotImplementedError
 
     def load_state_dict(self, state_dict):
-        r"""Loads the schedulers state.
+        r"""
+        Loads the schedulers state.
 
         :type state_dict: dict
         :param state_dict: scheduler state.

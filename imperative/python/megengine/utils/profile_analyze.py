@@ -57,7 +57,8 @@ def _tabulate_confluence(tab, **kwargs):
 
 
 def main(passed_args=None):  # pylint: disable=too-many-statements
-    """Analyses profile info from :mod:`~.utils.profile_analyzer` .
+    """
+    Analyses profile info from :mod:`~.utils.profile_analyzer` .
 
     Run this file with ``--help`` to get more usage.
     """

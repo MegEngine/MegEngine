@@ -14,7 +14,8 @@ from .optimizer import Optimizer
 
 
 class MultiStepLR(LRScheduler):
-    r"""Decays the learning rate of each parameter group by gamma once the
+    r"""
+    Decays the learning rate of each parameter group by gamma once the
         number of epoch reaches one of the milestones.
 
     :param optimizer: wrapped optimizer.
@@ -44,7 +45,8 @@ class MultiStepLR(LRScheduler):
         super().__init__(optimizer, current_epoch)
 
     def state_dict(self):
-        r"""Returns the state of the scheduler as a :class:`dict`.
+        r"""
+        Returns the state of the scheduler as a :class:`dict`.
             It contains an entry for every variable in self.__dict__ which
             is not the optimizer.
         """
@@ -55,7 +57,8 @@ class MultiStepLR(LRScheduler):
         }
 
     def load_state_dict(self, state_dict):
-        r"""Loads the schedulers state.
+        r"""
+        Loads the schedulers state.
 
         :type state_dict: dict
         :param state_dict: scheduler state.

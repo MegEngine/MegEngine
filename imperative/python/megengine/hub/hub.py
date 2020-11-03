@@ -43,7 +43,8 @@ PROTOCOLS = {
 
 
 def _get_megengine_home() -> str:
-    """MGE_HOME setting complies with the XDG Base Directory Specification
+    """
+    MGE_HOME setting complies with the XDG Base Directory Specification
     """
     megengine_home = os.path.expanduser(
         os.getenv(
@@ -94,7 +95,8 @@ def _init_hub(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ):
-    """Imports hubmodule like python import.
+    """
+    Imports hubmodule like python import.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -137,7 +139,8 @@ def list(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ) -> List[str]:
-    """Lists all entrypoints available in repo hubconf.
+    """
+    Lists all entrypoints available in repo hubconf.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -175,7 +178,8 @@ def load(
     protocol: str = DEFAULT_PROTOCOL,
     **kwargs
 ) -> Any:
-    """Loads model from github or gitlab repo, with pretrained weights.
+    """
+    Loads model from github or gitlab repo, with pretrained weights.
 
     :param repo_info:
         a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
@@ -215,7 +219,8 @@ def help(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ) -> str:
-    """This function returns docstring of entrypoint ``entry`` by following steps:
+    """
+    This function returns docstring of entrypoint ``entry`` by following steps:
 
     1. Pull the repo code specified by git and repo_info.
     2. Load the entry defined in repo's hubconf.py
@@ -250,7 +255,8 @@ def help(
 
 
 def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
-    """Loads MegEngine serialized object from the given URL.
+    """
+    Loads MegEngine serialized object from the given URL.
 
     If the object is already present in ``model_dir``, it's deserialized and
     returned. If no ``model_dir`` is specified, it will be ``MGE_HOME/serialized``.

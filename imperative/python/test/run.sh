@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-test_dirs="test megengine"
+test_dirs="megengine test"
 
 TEST_PLAT=$1
 

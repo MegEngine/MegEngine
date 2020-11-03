@@ -36,7 +36,8 @@ class _PoolNd(Module):
 
 
 class MaxPool2d(_PoolNd):
-    r"""Applies a 2D max pooling over an input.
+    r"""
+    Applies a 2D max pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of
@@ -83,7 +84,8 @@ class MaxPool2d(_PoolNd):
 
 
 class AvgPool2d(_PoolNd):
-    r"""Applies a 2D average pooling over an input.
+    r"""
+    Applies a 2D average pooling over an input.
 
     For instance, given an input of the size :math:`(N, C, H, W)` and
     :attr:`kernel_size` :math:`(kH, kW)`, this layer generates the output of

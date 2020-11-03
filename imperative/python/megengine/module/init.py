@@ -18,7 +18,8 @@ from ..tensor import Tensor
 
 
 def fill_(tensor: Tensor, val: Union[float, int]) -> None:
-    """Fills the given ``tensor`` with value ``val``.
+    """
+    Fills the given ``tensor`` with value ``val``.
 
     :param tensor: tensor to be initialized.
     :param val: value to be filled throughout the tensor.
@@ -27,7 +28,8 @@ def fill_(tensor: Tensor, val: Union[float, int]) -> None:
 
 
 def zeros_(tensor: Tensor) -> None:
-    """Fills the given ``tensor`` with scalar value `0`.
+    """
+    Fills the given ``tensor`` with scalar value `0`.
 
     :param tensor: tensor to be initialized.
     """
@@ -35,7 +37,8 @@ def zeros_(tensor: Tensor) -> None:
 
 
 def ones_(tensor: Tensor) -> None:
-    """Fills the given ``tensor`` with the scalar value `1`.
+    """
+    Fills the given ``tensor`` with the scalar value `1`.
 
     :param tensor: tensor to be initialized.
     """
@@ -43,7 +46,8 @@ def ones_(tensor: Tensor) -> None:
 
 
 def uniform_(tensor: Tensor, a: float = 0.0, b: float = 1.0) -> None:
-    r"""Fills the given ``tensor`` with random value sampled from uniform distribution
+    r"""
+    Fills the given ``tensor`` with random value sampled from uniform distribution
     :math:`\mathcal{U}(\text{a}, \text{b})`.
 
     :param tensor: tensor to be initialized.
@@ -54,7 +58,8 @@ def uniform_(tensor: Tensor, a: float = 0.0, b: float = 1.0) -> None:
 
 
 def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
-    r"""Fills the given ``tensor`` with random value sampled from normal distribution
+    r"""
+    Fills the given ``tensor`` with random value sampled from normal distribution
     :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
 
     :param tensor: tensor to be initialized.
@@ -67,7 +72,8 @@ def normal_(tensor: Tensor, mean: float = 0.0, std: float = 1.0) -> None:
 def calculate_gain(
     nonlinearity: str, param: Optional[Union[int, float]] = None
 ) -> float:
-    r"""Returns a recommended gain value (see the table below) for the given nonlinearity
+    r"""
+    Returns a recommended gain value (see the table below) for the given nonlinearity
     function.
 
     ================= ====================================================
@@ -168,7 +174,8 @@ def calculate_correct_fan(tensor: Tensor, mode: str) -> float:
 
 
 def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
-    r"""Fills tensor with random values sampled from :math:`\mathcal{U}(-a, a)`
+    r"""
+    Fills tensor with random values sampled from :math:`\mathcal{U}(-a, a)`
     where
 
     .. math::
@@ -188,7 +195,8 @@ def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
 
 
 def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
-    r"""Fills tensor with random values sampled from
+    r"""
+    Fills tensor with random values sampled from
     :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
@@ -209,7 +217,8 @@ def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
 def msra_uniform_(
     tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
 ) -> None:
-    r"""Fills tensor wilth random values sampled from
+    r"""
+    Fills tensor wilth random values sampled from
     :math:`\mathcal{U}(-\text{bound}, \text{bound})` where
 
     .. math::
@@ -238,7 +247,8 @@ def msra_uniform_(
 def msra_normal_(
     tensor: Tensor, a: float = 0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"
 ) -> None:
-    r"""Fills tensor wilth random values sampled from
+    r"""
+    Fills tensor wilth random values sampled from
     :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::

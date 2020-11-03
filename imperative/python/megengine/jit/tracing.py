@@ -519,7 +519,8 @@ class trace:
         optimize_for_inference=True,
         **kwargs
     ):
-        r"""Serializes trace to file system.
+        r"""
+        Serializes trace to file system.
 
         :param file: output file, could be file object or filename.
         :param arg_names: names of the input tensors in the traced function.

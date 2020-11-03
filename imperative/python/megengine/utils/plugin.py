@@ -12,7 +12,8 @@ import numpy as np
 
 
 def load_tensor_binary(fobj):
-    """Load a tensor dumped by the :class:`BinaryOprIODump` plugin; the actual
+    """
+    Load a tensor dumped by the :class:`BinaryOprIODump` plugin; the actual
     tensor value dump is implemented by ``mgb::debug::dump_tensor``.
 
     Multiple values can be compared by ``tools/compare_binary_iodump.py``.

@@ -110,7 +110,8 @@ def _toposort(edges):
 
 
 def reverse_dict(d):
-    """Reverses direction of dependence dict
+    """
+    Reverses direction of dependence dict
 
     >>> d = {'a': (1, 2), 'b': (2, 3), 'c':()}
     >>> reverse_dict(d)  # doctest: +SKIP
@@ -156,7 +157,8 @@ def groupby(func, seq):
 
 
 def typename(type):
-    """Get the name of `type`.
+    """
+    Get the name of `type`.
 
     Parameters
     ----------

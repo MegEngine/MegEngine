@@ -97,5 +97,6 @@ tensor = Tensor
 
 
 class Parameter(Tensor):
-    r"""A kind of Tensor that is to be considered a module parameter.
+    r"""
+    A kind of Tensor that is to be considered a module parameter.
     """

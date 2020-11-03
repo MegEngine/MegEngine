@@ -15,7 +15,8 @@ if os.environ.get("MEGENGINE_USE_SYMBOLIC_SHAPE"):
 
 
 def use_symbolic_shape() -> bool:
-    """Returns whether tensor.shape returns a tensor instead of a tuple
+    """
+    Returns whether tensor.shape returns a tensor instead of a tuple
 
     """
     return _use_symbolic_shape

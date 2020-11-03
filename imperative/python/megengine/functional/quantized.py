@@ -28,7 +28,8 @@ def conv_bias_activation(
     conv_mode="CROSS_CORRELATION",
     compute_mode="DEFAULT",
 ) -> Tensor:
-    """Convolution bias with activation operation, only for inference.
+    """
+    Convolution bias with activation operation, only for inference.
 
     :param inp: feature map of the convolution operation.
     :param weight: convolution kernel.

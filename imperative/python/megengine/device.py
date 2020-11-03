@@ -40,7 +40,8 @@ def _str2device_type(type_str: str, allow_unspec: bool = True):
 
 
 def get_device_count(device_type: str) -> int:
-    """Gets number of devices installed on this system.
+    """
+    Gets number of devices installed on this system.
 
     :param device_type: device type, one of 'gpu' or 'cpu'
     """
@@ -54,7 +55,8 @@ def get_device_count(device_type: str) -> int:
 
 
 def is_cuda_available() -> bool:
-    """Returns whether cuda device is available on this system.
+    """
+    Returns whether cuda device is available on this system.
 
     """
     t = _str2device_type("gpu")
@@ -62,7 +64,8 @@ def is_cuda_available() -> bool:
 
 
 def set_default_device(device: str = "xpux"):
-    r"""Sets default computing node.
+    r"""
+    Sets default computing node.
 
     :param device: default device type. The type can be 'cpu0', 'cpu1', etc.,
         or 'gpu0', 'gpu1', etc., to specify the particular cpu or gpu to use.
@@ -81,7 +84,8 @@ def set_default_device(device: str = "xpux"):
 
 
 def get_default_device() -> str:
-    r"""Gets default computing node.
+    r"""
+    Gets default computing node.
 
     It returns the value set by :func:`~.set_default_device`.
     """
@@ -98,7 +102,8 @@ def set_prealloc_config(
     growth_factor=2.0,
     device_type=DeviceType.CUDA,
 ):
-    """Specifies how to pre-allocate from raw device allocator.
+    """
+    Specifies how to pre-allocate from raw device allocator.
 
     :param alignment: specifies the alignment in bytes.
     :param min_req: min request size in bytes.

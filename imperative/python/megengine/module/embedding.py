@@ -93,7 +93,7 @@ class Embedding(Module):
             )
             self.reset_parameters()
         else:
-            if initial_weight.shape != (num_embeddings, embedding_dim):
+            if initial_weight.numpy().shape != (num_embeddings, embedding_dim):
                 raise ValueError(
                     "The weight shape should match num_embeddings and embedding_dim"
                 )

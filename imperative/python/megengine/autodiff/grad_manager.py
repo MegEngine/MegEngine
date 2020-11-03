@@ -17,7 +17,8 @@ def get_backwarding_grad_manager():
 
 
 class GradManager:
-    r"""GradManager manages auto differentiation and all resources required to perform it.
+    r"""
+    GradManager manages auto differentiation and all resources required to perform it.
 
     Our auto differentiation framework requires that the user explicitly indicates when
     the forward operations start and when all resources should be released. A typical usage of
@@ -71,7 +72,8 @@ class GradManager:
         self._gradients = dict()
 
     def attach(self, params: list, callbacks=None):
-        r"""Registers parameters that gradients should be calculated with respect to.
+        r"""
+        Registers parameters that gradients should be calculated with respect to.
         Callback Functions should have a signature like this:
 
             .. code-block::
@@ -99,7 +101,8 @@ class GradManager:
         return self
 
     def detach(self, params: list):
-        r"""Remove specific registered parameters and callback functions.
+        r"""
+        Remove specific registered parameters and callback functions.
 
         :param params: registered parameters
         """
@@ -125,7 +128,8 @@ class GradManager:
         return self
 
     def backward(self, ys, dys=None):
-        r"""Performs back-propagation and computes gradients.
+        r"""
+        Performs back-propagation and computes gradients.
 
         :param ys: outputs of forward operators, e.g., the loss tensor
         :param dys: derivatives of ys
@@ -165,7 +169,8 @@ class GradManager:
             backwarding_grad_manager = cache
 
     def record(self):
-        r"""Starts recording forward operations.
+        r"""
+        Starts recording forward operations.
         """
         if self._recording:
             raise RuntimeError("already recording")
@@ -190,7 +195,8 @@ class GradManager:
         self._grad.wrt(param_wrapper, callback=callback)
 
     def release(self):
-        r"""Stops recording and releases resources for gradients calculation.
+        r"""
+        Stops recording and releases resources for gradients calculation.
         """
         if self._grad is not None:
             self._grad.__exit__(None, None, None)

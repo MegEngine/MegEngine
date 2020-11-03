@@ -188,7 +188,8 @@ class OpNode:
 
 
 def optimize_for_inference(dest_vars, **kwargs):
-    r"""Applies optimize_for_inference pass for computing graph.
+    r"""
+    Applies optimize_for_inference pass for computing graph.
 
         :param dest_vars: list of output vars in the computing graph
 
@@ -287,7 +288,8 @@ def dump_graph(
     strip_info_file=None,
     append_json=False
 ):
-    """serialize the computing graph of `output_vars` and get byte result.
+    """
+    serialize the computing graph of `output_vars` and get byte result.
 
     :param output_vars: output variables which are the graph's end point.
 
@@ -385,7 +387,8 @@ CompGraphLoadResult = collections.namedtuple(
 
 
 def load_graph(fpath):
-    """Load a serialized computing graph from file.
+    """
+    Load a serialized computing graph from file.
 
     :param fpath: Path or Handle of the input file
     :return: An instance of namedtuple :class:`CompGraphLoadResult`,

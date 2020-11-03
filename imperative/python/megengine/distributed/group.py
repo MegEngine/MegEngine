@@ -81,7 +81,8 @@ def init_process_group(
     device: int,
     backend: Optional[str] = "nccl",
 ) -> None:
-    """Initialize the distributed process group and specify the device used in the current process
+    """
+    Initialize the distributed process group and specify the device used in the current process
 
     :param master_ip: ip address of the master node.
     :param port: port available for all processes to communicate.

@@ -16,7 +16,8 @@ from .optimizer import Optimizer
 
 
 class Adadelta(Optimizer):
-    r"""Implements Adadelta algorithm.
+    r"""
+    Implements Adadelta algorithm.
 
     It has been proposed in `"ADADELTA: An Adaptive Learning Rate Method" <https://arxiv.org/abs/1212.5701>`_.
 

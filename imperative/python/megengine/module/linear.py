@@ -14,7 +14,8 @@ from .module import Module
 
 
 class Linear(Module):
-    r"""Applies a linear transformation to the input. For instance, if input
+    r"""
+    Applies a linear transformation to the input. For instance, if input
     is x, then output y is:
 
     .. math::
@@ -39,7 +40,7 @@ class Linear(Module):
         m = M.Linear(in_features=3, out_features=1)
         inp = mge.tensor(np.arange(0, 6).astype("float32").reshape(2, 3))
         oup = m(inp)
-        print(oup.shape)
+        print(oup.numpy().shape)
 
     Outputs:
 

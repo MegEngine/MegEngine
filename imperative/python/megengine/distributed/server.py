@@ -21,7 +21,8 @@ from .util import get_free_ports
 
 
 class Methods:
-    """Distributed Server Method.
+    """
+    Distributed Server Method.
     Used for exchange information between distributed nodes.
 
     :param mm_server_port: multiple machine rpc server port.
@@ -45,7 +46,8 @@ class Methods:
         return self.mm_server_port
 
     def set_is_grad(self, key, is_grad):
-        """Mark send/recv need gradiants by key.
+        """
+        Mark send/recv need gradiants by key.
         
         :param key: key to match send/recv op.
         :param is_grad: whether this op need grad.
@@ -56,7 +58,8 @@ class Methods:
         return True
 
     def check_is_grad(self, key):
-        """Check whether send/recv need gradiants.
+        """
+        Check whether send/recv need gradiants.
         
         :param key: key to match send/recv op.
         """
@@ -68,7 +71,8 @@ class Methods:
         return ret
 
     def set_remote_tracer(self, key, tracer_set):
-        """Set tracer dict for tracing send/recv op.
+        """
+        Set tracer dict for tracing send/recv op.
 
         :param key: key to match send/recv op.
         :param tracer_set: valid tracer set.
@@ -79,7 +83,8 @@ class Methods:
         return True
 
     def check_remote_tracer(self, key):
-        """Get tracer dict for send/recv op.
+        """
+        Get tracer dict for send/recv op.
         
         :param key: key to match send/recv op.
         """
@@ -91,7 +96,8 @@ class Methods:
         return ret
 
     def group_barrier(self, key, size):
-        """A barrier wait for all group member.
+        """
+        A barrier wait for all group member.
         
         :param key: group key to match each other.
         :param size: group size.
@@ -114,7 +120,8 @@ class ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
 
 
 def start_server(py_server_port, mm_server_port):
-    """Start python distributed server and multiple machine server.
+    """
+    Start python distributed server and multiple machine server.
     
     :param py_server_port: python server port.
     :param mm_server_port: multiple machine server port.
@@ -125,7 +132,8 @@ def start_server(py_server_port, mm_server_port):
 
 
 class Server:
-    """Distributed Server for distributed training.
+    """
+    Distributed Server for distributed training.
     Should be running at master node.
 
     :param port: python server port.
@@ -143,7 +151,8 @@ class Server:
 
 
 class Client:
-    """Distributed Client for distributed training.
+    """
+    Distributed Client for distributed training.
 
     :param master_ip: ip address of master node.
     :param port: port of server at master node.
@@ -171,7 +180,8 @@ class Client:
         return self.proxy.get_mm_server_port()
 
     def set_is_grad(self, key, is_grad):
-        """Mark send/recv need gradiants by key.
+        """
+        Mark send/recv need gradiants by key.
         
         :param key: key to match send/recv op.
         :param is_grad: whether this op need grad.
@@ -179,14 +189,16 @@ class Client:
         self.proxy.set_is_grad(key, is_grad)
 
     def check_is_grad(self, key):
-        """Check whether send/recv need gradiants.
+        """
+        Check whether send/recv need gradiants.
         
         :param key: key to match send/recv op.
         """
         return self.proxy.check_is_grad(key)
 
     def set_remote_tracer(self, key, tracer_set):
-        """Set tracer dict for tracing send/recv op.
+        """
+        Set tracer dict for tracing send/recv op.
 
         :param key: key to match send/recv op.
         :param tracer_set: valid tracer set.
@@ -194,14 +206,16 @@ class Client:
         self.proxy.set_remote_tracer(key, tracer_set)
 
     def check_remote_tracer(self, key):
-        """Get tracer dict for send/recv op.
+        """
+        Get tracer dict for send/recv op.
         
         :param key: key to match send/recv op.
         """
         return self.proxy.check_remote_tracer(key)
 
     def group_barrier(self, key, size):
-        """A barrier wait for all group member.
+        """
+        A barrier wait for all group member.
         
         :param key: group key to match each other.
         :param size: group size.

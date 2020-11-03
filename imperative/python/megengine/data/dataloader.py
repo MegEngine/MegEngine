@@ -42,7 +42,8 @@ class DataLoader:
         timeout: int = 0,
         divide: bool = False,
     ):
-        r"""Provides a convenient way to iterate on a given dataset.
+        r"""
+        Provides a convenient way to iterate on a given dataset.
 
         `DataLoader` combines a dataset with `sampler`, `transform` and `collator`,
         make it flexible to get minibatch continually from a dataset.

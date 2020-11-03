@@ -19,7 +19,8 @@ from .module import QuantizedModule
 
 class Conv2d(Float.Conv2d, QuantizedModule):
     r"""Quantized version of :class:`~.qat.conv.Conv2d`."""
-    r"""Applies a 2D convolution over a quantized input tensor, used for inference only.
+    r"""
+    Applies a 2D convolution over a quantized input tensor, used for inference only.
 
     The parameter is same with :class: `~.Conv2d`.
     """

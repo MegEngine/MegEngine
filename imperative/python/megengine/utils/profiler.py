@@ -169,7 +169,7 @@ class Profiler:
 
     Examples:
 
-    .. testcode::
+    .. code-block::
 
         import megengine as mge
         import megengine.module as M
