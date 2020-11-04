@@ -428,6 +428,11 @@ public:
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
+    size_t get_preprocess_workspace_in_bytes(
+            const SizeArgs& args) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const override;
+    void exec_preprocess(const ExecArgs& args) const override;
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
@@ -560,6 +565,11 @@ public:
     const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
     static std::string to_string(AlgoParam algo_param);
+    size_t get_preprocess_workspace_in_bytes(
+            const SizeArgs& args) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const override;
+    void exec_preprocess(const ExecArgs& args) const override;
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,

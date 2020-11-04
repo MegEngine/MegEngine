@@ -1084,6 +1084,42 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
 }
 
 
+TEST_F(CUDA, CUTLASS_WEIGHT_PREPROCESS) {
+    require_compute_capability(6, 1);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle_cuda());
+    auto check = [&checker](const std::string& algo) {
+        checker.set_before_exec_callback(
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+        UniformIntRNG rng{-16, 16};
+        UniformIntRNG bias_rng{-50, 50};
+        UniformIntRNG const_rng{1, 1};
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &bias_rng)
+                .set_rng(3, &rng)
+                .set_dtype(0, dtype::QuantizedS8{1.2f})
+                .set_dtype(1, dtype::QuantizedS8{1.3f})
+                .set_dtype(2, dtype::QuantizedS32{1.2f * 1.3f})
+                .set_dtype(3, dtype::QuantizedS8{1.3f})
+                .set_dtype(4, dtype::QuantizedS8{1.0f})
+                .set_epsilon(1 + 1e-3)
+                .set_max_avg_error(1e-1)
+                .set_max_avg_biased_error(1e-3);
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 2;
+        param.format = param::ConvBias::Format::NCHW4;
+        checker.set_param(param).execs({{16, 4, 14, 14, 4},
+                                        {16, 4, 3, 3, 4},
+                                        {1, 4, 1, 1, 4},
+                                        {},
+                                        {}});
+    };
+    check("INT8_NCHW4_DOTPROD_IMPLICIT_GEMM_128X32X32_64X32X32");
+    check("INT8_NCHW4_DOTPROD_IMPLICIT_GEMM_16X64X8_16X64X8");
+}
+
 #if CUDA_VERSION >= 10020
 /// \note: we only check several cases and block sizes in megdnn_test, the
 /// full testcases are written in cutlass repository

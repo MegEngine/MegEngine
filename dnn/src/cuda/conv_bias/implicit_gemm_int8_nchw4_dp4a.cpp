@@ -62,8 +62,12 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
 WorkspaceBundle
 ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_workspace_bundle(
         dt_byte* raw_ptr, const SizeArgs& args) const {
-    size_t ws_filter = args.filter_layout->span().dist_byte();
-    return WorkspaceBundle{raw_ptr, {ws_filter}};
+    if (args.preprocessed_filter) {
+        return WorkspaceBundle{raw_ptr, {}};
+    } else {
+        size_t ws_filter = args.filter_layout->span().dist_byte();
+        return WorkspaceBundle{raw_ptr, {ws_filter}};
+    }
 }
 
 size_t
@@ -79,12 +83,12 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     auto&& fm = args.filter_meta;
     UNPACK_CONV_BIAS_NCHW4_PARAM(*(args.src_layout), fm, *(args.dst_layout),
                                  param);
-    auto ws = get_workspace_bundle(args.workspace.raw_ptr, args);
-    auto ws_filter = ws.get(0);
     auto&& stream = cuda_stream(args.opr->handle());
 
-    // reformat filter from nchw4 to chwn4
-    {
+    int8_t* filter_ptr = nullptr;
+    if (args.preprocessed_filter == nullptr) {
+        filter_ptr = reinterpret_cast<int8_t*>(args.workspace.raw_ptr);
+        // reformat filter from nchw4 to chwn4
         TensorLayout src{{co, ci / 4 * fh * fw}, dtype::Int32()};
         src.init_contiguous_stride();
         TensorLayout dst = src;
@@ -92,11 +96,14 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         TensorND ts_src, ts_dst;
         ts_src.raw_ptr = args.filter_tensor->raw_ptr;
         ts_src.layout = src;
-        ts_dst.raw_ptr = ws_filter;
+        ts_dst.raw_ptr = args.workspace.raw_ptr;
         ts_dst.layout = dst;
         auto&& transpose =
                 args.opr->handle()->create_operator<RelayoutForward>();
         transpose->exec(ts_src, ts_dst);
+    } else {
+        filter_ptr = reinterpret_cast<int8_t*>(
+                args.preprocessed_filter->tensors[0].raw_ptr);
     }
 
     convolution::ConvParam kern_param;
@@ -124,8 +131,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     uint32_t nonlinear_mode = static_cast<uint32_t>(param.nonlineMode);
     if (fh == 1 && fw == 1) {
         cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4<false>(
-                args.src_tensor->compatible_ptr<int8_t>(),
-                reinterpret_cast<int8_t*>(ws_filter),
+                args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,
                 args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
                 args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
                 nonlinear_mode, alpha, beta, gamma, dst_scale,
@@ -138,8 +144,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                 stream);
     } else {
         cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4<true>(
-                args.src_tensor->compatible_ptr<int8_t>(),
-                reinterpret_cast<int8_t*>(ws_filter),
+                args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,
                 args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
                 args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
                 nonlinear_mode, alpha, beta, gamma, dst_scale,
@@ -151,6 +156,37 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                                            m_algo_param.warp_k},
                 stream);
     }
+}
+
+size_t ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+        get_preprocess_workspace_in_bytes(const SizeArgs& args) const {
+    return 0_z;
+}
+
+SmallVector<TensorLayout> ConvBiasForwardImpl::
+        AlgoInt8NCHW4DotProdImplicitGemm::deduce_preprocessed_filter_layout(
+                const SizeArgs& args) const {
+    return {args.filter_layout->collapse_contiguous()};
+}
+
+void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec_preprocess(
+        const ExecArgs& args) const {
+    using Format = Param::Format;
+    auto&& param = args.opr->param();
+    auto&& fm = args.filter_meta;
+    UNPACK_CONV_BIAS_NCHW4_PARAM(*(args.src_layout), fm, *(args.dst_layout),
+                                 param);
+    TensorLayout src{{co, ci / 4 * fh * fw}, dtype::Int32()};
+    src.init_contiguous_stride();
+    TensorLayout dst = src;
+    dst.stride[0] = 1, dst.stride[1] = dst[0];
+    TensorND ts_src, ts_dst;
+    ts_src.raw_ptr = args.filter_tensor->raw_ptr;
+    ts_src.layout = src;
+    ts_dst.raw_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
+    ts_dst.layout = dst;
+    auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
+    transpose->exec(ts_src, ts_dst);
 }
 
 // vim: syntax=cpp.doxygen
