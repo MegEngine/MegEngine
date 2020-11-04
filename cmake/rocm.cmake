@@ -17,10 +17,11 @@ string(REPLACE "." ";" HIP_VERSION_LIST ${HIP_VERSION})
 list(GET HIP_VERSION_LIST 0 HIP_VERSION_MAJOR)
 list(GET HIP_VERSION_LIST 1 HIP_VERSION_MINOR)
 if (NOT ${HIP_VERSION_MAJOR} STREQUAL "3")
-    message(FATAL_ERROR "ROCM version needed 3.7.Please update ROCM.")
-endif()
-if (NOT ${HIP_VERSION_MINOR} STREQUAL "7")
-    message(FATAL_ERROR "ROCM version needed 3.7.Please update ROCM.")
+    message(FATAL_ERROR "ROCM version needed 3.x, Please update ROCM.")
+else()
+    if (${HIP_VERSION_MINOR} LESS "7")
+        message(WARNING "ROCM version 3.x which x(got ${HIP_VERSION_MINOR}) greater equal 7 is prefered.")
+    endif()
 endif()
 
 set(MGE_ROCM_LIBS OpenCL amdhip64 MIOpen rocblas rocrand)
@@ -37,7 +38,7 @@ find_path(MIOPEN_LIBRARY_DIR
     DOC "Path to MIOPEN library directory." )
 
 if(MIOPEN_LIBRARY_DIR STREQUAL "MIOPEN_LIBRARY_DIR-NOTFOUND")
-        message(FATAL_ERROR "Can not find MIOPEN Library")
+    message(FATAL_ERROR "Can not find MIOPEN Library")
 endif()
 
 get_filename_component(__found_miopen_include ${HIP_ROOT_DIR}/../miopen/include REALPATH)
@@ -48,7 +49,7 @@ find_path(MIOPEN_INCLUDE_DIR
     DOC "Path to MIOPEN include directory." )
 
 if(MIOPEN_INCLUDE_DIR STREQUAL "MIOPEN_INCLUDE_DIR-NOTFOUND")
-        message(FATAL_ERROR "Can not find MIOEPN INCLUDE")
+    message(FATAL_ERROR "Can not find MIOEPN INCLUDE")
 endif()
 
 #rocblas
@@ -60,7 +61,7 @@ find_path(ROCBLAS_LIBRARY_DIR
     DOC "Path to ROCBLAS library directory." )
 
 if(ROCBLAS_LIBRARY_DIR STREQUAL "ROCBLAS_LIBRARY_DIR-NOTFOUND")
-        message(FATAL_ERROR "Can not find ROCBLAS Library")
+    message(FATAL_ERROR "Can not find ROCBLAS Library")
 endif()
 
 get_filename_component(__found_rocblas_include ${HIP_ROOT_DIR}/../rocblas/include REALPATH)
@@ -71,7 +72,7 @@ find_path(ROCBLAS_INCLUDE_DIR
     DOC "Path to ROCBLAS include directory." )
 
 if(ROCBLAS_INCLUDE_DIR STREQUAL "ROCBLAS_INCLUDE_DIR-NOTFOUND")
-        message(FATAL_ERROR "Can not find ROCBLAS INCLUDE")
+    message(FATAL_ERROR "Can not find ROCBLAS INCLUDE")
 endif()
 
 #rocrand
@@ -83,7 +84,7 @@ find_path(ROCRAND_LIBRARY_DIR
     DOC "Path to ROCRAND library directory." )
 
 if(ROCRAND_LIBRARY_DIR STREQUAL "ROCRAND_LIBRARY_DIR-NOTFOUND")
-        message(FATAL_ERROR "Can not find ROCRAND Library")
+    message(FATAL_ERROR "Can not find ROCRAND Library")
 endif()
 
 get_filename_component(__found_rocrand_include ${HIP_ROOT_DIR}/../rocrand/include REALPATH)
@@ -94,7 +95,7 @@ find_path(ROCRAND_INCLUDE_DIR
     DOC "Path to ROCRAND include directory." )
 
 if(ROCRAND_INCLUDE_DIR STREQUAL "ROCRAND_INCLUDE_DIR-NOTFOUND")
-        message(FATAL_ERROR "Can not find ROCRAND INCLUDE")
+    message(FATAL_ERROR "Can not find ROCRAND INCLUDE")
 endif()
 
 
