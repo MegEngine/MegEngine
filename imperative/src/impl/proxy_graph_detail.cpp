@@ -31,7 +31,6 @@ SmallVector<Tensor*> to_raw_ptr_array(
     }
     return ret;
 }
-} // anonymous namespace
 
 void exec(const OpDef& def,
         const SmallVector<TensorPtr>& inputs_,
@@ -61,10 +60,24 @@ void exec(const OpDef& def,
     }
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs(const OpDef& def,
+SmallVector<LogicalTensorDesc>
+infer_output_attrs(const OpDef& def,
         const SmallVector<TensorPtr>& inputs) {
     auto&& graph = ProxyGraph::get_default_graph();
     return graph->infer_output_attrs(def, to_raw_ptr_array(inputs));
+}
+} // anonymous namespace
+
+SmallVector<TensorPtr>
+apply_on_physical_tensor(const OpDef& def,
+        const SmallVector<TensorPtr>& inputs) {
+    auto desc = infer_output_attrs(def, inputs);
+    SmallVector<TensorPtr> outputs;
+    for (auto&& i : desc) {
+        outputs.push_back(Tensor::make(i.layout, i.comp_node));
+    }
+    exec(def, inputs, outputs);
+    return outputs;
 }
 
 SmallVector<LogicalTensorDesc>

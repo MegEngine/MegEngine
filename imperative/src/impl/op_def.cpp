@@ -36,13 +36,6 @@ SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
     return def.trait()->apply_on_physical_tensor(def, inputs);
 }
 
-void OpDef::exec(
-    const OpDef& def,
-    const SmallVector<TensorPtr>& inputs,
-    const SmallVector<TensorPtr>& outputs) {
-    def.trait()->exec(def, inputs, outputs);
-}
-
 cg::OperatorNodeBase* OpDef::apply_on_var_node(
     const OpDef& def,
     const VarNodeArray& inputs) {
@@ -53,12 +46,6 @@ SmallVector<LogicalTensorDesc> OpDef::infer_output_attrs_fallible(
     const OpDef& def,
     const SmallVector<LogicalTensorDesc>& inputs) {
     return def.trait()->infer_output_attrs_fallible(def, inputs);
-}
-
-SmallVector<LogicalTensorDesc> OpDef::infer_output_attrs(
-    const OpDef& def,
-    const SmallVector<TensorPtr>& inputs) {
-    return def.trait()->infer_output_attrs(def, inputs);
 }
 
 BackwardGraphResult OpDef::make_backward_graph(
