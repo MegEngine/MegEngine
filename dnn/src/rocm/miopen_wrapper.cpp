@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "hcc_detail/hcc_defs_prologue.h"
+#include "megdnn/opr_param_defs.h"
 #include "src/rocm/miopen_wrapper.h"
 
 #include "src/common/utils.h"
@@ -113,6 +114,9 @@ void PoolingDesc::set(const param::Pooling& param) {
             break;
         case param::Pooling::Mode::AVERAGE_COUNT_EXCLUDE_PADDING:
             mode = miopenPoolingAverage;
+            break;
+        case param::Pooling::Mode::AVERAGE:
+            mode = miopenPoolingAverageInclusive;
             break;
         default:
             megdnn_throw(megdnn_mangle("Unsupported pooling mode for miopen"));
