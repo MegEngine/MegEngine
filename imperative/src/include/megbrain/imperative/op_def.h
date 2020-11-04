@@ -40,11 +40,6 @@ public:
         const OpDef& def,
         const SmallVector<TensorPtr>& inputs);
 
-    static void exec(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs,
-        const SmallVector<TensorPtr>& outputs);
-
     static cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs);
@@ -52,10 +47,6 @@ public:
     static SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
-
-    static SmallVector<LogicalTensorDesc> infer_output_attrs(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs);
 
     static BackwardGraphResult make_backward_graph(
         const OpDef& def,

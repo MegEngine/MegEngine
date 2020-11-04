@@ -17,11 +17,8 @@ namespace mgb {
 namespace imperative {
 namespace proxy_graph_detail {
 
-void exec(const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_,
-        const SmallVector<TensorPtr>& outputs_);
-
-SmallVector<LogicalTensorDesc> infer_output_attrs(const OpDef& def,
+SmallVector<TensorPtr>
+apply_on_physical_tensor(const OpDef& def,
         const SmallVector<TensorPtr>& inputs);
 
 SmallVector<LogicalTensorDesc>

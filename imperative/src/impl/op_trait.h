@@ -16,29 +16,39 @@
 namespace mgb {
 namespace imperative {
 
-using OpDefMaker = thin_function<
+namespace detail {
+template<typename Signature>
+struct OpMeth;
+template<typename RType, typename ...Args>
+struct OpMeth<RType(Args...)>: public thin_function<RType(Args...)> {
+    using Base = thin_function<RType(Args...)>;
+    using Base::Base;
+    RType operator()(Args... args) const {
+        if (!this->Base::operator bool()) {
+            mgb_throw(MegBrainError, "Not Implemented");
+        }
+        return this->Base::operator ()(args...);
+    }
+};
+} // detail
+
+using OpDefMaker = detail::OpMeth<
         decltype(OpDef::make_from_op_node)>;
-using ApplyOnPhysicalTensor = thin_function<
+using ApplyOnPhysicalTensor = detail::OpMeth<
         decltype(OpDef::apply_on_physical_tensor)>;
-using PhysicalTensorExecutor = thin_function<
-        decltype(OpDef::exec)>;
-using ApplyOnVarNode = thin_function<
+using ApplyOnVarNode = detail::OpMeth<
         decltype(OpDef::apply_on_var_node)>;
-using InferOutputAttrsFallible = thin_function<
+using InferOutputAttrsFallible = detail::OpMeth<
         decltype(OpDef::infer_output_attrs_fallible)>;
-using InferOutputAttrs = thin_function<
-        decltype(OpDef::infer_output_attrs)>;
-using GradMaker = thin_function<
+using GradMaker = detail::OpMeth<
         decltype(OpDef::make_backward_graph)>;
 
 struct OpTrait {
     const char* name;
     OpDefMaker make_from_op_node;
     ApplyOnPhysicalTensor apply_on_physical_tensor;
-    PhysicalTensorExecutor exec;
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
-    InferOutputAttrs infer_output_attrs;
     GradMaker make_backward_graph;
     OpTrait(const char* name);
     static OpTrait* find_by_name(const char* name);
@@ -46,38 +56,25 @@ struct OpTrait {
     static void for_each_trait(thin_function<void(OpTrait&)> visitor);
 };
 
+#define FOR_EACH_OP_METH(cb) \
+    cb(make_from_op_node) \
+    cb(apply_on_physical_tensor) \
+    cb(apply_on_var_node) \
+    cb(infer_output_attrs_fallible) \
+    cb(make_backward_graph)
+
 struct OpTraitRegistry {
     OpTrait* trait;
-    OpTraitRegistry& make_from_op_node(OpDefMaker f) {
-        trait->make_from_op_node = f;
-        return *this;
+#define DECL(meth) \
+    OpTraitRegistry& meth(decltype(OpTrait::meth) f) { \
+        mgb_assert(!trait->meth, "op %s has duplicate method %s", trait->name, #meth); \
+        trait->meth = f; \
+        return *this; \
     }
-    OpTraitRegistry& apply_on_physical_tensor(ApplyOnPhysicalTensor f) {
-        trait->apply_on_physical_tensor = f;
-        return *this;
-    }
-    OpTraitRegistry& physical_tensor_executor(PhysicalTensorExecutor f) {
-        trait->exec = f;
-        return *this;
-    }
-    OpTraitRegistry& apply_on_var_node(ApplyOnVarNode f) {
-        trait->apply_on_var_node = f;
-        return *this;
-    }
-    OpTraitRegistry& infer_output_attrs_fallible(InferOutputAttrsFallible f) {
-        trait->infer_output_attrs_fallible = f;
-        return *this;
-    }
-    OpTraitRegistry& infer_output_attrs(InferOutputAttrs f) {
-        trait->infer_output_attrs = f;
-        return *this;
-    }
-    OpTraitRegistry& grad_maker(GradMaker f) {
-        trait->make_backward_graph = f;
-        return *this;
-    }
+    FOR_EACH_OP_METH(DECL)
+#undef DECL
+
     OpTraitRegistry& fallback();
-    OpTraitRegistry& finalize();
 
     template<typename T>
     void insert() {
@@ -102,20 +99,11 @@ struct OpTraitRegistry {
     static OpTraitRegistry do_insert(const char* name);
 };
 
-namespace detail {
-struct _RegisterHelper {
-    OpTraitRegistry registry;
-    ~_RegisterHelper() {
-        registry.finalize();
-    }
-};
-} // namespace detail
-
 } // namespace imperative
 } // namespace mgb
 
 #define OP_TRAIT_REG(name, ...) \
     static OpTraitRegistry __##name##_global_registry__ = \
-        detail::_RegisterHelper{OpTraitRegistry::insert<__VA_ARGS__>(#name)}.registry
+        OpTraitRegistry::insert<__VA_ARGS__>(#name)
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

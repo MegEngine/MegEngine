@@ -110,20 +110,20 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return out;
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs(
+SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
     const OpDef& def,
-    const SmallVector<TensorPtr>& inputs) {
-    SmallVector<LogicalTensorDesc> out;
-    for (size_t i = 0; i < 2; ++ i) {
-        out.push_back({TensorLayout(), inputs[0]->comp_node()});
-    }
-    return out;
+    const SmallVector<LogicalTensorDesc>& inputs) {
+    auto cn = inputs[0].comp_node;
+    return {
+        {TensorLayout(inputs[0].layout.dtype), cn},
+        {TensorLayout(dtype::Int32()), cn}
+    };
 }
 
 OP_TRAIT_REG(CondTake, CondTake, opr::CondTake)
     .apply_on_var_node(apply_on_var_node)
     .apply_on_physical_tensor(apply_on_physical_tensor)
-    .infer_output_attrs(infer_output_attrs)
+    .infer_output_attrs_fallible(infer_output_attrs_fallible)
     .fallback();
 
 } // namespace
