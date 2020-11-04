@@ -26,8 +26,28 @@ function handle_strip() {
     rm $1.dbg
 }
 
+function patch_elf_depend_lib() {
+    echo "handle common depend lib"
+    LIBS_DIR=${BUILD_DIR}/staging/megengine/core/lib
+    mkdir -p ${LIBS_DIR}
+    cp /usr/lib64/libatomic.so.1 ${LIBS_DIR}
+
+    patchelf --remove-rpath ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
+    patchelf --force-rpath --set-rpath '$ORIGIN/lib' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
+
+
+    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+        echo "handle cuda lib"
+        CUDA_VER=10.1
+        cp ${BUILD_DIR}/dnn/cuda-stub/libcuda.so ${LIBS_DIR}
+        cp /usr/local/cuda/lib64/libnvrtc.so.${CUDA_VER} ${LIBS_DIR}
+        cp /usr/local/cuda/lib64/libnvToolsExt.so.1 ${LIBS_DIR}
+    fi
+}
+
 for ver in ${ALL_PYTHON}
 do
+    USE_AUDITWHEEL="ON"
     python_ver=${ver:0:2}
     MAJOR=${python_ver:0:1}
     MINOR=${ver:1}
@@ -67,10 +87,27 @@ do
         cp -L /usr/local/cuda/lib*/libnvrtc-builtins.so lib
     fi
 
+
+    if [ ${USE_AUDITWHEEL} = "OFF" ]; then
+        patch_elf_depend_lib
+    fi
+
     cd ${BUILD_DIR}/staging/
     ${PYTHON_DIR}/bin/python setup.py bdist_wheel
     cd /home/output
-    LD_LIBRARY_PATH=${BUILD_DIR}/dnn/cuda-stub:$LD_LIBRARY_PATH auditwheel repair -L ${NEW_LIB_PATH} ${BUILD_DIR}/staging/dist/Meg*.whl
+    if [ ${USE_AUDITWHEEL} = "ON" ]; then
+        LD_LIBRARY_PATH=${BUILD_DIR}/dnn/cuda-stub:$LD_LIBRARY_PATH auditwheel repair -L ${NEW_LIB_PATH} ${BUILD_DIR}/staging/dist/Meg*.whl
+    else
+        mkdir -p ${SRC_DIR}/scripts/whl/manylinux2010/output/wheelhouse
+        cd ${SRC_DIR}/scripts/whl/manylinux2010/output/wheelhouse
+        mv ${BUILD_DIR}/staging/dist/Meg*${ver}*.whl .
+        org_whl_name=`ls Meg*${ver}*.whl`
+        compat_whl_name=`echo ${org_whl_name} | sed 's/linux/manylinux2010/'`
+        echo "org whl name: ${org_whl_name}"
+        echo "comapt whl name: ${compat_whl_name}"
+        mv ${org_whl_name} ${compat_whl_name}
+        cd /home/output
+    fi
     chown -R ${UID}.${UID} .
     # compat for root-less docker env to remove output at host side
     chmod -R 777 .
