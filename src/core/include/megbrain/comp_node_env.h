@@ -90,6 +90,7 @@
 #endif // MGB_ATLAS
 
 
+
 #if MGB_ROCM
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "megcore_rocm.h"
@@ -193,6 +194,7 @@ namespace mgb {
 [[noreturn]] void _on_atlas_error(const char* expr, aclError err,
                                   const char* file, const char* func, int line);
 #endif
+
 
 #if MGB_CUDA
 [[noreturn]] void _on_cuda_error(const char* expr, cudaError_t err,
@@ -325,6 +327,7 @@ public:
         }
 #endif
 
+
     }
 
     /*!
@@ -426,6 +429,8 @@ public:
     void init_atlas(CompNode comp_node, const AtlasEnv& env);
 #endif
 
+
+
 #if MGB_ROCM
     struct ROCmEnv {
         int device = -1;
@@ -485,9 +490,7 @@ public:
         };
         static InitStatus init_status;
 
-        static void init() {
-            init_status.init();
-        }
+        static void init() { init_status.init(); }
 
         void activate() const {
             init();

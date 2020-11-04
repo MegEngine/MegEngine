@@ -177,11 +177,11 @@ CompNode::Locator CompNode::Locator::parse(const std::string &id) {
         dev_type = DeviceType::CAMBRICON;
         ptr += 9;
     } else if (ptr[0] == 'm') {
-        if (strncmp(ptr, "multithread", 11)) {
-            err();
-        }
-        dev_type = DeviceType::MULTITHREAD;
-        ptr += 11;
+            if (strncmp(ptr, "multithread", 11)) {
+                err();
+            }
+            dev_type = DeviceType::MULTITHREAD;
+            ptr += 11;
     } else {
         if (ptr[1] != 'p' || ptr[2] != 'u') {
             err();

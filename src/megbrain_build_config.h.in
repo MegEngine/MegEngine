@@ -33,7 +33,6 @@
 #cmakedefine01 MGB_ENABLE_OPR_MM
 #cmakedefine01 MGB_ENABLE_FBS_SERIALIZATION
 #cmakedefine01 MGB_IS_DEV
-
 // DNN related flags
 // Platform macro's
 #cmakedefine01 MEGDNN_WITH_CUDA

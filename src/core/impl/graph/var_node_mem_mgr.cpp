@@ -125,7 +125,7 @@ StaticDeviceMemoryManager::make_default_impl() {
 #endif  // MGB_THREAD_SAFE
 
 /* ==================== AsyncVarReleaser ==================== */
-#if MGB_CUDA || MGB_ATLAS
+#if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON 
 class VarNodeMemManager::AsyncVarReleaser {
     struct WaiterParam {
         CompNode cn;
@@ -245,18 +245,18 @@ bool VarNodeMemManager::ImpureMemPlanManager::check_need_realloc() {
 }
 
 /* ==================== VarNodeMemManager ==================== */
-VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl *graph):
-    m_owner_graph(graph),
-    m_seq_mem_opt(graph)
-#if MGB_CUDA || MGB_ATLAS
-    ,m_asyn_var_releaser(new AsyncVarReleaser)
+VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl* graph)
+        : m_owner_graph(graph),
+          m_seq_mem_opt(graph)
+#if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON 
+          ,m_asyn_var_releaser(new AsyncVarReleaser)
 #endif
 {
     auto on_comp_seq_finish = [this](const event::CompSeqExecFinished& ev) {
         MGB_MARK_USED_VAR(ev);
         // async release is only used for sync between multiple comp nodes, and
         // does not wait for device to finish
-#if MGB_CUDA || MGB_ATLAS
+#if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON 
         m_asyn_var_releaser->wait_release_finish();
 #endif
         m_cpu_async_release_barrier.wait_zero();
@@ -297,7 +297,8 @@ VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl *graph):
     graph->event().register_receiver_permanent<event::CompSeqExecError>(
             on_comp_seq_error);
 
-#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER && (MGB_CUDA || MGB_ATLAS)
+#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER &&                                   \
+        (MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON ) 
     auto on_mem_defrag_start = [this](const event::BeforeMemDefrag&) {
         m_asyn_var_releaser->wait_release_finish();
     };
@@ -1444,6 +1445,13 @@ void VarNodeMemManager::decr_var_mem_refcnt(
 #endif
 #if MGB_ATLAS
         case DT::ATLAS:
+            {
+                m_asyn_var_releaser->add(dispatch_cn, var);
+                break;
+            }
+#endif
+#if MGB_CAMBRICON
+        case DT::CAMBRICON:
             {
                 m_asyn_var_releaser->add(dispatch_cn, var);
                 break;
