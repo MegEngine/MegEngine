@@ -31,10 +31,6 @@ TEST_F(ROCM, POOLING_FORWARD) {
         for (auto format : {Format::NCHW})
             for (auto&& arg : args) {
                 auto param = arg.param;
-                if (param.mode == param::Pooling::Mode::AVERAGE) {
-                    param.mode =
-                            param::Pooling::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
-                }
                 auto src = arg.ishape;
                 param.format = format;
                 Checker<Pooling> checker(handle_rocm());
@@ -52,11 +48,6 @@ TEST_F(ROCM, POOLING_BACKWARD) {
         Checker<PoolingBackward> checker(handle_rocm());
         TensorLayout ilayout = TensorLayout(arg.ishape, dtype::Float32());
         TensorLayout olayout;
-
-        auto& param = arg.param;
-        if (param.mode == param::Pooling::Mode::AVERAGE) {
-            param.mode = param::Pooling::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
-        }
 
         auto constraint = [this,
                            arg](CheckerHelper::TensorValueArray& tensors_orig) {
@@ -141,7 +132,7 @@ TEST_F(ROCM, POOLING_FWD_BENCHMARK) {
         benchmarker.set_param(param);
         size_t OH = infer_conv_shape(IH, FH, SH, PH);
         size_t OW = infer_conv_shape(IW, FW, SW, PW);
-        // warm up  
+        // warm up
         benchmarker.execs({{N, IC, IH, IW}, {N, IC, OH, OW}});
         // do actual benchmark
         auto time_ms = benchmarker.execs({{N, IC, IH, IW}, {N, IC, OH, OW}});
