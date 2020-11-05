@@ -161,9 +161,12 @@ class StreamSampler(Sampler):
 
     .. warning::
 
-        In the case of multiple workers, sampler should ensure that each worker gets
+        In the case of multiple machines, sampler should ensure that each worker gets
         different data. But this class cannot do it yet, please build your own
         dataset and sampler to achieve this goal.
+
+    Usually, meth::`~.StreamDataset.__iter__` can return different iterator by
+    ``rank = dist.get_rank()``. So that they will get different data.
 
     """
 
@@ -174,7 +177,7 @@ class StreamSampler(Sampler):
         return self
 
     def __next__(self):
-        return range(self.batch_size)
+        return iter(range(self.batch_size))
 
 
 class SequentialSampler(MapSampler):
