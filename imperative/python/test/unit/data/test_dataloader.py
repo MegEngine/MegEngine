@@ -15,9 +15,15 @@ import pytest
 
 from megengine.data.collator import Collator
 from megengine.data.dataloader import DataLoader
-from megengine.data.dataset import ArrayDataset
-from megengine.data.sampler import RandomSampler, SequentialSampler
-from megengine.data.transform import PseudoTransform, Transform
+from megengine.data.dataset import ArrayDataset, StreamDataset
+from megengine.data.sampler import RandomSampler, SequentialSampler, StreamSampler
+from megengine.data.transform import (
+    Compose,
+    Normalize,
+    PseudoTransform,
+    ToMode,
+    Transform,
+)
 
 
 def init_dataset():
@@ -52,6 +58,80 @@ def test_dataloader_init():
         dataset, sampler=RandomSampler(dataset, batch_size=6, drop_last=True)
     )
     assert len(dataloader) == 16
+
+
+class MyStream(StreamDataset):
+    def __init__(self, number, batch=False, error=False):
+        self.number = number
+        self.batch = batch
+        self.error = error
+
+    def __iter__(self):
+        for cnt in range(self.number):
+            if self.batch:
+                data = np.random.randint(0, 256, (2, 32, 32, 3), dtype="uint8")
+                yield (True, (data, [cnt, cnt - self.number]))
+            else:
+                data = np.random.randint(0, 256, (32, 32, 3), dtype="uint8")
+                if self.error:
+                    yield (data, cnt)
+                else:
+                    yield (False, (data, cnt))
+        raise StopIteration
+
+
+@pytest.mark.parametrize("batch", [True, False])
+@pytest.mark.parametrize("num_workers", [0, 2])
+def test_stream_dataloader(batch, num_workers):
+    dataset = MyStream(100, batch)
+    sampler = StreamSampler(batch_size=4)
+    dataloader = DataLoader(
+        dataset,
+        sampler,
+        Compose([Normalize(mean=(103, 116, 123), std=(57, 57, 58)), ToMode("CHW")]),
+        num_workers=num_workers,
+    )
+
+    check_set = set()
+
+    for step, data in enumerate(dataloader):
+        if step == 10:
+            break
+        assert data[0].shape == (4, 3, 32, 32)
+        assert data[1].shape == (4,)
+        for i in data[1]:
+            assert i not in check_set
+            check_set.add(i)
+
+
+def test_stream_dataloader_error():
+    dataset = MyStream(100, error=True)
+    sampler = StreamSampler(batch_size=4)
+    dataloader = DataLoader(dataset, sampler)
+    with pytest.raises(AssertionError, match=r".*tuple.*"):
+        data_iter = iter(dataloader)
+        next(data_iter)
+
+
+@pytest.mark.parametrize("num_workers", [0, 2])
+def test_stream_dataloader_timeout(num_workers):
+    dataset = MyStream(100, False)
+    sampler = StreamSampler(batch_size=4)
+
+    class TimeoutTransform(Transform):
+        def __init__(self):
+            pass
+
+        def apply(self, input):
+            time.sleep(10)
+            return input
+
+    dataloader = DataLoader(
+        dataset, sampler, TimeoutTransform(), num_workers=num_workers, timeout=5
+    )
+    with pytest.raises(RuntimeError, match=r".*timeout.*"):
+        data_iter = iter(dataloader)
+        next(data_iter)
 
 
 def test_dataloader_serial():
