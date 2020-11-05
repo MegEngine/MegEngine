@@ -208,25 +208,16 @@ def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
         from megengine import tensor
         import megengine.functional as F
 
-        data = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        out = F.broadcast_to(data, (4, 2, 3))
+        data = tensor(np.arange(0, 3, dtype=np.float32).reshape(3))
+        out = F.broadcast_to(data, (2, 3))
         print(out.numpy())
 
     Outputs:
 
     .. testoutput::
 
-        [[[0. 1. 2.]
-          [3. 4. 5.]]
-
-         [[0. 1. 2.]
-          [3. 4. 5.]]
-
-         [[0. 1. 2.]
-          [3. 4. 5.]]
-
-         [[0. 1. 2.]
-          [3. 4. 5.]]]
+        [[0. 1. 2.]
+         [0. 1. 2.]]
 
     """
     return _broadcast(inp, shape)
@@ -298,8 +289,8 @@ def stack(inps, axis=0, device=None):
         from megengine import tensor
         import megengine.functional as F
 
-        x1 = tensor(np.arange(0, 6, dtype=np.float32).reshape((2, 3)))
-        x2 = tensor(np.arange(6, 12, dtype=np.float32).reshape((2, 3)))
+        x1 = tensor(np.arange(0, 3, dtype=np.float32).reshape((3)))
+        x2 = tensor(np.arange(6, 9, dtype=np.float32).reshape((3)))
         out = F.stack([x1, x2], axis=0)
         print(out.numpy())
 
@@ -307,11 +298,8 @@ def stack(inps, axis=0, device=None):
 
     .. testoutput::
 
-        [[[ 0.  1.  2.]
-          [ 3.  4.  5.]]
-
-         [[ 6.  7.  8.]
-          [ 9. 10. 11.]]]
+        [[0. 1. 2.]
+         [6. 7. 8.]]
 
     """
     if len(inps) > 0 and not isinstance(inps[0].shape, inps[0].__class__):
@@ -751,21 +739,16 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
         from megengine import tensor
         import megengine.functional as F
         x = tensor(np.arange(12, dtype=np.int32))
-        out = F.reshape(x, (3, 2, 2))
+        out = F.reshape(x, (3, 4))
         print(out.numpy())
 
     Outputs:
 
     .. testoutput::
 
-        [[[ 0  1]
-          [ 2  3]]
-
-         [[ 4  5]
-          [ 6  7]]
-
-         [[ 8  9]
-          [10 11]]]
+        [[ 0  1  2  3]
+         [ 4  5  6  7]
+         [ 8  9 10 11]]
 
     """
     return inp.reshape(target_shape)
