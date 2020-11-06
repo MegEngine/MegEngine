@@ -18,6 +18,8 @@
 #include "test/cuda/benchmark.h"
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
+#include "test/common/tensor.h"
+#include "test/common/workspace_wrapper.h"
 
 #define V1(x) #x
 #define V(x) V1(x)
@@ -34,7 +36,6 @@ struct BenchArgs {
 std::vector<BenchArgs> get_resnet50_bench_args(size_t batch = 64) {
     std::vector<BenchArgs> args;
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 256, 1, 1});
-
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 32, 3, 1});
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 32, 3, 2});
     args.emplace_back(BenchArgs{batch, 4, 256, 256, 32, 7, 2});
@@ -44,7 +45,6 @@ std::vector<BenchArgs> get_resnet50_bench_args(size_t batch = 64) {
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 64, 3, 1});
     args.emplace_back(BenchArgs{batch, 64, 56, 56, 64, 3, 2});
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 64, 3, 2});
-    args.emplace_back(BenchArgs{batch, 64, 56, 56, 256, 1, 1});
 
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 512, 1, 2});
     args.emplace_back(BenchArgs{batch, 256, 56, 56, 128, 1, 2});
@@ -57,6 +57,7 @@ std::vector<BenchArgs> get_resnet50_bench_args(size_t batch = 64) {
     args.emplace_back(BenchArgs{batch, 1024, 14, 14, 256, 1, 1});
     args.emplace_back(BenchArgs{batch, 256, 14, 14, 256, 3, 1});
     args.emplace_back(BenchArgs{batch, 256, 14, 14, 1024, 1, 1});
+    args.emplace_back(BenchArgs{batch, 256, 14, 14, 1024, 1, 2});
 
     args.emplace_back(BenchArgs{batch, 1024, 14, 14, 2048, 1, 2});
     args.emplace_back(BenchArgs{batch, 1024, 14, 14, 512, 1, 2});
@@ -331,6 +332,12 @@ void benchmark_target_algo_with_cudnn_tsc(
         if ((format == Format::CHWN4 || format == Format::NCHW4) &&
             (arg.ci % 16 != 0))
             continue;
+        Format format_cudnn = arg.ci % 32 == 0 && arg.co % 32 == 0
+                                      ? Format::NCHW32
+                                      : Format::NCHW4;
+        param.format = format_cudnn;
+        benchmarker_cudnn.set_param(param);
+
         float time_in_ms = 0.f;
         if (algo) {
             time_in_ms =
@@ -351,18 +358,14 @@ void benchmark_target_algo_with_cudnn_tsc(
                                             {}}) /
                          RUNS;
         }
-        Format format_cudnn = arg.ci % 32 == 0 && arg.co % 32 == 0
-                                      ? Format::NCHW32
-                                      : Format::NCHW4;
-        param.format = format_cudnn;
-        benchmarker_cudnn.set_param(param);
-        auto time_in_ms_cudnn =
+        float time_in_ms_cudnn =
                 benchmarker_cudnn.execs({get_tensor_shape(src, format_cudnn),
                                          get_tensor_shape(filter, format_cudnn),
                                          get_tensor_shape(bias, format_cudnn),
                                          {},
                                          {}}) /
                 RUNS;
+
         float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f * arg.f /
                     (1e12);
         printf("src=%s, filter=%s, dst=%s, time(algo=%s)=%.2f %.2fTops, "
@@ -1075,8 +1078,8 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
 
 
 #if CUDA_VERSION >= 10020
-/// \note: we only check several cases and block sizes in megdnn_test, the full
-/// testcases are written in cutlass repository
+/// \note: we only check several cases and block sizes in megdnn_test, the
+/// full testcases are written in cutlass repository
 TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_IMMA) {
     require_compute_capability_eq(7, 5);
     Checker<ConvBiasForward> checker(handle_cuda());

@@ -29,7 +29,8 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                _megdnn_workspace workspace) {
     check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
                workspace.size, preprocessed_filter);
-    AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace);
+    AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace,
+                            preprocessed_filter);
     auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
                               z.layout, dst.layout);
     algo->check_workspace(args, workspace).exec(args);
@@ -205,16 +206,49 @@ const char* ConvBiasForwardImpl::get_algorithm_set_name() const {
     return "CONV_BIAS_CUDA";
 }
 
-size_t ConvBiasForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                                   const TensorLayout& filter,
-                                                   const TensorLayout& bias,
-                                                   const TensorLayout& z,
-                                                   const TensorLayout& dst,
-                                                   const PreprocessedFilter*) {
-    AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
+size_t ConvBiasForwardImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter) {
+    AlgoBase::SizeArgs args{
+            this, src, filter, bias, z, dst, preprocessed_filter};
     return get_algorithm(this, src, filter, bias, z, dst)
             ->get_workspace_in_bytes(args);
 };
+
+size_t ConvBiasForwardImpl::get_preprocess_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst) {
+    AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
+    return get_algorithm(this, src, filter, bias, z, dst)
+            ->get_preprocess_workspace_in_bytes(args);
+}
+
+SmallVector<TensorLayout>
+ConvBiasForwardImpl::deduce_preprocessed_filter_layout(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst) {
+    AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
+    return get_algorithm(this, src, filter, bias, z, dst)
+            ->deduce_preprocessed_filter_layout(args);
+}
+
+void ConvBiasForwardImpl::exec_preprocess(
+        const TensorLayout& src_layout, _megdnn_tensor_in filter,
+        const TensorLayout& bias_layout, const TensorLayout& z_layout,
+        const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
+        _megdnn_workspace workspace) {
+    TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout},
+            z{nullptr, z_layout}, bias{nullptr, bias_layout};
+    AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace,
+                            preprocessed_filter);
+    auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
+                              z.layout, dst.layout);
+    return algo->exec_preprocess(args);
+}
 
 }  // namespace cuda
 }  // namespace megdnn

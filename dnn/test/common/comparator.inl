@@ -32,6 +32,22 @@ class DefaultComparator<dt_float32> {
         }
 };
 
+template <>
+class DefaultComparator<dt_qint8> {
+public:
+    bool is_same(dt_qint8 expected, dt_qint8 actual) const {
+        return expected.as_int8() == actual.as_int8();
+    }
+};
+
+template <>
+class DefaultComparator<dt_qint32> {
+public:
+    bool is_same(dt_qint32 expected, dt_qint32 actual) const {
+        return expected.as_int32() == actual.as_int32();
+    }
+};
+
 } // namespace test
 } // namespace megdnn
 

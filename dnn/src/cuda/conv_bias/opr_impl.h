@@ -44,21 +44,14 @@ public:
                                              const TensorLayout&,
                                              const TensorLayout&,
                                              const TensorLayout&,
-                                             const TensorLayout&) override {
-        return 0;
-    };
+                                             const TensorLayout&) override;
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const TensorLayout&, const TensorLayout&, const TensorLayout&,
-            const TensorLayout&, const TensorLayout&) override {
-        return {};
-    }
+            const TensorLayout&, const TensorLayout&) override;
     void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
                          const TensorLayout&, const TensorLayout&,
                          const TensorLayout&, PreprocessedFilter*,
-                         _megdnn_workspace) override {
-        megdnn_throw("cuda conv_bias exec_preprocess has not implemeted yet");
-    }
-
+                         _megdnn_workspace) override;
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;

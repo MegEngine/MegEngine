@@ -104,20 +104,19 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
 
 ConvBiasForwardImpl::AlgoPack ConvBiasForwardImpl::sm_algo_pack;
 
-ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(ConvBiasForwardImpl* o,
-                                                  const TensorLayout& src,
-                                                  const TensorLayout& filter,
-                                                  const TensorLayout& bias,
-                                                  const TensorLayout& z,
-                                                  const TensorLayout& dst)
+ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
+        ConvBiasForwardImpl* o, const TensorLayout& src,
+        const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst,
+        const PreprocessedFilter* preprocessed_filter)
         : SizeArgs(o, src, filter, o->check_layout_fwd(src, filter, dst), bias,
-                   z, dst) {}
+                   z, dst, preprocessed_filter) {}
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvBiasForwardImpl* o, const TensorLayout& src,
         const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
         const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst)
+        const TensorLayout& dst, const PreprocessedFilter* preprocessed_filter)
         : BiasForwardSizeArgs{concrete_handle(o->handle()),
                               &src,
                               &filter,
@@ -126,14 +125,16 @@ ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
                               filter_meta,
                               &dst,
                               o->param().nonlineMode},
-          opr{o} {}
+          opr{o},
+          preprocessed_filter{preprocessed_filter} {}
 
 ConvBiasForwardImpl::AlgoBase::ExecArgs::ExecArgs(
         ConvBiasForwardImpl* opr, _megdnn_tensor_in src,
         _megdnn_tensor_in filter, _megdnn_tensor_in bias, _megdnn_tensor_in z,
-        _megdnn_tensor_out dst, _megdnn_workspace workspace)
+        _megdnn_tensor_out dst, _megdnn_workspace workspace,
+        const PreprocessedFilter* preprocessed_filter)
         : SizeArgs(opr, src.layout, filter.layout, bias.layout, z.layout,
-                   dst.layout),
+                   dst.layout, preprocessed_filter),
           src_tensor{&src},
           filter_tensor{&filter},
           bias_tensor{&bias},

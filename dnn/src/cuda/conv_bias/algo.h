@@ -41,16 +41,19 @@ public:
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs : public conv_bias::BiasForwardSizeArgs {
         ConvBiasForwardImpl* opr;
-
+        const PreprocessedFilter* preprocessed_filter;
+        
         std::string to_string() const;
         SizeArgs(ConvBiasForwardImpl* opr, const TensorLayout& src,
                  const TensorLayout& filter, const TensorLayout& bias,
-                 const TensorLayout& z, const TensorLayout& dst);
+                 const TensorLayout& z, const TensorLayout& dst,
+                 const PreprocessedFilter* preprocessed_filter = nullptr);
         SizeArgs(ConvBiasForwardImpl* opr, const TensorLayout& src,
                  const TensorLayout& filter,
                  const CanonizedFilterMeta& filter_meta,
                  const TensorLayout& bias, const TensorLayout& z,
-                 const TensorLayout& dst);
+                 const TensorLayout& dst,
+                 const PreprocessedFilter* preprocessed_filter = nullptr);
 
         void init_conv_bias_desc(conv_bias::CUDNNForwardDescs& desc) const {
             desc.set_conv_bias(*src_layout, filter_meta, *dst_layout,
@@ -69,11 +72,21 @@ public:
         ExecArgs(ConvBiasForwardImpl* opr, _megdnn_tensor_in src,
                  _megdnn_tensor_in filter, _megdnn_tensor_in bias,
                  _megdnn_tensor_in z, _megdnn_tensor_out dst,
-                 _megdnn_workspace workspace);
+                 _megdnn_workspace workspace,
+                 const PreprocessedFilter* preprocessed_filter = nullptr);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
     virtual void exec(const ExecArgs& args) const = 0;
+    virtual size_t get_preprocess_workspace_in_bytes(
+            const SizeArgs& args) const {
+        return 0;
+    }
+    virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const {
+        return {};
+    }
+    virtual void exec_preprocess(const ExecArgs& args) const {}
 
     bool is_available_wk(const SizeArgs& args, size_t limit) {
         return is_available(args) && get_workspace_in_bytes(args) <= limit;

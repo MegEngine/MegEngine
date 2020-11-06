@@ -741,10 +741,12 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
     std::unique_ptr<RNG> rng;
     std::unique_ptr<RNG> bias_rng;
     std::unique_ptr<RNG> const_rng;
+    std::unique_ptr<RNG> zero_rng;
     // TODO: check range of rng
     if (src_dtype.enumv() == DTypeEnum::QuantizedS8) {
         rng = std::make_unique<UniformIntRNG>(-3, 3);
         const_rng = std::make_unique<UniformIntRNG>(1, 1);
+        zero_rng = std::make_unique<UniformIntRNG>(0, 0);
         megdnn_assert(bias_dtype.enumv() == DTypeEnum::QuantizedS32);
         bias_rng = std::make_unique<UniformIntRNG>(-50, 50);
         checker.set_epsilon(1 + 1e-3)
@@ -775,6 +777,12 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
                 fh = arg.filter[2];
                 fw = arg.filter[3];
                 z[1] = arg.filter[0] / 4;
+            } else if (format == Format::NCHW32) {
+                hi = arg.src[2];
+                wi = arg.src[3];
+                fh = arg.filter[2];
+                fw = arg.filter[3];
+                z[1] = arg.filter[0] / 32;
             } else {
                 megdnn_assert(format == Format::CHWN4);
                 hi = arg.src[1];
@@ -798,7 +806,7 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
     megdnn_assert(rng != nullptr && bias_rng != nullptr);
     checker.set_rng(0, rng.get())
             .set_rng(1, rng.get())
-            .set_rng(2, rng.get())
+            .set_rng(2, bias_rng.get())
             .set_rng(3, rng.get());
     if (args.empty()) {
         std::vector<TestArg> default_args;

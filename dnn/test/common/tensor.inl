@@ -24,7 +24,8 @@ Tensor<T, C>::Tensor(Handle *handle, TensorLayout layout):
     m_handle(handle),
     m_comparator(C())
 {
-    layout.dtype = get_dtype_from_static_type<T>();
+    if (!layout.dtype.valid())
+        layout.dtype = get_dtype_from_static_type<T>();
     m_tensornd.raw_ptr = megdnn_malloc(m_handle, layout.span().dist_byte());
     m_tensornd.layout = layout;
 }
@@ -67,10 +68,10 @@ void Tensor<T, C>::check_with(const Tensor<T, C_> &rhs) const
         auto index = Index(m_tensornd.layout, linear_idx);
         auto offset = index.positive_offset();
         ASSERT_TRUE(m_comparator.is_same(p0[offset], p1[offset]))
-            << "Index is " << index.to_string()
-            << "; layout is " << m_tensornd.layout.to_string()
-            << "; this->ptr()[offset] is " << this->ptr()[offset]
-            << "; rhs.ptr()[offset] is " << rhs.ptr()[offset];
+                << "Index is " << index.to_string() << "; layout is "
+                << m_tensornd.layout.to_string() << "; this->ptr()[offset] is "
+                << this->ptr()[offset] << "; rhs.ptr()[offset] is "
+                << rhs.ptr()[offset];
     }
 }
 
