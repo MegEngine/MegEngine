@@ -21,8 +21,7 @@ SmallVector<TensorPtr>
 apply_on_physical_tensor(const OpDef& def,
         const SmallVector<TensorPtr>& inputs);
 
-SmallVector<LogicalTensorDesc>
-infer_output_attrs_fallible(const OpDef& def,
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
 
 BackwardGraphResult

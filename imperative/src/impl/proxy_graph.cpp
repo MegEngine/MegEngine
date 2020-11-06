@@ -14,6 +14,7 @@
 #include "megbrain/graph/static_infer.h"
 #include "megbrain/graph/operator_node.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/backward_graph.h"
@@ -590,10 +591,9 @@ cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
         vinputs[i] = InputPlaceholder::make(*m_graph, *inputs[i]).node();
     }
     auto opr = OpDef::apply_on_var_node(opdef, vinputs);
-    mgb_assert(opr->dyn_typeinfo() != InputPlaceholder::typeinfo());
+    mgb_assert(!opr->same_type<InputPlaceholder>());
     for (auto &&i : opr->input()) {
-        mgb_assert(i->owner_opr()->dyn_typeinfo() ==
-                InputPlaceholder::typeinfo());
+        mgb_assert(i->owner_opr()->same_type<InputPlaceholder>());
     }
     return opr;
 }
@@ -605,17 +605,18 @@ size_t ProxyGraph::get_opr_output_size(const OpDef& opdef,
     return get_proxy_opr(opdef, inputs)->usable_output().size();
 }
 
-SmallVector<LogicalTensorDesc> ProxyGraph::infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::infer_output_attrs_fallible(
         const OpDef& opdef,
         const SmallVector<LogicalTensorDesc>& inputs) {
     auto opr = get_proxy_opr(opdef, inputs);
     CUR_OPR_GUARD(opr);
-    do_shape_infer(false);
-    SmallVector<LogicalTensorDesc> ret;
+    SmallVector<LogicalTensorDesc> outputs;
+    bool validated = do_shape_infer(false);
     for (auto&& i : opr->usable_output()) {
-        ret.push_back({{i->shape(), i->dtype()}, i->comp_node()});
+        outputs.push_back({{i->shape(), i->dtype()}, i->comp_node()});
     }
-    return ret;
+    bool need_check = opr->same_type<opr::Reshape>();
+    return {outputs, validated && !need_check};
 }
 
 struct ProxyGraph::GradGraph {
@@ -811,16 +812,20 @@ VarNodeArray ProxyGraph::make_input_place_holders(const SmallVector<LogicalTenso
 
 /*********************** Common Impl ***********************/
 
-void ProxyGraph::do_shape_infer(bool sync_value) {
+bool ProxyGraph::do_shape_infer(bool sync_value) {
     m_static_infer_manager->update();
 
+    bool validated = true;
     for (auto* var : m_cur_opr->output()) {
         if (sync_value) {
             var->shape(m_static_infer_manager->infer_shape(var));
         } else if (auto* shape = m_static_infer_manager->infer_shape_fallible(var)) {
-            var->shape(*shape);
+                var->shape(*shape);
+        } else {
+            validated = false;
         }
     }
+    return validated;
 }
 
 TensorPtr ProxyGraph::as_tensor(cg::OperatorNodeBase* opr, bool share) {

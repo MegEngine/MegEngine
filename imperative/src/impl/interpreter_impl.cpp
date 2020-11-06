@@ -63,15 +63,17 @@ SmallVector<void*> ChannelImpl::apply_op(
         input_infos.push_back(info);
         input_descs.push_back(info->desc);
     }
-    auto output_descs = OpDef::infer_output_attrs_fallible(*op, input_descs);
+
+    auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
     ApplyOp cmd{std::move(op)};
     cmd.inputs = std::move(input_infos);
     cmd.outputs.reserve(output_descs.size());
     SmallVector<void*> outputs;
-    bool is_fallible = false;
+    // FIXME: remove this check when op check is correct
+    bool validated_bkp = true;
     for (auto&& desc : output_descs) {
         if (desc.layout.ndim == 0) {
-            is_fallible = true;
+            validated_bkp = false;
         }
         auto info = alloc();
         info->desc = desc;
@@ -80,8 +82,14 @@ SmallVector<void*> ChannelImpl::apply_op(
         outputs.push_back(info);
     }
     m_worker.add_task(std::move(cmd));
-    if (is_fallible && m_async_level <= 1) {
+    if (!(validated && validated_bkp) && m_async_level == 1) {
         sync();
+    } else if (m_async_level == 0) {
+        sync();
+        // check device error
+        for (auto&& oup : cmd.outputs) {
+            oup->ptr->comp_node().sync();
+        }
     }
     return outputs;
 }
@@ -194,6 +202,9 @@ ChannelImpl::~ChannelImpl() {
 void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     MGB_LOCK_GUARD(m_mutex);
     dest->value_fetched = ptr->value_fetched();
+    // update tensor desc for static infer
+    dest->desc.layout = ptr->layout();
+    dest->desc.comp_node = ptr->comp_node();
     dest->ptr = std::move(ptr);
     if (m_waitee == dest) {
         m_cv.notify_all();

@@ -80,8 +80,7 @@ apply_on_physical_tensor(const OpDef& def,
     return outputs;
 }
 
-SmallVector<LogicalTensorDesc>
-infer_output_attrs_fallible(const OpDef& def,
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs) {
     auto&& graph = ProxyGraph::get_default_graph();
     return graph->infer_output_attrs_fallible(def, inputs);

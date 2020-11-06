@@ -40,21 +40,21 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return {Tensor::make(std::move(hv))};
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs) {
     def.cast_final_safe<GetVarShape>();
     mgb_assert(inputs.size() == 1, "GetVarShape take 1 input, got %lu", inputs.size());
     auto&& desc = inputs[0];
     if (!desc.layout.ndim) {
-        return {{TensorLayout(dtype::Int32()), desc.comp_node}};
+        return {{{TensorLayout(dtype::Int32()), desc.comp_node}}, true};
     }
     DeviceTensorND value(CompNode::default_cpu(), {desc.layout.ndim}, dtype::Int32());
     auto* ptr = value.ptr<dt_int32>();
     for (size_t i = 0; i < desc.layout.ndim; ++i) {
         ptr[i] = desc.layout[i];
     }
-    return {{value.layout(), desc.comp_node, std::move(value)}};
+    return {{{value.layout(), desc.comp_node, std::move(value)}}, true};
 }
 
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {

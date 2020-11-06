@@ -38,8 +38,8 @@ public:
         SmallVector<TensorPtr>
         apply(const SmallVector<TensorPtr>& inputs) const;
 
-        SmallVector<LogicalTensorDesc>
-        infer_attrs(const SmallVector<LogicalTensorDesc>& inputs) const;
+        std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_attrs(
+            const SmallVector<LogicalTensorDesc>& inputs) const;
 
         template <typename T, typename F, typename C>
         SmallVector<T> interpret(F&& f, C&& c, const SmallVector<T>& inputs) const {

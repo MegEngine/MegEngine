@@ -28,12 +28,13 @@ namespace {
 CompNode::UnorderedSet collect_comp_nodes(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     CompNode::UnorderedSet comp_nodes;
-    SmallVector<LogicalTensorDesc> descs;
+    SmallVector<LogicalTensorDesc> inp_descs;
     for (auto&& i : inputs) {
         comp_nodes.insert(i->comp_node());
-        descs.push_back({i->layout(), i->comp_node(), {}});
+        inp_descs.push_back({i->layout(), i->comp_node(), {}});
     }
-    for (auto&& output_attr : def.infer_output_attrs_fallible(def, descs)) {
+    SmallVector<LogicalTensorDesc> oup_descs = std::get<0>(def.infer_output_attrs_fallible(def, inp_descs));
+    for (auto&& output_attr : oup_descs) {
         comp_nodes.insert(output_attr.comp_node);
     }
     return comp_nodes;

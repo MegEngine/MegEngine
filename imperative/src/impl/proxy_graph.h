@@ -48,7 +48,7 @@ public:
             const OpDef& opdef,
             const SmallVector<LogicalTensorDesc>& inputs);
 
-    SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+    std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
             const OpDef& opdef,
             const SmallVector<LogicalTensorDesc>& inputs);
 
@@ -88,7 +88,7 @@ private:
 
     /********************** Common Helper **********************/
 
-    void do_shape_infer(bool sync_value);
+    bool do_shape_infer(bool sync_value);
 
     TensorPtr as_tensor(cg::OperatorNodeBase* opr, bool share=true);
 

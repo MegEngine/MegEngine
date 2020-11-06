@@ -47,7 +47,7 @@ bool valid_broadcast(const TensorShape& src_shape,
     return true;
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs) {
     def.cast_final_safe<Broadcast>();
@@ -59,7 +59,7 @@ SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
     TensorLayout out_layout = src.layout;
     if (tshp.layout.ndim == 0 || tshp.value.empty()) {
         out_layout.ndim = 0;
-        return {{out_layout, src.comp_node}};
+        return {{{out_layout, src.comp_node}}, true};
     }
     mgb_assert(
         tshp.layout.ndim == 1, 
@@ -77,7 +77,7 @@ SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
                src.layout.TensorShape::to_string().c_str(),
                out_layout.TensorShape::to_string().c_str());
 
-    return {{out_layout, src.comp_node}};
+    return {{{out_layout, src.comp_node}}, true};
 }
 
 OP_TRAIT_REG(Broadcast, Broadcast, opr::Broadcast)

@@ -25,7 +25,7 @@ namespace {
 
 class MegDNNDynOutMallocImpl final: public megdnn::DynOutMallocPolicy {
     using Output = std::array<TensorPtr, 2>;
-    
+
     CompNode m_cn;
     Output m_out;
 
@@ -110,14 +110,14 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return out;
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     const OpDef& def,
     const SmallVector<LogicalTensorDesc>& inputs) {
     auto cn = inputs[0].comp_node;
-    return {
+    return {{
         {TensorLayout(inputs[0].layout.dtype), cn},
         {TensorLayout(dtype::Int32()), cn}
-    };
+    }, true};
 }
 
 OP_TRAIT_REG(CondTake, CondTake, opr::CondTake)

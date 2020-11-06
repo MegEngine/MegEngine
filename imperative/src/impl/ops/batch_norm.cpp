@@ -44,7 +44,7 @@ cg::OperatorNodeBase* apply_on_var_node(
     }
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs) {
     auto&& op_def = def.cast_final_safe<BatchNorm>();
@@ -66,7 +66,7 @@ SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
         out_shapes[i] = {i1.layout, i1.comp_node};
     }
     out_shapes[nr_out-1] = {i0.layout, i0.comp_node};
-    return out_shapes;
+    return {out_shapes, true};
 }
 
 OP_TRAIT_REG(BatchNorm, BatchNorm, opr::BatchNorm)

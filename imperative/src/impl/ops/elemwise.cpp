@@ -29,7 +29,7 @@ cg::OperatorNodeBase* apply_on_var_node(
     return opr::Elemwise::make(inputs, elemwise_opr.mode).node()->owner_opr();
 }
 
-SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs) {
     auto&& op_def = def.cast_final_safe<Elemwise>();
@@ -40,7 +40,7 @@ SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
     TensorShapeArray inp_shapes;
     DType out_dt;
     CompNode out_cn;
-    for (size_t i = 0; i < inputs.size(); ++ i) {        
+    for (size_t i = 0; i < inputs.size(); ++ i) {
         auto &&t = inputs[i];
         if (!i) {
             out_cn = t.comp_node;
@@ -55,12 +55,12 @@ SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
             TensorLayout out_layout;
             out_layout.ndim = 0;
             out_layout.dtype = out_dt;
-            return {{out_layout, out_cn}};
+            return {{{out_layout, out_cn}}, true};
         }
     }
 
     auto&& out_shape = opr::Elemwise::get_output_var_shape(op_def.mode, inp_shapes);
-    return {{TensorLayout(out_shape, out_dt, inputs[0].layout.format), out_cn}};
+    return {{{TensorLayout(out_shape, out_dt, inputs[0].layout.format), out_cn}}, true};
 }
 
 OP_TRAIT_REG(Elemwise, Elemwise, opr::Elemwise)

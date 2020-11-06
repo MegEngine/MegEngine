@@ -24,12 +24,12 @@ BackwardGraph::InternalGraph::apply(
         inputs);
 }
 
-SmallVector<LogicalTensorDesc>
-BackwardGraph::InternalGraph::infer_attrs(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> BackwardGraph::InternalGraph::infer_attrs(
         const SmallVector<LogicalTensorDesc>& inputs) const {
     using TensorAttr = LogicalTensorDesc;
     ThinHashMap<size_t, TensorAttr> node2attr;
     auto&& input_nodes = this->inputs;
+    auto&& output_nodes = this->outputs;
     mgb_assert(inputs.size() == input_nodes.size());
     for (size_t i = 0; i < inputs.size(); ++ i) {
         node2attr[input_nodes[i]] = inputs[i];
@@ -41,25 +41,29 @@ BackwardGraph::InternalGraph::infer_attrs(
             i.second->layout(), i.second->comp_node(),
             value->proxy_to_default_cpu()};
     }
+    bool validated = true;
     for (size_t i = 0; i < exprs.size(); ++ i) {
-        auto&& expr = exprs[i];
-        SmallVector<TensorAttr> inputs;
-        for (auto &&in : std::get<1>(expr)) {
-            inputs.push_back(node2attr.at(in));
+        auto&& [expr_op, expr_inps, expr_oups] = exprs[i];
+        SmallVector<TensorAttr> expr_input_descs;
+        for (auto &&inp : expr_inps) {
+            expr_input_descs.push_back(node2attr.at(inp));
         }
-        auto outputs = OpDef::infer_output_attrs_fallible(
-                *std::get<0>(expr), inputs);
-        auto output_nodes = std::get<2>(expr);
-        mgb_assert(outputs.size() == output_nodes.size());
-        for (size_t i = 0; i < outputs.size(); ++ i) {
-            node2attr[output_nodes[i]] = outputs[i];
+
+        auto[expr_output_descs, expr_validated] = OpDef::infer_output_attrs_fallible(
+            *expr_op, expr_input_descs);
+        validated = validated && expr_validated;
+
+        mgb_assert(expr_output_descs.size() == expr_oups.size());
+        for (size_t i = 0; i < expr_output_descs.size(); ++ i) {
+            node2attr[expr_oups[i]] = expr_output_descs[i];
         }
     }
+
     SmallVector<TensorAttr> ret;
-    for (auto &&i : outputs) {
+    for (auto &&i : output_nodes) {
         ret.push_back(node2attr.at(i));
     }
-    return ret;
+    return {ret, validated};
 }
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(BackwardGraph);
@@ -72,11 +76,11 @@ SmallVector<TensorPtr> backward_impl(
             .graph().apply(tensors);
 }
 
-SmallVector<LogicalTensorDesc> infer_tensor_attrs(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_tensor_attrs(
     const OpDef& backward_graph,
     const SmallVector<LogicalTensorDesc> inputs) {
     return backward_graph.cast_final_safe<BackwardGraph>()
-            .graph().infer_attrs(inputs);
+        .graph().infer_attrs(inputs);
 }
 
 OP_TRAIT_REG(BackwardGraph, BackwardGraph)

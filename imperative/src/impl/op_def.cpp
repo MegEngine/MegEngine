@@ -42,7 +42,7 @@ cg::OperatorNodeBase* OpDef::apply_on_var_node(
     return def.trait()->apply_on_var_node(def, inputs);
 }
 
-SmallVector<LogicalTensorDesc> OpDef::infer_output_attrs_fallible(
+std::tuple<SmallVector<LogicalTensorDesc>, bool> OpDef::infer_output_attrs_fallible(
     const OpDef& def,
     const SmallVector<LogicalTensorDesc>& inputs) {
     return def.trait()->infer_output_attrs_fallible(def, inputs);

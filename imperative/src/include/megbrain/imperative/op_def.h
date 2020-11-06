@@ -44,7 +44,7 @@ public:
         const OpDef& def,
         const VarNodeArray& inputs);
 
-    static SmallVector<LogicalTensorDesc> infer_output_attrs_fallible(
+    static std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
 
