@@ -394,6 +394,7 @@ class trace:
 
     def _apply_graph_options(self, graph):
 
+        graph.options.no_force_inplace = True
         graph.options.seq_opt.enable_seq_comp_node_opt = False
         # graph opt level
         if self._graph_opt_level is not None:
@@ -417,7 +418,6 @@ class trace:
 
     def _compile(self):
         graph = self._graph = G.Graph()
-        graph.options.no_force_inplace = True
         graph.options.async_exec_level = 0b100
         self._apply_graph_options(graph)
         # graph.options.graph_opt_level = 0
