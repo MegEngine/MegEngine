@@ -99,13 +99,12 @@ do
         LD_LIBRARY_PATH=${BUILD_DIR}/dnn/cuda-stub:$LD_LIBRARY_PATH auditwheel repair -L ${NEW_LIB_PATH} ${BUILD_DIR}/staging/dist/Meg*.whl
     else
         mkdir -p ${SRC_DIR}/scripts/whl/manylinux2010/output/wheelhouse
-        cd ${SRC_DIR}/scripts/whl/manylinux2010/output/wheelhouse
-        mv ${BUILD_DIR}/staging/dist/Meg*${ver}*.whl .
+        cd ${BUILD_DIR}/staging/dist/
         org_whl_name=`ls Meg*${ver}*.whl`
         compat_whl_name=`echo ${org_whl_name} | sed 's/linux/manylinux2010/'`
         echo "org whl name: ${org_whl_name}"
         echo "comapt whl name: ${compat_whl_name}"
-        mv ${org_whl_name} ${compat_whl_name}
+        mv ${org_whl_name} ${SRC_DIR}/scripts/whl/manylinux2010/output/wheelhouse/${compat_whl_name}
         cd /home/output
     fi
     chown -R ${UID}.${UID} .
