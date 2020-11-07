@@ -33,13 +33,18 @@ namespace x86 {
 class MatrixMulImpl : public fallback::MatrixMulImpl {
 public:
     using fallback::MatrixMulImpl::MatrixMulImpl;
+    class AlgoBase : public fallback::MatrixMulImpl::AlgoBase {
+    public:
+        AlgoBase() : fallback::MatrixMulImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::X86;
+        }
+    };
 
     bool is_thread_safe() const override { return true; }
 
-    SmallVector<AlgoBase*> algo_pack() override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
 
 protected:
-    static void* const sm_x86_algo_type;
     class AlgoF32Blas;
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
     class AlgoF32MKLPackA;

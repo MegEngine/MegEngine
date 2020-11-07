@@ -28,6 +28,7 @@ class Convolution3DBackwardDataImpl::AlgoBase: public Algorithm {
         ~AlgoBase() = default;
 
     public:
+        AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
         struct SizeArgs {
             HandleImpl *handle;
             CanonizedFilterMeta filter_meta;

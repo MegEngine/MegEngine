@@ -18,8 +18,14 @@ namespace aarch64 {
 class MatrixMulImpl : public arm_common::MatrixMulImpl {
 public:
     using arm_common::MatrixMulImpl::MatrixMulImpl;
+    class AlgoBase : public arm_common::MatrixMulImpl::AlgoBase {
+    public:
+        AlgoBase() : arm_common::MatrixMulImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::AARCH64;
+        }
+    };
 
-    SmallVector<AlgoBase*> algo_pack() override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
 
 private:
     class AlgoF32K8x12x1;     // Aarch64 F32 Kernel 8X12X1
@@ -57,7 +63,7 @@ private:
 #else
     class AlgoQuint8K8x8x8;         // Aarch64 Quint8 Kernel 8x8x8
 #endif
-    class AlgoInt8x8x16MK4_K8x8x8;      // Aarch64 Int4x4x16 Kernel 4x4x16
+    class AlgoInt8x8x16MK4_K8x8x8;  // Aarch64 Int4x4x16 Kernel 4x4x16
 
     class AlgoPack;
 };

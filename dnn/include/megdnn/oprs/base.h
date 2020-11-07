@@ -11,6 +11,7 @@
 #pragma once
 
 #include "megdnn/basic_types.h"
+#include "megdnn/handle.h"
 
 #include "megdnn/internal/visibility_prologue.h"
 namespace megdnn {
@@ -105,11 +106,11 @@ public:
     virtual bool is_reproducible() const = 0;
     virtual const char* name() const = 0;
 
-    //! a pointer to represent class type
-    virtual void* type() const { return nullptr; }
+    Handle::HandleType handle_type() const { return m_handle_type; }
 
 protected:
     ~Algorithm() = default;
+    Handle::HandleType m_handle_type = Handle::HandleType::NAIVE;
 };
 
 /*!

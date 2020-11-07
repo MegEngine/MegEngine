@@ -28,6 +28,7 @@ class ConvolutionBackwardFilterImpl::AlgoBase: public Algorithm {
         ~AlgoBase() = default;
 
     public:
+        AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
         struct SizeArgs {
             HandleImpl *handle;
             const TensorLayout *src_layout, *diff_layout, *grad_layout;

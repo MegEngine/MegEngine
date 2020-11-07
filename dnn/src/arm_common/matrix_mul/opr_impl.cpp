@@ -15,13 +15,6 @@
 using namespace megdnn;
 using namespace arm_common;
 
-namespace {
-uint8_t arm_common_algo_type_storage;
-}  // anonymous namespace
-
-void* const MatrixMulImpl::sm_arm_common_algo_type =
-        &arm_common_algo_type_storage;
-
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt8x8x16 int8x8x16;
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -49,10 +42,10 @@ public:
         all_algos.emplace_back(&f32_gemv_mk4);
         all_algos.emplace_back(&gevm);
     }
-    SmallVector<AlgoBase*> all_algos;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> all_algos;
 };
 
-SmallVector<MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
     static AlgoPack s_algo_pack;
     auto&& algos = fallback::MatrixMulImpl::algo_pack();
     algos.insert(algos.begin(), s_algo_pack.all_algos.begin(),

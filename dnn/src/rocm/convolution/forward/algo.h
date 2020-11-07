@@ -32,6 +32,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::ROCM; }
     struct SizeArgs : public convolution::ForwardSizeArgs {
         ConvolutionForwardImpl* opr;
 

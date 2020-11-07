@@ -37,8 +37,6 @@ class NaiveConvolutionBackwardData final
     const char* name() const override { return "NCBD"; }
 };
 NaiveConvolutionBackwardData naive_conv_backward_data;
-uint8_t fallback_deconv_algo_type_storage;
-uint8_t fallback_conv_algo_type_storage;
 
 template <typename T>
 void incr_ptr(T*& dst, ptrdiff_t delta) {
@@ -68,9 +66,6 @@ public:
     }
     SmallVector<AlgoBase*> all_algos;
 };
-
-void* const ConvolutionImpl::sm_fallback_conv_algo_type =
-        &fallback_conv_algo_type_storage;
 
 SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
@@ -412,9 +407,6 @@ ConvolutionImpl::NCBKernSizeParam::deduce_algo_data_type() const {
 
 /* ===================== ConvolutionBackwardData ===================== */
 
-void* const ConvolutionBackwardDataImpl::sm_fallback_deconv_algo_type =
-        &fallback_deconv_algo_type_storage;
-
 struct ConvolutionBackwardDataImpl::AlgoPack {
     AlgoDirect direct;
     AlgoMatrixMul matmul;
@@ -630,7 +622,7 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic_with_ncb(
 size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(
         Algorithm* algo, const NCBKernSizeParam& param) {
     megdnn_assert(param.filter_meta.group == 1);
-    if (algo->type() == sm_fallback_deconv_algo_type) {
+    if (algo->handle_type() == Handle::HandleType::FALLBACK) {
         return static_cast<AlgoBase*>(algo)->get_workspace(this, param);
     }
     megdnn_assert(algo == &naive_conv_backward_data);
@@ -642,7 +634,7 @@ ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(
         Algorithm* algo, const NCBKernSizeParam& param) {
     megdnn_assert(param.filter_meta.group == 1);
 
-    if (algo->type() == sm_fallback_deconv_algo_type) {
+    if (algo->handle_type() == Handle::HandleType::FALLBACK) {
         return static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
     }
 

@@ -24,7 +24,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::INT8X8X16, DEFAULT)
 };
@@ -37,7 +36,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, DEFAULT)
@@ -51,7 +49,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4)
@@ -66,7 +63,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4_DOT)
@@ -84,7 +80,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
@@ -98,7 +93,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(4, 1, 1, 4, AlgoDataType::FLOAT32, MK4)
@@ -113,7 +107,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::FLOAT16, DEFAULT)
@@ -128,7 +121,6 @@ public:
     bool preferred(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_arm_common_algo_type; }
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(

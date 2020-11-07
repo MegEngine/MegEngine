@@ -22,54 +22,14 @@
 
 using namespace megdnn;
 using namespace x86;
-
 namespace {
-uint8_t x86_algo_type_storage;
-void* x86_algo_type = &x86_algo_type_storage;
+
+bool is_fallback_or_naive(const detail::Algorithm* algo) {
+    return algo->handle_type() == Handle::HandleType::NAIVE ||
+           algo->handle_type() == Handle::HandleType::FALLBACK;
+}
+
 }  // anonymous namespace
-#if MEGDNN_X86_WITH_MKL_DNN
-void* ConvBiasImpl::AlgoMkldnnQint8::type() const {
-    return x86_algo_type;
-}
-void* ConvBiasImpl::AlgoMkldnnMatmulQint8::type() const {
-    return x86_algo_type;
-}
-void* ConvBiasImpl::AlgoMkldnnConv::type() const {
-    return x86_algo_type;
-}
-#endif
-
-void* ConvBiasImpl::AlgoDirect::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoDirectStride2::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoDirectAvx2Stride1Int8::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoFP32WinogradF63_8x8::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoFP32WinogradF23_8x8::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoAVX2DirectConvStride2::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8::type() const {
-    return x86_algo_type;
-}
-
-void* ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8::type() const {
-    return x86_algo_type;
-}
 
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoDirect stride1_direct;
@@ -88,8 +48,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
-        //! FIXME: preference to use mkldnn algo on VNNI devices
-        //! But now mkldnn algo preference issue with NCHW->NHWC->NCHW
+    //! FIXME: preference to use mkldnn algo on VNNI devices
+    //! But now mkldnn algo preference issue with NCHW->NHWC->NCHW
 #if MEGDNN_X86_WITH_MKL_DNN
         //! Create the mkldnn algo
         all_algos.emplace_back(&mkldnn_conv_fp32);
@@ -108,7 +68,7 @@ public:
         auto&& matmul_algos =
                 static_cast<MatrixMulImpl*>(matmul_opr)->algo_pack();
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr)
+            if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {8, 16, 24}) {
                 refhold.emplace_back(new AlgoFP32WinogradF63_8x8(
@@ -126,7 +86,7 @@ public:
     SmallVector<AlgoBase*> winograd_algos;
 };
 
-SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
+SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
     auto&& algos = fallback::ConvBiasImpl::algo_pack();
     algos.insert(algos.begin(), sl_algo_pack.all_algos.begin(),
@@ -176,8 +136,8 @@ bool ConvBiasImpl::is_matmul_quantized_prefer(
             !chanwise_avx2_stride2_qint8_usable_preferred(param));
 }
 
-SmallVector<AlgoCategory>
-ConvBiasImpl::suggest_algo_category_order(const NCBKernSizeParam& param) const {
+SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
+        const NCBKernSizeParam& param) const {
     auto IC = param.filter_meta.icpg;
     auto OC = param.filter_meta.ocpg;
     auto FH = param.filter_meta.spatial[0];

@@ -213,6 +213,9 @@ public:
 
     class AlgoBase : public Algorithm {
     public:
+        AlgoBase() : Algorithm() {
+            m_handle_type = Handle::HandleType::FALLBACK;
+        }
         virtual ~AlgoBase() = default;
         virtual bool usable(
                 const NCBKernSizeParam& param,

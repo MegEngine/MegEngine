@@ -18,7 +18,14 @@ namespace armv7 {
 class MatrixMulImpl : public arm_common::MatrixMulImpl {
 public:
     using arm_common::MatrixMulImpl::MatrixMulImpl;
-    SmallVector<AlgoBase*> algo_pack() override;
+    class AlgoBase : public arm_common::MatrixMulImpl::AlgoBase {
+    public:
+        AlgoBase() : arm_common::MatrixMulImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::ARMV7;
+        }
+    };
+
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
 
 private:
     class AlgoF32;                  // Armv7 F32

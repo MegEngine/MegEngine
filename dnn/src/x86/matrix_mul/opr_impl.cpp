@@ -16,12 +16,6 @@
 using namespace megdnn;
 using namespace x86;
 
-namespace {
-uint8_t x86_algo_type_storage;
-}  // anonymous namespace
-
-void* const MatrixMulImpl::sm_x86_algo_type = &x86_algo_type_storage;
-
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32Blas f32blas;
 
@@ -62,10 +56,10 @@ public:
         all_algos.emplace_back(&f32mkl_packa);
 #endif
     }
-    SmallVector<AlgoBase*> all_algos;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> all_algos;
 };
 
-SmallVector<MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
     static AlgoPack s_algo_pack;
     auto&& algos = fallback::MatrixMulImpl::algo_pack();
     algos.insert(algos.begin(), s_algo_pack.all_algos.begin(),

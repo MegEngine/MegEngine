@@ -177,8 +177,6 @@ public:
         }
     };
 
-    static void* const sm_fallback_conv_algo_type;
-
     /**
      * \brief Kernel run time id, This information is used for getting the
      * work data
@@ -197,6 +195,9 @@ public:
 
     class AlgoBase : public Algorithm {
     public:
+        AlgoBase() : Algorithm() {
+            m_handle_type = Handle::HandleType::FALLBACK;
+        }
         virtual ~AlgoBase() = default;
         virtual bool usable(const NCBKernSizeParam& param,
                             AlgoSelectionStrategy) const = 0;
@@ -407,13 +408,14 @@ protected:
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
             bool reproducible = false);
 
-    static void* const sm_fallback_deconv_algo_type;
-
     class AlgoBase : public Algorithm {
     protected:
         ~AlgoBase() = default;
 
     public:
+        AlgoBase() : Algorithm() {
+            m_handle_type = Handle::HandleType::FALLBACK;
+        }
         virtual bool usable(ConvolutionBackwardDataImpl* opr,
                             const NCBKernSizeParam& param) const = 0;
         virtual size_t get_workspace(ConvolutionBackwardDataImpl* opr,

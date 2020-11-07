@@ -26,6 +26,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         BatchConvBiasForwardImpl* opr;
         TensorLayout src_layout, filter_layout, bias_layout, z_layout,

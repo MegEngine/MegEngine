@@ -32,7 +32,7 @@ public:
     SmallVector<AlgoBase*> all_algos;
 };
 
-SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
+SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
     auto&& algos = arm_common::ConvBiasImpl::algo_pack();
     //! TODO fused matmul bias is slower than matmul + elemwise in armv7 now,

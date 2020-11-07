@@ -21,9 +21,6 @@
 using namespace megdnn;
 using namespace arm_common;
 
-namespace {
-uint8_t arm_common_algo_type_storage;
-}  // anonymous namespace
 
 /* ===================== ConvolutionBackwardData ===================== */
 struct ConvolutionBackwardDataImpl::AlgoPack {
@@ -36,46 +33,44 @@ struct ConvolutionBackwardDataImpl::AlgoPack {
 };
 ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
 
-void* const ConvolutionBackwardDataImpl::sm_arm_common_algo_type =
-        &arm_common_algo_type_storage;
-
-ConvolutionBackwardDataImpl::ncb_kern_t ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(
+ConvolutionBackwardDataImpl::ncb_kern_t
+ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(
         Algorithm* algo, const NCBKernSizeParam& param) {
-    if (algo->type() == sm_arm_common_algo_type) {
+    if (algo->handle_type() == Handle::HandleType::ARM_COMMON) {
         return static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
     }
-    return fallback::ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(algo, param);
+    return fallback::ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(algo,
+                                                                       param);
 }
 
-size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(Algorithm* algo,
-                                             const NCBKernSizeParam& param) {
-    if (algo->type() == sm_arm_common_algo_type) {
+size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(
+        Algorithm* algo, const NCBKernSizeParam& param) {
+    if (algo->handle_type() == Handle::HandleType::ARM_COMMON) {
         return static_cast<AlgoBase*>(algo)->get_workspace(this, param);
     }
-    return fallback::ConvolutionBackwardDataImpl::ncb_1g_get_workspace(algo, param);
+    return fallback::ConvolutionBackwardDataImpl::ncb_1g_get_workspace(algo,
+                                                                       param);
 }
 
 std::vector<ConvolutionBackwardDataImpl::Algorithm*>
-ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(const NCBKernSizeParam& param) {
-
-    auto ret = fallback::ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(param);
+ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(
+        const NCBKernSizeParam& param) {
+    auto ret = fallback::ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(
+            param);
 
 #if __ARM_FEATURE_DOTPROD
-    if((param.filter_type.enumv() == DTypeEnum::QuantizedS8 ||
-        param.filter_type.enumv() == DTypeEnum::Int8) &&
-       (param.grad_type.enumv() == DTypeEnum::QuantizedS32 ||
-        param.grad_type.enumv() == DTypeEnum::Int32)) {
-
+    if ((param.filter_type.enumv() == DTypeEnum::QuantizedS8 ||
+         param.filter_type.enumv() == DTypeEnum::Int8) &&
+        (param.grad_type.enumv() == DTypeEnum::QuantizedS32 ||
+         param.grad_type.enumv() == DTypeEnum::Int32)) {
         if (sm_algo_pack.i8x8x32_direct_stride1_sdot.usable(this, param)) {
             ret.insert(ret.begin(), &sm_algo_pack.i8x8x32_direct_stride1_sdot);
         }
         if (sm_algo_pack.i8x8x32_direct_stride2_sdot.usable(this, param)) {
             ret.insert(ret.begin(), &sm_algo_pack.i8x8x32_direct_stride2_sdot);
         }
-    }
-    else if(param.filter_type.enumv() == DTypeEnum::Quantized8Asymm &&
-            param.grad_type.enumv() == DTypeEnum::QuantizedS32) {
-
+    } else if (param.filter_type.enumv() == DTypeEnum::Quantized8Asymm &&
+               param.grad_type.enumv() == DTypeEnum::QuantizedS32) {
         if (sm_algo_pack.quint8_direct_stride1_udot.usable(this, param)) {
             ret.insert(ret.begin(), &sm_algo_pack.quint8_direct_stride1_udot);
         }

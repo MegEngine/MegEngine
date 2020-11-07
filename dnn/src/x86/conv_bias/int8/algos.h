@@ -32,7 +32,6 @@ public:
             const NCBKernSizeParam& param) const override {
         return get_kimpls(param);
     }
-    void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
     ConvAlgoTypePack get_algo_type() const override {
@@ -57,7 +56,6 @@ public:
             const NCBKernSizeParam& param) const override {
         return get_kimpls(param);
     }
-    void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
     ConvAlgoTypePack get_algo_type() const override {
@@ -82,7 +80,6 @@ public:
             const NCBKernSizeParam& param) const override {
         return get_kimpls(param);
     }
-    void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
     ConvAlgoTypePack get_algo_type() const override {
@@ -107,7 +104,6 @@ public:
             const NCBKernSizeParam& param) const override {
         return get_kimpls(param);
     }
-    void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
     ConvAlgoTypePack get_algo_type() const override {
@@ -148,7 +144,6 @@ public:
         };
         return {{kern, {group, n, 1_z}}};
     }
-    void* type() const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
     ConvAlgoTypePack get_algo_type() const override {
@@ -178,8 +173,6 @@ public:
     }
     //! select matmul to the highest preference
     bool is_preferred(const NCBKernSizeParam& param) const override;
-
-    void* type() const override;
 
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};

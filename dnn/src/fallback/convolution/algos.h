@@ -141,8 +141,6 @@ public:
         return get_kimpl(m_algorithm, param);
     }
 
-    void* type() const override { return sm_fallback_conv_algo_type; }
-
     //! select matmul to the highest preference
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
@@ -168,7 +166,6 @@ public:
                          const NCBKernSizeParam& param) const override;
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
-    void* type() const override { return sm_fallback_deconv_algo_type; }
 };
 
 class ConvolutionBackwardDataImpl::AlgoMatrixMul final : public AlgoBase {
@@ -181,7 +178,6 @@ public:
                          const NCBKernSizeParam& param) const override;
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
-    void* type() const override { return sm_fallback_deconv_algo_type; }
 };
 
 }  // namespace fallback

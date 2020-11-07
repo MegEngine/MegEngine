@@ -26,6 +26,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::ROCM; }
     struct SizeArgs {
         HandleImpl* handle;
         const TensorLayout *src_layout, *diff_layout;

@@ -28,6 +28,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         BatchedMatrixMulForwardImpl* opr;
         TensorLayout layout_a, layout_b, layout_c;

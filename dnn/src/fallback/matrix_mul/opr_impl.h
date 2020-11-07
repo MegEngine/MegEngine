@@ -103,6 +103,7 @@ public:
         }
 
     public:
+        AlgoBase() { m_handle_type = Handle::HandleType::FALLBACK; }
         enum class AlgoSet : uint32_t {
             ALGO_TYPE_GEMM = 0,
             ALGO_TYPE_GEMV = 1,

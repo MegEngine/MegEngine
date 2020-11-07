@@ -18,24 +18,27 @@ namespace arm_common {
 
 class ConvBiasImpl;
 
-class ConvolutionBackwardDataImpl : public fallback::ConvolutionBackwardDataImpl {
+class ConvolutionBackwardDataImpl
+        : public fallback::ConvolutionBackwardDataImpl {
 public:
     using fallback::ConvolutionBackwardDataImpl::ConvolutionBackwardDataImpl;
 
 protected:
-    static void* const sm_arm_common_algo_type;
-
-    class AlgoBase : public Algorithm {
+    class AlgoBase : public fallback::ConvolutionBackwardDataImpl::AlgoBase {
     protected:
         ~AlgoBase() = default;
 
     public:
-        virtual bool usable(ConvolutionBackwardDataImpl* opr,
+        AlgoBase() : fallback::ConvolutionBackwardDataImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::ARM_COMMON;
+        }
+        virtual bool usable(fallback::ConvolutionBackwardDataImpl* opr,
                             const NCBKernSizeParam& param) const = 0;
-        virtual size_t get_workspace(ConvolutionBackwardDataImpl* opr,
+        virtual size_t get_workspace(fallback::ConvolutionBackwardDataImpl* opr,
                                      const NCBKernSizeParam& param) const = 0;
         virtual ncb_kern_t dispatch_kern(
-                ConvolutionBackwardDataImpl* opr, const NCBKernSizeParam& param) const = 0;
+                fallback::ConvolutionBackwardDataImpl* opr,
+                const NCBKernSizeParam& param) const = 0;
     };
 
     ncb_kern_t ncb_1g_dispatch_kern(Algorithm* algo,
@@ -49,7 +52,7 @@ protected:
 
     const char* get_algorithm_set_name() const override;
 
-    private:
+private:
 #if __ARM_FEATURE_DOTPROD
     class AlgoSdot8DirectStride1;
     class AlgoSdot8DirectStride2;
@@ -62,4 +65,4 @@ protected:
 
 }  // namespace arm_common
 }  // namespace megdnn
-// vim: syntax=cpp.doxygen
+   // vim: syntax=cpp.doxygen

@@ -25,7 +25,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
 };
@@ -38,7 +37,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::ONLY_PACKA; }
     kern_naked_t get_kern_naked(const KernSizeParam&) const override;
     void pack_A(const KernParam& kern_param, void* out, size_t index,
@@ -60,7 +58,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
@@ -71,7 +68,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
@@ -86,7 +82,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     bool preferred(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
@@ -102,7 +97,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     bool preferred(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
@@ -114,7 +108,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
@@ -125,7 +118,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 4, AlgoDataType::FLOAT32, MK8)
 };
@@ -138,7 +130,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 #endif
@@ -151,7 +142,6 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
-    void* type() const override { return sm_x86_algo_type; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, DEFAULT)
 };

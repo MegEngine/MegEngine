@@ -38,6 +38,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs : public conv_bias::BiasForwardSizeArgs {
         ConvBiasForwardImpl* opr;
 

@@ -26,6 +26,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         DeformableConvBackwardDataImpl* opr;
         HandleImpl* handle;

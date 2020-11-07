@@ -18,13 +18,18 @@ namespace arm_common {
 class MatrixMulImpl : public fallback::MatrixMulImpl {
 public:
     using fallback::MatrixMulImpl::MatrixMulImpl;
-
     bool is_thread_safe() const override { return true; }
 
-    SmallVector<AlgoBase*> algo_pack() override;
+    class AlgoBase : public fallback::MatrixMulImpl::AlgoBase {
+        public:
+            AlgoBase() : fallback::MatrixMulImpl::AlgoBase() {
+                m_handle_type = Handle::HandleType::ARM_COMMON;
+            }
+    };
+
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
 
 protected:
-    static void* const sm_arm_common_algo_type;
     class AlgoF32Gemv;               // Arm_common F32 Gemv
     class AlgoF32GemvMK4;         // Arm_common F32 Gemv NCHW44
     class AlgoInt8x8x32Gemv;         // Arm_common Int8x8x32 Gemv

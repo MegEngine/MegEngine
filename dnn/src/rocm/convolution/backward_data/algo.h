@@ -25,6 +25,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::ROCM; }
     struct SizeArgs {
         HandleImpl* handle;
         CanonizedFilterMeta filter_meta;

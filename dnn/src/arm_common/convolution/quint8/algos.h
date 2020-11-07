@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -18,38 +19,42 @@ namespace arm_common {
 
 #if __ARM_FEATURE_DOTPROD
 /* ===================== ConvolutionBackwardData ===================== */
-class ConvolutionBackwardDataImpl::AlgoUdot8DirectStride1 final : public AlgoBase {
+class ConvolutionBackwardDataImpl::AlgoUdot8DirectStride1 final
+        : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_COMMON_QUINT8_DIRECT_DECONV_STRIDE1"; }
+    const char* name() const override {
+        return "ARM_COMMON_QUINT8_DIRECT_DECONV_STRIDE1";
+    }
 
-    bool usable(ConvolutionBackwardDataImpl*,
+    bool usable(fallback::ConvolutionBackwardDataImpl*,
                 const NCBKernSizeParam& param) const override;
 
-    size_t get_workspace(ConvolutionBackwardDataImpl*,
+    size_t get_workspace(fallback::ConvolutionBackwardDataImpl*,
                          const NCBKernSizeParam& param) const override;
 
-    ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
+    ncb_kern_t dispatch_kern(fallback::ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
 
-    void* type() const override { return sm_arm_common_algo_type; }
 };
 
-class ConvolutionBackwardDataImpl::AlgoUdot8DirectStride2 final : public AlgoBase {
+class ConvolutionBackwardDataImpl::AlgoUdot8DirectStride2 final
+        : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "ARM_COMMON_QUINT8_DIRECT_DECONV_STRIDE2"; }
+    const char* name() const override {
+        return "ARM_COMMON_QUINT8_DIRECT_DECONV_STRIDE2";
+    }
 
-    bool usable(ConvolutionBackwardDataImpl*,
+    bool usable(fallback::ConvolutionBackwardDataImpl*,
                 const NCBKernSizeParam& param) const override;
 
-    size_t get_workspace(ConvolutionBackwardDataImpl*,
+    size_t get_workspace(fallback::ConvolutionBackwardDataImpl*,
                          const NCBKernSizeParam& param) const override;
 
-    ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
+    ncb_kern_t dispatch_kern(fallback::ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
 
-    void* type() const override { return sm_arm_common_algo_type; }
 };
 #endif
 }  // namespace arm_common

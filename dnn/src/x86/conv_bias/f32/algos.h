@@ -47,8 +47,6 @@ public:
         return get_kimpls(param);
     }
 
-    void* type() const override;
-
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
@@ -84,8 +82,6 @@ public:
         return get_kimpls(param);
     }
 
-    void* type() const override;
-
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
@@ -103,7 +99,6 @@ public:
         }
         return m_name.c_str();
     }
-    void* type() const override;
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
@@ -119,7 +114,6 @@ public:
         }
         return m_name.c_str();
     }
-    void* type() const override;
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
@@ -161,7 +155,6 @@ public:
         };
         return {{kern, {1_z, 1_z, 1_z}}};
     }
-    void* type() const override;
 
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};

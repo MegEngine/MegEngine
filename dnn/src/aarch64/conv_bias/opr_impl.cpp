@@ -45,7 +45,7 @@ public:
     SmallVector<AlgoBase*> matmul_algos;
 };
 
-SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
+SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
     auto&& algos = arm_common::ConvBiasImpl::algo_pack();
     algos.insert(algos.begin(), sl_algo_pack.direct_algos.begin(),

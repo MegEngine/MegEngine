@@ -20,10 +20,15 @@ namespace x86 {
 class ConvBiasImpl : public fallback::ConvBiasImpl {
 public:
     using fallback::ConvBiasImpl::ConvBiasImpl;
-    using FallbackConvBiasImpl = fallback::ConvBiasImpl;
+    class AlgoBase : public fallback::ConvBiasImpl::AlgoBase {
+    public:
+        AlgoBase() : fallback::ConvBiasImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::X86;
+        }
+    };
 
     bool is_thread_safe() const override { return true; }
-    SmallVector<AlgoBase*> algo_pack() override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> algo_pack() override;
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const override;
 

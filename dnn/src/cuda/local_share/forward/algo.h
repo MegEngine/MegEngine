@@ -25,6 +25,7 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         LocalShareForwardImpl* opr;
         TensorLayout src_layout, filter_layout, dst_layout;

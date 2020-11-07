@@ -22,6 +22,7 @@ class Convolution3DBackwardFilterImpl::AlgoBase: public Algorithm {
         ~AlgoBase() = default;
 
     public:
+        AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
         struct SizeArgs {
             HandleImpl *handle;
             const TensorLayout *src_layout, *diff_layout;
@@ -128,8 +129,8 @@ class Convolution3DBackwardFilterImpl::AlgoInplaceMatmul final: public AlgoBase 
         const char* name() const override {
             return "INPLACE_MATMUL";
         }
-        bool is_reproducible() const override {            
-            return false; 
+        bool is_reproducible() const override {
+            return false;
         }
 };
 

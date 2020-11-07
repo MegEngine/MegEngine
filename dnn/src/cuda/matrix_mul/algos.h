@@ -32,13 +32,14 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         MatrixMulForwardImpl* opr;
         TensorLayout layout_a, layout_b, layout_c;
 
         std::string to_string() const;
-        SizeArgs(MatrixMulForwardImpl* opr, const TensorLayout& A, const TensorLayout& B,
-                 const TensorLayout& C);
+        SizeArgs(MatrixMulForwardImpl* opr, const TensorLayout& A,
+                 const TensorLayout& B, const TensorLayout& C);
 
         bool can_be_treated_as_int8x8x32() const {
             return layout_a.dtype.enumv() == layout_b.dtype.enumv() &&

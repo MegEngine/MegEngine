@@ -6,10 +6,11 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-#include "hcc_detail/hcc_defs_prologue.h"
 #include "./opr_impl.h"
+#include "hcc_detail/hcc_defs_prologue.h"
 
 #include "src/common/utils.cuh"
 #include "src/rocm/handle.h"
@@ -92,8 +93,8 @@ void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
                     static_cast<const rocblas_half*>(A.raw_ptr),
                     A.layout.stride[1], A.layout.stride[0],
                     reinterpret_cast<const rocblas_half*>(zero_half),
-                    static_cast<rocblas_half*>(C.raw_ptr),
-                    C.layout.stride[1], C.layout.stride[0], batch));
+                    static_cast<rocblas_half*>(C.raw_ptr), C.layout.stride[1],
+                    C.layout.stride[0], batch));
 
         };
 #endif

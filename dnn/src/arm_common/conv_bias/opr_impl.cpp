@@ -11,6 +11,7 @@
  */
 
 #include "megdnn/opr_param_defs.h"
+#include "megdnn/oprs/base.h"
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8x8x16/algos.h"
 #include "src/arm_common/conv_bias/quint8/algos.h"
@@ -18,6 +19,7 @@
 #include "src/arm_common/conv_bias/opr_impl.h"
 #include "src/common/metahelper.h"
 #include "src/common/utils.h"
+#include "src/fallback/conv_bias/opr_impl.h"
 #include "src/naive/handle.h"
 
 #include "src/arm_common/convolution/opr_impl.h"
@@ -37,7 +39,12 @@ using namespace megdnn;
 using namespace arm_common;
 
 namespace {
-uint8_t arm_common_algo_type_storage;
+
+bool is_fallback_or_naive(const detail::Algorithm* algo) {
+    return algo->handle_type() == Handle::HandleType::NAIVE ||
+           algo->handle_type() == Handle::HandleType::FALLBACK;
+}
+
 }  // anonymous namespace
 
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
@@ -50,7 +57,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoS8DirectStride1 s8_direct_stride1;
     AlgoS8ChanWiseStride1NCHW44 s8_channel_wise_stride1_nchw44;
     AlgoS8ChanWiseStride2NCHW44 s8_channel_wise_stride2_nchw44;
-    AlgoS8x8x16ChanWiseStride1Stride2NCHW44 s8x8x16_channel_wise_stride1_stride2_nchw44;
+    AlgoS8x8x16ChanWiseStride1Stride2NCHW44
+            s8x8x16_channel_wise_stride1_stride2_nchw44;
 
 #if __ARM_FEATURE_DOTPROD
     AlgoDotS8DirectStride1 ds8_direct_stride1;
@@ -129,7 +137,7 @@ public:
                         ->select_algo_type(
                                 {AlgoDataType::FLOAT32, MatmulFormat::MK4});
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr)
+            if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP32WinogradF23_4x4(
@@ -166,7 +174,7 @@ public:
                                ->select_algo_type({AlgoDataType::FLOAT32,
                                                    MatmulFormat::DEFAULT});
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr)
+            if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP32WinogradF63(
@@ -189,7 +197,7 @@ public:
                                ->select_algo_type({AlgoDataType::FLOAT16,
                                                    MatmulFormat::DEFAULT});
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr)
+            if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP16WinogradF23(
@@ -210,7 +218,7 @@ public:
                                ->select_algo_type({AlgoDataType::FLOAT16,
                                                    MatmulFormat::MK8});
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr)
+            if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoFP16WinogradF23_8x8(
@@ -224,7 +232,7 @@ public:
                                ->select_algo_type({AlgoDataType::INT16X16X32,
                                                    MatmulFormat::MK8});
         for (auto&& algo : matmul_algos) {
-            if (algo->type() == nullptr)
+            if (is_fallback_or_naive(algo))
                 continue;
             for (uint32_t tile_size : {16, 8, 24, 32}) {
                 refhold.emplace_back(new AlgoS8WinogradF23_8x8(
@@ -242,7 +250,7 @@ public:
     SmallVector<AlgoBase*> winograd_algos;
 };
 
-SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
+SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
     static AlgoPack sl_algo_pack;
     auto&& algos = fallback::ConvBiasImpl::algo_pack();
     algos.insert(algos.begin(), sl_algo_pack.direct_algos.begin(),
@@ -251,9 +259,6 @@ SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
                  sl_algo_pack.winograd_algos.end());
     return std::move(algos);
 }
-
-void* const ConvBiasImpl::sm_arm_common_algo_type =
-        &arm_common_algo_type_storage;
 
 bool ConvBiasImpl::is_matmul_quantized_prefer(
         const ConvBiasImpl::NCBKernSizeParam& param) const {

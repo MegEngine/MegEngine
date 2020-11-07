@@ -44,7 +44,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt16x16x32MK8_4x8 int16x16x32_mk8_4x8;
 
 public:
-    SmallVector<MatrixMulImpl::AlgoBase*> all_algos;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> all_algos;
 
     AlgoPack() {
         all_algos.emplace_back(&f32_gemv);
@@ -73,7 +73,7 @@ public:
     }
 };
 
-SmallVector<MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
     static AlgoPack s_algo_pack;
     auto algos = arm_common::MatrixMulImpl::algo_pack();
     algos.insert(algos.begin(), s_algo_pack.all_algos.begin(),

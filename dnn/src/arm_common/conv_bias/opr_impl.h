@@ -19,23 +19,25 @@ namespace arm_common {
 class ConvBiasImpl : public fallback::ConvBiasImpl {
 public:
     using fallback::ConvBiasImpl::ConvBiasImpl;
-    using FallbackConvBiasImpl = fallback::ConvBiasImpl;
-    using NCBKernIndex = fallback::ConvBiasImpl::NCBKernIndex;
-
     bool is_thread_safe() const override { return true; }
+    class AlgoBase : public fallback::ConvBiasImpl::AlgoBase {
+    public:
+        AlgoBase() : fallback::ConvBiasImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::ARM_COMMON;
+        }
+    };
 
-    SmallVector<AlgoBase*> algo_pack() override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> algo_pack() override;
 
     bool is_matmul_quantized_prefer(
-            const ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
+            const fallback::ConvBiasImpl::NCBKernSizeParam& ncb_param)
+            const override;
 
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const override;
     class AlgoPack;
 
 protected:
-    static void* const sm_arm_common_algo_type;
-
     const char* get_algorithm_set_name() const override;
 
 private:
@@ -93,7 +95,7 @@ private:
     class AlgoF16Direct;
     class AlgoF16DirectStride1;
 #endif
-    };
+};
 
 }  // namespace arm_common
 }  // namespace megdnn

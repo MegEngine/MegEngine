@@ -18,11 +18,16 @@ namespace armv7 {
 class ConvBiasImpl : public arm_common::ConvBiasImpl {
 public:
     using arm_common::ConvBiasImpl::ConvBiasImpl;
+    class AlgoBase : public arm_common::ConvBiasImpl::AlgoBase {
+    public:
+        AlgoBase() : arm_common::ConvBiasImpl::AlgoBase() {
+            m_handle_type = Handle::HandleType::ARMV7;
+        }
+    };
 
-    SmallVector<AlgoBase*> algo_pack() override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> algo_pack() override;
 
 protected:
-
     const char* get_algorithm_set_name() const override;
 
 private:

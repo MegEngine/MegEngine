@@ -34,6 +34,7 @@ class Convolution3DForwardImpl::AlgoBase: public Algorithm {
         ~AlgoBase() = default;
 
     public:
+        AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
         struct SizeArgs: public convolution3d::ForwardSizeArgs {
             Convolution3DForwardImpl *opr;
 
@@ -42,11 +43,11 @@ class Convolution3DForwardImpl::AlgoBase: public Algorithm {
                 desc.set(*src_layout, filter_meta, *dst_layout, opr->param());
             }
             SizeArgs(Convolution3DForwardImpl *opr,
-                    const TensorLayout &src, 
+                    const TensorLayout &src,
                     const TensorLayout &filter,
                     const TensorLayout &dst);
             SizeArgs(Convolution3DForwardImpl *opr,
-                    const TensorLayout &src, 
+                    const TensorLayout &src,
                     const CanonizedFilterMeta &filter,
                     const TensorLayout &dst);
         };
