@@ -52,9 +52,37 @@ void ChannelImpl::del(void* handle) {
     m_worker.add_task(Del{reinterpret_cast<TensorInfo*>(handle)});
 }
 
+void ChannelImpl::swap_in(void* handle) {
+    if (m_enable_evict & SWAP) {
+        mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
+                "invalid handle: %p", handle);
+        m_worker.add_task(SwapIn{reinterpret_cast<TensorInfo*>(handle)});
+    }
+}
+
+void ChannelImpl::swap_out(void* handle) {
+    if (m_enable_evict & SWAP) {
+        mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
+                "invalid handle: %p", handle);
+        m_worker.add_task(SwapOut{reinterpret_cast<TensorInfo*>(handle)});
+    }
+}
+
+void ChannelImpl::drop(void* handle) {
+    if (m_enable_evict & DROP) {
+        mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
+                "invalid handle: %p", handle);
+        m_worker.add_task(Drop{reinterpret_cast<TensorInfo*>(handle)});
+    }
+}
+
 SmallVector<void*> ChannelImpl::apply_op(
         std::shared_ptr<OpDef> op,
         const SmallVector<void*>& inputs) {
+    for (auto i : inputs) {
+        mgb_assert(m_valid_handle.find(i) != m_valid_handle.end(),
+                "invalid handle: %p", i);
+    }
     SmallVector<TensorInfo*> input_infos;
     input_infos.reserve(inputs.size());
     SmallVector<LogicalTensorDesc> input_descs;
@@ -75,7 +103,8 @@ SmallVector<void*> ChannelImpl::apply_op(
     SmallVector<void*> outputs;
     // FIXME: remove this check when op check is correct
     bool validated_bkp = true;
-    for (auto&& desc : output_descs) {
+    for (size_t i = 0;i < output_descs.size();i ++) {
+        auto&& desc = output_descs[i];
         if (desc.layout.ndim == 0) {
             validated_bkp = false;
         }
@@ -84,6 +113,18 @@ SmallVector<void*> ChannelImpl::apply_op(
         m_valid_handle.insert(info);
         cmd.outputs.push_back(info);
         outputs.push_back(info);
+    }
+    if (m_enable_evict & DROP) {
+        for (auto out : cmd.outputs) {
+            out->path.op = cmd.op;
+            for (auto out_ : cmd.outputs) {
+                out->path.outputs.push_back(m_st.at(out_));
+            }
+            for (auto inp : cmd.inputs) {
+                out->path.inputs.push_back(m_st.at(inp));
+                inp->path.dep_outputs.push_back(m_st.at(out));
+            }
+        }
     }
     m_worker.add_task(std::move(cmd));
     if (!(validated && validated_bkp) && m_async_level == 1) {
@@ -192,11 +233,18 @@ int ChannelImpl::get_async_level() {
 
 TensorInfo* ChannelImpl::alloc() {
     MGB_LOCK_GUARD(m_mutex);
-    return m_pool.alloc();
+    auto info = m_pool.alloc();
+    m_st.insert(info);
+    return info;
 }
 
 void ChannelImpl::free(TensorInfo* ptr) {
     MGB_LOCK_GUARD(m_mutex);
+    if (ptr->path.dep_outputs.size() > 0) {
+        remove_dep(ptr);
+    }
+    m_st.erase(ptr);
+    mgb_assert(ptr->allow_delete, "delete before ref_cnt = 0");
     m_pool.free(ptr);
 }
 
@@ -204,15 +252,136 @@ ChannelImpl::~ChannelImpl() {
     close();
 }
 
-void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
-    MGB_LOCK_GUARD(m_mutex);
-    dest->value_fetched = ptr->value_fetched();
-    // update tensor desc for static infer
-    dest->desc.layout = ptr->layout();
-    dest->desc.comp_node = ptr->comp_node();
-    dest->ptr = std::move(ptr);
-    if (m_waitee == dest) {
-        m_cv.notify_all();
+void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice = true) {
+    if (notice) {
+        MGB_LOCK_GUARD(m_mutex);
+        dest->value_fetched = ptr->value_fetched();
+        // update tensor desc for static infer
+        dest->desc.layout = ptr->layout();
+        dest->desc.comp_node = ptr->comp_node();
+        dest->ptr = std::move(ptr);
+        if (m_waitee == dest) {
+            m_cv.notify_all();
+        }
+    } else {
+        dest->value_fetched = ptr->value_fetched();
+        // update tensor desc for static infer
+        dest->desc.layout = ptr->layout();
+        dest->desc.comp_node = ptr->comp_node();
+        dest->ptr = std::move(ptr);
+    }
+}
+
+void ChannelImpl::do_swap_out(TensorInfo* dest) {
+    if (dest->evict_type == DROP) {
+        mgb_log_warn("the evict type of tensor %p was set to DROP, this SWAP operation will be ignored", dest);
+        return;
+    }
+    if (!dest->ptr) {
+        return;
+    }
+    dest->evict_type = SWAP;
+    dest->value_fetched = false;
+    // TODO: swap in parallel
+    dest->h_value.copy_from(dest->ptr->dev_tensor()).sync();
+    dest->ptr.reset();
+}
+
+void ChannelImpl::do_swap_in(TensorInfo* dest) {
+    if (dest->ptr) {
+        return;
+    }
+    if (dest->h_value.empty()) {
+        mgb_log_error("backup of the tensor %p not found", dest);
+        return;
+    }
+    produce_tensor(dest, Tensor::make(dest->h_value), false);
+    dest->evict_type = NONE;
+}
+
+void ChannelImpl::remove_dep(TensorInfo* dest) {
+    for (auto i : dest->path.dep_outputs) {
+        auto out_ptr = i.lock();
+        if (out_ptr) {
+            regenerate(out_ptr.get(), true);
+        }
+    }
+}
+
+void ChannelImpl::do_drop(TensorInfo* dest) {
+    if (dest->evict_type == SWAP) {
+        mgb_log_warn("the evict type of tensor %p was set to SWAP, this DROP operation will be ignored", dest);
+        return;
+    }
+    if (!dest->path.op) {
+        mgb_log_warn("the input that produced tensor %p has been deleted, this drop operation will be ignored", dest);
+        return;
+    }
+    if (dest->recompute_times >= m_max_recompute_time) {
+        mgb_log_warn("the recomputation time for tensor %p exceeds the limit, this drop operation will be ignored", dest);
+        return;
+    }
+    if (!dest->ptr) {
+        return;
+    }
+    dest->evict_type = DROP;
+    dest->value_fetched = false;
+    dest->ptr.reset();
+}
+
+void ChannelImpl::set_swap_flag(bool flag) {
+    if (flag) {
+        m_enable_evict |= SWAP;
+    } else {
+        m_enable_evict &= ~SWAP;
+    }
+}
+
+void ChannelImpl::set_drop_flag(bool flag) {
+    if (flag) {
+        m_enable_evict |= DROP;
+    } else {
+        m_enable_evict &= ~DROP;
+    }
+}
+
+void ChannelImpl::regenerate(TensorInfo* info, bool must_drop = false) {
+    if (!info->ptr && info->evict_type != NONE) {
+        if (info->evict_type == SWAP) {
+            do_swap_in(info);
+        } else {
+            mgb_assert(info->evict_type == DROP);
+            mgb_assert(info->path.op, "recomputation path not found");
+            auto path = info->path;
+            SmallVector<TensorPtr> inputs;
+            inputs.reserve(path.inputs.size());
+            for (auto i : path.inputs) {
+                mgb_assert(i, "invalid history input");
+                if (!i->ptr) {
+                    regenerate(i.get(), must_drop);
+                }
+                inputs.push_back(i->ptr);
+            }
+            auto outputs = OpDef::apply_on_physical_tensor(*path.op, inputs); 
+            for (size_t i = 0; i < outputs.size(); i ++) {
+                auto out_ptr = path.outputs[i].lock();
+                if (out_ptr) {
+                    out_ptr->recompute_times ++;
+                    if (!out_ptr->ptr && out_ptr->evict_type == DROP) {
+                        produce_tensor(out_ptr.get(), std::move(outputs[i]), false);
+                    }
+                }
+            }
+        }
+    }
+    if (must_drop) {
+        if (info->path.op) {
+            info->path.op.reset();
+            info->path.inputs.clear();
+            if (info->evict_type == DROP) {
+                info->evict_type = NONE;
+            }
+        }
     }
 }
 
@@ -227,6 +396,11 @@ void ChannelImpl::process_one_task(Command& cmd) {
                 SmallVector<TensorPtr> tensor_inputs;
                 tensor_inputs.reserve(cmd.inputs.size());
                 for (auto i : cmd.inputs) {
+                    if (m_enable_evict && i->evict_type != NONE) {
+                        if (!i->ptr) {
+                            regenerate(i);
+                        }
+                    }
                     mgb_assert(i->ptr, "Invalid input tensor ptr!");
                     tensor_inputs.push_back(i->ptr);
                 }
@@ -238,6 +412,11 @@ void ChannelImpl::process_one_task(Command& cmd) {
             } else if constexpr (std::is_same_v<T, Del>) {
                 free(cmd.dest);
             } else if constexpr (std::is_same_v<T, GetValue>) {
+                if (m_enable_evict && cmd.dest->evict_type != NONE) {
+                    if (!cmd.dest->ptr) {
+                        regenerate(cmd.dest);
+                    }
+                }
                 mgb_assert(cmd.dest->ptr, "Invalid tensor ptr!");
                 cmd.dest->ptr->fetch_value();
                 MGB_LOCK_GUARD(m_mutex);
@@ -245,6 +424,12 @@ void ChannelImpl::process_one_task(Command& cmd) {
                 if (m_waitee == cmd.dest) {
                     m_cv.notify_all();
                 }
+            } else if constexpr (std::is_same_v<T, SwapIn>) {
+                do_swap_in(cmd.dest);
+            } else if constexpr (std::is_same_v<T, SwapOut>) {
+                do_swap_out(cmd.dest);
+            } else if constexpr (std::is_same_v<T, Drop>) {
+                do_drop(cmd.dest);
             } else {
                 static_assert(!std::is_same_v<T, T>);
             }

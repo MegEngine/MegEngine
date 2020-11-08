@@ -473,6 +473,15 @@ class GenericTensorWrapper(ArrayMethodMixin, TensorWrapperBase):
     def numpy(self):
         return self.__wrapped__.numpy()
 
+    def _drop(self):
+        self.__wrapped__._drop()
+
+    def _swap_in(self):
+        self.__wrapped__._swap_in()
+
+    def _swap_out(self):
+        self.__wrapped__._swap_out()
+
 
 class TensorWrapper(GenericTensorWrapper):
     def __init__(self, data, dtype=None, device=None):

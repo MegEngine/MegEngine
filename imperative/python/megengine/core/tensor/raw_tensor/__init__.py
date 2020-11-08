@@ -12,7 +12,10 @@ import numpy as np
 
 from ..._imperative_rt import CompNode, DeviceTensorND
 from ..._imperative_rt.imperative import (
+    _drop,
     _get_dev_tensor,
+    _swap_in,
+    _swap_out,
     apply_op,
     delete,
     get_device,
@@ -62,6 +65,15 @@ class RawTensor(TensorBase):
 
     def _dev_tensor(self):
         return _get_dev_tensor(self._handle)
+
+    def _drop(self):
+        _drop(self._handle)
+
+    def _swap_in(self):
+        _swap_in(self._handle)
+
+    def _swap_out(self):
+        _swap_out(self._handle)
 
     def __repr__(self):
         return "{}({}, device='{}')".format(

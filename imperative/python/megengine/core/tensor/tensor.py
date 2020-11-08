@@ -53,6 +53,15 @@ class Tensor(TensorBase):
     def numpy(self):
         return self._data.numpy()
 
+    def _drop(self):
+        self._data._drop()
+
+    def _swap_in(self):
+        self._data._swap_in()
+
+    def _swap_out(self):
+        self._data._swap_out()
+
 
 class ApplyContext:
     __slots__ = ("inputs", "outputs", "key")

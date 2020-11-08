@@ -966,6 +966,15 @@ class CompiledTensorProxy(RawTensor):
             self.__data = self.__info.data_reader.get_value()
         return self.__data
 
+    def _drop(self):
+        return
+
+    def _swap_in(self):
+        return
+
+    def _swap_out(self):
+        return
+
     def __del__(self):
         if self.__info.shape_read and self.__shape is not None:
             self.__info.shape_reader.drop_value()
@@ -1000,6 +1009,15 @@ class LazyEvalTensor(RawTensor):
         if self._isscalar:
             ret = ret.squeeze()
         return ret
+
+    def _drop(self):
+        return
+
+    def _swap_in(self):
+        return
+
+    def _swap_out(self):
+        return
 
     def _dev_tensor(self):
         raise RuntimeError("cannot access data during symbolic tracing")
@@ -1041,6 +1059,15 @@ class TraceMixin:
         if not skip_tracing:
             active_trace._require_data(self.__handle)
         return super()._dev_tensor()
+
+    def _drop(self):
+        return
+
+    def _swap_in(self):
+        return
+
+    def _swap_out(self):
+        return
 
 
 class TracedRawTensor(TraceMixin, RawTensor):

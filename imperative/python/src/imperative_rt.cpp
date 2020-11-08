@@ -68,6 +68,15 @@ void init_imperative_rt(py::module m) {
         .def("delete", [](Interpreter::Channel& self, Interpreter::Handle handle) {
                 return self.del(handle);
             })
+        .def("_swap_in", [](Interpreter::Channel& self, Interpreter::Handle handle) {
+                self.swap_in(handle);
+            })
+        .def("_swap_out", [](Interpreter::Channel& self, Interpreter::Handle handle) {
+                self.swap_out(handle);
+            })
+        .def("_drop", [](Interpreter::Channel& self, Interpreter::Handle handle) {
+                self.drop(handle);
+            })
         .def("get_value", [](Interpreter::Channel& self, Interpreter::Handle handle) {
                 PyObject* optr = npy::ndarray_from_tensor(self.get_value(handle), npy::ShareType::TRY_SHARE);
                 return py::reinterpret_steal<py::object>(optr);
@@ -76,6 +85,8 @@ void init_imperative_rt(py::module m) {
         .def("get_device", &Interpreter::Channel::get_device)
         .def("get_shape", &Interpreter::Channel::get_shape)
         .def("_get_dev_tensor", &Interpreter::Channel::get_dev_tensor)
+        .def("_set_swap_flag", &Interpreter::Channel::set_swap_flag)
+        .def("_set_drop_flag", &Interpreter::Channel::set_drop_flag)
         .def("apply_op", &Interpreter::Channel::apply_op)
         .def("config_async_level", &Interpreter::Channel::config_async_level)
         .def("get_async_level", &Interpreter::Channel::get_async_level)
@@ -84,7 +95,7 @@ void init_imperative_rt(py::module m) {
     std::unique_ptr<Interpreter::Channel> ch = Interpreter::inst().create_channel();
     m.attr("interpreter") = py::detail::make_caster<decltype(ch)>::cast(
         std::move(ch), py::return_value_policy::move, {});
-    for (auto name : {"put", "delete", "get_value", "get_dtype", "get_device", "get_shape", "_get_dev_tensor", "apply_op", "config_async_level", "get_async_level"}) {
+    for (auto name : {"put", "delete", "get_value", "get_dtype", "get_device", "get_shape", "_get_dev_tensor", "apply_op", "config_async_level", "get_async_level", "_drop", "_swap_in", "_swap_out", "_set_drop_flag", "_set_swap_flag"}) {
         m.attr(name) = m.attr("interpreter").attr(name);
     }
 

@@ -25,6 +25,9 @@ struct Interpreter {
         virtual Handle put(const DeviceTensorND& value) = 0;
 
         virtual void del(Handle) = 0;
+        virtual void swap_in(Handle) = 0;
+        virtual void swap_out(Handle) = 0;
+        virtual void drop(Handle) = 0;
 
         virtual SmallVector<Handle> apply_op(
                 std::shared_ptr<OpDef> op,
@@ -39,6 +42,8 @@ struct Interpreter {
 
         virtual void sync() = 0;
         virtual void close() = 0;
+        virtual void set_swap_flag(bool) = 0;
+        virtual void set_drop_flag(bool) = 0;
 
         virtual void config_async_level(int level) = 0;
         virtual int get_async_level() = 0;
