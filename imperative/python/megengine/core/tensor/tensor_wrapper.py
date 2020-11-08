@@ -345,9 +345,10 @@ class ArrayMethodMixin(abc.ABC):
     @property
     def ndim(self):
         shape = self.shape
-        # XXX: assume ndim is not changed during trace
         if isinstance(shape, self.__class__):
-            shape = shape.numpy()
+            # XXX: assume ndim is not changed during trace
+            ndim = shape.__wrapped__.shape[0]
+            return ndim
         return len(shape)
 
     @property
