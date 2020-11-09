@@ -441,22 +441,22 @@ def softplus(inp: Tensor) -> Tensor:
 
 def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     r"""
-    Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
-    input Tensor. The LogSoftmax formulation can be simplified as:
+    Applies the :math:`\log(\text{softmax}(x))` function to an n-dimensional
+    input tensor. The :math:`\text{logsoftmax}(x)` formulation can be simplified as:
 
     .. math::
-        \text{LogSoftmax}(x_{i}) = \log(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} )
+        \text{logsoftmax}(x_{i}) = \log(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} )
 
     For numerical stability the implementation follows this transformation:
 
     .. math::
-        \operatorname{logsoftmax}(x)
+        \text{logsoftmax}(x)
         = \log (\frac{\exp (x)}{\sum_{i}(\exp (x_{i}))})
         = x - \log (\sum_{i}(\exp (x_{i})))
-        = x - logsumexp(x)
+        = x - \text{logsumexp}(x)
 
     :param inp: input tensor.
-    :param axis: axis along which logsoftmax will be applied.
+    :param axis: axis along which :math:`\text{logsoftmax}(x)` will be applied.
 
     Examples:
 
@@ -487,8 +487,8 @@ def logsigmoid(inp: Tensor) -> Tensor:
 
     .. math::
         \text{logsigmoid}(x) = \log(\frac{ 1 }{ 1 + \exp(-x)})
-        = \log(1/(1 + exp(-x)))
-        = - \log(1 + exp(-x))
+        = \log(1/(1 + \exp(-x)))
+        = - \log(1 + \exp(-x))
         = - \text{softplus}(-x)
 
     :param inp: input tensor.
@@ -524,14 +524,14 @@ def logsumexp(
 
     .. math::
 
-        \operatorname{logsumexp}(\boldsymbol{x})= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
+        \text{logsumexp}(x)= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
 
     For numerical stability, the implementation follows this transformation:
 
     .. math::
 
-        \operatorname{logsumexp}(\boldsymbol{x})= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
-        = \operatorname{logsumexp}(\boldsymbol{x})=b+\log \sum_{j=1}^{n} \exp \left(x_{j}-b\right)
+        \text{logsumexp}(x)= \log \sum_{j=1}^{n} \exp \left(x_{j}\right)
+        = \text{logsumexp}(x)=b+\log \sum_{j=1}^{n} \exp \left(x_{j}-b\right)
 
     where
 
@@ -578,10 +578,10 @@ def _get_softmax_axis(ndim: int) -> int:
 
 def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     r"""
-    Applies a softmax function. Softmax is defined as:
+    Applies a :math:`\text{softmax}(x)` function. :math:`\text{softmax}(x)` is defined as:
 
     .. math::
-            \text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+            \text{softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
 
     It is applied to all elements along axis, and rescales elements so that
     they stay in the range `[0, 1]` and sum to 1.
@@ -589,8 +589,8 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     See :class:`~megengine.module.activation.Softmax` for more details.
 
     :param inp: input tensor.
-    :param axis: an axis along which softmax will be applied. By default,
-        softmax will apply along the highest ranked axis.
+    :param axis: an axis along which :math:`\text{softmax}(x)` will be applied. By default,
+        :math:`\text{softmax}(x)` will apply along the highest ranked axis.
 
     Examples:
 
