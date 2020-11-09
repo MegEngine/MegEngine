@@ -6,7 +6,6 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import multiprocessing as mp
 import threading
 import time
 from collections import defaultdict
@@ -142,7 +141,7 @@ class Server:
     def __init__(self, port):
         self.py_server_port = get_free_ports(1)[0] if port == 0 else port
         self.mm_server_port = create_mm_server("0.0.0.0", 0)
-        self.proc = mp.Process(
+        self.proc = threading.Thread(
             target=start_server,
             args=(self.py_server_port, self.mm_server_port),
             daemon=True,
