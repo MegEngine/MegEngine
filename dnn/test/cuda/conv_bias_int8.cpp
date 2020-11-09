@@ -97,6 +97,13 @@ std::vector<BenchArgs> get_detection_bench_args(size_t batch = 16) {
     return args;
 }
 
+std::vector<BenchArgs> get_det_first_bench_args(size_t batch = 16) {
+    std::vector<BenchArgs> args;
+    args.emplace_back(BenchArgs{batch, 4, 736, 1280, 16, 3, 2});
+    args.emplace_back(BenchArgs{batch, 16, 384, 640, 16, 3, 1});
+    return args;
+}
+
 void benchmark_target_algo(
         Handle* handle, const std::vector<BenchArgs>& args, DType src_dtype,
         DType filter_dtype, DType bias_dtype, DType dst_dtype,
@@ -1236,6 +1243,28 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW4) {
             dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.0f},
             "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM", param::ConvBias::Format::NCHW4);
 }
+
+TEST_F(CUDA, BENCHMARK_SASS_CONV_BIAS_INT8_NCHW4_DET_FIRST) {
+    require_compute_capability(6, 1);
+    std::string algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "SASS_INT8_NCHW4_DOTPROD_IMPLICIT_GEMM_128X32_64",
+            ConvBias::DirectParam{});
+    benchmark_target_algo(handle_cuda(), get_det_first_bench_args(16),
+                          dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+                          dtype::QuantizedS32{1.2f * 1.3f},
+                          dtype::QuantizedS8{1.0f}, algo.c_str(),
+                          param::ConvBias::Format::NCHW4);
+}
+
+TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW4_DET_FIRST) {
+    require_compute_capability(6, 1);
+    benchmark_target_algo(
+            handle_cuda(), get_det_first_bench_args(16),
+            dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.0f},
+            "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM_16", param::ConvBias::Format::NCHW4);
+}
+
 #endif
 }  // namespace test
 }  // namespace megdnn

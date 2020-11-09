@@ -172,7 +172,7 @@ void megdnn::cuda::cutlass_wrapper::
                 const GemmCoord& warp_shape, cudaStream_t stream) {
 #define DISPATCH_KERNEL_WITH_TILE_SHAPE(threadblock_m_, threadblock_n_,        \
                                         threadblock_k_, warp_m_, warp_n_,      \
-                                        warp_k_, aligned_)                     \
+                                        warp_k_, stage_, aligned_)                     \
     if (threadblock_shape.m() == threadblock_m_ &&                             \
         threadblock_shape.n() == threadblock_n_ &&                             \
         threadblock_shape.k() == threadblock_k_ &&                             \
@@ -194,7 +194,7 @@ void megdnn::cuda::cutlass_wrapper::
                 cutlass::convolution::threadblock::                            \
                         ConvolutionNCxHWxThreadblockSwizzle<                   \
                                 cutlass::convolution::ConvType::kConvolution>, \
-                2, 4, aligned_, NeedLoadFromConstMem>;                         \
+                stage_, 4, aligned_, NeedLoadFromConstMem>;                    \
         typename Convolution::ConvolutionParameter conv_param{                 \
                 param.n,  param.ci, param.co, param.hi, param.wi,              \
                 param.fh, param.fw, param.ho, param.wo, param.sh,              \
@@ -204,16 +204,17 @@ void megdnn::cuda::cutlass_wrapper::
                 epilogue, stream);                                             \
     }
 #define DISPATCH_KERNEL                                                      \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 16);           \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 64, 8, 16, 64, 8, 4);                \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 2, 16);        \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 128, 16, 16, 128, 16, 1, 8);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 64, 8, 16, 64, 8, 2, 4);             \
     megdnn_assert(false,                                                     \
                   "unsupported threadblock shape (%dx%dx%d) and warp shape " \
                   "(%dx%dx%d)",                                              \

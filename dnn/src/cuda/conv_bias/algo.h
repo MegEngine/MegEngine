@@ -407,15 +407,16 @@ public:
         int warp_m;
         int warp_n;
         int warp_k;
+        int stage;
         std::string to_string() {
             /// default algorithm
             if (threadblock_m == 128 && threadblock_n == 128 &&
                 threadblock_k == 32 && warp_m == 32 && warp_n == 64 &&
-                warp_k == 32) {
+                warp_k == 32 && stage == 2) {
                 return "";
             }
-            return ssprintf("_%dX%dX%d_%dX%dX%d", threadblock_m, threadblock_n,
-                            threadblock_k, warp_m, warp_n, warp_k);
+            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n,
+                            threadblock_k, warp_m, warp_n, warp_k, stage);
         }
     };
     AlgoInt8NCHW4DotProdImplicitGemm(AlgoParam algo_param)

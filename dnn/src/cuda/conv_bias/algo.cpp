@@ -260,16 +260,17 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
 
 void ConvBiasForwardImpl::AlgoPack::fill_dp4a_algos() {
     using AlgoParam = AlgoInt8NCHW4DotProdImplicitGemm::AlgoParam;
-    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 128, 32, 64, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 64, 32, 64, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 64, 32, 64, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 64, 32, 32, 64, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 32, 32, 64, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 32, 32, 32, 32, 32});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 128, 32, 64, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 64, 32, 64, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 64, 32, 64, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 64, 32, 32, 64, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 32, 32, 64, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 32, 32, 32, 32, 32, 2});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 128, 16, 16, 128, 16, 1});
+    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8, 2});
 }
 
 
