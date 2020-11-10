@@ -16,7 +16,6 @@
 #include "src/x86/conv_bias/opr_impl.h"
 #include "src/x86/conv_bias/postprocess_helper.h"
 #include "src/x86/handle.h"
-#include "src/x86/profile.h"
 
 #include "midout.h"
 
