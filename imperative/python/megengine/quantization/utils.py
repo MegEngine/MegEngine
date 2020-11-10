@@ -9,7 +9,12 @@ from enum import Enum
 from functools import partial, update_wrapper, wraps
 from typing import Dict
 
+import numpy as np
+
 from .. import functional as F
+from ..core.ops import builtin
+from ..core.tensor import megbrain_graph
+from ..core.tensor.core import apply
 from ..core.tensor.dtype import _metadata_dict
 from ..core.tensor.function import Function
 from ..tensor import Tensor
@@ -81,16 +86,20 @@ def fake_quant_tensor(inp: Tensor, qmin: int, qmax: int, q_dict: Dict) -> Tensor
 
     """
     scale = q_dict["scale"]
-    zero_point = 0
+    zero_point = Tensor([0.0], dtype=np.float32)
     if q_dict["mode"] == QuantMode.ASYMMERTIC:
         zero_point = q_dict["zero_point"]
-    # Quant
-    oup = Round()(inp / scale) + zero_point
-    # Clip
-    oup = F.minimum(F.maximum(oup, qmin), qmax)
-    # Dequant
-    oup = (oup - zero_point) * scale
-    return oup
+
+    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
+    assert isinstance(
+        scale, (Tensor, megbrain_graph.VarNode)
+    ), "scale must be Tensor type"
+    assert isinstance(
+        zero_point, (Tensor, megbrain_graph.VarNode)
+    ), "zero point must be Tensor type"
+
+    op = builtin.FakeQuant(qmin=qmin, qmax=qmax)
+    return apply(op, inp, scale, zero_point)[0]
 
 
 def fake_quant_bias(bias: Tensor, inp: Tensor, w_qat: Tensor) -> Tensor:
