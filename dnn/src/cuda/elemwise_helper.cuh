@@ -13,9 +13,9 @@
 #pragma once
 
 #include "src/common/elemwise_helper.cuh"
-#include "src/cuda/utils.cuh"
 #include "src/cuda/int_fastdiv.cuh"
 #include "src/cuda/query_blocksize.cuh"
+#include "src/cuda/utils.cuh"
 
 /*
  * please note that all arithmetics on GPU are 32-bit for best performance; this
@@ -646,6 +646,102 @@ struct OpCallerUniform<Op, 3, PVis> {
         par[0].next();
         par[1].next();
         par[2].next();
+    }
+};
+
+//! specialization for arity == 4
+template <class Op, class PVis>
+struct OpCallerUniform<Op, 4, PVis> {
+    Op op;
+    PVis par[4];
+    static const uint32_t packed_size = PVis::packed_size;
+
+    devfunc void thread_init(uint32_t idx) {
+        idx = idx * packed_size;
+        par[0].thread_init(idx);
+        par[1].thread_init(idx);
+        par[2].thread_init(idx);
+        par[3].thread_init(idx);
+    }
+
+    devfunc void on(uint32_t idx) {
+        idx = idx * packed_size;
+        op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx), par[3].at(idx));
+    }
+
+    devfunc void on(uint32_t idx, uint32_t remain) {
+        idx = idx * packed_size;
+        if (remain >= packed_size) {
+            op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx),
+               par[3].at(idx));
+        } else {
+            auto ptr0 = par[0].ptr();
+            auto ptr1 = par[1].ptr();
+            auto ptr2 = par[2].ptr();
+            auto ptr3 = par[3].ptr();
+            for (int i = 0; i < remain; i++) {
+                op(idx + i, ptr0[par[0].offset(idx + i)],
+                   ptr1[par[1].offset(idx + i)], ptr2[par[2].offset(idx + i)],
+                   ptr3[par[3].offset(idx + i)]);
+            }
+        }
+    }
+
+    devfunc void next() {
+        par[0].next();
+        par[1].next();
+        par[2].next();
+        par[3].next();
+    }
+};
+
+//! specialization for arity == 5
+template <class Op, class PVis>
+struct OpCallerUniform<Op, 5, PVis> {
+    Op op;
+    PVis par[5];
+    static const uint32_t packed_size = PVis::packed_size;
+
+    devfunc void thread_init(uint32_t idx) {
+        idx = idx * packed_size;
+        par[0].thread_init(idx);
+        par[1].thread_init(idx);
+        par[2].thread_init(idx);
+        par[3].thread_init(idx);
+        par[4].thread_init(idx);
+    }
+
+    devfunc void on(uint32_t idx) {
+        idx = idx * packed_size;
+        op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx), par[3].at(idx),
+           par[4].at(idx));
+    }
+
+    devfunc void on(uint32_t idx, uint32_t remain) {
+        idx = idx * packed_size;
+        if (remain >= packed_size) {
+            op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx),
+               par[3].at(idx), par[4].at(idx));
+        } else {
+            auto ptr0 = par[0].ptr();
+            auto ptr1 = par[1].ptr();
+            auto ptr2 = par[2].ptr();
+            auto ptr3 = par[3].ptr();
+            auto ptr4 = par[4].ptr();
+            for (int i = 0; i < remain; i++) {
+                op(idx + i, ptr0[par[0].offset(idx + i)],
+                   ptr1[par[1].offset(idx + i)], ptr2[par[2].offset(idx + i)],
+                   ptr3[par[3].offset(idx + i)], ptr4[par[4].offset(idx + i)]);
+            }
+        }
+    }
+
+    devfunc void next() {
+        par[0].next();
+        par[1].next();
+        par[2].next();
+        par[3].next();
+        par[4].next();
     }
 };
 

@@ -111,6 +111,8 @@ DEF(Remap, 3, true, true);
 DEF(RemapBackwardData, 3, true, false);
 DEF(RemapBackwardMat, 4, true, false);
 DEF(DctChannelSelectForward, 4, true, true);
+DEF(FakeQuantForward, 4, true, true);
+DEF(FakeQuantBackward, 5, true, false);
 }  // namespace test
 }  // namespace megdnn
 

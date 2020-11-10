@@ -79,6 +79,8 @@
 #include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_perspective/opr_impl.h"
 #include "src/naive/winograd_filter_preprocess/opr_impl.h"
+#include "src/naive/remap/opr_impl.h"
+#include "src/naive/fake_quant/opr_impl.h"
 
 static size_t g_image2d_pitch_alignment = 1;
 

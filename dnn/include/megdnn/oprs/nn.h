@@ -60,7 +60,7 @@ struct PreprocessedFilter {
     TensorNDArray tensors;
 };
 
-}  // namespace intl
+}  // namespace detail
 
 /**
  * \brief base class for convolution operation
@@ -1561,6 +1561,58 @@ protected:
                                    size_t workspace_in_bytes);
 };
 using BatchConvBias = BatchConvBiasForward;
+
+class FakeQuantBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(FakeQuantBase, OperatorBase);
+    DEF_OPR_PARAM(FakeQuant);
+
+protected:
+    void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
+    void check_layout_fwd(const TensorLayout& input, const TensorLayout& scale,
+                          const TensorLayout& zero_point,
+                          const TensorLayout& output);
+};
+
+class FakeQuantForward : public FakeQuantBase {
+    DEF_OPR_IMPL(FakeQuantForward, FakeQuantBase, 3, 1);
+
+public:
+    virtual void exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
+                      _megdnn_tensor_in zero_point, _megdnn_tensor_out output,
+                      _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& input, const TensorLayout& scale,
+                       const TensorLayout& zero_point, TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& input,
+                                          const TensorLayout& scale,
+                                          const TensorLayout& zero_point,
+                                          const TensorLayout& output) = 0;
+
+protected:
+    void check_exec(const TensorLayout& input, const TensorLayout& scale,
+                    const TensorLayout& zero_point, const TensorLayout& output,
+                    size_t workspace_in_bytes);
+};
+
+using FakeQuant = FakeQuantForward;
+
+class FakeQuantBackward : public FakeQuantBase {
+    DEF_OPR_IMPL(FakeQuantBackward, FakeQuantBase, 4, 1);
+
+public:
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
+                      _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& input,
+                                          const TensorLayout& scale,
+                                          const TensorLayout& zero_point,
+                                          const TensorLayout& grad) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& input,
+                    const TensorLayout& scale, const TensorLayout& zero_point,
+                    const TensorLayout& grad, size_t workspace_in_bytes);
+};
 
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"

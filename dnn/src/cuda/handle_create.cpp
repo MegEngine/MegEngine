@@ -77,6 +77,7 @@
 #include "src/cuda/roi_align/opr_impl.h"
 #include "src/cuda/batch_conv_bias/opr_impl.h"
 #include "src/cuda/remap/opr_impl.h"
+#include "src/cuda/fake_quant/opr_impl.h"
 
 namespace megdnn {
 namespace cuda {

@@ -201,7 +201,9 @@ private:
     cb(RemapBackwardMat) \
     cb(AdaptivePoolingForward) \
     cb(AdaptivePoolingBackward) \
-    cb(DctChannelSelectForward) 
+    cb(DctChannelSelectForward) \
+    cb(FakeQuantForward) \
+    cb(FakeQuantBackward)
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;
