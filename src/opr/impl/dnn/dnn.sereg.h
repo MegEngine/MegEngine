@@ -18,6 +18,7 @@
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
+#include "megbrain/opr/dnn/fake_quant.h"
 
 #include "megbrain/serialization/sereg.h"
 
@@ -423,6 +424,8 @@ namespace opr {
     MGB_SEREG_OPR(DeformablePSROIPoolingBackward, 5);
 
     MGB_SEREG_OPR(BatchConvBiasForward, 0);
+    MGB_SEREG_OPR(FakeQuant, 3);
+    MGB_SEREG_OPR(FakeQuantBackward, 4);
 } // namespace opr
 
 

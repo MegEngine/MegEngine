@@ -102,6 +102,7 @@ union OperatorParam {
     param.AdaptivePooling = 70,
     param.NvOf = 71,
     param.DctChannelSelect = 72,
+    param.FakeQuant = 73,
 }
 
 table Operator {

@@ -315,5 +315,9 @@ r"""
 """),
          has_out_dtype=True)
 
+decl_opr('FakeQuant',
+         inputs=[Doc('src','input tenosr'),Doc('scale','scale tensor'),Doc('zero_point','zero point tensor')],
+         params='FakeQuant')
+
 
 # vim: ft=python
