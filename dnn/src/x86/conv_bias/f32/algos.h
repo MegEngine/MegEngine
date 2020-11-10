@@ -123,47 +123,6 @@ public:
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
 };
 
-/* ===================== matmul algo ===================== */
-class ConvBiasImpl::AlgoMatrixMul final : public AlgoBase {
-    static MatrixMul* get_matmul_opr();
-    static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
-    static void kimpl(const NCBKernParam& param, const NCBKernIndex&);
-
-public:
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "X86_CONV_BIAS_MATMUL"; }
-
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy) const override {
-        auto&& fm = param.filter_meta;
-        return fm.format == Param::Format::NCHW && fm.spatial_ndim == 2 &&
-               param.src_type.enumv() == DTypeEnum::Float32 &&
-               param.filter_type.enumv() == DTypeEnum::Float32 &&
-               param.dst_type.enumv() == DTypeEnum::Float32 &&
-               fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-               //! The matmul opr is only used in single thread
-               //! TODO:support the no pack matmul algo in fallback im2col +
-               //! matmul
-               param.nr_threads == 1_z;
-    }
-
-    bool is_preferred(const NCBKernSizeParam&) const override;
-
-    size_t get_workspace(const NCBKernSizeParam& param) const override {
-        return get_bundle(param).total_size_in_bytes();
-    }
-    SmallVector<NCBKern> dispatch_kerns(
-            const NCBKernSizeParam& param) const override {
-        size_t group = param.filter_meta.group;
-        return {{kimpl, {group, 1_z, 1_z}}};
-    }
-
-    void* type() const override;
-    ConvAlgoTypePack get_algo_type() const override {
-        return {AlgoDataType::FLOAT32, AlgoCategory::IM2COL};
-    }
-};
-
 #if MEGDNN_X86_WITH_MKL_DNN
 class ConvBiasImpl::AlgoMkldnnConv final : public AlgoBase {
     static void kern_mkldnn_fp32(const NCBKernParam& param,

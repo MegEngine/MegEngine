@@ -47,10 +47,6 @@ void* ConvBiasImpl::AlgoDirectStride2::type() const {
     return x86_algo_type;
 }
 
-void* ConvBiasImpl::AlgoMatrixMul::type() const {
-    return x86_algo_type;
-}
-
 void* ConvBiasImpl::AlgoDirectAvx2Stride1Int8::type() const {
     return x86_algo_type;
 }
@@ -82,7 +78,6 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoAVX2DirectConvStride2 avx2_stride2_direct;
     AlgoChanWiseAvx2Stride1Qint8 avx2_stride1_chanwsie_qint8;
     AlgoChanWiseAvx2Stride2Qint8 avx2_stride2_chanwsie_qint8;
-    AlgoMatrixMul matmul;
 #if MEGDNN_X86_WITH_MKL_DNN
     AlgoMkldnnMatmulQint8 mkldnn_matmul_qint8;
     //! Because the mkldnnconv need handle
@@ -107,7 +102,6 @@ public:
         all_algos.emplace_back(&avx2_stride2_chanwsie_qint8);
         all_algos.emplace_back(&avx2_stride1_direct_int8);
         all_algos.emplace_back(&avx2_stride2_direct);
-        all_algos.emplace_back(&matmul);
 
         static CpuOprDelegationStorage<> storage;
         auto matmul_opr = storage.get<MatrixMul>();

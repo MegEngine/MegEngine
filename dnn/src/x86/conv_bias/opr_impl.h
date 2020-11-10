@@ -31,7 +31,6 @@ public:
     class AlgoDirectStride2;
     class AlgoFP32WinogradF63_8x8;
     class AlgoFP32WinogradF23_8x8;
-    class AlgoMatrixMul;
     class AlgoDirectAvx2Stride1Int8;
     class AlgoAVX2DirectConvStride2;
     class AlgoChanWiseAvx2Stride1Qint8;

@@ -11,8 +11,6 @@
 #pragma once
 #include "src/fallback/handle.h"
 
-#include "src/x86/profile.h"
-
 #if MEGDNN_X86_WITH_MKL_DNN
 #include <mkldnn.hpp>
 #endif
@@ -22,8 +20,6 @@ namespace x86 {
 
 class HandleImpl : public fallback::HandleImpl {
 public:
-    const ProfileCache& profile_cache() { return m_profile_cache; }
-
     HandleImpl(megcoreComputingHandle_t computing_handle,
                HandleType type = HandleType::X86);
 
@@ -37,7 +33,6 @@ public:
 #endif
 
 private:
-    ProfileCache m_profile_cache = get_profile_cache();
 #if MEGDNN_X86_WITH_MKL_DNN
     dnnl::engine m_mkldnn_engine;
     dnnl::stream m_mkldnn_stream;
