@@ -885,7 +885,12 @@ bool CpuCompNode::CompNodeImpl::check_global_finalized(const char* reason) {
 }
 
 /* ======================== CompNode methods ========================  */
-
+// CompNode get by default_cpu() is different from the CompNode which is
+// produced by CompNode::load("cpu:default")
+// default_cpu() is used for static infer and it is not allowed to send up the
+// compute kernel
+// CompNode::load("cpu:default") is "inplace cpu" which is in the
+// CpuCompNode::Pool
 CompNode CompNode::default_cpu() {
     static Locator locator{DeviceType::CPU, Locator::DEVICE_CPU_DEFAULT, {-1}};
     static auto empty_queue =
