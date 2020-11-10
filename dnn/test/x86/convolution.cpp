@@ -182,49 +182,6 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE2) {
     }
 }
 
-TEST_F(X86, DEFAULT_CONV_MATMUL) {
-    using namespace convolution;
-    std::vector<TestArg> args;
-
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
-        if (w + 2 * p < kernel || h + 2 * p < kernel)
-            return;
-        param::Convolution param;
-        param.stride_h = 1;
-        param.stride_w = 1;
-        param.pad_h = p;
-        param.pad_w = p;
-
-        //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-    };
-
-    for (size_t kernel : {2, 3, 5, 7})
-        for (size_t ic : {1, 2, 3, 4})
-            for (size_t oc : {1, 2, 3, 4})
-                for (size_t p : {0, 2})
-                    for (size_t size : {20, 21, 22, 23, 24}) {
-                        run(oc, ic, size, size, kernel, p);
-                    }
-
-    Checker<ConvolutionForward> checker(handle());
-    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_X86_CONV_BIAS_MATMUL"));
-    UniformIntRNG rng{-50, 50};
-    checker.set_dtype(0, dtype::Float32())
-            .set_dtype(1, dtype::Float32())
-            .set_dtype(2, dtype::Float32())
-            .set_rng(0, &rng)
-            .set_rng(1, &rng)
-            .set_rng(2, &rng);
-
-    for (auto&& arg : args) {
-        checker.set_param(arg.param).exec({arg.src, arg.filter, {}});
-    }
-}
-
 #if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, CONVOLUTION_FORWARD_INT8) {
     Checker<ConvolutionForward> checker(handle());
