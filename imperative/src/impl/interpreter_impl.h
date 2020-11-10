@@ -28,6 +28,7 @@ struct TensorInfo {
     TensorPtr ptr;
     LogicalTensorDesc desc;
     bool value_fetched = false;
+    bool invalid = false;
 };
 
 struct Put {
