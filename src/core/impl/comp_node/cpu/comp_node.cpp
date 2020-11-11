@@ -675,27 +675,7 @@ class CpuCompNodeImpl::CpuEventImpl final
         : public CpuDispatchableBase::EventImpl {
 #if MGB_HAVE_THREAD
     void host_wait_cv() override {
-        for (size_t i = 0, it = SCQueueSynchronizer::max_spin() / 20; i < it;
-             ++i) {
-            if (finished()) {
-                auto thread_pool =
-                        static_cast<CpuCompNodeImpl*>(m_comp_node_impl)
-                                ->get_thread_pool();
-                if (thread_pool) {
-                    thread_pool->deactive();
-                }
-                return;
-            }
-        }
-        m_dev_wait_nr_waiter.fetch_add(1, std::memory_order_release);
-        for (;;) {
-            std::unique_lock<std::mutex> lock{m_dev_wait_mtx};
-            if (finished()) {
-                break;
-            }
-            m_dev_wait_cv.wait(lock);
-        }
-        m_dev_wait_nr_waiter.fetch_sub(1, std::memory_order_release);
+        CpuDispatchableBase::EventImpl::host_wait_cv();
         auto thread_pool = static_cast<CpuCompNodeImpl*>(m_comp_node_impl)
                                    ->get_thread_pool();
         if (thread_pool) {
