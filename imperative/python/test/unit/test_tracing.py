@@ -100,8 +100,8 @@ def test_dump():
     file = io.BytesIO()
     dump_info = f.dump(file)
     assert dump_info.nr_opr == 3
-    np.testing.assert_equal(dump_info.inputs, ["h2d[0]", "h2d[2]"])
-    np.testing.assert_equal(dump_info.outputs, ["ADD(h2d[0],h2d[2])[4]"])
+    np.testing.assert_equal(dump_info.inputs, ["arg_0", "arg_1"])
+    np.testing.assert_equal(dump_info.outputs, ["ADD(arg_0,arg_1)[4]"])
     file.seek(0)
     result = cgtools.load_and_inference(file, [a, b])
     np.testing.assert_equal(result[0], y)
