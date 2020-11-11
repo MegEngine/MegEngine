@@ -80,6 +80,12 @@ size_t SCQueueSynchronizer::max_spin() {
         return cached_max_spin = std::numeric_limits<size_t>::max();
     }
 
+    if (auto spin_string = MGB_GETENV("MGB_WORKER_MAX_SPIN")) {
+        auto spin = std::stoi(spin_string);
+        mgb_log_warn("worker would execute with spin of %d", spin);
+        return cached_max_spin = spin;
+    }
+
     std::atomic_bool start{false}, stop{false};
     size_t cnt;
     double cnt_time;
