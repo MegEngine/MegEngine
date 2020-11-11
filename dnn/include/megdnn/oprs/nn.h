@@ -210,13 +210,25 @@ public:
     /**
      * \param[in] src (n, ic, ih, iw)
      * \param[in] filter (oc, ic, fh, fw)
+     * \param[in] preprocessed_filter if weight no preprocessed it will be
+     * nullptr, else the preprocessed weights store in the tensors of
+     * preprocessed_filter.
+     * \param[in] workspace if weight no preprocessed
+     * (preprocessed_filter == nullptr), The size of the workspace satisfies the
+     * situation that weights is not processed, other wise the size of workspace
+     * satisfies the situation that weights is preprocessed
      * \param[out] dst (n, oc, oh, ow)
      */
     virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                       _megdnn_tensor_out dst,
                       const PreprocessedFilter* preprocessed_filter,
                       _megdnn_workspace workspace) = 0;
-
+    /**
+     * \brief execute weight preprocessing, read weights form filter and write to
+     * preprocessed_filter after preprocessed.
+     *
+     * \praram[in] workspace the needed tmp workspace when exec_preprocess
+     */
     virtual void exec_preprocess(const TensorLayout& src_layout,
                                  _megdnn_tensor_in filter,
                                  const TensorLayout& dst_layout,
@@ -226,15 +238,39 @@ public:
 
     void deduce_layout(const TensorLayout& src, const TensorLayout& filter,
                        TensorLayout& dst);
+
+    /**
+     * \brief query the workspace needed when executing the opr, if the weights
+     * are preprocessed the preprocessed_filter will not be nullptr, else it
+     * will be nullptr, the workspace size maybe different whether weights are
+     * preprocessed
+     *
+     * \return the size of workspace needed when executing
+     */
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst,
             const PreprocessedFilter* preprocessed_filter) = 0;
 
+    /**
+     * \brief deduce the preprocessed filter layouts according to the src,
+     * filter and dst layout, the result may contain multi layouts when the
+     * weights is not one
+     *
+     * \return SmallVector<TensorLayout> Derive the layouts of weight
+     * preprocessing, return empty if preprocessing is not needed.
+     */
     virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) = 0;
 
+    /**
+     * \brief query the workspace needed when preprocessing the weights,
+     * according to the return size, a _megdnn_workspace will be created and
+     * passed through exec_preprocess
+     *
+     * \return the size of workspace needed when preprocessing
+     */
     virtual size_t get_preprocess_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) = 0;
@@ -323,6 +359,13 @@ public:
      * 4 * ic)
      * \param[in] bias (1, oc, 1, 1)
      * \param[in] z same as dst
+     * \param[in] preprocessed_filter if weight no preprocessed it will be
+     * nullptr, else the preprocessed weights store in the tensors of
+     * preprocessed_filter.
+     * \param[in] workspace if weight no preprocessed
+     * (preprocessed_filter == nullptr), The size of the workspace satisfies the
+     * situation that weights is not processed, other wise the size of workspace
+     * satisfies the situation that weights is preprocessed
      * \param[out] dst (n, oc, oh, ow) or (n, oh, ow, oc)
      *
      * \note if the format is NCHW_WINOGRAD, the filter layout is (alphah,
@@ -333,6 +376,14 @@ public:
                       _megdnn_tensor_out dst,
                       const PreprocessedFilter* preprocessed_filter,
                       _megdnn_workspace workspace) = 0;
+
+    /**
+     * \brief execute weight preprocessing, read weights form filter and write
+     * to preprocessed_filter after preprocessed.
+     *
+     * \praram[in] workspace the needed tmp workspace when exec_preprocess
+     * running, the size is got by get_preprocess_workspace_in_bytes
+     */
     virtual void exec_preprocess(const TensorLayout& src_layout,
                                  _megdnn_tensor_in filter,
                                  const TensorLayout& bias_layout,
@@ -345,20 +396,49 @@ public:
                        const TensorLayout& bias, const TensorLayout& z,
                        TensorLayout& dst);
 
+    /**
+     * \brief query the workspace needed when executing the opr, if the weights
+     * are preprocessed the preprocessed_filter will not be nullptr, else it
+     * will be nullptr, the workspace size maybe different whether weights are
+     * preprocessed
+     *
+     * \return the size of workspace needed when executing
+     */
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst,
             const PreprocessedFilter* preprocessed_filter) = 0;
+
+    /**
+     * \brief query the workspace needed when pre-processing the weights,
+     * according to the return size, a _megdnn_workspace will be created and
+     * passed through exec_preprocess
+     *
+     * \return the size of workspace needed when pre-processing
+     */
     virtual size_t get_preprocess_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst) = 0;
+
+    /**
+     * \brief deduce the pre-processed filter layouts according to the src,
+     * filter and dst layout, which may contain multi layouts when the weights
+     * is not one
+     *
+     * \return SmallVector<TensorLayout> Derive the layouts of weight
+     * preprocessing, return empty if preprocessing is not needed.
+     */
     virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst) = 0;
 
+    /**
+     * \brief deduce the origin filter layout and conv_bias param after winograd
+     * transform, this used in fast-run to construct the origin cache-key
+     */
     static void deduce_winograd_origin_layout_and_param(
             const Param::Format format, const size_t output_block_size,
             const TensorLayout& src_layout,
