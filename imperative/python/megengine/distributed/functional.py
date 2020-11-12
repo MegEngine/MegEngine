@@ -59,7 +59,11 @@ def _(op: RemoteSend, inputs, outputs, input_requires_grad):
     def backward(*args):
         return [
             remote_recv(
-                op.rank_to, inputs[0].shape, inputs[0].dtype, str(inputs[0].device)
+                op.rank_to,
+                inputs[0].shape,
+                inputs[0].dtype,
+                device=str(inputs[0].device),
+                inp=inputs[0],
             )
         ]
 
@@ -275,7 +279,11 @@ def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
 
 
 def remote_recv(
-    src_rank: int, shape: Tuple[int], dtype: type, device: Optional[str] = None
+    src_rank: int,
+    shape: Tuple[int],
+    dtype: type,
+    device: Optional[str] = None,
+    inp=None,
 ) -> Tensor:
     """
     Receive a Tensor from a remote process.
@@ -284,13 +292,15 @@ def remote_recv(
     :param shape: the shape of the tensor to receive.
     :param dtype: the data type of the tensor to receive.
     :param device: the device to place the received tensor.
+    :param inp: dummy input to determine recved tensor type
     """
     key = "{}->{}".format(src_rank, get_rank())
 
     if device is None:
         device = get_default_device()
-    # dummpy input
-    inp = tensor([0])
+    # dummy input
+    if inp == None:
+        inp = tensor([0])
     tracer_set = get_client().check_remote_tracer(key)
     for grad_manager in get_grad_managers():
         if grad_manager.name in tracer_set:

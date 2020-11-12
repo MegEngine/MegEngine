@@ -14,6 +14,8 @@ import weakref
 
 import numpy as np
 
+import megengine as mge
+
 from ..ops.builtin import Elemwise, OpDef
 from ..ops.special import Const
 from ..tensor.core import TensorBase, TensorWrapperBase, apply
@@ -167,6 +169,8 @@ class Grad:
             for i in dys:
                 if isinstance(i, TensorWrapperBase):
                     return type(i)
+            # use Tensor as defualt wrapper
+            return mge.Tensor
 
         Wrapper = check_wrapper()
 

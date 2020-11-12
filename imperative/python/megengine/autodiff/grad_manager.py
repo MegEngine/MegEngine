@@ -127,7 +127,7 @@ class GradManager:
         self._after_backward_callback.append(callback)
         return self
 
-    def backward(self, ys, dys=None):
+    def backward(self, ys=None, dys=None):
         r"""
         Performs back-propagation and computes gradients.
 
@@ -146,6 +146,8 @@ class GradManager:
                 "call a method that clears the history?"
             )
         assert self._grad is not None
+        if ys is None:
+            ys = []
         if not isinstance(ys, (tuple, list)):
             ys = [ys]
         if dys is None:
