@@ -10,6 +10,7 @@ import numpy as np
 
 import megengine.functional as F
 from megengine import tensor
+from megengine.functional.elemwise import _elwise
 
 
 def test_abs():
@@ -19,6 +20,17 @@ def test_abs():
     )
 
     np.testing.assert_allclose(F.abs(-3.0).numpy(), np.abs(np.float32(-3.0)))
+
+
+def test_elemwise_mode_string():
+    np.testing.assert_allclose(
+        _elwise(tensor([-3.0, -4.0, -5.0]), mode="ABS").numpy(),
+        np.abs(np.array([-3.0, -4.0, -5.0], dtype=np.float32)),
+    )
+
+    np.testing.assert_allclose(
+        _elwise(-3.0, mode="ABS").numpy(), np.abs(np.float32(-3.0))
+    )
 
 
 def test_multiply():

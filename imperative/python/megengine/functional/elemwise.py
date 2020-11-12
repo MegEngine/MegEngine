@@ -72,7 +72,27 @@ __all__ = [
 ]
 
 
+class _ElemwiseMode(Elemwise.Mode):
+    @classmethod
+    def __normalize(cls, val):
+        if isinstance(val, str):
+            if not hasattr(cls, "__member_upper_dict__"):
+                cls.__member_upper_dict__ = {
+                    k.upper(): v for k, v in cls.__members__.items()
+                }
+            val = cls.__member_upper_dict__.get(val.upper(), val)
+        return val
+
+    @classmethod
+    def convert(cls, val):
+        val = cls.__normalize(val)
+        if isinstance(val, cls):
+            return val
+        return cls(val)
+
+
 def _elwise(*args, mode):
+    mode = _ElemwiseMode.convert(mode)
     op = builtin.Elemwise(mode)
     tensor_args = list(
         filter(lambda x: isinstance(x, (Tensor, megbrain_graph.VarNode)), args)

@@ -33,4 +33,4 @@ class Elemwise(QuantizedModule):
         Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
-        return cls(qat_module.method.name, qat_module.get_activation_dtype())
+        return cls(qat_module.method, qat_module.get_activation_dtype())

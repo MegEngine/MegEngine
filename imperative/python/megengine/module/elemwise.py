@@ -73,11 +73,9 @@ class Elemwise(Module):
         * "NOT": bool unary: ~x
     """
 
-    _elemwise_mode_type = P.Elemwise.Mode
-
     def __init__(self, method):
         super().__init__()
-        self.method = self._elemwise_mode_type.convert(method)
+        self.method = method
 
     def forward(self, *inps):
         return _elwise(*inps, mode=self.method)
