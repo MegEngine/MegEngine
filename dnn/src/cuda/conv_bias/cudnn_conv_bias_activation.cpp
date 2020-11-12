@@ -31,6 +31,9 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         args.bias_layout->eq_shape(*args.dst_layout))
         return false;
     auto&& param = args.opr->param();
+    if (param.format == param::ConvBias::Format::NCHW4_NCHW32 ||
+        param.format == param::ConvBias::Format::NCHW32_NCHW4)
+        return false;
     if (param.format == param::ConvBias::Format::NCHW &&
         (param.dilate_h != 1 || param.dilate_w != 1) &&
         m_cudnn_enum == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM) {
@@ -152,16 +155,24 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         }
     };
 
-    megdnn_assert(args.src_layout->dtype.category() ==
-                          args.dst_layout->dtype.category() &&
-                  args.src_tensor->layout.dtype.category() ==
-                          args.filter_layout->dtype.category());
+    auto src_dtype = args.src_layout->dtype,
+         filter_dtype = args.filter_layout->dtype,
+         dst_dtype = args.dst_layout->dtype;
+    megdnn_assert(
+            (src_dtype.category() == dst_dtype.category()) ||
+            (args.opr->param().format == param::ConvBias::Format::NCHW4_NCHW &&
+             src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             dst_dtype.enumv() == DTypeEnum::Float32));
+    megdnn_assert(src_dtype.category() == filter_dtype.category());
 
     if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED) {
         auto expected_bias_scale = get_scale(args.src_layout->dtype) *
                                    get_scale(args.filter_layout->dtype);
-        alpha = expected_bias_scale / get_scale(args.dst_layout->dtype);
-        if (args.z_layout->ndim > 0) {
+        alpha = expected_bias_scale;
+        if (args.dst_layout->dtype.category() == DTypeCategory::QUANTIZED)
+            alpha /= get_scale(args.dst_layout->dtype);
+        if (args.z_layout->ndim > 0 &&
+            args.z_layout->dtype.category() == DTypeCategory::QUANTIZED) {
             beta = get_scale(args.z_layout->dtype) /
                    get_scale(args.dst_layout->dtype);
         }
@@ -232,10 +243,23 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
             break;
         case param::ConvBias::NonlineMode::H_SWISH: {
             megdnn_assert(args.dst_layout->dtype.category() ==
-                          DTypeCategory::QUANTIZED);
-            auto&& elem_opr = args.handle->create_operator<ElemwiseMultiType>();
-            elem_opr->param().mode = ElemwiseMultiType::Param::Mode::QH_SWISH;
-            elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
+                                  DTypeCategory::QUANTIZED ||
+                          (args.dst_layout->dtype.category() ==
+                                   DTypeCategory::FLOAT &&
+                           args.opr->param().format ==
+                                   param::ConvBias::Format::NCHW4_NCHW));
+            if (args.dst_layout->dtype.category() == DTypeCategory::QUANTIZED) {
+                auto&& elem_opr =
+                        args.handle->create_operator<ElemwiseMultiType>();
+                elem_opr->param().mode =
+                        ElemwiseMultiType::Param::Mode::QH_SWISH;
+                elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
+            } else {
+                auto&& elem_opr =
+                        args.handle->create_operator<ElemwiseForward>();
+                elem_opr->param().mode = ElemwiseForward::Param::Mode::H_SWISH;
+                elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
+            }
             break;
         }
         default:

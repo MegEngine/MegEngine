@@ -187,11 +187,15 @@ void FilterDesc<Param>::set(
     megdnn_assert(filter_meta.group == 1);
 #endif
 
+    auto filter_format = filter_meta.format;
+    if (filter_format == param::ConvBias::Format::NCHW4_NCHW) {
+        filter_format = param::ConvBias::Format::NCHW4;
+    }
     // cuDNN version 6 or below filter_meta.group always is 1.
     // So it is compatible for all cuDNN versions.
     cudnn_check(cudnnSetFilter4dDescriptor(
-            desc, to_cudnn_dtype(filter_meta.dtype, filter_meta.format),
-            to_cudnn_format(filter_meta.format),
+            desc, to_cudnn_dtype(filter_meta.dtype, filter_format),
+            to_cudnn_format(filter_format),
             filter_meta.ocpg * filter_meta.group,  // cudnn 6 group always be 1
             filter_meta.icpg, filter_meta.spatial[0], filter_meta.spatial[1]));
 }

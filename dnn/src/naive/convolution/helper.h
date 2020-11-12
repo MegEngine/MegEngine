@@ -66,6 +66,15 @@ inline void StrategyFwd::on(dt_quint8& s, dt_quint8& f, dt_qint32& d,
 }
 
 template <>
+inline void StrategyFwd::on(dt_qint8& s, dt_qint8& f, dt_float32& d,
+                            DType src_dt, DType filt_dt, DType) {
+    auto cast = [](const dt_qint8& val, DType dt) {
+        return dt.param<dtype::QuantizedS8>().dequantize(val);
+    };
+    d += cast(s, src_dt) * cast(f, filt_dt);
+}
+
+template <>
 inline void StrategyFwd::on(dt_qint8& s, dt_qint8& f, dt_qint32& d, DType,
                             DType, DType) {
     auto cast = [](const dt_qint8& val) {
@@ -149,8 +158,11 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
         filter_meta.format == Format::NCHW44 ||
         filter_meta.format == Format::NCHW44_DOT ||
         filter_meta.format == Format::NCHW4 ||
+        filter_meta.format == Format::NCHW4_NCHW ||
+        filter_meta.format == Format::NCHW4_NCHW32 ||
         filter_meta.format == Format::NCHW8 ||
-        filter_meta.format == Format::NCHW32) {
+        filter_meta.format == Format::NCHW32 ||
+        filter_meta.format == Format::NCHW32_NCHW4) {
         spatial_start = 2;
         channel_pos = 1;
         batch_pos = 0;
@@ -176,20 +188,25 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
     if (filter_meta.format == Format::NCHW4 ||
         filter_meta.format == Format::CHWN4 ||
         filter_meta.format == Format::NCHW44_DOT ||
-        filter_meta.format == Format::NCHW44) {
+        filter_meta.format == Format::NCHW44 || 
+        filter_meta.format == Format::NCHW32_NCHW4) {
         OC *= 4;
     } else if (filter_meta.format == Format::NCHW8 ||
                filter_meta.format == Format::NCHW88) {
         OC *= 8;
-    } else if (filter_meta.format == Format::NCHW32) {
+    } else if (filter_meta.format == Format::NCHW32 ||
+               filter_meta.format == Format::NCHW4_NCHW32) {
         OC *= 32;
     }
 
     size_t FS_G, FS_OC, FS_IC, FS_SPATIAL;
     if (filter_meta.format == Format::NCHW ||
         filter_meta.format == Format::NCHW4 ||
+        filter_meta.format == Format::NCHW4_NCHW ||
+        filter_meta.format == Format::NCHW4_NCHW32 ||
         filter_meta.format == Format::NCHW8 ||
-        filter_meta.format == Format::NCHW32) {
+        filter_meta.format == Format::NCHW32 ||
+        filter_meta.format == Format::NCHW32_NCHW4) {
         // g, oc, ic, fh, fw
         FS_SPATIAL = 1;
         FS_IC = FH * FW;
@@ -299,10 +316,39 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
             return n * layout.stride[0] + (c >> 5) * layout.stride[1] +
                    h * layout.stride[2] + w * layout.stride[3] +
                    (c & 0x1F) * layout.stride[4];
+        } else if (filter_meta.format == Format::NCHW32_NCHW4) {
+            if (is_output) {
+                return n * layout.stride[0] + (c / 4) * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3] +
+                       (c & 0b11) * layout.stride[4];
+            } else {
+                return n * layout.stride[0] + (c >> 5) * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3] +
+                       (c & 0x1F) * layout.stride[4];
+            }
         } else if (filter_meta.format == Format::CHWN4) {
             return (c / 4) * layout.stride[0] + h * layout.stride[1] +
                    w * layout.stride[2] + n * layout.stride[3] +
                    (c % 4) * layout.stride[4];
+        } else if (filter_meta.format == Format::NCHW4_NCHW) {
+            if (is_output) {
+                return n * layout.stride[0] + c * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3];
+            } else {
+                return n * layout.stride[0] + (c / 4) * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3] +
+                       (c & 0b11) * layout.stride[4];
+            }
+        } else if (filter_meta.format == Format::NCHW4_NCHW32) {
+            if (is_output) {
+                return n * layout.stride[0] + (c >> 5) * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3] +
+                       (c & 0x1F) * layout.stride[4];
+            } else {
+                return n * layout.stride[0] + (c / 4) * layout.stride[1] +
+                       h * layout.stride[2] + w * layout.stride[3] +
+                       (c & 0b11) * layout.stride[4];
+            }
         } else {
             megdnn_assert(filter_meta.format == Format::NCHW4,
                           "invalid conv format");
@@ -314,7 +360,9 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
 
     auto get_filter_addr = [&](GroupCounter& gc_out, size_t ic, size_t ic0,
                                size_t fh, size_t fw) {
-        if (filter_meta.format == Format::NCHW4) {
+        if (filter_meta.format == Format::NCHW4 ||
+            filter_meta.format == Format::NCHW4_NCHW ||
+            filter_meta.format == Format::NCHW4_NCHW32) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
                    (ic - ic0) / 4 * FS_IC * 4 +
                    (fh * FW + fw) * FS_SPATIAL * 4 + ((ic - ic0) & 0b11);
@@ -322,7 +370,8 @@ void compute2d(_megdnn_tensor_in src, ftype* __restrict fptr,
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
                    (ic - ic0) / 8 * FS_IC * 8 +
                    (fh * FW + fw) * FS_SPATIAL * 8 + ((ic - ic0) & 0b111);
-        } else if (filter_meta.format == Format::NCHW32) {
+        } else if (filter_meta.format == Format::NCHW32 ||
+                   filter_meta.format == Format::NCHW32_NCHW4) {
             return gc_out.cur_grp * FS_G + gc_out.cur_off * FS_OC +
                    (ic - ic0) / 32 * FS_IC * 32 +
                    (fh * FW + fw) * FS_SPATIAL * 32 + ((ic - ic0) & 0x1F);
@@ -569,12 +618,16 @@ template <typename stype, typename ftype, typename dtype, typename comp_type>
 void forward(_megdnn_tensor_in src, const ftype* fptr, _megdnn_tensor_out dst,
              const Convolution::CanonizedFilterMeta& filter_meta) {
     megdnn_assert(filter_meta.spatial_ndim == 2);
-    megdnn_assert(filter_meta.format == param::Convolution::Format::NCHW ||
-                  filter_meta.format == param::Convolution::Format::NHWC ||
-                  filter_meta.format == param::Convolution::Format::NCHW88 ||
-                  filter_meta.format == param::Convolution::Format::NCHW44 ||
-                  filter_meta.format == param::Convolution::Format::NCHW44_DOT ||
-                  filter_meta.format == param::Convolution::Format::NCHW4);
+    megdnn_assert(
+            filter_meta.format == param::Convolution::Format::NCHW ||
+            filter_meta.format == param::Convolution::Format::NHWC ||
+            filter_meta.format == param::Convolution::Format::NCHW88 ||
+            filter_meta.format == param::Convolution::Format::NCHW44 ||
+            filter_meta.format == param::Convolution::Format::NCHW44_DOT ||
+            filter_meta.format == param::Convolution::Format::NCHW4 ||
+            filter_meta.format == param::Convolution::Format::NCHW4_NCHW ||
+            filter_meta.format == param::Convolution::Format::NCHW4_NCHW32 ||
+            filter_meta.format == param::Convolution::Format::NCHW32_NCHW4);
     compute2d<stype, ftype, dtype, comp_type, StrategyFwd>(
             src, const_cast<ftype*>(fptr), dst, filter_meta);
 }
@@ -631,8 +684,11 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         case param::Convolution::Format::NCHW44_DOT:
         case param::Convolution::Format::NHWC:
         case param::Convolution::Format::NCHW4:
+        case param::Convolution::Format::NCHW4_NCHW:
+        case param::Convolution::Format::NCHW4_NCHW32:
         case param::Convolution::Format::NCHW8:
         case param::Convolution::Format::NCHW32:
+        case param::Convolution::Format::NCHW32_NCHW4:
         case param::Convolution::Format::CHWN4:
             compute2d<stype, ftype, dtype, comp_type, StrategyFwd, FilterMeta,
                       FilterVisitor>(src, filter.compatible_ptr<ftype>(), dst,
@@ -666,7 +722,8 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
 
         using Format = param::ConvBias::Format;
         switch (filter_meta.format) {
-            case Format::NCHW: {
+            case Format::NCHW:
+            case Format::NCHW4_NCHW: {
                 int dst_batch = dst.layout.shape[0];
                 int dst_channel = dst.layout.shape[1];
                 int chann_stride = dst.layout.shape[2] * dst.layout.shape[3];
@@ -707,6 +764,7 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
     } while (0)
             case Format::NCHW44:
             case Format::NCHW44_DOT:
+            case Format::NCHW32_NCHW4:
             case Format::NCHW4: {
                 BIAS_ADD_NCHWx(4);
                 break;
@@ -715,6 +773,7 @@ void forward_bias(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                 BIAS_ADD_NCHWx(8);
                 break;
             };
+            case Format::NCHW4_NCHW32: 
             case Format::NCHW32: {
                 BIAS_ADD_NCHWx(32);
                 break;

@@ -429,6 +429,62 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_NCHW4) {
     checker.exec({{1, 4, 2, 2, 4}, {16, 4, 3, 3, 4}, {1, 4, 1, 1, 4}, {}, {}});
 }
 
+TEST_F(CUDA, CONV_BIAS_FORWARD_NCHW4_NCHW) {
+    require_compute_capability(6, 1);
+    using namespace conv_bias;
+    Checker<ConvBiasForward> checker(handle_cuda());
+    UniformIntRNG int_rng{-3, 3};
+    UniformFloatRNG float_rng{-50, 50};
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW4_NCHW;
+    param.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+
+    checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(1, dtype::QuantizedS8(1.9980927f))
+            .set_dtype(2, dtype::Float32())
+            .set_dtype(3, dtype::Float32())
+            .set_dtype(4, dtype::Float32())
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_rng(2, &float_rng)
+            .set_rng(3, &float_rng)
+            .set_param(param);
+
+    auto opr = handle_cuda()->create_operator<ConvBias>();
+
+    auto run = [&](const TensorShapeArray& shapes) {
+        opr->param() = param;
+        TensorLayout dst_layout;
+        opr->deduce_layout({shapes[0], dtype::Float32()},
+                           {shapes[1], dtype::Float32()}, {}, {}, dst_layout);
+        checker.execs({shapes[0], shapes[1], shapes[2], dst_layout, {}});
+    };
+
+    run({{1, 4, 4, 4, 4}, {4, 4, 3, 3, 4}, {1, 4, 1, 1}});
+    run({{20, 1, 24, 24, 4}, {24, 1, 2, 2, 4}, {1, 24, 1, 1}});
+    run({{20, 2, 24, 24, 4}, {24, 2, 3, 3, 4}, {1, 24, 1, 1}});
+
+    param.sparse = ConvBias::Param::Sparse::GROUP;
+    param.nonlineMode = ConvBias::Param::NonlineMode::RELU;
+    checker.set_param(param);
+    run({{1, 4, 24, 24, 4}, {4, 4, 1, 1, 1, 4}, {1, 16, 1, 1}});
+    run({{20, 8, 24, 24, 4}, {4, 24, 2, 2, 2, 4}, {1, 96, 1, 1}});
+    run({{1, 3, 24, 24, 4}, {3, 8, 1, 3, 3, 4}, {1, 24, 1, 1}});
+
+    param.pad_h = param.pad_w = 1;
+    param.stride_h = param.stride_w = 2;
+    checker.set_param(param);
+    run({{10, 16, 28, 28, 4}, {8, 8, 2, 3, 3, 4}, {1, 64, 1, 1}});
+
+    // case which cudnn not supported
+    param.sparse = ConvBias::Param::Sparse::DENSE;
+    param.pad_h = param.pad_w = 1;
+    param.stride_h = param.stride_w = 1;
+    param.nonlineMode = ConvBias::Param::NonlineMode::H_SWISH;
+    checker.set_param(param);
+    checker.exec({{1, 4, 2, 2, 4}, {16, 4, 3, 3, 4}, {1, 16, 1, 1}, {}, {}});
+}
+
 #endif
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_CHANWISE) {

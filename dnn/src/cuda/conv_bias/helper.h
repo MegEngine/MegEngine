@@ -72,12 +72,19 @@ namespace conv_bias {
                            const TensorLayout& dst, const TensorLayout& bias,
                            const TensorLayout& z,
                            const param::ConvBias& param) {
-            src_desc.set(src, param.format);
+            using Format = param::ConvBias::Format;
+            Format src_format, dst_format;
+            src_format = dst_format = param.format;
+            if (param.format == Format::NCHW4_NCHW) {
+                src_format = Format::NCHW4;
+                dst_format = Format::NCHW;
+            }
+            src_desc.set(src, src_format);
             filter_desc.set(filter);
             if (z.ndim > 0) {
-                z_desc.set(z, param.format);
+                z_desc.set(z, dst_format);
             }
-            dst_desc.set(dst, param.format);
+            dst_desc.set(dst, dst_format);
             conv_desc.set_conv_bias(src.dtype, param, filter.group);
 
             // cudnn requires the bias to be float tensor.
@@ -91,6 +98,12 @@ namespace conv_bias {
                          float_bias_layout[1] * float_bias_layout[4],
                          float_bias_layout[2], float_bias_layout[3]});
                 bias_desc.set(float_bias_layout);
+            } else if (param.format == param::ConvBias::Format::NCHW4_NCHW) {
+                megdnn_assert(float_bias_layout.ndim == 4,
+                              "NCHW4_NCHW format assumes bias tensor is stored "
+                              "in NCHW layout, ndim(expected:4,got:%zu)",
+                              float_bias_layout.ndim);
+                bias_desc.set(float_bias_layout);
             } else {
                 bias_desc.set(float_bias_layout, param.format);
             }
@@ -99,9 +112,16 @@ namespace conv_bias {
         void set_conv(const TensorLayout& src,
                       const CanonizedFilterMeta& filter,
                       const TensorLayout& dst, const param::ConvBias& param) {
-            src_desc.set(src, param.format);
+            using Format = param::ConvBias::Format;
+            Format src_format, dst_format;
+            src_format = dst_format = param.format;
+            if (param.format == Format::NCHW4_NCHW) {
+                src_format = Format::NCHW4;
+                dst_format = Format::NCHW;
+            }
+            src_desc.set(src, src_format);
             filter_desc.set(filter);
-            dst_desc.set(dst, param.format);
+            dst_desc.set(dst, dst_format);
             conv_desc.set_conv(src.dtype, param, filter.group);
         }
     };

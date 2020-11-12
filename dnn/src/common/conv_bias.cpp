@@ -48,38 +48,52 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         megdnn_assert(src.dtype.enumv() == filter.dtype.enumv());
     }
     if (src.dtype.enumv() == DTypeEnum::QuantizedS8) {
-        float scale_src = src.dtype.param<dtype::QuantizedS8>().scale;
-        float scale_filter = 0.f;
-        if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
-            param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
-            param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
-            if (filter.dtype.enumv() == DTypeEnum::QuantizedS32) {
-                //!int8 winogradf23_44 using float,QuantizedS32 take the scale
-                scale_filter = filter.dtype.param<dtype::QuantizedS32>().scale;
+        if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
+            float scale_src = src.dtype.param<dtype::QuantizedS8>().scale;
+            float scale_filter = 0.f;
+            if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
+                param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
+                param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
+                if (filter.dtype.enumv() == DTypeEnum::QuantizedS32) {
+                    //! int8 winogradf23_44 using float,QuantizedS32 take the
+                    //! scale
+                    scale_filter =
+                            filter.dtype.param<dtype::QuantizedS32>().scale;
+                } else {
+                    scale_filter =
+                            filter.dtype.param<dtype::QuantizedS16>().scale;
+                }
             } else {
-                scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
+                scale_filter = filter.dtype.param<dtype::QuantizedS8>().scale;
             }
+            float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
+            megdnn_assert(
+                    std::abs(scale_src * scale_filter - scale_bias) < 1e-6,
+                    "scale_src: %f scale_filter: %f scale_bias: %f", scale_src,
+                    scale_filter, scale_bias);
         } else {
-            scale_filter = filter.dtype.param<dtype::QuantizedS8>().scale;
+            megdnn_assert(bias.dtype.enumv() == DTypeEnum::Float32);
         }
-        float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
-        megdnn_assert(std::abs(scale_src * scale_filter - scale_bias) < 1e-6,
-                      "scale_src: %f scale_filter: %f scale_bias: %f",
-                      scale_src, scale_filter, scale_bias);
     } else if (src.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
-        float scale_src = src.dtype.param<dtype::Quantized8Asymm>().scale;
-        float scale_filter = 0.f;
-        if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
-            param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
-            param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
-            scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
+        if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
+            float scale_src = src.dtype.param<dtype::Quantized8Asymm>().scale;
+            float scale_filter = 0.f;
+            if (param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
+                param().format == param::ConvBias::Format::NCHW88_WINOGRAD ||
+                param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
+                scale_filter = filter.dtype.param<dtype::QuantizedS16>().scale;
+            } else {
+                scale_filter =
+                        filter.dtype.param<dtype::Quantized8Asymm>().scale;
+            }
+            float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
+            megdnn_assert(
+                    std::abs(scale_src * scale_filter - scale_bias) < 1e-6,
+                    "scale_src: %f scale_filter: %f scale_bias: %f", scale_src,
+                    scale_filter, scale_bias);
         } else {
-            scale_filter = filter.dtype.param<dtype::Quantized8Asymm>().scale;
+            megdnn_assert(bias.dtype.enumv() == DTypeEnum::Float32);
         }
-        float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
-        megdnn_assert(std::abs(scale_src * scale_filter - scale_bias) < 1e-6,
-                      "scale_src: %f scale_filter: %f scale_bias: %f",
-                      scale_src, scale_filter, scale_bias);
     }
 
     auto ret = check_layout_fwd(src, filter, dst);
@@ -101,7 +115,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         if (check_eq(bias, dst))
             return ret;
         if (param().format == param::ConvBias::Format::NCHW ||
-            param().format == param::ConvBias::Format::NCHW_WINOGRAD) {
+            param().format == param::ConvBias::Format::NCHW_WINOGRAD ||
+            param().format == param::ConvBias::Format::NCHW4_NCHW) {
             megdnn_assert(bias.shape[0] == 1);
             megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
                           bias.to_string().c_str(), dst.to_string().c_str());
@@ -116,7 +131,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         } else if (param().format == param::ConvBias::Format::NCHW4 ||
                    param().format == param::ConvBias::Format::NCHW44 ||
                    param().format == param::ConvBias::Format::NCHW44_DOT ||
-                   param().format == param::ConvBias::Format::NCHW44_WINOGRAD) {
+                   param().format == param::ConvBias::Format::NCHW44_WINOGRAD ||
+                   param().format == param::ConvBias::Format::NCHW32_NCHW4) {
             megdnn_assert(bias.shape[0] == 1);
             megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
                           bias.to_string().c_str(), dst.to_string().c_str());
@@ -132,7 +148,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
             megdnn_assert(bias.shape[2] == 1);
             megdnn_assert(bias.shape[3] == 1);
             megdnn_assert(bias.shape[4] == 8);
-        } else if (param().format == param::ConvBias::Format::NCHW32) {
+        } else if (param().format == param::ConvBias::Format::NCHW32 ||
+                   param().format == param::ConvBias::Format::NCHW4_NCHW32) {
             megdnn_assert(bias.shape[0] == 1);
             megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
                           bias.to_string().c_str(), dst.to_string().c_str());
@@ -163,6 +180,8 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
                       param::ConvBias::Format::NCHW88_WINOGRAD);
         megdnn_assert(param().format !=
                       param::ConvBias::Format::NCHW44_WINOGRAD);
+        megdnn_assert(param().format != param::ConvBias::Format::NCHW4_NCHW32);
+        megdnn_assert(param().format != param::ConvBias::Format::NCHW32_NCHW4);
         megdnn_assert(z.dtype.enumv() == dst.dtype.enumv());
         megdnn_assert(z.eq_shape(dst));
     }

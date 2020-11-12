@@ -39,7 +39,10 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           'NCHW44','NCHW44_DOT',
           Doc('NCHW_WINOGRAD', 'NCHW layout with weights tranformed by winograd'),
           Doc('NCHW88_WINOGRAD', 'NCHW88 layout with weights tranformed by winograd'),
-          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'),
+          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'), 
+          Doc('NCHW4_NCHW32', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
+          Doc('NCHW32_NCHW4', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
+          Doc('NCHW4_NCHW', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'), 
           Doc('CHWN4', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
               'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'))
  )
