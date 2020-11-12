@@ -10,18 +10,18 @@
  * implied.
  */
 
-#include <vector>
 #include "megbrain_build_config.h"
-#include "megdnn/dtype.h"
 #if MGB_JIT && MGB_JIT_MLIR
-
 #if MGB_CUDA
+
 #include "./executable_cuda.h"
+#include "./ir/types.h"
 
 #include "megbrain/comp_node_env.h"
 #include "megbrain/jit/mlir/ir/utils.h"
 #include "megbrain/utils/persistent_cache.h"
 #include "megbrain/utils/timer.h"
+#include "megdnn/dtype.h"
 
 #include <mlir/Dialect/GPU/GPUDialect.h>
 #include <mlir/ExecutionEngine/CRunnerUtils.h>
@@ -83,6 +83,24 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
     MGB_CUDA_CU_CHECK(cuLaunchKernel(func, num_block, 1, 1, block_size, 1, 1, 0,
                                      env.cuda_env().stream, params.data(), 0));
 }
+
+template <int out_dim>
+void setup_and_launch_dim(const megdnn::DType dtype,
+                          const JITExecutor* fusion_opr, CUfunction func,
+                          int block_size) {
+    switch (dtype.enumv()) {
+#define cb(_dtype, _type)                                               \
+    case megdnn::DTypeEnum::_dtype:                                     \
+        setup_and_launch<out_dim, _type>(fusion_opr, func, block_size); \
+        return;
+        FOR_EACH_DNN_DTYPE(cb)
+#undef cb
+        default:
+            mgb_throw(InternalError, "Unsupported dtype: %s", dtype.name());
+    }
+    return;
+}
+
 }  // namespace
 
 const std::string MLIRCUDAExecutable::sm_blob_annotation = "nvvm.cubin";
@@ -136,30 +154,19 @@ void MLIRCUDAExecutable::FuncCache::exec(const JITExecutor* fusion_opr,
                fusion_opr->args().outputs.size());
     int out_dim = fusion_opr->args().outputs[0].from->layout().ndim;
     DType dtype = fusion_opr->args().outputs[0].from->layout().dtype;
-#define cb_outdim(_ndim, _dtype)                                \
-    if (_ndim == out_dim) {                                     \
-        setup_and_launch<_ndim, _dtype>(fusion_opr, func->func, \
-                                        func->block_size);      \
-        return;                                                 \
-    }
 
-#define cb(_dtype)                                      \
-    cb_outdim(1, float);                                \
-    cb_outdim(2, float);                                \
-    cb_outdim(3, float);                                \
-    cb_outdim(4, float);                                \
-    mgb_throw(InternalError, "unsupported out_dim=%zu", \
-              static_cast<size_t>(out_dim));            \
-    return;
-
-    switch (dtype.enumv()) {
-        case DTypeEnum::Float32:
-            cb(float);
-        default:
-            mgb_throw(InternalError, "unsupport dtype: %s", dtype.name());
-    }
+    switch (out_dim) {
+#define cb(_ndim)                                                  \
+    case _ndim:                                                    \
+        setup_and_launch_dim<_ndim>(dtype, fusion_opr, func->func, \
+                                    func->block_size);             \
+        break;
+        cb(1);
+        cb(2);
+        cb(3);
+        cb(4);
 #undef cb
-#undef cb_outdim
+    }
 }
 
 #endif  // MGB_CUDA

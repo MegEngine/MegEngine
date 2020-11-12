@@ -2,7 +2,7 @@
 // RUN: mgb-opt --mgb-convert-to-affine --mgb-codegen-convert-affine-to-llvm --split-input-file -canonicalize -cse %s
 
 func @add_dim1(%lhs: memref<2xf32>, %rhs: memref<2xf32>, %res: memref<2xf32>) -> () {
-    %0 = "mgb.add"(%lhs, %rhs) {name = "add.f"} :
+    %0 = "mgb.Elemwise"(%lhs, %rhs) {name = "add.f", mode = 16 : i32} :
        (memref<2xf32>, memref<2xf32>) -> memref<2xf32>
     "mgb.assign"(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
     mgb.return 
@@ -24,7 +24,7 @@ func @add_dim1(%lhs: memref<2xf32>, %rhs: memref<2xf32>, %res: memref<2xf32>) ->
 // CHECK: }
 
 func @add_dim4(%lhs: memref<4x3x64x64xf32>, %rhs: memref<4x3x64x64xf32>, %res: memref<4x3x64x64xf32>) -> () {
-    %0 = "mgb.add"(%lhs, %rhs) {name = "add.f"} :
+    %0 = "mgb.Elemwise"(%lhs, %rhs) {name = "add.f", mode = 16 : i32} :
        (memref<4x3x64x64xf32>, memref<4x3x64x64xf32>) -> memref<4x3x64x64xf32>
     "mgb.assign"(%0, %res) : (memref<4x3x64x64xf32>, memref<4x3x64x64xf32>) -> ()
     mgb.return

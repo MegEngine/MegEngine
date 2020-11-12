@@ -14,46 +14,73 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "./common.h"
+
 #include "megbrain/jit/mlir/ir/utils.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
+#include <mlir/Dialect/StandardOps/IR/Ops.h>
 
 using namespace mgb;
 using namespace jit;
+
+/* ===================== trivial unary functions ===================== */
+
+#define cb(name, op)                                        \
+    mlir::Value ValueBuilderHelper::name(mlir::Value lhs) { \
+        return m_builder.create<mlir::op>(m_location, lhs); \
+    }
+
+cb(abs, AbsFOp);
+cb(ceil, CeilFOp);
+cb(cos, CosOp);
+cb(exp2, Exp2Op);
+cb(exp, ExpOp);
+cb(floor, FloorFOp);
+cb(log10, Log10Op);
+cb(log2, Log2Op);
+cb(log, LogOp);
+cb(neg, NegFOp);
+cb(rsqrt, RsqrtOp);
+cb(sin, SinOp);
+cb(sqrt, SqrtOp);
+cb(tanh, TanhOp);
+
+#undef cb
+
+/* ===================== trivial binary functions ===================== */
 
 #define cb(name, op)                                                         \
     mlir::Value ValueBuilderHelper::name(mlir::Value lhs, mlir::Value rhs) { \
         return m_builder.create<mlir::op>(m_location, lhs, rhs);             \
     }
+
 cb(add, AddFOp);
-cb(sub, SubFOp);
-cb(mul, MulFOp);
-cb(div, DivFOp);
-cb(divI, SignedDivIOp);
-cb(mod, RemFOp);
 cb(bit_and, AndOp);
 cb(bit_or, OrOp);
+cb(div, DivFOp);
+cb(divI, SignedDivIOp);
 cb(modI, SignedRemIOp);
+cb(mod, RemFOp);
+cb(mul, MulFOp);
+cb(sub, SubFOp);
+
 #undef cb
+
+/* ===================== compare functions ===================== */
 
 #define cb(name, mode)                                                       \
     mlir::Value ValueBuilderHelper::name(mlir::Value lhs, mlir::Value rhs) { \
         return m_builder.create<mlir::CmpFOp>(                               \
                 m_location, mlir::CmpFPredicate::mode, lhs, rhs);            \
     }
-cb(gt, OGT);
-cb(ge, OGE);
-cb(lt, OLT);
-cb(le, OLE);
-cb(eq, OEQ);
-#undef cb
 
-mlir::Value ValueBuilderHelper::min(mlir::Value lhs, mlir::Value rhs) {
-    mlir::Value cmp = m_builder.create<mlir::CmpFOp>(
-            m_location, mlir::CmpFPredicate::OLT, lhs, rhs);
-    return m_builder.create<mlir::SelectOp>(m_location, cmp, lhs, rhs);
-}
+cb(eq, OEQ);
+cb(ge, OGE);
+cb(gt, OGT);
+cb(le, OLE);
+cb(lt, OLT);
+
+#undef cb
 
 mlir::Value ValueBuilderHelper::max(mlir::Value lhs, mlir::Value rhs) {
     mlir::Value cmp = m_builder.create<mlir::CmpFOp>(
@@ -61,50 +88,33 @@ mlir::Value ValueBuilderHelper::max(mlir::Value lhs, mlir::Value rhs) {
     return m_builder.create<mlir::SelectOp>(m_location, cmp, lhs, rhs);
 }
 
-mlir::Value ValueBuilderHelper::const_val(float val) {
+mlir::Value ValueBuilderHelper::min(mlir::Value lhs, mlir::Value rhs) {
+    mlir::Value cmp = m_builder.create<mlir::CmpFOp>(
+            m_location, mlir::CmpFPredicate::OLT, lhs, rhs);
+    return m_builder.create<mlir::SelectOp>(m_location, cmp, lhs, rhs);
+}
+
+/* ===================== constant functions ===================== */
+
+mlir::Value ValueBuilderHelper::const_f32(float val) {
     return m_builder.create<mlir::ConstantOp>(m_location,
                                               m_builder.getF32FloatAttr(val));
 }
 
-mlir::Value ValueBuilderHelper::constI(int32_t val) {
+mlir::Value ValueBuilderHelper::const_i32(int32_t val) {
     return m_builder.create<mlir::ConstantOp>(m_location,
                                               m_builder.getIndexAttr(val));
 }
 
-#define cb(name, op)                                        \
-    mlir::Value ValueBuilderHelper::name(mlir::Value lhs) { \
-        return m_builder.create<mlir::op>(m_location, lhs); \
-    }
-
-cb(neg, NegFOp);
-cb(ceil, CeilFOp);
-cb(cos, CosOp);
-cb(exp, ExpOp);
-cb(exp2, Exp2Op);
-cb(log10, Log10Op);
-cb(log2, Log2Op);
-cb(log, LogOp);
-cb(rsqrt, RsqrtOp);
-cb(sin, SinOp);
-cb(sqrt, SqrtOp);
-cb(tanh, TanhOp);
-#undef cb
-
-mlir::Value ValueBuilderHelper::abs(mlir::Value lhs) {
-    auto zero = const_val(0.f);
-    return select(ge(lhs, zero), lhs, sub(zero, lhs));
-}
-
-mlir::Value ValueBuilderHelper::floor(mlir::Value lhs) {
-    //! FIXME use standard floor when upgrade llvm
-    return neg(ceil(neg(lhs)));
-}
+/* ===================== select function ===================== */
 
 mlir::Value ValueBuilderHelper::select(mlir::Value cond, mlir::Value true_val,
                                        mlir::Value false_val) {
     return m_builder.create<mlir::SelectOp>(m_location, cond, true_val,
                                             false_val);
 }
+
+/* ===================== helper functions ===================== */
 
 mlir::AffineMap jit::get_affinemap(mlir::OpBuilder& builder,
                                    const mlir::Value& val,
@@ -125,10 +135,10 @@ mlir::AffineMap jit::get_affinemap(mlir::OpBuilder& builder,
 }
 
 mlir::Value jit::get_affine_load_op(mlir::OpBuilder& builder,
-                               const mlir::Location& loc,
-                               const mlir::Value& val,
-                               const mlir::ValueRange& index,
-                               const megdnn::TensorLayout& dst) {
+                                    const mlir::Location& loc,
+                                    const mlir::Value& val,
+                                    const mlir::ValueRange& index,
+                                    const megdnn::TensorLayout& dst) {
     if (val.getType().isa<mlir::MemRefType>()) {
         auto type = val.getType().cast<mlir::MemRefType>();
         megdnn::TensorLayout src_layout = mlir_type_to_layout(type);

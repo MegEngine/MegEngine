@@ -13,11 +13,14 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
+#include "megbrain/jit/mlir/ir/utils.h"
+
+#include "./types.h"
+
 #include "megbrain/common.h"
 #include "megbrain/exception.h"
-#include "megbrain/jit/mlir/ir/utils.h"
-#include "megdnn/oprs/general.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/oprs/general.h"
 
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
 #include <mlir/IR/Builders.h>
@@ -44,7 +47,7 @@ mlir::Value jit::insert_alloc_and_dealloc(mlir::MemRefType type,
     return alloc;
 }
 
-mlir::Type jit::deduce_result_type(mlir::ValueRange operands) {
+mlir::Type jit::deduce_elemwise_res_type(mlir::ValueRange operands) {
     megdnn::TensorShapeArray srcs;
     megdnn::TensorShape dst;
     megdnn::DType dst_type;
@@ -59,8 +62,8 @@ mlir::Type jit::deduce_result_type(mlir::ValueRange operands) {
     }
     megdnn::Elemwise::deduce_shape(srcs, dst);
     mlir::Builder builder(operands[0].getContext());
-    return layout_to_mlir_type({dst, mlir_type_to_dtype(operands[0].getType())},
-                               builder);
+    return layout_to_mlir_type(
+            {dst, mlir_type_to_megdnn_dtype(operands[0].getType())}, builder);
 }
 
 megdnn::TensorLayout jit::mlir_type_to_layout(mlir::Type type) {
@@ -72,24 +75,9 @@ megdnn::TensorLayout jit::mlir_type_to_layout(mlir::Type type) {
         for (size_t i = 0; i < ret.ndim; i++) {
             ret.shape[i] = real_type.getDimSize(i);
         }
-        ret.dtype = mlir_type_to_dtype(real_type.getElementType());
+        ret.dtype = mlir_type_to_megdnn_dtype(real_type.getElementType());
     }
     return ret;
-}
-
-megdnn::DType jit::mlir_type_to_dtype(mlir::Type type) {
-    mlir::Type element_type = type;
-    if (auto cast = type.dyn_cast_or_null<mlir::MemRefType>()) {
-        element_type = cast.getElementType();
-    }
-    if (element_type.isF32()) {
-        return megdnn::dtype::Float32{};
-    } else {
-        mgb_throw(InternalError,
-                  "Unsupport mlir type for MemRefType, got: %s\n",
-                  mlir_type_to_string(type).c_str());
-    }
-    return {};
 }
 
 mlir::MemRefType jit::layout_to_mlir_type(const megdnn::TensorLayout& layout,
@@ -98,15 +86,10 @@ mlir::MemRefType jit::layout_to_mlir_type(const megdnn::TensorLayout& layout,
     for (size_t i = 0; i < layout.ndim; i++) {
         shape.push_back(layout[i]);
     }
-    switch (layout.dtype.enumv()) {
-        case megdnn::DTypeEnum::Float32:
-            return mlir::MemRefType::get(shape, builder.getF32Type());
-        default:
-            mgb_throw(InternalError, "No supported dtype: %s",
-                      layout.dtype.name());
-    }
+    mlir::Type type = megdnn_dtype_to_mlir_type(layout.dtype, builder.getContext());
+    return mlir::MemRefType::get(shape, type);
 }
 
-#endif  // MGB_JIT_MLIR
+#endif  // MGB_JIT && MGB_JIT_MLIR
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

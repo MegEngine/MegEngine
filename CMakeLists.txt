@@ -753,12 +753,14 @@ install(TARGETS mgb_opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
 if(MGE_WITH_JIT_MLIR)
     # generate param_defs.td
     set(MGE_GENFILE_DIR ${PROJECT_BINARY_DIR}/src/genfiles)
+    set(MGE_GEN_IR_DIR ${PROJECT_BINARY_DIR}/src/core/include/megbrain/ir)
     set(OPR_PARAM_DEFS_SRCS ${MGE_GENFILE_DIR}/opr_param_defs.py)
     set(OPR_PARAM_DEFS_SCRIPT ${PROJECT_SOURCE_DIR}/dnn/scripts/gen_tablegen.py)
-    set(OPR_PARAM_DEFS_OUT ${MGE_GENFILE_DIR}/param_defs.td)
+    set(OPR_PARAM_DEFS_OUT ${MGE_GEN_IR_DIR}/param_defs.td)
     file(COPY ${PROJECT_SOURCE_DIR}/dnn/scripts/opr_param_defs.py DESTINATION ${MGE_GENFILE_DIR})
     file(READ ${PROJECT_SOURCE_DIR}/tools/param_defs/mgb_opr_param_defs.py CONTENTS)
     file(APPEND ${OPR_PARAM_DEFS_SRCS} ${CONTENTS})
+    file(MAKE_DIRECTORY ${MGE_GEN_IR_DIR})
     add_custom_target(param_defs_tblgen
         COMMAND ${PYTHON_EXECUTABLE} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_OUT}
         DEPENDS ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_SCRIPT}
@@ -766,7 +768,7 @@ if(MGE_WITH_JIT_MLIR)
     )
     # mlir tblgen sources
     set(MGE_IR_DIR ${PROJECT_SOURCE_DIR}/src/core/include/megbrain/ir)
-    set(MGE_IR_INCLUDE_DIRS ${MLIR_LLVM_INCLUDE_DIR} ${MGE_GENFILE_DIR} ${MGE_IR_DIR})
+    set(MGE_IR_INCLUDE_DIRS ${MLIR_LLVM_INCLUDE_DIR} ${MGE_IR_DIR} ${MGE_GEN_IR_DIR})
     list(TRANSFORM MGE_IR_INCLUDE_DIRS PREPEND "-I")
     file(GLOB_RECURSE MGE_IR_TDS ${MGE_IR_DIR}/*.td)
 endif()

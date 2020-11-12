@@ -14,7 +14,9 @@
 
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
+
 #include "megbrain/tensor.h"
+
 #include <mlir/Dialect/StandardOps/IR/Ops.h>
 #include <mlir/IR/OperationSupport.h>
 #include <mlir/IR/Value.h>
@@ -30,50 +32,59 @@ public:
     ValueBuilderHelper(mlir::OpBuilder& b, mlir::Location location)
             : m_builder{b}, m_location{location} {};
 
+#define cb(name)                                                              \
+    mlir::Value name(mlir::ValueRange operands) { return name(operands[0]); } \
+    mlir::Value name(mlir::Value lhs)
+
+    // unary functions
+    cb(abs);
+    cb(ceil);
+    cb(cos);
+    cb(exp);
+    cb(exp2);
+    cb(floor);
+    cb(log);
+    cb(log10);
+    cb(log2);
+    cb(neg);
+    cb(rsqrt);
+    cb(sin);
+    cb(sqrt);
+    cb(tanh);
+
+#undef cb
+
 #define cb(name)                                  \
     mlir::Value name(mlir::ValueRange operands) { \
         return name(operands[0], operands[1]);    \
     }                                             \
     mlir::Value name(mlir::Value lhs, mlir::Value rhs)
+
+    // binary functions
     cb(add);
-    cb(sub);
-    cb(mul);
+    cb(bit_and);
+    cb(bit_or);
     cb(div);
     cb(divI);
+    cb(eq);
+    cb(ge);
+    cb(gt);
+    cb(le);
+    cb(lt);
     cb(max);
     cb(min);
     cb(mod);
     cb(modI);
-    cb(gt);
-    cb(ge);
-    cb(lt);
-    cb(le);
-    cb(eq);
-    cb(bit_and);
-    cb(bit_or);
-#undef cb
-    mlir::Value const_val(float val);
-    mlir::Value constI(int32_t val);
+    cb(mul);
+    cb(sub);
 
-#define cb(name)                                                              \
-    mlir::Value name(mlir::ValueRange operands) { return name(operands[0]); } \
-    mlir::Value name(mlir::Value lhs)
-    cb(neg);
-    cb(abs);
-    cb(ceil);
-    cb(floor);
-    cb(cos);
-    cb(exp);
-    cb(exp2);
-    cb(log10);
-    cb(log2);
-    cb(log);
-    cb(rsqrt);
-    cb(sin);
-    cb(sqrt);
-    cb(tanh);
 #undef cb
 
+    // constant functions
+    mlir::Value const_f32(float val);
+    mlir::Value const_i32(int32_t val);
+
+    // select function
     mlir::Value select(mlir::Value cond, mlir::Value true_val,
                        mlir::Value false_val);
 

@@ -14,6 +14,7 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "megbrain/jit/mlir/ir/dialect.h"
+
 #include "./types.h"
 
 #include <mlir/IR/Builders.h>
@@ -28,14 +29,12 @@ MgbDialect::MgbDialect(mlir::MLIRContext* ctx)
         : mlir::Dialect("mgb", ctx, mlir::TypeID::get<MgbDialect>()) {
     addOperations<
 #define GET_OP_LIST
-#include "megbrain/jit/mlir/ir/ops.cpp.inc"
+#include "megbrain/jit/mlir/ir/mgb_dialect.cpp.inc"
             >();
 }
 
 #define GET_OP_CLASSES
-#include "megbrain/jit/mlir/ir/ops.cpp.inc"
-
-#include "megbrain/jit/mlir/ir/interfaces.cpp.inc"
+#include "megbrain/jit/mlir/ir/mgb_dialect.cpp.inc"
 
 #endif  // MGB_JIT && MGB_JIT_MLIR
 

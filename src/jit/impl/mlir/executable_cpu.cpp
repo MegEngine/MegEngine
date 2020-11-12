@@ -14,37 +14,44 @@
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include "./executable_cpu.h"
+#include "./ir/types.h"
+
 #include "megbrain/jit/mlir/ir/utils.h"
 
-#include <mlir/ExecutionEngine/OptUtils.h>
 #include <mlir/ExecutionEngine/CRunnerUtils.h>
+#include <mlir/ExecutionEngine/OptUtils.h>
 
 using namespace mgb;
 using namespace jit;
 
 namespace {
 
+template <typename T, int N>
+StridedMemRefType<T, N>* get_strided_memref_type(
+        const megdnn::TensorND& tensor) {
+    using DescType = StridedMemRefType<T, N>;
+    DescType* desc = static_cast<DescType*>(malloc(sizeof(DescType)));
+    desc->basePtr = tensor.ptr<T>();
+    desc->data = tensor.ptr<T>();
+    desc->offset = 0;
+    for (size_t i = 0; i < tensor.layout.ndim; i++) {
+        desc->sizes[i] = tensor.layout.shape[i];
+        desc->strides[i] = tensor.layout.stride[i];
+    }
+    return desc;
+}
+
 template <int N>
 void* tensor2memref_dim(const megdnn::TensorND& tensor) {
     switch (tensor.layout.dtype.enumv()) {
-        case megdnn::DTypeEnum::Float32: {
-            StridedMemRefType<float, N>* desc =
-                    static_cast<StridedMemRefType<float, N>*>(
-                            malloc(sizeof(StridedMemRefType<float, N>)));
-            desc->basePtr = tensor.ptr<float>();
-            desc->data = tensor.ptr<float>();
-            desc->offset = 0;
-            for (size_t i = 0; i < tensor.layout.ndim; i++) {
-                desc->sizes[i] = tensor.layout.shape[i];
-                desc->strides[i] = tensor.layout.stride[i];
-            }
-            return desc;
-            break;
-        }
+#define cb(_dtype, _type)           \
+    case megdnn::DTypeEnum::_dtype: \
+        return get_strided_memref_type<_type, N>(tensor);
+        FOR_EACH_DNN_DTYPE(cb)
+#undef cb
         default:
-            mgb_throw(InternalError, "Unsupport dtype, got %s",
+            mgb_throw(InternalError, "Unsupported dtype: %s",
                       tensor.layout.dtype.name());
-            break;
     }
     return nullptr;
 }

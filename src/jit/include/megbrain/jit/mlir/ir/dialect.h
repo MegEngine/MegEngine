@@ -1,5 +1,5 @@
 /**
- * \file src/jit/impl/mlir/ir/dialect.h
+ * \file src/jit/include/megbrain/jit/mlir/ir/dialect.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -15,8 +15,7 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
-#include "megbrain/jit/mlir/ir/interfaces.h"
-#include "megbrain/jit/mlir/ir/utils.h"
+#include "megdnn/opr_param_defs.h"
 
 #include <mlir/IR/Dialect.h>
 #include <mlir/IR/Function.h>
@@ -39,7 +38,7 @@ public:
 
 #define GET_OP_CLASSES
 using namespace mlir;
-#include "megbrain/jit/mlir/ir/ops.h.inc"
+#include "megbrain/jit/mlir/ir/mgb_dialect.h.inc"
 
 #endif  // MGB_JIT && MGB_JIT_MLIR
 

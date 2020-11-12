@@ -1,5 +1,5 @@
 /**
- * \file src/jit/impl/mlir/ir/passes.h
+ * \file src/jit/include/megbrain/jit/mlir/ir/passes.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -11,8 +11,8 @@
  */
 
 #pragma once
-#include "megbrain_build_config.h"
 
+#include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
 #include <memory>

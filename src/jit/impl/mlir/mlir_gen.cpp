@@ -15,6 +15,7 @@
 
 #include "./mlir_gen.h"
 #include "./ir/each_mode.h"
+#include "./ir/types.h"
 
 #include "megbrain/jit/mlir/ir/dialect.h"
 #include "megbrain/jit/mlir/ir/utils.h"
@@ -116,9 +117,9 @@ private:
             return nullptr;
         }
 
-        jit::ReturnOp return_op;
+        dialect::ReturnOp return_op;
         if (!return_op) {
-            m_builder.create<jit::ReturnOp>(m_builder.getUnknownLoc());
+            m_builder.create<dialect::ReturnOp>(m_builder.getUnknownLoc());
         }
         std::string op_content = mlir_type_to_string(func_op);
         func_op.setName(
@@ -135,9 +136,7 @@ private:
         cg::DepOprIter{[&](cg::OperatorNodeBase* opr) {
             if (opr->same_type<JITPlaceholder>()) {
                 return;
-            }
-
-            if (opr->same_type<opr::ImmutableTensor>()) {
+            } else if (opr->same_type<opr::ImmutableTensor>()) {
                 auto imm = SymbolVar{opr->output(0)}.as_immutable_scalar();
                 if (imm.valid()) {
                     auto dtype = imm->dtype();
@@ -150,59 +149,53 @@ private:
                                   "dtype, but got %s",
                                   dtype.name());
                     }
-                    auto&& out = m_builder.create<jit::ConstantScalarOp>(
+                    auto&& out = m_builder.create<dialect::ConstantScalarOp>(
                             m_builder.getUnknownLoc(), m_builder.getF32Type(),
                             m_builder.getF32FloatAttr(scalar_value));
                     mgb_assert(mlir::succeeded(
                             declare(opr->output(0)->name(), out)));
                 }
-            }
-
-            if (opr->same_type<opr::Elemwise>()) {
-                auto&& out = gen_op(opr->cast_final<opr::Elemwise>());
+            } else if (opr->same_type<opr::Elemwise>()) {
+                auto&& out = gen_elemwise(opr->cast_final<opr::Elemwise>());
+                mgb_assert(
+                        mlir::succeeded(declare(opr->output(0)->name(), out)));
+                return;
+            } else if (opr->same_type<opr::TypeCvt>()) {
+                auto&& out = gen_typecvt(opr->cast_final<opr::TypeCvt>());
                 mgb_assert(
                         mlir::succeeded(declare(opr->output(0)->name(), out)));
             }
         }}
                 .add(internal_graph.output());
-        m_builder.create<AssignOp>(m_builder.getUnknownLoc(),
-                                   get(internal_graph.output()),
-                                   get(args.outputs[0].from));
+        m_builder.create<dialect::AssignOp>(m_builder.getUnknownLoc(),
+                                            get(internal_graph.output()),
+                                            get(args.outputs[0].from));
 
         return mlir::success();
     }
 
-    mlir::Value gen_op(const opr::Elemwise& opr) {
-        switch (opr.param().mode) {
-#define cb(mlir_op, mgb_mode)                                            \
-    case opr::Elemwise::Mode::mgb_mode:                                  \
-        return m_builder.create<jit::mlir_op>(m_builder.getUnknownLoc(), \
-                                              get(opr.input(0)),         \
-                                              get(opr.input(1)));        \
-        break;
-            MLIR_MGB_FOREACH_ELEMWISE_MODE_BINARY(cb)
-#undef cb
-
-#define cb(mlir_op, mgb_mode)                                            \
-    case opr::Elemwise::Mode::mgb_mode:                                  \
-        return m_builder.create<jit::mlir_op>(m_builder.getUnknownLoc(), \
-                                              get(opr.input(0)));        \
-        break;
-            MLIR_MGB_FOREACH_ELEMWISE_MODE_UNARY(cb)
-#undef cb
-#define cb(mlir_op, mgb_mode)                                 \
-    case opr::Elemwise::Mode::mgb_mode:                       \
-        return m_builder.create<jit::mlir_op>(                \
-                m_builder.getUnknownLoc(), get(opr.input(0)), \
-                get(opr.input(1)), get(opr.input(2)));        \
-        break;
-            MLIR_MGB_FOREACH_ELEMWISE_MODE_TERNARY(cb)
-#undef cb
-
-            default:
-                return nullptr;
+    mlir::Value gen_elemwise(const opr::Elemwise& opr) {
+        llvm::SmallVector<mlir::Value, 4> operands;
+        for (size_t i = 0; i < opr.input().size(); i++) {
+            operands.push_back(get(opr.input(i)));
         }
-        return nullptr;
+        mlir::Type res_type = deduce_elemwise_res_type(operands);
+        return m_builder.create<dialect::Elemwise>(
+                m_builder.getUnknownLoc(), res_type, mlir::ValueRange(operands),
+                opr.param().mode);
+    }
+
+    mlir::Value gen_typecvt(const opr::TypeCvt& opr) {
+        auto shape = get(opr.input(0))
+                             .getType()
+                             .dyn_cast_or_null<mlir::MemRefType>()
+                             .getShape();
+        auto res_type = mlir::MemRefType::get(
+                shape,
+                megdnn_dtype_to_mlir_type(opr.param(), m_builder.getContext()));
+        return m_builder.create<dialect::TypeCvt>(
+                m_builder.getUnknownLoc(), res_type, get(opr.input(0)),
+                opr.input(0)->dtype(), opr.param());
     }
 
     mlir::Type get_type(const TensorLayout& layout) {

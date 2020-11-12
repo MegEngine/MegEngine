@@ -267,6 +267,8 @@ void run_mlir_mode(CompNode cn) {
 
 }  // anonymous namespace
 
+/* ===================== TestJITHalideCodeGenCude ===================== */
+
 #if MGB_JIT_HALIDE
 template <typename tag>
 class TestJITHalideCodeGenCuda : public ::testing::Test {};
@@ -277,6 +279,8 @@ TYPED_TEST(TestJITHalideCodeGenCuda, run) {
 }
 #endif
 
+/* ===================== TestJITNvrtcCodeGen ===================== */
+
 template <typename tag>
 class TestJITNvrtcCodeGen : public ::testing::Test {};
 TYPED_TEST_CASE(TestJITNvrtcCodeGen, test_types);
@@ -284,6 +288,8 @@ TYPED_TEST(TestJITNvrtcCodeGen, run) {
     REQUIRE_GPU(1);
     run<TypeParam>(Backend::NVRTC, CompNode::load("gpu0"));
 }
+
+/* ===================== TestJITMlirCodeGen ===================== */
 
 #if MGB_JIT_MLIR
 TEST(TestJITMlirCodeGen, Basic) {
@@ -299,7 +305,8 @@ TEST(TestJITMlirCodeGen, BasicGPU) {
     run_mlir_broadcast(cn);
 }
 
-///////////////////////// unary ///////////////////////////////
+/* ===================== TestJITMlirUnaryElemwise ===================== */
+
 // clang-format off
 #define FOREACH_UNARY_MODE(cb) \
     cb(RELU) \
@@ -365,7 +372,8 @@ TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
     run_mlir_mode<TypeParam, 1>(cn);
 }
 
-///////////////////////// binary ///////////////////////////////
+/* ===================== TestJITMlirBinaryElemwise ===================== */
+
 // clang-format off
 #define FOREACH_BINARY_MODE(cb) \
     cb(ADD) \
@@ -422,7 +430,8 @@ TYPED_TEST(TestJITMlirBinaryElemwise, runGpu) {
     run_mlir_mode<TypeParam, 2>(cn);
 }
 
-///////////////////////// ternary ///////////////////////////////
+/* ===================== TestJITMlirTenaryElemwise ===================== */
+
 // clang-format off
 #define FOREACH_TERNARY_MODE(cb) \
     cb(COND_LEQ_MOV) \
@@ -455,6 +464,81 @@ TYPED_TEST(TestJITMlirTernaryElemwise, runGpu) {
 }
 
 #undef SKIP_MODE
+
+
+/* ===================== TestJITMlirTypeCvt ===================== */
+
+template <typename itype, typename otype>
+void run_typecvt(CompNode cn) {
+    set_backend(Backend::MLIR);
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<itype, RandomDistribution::UNIFORM> gen(-10, 10);
+
+    auto host_x = gen({23, 42}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+    auto y = opr::TypeCvt::make(x, otype());
+
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+
+    for (auto i : get_rev_topo_order(y)) {
+        if (!i->template same_type<opr::Host2DeviceCopy>()) {
+            ig_gen->add_opr(i);
+        }
+    }
+
+    auto igraph = ig_gen->generate();
+    auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
+
+    HostTensorND host_y, host_y_jit;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_jit, host_y_jit)});
+    func->execute();
+
+    MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
+};
+
+#define add_typecvt_gtest(itype, otype) \
+    TEST(TestJITMlirTypeCvt, itype##_to_##otype) { \
+        run_typecvt<dtype::itype, dtype::otype>(CompNode::load("cpu0")); \
+    } \
+    TEST(TestJITMlirTypeCvt, itype##_to_##otype##_GPU) { \
+        REQUIRE_GPU(1); \
+        run_typecvt<dtype::itype, dtype::otype>(CompNode::load("gpu0")); \
+    }
+
+#if !MEGDNN_DISABLE_FLOAT16
+
+// TODO: the support for f16 and bf16 is currently not complete in mlir
+
+// FPExtOp
+// add_typecvt_gtest(Float16, Float32);
+// add_typecvt_gtest(BFloat16, Float32);
+// add_typecvt_gtest(Float16, BFloat16);
+
+// FPTruncOp
+// add_typecvt_gtest(Float32, Float16);
+// add_typecvt_gtest(Float32, BFloat16);
+// add_typecvt_gtest(Float16, BFloat16);
+
+#endif
+
+// FPToSIOp
+add_typecvt_gtest(Float32, Int8);
+add_typecvt_gtest(Float32, Int16);
+add_typecvt_gtest(Float32, Int32);
+
+// FPToUIOp
+add_typecvt_gtest(Float32, Uint8);
+
+// SIToFPOp
+add_typecvt_gtest(Int8, Float32);
+add_typecvt_gtest(Int16, Float32);
+add_typecvt_gtest(Int32, Float32);
+
+// UIToFPOp
+add_typecvt_gtest(Uint8, Float32);
+
+#undef add_typecvt_gtest
 
 #endif  // MGB_JIT_MLIR
 
