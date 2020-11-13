@@ -49,7 +49,7 @@ public:
             const TensorLayout&, const TensorLayout&, const TensorLayout&,
             const TensorLayout&, const TensorLayout&) override;
     void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
-                         const TensorLayout&, const TensorLayout&,
+                         _megdnn_tensor_in, const TensorLayout&,
                          const TensorLayout&, PreprocessedFilter*,
                          _megdnn_workspace) override;
     const char* get_algorithm_set_name() const override;

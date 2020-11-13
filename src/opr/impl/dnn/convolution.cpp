@@ -961,16 +961,36 @@ void ConvBiasForward::scn_do_execute_preprocess() {
         z_layout = input(3)->layout();
     }
     megdnn_opr()->exec_preprocess(
-            input(0)->layout(), input(1)->dev_tensor().as_megdnn(), bias_layout,
-            z_layout, output(0)->layout(), preprocessed_filter(),
+            input(0)->layout(), input(1)->dev_tensor().as_megdnn(),
+            input(2)->dev_tensor().as_megdnn(), z_layout, output(0)->layout(),
+            preprocessed_filter(),
             intl::get_megdnn_workspace_from_var(output().back()));
-    //! Flag the input(1) no use later, which can be freed when no other
+    //! Flag the weight and bias no use later, which can be freed when no other
     //! var depend on its dev_value, host_value and shape.
-    auto receiver_info =
+    auto receiver_info_weight =
             input(1)->owner_graph()->var_receiver_in_current_comp_seq(input(1));
-    if (receiver_info.dev_value == 1 && receiver_info.host_value == 0 &&
-        receiver_info.shape == 0) {
+    if (receiver_info_weight.dev_value == 1 &&
+        receiver_info_weight.host_value == 0 &&
+        receiver_info_weight.shape == 0) {
         input(1)->add_flag(VarNode::Flag::MEMORY_NO_NEED);
+    }
+    //! if bias is preprocessd
+    if (input().size() > 3) {
+        auto preprocessed_layouts =
+                megdnn_opr()->deduce_preprocessed_filter_layout(
+                        input(0)->layout(), input(1)->layout(), bias_layout,
+                        z_layout, output(0)->layout());
+        if (preprocessed_layouts.size() > 1 &&
+            !preprocessed_layouts[1].is_empty()) {
+            auto receiver_info_bias =
+                    input(2)->owner_graph()->var_receiver_in_current_comp_seq(
+                            input(2));
+            if (receiver_info_bias.dev_value == 1 &&
+                receiver_info_bias.host_value == 0 &&
+                receiver_info_bias.shape == 0) {
+                input(2)->add_flag(VarNode::Flag::MEMORY_NO_NEED);
+            }
+        }
     }
 }
 

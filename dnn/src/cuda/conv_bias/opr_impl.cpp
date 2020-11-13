@@ -238,11 +238,11 @@ ConvBiasForwardImpl::deduce_preprocessed_filter_layout(
 
 void ConvBiasForwardImpl::exec_preprocess(
         const TensorLayout& src_layout, _megdnn_tensor_in filter,
-        const TensorLayout& bias_layout, const TensorLayout& z_layout,
+        _megdnn_tensor_in bias, const TensorLayout& z_layout,
         const TensorLayout& dst_layout, PreprocessedFilter* preprocessed_filter,
         _megdnn_workspace workspace) {
     TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout},
-            z{nullptr, z_layout}, bias{nullptr, bias_layout};
+            z{nullptr, z_layout};
     AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace,
                             preprocessed_filter);
     auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,

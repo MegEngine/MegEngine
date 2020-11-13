@@ -178,9 +178,26 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
             for (size_t i = 0; i < flt_val.size(); i++) {
                 pf.tensors[i] = flt_val[i].as_megdnn();
             }
-            APPLY(_(megdnn_opr)->exec_preprocess(args..., &pf, mdn_workspace),
-                  std::forward_as_tuple(layouts[0], inp_val[1].as_megdnn()),
-                  array_skip<2>(layouts));
+            if_constexpr<opr_contain_bias<Opr>()>(
+                    //! convbias
+                    [&](auto __) {
+                        APPLY(__(megdnn_opr)
+                                      ->exec_preprocess(args..., &pf,
+                                                        mdn_workspace),
+                              std::forward_as_tuple(layouts[0],
+                                                    inp_val[1].as_megdnn(),
+                                                    inp_val[2].as_megdnn()),
+                              array_skip<arity_in - 1>(layouts));
+                    },
+                    //! Convolution
+                    [&](auto __) {
+                        APPLY(__(megdnn_opr)
+                                      ->exec_preprocess(args..., &pf,
+                                                        mdn_workspace),
+                              std::forward_as_tuple(layouts[0],
+                                                    inp_val[1].as_megdnn()),
+                              array_skip<2>(layouts));
+                    });
         }
     });
 

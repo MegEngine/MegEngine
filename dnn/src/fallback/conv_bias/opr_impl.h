@@ -57,7 +57,7 @@ public:
 
     void exec_preprocess(const TensorLayout& src_layout,
                          _megdnn_tensor_in filter,
-                         const TensorLayout& bias_layout,
+                         _megdnn_tensor_in bias,
                          const TensorLayout& z_layout,
                          const TensorLayout& dst_layout,
                          PreprocessedFilter* preprocessed_filter,

@@ -1955,6 +1955,39 @@ typename DnnOp::Algorithm* try_find_any_weight_preprocess_algo(
     return nullptr;
 }
 
+template <typename DnnOp, typename... Args>
+typename DnnOp::Algorithm* try_find_any_bias_preprocess_algo(
+        DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
+        Args&& ...args) {
+    if (found.valid()) {
+        if (found.val()) {
+            return dnn_op->execution_policy().algorithm;
+        } else {
+            return nullptr;
+        }
+    }
+    for (auto&& algo : dnn_op->get_all_algorithms(
+            std::forward<Args>(args)...)) {
+        dnn_op->execution_policy().algorithm = algo;
+        auto layouts = dnn_op->deduce_preprocessed_filter_layout(
+                std::forward<Args>(args)...);
+        if (layouts.size() <= 1)
+            continue;
+        bool valid = false;
+        if (!layouts[1].is_empty()) {
+            valid = true;
+            break;
+        }
+        if (valid) {
+            found.emplace(true);
+            return algo;
+        }
+    }
+    found.emplace(false);
+    mgb_log_warn("Can't find bias preprocess algo for op %s", mgb_info);
+    return nullptr;
+}
+
 void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
     HostTensorGenerator<> gen;
     auto graph = ComputingGraph::make();
@@ -2150,6 +2183,56 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
                         ->cast_final_safe<opr::SharedDeviceTensor>()
                         .get_dev_tensor()
                         .empty());
+}
+
+TEST(TestGraph, FreeBias) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto cn = CompNode::load("xpu0");
+    graph->options().graph_opt.weight_preprocess = true;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make_const(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+    auto x = mkvar("x", {1, 32, 16, 16});
+    // ConvBias test dense
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 0;
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+    auto w1 = mkcvar("w1", {32, 32, 1, 1}), b1 = mkcvar("b1", {1, 32, 1, 1});
+    auto conv1 = opr::ConvBias::make(x, w1, b1, param_conv_bias);
+    Maybe<bool> wp1;
+    conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>()
+        .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
+            return try_find_any_bias_preprocess_algo(
+                opr->cast_final_safe<opr::ConvBias>().megdnn_opr(),
+                opr->cname(), wp1,
+                opr->input(0)->layout(), opr->input(1)->layout(),
+                opr->input(2)->layout(), TensorLayout{},
+                opr->output(0)->layout());
+    });
+
+    HostTensorND host_y;
+    auto func =graph->compile({make_callback_copy(conv1, host_y)});
+    //!flag the no need memory of var
+    func->execute();
+    //!free the no need memory of var
+    func->execute();
+    auto check = [&](SymbolVar v) {
+        ASSERT_TRUE(v.node()->contain_flag(VarNode::Flag::MEMORY_NO_NEED));
+        ASSERT_TRUE(v.node()->dev_tensor().empty());
+        ASSERT_TRUE(v.node()->owner_opr()
+                            ->cast_final_safe<opr::SharedDeviceTensor>()
+                            .get_dev_tensor()
+                            .empty());
+    };
+    ASSERT_TRUE(wp1.valid());
+    if (wp1.val()) {
+        check(b1);
+    }
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

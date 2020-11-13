@@ -75,6 +75,11 @@ constexpr bool opr_supports_preprocess() {
            std::is_same<Opr, megdnn::ConvBias>::value;
 }
 
+template <typename Opr>
+constexpr bool opr_contain_bias() {
+    return std::is_same<Opr, megdnn::ConvBias>::value;
+}
+
 template <typename Opr, bool has_prep>
 struct PreprocessFilterImpl {
     using T = union {};

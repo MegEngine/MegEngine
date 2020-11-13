@@ -601,7 +601,7 @@ struct OprWeightPreprocessProxy<ConvBiasForward>
                         tensors[3].layout, tensors[4].layout);
         WorkspaceWrapper preprocess_workspace(opr->handle(),
                                               preprocess_workspace_size);
-        opr->exec_preprocess(tensors[0].layout, tensors[1], tensors[2].layout,
+        opr->exec_preprocess(tensors[0].layout, tensors[1], tensors[2],
                              tensors[3].layout, tensors[4].layout,
                              &preprocessed_filter,
                              preprocess_workspace.workspace());

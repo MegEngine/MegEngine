@@ -378,15 +378,15 @@ public:
                       _megdnn_workspace workspace) = 0;
 
     /**
-     * \brief execute weight preprocessing, read weights form filter and write
-     * to preprocessed_filter after preprocessed.
+     * \brief execute weight preprocessing, read weights form filter and bias,
+     * write to preprocessed_filter after preprocessed.
      *
      * \praram[in] workspace the needed tmp workspace when exec_preprocess
      * running, the size is got by get_preprocess_workspace_in_bytes
      */
     virtual void exec_preprocess(const TensorLayout& src_layout,
                                  _megdnn_tensor_in filter,
-                                 const TensorLayout& bias_layout,
+                                 _megdnn_tensor_in bias,
                                  const TensorLayout& z_layout,
                                  const TensorLayout& dst_layout,
                                  PreprocessedFilter* preprocessed_filter,

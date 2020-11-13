@@ -59,7 +59,7 @@ public:
     }
 
     void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
-                         const TensorLayout&, const TensorLayout&,
+                         _megdnn_tensor_in, const TensorLayout&,
                          const TensorLayout&, PreprocessedFilter*,
                          _megdnn_workspace) override {}
 

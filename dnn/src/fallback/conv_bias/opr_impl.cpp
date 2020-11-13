@@ -178,15 +178,14 @@ void ConvBiasImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
 
 void ConvBiasImpl::exec_preprocess(const TensorLayout& src_layout,
                                    _megdnn_tensor_in filter,
-                                   const TensorLayout& bias_layout,
+                                   _megdnn_tensor_in bias,
                                    const TensorLayout& z_layout,
                                    const TensorLayout& dst_layout,
                                    PreprocessedFilter* preprocessed_filter,
                                    _megdnn_workspace workspace) {
-    //! exec_preprocess currently only support preprocess weights before exec,
-    //! src/dst/bias/z will be ignored, just set to nullptr
-    TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout},
-            bias{nullptr, bias_layout};
+    //! exec_preprocess currently only support preprocess weights and bias
+    //! before exec, src/dst/z will be ignored, just set to nullptr
+    TensorND src{nullptr, src_layout}, dst{nullptr, dst_layout};
     auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace,
                                       preprocessed_filter);
     //! should not pass workspace_size limit otherwise can not find match algo
@@ -196,7 +195,7 @@ void ConvBiasImpl::exec_preprocess(const TensorLayout& src_layout,
         exec_preprocess_with_ncb_kern(fparam, algo);
     } else {
         naive::ConvBiasForwardImpl::exec_preprocess(
-                src_layout, filter, bias_layout, z_layout, dst_layout,
+                src_layout, filter, bias, z_layout, dst_layout,
                 preprocessed_filter, workspace);
     }
 }
