@@ -290,8 +290,8 @@ ConvBiasImpl::get_all_packed_algo() {
 bool ConvBiasImpl::is_matmul_quantized_prefer(
         const ConvBiasImpl::NCBKernSizeParam& param) const {
     fallback::ConvBiasImpl::NCBKernSizeParam conv_ncb_param(
-            param, 0, param::MatrixMul::Format::DEFAULT, {}, 0,
-            BiasMode::NO_BIAS, param::ConvBias::NonlineMode::IDENTITY);
+            param, {}, 0, BiasMode::NO_BIAS,
+            param::ConvBias::NonlineMode::IDENTITY);
     conv_ncb_param.dst_type = param.bias_type;
     conv_ncb_param.filter_meta.group = 1;
 
@@ -320,11 +320,6 @@ SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
     auto FH = param.filter_meta.spatial[0];
     auto FW = param.filter_meta.spatial[1];
     //! TODO: now winograd only support fast-run
-    if (param.filter_meta.format == param::ConvBias::Format::NCHW_WINOGRAD ||
-        param.filter_meta.format == param::ConvBias::Format::NCHW44_WINOGRAD ||
-        param.filter_meta.format == param::ConvBias::Format::NCHW88_WINOGRAD) {
-        return {AlgoCategory::WINOGRAD};
-    }
     //! im2col
     bool im2col_prefer = (IC >= 32 || OC >= 32);
     //! quantized algo use matmul when direct algo is unusable

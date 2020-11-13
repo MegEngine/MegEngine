@@ -72,7 +72,6 @@
 #include "src/cuda/type_cvt/opr_impl.h"
 #include "src/cuda/warp_affine/opr_impl.h"
 #include "src/cuda/warp_perspective/opr_impl.h"
-#include "src/cuda/winograd_filter_preprocess/opr_impl.h"
 #include "src/cuda/local_share/opr_impl.h"
 #include "src/cuda/roi_align/opr_impl.h"
 #include "src/cuda/batch_conv_bias/opr_impl.h"

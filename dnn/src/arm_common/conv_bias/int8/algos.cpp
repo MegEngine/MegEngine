@@ -242,14 +242,8 @@ bool ConvBiasImpl::AlgoS8WinogradF23_8x8::usable(
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() == PackMode::NO_PACK &&
-               ((param.filter_meta.format == param::ConvBias::Format::NCHW &&
-                 param.filter_type.enumv() == DTypeEnum::QuantizedS8) ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW_WINOGRAD &&
-                 param.output_block_size == 2 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK8 &&
-                 param.filter_type.enumv() == DTypeEnum::QuantizedS16)) &&
+               (param.filter_meta.format == param::ConvBias::Format::NCHW &&
+                 param.filter_type.enumv() == DTypeEnum::QuantizedS8) &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -293,13 +287,8 @@ bool ConvBiasImpl::AlgoS8CF32WinogradF23_4x4_NCHW44::usable(
                         .get_matmul_kern_param(param));
         return is_matmul_usable &&
                m_matmul_algo->packmode() == PackMode::NO_PACK &&
-               ((param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
-                 param.filter_type.enumv() == DTypeEnum::QuantizedS8) ||
-                ((param.filter_meta.format ==
-                  param::ConvBias::Format::NCHW44_WINOGRAD) &&
-                 param.output_block_size == 2 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK4)) &&
+               (param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
+                 param.filter_type.enumv() == DTypeEnum::QuantizedS8) &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -341,14 +330,8 @@ bool ConvBiasImpl::AlgoS8WinogradF23_8x8_NCHW44::usable(
                         .get_matmul_kern_param(param);
         bool is_matmul_usable = m_matmul_algo->usable(matmul_param);
         return is_matmul_usable &&
-               ((param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
-                 param.filter_type.enumv() == DTypeEnum::QuantizedS8) ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW44_WINOGRAD &&
-                 param.output_block_size == 2 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK8 &&
-                 param.filter_type.enumv() == DTypeEnum::QuantizedS16)) &&
+               (param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
+                param.filter_type.enumv() == DTypeEnum::QuantizedS8) &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&

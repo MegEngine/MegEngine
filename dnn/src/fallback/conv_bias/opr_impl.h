@@ -103,19 +103,13 @@ public:
     struct NCBKernSizeParam : ConvolutionImpl::NCBKernSizeParam {
         NCBKernSizeParam() = default;
         NCBKernSizeParam(const ConvolutionImpl::NCBKernSizeParam& param,
-                         size_t output_block_size,
-                         param::MatrixMul::Format winograd_matmul_format,
                          DType bias_type, ptrdiff_t bias_bs, BiasMode bias_mode,
                          Param::NonlineMode nonlineMode)
                 : ConvolutionImpl::NCBKernSizeParam(param),
-                  output_block_size{output_block_size},
-                  winograd_matmul_format{winograd_matmul_format},
                   bias_type{bias_type},
                   bias_bs{bias_bs},
                   bias_mode{bias_mode},
                   nonlineMode{nonlineMode} {}
-        size_t output_block_size;  //!< used in winograd algo
-        param::MatrixMul::Format winograd_matmul_format;
         DType bias_type;
         //! stride for batch of bias
         ptrdiff_t bias_bs;

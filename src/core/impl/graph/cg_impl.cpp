@@ -32,7 +32,6 @@
 #include "megbrain/jit/fusion_pass.h"
 #endif
 
-#include "megbrain/gopt/weights_preprocess.h"
 
 using namespace mgb;
 using namespace cg;

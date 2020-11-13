@@ -1607,15 +1607,5 @@ void RelayoutFormat::init_output_format() {
 }
 // f}}}
 //
-/* f{{{ ===================== WinogradFilterPreprocess ===================== */
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(WinogradFilterPreprocess);
-MEGDNN_OPR_INIT1(WinogradFilterPreprocess, "winograd_filter_preprocess")
-void WinogradFilterPreprocess::init_output_dtype() {
-    TensorLayout dst;
-    TensorLayout src{input(0)->shape(), input(0)->dtype(), input(0)->format()};
-    megdnn_opr()->deduce_layout(src, dst);
-    output(0)->dtype(dst.dtype);
-}
-// f}}}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

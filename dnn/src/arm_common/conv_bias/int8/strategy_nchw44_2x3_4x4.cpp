@@ -240,7 +240,6 @@ void winograd_2x3_4x4_s8_f32_nchw44::filter(const int8_t* filter,
                                  float* transform_mid_buf, size_t OC, size_t IC,
                                  size_t oc_start, size_t oc_end) {
     constexpr int alpha = 2 + 3 - 1;
-
     /**
      * origin: (4x3) * (3 x 3) * (3 x 4)
      */

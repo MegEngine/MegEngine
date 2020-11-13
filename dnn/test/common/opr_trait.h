@@ -95,7 +95,6 @@ DEF(MaskConvolution, 4, true, true);
 DEF(MaskPropagate, 2, true, true);
 DEF(RelayoutFormat, 2, true, true);
 DEF(MaxTensorDiff, 2, true, false);
-DEF(WinogradFilterPreprocess, 2, true, true);
 DEF(LocalShareForward, 3, true, true);
 DEF(LocalShareBackwardData, 3, true, false);
 DEF(LocalShareBackwardFilter, 3, true, false);

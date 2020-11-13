@@ -39,7 +39,7 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           'NCHW44','NCHW44_DOT',
           Doc('NCHW_WINOGRAD', 'NCHW layout with weights tranformed by winograd'),
           Doc('NCHW88_WINOGRAD', 'NCHW88 layout with weights tranformed by winograd'),
-          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'), 
+          Doc('NCHW44_WINOGRAD', 'NCHW44 layout with weights tranformed by winograd'),
           Doc('NCHW4_NCHW32', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
           Doc('NCHW32_NCHW4', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
           Doc('NCHW4_NCHW', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'), 
@@ -454,15 +454,6 @@ pdef('PowC', 'power with constant exponent').add_fields('float32', 'exp', 0)
           Doc('MK4_DOT', 'Split 4 from M and K, better for neon dotprod:'
               'M/4, K/4, 4(m), 4(k)) x (K/4, N, 4(k)). if transposeA the '
               'layout is (K/4, M/4, 4(m), 4(k)) x (K/4, N, 4(k))'))
- )
-
-(pdef('Winograd', 'winograd param used in convbias').
-  add_fields(
-      'uint32',
-      Doc('output_block_size', 'output block size, detail meaning see winograd '
-          'in convbias, equals to the meaning of m in F(m, r)'), 0).
-  add_enum_alias('Format', 'MatrixMul').
-  add_enum_alias('ComputeMode', 'Convolution', name_field='compute_mode')
  )
 
 (pdef('SVD').

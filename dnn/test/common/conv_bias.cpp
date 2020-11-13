@@ -1152,50 +1152,6 @@ void check_conv_bias_preprocess(std::vector<conv_bias::TestArg> args,
 }
 
 
-void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
-                              param::ConvBias param, Handle* handle,
-                              param::MatrixMul::Format format) {
-    megdnn_assert(param.format == param::ConvBias::Format::NCHW ||
-                  param.format == param::ConvBias::Format::NCHW44);
-    auto winograd_preprocess_opr =
-            handle->create_operator<WinogradFilterPreprocess>();
-    winograd_preprocess_opr->param().output_block_size = m;
-    winograd_preprocess_opr->param().format = format;
-    winograd_preprocess_opr->param().compute_mode = param.compute_mode;
-    TensorLayout filter_transform_layout;
-    winograd_preprocess_opr->deduce_layout(tensors[1].layout,
-                                           filter_transform_layout);
-    size_t winograd_preprocess_workspace_in_bytes =
-            winograd_preprocess_opr->get_workspace_in_bytes(
-                    tensors[1].layout, filter_transform_layout);
-
-    auto conv_bias_opr = handle->create_operator<ConvBias>();
-    conv_bias_opr->param() = param;
-    if (param.format == param::ConvBias::Format::NCHW) {
-        conv_bias_opr->param().format = param::ConvBias::Format::NCHW_WINOGRAD;
-    } else {
-        conv_bias_opr->param().format =
-                param::ConvBias::Format::NCHW44_WINOGRAD;
-    }
-    conv_bias_opr->param().output_block_size = m;
-    size_t conv_bias_workspace_in_bytes = conv_bias_opr->get_workspace_in_bytes(
-            tensors[0].layout, filter_transform_layout, tensors[2].layout,
-            tensors[3].layout, tensors[4].layout, nullptr);
-
-    WorkspaceBundle wb(nullptr, {filter_transform_layout.span().dist_byte(),
-                                 conv_bias_workspace_in_bytes,
-                                 winograd_preprocess_workspace_in_bytes});
-    wb.set(malloc(wb.total_size_in_bytes()));
-
-    TensorND filter_transform_tensor(wb.get(0),
-                                     std::move(filter_transform_layout));
-    winograd_preprocess_opr->exec(tensors[1], filter_transform_tensor,
-                                  wb.get_workspace(2));
-    conv_bias_opr->exec(tensors[0], filter_transform_tensor, tensors[2],
-                        tensors[3], tensors[4], nullptr, wb.get_workspace(1));
-    free(wb.ptr());
-};
-
 void checker_conv_bias_common(std::vector<conv_bias::TestArg> args, Handle* handle,
                        RNG* rng, float epsilon, DType type0, DType type1,
                        DType type2, DType type3, const char* algo_name) {
@@ -1388,7 +1344,6 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
                                 }
     return args;
 }
-
 }  // namespace conv_bias
 }  // namespace test
 }  // namespace megdnn

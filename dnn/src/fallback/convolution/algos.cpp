@@ -316,8 +316,6 @@ ConvolutionImpl::AlgoDefault::init_conv_bias_param(
                 mul_scale(param.src_type, param.filter_type));
     }
     return {param,
-            0,
-            param::MatrixMul::Format::DEFAULT,
             bias_type,
             0,
             BiasMode::NO_BIAS,

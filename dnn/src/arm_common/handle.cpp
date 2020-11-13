@@ -27,7 +27,7 @@
 #include "src/arm_common/type_cvt/opr_impl.h"
 #include "src/arm_common/reduce/opr_impl.h"
 #include "src/arm_common/conv_bias/opr_impl.h"
-#include "src/arm_common/winograd_filter_preprocess/opr_impl.h"
+
 
 namespace megdnn {
 namespace arm_common {
@@ -50,7 +50,6 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(WarpPerspective)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(TypeCvt)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Reduce)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvBias)
-MEGDNN_SPECIALIZE_CREATE_OPERATOR(WinogradFilterPreprocess)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData)
 
 #pragma GCC diagnostic push

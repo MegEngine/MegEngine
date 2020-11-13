@@ -78,7 +78,6 @@
 #include "src/naive/type_cvt/opr_impl.h"
 #include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_perspective/opr_impl.h"
-#include "src/naive/winograd_filter_preprocess/opr_impl.h"
 #include "src/naive/remap/opr_impl.h"
 #include "src/naive/fake_quant/opr_impl.h"
 

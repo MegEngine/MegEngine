@@ -113,10 +113,6 @@ class AlgoChooser {
     //! entrance for getting algorithm according to execution strategy
     static ImplAlgo get_algo(ExeContext& ctx);
 
-    static void get_origin_param_and_layouts(const ExeContext&,
-                                             ConvTensorLayouts&,
-                                             typename Opr::Param&) {}
-
     //! get all profile result, either by retrieving cache or profiling
     static AlgoChooserProfileCache::Result get_profile_result(
             ExeContext& ctx, bool enable_update);

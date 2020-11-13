@@ -635,22 +635,6 @@ MGB_DEFINE_OPR_CLASS(RelayoutFormat,
                 const OperatorNodeConfig &config = {});
         void init_output_format() override final;
 };
-
-/*!
- * \brief change conv weights layout base on winograd transform.
- *
- * See docs of megdnn params for more details
- */
-MGB_DEFINE_OPR_CLASS(WinogradFilterPreprocess,
-                     intl::MegDNNOprWrapperFwd<megdnn::WinogradFilterPreprocess>)
-    public:
-        WinogradFilterPreprocess(VarNode* p0, const Param& param,
-                const OperatorNodeConfig& config);
-        static SymbolVar make(SymbolVar p0, const Param& param = {},
-                const OperatorNodeConfig& config = {});
-        void init_output_dtype() override final;
-};
-
 } // opr
 } // mgb
 

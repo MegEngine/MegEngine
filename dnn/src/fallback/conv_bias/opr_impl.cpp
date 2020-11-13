@@ -342,10 +342,7 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
         param().format == Param::Format::NCHW4 ||
         param().format == Param::Format::NCHW44 ||
         param().format == Param::Format::NCHW44_DOT ||
-        param().format == Param::Format::NCHW ||
-        param().format == Param::Format::NCHW_WINOGRAD ||
-        param().format == Param::Format::NCHW88_WINOGRAD ||
-        param().format == Param::Format::NCHW44_WINOGRAD) {
+        param().format == Param::Format::NCHW) {
         spatial_pos = 2;
     } else if (param().format == Param::Format::NHWC) {
         spatial_pos = 1;
@@ -370,25 +367,7 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
                   "should be equal");
     auto&& fm = check_layout_fwd(src, filter, dst);
     auto& conv_fm = reinterpret_cast<ConvolutionImpl::CanonizedFilterMeta&>(fm);
-
-    param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT;
-    if (param().format == Param::Format::NCHW_WINOGRAD ||
-        param().format == Param::Format::NCHW88_WINOGRAD ||
-        param().format == Param::Format::NCHW44_WINOGRAD) {
-        size_t flt_start = 0;
-        if (param().sparse == Param::Sparse::GROUP) {
-            flt_start = 1;
-        }
-
-        if (filter.ndim == 6 + flt_start) {
-            if (filter[5] == 4) {
-                format = param::MatrixMul::Format::MK4;
-            } else {
-                megdnn_assert(filter[5] == 8);
-                format = param::MatrixMul::Format::MK8;
-            }
-        }
-    }
+    
     size_t nr_threads = static_cast<naive::HandleImpl*>(handle())
                                 ->megcore_dispatcher()
                                 ->nr_threads();
@@ -407,8 +386,6 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
              nr_threads,
              reinterpret_cast<const ConvolutionForward::PreprocessedFilter*>(
                      preprocessed_filter)},
-            param().output_block_size,
-            format,
             bias.dtype,
             bias.stride[0],
             bias_mode,
@@ -537,11 +514,7 @@ SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
     auto FH = param.filter_meta.spatial[0];
     auto FW = param.filter_meta.spatial[1];
     //! TODO: now winograd only support in fast-run
-    if (param.filter_meta.format == param::ConvBias::Format::NCHW_WINOGRAD ||
-        param.filter_meta.format == param::ConvBias::Format::NCHW44_WINOGRAD ||
-        param.filter_meta.format == param::ConvBias::Format::NCHW88_WINOGRAD) {
-        return {AlgoCategory::WINOGRAD};
-    }
+
     //! im2col + matmul
     bool im2col_prefer = (IC >= 32 || OC >= 32);
     //! quantized algo use matmul when direct algo is unusable
@@ -630,21 +603,6 @@ const T* ConvBiasImpl::NCBKernParam::filter(size_t group_pack_id,
                            filter_meta.ocpg * filter_meta.spatial[0] *
                            filter_meta.spatial[1] * filter_type.size();
 
-            break;
-        }
-        case ConvBiasImpl::Param::Format::NCHW_WINOGRAD:
-        case ConvBiasImpl::Param::Format::NCHW44_WINOGRAD:
-        case ConvBiasImpl::Param::Format::NCHW88_WINOGRAD: {
-            //! four format of weight layout
-            //! 1. {g, alpha, alpha, ocpg/8, icpg/8, 8, 8}
-            //! 2. {alpha, alpha, ocpg/8, icpg/8, 8, 8}
-            //! 3. {g, alpha, alpha, oc, ic, 8, 8}
-            //! 4. {alpha, alpha, oc, ic}
-            group_offset = pack_group_size * group_pack_id * filter_meta.icpg *
-                           filter_meta.ocpg *
-                           (filter_meta.spatial[0] + output_block_size - 1) *
-                           (filter_meta.spatial[1] + output_block_size - 1) *
-                           filter_type.size();
             break;
         }
         default:

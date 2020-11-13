@@ -435,16 +435,6 @@ public:
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst) = 0;
 
-    /**
-     * \brief deduce the origin filter layout and conv_bias param after winograd
-     * transform, this used in fast-run to construct the origin cache-key
-     */
-    static void deduce_winograd_origin_layout_and_param(
-            const Param::Format format, const size_t output_block_size,
-            const TensorLayout& src_layout,
-            const TensorLayout& winograd_filter_layout,
-            TensorLayout& origin_layout, Param& origin_param);
-
     enum class BiasMode : uint32_t {
         NO_BIAS = 0,             //!< no bias
         BROADCAST_CHANNEL_BIAS,  //!< broadcast channel bias, [1, c, 1, 1]

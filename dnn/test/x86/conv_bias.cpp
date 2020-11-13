@@ -1814,69 +1814,22 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_WEIGHT_PREPROCESS) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_winograd_mk_nchw88_args();
     Checker<ConvBiasForward> checker(handle());
-    auto extra_impl = [](const TensorNDArray& tensors, uint32_t m,
-                         param::ConvBias param, Handle* handle) {
-        megdnn_assert(param.format == param::ConvBias::Format::NCHW88);
-        auto winograd_preprocess_opr =
-                handle->create_operator<WinogradFilterPreprocess>();
-        winograd_preprocess_opr->param().output_block_size = m;
-        winograd_preprocess_opr->param().format = param::MatrixMul::Format::MK8;
-        TensorLayout filter_transform_layout;
-        winograd_preprocess_opr->deduce_layout(tensors[1].layout,
-                                               filter_transform_layout);
-        size_t winograd_preprocess_workspace_in_bytes =
-                winograd_preprocess_opr->get_workspace_in_bytes(
-                        tensors[1].layout, filter_transform_layout);
 
-        auto conv_bias_opr = handle->create_operator<ConvBias>();
-        conv_bias_opr->param() = param;
-        conv_bias_opr->param().format =
-                param::ConvBias::Format::NCHW88_WINOGRAD;
-        conv_bias_opr->param().output_block_size = m;
-        size_t conv_bias_workspace_in_bytes =
-                conv_bias_opr->get_workspace_in_bytes(
-                        tensors[0].layout, filter_transform_layout,
-                        tensors[2].layout, tensors[3].layout, tensors[4].layout,
-                        nullptr);
-
-        WorkspaceBundle wb(nullptr, {filter_transform_layout.span().dist_byte(),
-                                     conv_bias_workspace_in_bytes,
-                                     winograd_preprocess_workspace_in_bytes});
-        wb.set(malloc(wb.total_size_in_bytes()));
-
-        TensorND filter_transform_tensor(wb.get(0),
-                                         std::move(filter_transform_layout));
-        winograd_preprocess_opr->exec(tensors[1], filter_transform_tensor,
-                                      wb.get_workspace(2));
-        conv_bias_opr->exec(tensors[0], filter_transform_tensor, tensors[2],
-                            tensors[3], tensors[4], nullptr,
-                            wb.get_workspace(1));
-
-        free(wb.ptr());
-    };
-
-    auto run = [&checker, &extra_impl](
-                       Handle* handle, const std::vector<TestArg>& args,
-                       const std::vector<size_t>& out_size, DType A_dtype,
-                       DType B_dtype, DType C_dtype, DType D_dtype,
-                       const float eps) {
+    auto run = [&checker](const std::vector<TestArg>& args, DType A_dtype,
+                          DType B_dtype, DType C_dtype, DType D_dtype,
+                          const float eps) {
         for (auto&& arg : args) {
-            for (uint32_t m : out_size) {
-                checker.set_extra_opr_impl(std::bind(extra_impl,
-                                                     std::placeholders::_1, m,
-                                                     arg.param, handle));
-                checker.set_dtype(0, A_dtype)
-                        .set_dtype(1, B_dtype)
-                        .set_dtype(2, C_dtype)
-                        .set_dtype(4, D_dtype)
-                        .set_epsilon(eps)
-                        .set_param(arg.param)
-                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
-            }
+            checker.set_dtype(0, A_dtype)
+                    .set_dtype(1, B_dtype)
+                    .set_dtype(2, C_dtype)
+                    .set_dtype(4, D_dtype)
+                    .set_epsilon(eps)
+                    .set_param(arg.param)
+                    .execs({arg.src, arg.filter, arg.bias, {}, {}});
         }
     };
-    run(handle(), args, {2, 6}, dtype::Float32(), dtype::Float32(),
-        dtype::Float32(), dtype::Float32(), 1e-3f);
+    run(args, dtype::Float32(), dtype::Float32(), dtype::Float32(),
+        dtype::Float32(), 1e-3f);
 }
 
 /*********************************** End winograd ************************/

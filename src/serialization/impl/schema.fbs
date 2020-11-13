@@ -28,6 +28,7 @@ table Blob {
 }
 
 table Reserved0 {}
+table DeprecatedParam {}
 
 union OperatorParam {
     param.Empty = 1,
@@ -50,7 +51,8 @@ union OperatorParam {
     param.ElemwiseMultiType = 18,
     param.PowC = 19,
     param.MatrixMul = 20,
-    param.Winograd = 21,
+    //Reserved for param.Winograd = 21,
+    DeprecatedParam = 21,
     param.SVD = 22,
     param.Reduce = 23,
     param.Cumsum = 24,

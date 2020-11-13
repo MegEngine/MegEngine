@@ -46,7 +46,6 @@ AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
 
     ConvTensorLayouts origin_layouts = ctx.layouts();
     typename Opr::Param origin_param = ctx.mgb_opr()->param();
-    get_origin_param_and_layouts(ctx, origin_layouts, origin_param);
     AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
                                            origin_layouts.size(), &origin_param,
                                            sizeof(origin_param)};
@@ -102,18 +101,6 @@ AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
 
     cache.put(cache_key, prof_rst);
     return prof_rst;
-}
-
-template <>
-void AlgoChooser<megdnn::ConvBias>::get_origin_param_and_layouts(
-        const ExeContext& ctx, ConvTensorLayouts& layouts,
-        megdnn::ConvBias::Param& param) {
-    auto format = static_cast<megdnn::param::ConvBias::Format>(
-            ctx.megdnn_opr()->param().format);
-    size_t output_block_size = ctx.megdnn_opr()->param().output_block_size;
-    megdnn::ConvBias::deduce_winograd_origin_layout_and_param(
-            format, output_block_size, ctx.layouts()[0], ctx.layouts()[1],
-            layouts[1], param);
 }
 
 template <typename Opr>

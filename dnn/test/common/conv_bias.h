@@ -94,9 +94,6 @@ void checker_conv_bias_int8x8x16(
         std::vector<megdnn::test::conv_bias::TestArg> args,
         megdnn::Handle* handle, const char* algo_name);
 
-void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
-                              param::ConvBias param, Handle* handle,
-                              param::MatrixMul::Format format);
 void checker_conv_bias_common(std::vector<conv_bias::TestArg> args,
                               Handle* handle, RNG* rng, float epsilon,
                               DType type0, DType type1, DType type2,

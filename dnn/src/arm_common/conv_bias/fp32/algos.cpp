@@ -47,12 +47,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF23_4x4::usable(
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() == PackMode::NO_PACK &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW_WINOGRAD &&
-                 param.output_block_size == 2 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK4)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -86,12 +81,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF63::usable(
                                       strategy, m_tile_size, param)
                                       .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW_WINOGRAD &&
-                 param.output_block_size == 6 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::DEFAULT)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -125,12 +115,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF54::usable(
                                       strategy, m_tile_size, param)
                                       .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW_WINOGRAD &&
-                 param.output_block_size == 5 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::DEFAULT)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 4) &&
@@ -164,12 +149,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF45::usable(
                                       strategy, m_tile_size, param)
                                       .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW_WINOGRAD &&
-                 param.output_block_size == 4 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::DEFAULT)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 5) &&
@@ -209,12 +189,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF63_4x4::usable(
                         .get_matmul_kern_param(param);
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() == PackMode::NO_PACK &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW_WINOGRAD &&
-                 param.output_block_size == 6 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK4)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -257,12 +232,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF23_4x4_NCHW44::usable(
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() ==
                        fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW44_WINOGRAD &&
-                 param.output_block_size == 2 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK4)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -303,12 +273,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF63_4x4_NCHW44::usable(
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() ==
                        fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW44_WINOGRAD &&
-                 param.output_block_size == 6 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK4)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&
@@ -350,12 +315,7 @@ bool ConvBiasImpl::AlgoFP32WinogradF73_4x4_NCHW44::usable(
         return m_matmul_algo->usable(matmul_param) &&
                m_matmul_algo->packmode() ==
                        fallback::MatrixMulImpl::AlgoBase::PackMode::NO_PACK &&
-               (param.filter_meta.format == param::ConvBias::Format::NCHW44 ||
-                (param.filter_meta.format ==
-                         param::ConvBias::Format::NCHW44_WINOGRAD &&
-                 param.output_block_size == 7 &&
-                 param.winograd_matmul_format ==
-                         param::MatrixMul::Format::MK4)) &&
+               param.filter_meta.format == param::ConvBias::Format::NCHW44 &&
                !param.filter_meta.should_flip &&
                (param.filter_meta.spatial[0] == param.filter_meta.spatial[1] &&
                 param.filter_meta.spatial[0] == 3) &&

@@ -14,7 +14,6 @@
 #include "megbrain/gopt/gtrans.h"
 #include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/misc.h"
-#include "megbrain/gopt/weights_preprocess.h"
 #include "megbrain/graph/cg.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/graph/exc_extra_info.h"
@@ -780,8 +779,6 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<FuseConvBiasZPass>();
     });
 
-    cb(weight_winograd_transform,
-       { add_pass<WinogradTransformReplacePass>(); });
 #undef cb
 
     if (need_param_fuse) {
