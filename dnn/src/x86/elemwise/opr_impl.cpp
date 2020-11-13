@@ -153,7 +153,11 @@ bool ElemwiseImpl::exec_unary() {
         auto mkl_dispatch = [&]() {
             switch (param().mode) {
                 DISPATCH_MKL(ABS, vsAbs);
-                DISPATCH_MKL(LOG, vsLn);
+                //! Delete the calculation support of MKL LOG because it will
+                //! cause VML_STATUS_SING error, the reason is At least one of
+                //! the input array values causes a divide-by-zero exception or
+                //! produces an invalid (QNaN) result.
+                // DISPATCH_MKL(LOG, vsLn);
                 DISPATCH_MKL(COS, vsCos);
                 DISPATCH_MKL(SIN, vsSin);
                 DISPATCH_MKL(TANH, vsTanh);
