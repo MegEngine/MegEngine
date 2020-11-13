@@ -22,10 +22,84 @@
 #include "megbrain/opr/dnn/tqt.h"
 
 #include "megbrain/serialization/sereg.h"
+#include "megdnn/opr_param_defs.h"
+#include "megdnn/oprs/nn.h"
 
 namespace mgb {
 
 namespace serialization {
+    template <class MegDNNPooling = megdnn::Pooling>
+    struct MakePoolingCaller1 {
+        template <typename Opr>
+        static VarNode* make(const cg::VarNodeArray& inputs,
+                             const typename MegDNNPooling::Param& param,
+                             const OperatorNodeConfig& config) {
+            if (inputs.size() == 1) {
+                return Opr::make(inputs[0], param, config).node();
+            }
+            return nullptr;
+        }
+    };
+
+    template <class MegDNNROIALIGN = megdnn::ROIAlign>
+    struct MakeROIAlignCaller1 {
+        template <typename Opr>
+        static VarNode* make(const cg::VarNodeArray& inputs,
+                             const typename MegDNNROIALIGN::Param& param,
+                             const OperatorNodeConfig& config) {
+            if (inputs.size() == 2) {
+                return Opr::make(inputs[0],inputs[1], param, config).node();
+            } else {
+                return nullptr;
+            }
+        }
+    };
+
+    template <class MegDNNROIALIGN = megdnn::ROIAlignBackward>
+    struct MakeROIAlignCaller4 {
+        template <typename Opr>
+        static VarNode* make(const cg::VarNodeArray& inputs,
+                             const typename MegDNNROIALIGN::Param& param,
+                             const OperatorNodeConfig& config) {
+            if (inputs.size() == 4) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3],
+                                 param, config)
+                        .node();
+            } else {
+                return nullptr;
+            }
+        }
+    };
+
+    template <class MegDNNPooling = megdnn::PoolingBackward>
+    struct MakePoolingBackwardCaller3 {
+        template <typename Opr>
+        static VarNode* make(const cg::VarNodeArray& inputs,
+                             const typename MegDNNPooling::Param& param,
+                             const OperatorNodeConfig& config) {
+            if (inputs.size() == 3) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
+                        .node();
+            }
+            return nullptr;
+        }
+    };
+
+    template <class MegDNNPooling = megdnn::AdaptivePoolingBackward>
+    struct MakeAdaptivePoolingBackwardCaller3 {
+        template <typename Opr>
+        static VarNode* make(const cg::VarNodeArray& inputs,
+                             const typename MegDNNPooling::Param& param,
+                             const OperatorNodeConfig& config) {
+            if (inputs.size() == 4) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3],
+                                 param, config)
+                        .node();
+            }
+            return nullptr;
+        }
+    };
+
     template<class MegDNNConv = megdnn::Convolution>
     struct MakeConvCaller2 {
         template<typename Opr>
@@ -41,6 +115,7 @@ namespace serialization {
             return nullptr;
         }
     };
+
     template<class MegDNNConv = megdnn::Convolution>
     struct MakeConvCaller3 {
         template<typename Opr>
@@ -56,6 +131,7 @@ namespace serialization {
             return nullptr;
         }
     };
+
     template<class MegDNNConv = megdnn::Convolution>
     struct MakeConvCaller4 {
         template<typename Opr>
@@ -71,6 +147,7 @@ namespace serialization {
             return nullptr;
         }
     };
+
     template<class MegDNNConv = megdnn::Convolution>
     struct MakeConvCaller5 {
         template <typename Opr>
@@ -140,6 +217,75 @@ namespace serialization {
             return make(inputs, param, execution_policy, config)->owner_opr();
         }
     };
+
+    template <class Opr, class Maker0,
+              typename PoolingParam = megdnn::param::Pooling>
+    struct PoolingLoadDumpImpl {
+        static void dump(OprDumpContext& ctx,
+                         const cg::OperatorNodeBase& opr_) {
+            auto&& opr = opr_.cast_final_safe<Opr>();
+            ctx.write_param<PoolingParam>(opr.param());
+        }
+
+        static VarNode* make(
+                const cg::VarNodeArray& inputs, const PoolingParam& param,
+                const OperatorNodeConfig& config) {
+            VarNode* ret = Maker0::template make<Opr>(inputs, param,
+                                                      config);
+            mgb_assert(ret);
+            return ret;
+        }
+
+        static cg::OperatorNodeBase* load(OprLoadContext& ctx,
+                                          const cg::VarNodeArray& inputs,
+                                          const OperatorNodeConfig& config) {
+            auto param = ctx.read_param<PoolingParam>();
+            return make(inputs, param, config)->owner_opr();
+        }
+    };
+
+    template<>
+    struct OprLoadDumpImpl<opr::AdaptivePoolingBackward, 0>:
+        public PoolingLoadDumpImpl<opr::AdaptivePoolingBackward,
+               MakeAdaptivePoolingBackwardCaller3<megdnn::AdaptivePoolingBackward>,
+               megdnn::param::AdaptivePooling>
+    {};
+
+    template<>
+    struct OprLoadDumpImpl<opr::AdaptivePooling, 0>:
+        public PoolingLoadDumpImpl<opr::AdaptivePooling,
+               MakeROIAlignCaller1<megdnn::AdaptivePooling>,
+               megdnn::param::AdaptivePooling>
+    {};
+    
+    template<>
+    struct OprLoadDumpImpl<opr::ROIAlign, 0>:
+        public PoolingLoadDumpImpl<opr::ROIAlign,
+               MakeROIAlignCaller1<megdnn::ROIAlign>,
+               megdnn::param::ROIAlign>
+    {};
+   
+    template<>
+    struct OprLoadDumpImpl<opr::ROIAlignBackward, 0>:
+        public PoolingLoadDumpImpl<opr::ROIAlignBackward,
+               MakeROIAlignCaller4<megdnn::ROIAlignBackward>,
+               megdnn::param::ROIAlign>
+    {};
+
+    template<>
+    struct OprLoadDumpImpl<opr::Pooling, 0>:
+        public PoolingLoadDumpImpl<opr::Pooling,
+               MakePoolingCaller1<megdnn::Pooling>,
+               megdnn::param::Pooling>
+    {};
+
+    template<>
+    struct OprLoadDumpImpl<opr::PoolingBackward, 0>:
+        public PoolingLoadDumpImpl<opr::PoolingBackward,
+               MakePoolingBackwardCaller3<megdnn::PoolingBackward>,
+               megdnn::param::Pooling>
+    {};
+
 
     template<>
     struct OprLoadDumpImpl<opr::Convolution, 0>:
@@ -374,12 +520,12 @@ namespace serialization {
 
 namespace opr {
 
-    using ConvolutionV1 = Convolution;
-    using ConvolutionBackwardDataV1 = ConvolutionBackwardData;
-    using ConvolutionBackwardFilterV1 = ConvolutionBackwardFilter;
-    MGB_SEREG_OPR(ConvolutionV1, 0);
-    MGB_SEREG_OPR(ConvolutionBackwardDataV1, 0);
-    MGB_SEREG_OPR(ConvolutionBackwardFilterV1, 0);
+    using ConvolutionV2 = Convolution;
+    using ConvolutionBackwardDataV2 = ConvolutionBackwardData;
+    using ConvolutionBackwardFilterV2 = ConvolutionBackwardFilter;
+    MGB_SEREG_OPR(ConvolutionV2, 0);
+    MGB_SEREG_OPR(ConvolutionBackwardDataV2, 0);
+    MGB_SEREG_OPR(ConvolutionBackwardFilterV2, 0);
 
     MGB_SEREG_OPR(Images2Neibs, 1);
     MGB_SEREG_OPR(Images2NeibsBackward, 2);
@@ -400,12 +546,14 @@ namespace opr {
 
     MGB_SEREG_OPR(LRN, 1);
     MGB_SEREG_OPR(LRNBackward, 3);
-
-    MGB_SEREG_OPR(Pooling, 1);
-    MGB_SEREG_OPR(PoolingBackward, 3);
-
-    MGB_SEREG_OPR(AdaptivePooling, 2);
-    MGB_SEREG_OPR(AdaptivePoolingBackward, 4);
+    using PoolingV1 = Pooling;
+    using PoolingBackwardV1 = PoolingBackward;
+    MGB_SEREG_OPR(PoolingV1, 1);
+    MGB_SEREG_OPR(PoolingBackwardV1, 3);
+    using AdaptivePoolingV1 = AdaptivePooling;
+    using AdaptivePoolingBackwardV1 = AdaptivePoolingBackward;
+    MGB_SEREG_OPR(AdaptivePoolingV1, 2);
+    MGB_SEREG_OPR(AdaptivePoolingBackwardV1, 4);
 
     MGB_SEREG_OPR(ROIPooling, 3);
     MGB_SEREG_OPR(ROIPoolingBackward, 4);
@@ -418,18 +566,23 @@ namespace opr {
     MGB_SEREG_OPR(Convolution3DBackwardData, 0);
     MGB_SEREG_OPR(Convolution3DBackwardFilter, 0);
 
-    using ConvBiasForwardV3 = ConvBiasForward;
-    MGB_SEREG_OPR(ConvBiasForwardV3, 0);
+    using ConvBiasForwardV4 = ConvBiasForward;
+    MGB_SEREG_OPR(ConvBiasForwardV4, 0);
 
     MGB_SEREG_OPR(BatchNorm, 0);
     MGB_SEREG_OPR(BatchNormBackward, 5);
 
-    MGB_SEREG_OPR(LocalShareForward, 0);
-    MGB_SEREG_OPR(LocalShareBackwardData, 0);
-    MGB_SEREG_OPR(LocalShareBackwardFilter, 0);
+    using LocalShareForwardV1 = LocalShareForward;
+    using LocalShareBackwardDataV1 = LocalShareBackwardData;
+    using LocalShareBackwardFilterV1 = LocalShareBackwardFilter;
+    MGB_SEREG_OPR(LocalShareForwardV1, 0);
+    MGB_SEREG_OPR(LocalShareBackwardDataV1, 0);
+    MGB_SEREG_OPR(LocalShareBackwardFilterV1, 0);
 
-    MGB_SEREG_OPR(ROIAlign, 2);
-    MGB_SEREG_OPR(ROIAlignBackward, 4);
+    using ROIAlignV1=ROIAlign;
+    using ROIAlignBackwardV1=ROIAlignBackward;
+    MGB_SEREG_OPR(ROIAlignV1, 2);
+    MGB_SEREG_OPR(ROIAlignBackwardV1, 4);
     MGB_SEREG_OPR(DeformableConvForward, 0);
     MGB_SEREG_OPR(DeformableConvBackwardData, 0);
     MGB_SEREG_OPR(DeformableConvBackwardFilter, 0);
@@ -437,7 +590,9 @@ namespace opr {
     MGB_SEREG_OPR(DeformablePSROIPoolingForward, 3);
     MGB_SEREG_OPR(DeformablePSROIPoolingBackward, 5);
 
-    MGB_SEREG_OPR(BatchConvBiasForward, 0);
+
+    using BatchConvBiasForwardV1 = BatchConvBiasForward;
+    MGB_SEREG_OPR(BatchConvBiasForwardV1, 0);
     MGB_SEREG_OPR(FakeQuant, 3);
     MGB_SEREG_OPR(FakeQuantBackward, 4);
     MGB_SEREG_OPR(TQT, 2);

@@ -18,7 +18,7 @@ decl_opr('Convolution',
          params=[('param', 'Convolution'),
                  ('execution_polity', 'ExecutionPolicy')],
          desc='batched convolution on channeled 2D images',
-         version=1, has_out_dtype=True)
+         version=2, has_out_dtype=True)
 
 decl_opr('ConvolutionBackwardData',
          pyname='deconvolution_v0',
@@ -51,7 +51,7 @@ decl_opr('ConvolutionBackwardData',
          ],
          desc='batched deconvolution on channeled 2D images; the underlying '
          'computation is in fact gradient of convolution w.r.t. data',
-         version=1)
+         version=2)
 
 decl_opr('MaskConvolution',
          inputs=[Doc('src',
@@ -138,14 +138,14 @@ decl_opr('LRN',
 
 decl_opr('Pooling',
          inputs=['src'],
-         params='Pooling')
+         params='Pooling',version=1)
 
 decl_opr('AdaptivePooling',
         inputs=[Doc('src', 'input image, shape (n, c, ih, iw)'),
                 Doc('out_shape', 'output image shape, containing two elements specifying output height and width.')],
         params='AdaptivePooling',
         desc='Adaptive Pooling.'
-        'The output shape is (n, c, oh, ow), where (oh, ow) is given by *out_shape*.')
+        'The output shape is (n, c, oh, ow), where (oh, ow) is given by *out_shape*.',version=1)
 
 decl_opr('ROIPooling', outputs=[0],
          inputs=[Doc('src', 'input image, shape (n, c, ih, iw)'),
@@ -215,7 +215,7 @@ decl_opr('ConvBiasForward',
                  ('execution_policy', 'ExecutionPolicy')],
          desc=('activation(convolution(src, filter) + bias) with specified '
                'dtype'),
-         version=3, has_out_dtype=True)
+         version=4, has_out_dtype=True)
 
 decl_opr('BatchNorm',
          pyname='batch_norm',
@@ -255,7 +255,7 @@ r"""
                       & iw=-pad_w+ow \\times stride_w \\\\
                       & grp_h = oh / (OH / spatial_groups_h) \\\\
                       & grp_w = ow / (OW / spatial_groups_w)
-"""),
+"""), version=1,
          has_out_dtype=True)
 
 decl_opr('ROIAlign', outputs=[0],
@@ -270,7 +270,7 @@ decl_opr('ROIAlign', outputs=[0],
          desc='ROI Align, see '
          'Mask-RCNN: https://arxiv.org/pdf/1703.06870.pdf, '
          'The output shape is (m, c, pooled_height, pooled_width), where (pooled_height, pooled_width) is given by '
-         '*Param*.')
+         '*Param*.',version=1)
 
 decl_opr('DeformableConvForward',
          pyname='deformable_conv',
@@ -312,7 +312,7 @@ r"""
                             * filter_{n, oc, ic, kh, kw} \\\\
         \\text{where} & ih=-pad_h+oh \\times stride_h \\\\
                       & iw=-pad_w+ow \\times stride_w
-"""),
+"""), version=1,
          has_out_dtype=True)
 
 decl_opr('FakeQuant',

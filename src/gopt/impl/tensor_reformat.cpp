@@ -1945,7 +1945,7 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     megdnn::param::ConvBias::Format conv_bias_format =
             megdnn::param::ConvBias::Format::NCHW88;
     megdnn::param::Convolution::Format conv_format =
-            megdnn::param::ConvolutionV0::Format::NCHW88;
+            megdnn::param::Convolution::Format::NCHW88;
     megdnn::param::Pooling::Format pooling_format =
             megdnn::param::Pooling::Format::NCHW88;
     std::string convter_pass_name = "conv_format_nchw88";
@@ -1958,7 +1958,7 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         src_to_nchwxx_mode = RelayoutMode::NCHW_TO_NCHW4;
         src_to_nchw_mode = RelayoutMode::NCHW4_TO_NCHW;
         conv_bias_format = megdnn::param::ConvBias::Format::NCHW44;
-        conv_format = megdnn::param::ConvolutionV0::Format::NCHW44;
+        conv_format = megdnn::param::Convolution::Format::NCHW44;
         pooling_format = megdnn::param::Pooling::Format::NCHW44;
         convter_pass_name = "conv_format_nchw44";
     }
@@ -2360,7 +2360,7 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
     struct TestTransResult {
         TransType trans_type;
         RelayoutMode relayout_mod;
-        megdnn::param::ConvolutionV0::Format conv_format;
+        megdnn::param::Convolution::Format conv_format;
     };
     constexpr size_t pack_c_size = 4_z;
     auto test_trans_nchw44_dot =

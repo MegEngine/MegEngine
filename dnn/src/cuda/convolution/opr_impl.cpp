@@ -68,7 +68,6 @@ ConvolutionForwardImpl::conv_bias_extra_data(const TensorLayout& src,
                                  conv_param.stride_w,
                                  conv_param.dilate_h,
                                  conv_param.dilate_w,
-                                 0,
                                  conv_param.compute_mode};
     ret.convbias_opr->execution_policy() = {this->execution_policy().algo};
     return ret;

@@ -173,7 +173,6 @@ SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
     auto FH = param.filter_meta.spatial[0];
     auto FW = param.filter_meta.spatial[1];
     //! TODO: now winograd only support fast-run
-
     //! nchw88 use mkl-dnn which algo is direct
     if (param.filter_meta.format == param::ConvBias::Format::NCHW88) {
         return {AlgoCategory::DIRECT, AlgoCategory::IM2COL};

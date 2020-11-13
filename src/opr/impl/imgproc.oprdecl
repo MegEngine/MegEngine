@@ -12,7 +12,8 @@ decl_opr(
     params='WarpPerspective',
     desc='Apply perspective transformation to batched 2D images; '
     'see http://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html '
-    'for details on perspective transformations.')
+    'for details on perspective transformations.',
+    version=2)
 
 decl_opr(
     'WarpPerspective',
@@ -62,7 +63,7 @@ decl_opr('Resize',
          desc='Resize an image. '
          'see http://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#cv2.resize'
          ' for details.',
-    version=1)
+    version=2)
 
 decl_opr(
     'WarpAffine',
@@ -77,7 +78,7 @@ decl_opr(
     desc='Apply affine transformation to batched 2D images; '
     'see http://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html '
     'for details on affine transformations.',
-    version=1)
+    version=2)
 
 decl_opr(
     'Remap',
@@ -89,7 +90,8 @@ decl_opr(
     params='Remap',
     desc='Remap transformation to batched 2D images; '
     'see https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=remap'
-    'for details on remap transformations.')
+    'for details on remap transformations.',
+    version=1)
 
 decl_raw_opr(
     'dct_channel_select',

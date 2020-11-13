@@ -71,7 +71,6 @@ namespace {
 
 void OprRegistry::add(const OprRegistry& record) {
     auto&& sd = static_data();
-
     auto persist_id = record.persist_type_id;
     auto registry_ins = sd.id2reg.emplace(persist_id, record);
     mgb_assert(registry_ins.second ||

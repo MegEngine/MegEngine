@@ -9,8 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include <type_traits>
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/serialization/sereg.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace mgb {
 namespace serialization {
@@ -34,6 +36,63 @@ namespace serialization {
                                  param, config)
                         .node()
                         ->owner_opr();
+            }
+        }
+    };
+
+    template <>
+    struct OprMaker<opr::Remap, 0> {
+        using Opr = opr::Remap;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                                          const cg::VarNodeArray& inputs,
+                                          ComputingGraph& graph,
+                                          const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if (inputs.size() == 2) {
+                return Opr::make(inputs[0], inputs[1], param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                return nullptr;
+            }
+        }
+    };
+
+    template<>
+    struct OprMaker<opr::RemapBackwardMat, 0> {
+        using Opr = opr::RemapBackwardMat;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                                          const cg::VarNodeArray& inputs,
+                                          ComputingGraph& graph,
+                                          const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if (inputs.size() == 3) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                return nullptr;
+            }
+        }
+    };
+    
+    template<>
+    struct OprMaker<opr::RemapBackwardData, 0> {
+        using Opr = opr::RemapBackwardData;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                                          const cg::VarNodeArray& inputs,
+                                          ComputingGraph& graph,
+                                          const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if (inputs.size() == 3) {
+                return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
+                        .node()
+                        ->owner_opr();
+            } else {
+                return nullptr;
             }
         }
     };
@@ -106,29 +165,35 @@ namespace serialization {
 } // namespace serialization
 
 namespace opr {
-
-    MGB_SEREG_OPR(WarpPerspective, 0);
-    MGB_SEREG_OPR(WarpPerspectiveBackwardData, 0);
-    MGB_SEREG_OPR(WarpPerspectiveBackwardMat, 0);
+    using WarpPerspectiveV2=WarpPerspective;
+    using WarpPerspectiveBackwardDataV2=WarpPerspectiveBackwardData;
+    using WarpPerspectiveBackwardMatV2=WarpPerspectiveBackwardMat;
+    MGB_SEREG_OPR(WarpPerspectiveV2, 0);
+    MGB_SEREG_OPR(WarpPerspectiveBackwardDataV2, 0);
+    MGB_SEREG_OPR(WarpPerspectiveBackwardMatV2, 0);
 
     MGB_SEREG_OPR(Rotate, 1);
     MGB_SEREG_OPR(CvtColor, 1);
     MGB_SEREG_OPR(GaussianBlur, 1);
 
     MGB_SEREG_OPR(ResizeBackward, 2);
-    MGB_SEREG_OPR(Remap, 2);
-    MGB_SEREG_OPR(RemapBackwardData, 3);
-    MGB_SEREG_OPR(RemapBackwardMat, 3);
+    using RemapV1=Remap;
+    using RemapBackwardDataV1=RemapBackwardData;
+    using RemapBackwardMatV1=RemapBackwardMat;
+    MGB_SEREG_OPR(RemapV1, 2);
+    MGB_SEREG_OPR(RemapBackwardDataV1, 3);
+    MGB_SEREG_OPR(RemapBackwardMatV1, 3);
 
     //! current warp affine version
-    using WarpAffineV1 = opr::WarpAffine;
-    MGB_SEREG_OPR(WarpAffineV1, 3);
+    using WarpAffineV2 = opr::WarpAffine;
+    MGB_SEREG_OPR(WarpAffineV2, 3);
 
     //! current resize version
-    using ResizeV1 = opr::Resize;
-    MGB_SEREG_OPR(ResizeV1, 2);
+    using ResizeV2 = opr::Resize;
+    MGB_SEREG_OPR(ResizeV2, 2);
 
-    MGB_SEREG_OPR(DctChannelSelect, 0);
+    using DctChannelSelectV1 = opr::DctChannelSelect;
+    MGB_SEREG_OPR(DctChannelSelectV1, 0);
 } // namespace opr
 
 

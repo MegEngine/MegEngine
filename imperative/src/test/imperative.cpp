@@ -35,7 +35,7 @@ TEST(TestImperative, APlusB) {
 }
 
 TEST(TestImperative, Convolution) {
-     auto op = OprAttr::make("ConvolutionV1");
+     auto op = OprAttr::make("ConvolutionV2");
      auto&& attr = op->cast_final_safe<OprAttr>();
      using Param = opr::Convolution::Param;
      using Policy = opr::Convolution::ExecutionPolicy;
