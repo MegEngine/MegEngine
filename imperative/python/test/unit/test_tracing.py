@@ -14,7 +14,8 @@ import pytest
 
 import megengine.core.tensor.megbrain_graph as G
 import megengine.functional as F
-from megengine import cgtools, tensor
+import megengine.utils.comp_graph_tools as cgtools
+from megengine import tensor
 from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise

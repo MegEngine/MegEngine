@@ -13,9 +13,10 @@ import pytest
 import megengine
 import megengine.functional as F
 import megengine.module as M
-from megengine import cgtools
+import megengine.utils.comp_graph_tools as cgtools
 from megengine.core.tensor import megbrain_graph as mgb_graph
 from megengine.core.tensor.raw_tensor import as_raw_tensor
+from megengine.core.tensor.utils import astensor1d
 from megengine.jit import trace
 
 
@@ -98,3 +99,38 @@ def test_load_refcnt():
     graph, _, (varnode,) = mgb_graph.load_graph(io.BytesIO(buf))
     del graph
     varnode.owner
+
+
+def test_get_opr_seq():
+    class Net(M.Module):
+        def __init__(self):
+            super().__init__()
+            self.data = megengine.tensor(
+                np.random.random((1, 1, 4, 4)), dtype=np.float32
+            )
+
+        def forward(self, input):
+            A = input.shape[0]
+            shape = astensor1d((A, A), self.data, dtype="int32", device=input.device)
+            x = F.reshape(self.data, shape)
+            o = input + x
+            return o
+
+    net = Net()
+    input = megengine.tensor(np.random.random((4, 4)), dtype=np.float32)
+
+    @trace(symbolic=True, capture_as_const=True)
+    def func(inp, *, net=None):
+        return net(inp)
+
+    func(input, net=net)
+    file = io.BytesIO()
+    func.dump(file, optimize_for_inference=False)
+    file.seek(0)
+    *_, outputs = mgb_graph.load_graph(file)
+
+    seq_1 = cgtools.get_oprs_seq(outputs, True)
+    assert len(seq_1) == 5
+
+    seq_2 = cgtools.get_oprs_seq(outputs, False)
+    assert len(seq_2) == 6
