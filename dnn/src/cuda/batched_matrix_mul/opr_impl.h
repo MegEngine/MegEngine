@@ -32,6 +32,16 @@ public:
               _megdnn_workspace workspace) override;
     size_t get_workspace_in_bytes(const TensorLayout& A, const TensorLayout& B,
                                   const TensorLayout& C) override;
+
+    const char* get_algorithm_set_name() const override {
+        return "BATCHED_MATMUL";
+    }
+
+    bool is_thread_safe() const override { return true; }
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+
+protected:
     std::vector<Algorithm*> get_all_algorithms(const TensorLayout& A,
                                                const TensorLayout& B,
                                                const TensorLayout& C) override;
@@ -40,12 +50,6 @@ public:
                                        const TensorLayout& C,
                                        size_t workspace_limit_in_bytes,
                                        bool reproducible) override;
-    const char* get_algorithm_set_name() const override {
-        return "BATCHED_MATMUL";
-    }
-
-    bool is_thread_safe() const override { return true; }
-    static const AlgoPack& algo_pack() { return sm_algo_pack; }
 
 private:
     static AlgoPack sm_algo_pack;

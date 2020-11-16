@@ -168,7 +168,7 @@ void benchmark_target_algo(
 
         benchmarker.set_param(param);
         if (!algo) {
-            benchmarker.proxy()->target_algo = nullptr;
+            benchmarker.proxy()->target_algo_info.reset();
         }
         TensorShape src{arg.n, arg.ci, arg.hi, arg.wi},
                 filter{arg.co, arg.ci, arg.f, arg.f}, bias{1, arg.co, 1, 1},
@@ -327,7 +327,7 @@ void benchmark_target_algo_with_cudnn_tsc(
 
         benchmarker.set_param(param);
         if (!algo) {
-            benchmarker.proxy()->target_algo = nullptr;
+            benchmarker.proxy()->target_algo_info.reset();
         }
         TensorShape src{arg.n, arg.ci, arg.hi, arg.wi},
                 filter{arg.co, arg.ci, arg.f, arg.f}, bias{1, arg.co, 1, 1},

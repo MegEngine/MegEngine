@@ -20,6 +20,7 @@
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/gopt/inference.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megdnn/oprs/base.h"
 
 #include <gmock/gmock.h>
 
@@ -2008,11 +2009,11 @@ TEST(TestOprDNN, HeuristicReproducible) {
                                         bwd_flt->owner_opr())
                                         ->megdnn_opr())
                                 ->execution_policy()
-                                .algorithm;
+                                .algo;
             if (strategy == S::HEURISTIC_REPRODUCIBLE) {
-                EXPECT_TRUE(algo->is_reproducible());
+                EXPECT_TRUE(algo.is_reproducible);
             }
-            algo_name0 = algo->name();
+            algo_name0 = algo.name.c_str();
         }
         {
             Checker checker(make_graph, fwd);
@@ -2024,8 +2025,8 @@ TEST(TestOprDNN, HeuristicReproducible) {
                                         bwd_flt->owner_opr())
                                         ->megdnn_opr())
                                 ->execution_policy()
-                                .algorithm;
-            algo_name1 = algo->name();
+                                .algo;
+            algo_name1 = algo.name.c_str();
         }
         EXPECT_TRUE(algo_name0 == algo_name1);
     }
@@ -2183,6 +2184,17 @@ public:
     MOCK_METHOD3(get_preprocess_workspace_in_bytes,
                  size_t(const TensorLayout& src, const TensorLayout& filter,
                         const TensorLayout& dst));
+
+    MOCK_METHOD3(get_all_algorithms_info,
+                 std::vector<AlgorithmInfo>(const TensorLayout& p0,
+                                         const TensorLayout& p1,
+                                         const TensorLayout& p2));
+    MOCK_METHOD5(get_algorithm_info_heuristic,
+                 AlgorithmInfo(const TensorLayout& p0, const TensorLayout& p1,
+                            const TensorLayout& p2,
+                            size_t workspace_limit_in_bytes,
+                            bool reproducible));
+
     MOCK_METHOD3(get_all_algorithms,
                  std::vector<Algorithm*>(const TensorLayout& p0,
                                          const TensorLayout& p1,
@@ -2192,6 +2204,7 @@ public:
                             const TensorLayout& p2,
                             size_t workspace_limit_in_bytes,
                             bool reproducible));
+protected:
     const char* get_algorithm_set_name() const override {
         return m_algorithm_set_name;
     }
@@ -2204,6 +2217,9 @@ public:
     MockAlgorithm(const char* name = "NotImportant") : m_name(name) {}
     bool is_reproducible() const override { return true; }
     const char* name() const override { return m_name; }
+    uint32_t type() const override {
+        return megdnn::detail::Algorithm::INVALID_ALGO_TYPE;
+    }
 
     virtual ~MockAlgorithm() = default;
 };

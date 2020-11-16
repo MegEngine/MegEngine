@@ -11,12 +11,15 @@
 
 #pragma once
 
-#include <csetjmp>
+#include <unordered_map>
 #include "megdnn/oprs.h"
 
 #include "src/common/utils.h"
 #include "src/cuda/batch_conv_bias/opr_impl.h"
 #include "src/cuda/handle.h"
+
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
 
 namespace megdnn {
 namespace cuda {
@@ -26,6 +29,12 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        CUDA_GEMM_NCHW4_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_PRECOMP_NCHW4_DOTPROD_INT8,
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         BatchConvBiasForwardImpl* opr;
@@ -85,6 +94,7 @@ public:
     const char* name() const override {
         return "BATCH_CONV_BIAS_INT8_NCHW4_GEMM_DOTPROD";
     }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_GEMM_NCHW4_DOTPROD_INT8)
 };
 
 class BatchConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemmPrecomp final
@@ -99,15 +109,16 @@ public:
     const char* name() const override {
         return "BATCH_CONV_BIAS_INT8_NCHW4_IMPLICIT_GEMM_PRECOMP_DOTPROD";
     }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_PRECOMP_NCHW4_DOTPROD_INT8)
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
 };
 
-class BatchConvBiasForwardImpl::AlgoPack {
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
+class BatchConvBiasForwardImpl::AlgoPack : NonCopyableObj {
+private:
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack();
@@ -116,6 +127,8 @@ public:
     AlgoInt8NCHW4DotProdImplicitGemmPrecomp int8_nchw4_implicit_gemm_dotprod;
 
     std::vector<AlgoBase*> all_algos;
+
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
 }  // namespace cuda

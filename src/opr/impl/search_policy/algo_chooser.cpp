@@ -69,7 +69,7 @@ AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
         Maybe<AlgoChooserProfileCache::ResultEntry> cur_rst;
         std::string msg = ssprintf("profiling %s algorithm %s %s",
                                    ctx.mgb_opr()->dyn_typeinfo()->name,
-                                   algo->name(), str_on_inp_shape.c_str());
+                                   algo.name.c_str(), str_on_inp_shape.c_str());
         timer.reset();
         MGB_TRY { cur_rst = ctx.profile_single_algo(algo, cur_timeout); }
         MGB_CATCH(std::exception & exc, {
@@ -122,20 +122,20 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("AlgoChooser::choose_by_profile")))
     auto opr = ctx.mgb_opr();
     if (opr->owner_graph()->options().no_profiling_on_shape_change) {
-        auto algo = ctx.megdnn_opr()->execution_policy().algorithm;
-        if (algo)
+        auto algo = ctx.megdnn_opr()->execution_policy().algo;
+        if (algo.valid())
             return algo;
     }
 
     std::unordered_map<std::string, ImplAlgo> algo_map;
     for (auto i : ctx.get_all_candidates()) {
-        auto ins = algo_map.emplace(i->name(), i);
-        mgb_assert(ins.second, "duplicated algo name: %s", i->name());
+        auto ins = algo_map.emplace(i.name.c_str(), i);
+        mgb_assert(ins.second, "duplicated algo name: %s", i.name.c_str());
     }
 
     auto&& prof = get_profile_result(ctx, enable_update);
     if (prof.empty())
-        return nullptr;
+        return {};
     for (auto&& i : prof) {
         if ((!require_reproducible || i.reproducible)) {
             auto iter = algo_map.find(i.algo);
@@ -173,13 +173,13 @@ size_t AlgoChooser<Opr>::setup_algo(const ConvTensorLayouts& layouts,
         return 0;
     }
 
-    ImplAlgo algo = nullptr;
+    ImplAlgo algo = {};
     ExeContext ctx(layouts, megdnn_opr, mgb_opr, allow_weight_preprocess);
 
     if (auto algo_choose_hook = mgb_opr->algo_chooser()) {
         algo = algo_choose_hook(mgb_opr);
     }
-    if (!algo) {
+    if (!algo.valid()) {
         algo = get_algo(ctx);
     }
     size_t workspace = ctx.get_workspace_size_bytes(algo);
@@ -190,8 +190,8 @@ size_t AlgoChooser<Opr>::setup_algo(const ConvTensorLayouts& layouts,
             layouts[0].dtype.name(), layouts[1].to_string().c_str(),
             layouts[1].dtype.name(),
             layouts[layouts.size() - 1].to_string().c_str(),
-            layouts[layouts.size() - 1].dtype.name(), algo->name(),
-            workspace / (1024 * 1024.0), algo->is_reproducible());
+            layouts[layouts.size() - 1].dtype.name(), algo.name.c_str(),
+            workspace / (1024 * 1024.0), algo.is_reproducible);
     megdnn_opr->execution_policy() = {algo};
     return workspace;
 }
@@ -208,7 +208,7 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::get_algo(
             return ctx.choose_by_heuristic(true);
         case S::PROFILE_HEURISTIC: {
             ImplAlgo algo = choose_by_profile(ctx, false, false);
-            if (algo == nullptr)
+            if (!algo.valid())
                 algo = ctx.choose_by_heuristic();
             return algo;
         }
@@ -249,8 +249,8 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             opr->owner_graph(), opr->comp_node(),
             opr->execution_policy().workspace_limit);
-    return APPLY(m_megdnn_opr->get_algorithm_heuristic(args..., workspace_limit,
-                                                       reproducible),
+    return APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
+                         args..., workspace_limit, reproducible),
                  m_layouts);
 }
 
@@ -258,7 +258,8 @@ template <typename Opr>
 std::vector<typename AlgoChooser<Opr>::ImplAlgo>
 AlgoChooser<Opr>::ExeContext::get_all_candidates() const {
     auto heu = choose_by_heuristic();
-    auto&& ret = APPLY(m_megdnn_opr->get_all_algorithms(args...), m_layouts);
+    auto&& ret =
+            APPLY(m_megdnn_opr->get_all_algorithms_info(args...), m_layouts);
     bool found = false;
     for (size_t i = 0; i < ret.size(); ++i) {
         if (ret[i] == heu) {
@@ -269,7 +270,8 @@ AlgoChooser<Opr>::ExeContext::get_all_candidates() const {
     }
     mgb_assert(found,
                "algo %s got by heuristic not found in "
-               "candidate list", heu->name());
+               "candidate list",
+               heu.name.c_str());
     return std::move(ret);
 }
 
@@ -320,7 +322,7 @@ Maybe<AlgoChooserProfileCache::ResultEntry>
 AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
                                                   double& timeout) const {
     typename TimedProfiler<Opr>::Param param;
-    auto name = algo->name();
+    auto name = algo.name.c_str();
     // force check copy size <= dest len-1 from gcc8 for safe
     auto len = sizeof(param.algo_name);
     strncpy(param.algo_name, name, len - 1);
@@ -354,7 +356,7 @@ AlgoChooser<Opr>::ExeContext::profile_single_algo(ImplAlgo algo,
     if (!rst.valid())
         return None;
     return AlgoChooserProfileCache::ResultEntry{
-            algo->name(), algo->is_reproducible(), rst.val().time,
+            algo.name.c_str(), algo.is_reproducible, rst.val().time,
             param.workspace};
 }
 

@@ -82,7 +82,7 @@ void MatrixMulForwardImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
                 args.opr->handle()->create_operator<MatrixMulForward>();
         matmul_opr->param() = args.opr->param();
         matmul_opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-        matmul_opr->execution_policy() = {m_algorithm};
+        matmul_opr->execution_policy() = {m_algorithm->info()};
         matmul_opr->exec(a, b, c, ctypecvt.workspace());
     }
     ctypecvt.comp_to_dst_type(c, args.tensor_c);

@@ -25,7 +25,10 @@ public:
         }
     };
 
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo()
+            override;
+
+    MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(MatrixMulImpl);
 
 private:
     class AlgoF32;                  // Armv7 F32
@@ -52,6 +55,9 @@ private:
                                           // DotProduct
 #endif
     class AlgoPack;
+
+public:
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace armv7

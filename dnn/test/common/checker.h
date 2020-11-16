@@ -24,15 +24,15 @@
 #include <unordered_map>
 
 // clang-format off
-#if defined(__has_feature) 
+#if defined(__has_feature)
     #if __has_feature(address_sanitizer)
         #define MEGDNN_TEST_ASAN 1
     #else
         #define MEGDNN_TEST_ASAN 0
     #endif
-#elif defined(__SANITIZE_ADDRESS__) 
+#elif defined(__SANITIZE_ADDRESS__)
     #define MEGDNN_TEST_ASAN 1
-#else 
+#else
     #define MEGDNN_TEST_ASAN 0
 #endif
 // clang-format on
@@ -392,8 +392,8 @@ TensorND TensorValue(const TensorShape& shape, T dtype,
     tensor.layout = {shape, dtype};
     tensor.raw_ptr =
             static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
-    megdnn_assert(values.size() == tensor.layout.total_nr_elems(), "%zu == %zu", values.size(), 
-            tensor.layout.total_nr_elems());
+    megdnn_assert(values.size() == tensor.layout.total_nr_elems(), "%zu == %zu",
+                  values.size(), tensor.layout.total_nr_elems());
     auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
     for (const auto& v : values) {
         *ptr++ = typename DTypeTrait<T>::ctype(v);
@@ -456,28 +456,29 @@ public:
             : m_algo{algo}, m_require_algo{require_algo} {}
 
     void operator()(Opr* opr, const CheckerHelper::TensorValueArray& arr) {
-        opr->execution_policy().algorithm = nullptr;
         TensorLayoutArray layouts;
         for (auto&& val : arr) {
             layouts.push_back(val.layout);
         }
         if (m_require_algo && *m_require_algo) {
-            auto algo = OprAlgoProxy::get_algorithm_heuristic(opr, layouts);
+            auto algo =
+                    OprAlgoProxy::get_algorithm_info_heuristic(opr, layouts);
             if (m_name.empty()) {
-                ASSERT_EQ(m_algo->name(), algo->name());
+                ASSERT_EQ(m_algo->name(), algo.name.c_str());
             } else {
                 ASSERT_TRUE(std::regex_match(
-                        algo->name(), std::regex("(" + m_name + ")(.*)")));
+                        algo.name.c_str(), std::regex("(" + m_name + ")(.*)")));
             }
         } else {
             if (m_name.empty()) {
-                opr->execution_policy().algorithm = m_algo;
+                opr->execution_policy().algo = m_algo->info();
                 return;
             } else {
-                for (auto i : OprAlgoProxy::get_all_algorithms(opr, layouts)) {
-                    if (std::regex_match(i->name(),
+                for (auto i :
+                     OprAlgoProxy::get_all_algorithms_info(opr, layouts)) {
+                    if (std::regex_match(i.name,
                                          std::regex("(" + m_name + ")(.*)"))) {
-                        opr->execution_policy().algorithm = i;
+                        opr->execution_policy().algo = i;
                         return;
                     }
                 }

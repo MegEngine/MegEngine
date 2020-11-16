@@ -1086,6 +1086,10 @@ bool deconv::can_stride1_int8x8x32_dot(const NCBKernSizeParam& param) {
                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
                     FH >= PH + 1 && FW >= PW + 1;
 
+    avaiable &= (param.filter_type.enumv() == DTypeEnum::QuantizedS8 ||
+                 param.filter_type.enumv() == DTypeEnum::Int8) &&
+                (param.grad_type.enumv() == DTypeEnum::QuantizedS32 ||
+                 param.grad_type.enumv() == DTypeEnum::Int32);
     return avaiable &&
            ((FH == 2 && OC <= 8) ||
             ((FH == 3 || FH == 5 || FH == 7) && (IC < 32 && OC <= 16)));

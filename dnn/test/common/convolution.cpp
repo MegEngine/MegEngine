@@ -11,6 +11,7 @@
 
 #include "test/common/checker.h"
 #include "test/common/convolution.h"
+#include "src/common/algo_base.h"
 
 #include <unordered_set>
 #include <sstream>
@@ -52,7 +53,7 @@ std::vector<TestArg> convolution::get_args_common() {
                 TensorShape{5, 2, i, i+1},
                 TensorShape{3, 2, 3, 4});
     }
- 
+
     return args;
 }
 
@@ -73,7 +74,7 @@ std::vector<TestArg> convolution::get_args_padding() {
                 TensorShape{5, 2, i, i+1},
                 TensorShape{3, 2, 3, 4});
     }
- 
+
     return args;
 }
 
@@ -107,7 +108,7 @@ std::vector<TestArg> convolution::get_args_large_channel() {
                 TensorShape{2, 20, i, i+1},
                 TensorShape{30, 20, 3, 4});
     }
- 
+
     return args;
 }
 
@@ -126,7 +127,7 @@ std::vector<TestArg> convolution::get_args_1x1() {
                 TensorShape{2, 20, i, i+1},
                 TensorShape{30, 20, 1, 1});
     }
- 
+
     return args;
 }
 
@@ -145,7 +146,7 @@ std::vector<TestArg> convolution::get_args_large_filter() {
                 TensorShape{2, 2, i, i+1},
                 TensorShape{3, 2, 7, 8});
     }
- 
+
     return args;
 }
 
@@ -184,7 +185,7 @@ std::vector<TestArg> convolution::get_args_4x4() {
                 TensorShape{4, 3, oh+3, oh+4},
                 TensorShape{2, 3, 4, 4});
     }
- 
+
     return args;
 }
 
@@ -309,7 +310,7 @@ std::vector<TestArg> convolution::get_args_x86_winograd_algorithm() {
                 TensorShape{2, ic_size, 102, 102},
                 TensorShape{8, ic_size, 3, 3});
     }
- 
+
     return args;
 }
 
@@ -330,7 +331,7 @@ std::vector<TestArg> convolution::get_args_BRAIN_481() {
                     TensorShape{3, 4, 16-margin, 15-margin});
         }
     }
- 
+
     return args;
 }
 
@@ -470,9 +471,10 @@ void convolution::test_conv_config_combinations(int k_size,
 
 #define CONF_BOOL(var) for (int var: {0, 1})
 
-    std::unordered_set<Convolution::Algorithm*> used_algos;
-    std::unordered_set<ConvolutionBackwardData::Algorithm*> used_algos_bwd_data;
-    std::unordered_set<ConvolutionBackwardFilter::Algorithm*>
+    std::unordered_set<Convolution::AlgorithmDesc> used_algos;
+    std::unordered_set<ConvolutionBackwardData::AlgorithmDesc>
+            used_algos_bwd_data;
+    std::unordered_set<ConvolutionBackwardFilter::AlgorithmDesc>
         used_algos_bwd_flt;
 
     using Param = Convolution::Param;
@@ -576,14 +578,14 @@ void convolution::test_conv_config_combinations(int k_size,
         float scale = 1.0f / sqrt(fshp[channel_start] * FH * FW);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_rng(0, &rng).set_rng(1, &rng);
-        for (auto algo : opr->get_all_algorithms(ily, fly, oly)) {
-            used_algos.insert(algo);
-            opr->execution_policy().algorithm = algo;
+        for (auto algo : opr->get_all_algorithms_info(ily, fly, oly)) {
+            used_algos.insert(algo.desc);
+            opr->execution_policy().algo = algo;
             checker
-                .set_epsilon(eps_getter(dtype == 1, 0, algo->name()))
+                .set_epsilon(eps_getter(dtype == 1, 0, algo.name.c_str()))
                 .execs({ishp, fshp, {}});
-            opr->execution_policy().algorithm = nullptr;
-            ASSERT_TRUE(checker.prev_succ()) << errmsg(algo->name());
+            opr->execution_policy().algo.reset();
+            ASSERT_TRUE(checker.prev_succ()) << errmsg(algo.name.c_str());
         }
 
         if (test_backward) {
@@ -595,15 +597,15 @@ void convolution::test_conv_config_combinations(int k_size,
 
             auto opr = checker_bwd_data.opr();
             opr->param() = param;
-            for (auto algo: opr->get_all_algorithms(fly, oly, ily)) {
-                used_algos_bwd_data.insert(algo);
-                opr->execution_policy().algorithm = algo;
+            for (auto algo: opr->get_all_algorithms_info(fly, oly, ily)) {
+                used_algos_bwd_data.insert(algo.desc);
+                opr->execution_policy().algo = algo;
                 checker_bwd_data
-                    .set_epsilon(eps_getter(dtype == 1, 1, algo->name()))
+                    .set_epsilon(eps_getter(dtype == 1, 1, algo.name.c_str()))
                     .execl({fly, oly, ily});
-                opr->execution_policy().algorithm = nullptr;
+                opr->execution_policy().algo.reset();
                 ASSERT_TRUE(checker_bwd_data.prev_succ()) <<
-                    errmsg(algo->name());
+                    errmsg(algo.name.c_str());
             }
         }
         if (test_backward) {
@@ -616,38 +618,19 @@ void convolution::test_conv_config_combinations(int k_size,
 
             auto opr = checker_bwd_filter.opr();
             opr->param() = param;
-            for (auto algo: opr->get_all_algorithms(ily, oly, fly)) {
-                used_algos_bwd_flt.insert(algo);
-                opr->execution_policy().algorithm = algo;
+            for (auto algo: opr->get_all_algorithms_info(ily, oly, fly)) {
+                used_algos_bwd_flt.insert(algo.desc);
+                opr->execution_policy().algo = algo;
                 checker_bwd_filter
-                    .set_epsilon(eps_getter(dtype == 1, 2, algo->name()))
+                    .set_epsilon(eps_getter(dtype == 1, 2, algo.name.c_str()))
                     .execl({ily, oly, fly});
-                opr->execution_policy().algorithm = nullptr;
+                opr->execution_policy().algo.reset();
                 ASSERT_TRUE(checker_bwd_filter.prev_succ()) <<
-                    errmsg(algo->name());
+                    errmsg(algo.name.c_str());
             }
         }
-
-        //printf("%s\r", config2str().c_str());
-        //fflush(stdout);
     }
 
-    //printf("tested algos: fwd:{");
-    //for (auto i: used_algos) {
-    //    printf(" %s", i->name());
-    //}
-    //if (test_backward) {
-    //    printf("} bwd_data:{");
-    //    for (auto i: used_algos_bwd_data) {
-    //        printf(" %s", i->name());
-    //    }
-    //    printf("} bwd_filter:{");
-    //    for (auto i: used_algos_bwd_flt) {
-    //        printf(" %s", i->name());
-    //    }
-    //}
-    //printf("} \n");
 }
 
 // vim: syntax=cpp.doxygen
-

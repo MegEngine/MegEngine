@@ -12,6 +12,7 @@
 #pragma once
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/opr_impl.h"
+#include "src/common/algo_base.h"
 
 namespace megdnn {
 namespace arm_common {
@@ -27,7 +28,7 @@ public:
         }
     };
 
-    SmallVector<fallback::ConvBiasImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> get_all_packed_algo() override;
 
     bool is_matmul_quantized_prefer(
             const fallback::ConvBiasImpl::NCBKernSizeParam& ncb_param)
@@ -35,7 +36,8 @@ public:
 
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const override;
-    class AlgoPack;
+
+    MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(ConvBiasImpl);
 
 protected:
     const char* get_algorithm_set_name() const override;
@@ -95,6 +97,9 @@ private:
     class AlgoF16Direct;
     class AlgoF16DirectStride1;
 #endif
+
+    class AlgoPack;
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace arm_common

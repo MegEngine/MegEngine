@@ -27,6 +27,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(X86_F32_BLAS)
 };
 
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
@@ -48,6 +49,7 @@ public:
     InnerBlockSize get_inner_block_size() const override{ return {8, 16, 1}; };
 
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(X86_F32_MKL_PACKA)
 };
 #endif
 
@@ -59,6 +61,7 @@ public:
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X32_AVX2_2X4X16)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32AVX2M4N16K2 : public AlgoBase {
@@ -69,6 +72,7 @@ public:
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X32_AVX2_4X16X2)
 };
 
 class MatrixMulImpl::AlgoInt8x8x16AVX2 : public AlgoBase {
@@ -84,6 +88,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X16_AVX2)
 };
 
 class MatrixMulImpl::AlgoInt8x8x16SSE : public AlgoBase {
@@ -99,6 +104,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X16_SSE)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32SSEM4N8K2 : public AlgoBase {
@@ -109,6 +115,7 @@ public:
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X32_SSE_4X8X2)
 };
 
 class MatrixMulImpl::AlgoF32MK8_8x8 : public AlgoBase {
@@ -120,6 +127,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 8, 8, 4, AlgoDataType::FLOAT32, MK8)
+    MEGDNN_DECL_ALGO_TYPE(X86_F32_MK8_8X8)
 };
 
 #if MEGDNN_X86_WITH_VNNI
@@ -131,6 +139,7 @@ public:
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X32_VNNI)
 };
 #endif
 
@@ -144,6 +153,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(X86_INT8X8X32_MKLDNN)
 };
 #endif
 }  // namespace x86

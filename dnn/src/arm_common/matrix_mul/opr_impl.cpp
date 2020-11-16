@@ -28,28 +28,47 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoGevm gevm;
     AlgoF32GemvMK4 f32_gemv_mk4;
 
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
+    fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
+
 public:
     AlgoPack() {
-        all_algos.emplace_back(&int8x8x16);
+        m_all_algos.emplace_back(&int8x8x16);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-        all_algos.emplace_back(&f16gemv);
+        m_all_algos.emplace_back(&f16gemv);
 #endif
 #if __ARM_FEATURE_DOTPROD
-        all_algos.emplace_back(&int8x8x32_gemv_mk4_dot);
+        m_all_algos.emplace_back(&int8x8x32_gemv_mk4_dot);
 #endif
-        all_algos.emplace_back(&int8x8x32_gemv);
-        all_algos.emplace_back(&int8x8x32_gemv_mk4);
-        all_algos.emplace_back(&f32_gemv_mk4);
-        all_algos.emplace_back(&gevm);
+        m_all_algos.emplace_back(&int8x8x32_gemv);
+        m_all_algos.emplace_back(&int8x8x32_gemv_mk4);
+        m_all_algos.emplace_back(&f32_gemv_mk4);
+        m_all_algos.emplace_back(&gevm);
+
+        for (auto&& algo : m_all_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> all_algos;
+
+    const SmallVector<fallback::MatrixMulImpl::AlgoBase*>& all_algos() const {
+        return m_all_algos;
+    }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
+const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(MatrixMulImpl)
+
+SmallVector<fallback::MatrixMulImpl::AlgoBase*>
+MatrixMulImpl::get_all_packed_algo() {
     static AlgoPack s_algo_pack;
-    auto&& algos = fallback::MatrixMulImpl::algo_pack();
-    algos.insert(algos.begin(), s_algo_pack.all_algos.begin(),
-                 s_algo_pack.all_algos.end());
+    auto&& algos = fallback::MatrixMulImpl::get_all_packed_algo();
+    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
+                 algo_pack().all_algos().end());
     return std::move(algos);
 }
 

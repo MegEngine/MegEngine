@@ -23,19 +23,14 @@ public:
               _megdnn_tensor_out dst,
               const PreprocessedFilter* preprocessed_filter,
               _megdnn_workspace workspace) override;
-    std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& dst) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const CanonizedFilterMeta& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible);
+    AlgorithmInfo get_algorithm_info_heuristic(
+            const TensorLayout& src, const CanonizedFilterMeta& filter,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            bool reproducible) {
+        return get_algorithm_heuristic(src, filter, dst,
+                                       workspace_limit_in_bytes, reproducible)
+                ->info();
+    }
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& filter,
                                   const TensorLayout& dst,
@@ -71,8 +66,23 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
 
 private:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
+                                       const TensorLayout& filter,
+                                       const TensorLayout& dst,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible) override;
+    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
+                                       const CanonizedFilterMeta& filter,
+                                       const TensorLayout& dst,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible);
+
     static AlgoPack sm_algo_pack;
 };
 
@@ -81,19 +91,14 @@ public:
     using ConvolutionBackwardData::ConvolutionBackwardData;
     void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
               _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
-    std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& filter, const TensorLayout& diff,
-            const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
-    Algorithm* get_algorithm_heuristic(const CanonizedFilterMeta& filter,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible);
+    AlgorithmInfo get_algorithm_info_heuristic(
+            const CanonizedFilterMeta& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            bool reproducible) {
+        return get_algorithm_heuristic(filter, diff, grad,
+                                       workspace_limit_in_bytes, reproducible)
+                ->info();
+    }
     size_t get_workspace_in_bytes(const TensorLayout& filter,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;
@@ -107,8 +112,23 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
 
 private:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
+                                       const TensorLayout& diff,
+                                       const TensorLayout& grad,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible) override;
+    Algorithm* get_algorithm_heuristic(const CanonizedFilterMeta& filter,
+                                       const TensorLayout& diff,
+                                       const TensorLayout& grad,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible);
+
     static AlgoPack sm_algo_pack;
 };
 
@@ -117,6 +137,31 @@ public:
     using ConvolutionBackwardFilter::ConvolutionBackwardFilter;
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
               _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
+    AlgorithmInfo get_algorithm_info_heuristic(const TensorLayout& src,
+                                               const TensorLayout& diff,
+                                               const CanonizedFilterMeta& grad,
+                                               size_t workspace_limit_in_bytes,
+                                               bool reproducible) {
+        return get_algorithm_heuristic(src, diff, grad,
+                                       workspace_limit_in_bytes, reproducible)
+                ->info();
+    }
+    size_t get_workspace_in_bytes(const TensorLayout& src,
+                                  const TensorLayout& diff,
+                                  const TensorLayout& grad) override;
+    const char* get_algorithm_set_name() const override;
+
+    class AlgoBase;
+    class AlgoMIOpen;
+    class AlgoMatmul;
+    class AlgoChanwise;
+
+    class AlgoPack;
+
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+
+private:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& diff,
             const TensorLayout& grad) override;
@@ -130,25 +175,11 @@ public:
                                        const CanonizedFilterMeta& grad,
                                        size_t workspace_limit_in_bytes,
                                        bool reproducible);
-    size_t get_workspace_in_bytes(const TensorLayout& src,
-                                  const TensorLayout& diff,
-                                  const TensorLayout& grad) override;
-    const char* get_algorithm_set_name() const override;
 
-    class AlgoBase;
-    class AlgoMIOpen;
-    class AlgoMatmul;
-    class AlgoChanwise;
-
-    class AlgoPack;
-
-    static const AlgoPack& algo_pack() { return sm_algo_pack; }
-
-private:
     static AlgoPack sm_algo_pack;
 };
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

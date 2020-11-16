@@ -1922,19 +1922,19 @@ TEST(TestGraph, NaiveRecord2NCHW44) {
 
 namespace {
 template <typename DnnOp, typename... Args>
-typename DnnOp::Algorithm* try_find_any_weight_preprocess_algo(
+typename DnnOp::AlgorithmInfo try_find_any_weight_preprocess_algo(
         DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
         Args&& ...args) {
     if (found.valid()) {
         if (found.val()) {
-            return dnn_op->execution_policy().algorithm;
+            return dnn_op->execution_policy().algo;
         } else {
-            return nullptr;
+            return {};
         }
     }
-    for (auto&& algo : dnn_op->get_all_algorithms(
+    for (auto&& algo : dnn_op->get_all_algorithms_info(
             std::forward<Args>(args)...)) {
-        dnn_op->execution_policy().algorithm = algo;
+        dnn_op->execution_policy().algo = algo;
         auto layouts = dnn_op->deduce_preprocessed_filter_layout(
                 std::forward<Args>(args)...);
         if (layouts.empty()) continue;
@@ -1952,23 +1952,23 @@ typename DnnOp::Algorithm* try_find_any_weight_preprocess_algo(
     }
     found.emplace(false);
     mgb_log_warn("Can't find weight preprocess algo for op %s", mgb_info);
-    return nullptr;
+    return {};
 }
 
 template <typename DnnOp, typename... Args>
-typename DnnOp::Algorithm* try_find_any_bias_preprocess_algo(
+typename DnnOp::AlgorithmInfo try_find_any_bias_preprocess_algo(
         DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
         Args&& ...args) {
     if (found.valid()) {
         if (found.val()) {
-            return dnn_op->execution_policy().algorithm;
+            return dnn_op->execution_policy().algo;
         } else {
-            return nullptr;
+            return {};
         }
     }
-    for (auto&& algo : dnn_op->get_all_algorithms(
+    for (auto&& algo : dnn_op->get_all_algorithms_info(
             std::forward<Args>(args)...)) {
-        dnn_op->execution_policy().algorithm = algo;
+        dnn_op->execution_policy().algo = algo;
         auto layouts = dnn_op->deduce_preprocessed_filter_layout(
                 std::forward<Args>(args)...);
         if (layouts.size() <= 1)
@@ -1984,7 +1984,7 @@ typename DnnOp::Algorithm* try_find_any_bias_preprocess_algo(
     }
     found.emplace(false);
     mgb_log_warn("Can't find bias preprocess algo for op %s", mgb_info);
-    return nullptr;
+    return {};
 }
 
 void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {

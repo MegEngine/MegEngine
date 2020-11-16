@@ -28,24 +28,9 @@ public:
     };
 
     bool is_thread_safe() const override { return true; }
-    SmallVector<fallback::ConvBiasImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> get_all_packed_algo() override;
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const override;
-
-    class AlgoDirect;
-    class AlgoDirectStride2;
-    class AlgoFP32WinogradF63_8x8;
-    class AlgoFP32WinogradF23_8x8;
-    class AlgoDirectAvx2Stride1Int8;
-    class AlgoAVX2DirectConvStride2;
-    class AlgoChanWiseAvx2Stride1Qint8;
-    class AlgoChanWiseAvx2Stride2Qint8;
-#if MEGDNN_X86_WITH_MKL_DNN
-    class AlgoMkldnnConv;
-    class AlgoMkldnnQint8;
-    class AlgoMkldnnMatmulQint8;
-#endif
-    class AlgoPack;
 
     /**
      * \brief Adjust tensor layouts to fulfill alignment requirements.
@@ -62,6 +47,26 @@ public:
 
     bool is_matmul_quantized_prefer(
             const ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
+    static fallback::ConvBiasImpl::AlgoBase* get_algo_from_desc(
+            const AlgorithmDesc& desc);
+
+private:
+    class AlgoDirect;
+    class AlgoDirectStride2;
+    class AlgoFP32WinogradF63_8x8;
+    class AlgoFP32WinogradF23_8x8;
+    class AlgoDirectAvx2Stride1Int8;
+    class AlgoAVX2DirectConvStride2;
+    class AlgoChanWiseAvx2Stride1Qint8;
+    class AlgoChanWiseAvx2Stride2Qint8;
+#if MEGDNN_X86_WITH_MKL_DNN
+    class AlgoMkldnnConv;
+    class AlgoMkldnnQint8;
+    class AlgoMkldnnMatmulQint8;
+#endif
+    class AlgoPack;
+
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace x86

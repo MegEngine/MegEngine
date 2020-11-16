@@ -100,9 +100,15 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     for (size_t i = all_algo_size; i < all_algos.size(); ++i) {
         non_cudnn_algos.push_back(all_algos[i]);
     }
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
 
 ConvBiasForwardImpl::AlgoPack ConvBiasForwardImpl::sm_algo_pack;
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvBiasForwardImpl)
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvBiasForwardImpl* o, const TensorLayout& src,
@@ -172,43 +178,10 @@ std::string ConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
 }
 
 void ConvBiasForwardImpl::AlgoPack::fill_cudnn_algos() {
-#define V1(v) #v
-#define V(v) V1(v)
-
-#define DEF_ALGO(NAME, REPROD)                                              \
-    cudnn_conv_bias_activations.push_back(                                  \
-            {REPROD,                                                        \
-             "CUDNN:ConvBiasActivation:" #NAME                              \
-             "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL), \
-             NAME});                                                        \
-    cudnn_convs.push_back(                                                  \
-            {REPROD,                                                        \
-             "CUDNN:Convolution:" #NAME                                     \
-             "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL), \
-             NAME})
-
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, true);
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true);
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_GEMM, true);
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_DIRECT, true);
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT, true);
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING, true);
-
-#if CUDNN_MAJOR >= 5
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD, true);
-#if CUDNN_MAJOR >= 6 || CUDNN_MINOR >= 1
-    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED, true);
-#endif
-#endif
-
-#if !(CUDNN_MAJOR >= 6 || CUDNN_MINOR >= 1)
-#pragma message "not latest cudnn"
-#endif
-
-#undef DEF_ALGO
-
-#undef V
-#undef V1
+    for (auto&& algo : CudnnAlgoPack::conv_fwd_algos()) {
+        cudnn_conv_bias_activations.push_back(algo.first);
+        cudnn_convs.push_back(algo.first);
+    }
 }
 
 #if CUDA_VERSION >= 10000

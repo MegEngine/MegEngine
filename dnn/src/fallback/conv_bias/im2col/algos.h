@@ -68,6 +68,14 @@ public:
         return {m_matmul_algo->matmul_description().algo_type.data_type,
                 AlgoCategory::IM2COL};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_IM2COL)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_matmul_algo, ret);
+        serialize_write_pod(m_ohw_tile_size, ret);
+        return ret;
+    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;

@@ -22,31 +22,32 @@ struct AlgoProxy;
 
 template <typename Opr>
 struct AlgoProxy<Opr, 3> {
-    static std::vector<typename Opr::Algorithm*> get_all_algorithms(
+    static std::vector<typename Opr::AlgorithmInfo> get_all_algorithms_info(
             Opr* opr, TensorLayoutArray& layouts) {
         megdnn_assert(layouts.size() == 3);
-        return opr->get_all_algorithms(layouts[0], layouts[1], layouts[2]);
+        return opr->get_all_algorithms_info(layouts[0], layouts[1], layouts[2]);
     }
-    static typename Opr::Algorithm* get_algorithm_heuristic(
+    static typename Opr::AlgorithmInfo get_algorithm_info_heuristic(
             Opr* opr, TensorLayoutArray& layouts) {
         megdnn_assert(layouts.size() == 3);
-        return opr->get_algorithm_heuristic(layouts[0], layouts[1], layouts[2]);
+        return opr->get_algorithm_info_heuristic(layouts[0], layouts[1],
+                                                 layouts[2]);
     }
 };
 
 template <typename Opr>
 struct AlgoProxy<Opr, 5> {
-    static std::vector<typename Opr::Algorithm*> get_all_algorithms(
+    static std::vector<typename Opr::AlgorithmInfo> get_all_algorithms_info(
             Opr* opr, TensorLayoutArray& layouts) {
         megdnn_assert(layouts.size() == 5);
-        return opr->get_all_algorithms(layouts[0], layouts[1], layouts[2],
-                                       layouts[3], layouts[4]);
-    }
-    static typename Opr::Algorithm* get_algorithm_heuristic(
-            Opr* opr, TensorLayoutArray& layouts) {
-        megdnn_assert(layouts.size() == 5);
-        return opr->get_algorithm_heuristic(layouts[0], layouts[1], layouts[2],
+        return opr->get_all_algorithms_info(layouts[0], layouts[1], layouts[2],
                                             layouts[3], layouts[4]);
+    }
+    static typename Opr::AlgorithmInfo get_algorithm_info_heuristic(
+            Opr* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() == 5);
+        return opr->get_algorithm_info_heuristic(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4]);
     }
 };
 

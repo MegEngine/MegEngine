@@ -30,7 +30,13 @@ ConvolutionForwardImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&batched_matrix_mul);
     all_algos.push_back(&chanwise);
     all_algos.push_back(&miopen);
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvolutionForwardImpl)
 
 ConvolutionForwardImpl::AlgoPack ConvolutionForwardImpl::sm_algo_pack;
 

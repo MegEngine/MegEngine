@@ -80,27 +80,9 @@ void Convolution3DBackwardDataImpl::AlgoCUDNN::exec(
 }
 
 void Convolution3DBackwardDataImpl::AlgoPack::fill_cudnn_algos() {
-#define V1(v) #v
-#define V(v) V1(v)
-
-#define DEF_ALGO(NAME, REPROD) \
-    cudnn.push_back({ \
-                REPROD, #NAME \
-                    "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) \
-                    "." V(CUDNN_PATCHLEVEL), \
-                NAME})
-
-DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, false);
-DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true);
-DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING, true);
-#if !(CUDNN_MAJOR >= 6 || CUDNN_MINOR >= 1)
-#pragma message "not latest cudnn"
-#endif
-
-#undef DEF_ALGO
-
-#undef V
-#undef V1
+    for (auto&& algo : CudnnAlgoPack::conv3d_bwd_data_algos()) {
+        cudnn.push_back(algo.first);
+    }
 }
 
 // vim: syntax=cpp.doxygen

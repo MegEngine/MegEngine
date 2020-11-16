@@ -1236,6 +1236,9 @@ bool deconv::can_stride1_quint8_dot(const NCBKernSizeParam& param) {
                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
                     FH >= PH + 1 && FW >= PW + 1;
 
+    avaiable &= (param.filter_type.enumv() == DTypeEnum::Quantized8Asymm ||
+                 param.grad_type.enumv() == DTypeEnum::Int32);
+
     /**
      * \note In the kernel, we use int32_t to calc the value, in order
      * not generate negative number, we first initialize SHIFT and sub

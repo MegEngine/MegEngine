@@ -24,8 +24,13 @@ ConvolutionBackwardFilterImpl::AlgoPack::AlgoPack() {
     non_miopen_algos.push_back(&chanwise);
     non_miopen_algos.push_back(all_algos.back());
     miopen_algos.push_back(&miopen);
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
 
+MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvolutionBackwardFilterImpl)
 ConvolutionBackwardFilterImpl::AlgoPack
         ConvolutionBackwardFilterImpl::sm_algo_pack;
 

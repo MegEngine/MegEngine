@@ -42,9 +42,13 @@ public:
 
     bool is_thread_safe() const override { return true; }
 
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo()
+            override;
 
-protected:
+    static fallback::MatrixMulImpl::AlgoBase* get_algo_from_desc(
+            const AlgorithmDesc& desc);
+
+private:
     class AlgoF32Blas;
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
     class AlgoF32MKLPackA;
@@ -64,6 +68,9 @@ protected:
     class AlgoInt8x8x16SSE;
     class AlgoPack;
     class AlgoF32MK8_8x8;
+
+public:
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace x86

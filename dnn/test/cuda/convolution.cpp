@@ -429,7 +429,7 @@ TEST_F(CUDA, CONVOLUTION_FWD_BENCHMARK) {
         param.pad_h = param.pad_w = PH;
         param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
         bench.set_param(param);
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         TensorLayout src{{N, IC, IH, IW}, dtype::Float32()},
                 filter{{OC, IC, FH, FH}, dtype::Float32()};
         TensorLayout dst;
@@ -440,13 +440,13 @@ TEST_F(CUDA, CONVOLUTION_FWD_BENCHMARK) {
         }
         auto time_ms_fp32 = bench.execl({src, filter, dst}) / RUNS;
         src.dtype = filter.dtype = dst.dtype = dtype::Float16();
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         bench.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16());
         auto time_ms_true_fp16 = bench.execl({src, filter, dst}) / RUNS;
         param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         bench.set_param(param);
         auto time_ms_pseudo_fp16 = bench.execl({src, filter, dst}) / RUNS;
         float flo = 2.0 * N * OC * IC * dst[2] * dst[3] * FH * FH;
@@ -500,7 +500,7 @@ TEST_F(CUDA, CONVOLUTION_BWD_DATA_BENCHMARK) {
         param.pad_h = param.pad_w = PH;
         param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
         bench.set_param(param);
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         TensorLayout src{{N, IC, IH, IW}, dtype::Float32()},
                 filter{{OC, IC, FH, FH}, dtype::Float32()};
         TensorLayout dst;
@@ -511,13 +511,13 @@ TEST_F(CUDA, CONVOLUTION_BWD_DATA_BENCHMARK) {
         }
         auto time_ms_fp32 = bench.execl({filter, dst, src}) / RUNS;
         src.dtype = filter.dtype = dst.dtype = dtype::Float16();
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         bench.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16());
         auto time_ms_true_fp16 = bench.execl({filter, dst, src}) / RUNS;
         param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         bench.set_param(param);
         auto time_ms_pseudo_fp16 = bench.execl({filter, dst, src}) / RUNS;
         float flo = 2.0 * N * OC * IC * dst[2] * dst[3] * FH * FH;
@@ -571,7 +571,7 @@ TEST_F(CUDA, CONVOLUTION_BWD_FILTER_BENCHMARK) {
         param.pad_h = param.pad_w = PH;
         param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
         bench.set_param(param);
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         TensorLayout src{{N, IC, IH, IW}, dtype::Float32()},
                 filter{{OC, IC, FH, FH}, dtype::Float32()};
         TensorLayout dst;
@@ -582,13 +582,13 @@ TEST_F(CUDA, CONVOLUTION_BWD_FILTER_BENCHMARK) {
         }
         auto time_ms_fp32 = bench.execl({src, dst, filter}) / RUNS;
         src.dtype = filter.dtype = dst.dtype = dtype::Float16();
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         bench.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16());
         auto time_ms_true_fp16 = bench.execl({src, dst, filter}) / RUNS;
         param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
-        bench.proxy()->target_algo = nullptr;
+        bench.proxy()->target_algo_info.reset();
         bench.set_param(param);
         auto time_ms_pseudo_fp16 = bench.execl({src, dst, filter}) / RUNS;
         float flo = 2.0 * N * OC * IC * dst[2] * dst[3] * FH * FH;

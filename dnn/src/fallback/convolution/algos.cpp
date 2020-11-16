@@ -162,6 +162,7 @@ void kern_direct(const NCBKernParam& param) {
 
 }  // namespace
 
+
 /* ===================== fallback algo ===================== */
 
 bool ConvolutionImpl::AlgoFallback::usable(
@@ -461,7 +462,6 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::get_kimpl(
 }
 
 /////////////////////////// ConvolutionBackwardData /////////////////////
-
 /* ===================== naive algo ===================== */
 
 bool ConvolutionBackwardDataImpl::AlgoNaive::usable(

@@ -88,46 +88,50 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 #endif
 
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
+    fallback::ConvBiasImpl::AlgoBase::Mapper m_all_algos_map;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> m_direct_algos;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> m_winograd_algos;
 
 public:
     AlgoPack() {
 #if __ARM_FEATURE_DOTPROD
-        direct_algos.emplace_back(&ds8_direct_stride1);
-        direct_algos.emplace_back(&ds8_direct_stride2);
-        direct_algos.emplace_back(&du8_direct_stride1);
-        direct_algos.emplace_back(&du8_direct_stride2);
+        m_direct_algos.emplace_back(&ds8_direct_stride1);
+        m_direct_algos.emplace_back(&ds8_direct_stride2);
+        m_direct_algos.emplace_back(&du8_direct_stride1);
+        m_direct_algos.emplace_back(&du8_direct_stride2);
 
-        direct_algos.emplace_back(&ds8_direct_nchw44);
-        direct_algos.emplace_back(&ds8_direct_nchw_nchw44);
+        m_direct_algos.emplace_back(&ds8_direct_nchw44);
+        m_direct_algos.emplace_back(&ds8_direct_nchw_nchw44);
 #endif
-        direct_algos.emplace_back(&qu8_direct_stride2);
-        direct_algos.emplace_back(&qu8_direct_stride1);
-        direct_algos.emplace_back(&s8_direct_stride2);
-        direct_algos.emplace_back(&s8_direct_nchw44);
-        direct_algos.emplace_back(&s8x8x16_direct_nchw44);
-        direct_algos.emplace_back(&s8_direct_nchw_nchw44);
-        direct_algos.emplace_back(&s8_direct_stride1);
+        m_direct_algos.emplace_back(&qu8_direct_stride2);
+        m_direct_algos.emplace_back(&qu8_direct_stride1);
+        m_direct_algos.emplace_back(&s8_direct_stride2);
+        m_direct_algos.emplace_back(&s8_direct_nchw44);
+        m_direct_algos.emplace_back(&s8x8x16_direct_nchw44);
+        m_direct_algos.emplace_back(&s8_direct_nchw_nchw44);
+        m_direct_algos.emplace_back(&s8_direct_stride1);
 
-        direct_algos.emplace_back(&s8x8x16_channel_wise_stride1_stride2_nchw44);
-        direct_algos.emplace_back(&s8_channel_wise_stride1_nchw44);
-        direct_algos.emplace_back(&s8_channel_wise_stride2_nchw44);
+        m_direct_algos.emplace_back(
+                &s8x8x16_channel_wise_stride1_stride2_nchw44);
+        m_direct_algos.emplace_back(&s8_channel_wise_stride1_nchw44);
+        m_direct_algos.emplace_back(&s8_channel_wise_stride2_nchw44);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-        direct_algos.emplace_back(&f16_direct_stride1);
-        direct_algos.emplace_back(&f16_direct);
+        m_direct_algos.emplace_back(&f16_direct_stride1);
+        m_direct_algos.emplace_back(&f16_direct);
 #endif
-        direct_algos.emplace_back(&i8x8x16_direct);
-        direct_algos.emplace_back(&i8x8x16_stride2_filter2);
-        direct_algos.emplace_back(&i8x8x16_stride2);
-        direct_algos.emplace_back(&i8x8x16_nchw_nchw44);
+        m_direct_algos.emplace_back(&i8x8x16_direct);
+        m_direct_algos.emplace_back(&i8x8x16_stride2_filter2);
+        m_direct_algos.emplace_back(&i8x8x16_stride2);
+        m_direct_algos.emplace_back(&i8x8x16_nchw_nchw44);
 
-        direct_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
-        direct_algos.emplace_back(&f32_chanel_wise_nchw44);
-        direct_algos.emplace_back(&f32_direct_nchw44);
+        m_direct_algos.emplace_back(&f32_direct_stride2_nchw_nchw44);
+        m_direct_algos.emplace_back(&f32_chanel_wise_nchw44);
+        m_direct_algos.emplace_back(&f32_direct_nchw44);
 
-        direct_algos.emplace_back(&f32_direct_stride1);
-        direct_algos.emplace_back(&f32_direct_stride2);
-        direct_algos.emplace_back(&f32_direct);
+        m_direct_algos.emplace_back(&f32_direct_stride1);
+        m_direct_algos.emplace_back(&f32_direct_stride2);
+        m_direct_algos.emplace_back(&f32_direct);
 
         static CpuOprDelegationStorage<2> storage;
         auto matmul_opr = storage.get<MatrixMul, 0>();
@@ -143,31 +147,31 @@ public:
                 refhold.emplace_back(new AlgoFP32WinogradF23_4x4(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF63_4x4(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF63_4x4_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF23_4x4_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
 //! uncomment this when low precision mode is done
 #if 0
                 refhold.emplace_back(new AlgoFP32WinogradF73_4x4_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
 #endif
                 //! Qint8x8x32 winograd compute with fp32
                 refhold.emplace_back(new AlgoS8CF32WinogradF23_4x4_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
         matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
@@ -180,15 +184,15 @@ public:
                 refhold.emplace_back(new AlgoFP32WinogradF63(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF54(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF45(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
 
@@ -203,15 +207,15 @@ public:
                 refhold.emplace_back(new AlgoFP16WinogradF23(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP16WinogradF45(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP16WinogradF63(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
         matmul_algos = static_cast<arm_common::MatrixMulImpl*>(matmul_opr)
@@ -224,7 +228,7 @@ public:
                 refhold.emplace_back(new AlgoFP16WinogradF23_8x8(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
 #endif
@@ -238,25 +242,48 @@ public:
                 refhold.emplace_back(new AlgoS8WinogradF23_8x8(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoS8WinogradF23_8x8_NCHW44(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
+
+
+        for (auto&& algo : m_direct_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
+        for (auto&& algo : m_winograd_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<AlgoBase*> direct_algos;
-    SmallVector<AlgoBase*> winograd_algos;
+
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& direct_algos()
+            const {
+        return m_direct_algos;
+    }
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos()
+            const {
+        return m_winograd_algos;
+    }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
-    static AlgoPack sl_algo_pack;
-    auto&& algos = fallback::ConvBiasImpl::algo_pack();
-    algos.insert(algos.begin(), sl_algo_pack.direct_algos.begin(),
-                 sl_algo_pack.direct_algos.end());
-    algos.insert(algos.end(), sl_algo_pack.winograd_algos.begin(),
-                 sl_algo_pack.winograd_algos.end());
+const ConvBiasImpl::AlgoPack& ConvBiasImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(ConvBiasImpl)
+
+SmallVector<fallback::ConvBiasImpl::AlgoBase*>
+ConvBiasImpl::get_all_packed_algo() {
+    auto&& algos = fallback::ConvBiasImpl::get_all_packed_algo();
+    algos.insert(algos.begin(), algo_pack().direct_algos().begin(),
+                 algo_pack().direct_algos().end());
+    algos.insert(algos.end(), algo_pack().winograd_algos().begin(),
+                 algo_pack().winograd_algos().end());
     return std::move(algos);
 }
 

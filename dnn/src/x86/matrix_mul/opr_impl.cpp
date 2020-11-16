@@ -35,35 +35,58 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt8x8x16SSE algoint8x8x16sse_m4n8k2;
     AlgoF32MK8_8x8 algof32mk8_8x8;
 
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
+    fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
+
 public:
     AlgoPack() {
         if (is_supported(SIMDType::VNNI)) {
 #if MEGDNN_X86_WITH_VNNI
-            all_algos.emplace_back(&algoint8x8x32vnni);
+            m_all_algos.emplace_back(&algoint8x8x32vnni);
 #endif
         }
-        all_algos.emplace_back(&algoint8x8x32avx2_m4n16k2);
-        all_algos.emplace_back(&algoint8x8x16avx2_m4n16k2);
-        all_algos.emplace_back(&algoint8x8x32avx2_m2n4k16);
-        all_algos.emplace_back(&algoint8x8x32sse_m4n8k2);
-        all_algos.emplace_back(&algoint8x8x16sse_m4n8k2);
-        all_algos.emplace_back(&algof32mk8_8x8);
+        m_all_algos.emplace_back(&algoint8x8x32avx2_m4n16k2);
+        m_all_algos.emplace_back(&algoint8x8x16avx2_m4n16k2);
+        m_all_algos.emplace_back(&algoint8x8x32avx2_m2n4k16);
+        m_all_algos.emplace_back(&algoint8x8x32sse_m4n8k2);
+        m_all_algos.emplace_back(&algoint8x8x16sse_m4n8k2);
+        m_all_algos.emplace_back(&algof32mk8_8x8);
 #if MEGDNN_X86_WITH_MKL_DNN
-        all_algos.emplace_back(&algoint8x8x32mkldnn);
+        m_all_algos.emplace_back(&algoint8x8x32mkldnn);
 #endif
-        all_algos.emplace_back(&f32blas);
+        m_all_algos.emplace_back(&f32blas);
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
-        all_algos.emplace_back(&f32mkl_packa);
+        m_all_algos.emplace_back(&f32mkl_packa);
 #endif
+
+        for (auto&& algo : m_all_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> all_algos;
+
+    const SmallVector<fallback::MatrixMulImpl::AlgoBase*>& all_algos() const {
+        return m_all_algos;
+    }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
-    static AlgoPack s_algo_pack;
-    auto&& algos = fallback::MatrixMulImpl::algo_pack();
-    algos.insert(algos.begin(), s_algo_pack.all_algos.begin(),
-                 s_algo_pack.all_algos.end());
+const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+fallback::MatrixMulImpl::AlgoBase* MatrixMulImpl::get_algo_from_desc(
+        const AlgorithmDesc& desc) {
+    megdnn_assert(algo_pack().all_algos_map().find(desc) !=
+                  algo_pack().all_algos_map().end());
+    return algo_pack().all_algos_map().at(desc);
+}
+
+SmallVector<fallback::MatrixMulImpl::AlgoBase*>
+MatrixMulImpl::get_all_packed_algo() {
+    auto&& algos = fallback::MatrixMulImpl::get_all_packed_algo();
+    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
+                 algo_pack().all_algos().end());
     return std::move(algos);
 }
 

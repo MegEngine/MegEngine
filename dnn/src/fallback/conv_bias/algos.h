@@ -36,6 +36,7 @@ public:
                 static_cast<uint32_t>(AlgoDataType::QUINT8X8X32));
         return {support_data_type, AlgoCategory::NAIVE};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_NAIVE)
 };
 
 class ConvBiasImpl::AlgoWinogradF32 final : public AlgoBase {
@@ -58,6 +59,12 @@ public:
 
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::WINOGRAD};
+    }
+    MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_F32)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_matmul_algo, ret);
+        return ret;
     }
 
 private:
@@ -87,6 +94,12 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::WINOGRAD};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_4X4_F32)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_matmul_algo, ret);
+        return ret;
+    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -115,6 +128,12 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::WINOGRAD};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_QS8)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_matmul_algo, ret);
+        return ret;
+    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -142,6 +161,12 @@ public:
 
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::WINOGRAD};
+    }
+    MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_8X8_QS8)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_matmul_algo, ret);
+        return ret;
     }
 
 private:

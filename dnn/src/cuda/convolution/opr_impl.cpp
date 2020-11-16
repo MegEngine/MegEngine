@@ -70,7 +70,7 @@ ConvolutionForwardImpl::conv_bias_extra_data(const TensorLayout& src,
                                  conv_param.dilate_w,
                                  0,
                                  conv_param.compute_mode};
-    ret.convbias_opr->execution_policy() = {this->execution_policy().algorithm};
+    ret.convbias_opr->execution_policy() = {this->execution_policy().algo};
     return ret;
 }
 
@@ -183,15 +183,6 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
         CUDNNBwdDataDescs desc;
         args.init_desc(desc);
 
-        //disable, segfault in megbrain, need further investigate.
-#if 0
-        bool is_heuristic_success= convolution::
-                PerformanceModelBackwardData::get_algo_backward_data_success(
-                        args, desc, workspace_limit_in_bytes, &algo);
-        if (is_heuristic_success) {
-            return sm_algo_pack.cudnn_from_enum(algo);
-        }
-#endif
 #if CUDNN_MAJOR >= 7
         int max_count = 0;
         cudnn_check(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(

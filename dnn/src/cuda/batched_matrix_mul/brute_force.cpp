@@ -24,7 +24,7 @@ bool BatchedMatrixMulForwardImpl::AlgoBruteForce::is_available(
         const SizeArgs& args) const {
     MatrixMulForwardImpl mm{args.opr->handle()};
     mm.param() = {args.opr->param().transposeA, args.opr->param().transposeB};
-    mm.execution_policy() = {m_algorithm};
+    mm.execution_policy() = {m_algorithm->info()};
 
     auto mm_layout_a = args.layout_a.remove_axis(0);
     auto mm_layout_b = args.layout_b.remove_axis(0);
@@ -39,7 +39,7 @@ size_t BatchedMatrixMulForwardImpl::AlgoBruteForce::get_workspace_in_bytes(
     auto mm_opr = args.opr->handle()->create_operator<MatrixMulForward>();
     mm_opr->param() = {args.opr->param().transposeA,
                        args.opr->param().transposeB};
-    mm_opr->execution_policy() = {m_algorithm};
+    mm_opr->execution_policy() = {m_algorithm->info()};
 
     return mm_opr->get_workspace_in_bytes(args.layout_a, args.layout_b,
                                           args.layout_c);
@@ -50,7 +50,7 @@ void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(
     auto&& mm_opr = args.opr->handle()->create_operator<MatrixMulForward>();
     mm_opr->param() = {args.opr->param().transposeA,
                        args.opr->param().transposeB};
-    mm_opr->execution_policy() = {m_algorithm};
+    mm_opr->execution_policy() = {m_algorithm->info()};
     rep(n, N) {
         TensorND A_, B_, C_;
         auto tensor_n_from_batch = [n](const TensorND& in, TensorND& out) {

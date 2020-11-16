@@ -18,16 +18,19 @@ class DefaultConvolution3DForwardAlgorithm final
         : public megdnn::Convolution3DForward::Algorithm {
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "DEFAULT"; }
+    uint32_t type() const override { return 0; }
 };
 class DefaultConvolution3DBackwardDataAlgorithm final
         : public megdnn::Convolution3DBackwardData::Algorithm {
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "DEFAULT"; }
+    uint32_t type() const override { return 0; }
 };
 class DefaultConvolution3DBackwardFilterAlgorithm final
         : public megdnn::Convolution3DBackwardFilter::Algorithm {
     bool is_reproducible() const override { return true; }
     const char* name() const override { return "DEFAULT"; }
+    uint32_t type() const override { return 0; }
 };
 
 }  // namespace naive

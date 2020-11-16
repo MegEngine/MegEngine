@@ -59,6 +59,7 @@ public:
     virtual bool is_available(const KernParam&) const = 0;
     virtual void exec(const KernParam&) const = 0;
     virtual ~AlgoBase() = default;
+    uint32_t type() const override { return INVALID_ALGO_TYPE; };
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

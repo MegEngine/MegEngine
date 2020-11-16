@@ -216,6 +216,86 @@ public:
         AlgoBase() : Algorithm() {
             m_handle_type = Handle::HandleType::FALLBACK;
         }
+
+        enum class AlgoType : uint32_t {
+            //! fallback
+            FB_NAIVE = 1 << 0,
+            FB_WINOGRAD_F32,
+            FB_WINOGRAD_4X4_F32,
+            FB_WINOGRAD_QS8,
+            FB_WINOGRAD_8X8_QS8,
+            FB_CONV1x1,
+            FB_CONV1x1_GEMV,
+            FB_IM2COL,
+
+#if MEGDNN_X86
+            X86_DIRECT = 1 << 8,
+            X86_DIRECT_STRD2,
+            X86_WINOGRAD_F63_8x8_F32,
+            X86_WINOGRAD_F23_8x8_F32,
+            X86_MKLDNN,
+            X86_CHANWISE_AVX2_STRD1_QINT8,
+            X86_CHANWISE_AVX2_STRD2_QINT8,
+            X86_DIRECT_AVX2_STRD1_INT8,
+            X86_DIRECT_AVX2_STRD2_INT8,
+            X86_MKLDNN_QINT8,
+            X86_MKLDNN_MATMUL_QINT8,
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7
+            ARM_COMMON_WINOGRAD_F23_FP16 = 1 << 8,
+            ARM_COMMON_WINOGRAD_F45_FP16,
+            ARM_COMMON_WINOGRAD_F63_FP16,
+            ARM_COMMON_WINOGRAD_F23_8X8_FP16,
+            ARM_COMMON_DIRECT_FP16,
+            ARM_COMMON_DIRECT_STRD1_FP16,
+            ARM_COMMON_WINOGRAD_F23_4X4_FP32,
+            ARM_COMMON_WINOGRAD_F63_FP32,
+            ARM_COMMON_WINOGRAD_F63_4X4_FP32,
+            ARM_COMMON_WINOGRAD_F54_FP32,
+            ARM_COMMON_WINOGRAD_F45_FP32,
+            ARM_COMMON_WINOGRAD_F23_4X4_NCHW44_F32,
+            ARM_COMMON_WINOGRAD_F63_4X4_NCHW44_F32,
+            ARM_COMMON_WINOGRAD_F73_4X4_NCHW44_F32,
+            ARM_COMMON_DIRECT_FP32,
+            ARM_COMMON_DIRECT_STRD1_FP32,
+            ARM_COMMON_DIRECT_STRD2_FP32,
+            ARM_COMMON_DIRECT_NCHW44_FP32,
+            ARM_COMMON_DIRECT_NCHW_NCHW44_FP32,
+            ARM_COMMON_CHWNWISE_NCHW44_F32,
+            ARM_COMMON_DIRECT_STRD1_S8,
+            ARM_COMMON_DIRECT_STRD2_S8,
+            ARM_COMMON_DIRECT_NCHW44,
+            ARM_COMMON_DIRECT_NCHW_NCHW44_S8,
+            ARM_COMMON_CHANWISE_STRD1_NCHW44_S8,
+            ARM_COMMON_CHANWISE_STRD2_NCHW44_S8,
+            ARM_COMMON_DIRECT_NCHW_NCHW44_DOT_S8,
+            ARM_COMMON_DIRECT_STRD1_DOT_S8,
+            ARM_COMMON_DIRECT_STRD2_DOT_S8,
+            ARM_COMMON_DIRECT_NCHW44_DOT_S8,
+            ARM_COMMON_WINOGRAD_F23_8X8_S8,
+            ARM_COMMON_WINOGRAD_F23_8X8_NCHW44_S8CF32,
+            ARM_COMMON_WINOGRAD_F23_8X8_NCHW44_S8,
+            ARM_COMMON_DIRECT_INT8X8X16,
+            ARM_COMMON_DIRECT_NCHW44_INT8X8X16,
+            ARM_COMMON_DIRECT_STRD2_INT8X8X16,
+            ARM_COMMON_DIRECT_STRD2_F2_INT8X8X16,
+            ARM_COMMON_CHWNWISE_STRD1_STRD2_NCHW44_INT8X8X16,
+            ARM_COMMON_DIRECT_NCHW_NCHW44_INT8X8X16,
+            ARM_COMMON_DIRECT_STRD1_QU8,
+            ARM_COMMON_DIRECT_STRD2_QU8,
+            ARM_COMMON_DIRECT_STRD1_DOT_QU8,
+            ARM_COMMON_DIRECT_STRD2_DOT_QU8,
+#if MEGDNN_AARCH64
+            AARCH64_DIRECT_STRD2_FP16,
+            AARCH64_DIRECT_STRD2_FP32,
+            AARCH64_MATMUL_S8,
+            AARCH64_MATMUL_QU8,
+#else
+            ARMV7_MATMUL_S8,
+            ARMV7_MATMUL_QU8,
+#endif // MEGDNN_AARCH64
+#endif
+        };
+
         virtual ~AlgoBase() = default;
         virtual bool usable(
                 const NCBKernSizeParam& param,
@@ -255,12 +335,14 @@ public:
 
         //! get the type of the algo
         virtual ConvAlgoTypePack get_algo_type() const = 0;
+        using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
     };
 
+    using AlgoMapper = AlgoBase::Mapper;
     /**
      * \brief get all the algorithm for the opr.
      */
-    virtual SmallVector<AlgoBase*> algo_pack();
+    virtual SmallVector<AlgoBase*> get_all_packed_algo();
 
     /**
      * \brief select algo according to input algo type
@@ -305,6 +387,8 @@ private:
 
     bool is_naive_algo(ConvBiasImpl::Algorithm* algo);
 
+    Algorithm* get_algo_from_desc(const AlgorithmDesc& desc) const;
+
     //! get algorithm set by user or by heuristic
     Algorithm* get_algorithm(
             const NCBKernSizeParam& param,
@@ -320,6 +404,8 @@ private:
             _megdnn_tensor_in bias, _megdnn_tensor_out dst,
             _megdnn_workspace workspace,
             const PreprocessedFilter* preprocessed_filter);
+
+    static const AlgoPack& algo_pack();
 };
 
 inline bool is_enable_filter_preprocess(

@@ -45,6 +45,9 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoMkldnnConv mkldnn_conv_fp32;
 #endif
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> m_all_no_winograd_algo;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> m_winograd_algos;
+    fallback::ConvBiasImpl::AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack() {
@@ -52,21 +55,21 @@ public:
     //! But now mkldnn algo preference issue with NCHW->NHWC->NCHW
 #if MEGDNN_X86_WITH_MKL_DNN
         //! Create the mkldnn algo
-        all_algos.emplace_back(&mkldnn_conv_fp32);
-        all_algos.emplace_back(&mkldnn_matmul_qint8);
-        all_algos.emplace_back(&mkldnn_qint8);
+        m_all_no_winograd_algo.emplace_back(&mkldnn_conv_fp32);
+        m_all_no_winograd_algo.emplace_back(&mkldnn_matmul_qint8);
+        m_all_no_winograd_algo.emplace_back(&mkldnn_qint8);
 #endif
-        all_algos.emplace_back(&stride1_direct);
-        all_algos.emplace_back(&stride2_direct);
-        all_algos.emplace_back(&avx2_stride1_chanwsie_qint8);
-        all_algos.emplace_back(&avx2_stride2_chanwsie_qint8);
-        all_algos.emplace_back(&avx2_stride1_direct_int8);
-        all_algos.emplace_back(&avx2_stride2_direct);
+        m_all_no_winograd_algo.emplace_back(&stride1_direct);
+        m_all_no_winograd_algo.emplace_back(&stride2_direct);
+        m_all_no_winograd_algo.emplace_back(&avx2_stride1_chanwsie_qint8);
+        m_all_no_winograd_algo.emplace_back(&avx2_stride2_chanwsie_qint8);
+        m_all_no_winograd_algo.emplace_back(&avx2_stride1_direct_int8);
+        m_all_no_winograd_algo.emplace_back(&avx2_stride2_direct);
 
         static CpuOprDelegationStorage<> storage;
         auto matmul_opr = storage.get<MatrixMul>();
         auto&& matmul_algos =
-                static_cast<MatrixMulImpl*>(matmul_opr)->algo_pack();
+                static_cast<MatrixMulImpl*>(matmul_opr)->get_all_packed_algo();
         for (auto&& algo : matmul_algos) {
             if (is_fallback_or_naive(algo))
                 continue;
@@ -74,25 +77,52 @@ public:
                 refhold.emplace_back(new AlgoFP32WinogradF63_8x8(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
                 refhold.emplace_back(new AlgoFP32WinogradF23_8x8(
                         static_cast<fallback::MatrixMulImpl::AlgoBase*>(algo),
                         tile_size));
-                winograd_algos.emplace_back(refhold.back().get());
+                m_winograd_algos.emplace_back(refhold.back().get());
             }
         }
+
+        for (auto&& algo : m_all_no_winograd_algo) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
+        for (auto&& algo : m_winograd_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<AlgoBase*> all_algos;
-    SmallVector<AlgoBase*> winograd_algos;
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& all_no_winograd_algo()
+            const {
+        return m_all_no_winograd_algo;
+    }
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos()
+            const {
+        return m_winograd_algos;
+    }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
-    static AlgoPack sl_algo_pack;
-    auto&& algos = fallback::ConvBiasImpl::algo_pack();
-    algos.insert(algos.begin(), sl_algo_pack.all_algos.begin(),
-                 sl_algo_pack.all_algos.end());
-    algos.insert(algos.end(), sl_algo_pack.winograd_algos.begin(),
-                 sl_algo_pack.winograd_algos.end());
+const ConvBiasImpl::AlgoPack& ConvBiasImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+fallback::ConvBiasImpl::AlgoBase* ConvBiasImpl::get_algo_from_desc(
+        const AlgorithmDesc& desc) {
+    megdnn_assert(algo_pack().all_algos_map().find(desc) !=
+                  algo_pack().all_algos_map().end());
+    return algo_pack().all_algos_map().at(desc);
+}
+
+SmallVector<fallback::ConvBiasImpl::AlgoBase*>
+ConvBiasImpl::get_all_packed_algo() {
+    auto&& algos = fallback::ConvBiasImpl::get_all_packed_algo();
+    algos.insert(algos.begin(), algo_pack().all_no_winograd_algo().begin(),
+                 algo_pack().all_no_winograd_algo().end());
+    algos.insert(algos.end(), algo_pack().winograd_algos().begin(),
+                 algo_pack().winograd_algos().end());
+
     return std::move(algos);
 }
 

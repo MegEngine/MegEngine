@@ -14,8 +14,12 @@
 #include "megdnn/oprs.h"
 
 #include "src/common/utils.h"
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/local_share/opr_impl.h"
+
+#include <unordered_map>
 
 namespace megdnn {
 namespace cuda {
@@ -25,6 +29,13 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        CUDA_CHWN_BATCH_SIZE_AWARE,
+        CUDA_CHWN_BATCH_SIZE_AWARE_SMALL_IMAGE,
+        CUDA_BATCHED_MATMUL
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         LocalShareForwardImpl* opr;
@@ -79,6 +90,7 @@ public:
     const char* name() const override {
         return "LOCAL_SHARE_CHWN_BATCH_SIZE_AWARE";
     }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CHWN_BATCH_SIZE_AWARE)
 };
 
 class LocalShareForwardImpl::AlgoCHWNBatchSizeAwareSmallImage final
@@ -95,6 +107,7 @@ public:
     const char* name() const override {
         return "LOCAL_SHARE_CHWN_BATCH_SIZE_AWARE_SMALL_IMAGE";
     }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CHWN_BATCH_SIZE_AWARE_SMALL_IMAGE)
 };
 
 class LocalShareForwardImpl::AlgoBatchedMatMul final : public AlgoBase {
@@ -108,11 +121,11 @@ public:
     bool is_reproducible() const override { return true; }
 
     const char* name() const override { return "LOCAL_SHARE_BATCHED_MATMUL"; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_BATCHED_MATMUL)
 };
 
-class LocalShareForwardImpl::AlgoPack {
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
+class LocalShareForwardImpl::AlgoPack : NonCopyableObj {
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack();
@@ -122,6 +135,7 @@ public:
     AlgoBatchedMatMul batched_matmul;
 
     std::vector<AlgoBase*> all_algos;
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
 }  // namespace cuda

@@ -60,6 +60,13 @@ public:
         return {m_matmul_algo->matmul_description().algo_type.data_type,
                 AlgoCategory::IM2COL};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_8X8_QS8)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_matmul_algo, ret);
+        serialize_write_pod(m_oc_block_size, ret);
+        return ret;
+    }
 
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;

@@ -25,9 +25,9 @@ namespace mixin {
 class Convolution {
     public:
         using ExecutionPolicy = megdnn::param::ExecutionPolicy;
-        using Algorithm = megdnn::detail::Algorithm;
+        using AlgorithmInfo = megdnn::detail::Algorithm::Info;
         using AlgoChooserHook =
-                std::function<Algorithm*(const OperatorNodeBase*)>;
+                std::function<AlgorithmInfo(const OperatorNodeBase*)>;
 
         const ExecutionPolicy& execution_policy() const {
             if (!m_policy_accessed) {
@@ -618,9 +618,9 @@ private:
             const override final;
 };
 
-MGB_DEFINE_OPR_CLASS(BatchConvBiasForward, intl::BatchConvBiasForwardBase, 
+MGB_DEFINE_OPR_CLASS(BatchConvBiasForward, intl::BatchConvBiasForwardBase,
         public mixin::Convolution) // {
-    
+
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
             const TensorShapeArray& input_shapes,

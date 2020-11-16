@@ -26,6 +26,18 @@ public:
                                   const TensorLayout& bias,
                                   const TensorLayout& z,
                                   const TensorLayout& dst) override;
+    const char* get_algorithm_set_name() const override;
+
+    class AlgoBase;
+    class AlgoInt8NCHW4DotProdGemm;
+    class AlgoInt8NCHW4DotProdImplicitGemmPrecomp;
+
+    class AlgoPack;
+
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+
+protected:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
@@ -37,15 +49,6 @@ public:
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
                                        bool reproducible) override;
-    const char* get_algorithm_set_name() const override;
-
-    class AlgoBase;
-    class AlgoInt8NCHW4DotProdGemm;
-    class AlgoInt8NCHW4DotProdImplicitGemmPrecomp;
-
-    class AlgoPack;
-
-    static const AlgoPack& algo_pack() { return sm_algo_pack; }
 
 private:
     static AlgoPack sm_algo_pack;

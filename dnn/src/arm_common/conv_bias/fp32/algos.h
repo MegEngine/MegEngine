@@ -30,6 +30,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_4X4_FP32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63 final : public AlgoBase {
@@ -45,6 +46,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_FP32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4 final : public AlgoBase {
@@ -60,6 +62,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_4X4_FP32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF54 final : public AlgoBase {
@@ -75,6 +78,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F54_FP32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF45 final : public AlgoBase {
@@ -90,6 +94,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F45_FP32)
 };
 
 //===================== NCHW44 Winograd Support =====================//
@@ -107,6 +112,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_4X4_NCHW44_F32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4_NCHW44 final : public AlgoBase {
@@ -123,6 +129,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_4X4_NCHW44_F32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF73_4x4_NCHW44 final : public AlgoBase {
@@ -139,6 +146,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F73_4X4_NCHW44_F32)
 };
 // ================================================================= //
 
@@ -157,6 +165,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_FP32)
 };
 
 class ConvBiasImpl::AlgoF32DirectStride1 final : public AlgoBase {
@@ -174,6 +183,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_FP32)
 };
 
 class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
@@ -191,6 +201,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_FP32)
 };
 
 class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
@@ -209,6 +220,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW44_FP32)
 };
 
 class ConvBiasImpl::AlgoF32DirectNCHWNCHW44 final : public AlgoBase {
@@ -227,6 +239,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW_NCHW44_FP32)
 };
 
 class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {
@@ -244,6 +257,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_CHWNWISE_NCHW44_F32)
 };
 
 }  // namespace arm_common

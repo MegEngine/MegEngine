@@ -43,42 +43,60 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt16x16x32K12x4x1 int16x16x32_k12x4x1;
     AlgoInt16x16x32MK8_4x8 int16x16x32_mk8_4x8;
 
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
+    fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
+
 public:
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> all_algos;
 
     AlgoPack() {
-        all_algos.emplace_back(&f32_gemv);
-        all_algos.emplace_back(&f32);
-        all_algos.emplace_back(&f32_mk4_pack_4x12);
-        all_algos.emplace_back(&f32_mk4_4x8);
+        m_all_algos.emplace_back(&f32_gemv);
+        m_all_algos.emplace_back(&f32);
+        m_all_algos.emplace_back(&f32_mk4_pack_4x12);
+        m_all_algos.emplace_back(&f32_mk4_4x8);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-        all_algos.emplace_back(&f16_k4x16x1);
-        all_algos.emplace_back(&f16_mk8_4x8);
+        m_all_algos.emplace_back(&f16_k4x16x1);
+        m_all_algos.emplace_back(&f16_mk8_4x8);
 #endif
 #if __ARM_FEATURE_DOTPROD
-        all_algos.emplace_back(&int8x8x32_mk4_8x4x4_dotprod);
-        all_algos.emplace_back(&int8_k6x8x4);
-        all_algos.emplace_back(&quint8_k4x8x4);
+        m_all_algos.emplace_back(&int8x8x32_mk4_8x4x4_dotprod);
+        m_all_algos.emplace_back(&int8_k6x8x4);
+        m_all_algos.emplace_back(&quint8_k4x8x4);
 #endif
-        all_algos.emplace_back(&int8x8x32_mk4_4x2x16);
-        all_algos.emplace_back(&int8x8x32_k4x2x16);
-        all_algos.emplace_back(&int8x8x32_k4x8x8);
-        all_algos.emplace_back(&quint8_k4x8x8);
-        all_algos.emplace_back(&int8x8x16_mk4_8x8x4);
-        all_algos.emplace_back(&int8x8x16_k4x2x16);
-        all_algos.emplace_back(&int8x8x16_k4x8x8);
+        m_all_algos.emplace_back(&int8x8x32_mk4_4x2x16);
+        m_all_algos.emplace_back(&int8x8x32_k4x2x16);
+        m_all_algos.emplace_back(&int8x8x32_k4x8x8);
+        m_all_algos.emplace_back(&quint8_k4x8x8);
+        m_all_algos.emplace_back(&int8x8x16_mk4_8x8x4);
+        m_all_algos.emplace_back(&int8x8x16_k4x2x16);
+        m_all_algos.emplace_back(&int8x8x16_k4x8x8);
 
-        all_algos.emplace_back(&int16x16x32_k12x4x1);
-        all_algos.emplace_back(&int16x16x32_mk8_4x8);
+        m_all_algos.emplace_back(&int16x16x32_k12x4x1);
+        m_all_algos.emplace_back(&int16x16x32_mk8_4x8);
+
+        for (auto&& algo : m_all_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
+
+    const SmallVector<fallback::MatrixMulImpl::AlgoBase*>& all_algos() const {
+        return m_all_algos;
+    }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::algo_pack() {
-    static AlgoPack s_algo_pack;
-    auto algos = arm_common::MatrixMulImpl::algo_pack();
-    algos.insert(algos.begin(), s_algo_pack.all_algos.begin(),
-                 s_algo_pack.all_algos.end());
+const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+SmallVector<fallback::MatrixMulImpl::AlgoBase*>
+MatrixMulImpl::get_all_packed_algo() {
+    auto algos = arm_common::MatrixMulImpl::get_all_packed_algo();
+    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
+                 algo_pack().all_algos().end());
     return algos;
 }
+
+MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(MatrixMulImpl)
 
 // vim: syntax=cpp.doxygen

@@ -279,7 +279,7 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
 
             benchmarker.set_param(bparam);
             if (!algo) {
-                benchmarker.proxy()->target_algo = nullptr;
+                benchmarker.proxy()->target_algo_info.reset();
             }
             auto time_in_ms =
                     benchmarker.execs(

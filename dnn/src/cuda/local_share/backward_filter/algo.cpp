@@ -18,7 +18,13 @@ using namespace cuda;
 LocalShareBackwardFilterImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&implicit_gemm);
     all_algos.push_back(&batched_matmul);
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(LocalShareBackwardFilterImpl)
 
 LocalShareBackwardFilterImpl::AlgoPack LocalShareBackwardFilterImpl::sm_algo_pack;
 

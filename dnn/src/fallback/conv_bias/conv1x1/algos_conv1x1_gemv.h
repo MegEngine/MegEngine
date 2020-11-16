@@ -43,6 +43,7 @@ public:
                 static_cast<uint32_t>(AlgoDataType::QUINT8X8X32));
         return {support_data_type, AlgoCategory::IM2COL};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_CONV1x1_GEMV)
 
 protected:
     size_t get_oc_tile_size_heuristic(const NCBKernSizeParam& param) const;

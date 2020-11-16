@@ -26,6 +26,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::INT8X8X16, DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X16)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32Gemv : public AlgoBase {
@@ -39,6 +40,7 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X32_GEMV)
 };
 
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4 : public AlgoBase {
@@ -52,6 +54,7 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X32_GEMV_MK4)
 };
 
 #if __ARM_FEATURE_DOTPROD
@@ -66,6 +69,7 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QINT8X8X32, MK4_DOT)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_INT8X8X32_GEMV_MK4_DOT)
 };
 #endif
 
@@ -96,6 +100,7 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(4, 1, 1, 4, AlgoDataType::FLOAT32, MK4)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_F32_GEMV_MK4)
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -110,6 +115,7 @@ public:
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::FLOAT16, DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_F16_GEMV)
 };
 #endif
 
@@ -130,6 +136,7 @@ public:
                     static_cast<uint32_t>(AlgoDataType::FLOAT32) |
                     static_cast<uint32_t>(AlgoDataType::QINT8X8X32)),
             DEFAULT)
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_GEVM)
 };
 
 }  // namespace arm_common

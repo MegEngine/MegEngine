@@ -32,6 +32,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_QU8)
 };
 
 class ConvBiasImpl::AlgoQU8DirectStride2 final : public AlgoBase {
@@ -48,6 +49,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_QU8)
 };
 #if __ARM_FEATURE_DOTPROD
 class ConvBiasImpl::AlgoDotU8DirectStride1 final : public AlgoBase {
@@ -65,6 +67,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_DOT_QU8)
 };
 
 class ConvBiasImpl::AlgoDotU8DirectStride2 final : public AlgoBase {
@@ -81,6 +84,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QUINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_DOT_QU8)
 };
 #endif
 }  // namespace arm_common

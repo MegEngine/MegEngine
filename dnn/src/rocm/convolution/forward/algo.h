@@ -6,13 +6,16 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
 
 #include "megdnn/oprs.h"
 
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
 #include "src/common/utils.h"
 #include "src/rocm/convolution/helper.h"
 #include "src/rocm/convolution/opr_impl.h"
@@ -32,6 +35,16 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        ROCM_MIOPEN,
+        ROCM_MATMUL,
+        ROCM_INPLACE_MATMUL,
+        ROCM_1X1,
+        ROCM_1X1_LARGE_BATCH,
+        ROCM_CHANWISE
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::ROCM; }
     struct SizeArgs : public convolution::ForwardSizeArgs {
         ConvolutionForwardImpl* opr;
@@ -99,6 +112,12 @@ public:
     const char* name() const override { return "MIOpenConvolutionForward"; }
 
     bool is_miopen() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_MIOPEN)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_is_reproducible, ret);
+        return ret;
+    }
 
     static convolution::MIOpenCache<SizeArgs, miopenConvFwdAlgorithm_t>
             sm_miopen_algo_cache;
@@ -116,6 +135,7 @@ public:
 
     const char* name() const override { return "MATMUL"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_MATMUL)
 };
 
 //! compute small matmul in the kernel
@@ -127,6 +147,7 @@ public:
 
     const char* name() const override { return "INPLACE_MATMUL"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_INPLACE_MATMUL)
 };
 
 //! optimized 1x1 conv
@@ -141,6 +162,7 @@ public:
 
     const char* name() const override { return "1x1"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_1X1)
 };
 
 //! optimized 1x1 conv when input data batchsize is larger than 32
@@ -155,6 +177,7 @@ public:
 
     const char* name() const override { return "LARGE_BATCH_1x1"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_1X1_LARGE_BATCH)
 };
 
 class ConvolutionForwardImpl::AlgoChanwise final : public AlgoBase {
@@ -165,15 +188,14 @@ public:
 
     const char* name() const override { return "CHANNEL_WISE"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_CHANWISE)
 };
 
-class ConvolutionForwardImpl::AlgoPack {
+class ConvolutionForwardImpl::AlgoPack : NonCopyableObj {
     // defined in miopen.cpp
     void fill_miopen_algos();
 
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
-
+    AlgoBase::Mapper m_all_algos_map;
 public:
     AlgoPack();
 
@@ -187,9 +209,11 @@ public:
     std::vector<AlgoBase*>
             //! all algorithms
             all_algos, miopen_algos, non_miopen_algos;
+
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

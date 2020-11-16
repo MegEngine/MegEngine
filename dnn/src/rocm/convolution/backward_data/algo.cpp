@@ -23,8 +23,13 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
     non_miopen_algos.push_back(&matmul);
     non_miopen_algos.push_back(&chanwise);
     miopen_algos.push_back(&miopen);
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
 
+MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl)
 ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
 
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(

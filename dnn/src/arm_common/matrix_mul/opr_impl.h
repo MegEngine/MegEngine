@@ -11,6 +11,7 @@
 #pragma once
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
+#include "src/common/algo_base.h"
 
 namespace megdnn {
 namespace arm_common {
@@ -27,7 +28,10 @@ public:
             }
     };
 
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo()
+            override;
+
+    MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(MatrixMulImpl);
 
 protected:
     class AlgoF32Gemv;               // Arm_common F32 Gemv
@@ -43,6 +47,9 @@ protected:
 #endif
     class AlgoInt8x8x16;  // Arm_common Int 8x8x16
     class AlgoPack;
+
+public:
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace arm_common

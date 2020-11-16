@@ -6,19 +6,23 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
 
 #include "megdnn/oprs.h"
 
+#include "src/common/algo_base.h"
 #include "src/common/utils.h"
+#include "src/common/metahelper.h"
 #include "src/cuda/conv_bias/conv_bias_int8.cuh"
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/conv_bias/opr_impl.h"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/handle.h"
+#include "src/cuda/cudnn_wrapper.h"
 
 #include <cuda.h>
 #include <memory>
@@ -38,11 +42,39 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        CUDA_CUDNN_CONVBIAS,
+        CUDA_CHANWISE,
+        CUDA_CHANWISE_SMALL,
+        CUDA_CHANWISE_INT8X8X32,
+        CUDA_CUDNN_CONV,
+        CUDA_INPLACE_MATMUL,
+        CUDA_MATMUL,
+        CUDA_MATMUL_INT8X8X32,
+        CUDA_1X1,
+        CUDA_BATCHED_MATMUL,
+        CUDA_GROUP_CONV_GENERAL,
+        CUDA_WMMA_UINT4X4X32,
+        CUDA_IMPLICIT_GEMM_CHWN4_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_CHWN4_IMMA_INT8,
+        CUDA_IMPLICIT_GEMM_NCHW4_IMMA_INT8,
+        CUDA_IMPLICIT_GEMM_REORDER_FILTER_CHWN4_IMMA_INT8,
+        CUDA_IMPLICIT_GEMM_UNROLL_WIDTH_CHWN4_IMMA_INT8,
+        CUDA_IMPLICIT_GEMM_IMMA_NCHW32_INT8,
+        CUDA_BFLOAT16,
+        CUDA_IMPLICIT_GEMM_SASS_NCHW4_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW4_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_SASS_NCHW32_IMMA_INT8,
+        CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW32_IMMA_INT8,
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs : public conv_bias::BiasForwardSizeArgs {
         ConvBiasForwardImpl* opr;
         const PreprocessedFilter* preprocessed_filter;
-        
+
         std::string to_string() const;
         SizeArgs(ConvBiasForwardImpl* opr, const TensorLayout& src,
                  const TensorLayout& filter, const TensorLayout& bias,
@@ -80,13 +112,17 @@ public:
     virtual void exec(const ExecArgs& args) const = 0;
     virtual size_t get_preprocess_workspace_in_bytes(
             const SizeArgs& args) const {
+        MEGDNN_MARK_USED_VAR(args);
         return 0;
     }
     virtual SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const SizeArgs& args) const {
+        MEGDNN_MARK_USED_VAR(args);
         return {};
     }
-    virtual void exec_preprocess(const ExecArgs& args) const {}
+    virtual void exec_preprocess(const ExecArgs& args) const {
+        MEGDNN_MARK_USED_VAR(args);
+    }
 
     bool is_available_wk(const SizeArgs& args, size_t limit) {
         return is_available(args) && get_workspace_in_bytes(args) <= limit;
@@ -114,11 +150,14 @@ public:
 
 class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation final : public AlgoBase {
 public:
-    AlgoCUDNNConvBiasActivation(bool is_reproducible, const char* name,
-                                cudnnConvolutionFwdAlgo_t cudnn_enum)
-            : m_is_reproducible(is_reproducible),
-              m_name(ConvBiasForward::algo_name<DefaultParam>(name, {})),
-              m_cudnn_enum(cudnn_enum) {}
+    AlgoCUDNNConvBiasActivation(cudnnConvolutionFwdAlgo_t cudnn_enum)
+            : m_cudnn_enum(cudnn_enum) {
+        megdnn_assert(CudnnAlgoPack::conv_fwd_algos().find(cudnn_enum) !=
+                      CudnnAlgoPack::conv_fwd_algos().end());
+        m_attr = CudnnAlgoPack::conv_fwd_algos().at(cudnn_enum);
+        m_name = ConvBiasForward::algo_name<DefaultParam>(
+                "CUDNN:ConvBiasActivation:" + m_attr.name, {});
+    }
 
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
@@ -127,16 +166,24 @@ public:
 
     const char* name() const override { return m_name.c_str(); }
 
-    bool is_reproducible() const override { return m_is_reproducible; }
+    bool is_reproducible() const override { return m_attr.is_reproducible; }
 
     cudnnConvolutionFwdAlgo_t cudnn_enum() { return m_cudnn_enum; }
 
     bool is_cudnn() const override { return true; }
 
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_CONVBIAS)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_cudnn_enum, ret);
+        return ret;
+    }
+
 private:
-    bool m_is_reproducible;
     std::string m_name;
     cudnnConvolutionFwdAlgo_t m_cudnn_enum;
+    CudnnAlgoPack::Attr m_attr;
 };
 
 class ConvBiasForwardImpl::AlgoChanwise final : public AlgoBase {
@@ -153,6 +200,8 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE)
 
 private:
     mutable std::string m_name;
@@ -172,6 +221,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_SMALL)
 
 private:
     mutable std::string m_name;
@@ -190,6 +240,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_INT8X8X32)
 
 private:
     mutable std::string m_name;
@@ -197,27 +248,39 @@ private:
 
 class ConvBiasForwardImpl::AlgoCUDNNConv final : public AlgoBase {
 public:
-    AlgoCUDNNConv(bool is_reproducible, const char* name,
-                  cudnnConvolutionFwdAlgo_t cudnn_enum)
-            : m_is_reproducible(is_reproducible),
-              m_name(ConvBiasForward::algo_name<DefaultParam>(name, {})),
-              m_cudnn_enum(cudnn_enum) {}
+    AlgoCUDNNConv(cudnnConvolutionFwdAlgo_t cudnn_enum)
+            : m_cudnn_enum(cudnn_enum) {
+        megdnn_assert(CudnnAlgoPack::conv_fwd_algos().find(cudnn_enum) !=
+                      CudnnAlgoPack::conv_fwd_algos().end());
+        m_attr = CudnnAlgoPack::conv_fwd_algos().at(cudnn_enum);
+        m_name = ConvBiasForward::algo_name<DefaultParam>(
+                "CUDNN:Convolution:" + m_attr.name, {});
+    }
 
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return m_is_reproducible; }
+    bool is_reproducible() const override { return m_attr.is_reproducible; }
 
     const char* name() const override { return m_name.c_str(); }
 
     cudnnConvolutionFwdAlgo_t cudnn_enum() const { return m_cudnn_enum; }
 
     bool is_cudnn() const override { return true; }
+
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CUDNN_CONV)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_cudnn_enum, ret);
+        return ret;
+    }
+
 private:
-    bool m_is_reproducible;
     std::string m_name;
     cudnnConvolutionFwdAlgo_t m_cudnn_enum;
+    CudnnAlgoPack::Attr m_attr;
 
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
@@ -237,6 +300,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_INPLACE_MATMUL)
 
 private:
     mutable std::string m_name;
@@ -261,6 +325,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -281,6 +346,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL_INT8X8X32)
 
 private:
     bool need_src_unroll(const SizeArgs& args) const;
@@ -310,6 +376,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_1X1)
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -333,6 +400,7 @@ public:
         return m_name.c_str();
     }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_BATCHED_MATMUL)
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -354,6 +422,13 @@ public:
 
     static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
                                  TensorLayout& dst_pg, TensorLayout& bias_pg);
+    MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_impl, ret);
+        return ret;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -370,10 +445,13 @@ public:
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return "QUINT4x4x32_WMMA"; }
     bool is_reproducible() const override { return true; }
+
 private:
-    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const;
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
+                                         const SizeArgs& args) const;
     bool use_kernel_fhxfw(const SizeArgs& args) const;
     size_t get_workspace_in_bytes_do_conv(const SizeArgs& args) const;
+    MEGDNN_DECL_ALGO_TYPE(CUDA_WMMA_UINT4X4X32)
 };
 #endif
 
@@ -395,6 +473,7 @@ public:
             const convolution::ConvParam& param, float alpha, float beta,
             float gamma, float scale, cudaStream_t stream,
             param::ConvBias::NonlineMode nonlinear_mode);
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_CHWN4_DOTPROD_INT8)
 };
 
 class ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm final
@@ -415,8 +494,9 @@ public:
                 warp_k == 32 && stage == 2) {
                 return "";
             }
-            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n,
-                            threadblock_k, warp_m, warp_n, warp_k, stage);
+            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m,
+                            threadblock_n, threadblock_k, warp_m, warp_n,
+                            warp_k, stage);
         }
     };
     AlgoInt8NCHW4DotProdImplicitGemm(AlgoParam algo_param)
@@ -433,6 +513,13 @@ public:
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const SizeArgs& args) const override;
     void exec_preprocess(const ExecArgs& args) const override;
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algo_param, ret);
+        return ret;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
@@ -457,9 +544,7 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
-    const char* name() const override {
-        return m_name.c_str();
-    }
+    const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
     template <typename BiasVisitor>
     static void dispatch_nonlinear_mode(
@@ -470,6 +555,14 @@ public:
             param::ConvBias::NonlineMode nonlinear_mode,
             MMATileSize mma_tile_size);
     static std::string to_string(MMATileSize mma_tile_size);
+
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_CHWN4_IMMA_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_mma_tile_size, ret);
+        return ret;
+    }
 
 private:
     MMATileSize m_mma_tile_size;
@@ -488,10 +581,16 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
-    const char* name() const override {
-        return m_name.c_str();
-    }
+    const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW4_IMMA_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_mma_tile_size, ret);
+        return ret;
+    }
+
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
@@ -513,6 +612,13 @@ public:
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_REORDER_FILTER_CHWN4_IMMA_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_mma_tile_size, ret);
+        return ret;
+    }
 
 private:
     MMATileSize m_mma_tile_size;
@@ -533,6 +639,13 @@ public:
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_UNROLL_WIDTH_CHWN4_IMMA_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_mma_tile_size, ret);
+        return ret;
+    }
 
 private:
     MMATileSize m_mma_tile_size;
@@ -570,6 +683,13 @@ public:
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
             const SizeArgs& args) const override;
     void exec_preprocess(const ExecArgs& args) const override;
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_IMMA_NCHW32_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algo_param, ret);
+        return ret;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
@@ -592,6 +712,14 @@ public:
 
     bool is_reproducible() const override { return m_impl->is_reproducible(); }
 
+    MEGDNN_DECL_ALGO_TYPE(CUDA_BFLOAT16)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_impl, ret);
+        return ret;
+    }
+
 private:
     SizeArgs float_args(const SizeArgs& args, ConvBiasForwardImpl* opr,
                         TensorLayout& fsrc, TensorLayout& ffilter,
@@ -603,17 +731,16 @@ private:
 };
 
 
-class ConvBiasForwardImpl::AlgoPack {
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
+class ConvBiasForwardImpl::AlgoPack : NonCopyableObj {
+private:
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack();
 
     std::vector<AlgoBase*> all_algos,
             //! non-cudnn algos, used for heuristic if cudnn is not supported
-            non_cudnn_algos,
-            bfloat16_algos;
+            non_cudnn_algos, bfloat16_algos;
     std::vector<AlgoCUDNNConvBiasActivation> cudnn_conv_bias_activations;
     std::vector<AlgoCUDNNConv> cudnn_convs;
     AlgoChanwise chanwise;
@@ -645,6 +772,8 @@ public:
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);
 
     AlgoBase* cudnn_conv_from_enum(cudnnConvolutionFwdAlgo_t algo);
+
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 
 private:
 #if CUDA_VERSION >= 10000

@@ -15,6 +15,7 @@
 #include "src/fallback/conv_bias/algos.h"
 #include "src/fallback/convolution/opr_impl.h"
 #include "src/naive/convolution/helper.h"
+#include "src/common/algo_chooser.h"
 
 namespace megdnn {
 namespace fallback {
@@ -87,6 +88,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::NAIVE};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_ALGO)
 };
 
 class ConvolutionImpl::AlgoNaive final : public AlgoBase {
@@ -108,6 +110,7 @@ public:
                 static_cast<uint32_t>(AlgoDataType::QUINT8X8X32));
         return {support_data_type, AlgoCategory::NAIVE};
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_NAIVE)
 };
 
 class ConvolutionImpl::AlgoDefault final : public AlgoBase {
@@ -144,12 +147,19 @@ public:
     //! select matmul to the highest preference
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algorithm, ret);
+        return ret;
+    }
+
     static ConvBiasImpl::NCBKernSizeParam init_conv_bias_param(
             const NCBKernSizeParam& param);
 
     ConvAlgoTypePack get_algo_type() const override {
         return m_algorithm->get_algo_type();
     }
+    MEGDNN_DECL_ALGO_TYPE(FB_DEFAULT)
 
 private:
     std::string m_name;
@@ -168,6 +178,7 @@ public:
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
     bool is_naive() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(FB_NAIVE)
 };
 
 class ConvolutionBackwardDataImpl::AlgoDirect final : public AlgoBase {
@@ -180,6 +191,7 @@ public:
                          const NCBKernSizeParam& param) const override;
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
+    MEGDNN_DECL_ALGO_TYPE(FB_DIRECT)
 };
 
 class ConvolutionBackwardDataImpl::AlgoMatrixMul final : public AlgoBase {
@@ -193,6 +205,7 @@ public:
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+    MEGDNN_DECL_ALGO_TYPE(FB_MATMUL)
 };
 
 }  // namespace fallback

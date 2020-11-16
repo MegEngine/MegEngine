@@ -36,6 +36,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(AARCH64_DIRECT_STRD2_FP32)
 };
 
 }  // namespace aarch64

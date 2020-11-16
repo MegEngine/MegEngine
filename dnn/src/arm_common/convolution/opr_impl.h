@@ -47,10 +47,13 @@ protected:
     size_t ncb_1g_get_workspace(Algorithm* algo,
                                 const NCBKernSizeParam& param) override;
 
-    std::vector<Algorithm*> ncb_1g_get_all_algorithms(
-            const NCBKernSizeParam& param) override;
-
     const char* get_algorithm_set_name() const override;
+
+    SmallVector<fallback::ConvolutionBackwardDataImpl::AlgoBase*>
+    get_all_packed_algo() override;
+
+public:
+    MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl);
 
 private:
 #if __ARM_FEATURE_DOTPROD
@@ -59,8 +62,8 @@ private:
     class AlgoUdot8DirectStride1;
     class AlgoUdot8DirectStride2;
 #endif
-    struct AlgoPack;
-    static AlgoPack sm_algo_pack;
+    class AlgoPack;
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace arm_common

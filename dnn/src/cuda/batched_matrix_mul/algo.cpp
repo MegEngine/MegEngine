@@ -60,4 +60,12 @@ BatchedMatrixMulForwardImpl::AlgoPack::AlgoPack() {
     for (auto& algo : brute_force_algos) {
         all_algos.push_back(&algo);
     }
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(BatchedMatrixMulForwardImpl)
+
+// vim: syntax=cpp.doxygen

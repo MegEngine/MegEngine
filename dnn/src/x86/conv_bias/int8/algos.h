@@ -37,6 +37,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(X86_CHANWISE_AVX2_STRD1_QINT8)
 };
 
 /* ===================== avx2 stride2 chanwise algo ===================== */
@@ -61,6 +62,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(X86_CHANWISE_AVX2_STRD2_QINT8)
 };
 
 /* ===================== avx2 stride1 direct algo ===================== */
@@ -85,6 +87,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(X86_DIRECT_AVX2_STRD1_INT8)
 };
 
 /* ================== avx2 int8 direct conv stride2 algo ================== */
@@ -109,6 +112,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(X86_DIRECT_AVX2_STRD2_INT8)
 };
 
 #if MEGDNN_X86_WITH_MKL_DNN
@@ -149,6 +153,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(X86_MKLDNN_QINT8)
 };
 /* ===================== mkldnn qint8 matmul algo ===================== */
 class ConvBiasImpl::AlgoMkldnnMatmulQint8 final : public AlgoBase {
@@ -177,6 +182,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};
     }
+    MEGDNN_DECL_ALGO_TYPE(X86_MKLDNN_MATMUL_QINT8)
 };
 #endif
 

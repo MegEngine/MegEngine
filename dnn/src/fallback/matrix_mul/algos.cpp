@@ -41,6 +41,8 @@ void f32_8x12x1_kern(const MatrixMulImpl::KernParam& kern_param) {
 }
 }  // anonymous namespace
 
+////////////////////// AlgoF32K8x12x1 ///////////////////////////
+
 bool MatrixMulImpl::AlgoF32K8x12x1::usable(
         const KernSizeParam& kern_size_param) const {
     return kern_size_param.compute_mode ==

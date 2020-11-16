@@ -21,13 +21,13 @@ Convolution3DForwardImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(&a1x1x1);
 
     all_algos.push_back(&chanwise);
-    
+
     fill_cudnn_algos();
     for (auto &&i: cudnn) {
-       all_algos.push_back(&i); 
+       all_algos.push_back(&i);
     }
     all_algos.push_back(&inplace_matmul);
-    all_algos.push_back(&a1x1x1);    
+    all_algos.push_back(&a1x1x1);
     all_algos.reserve(all_algos.size() * 2);
 
     // add gconv algos by AlgoGroupConvGeneral
@@ -42,9 +42,15 @@ Convolution3DForwardImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(&i);
     }
     megdnn_assert(all_algos_data == all_algos.data());
-    non_cudnn_algos.push_back(all_algos.rbegin()[1]); // group inplace_matmul 
+    non_cudnn_algos.push_back(all_algos.rbegin()[1]); // group inplace_matmul
     non_cudnn_algos.push_back(all_algos.rbegin()[0]); // group 1x1x1
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(Convolution3DForwardImpl)
 
 Convolution3DForwardImpl::AlgoCUDNN*
 Convolution3DForwardImpl::AlgoPack::cudnn_from_enum(
@@ -99,7 +105,7 @@ std::string Convolution3DForwardImpl::AlgoBase::SizeArgs::to_string() const {
                 "src=%s, filter=%u{%u,%u,%u,%u,%u}, dst=%s, "
                 "pad=%ux%ux%u, stride=%ux%ux%u, dilate=%ux%ux%u, xcorr=%d, dtype=%s,%s",
                 src_layout->to_string().c_str(),
-                fm.group, fm.ocpg, fm.icpg, 
+                fm.group, fm.ocpg, fm.icpg,
                 fm.spatial[0], fm.spatial[1], fm.spatial[2],
                 dst_layout->to_string().c_str(),
                 fm.padding[0], fm.padding[1], fm.padding[2],

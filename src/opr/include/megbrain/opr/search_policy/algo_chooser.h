@@ -46,7 +46,7 @@ class AlgoChooser {
     static constexpr int arity_out = OprArityTrait<Opr>::arity_out;
     static constexpr int arity = OprArityTrait<Opr>::arity;
 
-    using ImplAlgo = typename Opr::Algorithm*;
+    using ImplAlgo = typename Opr::AlgorithmInfo;
     using MGBOpr = typename MegDNNOpr2MGBOpr<Opr>::MGBOpr;
     using ConvTensorLayouts = std::array<TensorLayout, arity>;
 

@@ -10,8 +10,11 @@
  */
 #pragma once
 
+#include <memory>
+#include <unordered_map>
 #include "megdnn/oprs/base.h"
 #include "src/common/utils.h"
+#include "src/common/algo_base.h"
 #include "src/fallback/handle.h"
 #include "src/naive/convolution/opr_impl.h"
 
@@ -198,6 +201,14 @@ public:
         AlgoBase() : Algorithm() {
             m_handle_type = Handle::HandleType::FALLBACK;
         }
+
+        enum class AlgoType : uint32_t {
+            //! fallback
+            FB_ALGO = 1 << 0,
+            FB_NAIVE,
+            FB_DEFAULT,
+        };
+
         virtual ~AlgoBase() = default;
         virtual bool usable(const NCBKernSizeParam& param,
                             AlgoSelectionStrategy) const = 0;
@@ -235,12 +246,13 @@ public:
 
         //! get the type of the algo
         virtual ConvAlgoTypePack get_algo_type() const = 0;
+        using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
     };
 
     /**
      * \brief get all the algorithm for the opr.
      */
-    virtual SmallVector<AlgoBase*> algo_pack();
+    virtual SmallVector<AlgoBase*> get_all_packed_algo();
 
     /**
      * \brief select algo according to input algo type
@@ -268,11 +280,12 @@ protected:
     class AlgoPack;
 
 private:
+
     NCBKernSizeParam m_prev_selected_algo_sizep;
     Algorithm* m_prev_selected_algo = nullptr;
 
+    Algorithm* get_algo_from_desc(const AlgorithmDesc& desc) const;
     bool is_naive_algo(ConvolutionImpl::Algorithm* algo);
-    //! get algorithm set by user or by heuristic
     Algorithm* get_algorithm(
             const NCBKernSizeParam& param,
             size_t workspace_size = std::numeric_limits<size_t>::max());
@@ -290,6 +303,9 @@ private:
 
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const;
+
+public:
+    static const AlgoPack& algo_pack();
 };
 
 class ConvolutionBackwardDataImpl : public naive::ConvolutionBackwardDataImpl {
@@ -374,6 +390,49 @@ public:
 
 protected:
     using ncb_kern_t = thin_function<void(const NCBKernParam& param)>;
+    class AlgoBase : public Algorithm {
+    protected:
+        ~AlgoBase() = default;
+
+    public:
+        AlgoBase() : Algorithm() {
+            m_handle_type = Handle::HandleType::FALLBACK;
+        }
+        enum class AlgoType : uint32_t {
+            //! fallback
+            FB_NAIVE = 1 << 0,
+            FB_DIRECT,
+            FB_MATMUL,
+
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+            ARM_COMMON_DIRECT_STRD1_DOT_INT8X8X32 = 1 << 8,
+            ARM_COMMON_DIRECT_STRD2_DOT_INT8X8X32,
+            ARM_COMMON_DIRECT_STRD1_DOT_QU8,
+            ARM_COMMON_DIRECT_STRD2_DOT_QU8
+#endif
+        };
+
+        virtual bool usable(ConvolutionBackwardDataImpl* opr,
+                            const NCBKernSizeParam& param) const = 0;
+        virtual size_t get_workspace(ConvolutionBackwardDataImpl* opr,
+                                     const NCBKernSizeParam& param) const = 0;
+        virtual ncb_kern_t dispatch_kern(
+                ConvolutionBackwardDataImpl* opr,
+                const NCBKernSizeParam& param) const = 0;
+        bool usable_reproducible(ConvolutionBackwardDataImpl* opr,
+                                 const NCBKernSizeParam& param,
+                                 bool reproducible = true) const {
+            return (!reproducible || is_reproducible()) && usable(opr, param);
+        }
+        virtual bool is_preferred(const NCBKernSizeParam&) const {
+            return false;
+        }
+        //! if the algo is naive, it will not split by group
+        virtual bool is_naive() const { return false; }
+        using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+    };
+
+protected:
 
     //! default impl calls ncb_1g_dispatch_kern()
     virtual void exec_with_ncb_kern(const NCBKernParam& param);
@@ -408,38 +467,11 @@ protected:
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
             bool reproducible = false);
 
-    class AlgoBase : public Algorithm {
-    protected:
-        ~AlgoBase() = default;
-
-    public:
-        AlgoBase() : Algorithm() {
-            m_handle_type = Handle::HandleType::FALLBACK;
-        }
-        virtual bool usable(ConvolutionBackwardDataImpl* opr,
-                            const NCBKernSizeParam& param) const = 0;
-        virtual size_t get_workspace(ConvolutionBackwardDataImpl* opr,
-                                     const NCBKernSizeParam& param) const = 0;
-        virtual ncb_kern_t dispatch_kern(
-                ConvolutionBackwardDataImpl* opr,
-                const NCBKernSizeParam& param) const = 0;
-        bool usable_reproducible(ConvolutionBackwardDataImpl* opr,
-                                 const NCBKernSizeParam& param,
-                                 bool reproducible = true) const {
-            return (!reproducible || is_reproducible()) && usable(opr, param);
-        }
-        virtual bool is_preferred(const NCBKernSizeParam&) const {
-            return false;
-        }
-        //! if the algo is naive, it will not split by group
-        virtual bool is_naive() const { return false; }
-    };
-
     static bool is_matrix_mul_preferred(const NCBKernSizeParam& param);
     /**
      * \brief get all the algorithm for the opr.
      */
-    virtual SmallVector<AlgoBase*> algo_pack();
+    virtual SmallVector<AlgoBase*> get_all_packed_algo();
 
 private:
     NCBKernSizeParam m_prev_selected_algo_sizep;
@@ -461,6 +493,11 @@ private:
     class AlgoDirect;
     class AlgoMatrixMul;
     class AlgoPack;
+    Algorithm* get_algo_from_desc(const AlgorithmDesc& desc) const;
+
+public:
+    //! maintain all the algos of in the opr of fallback
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace fallback

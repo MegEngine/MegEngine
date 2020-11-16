@@ -39,6 +39,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_INT8X8X16)
 };
 
 class ConvBiasImpl::AlgoS8x8x16DirectNCHW44 final : public AlgoBase {
@@ -54,6 +55,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW44_INT8X8X16)
 };
 
 class ConvBiasImpl::AlgoI8x8x16Stride2 final : public AlgoBase {
@@ -80,6 +82,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_INT8X8X16)
 };
 
 class ConvBiasImpl::AlgoI8x8x16Stride2Filter2 final : public AlgoBase {
@@ -96,12 +99,16 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_F2_INT8X8X16)
 };
 
-class ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44 final : public AlgoBase {
+class ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44 final
+        : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"; }
+    const char* name() const override {
+        return "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44";
+    }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(
@@ -111,6 +118,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_CHWNWISE_STRD1_STRD2_NCHW44_INT8X8X16)
 };
 
 class ConvBiasImpl::AlgoI8x8x16DirectNCHWNCHW44 final : public AlgoBase {
@@ -129,6 +137,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::INT8X8X16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW_NCHW44_INT8X8X16)
 };
 
 }  // namespace arm_common

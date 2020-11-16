@@ -39,7 +39,13 @@ Convolution3DBackwardDataImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(&i);
     }
     megdnn_assert(all_algos_data == all_algos.data());
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(Convolution3DBackwardDataImpl)
 
 Convolution3DBackwardDataImpl::AlgoCUDNN*
 Convolution3DBackwardDataImpl::AlgoPack::cudnn_from_enum(
@@ -96,7 +102,7 @@ std::string Convolution3DBackwardDataImpl::AlgoBase::SizeArgs::to_string() const
                 fm.group, fm.ocpg, fm.icpg, fm.spatial[0], fm.spatial[1], fm.spatial[2],
                 diff_layout->to_string().c_str(),
                 grad_layout->to_string().c_str(),
-                fm.padding[0], fm.padding[1], fm.padding[2], 
+                fm.padding[0], fm.padding[1], fm.padding[2],
                 fm.stride[0], fm.stride[1], fm.stride[2],
                 fm.dilation[0], fm.dilation[1] ,fm.dilation[2],
                 !fm.should_flip,

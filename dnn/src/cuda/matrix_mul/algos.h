@@ -6,14 +6,18 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
 #include "megdnn/oprs.h"
 #include "src/common/utils.h"
 #include "src/cuda/matrix_mul/opr_impl.h"
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
 
+#include <unordered_map>
 #include <cuda.h>
 #include <memory>
 #if CUDA_VERSION >= 10010
@@ -32,6 +36,15 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        CUDA_CUBLAS,
+        CUDA_WMMA_UINT4X4X32,
+        CUDA_CUBLASLT,
+        CUDA_NAIVE,
+        CUDA_BFLOAT16
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         MatrixMulForwardImpl* opr;
@@ -62,12 +75,12 @@ public:
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
     virtual void exec(const ExecArgs& args) const = 0;
 
-    bool is_available_wk(const SizeArgs& args, size_t limit) {
+    bool is_available_wk(const SizeArgs& args, size_t limit) const {
         return is_available(args) && get_workspace_in_bytes(args) <= limit;
     }
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
-            size_t limit = std::numeric_limits<size_t>::max()) {
+            size_t limit = std::numeric_limits<size_t>::max()) const {
         return (!reproducible || is_reproducible()) &&
                is_available_wk(args, limit);
     }
@@ -80,8 +93,6 @@ public:
                 name(), req, workspace.size);
         return *this;
     }
-
-
 };
 
 class MatrixMulForwardImpl::AlgoCuBlas final : public AlgoBase {
@@ -91,13 +102,10 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& /* args */) const override {
         return 0_z;
     }
-    const char* name() const override {
-        return "CUBLAS";
-    }
+    const char* name() const override { return "CUBLAS"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override {
-        return true;
-    }
+    bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLAS)
 };
 
 #if CUDA_VERSION >= 10000
@@ -106,13 +114,10 @@ public:
     AlgoUInt4x4x32WMMA() = default;
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    const char* name() const override {
-        return "UINT4x4x32_WMMA";
-    }
+    const char* name() const override { return "UINT4x4x32_WMMA"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override {
-        return true;
-    }
+    bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_WMMA_UINT4X4X32)
 };
 #endif
 #if CUDA_VERSION >= 10010
@@ -120,13 +125,10 @@ class MatrixMulForwardImpl::AlgoCuBlasLt final : public AlgoBase {
 public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    const char* name() const override {
-        return "CUBLAS_LT";
-    }
+    const char* name() const override { return "CUBLAS_LT"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override {
-        return true;
-    }
+    bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLASLT)
 };
 #endif
 
@@ -140,6 +142,7 @@ public:
     const char* name() const override { return "NAIVE"; }
     void exec(const ExecArgs& args) const override;
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_NAIVE)
 };
 
 #if !MEGDNN_DISABLE_FLOAT16
@@ -151,6 +154,13 @@ public:
     const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_NAIVE)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algorithm, ret);
+        return ret;
+    }
 
 private:
     MatrixMulForwardImpl::AlgoBase* m_algorithm = nullptr;
@@ -160,9 +170,9 @@ private:
 };
 #endif
 
-class MatrixMulForwardImpl::AlgoPack {
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
+class MatrixMulForwardImpl::AlgoPack : NonCopyableObj {
+private:
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack();
@@ -178,6 +188,8 @@ public:
     std::unique_ptr<AlgoBFloat16> cublas_bfloat16;
 #endif
     std::vector<AlgoBase*> all_algos;
+
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
 }  // namespace cuda

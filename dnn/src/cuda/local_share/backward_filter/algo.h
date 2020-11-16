@@ -13,9 +13,13 @@
 
 #include "megdnn/oprs.h"
 
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
 #include "src/common/utils.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/local_share/opr_impl.h"
+
+#include <unordered_map>
 
 namespace megdnn {
 namespace cuda {
@@ -25,6 +29,12 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        CUDA_IMPLICIT_GEMM,
+        CUDA_BATCHED_MATMUL,
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
+
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs {
         LocalShareBackwardFilterImpl* opr;
@@ -75,6 +85,7 @@ public:
     bool is_reproducible() const override { return true; }
 
     const char* name() const override { return "LOCAL_SHARE_IMPLICIT_GEMM"; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM)
 };
 
 class LocalShareBackwardFilterImpl::AlgoBatchedMatMul final : public AlgoBase {
@@ -88,11 +99,11 @@ public:
     bool is_reproducible() const override { return true; }
 
     const char* name() const override { return "LOCAL_SHARE_BATCHED_MATMUL"; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_BATCHED_MATMUL)
 };
 
-class LocalShareBackwardFilterImpl::AlgoPack {
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
+class LocalShareBackwardFilterImpl::AlgoPack : NonCopyableObj {
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack();
@@ -101,6 +112,8 @@ public:
     AlgoBatchedMatMul batched_matmul;
 
     std::vector<AlgoBase*> all_algos;
+
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
 }  // namespace cuda

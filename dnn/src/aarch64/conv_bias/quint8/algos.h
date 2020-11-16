@@ -48,6 +48,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QUINT8X8X32, AlgoCategory::IM2COL};
     }
+    MEGDNN_DECL_ALGO_TYPE(AARCH64_MATMUL_QU8)
 };
 }  // namespace aarch64
 }  // namespace megdnn

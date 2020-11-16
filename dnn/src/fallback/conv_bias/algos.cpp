@@ -10,10 +10,14 @@
  */
 
 #include "src/fallback/conv_bias/algos.h"
+#include "src/fallback/conv_bias/conv1x1/algos.h"
+#include "src/fallback/conv_bias/conv1x1/algos_conv1x1_gemv.h"
+#include "src/fallback/conv_bias/im2col/algos.h"
 #include "megdnn/opr_param_defs.h"
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/winograd/strategy.h"
 #include "src/naive/convolution/helper.h"
+#include "src/common/algo_base.h"
 
 #include "midout.h"
 
@@ -176,6 +180,7 @@ void kern_default(const ConvBiasImpl::NCBKernParam& p) {
 }  // namespace
 
 MIDOUT_DECL(megdnn_fallback_naive)
+
 /* ======================= AlgoNaive ======================== */
 
 bool ConvBiasImpl::AlgoNaive::usable(

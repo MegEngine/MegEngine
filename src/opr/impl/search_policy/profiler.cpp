@@ -99,14 +99,15 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
 
     megdnn_opr->param() = param.opr_param;
     {
-        typename Opr::Algorithm* algo = nullptr;
-        for (auto i : APPLY(megdnn_opr->get_all_algorithms(args...), layouts)) {
-            if (!strcmp(i->name(), param.algo_name)) {
+        typename Opr::AlgorithmInfo algo;
+        for (auto i :
+             APPLY(megdnn_opr->get_all_algorithms_info(args...), layouts)) {
+            if (!strcmp(i.name.c_str(), param.algo_name)) {
                 algo = i;
                 break;
             }
         }
-        mgb_assert(algo, "algorithm %s not found", param.algo_name);
+        mgb_assert(algo.valid(), "algorithm %s not found", param.algo_name);
         megdnn_opr->execution_policy() = {algo};
     }
 

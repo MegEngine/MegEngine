@@ -25,7 +25,9 @@ public:
         }
     };
 
-    SmallVector<fallback::ConvBiasImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> get_all_packed_algo() override;
+
+    MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(ConvBiasImpl);
 
 protected:
     const char* get_algorithm_set_name() const override;
@@ -34,6 +36,7 @@ private:
     class AlgoS8MatrixMul;
     class AlgoQU8MatrixMul;
     class AlgoPack;
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace armv7

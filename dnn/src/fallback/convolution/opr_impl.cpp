@@ -22,6 +22,10 @@
 
 #include "midout.h"
 
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+#include "src/arm_common/convolution/opr_impl.h"
+#endif
+
 #include <cstring>
 #include <unordered_map>
 
@@ -31,39 +35,50 @@ using namespace megdnn;
 using namespace fallback;
 
 namespace {
-
 template <typename T>
 void incr_ptr(T*& dst, ptrdiff_t delta) {
     dst = reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(dst) + delta);
 }
+
 }  // namespace
 
 class ConvolutionImpl::AlgoPack : NonCopyableObj {
     AlgoFallback algo_fallback;
     AlgoNaive algo_naive;
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
-
+    SmallVector<AlgoBase*> m_all_algos;
+    AlgoBase::Mapper m_all_algos_map;
 public:
     AlgoPack() {
         static CpuOprDelegationStorage<1> storage;
         auto conv_bias_opr = storage.get<ConvBias, 0>();
         auto&& conv_bias_algo =
-                static_cast<ConvBiasImpl*>(conv_bias_opr)->algo_pack();
+                static_cast<ConvBiasImpl*>(conv_bias_opr)->get_all_packed_algo();
         for (auto&& algorithm : conv_bias_algo) {
             // fallback algo
             refhold.emplace_back(new AlgoDefault(algorithm));
-            all_algos.emplace_back(refhold.back().get());
+            m_all_algos.emplace_back(refhold.back().get());
         }
 
-        all_algos.emplace_back(&algo_fallback);
-        all_algos.emplace_back(&algo_naive);
+        m_all_algos.emplace_back(&algo_fallback);
+        m_all_algos.emplace_back(&algo_naive);
+
+        for (auto&& algo : m_all_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<AlgoBase*> all_algos;
+
+    const SmallVector<AlgoBase*>& all_algos() const { return m_all_algos; }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::algo_pack() {
-    static AlgoPack sl_algo_pack;
-    return sl_algo_pack.all_algos;
+const ConvolutionImpl::AlgoPack& ConvolutionImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::get_all_packed_algo() {
+    return algo_pack().all_algos();
 }
 
 SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::select_algo_type(
@@ -71,7 +86,7 @@ SmallVector<ConvolutionImpl::AlgoBase*> ConvolutionImpl::select_algo_type(
     megdnn_assert(nr_type_contain(target_type.data_type),
                   "ConvBias algo selection only support one type");
     SmallVector<ConvolutionImpl::AlgoBase*> algos;
-    for (auto&& algo : algo_pack()) {
+    for (auto&& algo : get_all_packed_algo()) {
         auto algo_type = algo->get_algo_type();
         if (contain_data_type(algo_type.data_type, target_type.data_type) &&
             algo_type.algo_category == target_type.algo_category) {
@@ -94,7 +109,7 @@ void ConvolutionImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                            _megdnn_workspace workspace) {
     auto fparam = make_ncb_kern_param(src, filter, dst, preprocessed_filter,
                                       workspace);
-    ConvolutionImpl::Algorithm* algo = get_algorithm(fparam, workspace.size);
+    auto&& algo = get_algorithm(fparam, workspace.size);
     if (!is_naive_algo(algo) &&
         NCB_ALGO_FUNC(get_workspace, algo, fparam) <= workspace.size) {
         exec_with_ncb_kern(fparam, algo);
@@ -116,9 +131,10 @@ void ConvolutionImpl::exec_preprocess(const TensorLayout& src_layout,
                                       workspace);
 
     //! should not pass workspace_size limit otherwise can not find match algo
-    ConvolutionImpl::Algorithm* algo = get_algorithm(fparam);
-    if (!is_naive_algo(algo) && NCB_ALGO_FUNC(get_preprocess_workspace, algo,
-                                              fparam) <= workspace.size) {
+    auto&& algo = get_algorithm(fparam);
+    if (!is_naive_algo(algo) &&
+        NCB_ALGO_FUNC(get_preprocess_workspace, algo, fparam) <=
+                workspace.size) {
         exec_preprocess_with_ncb_kern(fparam, algo);
     } else {
         naive::ConvolutionForwardImpl::exec_preprocess(
@@ -132,7 +148,7 @@ size_t ConvolutionImpl::get_workspace_in_bytes(
         const PreprocessedFilter* preprocessed_filter) {
     auto fparam =
             make_ncb_kern_size_param(src, filter, dst, preprocessed_filter);
-    Algorithm* algo = get_algorithm(fparam);
+    auto&& algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvolutionForwardImpl::get_workspace_in_bytes(
                 src, filter, dst, preprocessed_filter);
@@ -145,7 +161,7 @@ size_t ConvolutionImpl::get_preprocess_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) {
     auto fparam = make_ncb_kern_size_param(src, filter, dst, nullptr);
-    Algorithm* algo = get_algorithm(fparam);
+    auto&& algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvolutionForwardImpl::get_preprocess_workspace_in_bytes(
                 src, filter, dst);
@@ -158,7 +174,7 @@ SmallVector<TensorLayout> ConvolutionImpl::deduce_preprocessed_filter_layout(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) {
     auto fparam = make_ncb_kern_size_param(src, filter, dst, nullptr);
-    Algorithm* algo = get_algorithm(fparam);
+    auto&& algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvolutionForwardImpl::deduce_preprocessed_filter_layout(
                 src, filter, dst);
@@ -333,7 +349,7 @@ std::vector<ConvolutionImpl::Algorithm*>
 ConvolutionImpl::get_all_algorithms_with_ncb(const NCBKernSizeParam& param) {
     std::vector<Algorithm*> ret;
     std::vector<Algorithm*> prefer_algos;
-    for (auto&& i : algo_pack()) {
+    for (auto&& i : get_all_packed_algo()) {
         if (i->usable(param, AlgoSelectionStrategy::FULL_RUN)) {
             if (i->is_preferred(param)) {
                 prefer_algos.push_back(i);
@@ -346,10 +362,34 @@ ConvolutionImpl::get_all_algorithms_with_ncb(const NCBKernSizeParam& param) {
     return ret;
 }
 
+ConvolutionImpl::Algorithm* ConvolutionImpl::get_algo_from_desc(
+        const AlgorithmDesc& desc) const {
+    if (!desc.valid()) {
+        return nullptr;
+    } else {
+        switch (desc.handle_type) {
+            case Handle::HandleType::FALLBACK: {
+                const auto& map = algo_pack().all_algos_map();
+                megdnn_assert(map.find(desc) != map.end());
+                return map.at(desc);
+            }
+            case Handle::HandleType::NAIVE: {
+                auto algo = static_cast<naive::HandleImpl*>(handle())
+                                    ->default_conv_fwd_algo();
+                megdnn_assert(algo->info().desc == desc);
+                return algo;
+            }
+            default:
+                megdnn_throw("Unknown handle type");
+                return nullptr;
+        }
+    }
+}
+
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm(
         const NCBKernSizeParam& param, size_t workspace_size) {
-    if (auto set = execution_policy().algorithm) {
-        return set;
+    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+        return algo;
     }
     if (!m_prev_selected_algo ||
         memcmp(&m_prev_selected_algo_sizep, &param, sizeof(NCBKernSizeParam))) {
@@ -405,20 +445,31 @@ class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
     AlgoNaive algo_naive;
     AlgoDirect algo_direct;
     AlgoMatrixMul algo_matmul;
+    SmallVector<AlgoBase*> m_all_algos;
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
     AlgoPack() {
-        all_algos.emplace_back(&algo_matmul);
-        all_algos.emplace_back(&algo_direct);
-        all_algos.emplace_back(&algo_naive);
+        m_all_algos.emplace_back(&algo_matmul);
+        m_all_algos.emplace_back(&algo_direct);
+        m_all_algos.emplace_back(&algo_naive);
+
+        for (auto&& algo : m_all_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<AlgoBase*> all_algos;
+    const SmallVector<AlgoBase*>& all_algos() const { return m_all_algos; }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
+const ConvolutionBackwardDataImpl::AlgoPack&
+ConvolutionBackwardDataImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
 
 SmallVector<ConvolutionBackwardDataImpl::AlgoBase*>
-ConvolutionBackwardDataImpl::algo_pack() {
-    static AlgoPack sl_algo_pack;
-    return sl_algo_pack.all_algos;
+ConvolutionBackwardDataImpl::get_all_packed_algo() {
+    return algo_pack().all_algos();
 }
 
 void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
@@ -545,7 +596,7 @@ void ConvolutionBackwardDataImpl::exec_with_ncb_kern(
     auto p1g = param;
     auto group = p1g.filter_meta.group;
     p1g.filter_meta.group = 1;
-    auto algo = get_algorithm(p1g);
+    auto&& algo = get_algorithm(p1g);
     auto kptr = ncb_1g_dispatch_kern(algo, p1g);
     if (group == 1 || static_cast<AlgoBase*>(algo)->is_naive()) {
         auto run = [kptr, param]() { kptr(param); };
@@ -597,9 +648,11 @@ size_t ConvolutionBackwardDataImpl::get_workspace_with_ncb(
     if (param.filter_meta.group != 1) {
         auto p1g = param;
         p1g.filter_meta.group = 1;
-        return ncb_1g_get_workspace(get_algorithm(p1g), p1g);
+        auto algo = get_algorithm(p1g);
+        return ncb_1g_get_workspace(algo, p1g);
     }
-    return ncb_1g_get_workspace(get_algorithm(param), param);
+    auto algo = get_algorithm(param);
+    return ncb_1g_get_workspace(algo, param);
 }
 
 std::vector<ConvolutionBackwardDataImpl::Algorithm*>
@@ -664,7 +717,7 @@ ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(
         const NCBKernSizeParam& param) {
     std::vector<Algorithm*> ret;
     std::vector<Algorithm*> prefer_algos;
-    for (auto&& i : algo_pack()) {
+    for (auto&& i : get_all_packed_algo()) {
         if (i->usable(this, param)) {
             if (i->is_preferred(param)) {
                 prefer_algos.push_back(i);
@@ -697,9 +750,42 @@ ConvolutionBackwardDataImpl::ncb_1g_get_algorithm_heuristic(
 }
 
 ConvolutionBackwardDataImpl::Algorithm*
+ConvolutionBackwardDataImpl::get_algo_from_desc(
+        const AlgorithmDesc& desc) const {
+    if (!desc.valid()) {
+        return nullptr;
+    } else {
+        switch (desc.handle_type) {
+            case Handle::HandleType::FALLBACK: {
+                const auto& map = algo_pack().all_algos_map();
+                megdnn_assert(map.find(desc) != map.end());
+                return map.at(desc);
+            }
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+            case Handle::HandleType::ARM_COMMON:
+            case Handle::HandleType::AARCH64:
+            case Handle::HandleType::ARMV7:
+                return arm_common::ConvolutionBackwardDataImpl::
+                        get_algo_from_desc(desc);
+#endif
+            case Handle::HandleType::NAIVE: {
+                auto algo = static_cast<naive::HandleImpl*>(handle())
+                                    ->default_conv_bwd_data_algo();
+                megdnn_assert(algo->info().desc == desc);
+                return algo;
+            }
+            default:
+                megdnn_throw("Unknown handle type");
+                return nullptr;
+        }
+    }
+}
+
+
+ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm(const NCBKernSizeParam& param) {
-    if (auto set = execution_policy().algorithm) {
-        return set;
+    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+        return algo;
     }
     if (!m_prev_selected_algo ||
         memcmp(&m_prev_selected_algo_sizep, &param, sizeof(NCBKernSizeParam))) {

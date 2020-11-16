@@ -13,6 +13,8 @@
 
 #include <unordered_map>
 #include "src/rocm/convolution/helper.h"
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
 
 namespace megdnn {
 namespace rocm {
@@ -26,6 +28,12 @@ protected:
     ~AlgoBase() = default;
 
 public:
+    enum class AlgoType : uint32_t {
+        ROCM_MIOPEN,
+        ROCM_MATMUL,
+        ROCM_CHANWISE
+    };
+    using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::ROCM; }
     struct SizeArgs {
         HandleImpl* handle;
@@ -103,6 +111,13 @@ public:
     }
 
     bool is_miopen() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_MIOPEN)
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_is_reproducible, ret);
+        return ret;
+    }
+
     static convolution::MIOpenCache<SizeArgs, miopenConvBwdWeightsAlgorithm_t>
             sm_miopen_algo_cache;
     static convolution::MIOpenCache<SizeArgs, size_t> sm_miopen_ws_cache;
@@ -119,6 +134,7 @@ public:
 
     const char* name() const override { return "MATMUL"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_MATMUL)
 };
 
 class ConvolutionBackwardFilterImpl::AlgoChanwise final : public AlgoBase {
@@ -129,14 +145,13 @@ public:
 
     const char* name() const override { return "CHANNEL_WISE"; }
     bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(ROCM_CHANWISE)
 };
 
-class ConvolutionBackwardFilterImpl::AlgoPack {
+class ConvolutionBackwardFilterImpl::AlgoPack : NonCopyableObj {
     void fill_miopen_algos();
 
-    AlgoPack(const AlgoPack&) = delete;
-    AlgoPack& operator=(const AlgoPack&) = delete;
-
+    AlgoBase::Mapper m_all_algos_map;
 public:
     AlgoPack();
 
@@ -147,6 +162,7 @@ public:
     std::vector<AlgoBase*>
             //! all algorithms
             all_algos, miopen_algos, non_miopen_algos;
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
 } // namespace rocm

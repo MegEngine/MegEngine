@@ -30,6 +30,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_FP16)
 };
 
 class ConvBiasImpl::AlgoFP16WinogradF45 final : public AlgoBase {
@@ -45,7 +46,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
-
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F45_FP16)
 };
 class ConvBiasImpl::AlgoFP16WinogradF63 final : public AlgoBase {
 public:
@@ -61,6 +62,7 @@ public:
     }
 
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_FP16)
 };
 class ConvBiasImpl::AlgoFP16WinogradF23_8x8 final : public AlgoBase {
 public:
@@ -75,6 +77,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_FP16)
 };
 
 class ConvBiasImpl::AlgoF16Direct final : public AlgoBase {
@@ -94,6 +97,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override{
         return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_FP16)
 };
 
 class ConvBiasImpl::AlgoF16DirectStride1 final : public AlgoBase {
@@ -110,6 +114,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_FP16)
 };
 
 }  // namespace arm_common

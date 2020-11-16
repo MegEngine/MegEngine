@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -19,8 +20,6 @@
 
 #include <algorithm>
 #include <memory>
-
-
 
 namespace megdnn {
 namespace test {
@@ -142,7 +141,7 @@ struct OprProxyProfilingBase
 
     //! target algo setup by profiler; it can also be directly specified by the
     //! caller
-    typename Opr::Algorithm* target_algo = nullptr;
+    typename Opr::AlgorithmInfo target_algo_info;
 
     OprProxyProfilingBase(bool profile = false) { m_profiling = profile; }
 
@@ -178,12 +177,12 @@ struct OprProxyProfilingTernary : public OprProxyProfilingBase<Opr, 3> {
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo :
-                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout)) {
-                opr->execution_policy().algorithm = algo;
+            for (auto algo : opr->get_all_algorithms_info(tensors[0].layout,
+                                                          tensors[1].layout,
+                                                          tensors[2].layout)) {
+                opr->execution_policy().algo = algo;
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout,
                         tensors[2].layout);
@@ -202,18 +201,18 @@ struct OprProxyProfilingTernary : public OprProxyProfilingBase<Opr, 3> {
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout);
             Base::W.update(workspace_size);
         }
-        if (!Base::target_algo) {
+        if (!Base::target_algo_info.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout);
             Base::W.update(workspace_size);
@@ -238,18 +237,19 @@ DEF_PROF3(LocalShareBackwardFilter);
 template <>
 struct OprProxy<ConvolutionForward>
         : public OprProxyProfilingTernary<ConvolutionForward> {
-    using OprProxyProfilingTernary<ConvolutionForward>::OprProxyProfilingTernary;
+    using OprProxyProfilingTernary<
+            ConvolutionForward>::OprProxyProfilingTernary;
     void exec(ConvolutionForward* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() == 3);
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.desc.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo :
-                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout)) {
-                opr->execution_policy().algorithm = algo;
+            for (auto algo : opr->get_all_algorithms_info(tensors[0].layout,
+                                                          tensors[1].layout,
+                                                          tensors[2].layout)) {
+                opr->execution_policy().algo = algo;
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
                         nullptr);
@@ -268,18 +268,19 @@ struct OprProxy<ConvolutionForward>
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto workspace_size = opr->get_workspace_in_bytes(
-                    tensors[0].layout, tensors[1].layout, tensors[2].layout, nullptr);
+                    tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                    nullptr);
             Base::W.update(workspace_size);
         }
-        if (!Base::target_algo) {
+        if (!Base::target_algo_info.desc.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     nullptr);
@@ -293,23 +294,25 @@ struct OprProxy<ConvolutionForward>
 template <>
 struct OprWeightPreprocessProxy<ConvolutionForward>
         : public OprProxyProfilingTernary<ConvolutionForward> {
-    using OprProxyProfilingTernary<ConvolutionForward>::OprProxyProfilingTernary;
+    using OprProxyProfilingTernary<
+            ConvolutionForward>::OprProxyProfilingTernary;
     void exec(ConvolutionForward* opr, const TensorNDArray& tensors) {
         megdnn_assert(tensors.size() == 3);
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.desc.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo :
-                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout)) {
-                opr->execution_policy().algorithm = algo;
+            for (auto algo : opr->get_all_algorithms_info(tensors[0].layout,
+                                                          tensors[1].layout,
+                                                          tensors[2].layout)) {
+                opr->execution_policy().algo = algo;
 
-                auto preprocess_tensors = weight_prerocess(opr, tensors, algo);
+                auto preprocess_tensors =
+                        weight_prerocess(opr, tensors, algo.desc);
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 ConvolutionForward::PreprocessedFilter preprocessed_filter{
-                        algo, *preprocess_tensors};
+                        nullptr, *preprocess_tensors};
 
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
@@ -329,29 +332,29 @@ struct OprWeightPreprocessProxy<ConvolutionForward>
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto preprocess_tensors =
-                    weight_prerocess(opr, tensors, Base::target_algo);
+                    weight_prerocess(opr, tensors, Base::target_algo_info.desc);
             megcoreSynchronize(opr->handle()->megcore_computing_handle());
             ConvolutionForward::PreprocessedFilter preprocessed_filter{
-                    Base::target_algo, *preprocess_tensors};
+                    nullptr, *preprocess_tensors};
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     &preprocessed_filter);
             Base::W.update(workspace_size);
         }
         auto preprocess_tensors =
-                weight_prerocess(opr, tensors, Base::target_algo);
+                weight_prerocess(opr, tensors, Base::target_algo_info.desc);
         megcoreSynchronize(opr->handle()->megcore_computing_handle());
         ConvolutionForward::PreprocessedFilter preprocessed_filter{
-                Base::target_algo, *preprocess_tensors};
-        if (!Base::target_algo) {
+                nullptr, *preprocess_tensors};
+        if (!Base::target_algo_info.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     &preprocessed_filter);
@@ -364,13 +367,13 @@ struct OprWeightPreprocessProxy<ConvolutionForward>
     //! handle weight preprocess
     std::shared_ptr<TensorNDArray> weight_prerocess(
             ConvolutionForward* opr, const TensorNDArray& tensors,
-            ConvolutionForward::Algorithm* algo) {
+            const ConvolutionForward::AlgorithmDesc&) {
         auto weight_perprocess_layouts = opr->deduce_preprocessed_filter_layout(
                 tensors[0].layout, tensors[1].layout, tensors[2].layout);
         auto preprocessed_filter_tensors_ptr =
                 alloc_tensors(opr->handle(), weight_perprocess_layouts);
         ConvolutionForward::PreprocessedFilter preprocessed_filter{
-                algo, *preprocessed_filter_tensors_ptr};
+                nullptr, *preprocessed_filter_tensors_ptr};
         size_t preprocess_workspace_size =
                 opr->get_preprocess_workspace_in_bytes(tensors[0].layout,
                                                        tensors[1].layout,
@@ -384,7 +387,6 @@ struct OprWeightPreprocessProxy<ConvolutionForward>
     }
 };
 
-
 template <class Opr>
 struct OprProxyProfiling5 : public OprProxyProfilingBase<Opr, 5> {
     using Base = OprProxyProfilingBase<Opr, 5>;
@@ -394,13 +396,13 @@ struct OprProxyProfiling5 : public OprProxyProfilingBase<Opr, 5> {
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo :
-                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout, tensors[3].layout,
-                                         tensors[4].layout)) {
-                opr->execution_policy().algorithm = algo;
+            for (auto algo : opr->get_all_algorithms_info(
+                         tensors[0].layout, tensors[1].layout,
+                         tensors[2].layout, tensors[3].layout,
+                         tensors[4].layout)) {
+                opr->execution_policy().algo = algo;
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
                         tensors[3].layout, tensors[4].layout);
@@ -419,19 +421,19 @@ struct OprProxyProfiling5 : public OprProxyProfilingBase<Opr, 5> {
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout);
             Base::W.update(workspace_size);
         }
-        if (!Base::target_algo) {
+        if (!Base::target_algo_info.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout);
@@ -461,13 +463,13 @@ struct OprProxy<ConvBiasForward> : public OprProxyProfiling5<ConvBiasForward> {
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.desc.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo :
-                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout, tensors[3].layout,
-                                         tensors[4].layout)) {
-                opr->execution_policy().algorithm = algo;
+            for (auto algo : opr->get_all_algorithms_info(
+                         tensors[0].layout, tensors[1].layout,
+                         tensors[2].layout, tensors[3].layout,
+                         tensors[4].layout)) {
+                opr->execution_policy().algo = algo;
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
                         tensors[3].layout, tensors[4].layout, nullptr);
@@ -486,19 +488,19 @@ struct OprProxy<ConvBiasForward> : public OprProxyProfiling5<ConvBiasForward> {
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout, nullptr);
             Base::W.update(workspace_size);
         }
-        if (!Base::target_algo) {
+        if (!Base::target_algo_info.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout, nullptr);
@@ -518,18 +520,19 @@ struct OprWeightPreprocessProxy<ConvBiasForward>
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo :
-                 opr->get_all_algorithms(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout, tensors[3].layout,
-                                         tensors[4].layout)) {
-                opr->execution_policy().algorithm = algo;
+            for (auto algo : opr->get_all_algorithms_info(
+                         tensors[0].layout, tensors[1].layout,
+                         tensors[2].layout, tensors[3].layout,
+                         tensors[4].layout)) {
+                opr->execution_policy().algo = algo;
 
-                auto preprocess_tensors = weight_prerocess(opr, tensors, algo);
+                auto preprocess_tensors =
+                        weight_prerocess(opr, tensors, algo.desc);
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 ConvBiasForward::PreprocessedFilter preprocessed_filter{
-                        algo, *preprocess_tensors};
+                        nullptr, *preprocess_tensors};
 
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
@@ -552,29 +555,29 @@ struct OprWeightPreprocessProxy<ConvBiasForward>
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto preprocess_tensors =
-                    weight_prerocess(opr, tensors, Base::target_algo);
+                    weight_prerocess(opr, tensors, Base::target_algo_info.desc);
             megcoreSynchronize(opr->handle()->megcore_computing_handle());
             ConvBiasForward::PreprocessedFilter preprocessed_filter{
-                    Base::target_algo, *preprocess_tensors};
+                    nullptr, *preprocess_tensors};
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout, &preprocessed_filter);
             Base::W.update(workspace_size);
         }
         auto preprocess_tensors =
-                    weight_prerocess(opr, tensors, Base::target_algo);
+                weight_prerocess(opr, tensors, Base::target_algo_info.desc);
         megcoreSynchronize(opr->handle()->megcore_computing_handle());
         ConvBiasForward::PreprocessedFilter preprocessed_filter{
-                Base::target_algo, *preprocess_tensors};
-        if (!Base::target_algo) {
+                nullptr, *preprocess_tensors};
+        if (!Base::target_algo_info.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout, &preprocessed_filter);
@@ -587,14 +590,14 @@ struct OprWeightPreprocessProxy<ConvBiasForward>
     //! handle weight preprocess
     std::shared_ptr<TensorNDArray> weight_prerocess(
             ConvBiasForward* opr, const TensorNDArray& tensors,
-            ConvBiasForward::Algorithm* algo) {
+            const ConvBiasForward::AlgorithmDesc&) {
         auto weight_perprocess_layouts = opr->deduce_preprocessed_filter_layout(
                 tensors[0].layout, tensors[1].layout, tensors[2].layout,
                 tensors[3].layout, tensors[4].layout);
         auto preprocessed_filter_tensors_ptr =
                 alloc_tensors(opr->handle(), weight_perprocess_layouts);
         ConvBiasForward::PreprocessedFilter preprocessed_filter{
-                algo, *preprocessed_filter_tensors_ptr};
+                nullptr, *preprocessed_filter_tensors_ptr};
         size_t preprocess_workspace_size =
                 opr->get_preprocess_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
@@ -618,14 +621,14 @@ struct OprProxyProfiling8 : public OprProxyProfilingBase<Opr, 8> {
         if (!Base::W.valid()) {
             Base::W = WorkspaceWrapper(opr->handle(), 0);
         }
-        if (Base::m_profiling && !Base::target_algo) {
+        if (Base::m_profiling && !Base::target_algo_info.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
-            for (auto algo : opr->get_all_algorithms(
+            for (auto algo : opr->get_all_algorithms_info(
                          tensors[0].layout, tensors[1].layout,
                          tensors[2].layout, tensors[3].layout,
                          tensors[4].layout, tensors[5].layout,
                          tensors[6].layout, tensors[7].layout)) {
-                opr->execution_policy().algorithm = algo;
+                opr->execution_policy().algo = algo;
                 auto workspace_size = opr->get_workspace_in_bytes(
                         tensors[0].layout, tensors[1].layout, tensors[2].layout,
                         tensors[3].layout, tensors[4].layout, tensors[5].layout,
@@ -647,20 +650,20 @@ struct OprProxyProfiling8 : public OprProxyProfilingBase<Opr, 8> {
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo->name());
+                       algo.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
-                    Base::target_algo = algo;
+                    Base::target_algo_info = algo;
                 }
             }
-            opr->execution_policy().algorithm = Base::target_algo;
+            opr->execution_policy().algo = Base::target_algo_info;
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout, tensors[5].layout,
                     tensors[6].layout, tensors[7].layout);
             Base::W.update(workspace_size);
         }
-        if (!Base::target_algo) {
+        if (!Base::target_algo_info.valid()) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors[0].layout, tensors[1].layout, tensors[2].layout,
                     tensors[3].layout, tensors[4].layout, tensors[5].layout,

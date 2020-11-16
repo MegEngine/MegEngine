@@ -22,6 +22,14 @@
 #include "src/naive/convolution/algorithms.h"
 #include "src/naive/handle.h"
 
+#if MEGDNN_X86
+#include "src/x86/conv_bias/opr_impl.h"
+#elif MEGDNN_AARCH64
+#include "src/aarch64/conv_bias/opr_impl.h"
+#elif MEGDNN_ARMV7
+#include "src/armv7/conv_bias/opr_impl.h"
+#endif
+
 #include <cstring>
 
 using namespace megdnn;
@@ -65,17 +73,19 @@ void incr_ptr(T*& dst, ptrdiff_t delta) {
 class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoNaive algo_naive;
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
+    SmallVector<AlgoBase*> m_all_algos;
+    AlgoBase::Mapper m_all_algos_map;
 
 public:
 
     AlgoPack() {
         refhold.emplace_back(new AlgoConv1x1Gemv());
-        all_algos.emplace_back(refhold.back().get());
+        m_all_algos.emplace_back(refhold.back().get());
 
         static CpuOprDelegationStorage<> storage;
         auto matmul_opr = storage.get<MatrixMul>();
-        auto&& matmul_algos =
-                static_cast<fallback::MatrixMulImpl*>(matmul_opr)->algo_pack();
+        auto&& matmul_algos = static_cast<fallback::MatrixMulImpl*>(matmul_opr)
+                                      ->get_all_packed_algo();
         for (auto&& algo : matmul_algos) {
 #if MEGDNN_X86
 //! As we haven't direct conv for int8x8x16 yet, if we disable gemv here, it may
@@ -97,13 +107,13 @@ public:
                 refhold.emplace_back(new AlgoIm2col(
                         static_cast<MatrixMulImpl::AlgoBase*>(algo),
                         ohw_tile_size));
-                all_algos.emplace_back(refhold.back().get());
+                m_all_algos.emplace_back(refhold.back().get());
             }
             for (size_t oc_tile_size : {48, 24}) {
                 refhold.emplace_back(new AlgoConv1x1(
                         static_cast<MatrixMulImpl::AlgoBase*>(algo),
                         oc_tile_size));
-                all_algos.emplace_back(refhold.back().get());
+                m_all_algos.emplace_back(refhold.back().get());
             }
 #endif
 
@@ -113,26 +123,35 @@ public:
         //! FIXME: I do not know a better way to do it.
             refhold.emplace_back(new AlgoWinogradF32(
                     static_cast<MatrixMulImpl::AlgoBase*>(algo)));
-            all_algos.emplace_back(refhold.back().get());
+            m_all_algos.emplace_back(refhold.back().get());
             refhold.emplace_back(new AlgoWinogradF32_4x4(
                     static_cast<MatrixMulImpl::AlgoBase*>(algo)));
-            all_algos.emplace_back(refhold.back().get());
+            m_all_algos.emplace_back(refhold.back().get());
             refhold.emplace_back(new AlgoWinogradQS8(
                     static_cast<MatrixMulImpl::AlgoBase*>(algo)));
-            all_algos.emplace_back(refhold.back().get());
+            m_all_algos.emplace_back(refhold.back().get());
             refhold.emplace_back(new AlgoWinogradQS8_8x8(
                     static_cast<MatrixMulImpl::AlgoBase*>(algo)));
-            all_algos.emplace_back(refhold.back().get());
+            m_all_algos.emplace_back(refhold.back().get());
 #endif
         }
-        all_algos.emplace_back(&algo_naive);
+        m_all_algos.emplace_back(&algo_naive);
+
+        for (auto&& algo : m_all_algos) {
+            m_all_algos_map.emplace(algo->info().desc, algo);
+        }
     }
-    SmallVector<AlgoBase*> all_algos;
+    const SmallVector<AlgoBase*>& all_algos() const { return m_all_algos; }
+    const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
-SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::algo_pack() {
-    static AlgoPack sl_algo_pack;
-    return sl_algo_pack.all_algos;
+const ConvBiasImpl::AlgoPack& ConvBiasImpl::algo_pack() {
+    static AlgoPack algo_pack;
+    return algo_pack;
+}
+
+SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::get_all_packed_algo() {
+    return algo_pack().all_algos();
 }
 
 SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::select_algo_type(
@@ -140,7 +159,7 @@ SmallVector<ConvBiasImpl::AlgoBase*> ConvBiasImpl::select_algo_type(
     megdnn_assert(nr_type_contain(target_type.data_type),
                   "ConvBias algo selection only support one type");
     SmallVector<ConvBiasImpl::AlgoBase*> algos;
-    for (auto&& algo : algo_pack()) {
+    for (auto&& algo : get_all_packed_algo()) {
         auto algo_type = algo->get_algo_type();
         if (contain_data_type(algo_type.data_type, target_type.data_type) &&
             algo_type.algo_category == target_type.algo_category) {
@@ -166,7 +185,7 @@ void ConvBiasImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                workspace.size, preprocessed_filter);
     auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace,
                                       preprocessed_filter);
-    ConvBiasImpl::Algorithm* algo = get_algorithm(fparam, workspace.size);
+    auto&& algo = get_algorithm(fparam, workspace.size);
     if (!is_naive_algo(algo) &&
         NCB_ALGO_FUNC(get_workspace, algo, fparam) <= workspace.size) {
         exec_with_ncb_kern(fparam, algo);
@@ -189,9 +208,10 @@ void ConvBiasImpl::exec_preprocess(const TensorLayout& src_layout,
     auto fparam = make_ncb_kern_param(src, filter, bias, dst, workspace,
                                       preprocessed_filter);
     //! should not pass workspace_size limit otherwise can not find match algo
-    ConvBiasImpl::Algorithm* algo = get_algorithm(fparam);
-    if (!is_naive_algo(algo) && NCB_ALGO_FUNC(get_preprocess_workspace, algo,
-                                              fparam) <= workspace.size) {
+    auto&& algo = get_algorithm(fparam);
+    if (!is_naive_algo(algo) &&
+        NCB_ALGO_FUNC(get_preprocess_workspace, algo, fparam) <=
+                workspace.size) {
         exec_preprocess_with_ncb_kern(fparam, algo);
     } else {
         naive::ConvBiasForwardImpl::exec_preprocess(
@@ -207,7 +227,7 @@ size_t ConvBiasImpl::get_workspace_in_bytes(
         const PreprocessedFilter* preprocessed_filter) {
     auto fparam = make_ncb_kern_size_param(src, filter, bias, dst,
                                            preprocessed_filter);
-    ConvBiasImpl::Algorithm* algo = get_algorithm(fparam);
+    auto&& algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvBiasForwardImpl::get_workspace_in_bytes(
                 src, filter, bias, z, dst, preprocessed_filter);
@@ -221,7 +241,7 @@ size_t ConvBiasImpl::get_preprocess_workspace_in_bytes(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst) {
     auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
-    Algorithm* algo = get_algorithm(fparam);
+    auto&& algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvBiasForwardImpl::get_preprocess_workspace_in_bytes(
                 src, filter, bias, z, dst);
@@ -235,7 +255,7 @@ SmallVector<TensorLayout> ConvBiasImpl::deduce_preprocessed_filter_layout(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst) {
     auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
-    Algorithm* algo = get_algorithm(fparam);
+    auto&& algo = get_algorithm(fparam);
     if (is_naive_algo(algo)) {
         return naive::ConvBiasForwardImpl::deduce_preprocessed_filter_layout(
                 src, filter, bias, z, dst);
@@ -443,7 +463,7 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
     MEGDNN_MARK_USED_VAR(param);
     std::vector<Algorithm*> algos;
     std::vector<Algorithm*> prefer_algos;
-    for (auto&& algo : algo_pack()) {
+    for (auto&& algo : get_all_packed_algo()) {
         if (algo->usable(param, AlgoSelectionStrategy::FULL_RUN)) {
             if (algo->is_preferred(param)) {
                 prefer_algos.push_back(algo);
@@ -457,10 +477,49 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
     return algos;
 }
 
+ConvBiasImpl::Algorithm* ConvBiasImpl::get_algo_from_desc(
+        const AlgorithmDesc& desc) const {
+    if (!desc.valid()) {
+        return nullptr;
+    } else {
+        switch (desc.handle_type) {
+            case Handle::HandleType::FALLBACK: {
+                const auto& map = algo_pack().all_algos_map();
+                megdnn_assert(map.find(desc) != map.end());
+                return map.at(desc);
+            };
+
+#if MEGDNN_X86
+            case Handle::HandleType::X86:
+                return x86::ConvBiasImpl::get_algo_from_desc(desc);
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7
+            case Handle::HandleType::ARM_COMMON:
+                return arm_common::ConvBiasImpl::get_algo_from_desc(desc);
+#if MEGDNN_AARCH64
+            case Handle::HandleType::AARCH64:
+                return aarch64::ConvBiasImpl::get_algo_from_desc(desc);
+#else
+            case Handle::HandleType::ARMV7:
+                return armv7::ConvBiasImpl::get_algo_from_desc(desc);
+#endif
+#endif
+            case Handle::HandleType::NAIVE: {
+                auto algo = static_cast<naive::HandleImpl*>(handle())
+                                    ->default_conv_bias_fwd_algo();
+                megdnn_assert(algo->info().desc == desc);
+                return algo;
+            }
+            default:
+                megdnn_throw("Unknown handle type");
+                return nullptr;
+        }
+    }
+}
+
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm(
         const NCBKernSizeParam& param, size_t workspace_size) {
-    if (auto set = execution_policy().algorithm) {
-        return set;
+    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+        return algo;
     }
     if (!m_prev_selected_algo ||
         memcmp(&m_prev_selected_algo_sizep, &param, sizeof(NCBKernSizeParam))) {

@@ -40,6 +40,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::IM2COL};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARMV7_MATMUL_S8)
 };
 
 }  // namespace armv7

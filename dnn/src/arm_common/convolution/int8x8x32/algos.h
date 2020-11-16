@@ -36,6 +36,7 @@ public:
 
     ncb_kern_t dispatch_kern(fallback::ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_DOT_INT8X8X32)
 };
 
 class ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2 final
@@ -54,6 +55,7 @@ public:
 
     ncb_kern_t dispatch_kern(fallback::ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_DOT_INT8X8X32)
 };
 
 #endif

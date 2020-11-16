@@ -25,7 +25,10 @@ public:
         }
     };
 
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> algo_pack() override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo()
+            override;
+
+    MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(MatrixMulImpl);
 
 private:
     class AlgoF32K8x12x1;     // Aarch64 F32 Kernel 8X12X1
@@ -66,6 +69,8 @@ private:
     class AlgoInt8x8x16MK4_K8x8x8;  // Aarch64 Int4x4x16 Kernel 4x4x16
 
     class AlgoPack;
+public:
+    static const AlgoPack& algo_pack();
 };
 
 }  // namespace aarch64

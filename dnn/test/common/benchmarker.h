@@ -376,16 +376,16 @@ float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
     auto opr = benchmark.opr();
     opr->param() = benchmark.param();
     proxy.deduce_layout(opr, layouts);
-    auto algos = OprAlgoProxy<Opr>::get_all_algorithms(opr, layouts);
+    auto algos = OprAlgoProxy<Opr>::get_all_algorithms_info(opr, layouts);
     float min_used = std::numeric_limits<float>::max();
     bool execed = false;
     for (auto i : algos) {
-        if (std::regex_match(i->name(),
+        if (std::regex_match(i.name,
                              std::regex("(" + algo_base + ")(.*)"))) {
-            opr->execution_policy().algorithm = i;
+            opr->execution_policy().algo = i;
             auto used = benchmark.exec(layouts);
             min_used = std::min(min_used, used);
-            printf("run algo: %s used: %f ms min_used: %f ms\n", i->name(),
+            printf("run algo: %s used: %f ms min_used: %f ms\n", i.name.c_str(),
                    used, min_used);
             execed = true;
         }

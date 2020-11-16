@@ -23,14 +23,6 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& filter,
                                   const TensorLayout& dst) override;
-    std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& src, const TensorLayout& filter,
-            const TensorLayout& dst) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;
@@ -41,7 +33,17 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
 
+protected:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
+                                       const TensorLayout& filter,
+                                       const TensorLayout& dst,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible) override;
 private:
     static AlgoPack sm_algo_pack;
 };
@@ -54,14 +56,6 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& filter,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;
-    std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& filter, const TensorLayout& diff,
-            const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;
@@ -71,6 +65,17 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+
+protected:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
+                                       const TensorLayout& diff,
+                                       const TensorLayout& grad,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -84,14 +89,6 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;
-    std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& src, const TensorLayout& diff,
-            const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;
@@ -101,6 +98,17 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+
+protected:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
+                                       const TensorLayout& diff,
+                                       const TensorLayout& grad,
+                                       size_t workspace_limit_in_bytes,
+                                       bool reproducible) override;
 
 private:
     static AlgoPack sm_algo_pack;

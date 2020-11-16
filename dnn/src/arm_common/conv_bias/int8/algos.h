@@ -33,6 +33,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_S8)
 };
 
 class ConvBiasImpl::AlgoS8DirectStride2 final : public AlgoBase {
@@ -49,6 +50,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_S8)
 };
 
 class ConvBiasImpl::AlgoS8DirectNCHW44 final : public AlgoBase {
@@ -65,6 +67,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW44)
 };
 
 class ConvBiasImpl::AlgoS8DirectNCHWNCHW44 final : public AlgoBase {
@@ -81,6 +84,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW_NCHW44_S8)
 };
 
 class ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44 final : public AlgoBase {
@@ -95,6 +99,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_CHANWISE_STRD1_NCHW44_S8)
 };
 
 class ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44 final : public AlgoBase {
@@ -109,6 +114,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_CHANWISE_STRD2_NCHW44_S8)
 };
 
 #if __ARM_FEATURE_DOTPROD
@@ -126,6 +132,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW_NCHW44_DOT_S8)
 };
 
 class ConvBiasImpl::AlgoDotS8DirectStride1 final : public AlgoBase {
@@ -142,6 +149,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_DOT_S8)
 };
 
 class ConvBiasImpl::AlgoDotS8DirectStride2 final : public AlgoBase {
@@ -159,6 +167,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_DOT_S8)
 };
 
 class ConvBiasImpl::AlgoDotS8Direct_NCHW44 final : public AlgoBase {
@@ -180,6 +189,7 @@ public:
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::QINT8X8X32, AlgoCategory::DIRECT};
     }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_NCHW44_DOT_S8)
 };
 #endif
 
@@ -196,6 +206,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_S8)
 };
 
 //=======================input int8 compute fp32 output int8============
@@ -213,6 +224,7 @@ public:
         return m_name.c_str();
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_NCHW44_S8CF32)
 };
 
 //=======================input int8 compute int16 output int8============
@@ -231,6 +243,7 @@ public:
     }
 
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_NCHW44_S8)
 };
 
 }  // namespace arm_common

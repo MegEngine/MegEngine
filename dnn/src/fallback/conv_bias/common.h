@@ -156,6 +156,12 @@ using BiasMode = ConvBiasForward::BiasMode;
     ConvAlgoTypePack get_algo_type() const override {                          \
         return {_algo_data_type, AlgoCategory::WINOGRAD};                      \
     }                                                                          \
+    std::string param() const override {                                       \
+        std::string ret;                                                       \
+        serialize_write_pod(m_matmul_algo, ret);                               \
+        serialize_write_pod(m_tile_size, ret);                                 \
+        return ret;                                                            \
+    }                                                                          \
                                                                                \
 private:                                                                       \
     fallback::MatrixMulImpl::AlgoBase* m_matmul_algo;                          \

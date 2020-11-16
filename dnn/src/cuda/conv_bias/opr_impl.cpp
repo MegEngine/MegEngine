@@ -63,12 +63,12 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     auto conv_args = args;
 
     auto cudnn_conv_bias_act_from_enum_wrapper =
-            [this](cudnnConvolutionFwdAlgo_t algo) -> AlgoBase* {
+            [](cudnnConvolutionFwdAlgo_t algo) -> AlgoBase* {
         return sm_algo_pack.cudnn_conv_bias_act_from_enum(algo);
     };
 
     auto cudnn_conv_from_enum_wrapper =
-            [this](cudnnConvolutionFwdAlgo_t algo) -> AlgoBase* {
+            [](cudnnConvolutionFwdAlgo_t algo) -> AlgoBase* {
         return sm_algo_pack.cudnn_conv_from_enum(algo);
     };
 

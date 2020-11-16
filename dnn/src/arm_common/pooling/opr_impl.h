@@ -10,6 +10,7 @@
  * implied.
  */
 #pragma once
+#include "megdnn/oprs/base.h"
 #include "src/fallback/pooling/opr_impl.h"
 
 namespace megdnn {
@@ -72,6 +73,8 @@ public:
         virtual ~AlgoBase() = default;
         virtual bool usable(const PoolingKernSizeParam& param) const = 0;
         virtual void exec(const PoolingKernParam& param) const = 0;
+
+        uint32_t type() const override { return INVALID_ALGO_TYPE; };
     };
 
 private:

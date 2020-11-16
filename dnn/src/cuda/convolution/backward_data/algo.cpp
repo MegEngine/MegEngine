@@ -52,7 +52,13 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(bfloat16_refhold.back().get());
         bfloat16_algos.push_back(bfloat16_refhold.back().get());
     }
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl)
 
 ConvolutionBackwardDataImpl::AlgoCUDNN*
 ConvolutionBackwardDataImpl::AlgoPack::cudnn_from_enum(

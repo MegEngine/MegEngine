@@ -19,7 +19,13 @@ LocalShareForwardImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&batch_size_aware_chwn_small_image);
     all_algos.push_back(&batch_size_aware_chwn);
     all_algos.push_back(&batched_matmul);
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(LocalShareForwardImpl)
 
 LocalShareForwardImpl::AlgoPack LocalShareForwardImpl::sm_algo_pack;
 

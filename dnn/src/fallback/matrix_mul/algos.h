@@ -11,8 +11,10 @@
 
 #pragma once
 
+#include <type_traits>
 #include "src/fallback/matrix_mul/opr_impl.h"
 #include "src/fallback/matrix_mul/gemm_common.h"
+#include "src/common/algo_base.h"
 
 namespace megdnn {
 namespace fallback {
@@ -24,6 +26,7 @@ public:
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
+    MEGDNN_DECL_ALGO_TYPE(FB_F32K8x12x1)
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
@@ -37,6 +40,7 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_DECL_ALGO_TYPE(FB_GEMV)
     MEGDNN_OVERRIDE_MATMUL_DESC(
             8, 16, 1, 4,
             static_cast<AlgoDataType>(

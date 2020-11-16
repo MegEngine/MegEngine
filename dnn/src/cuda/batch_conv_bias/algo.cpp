@@ -18,7 +18,13 @@ using namespace cuda;
 BatchConvBiasForwardImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&int8_nchw4_gemm_dotprod);
     all_algos.push_back(&int8_nchw4_implicit_gemm_dotprod);
+
+    for (auto&& algo : all_algos) {
+        m_all_algos_map.emplace(algo->info().desc, algo);
+    }
 }
+
+MEGDNN_DEF_GET_ALGO_FROM_DESC(BatchConvBiasForwardImpl)
 
 BatchConvBiasForwardImpl::AlgoPack BatchConvBiasForwardImpl::sm_algo_pack;
 
