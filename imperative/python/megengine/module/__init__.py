@@ -9,6 +9,7 @@
 
 from .activation import LeakyReLU, PReLU, ReLU, Sigmoid, Softmax
 from .adaptive_pooling import AdaptiveAvgPool2d, AdaptiveMaxPool2d
+from .batch_matmul_activation import BatchMatMulActivation
 from .batchnorm import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 from .concat import Concat
 from .conv import Conv1d, Conv2d, ConvRelu2d, ConvTranspose2d, LocalConv2d

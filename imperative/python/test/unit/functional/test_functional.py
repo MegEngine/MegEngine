@@ -20,6 +20,7 @@ from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
+from megengine.distributed.helper import get_device_count_by_fork
 
 
 def test_where():
@@ -420,7 +421,9 @@ def test_nms():
     np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
 
 
-@pytest.mark.skip(reason="cuda does not support nchw int8")
+@pytest.mark.skipif(
+    get_device_count_by_fork("gpu") > 0, reason="cuda does not support nchw int8"
+)
 def test_conv_bias():
     inp_scale = 1.5
     w_scale = 2.5
@@ -446,7 +449,7 @@ def test_conv_bias():
         nonlinear_mode="IDENTITY",
     ):
         inp_v = np.random.normal(size=(N, IC, IH, IW))
-        w_v = np.random.normal(size=(OC, IC, KW, KW))
+        w_v = np.random.normal(size=(OC, IC, KH, KW))
         b_v = np.random.normal(size=(1, OC, 1, 1))
         inp_scale = dtype.get_scale(inp_dtype)
         w_scale = dtype.get_scale(w_dtype)
@@ -486,13 +489,12 @@ def test_conv_bias():
                 inp = convert_to_nchw4(inp)
                 w = convert_to_nchw4(w)
                 b = convert_to_nchw4(b)
-            return F.nn.conv_bias_activation(
+            return F.quantized.conv_bias_activation(
                 inp,
                 w,
                 b,
                 stride=(SH, SW),
                 padding=(PH, PW),
-                format=format,
                 dtype=out_dtype,
                 nonlinear_mode=nonlinear_mode,
             )
@@ -520,6 +522,59 @@ def test_conv_bias():
 
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
+
+
+@pytest.mark.skipif(
+    get_device_count_by_fork("gpu") > 0, reason="no int8 algorithm on cuda"
+)
+def test_batch_conv_bias():
+    inp_scale = 1.5
+    w_scale = 2.5
+    outp_scale = 1.5
+    inp_dtype = dtype.qint8(inp_scale)
+    w_dtype = dtype.qint8(w_scale)
+    b_dtype = dtype.qint32(inp_scale * w_scale)
+    out_dtype = dtype.qint8(outp_scale)
+
+    def run(
+        N, IC, OC, IH, IW, KH, KW, PH, PW, SH, SW, has_bias=True,
+    ):
+        inp_v = np.random.normal(size=(N, IC, IH, IW))
+        w_v = np.random.normal(size=(N, OC, IC, KH, KW))
+        b_v = np.random.normal(size=(1, OC, 1, 1))
+        inp_scale = dtype.get_scale(inp_dtype)
+        w_scale = dtype.get_scale(w_dtype)
+        b_scale = dtype.get_scale(b_dtype)
+
+        inpv = dtype.convert_to_qint8(inp_v * inp_scale, inp_dtype)
+        wv = dtype.convert_to_qint8(w_v * w_scale, w_dtype)
+        bv = dtype.convert_to_qint32(b_v * b_scale, b_dtype)
+
+        inp_int8 = tensor(inpv, dtype=inp_dtype)
+        w_int8 = Parameter(wv, dtype=w_dtype)
+        b_int32 = Parameter(bv, dtype=b_dtype)
+
+        inp_fp32 = inp_int8.astype("float32")
+        w_fp32 = w_int8.astype("float32")
+        b_fp32 = b_int32.astype("float32")
+
+        def run_batch_conv_bias(inp, w, b):
+            b = b if has_bias else Parameter(np.zeros_like(b.numpy()))
+            result = F.quantized.batch_conv_bias_activation(
+                inp, w, b, stride=(SH, SW), padding=(PH, PW), dtype=out_dtype,
+            )
+            return result.astype("float32")
+
+        expected = F.conv2d(inp_fp32, w_fp32[0], b_fp32 if has_bias else None)[0]
+        expected = expected.astype(out_dtype).astype("float32")
+        expected = F.flatten(expected)
+
+        result = run_batch_conv_bias(inp_int8, w_int8, b_int32)
+        result = F.flatten(result)
+
+        np.testing.assert_allclose(result.numpy(), expected.numpy(), atol=outp_scale)
+
+    run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
 def test_zero_stride_numpy_array():
