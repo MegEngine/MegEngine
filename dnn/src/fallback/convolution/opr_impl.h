@@ -373,7 +373,7 @@ public:
     };
 
 protected:
-    typedef void (*ncb_kern_t)(const NCBKernParam& param);
+    using ncb_kern_t = thin_function<void(const NCBKernParam& param)>;
 
     //! default impl calls ncb_1g_dispatch_kern()
     virtual void exec_with_ncb_kern(const NCBKernParam& param);
@@ -428,9 +428,18 @@ protected:
                                  bool reproducible = true) const {
             return (!reproducible || is_reproducible()) && usable(opr, param);
         }
+        virtual bool is_preferred(const NCBKernSizeParam&) const {
+            return false;
+        }
+        //! if the algo is naive, it will not split by group
+        virtual bool is_naive() const { return false; }
     };
 
     static bool is_matrix_mul_preferred(const NCBKernSizeParam& param);
+    /**
+     * \brief get all the algorithm for the opr.
+     */
+    virtual SmallVector<AlgoBase*> algo_pack();
 
 private:
     NCBKernSizeParam m_prev_selected_algo_sizep;
@@ -448,11 +457,10 @@ private:
                                      _megdnn_tensor_out grad,
                                      _megdnn_workspace workspace);
 
+    class AlgoNaive;
     class AlgoDirect;
     class AlgoMatrixMul;
-
-    struct AlgoPack;
-    static AlgoPack sm_algo_pack;
+    class AlgoPack;
 };
 
 }  // namespace fallback

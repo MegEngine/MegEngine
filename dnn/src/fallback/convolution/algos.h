@@ -156,6 +156,20 @@ private:
     ConvBiasImpl::AlgoBase* m_algorithm;
 };
 
+////////////////////////// convolutionbackwarddata ////////////////////////
+class ConvolutionBackwardDataImpl::AlgoNaive final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "DeconvNaive"; }
+    bool usable(ConvolutionBackwardDataImpl* opr,
+                const NCBKernSizeParam& param) const override;
+    size_t get_workspace(ConvolutionBackwardDataImpl*,
+                         const NCBKernSizeParam& param) const override;
+    ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
+                             const NCBKernSizeParam&) const override;
+    bool is_naive() const override { return true; }
+};
+
 class ConvolutionBackwardDataImpl::AlgoDirect final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
@@ -178,6 +192,7 @@ public:
                          const NCBKernSizeParam& param) const override;
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
+    bool is_preferred(const NCBKernSizeParam& param) const override;
 };
 
 }  // namespace fallback

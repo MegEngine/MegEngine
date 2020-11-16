@@ -31,12 +31,6 @@ using namespace megdnn;
 using namespace fallback;
 
 namespace {
-class NaiveConvolutionBackwardData final
-        : public megdnn::ConvolutionBackwardData::Algorithm {
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "NCBD"; }
-};
-NaiveConvolutionBackwardData naive_conv_backward_data;
 
 template <typename T>
 void incr_ptr(T*& dst, ptrdiff_t delta) {
@@ -407,11 +401,25 @@ ConvolutionImpl::NCBKernSizeParam::deduce_algo_data_type() const {
 
 /* ===================== ConvolutionBackwardData ===================== */
 
-struct ConvolutionBackwardDataImpl::AlgoPack {
-    AlgoDirect direct;
-    AlgoMatrixMul matmul;
+class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
+    AlgoNaive algo_naive;
+    AlgoDirect algo_direct;
+    AlgoMatrixMul algo_matmul;
+
+public:
+    AlgoPack() {
+        all_algos.emplace_back(&algo_matmul);
+        all_algos.emplace_back(&algo_direct);
+        all_algos.emplace_back(&algo_naive);
+    }
+    SmallVector<AlgoBase*> all_algos;
 };
-ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
+
+SmallVector<ConvolutionBackwardDataImpl::AlgoBase*>
+ConvolutionBackwardDataImpl::algo_pack() {
+    static AlgoPack sl_algo_pack;
+    return sl_algo_pack.all_algos;
+}
 
 void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
                                        _megdnn_tensor_in diff,
@@ -539,7 +547,7 @@ void ConvolutionBackwardDataImpl::exec_with_ncb_kern(
     p1g.filter_meta.group = 1;
     auto algo = get_algorithm(p1g);
     auto kptr = ncb_1g_dispatch_kern(algo, p1g);
-    if (algo == &naive_conv_backward_data || group == 1) {
+    if (group == 1 || static_cast<AlgoBase*>(algo)->is_naive()) {
         auto run = [kptr, param]() { kptr(param); };
         static_cast<naive::HandleImpl*>(handle())->dispatch_kern(run);
     } else {
@@ -625,7 +633,6 @@ size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(
     if (algo->handle_type() == Handle::HandleType::FALLBACK) {
         return static_cast<AlgoBase*>(algo)->get_workspace(this, param);
     }
-    megdnn_assert(algo == &naive_conv_backward_data);
     return 0;
 }
 
@@ -638,36 +645,6 @@ ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(
         return static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
     }
 
-    if (algo == &naive_conv_backward_data) {
-#define cb(_dt)                                                    \
-    do {                                                           \
-        if (param.filter_type.enumv() == DTypeTrait<_dt>::enumv) { \
-            MIDOUT_BEGIN(megdnn_fb_convbwd_float,                  \
-                         midout_iv(DTypeTrait<_dt>::enumv)) {      \
-                using ctype = DTypeTrait<_dt>::ctype;              \
-                return kern_naive<ctype, ctype, ctype>;            \
-            }                                                      \
-            MIDOUT_END();                                          \
-        }                                                          \
-    } while (0);
-        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
-#undef cb
-#define cb(dt_src, dt_dst)                                            \
-    do {                                                              \
-        if (param.diff_type.enumv() == DTypeTrait<dt_src>::enumv &&   \
-            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv && \
-            param.grad_type.enumv() == DTypeTrait<dt_dst>::enumv) {   \
-            return kern_naive<DTypeTrait<dt_src>::ctype,              \
-                              DTypeTrait<dt_src>::ctype,              \
-                              DTypeTrait<dt_dst>::ctype>;             \
-        }                                                             \
-    } while (0);
-        cb(dtype::Int8, dtype::Int32) cb(dtype::Quantized8Asymm,
-                                         dtype::QuantizedS32)
-                cb(dtype::QuantizedS8, dtype::QuantizedS32) megdnn_throw(
-                        "unsupported data type on ConvolutionBackwardData");
-#undef cb
-    }
     megdnn_throw(
             megdnn_mangle("no suitable ConvolutionBackwardData algorithm"));
 }
@@ -686,34 +663,17 @@ std::vector<ConvolutionBackwardDataImpl::Algorithm*>
 ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(
         const NCBKernSizeParam& param) {
     std::vector<Algorithm*> ret;
-    ret.reserve(2);
-    ret.push_back(&naive_conv_backward_data);
-
-    // insert from lowest to highest preference
-    AlgoBase* cand[2] = {nullptr};
-
-    if (param.filter_meta.group == 1 && param.filter_meta.dilation[0] == 1 &&
-        param.filter_meta.dilation[1] == 1) {
-        // we currently only have non-dilated algos
-        if (param.filter_type.enumv() == DTypeEnum::Float32) {
-            if (is_matrix_mul_preferred(param)) {
-                cand[0] = &sm_algo_pack.direct;
-                cand[1] = &sm_algo_pack.matmul;
+    std::vector<Algorithm*> prefer_algos;
+    for (auto&& i : algo_pack()) {
+        if (i->usable(this, param)) {
+            if (i->is_preferred(param)) {
+                prefer_algos.push_back(i);
             } else {
-                cand[0] = &sm_algo_pack.matmul;
-                cand[1] = &sm_algo_pack.direct;
+                ret.push_back(i);
             }
-        } else {
-            cand[0] = &sm_algo_pack.matmul;
         }
     }
-    for (auto i : cand) {
-        if (i && i->usable(this, param)) {
-            ret.push_back(i);
-        }
-    }
-
-    std::reverse(ret.begin(), ret.end());
+    ret.insert(ret.begin(), prefer_algos.begin(), prefer_algos.end());
     return ret;
 }
 

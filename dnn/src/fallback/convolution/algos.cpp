@@ -21,6 +21,7 @@ using namespace megdnn;
 using namespace fallback;
 
 MIDOUT_DECL(megdnn_fallback_conv)
+MIDOUT_DECL(megdnn_fallback_deconv)
 
 namespace {
 
@@ -459,6 +460,70 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoDefault::get_kimpl(
     MIDOUT_END();
 }
 
+/////////////////////////// ConvolutionBackwardData /////////////////////
+
+/* ===================== naive algo ===================== */
+
+bool ConvolutionBackwardDataImpl::AlgoNaive::usable(
+        ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    bool ret = false;
+
+#define cb(dt) ret |= (param.diff_type.enumv() == DTypeTrait<dt>::enumv);
+    MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
+#undef cb
+#define cb(dt_src, dt_dst)                                            \
+    ret |= (param.diff_type.enumv() == DTypeTrait<dt_src>::enumv &&   \
+            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv && \
+            param.grad_type.enumv() == DTypeTrait<dt_dst>::enumv)
+    cb(dtype::Int8, dtype::Int32);
+    cb(dtype::Quantized8Asymm, dtype::QuantizedS32);
+    cb(dtype::QuantizedS8, dtype::QuantizedS32);
+#undef cb
+    return ret;
+}
+
+size_t ConvolutionBackwardDataImpl::AlgoNaive::get_workspace(
+        ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
+    return 0;
+}
+
+ConvolutionBackwardDataImpl::ncb_kern_t
+ConvolutionBackwardDataImpl::AlgoNaive::dispatch_kern(
+        ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+#define cb(_dt)                                                    \
+    do {                                                           \
+        if (param.filter_type.enumv() == DTypeTrait<_dt>::enumv) { \
+            MIDOUT_BEGIN(megdnn_fallback_deconv,                   \
+                         midout_iv(DTypeTrait<_dt>::enumv)) {      \
+                using ctype = DTypeTrait<_dt>::ctype;              \
+                return kern_naive<ctype, ctype, ctype>;            \
+            }                                                      \
+            MIDOUT_END();                                          \
+        }                                                          \
+    } while (0);
+    MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
+#undef cb
+#define cb(dt_src, dt_dst)                                            \
+    do {                                                              \
+        if (param.diff_type.enumv() == DTypeTrait<dt_src>::enumv &&   \
+            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv && \
+            param.grad_type.enumv() == DTypeTrait<dt_dst>::enumv) {   \
+            MIDOUT_BEGIN(megdnn_fallback_deconv,                      \
+                         midout_iv(DTypeTrait<_dt>::enumv)) {         \
+                return kern_naive<DTypeTrait<dt_src>::ctype,          \
+                                  DTypeTrait<dt_src>::ctype,          \
+                                  DTypeTrait<dt_dst>::ctype>;         \
+            }                                                         \
+            MIDOUT_END();                                             \
+        }                                                             \
+    } while (0)
+    cb(dtype::Int8, dtype::Int32);
+    cb(dtype::Quantized8Asymm, dtype::QuantizedS32);
+    cb(dtype::QuantizedS8, dtype::QuantizedS32);
+    megdnn_throw("unsupported data type on ConvolutionBackwardData");
+#undef cb
+}
+
 /* ===================== direct algo ===================== */
 
 bool ConvolutionBackwardDataImpl::AlgoDirect::usable(
@@ -474,7 +539,7 @@ bool ConvolutionBackwardDataImpl::AlgoDirect::usable(
 
 size_t ConvolutionBackwardDataImpl::AlgoDirect::get_workspace(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_fallback_conv,
+    MIDOUT_BEGIN(megdnn_fallback_deconv,
                  midout_iv("AlgoDirect::get_workspace"_hash)) {
         auto FH = param.filter_meta.spatial[0],
              FW = param.filter_meta.spatial[1];
@@ -511,7 +576,7 @@ bool ConvolutionBackwardDataImpl::AlgoMatrixMul::usable(
 
 size_t ConvolutionBackwardDataImpl::AlgoMatrixMul::get_workspace(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_fallback_conv,
+    MIDOUT_BEGIN(megdnn_fallback_deconv,
                  midout_iv("AlgoMatrixMul::get_workspace"_hash)) {
         return get_bundle(param).total_size_in_bytes();
     }
@@ -522,39 +587,44 @@ size_t ConvolutionBackwardDataImpl::AlgoMatrixMul::get_workspace(
 ConvolutionBackwardDataImpl::ncb_kern_t
 ConvolutionBackwardDataImpl::AlgoMatrixMul::dispatch_kern(
         ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
-#define cb(dt, midout_tag)                                              \
-    do {                                                                \
-        if (param.filter_type.enumv() == DTypeTrait<dt>::enumv) {       \
-            MIDOUT_BEGIN(megdnn_fallback_conv, midout_iv(midout_tag)) { \
-                using ctype = DTypeTrait<dt>::ctype;                    \
-                return kern_matmul<ctype, ctype, ctype>;                \
-            }                                                           \
-            MIDOUT_END();                                               \
-        }                                                               \
+#define cb(dt, midout_tag)                                                \
+    do {                                                                  \
+        if (param.filter_type.enumv() == DTypeTrait<dt>::enumv) {         \
+            MIDOUT_BEGIN(megdnn_fallback_deconv, midout_iv(midout_tag)) { \
+                using ctype = DTypeTrait<dt>::ctype;                      \
+                return kern_matmul<ctype, ctype, ctype>;                  \
+            }                                                             \
+            MIDOUT_END();                                                 \
+        }                                                                 \
     } while (0);
     cb(dtype::Float32, "FLOAT"_hash);
     MEGDNN_INC_FLOAT16(cb(dtype::Float16, "FLOAT16"_hash));
     MEGDNN_INC_FLOAT16(cb(dtype::BFloat16, "BFLOAT16"_hash));
 #undef cb
 
-#define cb(dt_src, dt_dst, midout_tag)                                  \
-    do {                                                                \
-        if (param.diff_type.enumv() == DTypeTrait<dt_src>::enumv &&     \
-            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv &&   \
-            param.grad_type.enumv() == DTypeTrait<dt_dst>::enumv) {     \
-            MIDOUT_BEGIN(megdnn_fallback_conv, midout_iv(midout_tag)) { \
-                return kern_matmul<DTypeTrait<dt_src>::ctype,           \
-                                   DTypeTrait<dt_src>::ctype,           \
-                                   DTypeTrait<dt_dst>::ctype>;          \
-            }                                                           \
-            MIDOUT_END();                                               \
-        }                                                               \
+#define cb(dt_src, dt_dst, midout_tag)                                    \
+    do {                                                                  \
+        if (param.diff_type.enumv() == DTypeTrait<dt_src>::enumv &&       \
+            param.filter_type.enumv() == DTypeTrait<dt_src>::enumv &&     \
+            param.grad_type.enumv() == DTypeTrait<dt_dst>::enumv) {       \
+            MIDOUT_BEGIN(megdnn_fallback_deconv, midout_iv(midout_tag)) { \
+                return kern_matmul<DTypeTrait<dt_src>::ctype,             \
+                                   DTypeTrait<dt_src>::ctype,             \
+                                   DTypeTrait<dt_dst>::ctype>;            \
+            }                                                             \
+            MIDOUT_END();                                                 \
+        }                                                                 \
     } while (0)
     cb(dtype::Int8, dtype::Int32, "INT8x8x32"_hash);
     cb(dtype::QuantizedS8, dtype::QuantizedS32, "QINT8x8x32"_hash);
     cb(dtype::Quantized8Asymm, dtype::QuantizedS32, "QUINT8x8x32"_hash);
     megdnn_throw("unsupported data type on matrix mul");
 #undef cb
+}
+
+bool ConvolutionBackwardDataImpl::AlgoMatrixMul::is_preferred(
+        const NCBKernSizeParam& param) const {
+    return is_matrix_mul_preferred(param);
 }
 
 // vim: syntax=cpp.doxygen

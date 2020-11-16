@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#include "megdnn/dtype.h"
 #include "test/fallback/fixture.h"
 
 #include "test/common/benchmarker.h"
@@ -597,6 +598,55 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_QUINT8) {
                 .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)129))
                 .set_dtype(2, {});
         checker.set_rng(0, &rng).set_rng(1, &rng);
+        checker.exec(TensorLayoutArray{filter, diff, grad});
+    };
+
+    for (auto mode :
+         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+        param.mode = mode;
+        run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
+        run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);
+        run(4, 3, 10, 45, 2, 1, 1, 1, 0, 4, 3);
+        run(2, 3, 9, 12, 2, 4, 6, 1, 0, 1, 2);
+        run(3, 4, 17, 32, 2, 3, 2, 5, 4, 4, 3);
+        run(5, 5, 24, 43, 11, 9, 3, 3, 12, 2, 2);
+        run(2, 3, 20, 33, 3, 5, 7, 4, 15, 2, 3);
+        run(4, 4, 6, 7, 9, 3, 2, 2, 1, 3, 2);
+    }
+}
+
+TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_NAIVE_ALGO) {
+    Checker<ConvolutionBackwardData> checker(handle());
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionBackwardData>("DeconvNaive"));
+    using Param = ConvolutionBackwardData::Param;
+    Param param;
+
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
+                   size_t fh, size_t fw, size_t stride, size_t padding,
+                   size_t dilate = 1, size_t group = 1) {
+        param.pad_h = param.pad_w = padding;
+        param.stride_h = param.stride_w = stride;
+        param.dilate_h = param.dilate_w = dilate;
+
+        TensorLayout diff =
+                TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
+        TensorLayout grad;
+        TensorLayout filter;
+        if (group == 1) {
+            param.sparse = Param::Sparse::DENSE;
+            filter = {{oc, ic, fh, fw}, dtype::Float32()};
+        } else {
+            param.sparse = Param::Sparse::GROUP;
+            filter = {{group, oc, ic, fh, fw}, dtype::Float32()};
+        }
+        // TensorLayout grad;
+        {
+            auto opr = handle()->create_operator<ConvolutionBackwardData>();
+            opr->param() = param;
+            opr->deduce_layout(filter, diff, grad);
+        }
+        checker.set_param(param);
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
