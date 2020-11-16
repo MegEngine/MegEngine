@@ -13,6 +13,8 @@ from .observer import (
     ExponentialMovingAverageObserver,
     HistogramObserver,
     MinMaxObserver,
+    SyncExponentialMovingAverageObserver,
+    SyncMinMaxObserver,
 )
 
 
@@ -87,6 +89,15 @@ ema_fakequant_qconfig = QConfig(
     weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
     act_observer=partial(
         ExponentialMovingAverageObserver, dtype="qint8", narrow_range=False
+    ),
+    weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
+    act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
+)
+
+sync_ema_fakequant_qconfig = QConfig(
+    weight_observer=partial(SyncMinMaxObserver, dtype="qint8", narrow_range=True),
+    act_observer=partial(
+        SyncExponentialMovingAverageObserver, dtype="qint8", narrow_range=False
     ),
     weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
     act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),

@@ -12,6 +12,8 @@ import numpy as np
 
 from .. import functional as F
 from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
+from ..distributed import WORLD, get_rank, is_distributed
+from ..functional.distributed import all_reduce_max, all_reduce_min
 from ..module import Module
 from ..tensor import Tensor
 from .utils import QuantMode, Round, get_qparam_dict
@@ -123,6 +125,21 @@ class MinMaxObserver(Observer):
         return x_orig
 
 
+class SyncMinMaxObserver(MinMaxObserver):
+    def forward(self, x_orig):
+        if self.enable:
+            x = x_orig.detach()
+            if is_distributed():
+                min_x = all_reduce_min(x.min(), WORLD)
+                max_x = all_reduce_max(x.max(), WORLD)
+            else:
+                min_x = x.min()
+                max_x = x.max()
+            self.min_val._reset(F.minimum(self.min_val, min_x))
+            self.max_val._reset(F.maximum(self.max_val, max_x))
+        return x_orig
+
+
 class ExponentialMovingAverageObserver(MinMaxObserver):
     def __init__(
         self,
@@ -154,6 +171,28 @@ class ExponentialMovingAverageObserver(MinMaxObserver):
             )
             self.runtime_momentum = self.momentum
 
+        return x_orig
+
+
+class SyncExponentialMovingAverageObserver(ExponentialMovingAverageObserver):
+    def forward(self, x_orig):
+        if self.enabled:
+            x = x_orig.detach()
+            if is_distributed:
+                min_x = all_reduce_min(x.min(), WORLD)
+                max_x = all_reduce_max(x.max(), WORLD)
+            else:
+                min_x = x.min()
+                max_x = x.max()
+            self.min_val._reset(
+                self.min_val * self.runtime_momentum
+                + (1 - self.runtime_momentum) * min_x
+            )
+            self.max_val._reset(
+                self.max_val * self.runtime_momentum
+                + (1 - self.runtime_momentum) * max_x
+            )
+            self.runtime_momentum = self.momentum
         return x_orig
 
 
