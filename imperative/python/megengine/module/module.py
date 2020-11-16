@@ -12,7 +12,6 @@ from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
 
 import numpy as np
 
-from ..core.tensor.dtype import is_quantize
 from ..core.tensor.utils import make_shape_tuple
 from ..logger import get_logger
 from ..tensor import Parameter, Tensor
@@ -529,11 +528,7 @@ class Module(metaclass=ABCMeta):
             ), "param `{}` shape mismatch, should be {}, get {}".format(
                 k, var.shape, to_be_load.shape
             )
-            # For quantized dtype, the initialized dtype
-            # scale/zero_points maybe invalid, use pretrained dtype instead.
-            if is_quantize(to_be_load.dtype) and is_quantize(var.dtype):
-                var = var.astype(to_be_load.dtype)
-            var._reset(to_be_load)
+            var._reset(type(var)(to_be_load, dtype=to_be_load.dtype, device=var.device))
             loaded.append(k)
 
         return set(loaded), set(skipped)

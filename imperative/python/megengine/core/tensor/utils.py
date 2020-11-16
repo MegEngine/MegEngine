@@ -14,7 +14,7 @@ import numpy as np
 from ..ops import builtin
 from ..ops.special import Const
 from ..tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
-from .dtype import is_equal
+from .dtype import is_equal, is_quantize
 
 
 def dtype_promotion(inputs):
@@ -122,7 +122,7 @@ def convert_single_value(v, inputs, *, dtype=None, device=None):
     tensors = [i for i in inputs if isinstance(i, (TensorBase, TensorWrapperBase))]
     assert len(tensors) > 0
     if isinstance(v, (TensorWrapperBase, TensorBase)):
-        v = astype(v, dtype)
+        v = astype(v, v.dtype if is_quantize(v.dtype) else dtype)
     else:
         (v,) = Const(v, dtype=dtype, device=device)(*tensors)
     return v

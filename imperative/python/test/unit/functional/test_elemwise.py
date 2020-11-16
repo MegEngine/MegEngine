@@ -10,6 +10,7 @@ import numpy as np
 
 import megengine.functional as F
 from megengine import tensor
+from megengine.core.tensor import dtype
 from megengine.functional.elemwise import _elwise
 
 
@@ -150,3 +151,18 @@ def test_logical_oprs():
     np.testing.assert_equal(x & y, F.logical_and(xx, yy).numpy())
     np.testing.assert_equal(x | y, F.logical_or(xx, yy).numpy())
     np.testing.assert_equal(x ^ y, F.logical_xor(xx, yy).numpy())
+
+
+def test_qadd():
+    inp_scale = 0.5
+    outp_scale = 0.2
+    x = np.arange(6).reshape(2, 3).astype("float32")
+    y = np.arange(6).reshape(2, 3).astype("float32")
+    x = tensor(x, dtype=dtype.qint8(inp_scale))
+    y = tensor(y, dtype=dtype.qint8(inp_scale))
+    result_mge = F.elemwise._elemwise_multi_type(
+        x, y, mode="QADD", dtype=dtype.qint8(outp_scale)
+    )
+    result_mge = result_mge.astype("float32").numpy()
+    result_expect = x.astype("float32").numpy() + y.astype("float32").numpy()
+    np.testing.assert_almost_equal(result_mge, result_expect, decimal=6)
