@@ -366,7 +366,6 @@ TYPED_TEST(TestJITMlirUnaryElemwise, runGpu) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
 
-    SKIP_MODE(SIN);
     SKIP_MODE(ROUND);
 
     run_mlir_mode<TypeParam, 1>(cn);

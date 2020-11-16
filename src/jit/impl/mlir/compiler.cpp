@@ -130,10 +130,9 @@ void add_cpu_lowering_pass(mlir::PassManager& manager) {
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
     }
-
-    manager.addPass(create_lower_to_affine_pass());
     {
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
+        opt_pm.addPass(create_lower_to_affine_pass());
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
         opt_pm.addPass(mlir::createLoopFusionPass());
@@ -150,9 +149,9 @@ void add_cuda_lowering_pass(mlir::PassManager& manager,
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
     }
-    manager.addPass(create_lower_to_gpu_pass());
     {
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
+        opt_pm.addPass(create_lower_to_gpu_pass());
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
         opt_pm.addPass(mlir::createLoopFusionPass());
@@ -179,9 +178,6 @@ thread_local mlir::MLIRContext MLIRCompiler::sm_ctx;
 
 MLIRCompiler::MLIRCompiler(CompNode::DeviceType device_type)
         : m_device_type{device_type} {
-    mlir::registerAllDialects();
-    mlir::registerDialect<MgbDialect>();
-
 #if MGB_CUDA
     if (m_device_type == CompNode::DeviceType::CUDA) {
         LLVMInitializeNVPTXTarget();

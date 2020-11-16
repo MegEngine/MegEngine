@@ -81,7 +81,7 @@ MLIRCPUExecutable::MLIRCPUExecutable(mlir::OwningModuleRef& module,
     auto opt_pipeline = mlir::makeOptimizingTransformer(3, 3, 0);
     std::vector<std::string> libs;
     auto&& engine = mlir::ExecutionEngine::create(
-            *module, opt_pipeline, llvm::None,
+            *module, nullptr, opt_pipeline, llvm::None,
             std::vector<llvm::StringRef>(libs.begin(), libs.end()), true,
             false);
     mgb_assert(engine);

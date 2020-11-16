@@ -279,7 +279,8 @@ public:
                         ConstantScalarOpLowering, AssignOpLowering>(
                 &getContext(), launch_op);
 
-        if (failed(applyPartialConversion(func_op, target, patterns))) {
+        if (failed(applyPartialConversion(func_op, target,
+                                          std::move(patterns)))) {
             signalPassFailure();
         }
     }

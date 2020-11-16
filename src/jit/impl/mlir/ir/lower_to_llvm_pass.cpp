@@ -51,7 +51,7 @@ public:
         populateExpandTanhPattern(patterns, &getContext());
 
         auto module = getOperation();
-        if (failed(applyFullConversion(module, target, patterns)))
+        if (failed(applyFullConversion(module, target, std::move(patterns))))
             signalPassFailure();
     }
 };
