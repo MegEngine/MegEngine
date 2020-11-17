@@ -8,6 +8,7 @@
 
 using LayoutSrc = cutlass::layout::TensorNCxHWx<4>;
 using LayoutFilter = cutlass::layout::TensorCxRSKx<4>;
+using LayoutDst = cutlass::layout::TensorNCxHWx<4>;
 using ThreadBlockShape = cutlass::gemm::GemmShape<128, 128, 32>;
 using WarpShape = cutlass::gemm::GemmShape<64, 32, 32>;
 using InstructionShape = cutlass::gemm::GemmShape<1, 1, 4>;
@@ -15,18 +16,19 @@ using EpilogueOp = cutlass::epilogue::thread::BiasAddLinearCombinationReluClamp<
                     int8_t, 4, int32_t, int32_t, float>;
 using Convolution = cutlass::convolution::device::Convolution<
     int8_t, LayoutSrc, int8_t, LayoutFilter, int8_t, 
-    LayoutSrc, int32_t, LayoutSrc, int32_t, 
+    LayoutDst, int32_t, LayoutDst, int32_t, 
     cutlass::convolution::ConvType::kConvolution, cutlass::arch::OpClassSimt, cutlass::arch::Sm61, 
     ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp, 
     cutlass::convolution::threadblock::ConvolutionNCxHWxThreadblockSwizzle<
     cutlass::convolution::ConvType::kConvolution>, 
-    2, 4, 16, true>;
+    2, 4, 16, true, 
+    cutlass::arch::OpMultiplyAddSaturate>;
 template void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper<Convolution>(
-        const int8_t* d_src, 
-        const int8_t* d_filter, 
-        const int32_t* d_bias, 
-        const int8_t* d_z, 
-        int8_t* d_dst, 
+        const typename Convolution::ElementSrc* d_src, 
+        const typename Convolution::ElementFilter* d_filter, 
+        const typename Convolution::ElementBias* d_bias, 
+        const typename Convolution::ElementDst* d_z, 
+        typename Convolution::ElementDst* d_dst, 
         int* workspace, 
         typename Convolution::ConvolutionParameter const& conv_param, 
         typename Convolution::EpilogueOutputOp::Params const& epilogue, 

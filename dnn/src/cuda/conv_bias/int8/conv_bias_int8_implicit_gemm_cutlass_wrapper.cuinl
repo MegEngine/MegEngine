@@ -19,25 +19,28 @@ using namespace cutlass_wrapper;
 
 template <typename Convolution>
 void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper(
-        const int8_t* d_src, const int8_t* d_filter, const int32_t* d_bias,
-        const int8_t* d_z, int8_t* d_dst, int* workspace,
+        const typename Convolution::ElementSrc* d_src,
+        const typename Convolution::ElementFilter* d_filter,
+        const typename Convolution::ElementBias* d_bias,
+        const typename Convolution::ElementDst* d_z,
+        typename Convolution::ElementDst* d_dst, int* workspace,
         typename Convolution::ConvolutionParameter const& conv_param,
         typename Convolution::EpilogueOutputOp::Params const& epilogue,
         cudaStream_t stream) {
     typename Convolution::TensorRefSrc tensor_src{
-            const_cast<int8_t*>(d_src),
+            const_cast<typename Convolution::ElementSrc*>(d_src),
             Convolution::LayoutSrc::packed({conv_param.n(), conv_param.hi(),
                                             conv_param.wi(), conv_param.ci()})};
     typename Convolution::TensorRefFilter tensor_filter{
-            const_cast<int8_t*>(d_filter),
+            const_cast<typename Convolution::ElementFilter*>(d_filter),
             Convolution::LayoutFilter::packed({conv_param.co(), conv_param.fh(),
                                                conv_param.fw(),
                                                conv_param.ci()})};
     typename Convolution::TensorRefBias tensor_bias{
-            const_cast<int32_t*>(d_bias),
+            const_cast<typename Convolution::ElementBias*>(d_bias),
             Convolution::LayoutBias::packed({1, 1, 1, conv_param.co()})};
     typename Convolution::TensorRefDst tensor_z{
-            const_cast<int8_t*>(d_z),
+            const_cast<typename Convolution::ElementDst*>(d_z),
             Convolution::LayoutDst::packed({conv_param.n(), conv_param.ho(),
                                             conv_param.wo(), conv_param.co()})};
     typename Convolution::TensorRefDst tensor_dst{

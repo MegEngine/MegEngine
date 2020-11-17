@@ -1191,6 +1191,47 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_IMMA) {
 }
 #endif
 
+TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW4_NCHW) {
+    require_compute_capability(6, 1);
+    using namespace conv_bias;
+    Checker<ConvBiasForward> checker(handle_cuda());
+    UniformIntRNG int_rng{-3, 3};
+    UniformFloatRNG float_rng{-50, 50};
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW4_NCHW;
+    param.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM"));
+    checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(1, dtype::QuantizedS8(1.9980927f))
+            .set_dtype(2, dtype::Float32())
+            .set_dtype(3, dtype::Float32())
+            .set_dtype(4, dtype::Float32())
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_rng(2, &float_rng)
+            .set_rng(3, &float_rng)
+            .set_param(param);
+
+    auto opr = handle_cuda()->create_operator<ConvBias>();
+
+    auto run = [&](const TensorShapeArray& shapes) {
+        opr->param() = param;
+        TensorLayout dst_layout;
+        opr->deduce_layout({shapes[0], dtype::Float32()},
+                           {shapes[1], dtype::Float32()}, {}, {}, dst_layout);
+        checker.execs({shapes[0], shapes[1], shapes[2], dst_layout, {}});
+    };
+
+    run({{16, 4, 23, 40, 4}, {20, 4, 3, 3, 4}, {1, 20, 1, 1}});
+    run({{16, 4, 92, 160, 4}, {24, 4, 3, 3, 4}, {1, 24, 1, 1}});
+    run({{16, 4, 92, 160, 4}, {20, 4, 3, 3, 4}, {1, 20, 1, 1}});
+    run({{16, 4, 92, 160, 4}, {16, 4, 3, 3, 4}, {1, 16, 1, 1}});
+    run({{16, 4, 92, 160, 4}, {8, 4, 3, 3, 4}, {1, 8, 1, 1}});
+    run({{16, 4, 46, 80, 4}, {4, 4, 3, 3, 4}, {1, 4, 1, 1}});
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_CHWN4) {
     require_compute_capability(6, 1);
