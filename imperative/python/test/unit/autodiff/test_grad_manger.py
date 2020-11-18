@@ -18,6 +18,7 @@ import megengine.optimizer as optim
 from megengine.autodiff import GradManager
 from megengine.core._imperative_rt.imperative import sync
 from megengine.distributed.helper import get_device_count_by_fork
+from megengine.jit import trace
 
 
 def test_basic():
@@ -75,27 +76,27 @@ def test_remote_grad():
         gm = GradManager().attach(m.parameters())
         opt = optim.SGD(m.parameters(), 1e-3, momentum=0.9)
 
+        @trace(symbolic=True)
         def train_func(x):
-            if rank != 0:
-                x = dist.functional.remote_recv(
-                    rank - 1, shape=(1, rank * 2 + 2), dtype=np.float32
-                )
-            print(rank, "x", x)
-            y = m(x)
-            print(rank, "y", y)
-            if rank != size - 1:
-                y = dist.functional.remote_send(y, dest_rank=rank + 1)
-            return y
+            with gm:
+                if rank != 0:
+                    x = dist.functional.remote_recv(
+                        rank - 1, shape=(1, rank * 2 + 2), dtype=np.float32
+                    )
+                y = m(x)
+                if rank != size - 1:
+                    y = dist.functional.remote_send(y, dest_rank=rank + 1)
+                if rank == size - 1:
+                    y = y.mean()
+                    gm.backward(y)
+                else:
+                    gm.backward()
+                opt.step().clear_grad()
 
-        with gm:
-            y = train_func(x)
-            if rank == size - 1:
-                y = y.mean()
-                gm.backward(y)
-            else:
-                gm.backward()
-            opt.step().clear_grad()
-        # sync because send is the last job
-        sync()
+        for i in range(3):
+            train_func(x)
+
+        for param in m.parameters():
+            param.numpy()
 
     worker()

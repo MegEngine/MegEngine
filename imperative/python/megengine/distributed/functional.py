@@ -300,7 +300,7 @@ def remote_recv(
         device = get_default_device()
     # dummy input
     if inp == None:
-        inp = tensor([0])
+        inp = tensor([0], device=device)
     tracer_set = get_client().check_remote_tracer(key)
     for grad_manager in get_grad_managers():
         if grad_manager.name in tracer_set:
