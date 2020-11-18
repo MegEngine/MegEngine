@@ -12,7 +12,9 @@
 #pragma once
 
 #include <mutex>
+#include <memory>
 
+#include "megbrain/comp_node.h"
 #include "megbrain/opr/group_manager.h"
 #include "megray.h"
 
@@ -22,6 +24,8 @@ namespace opr {
 MegRay::DType get_megray_dtype(megdnn::DType);
 
 MegRay::Backend get_megray_backend(const std::string& backend);
+
+std::shared_ptr<MegRay::Context> get_megray_context(CompNode comp_node);
 
 /*!
  * gather MegRay unique ids and build communicator, use hash for deduplication

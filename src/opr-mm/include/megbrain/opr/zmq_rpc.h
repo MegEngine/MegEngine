@@ -2,7 +2,6 @@
 
 #include "megbrain_build_config.h"
 
-#if MGB_CUDA
 #include <unistd.h>
 #include <cassert>
 #include <iostream>
@@ -101,4 +100,3 @@ private:
     std::vector<std::shared_ptr<zmq::socket_t>> m_own_sockets;
 };
 }  // namespace ZmqRpc
-#endif

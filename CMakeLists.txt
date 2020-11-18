@@ -339,8 +339,8 @@ if(MGE_BUILD_IMPERATIVE_RT)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
-if(NOT MGE_WITH_CUDA)
-    message(STATUS "Disable distributed support, as CUDA is not enabled.")
+if(NOT ${MGE_WITH_CUDA} AND NOT ${MGE_WITH_ROCM})
+    message(STATUS "Disable distributed support, as both CUDA and ROCm are disabled.")
     set(MGE_WITH_DISTRIBUTED OFF)
 endif()
 
@@ -903,6 +903,8 @@ if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
 endif()
 
 if(MGE_WITH_DISTRIBUTED)
+    set(MEGRAY_WITH_NCCL ${MGE_WITH_CUDA} CACHE BOOL "Override MegRay option" FORCE)
+    set(MEGRAY_WITH_RCCL ${MGE_WITH_ROCM} CACHE BOOL "Override MegRay option" FORCE)
     add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/MegRay)
 endif()
 
