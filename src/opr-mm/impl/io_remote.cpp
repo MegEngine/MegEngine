@@ -18,10 +18,6 @@
 using namespace mgb;
 using namespace opr;
 
-cudaStream_t get_stream(VarNode* var) {
-    return CompNodeEnv::from_comp_node(var->comp_node()).cuda_env().stream;
-}
-
 /* ===================== RemoteSend ===================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteSend);
@@ -70,7 +66,7 @@ void RemoteSend::scn_do_execute() {
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
                 reg_info.hash, m_key, 2, 0, MegRay::MEGRAY_NCCL, m_group_client);
 
-        m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
+        m_megray_ctx = get_megray_context(output(0)->comp_node());
 
         m_init = true;
     }
@@ -207,7 +203,7 @@ void RemoteRecv::scn_do_execute() {
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
                 reg_info.hash, m_key, 2, 1, MegRay::MEGRAY_NCCL, m_group_client);
 
-        m_megray_ctx = MegRay::CudaContext::make(get_stream(output(0)));
+        m_megray_ctx = get_megray_context(output(0)->comp_node());
 
         m_init = true;
     }

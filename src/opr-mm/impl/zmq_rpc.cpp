@@ -1,6 +1,5 @@
 #include "megbrain_build_config.h"
 
-#if MGB_CUDA
 #include "megbrain/opr/zmq_rpc.h"
 #include "megbrain/common.h"
 #include "megbrain/exception.h"
@@ -228,4 +227,3 @@ void ZmqRpcClient::request(message_t& request, message_t& reply) {
     DISCARD_RETVAL(client->recv(reply));
     add_socket(client);
 }
-#endif // MGB_CUDA

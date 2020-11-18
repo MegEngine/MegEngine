@@ -79,6 +79,8 @@ namespace {
             if (g_unspec_locator_type == DT::UNSPEC) {
                 if (CudaCompNode::available()) {
                     g_unspec_locator_type = DT::CUDA;
+                } else if (ROCmCompNode::available()) {
+                    g_unspec_locator_type = DT::ROCM;
                 } else {
                     g_unspec_locator_type = DT::CPU;
                 }
