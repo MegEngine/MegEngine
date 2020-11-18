@@ -22,6 +22,7 @@
 #include "megbrain/imperative/ops/elemwise.h"
 #include "megbrain/imperative/ops/batch_norm.h"
 #include "megbrain/imperative/ops/broadcast.h"
+#include "megbrain/imperative/ops/utility.h"
 
 namespace py = pybind11;
 
@@ -112,6 +113,9 @@ void init_ops(py::module m) {
     py::class_<ParamPackConcat, std::shared_ptr<ParamPackConcat>, OpDef>(m, "ParamPackConcat")
         .def(py::init<>())
         .def_readwrite("offsets", &ParamPackConcat::offsets);
+
+    py::class_<VirtualDep, std::shared_ptr<VirtualDep>, OpDef>(m, "VirtualDep")
+        .def(py::init<>());
 
     py::class_<CondTake, std::shared_ptr<CondTake>, OpDef>(m, "CondTake")
         .def(py::init<>());
