@@ -29,13 +29,19 @@ def _run_wrapped(
     world_size,
     rank,
     dev,
+    device_type,
     args,
     kwargs,
     queue: mp.Queue,
 ):
     """Init distributed process group and run wrapped function."""
     init_process_group(
-        master_ip=master_ip, port=port, world_size=world_size, rank=rank, device=dev
+        master_ip=master_ip,
+        port=port,
+        world_size=world_size,
+        rank=rank,
+        device=dev,
+        device_type=device_type,
     )
     if is_multimachine:
         group_barrier()
@@ -70,13 +76,17 @@ class launcher:
         rank_start=0,
         master_ip="localhost",
         port=0,
+        device_type="xpu",
     ):
         self.func = func
-        self.n_gpus = n_gpus if n_gpus is not None else get_device_count_by_fork("gpu")
+        self.n_gpus = (
+            n_gpus if n_gpus is not None else get_device_count_by_fork(device_type)
+        )
         self.world_size = world_size if world_size is not None else self.n_gpus
         self.rank_start = rank_start
         self.master_ip = master_ip
         self.port = port
+        self.device_type = device_type
         # master node create server
         if self.rank_start == 0:
             self.server = Server(self.port)
@@ -99,6 +109,7 @@ class launcher:
                     self.world_size,
                     dev + self.rank_start,
                     dev,
+                    self.device_type,
                     args,
                     kwargs,
                     queue,

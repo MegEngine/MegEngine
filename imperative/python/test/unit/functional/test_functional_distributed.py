@@ -236,12 +236,12 @@ def test_io_remote(shape):
     def worker(val, shape):
         rank = dist.get_rank()
         if rank == 0:  # remote send
-            x = tensor(val, device="gpu0")
+            x = tensor(val, device="xpu0")
             remote_send(x, 1)
             sync()
         else:  # remote recv
             y = remote_recv(0, shape, np.float32)
-            assert y.device == "gpu1"
+            assert y.device == get_default_device()
             np.testing.assert_almost_equal(val, y.numpy())
 
     val = np.random.random_sample(shape).astype("float32")

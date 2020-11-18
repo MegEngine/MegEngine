@@ -62,8 +62,8 @@ void init_common(py::module m) {
             return cn.get_mem_status_bytes();
         })
         .def("create_event", &CompNode::create_event, py::arg("flags") = 0ul)
-        .def("_set_default_device", &set_default_device)
-        .def("_get_default_device", &get_default_device)
+        .def_static("_set_default_device", &set_default_device)
+        .def_static("_get_default_device", &get_default_device)
         .def("__str__", &CompNode::to_string_logical)
         .def("__repr__", [](const CompNode& cn) {
             return py::str("\"" + cn.to_string() + "\" from \"" + cn.to_string_logical() + "\"");
@@ -178,6 +178,10 @@ void init_common(py::module m) {
 
     m.def("set_prealloc_config", &CompNode::set_prealloc_config, 
         "specifies how to pre-allocate from raw dev allocator");
+
+    m.def("what_is_xpu", []{
+        return CompNode::Locator::parse("xpux").to_physical().type;
+    });
 
     init_npy_num_bfloat16(m);
     init_npy_num_intbx(m);
