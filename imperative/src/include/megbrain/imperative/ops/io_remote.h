@@ -31,6 +31,13 @@ public:
     std::string addr;
     uint32_t port;
     uint32_t rank_to;
+
+    size_t hash() const override;
+    bool is_same_st(const Hashable& another) const override;
+
+    auto as_tuple() const{
+        return std::tuple(key, addr, port, rank_to);
+    }
 };
 
 class RemoteRecv : public OpDefImplBase<RemoteRecv> {
@@ -55,6 +62,13 @@ public:
     CompNode cn;
     TensorShape shape;
     DType dtype;
+
+    size_t hash() const override;
+    bool is_same_st(const Hashable& another) const override;
+
+    auto as_tuple() const{
+        return std::tuple(key, addr, port, rank_from, cn, dtype, shape.to_string());
+    }
 };
 
 }  // namespace imperative

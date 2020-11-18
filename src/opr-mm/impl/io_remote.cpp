@@ -151,12 +151,38 @@ RemoteRecv::RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
     add_equivalence_component<ScalarHash<void*>>(this);
 }
 
+RemoteRecv::RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph& graph,
+                       std::shared_ptr<GroupClient> group_client,
+                       const OperatorNodeConfig& config,
+                       const TensorShape& shape, DType dtype) :
+        Super(&graph, config, "remote_recv", {}),
+        m_shape(shape), m_dtype(dtype) {
+    m_key = key;
+    m_group_client = group_client;
+
+    add_input({var});
+    add_output(None)
+            ->dtype(dtype)
+            .add_flag(VarNode::Flag::NO_MEM_RECLAIM)
+            .add_flag(VarNode::Flag::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC);
+    add_equivalence_component<ScalarHash<void*>>(this);
+}
+
 SymbolVar RemoteRecv::make(const std::string& key, cg::ComputingGraph& graph,
                            std::shared_ptr<GroupClient> group_client,
                            const OperatorNodeConfig& config,
                            const TensorShape& shape, DType dtype) {
     auto opr = graph.insert_opr(std::make_unique<RemoteRecv>(
             key, graph, group_client, config, shape, dtype));
+    return opr->output(0);
+}
+
+SymbolVar RemoteRecv::make(const std::string& key, SymbolVar var, cg::ComputingGraph& graph,
+                           std::shared_ptr<GroupClient> group_client,
+                           const OperatorNodeConfig& config,
+                           const TensorShape& shape, DType dtype) {
+    auto opr = graph.insert_opr(std::make_unique<RemoteRecv>(
+            key, var.node(), graph, group_client, config, shape, dtype));
     return opr->output(0);
 }
 

@@ -46,7 +46,7 @@ cg::OperatorNodeBase* apply_on_var_node_remote_recv(
             ssprintf("%s:%d", recv.addr.data(), recv.port));
     auto&& graph = inputs[0]->owner_graph();
     return graph->insert_opr(std::make_unique<mgb::opr::RemoteRecv>(
-            recv.key, *graph, group_client, OperatorNodeConfig{recv.cn},
+            recv.key, inputs[0], *graph, group_client, OperatorNodeConfig{recv.cn},
             recv.shape, recv.dtype));
 }
 
@@ -59,6 +59,43 @@ OP_TRAIT_REG(RemoteRecv, RemoteRecv, mgb::opr::RemoteRecv)
         .fallback();
 }  // anonymous namespace
 #endif // MGB_ENABLE_OPR_MM
+
+bool RemoteSend::is_same_st(const Hashable& another) const{
+    return as_tuple() == another.cast_final<RemoteSend>().as_tuple();
+}
+
+size_t RemoteSend::hash() const{
+    XXHash xxhash;
+    auto append = [&xxhash](auto field){
+        auto hash_val = HashTrait<decltype(field)>::eval(field);
+        xxhash.update(reinterpret_cast<void*>(&hash_val), sizeof(hash_val));
+    };
+    append(key); 
+    append(addr);
+    append(port);
+    append(rank_to);
+    return xxhash.digest();
+}
+
+bool RemoteRecv::is_same_st(const Hashable& another) const{
+    return as_tuple() == another.cast_final<RemoteRecv>().as_tuple();
+}
+
+size_t RemoteRecv::hash() const{
+    XXHash xxhash;
+    auto append = [&xxhash](auto field){
+        auto hash_val = HashTrait<decltype(field)>::eval(field);
+        xxhash.update(reinterpret_cast<void*>(&hash_val), sizeof(hash_val));
+    };
+    append(key); 
+    append(addr);
+    append(port);
+    append(rank_from);
+    append(cn.to_string());
+    append(dtype.handle());
+    append(shape.to_string());
+    return xxhash.digest();
+}
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteSend);
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteRecv);

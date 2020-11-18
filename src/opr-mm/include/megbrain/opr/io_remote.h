@@ -77,8 +77,19 @@ MGB_DEFINE_OPR_CLASS(RemoteRecv, RemoteIOBase) // {
                    const OperatorNodeConfig& config, const TensorShape& shape,
                    DType dtype);
 
+        RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph& graph,
+                   std::shared_ptr<GroupClient> group_client,
+                   const OperatorNodeConfig& config, const TensorShape& shape,
+                   DType dtype);
+
         static SymbolVar make(
                 const std::string& key, cg::ComputingGraph& graph,
+                std::shared_ptr<GroupClient> group_client,
+                const OperatorNodeConfig& config, const TensorShape& shape,
+                DType dtype);
+
+        static SymbolVar make(
+                const std::string& key, SymbolVar var, cg::ComputingGraph& graph,
                 std::shared_ptr<GroupClient> group_client,
                 const OperatorNodeConfig& config, const TensorShape& shape,
                 DType dtype);
