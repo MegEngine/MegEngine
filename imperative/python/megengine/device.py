@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
 import re
+from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
@@ -17,6 +18,7 @@ __all__ = [
     "get_device_count",
     "get_default_device",
     "set_default_device",
+    "get_mem_status_bytes",
     "set_prealloc_config",
     "DeviceType",
 ]
@@ -90,6 +92,16 @@ def get_default_device() -> str:
     It returns the value set by :func:`~.set_default_device`.
     """
     return CompNode._get_default_device()
+
+
+def get_mem_status_bytes(device: Optional[str] = None):
+    r"""
+    Get total and free memory on the computing device in bytes.
+    """
+    if device is None:
+        device = get_default_device()
+    tot, free = CompNode(device).get_mem_status_bytes
+    return tot, free
 
 
 set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))

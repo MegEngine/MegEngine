@@ -58,6 +58,9 @@ void init_common(py::module m) {
         .def_property_readonly("logical_name", [](const CompNode& cn) {
             return cn.to_string_logical();
         })
+        .def_property_readonly("get_mem_status_bytes", [](const CompNode& cn) {
+            return cn.get_mem_status_bytes();
+        })
         .def("create_event", &CompNode::create_event, py::arg("flags") = 0ul)
         .def("_set_default_device", &set_default_device)
         .def("_get_default_device", &get_default_device)
