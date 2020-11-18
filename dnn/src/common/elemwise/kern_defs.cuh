@@ -204,7 +204,7 @@ namespace megdnn {
 
     DEF_KERN_FLOAT(ATAN2, atan2f(x, y));
     DEF_KERN_FLOAT(H_SWISH_GRAD,
-                   x < -3.f ? 0.f : (x > 3.f ? y : (2.f * x + 3.f) / 6.f * y));
+                   x < -3.f ? (ctype)0.f : (ctype)(x > 3.f ? (ctype)y : (ctype)((2.f * x + 3.f) / 6.f * y)));
 
     DEF_KERN_FLOAT(FUSE_ADD_H_SWISH, fuse_add_hswish(x, y));
 #undef KERN_SIG

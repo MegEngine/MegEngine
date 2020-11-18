@@ -314,7 +314,7 @@ void convolution::exec_inplace_matmul_fwd(
             } else {                                                          \
                 kptr = conv_kernel<BY, BX, false, BufferFetcherTexture>;      \
             }                                                                 \
-            kptr<<<blocks, threads, 0, stream>>>(                             \
+            hipLaunchKernelGGL(kptr, blocks, threads, 0, stream,                    \
                     src_tex.val, filter_tex.val, dst, INP_BS, OUT_BS, IC, IH, \
                     IW, OC, OH, OW, FH, FW, SH, SW, PH, PW);                  \
         } else {                                                              \
@@ -324,7 +324,7 @@ void convolution::exec_inplace_matmul_fwd(
             } else {                                                          \
                 kptr = conv_kernel<BY, BX, false, BufferFetcherRaw>;          \
             }                                                                 \
-            kptr<<<blocks, threads, 0, stream>>>(                             \
+            hipLaunchKernelGGL(kptr, blocks, threads, 0, stream,              \
                     src_buf, filter_buf, dst, INP_BS, OUT_BS, IC, IH, IW, OC, \
                     OH, OW, FH, FW, SH, SW, PH, PW);                          \
         }                                                                     \
