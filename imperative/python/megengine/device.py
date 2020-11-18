@@ -12,6 +12,7 @@ from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
+from .core._imperative_rt.common import what_is_xpu as _what_is_xpu
 
 __all__ = [
     "is_cuda_available",
@@ -25,7 +26,7 @@ __all__ = [
 
 
 def _valid_device(inp):
-    if isinstance(inp, str) and re.match("^[cxg]pu(\d+|\d+:\d+|x)$", inp):
+    if isinstance(inp, str) and re.match("^([cxg]pu|rocm)(\d+|\d+:\d+|x)$", inp):
         return True
     return False
 
@@ -40,9 +41,14 @@ def _str2device_type(type_str: str, allow_unspec: bool = True):
         return DeviceType.CAMBRICON
     elif type_str == "ATLAS":
         return DeviceType.ATLAS
+    elif type_str == "ROCM" or type_str == "AMDGPU":
+        return DeviceType.ROCM
     else:
         assert allow_unspec and str == "XPU", "device type can only be cpu, gpu or xpu"
         return DeviceType.UNSPEC
+
+
+_device_type_set = {"cpu", "gpu", "xpu", "rocm"}
 
 
 def get_device_count(device_type: str) -> int:
@@ -51,10 +57,8 @@ def get_device_count(device_type: str) -> int:
 
     :param device_type: device type, one of 'gpu' or 'cpu'
     """
-
-    device_type_set = ("cpu", "gpu")
-    assert device_type in device_type_set, "device must be one of {}".format(
-        device_type_set
+    assert device_type in _device_type_set, "device must be one of {}".format(
+        _device_type_set
     )
     device_type = _str2device_type(device_type)
     return CompNode._get_device_count(device_type, False)
@@ -84,6 +88,14 @@ def is_atlas_available() -> bool:
 
     """
     t = _str2device_type("atlas")
+    return CompNode._get_device_count(t, False) > 0
+
+
+def is_rocm_available() -> bool:
+    """Returns whether rocm device is available on this system.
+
+    """
+    t = _str2device_type("rocm")
     return CompNode._get_device_count(t, False) > 0
 
 
@@ -151,3 +163,7 @@ def set_prealloc_config(
     assert max_overhead >= 0
     assert growth_factor >= 1
     _set_prealloc_config(alignment, min_req, max_overhead, growth_factor, device_type)
+
+
+def what_is_xpu():
+    return _what_is_xpu().name.lower()

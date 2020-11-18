@@ -16,6 +16,7 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 from megengine.core.ops.builtin import CollectiveComm, ParamPackConcat, ParamPackSplit
+from megengine.device import get_default_device
 from megengine.distributed.helper import (
     get_device_count_by_fork,
     param_pack_concat,
@@ -87,7 +88,8 @@ def test_new_group():
             assert group.size == 2
             assert group.key == "2,0"
             assert group.rank == ranks.index(rank)
-            assert group.comp_node == "gpu{}:2".format(rank)
+            dt = get_default_device()[:-1]
+            assert group.comp_node == "{}{}:2".format(dt, rank)
 
     worker()
 

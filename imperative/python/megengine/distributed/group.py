@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import List, Optional, Tuple
 
-from ..device import set_default_device
+from ..device import set_default_device, what_is_xpu
 from .server import Client, Server
 
 
@@ -23,6 +23,7 @@ class StaticData:
     device = None
     backend = None
     next_stream = None
+    device_type = None
 
 
 _sd = None
@@ -78,10 +79,19 @@ class Group:
     @property
     def comp_node(self):
         assert len(self.proc_ranks) > 0, "invalid group"
-        return "gpu{}:{}".format(_sd.device, self.stream)
+        return "{}{}:{}".format(_sd.device_type, _sd.device, self.stream)
 
 
 WORLD = Group([])
+
+
+_device2backend = {
+    "gpu": "nccl",
+    "cuda": "nccl",
+    "rocm": "rccl",
+}
+
+_backends = {"nccl", "rccl", "ucx"}
 
 
 def init_process_group(
@@ -90,7 +100,8 @@ def init_process_group(
     world_size: int,
     rank: int,
     device: int,
-    backend: Optional[str] = "nccl",
+    backend: Optional[str] = None,
+    device_type: str = "xpu",
 ) -> None:
     """
     Initialize the distributed process group and specify the device used in the current process
@@ -102,6 +113,8 @@ def init_process_group(
     :param device: the GPU device id to bind this process to.
     :param backend: communicator backend, currently support 'nccl' and 'ucx'.
     """
+    physical_device_type = what_is_xpu() if device_type == "xpu" else device_type
+    backend = _device2backend[physical_device_type] if backend is None else backend
     if not isinstance(master_ip, str):
         raise TypeError("Expect type str but got {}".format(type(master_ip)))
     if not isinstance(port, int):
@@ -112,8 +125,14 @@ def init_process_group(
         raise TypeError("Expect type int but got {}".format(type(rank)))
     if not isinstance(device, int):
         raise TypeError("Expect type int but got {}".format(type(backend)))
-    if not isinstance(backend, str):
-        raise TypeError("Expect type str but got {}".format(type(backend)))
+    if backend not in _backends:
+        raise ValueError(
+            "backend should be one of {} but got {}".format(_backends, backend)
+        )
+    if physical_device_type not in _device2backend:
+        raise ValueError(
+            "{} is not a valid distributed device type".format(device_type)
+        )
 
     global _sd
     assert _sd is None, "init_process_group should be called only once"
@@ -132,10 +151,11 @@ def init_process_group(
     _sd.device = device
     _sd.backend = backend
     _sd.next_stream = 1
+    _sd.device_type = device_type
 
     WORLD.reset(list(range(world_size)))
 
-    set_default_device("gpu{}".format(device))
+    set_default_device("{}{}".format(device_type, device))
 
 
 def is_distributed() -> bool:
@@ -182,7 +202,7 @@ def new_group(proc_ranks: List[int]) -> Group:
     return Group(proc_ranks)
 
 
-def group_barrier(group: Optional[Group] = WORLD) -> None:
+def group_barrier(group: Group = WORLD) -> None:
     """Block until all ranks in the group reach this barrier."""
     # if running with single node, skip it
     if _sd is None:
