@@ -11,9 +11,7 @@
 
 #pragma once
 
-#ifndef __HIP_PLATFORM_HCC__
-#define __HIP_PLATFORM_HCC__
-#endif
+#include "hcc_detail/hcc_defs_prologue.h"
 
 #include <miopen/version.h>
 #pragma GCC diagnostic push

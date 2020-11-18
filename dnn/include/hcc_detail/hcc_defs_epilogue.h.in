@@ -9,10 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#ifdef __HIP_PLATFORM_HCC__
-#undef __HIP_PLATFORM_HCC__
-#else
-#error "hcc_defs_epilogue.h must be included after hcc_defs_prologue.h"
-#endif
+@HIP_CPP_UNDEFINE@
 
 // vim: syntax=cpp.doxygen

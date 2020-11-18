@@ -13,89 +13,79 @@ else()
     message(FATAL_ERROR "Could not find HIP. Ensure that HIP is either installed in /opt/rocm/hip or the variable HIP_PATH is set to point to the right location.")
 endif()
 
-string(REPLACE "." ";" HIP_VERSION_LIST ${HIP_VERSION})
-list(GET HIP_VERSION_LIST 0 HIP_VERSION_MAJOR)
-list(GET HIP_VERSION_LIST 1 HIP_VERSION_MINOR)
-if (NOT ${HIP_VERSION_MAJOR} STREQUAL "3")
-    message(FATAL_ERROR "ROCM version needed 3.x, Please update ROCM.")
-else()
-    if (${HIP_VERSION_MINOR} LESS "7")
-        message(WARNING "ROCM version 3.x which x(got ${HIP_VERSION_MINOR}) greater equal 7 is prefered.")
-    endif()
+if (${HIP_VERSION} VERSION_LESS 3.0)
+    message(FATAL_ERROR "ROCM version needed 3. Please update ROCM.")
 endif()
 
-set(MGE_ROCM_LIBS OpenCL amdhip64 MIOpen rocblas rocrand)
+macro(hipconfig_get_option variable option)
+    if(NOT DEFINED ${variable})
+        execute_process(
+            COMMAND ${HIP_HIPCONFIG_EXECUTABLE} ${option}
+            OUTPUT_VARIABLE ${variable})
+    endif()
+endmacro()
+
+hipconfig_get_option(HIP_COMPILER "--compiler")
+hipconfig_get_option(HIP_CPP_CONFIG "--cpp_config")
+
+separate_arguments(HIP_CPP_CONFIG)
+
+foreach(hip_config_item ${HIP_CPP_CONFIG})
+    foreach(macro_name "__HIP_PLATFORM_HCC__" "__HIP_ROCclr__")
+        if(${hip_config_item} STREQUAL "-D${macro_name}=")
+            set(HIP_CPP_DEFINE "${HIP_CPP_DEFINE}#define ${macro_name}\n")
+            set(HIP_CPP_UNDEFINE "${HIP_CPP_UNDEFINE}\
+                    #ifdef ${macro_name}\n#undef ${macro_name}\n\
+                    #else\n#error\n\
+                    #endif\n")
+        elseif(${hip_config_item} STREQUAL "-D${macro_name}")
+            set(HIP_CPP_DEFINE "${HIP_CPP_DEFINE}#define ${macro_name} 1\n")
+            set(HIP_CPP_UNDEFINE "${HIP_CPP_UNDEFINE}\
+                    #ifdef ${macro_name}\n#undef ${macro_name}\n\
+                    #else\n#error\n\
+                    #endif\n")
+        endif()
+    endforeach()
+endforeach()
+
+message(STATUS "Using HIP compiler ${HIP_COMPILER}")
+
+if(${HIP_COMPILER} STREQUAL "hcc")
+    set(MGE_ROCM_LIBS hip_hcc)
+    message(WARNING "hcc is not well supported, please modify link.txt to link with hipcc")
+elseif (${HIP_COMPILER} STREQUAL "clang")
+    set(MGE_ROCM_LIBS amdhip64)
+endif()
+
+list(APPEND MGE_ROCM_LIBS amdocl64 MIOpen rocblas rocrand)
 
 set(HIP_INCLUDE_DIR ${HIP_ROOT_DIR}/../include)
 set(HIP_LIBRARY_DIR ${HIP_ROOT_DIR}/../lib)
 
-#miopen
-get_filename_component(__found_miopen_library ${HIP_ROOT_DIR}/../miopen/lib REALPATH)
-find_path(MIOPEN_LIBRARY_DIR
-    NAMES libMIOpen.so
-    HINTS ${PC_MIOPEN_INCLUDE_DIRS} ${MIOPEN_ROOT_DIR} ${ROCM_TOOLKIT_INCLUDE} ${__found_miopen_library}
-    PATH_SUFFIXES lib
-    DOC "Path to MIOPEN library directory." )
+function(find_rocm_library name dirname include library)
+    find_path(${name}_LIBRARY_DIR
+        NAMES ${library}
+        HINTS "${HIP_ROOT_DIR}/../${dirname}"
+        PATH_SUFFIXES lib lib/x86_64
+        DOC "Path to ${name} library directory")
 
-if(MIOPEN_LIBRARY_DIR STREQUAL "MIOPEN_LIBRARY_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find MIOPEN Library")
-endif()
+    if(${${name}_LIBRARY_DIR} MATCHES "NOTFOUND$")
+        message(FATAL_ERROR "Can not find ${name} library")
+    endif()
 
-get_filename_component(__found_miopen_include ${HIP_ROOT_DIR}/../miopen/include REALPATH)
-find_path(MIOPEN_INCLUDE_DIR
-    NAMES miopen
-    HINTS ${PC_MIOPEN_INCLUDE_DIRS} ${MIOPEN_ROOT_DIR} ${ROCM_TOOLKIT_INCLUDE} ${__found_miopen_include}
-    PATH_SUFFIXES include
-    DOC "Path to MIOPEN include directory." )
+    find_path(${name}_INCLUDE_DIR
+        NAMES ${include}
+        HINTS "${HIP_ROOT_DIR}/../${dirname}"
+        PATH_SUFFIXES include
+        DOC "Path to ${name} include directory")
 
-if(MIOPEN_INCLUDE_DIR STREQUAL "MIOPEN_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find MIOEPN INCLUDE")
-endif()
+    if(${name}_INCLUDE_DIR MATCHES "NOTFOUND$")
+        message(FATAL_ERROR "Can not find ${name} include")
+    endif()
+    message(DEBUG "Found lib ${${name}_LIBRARY_DIR}, include ${${name}_INCLUDE_DIR}")
+endfunction()
 
-#rocblas
-get_filename_component(__found_rocblas_library ${HIP_ROOT_DIR}/../rocblas/lib REALPATH)
-find_path(ROCBLAS_LIBRARY_DIR
-    NAMES librocblas.so
-    HINTS ${PC_ROCBLAS_INCLUDE_DIRS} ${ROCBLAS_ROOT_DIR} ${ROCM_TOOLKIT_INCLUDE} ${__found_rocblas_library}
-    PATH_SUFFIXES lib
-    DOC "Path to ROCBLAS library directory." )
-
-if(ROCBLAS_LIBRARY_DIR STREQUAL "ROCBLAS_LIBRARY_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find ROCBLAS Library")
-endif()
-
-get_filename_component(__found_rocblas_include ${HIP_ROOT_DIR}/../rocblas/include REALPATH)
-find_path(ROCBLAS_INCLUDE_DIR
-    NAMES rocblas.h
-    HINTS ${PC_ROCBLAS_INCLUDE_DIRS} ${ROCBLAS_ROOT_DIR} ${ROCM_TOOLKIT_INCLUDE} ${__found_rocblas_include}
-    PATH_SUFFIXES include
-    DOC "Path to ROCBLAS include directory." )
-
-if(ROCBLAS_INCLUDE_DIR STREQUAL "ROCBLAS_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find ROCBLAS INCLUDE")
-endif()
-
-#rocrand
-get_filename_component(__found_rocrand_library ${HIP_ROOT_DIR}/../rocrand/lib REALPATH)
-find_path(ROCRAND_LIBRARY_DIR
-    NAMES librocrand.so
-    HINTS ${PC_ROCRAND_INCLUDE_DIRS} ${ROCRAND_ROOT_DIR} ${ROCM_TOOLKIT_INCLUDE} ${__found_rocrand_library}
-    PATH_SUFFIXES lib
-    DOC "Path to ROCRAND library directory." )
-
-if(ROCRAND_LIBRARY_DIR STREQUAL "ROCRAND_LIBRARY_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find ROCRAND Library")
-endif()
-
-get_filename_component(__found_rocrand_include ${HIP_ROOT_DIR}/../rocrand/include REALPATH)
-find_path(ROCRAND_INCLUDE_DIR
-    NAMES rocrand.h
-    HINTS ${PC_ROCRAND_INCLUDE_DIRS} ${ROCRAND_ROOT_DIR} ${ROCM_TOOLKIT_INCLUDE} ${__found_rocrand_include}
-    PATH_SUFFIXES include
-    DOC "Path to ROCRAND include directory." )
-
-if(ROCRAND_INCLUDE_DIR STREQUAL "ROCRAND_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find ROCRAND INCLUDE")
-endif()
-
-
+find_rocm_library(MIOPEN miopen miopen libMIOpen.so)
+find_rocm_library(ROCBLAS rocblas rocblas.h librocblas.so)
+find_rocm_library(ROCRAND rocrand rocrand.h librocrand.so)
+find_rocm_library(AMDOCL opencl CL libamdocl64.so)

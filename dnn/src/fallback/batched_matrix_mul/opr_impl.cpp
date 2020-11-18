@@ -11,7 +11,6 @@
  */
 #include "./opr_impl.h"
 #include "./algos.h"
-#include "hcc_detail/hcc_defs_prologue.h"
 
 #include "src/common/algo_chooser.h"
 #include "src/common/utils.cuh"
