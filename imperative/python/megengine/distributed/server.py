@@ -35,6 +35,7 @@ class Methods:
         self.dict_pack_list = defaultdict(partial(Future, False))
         self.dict_barrier_counter = defaultdict(int)
         self.dict_barrier_event = defaultdict(threading.Event)
+        self.user_dict = defaultdict(partial(Future, False))
 
     def connect(self):
         """Method for checking connection success."""
@@ -112,6 +113,19 @@ class Methods:
         else:
             event.wait()
         return True
+
+    def user_set(self, key, val):
+        """Set user defined key-value pairs across processes."""
+        with self.lock:
+            future = self.user_dict[key]
+        future.set(val)
+        return True
+
+    def user_get(self, key):
+        """Get user defined key-value pairs across processes."""
+        with self.lock:
+            future = self.user_dict[key]
+        return future.get()
 
 
 class ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
@@ -220,3 +234,11 @@ class Client:
         :param size: group size.
         """
         self.proxy.group_barrier(key, size)
+
+    def user_set(self, key, val):
+        """Set user defined key-value pairs across processes."""
+        self.proxy.user_set(key, val)
+
+    def user_get(self, key):
+        """Get user defined key-value pairs across processes."""
+        return self.proxy.user_get(key)

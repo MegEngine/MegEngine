@@ -195,6 +195,38 @@ def test_synchronized():
         assert p.exitcode == 0
 
 
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
+)
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.isolated_distributed
+def test_user_set_get():
+    world_size = 2
+    port = dist.get_free_ports(1)[0]
+    server = dist.Server(port)
+
+    def worker(rank):
+        dist.init_process_group("localhost", port, world_size, rank, rank)
+        # set in race condition
+        dist.get_client().user_set("foo", 1)
+        # get in race condition
+        ret = dist.get_client().user_get("foo")
+        assert ret == 1
+
+    procs = []
+    for rank in range(world_size):
+        p = mp.Process(target=worker, args=(rank,))
+        p.start()
+        procs.append(p)
+
+    for p in procs:
+        p.join(20)
+        assert p.exitcode == 0
+
+
 def test_oprmm_hashable():
     lhs = (CollectiveComm(), ParamPackConcat(), ParamPackSplit())
     rhs = (CollectiveComm(), ParamPackConcat(), ParamPackSplit())
