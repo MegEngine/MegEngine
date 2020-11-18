@@ -9,6 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#define __HIP_PLATFORM_HCC__
+@HIP_CPP_DEFINE@
 
 // vim: syntax=cpp.doxygen
