@@ -224,6 +224,7 @@ class AllreduceCallback:
         self._packing_size[dtype] = 0
 
     def __call__(self, param, grad):
+        param = param.__wrapped__
         gm = get_backwarding_grad_manager()
         assert isinstance(gm, GradManager)
         if gm not in self._marked_gm:

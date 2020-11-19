@@ -6,6 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import platform
+import weakref
 
 import numpy as np
 import pytest
@@ -57,6 +58,39 @@ def test_attach_in_with_block():
         c = b + 1
         gm.backward(c)
     assert int(b.grad.numpy()) == 1
+
+
+def test_attach_temporary():
+    w = mge.Parameter(2.0)
+    gm = GradManager()
+    gm.attach(w)
+
+    def cb(x, g):
+        assert x is ref()
+        cb.called = True
+
+    for i in range(3):
+        with gm:
+            cb.called = False
+            x = mge.Tensor(i, dtype="float32")
+            gm.attach(x, callbacks=cb)
+            ref = weakref.ref(x)
+            y = x * w
+            gm.backward(y)
+            assert cb.called
+        del x
+        assert ref() is None
+
+    # NOTE: does not guarantee timely release when recording
+    # for i in range(3):
+    #     with gm:
+    #         x = mge.Tensor(i, dtype='float32')
+    #         gm.attach(x)
+    #         ref = weakref.ref(x)
+    #         y = x * w
+    #         del x
+    #         assert ref() is None
+    #         gm.backward(y)
 
 
 @pytest.mark.skipif(
