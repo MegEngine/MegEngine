@@ -145,11 +145,6 @@ void init_graph_rt(py::module m) {
         .def_property_readonly("comp_node", [](cg::VarNode* v) {return v->comp_node();})
         .def_property_readonly("shape", [](cg::VarNode* v) -> const TensorShape* {
                 auto&& mgr = v->owner_graph()->static_infer_manager();
-                auto&& type = mgr.get_infer_type(v);
-                using InferType = cg::static_infer::InferType;
-                if (!(type.shape & (InferType::CONST | InferType::RT_STATIC))) {
-                    return nullptr;
-                }
                 return mgr.infer_shape_fallible(v);
             })
         .def_property_readonly("value", [](cg::VarNode* v) -> py::object {
@@ -437,7 +432,8 @@ void init_graph_rt(py::module m) {
                              const DType& dtype,
                              const TensorShape& shape,
                              const std::vector<cg::VarNode*>& inputs,
-                             cg::ComputingGraph* graph) {
+                             cg::ComputingGraph* graph,
+                             bool use_static_shape) {
         if (!graph) {
             graph = inputs[0]->owner_graph();
         }
@@ -446,7 +442,9 @@ void init_graph_rt(py::module m) {
             sinputs.emplace_back(i);
         }
         static_assert(!std::is_reference<decltype(callback)>::value);
-        auto soutputs = opr::InputCallback::make(*graph, std::move(callback), comp_node, dtype, shape, sinputs);
+        auto soutputs = opr::InputCallback::make(*graph, std::move(callback),
+                                                 comp_node, dtype, shape,
+                                                 sinputs, use_static_shape);
         std::vector<VarNode*> outputs;
         outputs.reserve(soutputs.size());
         for (auto i : soutputs) {
@@ -490,23 +488,29 @@ void init_graph_rt(py::module m) {
                                              const DType& dtype,
                                              const TensorShape& shape,
                                              const std::vector<cg::VarNode*>& inputs,
-                                             cg::ComputingGraph* graph) {
-            return input_callback([f=std::move(callback)](){py::gil_scoped_acquire _; return f();}, comp_node, dtype, shape, inputs, graph);
+                                             cg::ComputingGraph* graph,
+                                             bool use_static_shape) {
+            return input_callback(
+                [f=std::move(callback)](){py::gil_scoped_acquire _; return f();},
+                comp_node, dtype, shape, inputs, graph, use_static_shape);
         },
-        py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(), py::arg("graph") = py::none());
+        py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(),
+        py::arg("graph") = py::none(), py::arg("use_static_shape") = false);
 
     m.def("input_callback", [input_callback](std::shared_ptr<Rendezvous<DeviceTensorND>> p,
                                              const CompNode& comp_node,
                                              const DType& dtype,
                                              const TensorShape& shape,
                                              const std::vector<cg::VarNode*>& inputs,
-                                             cg::ComputingGraph* graph) {
+                                             cg::ComputingGraph* graph,
+                                             bool use_static_shape) {
             auto f = [p]() -> DeviceTensorND {
                 return p->get();
             };
-            return input_callback(std::move(f), comp_node, dtype, shape, inputs, graph);
+            return input_callback(std::move(f), comp_node, dtype, shape, inputs, graph, use_static_shape);
         },
-        py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(), py::arg("graph") = py::none());
+        py::arg(), py::arg(), py::arg(), py::arg() = py::none(), py::arg() = py::tuple(), 
+        py::arg("graph") = py::none(), py::arg("use_static_shape") = false);
 
     auto output_callback = [](auto callback, const std::vector<cg::VarNode*>& inputs,
             std::shared_ptr<RendezvousBase> r = {}, bool borrow = false, bool prefer_host_value = false) {

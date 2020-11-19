@@ -35,13 +35,15 @@ public:
                   callback_t callback,
                   const VarNodeArray& inputs,
                   const TensorShape& output_shape,
-                  const OperatorNodeConfig &config);
+                  const OperatorNodeConfig &config,
+                  bool use_static_shape);
     static SymbolVarArray make(cg::ComputingGraph& graph,
                                callback_t callback,
                                CompNode comp_node,
                                DType dtype,
                                const TensorShape& shape,
-                               const SymbolVarArray& inputs = {});
+                               const SymbolVarArray& inputs = {},
+                               bool use_static_shape = false);
     static cg::OperatorNodeBase* shallow_copy(
             const serialization::OprShallowCopyContext &ctx,
             const cg::OperatorNodeBase &opr_, const VarNodeArray &inputs,
@@ -53,6 +55,7 @@ protected:
 private:
     TensorShape m_output_shape;
     callback_t m_callback;
+    bool m_use_static_shape;
 };
 
 MGB_DEFINE_OPR_CLASS(OutputCallback, cg::SingleCNOperatorNodeBase) // {

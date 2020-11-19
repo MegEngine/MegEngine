@@ -97,7 +97,9 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
             for param in net.parameters():
                 ori_params[param] = np.copy(param.numpy())
 
-            train_func(np.random.random(data_shape).astype(np.float32), opt=opt, gm=gm)
+            train_func(
+                tensor(np.random.random(data_shape).astype(np.float32)), opt=opt, gm=gm
+            )
             step += 1
             check_func(ori_params, net.parameters(), step)
 

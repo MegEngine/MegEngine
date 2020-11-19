@@ -74,6 +74,11 @@ class Graph(_imperative_rt.ComputingGraph):
         self.execute(*args)
         return self.wait()
 
+    def _make_const_for_backward(self, data):
+        device = as_device(data.comp_node).to_c()
+        data = data.numpy()
+        return self._wrap(_imperative_rt.make_const(self, data, device, data.dtype))
+
     def make_const(self, data, dtype=None, device=None):
         if isinstance(data, _imperative_rt.DeviceTensorND):
             assert dtype is None and device is None
@@ -437,7 +442,9 @@ def _(op: OpDef, *args: VarNode):
 def _(op: BackwardGraph, *args: VarNode):
     assert args
     graph = args[0].graph
-    return op.interpret(lambda op, args: apply(op, *args), graph.make_const, args)
+    return op.interpret(
+        lambda op, args: apply(op, *args), graph._make_const_for_backward, args
+    )
 
 
 def input_callback(callback, *args, device=None, dtype=None, shape=None, graph=None):
@@ -449,12 +456,26 @@ def input_callback(callback, *args, device=None, dtype=None, shape=None, graph=N
 
 
 class InputNode(OpNode):
-    def __init__(self, *args: VarNode, device=None, dtype=None, shape=None, graph=None):
+    def __init__(
+        self,
+        *args: VarNode,
+        device=None,
+        dtype=None,
+        shape=None,
+        graph=None,
+        use_static_shape=False
+    ):
         r = _imperative_rt.DeviceTensorNDRendezvous()
         if device is not None:
             device = as_device(device).to_c()
         outputs = _imperative_rt.input_callback(
-            r, device, dtype, shape, _unwrap(args), graph=graph
+            r,
+            device,
+            dtype,
+            shape,
+            _unwrap(args),
+            graph=graph,
+            use_static_shape=use_static_shape,
         )
         super().__init__(outputs[0].owner)
         self._rendezvous = r

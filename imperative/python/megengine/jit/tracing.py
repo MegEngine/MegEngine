@@ -11,6 +11,7 @@ import contextlib
 import functools
 import itertools
 import json
+import os
 import typing
 import warnings
 import weakref
@@ -33,6 +34,10 @@ from ..core.tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
 from ..core.tensor.raw_tensor import OpDef, RawTensor, as_raw_tensor
 from ..core.tensor.tensor import Tensor
 from .sublinear_memory_config import SublinearMemoryConfig
+
+
+def _input_node_use_static_shape():
+    return os.environ.get("MEGENGINE_INPUT_NODE_USE_STATIC_SHAPE") is not None
 
 
 class TraceMismatchError(RuntimeError):
@@ -76,6 +81,7 @@ class TensorInfo:
         "device",
         "dtype",
         "shape",
+        "is_const",
         "bound_data",
         # resources for execution
         "varnode",
@@ -242,6 +248,28 @@ class trace:
         self._active_tensors.update(outputs)
         return outputs
 
+    def _apply_const(self, op, args):
+        assert not self._untraced
+        # check against trace
+        if self._pc >= len(self._seq):
+            raise TraceMismatchError("trace should end here, but more op observed")
+        record = self._seq[self._pc]
+        op_, ihandles, ohandles = record
+        assert isinstance(op_, Const)
+
+        eq = op_.value == op.value
+        if not isinstance(eq, bool):
+            eq = all(eq)
+        if not eq:
+            raise TraceMismatchError(
+                "const tensor violated: got a different tensor this time"
+            )
+
+        self._pc += 1
+        (h,) = ohandles
+        outputs = tuple([self._tinfo[h].bound_data])
+        return outputs
+
     def _record_op(self, op, inputs, outputs):
         if skip_tracing:
             for x in inputs:
@@ -275,7 +303,24 @@ class trace:
         self._active_tensors.update(outputs)
 
     def _record_const(self, op, outputs):
-        pass
+        if skip_tracing:
+            (x,) = outputs
+            h = getattr(x, "_TraceMixin__handle", None)
+            if h is not None:
+                self._tinfo[h].data_read = True
+            return
+
+        (x,) = outputs
+        h, info = self._new_handle()
+        ohandles = [h]
+        info.external = True
+        info.device = x.device
+        info.dtype = x.dtype
+        info.shape = x.shape
+        info.bound_data = x
+        info.is_const = True
+        TraceMixin._TraceMixin__inject(x, h)
+        self._seq.append((op, tuple(), tuple(ohandles)))
 
     def _set_active(self, active: bool):
         global active_trace
@@ -308,6 +353,11 @@ class trace:
             for x in lazy_eval_tensors
         ]
         self._apply_graph_options(lazy_eval_graph)
+        # FIXME
+        if self._graph_opt_level is not None:
+            lazy_eval_graph.options.graph_opt_level = self._graph_opt_level
+        else:
+            lazy_eval_graph.options.graph_opt_level = 2
         lazy_eval_graph.compile(*lazy_eval_links, *readers)
         lazy_eval_graph()
         for r, x in zip(readers, lazy_eval_tensors):
@@ -323,6 +373,7 @@ class trace:
                 self._init_trace(self._symbolic)
             else:
                 apply.enable(apply_compiled_mode)
+                apply.enable(apply_const_compiled_mode)
                 if self._graph is None:
                     self._compile()
                 self._graph.execute()
@@ -370,6 +421,7 @@ class trace:
             apply.disable(apply_symbolic_mode)
             apply.disable(apply_const_symbolic_mode)
             apply.disable(apply_compiled_mode)
+            apply.disable(apply_const_compiled_mode)
             self._set_active(False)
 
         def do_exit():
@@ -409,8 +461,10 @@ class trace:
         graph.options.no_force_inplace = True
         graph.options.seq_opt.enable_seq_comp_node_opt = False
         # graph opt level
-        if self._graph_opt_level is not None:
-            graph.options.graph_opt_level = self._graph_opt_level
+        # if self._graph_opt_level is not None:
+        #     graph.options.graph_opt_level = self._graph_opt_level
+        # FIXME
+        graph.options.graph_opt_level = 0
         # sublinear
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True
@@ -442,22 +496,49 @@ class trace:
             for h in itertools.chain(self._arg_bindings, self._kwarg_bindings.values()):
                 info = self._tinfo[h]
                 opnode = info.data_setter = G.InputNode(
-                    device=info.device, dtype=info.dtype, shape=info.shape, graph=graph
+                    device=info.device,
+                    dtype=info.dtype,
+                    shape=info.shape,
+                    graph=graph,
+                    use_static_shape=_input_node_use_static_shape(),
                 )
                 need_reset_nodes.append(opnode)
                 info.varnode = opnode.outputs[0]
                 links += opnode.outputs[1:]
 
         for op, ihandles, ohandles in self._seq:
-            require_links = type(op) in _io_op_types
+            if isinstance(op, Const):
+                assert len(ihandles) == 0
+                (h,) = ohandles
+                info = self._tinfo[h]
+                if not hasattr(info, "varnode"):
+                    assert info.external
+                    assert info.bound_data
+                    info.varnode = graph.make_const(
+                        info.bound_data.numpy(),
+                        info.bound_data.dtype,
+                        info.bound_data.device,
+                    )
+                continue
 
+            require_links = type(op) in _io_op_types
             ivars = []
             for i, h in enumerate(ihandles):
                 info = self._tinfo[h]
                 if not hasattr(info, "varnode"):
                     assert info.external
                     if info.bound_data:
-                        info.varnode = graph.make_const(info.bound_data._dev_tensor())
+                        if hasattr(info, "is_const") and info.is_const:
+                            info.varnode = graph.make_const(
+                                info.bound_data.numpy(),
+                                info.bound_data.dtype,
+                                info.bound_data.device,
+                            )
+                        else:
+                            info.varnode = graph.make_const(
+                                info.bound_data._dev_tensor()
+                                # info.bound_data.numpy()
+                            )
                     else:
                         opnode = info.data_setter = G.InputNode(
                             *links,
@@ -465,6 +546,7 @@ class trace:
                             dtype=info.dtype,
                             shape=info.shape,
                             graph=graph,
+                            use_static_shape=_input_node_use_static_shape(),
                         )
                         need_reset_nodes.append(opnode)
                         info.varnode, *links = opnode.outputs
@@ -500,7 +582,11 @@ class trace:
                 if info.shape_read:
                     opnode = info.shape_reader = G.AttrOutputNode(v, *links)
                     add_reader(opnode)
-
+        # FIXME
+        if self._graph_opt_level is not None:
+            graph.options.graph_opt_level = self._graph_opt_level
+        else:
+            graph.options.graph_opt_level = 2
         graph.compile(*readers)
 
     def _reset_exec_env(self):
@@ -643,6 +729,17 @@ class trace:
             )
 
         for op, ihandles, ohandles in self._seq:
+            if isinstance(op, Const):
+                assert len(ihandles) == 0
+                (h,) = ohandles
+                info = self._tinfo[h]
+                if h not in h2v:
+                    assert info.external
+                    assert info.bound_data
+                    h2v[h] = graph.make_const(
+                        info.bound_data.numpy(), dtype=info.dtype, device=info.device,
+                    )
+                continue
             ivars = []
             for h in ihandles:
                 info = self._tinfo[h]
@@ -874,6 +971,7 @@ class CompiledTensorProxy(RawTensor):
 
 class LazyEvalTensor(RawTensor):
     def __init__(self, varnode):
+        super(LazyEvalTensor, self).__init__()
         self.__varnode = varnode
 
     @property
@@ -953,11 +1051,22 @@ def assign_raw_tensor(lhs, rhs):
 @apply.register()
 def apply_symbolic_mode(op: OpDef, *args: RawTensor):
     graph = active_trace._lazy_eval_graph
-    ivars = [
-        getattr(x, "_LazyEvalTensor__varnode", None)
-        or graph.make_const(x._dev_tensor())
-        for x in args
-    ]
+    ivars = []
+    for x in args:
+        var = getattr(x, "_LazyEvalTensor__varnode", None)
+        if var:
+            ivars.append(var)
+        else:
+            data_setter = G.InputNode(
+                device=x.device,
+                dtype=x.dtype,
+                shape=x.shape,
+                graph=graph,
+                use_static_shape=True,
+            )
+            var = data_setter.outputs[0]
+            ivars.append(var)
+            data_setter.set_value(x._dev_tensor())
 
     require_links = type(op) in _io_op_types
 
@@ -1002,6 +1111,20 @@ def apply_compiled_mode(op: OpDef, *args: RawTensor):
 
 
 apply.disable(apply_compiled_mode)
+
+
+@apply.register()
+def apply_const_compiled_mode(op: Const, *args: RawTensor):
+    if skip_tracing:
+        args = [
+            as_raw_tensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
+            for x in args
+        ]
+        return apply.super(op, *args)
+    return active_trace._apply_const(op, args)
+
+
+apply.disable(apply_const_compiled_mode)
 
 
 # this hook injects TraceMixin

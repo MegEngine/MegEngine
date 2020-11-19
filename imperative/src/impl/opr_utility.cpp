@@ -33,14 +33,18 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(InputCallback);
 InputCallback::InputCallback(cg::ComputingGraph& graph, callback_t callback,
                              const VarNodeArray& inputs,
                              const TensorShape& output_shape,
-                             const OperatorNodeConfig& config)
+                             const OperatorNodeConfig& config,
+                             bool use_static_shape)
         : Super(&graph, config, "input_callback", inputs),
-          m_output_shape(output_shape), m_callback(callback) {
+          m_output_shape(output_shape), m_callback(callback), m_use_static_shape(use_static_shape) {
     for (VarNode* i : inputs) {
         add_input({i});
     }
     DType dt = config.output_dtype();
     mgb_assert(dt.valid());
+    if(m_use_static_shape){
+        mgb_assert(m_output_shape.ndim);
+    }
     add_output(None)->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC).dtype(dt);
     add_output(None)
             ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
@@ -52,7 +56,8 @@ InputCallback::InputCallback(cg::ComputingGraph& graph, callback_t callback,
 SymbolVarArray InputCallback::make(cg::ComputingGraph& graph,
                                    callback_t callback, CompNode comp_node,
                                    DType dtype, const TensorShape& shape,
-                                   const SymbolVarArray& inputs) {
+                                   const SymbolVarArray& inputs,
+                                   bool use_static_shape) {
     mgb_assert(comp_node.valid());
     mgb_assert(dtype.valid());
     OperatorNodeConfig config;
@@ -60,24 +65,33 @@ SymbolVarArray InputCallback::make(cg::ComputingGraph& graph,
     config.output_dtype(dtype);
     auto vinputs = to_var_node_array(inputs);
     auto opr = graph.insert_opr(
-            std::make_unique<InputCallback>(graph, callback, vinputs, shape, config));
+            std::make_unique<InputCallback>(graph, callback, vinputs, shape, config, use_static_shape));
     return to_symbol_var_array(opr->output());
 }
 
 void InputCallback::init_output_static_infer_desc() {
-    if (m_output_shape.ndim) {
-        // Write this shape to static infer manager. The effect is
-        // that infer_shape_fallible() will return a non-empty shape
-        // while get_infer_type() remains NO_DESC. Most places check
-        // infer type before relying on inferred shape so things
-        // won't break. Memory optimizer however, deliberately omits
-        // infer type check so it will be able to use this shape for hint.
-        using namespace cg::static_infer;
-        auto* var = output(0);
-        var->shape(m_output_shape);
-        auto&& mgr = cg::ComputingGraphImpl::downcast(owner_graph())->static_infer_manager_impl();
-        auto* handle = mgr.get_tag_handler_for_shape(var);
-        handle->sync_from_var();
+    using namespace cg::static_infer;
+    if(m_use_static_shape) {
+        auto &&mgr = owner_graph()->static_infer_manager();
+        auto infer_shape = [this](TensorShape &dest, const InpVal &) {
+            dest = m_output_shape;
+            return true;
+        };
+        mgr.register_shape_infer(output(0), {SourceType::CONSTANT, {}, infer_shape});
+    } else {
+        if (m_output_shape.ndim) {
+            // Write this shape to static infer manager. The effect is
+            // that infer_shape_fallible() will return a non-empty shape
+            // while get_infer_type() remains NO_DESC. Most places check
+            // infer type before relying on inferred shape so things
+            // won't break. Memory optimizer however, deliberately omits
+            // infer type check so it will be able to use this shape for hint.
+            auto* var = output(0);
+            var->shape(m_output_shape);
+            auto&& mgr = cg::ComputingGraphImpl::downcast(owner_graph())->static_infer_manager_impl();
+            auto* handle = mgr.get_tag_handler_for_shape(var);
+            handle->sync_from_var();
+        }
     }
 }
 
@@ -92,6 +106,9 @@ cg::OperatorNodeBase::NodeProp* InputCallback::do_make_node_prop() const {
 
 void InputCallback::scn_do_execute() {
     auto dev_tensor = m_callback();
+    if (m_use_static_shape) {
+        mgb_assert(dev_tensor.shape().eq_shape(m_output_shape));
+    }
     output(0)->reset_dev_tensor_from_tensor(dev_tensor);
 }
 
@@ -101,7 +118,10 @@ cg::OperatorNodeBase* InputCallback::shallow_copy(
         const OperatorNodeConfig &config) {
     auto &&opr = opr_.cast_final_safe<InputCallback>();
     auto* graph = ctx.owner_graph(opr, inputs);
-    return graph->insert_opr(std::make_unique<InputCallback>(*graph, opr.m_callback, inputs, opr.m_output_shape, config));
+    return graph->insert_opr(
+        std::make_unique<InputCallback>(*graph, opr.m_callback,
+                                        inputs, opr.m_output_shape,
+                                        config, opr.m_use_static_shape));
 }
 
 MGB_REG_OPR_SHALLOW_COPY(InputCallback, InputCallback::shallow_copy);
