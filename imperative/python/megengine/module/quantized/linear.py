@@ -17,9 +17,7 @@ from .module import QuantizedModule
 class Linear(QuantizedModule):
     r"""Quantized version of :class:`~.qat.linear.Linear`."""
 
-    def __init__(
-        self, dtype: np.dtype = None,
-    ):
+    def __init__(self, dtype: np.dtype = None):
         super().__init__()
         self.weight = None
         self.bias = None

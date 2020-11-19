@@ -54,17 +54,15 @@ class QuantMode(Enum):
 
     SYMMERTIC = 1
     ASYMMERTIC = 2
-    TQT = 3
 
 
 qparam_dict = {
-    QuantMode.SYMMERTIC: {"mode": QuantMode.SYMMERTIC, "scale": None,},
+    QuantMode.SYMMERTIC: {"mode": QuantMode.SYMMERTIC, "scale": None},
     QuantMode.ASYMMERTIC: {
         "mode": QuantMode.ASYMMERTIC,
         "scale": None,
         "zero_point": None,
     },
-    QuantMode.TQT: {"mode": QuantMode.TQT, "scale": None,},
 }
 
 

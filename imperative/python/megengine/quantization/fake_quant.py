@@ -28,7 +28,9 @@ class _FakeQuantize(Module):
     :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
-    def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):
+    def __init__(
+        self, dtype: str, narrow_range: bool = False, enable: bool = True, **kwargs
+    ):
         super().__init__()
         if not dtype in _metadata_dict.keys():
             raise ValueError(
@@ -114,24 +116,28 @@ class TQT(_FakeQuantize):
     for Accurate and Efficient Fixed-Point Inference of Deep Neural Networks.
     """
 
-    def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):
-        super().__init__(dtype, narrow_range, enable)
-        self.scale = Parameter([0.0], dtype=np.float32)
+    def __init__(
+        self,
+        q_dict,
+        dtype: str,
+        narrow_range: bool = False,
+        enable: bool = True,
+        **kwargs
+    ):
+        super().__init__(dtype, narrow_range, enable, **kwargs)
+        assert (
+            q_dict["mode"] == QuantMode.SYMMERTIC
+        ), "only symmetric quantization is supported by TQT"
+        if "scale" not in q_dict or q_dict["scale"] is None:
+            raise AssertionError("Can not get an initialized scale")
+        self.scale = F.log(q_dict["scale"]) / math.log(2)
 
     def fake_quant_forward(self, inp, q_dict=None):
         # when enable, TQT will do fakequant forward, finetune the scale
         return TQT_Function(self.qmin, self.qmax)(inp, self.scale)
 
-    def normal_foward(self, inp, q_dict=None):
-        if q_dict["enable_observer"]:
-            # when disable, TQT will do normal forward, initialize scale weight
-            tmp_scale = F.maximum(F.abs(q_dict["min_val"]), F.abs(q_dict["max_val"]))
-            tmp_scale = F.log(tmp_scale / 127) / math.log(2)
-            self.scale[...] = tmp_scale
-        return inp
-
     def get_qparams(self):
-        q_dict = get_qparam_dict(QuantMode.TQT)
+        q_dict = get_qparam_dict(QuantMode.SYMMERTIC)
         q_dict["scale"] = 2 ** self.scale
         return q_dict
 

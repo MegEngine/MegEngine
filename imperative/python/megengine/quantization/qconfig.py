@@ -13,6 +13,7 @@ from .observer import (
     ExponentialMovingAverageObserver,
     HistogramObserver,
     MinMaxObserver,
+    PassiveObserver,
     SyncExponentialMovingAverageObserver,
     SyncMinMaxObserver,
 )
@@ -66,17 +67,22 @@ class QConfig:
         self.weight_fake_quant = weight_fake_quant
         self.act_fake_quant = act_fake_quant
 
+    def __eq__(self, other):
+        def eq(a, b):
+            if isinstance(a, partial) and isinstance(b, partial):
+                return all(
+                    [a.func == b.func, a.args == b.args, a.keywords == b.keywords]
+                )
+            else:
+                return a == b
 
-tqt_quant_qconfig = QConfig(
-    weight_observer=partial(
-        ExponentialMovingAverageObserver, dtype="qint8", narrow_range=True
-    ),
-    act_observer=partial(
-        ExponentialMovingAverageObserver, dtype="qint8", narrow_range=False
-    ),
-    weight_fake_quant=partial(TQT, dtype="qint8", narrow_range=True),
-    act_fake_quant=partial(TQT, dtype="qint8", narrow_range=False),
-)
+        return (
+            eq(self.weight_observer, other.weight_observer)
+            and eq(self.act_observer, other.act_observer)
+            and eq(self.weight_fake_quant, other.weight_fake_quant)
+            and eq(self.act_fake_quant, other.act_fake_quant)
+        )
+
 
 min_max_fakequant_qconfig = QConfig(
     weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
@@ -117,4 +123,18 @@ calibration_qconfig = QConfig(
     act_observer=partial(HistogramObserver, dtype="qint8", narrow_range=False),
     weight_fake_quant=None,
     act_fake_quant=None,
+)
+
+tqt_qconfig = QConfig(
+    weight_observer=None,
+    act_observer=None,
+    weight_fake_quant=partial(TQT, dtype="qint8", narrow_range=True),
+    act_fake_quant=partial(TQT, dtype="qint8", narrow_range=False),
+)
+
+passive_qconfig = QConfig(
+    weight_observer=partial(PassiveObserver, dtype="qint8", narrow_range=True),
+    act_observer=partial(PassiveObserver, dtype="qint8", narrow_range=False),
+    weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
+    act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
 )

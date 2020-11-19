@@ -7,6 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import math
 from abc import abstractmethod
+from copy import deepcopy
 
 import numpy as np
 
@@ -28,7 +29,7 @@ class Observer(Module):
         instead of 1 greater. Usually True for weight and False for activation.
     """
 
-    def __init__(self, dtype: str, narrow_range: bool = False):
+    def __init__(self, dtype: str, narrow_range: bool = False, **kwargs):
         super().__init__()
         if dtype not in _metadata_dict.keys():
             raise ValueError(
@@ -81,8 +82,9 @@ class MinMaxObserver(Observer):
         eps=0.00001,
         dtype="qint8",
         narrow_range: bool = False,
+        **kwargs
     ):
-        super().__init__(dtype, narrow_range)
+        super().__init__(dtype, narrow_range, **kwargs)
         self.mode = mode
         self.min_val = Tensor(np.finfo(np.float32).max, dtype=np.float32)
         self.max_val = Tensor(np.finfo(np.float32).min, dtype=np.float32)
@@ -105,7 +107,7 @@ class MinMaxObserver(Observer):
         else:
             # use maximun to avoid scale too small at the begin
             q_dict["scale"] = F.maximum(
-                (max_val - min_val) / (self.qmax - self.qmin), self.scale_limit,
+                (max_val - min_val) / (self.qmax - self.qmin), self.scale_limit
             )
             # caculate zero_point
             q_dict["zero_point"] = self.qmin - Round()((min_val / q_dict["scale"]))
@@ -148,8 +150,9 @@ class ExponentialMovingAverageObserver(MinMaxObserver):
         eps=0.00001,
         dtype="qint8",
         narrow_range: bool = False,
+        **kwargs
     ):
-        super().__init__(mode, eps, dtype, narrow_range)
+        super().__init__(mode, eps, dtype, narrow_range, **kwargs)
         self.momentum = Tensor(momentum)
         self.runtime_momentum = Tensor(0.0)
 
@@ -205,8 +208,9 @@ class HistogramObserver(MinMaxObserver):
         eps=0.00001,
         dtype="qint8",
         narrow_range: bool = False,
+        **kwargs
     ):
-        super().__init__(mode, eps, dtype, narrow_range)
+        super().__init__(mode, eps, dtype, narrow_range, **kwargs)
         self.bins = bins
         self.upsample_rate = upsample_rate
         self.dst_nbins = _metadata_dict[dtype].qmax - _metadata_dict[dtype].qmin + 1
@@ -417,7 +421,7 @@ class HistogramObserver(MinMaxObserver):
             # combine the existing histogram and new histogram into 1 histogram
             # We do this by first upsampling the histogram to a dense grid
             # and then downsampling the histogram efficiently
-            (new_min, new_max, downsample_rate, start_idx,) = self._adjust_min_max(
+            (new_min, new_max, downsample_rate, start_idx) = self._adjust_min_max(
                 new_min, new_max, self.upsample_rate
             )
 
@@ -442,3 +446,34 @@ class HistogramObserver(MinMaxObserver):
     def forward(self, x_orig):
         self.sideeffect_forward(x_orig)
         return x_orig
+
+
+class PassiveObserver(Observer):
+    r"""
+    This class can be set :attr:`scale` derectly.
+    """
+
+    def __init__(self, q_dict, dtype: str, narrow_range: bool = False, **kwargs):
+        super().__init__(dtype, narrow_range, **kwargs)
+        self.q_dict = deepcopy(q_dict)
+        if "scale" not in q_dict or q_dict["scale"] is None:
+            raise AssertionError("Can not get an initialized scale")
+        self.orig_scale = q_dict["scale"].numpy()
+
+    @property
+    def scale(self):
+        return self.q_dict["scale"]
+
+    @scale.setter
+    def scale(self, value):
+        assert value > 0
+        self.q_dict["scale"].set_value(value)
+
+    def get_qparams(self):
+        return self.q_dict
+
+    def forward(self, x):
+        r"""
+        Just return input because :attr:`q_dict` is set by :func:`~.apply_easy_quant`.
+        """
+        return x

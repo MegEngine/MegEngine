@@ -15,7 +15,8 @@ from .qconfig import (
     ema_fakequant_qconfig,
     ema_lowbit_fakequant_qconfig,
     min_max_fakequant_qconfig,
+    passive_qconfig,
     sync_ema_fakequant_qconfig,
-    tqt_quant_qconfig,
+    tqt_qconfig,
 )
 from .utils import QuantMode
