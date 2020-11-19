@@ -34,7 +34,7 @@ public:
     Property property() const override {
         using F = Property::Flag;
         return Property{F::NEED_INPUT_COLLAPSE | F::BIND_NDIM,
-                        JITFeatureBits::NONE, 64};
+                        JITFeatureBits::DIMSHUFFLE, 64};
     }
 
     size_t get_nr_workspace_outputs(JITExecutor* opr) const override;

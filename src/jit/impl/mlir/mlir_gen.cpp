@@ -20,6 +20,7 @@
 #include "megbrain/jit/mlir/ir/dialect.h"
 #include "megbrain/jit/mlir/ir/utils.h"
 #include "megbrain/opr/basic_arith.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megdnn/dtype.h"
 
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
@@ -160,6 +161,10 @@ private:
                 mgb_assert(
                         mlir::succeeded(declare(opr->output(0)->name(), out)));
                 return;
+            } else if (opr->same_type<opr::Dimshuffle>()) {
+                auto&& out = gen_dimshuffle(opr->cast_final<opr::Dimshuffle>());
+                mgb_assert(
+                        mlir::succeeded(declare(opr->output(0)->name(), out)));
             } else if (opr->same_type<opr::TypeCvt>()) {
                 auto&& out = gen_typecvt(opr->cast_final<opr::TypeCvt>());
                 mgb_assert(
@@ -186,16 +191,42 @@ private:
     }
 
     mlir::Value gen_typecvt(const opr::TypeCvt& opr) {
-        auto shape = get(opr.input(0))
+        auto itype = get(opr.input(0))
                              .getType()
-                             .dyn_cast_or_null<mlir::MemRefType>()
-                             .getShape();
+                             .dyn_cast_or_null<mlir::MemRefType>();
+        mgb_assert(itype, "currently only support MemRefType");
         auto res_type = mlir::MemRefType::get(
-                shape,
+                itype.getShape(),
                 megdnn_dtype_to_mlir_type(opr.param(), m_builder.getContext()));
         return m_builder.create<dialect::TypeCvt>(
                 m_builder.getUnknownLoc(), res_type, get(opr.input(0)),
                 opr.input(0)->dtype(), opr.param());
+    }
+
+    mlir::Value gen_dimshuffle(const opr::Dimshuffle& opr) {
+        auto itype = get(opr.input(0))
+                             .getType()
+                             .dyn_cast_or_null<mlir::MemRefType>();
+        mgb_assert(itype, "the input type of Dimshuffle must be MemRefType");
+        auto ishape = itype.getShape();
+        auto param = opr.param();
+
+        std::vector<int32_t> pattern;
+        std::vector<int64_t> oshape;
+        for (size_t i = 0; i < param.pattern_len; i++) {
+            int32_t j = param.pattern[i];
+            pattern.push_back(j);
+            if (j < 0) {
+                oshape.push_back(1);
+            } else {
+                oshape.push_back(ishape[j]);
+            }
+        }
+        auto res_type = mlir::MemRefType::get(oshape, itype.getElementType());
+
+        return m_builder.create<dialect::Dimshuffle>(
+                m_builder.getUnknownLoc(), res_type, get(opr.input(0)),
+                pattern);
     }
 
     mlir::Type get_type(const TensorLayout& layout) {

@@ -62,6 +62,7 @@ struct ElemwiseLowering : public ConversionPattern {
     ElemwiseLowering(MLIRContext* ctx)
             : ConversionPattern(mgb::dialect::Elemwise::getOperationName(), 1,
                                 ctx) {}
+
     LogicalResult matchAndRewrite(
             Operation* op, ArrayRef<Value> operands,
             ConversionPatternRewriter& rewriter) const final {
@@ -89,6 +90,7 @@ struct TypeCvtLowering : public ConversionPattern {
     TypeCvtLowering(MLIRContext* ctx)
             : ConversionPattern(mgb::dialect::TypeCvt::getOperationName(), 1,
                                 ctx) {}
+
     LogicalResult matchAndRewrite(
             Operation* op, ArrayRef<Value> operands,
             ConversionPatternRewriter& rewriter) const final {
@@ -100,6 +102,41 @@ struct TypeCvtLowering : public ConversionPattern {
                     mlir::Value input = get_operand<AffineLoadOp>(
                             builder, loc, memref_operands[0], loop_ivs);
                     return lower_typecvt_to_std(op, builder, loc, input);
+                });
+        return success();
+    }
+};
+
+struct DimshuffleLowering : public ConversionPattern {
+    DimshuffleLowering(MLIRContext* ctx)
+            : ConversionPattern(mgb::dialect::Dimshuffle::getOperationName(), 1,
+                                ctx) {}
+
+    static mlir::AffineMap get_affinemap_from_pattern(
+            const std::vector<int32_t>& pattern, mlir::MLIRContext* ctx) {
+        size_t ndim = *std::max_element(pattern.begin(), pattern.end()) + 1;
+        std::vector<mlir::AffineExpr> exprs(ndim);
+        for (size_t i = 0; i < pattern.size(); i++) {
+            int32_t j = pattern[i];
+            if (j >= 0) {
+                exprs[j] = mlir::getAffineDimExpr(i, ctx);
+            }
+        }
+        return mlir::AffineMap::get(pattern.size(), 0, exprs, ctx);
+    }
+
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands,
+            ConversionPatternRewriter& rewriter) const final {
+        auto loc = op->getLoc();
+        auto pattern = llvm::dyn_cast<dialect::Dimshuffle>(op).pattern();
+        auto map = get_affinemap_from_pattern(pattern, op->getContext());
+        lower_op_to_loops(
+                op, operands, rewriter,
+                [loc, op, &map](OpBuilder& builder, ValueRange memref_operands,
+                                ValueRange loop_ivs) {
+                    return builder.create<AffineLoadOp>(loc, memref_operands[0],
+                                                        map, loop_ivs);
                 });
         return success();
     }
@@ -172,9 +209,9 @@ public:
         target.addIllegalDialect<MgbDialect>();
 
         OwningRewritePatternList patterns;
-        patterns.insert<ElemwiseLowering, TypeCvtLowering, ReturnOpLowering,
-                        AssignOpLowering, ConstantScalarOpLowering>(
-                &getContext());
+        patterns.insert<ElemwiseLowering, TypeCvtLowering, DimshuffleLowering,
+                        ReturnOpLowering, AssignOpLowering,
+                        ConstantScalarOpLowering>(&getContext());
 
         if (failed(applyPartialConversion(getFunction(), target,
                                           std::move(patterns)))) {

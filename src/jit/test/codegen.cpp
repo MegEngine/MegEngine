@@ -15,6 +15,7 @@
 #include "megbrain/jit/executor_opr.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/test/helper.h"
 #include "megdnn/dtype.h"
 
@@ -538,6 +539,51 @@ add_typecvt_gtest(Int32, Float32);
 add_typecvt_gtest(Uint8, Float32);
 
 #undef add_typecvt_gtest
+
+/* ===================== TestJITMlirDimshuffle ===================== */
+
+void run_dimshuffle(CompNode cn, TensorShape ishape,
+                    const std::vector<int>& pattern) {
+    set_backend(Backend::MLIR);
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<> gen;
+
+    auto host_x = gen(ishape, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+    auto y = opr::Dimshuffle::make(x, pattern);
+
+    auto ig_gen = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+
+    for (auto i : get_rev_topo_order(y)) {
+        if (!i->template same_type<opr::Host2DeviceCopy>()) {
+            ig_gen->add_opr(i);
+        }
+    }
+
+    auto igraph = ig_gen->generate();
+    auto y_jit = JITExecutor::make(igraph, ig_gen->orig_inps());
+
+    HostTensorND host_y, host_y_jit;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_jit, host_y_jit)});
+    func->execute();
+
+    MGB_ASSERT_TENSOR_EQ(host_y, host_y_jit);
+}
+
+void run_dimshuffle_cases(CompNode cn) {
+    run_dimshuffle(cn, {3, 4, 5}, {2, 0, 1});
+    run_dimshuffle(cn, {3, 4, 5}, {1, -1, 0, 2});
+}
+
+TEST(TestJITMlirDimshuffle, Basic) {
+    run_dimshuffle_cases(CompNode::load("cpu0"));
+}
+
+TEST(TestJITMlirDimshuffle, BasicGPU) {
+    REQUIRE_GPU(1);
+    run_dimshuffle_cases(CompNode::load("gpu0"));
+}
 
 #endif  // MGB_JIT_MLIR
 

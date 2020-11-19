@@ -152,6 +152,47 @@ private:
     gpu::LaunchOp& m_launch_op;
 };
 
+struct DimshuffleLowering : public ConversionPattern {
+    DimshuffleLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
+            : ConversionPattern(dialect::Dimshuffle::getOperationName(), 1,
+                                ctx),
+              m_launch_op{launch_op} {}
+
+    static std::vector<mlir::Value> get_index_from_pattern(
+            const std::vector<int32_t>& pattern,
+            const std::vector<mlir::Value>& index) {
+        size_t ndim = *std::max_element(pattern.begin(), pattern.end()) + 1;
+        std::vector<mlir::Value> res(ndim);
+        for (size_t i = 0; i < pattern.size(); i++) {
+            int32_t j = pattern[i];
+            if (j >= 0) {
+                res[j] = index[i];
+            }
+        }
+        return res;
+    }
+
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands,
+            ConversionPatternRewriter& rewriter) const final {
+        auto loc = op->getLoc();
+
+        rewriter.setInsertionPointToEnd(&(m_launch_op.body().front()));
+
+        auto dst_layout = output_layout(m_launch_op);
+        auto index = get_multidim_tid(rewriter, loc, operands[0], dst_layout);
+        auto pattern = llvm::dyn_cast<dialect::Dimshuffle>(op).pattern();
+        auto shuffled_index = get_index_from_pattern(pattern, index);
+
+        rewriter.replaceOp(op, get_operand<LoadOp>(rewriter, loc, operands[0],
+                                                   shuffled_index));
+        return success();
+    }
+
+private:
+    gpu::LaunchOp& m_launch_op;
+};
+
 struct ReturnOpLowering : public ConversionPattern {
     ReturnOpLowering(MLIRContext* ctx, gpu::LaunchOp& launch_op)
             : ConversionPattern(dialect::ReturnOp::getOperationName(), 1, ctx),
@@ -275,9 +316,9 @@ public:
         target.addLegalDialect<gpu::GPUDialect>();
         target.addIllegalDialect<MgbDialect>();
 
-        patterns.insert<ElemwiseLowering, TypeCvtLowering, ReturnOpLowering,
-                        ConstantScalarOpLowering, AssignOpLowering>(
-                &getContext(), launch_op);
+        patterns.insert<ElemwiseLowering, TypeCvtLowering, DimshuffleLowering,
+                        ReturnOpLowering, ConstantScalarOpLowering,
+                        AssignOpLowering>(&getContext(), launch_op);
 
         if (failed(applyPartialConversion(func_op, target,
                                           std::move(patterns)))) {
