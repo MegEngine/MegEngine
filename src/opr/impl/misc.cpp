@@ -415,6 +415,8 @@ void TopK::record_execute_deps(ExecDependencyArray& deps) {
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TopK) {
+    // TopK has no gradient on the input k
+    if (wrt_idx) return nullptr;
     if (opr.param().mode == TopK::Param::Mode::KTH_ONLY) {
         mgb_assert(out_grad[0] && !out_grad[1] && !out_grad[2]);
         auto add_axis = [](SymbolVar x) {
