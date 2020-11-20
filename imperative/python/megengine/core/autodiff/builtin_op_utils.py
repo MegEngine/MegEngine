@@ -28,6 +28,7 @@ from ..ops.builtin import (
 from ..ops.special import Const
 from ..tensor.core import apply
 from ..tensor.function import Function
+from ..tensor.tensor import Tensor
 from ..tensor.tensor_wrapper import TensorWrapper
 
 _reduce_sum_param = Reduce(mode="SUM").to_c().param[0]
@@ -103,8 +104,8 @@ def default_grad_fn(op, inputs, outputs, input_requires_grad):
 
 
 def get_shape(x):
-    (s,) = apply(GetVarShape(), x)
-    return s
+    (s,) = apply(GetVarShape(), x._data)
+    return Tensor(s)
 
 
 # override for Elemwise.add

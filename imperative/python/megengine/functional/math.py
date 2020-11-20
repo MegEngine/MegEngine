@@ -229,7 +229,7 @@ def mean(
         [3.5]
 
     """
-    return inp.astype("float32").mean(axis=axis, keepdims=keepdims)
+    return inp.mean(axis=axis, keepdims=keepdims)
 
 
 def var(

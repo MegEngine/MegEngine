@@ -22,7 +22,14 @@ class Device:
         else:
             self._cn = CompNode(device)
 
-        self.logical_name = self._cn.logical_name
+        self._logical_name = None
+
+    @property
+    def logical_name(self):
+        if self._logical_name:
+            return self._logical_name
+        self._logical_name = self._cn.logical_name
+        return self._logical_name
 
     def to_c(self):
         return self._cn
@@ -39,7 +46,7 @@ class Device:
     def __eq__(self, rhs):
         if not isinstance(rhs, Device):
             rhs = Device(rhs)
-        return str(self._cn) == str(rhs._cn)
+        return self._cn == rhs._cn
 
 
 def device(obj):

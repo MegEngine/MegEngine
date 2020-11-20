@@ -107,7 +107,7 @@ private:
     //! level 2: both device and user side errors are async;
     //! level 1: user side errors are sync;
     //! level 0: both sync.
-    int m_async_level = 1;
+    int m_async_level = 2;
 };
 
 } // namespace mgb::imperative::interpreter::intl

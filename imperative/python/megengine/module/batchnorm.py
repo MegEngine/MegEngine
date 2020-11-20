@@ -35,14 +35,13 @@ class _BatchNorm(Module):
         self.track_running_stats = track_running_stats
         self._track_running_stats_saved = track_running_stats
         self.freeze = freeze
+        tshape = (1, self.num_features, 1, 1)
         if self.affine:
-            self.weight = Parameter(np.ones(num_features, dtype=np.float32))
-            self.bias = Parameter(np.zeros(num_features, dtype=np.float32))
+            self.weight = Parameter(np.ones(tshape, dtype=np.float32))
+            self.bias = Parameter(np.zeros(tshape, dtype=np.float32))
         else:
             self.weight = None
             self.bias = None
-
-        tshape = (1, self.num_features, 1, 1)
 
         if self.track_running_stats:
             self.running_mean = Tensor(np.zeros(tshape, dtype=np.float32))
@@ -86,10 +85,8 @@ class _BatchNorm(Module):
             inp = inp.reshape(new_shape)
 
         if self.freeze and self.training and self._track_running_stats_saved:
-            scale = self.weight.reshape(1, -1, 1, 1) * (
-                self.running_var + self.eps
-            ) ** (-0.5)
-            bias = self.bias.reshape(1, -1, 1, 1) - self.running_mean * scale
+            scale = self.weight * (self.running_var + self.eps) ** (-0.5)
+            bias = self.bias - self.running_mean * scale
             return inp * scale.detach() + bias.detach()
 
         if self.training and self.track_running_stats:
@@ -276,7 +273,7 @@ class BatchNorm2d(_BatchNorm):
         m = M.BatchNorm2d(4)
         inp = mge.tensor(np.random.rand(1, 4, 3, 3).astype("float32"))
         oup = m(inp)
-        print(m.weight.numpy(), m.bias.numpy())
+        print(m.weight.numpy().flatten(), m.bias.numpy().flatten())
         # Without L`e`arnable Parameters
         m = M.BatchNorm2d(4, affine=False)
         oup = m(inp)

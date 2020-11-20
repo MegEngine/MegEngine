@@ -188,7 +188,11 @@ def run_test(
             net.state_dict().items(), checkpoint["net_updated"].items()
         ):
             assert param[0] == param_ref[0]
-            np.testing.assert_allclose(param[1], param_ref[1], atol=max_err)
+            if "bn" in param[0]:
+                ref = param_ref[1].reshape(param[1].shape)
+                np.testing.assert_allclose(param[1], ref, atol=max_err)
+            else:
+                np.testing.assert_allclose(param[1], param_ref[1], atol=max_err)
 
     procs = []
     for rank in range(p_num):

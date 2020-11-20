@@ -55,6 +55,14 @@ def _is_module(obj):
     return isinstance(obj, Module)
 
 
+def _get_XNorm_typeclass():
+    from .batchnorm import _BatchNorm
+
+    XNorm_types = []
+    XNorm_types.append(_BatchNorm)
+    return tuple(XNorm_types)
+
+
 class Module(metaclass=ABCMeta):
     """
     Base Module class.
@@ -393,6 +401,18 @@ class Module(metaclass=ABCMeta):
         return offset
 
     def state_dict(self, rst=None, prefix="", keep_var=False):
+        _rst = self._state_dict(rst=rst, prefix=prefix, keep_var=keep_var)
+        rst = OrderedDict()
+        XNorm_typeclass = _get_XNorm_typeclass()
+        for (module_type, k), v in _rst.items():
+            # for performance reasons, parameters in XNorm (e.g., BatchNorm2d) are 4-dim tensors,
+            # however they will be reshaped to 1-dim tensors before returned by `statr_dict()`
+            if issubclass(module_type, XNorm_typeclass):
+                v = v.reshape(-1)
+            rst[k] = v
+        return rst
+
+    def _state_dict(self, rst=None, prefix="", keep_var=False):
         r"""
         Returns a dictionary containing whole states of the module.
         """
@@ -400,15 +420,16 @@ class Module(metaclass=ABCMeta):
         def is_state(obj):
             return _is_parameter(obj) or _is_buffer(obj)
 
+        module_type = self.__class__
         if rst is None:
             rst = OrderedDict()
 
         for k, v in self._flatten(recursive=False, with_key=True, predicate=is_state):
             assert prefix + k not in rst, "duplicated state: {}".format(k)
             if keep_var:
-                rst[prefix + k] = v
+                rst[(module_type, prefix + k)] = v
             else:
-                rst[prefix + k] = v.numpy()
+                rst[(module_type, prefix + k)] = v.numpy()
 
         for k, submodule in self._flatten(
             recursive=False,
@@ -507,13 +528,14 @@ class Module(metaclass=ABCMeta):
         Advance state_dict load through callable ``closure`` whose signature is
         ``closure(key: str, var: Tensor) -> Union[np.ndarry, None]``
         """
+        XNorm_typeclass = _get_XNorm_typeclass()
         assert callable(closure), "closure must be a function"
 
         loaded = []
         skipped = []
 
-        local_state_dict = self.state_dict(keep_var=True)
-        for k, var in local_state_dict.items():
+        local_state_dict = self._state_dict(keep_var=True)
+        for (module_type, k), var in local_state_dict.items():
             to_be_load = closure(k, var)
             if to_be_load is None:
                 skipped.append(k)
@@ -523,11 +545,27 @@ class Module(metaclass=ABCMeta):
             ), "closure should return a `np.ndarray`, now `{}` get {}".format(
                 k, to_be_load
             )
-            assert make_shape_tuple(var.shape) == make_shape_tuple(
-                to_be_load.shape
-            ), "param `{}` shape mismatch, should be {}, get {}".format(
-                k, var.shape, to_be_load.shape
-            )
+            var_shape = make_shape_tuple(var.shape)
+            to_be_load_shape = make_shape_tuple(to_be_load.shape)
+            if var_shape != to_be_load_shape:
+                # weight and bias in BatchNorm1d, BatchNorm2d and SyncBatchNorm are 1-dim tensors in v1.0, and
+                # since v1.1 they are 4-dim tensors. The following special rule for these modules preserves the
+                # backward compatibility.
+                if issubclass(module_type, XNorm_typeclass):
+                    if np.prod(var_shape) == np.prod(to_be_load_shape):
+                        to_be_load = to_be_load.reshape(var_shape)
+                    else:
+                        raise ValueError(
+                            "param `{}` size mismatch, should be {}, get {}".format(
+                                k, np.prod(var_shape), np.prod(to_be_load_shape)
+                            )
+                        )
+                else:
+                    raise ValueError(
+                        "param `{}` shape mismatch, should be {}, get {}".format(
+                            k, var_shape, to_be_load_shape
+                        )
+                    )
             var._reset(type(var)(to_be_load, dtype=to_be_load.dtype, device=var.device))
             loaded.append(k)
 

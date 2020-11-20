@@ -55,6 +55,8 @@ class Tensor(TensorBase):
 
 
 class ApplyContext:
+    __slots__ = ("inputs", "outputs", "key")
+
     def __init__(self):
         self.inputs = None
         self.outputs = None
@@ -81,7 +83,7 @@ def get_context():
 
 @apply.register()
 def tensor_apply(op: OpBase, *args: Tensor):
-    data = tuple(i._data if isinstance(i, Tensor) else i for i in args)
+    data = tuple(i._data for i in args)
     # type(Tensor._data) is RawTensor
     # dispached to apply.add@RawTensor.py if passed Tensor args
     outputs = apply(op, *data)
@@ -90,7 +92,7 @@ def tensor_apply(op: OpBase, *args: Tensor):
     with push_context() as ctx:
         ctx.inputs = args
         ctx.outputs = ret
-        for k in set().union(*(i._extra_data for i in args if isinstance(i, Tensor))):
+        for k in set().union(*(i._extra_data for i in args)):
             ctx.key = k
             data = tuple(
                 i._extra_data.get(k) if isinstance(i, Tensor) else i for i in args

@@ -120,12 +120,12 @@ make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad) {
-    auto&& graph = ProxyGraph::get_default_graph();
     auto hash_key = get_backward_graph_hash_key(def, inputs, input_requires_grad, output_has_grad);
     auto&& iter = backward_graph_cache.find(hash_key);
     if (iter != backward_graph_cache.end()) {
         return iter->second;
     }
+    auto&& graph = ProxyGraph::get_default_graph();
     auto res = graph->make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
     backward_graph_cache.emplace(hash_key, res);
     return res;

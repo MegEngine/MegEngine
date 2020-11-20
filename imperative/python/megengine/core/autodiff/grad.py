@@ -387,16 +387,19 @@ def tracer_apply(op: (OpDef, Function), *args: typing.Optional[Tracer]):
     if not manager._enabled:
         return
 
-    opnode, outputs = manager._new_opnode([i and i.node for i in args], ctx.outputs)
-
     # register backward method
     # tuple of backward functions corresponding to dy / dx_i
     # None means y is not a function of x_i
-    opnode.backward, output_need_grad = builtin_op_utils.builtin_op_get_backward_fn(
+    backward, output_need_grad = builtin_op_utils.builtin_op_get_backward_fn(
         op, ctx.inputs, ctx.outputs, input_requires_grad
     )
+    assert len(ctx.outputs) == len(output_need_grad)
+    if not any(output_need_grad):
+        return
 
-    assert len(outputs) == len(output_need_grad)
+    opnode, outputs = manager._new_opnode([i and i.node for i in args], ctx.outputs)
+    opnode.backward = backward
+
     outputs = [x if y else None for (x, y) in zip(outputs, output_need_grad)]
 
     opnode.backward_allow_noinput = check_backward_allow_noinput(op)

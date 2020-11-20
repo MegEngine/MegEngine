@@ -94,7 +94,7 @@ private:
 
     cg::OperatorNodeBase* m_cur_opr = nullptr;
     std::unique_ptr<ProxyGraphImpl> m_graph;
-    size_t m_max_op_cnt = 1000;
+    size_t m_max_op_cnt = 100;
     std::unique_ptr<ExecEnv> m_env;
     std::unique_ptr<StaticInferManager> m_static_infer_manager;
     std::unique_ptr<SeqCompNodeOptimizer> m_seq_comp_node_optimizer;
