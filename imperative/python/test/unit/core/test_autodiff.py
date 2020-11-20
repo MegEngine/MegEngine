@@ -163,12 +163,16 @@ def test_release():
     def check(f):
         n = 0
         d = None
-        for i in range(3):
-            f()
-            m = len(gc.get_objects())
-            d = m - n
-            n = m
-        assert d == 0
+        gc.disable()
+        try:
+            for i in range(3):
+                f()
+                m = len(gc.get_objects())
+                d = m - n
+                n = m
+            assert d == 0
+        finally:
+            gc.enable()
 
     x = TensorWrapper([0.0])
     dy = TensorWrapper(np.ones_like(x.numpy()))
