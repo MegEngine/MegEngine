@@ -22,25 +22,30 @@ namespace opr {
 MGB_DEFINE_OPR_CLASS(ExternCOprRunner,
                            cg::SingleCNOutshapePureByInshapeOprBase) // {
     std::shared_ptr<MGBOprDesc> m_desc;
+    //! store ExternCOprRunner opr full dump name
+    std::string m_dump_name;
+    //! store dynamic store param
+    std::shared_ptr<ExternCOprParam> m_param;
 
     void get_output_var_shape(const TensorShapeArray& inp_shape,
                               TensorShapeArray& out_shape) const override;
     void scn_do_execute() override;
     void add_input_layout_constraint() override;
     void init_output_dtype() override;
+    void check_param();
 
     static cg::OperatorNodeBase* make_from_desc_shared(
-            const VarNodeArray& inputs, std::shared_ptr<MGBOprDesc> desc,
-            const OperatorNodeConfig& config);
+            std::string& name, const VarNodeArray& inputs,
+            std::shared_ptr<MGBOprDesc> desc, const OperatorNodeConfig& config);
 
 public:
-    ExternCOprRunner(const VarNodeArray& inputs,
+    ExternCOprRunner(std::string& name, const VarNodeArray& inputs,
                      std::shared_ptr<MGBOprDesc> desc,
                      const OperatorNodeConfig& config);
 
     //! create from MGBOprDesc and steal its reference
     static cg::OperatorNodeBase* make_from_desc(
-            const VarNodeArray& inputs, MGBOprDesc* desc,
+            std::string& name, const VarNodeArray& inputs, MGBOprDesc* desc,
             const OperatorNodeConfig& config = {});
 
     /*!
@@ -87,6 +92,15 @@ public:
 
     //! helper for converting MGBTensorShape to TensorShape
     static TensorShape tensor_shape_from_c(const MGBTensorShape& shape);
+
+    const std::string& get_dump_name() {
+        return m_dump_name;
+    }
+
+    void set_param(const std::shared_ptr<ExternCOprParam>& param) {
+        m_param = param;
+        m_desc->dynamic_param = m_param.get();
+    }
 };
 
 }  // namespace opr

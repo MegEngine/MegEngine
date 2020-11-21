@@ -26,6 +26,10 @@ extern "C" {
 #define MGB_C_OPR_INIT_FUNC  mgb_c_opr_init
 #endif
 
+#define INIT_FUNCS(s) #s
+#define INIT_FUNC(s) INIT_FUNCS(s)
+#define MGB_C_OPR_INIT_FUNC_STR INIT_FUNC(MGB_C_OPR_INIT_FUNC)
+
 #define MGB_EXTERN_C_OPR_VERSION 0x24
 #define MGB_TENSOR_MAX_NDIM 8
 
@@ -53,6 +57,51 @@ typedef struct MGBTensor {
     MGBTensorLayout layout;
     void* data;  //!< the tensor value, accessible by caller CPU thread
 } MGBTensor;
+
+//! extern device tenosr struct
+typedef struct ExternDeviceTensor {
+    //! layout of device extern tensor, use to validity check with MGBTensor
+    MGBTensorLayout layout;
+    //! different NPU API has different type define so just define a void * to
+    //! compat all, need loader and SDK implement reinterpret_cast it
+    //! exampe for NNIE, device_ptr may define as
+    //! struct MemoryInfo {
+    //!     HI_U64 phy_addr;
+    //!     void* vir_addr;
+    //!     size_t size = 0;
+    //! }
+    void* device_ptr;
+} ExternDeviceTensor;
+
+//! for dynamic extern c opr param
+typedef struct ExternCOprParam {
+    //! dump name of extern c opr in graph
+    //! example graph:
+    //! ExternCOpr1(3516:preprocess)->opr->ExternCOpr2(3559)->opr->ExternCOpr3(3516:det_face)...
+    //! extern_c_opr_dump_name config case:
+    //! when set 3516:preprocess, ExternCOpr1 will be config.
+    //! when set 3559, ExternCOpr2 will be config.
+    //! when set 3516:det_face, ExternCOpr3 will be config.
+    //! when set nullptr, will auto config the first ExternCOpr.
+    const char* extern_c_opr_dump_name;
+
+    //! number of input/output, use to index and check
+    //! if set nr_input = 0, means do not provide input ExternDeviceTensor
+    //! if set nr_output = 0, means do not provide nr_output ExternDeviceTensor
+    size_t nr_input, nr_output;
+
+    //! ptr of input/output ExternDeviceTensor
+    ExternDeviceTensor* input;
+    ExternDeviceTensor* output;
+
+    //! device id
+    size_t device_id;
+
+    //! extra info for misc dynamic config
+    uint8_t* extra_info;
+    //! size of extra_info
+    size_t extra_info_size;
+} ExternCOprParam;
 
 /*!
  * \brief operator descriptor
@@ -93,6 +142,9 @@ typedef struct MGBOprDesc {
 
     //! custom user data to be associated with this descriptor
     void* user_data;
+
+    //! dynamic extern c opr param
+    ExternCOprParam* dynamic_param;
 } MGBOprDesc;
 
 //! foreach member function of MGBOprDesc to help initialization

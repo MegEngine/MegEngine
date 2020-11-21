@@ -42,6 +42,10 @@ typedef struct MGBTensor {
     void* data;  //!< the tensor value, accessible by caller CPU thread
 } MGBTensor;
 
+typedef struct ExternCOprParam {
+    //! just for build
+    size_t _;
+} ExternCOprParam;
 /*!
  * \brief operator descriptor
  *
@@ -74,6 +78,9 @@ typedef struct MGBOprDesc {
 
     //! custom user data to be associated with this descriptor
     void* user_data;
+
+    //! dynamic extern c opr param
+    ExternCOprParam* dynamic_param;
 } MGBOprDesc;
 
 //! foreach member function of MGBOprDesc to help initialization

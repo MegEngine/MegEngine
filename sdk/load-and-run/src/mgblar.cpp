@@ -153,7 +153,7 @@ R"__usage__(
     Print PID and wait for a line from stdin before starting execution. Useful
     for waiting for gdb attach.
   --c-opr-lib <path>
-    Load external operator library. It must implement `mgb_c_opr_init` as the
+    Load external operator library. It must implement MGB_C_OPR_INIT_FUNC_STR as the
     entry point.
   --thread <num>
     Number of threads to run concurrently. All threads perform the same work of
@@ -1223,7 +1223,7 @@ Args Args::from_argv(int argc, char **argv) {
             auto handle = dlopen(argv[i], RTLD_LAZY);
             mgb_assert(handle, "failed to open c opr lib %s: %s",
                     argv[i], dlerror());
-            const char* entry = "mgb_c_opr_init";
+            const char* entry = MGB_C_OPR_INIT_FUNC_STR;
             auto func = dlsym(handle, entry);
             mgb_assert(func, "can not resolve %s: %s", entry, dlerror());
             typedef void (*entry_f_t)(void*);

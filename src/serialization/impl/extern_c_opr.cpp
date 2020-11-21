@@ -9,8 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/comp_node_env.h"
 #include "megbrain/serialization/extern_c_opr.h"
+#include "megbrain/comp_node_env.h"
+#include "megbrain/graph/extern_copr_api.h"
 #include "megbrain/serialization/extern_c_opr_io.h"
 #include "megbrain/serialization/opr_load_dump.h"
 
@@ -280,11 +281,14 @@ void PlaceholderMGBOprDesc::dump(OprDumpContext& ctx, MGBOprDesc* desc) {
 
 /* ===================== ExternCOprRunner ===================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ExternCOprRunner);
-ExternCOprRunner::ExternCOprRunner(const VarNodeArray& inputs,
+ExternCOprRunner::ExternCOprRunner(std::string& name,
+                                   const VarNodeArray& inputs,
                                    std::shared_ptr<MGBOprDesc> desc,
                                    const OperatorNodeConfig& config)
         : Super{inputs[0]->owner_graph(), config, desc->type_name, inputs},
-          m_desc{std::move(desc)} {
+          m_desc{std::move(desc)},
+          m_dump_name{name},
+          m_param{nullptr} {
     mgb_assert(m_desc->size == sizeof(MGBOprDesc),
                "invalid MGBOprDesc size: expect=%zu got=%u", sizeof(MGBOprDesc),
                m_desc->size);
@@ -332,10 +336,61 @@ void ExternCOprRunner::init_output_dtype() {
         output(i)->dtype(dtype_c2cpp(out_dtypes[i]));
     }
 }
+void ExternCOprRunner::check_param() {
+    //! check extern dynamic param validity
+    //! nr_input=0 or nr_output=0 means do not provide input/output
+    //! ExternDeviceTensor for some case, ExternCOprParam may only config
+    //! device_id, extra_info, etc. so we need consider nr_input=0 or
+    //! nr_output=0
+    auto check = [](size_t nr_config_tensor, size_t var_node_size,
+                    ExternDeviceTensor* e_tensor,
+                    const VarNodeArray& var_node_array, const char* msg) {
+        mgb_assert(e_tensor, "%s ExternDeviceTensor should not be null!!", msg);
+        mgb_assert(
+                nr_config_tensor == var_node_size,
+                "param %s size provided by `config_extern_c_opr_dynamic_param` "
+                "mismatch with the number of %s, got %zu, expected %zu",
+                msg, msg, nr_config_tensor, var_node_size);
+        for (size_t i = 0; i < nr_config_tensor; i++) {
+            mgb_assert(e_tensor[i].device_ptr,
+                       "%s ExternDeviceTensor(index: %zu) device_ptr should "
+                       "not be null!!",
+                       msg, i);
+            auto param_shape = e_tensor[i].layout.shape;
+            auto shape = var_node_array.at(i)->shape();
+            auto param_dtype = e_tensor[i].layout.dtype;
+            auto dtype = dtype_cpp2c(var_node_array.at(i)->dtype());
+            mgb_assert(param_dtype == dtype,
+                       "%s dtype provided mismatch, expected: %u, got: %d", msg,
+                       param_dtype, dtype);
+            mgb_assert(shape.ndim == param_shape.ndim,
+                       "%s ndim provided mismatch got: %u, expect: %zu of "
+                       "index: %zu",
+                       msg, param_shape.ndim, shape.ndim, i);
+            for (size_t j = 0; j < shape.ndim; j++) {
+                mgb_assert(param_shape.shape[j] == shape.shape[j],
+                           "config %s shape should same with c opr %s shape: "
+                           "(got: %u expect: %zu) of index: %zu",
+                           msg, msg, param_shape.shape[j], shape.shape[j], j);
+            }
+        }
+    };
+
+    if (m_param && m_param->nr_input > 0) {
+        check(m_param->nr_input, input().size(), m_param->input, input(),
+              "input");
+    }
+
+    if (m_param && m_param->nr_output > 0) {
+        check(m_param->nr_output, output().size(), m_param->output, output(),
+              "output");
+    }
+}
 
 void ExternCOprRunner::scn_do_execute() {
     SmallVector<MGBTensor> c_inp(input().size()), c_out(output().size());
     SmallVector<HostTensorND> cpu_inp, cpu_out;
+    check_param();
 
     bool need_copy = false;
     if (comp_node().device_type() == CompNode::DeviceType::CPU) {
@@ -399,27 +454,31 @@ cg::OperatorNodeBase* ExternCOprRunner::make_placeholder(
         var_inp[i] = inputs[i].node();
     }
 
-    return make_from_desc(var_inp, desc, config);
+    auto dump_name = std::string{name};
+    return make_from_desc(dump_name, var_inp, desc, config);
 }
 
 cg::OperatorNodeBase* ExternCOprRunner::make_from_desc(
-        const VarNodeArray& inputs, MGBOprDesc* desc,
+        std::string& name, const VarNodeArray& inputs, MGBOprDesc* desc,
         const OperatorNodeConfig& config) {
     auto desc_del = [](MGBOprDesc* ptr) { ptr->release(ptr); };
-    return make_from_desc_shared(inputs, {desc, desc_del}, config);
+    return make_from_desc_shared(name, inputs, {desc, desc_del}, config);
 }
 
 cg::OperatorNodeBase* ExternCOprRunner::make_from_desc_shared(
-        const VarNodeArray& inputs, std::shared_ptr<MGBOprDesc> desc,
-        const OperatorNodeConfig& config) {
+        std::string& name, const VarNodeArray& inputs,
+        std::shared_ptr<MGBOprDesc> desc, const OperatorNodeConfig& config) {
     mgb_assert(!inputs.empty() && desc->nr_output);
 
 #define CHECK(name) mgb_assert(desc->name, #name " is not given");
     MGB_OPR_DESC_FOREACH_MEM_FN(CHECK);
 #undef CHECK
 
+    if (!config.name().valid())
+        const_cast<OperatorNodeConfig&>(config).name(name);
+
     auto opr = inputs[0]->owner_graph()->insert_opr(
-            std::make_unique<ExternCOprRunner>(inputs, std::move(desc),
+            std::make_unique<ExternCOprRunner>(name, inputs, std::move(desc),
                                                config));
     return &opr->cast_final_safe<ExternCOprRunner>();
 }
@@ -437,7 +496,11 @@ void ExternCOprRunner::dump(OprDumpContext& ctx,
 cg::OperatorNodeBase* ExternCOprRunner::load(OprLoadContext& ctx,
                                              const cg::VarNodeArray& inputs,
                                              const OperatorNodeConfig& config) {
-    auto name = ctx.load_buf_with_len();
+    auto dump_name = ctx.load_buf_with_len();
+    auto name = dump_name;
+    //! use to compat dump ExternCOprRunner with more info
+    if (auto index = name.find(":"))
+        name = name.substr(0, index);
     auto&& map = loader_map();
     auto iter = map.find(name);
     mgb_assert(iter != map.end(),
@@ -448,7 +511,7 @@ cg::OperatorNodeBase* ExternCOprRunner::load(OprLoadContext& ctx,
     if (auto trans = iter->second.second) {
         desc = trans(desc);
     }
-    return make_from_desc(inputs, desc, config);
+    return make_from_desc(dump_name, inputs, desc, config);
 }
 
 cg::OperatorNodeBase* ExternCOprRunner::shallow_copy(
@@ -456,7 +519,8 @@ cg::OperatorNodeBase* ExternCOprRunner::shallow_copy(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<ExternCOprRunner>();
-    return make_from_desc_shared(inputs, opr.m_desc, config);
+    auto dump_name = opr.m_dump_name;
+    return make_from_desc_shared(dump_name, inputs, opr.m_desc, config);
 }
 
 MGBTensorShape ExternCOprRunner::tensor_shape_to_c(const TensorShape& shape) {
@@ -479,6 +543,36 @@ TensorShape ExternCOprRunner::tensor_shape_from_c(const MGBTensorShape& shape) {
         ret.shape[i] = shape.shape[i];
     }
     return ret;
+}
+
+void mgb::config_extern_c_opr_dynamic_param(
+        std::unique_ptr<cg::AsyncExecutable>& func,
+        std::shared_ptr<ExternCOprParam> param) {
+    mgb_throw_if(!param, MegBrainError, "invalid ExternCOprParam param!!");
+
+    auto find_config_opr = false;
+
+    auto cb = [&](cg::OperatorNodeBase* opr) {
+        if (auto c_opr = opr->try_cast_final<opr::ExternCOprRunner>()) {
+            auto dump_name = c_opr->get_dump_name().c_str();
+            if (!param->extern_c_opr_dump_name ||
+                !strncmp(param->extern_c_opr_dump_name, dump_name,
+                         strlen(dump_name))) {
+                c_opr->set_param(param);
+                find_config_opr = true;
+                mgb_log_debug("config dynamic param for extern c opr: %s",
+                              dump_name);
+            }
+        }
+
+        return !find_config_opr;
+    };
+
+    func->iter_opr_seq(cb);
+
+    mgb_throw_if(!find_config_opr, MegBrainError,
+                 "graph do not include a ExternCOprRunner opr or error config "
+                 "extern_c_opr_dump_name!!");
 }
 
 /* ===================== public APIs ===================== */
