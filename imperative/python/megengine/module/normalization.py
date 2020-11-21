@@ -14,7 +14,7 @@ from megengine import Parameter
 
 class GroupNorm(M.Module):
     """
-    Simple implementation of GroupNorm.
+    Simple implementation of GroupNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     """
 
@@ -63,7 +63,7 @@ class GroupNorm(M.Module):
 
 class InstanceNorm(M.Module):
     """
-    simple implementation of InstanceNorm.
+    Simple implementation of InstanceNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/abs/1607.08022.
     Note that InstanceNorm equals using GroupNome with num_groups=num_channels.
     """
@@ -107,7 +107,7 @@ class InstanceNorm(M.Module):
 
 class LayerNorm(M.Module):
     """
-    simple implementation of LayerNorm.
+    Simple implementation of LayerNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     Note that LayerNorm equals using GroupNorm with num_groups=1.
     """
