@@ -1196,6 +1196,199 @@ void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
     free(wb.ptr());
 };
 
+void checker_conv_bias_common(std::vector<conv_bias::TestArg> args, Handle* handle,
+                       RNG* rng, float epsilon, DType type0, DType type1,
+                       DType type2, DType type3, const char* algo_name) {
+    using namespace conv_bias;
+
+    Checker<ConvBias> checker(handle);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
+    checker.set_dtype(0, type0);
+    checker.set_dtype(1, type1);
+    checker.set_dtype(2, type2);
+    checker.set_dtype(4, type3);
+    checker.set_epsilon(epsilon);
+    if (NULL != rng) {
+        checker.set_rng(0, rng).set_rng(1, rng).set_rng(2, rng).set_rng(3, rng);
+    }
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs(
+                {arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
+void checker_conv_bias_mul_int8x8x32(std::vector<conv_bias::TestArg> args,
+                                     Handle* handle, const char* algo_name) {
+    using namespace conv_bias;
+    float epsilon = 0.001;
+#if MEGDNN_ARMV7
+    epsilon = 1.0;
+#endif
+    Checker<ConvBias> checker(handle);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
+    checker.set_dtype(0, dtype::Int8());
+    checker.set_dtype(1, dtype::Int8());
+    checker.set_dtype(2, dtype::Int32());
+    checker.set_dtype(4, dtype::Int32());
+    checker.set_epsilon(epsilon);
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, {}, {}, {}});
+    }
+
+    UniformIntRNG rng{-50, 50};
+    for (auto&& arg : args) {
+        checker.set_dtype(0, dtype::QuantizedS8(2.5f))
+                .set_dtype(1, dtype::QuantizedS8(2.5f))
+                .set_dtype(2, dtype::QuantizedS32(6.25f))
+                .set_dtype(4, dtype::QuantizedS32(6.25f))
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &rng)
+                .set_param(arg.param)
+                .set_epsilon(epsilon)
+                .execs({arg.src, arg.filter, {}, {}, {}});
+    }
+}
+
+void checker_conv_bias_int8x8x32_preprocess(
+        std::vector<conv_bias::TestArg> args, Handle* handle,
+        const char* algo_name) {
+    using namespace conv_bias;
+
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle);
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
+    checker.set_dtype(0, dtype::Int8());
+    checker.set_dtype(1, dtype::Int8());
+    checker.set_dtype(2, dtype::Int32());
+    checker.set_dtype(4, dtype::Int32());
+    for (auto&& arg : args) {
+        checker.set_param(arg.param).execs({arg.src, arg.filter, {}, {}, {}});
+    }
+
+    UniformIntRNG rng{-50, 50};
+    for (auto&& arg : args) {
+        checker.set_dtype(0, dtype::QuantizedS8(2.5f))
+                .set_dtype(1, dtype::QuantizedS8(2.5f))
+                .set_dtype(2, dtype::QuantizedS32(6.25f))
+                .set_dtype(4, dtype::QuantizedS32(6.25f))
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &rng)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}, {}, {}});
+    }
+}
+
+std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
+        std::vector<size_t> kernel_vec,
+        std::vector<param::ConvBias::NonlineMode> nlmode_vec,
+        std::vector<megdnn::BiasMode> biasmode_vec, size_t stride, bool no_pad,
+        bool is_input_nchw, bool is_nchw44_dot) {
+    using namespace conv_bias;
+    using NLMode = param::ConvBias::NonlineMode;
+
+    std::vector<TestArg> args;
+    MEGDNN_MARK_USED_VAR(no_pad);
+
+    auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
+                    size_t kernel, size_t stride, size_t group, NLMode nlmode,
+                    megdnn::BiasMode bias_mode, int any_pad = -1) {
+        constexpr int pack_c = 4;
+        const size_t pad = any_pad >= 0 ? any_pad : kernel / 2;
+        auto oc_per_group = oc / group;
+        auto ic_per_group = ic / group;
+        bool ok_group = (oc % group == 0 && ic % group == 0) &&
+                        oc_per_group % pack_c == 0 && oc_per_group > 0 &&
+                        ic_per_group > 0;
+        bool nchw_disable = group > 1 || ic_per_group >= 4;
+        bool nchw44_disable = ic_per_group % pack_c != 0;
+        bool invalid_pad = (w + 2 * pad < kernel) || (h + 2 * pad < kernel);
+        if (!(ok_group) || invalid_pad) {
+            return;
+        }
+        if ((is_input_nchw && nchw_disable) ||
+            (!is_input_nchw && nchw44_disable)) {
+            return;
+        }
+
+        size_t kernel_h = kernel;
+        size_t kernel_w = kernel;
+        param::ConvBias param;
+        if (!is_nchw44_dot) {
+            param.format = param::ConvBias::Format::NCHW44;
+        } else {
+            param.format = param::ConvBias::Format::NCHW44_DOT;
+        }
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = pad;
+        param.pad_w = pad;
+        param.nonlineMode = nlmode;
+
+        auto src_tensor_shape = TensorShape{n, ic / pack_c, h, w, pack_c};
+        auto weight_tensor_shape = TensorShape{
+                oc / pack_c, ic / pack_c, kernel_h, kernel_w, pack_c, pack_c};
+        auto bias_tensor_shape = TensorShape{};
+        if (bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
+            bias_tensor_shape = {1, oc / pack_c, 1, 1, pack_c};
+        } else if (bias_mode == megdnn::BiasMode::BIAS) {
+            bias_tensor_shape = {n, oc / pack_c,
+                                 (h + 2 * pad - kernel) / stride + 1,
+                                 (w + 2 * pad - kernel) / stride + 1, pack_c};
+        }
+        if (group == 1) {
+            param.sparse = param::ConvBias::Sparse::DENSE;
+        } else if (group > 1 && ic / group == 1 && oc / group == 1) {
+            megdnn_assert(0, "not support channel wise");
+            param.sparse = param::ConvBias::Sparse::GROUP;
+            weight_tensor_shape = TensorShape{group / pack_c, 1,        1,
+                                              kernel_h,       kernel_w, pack_c};
+        } else if (group > 1 && oc_per_group % pack_c == 0 && oc / group > 0 &&
+                   ic_per_group % pack_c == 0 && ic / group > 0) {
+            param.sparse = param::ConvBias::Sparse::GROUP;
+            weight_tensor_shape = TensorShape{group,
+                                              oc_per_group / pack_c,
+                                              ic_per_group / pack_c,
+                                              kernel_h,
+                                              kernel_w,
+                                              pack_c,
+                                              pack_c};
+        }
+        if (is_input_nchw) {
+            src_tensor_shape = TensorShape{n, ic, h, w};
+            weight_tensor_shape =
+                    TensorShape{oc / pack_c, kernel_h, kernel_w, ic, pack_c};
+        }
+        args.emplace_back(param, src_tensor_shape, weight_tensor_shape,
+                          bias_tensor_shape);
+    };
+
+    for (auto bias : biasmode_vec)
+        for (auto nlmode : nlmode_vec)
+            for (size_t n : {1, 2})
+                for (size_t kernel : kernel_vec)
+                    for (size_t oc : {4, 12})
+                        for (size_t ic : {1, 3, 4, 12})
+                            for (size_t h : {1, 3, 12})
+                                for (size_t w : {1, 16, 23}) {
+                                    for (size_t group = 1;
+                                         group <=
+                                         std::min(std::min(oc, ic), 4_z);
+                                         ++group) {
+                                        if (kernel != 1 && (h == 1 || w == 1)) {
+                                            continue;
+                                        }
+                                        pack(n, oc, ic, h, w, kernel, stride,
+                                             group, nlmode, bias);
+                                    }
+                                }
+    return args;
+}
+
 }  // namespace conv_bias
 }  // namespace test
 }  // namespace megdnn

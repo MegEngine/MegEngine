@@ -97,7 +97,53 @@ void checker_conv_bias_int8x8x16(
 void winograd_algo_extra_impl(const TensorNDArray& tensors, uint32_t m,
                               param::ConvBias param, Handle* handle,
                               param::MatrixMul::Format format);
+void checker_conv_bias_common(std::vector<conv_bias::TestArg> args,
+                              Handle* handle, RNG* rng, float epsilon,
+                              DType type0, DType type1, DType type2,
+                              DType type3, const char* algo_name);
+std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
+        std::vector<size_t> kernel_vec,
+        std::vector<param::ConvBias::NonlineMode> nlmode_vec,
+        std::vector<megdnn::BiasMode> biasmode_vec, size_t stride,
+        bool no_pad = false, bool is_input_nchw = false,
+        bool is_nchw44_dot = false);
+void checker_conv_bias_mul_int8x8x32(std::vector<conv_bias::TestArg> args,
+                                     Handle* handle, const char* algo_name);
+void checker_conv_bias_int8x8x32_preprocess(
+        std::vector<conv_bias::TestArg> args, Handle* handle,
+        const char* algo_name);
 
+#define FULL_NLMODE                                    \
+    {                                                  \
+        param::ConvBias::NonlineMode::IDENTITY,        \
+                param::ConvBias::NonlineMode::RELU,    \
+                param::ConvBias::NonlineMode::H_SWISH, \
+                param::ConvBias::NonlineMode::SIGMOID  \
+    }
+#define QUAN_NLMODE                                   \
+    {                                                 \
+        param::ConvBias::NonlineMode::IDENTITY,       \
+                param::ConvBias::NonlineMode::RELU,   \
+                param::ConvBias::NonlineMode::H_SWISH \
+    }
+#define ONLY_IDENTITY_NLMODE \
+    { param::ConvBias::NonlineMode::IDENTITY }
+
+#define ALL_BIASMODE                                                         \
+    {                                                                        \
+        megdnn::BiasMode::NO_BIAS, megdnn::BiasMode::BROADCAST_CHANNEL_BIAS, \
+                megdnn::BiasMode::BIAS                                       \
+    }
+#define BR_AND_NO_BIASMODE \
+    { megdnn::BiasMode::NO_BIAS, megdnn::BiasMode::BROADCAST_CHANNEL_BIAS }
+#define BR_AND_BIAS_BIASMODE \
+    { megdnn::BiasMode::NO_BIAS, megdnn::BiasMode::BIAS }
+#define ONLY_BR_BIASMODE \
+    { megdnn::BiasMode::BROADCAST_CHANNEL_BIAS }
+#define ONLY_NO_BIASMODE \
+    { megdnn::BiasMode::NO_BIAS }
+#define ONLY_BIAS_BIASMODE \
+    { megdnn::BiasMode::BIAS }
 }  // namespace conv_bias
 }  // namespace test
 }  // namespace megdnn
