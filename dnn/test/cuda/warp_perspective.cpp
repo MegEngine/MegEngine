@@ -23,8 +23,7 @@ using namespace megdnn;
 using namespace test;
 
 class NanMatRNG : public RNG {
-    void gen(const TensorND& tensor_) override
-    {
+    void gen(const TensorND& tensor_) override {
         auto& gen = RandomState::generator();
         std::uniform_real_distribution<dt_float32> pdist3(1.9f, 2.1f);
         std::uniform_real_distribution<dt_float32> pdist(0.9f, 1.1f);
@@ -332,6 +331,144 @@ TEST_F(CUDA, WARP_PERSPECTIVE_NCHW4) {
                        {123, 3, 3},
                        {123},
                        {123, 14, 16, 15, 4}});
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_NCHW_NCHW4_IC_SMALL) {
+    using Param = WarpPerspective::Param;
+    WarpPerspective::Param param;
+    Checker<WarpPerspectiveForward> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+
+    param.format = Param::Format::NCHW_NCHW4_IC_SMALL;
+
+    checker.set_rng(1, &rng);
+    checker.set_dtype(0, dtype::Quantized8Asymm(0.1f, 128));
+    checker.set_dtype(2, dtype::QuantizedS8(0.1f));
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{2, 3, 10, 11}, {2, 3, 3}, {2, 1, 11, 12, 4}});
+        checker.execs({{1, 3, 25, 510}, {1, 3, 3}, {1, 1, 25, 25, 4}});
+        checker.execs({{1, 3, 25, 25}, {1, 3, 3}, {1, 1, 51, 51, 4}});
+        checker.execs({{1, 3, 51, 51}, {1, 3, 3}, {1, 1, 25, 25, 4}});
+    }
+    {
+        Checker<WarpPerspective, WarpPerspectiveMatIdxProxy> checker(
+                handle_cuda());
+        constexpr int N_SRC = 5;
+        UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+        checker.set_dtype(0, dtype::Quantized8Asymm(0.1f, 128));
+        checker.set_rng(1, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_rng(2, &mat_idx_rng);
+        checker.set_dtype(3, dtype::QuantizedS8(0.1f));
+        param.bmode = WarpPerspective::Param::BorderMode::REFLECT;
+        param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{N_SRC, 3, 10, 11}, {2, 3, 3}, {2}, {2, 1, 11, 12, 4}});
+        checker.execs(
+                {{N_SRC, 3, 17, 13}, {123, 3, 3}, {123}, {123, 1, 16, 15, 4}});
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_NHWC_NCHW4_IC_SMALL) {
+    using Param = WarpPerspective::Param;
+    WarpPerspective::Param param;
+    Checker<WarpPerspectiveForward> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+
+    param.format = Param::Format::NHWC_NCHW4_IC_SMALL;
+
+    checker.set_rng(1, &rng);
+    checker.set_dtype(0, dtype::Uint8());
+    checker.set_dtype(2, dtype::QuantizedS8(1.f));
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{2, 10, 11, 3}, {2, 3, 3}, {2, 1, 11, 12, 4}});
+        checker.execs({{1, 25, 510, 3}, {1, 3, 3}, {1, 1, 25, 25, 4}});
+        checker.execs({{1, 25, 25, 3}, {1, 3, 3}, {1, 1, 51, 51, 4}});
+        checker.execs({{1, 51, 51, 3}, {1, 3, 3}, {1, 1, 25, 25, 4}});
+    }
+    {
+        Checker<WarpPerspective, WarpPerspectiveMatIdxProxy> checker(
+                handle_cuda());
+        constexpr int N_SRC = 5;
+        UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+        checker.set_dtype(0, dtype::Uint8());
+        checker.set_rng(1, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_rng(2, &mat_idx_rng);
+        checker.set_dtype(3, dtype::QuantizedS8(1.f));
+        param.bmode = WarpPerspective::Param::BorderMode::REFLECT;
+        param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{N_SRC, 10, 11, 3}, {2, 3, 3}, {2}, {2, 1, 11, 12, 4}});
+        checker.execs(
+                {{N_SRC, 17, 13, 3}, {123, 3, 3}, {123}, {123, 1, 16, 15, 4}});
+    }
+}
+
+TEST_F(CUDA, WARP_PERSPECTIVE_NHWC_NCHW) {
+    using Param = WarpPerspective::Param;
+    WarpPerspective::Param param;
+    Checker<WarpPerspectiveForward> checker(handle_cuda());
+    WarpPerspectiveMatRNG rng;
+
+    param.format = Param::Format::NHWC_NCHW;
+
+    checker.set_rng(1, &rng);
+    checker.set_dtype(0, dtype::Uint8());
+    checker.set_dtype(2, dtype::Float32());
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
+        param.border_val = 0.3f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{2, 10, 11, 3}, {2, 3, 3}, {2, 3, 11, 12}});
+        checker.execs({{1, 25, 510, 3}, {1, 3, 3}, {1, 3, 25, 25}});
+        checker.execs({{1, 25, 25, 3}, {1, 3, 3}, {1, 3, 51, 51}});
+        checker.execs({{1, 51, 51, 3}, {1, 3, 3}, {1, 3, 25, 25}});
+    }
+    {
+        Checker<WarpPerspective, WarpPerspectiveMatIdxProxy> checker(
+                handle_cuda());
+        constexpr int N_SRC = 5;
+        UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+        checker.set_dtype(0, dtype::Uint8());
+        checker.set_rng(1, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_rng(2, &mat_idx_rng);
+        checker.set_dtype(3, dtype::Float32());
+        param.bmode = WarpPerspective::Param::BorderMode::REFLECT;
+        param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        checker.execs({{N_SRC, 10, 11, 3}, {2, 3, 3}, {2}, {2, 3, 11, 12}});
+        checker.execs(
+                {{N_SRC, 17, 13, 3}, {123, 3, 3}, {123}, {123, 3, 16, 15}});
     }
 }
 

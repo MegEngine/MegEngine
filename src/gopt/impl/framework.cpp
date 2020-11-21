@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megbrain/gopt/framework.h"
@@ -35,13 +36,13 @@ using namespace gopt;
 /* ================ SubGraph ================ */
 
 OperatorNodeBase* SubGraph::Rewriter::auto_replace_outputs(
-        OperatorNodeBase *opr) {
-    auto &&new_inp = m_opr_new_inp_cache;
+        OperatorNodeBase* opr) {
+    auto&& new_inp = m_opr_new_inp_cache;
     new_inp.clear();
     new_inp.reserve(opr->input().size());
     bool has_replaced_inp = false;
 
-    for (auto i: opr->input()) {
+    for (auto i : opr->input()) {
         auto new_var = get_var(i);
         if (new_var != i) {
             has_replaced_inp = true;
@@ -52,14 +53,14 @@ OperatorNodeBase* SubGraph::Rewriter::auto_replace_outputs(
     }
 
     if (has_replaced_inp) {
-        auto new_opr = serialization::copy_opr_shallow(
-                *opr, new_inp, opr->config());
+        auto new_opr =
+                serialization::copy_opr_shallow(*opr, new_inp, opr->config());
         auto &&out0 = opr->output(), &&out1 = new_opr->output();
         size_t i = 0;
         auto err_msg = [opr, new_opr] {
-            return ssprintf("bad opr copy: src=%s{%s} dst=%s{%s}",
-                    opr->cname(), opr->dyn_typeinfo()->name,
-                    new_opr->cname(), new_opr->dyn_typeinfo()->name);
+            return ssprintf("bad opr copy: src=%s{%s} dst=%s{%s}", opr->cname(),
+                            opr->dyn_typeinfo()->name, new_opr->cname(),
+                            new_opr->dyn_typeinfo()->name);
         };
         MGB_MARK_USED_VAR(err_msg);
         // opr output size mismatch may be caused by:
@@ -67,33 +68,33 @@ OperatorNodeBase* SubGraph::Rewriter::auto_replace_outputs(
         //     1) other post-insert optimization (e.g. const folding)
         // we can't handle only usable_output here, since some output var with
         // volatile flag could be the graph's endpoint (e.g. RemoteSend)
-        for (; i < std::min(out0.size(), out1.size()); ++ i) {
+        for (; i < std::min(out0.size(), out1.size()); ++i) {
             bool v0 = out0[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
                  v1 = out1[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT);
             mgb_assert(v0 == v1, "%s", err_msg().c_str());
 
-            auto &&ins = m_varmap.insert({out0[i], {true, nullptr}});
+            auto&& ins = m_varmap.insert({out0[i], {true, nullptr}});
             mgb_assert(ins.second || ins.first->second.first,
                        "opr output already replaced");
             // handle repeated call on the same opr
             ins.first->second.second = out1[i];
             on_var_replaced(out0[i], out1[i], nullptr);
         }
-        for (; i < out0.size(); ++ i) {
+        for (; i < out0.size(); ++i) {
             mgb_assert(out0[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
-                    "%s", err_msg().c_str());
+                       "%s", err_msg().c_str());
         }
-        for (; i < out1.size(); ++ i) {
+        for (; i < out1.size(); ++i) {
             mgb_assert(out1[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
-                    "%s", err_msg().c_str());
+                       "%s", err_msg().c_str());
         }
         return new_opr;
     }
     return opr;
 }
 
-void SubGraph::Rewriter::replace_var(
-        VarNode *src, VarNode *dst, const char *msg) {
+void SubGraph::Rewriter::replace_var(VarNode* src, VarNode* dst,
+                                     const char* msg) {
     if (src == dst)
         return;
 
@@ -103,19 +104,19 @@ void SubGraph::Rewriter::replace_var(
             "dst %s maps back to src %s in SubGraph::Rewriter::replace_var",
             dst->cname(), src->cname());
 
-    auto &&ins = m_varmap.insert({src, {false, dst}});
+    auto&& ins = m_varmap.insert({src, {false, dst}});
     if (!ins.second) {
-        auto &&old_rep = ins.first->second;
+        auto&& old_rep = ins.first->second;
         mgb_assert(old_rep.first || old_rep.second == dst,
-                "can not replace a var twice");
+                   "can not replace a var twice");
         old_rep.first = false;
         old_rep.second = dst;
     }
     on_var_replaced(src, dst, msg);
 }
 
-void SubGraph::Rewriter::on_var_replaced(
-        VarNode* src, VarNode* dst, const char* msg) {
+void SubGraph::Rewriter::on_var_replaced(VarNode* src, VarNode* dst,
+                                         const char* msg) {
     if (auto state = m_owner_graph->owner_opt_state()) {
         state->on_var_replaced(src, dst, msg);
     }
@@ -124,7 +125,7 @@ void SubGraph::Rewriter::on_var_replaced(
 void SubGraph::Rewriter::apply_inplace() const {
     m_owner_graph->m_endpoint_oprs.clear();
     m_owner_graph->m_endpoint_vars_set.clear();
-    for (auto &&var: m_owner_graph->m_endpoint_vars) {
+    for (auto&& var : m_owner_graph->m_endpoint_vars) {
         var = get_var(var.node());
         m_owner_graph->m_endpoint_oprs.insert(var.node()->owner_opr());
         m_owner_graph->m_endpoint_vars_set.insert(var.node());
@@ -150,33 +151,30 @@ std::pair<bool, VarNode*> SubGraph::Rewriter::get_var_internal(VarNode* var) {
     return it->second = {it_next->second.first & it->second.first, next.second};
 }
 
-SubGraph::SubGraph(const SymbolVarArray &endpoint_vars):
-    m_endpoint_vars(endpoint_vars)
-{
+SubGraph::SubGraph(const SymbolVarArray& endpoint_vars)
+        : m_endpoint_vars(endpoint_vars) {
     mgb_assert(!endpoint_vars.empty(), "endpoints can not be empty");
     m_comp_graph = endpoint_vars[0].node()->owner_graph();
-    for (auto i: endpoint_vars) {
+    for (auto i : endpoint_vars) {
         m_endpoint_oprs.insert(i.node()->owner_opr());
         m_endpoint_vars_set.insert(i.node());
         mgb_assert(m_comp_graph == i.node()->owner_graph(),
-                "endpoints belong to different computing graphs");
+                   "endpoints belong to different computing graphs");
     }
 }
 
-void SubGraph::iter(
-        const Callback& cb,
-        std::shared_ptr<ExtraDep> extra_dep) const {
+void SubGraph::iter(const Callback& cb,
+                    std::shared_ptr<ExtraDep> extra_dep) const {
     Callback on_opr;
 
     if (m_owner_opt_state) {
-        on_opr = [state=m_owner_opt_state, &cb](OperatorNodeBase *opr) {
+        on_opr = [state = m_owner_opt_state, &cb](OperatorNodeBase* opr) {
             state->m_opr_property_flag = OprPropertyFlag::ALL;
             state->m_cur_iter_src_opr = cg::get_opr_root_source_opr(opr);
             state->m_cur_iter_opr_priority =
-                opr->node_prop().attribute().priority;
+                    opr->node_prop().attribute().priority;
             state->m_cur_iter_opr_stream_prop_type =
-                state->m_comp_node_opt.stream_prop_type(
-                        opr->output(0));
+                    state->m_comp_node_opt.stream_prop_type(opr->output(0));
             mgb_assert(state->m_oprs_inserted.empty());
             cb(opr);
             state->m_opr_property_flag = OprPropertyFlag::NONE;
@@ -188,19 +186,19 @@ void SubGraph::iter(
     }
 
     cg::DepOprIter dep_iter{on_opr, std::move(extra_dep)};
-    for (auto i: m_endpoint_oprs)
+    for (auto i : m_endpoint_oprs)
         dep_iter.add(i);
 }
 
 ThinHashMap<VarNode*, size_t> SubGraph::get_var2nr_val_dep_oprs() const {
     ThinHashMap<VarNode*, size_t> ret;
-    auto cb = [&](OperatorNodeBase *opr) {
-        for (auto &&i: opr->node_prop().dep_map()) {
+    auto cb = [&](OperatorNodeBase* opr) {
+        for (auto&& i : opr->node_prop().dep_map()) {
             if (OperatorNodeBase::NodeProp::is_device_value_dep(i.second)) {
-                ++ ret.at(i.first);
+                ++ret.at(i.first);
             }
         }
-        for (auto i: opr->output()) {
+        for (auto i : opr->output()) {
             if (!i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
                 auto ins = ret.insert({i, 0});
                 mgb_assert(ins.second);
@@ -208,13 +206,13 @@ ThinHashMap<VarNode*, size_t> SubGraph::get_var2nr_val_dep_oprs() const {
         }
     };
     iter(cb);
-    for (auto i: m_endpoint_vars_set) {
+    for (auto i : m_endpoint_vars_set) {
         auto iter = ret.find(i);
         if (iter == ret.end()) {
             mgb_assert(i->contain_flag(VarNode::Flag::VOLATILE_CONTENT));
             ret[i] = 1;
         } else {
-            ++ ret.at(i);
+            ++ret.at(i);
         }
     }
     return ret;
@@ -222,10 +220,8 @@ ThinHashMap<VarNode*, size_t> SubGraph::get_var2nr_val_dep_oprs() const {
 
 /* ================ UniqReaderCheck ================ */
 
-UniqReaderCheck::UniqReaderCheck(const SubGraph &graph):
-    m_var2nr_val_dep{graph.get_var2nr_val_dep_oprs()}
-{
-}
+UniqReaderCheck::UniqReaderCheck(const SubGraph& graph)
+        : m_var2nr_val_dep{graph.get_var2nr_val_dep_oprs()} {}
 
 void UniqReaderCheck::update_on_opr_auto_replace(OperatorNodeBase* opr,
                                                  OperatorNodeBase* repl_opr) {
@@ -253,32 +249,30 @@ void UniqReaderCheck::update_on_opr_auto_replace(OperatorNodeBase* opr,
 
 /* ================ OptState ================ */
 
-OptState::OptState(
-        const GraphOptimizer *owner_optimizer, const SubGraph& graph):
-    m_owner_optimizer{owner_optimizer},
-    m_var_replace_map{
-        const_cast<ThinHashMap<VarNode*, VarNode*>*>(
-                &GraphOptimizer::var_replace_map(*graph.comp_graph()))},
-    m_comp_node_opt{graph.comp_graph()->seq_comp_node_optimizer()},
-    m_graph{graph}
-{
+OptState::OptState(const GraphOptimizer* owner_optimizer, const SubGraph& graph)
+        : m_owner_optimizer{owner_optimizer},
+          m_var_replace_map{const_cast<ThinHashMap<VarNode*, VarNode*>*>(
+                  &GraphOptimizer::var_replace_map(*graph.comp_graph()))},
+          m_comp_node_opt{graph.comp_graph()->seq_comp_node_optimizer()},
+          m_graph{graph} {
     mgb_assert(!m_graph.m_owner_opt_state);
     m_var_replace_map->clear();
     m_graph.m_owner_opt_state = this;
     m_oprs_inserted.clear();
 
-    auto on_opr_insert = [this](const cg::event::OprInserted &ev) {
+    auto on_opr_insert = [this](const cg::event::OprInserted& ev) {
         auto need_src_opr = m_opr_property_flag & OprPropertyFlag::SOURCE_OPR,
              need_priority = m_opr_property_flag & OprPropertyFlag::PRIORITY;
         if (need_src_opr)
-            mgb_assert(m_cur_iter_src_opr, "opr %s{%s} created outside from "
-                    "SubGraph::iter",
-                    ev.opr->cname(), ev.opr->dyn_typeinfo()->name);
+            mgb_assert(m_cur_iter_src_opr,
+                       "opr %s{%s} created outside from "
+                       "SubGraph::iter",
+                       ev.opr->cname(), ev.opr->dyn_typeinfo()->name);
         if (ev.exc || ev.is_dedup)
             return;
 
-        auto &&new_attr = ev.opr->node_prop().attribute();
-        auto &&ins = m_oprs_inserted.insert({ev.opr, OprPropertyFlag::NONE});
+        auto&& new_attr = ev.opr->node_prop().attribute();
+        auto&& ins = m_oprs_inserted.insert({ev.opr, OprPropertyFlag::NONE});
         mgb_assert(ins.second);
 
         if (need_src_opr && !new_attr.src_opr) {
@@ -296,20 +290,22 @@ OptState::OptState(
 
         auto csp = m_cur_iter_opr_stream_prop_type;
         if (csp.prop_type != cg::SeqCompNodeOptimizer::StreamPropType::NONE) {
-            for (auto i: ev.opr->output())
+            for (auto i : ev.opr->output())
                 m_comp_node_opt.register_stream_var(i, csp);
         }
     };
-    m_on_opr_insert_handler = graph.comp_graph()->event().register_receiver<
-        cg::event::OprInserted>(on_opr_insert);
+    m_on_opr_insert_handler =
+            graph.comp_graph()
+                    ->event()
+                    .register_receiver<cg::event::OprInserted>(on_opr_insert);
 }
 
-void OptState::on_var_replaced(VarNode *src, VarNode *dst, const char *msg) {
+void OptState::on_var_replaced(VarNode* src, VarNode* dst, const char* msg) {
     if (src->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
         // this can only happen in auto_replace_outputs()
         mgb_assert(dst->contain_flag(VarNode::Flag::VOLATILE_CONTENT) &&
-                src->owner_opr()->dyn_typeinfo() ==
-                dst->owner_opr()->dyn_typeinfo());
+                   src->owner_opr()->dyn_typeinfo() ==
+                           dst->owner_opr()->dyn_typeinfo());
         mgb_assert(!msg);
         return;
     }
@@ -362,7 +358,7 @@ void OptState::on_var_replaced(VarNode *src, VarNode *dst, const char *msg) {
                 return f & (InferType::RT_STATIC | InferType::CONST);
             };
             if (!(norm(it0.shape) == norm(it1.shape) &&
-                norm(it0.value) <= norm(it1.value))) {
+                  norm(it0.value) <= norm(it1.value))) {
                 suc = false;
                 fail_chks.push_back("infer-type");
             }
@@ -407,22 +403,21 @@ void OptState::on_var_replaced(VarNode *src, VarNode *dst, const char *msg) {
 
 #if MGB_ENABLE_LOGGING
     if (msg && m_owner_optimizer->verbosity()) {
-        m_log_msg.
-            append("\n ").
-            append(std::to_string(m_log_nr_item)).
-            append(": ").
-            append(src->owner_opr()->cname()).
-            append(" => ").
-            append(dst->owner_opr()->cname()).
-            append(" (").
-            append(msg).
-            append(")");
+        m_log_msg.append("\n ")
+                .append(std::to_string(m_log_nr_item))
+                .append(": ")
+                .append(src->owner_opr()->cname())
+                .append(" => ")
+                .append(dst->owner_opr()->cname())
+                .append(" (")
+                .append(msg)
+                .append(")");
     }
-    ++ m_log_nr_item;
+    ++m_log_nr_item;
 #endif
 }
 
-size_t OptState::flush_log(const char *title) {
+size_t OptState::flush_log(const char* title) {
     if (m_owner_optimizer->verbosity() >= 2) {
         if (m_log_msg.empty()) {
             m_log_msg = mgb_cstr_log(" no var replacement logged");
@@ -435,42 +430,40 @@ size_t OptState::flush_log(const char *title) {
     return ret;
 }
 
-void OptState::call_with_opr(OperatorNodeBase *opr, thin_function<void(void)> func,
+void OptState::call_with_opr(OperatorNodeBase* opr,
+                             thin_function<void(void)> func,
                              OprPropertyFlag opr_property_flag) {
     auto src_opr = cg::get_opr_root_source_opr(opr);
     auto opr_priority = opr->node_prop().attribute().priority;
     auto stream_prop_type = m_comp_node_opt.stream_prop_type(opr->output(0));
     ThinHashMap<OperatorNodeBase*, OprPropertyFlag> oprs_inserted;
 
-    auto swap_properties = [&,
-        need_src_opr = opr_property_flag & OprPropertyFlag::SOURCE_OPR,
-        need_priority = opr_property_flag & OprPropertyFlag::PRIORITY] {
-        if (need_src_opr) {
-            std::swap(m_cur_iter_src_opr, src_opr);
-        }
-        if (need_priority) {
-            std::swap(m_cur_iter_opr_priority, opr_priority);
-        }
-        std::swap(m_cur_iter_opr_stream_prop_type, stream_prop_type);
-        std::swap(m_opr_property_flag, opr_property_flag);
-        std::swap(m_oprs_inserted, oprs_inserted);
-    };
+    auto swap_properties =
+            [&, need_src_opr = opr_property_flag & OprPropertyFlag::SOURCE_OPR,
+             need_priority = opr_property_flag & OprPropertyFlag::PRIORITY] {
+                if (need_src_opr) {
+                    std::swap(m_cur_iter_src_opr, src_opr);
+                }
+                if (need_priority) {
+                    std::swap(m_cur_iter_opr_priority, opr_priority);
+                }
+                std::swap(m_cur_iter_opr_stream_prop_type, stream_prop_type);
+                std::swap(m_opr_property_flag, opr_property_flag);
+                std::swap(m_oprs_inserted, oprs_inserted);
+            };
     MGB_TRY {
         swap_properties();
         func();
-    } MGB_FINALLY({
-        swap_properties();
-    });
+    }
+    MGB_FINALLY({ swap_properties(); });
 }
 
 /* ================ RecursiveSubGraphRewriteHelper ================ */
-RecursiveSubGraphRewriteHelper::
-~RecursiveSubGraphRewriteHelper() noexcept = default;
+RecursiveSubGraphRewriteHelper::~RecursiveSubGraphRewriteHelper() noexcept =
+        default;
 
-RecursiveSubGraphRewriteHelper::RecursiveSubGraphRewriteHelper(OptState &state):
-    m_opt_state{state}, m_rewriter{state.graph().make_rewriter()}
-{
-}
+RecursiveSubGraphRewriteHelper::RecursiveSubGraphRewriteHelper(OptState& state)
+        : m_opt_state{state}, m_rewriter{state.graph().make_rewriter()} {}
 
 void RecursiveSubGraphRewriteHelper::apply() {
     using namespace std::placeholders;
@@ -479,8 +472,8 @@ void RecursiveSubGraphRewriteHelper::apply() {
     m_rewriter.apply_inplace();
 }
 
-void RecursiveSubGraphRewriteHelper::on_opr(OperatorNodeBase *opr) {
-    auto on_new_opr = [this](OperatorNodeBase *opr) {
+void RecursiveSubGraphRewriteHelper::on_opr(OperatorNodeBase* opr) {
+    auto on_new_opr = [this](OperatorNodeBase* opr) {
         auto repl_opr = m_rewriter.auto_replace_outputs(opr);
         return on_new_opr_check_should_process(opr, repl_opr);
     };
@@ -493,8 +486,8 @@ void RecursiveSubGraphRewriteHelper::on_opr(OperatorNodeBase *opr) {
         return;
 
     mgb_assert(m_opr_stack.empty());
-    m_opr_stack.push_back({
-            orig_out, m_rewriter.get_var(orig_out)->owner_opr()});
+    m_opr_stack.push_back(
+            {orig_out, m_rewriter.get_var(orig_out)->owner_opr()});
 
     bool first = true;
     while (!m_opr_stack.empty()) {
@@ -515,9 +508,9 @@ void RecursiveSubGraphRewriteHelper::on_opr(OperatorNodeBase *opr) {
         if (should_process) {
             auto trans = process_opr(cur_out);
             if (trans.valid()) {
-                m_opr_stack.push_back({
-                        cur_frame.orig_var, trans->result->owner_opr()});
-                for (auto i: reverse_adaptor(trans->internal)) {
+                m_opr_stack.push_back(
+                        {cur_frame.orig_var, trans->result->owner_opr()});
+                for (auto i : reverse_adaptor(trans->internal)) {
                     if (i)
                         m_opr_stack.push_back({i, i->owner_opr()});
                 }
@@ -532,7 +525,7 @@ void RecursiveSubGraphRewriteHelper::on_opr(OperatorNodeBase *opr) {
 
         auto src = cur_frame.orig_var;
         if (m_rewriter.get_var(src) != cur_out) {
-            const char *msg = nullptr;
+            const char* msg = nullptr;
             if (m_opr_stack.empty()) {
                 msg = m_log_msg.c_str();
             }
@@ -550,11 +543,12 @@ void RecursiveSubGraphRewriteHelper::on_opr(OperatorNodeBase *opr) {
 
 GraphOptimizer::~GraphOptimizer() noexcept = default;
 
-class GraphOptimizer::VarReplaceMapStorage :public UserDataContainer::UserData {
+class GraphOptimizer::VarReplaceMapStorage
+        : public UserDataContainer::UserData {
     MGB_TYPEINFO_OBJ_DECL;
 
-    public:
-        ThinHashMap<VarNode*, VarNode*> map;
+public:
+    ThinHashMap<VarNode*, VarNode*> map;
 };
 MGB_TYPEINFO_OBJ_IMPL(GraphOptimizer::VarReplaceMapStorage);
 
@@ -565,7 +559,7 @@ GraphOptimizer& GraphOptimizer::add_pass(std::unique_ptr<Pass> pass) {
     return *this;
 }
 
-SubGraph GraphOptimizer::apply(const SubGraph &graph) const {
+SubGraph GraphOptimizer::apply(const SubGraph& graph) const {
     RealTimer timer;
     OptState state{this, graph};
 
@@ -574,38 +568,38 @@ SubGraph GraphOptimizer::apply(const SubGraph &graph) const {
     // first update output var shapes of all oprs
     state.graph().iter(cg::update_output_var_shapes);
 
-    auto &&opt = graph.comp_graph()->options();
+    auto&& opt = graph.comp_graph()->options();
     auto orig_setting = opt.graph_opt_level;
-    Pass *cur_pass = nullptr;
+    Pass* cur_pass = nullptr;
     MGB_MARK_USED_VAR(cur_pass);
     MGB_TRY {
-        for (auto &&i: m_passes) {
+        for (auto&& i : m_passes) {
             state.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_ALL);
             cur_pass = i.get();
             opt.graph_opt_level = 1;
             i->apply(state);
             tot_nr_replace += state.flush_log(
-                    mgb_ssprintf_log(
-                        "apply optimization pass %s:", i->name()).c_str());
+                    mgb_ssprintf_log("apply optimization pass %s:", i->name())
+                            .c_str());
         }
-    } MGB_CATCH(std::exception &exc, {
+    }
+    MGB_CATCH(std::exception & exc, {
         mgb_log_error("error while applying optimization pass %s: %s",
-                cur_pass->name(), exc.what());
+                      cur_pass->name(), exc.what());
         opt.graph_opt_level = orig_setting;
         throw;
     })
-    MGB_FINALLY(
-        opt.graph_opt_level = orig_setting
-    );
+    MGB_FINALLY(opt.graph_opt_level = orig_setting);
     if (verbosity() >= 1) {
-        mgb_log_debug("graph optimization: applied %zu passes, "
+        mgb_log_debug(
+                "graph optimization: applied %zu passes, "
                 "total %zu var(s) replaced; time=%.2fms",
                 m_passes.size(), tot_nr_replace, timer.get_msecs());
     }
     return state.graph();
 }
 
-const GraphOptimizer& GraphOptimizer::apply_inplace(VarNodeArray &vars) const {
+const GraphOptimizer& GraphOptimizer::apply_inplace(VarNodeArray& vars) const {
     if (m_passes.empty()) {
         // this check is necessary, since OptState would clear
         // var_replace_map()
@@ -613,7 +607,7 @@ const GraphOptimizer& GraphOptimizer::apply_inplace(VarNodeArray &vars) const {
     }
 
     auto g = apply({{vars.begin(), vars.end()}});
-    for (size_t i = 0; i < vars.size(); ++ i) {
+    for (size_t i = 0; i < vars.size(); ++i) {
         vars[i] = g.endpoint_vars()[i].node();
     }
     return *this;
@@ -653,7 +647,7 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
 #if MGB_JIT
     bool need_jit = false;
     if (comp_graph_opt && (std::abs(comp_graph_opt->graph_opt_level) >= 3 ||
-            comp_graph_opt->graph_opt.jit)) {
+                           comp_graph_opt->graph_opt.jit)) {
         need_jit = true;
     }
     if (need_jit && after_grad) {
@@ -679,7 +673,6 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
         add_passes_for_optimize_options(*inference_opt);
     }
 
-
     if (inference_opt) {
         // merge params to reduce loading time and graph overhead
         add_pass<ParamMergePass>();
@@ -689,22 +682,22 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
 }
 
 const ThinHashMap<VarNode*, VarNode*>& GraphOptimizer::var_replace_map(
-        ComputingGraph &graph) {
-    auto storage = graph.options().user_data.get_user_data_or_create<
-        VarReplaceMapStorage>();
+        ComputingGraph& graph) {
+    auto storage =
+            graph.options()
+                    .user_data.get_user_data_or_create<VarReplaceMapStorage>();
     return storage->map;
 }
 
-VarNode* GraphOptimizer::var_replace_lookup(VarNode *var) {
-    auto &&map = var_replace_map(*(var->owner_graph()));
-    for (; ; ) {
+VarNode* GraphOptimizer::var_replace_lookup(VarNode* var) {
+    auto&& map = var_replace_map(*(var->owner_graph()));
+    for (;;) {
         auto iter = map.find(var);
         if (iter == map.end())
             return var;
         var = iter->second;
     }
 }
-
 
 const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         const cg::GraphCommonOptimizeOptions& options) {
@@ -723,11 +716,13 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
             options.disable_##_option(); \
         }                                \
     }
-    
-    cb(fuse_preprocess, {add_pass(FuseNCHW4Int8Preprocess::make());});
+
+    cb(fuse_preprocess, {
+        add_pass(FuseNCHW4Int8Preprocess::make());
+        add_pass<FuseWarpPerspectiveDimshufflePass>();
+    });
     cb(f16_io_comp, { add_pass(ConvertF32ToF16Pass::make(false)); });
     cb(f16_io_f32_comp, { add_pass(ConvertF32ToF16Pass::make(true)); });
-
 
     cb(nchw4, {
         add_pass<FuseConvBiasNonlinPass>();
@@ -763,6 +758,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
         add_pass(FuseNCHW4Int8Preprocess::make());
+        add_pass<FuseWarpPerspectiveDimshufflePass>();
     });
     cb(chwn4, {
         add_pass<FuseConvBiasNonlinPass>();
@@ -790,9 +786,9 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
 /* ================ ConstVarPropogateBase ================ */
 
 ConstVarPropogate::AddOprResult ConstVarPropogate::add_opr(
-        OperatorNodeBase *opr) {
+        OperatorNodeBase* opr) {
     using ProfFlag = OperatorNodeBase::NodeProp::Flag;
-    auto &&info = m_oprinfo[opr];
+    auto&& info = m_oprinfo[opr];
     if (info.processed)
         return info.result;
     info.processed = true;
@@ -819,15 +815,14 @@ ConstVarPropogate::AddOprResult ConstVarPropogate::add_opr(
     if (opr->input().empty())
         return make_ret();
 
-    if (opr->node_prop().contain(
-                ProfFlag::FORCE_UPDATE_INPUT_VAR |
-                ProfFlag::IMPURE_FUNC)) {
+    if (opr->node_prop().contain(ProfFlag::FORCE_UPDATE_INPUT_VAR |
+                                 ProfFlag::IMPURE_FUNC)) {
         return make_ret();
     }
 
     size_t max_input_size = 0;
     ret.all_const_inp = true;
-    for (auto i: opr->input()) {
+    for (auto i : opr->input()) {
         auto io = i->owner_opr();
         auto iter = m_oprinfo.find(io);
         if (iter == m_oprinfo.end()) {
@@ -835,7 +830,7 @@ ConstVarPropogate::AddOprResult ConstVarPropogate::add_opr(
             iter = m_oprinfo.find(io);
             mgb_assert(iter != m_oprinfo.end());
         }
-        auto &&src = iter->second;
+        auto&& src = iter->second;
         if (src.is_const) {
             update_max(max_input_size, src.max_size);
             ret.has_const_inp = true;

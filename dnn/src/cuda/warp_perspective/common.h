@@ -12,6 +12,7 @@
 #pragma once
 #include <cuda_runtime_api.h>
 #include "src/common/cv/enums.h"
+#include "src/cuda/utils.cuh"
 #include "megcore_cdefs.h"
 
 namespace megdnn {
@@ -33,6 +34,22 @@ void forward_proxy_nchw4(const ctype* src, const float* mat, const int* mat_idx,
                          int IW, int OH, int OW, ctype bval, BorderMode bmode,
                          megcore::AsyncErrorInfo* error_info,
                          void* error_tracker, cudaStream_t stream);
+
+template <typename src_dtype, typename src_ctype, typename dst_ctype>
+void forward_proxy_quint8_dimshuffle_typecvt_nchw4(
+        bool is_nhwc, const src_ctype* src, const float* mat,
+        const int* mat_idx, dst_ctype* dst, int N_SRC, int N_MAT, int C, int IH,
+        int IW, int OH, int OW, src_ctype bval, DTypeParamImpl<src_dtype> param,
+        BorderMode bmode, megcore::AsyncErrorInfo* error_info,
+        void* error_tracker, cudaStream_t stream);
+
+template <typename src_dtype, typename src_ctype, typename dst_ctype>
+void forward_proxy_quint8_dimshuffle_typecvt_nchw(
+        bool is_nhwc, const src_ctype* src, const float* mat,
+        const int* mat_idx, dst_ctype* dst, int N_SRC, int N_MAT, int C, int IH,
+        int IW, int OH, int OW, src_ctype bval, DTypeParamImpl<src_dtype> param,
+        BorderMode bmode, megcore::AsyncErrorInfo* error_info,
+        void* error_tracker, cudaStream_t stream);
 
 void backward_data_proxy(const float* mat, const int* midx, const float* diff,
                          float* grad, float* workspace, int N, int N_SRC, int C,

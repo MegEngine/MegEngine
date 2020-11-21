@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/cuda/warp_perspective/opr_impl.h"
 #include "src/cuda/warp_perspective/warp_perspective_cv.cuh"
@@ -166,6 +167,30 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                 IW = src.layout.shape[3];
                 OH = dst.layout.shape[2];
                 OW = dst.layout.shape[3];
+            } else if (param().format == Param::Format::NHWC_NCHW) {
+                C = src.layout.shape[3];
+                IH = src.layout.shape[1];
+                IW = src.layout.shape[2];
+                OH = dst.layout.shape[2];
+                OW = dst.layout.shape[3];
+            } else if (param().format == Param::Format::NHWC_NCHW4_IC_SMALL) {
+                C = src.layout.shape[3];
+                IH = src.layout.shape[1];
+                IW = src.layout.shape[2];
+                OH = dst.layout.shape[2];
+                OW = dst.layout.shape[3];
+                megdnn_assert(
+                        (C == 1) || (C == 3),
+                        "NHWC_NCHW4_IC_SMALL only support C == 1 or C == 3");
+            } else if (param().format == Param::Format::NCHW_NCHW4_IC_SMALL) {
+                C = src.layout.shape[1];
+                IH = src.layout.shape[2];
+                IW = src.layout.shape[3];
+                OH = dst.layout.shape[2];
+                OW = dst.layout.shape[3];
+                megdnn_assert(
+                        (C == 1) || (C == 3),
+                        "NCHW_NCHW4_IC_SMALL only support C == 1 or C == 3");
             } else {
                 megdnn_assert(
                         param().format == param::WarpPerspective::Format::NCHW,
@@ -180,55 +205,123 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                           "unsupported interpolation mode for NCHW format");
             auto bval = param().border_val;
             auto bmode = warp_perspective::get_bmode(param().bmode);
-
-            if (src.layout.dtype == dtype::Float32{}) {
-                warp_perspective::forward_proxy(
-                        is_nhwc, src.ptr<dt_float32>(), mat.ptr<dt_float32>(),
-                        mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
-                        dst.ptr<dt_float32>(), src.layout[0], mat.layout[0], C,
-                        IH, IW, OH, OW, bval, bmode, async_error_info(handle()),
-                        m_error_tracker, stream);
-            } else if (MEGDNN_FLOAT16_SELECT(
-                               src.layout.dtype == dtype::Float16(), false)) {
+            if (src.layout.dtype == dst.layout.dtype) {
+                if (src.layout.dtype == dtype::Float32{}) {
+                    warp_perspective::forward_proxy(
+                            is_nhwc, src.ptr<dt_float32>(),
+                            mat.ptr<dt_float32>(),
+                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            dst.ptr<dt_float32>(), src.layout[0], mat.layout[0],
+                            C, IH, IW, OH, OW, bval, bmode,
+                            async_error_info(handle()), m_error_tracker,
+                            stream);
+                } else if (MEGDNN_FLOAT16_SELECT(
+                                   src.layout.dtype == dtype::Float16(),
+                                   false)) {
 #ifndef MEGDNN_DISABLE_FLOAT16
-                warp_perspective::forward_proxy(
-                        is_nhwc, src.ptr<dt_float16>(), mat.ptr<dt_float32>(),
-                        mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
-                        dst.ptr<dt_float16>(), src.layout[0], mat.layout[0], C,
-                        IH, IW, OH, OW, static_cast<dt_float16>(bval), bmode,
-                        async_error_info(handle()), m_error_tracker, stream);
+                    warp_perspective::forward_proxy(
+                            is_nhwc, src.ptr<dt_float16>(),
+                            mat.ptr<dt_float32>(),
+                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            dst.ptr<dt_float16>(), src.layout[0], mat.layout[0],
+                            C, IH, IW, OH, OW, static_cast<dt_float16>(bval),
+                            bmode, async_error_info(handle()), m_error_tracker,
+                            stream);
 #endif
-            } else if (src.layout.dtype == dtype::Uint8()) {
-                warp_perspective::forward_proxy<dt_uint8>(
-                        is_nhwc, src.ptr<dt_uint8>(), mat.ptr<dt_float32>(),
-                        mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
-                        dst.ptr<dt_uint8>(), src.layout[0], mat.layout[0], C,
-                        IH, IW, OH, OW, bval, bmode, async_error_info(handle()),
-                        m_error_tracker, stream);
-            } else if (src.layout.dtype == dtype::Int8()) {
-                megdnn_assert(
-                        !is_nhwc,
-                        "WarpPerspective on CUDA does not support NHWC + Int8");
-                warp_perspective::forward_proxy<dt_int8>(
-                        false, src.ptr<dt_int8>(), mat.ptr<dt_float32>(),
-                        mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
-                        dst.ptr<dt_int8>(), src.layout[0], mat.layout[0], C, IH,
-                        IW, OH, OW,
-                        bval /* implicit float -> int8 conversion, should be
-                                safe */
-                        ,
-                        bmode, async_error_info(handle()), m_error_tracker,
-                        stream);
-            } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
-                megdnn_assert(param().format == Param::Format::NCHW4,
-                              "WarpPerspective on CUDA supports NCHW4 + "
-                              "QuantizedS8 only");
-                warp_perspective::forward_proxy_nchw4<dt_int8>(
-                        src.compatible_ptr<dt_int8>(), mat.ptr<dt_float32>(),
-                        mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
-                        dst.compatible_ptr<dt_int8>(), src.layout[0],
-                        mat.layout[0], C, IH, IW, OH, OW, bval, bmode,
-                        async_error_info(handle()), m_error_tracker, stream);
+                } else if (src.layout.dtype == dtype::Uint8()) {
+                    warp_perspective::forward_proxy<dt_uint8>(
+                            is_nhwc, src.ptr<dt_uint8>(), mat.ptr<dt_float32>(),
+                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            dst.ptr<dt_uint8>(), src.layout[0], mat.layout[0],
+                            C, IH, IW, OH, OW, bval, bmode,
+                            async_error_info(handle()), m_error_tracker,
+                            stream);
+                } else if (src.layout.dtype == dtype::Int8()) {
+                    megdnn_assert(!is_nhwc,
+                                  "WarpPerspective on CUDA does not support "
+                                  "NHWC + Int8");
+                    warp_perspective::forward_proxy<dt_int8>(
+                            false, src.ptr<dt_int8>(), mat.ptr<dt_float32>(),
+                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            dst.ptr<dt_int8>(), src.layout[0], mat.layout[0], C,
+                            IH, IW, OH, OW,
+                            bval /* implicit float -> int8 conversion,
+                                    should be safe */
+                            ,
+                            bmode, async_error_info(handle()), m_error_tracker,
+                            stream);
+                } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+                    megdnn_assert(param().format == Param::Format::NCHW4,
+                                  "WarpPerspective on CUDA supports NCHW4 + "
+                                  "QuantizedS8 only");
+                    warp_perspective::forward_proxy_nchw4<dt_int8>(
+                            src.compatible_ptr<dt_int8>(),
+                            mat.ptr<dt_float32>(),
+                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            dst.compatible_ptr<dt_int8>(), src.layout[0],
+                            mat.layout[0], C, IH, IW, OH, OW, bval, bmode,
+                            async_error_info(handle()), m_error_tracker,
+                            stream);
+                }
+            } else if ((src.layout.dtype.enumv() ==
+                                DTypeEnum::Quantized8Asymm ||
+                        src.layout.dtype.enumv() == DTypeEnum::Uint8)) {
+                uint8_t zero_point = 0;
+                float scale = 1.f;
+                if (src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
+                    zero_point =
+                            src.layout.dtype.param<dtype::Quantized8Asymm>()
+                                    .zero_point;
+                    scale = src.layout.dtype.param<dtype::Quantized8Asymm>()
+                                    .scale;
+                } else if (src.layout.dtype.enumv() == DTypeEnum::Uint8 &&
+                           dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+                    zero_point = 128;
+                    scale = 1.f;
+                }
+                DTypeParamImpl<dt_quint8> src_dtype_param(scale, zero_point);
+
+                if ((dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                     dst.layout.dtype.param<dtype::QuantizedS8>().scale ==
+                             scale) &&
+                    ((param().format == Param::Format::NCHW_NCHW4_IC_SMALL) ||
+                     (param().format == Param::Format::NHWC_NCHW4_IC_SMALL))) {
+                    bool is_nhwc_ic_small =
+                            (param().format ==
+                             Param::Format::NHWC_NCHW4_IC_SMALL);
+                    warp_perspective::
+                            forward_proxy_quint8_dimshuffle_typecvt_nchw4<
+                                    dt_quint8, dt_uint8, dt_int8>(
+                                    is_nhwc_ic_small,
+                                    src.compatible_ptr<dt_uint8>(),
+                                    mat.ptr<dt_float32>(),
+                                    mat_idx.raw_ptr ? mat_idx.ptr<int>()
+                                                    : nullptr,
+                                    dst.compatible_ptr<dt_int8>(),
+                                    src.layout[0], mat.layout[0], C, IH, IW, OH,
+                                    OW, bval, src_dtype_param, bmode,
+                                    async_error_info(handle()), m_error_tracker,
+                                    stream);
+                } else {
+                    megdnn_assert(
+                            ((dst.layout.dtype.enumv() == DTypeEnum::Float32) &&
+                             ((param().format == Param::Format::NCHW) ||
+                              (param().format == Param::Format::NHWC_NCHW))),
+                            "invalid format for Quantized8Asymm input");
+                    bool is_nhwc = (param().format == Param::Format::NHWC_NCHW);
+                    warp_perspective::
+                            forward_proxy_quint8_dimshuffle_typecvt_nchw<
+                                    dt_quint8, dt_uint8, dt_float32>(
+                                    is_nhwc, src.compatible_ptr<dt_uint8>(),
+                                    mat.ptr<dt_float32>(),
+                                    mat_idx.raw_ptr ? mat_idx.ptr<int>()
+                                                    : nullptr,
+                                    dst.compatible_ptr<dt_float32>(),
+                                    src.layout[0], mat.layout[0], C, IH, IW, OH,
+                                    OW, bval, src_dtype_param, bmode,
+                                    async_error_info(handle()), m_error_tracker,
+                                    stream);
+                }
             } else {
                 megdnn_throw(ssprintf("unsupported dtype: %s",
                                       src.layout.dtype.name()));

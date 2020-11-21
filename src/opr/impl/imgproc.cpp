@@ -47,7 +47,11 @@ SymbolVar WarpPerspectiveForward::make(SymbolVar i0, SymbolVar i1, SymbolVar i2,
 }
 
 void WarpPerspectiveForward::init_output_dtype() {
-    output(0)->dtype(input(0)->dtype());
+    if (config().output_dtype().valid()) {
+        output(0)->dtype(config().output_dtype());
+    } else {
+        output(0)->dtype(input(0)->dtype());
+    }
 }
 
 void WarpPerspectiveForward::add_input_layout_constraint() {
@@ -78,23 +82,40 @@ void WarpPerspectiveForward::outshape_by_symvar_do_get_output_shape(
                    mat_idx_shp.to_string().c_str());
     }
 
-    //! The index of height, e.g.,[b, h, w, c], the height_idx = 1
-    size_t height_idx = 0;
-    if (param().format == Param::Format::NCHW ||
-        param().format == Param::Format::NCHW4) {
-        height_idx = 2;
-    } else {
-        height_idx = 1;
-    }
-
-    dest = imgshp;
-    dest[0] = matshp[0];
-    if (param().format == Param::Format::NHWCD4) {
-        dest.shape[height_idx] = oshp2d.shape[0];
-        dest.shape[height_idx + 2] = oshp2d.shape[1];
-    } else {
-        for (int i = 0; i < 2; ++i)
-            dest.shape[height_idx + i] = oshp2d.shape[i];
+    switch (param().format) {
+        case Param::Format::NCHW_NCHW4_IC_SMALL:
+        case Param::Format::NHWC_NCHW4_IC_SMALL:
+            dest.ndim = 5;
+            dest[0] = matshp[0];
+            dest.shape[1] = 1;
+            dest.shape[2] = oshp2d.shape[0];
+            dest.shape[3] = oshp2d.shape[1];
+            dest.shape[4] = 4;
+            break;
+        case Param::Format::NHWC_NCHW:
+            dest[0] = matshp[0];
+            dest.shape[1] = imgshp.shape[3];
+            dest.shape[2] = oshp2d.shape[0];
+            dest.shape[3] = oshp2d.shape[1];
+            break;
+        default:
+            size_t height_idx = 0;
+            if (param().format == Param::Format::NCHW ||
+                param().format == Param::Format::NCHW4) {
+                height_idx = 2;
+            } else {
+                height_idx = 1;
+            }
+            dest = imgshp;
+            dest[0] = matshp[0];
+            if (param().format == Param::Format::NHWCD4) {
+                dest.shape[height_idx] = oshp2d.shape[0];
+                dest.shape[height_idx + 2] = oshp2d.shape[1];
+            } else {
+                for (int i = 0; i < 2; ++i)
+                    dest.shape[height_idx + i] = oshp2d.shape[i];
+            }
+            break;
     }
 }
 

@@ -1172,7 +1172,8 @@ TEST(TestGoptInference, ConvertFormatNHWCD4) {
     param.pad_h = param.pad_w = 1;
     auto w2 = mkcvar("w2", {4, 4, 3, 3}),
          y = opr::Convolution::make(elem, w2, param),
-         z = opr::AxisAddRemove::make(y, {opr::AxisAddRemove::AxisDesc::make_add(0)});
+         z = opr::AxisAddRemove::make(
+                 y, {opr::AxisAddRemove::AxisDesc::make_add(0)});
 
     SymbolVar y_opt, z_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
@@ -3721,6 +3722,66 @@ TEST(TestGoptInference, PreProcessCase1) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
 
     ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::RelayoutFormat>());
+}
+
+TEST(TestGoptInference, WarpAndPreProcessCase) {
+    REQUIRE_GPU(1);
+    HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM> gen(0, 255);
+    auto cn = CompNode::load("gpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    size_t n = 1;
+    size_t c = 3;
+    size_t h = 16;
+    size_t w = 16;
+    auto host_x1 = gen({n, h, w, c}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+
+    auto mat_host = std::make_shared<HostTensorND>(cn, TensorShape{n, 3, 3},
+                                                   dtype::Float32());
+    warp_perspective_mat_gen(*mat_host, n, h, w);
+    auto mat = opr::Host2DeviceCopy::make(*graph, mat_host).rename("mat");
+
+    opr::WarpPerspective::Param warp_param;
+    warp_param.format = opr::WarpPerspective::Param::Format::NHWC;
+    auto x_warp =
+            opr::WarpPerspective::make(x, mat, TensorShape{h, w}, warp_param);
+    auto x_nchw = opr::Dimshuffle::make(x_warp, {0, 3, 1, 2}, 4, cn);
+
+    auto x_u8 = opr::TypeCvt::make(x_nchw, dtype::Float32(), cn);
+    auto x_s8 = x_u8 - 128;
+    auto zero = DTypeScalar(dtype::Float32());
+    auto zero_tensor = opr::ImmutableTensor::make(*graph, zero, cn);
+    auto pad_channel_tensor =
+            opr::Broadcast::make(zero_tensor, {n, 1, h, w}, cn);
+    auto paded_x = opr::Concat::make({x_s8, pad_channel_tensor}, 1, cn)
+                           .reshape({n, 1, 4, h, w});
+
+    auto nchw4_out = opr::Dimshuffle::make(paded_x, {0, 1, 3, 4, 2}, 5, cn);
+    auto result = opr::TypeCvt::make(nchw4_out, dtype::QuantizedS8(1.f));
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_fuse_preprocess();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::WarpPerspective>());
+
+    ASSERT_EQ(opr::WarpPerspective::Param::Format::NHWC_NCHW4_IC_SMALL,
+              find_opr<opr::WarpPerspective>(y_opt).param().format);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.WarpAndPreProcessCase.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
 }
 #endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

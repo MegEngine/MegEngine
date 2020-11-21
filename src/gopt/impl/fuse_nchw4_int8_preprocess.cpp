@@ -19,6 +19,7 @@
 #include "megbrain/opr/utility.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/serialization/serializer.h"
+#include "megbrain/opr/imgproc.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -442,5 +443,245 @@ void FuseNCHW4Int8Preprocess::apply(OptState& state) const {
         }
     };
     state.graph().iter(on_opr);
+    rewriter.apply_inplace();
+}
+
+/* ==================== FuseWarpPerspectiveDimshufflePass ================= */
+const char* FuseWarpPerspectiveDimshufflePass::name() const {
+    return mgb_cstr_log("Fuse warp perspective dimshuffle pass");
+}
+
+void FuseWarpPerspectiveDimshufflePass::apply(OptState& opt) const {
+    auto rewriter = opt.graph().make_rewriter();
+    auto uniq_reader_check = UniqReaderCheck{opt.graph()};
+
+    auto make_new_warp = [&rewriter](opr::WarpPerspective* warp,
+                                     opr::WarpPerspective::Param new_param,
+                                     megdnn::DType dst_dtype,
+                                     SymbolVar& new_warp) {
+        OperatorNodeConfig new_config(dst_dtype);
+        if (warp->input().size() == 3) {
+            auto src = rewriter.get_var(warp->input(0)),
+                 mat = rewriter.get_var(warp->input(1)),
+                 out_shape = rewriter.get_var(warp->input(2));
+            new_warp = opr::WarpPerspective::make(src, mat, out_shape,
+                                                  new_param, new_config);
+        } else {
+            mgb_assert(warp->input().size() == 4);
+            auto src = rewriter.get_var(warp->input(0)),
+                 mat = rewriter.get_var(warp->input(1)),
+                 mat_idx = rewriter.get_var(warp->input(2)),
+                 out_shape = rewriter.get_var(warp->input(3));
+            new_warp = opr::WarpPerspective::make(src, mat, mat_idx, out_shape,
+                                                  new_param, new_config);
+        }
+    };
+
+    auto is_warp_nchw = [&uniq_reader_check](OperatorNodeBase* bottom_opr,
+                                             OperatorNodeBase*& top_opr) {
+        // check warp
+        auto warp = try_cast_as_op<opr::WarpPerspective>(bottom_opr);
+        if (warp == nullptr)
+            return false;
+        auto inp_dtype = warp->input(0)->dtype();
+        bool is_u8_or_qu8 = inp_dtype.enumv() == DTypeEnum::Quantized8Asymm ||
+                            inp_dtype.enumv() == DTypeEnum::Uint8;
+
+        bool is_nchw = warp->param().format ==
+                       megdnn::param::WarpPerspective::Format::NCHW;
+        if (!(is_u8_or_qu8 && is_nchw))
+            return false;
+        if (!uniq_reader_check(warp->input(0)))
+            return false;
+
+        top_opr = warp;
+        return true;
+    };
+
+    auto is_warp_nhwc2nchw = [&uniq_reader_check](OperatorNodeBase* bottom_opr,
+                                                  OperatorNodeBase*& top_opr) {
+        // check shuffle
+        auto shuffle = try_cast_as_op<opr::Dimshuffle>(bottom_opr);
+        if (shuffle == nullptr)
+            return false;
+        auto&& shuffle_param = shuffle->param();
+        if (shuffle_param.pattern_len != 4)
+            return false;
+        bool is_nhwc2nchw = shuffle_param.pattern[0] == 0 &&
+                            shuffle_param.pattern[1] == 3 &&
+                            shuffle_param.pattern[2] == 1 &&
+                            shuffle_param.pattern[3] == 2;
+        if (!is_nhwc2nchw)
+            return false;
+        if (!uniq_reader_check(shuffle->input(0)))
+            return false;
+
+        // check warp
+        auto warp = try_cast_as_op<opr::WarpPerspective>(
+                shuffle->input(0)->owner_opr());
+        if (warp == nullptr)
+            return false;
+        auto inp_dtype = warp->input(0)->dtype();
+        bool is_u8_or_qu8 = inp_dtype.enumv() == DTypeEnum::Quantized8Asymm ||
+                            inp_dtype.enumv() == DTypeEnum::Uint8;
+        bool is_nhwc = warp->param().format ==
+                       megdnn::param::WarpPerspective::Format::NHWC;
+        if (!(is_u8_or_qu8 && is_nhwc))
+            return false;
+
+        top_opr = warp;
+        return true;
+    };
+
+    auto try_warp_nchw_typecvt = [&rewriter, &uniq_reader_check, &is_warp_nchw,
+                                  &make_new_warp](OperatorNodeBase* opr) {
+        // check typecvt
+        auto typecvt = try_cast_as_op<opr::TypeCvt>(opr);
+        if (typecvt == nullptr)
+            return false;
+        bool is_to_f32 =
+                typecvt->output(0)->dtype().enumv() == DTypeEnum::Float32;
+        if (!is_to_f32)
+            return false;
+        if (!uniq_reader_check(typecvt->input(0)))
+            return false;
+
+        OperatorNodeBase* top_opr = nullptr;
+        if (!is_warp_nchw(typecvt->input(0)->owner_opr(), top_opr))
+            return false;
+        auto warp = try_cast_as_op<opr::WarpPerspective>(top_opr);
+        SymbolVar new_warp;
+        make_new_warp(warp, warp->param(), opr->output()[0]->dtype(), new_warp);
+
+        rewriter.replace_var(opr->output(0), new_warp.node(),
+                             mgb_cstr_log("replace warp + typecvt"
+                                          "fuse warp_dimshuffle(NCHW)"));
+
+        return true;
+    };
+
+    auto try_warp_nhwc2nchw_typecvt = [&rewriter, &uniq_reader_check,
+                                       &is_warp_nhwc2nchw,
+                                       &make_new_warp](OperatorNodeBase* opr) {
+        // check typecvt
+        auto typecvt = try_cast_as_op<opr::TypeCvt>(opr);
+        if (typecvt == nullptr)
+            return false;
+        bool is_to_f32 =
+                typecvt->output(0)->dtype().enumv() == DTypeEnum::Float32;
+        if (!is_to_f32)
+            return false;
+        if (!uniq_reader_check(typecvt->input(0)))
+            return false;
+
+        OperatorNodeBase* top_opr = nullptr;
+        if (!is_warp_nhwc2nchw(typecvt->input(0)->owner_opr(), top_opr))
+            return false;
+        auto warp = try_cast_as_op<opr::WarpPerspective>(top_opr);
+        opr::WarpPerspective::Param new_param = warp->param();
+        new_param.format = megdnn::param::WarpPerspective::Format::NHWC_NCHW;
+        SymbolVar new_warp;
+        make_new_warp(warp, new_param, opr->output()[0]->dtype(), new_warp);
+
+        rewriter.replace_var(
+                opr->output(0), new_warp.node(),
+                mgb_cstr_log("replace conv_bias + dimshuffle + "
+                             "typecvt to warp_dimshuffle(NHWC_NCHW)"));
+
+        return true;
+    };
+
+    auto try_warp_nhwc2nchw4_typecvt = [&rewriter, &uniq_reader_check,
+                                        &is_warp_nhwc2nchw,
+                                        &make_new_warp](OperatorNodeBase* opr) {
+        // check relayout
+        auto relayout = try_cast_as_op<opr::RelayoutFormat>(opr);
+        if (relayout == nullptr)
+            return false;
+        bool is_to_q8 =
+                relayout->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        bool is_to_nchw2nchw4 = relayout->param().mode ==
+                                opr::RelayoutFormat::Param::Mode::NCHW_NCHW4;
+        if (!(is_to_q8 && is_to_nchw2nchw4))
+            return false;
+        if (!uniq_reader_check(relayout->input(0)))
+            return false;
+
+        OperatorNodeBase* top_opr = nullptr;
+        if (!is_warp_nhwc2nchw(relayout->input(0)->owner_opr(), top_opr))
+            return false;
+
+        auto warp = try_cast_as_op<opr::WarpPerspective>(top_opr);
+
+        bool is_small_chn = warp->input(0)->shape()[3] < 4;
+        if (!is_small_chn)
+            return false;
+
+        opr::WarpPerspective::Param new_param = warp->param();
+        new_param.format =
+                megdnn::param::WarpPerspective::Format::NHWC_NCHW4_IC_SMALL;
+
+        SymbolVar new_warp;
+        make_new_warp(warp, new_param, opr->output()[0]->dtype(), new_warp);
+
+        rewriter.replace_var(
+                opr->output(0), new_warp.node(),
+                mgb_cstr_log("replace warp + dimshuffle + relayout(NCHW_NCHW4)"
+                             "to warp_dimshuffle(NHWC_NCHW4_IC_SMALL)"));
+
+        return true;
+    };
+
+    auto try_warp_nchw2nchw4_typecvt = [&rewriter, &uniq_reader_check,
+                                        &is_warp_nchw,
+                                        &make_new_warp](OperatorNodeBase* opr) {
+        // check relayout
+        auto relayout = try_cast_as_op<opr::RelayoutFormat>(opr);
+        if (relayout == nullptr)
+            return false;
+        bool is_to_q8 =
+                relayout->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        bool is_to_nchw2nchw4 = relayout->param().mode ==
+                                opr::RelayoutFormat::Param::Mode::NCHW_NCHW4;
+        if (!(is_to_q8 && is_to_nchw2nchw4))
+            return false;
+        if (!uniq_reader_check(relayout->input(0)))
+            return false;
+
+        OperatorNodeBase* top_opr = nullptr;
+        if (!is_warp_nchw(relayout->input(0)->owner_opr(), top_opr))
+            return false;
+
+        auto warp = try_cast_as_op<opr::WarpPerspective>(top_opr);
+
+        bool is_small_chn = warp->input(0)->shape()[1] < 4;
+        if (!is_small_chn)
+            return false;
+
+        opr::WarpPerspective::Param new_param = warp->param();
+        new_param.format =
+                megdnn::param::WarpPerspective::Format::NCHW_NCHW4_IC_SMALL;
+
+        SymbolVar new_warp;
+        make_new_warp(warp, new_param, opr->output()[0]->dtype(), new_warp);
+
+        rewriter.replace_var(
+                opr->output(0), new_warp.node(),
+                mgb_cstr_log("replace warp + relayout(NCHW_NCHW4)"
+                             "to warp_dimshuffle(NCHW_NCHW4_IC_SMALL)"));
+
+        return true;
+    };
+
+    auto on_opr = [&try_warp_nchw_typecvt, &try_warp_nhwc2nchw_typecvt,
+                   &try_warp_nhwc2nchw4_typecvt, &try_warp_nchw2nchw4_typecvt,
+                   &rewriter](OperatorNodeBase* opr) {
+        if (!try_warp_nchw_typecvt(opr) && !try_warp_nhwc2nchw_typecvt(opr) &&
+            !try_warp_nhwc2nchw4_typecvt(opr) &&
+            !try_warp_nchw2nchw4_typecvt(opr)) {
+            rewriter.auto_replace_outputs(opr);
+        }
+    };
+    opt.graph().iter(on_opr);
     rewriter.apply_inplace();
 }

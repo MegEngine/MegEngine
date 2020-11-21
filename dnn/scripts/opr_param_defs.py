@@ -43,6 +43,12 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           Doc('NCHW4_NCHW32', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
           Doc('NCHW32_NCHW4', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
           Doc('NCHW4_NCHW', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'), 
+          Doc('NHWC_NCHW', 'NHWC_NCHW means input tensors are nhwc layout, '
+              'output tensor is nchw layout'),
+          Doc('NHWC_NCHW4_IC_SMALL', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
+              'output tensor is nchw4 layout, padding c=4'),
+          Doc('NCHW_NCHW4_IC_SMALL', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
+              'output tensor is nchw4 layout, padding c=4'),
           Doc('CHWN4', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
               'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'))
  )
