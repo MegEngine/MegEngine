@@ -26,6 +26,7 @@ TEST(TestDType, SizeCheck) {
     ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::IntB4().size(3));
     ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::IntB4().size(4));
     ASSERT_EQ(static_cast<size_t>(3), ::megdnn::dtype::IntB4().size(5));
+    ASSERT_EQ(static_cast<size_t>(2), ::megdnn::dtype::Uint16().size(1));
     ASSERT_EQ(static_cast<size_t>(2),
               ::megdnn::dtype::Quantized4Asymm(1.0f, static_cast<uint8_t>(12))
                       .size(3));

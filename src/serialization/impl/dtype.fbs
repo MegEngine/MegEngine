@@ -22,6 +22,7 @@ enum DTypeEnum : byte {
     QuantizedS16,
     BFloat16,
     Bool,
+    Uint16,
 }
 
 table LinearQuantizationParam {

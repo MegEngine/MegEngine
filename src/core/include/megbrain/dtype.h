@@ -28,6 +28,7 @@ using ::megdnn::dt_quint8;
 using ::megdnn::dt_qint8;
 using ::megdnn::dt_qint32;
 using ::megdnn::dt_bool;
+using ::megdnn::dt_uint16;
 using ::megdnn::DType;
 using ::megdnn::DTypeEnum;
 using ::megdnn::DTypeTrait;

@@ -249,6 +249,8 @@ MGB_DEFINE_OPR_CLASS(LoopImpl::DescImplBase::LoopCondManager::GetCondOpr,
                     break;
                 case DTypeEnum::Bool:
                     break;
+                case DTypeEnum::Uint16:
+                    break;
 #define cb(_dt)         \
     case DTypeEnum::_dt: \
         break;

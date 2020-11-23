@@ -370,6 +370,12 @@ cg::OperatorNodeBase::NodeProp* Loop::do_make_node_prop() const {
                         iv += contain_eq;
                         return std::max(iv, 0);
                     }
+                case DTypeEnum::Uint16:
+                    {
+                        auto iv = val.ptr<dt_uint16>()[0];
+                        iv += contain_eq;
+                        return std::max<int>(iv, 0);
+                    }
                 case DTypeEnum::Float32:
 #if !MEGDNN_DISABLE_FLOAT16
                 case DTypeEnum::Float16:

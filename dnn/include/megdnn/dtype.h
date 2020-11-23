@@ -53,6 +53,7 @@ namespace megdnn {
     MEGDNN_INC_FLOAT16(cb(BFloat16)) \
     cb(UintB4) \
     cb(Bool) \
+    cb(Uint16) \
 
 /*!
  * \brief iterate through each full byte dtype
@@ -67,6 +68,7 @@ namespace megdnn {
     MEGDNN_INC_FLOAT16(cb(Float16)) \
     MEGDNN_INC_FLOAT16(cb(BFloat16)) \
     cb(Bool) \
+    cb(Uint16) \
 
 /*!
  * \brief iterate through each fractional byte dtype
@@ -353,6 +355,7 @@ typedef int16_t dt_int16;
 typedef int8_t dt_int8;
 typedef uint8_t dt_uint8;
 typedef bool dt_bool;
+typedef uint16_t dt_uint16;
 MEGDNN_INC_FLOAT16(typedef half_float::half dt_float16;)
 MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 
@@ -381,6 +384,7 @@ MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
             BFloat16 = 11,
 #endif
             Bool = 12,
+            Uint16 = 13,
             #define FST(_name) _name = MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE,
             #define D(_name) _name,
             MEGDNN_FOREACH_PARAMETERIZED_DTYPE_2(FST, D)
@@ -713,6 +717,7 @@ MEGDNN_DEF_DT(Int16, dt_int16, INT, SIGNED, INT16_MIN, INT16_MAX);
 MEGDNN_DEF_DT(Int8, dt_int8, INT, SIGNED, INT8_MIN, INT8_MAX);
 MEGDNN_DEF_DT(Uint8, dt_uint8, INT, UNSIGNED, 0, UINT8_MAX);
 MEGDNN_DEF_DT(Bool, dt_bool, BOOL, UNSIGNED, false, true);
+MEGDNN_DEF_DT(Uint16, dt_uint16, INT, UNSIGNED, 0, UINT16_MAX);
 MEGDNN_INC_FLOAT16(MEGDNN_DEF_DT(Float16, dt_float16, FLOAT, SIGNED,
             std::numeric_limits<dt_float16>::lowest(),
             std::numeric_limits<dt_float16>::max()));
