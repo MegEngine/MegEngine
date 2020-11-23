@@ -125,5 +125,6 @@ def fake_quant_bias(bias: Tensor, inp: Tensor, w_qat: Tensor) -> Tensor:
             qmax = _metadata_dict["qint32"].qmax
             qmin = _metadata_dict["qint32"].qmin
             b_qat = fake_quant_tensor(b_qat, qmin, qmax, b_dict)
+            b_qat.q_dict.update(b_dict)
 
     return b_qat

@@ -24,7 +24,10 @@ class Linear(Float.Linear, QATModule):
 
     def forward(self, x):
         w_qat = self.apply_quant_weight(self.weight)
-        b_qat = fake_quant_bias(self.bias, x, w_qat)
+        if self.weight_fake_quant and self.weight_fake_quant.enabled:
+            b_qat = fake_quant_bias(self.bias, x, w_qat)
+        else:
+            b_qat = self.bias
         return self.apply_quant_activation(self._calc_linear(x, w_qat, b_qat))
 
     @classmethod

@@ -115,8 +115,9 @@ def _dump_compatible(entries: List[ProfileEntry], path: str):
 
 
 def _dump_graphviz(entries: List[ProfileEntry], path: str):
-    import graphviz
     import json
+
+    import graphviz
 
     graph = graphviz.Digraph()
     graph.graph_attr["ordering"] = "out"

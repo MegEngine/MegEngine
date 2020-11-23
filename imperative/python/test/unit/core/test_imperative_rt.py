@@ -14,8 +14,8 @@ from megengine.core.tensor.core import apply
 
 
 def elemwise(*args, mode):
-    from megengine.core.ops.builtin import Elemwise
     from megengine.core._imperative_rt.imperative import apply_op
+    from megengine.core.ops.builtin import Elemwise
 
     return apply_op(Elemwise(mode), args)
 
@@ -61,8 +61,8 @@ def test_tensor_on_device():
 
 
 def test_raw_tensor():
-    from megengine.core.tensor.raw_tensor import as_raw_tensor
     from megengine.core.ops.builtin import Elemwise
+    from megengine.core.tensor.raw_tensor import as_raw_tensor
 
     x = np.random.rand(10).astype("float32")
     xx = as_raw_tensor(x)

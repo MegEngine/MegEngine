@@ -122,7 +122,10 @@ class _ConvBnActivation2d(Float._ConvBnActivation2d, QATModule):
             b_fold = beta + gamma * (conv_bias - bn_mean) * bn_istd
 
         w_qat = self.apply_quant_weight(w_fold)
-        b_qat = fake_quant_bias(b_fold, inp, w_qat)
+        if self.weight_fake_quant and self.weight_fake_quant.enabled:
+            b_qat = fake_quant_bias(b_fold, inp, w_qat)
+        else:
+            b_qat = b_fold
         conv = self.conv.calc_conv(inp, w_qat, b_qat)
         if not (self.training and approx):
             return conv

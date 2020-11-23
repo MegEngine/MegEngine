@@ -116,7 +116,7 @@ class TQT(_FakeQuantize):
 
     def __init__(self, dtype: str, narrow_range: bool = False, enable: bool = True):
         super().__init__(dtype, narrow_range, enable)
-        self.scale = Parameter(0.0, dtype=np.float32)
+        self.scale = Parameter([0.0], dtype=np.float32)
 
     def fake_quant_forward(self, inp, q_dict=None):
         # when enable, TQT will do fakequant forward, finetune the scale

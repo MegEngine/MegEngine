@@ -219,8 +219,8 @@ class HistogramObserver(MinMaxObserver):
         By selecting new min/max, we filter out outliers in input distribution.
         """
 
-        np_min_val = self.min_val.numpy()[0]
-        np_max_val = self.max_val.numpy()[0]
+        np_min_val = self.min_val.numpy()
+        np_max_val = self.max_val.numpy()
         np_histogram = self.histogram.numpy()
         assert len(np_histogram) == self.bins, "bins mistmatch"
         bin_width = (np_max_val - np_min_val) / self.bins
@@ -386,8 +386,8 @@ class HistogramObserver(MinMaxObserver):
         # This allows us to have a common grid of resolution s, where we can align
         # the input histogram
         # start_idx maps min_val to the histogram bin index.
-        np_min_val = self.min_val.numpy()[0]
-        np_max_val = self.max_val.numpy()[0]
+        np_min_val = self.min_val.numpy()
+        np_max_val = self.max_val.numpy()
 
         hist_bin_width = (np_max_val - np_min_val) / (self.bins * upsample_rate)
         downsample_rate = int(
@@ -404,8 +404,8 @@ class HistogramObserver(MinMaxObserver):
 
     def sideeffect_forward(self, x_orig):
         x = x_orig.numpy()
-        min_val = self.min_val.numpy()[0]
-        max_val = self.max_val.numpy()[0]
+        min_val = self.min_val.numpy()
+        max_val = self.max_val.numpy()
         histogram = self.histogram.numpy()
         new_min = x.min()
         new_max = x.max()

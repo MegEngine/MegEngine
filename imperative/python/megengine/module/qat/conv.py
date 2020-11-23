@@ -19,7 +19,10 @@ class Conv2d(Float.Conv2d, QATModule):
 
     def calc_conv_qat(self, inp):
         w_qat = self.apply_quant_weight(self.weight)
-        b_qat = fake_quant_bias(self.bias, inp, w_qat)
+        if self.weight_fake_quant and self.weight_fake_quant.enabled:
+            b_qat = fake_quant_bias(self.bias, inp, w_qat)
+        else:
+            b_qat = self.bias
         conv = self.calc_conv(inp, w_qat, b_qat)
         return conv
 
