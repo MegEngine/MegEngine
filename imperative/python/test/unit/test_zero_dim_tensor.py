@@ -50,3 +50,8 @@ def test_elemementwise():
 def test_astype():
     a = Tensor(1.0)
     assert a.astype("int32").ndim == 0
+
+
+def test_tranpose():
+    a = Tensor(1.0)
+    assert a.transpose().ndim == 0

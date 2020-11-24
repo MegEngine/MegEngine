@@ -392,6 +392,13 @@ class ArrayMethodMixin(abc.ABC):
         return _broadcast(self, _expand_args(args))
 
     def transpose(self, *args):
+        if self.ndim == 0:
+            assert (
+                len(args) == 0
+            ), "transpose for scalar does not accept additional args"
+            ret = self.to(self.device)
+            setscalar(ret)
+            return ret
         if not args:
             args = range(self.ndim)[::-1]
         return _transpose(self, _expand_args(args))
