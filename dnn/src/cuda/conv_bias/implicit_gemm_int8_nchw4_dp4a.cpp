@@ -208,6 +208,24 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                             stream);
         } else {
             megdnn_assert(param.format == Format::NCHW4_NCHW32);
+            cutlass_wrapper::
+                    do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_ncdiv32hw32<
+                            false>(
+                            args.src_tensor->compatible_ptr<int8_t>(),
+                            filter_ptr,
+                            args.bias_tensor->compatible_ptr<int32_t>(),
+                            args.z_tensor->compatible_ptr<int8_t>(),
+                            args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                            kern_param, nonlinear_mode, alpha, beta, gamma,
+                            dst_scale,
+                            cutlass_wrapper::GemmCoord{
+                                    m_algo_param.threadblock_m,
+                                    m_algo_param.threadblock_n,
+                                    m_algo_param.threadblock_k},
+                            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                                       m_algo_param.warp_n,
+                                                       m_algo_param.warp_k},
+                            stream);
         }
     } else {
         if (param.format == Format::NCHW4) {
@@ -246,6 +264,24 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
 
         } else {
             megdnn_assert(param.format == Format::NCHW4_NCHW32);
+            cutlass_wrapper::
+                    do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_ncdiv32hw32<
+                            true>(
+                            args.src_tensor->compatible_ptr<int8_t>(),
+                            filter_ptr,
+                            args.bias_tensor->compatible_ptr<int32_t>(),
+                            args.z_tensor->compatible_ptr<int8_t>(),
+                            args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                            kern_param, nonlinear_mode, alpha, beta, gamma,
+                            dst_scale,
+                            cutlass_wrapper::GemmCoord{
+                                    m_algo_param.threadblock_m,
+                                    m_algo_param.threadblock_n,
+                                    m_algo_param.threadblock_k},
+                            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                                       m_algo_param.warp_n,
+                                                       m_algo_param.warp_k},
+                            stream);
         }
     }
     after_kernel_launch();

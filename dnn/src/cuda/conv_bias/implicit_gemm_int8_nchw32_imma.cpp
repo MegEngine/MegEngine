@@ -35,10 +35,23 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
     if (!conv_bias::check_bias_share_in_channel(*(args.bias_layout),
                                                 param.format))
         return false;
-    if (param.format != Format::NCHW32)
+    if (param.format != Format::NCHW32 && param.format != Format::NCHW32_NCHW4)
         return false;
-    UNPACK_CONV_BIAS_NCHW32_PARAM(*(args.src_layout), fm, *(args.dst_layout),
-                                  param);
+    size_t n = args.src_layout->operator[](0),
+           ci = args.src_layout->operator[](1) * 32,
+           hi = args.src_layout->operator[](2),
+           wi = args.src_layout->operator[](3);
+    size_t ho = args.dst_layout->operator[](2),
+           wo = args.dst_layout->operator[](3);
+    size_t co;
+    if (param.format == Format::NCHW32) {
+        co = args.dst_layout->operator[](1) * 32;
+    } else {
+        megdnn_assert(param.format == Format::NCHW32_NCHW4);
+        co = args.dst_layout->operator[](1) * 4;
+    }
+    UNPACK_CONV_PARAMETER(fm, param);
+    MARK_USED_VAR
     // TODO support group conv
     available &= param.sparse == Sparse::DENSE;
     // mode must be cross correlation
@@ -84,8 +97,21 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
     using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    UNPACK_CONV_BIAS_NCHW32_PARAM(*(args.src_layout), fm, *(args.dst_layout),
-                                  param);
+    size_t n = args.src_layout->operator[](0),
+           ci = args.src_layout->operator[](1) * 32,
+           hi = args.src_layout->operator[](2),
+           wi = args.src_layout->operator[](3);
+    size_t ho = args.dst_layout->operator[](2),
+           wo = args.dst_layout->operator[](3);
+    size_t co;
+    if (param.format == Format::NCHW32) {
+        co = args.dst_layout->operator[](1) * 32;
+    } else {
+        megdnn_assert(param.format == Format::NCHW32_NCHW4);
+        co = args.dst_layout->operator[](1) * 4;
+    }
+    UNPACK_CONV_PARAMETER(fm, param);
+    MARK_USED_VAR
     auto&& stream = cuda_stream(args.opr->handle());
 
     int8_t* filter_ptr = nullptr;
@@ -137,33 +163,79 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
     }
     uint32_t nonlinear_mode = static_cast<uint32_t>(param.nonlineMode);
     if (fh == 1 && fw == 1) {
-        cutlass_wrapper::do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32<
-                false>(args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,
-                       args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
-                       args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
-                       kern_param, nonlinear_mode, alpha, beta, gamma,
-                       dst_scale,
-                       cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
-                                                  m_algo_param.threadblock_n,
-                                                  m_algo_param.threadblock_k},
-                       cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
-                                                  m_algo_param.warp_n,
-                                                  m_algo_param.warp_k},
-                       stream);
+        if (param.format == Format::NCHW32) {
+            cutlass_wrapper::do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32<
+                    false>(
+                    args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,
+                    args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
+                    args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                    kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale,
+                    cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
+                                               m_algo_param.threadblock_n,
+                                               m_algo_param.threadblock_k},
+                    cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                               m_algo_param.warp_n,
+                                               m_algo_param.warp_k},
+                    stream);
+        } else {
+            megdnn_assert(param.format == Format::NCHW32_NCHW4);
+            cutlass_wrapper::
+                    do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32_ncdiv4hw4<
+                            false>(
+                            args.src_tensor->compatible_ptr<int8_t>(),
+                            filter_ptr,
+                            args.bias_tensor->compatible_ptr<int32_t>(),
+                            z_dev_ptr,
+                            args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                            kern_param, nonlinear_mode, alpha, beta, gamma,
+                            dst_scale,
+                            cutlass_wrapper::GemmCoord{
+                                    m_algo_param.threadblock_m,
+                                    m_algo_param.threadblock_n,
+                                    m_algo_param.threadblock_k},
+                            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                                       m_algo_param.warp_n,
+                                                       m_algo_param.warp_k},
+                            stream);
+        }
     } else {
-        cutlass_wrapper::do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32<true>(
-                args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,
-                args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
-                args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
-                nonlinear_mode, alpha, beta, gamma, dst_scale,
-                cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
-                                           m_algo_param.threadblock_n,
-                                           m_algo_param.threadblock_k},
-                cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
-                                           m_algo_param.warp_n,
-                                           m_algo_param.warp_k},
-                stream);
+        if (param.format == Format::NCHW32) {
+            cutlass_wrapper::do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32<
+                    true>(
+                    args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,
+                    args.bias_tensor->compatible_ptr<int32_t>(), z_dev_ptr,
+                    args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                    kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale,
+                    cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
+                                               m_algo_param.threadblock_n,
+                                               m_algo_param.threadblock_k},
+                    cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                               m_algo_param.warp_n,
+                                               m_algo_param.warp_k},
+                    stream);
+        } else {
+            megdnn_assert(param.format == Format::NCHW32_NCHW4);
+            cutlass_wrapper::
+                    do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32_ncdiv4hw4<
+                            true>(
+                            args.src_tensor->compatible_ptr<int8_t>(),
+                            filter_ptr,
+                            args.bias_tensor->compatible_ptr<int32_t>(),
+                            z_dev_ptr,
+                            args.dst_tensor->compatible_ptr<int8_t>(), nullptr,
+                            kern_param, nonlinear_mode, alpha, beta, gamma,
+                            dst_scale,
+                            cutlass_wrapper::GemmCoord{
+                                    m_algo_param.threadblock_m,
+                                    m_algo_param.threadblock_n,
+                                    m_algo_param.threadblock_k},
+                            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
+                                                       m_algo_param.warp_n,
+                                                       m_algo_param.warp_k},
+                            stream);
+        }
     }
+    after_kernel_launch();
 }
 
 std::string ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::to_string(
@@ -189,8 +261,21 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec_preprocess(
     using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    UNPACK_CONV_BIAS_NCHW32_PARAM(*(args.src_layout), fm, *(args.dst_layout),
-                                  param);
+    size_t n = args.src_layout->operator[](0),
+           ci = args.src_layout->operator[](1) * 32,
+           hi = args.src_layout->operator[](2),
+           wi = args.src_layout->operator[](3);
+    size_t ho = args.dst_layout->operator[](2),
+           wo = args.dst_layout->operator[](3);
+    size_t co;
+    if (param.format == Format::NCHW32) {
+        co = args.dst_layout->operator[](1) * 32;
+    } else {
+        megdnn_assert(param.format == Format::NCHW32_NCHW4);
+        co = args.dst_layout->operator[](1) * 4;
+    }
+    UNPACK_CONV_PARAMETER(fm, param);
+    MARK_USED_VAR
     TensorLayout src{{co, ci / 32, fh, fw, 32}, dtype::Int8()};
     src.init_contiguous_stride();
     TensorLayout dst = src;

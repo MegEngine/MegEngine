@@ -1232,6 +1232,73 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW4_NCHW) {
     run({{16, 4, 46, 80, 4}, {4, 4, 3, 3, 4}, {1, 4, 1, 1}});
 }
 
+TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW4_NCHW32) {
+    require_compute_capability(6, 1);
+    using namespace conv_bias;
+    Checker<ConvBiasForward> checker(handle_cuda());
+    UniformIntRNG int_rng{-3, 3};
+    UniformIntRNG bias_rng{-50, 50};
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW4_NCHW32;
+    param.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+    checker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM"));
+    checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(1, dtype::QuantizedS8(1.9980927f))
+            .set_dtype(2, dtype::QuantizedS32(1.9980618f * 1.9980927f))
+            .set_dtype(3, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(4, dtype::QuantizedS8(1.9980618f))
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_rng(2, &bias_rng)
+            .set_rng(3, &int_rng)
+            .set_param(param);
+    auto run = [&](const TensorShapeArray& shapes) {
+        checker.execs({shapes[0], shapes[1], shapes[2], {}, {}});
+    };
+
+    run({{16, 4, 23, 40, 4}, {32, 4, 3, 3, 4}, {1, 1, 1, 1, 32}});
+    run({{16, 4, 92, 160, 4}, {32, 4, 3, 3, 4}, {1, 1, 1, 1, 32}});
+    run({{16, 4, 46, 80, 4}, {32, 4, 3, 3, 4}, {1, 1, 1, 1, 32}});
+}
+
+#if CUDA_VERSION >= 10020
+TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_NCHW4) {
+    require_compute_capability(7, 5);
+    using namespace conv_bias;
+    Checker<ConvBiasForward> checker(handle_cuda());
+    UniformIntRNG int_rng{-3, 3};
+    UniformIntRNG bias_rng{-50, 50};
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW32_NCHW4;
+    param.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<
+                                     ConvBiasForward>(
+            ConvBias::algo_name<ConvBias::DirectParam>(
+                    "INT8_NCHW32_IMMA_IMPLICIT_GEMM_256X128X64_64X64X64",
+                    ConvBias::DirectParam{})
+                    .c_str()));
+    checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(1, dtype::QuantizedS8(1.9980927f))
+            .set_dtype(2, dtype::QuantizedS32(1.9980618f * 1.9980927f))
+            .set_dtype(3, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(4, dtype::QuantizedS8(1.9980618f))
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_rng(2, &bias_rng)
+            .set_rng(3, &int_rng)
+            .set_param(param);
+    auto run = [&](const TensorShapeArray& shapes) {
+        checker.execs({shapes[0], shapes[1], shapes[2], {}, {}});
+    };
+
+    run({{16, 2, 23, 40, 32}, {20, 2, 3, 3, 32}, {1, 5, 1, 1, 4}});
+    run({{16, 1, 92, 160, 32}, {24, 1, 3, 3, 32}, {1, 6, 1, 1, 4}});
+    run({{16, 2, 46, 80, 32}, {4, 2, 3, 3, 32}, {1, 1, 1, 1, 4}});
+}
+#endif
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_CHWN4) {
     require_compute_capability(6, 1);

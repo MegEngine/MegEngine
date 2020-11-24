@@ -41,6 +41,15 @@ void do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32(
         cudaStream_t stream);
 
 template <bool NeedLoadFromConstMem>
+void do_conv_bias_int8_implicit_gemm_imma_ncdiv32hw32_ncdiv4hw4(
+        const int8_t* d_src, const int8_t* d_filter, const int32_t* d_bias,
+        const int8_t* d_z, int8_t* d_dst, int* workspace,
+        const convolution::ConvParam& param, uint32_t nonlinear_mode,
+        float alpha, float beta, float gamma, float scale,
+        const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
+        cudaStream_t stream);
+
+template <bool NeedLoadFromConstMem>
 void do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4(
         const int8_t* d_src, const int8_t* d_filter, const int32_t* d_bias,
         const int8_t* d_z, int8_t* d_dst, int* workspace,
@@ -53,6 +62,15 @@ template <bool NeedLoadFromConstMem>
 void do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nchw(
         const int8_t* d_src, const int8_t* d_filter, const float* d_bias,
         const float* d_z, float* d_dst, int* workspace,
+        const convolution::ConvParam& param, uint32_t nonlinear_mode,
+        float alpha, float beta, float gamma, float scale,
+        const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
+        cudaStream_t stream);
+
+template <bool NeedLoadFromConstMem>
+void do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_ncdiv32hw32(
+        const int8_t* d_src, const int8_t* d_filter, const int32_t* d_bias,
+        const int8_t* d_z, int8_t* d_dst, int* workspace,
         const convolution::ConvParam& param, uint32_t nonlinear_mode,
         float alpha, float beta, float gamma, float scale,
         const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
