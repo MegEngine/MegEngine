@@ -759,6 +759,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<RemoveRedundantTypeCvtPass>();
         add_pass(FuseNCHW4Int8Preprocess::make());
         add_pass<FuseWarpPerspectiveDimshufflePass>();
+        add_pass<FoldingConvBiasDimshufflePass>();
     });
     cb(chwn4, {
         add_pass<FuseConvBiasNonlinPass>();

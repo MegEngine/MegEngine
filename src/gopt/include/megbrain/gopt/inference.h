@@ -402,6 +402,12 @@ namespace gopt {
             void apply(OptState& opt) const override;
     };
 
+    class FoldingConvBiasDimshufflePass final : public Pass {
+        public:
+            const char* name() const override;
+            void apply(OptState& opt) const override;
+    };
+
 }  // namespace gopt
 } // namespace mgb
 

@@ -3632,7 +3632,6 @@ TEST(TestGoptInference, ConvertFormatCD4GroupOneConv) {
 }
 
 #if MGB_CUDA
-
 TEST(TestGoptInference, PreProcessCase0) {
     REQUIRE_GPU(1);
     HostTensorGenerator<dtype::Quantized8Asymm, RandomDistribution::UNIFORM>
@@ -3783,5 +3782,247 @@ TEST(TestGoptInference, WarpAndPreProcessCase) {
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
 }
+
+TEST(TestGoptInference, FoldingConvDimshuffle) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 61) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 61);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+    auto nchw42nchw = [](SymbolVar x) {
+        auto xshp = opr::GetVarShape::make(x);
+        auto cv = [&x](int v) { return x.make_scalar(v); };
+        auto sub = [&xshp, &cv](int idx) {
+            return opr::IndexAt::make(xshp, {{0, cv(idx)}});
+        };
+        auto tshp0 = opr::Concat::make({sub(0), sub(1) * 4, sub(2), sub(3)}, 0);
+        auto y0 = opr::Dimshuffle::make(x, {0, 1, 4, 2, 3});
+        auto y1 = opr::Reshape::make(y0, tshp0);
+        return y1;
+    };
+
+    auto x = mkvar("x", {32, 16, 4, 8, 4}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {64, 16, 3, 3, 4}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 16, 1, 1, 4}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW4;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    y = opr::TypeCvt::make(y, dtype::Float32());
+    y = nchw42nchw(y);
+    SymbolVar y_fuse, y_non_fuse;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::ShuffleShuffleRemovePass>()
+                          .add_pass<gopt::FoldingConvBiasDimshufflePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y}})
+                          .endpoint_vars(),
+                  y_fuse);
+    graph->compile({{y_fuse, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.FoldingConvDimshuffle.json"));
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4_NCHW,
+              find_opr<opr::ConvBias>(y_fuse).param().format);
+    ASSERT_EQ(0u, find_opr_num<opr::Dimshuffle>(y_fuse));
+    unpack_vector(gopt::GraphOptimizer{}.apply({{y}}).endpoint_vars(),
+                  y_non_fuse);
+    HostTensorND host_y_fuse, host_y_non_fuse;
+    auto func =
+            graph->compile({make_callback_copy(y_fuse, host_y_fuse),
+                            make_callback_copy(y_non_fuse, host_y_non_fuse)});
+    func->execute();
+}
+
+TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 61) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 61);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+    auto nchw42nchw32 = [](SymbolVar x) {
+        auto xshp = opr::GetVarShape::make(x);
+        auto cv = [&x](int v) { return x.make_scalar(v); };
+        auto sub = [&xshp, &cv](int idx) {
+            return opr::IndexAt::make(xshp, {{0, cv(idx)}});
+        };
+        auto tshp0 = opr::Concat::make(
+                     {sub(0), sub(1) / 8, cv(8), sub(2), sub(3), sub(4)}, 0),
+             tshp1 = opr::Concat::make(
+                     {sub(0), sub(1) / 8, sub(2), sub(3), sub(4) * 8}, 0);
+        auto y0 = opr::Reshape::make(x, tshp0);
+        auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 4, 2, 5});
+        auto y2 = opr::Reshape::make(y1, tshp1);
+        return y2;
+    };
+
+    auto x = mkvar("x", {32, 16, 4, 8, 4}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {64, 16, 3, 3, 4}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 16, 1, 1, 4}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW4;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    y = nchw42nchw32(y);
+    y = opr::TypeCvt::make(y, dtype::Float32());
+    SymbolVar y_fuse, y_non_fuse;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::FoldingConvBiasDimshufflePass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y}})
+                          .endpoint_vars(),
+                  y_fuse);
+    graph->compile({{y_fuse, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.FoldingConvDimshuffleNCHW4NCHW32.json"));
+    ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4_NCHW32,
+              find_opr<opr::ConvBias>(y_fuse).param().format);
+    ASSERT_EQ(0u, find_opr_num<opr::Dimshuffle>(y_fuse));
+    unpack_vector(gopt::GraphOptimizer{}.apply({{y}}).endpoint_vars(),
+                  y_non_fuse);
+    HostTensorND host_y_fuse, host_y_non_fuse;
+    auto func =
+            graph->compile({make_callback_copy(y_fuse, host_y_fuse),
+                            make_callback_copy(y_non_fuse, host_y_non_fuse)});
+    func->execute();
+    MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
+}
+
+#if CUDA_VERSION >= 10020
+TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {32, 16, 4, 8, 4}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {64, 16, 3, 3, 4}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 16, 1, 1, 4}, dtype::QuantizedS32(6.25f)),
+         w1 = mkcvar("w1", {16, 16, 3, 3, 4}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 4, 1, 1, 4}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW4;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    param.stride_h = param.stride_w = 1; 
+    y = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    y = opr::TypeCvt::make(y, dtype::Float32());
+    SymbolVar y_fuse, y_non_fuse;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw32().enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_fuse);
+    }
+    graph->compile({{y_fuse, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.FoldingConvDimshuffleNCHW32NCHW4.json"));
+    ASSERT_EQ(1u, find_opr_num<opr::Dimshuffle>(y_fuse));
+    bool found = false;
+    cg::DepOprIter{[&found](cg::OperatorNodeBase* opr) {
+        if (!found && opr->same_type<opr::ConvBias>()) {
+            opr::ConvBias* cb = &opr->cast_final_safe<opr::ConvBias>();
+            if (cb->param().format ==
+                opr::ConvBias::Param::Format::NCHW32_NCHW4)
+                found = true;
+        }
+    }}
+            .add(y_fuse.node()->owner_opr());
+    EXPECT_TRUE(found);
+    unpack_vector(gopt::GraphOptimizer{}.apply({{y}}).endpoint_vars(),
+                  y_non_fuse);
+    HostTensorND host_y_fuse, host_y_non_fuse;
+    auto func =
+            graph->compile({make_callback_copy(y_fuse, host_y_fuse),
+                            make_callback_copy(y_non_fuse, host_y_non_fuse)});
+    func->execute();
+    MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
+}
 #endif
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
