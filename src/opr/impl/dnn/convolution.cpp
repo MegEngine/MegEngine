@@ -960,11 +960,20 @@ void ConvBiasForward::scn_do_execute_preprocess() {
     if (input().size() > 3) {
         z_layout = input(3)->layout();
     }
-    megdnn_opr()->exec_preprocess(
-            input(0)->layout(), input(1)->dev_tensor().as_megdnn(),
-            input(2)->dev_tensor().as_megdnn(), z_layout, output(0)->layout(),
-            preprocessed_filter(),
-            intl::get_megdnn_workspace_from_var(output().back()));
+    if (input().size() > 2) {
+        megdnn_opr()->exec_preprocess(
+                input(0)->layout(), input(1)->dev_tensor().as_megdnn(),
+                input(2)->dev_tensor().as_megdnn(), z_layout,
+                output(0)->layout(), preprocessed_filter(),
+                intl::get_megdnn_workspace_from_var(output().back()));
+    } else {
+        megdnn::TensorND bias_tensor{nullptr, bias_layout};
+        megdnn_opr()->exec_preprocess(
+                input(0)->layout(), input(1)->dev_tensor().as_megdnn(),
+                bias_tensor, z_layout, output(0)->layout(),
+                preprocessed_filter(),
+                intl::get_megdnn_workspace_from_var(output().back()));
+    }
     //! Flag the weight and bias no use later, which can be freed when no other
     //! var depend on its dev_value, host_value and shape.
     auto receiver_info_weight =
@@ -975,7 +984,7 @@ void ConvBiasForward::scn_do_execute_preprocess() {
         input(1)->add_flag(VarNode::Flag::MEMORY_NO_NEED);
     }
     //! if bias is preprocessd
-    if (input().size() > 3) {
+    if (input().size() > 2) {
         auto preprocessed_layouts =
                 megdnn_opr()->deduce_preprocessed_filter_layout(
                         input(0)->layout(), input(1)->layout(), bias_layout,

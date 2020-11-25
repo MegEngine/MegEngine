@@ -1976,7 +1976,6 @@ typename DnnOp::Algorithm* try_find_any_bias_preprocess_algo(
         bool valid = false;
         if (!layouts[1].is_empty()) {
             valid = true;
-            break;
         }
         if (valid) {
             found.emplace(true);
@@ -2204,6 +2203,8 @@ TEST(TestGraph, FreeBias) {
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
     auto w1 = mkcvar("w1", {32, 32, 1, 1}), b1 = mkcvar("b1", {1, 32, 1, 1});
     auto conv1 = opr::ConvBias::make(x, w1, b1, param_conv_bias);
+    auto w2 = mkcvar("w2", {32, 32, 1, 1});
+    auto conv2 = opr::ConvBias::make(conv1, w2, param_conv_bias);
     Maybe<bool> wp1;
     conv1.node()->owner_opr()->cast_final_safe<opr::ConvBias>()
         .setup_algo_chooser([&](const cg::OperatorNodeBase* opr) {
@@ -2216,7 +2217,7 @@ TEST(TestGraph, FreeBias) {
     });
 
     HostTensorND host_y;
-    auto func =graph->compile({make_callback_copy(conv1, host_y)});
+    auto func =graph->compile({make_callback_copy(conv2, host_y)});
     //!flag the no need memory of var
     func->execute();
     //!free the no need memory of var
