@@ -266,11 +266,20 @@ cg::OperatorNodeBase* opr_shallow_copy_remote_recv(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<RemoteRecv>();
-    return RemoteRecv::make(opr.key(), *opr.owner_graph(),
-                            opr.group_client(), config, inputs[0]->shape(),
-                            inputs[0]->dtype())
-            .node()
-            ->owner_opr();
+    if (inputs.size() == 1) {
+        return RemoteRecv::make(opr.key(), inputs[0], *opr.owner_graph(),
+                                opr.group_client(), config, opr.shape(),
+                                opr.dtype())
+                .node()
+                ->owner_opr();
+    } else {
+        mgb_assert(inputs.size() == 0, "recv should have 1 or 0 input");
+        return RemoteRecv::make(opr.key(), *opr.owner_graph(),
+                                opr.group_client(), config, opr.shape(),
+                                opr.dtype())
+                .node()
+                ->owner_opr();
+    }
 }
 MGB_REG_OPR_SHALLOW_COPY(RemoteRecv, opr_shallow_copy_remote_recv);
 

@@ -94,6 +94,9 @@ MGB_DEFINE_OPR_CLASS(RemoteRecv, RemoteIOBase) // {
                 const OperatorNodeConfig& config, const TensorShape& shape,
                 DType dtype);
 
+        const TensorShape& shape() const { return m_shape; }
+        const DType& dtype() const { return m_dtype; }
+
     private:
         const TensorShape m_shape;
         const DType m_dtype;

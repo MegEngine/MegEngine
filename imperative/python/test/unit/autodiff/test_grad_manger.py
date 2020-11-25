@@ -111,7 +111,6 @@ def test_remote_grad():
         gm = GradManager().attach(m.parameters())
         opt = optim.SGD(m.parameters(), 1e-3, momentum=0.9)
 
-        @trace(symbolic=True)
         def train_func(x):
             with gm:
                 if rank != 0:
@@ -120,18 +119,22 @@ def test_remote_grad():
                     )
                 y = m(x)
                 if rank != size - 1:
-                    y = dist.functional.remote_send(y, dest_rank=rank + 1)
-                if rank == size - 1:
+                    dist.functional.remote_send(y, dest_rank=rank + 1)
+                    gm.backward()
+                else:
                     y = y.mean()
                     gm.backward(y)
-                else:
-                    gm.backward()
                 opt.step().clear_grad()
 
-        for i in range(3):
-            train_func(x)
+        train_funcs = [
+            train_func,
+            trace(symbolic=False)(train_func),
+            trace(symbolic=True)(train_func),
+        ]
 
-        for param in m.parameters():
-            param.numpy()
+        for func in train_funcs:
+            for i in range(3):
+                func(x)
+            sync()
 
     worker()

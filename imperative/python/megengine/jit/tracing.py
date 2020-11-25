@@ -588,7 +588,7 @@ class trace:
             graph.options.graph_opt_level = self._graph_opt_level
         else:
             graph.options.graph_opt_level = 2
-        graph.compile(*readers)
+        graph.compile(*readers, *links)
 
     def _reset_exec_env(self):
         for opnode in self._need_reset_nodes:
