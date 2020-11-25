@@ -28,25 +28,16 @@ def test_min_max_observer():
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_sync_min_max_observer():
-    x = np.random.rand(6, 3, 3, 3).astype("float32")
+    word_size = get_device_count_by_fork("gpu")
+    x = np.random.rand(3 * word_size, 3, 3, 3).astype("float32")
     np_min, np_max = x.min(), x.max()
-    world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
 
-    def worker(rank, slc):
-        dist.init_process_group("localhost", port, world_size, rank, rank)
+    @dist.launcher
+    def worker():
+        rank = dist.get_rank()
         m = ob.SyncMinMaxObserver()
-        y = mge.tensor(x[slc])
+        y = mge.tensor(x[rank * 3 : (rank + 1) * 3])
         m(y)
         assert m.min_val == np_min and m.max_val == np_max
 
-    procs = []
-    for rank in range(world_size):
-        slc = slice(rank * 3, (rank + 1) * 3)
-        p = mp.Process(target=worker, args=(rank, slc,), daemon=True)
-        p.start()
-        procs.append(p)
-    for p in procs:
-        p.join(20)
-        assert p.exitcode == 0
+    worker()

@@ -23,6 +23,7 @@ from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.core.tensor.tensor import Tensor, apply
 from megengine.core.tensor.tensor_wrapper import TensorWrapper
+from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.distributed import remote_recv, remote_send
 
 
@@ -53,15 +54,19 @@ def save_to(self, name="grad"):
     return callback
 
 
-@pytest.mark.isolated_distributed
+@pytest.mark.skipif(
+    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
+)
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.isolated_distributed
 def test_dist_grad():
     world_size = 2
     x_np = np.random.rand(10).astype("float32")
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker0():
         dist.init_process_group("localhost", port, world_size, 0, 0)

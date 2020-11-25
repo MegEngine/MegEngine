@@ -47,8 +47,8 @@ def _assert_q_val(q, val):
 @pytest.mark.isolated_distributed
 def test_init_process_group():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, backend):
         dist.init_process_group("localhost", port, world_size, rank, rank, backend)
@@ -92,11 +92,10 @@ def test_init_process_group():
 def test_new_group():
     world_size = 3
     ranks = [2, 0]
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
 
-    def worker(rank):
-        dist.init_process_group("localhost", port, world_size, rank, rank)
+    @dist.launcher
+    def worker():
+        rank = dist.get_rank()
         if rank in ranks:
             group = dist.new_group(ranks)
             assert group.size == 2
@@ -104,15 +103,7 @@ def test_new_group():
             assert group.rank == ranks.index(rank)
             assert group.comp_node == "gpu{}:2".format(rank)
 
-    procs = []
-    for rank in range(world_size):
-        p = mp.Process(target=worker, args=(rank,))
-        p.start()
-        procs.append(p)
-
-    for p in procs:
-        p.join(20)
-        assert p.exitcode == 0
+    worker()
 
 
 @pytest.mark.skipif(
@@ -125,8 +116,8 @@ def test_new_group():
 @pytest.mark.isolated_distributed
 def test_group_barrier():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, q):
         dist.init_process_group("localhost", port, world_size, rank, rank)
@@ -161,8 +152,8 @@ def test_group_barrier():
 @pytest.mark.isolated_distributed
 def test_synchronized():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     @dist.synchronized
     def func(rank, q):
@@ -205,26 +196,16 @@ def test_synchronized():
 @pytest.mark.isolated_distributed
 def test_user_set_get():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
 
-    def worker(rank):
-        dist.init_process_group("localhost", port, world_size, rank, rank)
+    @dist.launcher
+    def worker():
         # set in race condition
         dist.get_client().user_set("foo", 1)
         # get in race condition
         ret = dist.get_client().user_get("foo")
         assert ret == 1
 
-    procs = []
-    for rank in range(world_size):
-        p = mp.Process(target=worker, args=(rank,))
-        p.start()
-        procs.append(p)
-
-    for p in procs:
-        p.join(20)
-        assert p.exitcode == 0
+    worker()
 
 
 def test_oprmm_hashable():

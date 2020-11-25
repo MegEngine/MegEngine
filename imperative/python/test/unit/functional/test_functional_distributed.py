@@ -41,8 +41,8 @@ from megengine.functional.distributed import (
 @pytest.mark.isolated_distributed
 def test_reduce_sum():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -83,8 +83,8 @@ def test_reduce_sum():
 @pytest.mark.isolated_distributed
 def test_broadcast():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -121,8 +121,8 @@ def test_broadcast():
 @pytest.mark.isolated_distributed
 def test_all_gather():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -160,8 +160,8 @@ def test_all_gather():
 @pytest.mark.isolated_distributed
 def test_reduce_scatter_sum():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -199,8 +199,8 @@ def test_reduce_scatter_sum():
 @pytest.mark.isolated_distributed
 def test_all_reduce_sum():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -238,8 +238,8 @@ def test_all_reduce_sum():
 @pytest.mark.isolated_distributed
 def test_all_reduce_max():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -277,8 +277,8 @@ def test_all_reduce_max():
 @pytest.mark.isolated_distributed
 def test_all_reduce_min():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -316,8 +316,8 @@ def test_all_reduce_min():
 @pytest.mark.isolated_distributed
 def test_gather():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -358,8 +358,8 @@ def test_gather():
 @pytest.mark.isolated_distributed
 def test_scatter():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -396,8 +396,8 @@ def test_scatter():
 @pytest.mark.isolated_distributed
 def test_all_to_all():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
 
     def worker(rank, data, expect, port):
         if mge.get_device_count("gpu") < world_size:
@@ -436,8 +436,8 @@ def test_all_to_all():
 @pytest.mark.isolated_distributed
 def test_io_remote():
     world_size = 2
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
+    server = dist.Server()
+    port = server.py_server_port
     val = np.random.rand(4, 5).astype(np.float32)
 
     def worker(rank):

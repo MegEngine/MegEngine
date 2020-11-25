@@ -38,7 +38,7 @@ def test_syncbn():
     running_var = np.ones((1, nr_chan, 1, 1), dtype=np.float32)
     steps = 4
     nr_ranks = 2
-    server = dist.Server(0)
+    server = dist.Server()
     port = server.py_server_port
 
     def worker(rank, data, yv_expect, running_mean, running_var):

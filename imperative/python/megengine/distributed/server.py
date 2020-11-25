@@ -133,18 +133,22 @@ class ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
     pass
 
 
-def start_server(py_server_port, mm_server_port, queue):
+def _start_server(py_server_port, mm_server_port, queue):
     """
     Start python distributed server and multiple machine server.
     
     :param py_server_port: python server port.
     :param mm_server_port: multiple machine server port.
+    :param queue: server port will put in this queue, puts exception when process fails.
     """
-    server = ThreadXMLRPCServer(("0.0.0.0", py_server_port), logRequests=False)
-    server.register_instance(Methods(mm_server_port))
-    _, port = server.server_address
-    queue.put(port)
-    server.serve_forever()
+    try:
+        server = ThreadXMLRPCServer(("0.0.0.0", py_server_port), logRequests=False)
+        server.register_instance(Methods(mm_server_port))
+        _, port = server.server_address
+        queue.put(port)
+        server.serve_forever()
+    except Exception as e:
+        queue.put(e)
 
 
 class Server:
@@ -159,10 +163,14 @@ class Server:
         self.mm_server_port = create_mm_server("0.0.0.0", 0)
         q = Queue()
         self.proc = threading.Thread(
-            target=start_server, args=(port, self.mm_server_port, q), daemon=True,
+            target=_start_server, args=(port, self.mm_server_port, q), daemon=True,
         )
         self.proc.start()
-        self.py_server_port = q.get()
+        ret = q.get()
+        if isinstance(ret, Exception):
+            raise ret
+        else:
+            self.py_server_port = ret
 
 
 class Client:

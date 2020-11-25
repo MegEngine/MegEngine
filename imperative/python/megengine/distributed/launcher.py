@@ -45,9 +45,15 @@ def launcher(func):
 
         while len(ranks) > 0:
             left = []
+            # check all processes in one second
+            time_to_wait = 1.0 / len(ranks)
             for rank in ranks:
-                procs[rank].join(1)
+                procs[rank].join(time_to_wait)
                 code = procs[rank].exitcode
+                # terminate processes if one of them has failed
+                if code != 0 and code != None:
+                    for i in ranks:
+                        procs[i].terminate()
                 assert (
                     code == 0 or code == None
                 ), "subprocess {} exit with code {}".format(rank, code)

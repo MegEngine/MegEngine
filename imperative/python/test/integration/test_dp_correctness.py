@@ -159,11 +159,9 @@ def run_test(
     checkpoint = mge.load(model_path)
     data = checkpoint["data"]
     label = checkpoint["label"]
-    port = dist.get_free_ports(1)[0]
-    server = dist.Server(port)
 
-    def worker(rank, max_err):
-        dist.init_process_group("localhost", port, p_num, rank, rank)
+    @dist.launcher
+    def worker(max_err):
         net = MnistNet(has_bn=True)
         net.load_state_dict(checkpoint["net_init"])
         lr = checkpoint["sgd_lr"]
@@ -194,15 +192,7 @@ def run_test(
             else:
                 np.testing.assert_allclose(param[1], param_ref[1], atol=max_err)
 
-    procs = []
-    for rank in range(p_num):
-        p = mp.Process(target=worker, args=(rank, max_err,))
-        p.start()
-        procs.append(p)
-
-    for p in procs:
-        p.join(20)
-        assert p.exitcode == 0
+    worker(max_err)
 
 
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 4, reason="need more gpu device")
