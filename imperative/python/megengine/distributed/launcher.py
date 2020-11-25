@@ -29,8 +29,8 @@ def launcher(func):
 
     def wrapper(*args, **kwargs):
         master_ip = "localhost"
-        port = get_free_ports(1)[0]
-        server = Server(port)
+        server = Server()
+        port = server.py_server_port
 
         procs = []
         for rank in range(n_gpus):
@@ -41,9 +41,18 @@ def launcher(func):
             p.start()
             procs.append(p)
 
-        for rank in range(n_gpus):
-            procs[rank].join()
-            code = procs[rank].exitcode
-            assert code == 0, "subprocess {} exit with code {}".format(rank, code)
+        ranks = [rank for rank in range(n_gpus)]
+
+        while len(ranks) > 0:
+            left = []
+            for rank in ranks:
+                procs[rank].join(1)
+                code = procs[rank].exitcode
+                assert (
+                    code == 0 or code == None
+                ), "subprocess {} exit with code {}".format(rank, code)
+                if code == None:
+                    left.append(rank)
+            ranks = left
 
     return wrapper

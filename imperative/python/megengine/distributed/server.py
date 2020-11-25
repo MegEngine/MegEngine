@@ -10,6 +10,7 @@ import threading
 import time
 from collections import defaultdict
 from functools import partial
+from queue import Queue
 from socketserver import ThreadingMixIn
 from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
@@ -132,7 +133,7 @@ class ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
     pass
 
 
-def start_server(py_server_port, mm_server_port):
+def start_server(py_server_port, mm_server_port, queue):
     """
     Start python distributed server and multiple machine server.
     
@@ -141,6 +142,8 @@ def start_server(py_server_port, mm_server_port):
     """
     server = ThreadXMLRPCServer(("0.0.0.0", py_server_port), logRequests=False)
     server.register_instance(Methods(mm_server_port))
+    _, port = server.server_address
+    queue.put(port)
     server.serve_forever()
 
 
@@ -152,15 +155,14 @@ class Server:
     :param port: python server port.
     """
 
-    def __init__(self, port):
-        self.py_server_port = get_free_ports(1)[0] if port == 0 else port
+    def __init__(self, port=0):
         self.mm_server_port = create_mm_server("0.0.0.0", 0)
+        q = Queue()
         self.proc = threading.Thread(
-            target=start_server,
-            args=(self.py_server_port, self.mm_server_port),
-            daemon=True,
+            target=start_server, args=(port, self.mm_server_port, q), daemon=True,
         )
         self.proc.start()
+        self.py_server_port = q.get()
 
 
 class Client:
