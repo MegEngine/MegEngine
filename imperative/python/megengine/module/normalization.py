@@ -8,11 +8,13 @@
 import numpy as np
 
 import megengine.functional as F
-import megengine.module as M
 from megengine import Parameter
 
+from .init import ones_, zeros_
+from .module import Module
 
-class GroupNorm(M.Module):
+
+class GroupNorm(Module):
     """
     Simple implementation of GroupNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
@@ -35,8 +37,8 @@ class GroupNorm(M.Module):
 
     def reset_parameters(self):
         if self.affine:
-            M.init.ones_(self.weight)
-            M.init.zeros_(self.bias)
+            ones_(self.weight)
+            zeros_(self.bias)
 
     def forward(self, x):
         N, C, H, W = x.shape
@@ -61,7 +63,7 @@ class GroupNorm(M.Module):
         return s.format(**self.__dict__)
 
 
-class InstanceNorm(M.Module):
+class InstanceNorm(Module):
     """
     Simple implementation of InstanceNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/abs/1607.08022.
@@ -83,8 +85,8 @@ class InstanceNorm(M.Module):
 
     def reset_parameters(self):
         if self.affine:
-            M.init.ones_(self.weight)
-            M.init.zeros_(self.bias)
+            ones_(self.weight)
+            zeros_(self.bias)
 
     def forward(self, x):
         N, C, H, W = x.shape
@@ -105,7 +107,7 @@ class InstanceNorm(M.Module):
         return s.format(**self.__dict__)
 
 
-class LayerNorm(M.Module):
+class LayerNorm(Module):
     """
     Simple implementation of LayerNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
@@ -127,8 +129,8 @@ class LayerNorm(M.Module):
 
     def reset_parameters(self):
         if self.affine:
-            M.init.ones_(self.weight)
-            M.init.zeros_(self.bias)
+            ones_(self.weight)
+            zeros_(self.bias)
 
     def forward(self, x):
         N, C, H, W = x.shape

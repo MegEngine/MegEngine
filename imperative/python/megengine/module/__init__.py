@@ -20,6 +20,7 @@ from .embedding import Embedding
 from .identity import Identity
 from .linear import Linear
 from .module import Module
+from .normalization import GroupNorm, InstanceNorm, LayerNorm
 from .pooling import AvgPool2d, MaxPool2d
 from .quant_dequant import DequantStub, QuantStub
 from .sequential import Sequential
