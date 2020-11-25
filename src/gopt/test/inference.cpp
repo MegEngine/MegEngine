@@ -1989,6 +1989,74 @@ TEST(TestEnableTensorCore, ConvBiasWithZ) {
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
 
+TEST(TestEnableTensorCore, Pooling) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {32, 16, 16, 16, 4}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w1", {64, 16, 3, 3, 4}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 16, 1, 1, 4}, dtype::QuantizedS32(6.25f)),
+         z = mkvar("b1", {32, 16, 16, 16, 4}, dtype::QuantizedS8(2.5f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW4;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, z, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    opr::Pooling::Param pool_param;
+    pool_param.format = opr::Pooling::Param::Format::NCHW4;
+    y = opr::Pooling::make(y, pool_param);
+    y = opr::TypeCvt::make(y, dtype::Float32());
+
+    SymbolVar y_opt;
+    SymbolVar y_no_tc;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity().enable_nchw32();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+    ASSERT_EQ(opr::Pooling::Param::Format::NCHW32,
+              find_opr<opr::Pooling>(y_opt).param().format);
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_fuse_conv_bias_nonlinearity();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_no_tc);
+    }
+    HostTensorND host_y, host_y_opt;
+    auto func = graph->compile({make_callback_copy(y_no_tc, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
+}
+
 TEST(TestGoptInference, EnableTensorCore) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");

@@ -413,6 +413,62 @@ __global__ void pooling2d_device_template_int8_ncdiv4hw4(
     *(reinterpret_cast<ldg_type*>(g_dst_ptr)) = res;
 }
 
+template <typename Pooler>
+__global__ void pooling2d_device_template_int8_ncdiv32hw32(
+        const int8_t* __restrict__ src, int8_t* __restrict__ dst, Param param) {
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    using ldg_type = typename Pooler::feed_type;
+    static int constexpr pack_size = 32;
+    static int constexpr ldg_width = sizeof(ldg_type) / sizeof(int32_t);
+    static int constexpr ldg_width_bytes = sizeof(ldg_type);
+    static int constexpr section = pack_size / sizeof(ldg_type);
+    MEGDNN_STATIC_ASSERT(
+            ldg_width == 4,
+            "pooling2d (NCHW32) kernel must use 128bit width ldg instruction");
+    const int c_packed = param.c / pack_size;
+    const int batch = tid / (param.ho * param.wo * c_packed * section);
+    const int batch_residual =
+            tid - batch * param.ho * param.wo * c_packed * section;
+    const int oc = batch_residual / (param.ho * param.wo * section);
+    const int oc_residual = batch_residual - oc * param.ho * param.wo * section;
+    const int oh = oc_residual / (param.wo * section);
+    const int oh_residual = (oc_residual - oh * param.wo * section);
+    const int ow = oh_residual / section;
+    const int sec = oh_residual - ow * section;
+    if (batch >= param.n || oc >= c_packed || oh >= param.ho || ow >= param.wo)
+        return;
+
+    const int in_batch_stride = param.hi * param.wi * param.c;
+    const int out_batch_stride = param.ho * param.wo * param.c;
+    const int in_channel_stride = param.hi * param.wi * pack_size;
+    const int out_channel_stride = param.ho * param.wo * pack_size;
+    const int8_t* __restrict__ g_src_ptr = src + batch * in_batch_stride +
+                                           oc * in_channel_stride +
+                                           sec * ldg_width_bytes;
+    int8_t* __restrict__ g_dst_ptr =
+            dst + batch * out_batch_stride + oc * out_channel_stride +
+            (oh * param.wo + ow) * pack_size + sec * ldg_width_bytes;
+
+    Pooler pooler(param.window_h * param.window_w);
+    pooler.init();
+    for (int fh = 0; fh < param.window_h; fh++) {
+        uint32_t ih = oh * param.sh + fh - param.ph;
+        for (int fw = 0; fw < param.window_w; fw++) {
+            uint32_t iw = ow * param.sw + fw - param.pw;
+            if (ih < param.hi && iw < param.wi) {
+                const int8_t* __restrict__ cur_src_ptr =
+                        g_src_ptr + (ih * param.wi + iw) * pack_size;
+                ldg_type sval =
+                        __ldg(reinterpret_cast<const ldg_type*>(cur_src_ptr));
+                pooler.feed(sval);
+            }
+        }
+    }
+    ldg_type res = pooler.get_ans();
+    *(reinterpret_cast<ldg_type*>(g_dst_ptr)) = res;
+}
+
 };  // namespace
 
 void megdnn::cuda::pooling2d::do_pooling2d_int8_cdiv4hwn4(const int8_t* d_src,
@@ -494,4 +550,43 @@ void megdnn::cuda::pooling2d::do_pooling2d_int8_ncdiv4hw4(const int8_t* d_src,
     kern<<<nr_blocks, nr_threads, 0, stream>>>(d_src, d_dst, param);
     after_kernel_launch();
 }
+
+void megdnn::cuda::pooling2d::do_pooling2d_int8_ncdiv32hw32(const int8_t* d_src,
+                                                            int8_t* d_dst,
+                                                            const Param& param,
+                                                            cudaStream_t stream,
+                                                            uint32_t mode) {
+    using Mode = megdnn::param_enumv::Pooling::Mode;
+    void (*kern)(const int8_t* __restrict__, int8_t* __restrict__, Param param);
+    uint32_t vthreads = param.n * param.c * param.ho * param.wo / 16;
+    switch (mode) {
+        case Mode::MAX:
+            kern = pooling2d_device_template_int8_ncdiv32hw32<
+                    MaxPooler<int8_t, int4>>;
+            break;
+        case Mode::AVERAGE:
+            kern = pooling2d_device_template_int8_ncdiv32hw32<
+                    MeanIncludeRoundedPooler<int8_t, int4, int32_t>>;
+            break;
+        case Mode::AVERAGE_COUNT_EXCLUDE_PADDING:
+            kern = pooling2d_device_template_int8_ncdiv32hw32<
+                    MeanExcludeRoundedPooler<int8_t, int4, int32_t>>;
+            break;
+        default:
+            megdnn_assert(false, "invalid pooling mode");
+    }
+    uint32_t nr_threads = query_blocksize_for_kernel(kern);
+    nr_threads = std::min(nr_threads, vthreads);
+    uint32_t nr_blocks = DIVUP(vthreads, nr_threads);
+    kern<<<nr_blocks, nr_threads, 0, stream>>>(d_src, d_dst, param);
+    after_kernel_launch();
+}
+
+#undef FEED1
+#undef FEED2
+#undef FEED3
+#undef ANS1
+#undef ANS2
+#undef ANS4
+
 // vim: syntax=cuda.doxygen

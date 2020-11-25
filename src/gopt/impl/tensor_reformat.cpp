@@ -1090,14 +1090,24 @@ EnableTensorCorePass::make_tensorcore_converter() {
         size_t nr_inps = opr->input().size();
         MGB_MARK_USED_VAR(nr_inps);
         mgb_assert(nr_inps == 1);
-        if (!opr->input(0)->shape().eq_shape(new_inp[0]->shape())) {
-            mgb_assert(opr->input(0)->shape().ndim == 5 &&
-                       opr->input(0)->shape()[4] == 4);
-            mgb_assert(new_inp[0]->shape().ndim == 5 &&
-                       new_inp[0]->shape()[4] == 32);
+        size_t nr_channels = opr->input(0)->shape()[1] * 4;
+        if (nr_channels % 32 == 0) {  // use nchw32 format
+            VarNode* new_inp_var = new_inp[0];
+            if (opr->input(0)->shape().eq_shape(new_inp[0]->shape())) {
+                new_inp_var =
+                        RelayoutPlaceholder::make(
+                                new_inp[0], RelayoutPlaceholder::LayoutType::
+                                                    NCHW4_TO_NCHW32)
+                                .node();
+            } else {
+                mgb_assert(opr->input(0)->shape().ndim == 5 &&
+                           opr->input(0)->shape()[4] == 4);
+                mgb_assert(new_inp[0]->shape().ndim == 5 &&
+                           new_inp[0]->shape()[4] == 32);
+            }
             auto new_param = pooling.param();
             new_param.format = Format::NCHW32;
-            auto new_pooling = opr::PoolingForward::make(new_inp[0], new_param,
+            auto new_pooling = opr::PoolingForward::make(new_inp_var, new_param,
                                                          opr->config());
             return new_pooling.node()->owner_opr();
         }

@@ -310,6 +310,26 @@ TEST_F(CUDA, POOLING_FORWARD_INT8_NCHW4) {
     }
 }
 
+TEST_F(CUDA, POOLING_FORWARD_INT8_NCHW32) {
+    require_compute_capability(6, 1);
+    using Param = param::Pooling;
+    Checker<Pooling> checker(handle_cuda());
+    Param param;
+    auto i8_min = std::numeric_limits<int8_t>().min();
+    auto i8_max = std::numeric_limits<int8_t>().max();
+    UniformIntRNG int_rng{i8_min, i8_max};
+    checker.set_dtype(0, dtype::QuantizedS8(0.1f));
+    param.format = Param::Format::NCHW32;
+    for (auto mode : {Param::Mode::MAX, Param::Mode::AVERAGE,
+                      Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING}) {
+        param.mode = mode;
+        checker.set_epsilon(1e-3).set_rng(0, &int_rng);
+        checker.set_param(param).exec({{64, 8, 28, 28, 32}, {}});
+        checker.set_param(param).exec({{15, 8, 28, 28, 32}, {}});
+        checker.set_param(param).exec({{30, 8, 28, 28, 32}, {}});
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_POOLING_CHWN4) {
     CUBenchmarker<Pooling> bencher(handle_cuda());
@@ -331,13 +351,17 @@ TEST_F(CUDA, BENCHMARK_POOLING_CHWN4) {
         param.format = Param::Format::CHWN4;
         bencher.set_param(param);
         auto time_chwn4 = bencher.execs({{C / 4, H, W, N, 4}, {}}) / nr_times;
+        auto time_nchw32 =
+                bencher.execs({{N, C / 32, H, W, 32}, {}}) / nr_times;
         size_t oh = infer_conv_shape(H, window, stride, padding),
                ow = infer_conv_shape(W, window, stride, padding);
         float io = (N * C * H * W + N * C * oh * ow) * sizeof(int8_t);
-        printf("time(cudnn)=%.2f ms, time(chwn4)=%.2f ms, "
-               "bandwidth(cudnn)=%.2f Gb/s, bandwidth(chwn4)=%.2f Gb/s\n",
-               time_cudnn, time_chwn4, io / (1e6 * time_cudnn),
-               io / (1e6 * time_chwn4));
+        printf("time(cudnn)=%.2f ms, time(chwn4)=%.2f ms, time(nchw32)=%.2f "
+               "ms, "
+               "bandwidth(cudnn)=%.2f Gb/s, bandwidth(chwn4)=%.2f Gb/s, "
+               "bandwidth(nchw32)=%.2f Gb/s\n",
+               time_cudnn, time_chwn4, time_nchw32, io / (1e6 * time_cudnn),
+               io / (1e6 * time_chwn4), io / (1e6 * time_nchw32));
     };
     run_bench(64, 64, 112, 112, 2, 1, 2);
     run_bench(256, 64, 112, 112, 2, 1, 2);
