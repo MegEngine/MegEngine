@@ -14,29 +14,31 @@
 #include "./json_loader.h"
 #include "./npy.h"
 
+#include "megbrain/comp_node_env.h"
+#include "megbrain/gopt/inference.h"
+#include "megbrain/graph/extern_copr_api.h"
 #include "megbrain/opr/dnn/convolution.h"
-#include "megbrain/utils/debug.h"
-#include "megbrain/serialization/serializer.h"
-#include "megbrain/serialization/extern_c_opr.h"
-#include "megbrain/plugin/opr_io_dump.h"
-#include "megbrain/plugin/profiler.h"
-#include "megbrain/plugin/num_range_checker.h"
-#include "megbrain/plugin/cpu_dispatch_checker.h"
-#include "megbrain/plugin/var_value_checker.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/gopt/inference.h"
-#include "megbrain/comp_node_env.h"
+#include "megbrain/plugin/cpu_dispatch_checker.h"
+#include "megbrain/plugin/num_range_checker.h"
+#include "megbrain/plugin/opr_io_dump.h"
+#include "megbrain/plugin/profiler.h"
+#include "megbrain/plugin/var_value_checker.h"
+#include "megbrain/serialization/extern_c_opr.h"
+#include "megbrain/serialization/serializer.h"
+#include "megbrain/utils/debug.h"
 
 #include "megbrain/system.h"
 #include "megbrain/version.h"
 #include "megdnn/version.h"
 
-#include <cstdlib>
-#include <cstring>
+#include <cctype>
 #include <cerrno>
 #include <cstdio>
-#include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
 #include <numeric>
 #include <sstream>
 
@@ -155,6 +157,9 @@ R"__usage__(
   --c-opr-lib <path>
     Load external operator library. It must implement MGB_C_OPR_INIT_FUNC_STR as the
     entry point.
+  --c-opr-lib-with-param
+    Run c opr lib with param, use to benchmark speed and check result, need c opr loader implemente
+    `copr_param_device_ptr_malloc, copr_param_device_ptr_free and copr_param_device_ptr_h2d symbols`.
   --thread <num>
     Number of threads to run concurrently. All threads perform the same work of
     loading and executing models. This is used for test thread safety, not for
@@ -486,6 +491,20 @@ struct Args {
     int args_parse_ret = 0;
 
     std::string model_path;
+    struct COprArgs {
+        //! for run c opr
+        bool is_run_c_opr = false;
+        bool is_run_c_opr_with_param = false;
+        typedef void (*COPR_PARAM_DEVICE_PTR_MEM_T)(ExternCOprParam* param);
+        typedef void (*COPR_PARAM_DEVICE_PTR_H2D_T)(
+                ExternCOprParam* param, void* host_ptr,
+                size_t extern_device_tensor_id);
+        COPR_PARAM_DEVICE_PTR_MEM_T copr_param_device_ptr_malloc = nullptr;
+        COPR_PARAM_DEVICE_PTR_MEM_T copr_param_device_ptr_free = nullptr;
+        COPR_PARAM_DEVICE_PTR_H2D_T copr_param_device_ptr_h2d = nullptr;
+    };
+
+    COprArgs c_opr_args;
 
     bool disable_assert_throw = false;
     bool share_param_mem = false;
@@ -775,6 +794,65 @@ void run_test_st(Args &env) {
                 output_names.c_str());
         double tot_time = 0;
         for (uint32_t i = 0; i < nr_test; ++ i) {
+            std::shared_ptr<ExternCOprParam> c_opr_param;
+            auto dtype_cpp2c = [](DType dtype) -> MGBDType {
+                switch (dtype.enumv()) {
+                    case DTypeEnum::Float32:
+                        return MGB_DTYPE_FLOAT32;
+                    case DTypeEnum::Int32:
+                        return MGB_DTYPE_INT32;
+                    case DTypeEnum::Int16:
+                        return MGB_DTYPE_INT16;
+                    case DTypeEnum::Uint8:
+                        return MGB_DTYPE_UINT8;
+#if !MEGDNN_DISABLE_FLOAT16
+                    case DTypeEnum::Float16:
+                        return MGB_DTYPE_FLOAT16;
+#endif
+                    default:
+                        mgb_throw(InternalError,
+                                  "unsupported dtype for extern C API: %s",
+                                  dtype.name());
+                }
+            };
+
+            auto tensor_shape_to_c = [](const TensorShape& shape,
+                                        MGBTensorShape& mgb_shape) {
+                mgb_assert(shape.ndim <= MGB_TENSOR_MAX_NDIM,
+                           "shape ndim too large: %zu", shape.ndim);
+                mgb_shape.ndim = shape.ndim;
+                for (size_t i = 0; i < shape.ndim; ++i) {
+                    mgb_shape.shape[i] = shape[i];
+                }
+            };
+
+            if (env.c_opr_args.is_run_c_opr_with_param) {
+                c_opr_param = std::make_shared<ExternCOprParam>();
+                memset(c_opr_param.get(), 0, sizeof(ExternCOprParam));
+                //! we just test input on npu case, do not test output on
+                //! npu case, so we just init input shape and type
+                c_opr_param->nr_input = inp_tensors.size();
+                c_opr_param->input = (ExternDeviceTensor*)malloc(
+                        sizeof(ExternDeviceTensor) * inp_tensors.size());
+                memset(c_opr_param->input, 0,
+                       sizeof(ExternDeviceTensor) * inp_tensors.size());
+                //! init input ExternDeviceTensor shape and dtype
+                for (size_t input_index = 0; input_index < inp_tensors.size();
+                     input_index++) {
+                    auto& mgb_tensor_layout =
+                            c_opr_param->input[input_index].layout;
+                    auto host_tensor_nd_p = inp_tensors[input_index].second;
+                    mgb_tensor_layout.dtype =
+                            dtype_cpp2c(host_tensor_nd_p->dtype());
+                    tensor_shape_to_c(inp_tensors[input_index].second->shape(),
+                                      mgb_tensor_layout.shape);
+                }
+                c_opr_param->nr_output = 0;
+                //! now call copr_param_device_ptr_malloc to malloc
+                //! device_ptr
+                env.c_opr_args.copr_param_device_ptr_malloc(c_opr_param.get());
+            }
+
             loader = serialization::GraphLoader::make(
                     loader->reset_file(), loader->format());
             auto testcase = loader->load(env.load_config, false);
@@ -782,8 +860,18 @@ void run_test_st(Args &env) {
             for (size_t i = 0; i < inp_tensors.size(); ++ i) {
                 auto &&opr = testcase.output_var_list[i].node()->owner_opr()->
                     cast_final_safe<opr::SharedDeviceTensor>();
-                inp_tensors[i].second->copy_from(
-                        HostTensorND::make_proxy(*opr.dev_data()));
+                if (env.c_opr_args.is_run_c_opr_with_param) {
+                    //! now call copr_param_device_ptr_h2d to fill data
+                    env.c_opr_args.copr_param_device_ptr_h2d(
+                            c_opr_param.get(), opr.dev_data()->raw_ptr(), i);
+                } else {
+                    inp_tensors[i].second->copy_from(
+                            HostTensorND::make_proxy(*opr.dev_data()));
+                }
+            }
+            //! now config c opr dynamic param
+            if (env.c_opr_args.is_run_c_opr_with_param) {
+                config_extern_c_opr_dynamic_param(func, c_opr_param);
             }
 
             if (!i) {
@@ -796,10 +884,18 @@ void run_test_st(Args &env) {
                 continue;
             }
             tot_time += run_iters(i);
+
+            //! now free c opr device_ptr
+            if (env.c_opr_args.is_run_c_opr_with_param) {
+                env.c_opr_args.copr_param_device_ptr_free(c_opr_param.get());
+                free(c_opr_param->input);
+            }
         }
 
         printf("=== total time: %.3fms\n", tot_time);
     } else if (not env.data_files.empty()) {
+        mgb_assert(!env.c_opr_args.is_run_c_opr_with_param,
+                   "run c opr with param only support dump_with_testcase!!");
         auto& tensormap = env.load_ret.tensor_map;
 
         DataParser parser;
@@ -824,6 +920,8 @@ void run_test_st(Args &env) {
         printf("=== going to run input for %d times\n", env.nr_run);
         run_iters(0);
     } else {
+        mgb_assert(!env.c_opr_args.is_run_c_opr_with_param,
+                   "run c opr with param only support dump_with_testcase!!");
         // run speed test for a raw mgb graph
         mgb_assert(env.load_ret.tensor_map.empty(),
                 "model should not require input values; input vars should be "
@@ -878,6 +976,16 @@ int mgb_load_and_run_main(int argc, char** argv) {
                v1.patch);
     }
     auto env = Args::from_argv(argc, argv);
+
+    if (env.c_opr_args.is_run_c_opr_with_param)
+        mgb_assert(env.c_opr_args.is_run_c_opr &&
+                           env.c_opr_args.copr_param_device_ptr_malloc &&
+                           env.c_opr_args.copr_param_device_ptr_free &&
+                           env.c_opr_args.copr_param_device_ptr_h2d,
+                   "--c-opr-lib-with-param need config with --c-opr-lib, also "
+                   "extern c opr loader need implemente "
+                   "copr_param_device_ptr_malloc, copr_param_device_ptr_free "
+                   "and copr_param_device_ptr_h2d symbols");
 
     if (env.args_parse_ret != 0) {
         return env.args_parse_ret;
@@ -1219,6 +1327,7 @@ Args Args::from_argv(int argc, char **argv) {
         }
         if (!strcmp(argv[i], "--c-opr-lib")) {
             ++ i;
+            ret.c_opr_args.is_run_c_opr = true;
             mgb_assert(i < argc, "value not given for --c-opr-lib");
             auto handle = dlopen(argv[i], RTLD_LAZY);
             mgb_assert(handle, "failed to open c opr lib %s: %s",
@@ -1231,6 +1340,36 @@ Args Args::from_argv(int argc, char **argv) {
                     reinterpret_cast<void*>(
                         &mgb_get_extern_c_opr_api_versioned));
             printf("loaded C opr library: %s\n", argv[i]);
+
+            entry = "copr_param_device_ptr_malloc";
+            func = dlsym(handle, entry);
+            if (func) {
+                printf("get %s from: %s\n", entry, argv[i]);
+                ret.c_opr_args.copr_param_device_ptr_malloc =
+                        reinterpret_cast<COprArgs::COPR_PARAM_DEVICE_PTR_MEM_T>(
+                                func);
+            }
+            entry = "copr_param_device_ptr_free";
+            func = dlsym(handle, entry);
+            if (func) {
+                printf("get %s from: %s\n", entry, argv[i]);
+                ret.c_opr_args.copr_param_device_ptr_free =
+                        reinterpret_cast<COprArgs::COPR_PARAM_DEVICE_PTR_MEM_T>(
+                                func);
+            }
+            entry = "copr_param_device_ptr_h2d";
+            func = dlsym(handle, entry);
+            if (func) {
+                printf("get %s from: %s\n", entry, argv[i]);
+                ret.c_opr_args.copr_param_device_ptr_h2d =
+                        reinterpret_cast<COprArgs::COPR_PARAM_DEVICE_PTR_H2D_T>(
+                                func);
+            }
+
+            continue;
+        }
+        if (!strcmp(argv[i], "--c-opr-lib-with-param")) {
+            ret.c_opr_args.is_run_c_opr_with_param = true;
             continue;
         }
 #endif
