@@ -35,12 +35,9 @@ namespace jit {
 
 mlir::Type megdnn_dtype_to_mlir_type(megdnn::DType type,
                                      mlir::MLIRContext* ctx);
+mlir::Type signless(mlir::Type type);
 
 megdnn::DType mlir_type_to_megdnn_dtype(mlir::Type type);
-
-bool is_signed_int_dtype(megdnn::DType type);
-
-bool is_unsigned_int_dtype(megdnn::DType type);
 
 }  // namespace jit
 }  // namespace mgb

@@ -197,12 +197,15 @@ private:
                              .getType()
                              .dyn_cast_or_null<mlir::MemRefType>();
         mgb_assert(itype, "currently only support MemRefType");
+        auto output_type = megdnn_dtype_to_mlir_type(opr.param(),
+                                                     m_builder.getContext());
         auto res_type = mlir::MemRefType::get(
-                itype.getShape(),
-                megdnn_dtype_to_mlir_type(opr.param(), m_builder.getContext()));
+                itype.getShape(), signless(output_type));
+        auto inp_type = megdnn_dtype_to_mlir_type(opr.input(0)->dtype(),
+                                                  m_builder.getContext());
         return m_builder.create<dialect::TypeCvt>(
                 m_builder.getUnknownLoc(), res_type, get(opr.input(0)),
-                opr.input(0)->dtype(), opr.param());
+                mlir::TypeAttr::get(inp_type), opr.param());
     }
 
     mlir::Value gen_dimshuffle(const opr::Dimshuffle& opr) {

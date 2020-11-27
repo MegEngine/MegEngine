@@ -28,13 +28,13 @@ mlir::Type megdnn_dtype_to_mlir_type(megdnn::DType type,
         case megdnn::DTypeEnum::Float32:
             return mlir::FloatType::getF32(ctx);
         case megdnn::DTypeEnum::Uint8:
-            return mlir::IntegerType::get(8, ctx);
+            return mlir::IntegerType::get(8, mlir::IntegerType::Unsigned, ctx);
         case megdnn::DTypeEnum::Int8:
-            return mlir::IntegerType::get(8, ctx);
+            return mlir::IntegerType::get(8, mlir::IntegerType::Signed, ctx);
         case megdnn::DTypeEnum::Int16:
-            return mlir::IntegerType::get(16, ctx);
+            return mlir::IntegerType::get(16, mlir::IntegerType::Signed, ctx);
         case megdnn::DTypeEnum::Int32:
-            return mlir::IntegerType::get(32, ctx);
+            return mlir::IntegerType::get(32, mlir::IntegerType::Signed, ctx);
         case megdnn::DTypeEnum::IntB1:
             return mlir::IntegerType::get(1, ctx);
         case megdnn::DTypeEnum::IntB2:
@@ -55,6 +55,13 @@ mlir::Type megdnn_dtype_to_mlir_type(megdnn::DType type,
             mgb_throw(InternalError, "Unsupported MegDNN dtype: %s",
                       type.name());
     }
+}
+
+mlir::Type signless(mlir::Type type) {
+    if (auto intty = type.dyn_cast<mlir::IntegerType>()) {
+        return mlir::IntegerType::get(intty.getWidth(), type.getContext());
+    }
+    return type;
 }
 
 megdnn::DType mlir_type_to_megdnn_dtype(mlir::Type type) {
@@ -89,22 +96,6 @@ megdnn::DType mlir_type_to_megdnn_dtype(mlir::Type type) {
                   mlir_type_to_string(element_type).c_str());
     }
     return megdnn::DType::from_enum(enumv);
-}
-
-bool is_signed_int_dtype(megdnn::DType type) {
-    auto enumv = type.enumv();
-    return enumv == megdnn::DTypeEnum::Int8 or
-           enumv == megdnn::DTypeEnum::Int16 or
-           enumv == megdnn::DTypeEnum::Int32 or
-           enumv == megdnn::DTypeEnum::IntB1 or
-           enumv == megdnn::DTypeEnum::IntB2 or
-           enumv == megdnn::DTypeEnum::IntB4;
-}
-
-bool is_unsigned_int_dtype(megdnn::DType type) {
-    auto enumv = type.enumv();
-    return enumv == megdnn::DTypeEnum::Uint8 or
-           enumv == megdnn::DTypeEnum::UintB4;
 }
 
 }  // namespace jit

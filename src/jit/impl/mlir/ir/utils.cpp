@@ -87,7 +87,7 @@ mlir::MemRefType jit::layout_to_mlir_type(const megdnn::TensorLayout& layout,
         shape.push_back(layout[i]);
     }
     mlir::Type type = megdnn_dtype_to_mlir_type(layout.dtype, builder.getContext());
-    return mlir::MemRefType::get(shape, type);
+    return mlir::MemRefType::get(shape, signless(type));
 }
 
 #endif  // MGB_JIT && MGB_JIT_MLIR

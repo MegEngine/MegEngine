@@ -22,6 +22,7 @@
 #include "megbrain/exception.h"
 #include "megbrain/jit/mlir/ir/dialect.h"
 
+#include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/StandardOps/IR/Ops.h>
 
 namespace mgb {
@@ -442,31 +443,35 @@ mlir::Value lower_elemwise_to_std(mlir::Operation* op, mlir::OpBuilder& builder,
 mlir::Value lower_typecvt_to_std(mlir::Operation* op, mlir::OpBuilder& builder,
                                  mlir::Location loc, mlir::Value input) {
     auto&& typecvt = llvm::dyn_cast<dialect::TypeCvt>(op);
-    megdnn::DType idtype = typecvt.idtype();
-    megdnn::DType odtype = typecvt.odtype();
+    mlir::Type idtype = typecvt.idtype();
+    mlir::Type odtype =
+            megdnn_dtype_to_mlir_type(typecvt.dtype(), builder.getContext());
 
     mlir::Type itype = input.getType();
-    mlir::Type otype = megdnn_dtype_to_mlir_type(odtype, builder.getContext());
+    mlir::Type otype = signless(odtype);
+    mgb_assert(signless(idtype) == itype);
 
     if (mlir::FPExtOp::areCastCompatible(itype, otype)) {
         return builder.create<mlir::FPExtOp>(loc, otype, input);
     } else if (mlir::FPTruncOp::areCastCompatible(itype, otype)) {
         return builder.create<mlir::FPTruncOp>(loc, otype, input);
     } else if (mlir::FPToSIOp::areCastCompatible(itype, otype) and
-               is_signed_int_dtype(odtype)) {
+               odtype.isSignedInteger()) {
         return builder.create<mlir::FPToSIOp>(loc, otype, input);
     } else if (mlir::FPToUIOp::areCastCompatible(itype, otype) and
-               is_unsigned_int_dtype(odtype)) {
+               odtype.isUnsignedInteger()) {
         return builder.create<mlir::FPToUIOp>(loc, otype, input);
     } else if (mlir::SIToFPOp::areCastCompatible(itype, otype) and
-               is_signed_int_dtype(idtype)) {
+               idtype.isSignedInteger()) {
         return builder.create<mlir::SIToFPOp>(loc, otype, input);
     } else if (mlir::UIToFPOp::areCastCompatible(itype, otype) and
-               is_unsigned_int_dtype(idtype)) {
+               idtype.isUnsignedInteger()) {
         return builder.create<mlir::UIToFPOp>(loc, otype, input);
     } else {
-        mgb_throw(InternalError, "cannot convert from %s to %s", idtype.name(),
-                  odtype.name());
+        std::string tmp;
+        llvm::raw_string_ostream os(tmp);
+        os << "cannot convert from " << idtype << " to " << odtype;
+        mgb_throw_raw(InternalError{tmp});
     }
 
     return nullptr;

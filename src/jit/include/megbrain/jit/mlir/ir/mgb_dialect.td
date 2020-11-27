@@ -15,6 +15,8 @@
 
 include "ops.td"
 
+include "mlir/Interfaces/SideEffectInterfaces.td"
+
 class GenericOp<string mnemonic, list<OpTrait> traits = []> :
   Op<Mgb_Dialect, mnemonic, traits>;
 
