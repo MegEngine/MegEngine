@@ -507,8 +507,8 @@ endif ()
 
 
 if(MGE_WITH_ATLAS)
-    include(cmake/aclrt.cmake)
-    list(APPEND MGE_ATLAS_LIBS libascendcl)
+    add_subdirectory(dnn/atlas-stub)
+    list(APPEND MGE_ATLAS_LIBS atlas-stub)
     set(MGE_ATLAS_LIBS "${MGE_ATLAS_LIBS}")
     set(MGB_ATLAS ${MGE_WITH_ATLAS})
 endif()
