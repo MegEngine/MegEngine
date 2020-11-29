@@ -80,7 +80,9 @@ private:
         for (auto&& arg : args.outputs) {
             func_args.push_back(get_type(arg.from->layout()));
         }
-        //! the last arg is nr_elements
+        //! nr_elements
+        func_args.push_back(m_builder.getIndexType());
+        //! nr_threads
         func_args.push_back(m_builder.getIndexType());
 
         auto func_type = m_builder.getFunctionType(func_args, llvm::None);

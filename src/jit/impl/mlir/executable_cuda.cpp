@@ -32,6 +32,14 @@ using namespace mgb;
 using namespace jit;
 
 namespace {
+
+int64_t get_grid_size(int64_t nr_elements, int64_t block_size) {
+    // unroll three times in the kernel
+    int64_t a = nr_elements / (block_size * 2);
+    int64_t b = (nr_elements - 1) / (block_size * 3) + 1;
+    return std::max(a, b);
+}
+
 template <int out_dim, typename ctype>
 void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
                       int block_size) {
@@ -87,9 +95,18 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
     const CompNodeEnv& env =
             CompNodeEnv::from_comp_node(fusion_opr->comp_node());
 
-    int64_t num_block = (nr_elements - 1) / block_size + 1;
+    int64_t grid_size;
+    if (nr_elements <= block_size) {
+        block_size = nr_elements;
+        grid_size = 1;
+    } else {
+        grid_size = get_grid_size(nr_elements, block_size);
+    }
+    int64_t nr_threads = grid_size * block_size;
     params.push_back(&nr_elements);
-    MGB_CUDA_CU_CHECK(cuLaunchKernel(func, num_block, 1, 1, block_size, 1, 1, 0,
+    params.push_back(&nr_threads);
+
+    MGB_CUDA_CU_CHECK(cuLaunchKernel(func, grid_size, 1, 1, block_size, 1, 1, 0,
                                      env.cuda_env().stream, params.data(), 0));
 }
 

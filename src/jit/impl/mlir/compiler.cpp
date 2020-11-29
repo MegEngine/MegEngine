@@ -26,6 +26,7 @@
 
 #include <mlir/Conversion/GPUCommon/GPUCommonPass.h>
 #include <mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h>
+#include <mlir/Conversion/SCFToStandard/SCFToStandard.h>
 #include <mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h>
 #include <mlir/Dialect/GPU/Passes.h>
 #include <mlir/IR/Dialect.h>
@@ -152,6 +153,7 @@ void add_cuda_lowering_pass(mlir::PassManager& manager,
     {
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
         opt_pm.addPass(create_lower_to_gpu_pass());
+        opt_pm.addPass(mlir::createLowerToCFGPass());
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
         opt_pm.addPass(mlir::createLoopFusionPass());
