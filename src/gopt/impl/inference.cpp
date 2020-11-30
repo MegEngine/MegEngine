@@ -54,7 +54,6 @@ using namespace gopt;
 
 namespace {
 
-
 template <typename SharedDeviceTensor, typename MultipleDeviceTensorHolder>
 void param_merge(OptState& opt_state) {
     auto rewriter = opt_state.graph().make_rewriter();
@@ -102,7 +101,7 @@ void param_merge(OptState& opt_state) {
     rewriter.apply_inplace();
 }
 
-}
+}  // namespace
 
 /* ================ global functions ================ */
 
@@ -190,11 +189,9 @@ void gopt::enable_opr_algo_profiling_inplace(
 
 void gopt::enable_opr_use_profiling_cache_inplace(
         const VarNodeArrayView& dest_vars) {
-    modify_opr_algo_strategy_inplace(
-            dest_vars, opr::mixin::AlgoChooserHelper::ExecutionPolicy::
-                               Strategy::PROFILE_HEURISTIC);
+    using S = megdnn::param::ExecutionPolicy::Strategy;
+    modify_opr_algo_strategy_inplace(dest_vars, S::PROFILE | S::HEURISTIC);
 }
-
 
 void gopt::set_opr_algo_workspace_limit_inplace(
         const VarNodeArrayView& dest_vars, size_t workspace_limit) {

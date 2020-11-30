@@ -43,6 +43,7 @@ namespace megdnn {
             std::ostream &ostr, const DType &dt) {
         return ostr << dt.name();
     }
+
 } // namespace megdnn
 
 namespace mgb {

@@ -19,6 +19,7 @@ import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import jit
 from megengine.core._trace_option import set_symbolic_shape
+from megengine.core.ops import builtin
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.functional.debug_param import set_execution_strategy
 from megengine.jit import SublinearMemoryConfig
@@ -32,6 +33,8 @@ from megengine.module import (
 )
 from megengine.optimizer import SGD
 from megengine.tensor import Tensor
+
+Strategy = builtin.ops.Convolution.Strategy
 
 
 def get_gpu_name():
@@ -242,7 +245,7 @@ def test_correctness():
     else:
         model_name = "mnist_model_with_test_cpu.mge"
     model_path = os.path.join(os.path.dirname(__file__), model_name)
-    set_execution_strategy("HEURISTIC_REPRODUCIBLE")
+    set_execution_strategy(Strategy.HEURISTIC | Strategy.REPRODUCIBLE)
 
     run_train(model_path, False, False, max_err=1e-5)
     run_train(model_path, True, False, max_err=1e-5)

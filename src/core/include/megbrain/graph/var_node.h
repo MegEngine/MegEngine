@@ -12,7 +12,6 @@
 #pragma once
 
 #include "megbrain/graph/bases.h"
-#include "megbrain/utils/enum_class_bit.h"
 #include "megbrain/utils/comp_node_sync_manager.h"
 #include "megbrain/utils/small_vector.h"
 #include "megbrain/utils/mempool.h"

@@ -355,11 +355,13 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
     auto cn = CompNode::load("cpux");
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy: {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
-
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
 
@@ -397,7 +399,8 @@ TEST(TestOprDNN, ConvBiasExePolicy_Quantized8Asym) {
 
     auto cn = CompNode::load("cpux");
 
-    for (auto strategy: {S::PROFILE, S::PROFILE_REPRODUCIBLE}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::PROFILE | S::REPRODUCIBLE}) {
 
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
@@ -439,10 +442,12 @@ TEST(TestOprDNN, ConvolutionExePolicy) {
     PersistentCacheHook cache_hook{on_get};
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
         using Checker = AutoOprChecker<2, 1>;
 
@@ -522,10 +527,11 @@ TEST(TestOprDNN, ConvolutionBackwardDataBfloat16ExePolicy) {
     PersistentCacheHook cache_hook{on_get};
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         {S::PROFILE, S::HEURISTIC, S(S::PROFILE | S::REPRODUCIBLE),
+          S(S::PROFILE | S::HEURISTIC)}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy: {S:HEURISTIC, S(S::PROFILE | S::HEURISTIC)}) {
 #endif
         using Checker = AutoOprChecker<2, 1>;
 
@@ -1183,9 +1189,12 @@ TEST(TestOprDNN, Convolution3DExePolicy) {
     using S = Policy::Strategy;
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy: {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+          S::PROFILE | S::HEURISTIC}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
 
         using Checker = AutoOprChecker<2, 1>;
@@ -1660,10 +1669,12 @@ TEST(TestOprDNN, LocalShareForwardExecPolicy) {
     PersistentCacheHook cache_hook{on_get};
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
         auto make_graph = [&](const Checker::SymInpArray& inputs)
                 -> Checker::SymOutArray {
@@ -1769,10 +1780,12 @@ TEST(TestOprDNN, DeformableConvForward) {
     Param param;
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
 #else
-    for (auto strategy : {S : HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
         auto make_graph = [&](const Checker::SymInpArray& inputs)
                 -> Checker::SymOutArray {
@@ -1936,10 +1949,12 @@ TEST(TestOprDNN, BatchConvBiasForward) {
     param.sparse = Param::Sparse::DENSE;
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
 #else
-    for (auto strategy : {S : HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
 
         auto make_quantized = [&](SymbolVar x, const DType& dtype) {
@@ -2080,7 +2095,8 @@ TEST(TestOprDNN, HeuristicReproducible) {
 
     constexpr size_t PH = 1, PW = 1, SH = 1, SW = 1;
 
-    for (auto strategy : {S::HEURISTIC, S::HEURISTIC_REPRODUCIBLE}) {
+    for (auto strategy :
+         SmallVector<S>{S::HEURISTIC, S::HEURISTIC | S::REPRODUCIBLE}) {
         VarNode* bwd_flt;
         auto make_graph = [&](const Checker::SymInpArray& inputs)
                 -> Checker::SymOutArray {
@@ -2126,7 +2142,7 @@ TEST(TestOprDNN, HeuristicReproducible) {
             megdnn::Algorithm* palgo =
                     megdnn_opr->get_algorithm_from_desc(algo);
             mgb_assert(palgo, "Unknown algo description");
-            if (strategy == S::HEURISTIC_REPRODUCIBLE) {
+            if (strategy == S(S::HEURISTIC | S::REPRODUCIBLE)) {
                 EXPECT_TRUE(palgo->contain_attribute(
                             megdnn::AlgoAttribute::REPRODUCIBLE));
             }

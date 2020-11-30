@@ -20,7 +20,6 @@
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/tqt.h"
-
 #include "megbrain/serialization/sereg.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs/nn.h"

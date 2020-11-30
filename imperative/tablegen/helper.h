@@ -77,6 +77,9 @@ struct MgbEnumAttrMixin : public MgbAttrWrapperBase {
     bool supportToString() const {
         return getBaseRecord()->getValueAsBit("supportToString");
     }
+    bool getEnumCombinedFlag() const {
+        return getBaseRecord()->getValueAsBit("enumCombined");
+    }
 };
 
 struct MgbHashableAttrMixin : public MgbAttrWrapperBase {

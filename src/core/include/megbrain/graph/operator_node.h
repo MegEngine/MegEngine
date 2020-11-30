@@ -16,7 +16,6 @@
 #include "megbrain/graph/symbol_var.h"
 
 #include "megbrain/utils/hashable.h"
-#include "megbrain/utils/enum_class_bit.h"
 #include "megbrain/utils/thin/hash_table.h"
 #include "megbrain/utils/small_vector.h"
 

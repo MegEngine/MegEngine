@@ -218,4 +218,3 @@ public:
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

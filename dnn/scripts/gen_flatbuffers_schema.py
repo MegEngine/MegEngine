@@ -53,9 +53,13 @@ class FlatBuffersWriter(IndentWriterBase):
             e = self._enums[(p, e)]
             self._write_doc(e.name)
             self._write("enum %s%s : uint {", p, e.name, indent=1)
-            for member in e.members:
+            for idx, member in enumerate(e.members):
                 self._write_doc(member)
-                self._write("%s,", scramble_enum_member_name(str(member)))
+                if e.combined:
+                    self._write("%s=%d,", scramble_enum_member_name(str(member)),
+                            1<<idx)
+                else:
+                    self._write("%s,", scramble_enum_member_name(str(member)))
             self._write("}\n", indent=-1)
 
     def _write_doc(self, doc):

@@ -8,8 +8,11 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
 
+from ..core.ops import builtin
 from ..logger import get_logger
 from ..utils.deprecation import deprecated
+
+Strategy = builtin.ops.Convolution.Strategy
 
 _execution_strategy = os.getenv("MEGENGINE_EXECUTION_STRATEGY", "HEURISTIC")
 
@@ -19,7 +22,7 @@ if os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY") != None:
     )
 
 
-def get_execution_strategy() -> str:
+def get_execution_strategy() -> Strategy:
     """
     Returns the execution strategy of :class:`~.Conv2d` and :func:'~.matmul'
 
@@ -28,12 +31,22 @@ def get_execution_strategy() -> str:
     return _execution_strategy
 
 
-def set_execution_strategy(option: str):
+def set_execution_strategy(option):
     """
     Sets the execution strategy of :class:`~.Conv2d` and :func:'~.matmul'
 
-    :param option: Decides how :class:`~.Conv2d` and :func:'~.matmul' algorithms are chosen.
-        Available values:
+    :param option: Decides how :class:`~.Conv2d`and :func:'~.matmul' algorithms are chosen.
+        Available value Strategy
+        * HEURISTIC uses heuristic to choose the fastest algorithm.
+        * PROFILE runs possible algorithms on real device to find the best one.
+        * REPRODUCIBLE uses the algorithms that is reproducible.
+        * OPTMIZED uses the algorithms that is optimized.
+
+        The default strategy is HEURISTIC, this options can be combined to
+        form a combination option, e.g. PROFILE | REPRODUCIBLE
+        can combined a option that uses the fastest of profiling result that is also reproducible.
+
+        Available values string:
 
         * 'HEURISTIC' uses heuristic to choose the fastest algorithm.
         * 'PROFILE' runs possible algorithms on real device to find the best one.
@@ -45,18 +58,29 @@ def set_execution_strategy(option: str):
 
         It can also be set through the environment variable 'MEGENGINE_EXECUTION_STRATEGY'.
     """
-    valid_option = (
-        "HEURISTIC",
-        "PROFILE",
-        "PROFILE_HEURISTIC",
-        "PROFILE_REPRODUCIBLE",
-        "HEURISTIC_REPRODUCIBLE",
-    )
-    if not option in valid_option:
-        raise ValueError("Valid option can only be one of {}".format(valid_option))
+    valid_string_option = {
+        "REPRODUCIBLE": Strategy.REPRODUCIBLE,
+        "HEURISTIC": Strategy.HEURISTIC,
+        "PROFILE": Strategy.PROFILE,
+    }
 
     global _execution_strategy  # pylint: disable=global-statement
-    _execution_strategy = option
+    if isinstance(option, Strategy):
+        _execution_strategy = option
+        return
+
+    assert isinstance(option, str)
+
+    strategy_tmp = Strategy(0)
+    for opt in option.split("_"):
+        if not opt in valid_string_option:
+            raise ValueError(
+                "Valid option can only be one of {}, or combine them with '_'.".format(
+                    valid_string_option.keys()
+                )
+            )
+        strategy_tmp = strategy_tmp | valid_string_option[opt]
+    _execution_strategy = strategy_tmp
 
 
 @deprecated(version="1.3", reason="use get_execution_strategy() instead")

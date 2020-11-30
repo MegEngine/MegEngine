@@ -33,10 +33,11 @@ class MgbHashableAttrMixin {
   string reprFunction = "std::to_string($0)";
 }
 
-class MgbEnumAttrMixin<string namespace, string name, list<string> members, bit toString> {
+class MgbEnumAttrMixin<string namespace, string name, list<string> members, bit combined, bit toString> {
   string parentNamespace = namespace;
   string enumName = name;
   list<string> enumMembers = members;
+  bit enumCombined = combined;
   bit supportToString = toString;
 }
 
@@ -166,8 +167,8 @@ class MgbTupleAttr<list<MgbAttrWrapper> args>:
 }
 
 // -- enum types
-class MgbEnumAttr<string namespace, string enumName, list<string> members, bit toString=0>:
-    HashableAttr<namespace # "::" # enumName>, MgbEnumAttrMixin<namespace, enumName, members, toString> {
+class MgbEnumAttr<string namespace, string enumName, list<string> members, bit combined, bit toString=0>:
+    HashableAttr<namespace # "::" # enumName>, MgbEnumAttrMixin<namespace, enumName, members, combined, toString> {
   let storageType = "::mlir::IntegerAttr";
   let convertFromStorage = "static_cast<" # returnType # ">($_self.getInt())";
   let constBuilderCall = "$_builder.getI32IntegerAttr(static_cast<int32_t>($0))";
@@ -176,7 +177,7 @@ class MgbEnumAttr<string namespace, string enumName, list<string> members, bit t
 }
 
 class MgbEnumAliasAttr<string namespace, string enumName, MgbEnumAttr base>:
-    MgbEnumAttr<namespace, enumName, base.enumMembers>, MgbAliasAttrMixin<base>;
+    MgbEnumAttr<namespace, enumName, base.enumMembers, 0>, MgbAliasAttrMixin<base>;
 
 // -- other types
 def MgbDTypeAttr: HashableAttr<"::megdnn::DType"> {

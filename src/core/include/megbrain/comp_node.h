@@ -12,7 +12,6 @@
 #pragma once
 
 #include "megbrain/utils/hash.h"
-#include "megbrain/utils/enum_class_bit.h"
 #include "megbrain/utils/metahelper.h"
 #include "megbrain/utils/thin/hash_table.h"
 #include "megbrain/utils/thread.h"

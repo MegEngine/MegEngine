@@ -337,6 +337,20 @@ static void gen_op_def_pybind11_single(raw_ostream &os, MgbOp& op, EnumContext& 
                         className, attr->getEnumName(), i
                     ));
                 }
+                if (attr->getEnumCombinedFlag()) {
+                    //! define operator |
+                    os << formatv(
+                            "\n    .def(\"__or__\", []({0}::{1} s0, {0}::{1} s1) {{ "
+                            "\n         return static_cast<{0}::{1}>(uint32_t(s0) | uint32_t(s1));"
+                            "\n      })",
+                            className, attr->getEnumName());
+                    //! define operator &
+                    os << formatv(
+                            "\n    .def(\"__and__\", []({0}::{1} s0, {0}::{1} s1) {{"
+                            "\n         return static_cast<{0}::{1}>(uint32_t(s0) & uint32_t(s1));"
+                            "\n    })",
+                            className, attr->getEnumName());
+                }
                 os << formatv(
                     "\n    .def(py::init([](const std::string& in) {"
                     "\n        auto&& str = normalize_enum(in);"

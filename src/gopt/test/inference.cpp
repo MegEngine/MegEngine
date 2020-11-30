@@ -1693,7 +1693,22 @@ TEST(TestGoptInference, ProfileCache) {
     using S = opr::Convolution::ExecutionPolicy::Strategy;
     ASSERT_EQ(S::HEURISTIC, conv.execution_policy_transient().strategy);
     gopt::enable_opr_use_profiling_cache_inplace({z + 2.3f});
-    ASSERT_EQ(S::PROFILE_HEURISTIC, conv.execution_policy().strategy);
+    ASSERT_EQ(S::PROFILE | S::HEURISTIC, conv.execution_policy().strategy);
+}
+
+TEST(TestGoptInference, FastProfileCache) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    auto host_x = gen({4, 3, 8, 9}), host_y = gen({2, 3, 3, 3});
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+         y = opr::Host2DeviceCopy::make(*graph, host_y),
+         z = opr::Convolution::make(x, y);
+    auto&& conv = z.node()->owner_opr()->cast_final_safe<opr::Convolution>();
+    using S = opr::Convolution::ExecutionPolicy::Strategy;
+    ASSERT_EQ(S::HEURISTIC, conv.execution_policy_transient().strategy);
+    gopt::modify_opr_algo_strategy_inplace({z + 2.3f},
+                                           S::PROFILE | S::OPTMIZED);
+    ASSERT_EQ(S::PROFILE | S::OPTMIZED, conv.execution_policy().strategy);
 }
 
 TEST(TestGoptInference, AlgoWorkspaceLimit) {

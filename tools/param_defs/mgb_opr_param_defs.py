@@ -18,7 +18,7 @@ pdef('PersistentOutputStorage').add_fields(
  add_const('int32', 'INVALID_AXIS', 'MAX_NDIM').
  add_fields('int32', 'axis', 'INVALID_AXIS'))
 
-(pdef('ExecutionPolicy', 'specify how to select an algorithm for an operator').
+(pdef('ExecutionPolicy', version=0, is_legacy=True).
  add_enum('Strategy',
           Doc('HEURISTIC', 'use heuristic to choose the fastest algorithm'),
           Doc('HEURISTIC_REPRODUCIBLE', 'use heuristic to choose the fastest algorithm, '
@@ -29,6 +29,20 @@ pdef('PersistentOutputStorage').add_fields(
               'the fastest of profile result that is also reproducible'),
           Doc('PROFILE_HEURISTIC',
               'use profile result and heuristic to choose the fastest algorithm')).
+ add_fields('uint64',
+            Doc('workspace_limit', 'workspace limit in bytes'),
+            str(2**64-1)+'ull'))
+
+(pdef('ExecutionPolicy', 'specify how to select an algorithm for an operator', version=1).
+ add_bit_combination_enum('Strategy',
+          Doc('HEURISTIC', 'use heuristic to choose the fastest algorithm'),
+          Doc('PROFILE',
+              'run possible algorithms on real device to find the best'),
+          Doc('REPRODUCIBLE',
+              'when profile or heuristic algo selection it require the algos'
+              'must be reproducible'),
+          Doc('OPTMIZED',
+              'profile require algos are optmized to achieve fast-profile')).
  add_fields('uint64',
             Doc('workspace_limit', 'workspace limit in bytes'),
             str(2**64-1)+'ull'))

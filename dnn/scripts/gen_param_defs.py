@@ -80,13 +80,13 @@ class member_defs:
         :attr member_alias: list of (member, alias) pairs
         """
         __slots__ = ['name', 'name_field', 'members', 'default',
-                     'member_alias']
+                     'member_alias', 'combined']
 
         all_enums = {}
         """(param_name, name) => enum"""
 
         def __init__(self, param_name, name, name_field, members, default,
-                     member_alias):
+                member_alias, combined = False):
             name = member_defs.Doc.make(name)
             assert name.id[0].isupper()
             members = tuple(map(member_defs.Doc.make, members))
@@ -97,6 +97,7 @@ class member_defs:
                 default = name_field.index(default)
             assert isinstance(default, int)
             self.name = name
+            self.combined = combined
             self.name_field = self.get_name_field(name.id, name_field)
             self.members = members
             self.default = default
@@ -195,6 +196,12 @@ class ParamDef:
                  member_alias=[]):
         self.members.append(member_defs.Enum(
             self.name.id, name, name_field, members, default, member_alias))
+        return self
+
+    def add_bit_combination_enum(self, name, *members, default=0,
+                 name_field=None, member_alias=[]):
+        self.members.append(member_defs.Enum(
+            self.name.id, name, name_field, members, default, member_alias, True))
         return self
 
     def add_enum_alias(self, name, src_class, src_name=None, name_field=None,
@@ -463,8 +470,12 @@ class SerializedDType(_ParamDefBase):
         for idx, emem in enumerate(e.members):
             self._write('%s = "%s"', emem, emem)
             self._write_doc(emem)
-            self._enum_member2num.append('id({}.{}):{}'.format(
-                qualname, emem, idx))
+            if e.combined:
+                self._enum_member2num.append('id({}.{}):{}'.format(
+                    qualname, emem, 1<<idx))
+            else:
+                self._enum_member2num.append('id({}.{}):{}'.format(
+                    qualname, emem, idx))
 
         for emem, emem_alis in e.member_alias:
             self._write('%s = %s', emem_alis, emem)
@@ -622,6 +633,8 @@ class CPPWriter(IndentWriterBase):
         for idx, i in enumerate(e.members):
             self._write_doc(i)
             v = '{} = {}'.format(i, idx)
+            if e.combined:
+                v = '{} = 1 << {}'.format(i, idx)
             if i is not e.members[-1] or e.member_alias:
                 v += ','
             self._write(v)
@@ -671,7 +684,6 @@ class CPPEnumValueWriter(CPPWriter):
         for mem, alias in e.member_alias:
             self._write('static const uint32_t %s = %s;', alias, mem)
         self._write('};', indent=-1)
-
 
     def _on_member_enum_alias(self, e):
         s = e.src_enum

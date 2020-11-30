@@ -13,7 +13,6 @@
 #pragma once
 
 #include "megbrain/graph/operator_node.h"
-#include "megbrain/opr/param_defs.h"
 #include "megdnn/oprs/base.h"
 #include "megdnn/oprs/nn.h"
 
@@ -73,7 +72,6 @@ protected:
 
 };
 }  // namespace mixin
-
 }  // namespace opr
 }  // namespace mgb
 

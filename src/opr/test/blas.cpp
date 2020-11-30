@@ -429,10 +429,11 @@ TEST(TestOprDNN, MatrixMulExePolicy) {
     auto cn = CompNode::load("cpux");
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+                        S::PROFILE | S::HEURISTIC}) {
 #else
-    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy: {S:HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
 
         auto graph = ComputingGraph::make();

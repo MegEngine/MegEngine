@@ -21,8 +21,6 @@
 
 namespace megdnn {
 
-MEGDNN_DEF_ENUM_CLASS_BIT_OPR(AlgoAttribute)
-
 #define MEGDNN_DECL_ALGO_TYPE(_type)                              \
     uint32_t type() const override {                              \
         return static_cast<std::underlying_type<AlgoType>::type>( \

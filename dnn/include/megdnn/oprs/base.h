@@ -251,6 +251,8 @@ protected:
     Handle::HandleType m_handle_type = Handle::HandleType::NAIVE;
 };
 
+MEGDNN_DEF_ENUM_CLASS_BIT_OPR(Algorithm::Attribute)
+
 //! policy for executing the operator
 struct ExecutionPolicy {
     //! INVALID_ALGO_TYPE algo_type means using heuristic

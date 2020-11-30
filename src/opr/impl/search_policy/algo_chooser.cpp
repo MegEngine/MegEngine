@@ -284,8 +284,9 @@ namespace mgb {
 namespace opr {
 
 template <typename Opr>
-void AlgoChooser<Opr>::profile(ExeContext& ctx, bool require_reproducible) {
-    if (ctx.get_profile_result_from_cache(require_reproducible).valid())
+void AlgoChooser<Opr>::profile(ExeContext& ctx,
+                               ExecutionStrategy select_strategy) {
+    if (ctx.get_profile_result_from_cache(select_strategy).valid())
         return;
     AlgoChooserProfileCache::Result prof_rst;
 
@@ -305,7 +306,7 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx, bool require_reproducible) {
                                    algo.name.c_str(), str_on_inp_shape.c_str());
         ImplExecutionPolicy policy;
         policy.algo = algo.desc;
-        ctx.construct_execution_policy(require_reproducible, policy);
+        ctx.construct_execution_policy(select_strategy, policy);
         if (ctx.get_workspace_size_bytes(policy) >= workspace_limit)
             continue;
 
@@ -354,7 +355,8 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx, bool require_reproducible) {
 
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy
-AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx, bool require_reproducible,
+AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx,
+                                    ExecutionStrategy select_strategy,
                                     bool enable_update) {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("AlgoChooser::choose_by_profile")))
     if (ctx.owner_graph()->options().no_profiling_on_shape_change) {
@@ -376,11 +378,11 @@ AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx, bool require_reproducible,
                     to_fixed_layouts<_Opr>(_item.layouts), megdnn_opr.get(),
                     _item.param, ctx.mgb_opr(), ctx.comp_node(),
                     ctx.execution_policy(), ctx.allow_weight_preprocess());
-            AlgoChooser<_Opr>::profile(sub_ctx, require_reproducible);
+            AlgoChooser<_Opr>::profile(sub_ctx, select_strategy);
         });
     }
     typename AlgoChooser<Opr>::ImplExecutionPolicy policy;
-    ctx.construct_execution_policy(require_reproducible, policy);
+    ctx.construct_execution_policy(select_strategy, policy);
     return policy;
     MIDOUT_E
 }
@@ -402,11 +404,9 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     ImplExecutionPolicy policy;
     if (auto algo_choose_hook = mgb_opr->algo_chooser()) {
         policy = algo_choose_hook(mgb_opr);
-        ctx.construct_execution_policy(
-                mgb_opr->execution_policy().strategy ==
-                        mixin::AlgoChooserHelper::ExecutionPolicy::Strategy::
-                                HEURISTIC_REPRODUCIBLE,
-                policy, false);
+        ctx.construct_execution_policy((ExecutionStrategy::HEURISTIC |
+                                        ExecutionStrategy::REPRODUCIBLE),
+                                       policy, false);
     }
     if (!policy.algo.valid()) {
         policy = get_policy(ctx);
@@ -419,10 +419,9 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     Algorithm* palgo = megdnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "Unknown algo description");
     ret.append("): algo=" + std::string(palgo->name()));
-    ret.append(ssprintf(" workspace=%.2fMiB reproducible=%d",
+    ret.append(ssprintf(" workspace=%.2fMiB attirbute=%d",
                         workspace / (1024 * 1024.0),
-                        palgo->contain_attribute(
-                                megdnn::AlgoAttribute::REPRODUCIBLE)));
+                        static_cast<uint32_t>(palgo->attribute())));
     mgb_log_debug("%s", ret.c_str());
 
     megdnn_opr->execution_policy() = policy;
@@ -432,41 +431,39 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::get_policy(
         ExeContext& ctx) {
-    using S = mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     MGB_MARK_USED_VAR(TIMEOUT_TOLERANCE);
-    switch (ctx.execution_policy().strategy) {
-        case S::HEURISTIC:
-            return ctx.choose_by_heuristic();
-        case S::HEURISTIC_REPRODUCIBLE:
-            return ctx.choose_by_heuristic(true);
-        case S::PROFILE_HEURISTIC: {
-            ImplExecutionPolicy policy = choose_by_profile(ctx, false, false);
-            if (!policy.algo.valid())
-                policy = ctx.choose_by_heuristic();
-            return policy;
-        }
+    auto opr_strategy = ctx.execution_policy().strategy;
+    if ((opr_strategy & ExecutionStrategy::HEURISTIC) &&
+               (opr_strategy & ExecutionStrategy::PROFILE)) {
+        ImplExecutionPolicy policy =
+                choose_by_profile(ctx, opr_strategy, false);
+        if (!policy.algo.valid())
+            policy = ctx.choose_by_heuristic(opr_strategy);
+        return policy;
+    } else if ((opr_strategy & ExecutionStrategy::HEURISTIC)) {
+        return ctx.choose_by_heuristic(opr_strategy);
+    }
 #if MGB_ENABLE_FASTRUN
-        case S::PROFILE:
-            return choose_by_profile(ctx, false);
-        case S::PROFILE_REPRODUCIBLE:
-            return choose_by_profile(ctx, true);
+    else if (opr_strategy & ExecutionStrategy::PROFILE) {
+        return choose_by_profile(ctx, opr_strategy);
+    }
 #endif
-        default:
-            mgb_throw(GraphError, "bad convolution ExecutionPolicy strategy");
+    else {
+        mgb_throw(GraphError, "bad convolution ExecutionPolicy strategy");
     }
 }
 
-#define INST(Opr)                                                            \
-    template AlgoChooser<megdnn::Opr>::ImplExecutionPolicy                   \
-    AlgoChooser<megdnn::Opr>::get_policy(ExeContext& ctx);                   \
-    template void AlgoChooser<megdnn::Opr>::profile(                         \
-            ExeContext& ctx, bool require_reproducible);                     \
-    template AlgoChooser<megdnn::Opr>::ImplExecutionPolicy                   \
-    AlgoChooser<megdnn::Opr>::choose_by_profile(                             \
-            ExeContext& ctx, bool require_reproducible, bool enable_update); \
-    template size_t AlgoChooser<megdnn::Opr>::setup_algo(                    \
-            const FixedTensorLayouts& layouts, megdnn::Opr* megdnn_opr,      \
-            const MGBOpr* mgb_opr, bool allow_weight_preprocess);            \
+#define INST(Opr)                                                       \
+    template AlgoChooser<megdnn::Opr>::ImplExecutionPolicy              \
+    AlgoChooser<megdnn::Opr>::get_policy(ExeContext& ctx);              \
+    template void AlgoChooser<megdnn::Opr>::profile(ExeContext& ctx,    \
+                                                    ExecutionStrategy); \
+    template AlgoChooser<megdnn::Opr>::ImplExecutionPolicy              \
+    AlgoChooser<megdnn::Opr>::choose_by_profile(                        \
+            ExeContext& ctx, ExecutionStrategy, bool enable_update);    \
+    template size_t AlgoChooser<megdnn::Opr>::setup_algo(               \
+            const FixedTensorLayouts& layouts, megdnn::Opr* megdnn_opr, \
+            const MGBOpr* mgb_opr, bool allow_weight_preprocess);
 
 MGB_FOREACH_FASTRUN_OPR(INST)
 
@@ -498,7 +495,7 @@ AlgoChooser<Opr>::ExeContext::ExeContext(
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplAlgo
 AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
-        bool require_reproducible) const {
+        ExecutionStrategy select_strategy) const {
     MIDOUT_B(Opr,
              midout_iv(MGB_HASH_STR(
                      "AlgoChooser::ExeContext::get_profile_result_from_cache")))
@@ -522,7 +519,9 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
     if (prof.empty())
         return {};
     for (auto&& i : prof) {
-        if ((!require_reproducible || i.reproducible)) {
+        if (!(select_strategy & ExecutionStrategy::REPRODUCIBLE) ||
+            static_cast<AlgoAttribute>(i.attribute) &
+                    AlgoAttribute::REPRODUCIBLE) {
             auto iter = algo_map.find(i.algo);
             mgb_assert(iter != algo_map.end(),
                        "algorithm %s exists in "
@@ -550,7 +549,8 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
 
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy
-AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
+AlgoChooser<Opr>::ExeContext::choose_by_heuristic(
+        ExecutionStrategy select_strategy) const {
     if (m_execution_policy.workspace_limit !=
         std::numeric_limits<decltype(
                 m_execution_policy.workspace_limit)>::max()) {
@@ -558,6 +558,8 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
                 "workspace_limit should not be setted if choose algo by "
                 "heuristic");
     }
+    bool reproducible = static_cast<bool>(select_strategy &
+                                          ExecutionStrategy::REPRODUCIBLE);
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             owner_graph(), m_cn, m_execution_policy.workspace_limit);
     ImplExecutionPolicy policy;
@@ -579,7 +581,8 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
                 to_fixed_layouts<_Opr>(_item.layouts), megdnn_opr.get(),
                 _item.param, m_base_mgb_opr, m_cn, m_execution_policy,
                 m_allow_weight_preprocess);
-        policy.sub_policy.push_back(sub_ctx.choose_by_heuristic(reproducible));
+        policy.sub_policy.push_back(
+                sub_ctx.choose_by_heuristic(select_strategy));
     });
 
     return policy;
@@ -588,9 +591,8 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
 template <typename Opr>
 std::vector<typename AlgoChooser<Opr>::ImplAlgo>
 AlgoChooser<Opr>::ExeContext::get_all_candidates() const {
-    auto heu = choose_by_heuristic();
-    auto&& ret =
-            APPLY(m_megdnn_opr->get_all_algorithms_info(args...), m_layouts);
+    auto heu = choose_by_heuristic(ExecutionStrategy::HEURISTIC);
+    auto&& ret = APPLY(m_megdnn_opr->get_all_algorithms_info(args...), m_layouts);
     bool found = false;
     for (size_t i = 0; i < ret.size(); ++i) {
         if (ret[i].desc == heu.algo) {
@@ -611,19 +613,21 @@ AlgoChooser<Opr>::ExeContext::get_all_candidates() const {
 
 template <typename Opr>
 void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
-        bool require_reproducible,
+        ExecutionStrategy select_strategy,
         typename AlgoChooser<Opr>::ImplExecutionPolicy& policy,
         bool retrive_from_cache) const {
+    bool reproducible = static_cast<bool>(select_strategy &
+                                          ExecutionStrategy::REPRODUCIBLE);
     if (!policy.algo.valid()) {
         if (retrive_from_cache) {
             policy.algo =
-                    get_profile_result_from_cache(require_reproducible).desc;
+                    get_profile_result_from_cache(select_strategy).desc;
         } else {
             auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
                     owner_graph(), m_cn, m_execution_policy.workspace_limit);
             policy.algo = APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
                                         args..., workspace_limit,
-                                        require_reproducible),
+                                        reproducible),
                                 m_layouts)
                                   .desc;
         }
@@ -647,7 +651,7 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
                 _item.param, m_base_mgb_opr, m_cn, m_execution_policy,
                 m_allow_weight_preprocess);
         policy.sub_policy.push_back({});
-        sub_ctx.construct_execution_policy(require_reproducible,
+        sub_ctx.construct_execution_policy(select_strategy,
                                            policy.sub_policy.back(),
                                            retrive_from_cache);
     });
@@ -718,8 +722,7 @@ AlgoChooser<Opr>::ExeContext::profile_single_algo(
         return None;
     return AlgoChooserProfileCache::ResultEntry{
             palgo->name(),
-            palgo->contain_attribute(
-                    megdnn::AlgoAttribute::REPRODUCIBLE),
+            static_cast<uint32_t>(palgo->attribute()),
             rst.val().time, param.workspace};
 }
 
@@ -768,10 +771,10 @@ AlgoChooser<Opr>::ExeContext::construct_fake_preprocess_filter() const {
             bool allow_weight_preprocess);                                     \
     template typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy            \
     AlgoChooser<megdnn::Opr>::ExeContext::choose_by_heuristic(                 \
-            bool reproducible) const;                                          \
+            ExecutionStrategy select_strategy) const;                          \
     template typename AlgoChooser<megdnn::Opr>::ImplAlgo                       \
     AlgoChooser<megdnn::Opr>::ExeContext::get_profile_result_from_cache(       \
-            bool require_reproducible) const;                                  \
+            ExecutionStrategy select_strategy) const;                          \
     template std::vector<typename AlgoChooser<megdnn::Opr>::ImplAlgo>          \
     AlgoChooser<megdnn::Opr>::ExeContext::get_all_candidates() const;          \
     template size_t                                                            \
@@ -780,7 +783,7 @@ AlgoChooser<Opr>::ExeContext::construct_fake_preprocess_filter() const {
                     policy) const;                                             \
     template void                                                              \
     AlgoChooser<megdnn::Opr>::ExeContext::construct_execution_policy(          \
-            bool require_reproducible,                                         \
+            ExecutionStrategy select_strategy,                                 \
             typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy& policy,    \
             bool retrive_from_cache) const;                                    \
     template Maybe<AlgoChooserProfileCache::ResultEntry>                       \

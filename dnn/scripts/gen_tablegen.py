@@ -91,12 +91,17 @@ class ConverterWriter(IndentWriterBase):
         def format(v):
             return '\"{}\"'.format(str(v))
         enum_def += ','.join(format(i) for i in e.members)
-        enum_def += "]"
+
+        if e.combined:
+            enum_def += "], 1"
+        else:
+            enum_def += "], 0"
+
         if ENUM_TO_STRING_SPECIAL_RULES.count((p.name, e.name)):
             enum_def += ", 1" # whether generate ToStringTrait
         enum_def += ">"
-        self._write("def {} : {};".format(td_class, enum_def))
 
+        self._write("def {} : {};".format(td_class, enum_def))
         if self._skip_current_param:
             return
 

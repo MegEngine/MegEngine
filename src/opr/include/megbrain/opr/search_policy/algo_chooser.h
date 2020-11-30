@@ -35,6 +35,13 @@ MGB_FOREACH_FASTRUN_OPR(cb)
 #undef cb
 
 namespace mgb {
+
+//! define logical operation of megdnn::param::ExecutionPolicy::Strategy::Enum
+//! and megdnn::detail::AlgoAttribute enum
+using ExecutionStrategy = megdnn::param::ExecutionPolicy::Strategy;
+
+using AlgoAttribute = megdnn::AlgoAttribute;
+
 namespace opr {
 
 /* =================== AlgoChooser =================== */
@@ -103,7 +110,7 @@ public:
         const FixedTensorLayouts& layouts() const { return m_layouts; }
 
         ImplExecutionPolicy choose_by_heuristic(
-                bool reproducible = false) const;
+                ExecutionStrategy select_strategy) const;
 
         //! get all candidate algos, and the one choose_by_heuristic() is
         //! put first
@@ -126,19 +133,20 @@ public:
                 const ImplExecutionPolicy& policy, double& timeout) const;
 
         //! get all profile algorithm from cache, return invalid if not exists
-        ImplAlgo get_profile_result_from_cache(bool require_reproducible) const;
+        ImplAlgo get_profile_result_from_cache(
+                ExecutionStrategy select_strategy) const;
 
         /**
          * \brief construct execution policy from cache or heuristic.
          *
-         * \param require_reproducible select algo which is reproducible
+         * \param select_strategy select algo which matched this strategy
          * \param policy execution policy
          * \param retrive_from_cache retrive algo from cache if set True, get
          *     from heuristic otherwise.
          */
-        void construct_execution_policy(
-                bool require_reproducible, ImplExecutionPolicy& policy,
-                bool retrive_from_cache = true) const;
+        void construct_execution_policy(ExecutionStrategy select_strategy,
+                                        ImplExecutionPolicy& policy,
+                                        bool retrive_from_cache = true) const;
 
     private:
         Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const;
@@ -153,11 +161,11 @@ private:
 
 
     //! profile and save to cache
-    static void profile(ExeContext& ctx, bool require_reproducible);
+    static void profile(ExeContext& ctx, ExecutionStrategy select_strategy);
 
-    static ImplExecutionPolicy choose_by_profile(ExeContext& ctx,
-                                                 bool require_reproducible,
-                                                 bool enable_update = true);
+    static ImplExecutionPolicy choose_by_profile(
+            ExeContext& ctx, ExecutionStrategy select_strategy,
+            bool enable_update = true);
 
 public:
     /*!

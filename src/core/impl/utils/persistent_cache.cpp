@@ -188,7 +188,7 @@ AlgoChooserProfileCache::get(const Key &key) {
         auto entry_len = read_uint32();
         mgb_assert(buf + entry_len <= buf_end);
         auto nr = sscanf(reinterpret_cast<const char*>(buf), ENTRY_FMT,
-                         &i.reproducible, &i.time, &i.workspace);
+                         &i.attribute, &i.time, &i.workspace);
         mgb_assert(nr == 3);
         buf += entry_len;
     }
@@ -210,10 +210,10 @@ void AlgoChooserProfileCache::put(const Key &key, Result &result) {
         auto &&cur = result[i];
 
         if (prev.workspace <= cur.workspace &&
-                prev.reproducible == cur.reproducible) {
+            prev.attribute == cur.attribute) {
             result.erase(result.begin() + i);
         } else {
-            ++ i;
+            ++i;
         }
     }
 
@@ -235,8 +235,8 @@ void AlgoChooserProfileCache::put(const Key &key, Result &result) {
         write_uint32(0);
         pos = val.size();
         val.resize(pos + SPR_SIZE);
-        uint32_t nr = snprintf(&val[pos], SPR_SIZE,
-                ENTRY_FMT, i.reproducible, i.time, i.workspace);
+        uint32_t nr = snprintf(&val[pos], SPR_SIZE, ENTRY_FMT, i.attribute,
+                               i.time, i.workspace);
         //! for memory boundary failed, snprintf ret do not contain \0
         nr += 1;
         mgb_assert(nr < SPR_SIZE);
