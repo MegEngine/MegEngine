@@ -51,6 +51,15 @@ using namespace debug;
 #endif
 #endif
 
+#if defined(WIN32)
+#include <process.h>
+#include <windows.h>
+#include <iostream>
+#include <sstream>
+#include "dbghelp.h"
+#pragma comment(lib, "dbghelp.lib")
+#endif
+
 #ifdef __ANDROID__
 namespace {
 
@@ -98,6 +107,7 @@ struct MemmapEntry {
             : low(low_), high(high_), file(file_) {}
 };
 
+#if !defined (WIN32) && ! defined (__APPLE__)
 void get_mem_map(
         int pid,
         thin_function<void(uintptr_t, uintptr_t, const char*, const char*)>
@@ -125,6 +135,7 @@ void get_mem_map(
     }
     fclose(fin);
 }
+#endif
 
 #ifndef WIN32
 // FIXME: imp SigHandlerInit backtrace for windows
@@ -146,12 +157,9 @@ class SigHandlerInit {
             mgb_log_error("%s: caught deadly signal %d(%s)", msg0, signum,
                           strsignal(signum));
         }
-// FIXME: imp backtrace for macos
-#ifndef __APPLE__
         std::string bp;
         debug::backtrace(2).fmt_to_str(bp);
         mgb_log_error("%s", bp.c_str());
-#endif
         exit(EXIT_FAILURE);
     }
 
@@ -228,16 +236,69 @@ void (*ForkAfterCudaError::throw_)() = throw_fork_cuda_exc;
 std::atomic_size_t ScopedForkWarningSupress::sm_depth{0};
 
 BacktraceResult mgb::debug::backtrace(int nr_exclude) {
-#ifndef WIN32
     static bool thread_local recursive_call = false;
+    constexpr size_t MAX_DEPTH = 12;
+    void* stack_mem[MAX_DEPTH];
     if (recursive_call) {
         fprintf(stderr, "recursive call to backtrace()!\n");
         return {};
     }
     recursive_call = true;
+    BacktraceResult result;
 
-    constexpr size_t MAX_DEPTH = 6;
-    void* stack_mem[MAX_DEPTH];
+#if defined(WIN32)
+    WORD i = 0;
+    SYMBOL_INFO* pSymbol;
+    HANDLE p = GetCurrentProcess();
+    SymInitialize(p, NULL, TRUE);
+    if (!p) {
+        recursive_call = false;
+        return {};
+    }
+    pSymbol = (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+    WORD depth = CaptureStackBackTrace(0, MAX_DEPTH, stack_mem, NULL);
+    if (depth > nr_exclude)
+        i = nr_exclude;
+    for (; i < depth; ++i) {
+        std::ostringstream frame_info;
+        DWORD64 address = (DWORD64)(stack_mem[i]);
+        pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+        pSymbol->MaxNameLen = 128;
+
+        DWORD displacementLine = 0;
+        IMAGEHLP_LINE64 line;
+        line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+
+        if (SymFromAddr(p, address, 0, pSymbol) &&
+            SymGetLineFromAddr64(p, address, &displacementLine, &line)) {
+            frame_info << i << " " << line.FileName << ":" << line.LineNumber
+                       << " " << pSymbol->Name << std::endl;
+        } else {
+            frame_info << i << " "
+                       << "null" << std::endl;
+        }
+        auto frame = std::string{frame_info.str().c_str()};
+        result.stack.emplace_back(frame, i);
+    }
+    free(pSymbol);
+
+    recursive_call = false;
+    return result;
+#elif defined(__APPLE__)
+    int i = 0;
+    int depth = ::backtrace(stack_mem, MAX_DEPTH);
+    char** strs = backtrace_symbols(stack_mem, depth);
+    if (depth > nr_exclude)
+        i = nr_exclude;
+    for (; i < depth; ++i) {
+        auto frame = std::string{strs[i]};
+        result.stack.emplace_back(frame, i);
+    }
+    free(strs);
+
+    recursive_call = false;
+    return result;
+#else
     int depth = ::backtrace(stack_mem, MAX_DEPTH);
     auto stack = stack_mem;
     if (depth > nr_exclude) {
@@ -257,7 +318,6 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
             });
         }
     }
-    BacktraceResult result;
 
     for (int i = 0; i < depth; ++i) {
         const char* fname = nullptr;
@@ -273,33 +333,37 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
                 fname = j.file.c_str();
                 break;
             }
-        result.stack.emplace_back(fname, addr);
+        auto frame = std::string{fname};
+        result.stack.emplace_back(frame, addr);
     }
 
     recursive_call = false;
-    return result;
-#else
-    // FIXME: imp Backtrace for windows
-    BacktraceResult result;
     return result;
 #endif
 }
 
 void BacktraceResult::fmt_to_str(std::string& dst) {
+#if defined(WIN32) || defined(__APPLE__)
+    dst.append("bt:\n");
+    for (auto&& i : stack) {
+        dst.append(i.first);
+        dst.append("\n");
+    }
+#else
     char addr[128];
     bool first = true;
     const char* prev_fname = nullptr;
     dst.append("bt:");
     for (auto&& i : stack) {
         sprintf(addr, "%zx", i.second);
-        if (i.first != prev_fname || first) {
+        if (i.first.c_str() != prev_fname || first) {
             if (!first)
                 dst.append("}");
-            if (i.first)
+            if (i.first.c_str())
                 dst.append(i.first);
             else
                 dst.append("unknown");
-            prev_fname = i.first;
+            prev_fname = i.first.c_str();
             first = false;
             dst.append("{");
             dst.append(addr);
@@ -309,6 +373,7 @@ void BacktraceResult::fmt_to_str(std::string& dst) {
         }
     }
     dst.append("}");
+#endif
 }
 
 void debug::set_fork_cuda_warning_flag(int flag) {

@@ -56,7 +56,7 @@ if (APPLE)
 elseif (MSVC OR WIN32)
     # Windows does not support implicitly importing data members from DLL.
     target_link_libraries(${MODULE_NAME} PRIVATE megbrain megdnn)
-    message(STATUS, "CMAKE_MSVC_RUNTIME_LIBRARY: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
+    message(STATUS "CMAKE_MSVC_RUNTIME_LIBRARY: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
     set_target_properties(${MODULE_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY "${CMAKE_MSVC_RUNTIME_LIBRARY}")
 else()
     if (MGE_WITH_PYTHON_MODULE)
