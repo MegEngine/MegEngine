@@ -20,11 +20,13 @@ namespace x86 {
 
 class MatrixMulImpl::AlgoF32Blas : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "X86_F32_BLAS"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
     kern_t get_kern(const KernSizeParam&) const override;
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     PackMode packmode() const override { return PackMode::NO_PACK; }
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 4, AlgoDataType::FLOAT32, DEFAULT)
     MEGDNN_DECL_ALGO_TYPE(X86_F32_BLAS)
@@ -33,7 +35,9 @@ public:
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 class MatrixMulImpl::AlgoF32MKLPackA : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_F32_MKL_PACKA"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }
@@ -55,7 +59,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32AVX2M2N4K16 : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X32_AVX2_2X4X16"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -66,7 +72,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32AVX2M4N16K2 : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X32_AVX2_4X16X2"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -81,7 +89,9 @@ private:
             const MatrixMulImpl::KernParam& kern_param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X16_AVX2"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -97,7 +107,9 @@ private:
             const MatrixMulImpl::KernParam& kern_param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X16_SSE"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -109,7 +121,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32SSEM4N8K2 : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X32_SSE_4X8X2"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -120,7 +134,9 @@ public:
 
 class MatrixMulImpl::AlgoF32MK8_8x8 : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_F32MK8_8X8"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -133,7 +149,9 @@ public:
 #if MEGDNN_X86_WITH_VNNI
 class MatrixMulImpl::AlgoInt8x8x32Vnni : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X32_VNNI"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -146,7 +164,9 @@ public:
 #if MEGDNN_X86_WITH_MKL_DNN
 class MatrixMulImpl::AlgoInt8x8x32Mkldnn : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "X86_INT8X8X32_MKLDNN"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override { return 0; }

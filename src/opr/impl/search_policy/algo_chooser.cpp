@@ -420,7 +420,9 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     mgb_assert(palgo, "Unknown algo description");
     ret.append("): algo=" + std::string(palgo->name()));
     ret.append(ssprintf(" workspace=%.2fMiB reproducible=%d",
-                        workspace / (1024 * 1024.0), palgo->is_reproducible()));
+                        workspace / (1024 * 1024.0),
+                        palgo->contain_attribute(
+                                megdnn::AlgoAttribute::REPRODUCIBLE)));
     mgb_log_debug("%s", ret.c_str());
 
     megdnn_opr->execution_policy() = policy;
@@ -715,8 +717,10 @@ AlgoChooser<Opr>::ExeContext::profile_single_algo(
     if (!rst.valid())
         return None;
     return AlgoChooserProfileCache::ResultEntry{
-            palgo->name(), palgo->is_reproducible(), rst.val().time,
-            param.workspace};
+            palgo->name(),
+            palgo->contain_attribute(
+                    megdnn::AlgoAttribute::REPRODUCIBLE),
+            rst.val().time, param.workspace};
 }
 
 template <typename Opr>

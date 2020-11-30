@@ -20,7 +20,9 @@ namespace fallback {
 
 class ConvBiasImpl::AlgoNaive final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override{
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     const char* name() const override { return "FALLBACK_NAIVE"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -43,7 +45,9 @@ class ConvBiasImpl::AlgoWinogradF32 final : public AlgoBase {
 public:
     AlgoWinogradF32(MatrixMulImpl::AlgoBase* matmul_algo)
             : m_matmul_algo{matmul_algo} {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -77,7 +81,9 @@ class ConvBiasImpl::AlgoWinogradF32_4x4 final : public AlgoBase {
 public:
     AlgoWinogradF32_4x4(MatrixMulImpl::AlgoBase* matmul_algo)
             : m_matmul_algo{matmul_algo} {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -111,7 +117,9 @@ class ConvBiasImpl::AlgoWinogradQS8 final : public AlgoBase {
 public:
     AlgoWinogradQS8(MatrixMulImpl::AlgoBase* matmul_algo)
             : m_matmul_algo{matmul_algo} {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(
@@ -145,7 +153,9 @@ class ConvBiasImpl::AlgoWinogradQS8_8x8 final : public AlgoBase {
 public:
     AlgoWinogradQS8_8x8(MatrixMulImpl::AlgoBase* matmul_algo)
             : m_matmul_algo{matmul_algo} {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasImpl::algo_name<ConvBias::WinogradParam>(

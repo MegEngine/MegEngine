@@ -82,7 +82,7 @@ template <typename Opr>
 typename Opr::Algorithm* get_reproducible_algo(typename Opr::AlgoBase* algo,
                                                bool reproducible) {
     if (reproducible) {
-        if (algo->is_reproducible()) {
+        if (algo->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
             return algo;
         }
     } else {
@@ -113,7 +113,7 @@ typename Opr::Algorithm* get_reproducible_algo(
             }
         }
         if (i->is_available(args)) {
-            if (!i->is_reproducible())
+            if (!i->contain_attribute(AlgoAttribute::REPRODUCIBLE))
                 available_but_not_reproducible = true;
         }
     }

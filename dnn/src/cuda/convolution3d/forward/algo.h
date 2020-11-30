@@ -77,7 +77,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -102,7 +103,9 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "1x1x1"; }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(CUDA_1X1X1)
 };
 
@@ -120,8 +123,13 @@ public:
 
     const char* name() const override { return m_name.c_str(); }
 
-    bool is_reproducible() const override { return m_impl->is_reproducible(); }
-
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_impl->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
     static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
                                  TensorLayout& dst_pg);
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
@@ -147,7 +155,13 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return m_attr.is_reproducible; }
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_attr.is_reproducible) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
 
     const char* name() const override { return m_attr.name.c_str(); }
 
@@ -172,7 +186,9 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "INPLACE_MATMUL"; }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(CUDA_INPLACE_MATMUL)
 };
 
@@ -183,7 +199,9 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "CHANNEL_WISE"; }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE)
 };
 
@@ -218,3 +236,4 @@ public:
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
+

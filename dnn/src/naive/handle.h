@@ -11,6 +11,7 @@
 #pragma once
 #include "megdnn/basic_types.h"
 
+#include "megdnn/oprs/base.h"
 #include "src/common/handle_impl.h"
 #include "src/naive/convolution/algorithms.h"
 #include "src/naive/matrix_mul/algorithms.h"

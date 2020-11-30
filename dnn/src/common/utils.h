@@ -54,6 +54,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <type_traits>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -683,6 +684,62 @@ inline void* get_origin_ptr(const TensorND* tensor, void* ptr) {
     return static_cast<void*>(static_cast<dt_byte*>(ptr) -
                               tensor->layout.span().low_byte);
 }
+
+template <typename T>
+class EnumClassBit {
+    std::underlying_type_t<T> m_val;
+
+    constexpr EnumClassBit(std::underlying_type_t<T> v) : m_val(v) {}
+
+public:
+    constexpr EnumClassBit(T v)
+            : m_val(static_cast<std::underlying_type_t<T>>(v)) {}
+
+    constexpr operator T() const { return static_cast<T>(m_val); }
+
+    constexpr explicit operator bool() const { return m_val; }
+
+#define DEF_OPR(op)                                                     \
+    constexpr EnumClassBit operator op(const EnumClassBit& rhs) const { \
+        return m_val op rhs.m_val;                                      \
+    }
+
+    DEF_OPR(&)
+    DEF_OPR(|)
+    DEF_OPR (^)
+
+    constexpr EnumClassBit operator~() const { return ~m_val; }
+
+#undef DEF_OPR
+};
+
+#define _MEGDNN_DECBO_SINGLE_OPR(cls, op)                                    \
+    inline constexpr ::megdnn::EnumClassBit<cls> operator op(cls x, cls y) { \
+        return ::megdnn::EnumClassBit<cls>(x)                                \
+                op ::megdnn::EnumClassBit<cls>(y);                           \
+    }                                                                        \
+    inline constexpr ::megdnn::EnumClassBit<cls> operator op(                \
+            ::megdnn::EnumClassBit<cls> x, cls y) {                          \
+        return x op ::megdnn::EnumClassBit<cls>(y);                          \
+    }
+
+#define _MEGDNN_DECBO_SINGLE_OPR_ASSIGN(cls, op)          \
+    inline constexpr cls& operator op##=(cls& x, cls y) { \
+        x = x op ::megdnn::EnumClassBit<cls>(y);          \
+        return x;                                         \
+    }
+
+#define MEGDNN_DEF_ENUM_CLASS_BIT_OPR(cls)                          \
+    _MEGDNN_DECBO_SINGLE_OPR(cls, &)                                \
+    _MEGDNN_DECBO_SINGLE_OPR(cls, |)                                \
+    _MEGDNN_DECBO_SINGLE_OPR(cls, ^)                                \
+    _MEGDNN_DECBO_SINGLE_OPR_ASSIGN(cls, &)                         \
+    _MEGDNN_DECBO_SINGLE_OPR_ASSIGN(cls, |)                         \
+    _MEGDNN_DECBO_SINGLE_OPR_ASSIGN(cls, ^)                         \
+    inline constexpr ::megdnn::EnumClassBit<cls> operator~(cls x) { \
+        return ~::megdnn::EnumClassBit<cls>(x);                     \
+    }
+
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

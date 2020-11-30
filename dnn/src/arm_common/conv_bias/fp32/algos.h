@@ -29,6 +29,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_4X4_FP32)
 };
@@ -44,6 +47,9 @@ public:
                     m_matmul_algo->name(), {1, 6, m_tile_size});
         }
         return m_name.c_str();
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_FP32)
@@ -61,6 +67,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_4X4_FP32)
 };
@@ -77,6 +86,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F54_FP32)
 };
@@ -92,6 +104,9 @@ public:
                     m_matmul_algo->name(), {1, 4, m_tile_size});
         }
         return m_name.c_str();
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F45_FP32)
@@ -111,6 +126,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_4X4_NCHW44_F32)
 };
@@ -127,6 +145,9 @@ public:
                     param::ConvBias::Format::NCHW44);
         }
         return m_name.c_str();
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_4X4_NCHW44_F32)
@@ -145,6 +166,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F73_4X4_NCHW44_F32)
 };
@@ -154,7 +178,9 @@ class ConvBiasImpl::AlgoF32Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F32DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -172,7 +198,9 @@ class ConvBiasImpl::AlgoF32DirectStride1 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F32STRD1"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -190,7 +218,9 @@ class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F32STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -209,7 +239,9 @@ class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
 
 public:
     AlgoF32DirectNCHW44() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F32_CONV_NCHW44_DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -228,7 +260,9 @@ class ConvBiasImpl::AlgoF32DirectNCHWNCHW44 final : public AlgoBase {
 
 public:
     AlgoF32DirectNCHWNCHW44() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F32_CONV_NCHW_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -246,7 +280,9 @@ class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F32_CHANNEL_WISE_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;

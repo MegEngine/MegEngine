@@ -77,7 +77,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
 
@@ -107,8 +108,13 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
-
-    bool is_reproducible() const override { return m_is_reproducible; }
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_is_reproducible) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
 
     const char* name() const override {
         return "MIOpenConvolutionBackwardData";
@@ -137,8 +143,10 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "MATMUL"; }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_MATMUL)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 class ConvolutionBackwardDataImpl::AlgoChanwise final : public AlgoBase {
@@ -148,8 +156,10 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "CHANNEL_WISE"; }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_CHANWISE)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {

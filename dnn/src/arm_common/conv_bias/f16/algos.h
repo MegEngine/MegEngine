@@ -29,6 +29,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_FP16)
 };
@@ -45,6 +48,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F45_FP16)
 };
@@ -60,7 +66,9 @@ public:
         }
         return m_name.c_str();
     }
-
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_FP16)
 };
@@ -76,6 +84,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT16);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_FP16)
 };
@@ -84,7 +95,9 @@ class ConvBiasImpl::AlgoF16Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F16DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -104,7 +117,9 @@ class ConvBiasImpl::AlgoF16DirectStride1 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "F16STRD1"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;

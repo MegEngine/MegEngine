@@ -141,7 +141,6 @@ using BiasMode = ConvBiasForward::BiasMode;
     }
 
 #define MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(_algo_data_type)                      \
-    bool is_reproducible() const override { return true; }                     \
     bool usable(const NCBKernSizeParam& param,                                 \
                 AlgoSelectionStrategy algo_selection_strategy) const override; \
     size_t get_workspace(const NCBKernSizeParam& param) const override;        \

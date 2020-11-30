@@ -225,7 +225,9 @@ public:
         };
         bool preferred_reproducible(const KernSizeParam& param,
                                     bool reproducible = true) {
-            return (!reproducible || is_reproducible()) && preferred(param);
+            return (!reproducible ||
+                    contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
+                   preferred(param);
         };
         virtual MatmulDescription matmul_description() const = 0;
 

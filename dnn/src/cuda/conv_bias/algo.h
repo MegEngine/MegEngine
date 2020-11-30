@@ -130,7 +130,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
 
@@ -165,7 +166,13 @@ public:
 
     const char* name() const override { return m_name.c_str(); }
 
-    bool is_reproducible() const override { return m_attr.is_reproducible; }
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_attr.is_reproducible) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
 
     cudnnConvolutionFwdAlgo_t cudnn_enum() { return m_cudnn_enum; }
 
@@ -198,7 +205,9 @@ public:
         }
         return m_name.c_str();
     }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE)
 
@@ -219,8 +228,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_SMALL)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     mutable std::string m_name;
@@ -238,8 +249,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_INT8X8X32)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     mutable std::string m_name;
@@ -260,7 +273,13 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return m_attr.is_reproducible; }
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_attr.is_reproducible) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
 
     const char* name() const override { return m_name.c_str(); }
 
@@ -298,8 +317,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_INPLACE_MATMUL)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     mutable std::string m_name;
@@ -327,8 +348,10 @@ public:
     std::vector<SearchItem> get_subopr_list(
             const TensorLayoutArray& layouts,
             const OperatorBase* opr) const override;
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -347,8 +370,10 @@ public:
         }
         return m_name.c_str();
     }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL_INT8X8X32)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     bool need_src_unroll(const SizeArgs& args) const;
@@ -378,7 +403,10 @@ public:
             const TensorLayoutArray& layouts,
             const OperatorBase* opr) const override;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+
     MEGDNN_DECL_ALGO_TYPE(CUDA_BATCHED_MATMUL)
 
 private:
@@ -397,7 +425,13 @@ public:
 
     const char* name() const override { return m_name.c_str(); }
 
-    bool is_reproducible() const override { return m_impl->is_reproducible(); }
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_impl->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
 
     static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
                                  TensorLayout& dst_pg, TensorLayout& bias_pg);
@@ -423,7 +457,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return "QUINT4x4x32_WMMA"; }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
@@ -444,7 +480,9 @@ public:
     const char* name() const override {
         return "INT8_CHWN4_DOTPROD_IMPLICIT_GEMM";
     }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     template <typename BiasVisitor>
     static void dispatch_nonlinear_mode(
             const int8_t* d_src, const int8_t* d_filter,
@@ -486,7 +524,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     size_t get_preprocess_workspace_in_bytes(
             const SizeArgs& args) const override;
     SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
@@ -524,7 +564,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     template <typename BiasVisitor>
     static void dispatch_nonlinear_mode(
             const int8_t* d_src, const int8_t* d_filter,
@@ -561,13 +603,15 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW4_IMMA_INT8)
 
     std::string param() const override {
         std::string ret;
         serialize_write_pod(m_mma_tile_size, ret);
         return ret;
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
     }
 
 private:
@@ -590,13 +634,15 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_REORDER_FILTER_CHWN4_IMMA_INT8)
 
     std::string param() const override {
         std::string ret;
         serialize_write_pod(m_mma_tile_size, ret);
         return ret;
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
     }
 
 private:
@@ -617,13 +663,15 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_UNROLL_WIDTH_CHWN4_IMMA_INT8)
 
     std::string param() const override {
         std::string ret;
         serialize_write_pod(m_mma_tile_size, ret);
         return ret;
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
     }
 
 private:
@@ -655,7 +703,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     static std::string to_string(AlgoParam algo_param);
     size_t get_preprocess_workspace_in_bytes(
             const SizeArgs& args) const override;
@@ -690,7 +740,10 @@ public:
             const OperatorBase* opr) const override;
 
     const char* name() const override { return "CONVBIAS_BFLOAT16"; }
-    bool is_reproducible() const override { return true; }
+
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_BFLOAT16)
 private:

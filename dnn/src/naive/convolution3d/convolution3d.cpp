@@ -123,7 +123,7 @@ Convolution3DForwardImpl::get_algorithm_heuristic(
         bool reproducible) {
     auto algo = static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo();
     if (reproducible) {
-        megdnn_assert(algo->is_reproducible(),
+        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
                       "require reproducible algorithm, but heuristic "
                       "algorithm(%s) is not "
                       "reproducible",
@@ -156,7 +156,7 @@ Convolution3DBackwardDataImpl::get_algorithm_heuristic(
     auto algo =
             static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo();
     if (reproducible) {
-        megdnn_assert(algo->is_reproducible(),
+        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
                       "require reproducible algorithm, but heuristic "
                       "algorithm(%s) is not "
                       "reproducible",
@@ -191,7 +191,7 @@ Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
     auto algo = static_cast<HandleImpl*>(handle())
                         ->default_conv3d_bwd_filter_algo();
     if (reproducible) {
-        megdnn_assert(algo->is_reproducible(),
+        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
                       "require reproducible algorithm, but heuristic "
                       "algorithm(%s) is not "
                       "reproducible",

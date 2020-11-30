@@ -66,7 +66,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) const {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -87,7 +88,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& /* args */) const override;
     const char* name() const override { return "DEFAULT"; }
     virtual void exec(const ExecArgs&) const override;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(fallback_BLAS)
 };
 

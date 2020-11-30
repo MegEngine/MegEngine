@@ -63,7 +63,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -85,7 +86,9 @@ public:
                                          const SizeArgs& args) const;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     const char* name() const override {
         return "LOCAL_SHARE_CHWN_BATCH_SIZE_AWARE";
@@ -102,7 +105,9 @@ public:
                                          const SizeArgs& args) const;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     const char* name() const override {
         return "LOCAL_SHARE_CHWN_BATCH_SIZE_AWARE_SMALL_IMAGE";
@@ -118,7 +123,9 @@ public:
                                          const SizeArgs& args) const;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     const char* name() const override { return "LOCAL_SHARE_BATCHED_MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_BATCHED_MATMUL)

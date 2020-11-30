@@ -21,18 +21,19 @@ namespace fallback {
 
 class MatrixMulImpl::AlgoF32K8x12x1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "FB_F32_K8X12X1"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
     kern_t get_kern(const KernSizeParam&) const override;
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_DECL_ALGO_TYPE(FB_F32K8x12x1)
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
 };
 
 class MatrixMulImpl::AlgoGemv final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "FB_GEMV"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -40,6 +41,9 @@ public:
     kern_t get_kern(const KernSizeParam&) const override;
     AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMV; }
     PackMode packmode() const override { return PackMode::NO_PACK; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_DECL_ALGO_TYPE(FB_GEMV)
     MEGDNN_OVERRIDE_MATMUL_DESC(
             8, 16, 1, 4,
@@ -54,7 +58,9 @@ public:
 
 class MatrixMulImpl::AlgoNaive final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     const char* name() const override { return "FB_NAIVE"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;

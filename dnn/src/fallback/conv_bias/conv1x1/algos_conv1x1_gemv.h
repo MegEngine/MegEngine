@@ -22,7 +22,9 @@ class ConvBiasImpl::AlgoConv1x1Gemv final : public AlgoBase {
 public:
     AlgoConv1x1Gemv() = default;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     const char* name() const override { return "CONV1x1_GEMV"; }
 

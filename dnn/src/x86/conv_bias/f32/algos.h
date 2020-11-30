@@ -32,7 +32,9 @@ class ConvBiasImpl::AlgoDirect final : public AlgoBase {
                              const CpuNDRange& workspace_ids);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP";
     }
@@ -68,7 +70,9 @@ class ConvBiasImpl::AlgoDirectStride2 final : public AlgoBase {
                              const CpuNDRange& workspace_ids);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP";
     }
@@ -101,6 +105,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(X86_WINOGRAD_F63_8x8_F32)
 };
@@ -117,6 +124,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(X86_WINOGRAD_F23_8x8_F32)
 };
@@ -128,7 +138,9 @@ class ConvBiasImpl::AlgoMkldnnConv final : public AlgoBase {
 
 public:
     AlgoMkldnnConv() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "MKLDNN_CONV_FP32"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy) const override {

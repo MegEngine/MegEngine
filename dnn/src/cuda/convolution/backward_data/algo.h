@@ -82,7 +82,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
 
@@ -115,10 +116,14 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return m_attr.is_reproducible; }
-
     const char* name() const override { return m_attr.name.c_str(); }
-
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_attr.is_reproducible) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
     cudnnConvolutionBwdDataAlgo_t cudnn_enum() const { return m_cudnn_enum; }
 
     bool is_cudnn() const override { return true; }
@@ -146,8 +151,10 @@ public:
             const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL"; }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 class ConvolutionBackwardDataImpl::AlgoChanwise final : public AlgoBase {
@@ -157,8 +164,10 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "CHANNEL_WISE"; }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 class ConvolutionBackwardDataImpl::AlgoChanwiseSmall final : public AlgoBase {
@@ -168,8 +177,10 @@ public:
     void exec(const ExecArgs& args) const override;
 
     const char* name() const override { return "CHANNEL_WISE_SMALL"; }
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_SMALL)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 class ConvolutionBackwardDataImpl::AlgoBFloat16 final : public AlgoBase {
@@ -185,7 +196,10 @@ public:
     const char* name() const override {
         return "CONVOLUTION_BACKWARD_DATD_BFLOAT16";
     }
-    bool is_reproducible() const override { return true; }
+
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -207,11 +221,17 @@ public:
 
     const char* name() const override { return m_name.c_str(); }
 
-    bool is_reproducible() const override { return m_impl->is_reproducible(); }
 
     static void modify_size_args(SizeArgs& args, TensorLayout& diff_pg,
                                  TensorLayout& grad_pg);
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
+    AlgoAttribute attribute() const override {
+        auto ret = static_cast<AlgoAttribute>(0);
+        if (m_impl->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
 
     std::string param() const override {
         std::string ret;

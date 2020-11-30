@@ -21,7 +21,9 @@ class ConvBiasImpl::AlgoChanWiseAvx2Stride1Qint8 final : public AlgoBase {
     static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1";
     }
@@ -46,7 +48,9 @@ class ConvBiasImpl::AlgoChanWiseAvx2Stride2Qint8 final : public AlgoBase {
     static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE2";
     }
@@ -71,7 +75,9 @@ class ConvBiasImpl::AlgoDirectAvx2Stride1Int8 final : public AlgoBase {
     static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1";
     }
@@ -96,7 +102,9 @@ class ConvBiasImpl::AlgoAVX2DirectConvStride2 final : public AlgoBase {
     static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2";
     }
@@ -124,7 +132,9 @@ class ConvBiasImpl::AlgoMkldnnQint8 final : public AlgoBase {
 
 public:
     AlgoMkldnnQint8() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "MKLDNN_INT8"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy) const override;
@@ -163,7 +173,9 @@ class ConvBiasImpl::AlgoMkldnnMatmulQint8 final : public AlgoBase {
     static WorkspaceBundle get_bundle(const NCBKernSizeParam& param);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "MKLDNN_MATMUL_INT8"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy) const override;

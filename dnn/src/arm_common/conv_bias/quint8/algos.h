@@ -20,7 +20,9 @@ namespace arm_common {
 class ConvBiasImpl::AlgoQU8DirectStride1 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "QU8STRD1"; }
 
     bool usable(const NCBKernSizeParam& param,
@@ -38,7 +40,9 @@ public:
 class ConvBiasImpl::AlgoQU8DirectStride2 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "QU8STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -55,7 +59,9 @@ public:
 class ConvBiasImpl::AlgoDotU8DirectStride1 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMDOTU8STRD1"; }
 
     bool usable(const NCBKernSizeParam& param,
@@ -73,7 +79,9 @@ public:
 class ConvBiasImpl::AlgoDotU8DirectStride2 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMDOTU8STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;

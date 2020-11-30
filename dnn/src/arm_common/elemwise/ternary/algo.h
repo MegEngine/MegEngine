@@ -18,7 +18,9 @@ namespace arm_common {
     class ElemwiseImpl::AlgoTernaryFma3##case final                   \
             : public ElemwiseImpl::AlgoBase {                         \
         mutable std::string m_name;                                   \
-        bool is_reproducible() const override { return true; }        \
+        AlgoAttribute attribute() const override {                    \
+            return AlgoAttribute::REPRODUCIBLE;                       \
+        }                                                             \
         const char* name() const override {                           \
             if (m_name.empty()) {                                     \
                 m_name = megdnn_mangle(                               \

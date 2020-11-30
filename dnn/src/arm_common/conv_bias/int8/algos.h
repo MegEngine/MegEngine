@@ -20,7 +20,9 @@ namespace arm_common {
 class ConvBiasImpl::AlgoS8DirectStride1 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8STRD1"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -39,7 +41,9 @@ public:
 class ConvBiasImpl::AlgoS8DirectStride2 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -56,7 +60,9 @@ public:
 class ConvBiasImpl::AlgoS8DirectNCHW44 final : public AlgoBase {
 public:
     AlgoS8DirectNCHW44() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8_NCHW44_DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -73,7 +79,9 @@ public:
 class ConvBiasImpl::AlgoS8DirectNCHWNCHW44 final : public AlgoBase {
 public:
     AlgoS8DirectNCHWNCHW44() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8_CONV_NCHW_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -89,7 +97,9 @@ public:
 
 class ConvBiasImpl::AlgoS8ChanWiseStride1NCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8_CHAN_WISE_STRD1_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -104,7 +114,9 @@ public:
 
 class ConvBiasImpl::AlgoS8ChanWiseStride2NCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8_CHAN_WISE_STRD2_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -121,7 +133,9 @@ public:
 
 class ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMDOTS8_NCHW_NCHW44"; }
     bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -138,7 +152,9 @@ public:
 class ConvBiasImpl::AlgoDotS8DirectStride1 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMDOTS8STRD1"; }
     bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -155,7 +171,9 @@ public:
 class ConvBiasImpl::AlgoDotS8DirectStride2 final : public AlgoBase {
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMDOTS8STRD2"; }
 
     bool usable(const NCBKernSizeParam&,
@@ -174,7 +192,9 @@ class ConvBiasImpl::AlgoDotS8Direct_NCHW44 final : public AlgoBase {
 public:
     AlgoDotS8Direct_NCHW44() {}
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMDOTS8DIRECT_NCHW44"; }
     bool usable(const NCBKernSizeParam&,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -205,6 +225,9 @@ public:
         }
         return m_name.c_str();
     }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_S8)
 };
@@ -222,6 +245,9 @@ public:
                     param::ConvBias::Format::NCHW44);
         }
         return m_name.c_str();
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
     }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_NCHW44_S8CF32)
@@ -241,7 +267,9 @@ public:
         }
         return m_name.c_str();
     }
-
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::QINT8X8X32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_8X8_NCHW44_S8)
 };

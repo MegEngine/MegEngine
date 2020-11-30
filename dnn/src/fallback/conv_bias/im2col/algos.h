@@ -27,7 +27,9 @@ public:
             : m_matmul_algo(matmul_algo),
               m_ohw_tile_size(ohw_tile_size) {}
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return m_matmul_algo->attribute();
+    }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ssprintf("IM2COLMATMUL:%s:%zu", m_matmul_algo->name(),

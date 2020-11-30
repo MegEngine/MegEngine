@@ -2127,7 +2127,8 @@ TEST(TestOprDNN, HeuristicReproducible) {
                     megdnn_opr->get_algorithm_from_desc(algo);
             mgb_assert(palgo, "Unknown algo description");
             if (strategy == S::HEURISTIC_REPRODUCIBLE) {
-                EXPECT_TRUE(palgo->is_reproducible());
+                EXPECT_TRUE(palgo->contain_attribute(
+                            megdnn::AlgoAttribute::REPRODUCIBLE));
             }
             algo_name0 = palgo->name();
         }
@@ -2338,7 +2339,9 @@ class MockAlgorithm : public megdnn::detail::Algorithm {
 
 public:
     MockAlgorithm(const char* name = "NotImportant") : m_name(name) {}
-    bool is_reproducible() const override { return true; }
+    Attribute attribute() const override {
+        return Attribute::REPRODUCIBLE;
+    }
     const char* name() const override { return m_name; }
     uint32_t type() const override {
         return megdnn::detail::Algorithm::INVALID_ALGO_TYPE;

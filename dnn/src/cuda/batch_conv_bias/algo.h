@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include "megdnn/oprs.h"
 
+#include "megdnn/oprs/base.h"
 #include "src/common/utils.h"
 #include "src/cuda/batch_conv_bias/opr_impl.h"
 #include "src/cuda/handle.h"
@@ -67,7 +68,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
 
@@ -89,7 +91,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     const char* name() const override {
         return "BATCH_CONV_BIAS_INT8_NCHW4_GEMM_DOTPROD";
@@ -104,7 +108,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     const char* name() const override {
         return "BATCH_CONV_BIAS_INT8_NCHW4_IMPLICIT_GEMM_PRECOMP_DOTPROD";

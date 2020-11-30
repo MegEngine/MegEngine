@@ -166,7 +166,7 @@ LocalShareForward::Algorithm* LocalShareForwardImpl::get_algorithm_heuristic(
     auto algo =
             static_cast<HandleImpl*>(handle())->default_local_share_fwd_algo();
     if (reproducible) {
-        megdnn_assert(algo->is_reproducible(),
+        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
                       "require reproducible algorithm, but heuristic "
                       "algorithm(%s) is not "
                       "reproducible",
@@ -200,7 +200,7 @@ LocalShareBackwardDataImpl::get_algorithm_heuristic(
     auto algo = static_cast<HandleImpl*>(handle())
                         ->default_local_share_bwd_data_algo();
     if (reproducible) {
-        megdnn_assert(algo->is_reproducible(),
+        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
                       "require reproducible algorithm, but heuristic "
                       "algorithm(%s) is not "
                       "reproducible",
@@ -234,7 +234,7 @@ LocalShareBackwardFilterImpl::get_algorithm_heuristic(
     auto algo = static_cast<HandleImpl*>(handle())
                         ->default_local_share_bwd_filter_algo();
     if (reproducible) {
-        megdnn_assert(algo->is_reproducible(),
+        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
                       "require reproducible algorithm, but heuristic "
                       "algorithm(%s) is not "
                       "reproducible",

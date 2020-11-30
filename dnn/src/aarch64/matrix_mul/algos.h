@@ -21,7 +21,9 @@ namespace aarch64 {
 
 class MatrixMulImpl::AlgoF32K8x12x1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_F32K8X12X1"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -32,7 +34,9 @@ public:
 
 class MatrixMulImpl::AlgoF32MK4_8x12x1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_F32_MK4_K8X12X1"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -43,7 +47,9 @@ public:
 
 class MatrixMulImpl::AlgoF32K4x16x1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_F32K4X16X1"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -54,7 +60,9 @@ public:
 
 class MatrixMulImpl::AlgoF32MK4_4x16 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_F32_MK4_4x16"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -76,7 +84,9 @@ public:
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 class MatrixMulImpl::AlgoF16K8x24x1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_F16_K8X24X1"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -87,7 +97,9 @@ public:
 
 class MatrixMulImpl::AlgoF16MK8_8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_F16_MK8_8X8"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -102,7 +114,9 @@ public:
 #if __ARM_FEATURE_DOTPROD
 class MatrixMulImpl::AlgoInt8x8x32K8x12x4DotProd final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "AARCH64_INT8X8X32_K8X12X4_DOTPROD";
     }
@@ -115,7 +129,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32MK4_8x12x4DotProd final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD";
     }
@@ -129,7 +145,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32MK4_4x4x16 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT8X8X32_MK4_4X4X16"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -143,7 +161,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32K4x4x16 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT8X8X32_K4X4X16"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -156,7 +176,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x32K8x8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT8X8X32_K8X8X8"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -169,7 +191,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x16K8x8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT8X8X16_K8X8X8"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -182,7 +206,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x16K4x4x16 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT8X8X16_K4X4X16"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -194,7 +220,9 @@ public:
 
 class MatrixMulImpl::AlgoInt4x4x16K8x8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT4X4X16_K8X8X8"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -207,7 +235,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x16MK4_16x12x4 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "AARCH64_INT8X8X16_MK4_16X12X4";
     }
@@ -223,7 +253,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x16MK4_K8x8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "AARCH64_INT8X8X16_MK4_K8X8X8";
     }
@@ -239,7 +271,9 @@ public:
 
 class MatrixMulImpl::AlgoInt8x8x16MK4_4x4x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT8X8X16_MK4_4X4X8"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -253,7 +287,9 @@ public:
 
 class MatrixMulImpl::AlgoInt16x16x32K12x8x1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT16X16X32_K12X8X1"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -265,7 +301,9 @@ public:
 
 class MatrixMulImpl::AlgoInt16x16x32MK8_8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_INT16X16X32_MK8_8X8"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;
@@ -278,7 +316,9 @@ public:
 #if __ARM_FEATURE_DOTPROD
 class MatrixMulImpl::AlgoQuint8K8x8x4DotProd final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "AARCH64_QUINT8_K8X8X4_DOTPROD";
     }
@@ -291,7 +331,9 @@ public:
 
 class MatrixMulImpl::AlgoQuint8GemvDotProd final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_QUINT8_GEMV_DOTPROD"; }
     bool usable(const KernSizeParam&) const override;
     bool preferred(const KernSizeParam&) const override;
@@ -306,7 +348,9 @@ public:
 
 class MatrixMulImpl::AlgoQuint8K8x8x8 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "AARCH64_QUINT8_K8X8X8"; }
     bool usable(const KernSizeParam&) const override;
     size_t get_workspace(const KernSizeParam&) const override;

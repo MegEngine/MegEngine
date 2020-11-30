@@ -320,10 +320,12 @@ public:
         virtual bool is_preferred(const NCBKernSizeParam&) const {
             return false;
         }
+
         bool usable_reproducible(const NCBKernSizeParam& param,
                                  AlgoSelectionStrategy algo_selection_strategy,
                                  bool reproducible = true) const {
-            return (!reproducible || is_reproducible()) &&
+            return (!reproducible ||
+                    contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                    usable(param, algo_selection_strategy);
         }
 

@@ -736,7 +736,7 @@ ConvolutionBackwardDataImpl::ncb_1g_get_algorithm_heuristic(
     for (auto i : ncb_1g_get_all_algorithms(param)) {
         if (ncb_1g_get_workspace(i, param) <= workspace_limit_in_bytes) {
             if (reproducible) {
-                if (i->is_reproducible()) {
+                if (i->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
                     return i;
                 }
             } else {

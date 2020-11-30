@@ -23,7 +23,9 @@ using FallbackConvBiasImpl = fallback::ConvBiasImpl;
 class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "ARMV8F32STRD2"; }
 
     bool usable(const NCBKernSizeParam& param,

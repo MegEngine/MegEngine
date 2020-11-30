@@ -75,7 +75,6 @@ void kern_naive(const ConvolutionBackwardDataImpl::NCBKernParam& p) {
 
 class ConvolutionImpl::AlgoFallback final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "FALLBACK_ALGO"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -85,6 +84,10 @@ public:
     SmallVector<NCBKern> dispatch_kern(
             const NCBKernSizeParam& /*param*/) const override;
 
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+
     ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT32, AlgoCategory::NAIVE};
     }
@@ -93,7 +96,6 @@ public:
 
 class ConvolutionImpl::AlgoNaive final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "NAIVE_ALGO"; }
     bool usable(const NCBKernSizeParam& /*param*/,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -103,6 +105,9 @@ public:
     SmallVector<NCBKern> dispatch_kern(
             const NCBKernSizeParam& /*param*/) const override;
 
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     ConvAlgoTypePack get_algo_type() const override {
         auto support_data_type = static_cast<AlgoDataType>(
                 static_cast<uint32_t>(AlgoDataType::INT8X8X16) |
@@ -122,7 +127,6 @@ class ConvolutionImpl::AlgoDefault final : public AlgoBase {
 
 public:
     AlgoDefault(ConvBiasImpl::AlgoBase*);
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return m_name.c_str(); }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -142,6 +146,10 @@ public:
     SmallVector<NCBKern> dispatch_kern(
             const NCBKernSizeParam& param) const override {
         return get_kimpl(m_algorithm, param);
+    }
+
+    AlgoAttribute attribute() const override {
+        return m_algorithm->attribute();
     }
 
     //! select matmul to the highest preference
@@ -169,7 +177,6 @@ private:
 ////////////////////////// convolutionbackwarddata ////////////////////////
 class ConvolutionBackwardDataImpl::AlgoNaive final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "DeconvNaive"; }
     bool usable(ConvolutionBackwardDataImpl* opr,
                 const NCBKernSizeParam& param) const override;
@@ -178,12 +185,14 @@ public:
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
     bool is_naive() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     MEGDNN_DECL_ALGO_TYPE(FB_NAIVE)
 };
 
 class ConvolutionBackwardDataImpl::AlgoDirect final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "DeconvDirect"; }
     bool usable(ConvolutionBackwardDataImpl* opr,
                 const NCBKernSizeParam& param) const override;
@@ -191,12 +200,14 @@ public:
                          const NCBKernSizeParam& param) const override;
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(FB_DIRECT)
 };
 
 class ConvolutionBackwardDataImpl::AlgoMatrixMul final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
     const char* name() const override { return "DeconvMatmul"; }
     bool usable(ConvolutionBackwardDataImpl* opr,
                 const NCBKernSizeParam& param) const override;
@@ -205,6 +216,9 @@ public:
     ncb_kern_t dispatch_kern(ConvolutionBackwardDataImpl*,
                              const NCBKernSizeParam&) const override;
     bool is_preferred(const NCBKernSizeParam& param) const override;
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(FB_MATMUL)
 };
 

@@ -29,7 +29,9 @@ class ConvBiasImpl::AlgoI8x8x16Direct final : public AlgoBase {
                              const CpuNDRange& workspace_ids);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "I8816DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -45,7 +47,9 @@ public:
 class ConvBiasImpl::AlgoS8x8x16DirectNCHW44 final : public AlgoBase {
 public:
     AlgoS8x8x16DirectNCHW44() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8x8x16_NCHW44_DIRECT"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -71,7 +75,9 @@ class ConvBiasImpl::AlgoI8x8x16Stride2 final : public AlgoBase {
                              const CpuNDRange& workspace_ids);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "I8816STRD2"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
@@ -87,7 +93,9 @@ public:
 
 class ConvBiasImpl::AlgoI8x8x16Stride2Filter2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "I8816STRD2F2"; }
 
     bool usable(const NCBKernSizeParam& param,
@@ -105,10 +113,10 @@ public:
 class ConvBiasImpl::AlgoS8x8x16ChanWiseStride1Stride2NCHW44 final
         : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
-    const char* name() const override {
-        return "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44";
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
     }
+    const char* name() const override { return "S8x8x16_CHAN_WISE_STRD1_STRD2_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(
@@ -126,7 +134,9 @@ class ConvBiasImpl::AlgoI8x8x16DirectNCHWNCHW44 final : public AlgoBase {
 
 public:
     AlgoI8x8x16DirectNCHWNCHW44() {}
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "I8816_CONV_NCHW_NCHW44"; }
     bool usable(const NCBKernSizeParam& param,
                 AlgoSelectionStrategy algo_selection_strategy) const override;

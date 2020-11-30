@@ -11,39 +11,50 @@
  */
 #pragma once
 #include "megdnn/oprs.h"
+#include "src/common/algo_base.h"
 
 namespace megdnn {
 namespace naive {
 
 class DefaultConvolutionForwardAlgorithm final
         : public megdnn::ConvolutionForward::Algorithm {
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "DEFAULT"; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
 };
 class DefaultConvolutionBackwardDataAlgorithm final
         : public megdnn::ConvolutionBackwardData::Algorithm {
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "DEFAULT"; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
 };
 class DefaultConvolutionBackwardFilterAlgorithm final
         : public megdnn::ConvolutionBackwardFilter::Algorithm {
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "DEFAULT"; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
 };
 class DefaultConvBiasForwardAlgorithm final
         : public megdnn::ConvBiasForward::Algorithm {
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "DEFAULT"; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
 };
 class DefaultBatchConvBiasForwardAlgorithm final
         : public megdnn::BatchConvBiasForward::Algorithm {
-    bool is_reproducible() const override { return true; }
-    const char* name() const override { return "DEFAULT"; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
     uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
 };
 
 }  // namespace naive

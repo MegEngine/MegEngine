@@ -86,7 +86,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) const {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -109,8 +110,10 @@ public:
     }
     const char* name() const override { return "CUBLAS"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLAS)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 #if CUDA_VERSION >= 10000
@@ -121,8 +124,10 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return "UINT4x4x32_WMMA"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_WMMA_UINT4X4X32)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 #endif
 #if CUDA_VERSION >= 10010
@@ -132,8 +137,10 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return "CUBLAS_LT"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLASLT)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 #endif
 
@@ -146,8 +153,10 @@ public:
     }
     const char* name() const override { return "NAIVE"; }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_NAIVE)
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 };
 
 #if !MEGDNN_DISABLE_FLOAT16
@@ -163,7 +172,10 @@ public:
             const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL_BFLOAT16"; }
-    bool is_reproducible() const override { return true; }
+
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -189,7 +201,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
 
     std::string param() const override {
@@ -214,7 +228,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_SPLIT_K)
 
     std::string param() const override {
@@ -239,7 +255,9 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_GEMV_BATCHED_STRIDED)
 
     std::string param() const override {

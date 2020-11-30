@@ -22,7 +22,9 @@ namespace arm_common {
 class ConvolutionBackwardDataImpl::AlgoUdot8DirectStride1 final
         : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "ARM_COMMON_QUINT8_DIRECT_DECONV_STRIDE1";
     }
@@ -42,7 +44,9 @@ public:
 class ConvolutionBackwardDataImpl::AlgoUdot8DirectStride2 final
         : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override {
         return "ARM_COMMON_QUINT8_DIRECT_DECONV_STRIDE2";
     }

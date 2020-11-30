@@ -22,7 +22,9 @@ using AlgoBase = PoolingImpl::AlgoBase;
 
 class PoolingImpl::AlgoFilterxModexStride1 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_STRIDE1"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -30,14 +32,18 @@ public:
 
 class PoolingImpl::AlgoFilter2ModexStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_STRIDE2"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
 class PoolingImpl::AlgoFilter3MaxStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER3_MAX"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -45,7 +51,9 @@ public:
 
 class PoolingImpl::AlgoFilter3AverageStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER3_AVERAGE"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -53,7 +61,9 @@ public:
 
 class PoolingImpl::AlgoFilter4MaxStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER4_MAX"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -61,7 +71,9 @@ public:
 
 class PoolingImpl::AlgoFilter5MaxStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER5_MAX"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -69,7 +81,9 @@ public:
 
 class PoolingImpl::AlgoInt8Filter2MaxStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_INT8_FILTER2X2"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -77,7 +91,9 @@ public:
 
 class PoolingImpl::AlgoInt8Filter3MaxStride2 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_INT8_FILTER3X3"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -85,7 +101,9 @@ public:
 
 class PoolingImpl::AlgoFilter3ModexStridexNCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER3_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -93,7 +111,9 @@ public:
 
 class PoolingImpl::AlgoFilter2ModexStridexNCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER2_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -101,7 +121,9 @@ public:
 
 class PoolingImpl::AlgoFilter4ModexStridexNCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER4_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
@@ -109,14 +131,18 @@ public:
 
 class PoolingImpl::AlgoFilter5ModexStridexNCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FILTER5_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;
 };
 class PoolingImpl::AlgoFp32ModexStridexNCHW44 final : public AlgoBase {
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    };
     const char* name() const override { return "ARM_POOLING_FP32_MODEX_STRIDEX_NCHW44"; }
     bool usable(const PoolingKernSizeParam& param) const override;
     void exec(const PoolingKernParam& param) const override;

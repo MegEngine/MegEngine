@@ -99,6 +99,27 @@ enum class AlgoDataType : uint32_t {
 class Algorithm {
 public:
     static constexpr uint32_t INVALID_ALGO_TYPE = static_cast<uint32_t>(-1);
+
+    /**
+     * \brief the attribe of the algo, such as REPRODUCIBLE, NAIVE
+     *
+     */
+    enum class Attribute : uint32_t {
+
+        /**
+         * \brief whether the execution result is
+         *      reproducible across multiple runs.
+         */
+        REPRODUCIBLE = 1 << 0,
+
+        /**
+         * \brief whether the algo is naive
+         * Mark algorithms with simple implementation as NAIVE, so we can filter
+         * these algorithms to speed up fastrun.
+         * */
+        NAIVE = 1 << 1,
+    };
+
     /**
      * \brief Algorithm information, we can get real algo from
      * AlgorithmInfo::Info::Desc
@@ -121,7 +142,7 @@ public:
         } desc;
         //! algorithm name
         std::string name;
-        bool is_reproducible;
+        Attribute attribute;
         bool valid() const { return desc.valid(); }
         void reset() { desc.reset(); }
         //! desc donate the algo
@@ -131,18 +152,20 @@ public:
     virtual ~Algorithm() = default;
 
     /**
-     * \brief whether the execution result is
-     *      reproducible across multiple runs.
+     * \brief get the attribute of the algo
      */
-    virtual bool is_reproducible() const = 0;
+    virtual Attribute attribute() const = 0;
+
     virtual const char* name() const = 0;
     //! serialized param
     virtual std::string param() const { return {}; }
     virtual uint32_t type() const = 0;
 
+    bool contain_attribute(const Attribute& attr) const;
+
     Handle::HandleType handle_type() const { return m_handle_type; }
     Info info() const {
-        return {{handle_type(), type(), param()}, name(), is_reproducible()};
+        return {{handle_type(), type(), param()}, name(), attribute()};
     }
 
     Info::Desc desc() const { return {handle_type(), type(), param()}; }
@@ -524,6 +547,7 @@ protected:
 }  // namespace detail
 
 using Algorithm = detail::Algorithm;
+using AlgoAttribute = Algorithm::Attribute;
 using ExecutionPolicy = detail::ExecutionPolicy;
 }  // namespace megdnn
 

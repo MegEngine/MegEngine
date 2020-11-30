@@ -29,7 +29,9 @@ public:
     AlgoConv1x1(MatrixMulImpl::AlgoBase* matmul_algo, size_t oc_block_size)
             : m_matmul_algo(matmul_algo), m_oc_block_size(oc_block_size) {}
 
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return m_matmul_algo->attribute();
+    }
 
     const char* name() const override {
         if (m_name.empty()) {

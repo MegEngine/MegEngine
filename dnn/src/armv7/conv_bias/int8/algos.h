@@ -24,7 +24,9 @@ class ConvBiasImpl::AlgoS8MatrixMul final : public AlgoBase {
     static void kimpl(const NCBKernParam& param, const NCBKernIndex&);
 
 public:
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "S8MATMUL"; }
 
     bool usable(const NCBKernSizeParam& param,

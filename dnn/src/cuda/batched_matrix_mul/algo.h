@@ -71,7 +71,8 @@ public:
     bool is_available_reproducible(
             const SizeArgs& args, bool reproducible = true,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible || is_reproducible()) &&
+        return (!reproducible ||
+                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
                is_available_wk(args, limit);
     }
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -94,7 +95,9 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute()const override{
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "BRUTE_FORCE"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_BRUTE_FORCE)
 
@@ -109,7 +112,9 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "CUBLAS"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLAS)
 };
@@ -120,7 +125,9 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "CUBLAS_LT"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLASLT)
 };
@@ -132,7 +139,9 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
-    bool is_reproducible() const override { return true; }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
     const char* name() const override { return "INT8x8x32"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_INT8X8X32)
 };
