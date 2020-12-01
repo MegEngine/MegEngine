@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megdnn/oprs.h"
@@ -94,7 +95,9 @@ void RelayoutForward::check_layout_and_canonize(TensorLayout& src,
     src = src.collapse_contiguous();
     dst = dst.collapse_contiguous();
     megdnn_assert(src.dtype == dst.dtype &&
-                  src.total_nr_elems() == dst.total_nr_elems());
+                          src.total_nr_elems() == dst.total_nr_elems(),
+                  "check %s == %s and %zu == %zu", src.dtype.name(),
+                  dst.dtype.name(), src.total_nr_elems(), dst.total_nr_elems());
 }
 
 bool relayout::is_transpose(const TensorLayout& src, const TensorLayout& dst,

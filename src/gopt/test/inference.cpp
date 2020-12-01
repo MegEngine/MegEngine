@@ -719,15 +719,15 @@ TEST(TestGoptInference, Float16IOFloat32ComputeDeConv) {
     };
     graph->options().graph_opt_level = 0;
 
-    auto s0 = mkvar("s0", {5, 5, 3, 3}),
-         s1 = mkvar("s1", {1, 5, INP_H, INP_W});
+    auto s0 = mkvar("s0", {5, 5, 3, 3}), s1 = mkvar("s1", {1, 5, INP_H, INP_W});
     auto y = opr::ConvolutionBackwardData::make(s0, s1, {}, {});
     SymbolVar y_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
     options.enable_f16_io_f32_comp();
     unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
-    ASSERT_EQ(find_opr<opr::ConvolutionBackwardData>(y_opt).param().compute_mode,
-              opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
+    ASSERT_EQ(
+            find_opr<opr::ConvolutionBackwardData>(y_opt).param().compute_mode,
+            opr::ConvBias::Param::ConvBias::ComputeMode::FLOAT32);
     ASSERT_EQ(y_opt.dtype(), dtype::Float32());
 
     HostTensorND host_y, host_y_opt;
@@ -1602,7 +1602,6 @@ TEST(TestGoptInference, ConvBiasNonlinearityFusePass_FullBias) {
         MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-4);
     }
 }
-
 
 TEST(TestGoptInference, ParamMerge) {
     auto cns = load_multiple_xpus(2);
@@ -3364,14 +3363,14 @@ TEST(TestGoptInference, ConvertFormatNCHW44MultiInput) {
 
     auto b = mkvar("b", {1, 1, 16, 16}),
          elem0 = opr::Elemwise::make({conv1 + b + b},
-                                 opr::Elemwise::Param::Mode::RELU);
+                                     opr::Elemwise::Param::Mode::RELU);
 
     auto w2 = mkcvar("w2", {8, 8, 3, 3}),
          conv2 = opr::Convolution::make(elem0, w2, param_conv);
 
     auto b1 = mkvar("b1", {1}),
          y = opr::Elemwise::make({conv2 + b1 + b},
-                                     opr::Elemwise::Param::Mode::RELU);
+                                 opr::Elemwise::Param::Mode::RELU);
 
     SymbolVar y_opt;
     auto options = gopt::OptimizeForInferenceOptions{};
@@ -3631,4 +3630,97 @@ TEST(TestGoptInference, ConvertFormatCD4GroupOneConv) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+#if MGB_CUDA
+
+TEST(TestGoptInference, PreProcessCase0) {
+    REQUIRE_GPU(1);
+    HostTensorGenerator<dtype::Quantized8Asymm, RandomDistribution::UNIFORM>
+            gen(dt_quint8(0), dt_quint8(50), 1, 128, 1234);
+    auto cn = CompNode::load("gpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    size_t n = 1;
+    size_t c = 3;
+    size_t h = 16;
+    size_t w = 16;
+    auto host_x1 = gen({n, c, h, w}, cn);
+
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+    auto x_q8 = opr::TypeCvt::make(x, dtype::QuantizedS8(1.f), cn);
+    auto zero = DTypeScalar(dtype::QuantizedS8(1.f));
+    auto zero_tensor = opr::ImmutableTensor::make(*graph, zero, cn);
+    auto pad_channel_tensor =
+            opr::Broadcast::make(zero_tensor, {n, 1, h, w}, cn);
+    auto paded_x = opr::Concat::make({x_q8, pad_channel_tensor}, 1, cn)
+                           .reshape({n, 1, 4, h, w});
+
+    auto result = opr::Dimshuffle::make(paded_x, {0, 1, 3, 4, 2}, 5, cn);
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_fuse_preprocess();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(
+                    output_file("TestGoptInference.PreProcessCase0.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+
+    ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::RelayoutFormat>());
+}
+
+TEST(TestGoptInference, PreProcessCase1) {
+    REQUIRE_GPU(1);
+    HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM> gen(0, 255);
+    auto cn = CompNode::load("gpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    size_t n = 1;
+    size_t c = 3;
+    size_t h = 16;
+    size_t w = 16;
+    auto host_x1 = gen({n, c, h, w}, cn);
+
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+    auto x_u8 = opr::TypeCvt::make(x, dtype::Float32(), cn);
+    auto x_s8 = x_u8 - 128;
+    auto zero = DTypeScalar(dtype::Float32());
+    auto zero_tensor = opr::ImmutableTensor::make(*graph, zero, cn);
+    auto pad_channel_tensor =
+            opr::Broadcast::make(zero_tensor, {n, 1, h, w}, cn);
+    auto paded_x = opr::Concat::make({x_s8, pad_channel_tensor}, 1, cn)
+                           .reshape({n, 1, 4, h, w});
+
+    auto nchw4_out = opr::Dimshuffle::make(paded_x, {0, 1, 3, 4, 2}, 5, cn);
+    auto result = opr::TypeCvt::make(nchw4_out, dtype::QuantizedS8(1.f));
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_fuse_preprocess();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(
+                    output_file("TestGoptInference.PreProcessCase1.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+
+    ASSERT_TRUE(y_opt.node()->owner_opr()->same_type<opr::RelayoutFormat>());
+}
+#endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

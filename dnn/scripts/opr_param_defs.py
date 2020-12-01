@@ -877,6 +877,7 @@ when the ``I`` suffix is present.
      'NCHW88_NCHW',
      'NCHW_NCHW4_IC_SMALL',
      'NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT',
+     'NCHW_NCHW4',
      )
  )
 

@@ -101,6 +101,8 @@ struct GraphCommonOptimizeOptions {
     //! memory, default disable now, when weight preprocess is enabled, the
     //! input shape should no change
     bool weight_preprocess = false;
+    //! fuse preprocess patten, like astype + pad_channel + dimshuffle
+    bool fuse_preprocess = false;
     enum LayoutTransform : uint32_t {
         DEFAULT,
         NCHW4,       ///< compute using NCHW4 tensor format
@@ -130,6 +132,7 @@ struct GraphCommonOptimizeOptions {
     SET(f16_io_comp);
     SET(fuse_conv_bias_nonlinearity);
     SET(fuse_conv_bias_with_z);
+    SET(fuse_preprocess);
     SET(weight_winograd_transform);
     SET(weight_preprocess);
 #undef SET

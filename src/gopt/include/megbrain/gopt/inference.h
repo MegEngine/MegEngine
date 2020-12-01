@@ -153,6 +153,26 @@ namespace gopt {
     };
 
     /*!
+     * \brief fuse preprocess, like pad channel, quint8 to qint8
+     */
+    class FuseNCHW4Int8Preprocess : public Pass {
+    public:
+        const char* name() const override;
+        void apply(OptState& opt) const override;
+        static std::unique_ptr<FuseNCHW4Int8Preprocess> make();
+        using DepType = cg::OperatorNodeProp::DepType;
+        using ReaderType =
+                ThinHashMap<OperatorNodeBase*,
+                            SmallVector<std::pair<OperatorNodeBase*, DepType>>>;
+
+    private:
+        ThinHashMap<Typeinfo*, thin_function<OperatorNodeBase*(
+                                       OperatorNodeBase*, const VarNodeArray&,
+                                       SubGraph::Rewriter&, ReaderType&)>>
+                m_opr_replace_func;
+    };
+
+    /*!
      * \brief fuse deconv and typecvt to a deconv opr
      */
     class FuseDeconvCvtPass : public Pass {

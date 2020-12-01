@@ -201,6 +201,8 @@ class dt_quint8 {
 #endif
         bool operator<(const dt_quint8& b) const { return _ < b._; }
         bool operator>(const dt_quint8& b) const { return _ > b._; }
+        bool operator==(const dt_quint8& b) const { return _ == b._; }
+        bool operator!=(const dt_quint8& b) const { return _ != b._; }
 } MEGDNN_PACKED;
 
 class dt_qint32 {
@@ -255,6 +257,8 @@ class dt_qint8 {
 #endif
         bool operator<(const dt_qint8& b) const { return _ < b._; }
         bool operator>(const dt_qint8& b) const { return _ > b._; }
+        bool operator==(const dt_qint8& b) const { return _ == b._; }
+        bool operator!=(const dt_qint8& b) const { return _ != b._; }
 } MEGDNN_PACKED;
 
 class dt_qint16 {

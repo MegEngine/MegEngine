@@ -6,11 +6,12 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
-#include "src/naive/relayout_format/opr_impl.h"
 #include "src/naive/handle.h"
+#include "src/naive/relayout_format/opr_impl.h"
 
 #include "megdnn/tensor_iter.h"
 
@@ -44,7 +45,7 @@ void padding_src_to_workspace(dtype* dptr, const dtype* sptr, size_t N,
 template <typename dtype>
 void padding_to_workspace(dtype* dptr, const dtype* sptr,
                           const TensorLayout& src_layout, const size_t pad_axis,
-                          const size_t align_size) {
+                          const size_t align_size, const int pad_val = 0) {
     megdnn_assert(pad_axis < src_layout.ndim);
     const size_t axis_dim = src_layout[pad_axis];
     const size_t axis_dim_padded = round_up(axis_dim, align_size);
@@ -64,14 +65,16 @@ void padding_to_workspace(dtype* dptr, const dtype* sptr,
                             sptr[src_inner_offset + inner_idx_offset];
                 } else {
                     dptr[dst_outer_offset + inner_idx_offset] =
-                            static_cast<dtype>(0);
+                            static_cast<dtype>(pad_val);
                 }
             }
         }
     }
 }
+
 void padding_to_workspace(_megdnn_tensor_out dst, _megdnn_tensor_in src,
-                          const size_t pad_axis, const size_t align_size) {
+                          const size_t pad_axis, const size_t align_size,
+                          DType exec_dst_dtype) {
     switch (src.layout.dtype.enumv()) {
 #define cb(name, ctype)                                               \
     case (DTypeEnum::name): {                                         \
@@ -84,8 +87,27 @@ void padding_to_workspace(_megdnn_tensor_out dst, _megdnn_tensor_in src,
 
         cb(Float32, dt_float32);
         cb(QuantizedS8, dt_qint8);
+
+        case (DTypeEnum::Quantized8Asymm): {
+            dt_quint8* sptr = src.compatible_ptr<dt_quint8>();
+            dt_quint8* dptr = dst.compatible_ptr<dt_quint8>();
+            padding_to_workspace<dt_quint8>(
+                    dptr, sptr, src.layout, pad_axis, align_size,
+                    src.layout.dtype.param<dtype::Quantized8Asymm>()
+                            .zero_point);
+            break;
+        }
+        case (DTypeEnum::Uint8): {
+            uint8_t* sptr = src.compatible_ptr<uint8_t>();
+            uint8_t* dptr = dst.compatible_ptr<uint8_t>();
+            uint8_t zero_point =
+                    exec_dst_dtype.enumv() == DTypeEnum::QuantizedS8 ? 128 : 0;
+            padding_to_workspace<uint8_t>(dptr, sptr, src.layout, pad_axis,
+                                          align_size, zero_point);
+            break;
+        }
         default:
-            megdnn_assert(0);
+            megdnn_assert(0, "not support dtype %s", src.layout.dtype.name());
 #undef cb
     }
 }
@@ -108,6 +130,57 @@ void padding_filter_to_workspace(dtype* dptr, const dtype* sptr, size_t OC,
         }
     }
 }
+
+void do_copy_diff_qu8_q8(const TensorND& dst, const TensorND& src) {
+    auto isrc =
+            tensor_iter_valonly<DTypeTrait<dtype::Quantized8Asymm>::ctype>(src)
+                    .begin();
+    auto idst = tensor_iter_valonly<DTypeTrait<dtype::QuantizedS8>::ctype>(dst)
+                        .begin();
+    auto src_dt_parm = src.layout.dtype.param<dtype::Quantized8Asymm>();
+    auto dst_dt_parm = dst.layout.dtype.param<dtype::QuantizedS8>();
+    for (size_t i = 0, it = dst.layout.total_nr_elems(); i < it; ++i) {
+        *idst = dst_dt_parm.quantize(src_dt_parm.dequantize(*isrc));
+        ++idst;
+        ++isrc;
+    }
+}
+
+void do_copy_diff_q8_q8(const TensorND& dst, const TensorND& src) {
+    auto isrc = tensor_iter_valonly<DTypeTrait<dtype::QuantizedS8>::ctype>(src)
+                        .begin();
+    auto idst = tensor_iter_valonly<DTypeTrait<dtype::QuantizedS8>::ctype>(dst)
+                        .begin();
+    auto src_dt_parm = src.layout.dtype.param<dtype::QuantizedS8>();
+    auto dst_dt_parm = dst.layout.dtype.param<dtype::QuantizedS8>();
+    for (size_t i = 0, it = dst.layout.total_nr_elems(); i < it; ++i) {
+        *idst = dst_dt_parm.quantize(src_dt_parm.dequantize(*isrc));
+        ++idst;
+        ++isrc;
+    }
+}
+
+void do_copy_diff_u8_q8(const TensorND& dst, const TensorND& src) {
+    auto isrc =
+            tensor_iter_valonly<DTypeTrait<dtype::Uint8>::ctype>(src).begin();
+    auto idst = tensor_iter_valonly<DTypeTrait<dtype::QuantizedS8>::ctype>(dst)
+                        .begin();
+    auto dst_dt_parm = dst.layout.dtype.param<dtype::QuantizedS8>();
+    for (size_t i = 0, it = dst.layout.total_nr_elems(); i < it; ++i) {
+        *idst = dst_dt_parm.quantize((float)(*isrc) - 128.f);
+        ++idst;
+        ++isrc;
+    }
+}
+
+void check_layout_and_canonize(TensorLayout& src, TensorLayout& dst) {
+    megdnn_assert(dst.is_non_overlapping_strong());
+    src = src.collapse_contiguous();
+    dst = dst.collapse_contiguous();
+    megdnn_assert(dst.dtype.valid() &&
+                  src.total_nr_elems() == dst.total_nr_elems());
+}
+
 }  // anonymous namespace
 
 size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
@@ -189,6 +262,13 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
             size_t w = src[3];
             return n * c * h * w * src.dtype.size();
         }
+        case Param::Mode::NCHW_NCHW4: {
+            size_t n = src[0];
+            size_t c = round_up(src[1], 4_z);
+            size_t h = src[2];
+            size_t w = src[3];
+            return n * c * h * w * src.dtype.size();
+        }
         case Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT: {
             megdnn_assert(src.ndim == 4, "src must be oihw, ndim == 5");
             if (src[1] % 4 == 0)
@@ -208,6 +288,8 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
 void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                               _megdnn_workspace workspace) {
     megdnn_assert(src.layout.dtype.category() == DTypeCategory::FLOAT ||
+                  (src.layout.dtype.enumv() == DTypeEnum::Uint8 &&
+                   dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) ||
                   src.layout.dtype.category() == DTypeCategory::QUANTIZED);
     check_exec(src.layout, dst.layout, workspace.size);
     HandleImpl* m_handle = static_cast<HandleImpl*>(handle());
@@ -284,7 +366,7 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         size_t val = src.layout[_idx];                                     \
         if (val % _pack_size != 0) {                                       \
             padding_to_workspace({workspace.raw_ptr, exec_src}, src, _idx, \
-                                 _pack_size);                              \
+                                 _pack_size, exec_dst.dtype);              \
             exec_src_nd.raw_ptr = workspace.raw_ptr;                       \
         }                                                                  \
     }                                                                      \
@@ -301,11 +383,43 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         cb(2, 8, NCHW_NCHW88_CONV_GROUP_WEIGHT);
     } else if (param().mode == Param::Mode::NCHW_NCHW4_IC_SMALL) {
         cb(1, 4, NCHW_NCHW4_IC_SMALL);
+    } else if (param().mode == Param::Mode::NCHW_NCHW4) {
+        cb(1, 4, NCHW_NCHW4);
     } else if (param().mode ==
                Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT) {
         cb(1, 4, NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT);
     }
-    m_handle->relayout_opr()->exec(exec_src_nd, exec_dst_nd, handle());
+
+    if (src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm &&
+        dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+        TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
+        check_layout_and_canonize(src0.layout, src0.layout);
+        auto func = [](const TensorND& dst, const TensorND& src) {
+            do_copy_diff_qu8_q8(dst, src);
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
+        return;
+    } else if (src.layout.dtype.enumv() == DTypeEnum::Uint8 &&
+               dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+        TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
+        check_layout_and_canonize(src0.layout, src0.layout);
+        auto func = [](const TensorND& dst, const TensorND& src) {
+            do_copy_diff_u8_q8(dst, src);
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
+        return;
+    } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 &&
+               dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+        TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
+        check_layout_and_canonize(src0.layout, src0.layout);
+        auto func = [](const TensorND& dst, const TensorND& src) {
+            do_copy_diff_q8_q8(dst, src);
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
+        return;
+    } else {
+        m_handle->relayout_opr()->exec(exec_src_nd, exec_dst_nd, handle());
+    }
 #undef cb
 }
 

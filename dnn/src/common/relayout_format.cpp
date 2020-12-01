@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megdnn/oprs.h"
@@ -207,6 +208,15 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src,
             dst[3] = src[2];
             dst[4] = src[4];
             break;
+        case Param::Mode::NCHW_NCHW4:
+            megdnn_assert(src.ndim == 4);
+            dst.ndim = 5;
+            dst[0] = src[0];
+            dst[1] = div_ceil<size_t>(src[1], 4);
+            dst[2] = src[2];
+            dst[3] = src[3];
+            dst[4] = 4;
+            break;
         default:
             megdnn_assert(0, "Invalid RelayoutFormat Mode");
             break;
@@ -214,7 +224,9 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src,
     TensorFormat dst_fmt;
     deduce_format(src.format, dst_fmt);
     dst.format = dst_fmt;
-    dst.dtype = src.dtype;
+    if (!dst.dtype.valid()) {
+        dst.dtype = src.dtype;
+    }
     dst.init_contiguous_stride();
 }
 
@@ -242,6 +254,10 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             dst = Image2DPack4TensorFormat::make_raw(2, align);
             break;
         case Param::Mode::NCHW_NHWCD4:
+            CHECK_SRC(DefaultTensorFormat::make());
+            dst = src;
+            break;
+        case Param::Mode::NCHW_NCHW4:
             CHECK_SRC(DefaultTensorFormat::make());
             dst = src;
             break;
@@ -322,6 +338,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
 void RelayoutFormat::check_layout_fwd(const TensorLayout& src,
                                       const TensorLayout& dst) {
     TensorLayout dst_expected;
+    dst_expected.dtype = dst.dtype;
     deduce_layout_fwd(src, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
 }
@@ -349,6 +366,19 @@ void RelayoutFormat::deduce_exec_layout(const TensorLayout& src,
                         src.dtype, src.format);
                 exec_src = work_space_layout
                                    .reshape({src[0], div_ceil(src[1], 8_z), 8,
+                                             src[2], src[3]})
+                                   .dimshuffle({0, 1, 3, 4, 2});
+                exec_dst = dst;
+            }
+            break;
+        case Param::Mode::NCHW_NCHW4:
+            // nchw to nchw4
+            {
+                TensorLayout work_space_layout(
+                        {src[0], round_up(src[1], 4_z), src[2], src[3]},
+                        src.dtype, src.format);
+                exec_src = work_space_layout
+                                   .reshape({src[0], div_ceil(src[1], 4_z), 4,
                                              src[2], src[3]})
                                    .dimshuffle({0, 1, 3, 4, 2});
                 exec_dst = dst;
@@ -421,7 +451,6 @@ void RelayoutFormat::deduce_exec_layout(const TensorLayout& src,
                 exec_dst = dst;
             }
             break;
-
 
         case Param::Mode::NCHW_NHWCD4:
         case Param::Mode::NCHW_NHWCD4I:

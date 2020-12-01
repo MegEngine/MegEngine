@@ -219,7 +219,10 @@ R"__usage__(
     Execute operators with weight preprocess, which can optimize the operator execution time with
     algo of winograd, im2col ,etc., but it may consume more memory.
 )__usage__"
-
+R"__usage__(
+  --enable-fuse-preprocess
+    Fusion astype\pad_channel\dimshuffle and etc opr from h2d op
+)__usage__"
 ;
 
 struct DataParser {
@@ -1139,6 +1142,11 @@ Args Args::from_argv(int argc, char **argv) {
         if (!strcmp(argv[i], "--enable-nchw44-dot")) {
             mgb_log_warn("enable-nchw44-dot optimization");
             graph_opt.graph_opt.enable_nchw44_dot();
+            continue;
+        }
+        if (!strcmp(argv[i], "--enable-fuse-preprocess")) {
+            mgb_log_warn("enable-fuse-preprocess optimization");
+            graph_opt.graph_opt.enable_fuse_preprocess();
             continue;
         }
         if (!strcmp(argv[i], "--enable-fuse-conv-bias-nonlinearity")) {

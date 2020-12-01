@@ -264,6 +264,10 @@ struct UniformRNGDefaultRange<dtype::QuantizedS8> {
     static const dt_qint8 LO, HI;
 };
 
+template<>
+struct UniformRNGDefaultRange<dtype::Quantized8Asymm> {
+    static const dt_quint8 LO, HI;
+};
 //! gaussian
 template<class dtype>
 class HostTensorGenerator<dtype, RandomDistribution::GAUSSIAN> final:
@@ -402,6 +406,33 @@ class HostTensorGenerator<dtype::QuantizedS8, RandomDistribution::UNIFORM> final
     private:
         float m_scale;
         ctype m_lo, m_hi;
+};
+
+template <>
+class HostTensorGenerator<dtype::Quantized8Asymm, RandomDistribution::UNIFORM>
+        final : public HostTensorGeneratorBase {
+public:
+    using ctype = typename DTypeTrait<dtype::Quantized8Asymm>::ctype;
+
+    HostTensorGenerator(
+            ctype lo = UniformRNGDefaultRange<dtype::Quantized8Asymm>::LO,
+            ctype hi = UniformRNGDefaultRange<dtype::Quantized8Asymm>::HI,
+            float scale = 1.f, uint8_t zero_point = 0,
+            uint64_t seed = next_rand_seed())
+            : HostTensorGeneratorBase{seed},
+              m_scale{scale},
+              m_zero_point(zero_point),
+              m_lo{lo},
+              m_hi{hi} {}
+
+    std::shared_ptr<HostTensorND> operator()(const TensorShape& shape,
+                                             CompNode cn = {}) override;
+    using HostTensorGeneratorBase::operator();
+
+private:
+    float m_scale;
+    uint8_t m_zero_point;
+    ctype m_lo, m_hi;
 };
 
 /*!

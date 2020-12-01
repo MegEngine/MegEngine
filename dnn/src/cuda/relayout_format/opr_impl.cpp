@@ -6,11 +6,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
-#include "src/cuda/relayout_format/opr_impl.h"
 #include "src/cuda/handle.h"
+#include "src/cuda/relayout_format/opr_impl.h"
+#include "src/cuda/relayout_format/relayout_format.h"
 #include "src/cuda/utils.h"
 
 using namespace megdnn;
@@ -21,6 +23,7 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     auto src_dtype = src.layout.dtype;
     megdnn_assert(
             param().mode == param::RelayoutFormat::Mode::NCHW4_CHWN4 ||
+                    param().mode == param::RelayoutFormat::Mode::NCHW_NCHW4 ||
                     param().mode == param::RelayoutFormat::Mode::CHWN4_NCHW4 ||
                     param().mode == Param::Mode::NCHW_NCHW4_IC_SMALL ||
                     param().mode ==
@@ -72,12 +75,25 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         return handle()->create_operator<RelayoutForward>()->exec(
                 {src.raw_ptr, exec_src_layout}, {dst.raw_ptr, exec_dst_layout});
     }
-    TensorLayout exec_src, exec_dst;
-    deduce_exec_layout(src.layout, dst.layout, exec_src, exec_dst);
-    TensorND exec_src_nd{src.raw_ptr, exec_src};
-    TensorND exec_dst_nd{dst.raw_ptr, exec_dst};
-    handle()->create_operator<RelayoutForward>()->exec(exec_src_nd,
-                                                       exec_dst_nd);
+
+    if (param().mode == Param::Mode::NCHW_NCHW4) {
+        bool is_usable = relayout_format::RelayoutFormatFast::usable(
+                src.layout, dst.layout);
+        megdnn_assert(is_usable,
+                      "RelayoutFormatNCHW_NCHW4 kernel not usable for %s(%s) "
+                      "to %s(%s)",
+                      src.layout.to_string().c_str(), src.layout.dtype.name(),
+                      dst.layout.to_string().c_str(), dst.layout.dtype.name());
+        relayout_format::RelayoutFormatFast::exec(src, dst,
+                                                  cuda_stream(this->handle()));
+    } else {
+        TensorLayout exec_src, exec_dst;
+        deduce_exec_layout(src.layout, dst.layout, exec_src, exec_dst);
+        TensorND exec_src_nd{src.raw_ptr, exec_src};
+        TensorND exec_dst_nd{dst.raw_ptr, exec_dst};
+        handle()->create_operator<RelayoutForward>()->exec(exec_src_nd,
+                                                           exec_dst_nd);
+    }
 }
 
 size_t RelayoutFormatImpl::get_workspace_in_bytes(

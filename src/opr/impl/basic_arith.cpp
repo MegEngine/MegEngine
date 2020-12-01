@@ -198,7 +198,7 @@ Elemwise::Elemwise(
                            param.mode == Param::Mode::MAX ||
                            param.mode == Param::Mode::MIN,
                    "Only ADD, SUB, NEGATE, RELU, MAX and MIN is guaranteed "
-                   "to be supported on Elemwise for quantized DType");
+                   "to be supported on Elemwise for quantized DType, no support %d", (int)param.mode);
     }
 }
 

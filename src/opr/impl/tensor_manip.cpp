@@ -1578,6 +1578,23 @@ MGB_IMPL_OPR_GRAD(ParamPackSplit) {
 // f}}}
 
 /* f{{{ ======================= RelayoutFormat ======================= */
+namespace mgb {
+namespace opr {
+namespace intl {
+template <>
+struct MegDNNOprInitPostCtor<RelayoutFormat> {
+    static void apply(cg::OperatorNodeBase& opr) {
+        if (opr.config().output_dtype().valid()) {            
+            opr.output(0)->dtype(opr.config().output_dtype());
+        } else {
+            opr.output(0)->dtype(opr.input(0)->dtype());
+        }
+    }
+};
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RelayoutFormat);
 MEGDNN_OPR_INIT1(RelayoutFormat, "relayout_format")
 

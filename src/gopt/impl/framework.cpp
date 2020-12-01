@@ -724,6 +724,8 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
             options.disable_##_option(); \
         }                                \
     }
+    
+    cb(fuse_preprocess, {add_pass(FuseNCHW4Int8Preprocess::make());});
     cb(f16_io_comp, { add_pass(ConvertF32ToF16Pass::make(false)); });
     cb(f16_io_f32_comp, { add_pass(ConvertF32ToF16Pass::make(true)); });
 
@@ -761,6 +763,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass(EnableTensorCorePass::make_tensorcore_converter());
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
+        add_pass(FuseNCHW4Int8Preprocess::make());
     });
     cb(chwn4, {
         add_pass<FuseConvBiasNonlinPass>();

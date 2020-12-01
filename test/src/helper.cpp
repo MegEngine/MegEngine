@@ -190,6 +190,24 @@ namespace mgb {
         }
         return ret;
     }
+
+    std::shared_ptr<HostTensorND>
+    HostTensorGenerator<dtype::Quantized8Asymm, RandomDistribution::UNIFORM>::
+    operator()(const TensorShape& shape, CompNode cn) {
+        if (!cn.valid())
+            cn = CompNode::load("xpu0");
+        auto dtype = dtype::Quantized8Asymm(m_scale, m_zero_point);
+        auto param = dtype.param();
+        std::shared_ptr<HostTensorND> ret =
+                std::make_shared<HostTensorND>(cn, shape, dtype);
+        auto ptr = ret->ptr<dt_quint8>();
+        double scale = (param.dequantize(m_hi) - param.dequantize(m_lo)) /
+                       (m_rng.max() + 1.0);
+        for (size_t i = 0, it = shape.total_nr_elems(); i < it; ++i) {
+            ptr[i] = param.quantize(m_rng() * scale + param.dequantize(m_lo));           
+        }
+        return ret;
+    }
 }
 
 ::testing::AssertionResult mgb::__assert_float_equal(
