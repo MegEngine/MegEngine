@@ -8,19 +8,20 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import abc
 import collections
+from typing import Union
 
 import numpy as np
 
+from .._imperative_rt.common import CompNode
+from .._imperative_rt.core2 import Tensor, apply
 from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.builtin import Elemwise, GetVarShape
 from ..ops.special import Const
 from . import utils
-from .core import OpBase, TensorBase, TensorWrapperBase, apply
+from .core import OpBase, TensorBase, TensorWrapperBase
 from .indexing import getitem as _getitem
 from .indexing import setitem as _setitem
-from .raw_tensor import RawTensor, as_raw_tensor
-from .tensor import Tensor
 from .utils import isscalar
 from .utils import make_shape_tuple as _make_shape_tuple
 from .utils import setscalar
@@ -41,6 +42,7 @@ def _elwise(*args, mode):
         )
     args = utils.convert_inputs(*args)
     (result,) = apply(op, *args)
+
     _isscalar = True
     for i in args:
         if isscalar(i) == False:
@@ -84,9 +86,7 @@ def _reshape(x, shape):
             if unspec_axis is not None:
                 raise ValueError("multiple -1 in shape: {} & {}".format(unspec_axis, i))
             unspec_axis = i
-
     shape = utils.astensor1d(shape, x, dtype="int32", device=x.device)
-
     if unspec_axis is None:
         op = builtin.Reshape()
     else:
@@ -181,7 +181,6 @@ def _reduce(mode):
         elif isinstance(axis, collections.abc.Iterable):
             axis = list(axis)
             axis.sort(reverse=True)
-
             for ai in axis:
                 op = builtin.Reduce(mode=mode, axis=ai)
                 (data,) = apply(op, data)
@@ -221,10 +220,7 @@ def _todo(*_):
 
 def _expand_args(args):
     if len(args) == 1:
-        if isinstance(
-            args[0],
-            (collections.abc.Sequence, TensorBase, TensorWrapperBase, np.ndarray),
-        ):
+        if isinstance(args[0], (collections.abc.Sequence, Tensor, np.ndarray),):
             args = args[0]
     return args
 
@@ -240,9 +236,8 @@ class ArrayMethodMixin(abc.ABC):
         return self.numpy().astype(dtype)
 
     def __array_wrap__(self, array):
-        return TensorWrapper(
-            as_raw_tensor(array, dtype=array.dtype, device=self.device)
-        )
+        Wrapper = type(self)
+        return Wrapper(array, dtype=array.dtype, device=self.device)
 
     @abc.abstractmethod
     def _reset(self, other):
@@ -253,7 +248,11 @@ class ArrayMethodMixin(abc.ABC):
         pass
 
     @abc.abstractproperty
-    def shape(self) -> tuple:
+    def shape(self) -> Union[tuple, Tensor]:
+        pass
+
+    @abc.abstractproperty
+    def _tuple_shape(self) -> tuple:
         pass
 
     @abc.abstractmethod
@@ -331,7 +330,7 @@ class ArrayMethodMixin(abc.ABC):
     __complex__ = lambda self: complex(self.item())
 
     def __len__(self):
-        shape = self.__wrapped__.shape
+        shape = self._tuple_shape
         if shape:
             return int(shape[0])
         raise TypeError("ndim is 0")
@@ -352,7 +351,7 @@ class ArrayMethodMixin(abc.ABC):
 
     @property
     def ndim(self):
-        shape = self.__wrapped__.shape
+        shape = self._tuple_shape
         if shape is None:
             raise ValueError("unkown ndim")
         return len(shape)
@@ -480,22 +479,52 @@ class GenericTensorWrapper(ArrayMethodMixin, TensorWrapperBase):
         self.__wrapped__._swap_out()
 
 
-class TensorWrapper(GenericTensorWrapper):
-    def __init__(self, data, dtype=None, device=None):
-        if isinstance(data, TensorWrapperBase):
-            data = data.__wrapped__
-        elif not isinstance(data, TensorBase):
-            assert data is not None, "Cannot init a tensor with data as None"
-            data = Tensor(as_raw_tensor(data, dtype=dtype, device=device))
-        super().__init__(data)
+class TensorWrapper(ArrayMethodMixin, TensorBase):
+    def __init__(self, data, dtype=None, device=None, isscalar=False):
+        self._isscalar = isscalar
+        if isinstance(data, Tensor):
+            self._tensor = data
+        else:
+            if device is None:
+                device = CompNode._get_default_device()
+            self._tensor = Tensor(data, dtype, device)
 
     def _reset(self, other):
-        if isinstance(other, TensorWrapperBase):
-            self.__wrapped__ = other.__wrapped__
-        elif isinstance(other, TensorBase):
-            self.__wrapped__ = other
-        else:
-            self._reset(type(self)(other, dtype=self.dtype, device=self.device))
+        if not isinstance(other, __class__):
+            raise TypeError(type(other))
+        self._tensor = other._tensor
+        return self
+
+    @property
+    def dtype(self):
+        return self._tensor.dtype
+
+    @property
+    def shape(self):
+        if self._isscalar:
+            return ()
+        shape = self._tensor.shape
+        if shape == () or not use_symbolic_shape():
+            return shape
+        return apply(GetVarShape(), self)[0]
+
+    @property
+    def device(self):
+        return self._tensor.device
+
+    def numpy(self):
+        if self._isscalar:
+            return self._tensor.numpy().squeeze()
+        return self._tensor.numpy()
+
+    def _drop(self):
+        self._tensor._drop()
+
+    def _swap_in(self):
+        self._tensor._swap_in()
+
+    def _swap_out(self):
+        self._tensor._swap_out()
 
     def __repr__(self):
         piece = "Tensor("

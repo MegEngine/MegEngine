@@ -10,26 +10,66 @@
 
 import collections
 
-from .core import Tensor as _Tensor
-from .core.ops.builtin import Copy
-from .core.tensor.core import apply
+import numpy as np
+
+from .core._imperative_rt import CompNode
+from .core._imperative_rt.core2 import Tensor as _Tensor
+from .core._imperative_rt.core2 import apply
+from .core._trace_option import use_symbolic_shape
+from .core.ops.builtin import Copy, GetVarShape
 from .core.tensor.raw_tensor import as_device
+from .core.tensor.tensor_wrapper import ArrayMethodMixin
 from .device import _valid_device, get_default_device
 from .utils.deprecation import deprecated
 
 
-class Tensor(_Tensor):
+class Tensor(_Tensor, ArrayMethodMixin):
     grad = None
     dmap_callback = None
+    q_dict = {"mode": None, "scale": None, "zero_point": None}
 
-    def __init__(self, data, dtype=None, device=None):
+    def __new__(cls, data, dtype=None, device=None):
         if device is None:
-            device = get_default_device()
-        self.q_dict = {"mode": None, "scale": None, "zero_point": None}
-        super().__init__(data, dtype=dtype, device=device)
+            cn = get_default_device()
+        elif isinstance(device, str):
+            if cls.dmap_callback is not None:
+                cn = CompNode(cls.dmap_callback(device))
+            else:
+                cn = CompNode(device)
+        else:
+            assert isinstance(device, CompNode)
+            cn = device
+
+        if isinstance(data, _Tensor):
+            obj = _Tensor.__new__(cls, data)
+        else:
+            obj = _Tensor.__new__(cls, data, dtype, cn)
+        return obj
+
+    @property
+    def shape(self):
+        shape = super().shape
+        if shape == () or not use_symbolic_shape():
+            return shape
+        return apply(GetVarShape(), self)[0]
+
+    @property
+    def _tuple_shape(self):
+        return super().shape
+
+    def __repr__(self):
+        piece = "Tensor("
+        with np.printoptions(precision=4, suppress=True):
+            piece += "{}".format(str(self.numpy()))
+        if self.dtype != np.float32:
+            piece += ", dtype={}".format(np.dtype(self.dtype).name)
+        piece += ", device={}".format(self.device) + ")"
+        return piece
 
     @deprecated(version="1.0", reason="no need to reuse an existing tensor since 1.0")
     def set_value(self, value):
+        if not isinstance(value, _Tensor):
+            value = Tensor(value, dtype=self.dtype, device=self.device)
         self._reset(value)
 
     @deprecated(version="1.0", reason="use *= 0 instead")
@@ -61,27 +101,22 @@ class Tensor(_Tensor):
     def __hash__(self):
         return id(self)
 
+    def __getnewargs__(self):
+        r""" __getnewargs__ will be called for pickle serialization or deep copy
+        """
+        return (self.numpy(), self.dtype, self.device.logical_name)
+
     def __getstate__(self):
         r""" __getstate__ will be called for pickle serialization or deep copy
         """
 
         state = {
-            "data": self.numpy(),
-            "device": self.device.logical_name,
-            "dtype": self.dtype,
             "qdict": self.q_dict,
         }
         return state
 
     def __setstate__(self, state):
-        data = state.pop("data")
-        logical_device = state.pop("device")
-        if self.dmap_callback is not None:
-            assert isinstance(logical_device, str)
-            logical_device = self.dmap_callback(logical_device)
-        dtype = state.pop("dtype")
         self.q_dict = state.pop("qdict")
-        super().__init__(data, dtype=dtype, device=logical_device)
 
     def detach(self):
         r"""
@@ -89,8 +124,7 @@ class Tensor(_Tensor):
         during backward gradient calcuation, i.e. its gradient is zero.
         """
         Wrapper = type(self)
-        Tensor = type(self.__wrapped__)
-        return Wrapper(Tensor(self.__wrapped__._data))
+        return Wrapper(self)
 
 
 tensor = Tensor

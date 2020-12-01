@@ -9,12 +9,12 @@
 import numpy as np
 
 from megengine.core.tensor.dtype import get_scale, get_zero_point, qint8, quint8
-from megengine.core.tensor.tensor_wrapper import TensorWrapper
+from megengine.tensor import Tensor
 
 
 def test_basic():
     x_np = np.random.rand(10).astype("float32")
-    x = TensorWrapper(x_np)
+    x = Tensor(x_np)
     y = x * x
     y_np = y.numpy()
     np.testing.assert_almost_equal(y_np, x_np * x_np)
@@ -22,15 +22,15 @@ def test_basic():
 
 def test_literal_arith():
     x_np = np.random.rand(10).astype("float32")
-    x = TensorWrapper(x_np)
+    x = Tensor(x_np)
     y = x * 2
     y_np = y.numpy()
     np.testing.assert_almost_equal(y_np, x_np * 2)
 
 
 def test_matmul():
-    A = TensorWrapper(np.random.rand(5, 7).astype("float32"))
-    B = TensorWrapper(np.random.rand(7, 10).astype("float32"))
+    A = Tensor(np.random.rand(5, 7).astype("float32"))
+    B = Tensor(np.random.rand(7, 10).astype("float32"))
     C = A @ B
     np.testing.assert_almost_equal(C.numpy(), A.numpy() @ B.numpy(), decimal=6)
 
@@ -38,7 +38,7 @@ def test_matmul():
 def test_reduce():
     def test_x(x_np):
         for m in ["sum", "prod", "min", "max", "mean"]:
-            x = TensorWrapper(x_np)
+            x = Tensor(x_np)
             y = getattr(x, m)(axis=-1, keepdims=True)
             np.testing.assert_almost_equal(y.numpy(), getattr(x_np, m)(-1), decimal=6)
 
@@ -49,7 +49,7 @@ def test_reduce():
 
 
 def test_set_subtensor():
-    x = TensorWrapper([1, 2, 3])
+    x = Tensor([1, 2, 3])
     x[:] = [1, 1, 1]
     np.testing.assert_almost_equal(x.numpy(), [1, 1, 1], decimal=6)
     x[[0, 2]] = [3, 2]
@@ -60,7 +60,7 @@ def test_set_subtensor():
 
 def test_computing_with_numpy_array():
     x = np.array([1, 2, 3], dtype=np.int32)
-    xx = TensorWrapper(x, device="cpu0")
+    xx = Tensor(x, device="cpu0")
     y = np.array([1, 0, 3], dtype=np.int32)
     assert np.add(xx, y).device == xx.device
     np.testing.assert_equal(np.add(xx, y).numpy(), np.add(x, y))
@@ -70,12 +70,12 @@ def test_computing_with_numpy_array():
 
 def test_transpose():
     x = np.random.rand(2, 5).astype("float32")
-    xx = TensorWrapper(x)
+    xx = Tensor(x)
     np.testing.assert_almost_equal(xx.T.numpy(), x.T)
 
 
 def test_as_type():
-    x = TensorWrapper([1, 2, 3], dtype=np.float32)
+    x = Tensor([1, 2, 3], dtype=np.float32)
     y = x.astype(qint8(0.1))
     np.testing.assert_almost_equal(get_scale(y.dtype), 0.1)
     z = y.astype(qint8(0.2))

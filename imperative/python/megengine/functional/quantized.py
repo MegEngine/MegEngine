@@ -8,8 +8,8 @@
 # pylint: disable=too-many-lines
 from typing import Tuple, Union
 
+from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
-from ..core.tensor.core import apply
 from ..tensor import Tensor
 from .debug_param import get_conv_execution_strategy
 from .types import _pair, _pair_nonzero

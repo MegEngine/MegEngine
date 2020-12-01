@@ -11,10 +11,10 @@ from typing import Iterable, Union
 
 import numpy as np
 
+from ..core._imperative_rt.core2 import apply
 from ..core._wrap import device as as_device
 from ..core.ops.builtin import Copy, Identity
-from ..core.tensor import Tensor
-from ..core.tensor.core import apply
+from ..tensor import Tensor
 from .math import topk as _topk
 from .tensor import broadcast_to, transpose
 

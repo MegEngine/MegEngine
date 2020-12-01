@@ -10,12 +10,12 @@
 from typing import Optional, Sequence, Tuple, Union
 
 from ..core._imperative_rt import CompNode
+from ..core._imperative_rt.core2 import Tensor, apply
 from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph, utils
-from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..core.tensor.utils import astensor1d
 from ..distributed import WORLD, is_distributed
 from ..jit.tracing import is_tracing
@@ -1565,9 +1565,7 @@ def indexing_one_hot(
         [1.]
 
     """
-    assert isinstance(
-        src, (TensorWrapperBase, TensorBase)
-    ), "src must be of Tensor type"
+    assert isinstance(src, Tensor), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
     index = utils.convert_single_value(index, (src,), dtype="int32", device=src.device)
     (result,) = apply(op, src, index)

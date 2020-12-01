@@ -14,7 +14,7 @@
 #include "megbrain/imperative/ops/opr_attr.h"
 
 #include "./op_trait.h"
-#include "./proxy_graph_detail.h"
+#include "megbrain/imperative/proxy_graph_detail.h"
 
 namespace mgb {
 namespace imperative {

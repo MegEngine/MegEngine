@@ -6,11 +6,18 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import numpy as np
+
+from .._imperative_rt.core2 import Tensor
 from ..tensor.core import OpBase, TensorBase, apply
 
 
-class Const(OpBase):
+class Const:
     def __init__(self, value=None, *, dtype=None, device=None):
-        self.value = value
+        self.value = np.asarray(value, dtype=dtype)
         self.dtype = dtype
         self.device = device
+
+    def __call__(self, *reference):
+        Wrapper = type(reference[0])
+        return (Wrapper(self.value, self.dtype, self.device),)

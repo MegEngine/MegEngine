@@ -9,10 +9,10 @@
 # pylint: disable=unused-argument,invalid-name,redefined-builtin,arguments-out-of-order
 import functools
 
+from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor import megbrain_graph, utils
-from ..core.tensor.core import apply
 from ..core.tensor.utils import isscalar, setscalar
 from ..device import get_default_device
 from ..jit.tracing import is_tracing

@@ -10,9 +10,9 @@ from typing import Iterable, Optional
 
 from .. import Tensor
 from ..core._imperative_rt import invoke_op
+from ..core._imperative_rt.core2 import apply
 from ..core.ops.builtin import GaussianRNG, UniformRNG
 from ..core.tensor import utils
-from ..core.tensor.core import apply
 from .rng import _random_seed_generator
 
 __all__ = ["normal", "uniform"]

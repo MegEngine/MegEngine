@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Optional, Tuple
 
+from ..core._imperative_rt.core2 import apply
 from ..core.autodiff.builtin_op_utils import builtin_op_get_backward_fn
 from ..core.autodiff.grad import (
     Tracer,
@@ -17,7 +18,6 @@ from ..core.autodiff.grad import (
     tracer_apply,
 )
 from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
-from ..core.tensor.core import apply
 from ..core.tensor.tensor import Tensor, tensor_apply
 from ..device import get_default_device
 from ..tensor import tensor
@@ -37,71 +37,6 @@ __all__ = [
     "remote_send",
     "remote_recv",
 ]
-
-
-@apply.register()
-def _(op: RemoteSend, *args: Tensor):
-    ret = tensor_apply(op, *args)
-
-    # set extra information
-    tracer_set = dict()
-    for k in set().union(*(i._extra_data for i in args if isinstance(i, Tensor))):
-        tracer_set[k.name] = True
-
-    # check tracer_set in remote_recv
-    get_client().set_remote_tracer(op.key, tracer_set)
-    return ret
-
-
-@builtin_op_get_backward_fn.register(RemoteSend)
-def _(op: RemoteSend, inputs, outputs, input_requires_grad):
-    def backward(*args):
-        return [
-            remote_recv(
-                op.rank_to,
-                inputs[0].shape,
-                inputs[0].dtype,
-                device=str(inputs[0].device),
-                inp=inputs[0],
-            )
-        ]
-
-    return backward, [True]
-
-
-@get_op_has_grad_fn.register(RemoteSend)
-def _(op: RemoteSend):
-    def has_grad(opnode, reached):
-        return get_client().check_is_grad(op.key)
-
-    return has_grad
-
-
-@check_backward_allow_noinput.register(RemoteSend)
-def _(op: RemoteSend):
-    return True
-
-
-@builtin_op_get_backward_fn.register(RemoteRecv)
-def _(op: RemoteRecv, inputs, outputs, input_requires_grad):
-    def backward(*output_grads):
-        return [remote_send(output_grads[0], op.rank_from)]
-
-    return backward, [True]
-
-
-@get_op_has_grad_fn.register(RemoteRecv)
-def _(op: RemoteRecv):
-    def has_grad(opnode, reached):
-        ret = False
-        for v in opnode.outputs:
-            if v() in reached:
-                ret = True
-                break
-        get_client().set_is_grad(op.key, ret)
-        return ret
-
-    return has_grad
 
 
 def collective_comm(inp, mode, group, device):

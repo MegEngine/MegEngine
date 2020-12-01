@@ -14,10 +14,10 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ..core._imperative_rt import CompNode
+from ..core._imperative_rt.core2 import Tensor, apply
 from ..core._wrap import device as as_device
 from ..core.ops import builtin
 from ..core.ops.special import Const
-from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..core.tensor.tensor_wrapper import _broadcast, _remove_axis
 from ..core.tensor.utils import (
     astensor1d,
@@ -611,11 +611,11 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
     """
 
     x, y = convert_inputs(x, y)
-    if not isinstance(x, (TensorWrapperBase, TensorBase)):
+    if not isinstance(x, Tensor):
         raise TypeError("input x must be a tensor")
-    if not isinstance(y, (TensorWrapperBase, TensorBase)):
+    if not isinstance(y, Tensor):
         raise TypeError("input y must be a tensor")
-    if not isinstance(mask, (TensorWrapperBase, TensorBase)):
+    if not isinstance(mask, Tensor):
         raise TypeError("mask must be a tensor")
     if mask.dtype != np.bool_:
         raise ValueError("mask must be bool")
@@ -668,9 +668,9 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
         [1. 4.] [0 3]
 
     """
-    if not isinstance(x, (TensorWrapperBase, TensorBase)):
+    if not isinstance(x, Tensor):
         raise TypeError("input must be a tensor")
-    if not isinstance(mask, (TensorWrapperBase, TensorBase)):
+    if not isinstance(mask, Tensor):
         raise TypeError("mask must be a tensor")
     if mask.dtype != np.bool_:
         raise ValueError("mask must be bool")

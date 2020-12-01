@@ -10,10 +10,10 @@ from typing import Iterable
 
 import numpy as np
 
+from .._imperative_rt.core2 import Tensor, apply
 from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.special import Const
-from .core import TensorBase, TensorWrapperBase, apply
 from .utils import astensor1d, isscalar, make_shape_tuple
 
 
@@ -149,13 +149,13 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
             return True
 
         def get_index(i):
-            if not isinstance(i, (TensorBase, TensorWrapperBase)):
+            if not isinstance(i, (Tensor)):
                 if is_bool_list(i) or isinstance(i, np.ndarray) and i.dtype == np.bool_:
                     (i,) = Const(i, dtype=np.bool_, device=inp.device)(inp)
                 else:
                     (i,) = Const(i, dtype=np.int32, device=inp.device)(inp)
                     return i
-            assert isinstance(i, (TensorBase, TensorWrapperBase))
+            assert isinstance(i, Tensor)
             if i.dtype != np.bool_:
                 return i
             _, ind = apply(builtin.CondTake(), i, i)
@@ -198,8 +198,8 @@ def try_condtake(tensor, index):
         return []
     if isinstance(index, np.ndarray):
         (index,) = Const(index, dtype=np.bool_, device=tensor.device)(tensor)
-    assert isinstance(index, (TensorBase, TensorWrapperBase))
-    if not isinstance(tensor, (TensorWrapperBase, TensorBase)):
+    assert isinstance(index, Tensor)
+    if not isinstance(tensor, Tensor):
         raise TypeError("input must be a tensor")
     if tensor.device != index.device:
         raise ValueError(
@@ -227,7 +227,7 @@ def getitem(tensor, index):
         op = builtin.IndexingMultiAxisVec(items=items)
     (result,) = apply(op, tensor, *tensors)
     if ret_scalar:
-        result.__wrapped__._data._isscalar = True
+        result.setscalar()
     return result
 
 
@@ -239,7 +239,7 @@ def setitem(tensor, index, value):
         if index.shape[0] == 0:
             return tensor
         tensor = tensor.reshape(-1)
-    if not isinstance(value, (TensorBase, TensorWrapperBase)):
+    if not isinstance(value, Tensor):
         op = Const(value, dtype=tensor.dtype, device=tensor.device)
         (value,) = op(tensor)
     tensor, tensors, items, use_subtensor, _ = unpack_getitem(tensor, index)
@@ -250,6 +250,7 @@ def setitem(tensor, index, value):
         op = builtin.Subtensor(items=items)
     else:
         op = builtin.IndexingMultiAxisVec(items=items)
+
     (tmp_result,) = apply(op, tensor, *tensors)
 
     # XXX: broadcast can always be applied even if shapes are equal

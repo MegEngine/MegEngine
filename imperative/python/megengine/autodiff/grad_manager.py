@@ -301,7 +301,7 @@ class GradManager:
         if tensor is None:
             return
 
-        def callback(_, grad, callbacks=spec.callbacks):
+        def callback(grad, callbacks=spec.callbacks):
             for cb in callbacks:
                 grad = cb(tensor, grad)
             self._gradients[id(tensor)] = grad

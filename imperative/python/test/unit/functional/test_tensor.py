@@ -312,7 +312,7 @@ def test_device():
     np.testing.assert_almost_equal(y1.numpy(), y2.numpy())
 
     y3 = F.eye(x.shape, dtype="float32", device="xpux")
-    y4 = F.eye(x.shape, dtype="float32", device=x.device.to_c())
+    y4 = F.eye(x.shape, dtype="float32", device=x.device)
     np.testing.assert_almost_equal(y3.numpy(), y4.numpy())
 
     y5 = F.full((3, 2), 4, device=x.device)

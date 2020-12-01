@@ -13,7 +13,15 @@ import sys
 import typing
 from abc import ABC
 
+from .._imperative_rt.core2 import apply as apply2
 from .multipledispatch import Dispatcher
+
+
+def apply_op(op, *args):
+    Wrapper = type(args[0])
+    args = [arg._tensor for arg in args]
+    results = apply2(op, *args)
+    return tuple(map(Wrapper, results))
 
 
 class OpBase(ABC):

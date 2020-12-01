@@ -10,7 +10,7 @@
  */
 
 #include "./proxy_graph.h"
-#include "./proxy_graph_detail.h"
+#include "megbrain/imperative/proxy_graph_detail.h"
 
 namespace mgb {
 namespace imperative {

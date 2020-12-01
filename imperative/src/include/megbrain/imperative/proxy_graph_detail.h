@@ -1,5 +1,5 @@
 /**
- * \file imperative/src/impl/proxy_graph_detail.h
+ * \file imperative/src/include/megbrain/imperative/proxy_graph_detail.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.

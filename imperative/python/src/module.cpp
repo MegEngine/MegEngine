@@ -23,7 +23,10 @@
 
 #include "./dispatcher.h"
 
+#include "./tensor.h"
+
 namespace py = pybind11;
+using namespace mgb::imperative::python;
 
 #ifndef MODULE_NAME
 #define MODULE_NAME imperative_rt
@@ -68,4 +71,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         py::getattr(m, "__dict__"));
 
     init_dispatcher(submodule(m, "dispatcher"));
+
+    init_tensor(submodule(m, "core2"));
 }

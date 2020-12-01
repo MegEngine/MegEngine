@@ -11,30 +11,29 @@ import collections
 import numpy as np
 import pytest
 
-import megengine.core.tensor.raw_tensor
+import megengine
+import megengine.tensor as Tensor
+from megengine.core._imperative_rt.core2 import apply
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops import builtin
-from megengine.core.tensor import Tensor
-from megengine.core.tensor.core import apply
-from megengine.core.tensor.raw_tensor import RawTensor, as_raw_tensor
 
 
 def cvt_to_shape_desc(val, inpvar, config=None):
     def as_tensor(val, device):
         assert device is not None, "can not infer device"
         # TODO: should copy to appropriate device
-        val = as_raw_tensor(val, device=device)
+        val = Tensor(val, device=device)
         return val
 
     device = None
     if inpvar is not None:
-        assert isinstance(inpvar, RawTensor)
+        assert isinstance(inpvar, Tensor)
         device = device or inpvar.device
 
     if config is not None:
         device = device or config.device
 
-    if isinstance(val, RawTensor):
+    if isinstance(val, Tensor):
         return as_tensor(val, device)
 
     if not isinstance(val, collections.abc.Iterable):
@@ -43,7 +42,7 @@ def cvt_to_shape_desc(val, inpvar, config=None):
     components = []
     on_host = True
     for i in val:
-        if isinstance(i, RawTensor):
+        if isinstance(i, Tensor):
             on_host = False
             device = device or i.device
         else:
@@ -62,7 +61,7 @@ def cvt_to_shape_desc(val, inpvar, config=None):
         return as_tensor(shape, device)
 
     for idx, v in enumerate(components):
-        if not isinstance(v, RawTensor):
+        if not isinstance(v, Tensor):
             vi = int(v)
             assert vi == v, "could not convert {} to int".format(v)
             v = vi
@@ -95,7 +94,7 @@ def canonize_inputs(inputs, *, config):
         # and is called with concat([a, b]))
         inputs = inputs[0]
 
-    if isinstance(inputs, RawTensor):
+    if isinstance(inputs, Tensor):
         return [inputs]
 
     old_inputs = inputs
@@ -103,7 +102,7 @@ def canonize_inputs(inputs, *, config):
     get_comp_node = None
     need_cvt = False
     for i in old_inputs:
-        if isinstance(i, RawTensor):
+        if isinstance(i, Tensor):
             get_comp_node = lambda cn=i.device: cn
         else:
             need_cvt = True
@@ -117,8 +116,8 @@ def canonize_inputs(inputs, *, config):
             return config.comp_node
 
     for idx, var in enumerate(inputs):
-        if not isinstance(var, RawTensor):
-            var = as_raw_tensor(var)
+        if not isinstance(var, Tensor):
+            var = Tensor(var)
         inputs[idx] = var
     return inputs
 
@@ -131,15 +130,15 @@ def invoke_op(op, inputs_, cvt_inputs=canonize_inputs):
 
 
 def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
-    assert isinstance(inp, RawTensor)
+    assert isinstance(inp, Tensor)
     if not isinstance(tuple_val, tuple):
         tuple_val = (tuple_val,)
 
     def as_tensor(v):
-        if not isinstance(v, RawTensor):
+        if not isinstance(v, Tensor):
             vi = np.ascontiguousarray(v, dtype=np.int32)
             assert np.abs(vi - v).max() == 0, "bad index: {!r}".format(v)
-            v = as_raw_tensor(vi)
+            v = Tensor(vi)
         return v
 
     new_axes = []
@@ -275,14 +274,14 @@ def batched_incr_mesh_indexing(input, value, tuple_val):
 
 def test_transpose():
     x = np.arange(10).reshape(2, 5).astype("int32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     (yy,) = transpose(xx, pattern=[1, -1, 0])
     np.testing.assert_equal(np.expand_dims(x.transpose(), axis=1), yy.numpy())
 
 
 def test_broadcast():
     x = np.arange(10).reshape(1, 10).astype("int32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     (yy,) = broadcast(xx, (10, 10))
     np.testing.assert_equal(np.repeat(x, 10, 0), yy.numpy())
 
@@ -290,7 +289,7 @@ def test_broadcast():
 def test_subtensor():
     x = np.arange(25).reshape(5, 5).astype("int32")
     d = np.arange(2).astype("int32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     (yy0,) = subtensor(xx, (slice(0, 4, 2), 3))
     (yy1,) = set_subtensor(xx, d, (slice(0, 4, 2), 3))
     (yy2,) = incr_subtensor(xx, d, (slice(0, 4, 2), 3))
@@ -309,7 +308,7 @@ def test_subtensor():
 def test_advance_indexing():
     x = np.arange(25).reshape(5, 5).astype("int32")
     d = np.arange(15).reshape(3, 5).astype("int32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     (yy0,) = advance_indexing(xx, ((0, 4, 2), slice(None, None, None)))
     (yy1,) = set_advance_indexing(xx, d, ((0, 4, 2), slice(None, None, None)))
     (yy2,) = incr_advance_indexing(xx, d, ((0, 4, 2), slice(None, None, None)))
@@ -328,7 +327,7 @@ def test_advance_indexing():
 def test_mesh_indexing():
     x = np.arange(25).reshape(5, 5).astype("int32")
     d = np.arange(6).reshape(3, 2).astype("int32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     (yy0,) = mesh_indexing(xx, (slice(0, 5, 2), (1, 3)))
     (yy1,) = set_mesh_indexing(xx, d, (slice(0, 5, 2), (1, 3)))
     (yy2,) = incr_mesh_indexing(xx, d, (slice(0, 5, 2), (1, 3)))
@@ -355,7 +354,7 @@ def test_mesh_indexing():
 def test_batched_mesh_indexing():
     x = np.arange(24).reshape(2, 3, 4).astype("int32")
     d = np.arange(12).reshape(2, 2, 3).astype("int32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     s = [(0, 1, 2), (1, 2, 3)]
     (yy0,) = batched_mesh_indexing(xx, (slice(None, None, None), [(0, 2)] * 2, s))
     (yy1,) = batched_set_mesh_indexing(

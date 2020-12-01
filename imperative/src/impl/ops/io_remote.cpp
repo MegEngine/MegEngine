@@ -13,7 +13,7 @@
 
 #if MGB_ENABLE_OPR_MM
 #include "../op_trait.h"
-#include "../proxy_graph_detail.h"
+#include "megbrain/imperative/proxy_graph_detail.h"
 #include "megbrain/opr/io_remote.h"
 #include "megbrain/opr/mm_handler.h"
 #endif // MGB_ENABLE_OPR_MM

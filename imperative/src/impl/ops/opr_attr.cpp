@@ -13,7 +13,7 @@
 #include "megbrain/serialization/opr_load_dump.h"
 
 #include "../op_trait.h"
-#include "../proxy_graph_detail.h"
+#include "megbrain/imperative/proxy_graph_detail.h"
 
 namespace mgb {
 namespace imperative {

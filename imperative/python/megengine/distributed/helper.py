@@ -17,8 +17,8 @@ import numpy as np
 from megengine.autodiff.grad_manager import GradManager, get_backwarding_grad_manager
 from megengine.device import get_default_device, get_device_count
 
+from ..core._imperative_rt.core2 import apply
 from ..core.ops.builtin import ParamPackConcat, ParamPackSplit
-from ..core.tensor.core import apply
 from ..functional.utils import copy
 from ..tensor import Tensor
 from ..utils.future import Future
@@ -228,7 +228,6 @@ class AllreduceCallback:
         self._packing_size[dtype] = 0
 
     def __call__(self, param, grad):
-        param = param.__wrapped__
         gm = get_backwarding_grad_manager()
         assert isinstance(gm, GradManager)
         if gm not in self._marked_gm:

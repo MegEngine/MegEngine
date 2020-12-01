@@ -12,10 +12,11 @@ import math
 import numbers
 from typing import Optional, Sequence, Tuple, Union
 
+from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.ops.special import Const
 from ..core.tensor import utils
-from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
+from ..core.tensor.core import TensorBase, TensorWrapperBase
 from ..tensor import Tensor
 from .elemwise import clip, exp, log, log1p
 from .tensor import reshape, squeeze

@@ -15,6 +15,7 @@
 #include <vector>
 #include <utility>
 #include <Python.h>
+#include <pybind11/pybind11.h>
 
 namespace pyext17 {
 
@@ -52,6 +53,26 @@ inline PyObject* cvt_retval(PyObject* rv) {
     } else { \
         return cvt_retval(__VA_ARGS__); \
     }
+
+inline int cvt_retint(int ret) {
+    return ret;
+}
+
+#define CVT_RET_INT(...) \
+    if constexpr (std::is_same_v<decltype(__VA_ARGS__), void>) { \
+        __VA_ARGS__; \
+        return 0; \
+    } else { \
+        return cvt_retint(__VA_ARGS__); \
+    }
+
+
+struct py_err_set : std::exception {};
+
+#define HANDLE_ALL_EXC(RET) catch(py_err_set&) {return RET;} \
+    catch(pybind11::error_already_set& e) {e.restore(); return RET;} \
+    catch(pybind11::builtin_exception& e) {e.set_error(); return RET;} \
+    catch(std::exception& e) {PyErr_SetString(PyExc_RuntimeError, e.what()); return RET;}
 
 template <typename T>
 struct wrap {
@@ -111,7 +132,9 @@ private:
 
         static PyObject* impl(PyObject* self, PyObject*) {
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
-            CVT_RET_PYOBJ((inst->*f)());
+            try {
+                CVT_RET_PYOBJ((inst->*f)());
+            } HANDLE_ALL_EXC(nullptr)
         }
     };
 
@@ -121,7 +144,9 @@ private:
 
         static PyObject* impl(PyObject* self, PyObject* args, PyObject* kwargs) {
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
-            CVT_RET_PYOBJ((inst->*f)(args, kwargs));
+            try {
+                CVT_RET_PYOBJ((inst->*f)(args, kwargs));
+            } HANDLE_ALL_EXC(nullptr)
         }
     };
 
@@ -132,7 +157,9 @@ private:
 
         static PyObject* impl(PyObject* self, PyObject*const* args, Py_ssize_t nargs) {
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
-            CVT_RET_PYOBJ((inst->*f)(args, nargs));
+            try {
+                CVT_RET_PYOBJ((inst->*f)(args, nargs));
+            } HANDLE_ALL_EXC(nullptr)
         }
         #else
         static constexpr int flags = METH_VARARGS;
@@ -141,7 +168,9 @@ private:
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
             auto* arr = &PyTuple_GET_ITEM(args, 0);
             auto size = PyTuple_GET_SIZE(args);
-            CVT_RET_PYOBJ((inst->*f)(arr, size));
+            try {
+                CVT_RET_PYOBJ((inst->*f)(arr, size));
+            } HANDLE_ALL_EXC(nullptr)
         }
         #endif
     };
@@ -152,7 +181,9 @@ private:
 
         static PyObject* impl(PyObject* self, PyObject* obj) {
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
-            CVT_RET_PYOBJ((inst->*f)(obj));
+            try {
+                CVT_RET_PYOBJ((inst->*f)(obj));
+            } HANDLE_ALL_EXC(nullptr)
         }
     };
 
@@ -160,6 +191,55 @@ private:
     static constexpr PyMethodDef make_meth_def(const char* name, const char* doc = nullptr) {
         using M = meth<detect_meth_type<f>::value, f>;
         return {name, (PyCFunction)M::impl, M::flags, doc};
+    }
+
+    template<auto f>
+    struct getter {
+        using F = decltype(f);
+
+        static PyObject* impl(PyObject* self, void* closure) {
+            auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+            try {
+                if constexpr (std::is_invocable_v<F, PyObject*, void*>) {
+                    CVT_RET_PYOBJ(f(self, closure));
+                } else if constexpr (std::is_invocable_v<F, T, void*>) {
+                    CVT_RET_PYOBJ((inst->*f)(closure));
+                } else if constexpr (std::is_invocable_v<F, T>) {
+                    CVT_RET_PYOBJ((inst->*f)());
+                } else {
+                    static_assert(!std::is_same_v<F, F>);
+                }
+            } HANDLE_ALL_EXC(nullptr)
+        }
+    };
+
+    template<auto f>
+    struct setter {
+        using F = decltype(f);
+
+        template<typename = void>
+        static int impl_(PyObject* self, PyObject* val, void* closure) {
+            auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+            try {
+                if constexpr (std::is_invocable_v<F, PyObject*, PyObject*, void*>) {
+                    CVT_RET_INT(f(self, val, closure));
+                } else if constexpr (std::is_invocable_v<F, T, PyObject*, void*>) {
+                    CVT_RET_INT((inst->*f)(val, closure));
+                } else if constexpr (std::is_invocable_v<F, T, PyObject*>) {
+                    CVT_RET_INT((inst->*f)(val));
+                } else {
+                    static_assert(!std::is_same_v<F, F>);
+                }
+            } HANDLE_ALL_EXC(-1)
+        }
+
+        static constexpr auto impl = []() {if constexpr (std::is_same_v<F, std::nullptr_t>) return nullptr;
+                                           else return impl_<>;}();
+    };
+
+    template<auto get, auto set = nullptr>
+    static constexpr PyGetSetDef make_getset_def(const char* name, const char* doc = nullptr, void* closure = nullptr) {
+        return {const_cast<char *>(name), getter<get>::impl, setter<set>::impl, const_cast<char *>(doc), closure};
     }
 
     // polyfills
@@ -216,16 +296,26 @@ private:
 
         template<typename = void>
         static PyObject* impl(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
+            struct FreeGuard {
+                PyObject* self;
+                PyTypeObject* type;
+                ~FreeGuard() {if (self) type->tp_free(self);}
+            };
+
             auto* self = type->tp_alloc(type, 0);
+            FreeGuard free_guard{self, type};
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
             if constexpr (has_vectorcall && tp_vectorcall::valid) {
                 reinterpret_cast<wrap_t*>(self)->vectorcall_slot = &tp_vectorcall::template impl<>;
             }
-            if constexpr (varkw) {
-                new(inst) T(args, kwargs);
-            } else {
-                new(inst) T();
-            }
+            try {
+                if constexpr (varkw) {
+                    new(inst) T(args, kwargs);
+                } else {
+                    new(inst) T();
+                }
+            } HANDLE_ALL_EXC(nullptr)
+            free_guard.self = nullptr;
             return self;
         }
 
@@ -250,6 +340,7 @@ private:
 public:
     class TypeBuilder {
         std::vector<PyMethodDef> m_methods;
+        std::vector<PyGetSetDef> m_getsets;
         PyTypeObject m_type;
         bool m_finalized = false;
         bool m_ready = false;
@@ -259,6 +350,13 @@ public:
                 throw std::runtime_error("type is already finalized");
             }
         }
+
+        static const char* to_c_str(const char* s) {return s;}
+
+        template <size_t N, typename... Ts>
+        static const char* to_c_str(const pybind11::detail::descr<N, Ts...>& desc) {
+            return desc.text;
+        }
     public:
         TypeBuilder(const TypeBuilder&) = delete;
         TypeBuilder& operator=(const TypeBuilder&) = delete;
@@ -266,7 +364,7 @@ public:
         TypeBuilder() : m_type{PyVarObject_HEAD_INIT(nullptr, 0)} {
             constexpr auto has_tp_name = HAS_MEMBER(T, tp_name);
             if constexpr (has_tp_name) {
-                m_type.tp_name = T::tp_name;
+                m_type.tp_name = to_c_str(T::tp_name);
             }
             m_type.tp_dealloc = tp_dealloc::value;
             #ifdef _Py_TPFLAGS_HAVE_VECTORCALL
@@ -291,8 +389,17 @@ public:
             return m_ready;
         }
 
+        bool isinstance(PyObject* op) {
+            return PyObject_TypeCheck(op, &m_type);
+        }
+
+        bool isexact(PyObject* op) {
+            return Py_TYPE(op) == &m_type;
+        }
+
         PyObject* finalize() {
             if (!m_finalized) {
+                m_finalized = true;
                 if (m_methods.size()) {
                     m_methods.push_back({0});
                     if (m_type.tp_methods) {
@@ -300,6 +407,14 @@ public:
                         return nullptr;
                     }
                     m_type.tp_methods = &m_methods[0];
+                }
+                if (m_getsets.size()) {
+                    m_getsets.push_back({0});
+                    if (m_type.tp_getset) {
+                        PyErr_SetString(PyExc_SystemError, "tp_getset is already set");
+                        return nullptr;
+                    }
+                    m_type.tp_getset = &m_getsets[0];
                 }
                 if (PyType_Ready(&m_type)) {
                     return nullptr;
@@ -315,12 +430,64 @@ public:
             m_methods.push_back(make_meth_def<f>(name, doc));
             return *this;
         }
+
+        template<auto get, auto set = nullptr>
+        TypeBuilder& def_getset(const char* name, const char* doc = nullptr, void* closure = nullptr) {
+            check_finalized();
+            m_getsets.push_back(make_getset_def<get, set>(name, doc, closure));
+            return *this;
+        }
     };
 
     static TypeBuilder& type() {
         static TypeBuilder type_helper;
         return type_helper;
     }
+
+    template<typename... Args>
+    static PyObject* cnew(Args&&... args) {
+        auto* pytype = type().operator->();
+        auto* self = pytype->tp_alloc(pytype, 0);
+        auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+        if constexpr (has_vectorcall && tp_vectorcall::valid) {
+            reinterpret_cast<wrap_t*>(self)->vectorcall_slot = &tp_vectorcall::template impl<>;
+        }
+        new(inst) T(std::forward<Args>(args)...);
+        return self;
+    }
+
+    template<typename... Args>
+    static PyObject* cnew_with_type(PyTypeObject* pytype, Args&&... args) {
+        
+        auto* self = pytype->tp_alloc(pytype, 0);
+        auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
+        if constexpr (has_vectorcall && tp_vectorcall::valid) {
+            reinterpret_cast<wrap_t*>(self)->vectorcall_slot = &tp_vectorcall::template impl<>;
+        }
+        new(inst) T(std::forward<Args>(args)...);
+        return self;
+    }
+    
+    struct caster {
+        static constexpr auto name = T::tp_name;
+
+        T* value;
+
+        bool load(pybind11::handle src, bool convert) {
+            if (wrap_t::type().isinstance(src.ptr())) {
+                value = reinterpret_cast<wrap_t*>(src.ptr())->inst();
+                return true;
+            }
+            return false;
+        }
+
+        template <typename U> using cast_op_type = pybind11::detail::cast_op_type<U>;
+        operator T*() { return value; }
+        operator T&() { return *value; }
+    };
+
+
+
 };
 
 } // namespace pyext17
@@ -328,3 +495,5 @@ public:
 #undef HAS_MEMBER_TYPE
 #undef HAS_MEMBER
 #undef CVT_RET_PYOBJ
+#undef CVT_RET_INT
+#undef HANDLE_ALL_EXC

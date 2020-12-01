@@ -16,6 +16,7 @@ import numpy as np
 
 import megengine as mge
 
+from .._imperative_rt import core2
 from ..ops.builtin import Elemwise, OpDef, RemoteSend
 from ..ops.special import Const
 from ..tensor.core import TensorBase, TensorWrapperBase, apply
@@ -418,3 +419,28 @@ def tracer_apply(op: (OpDef, Function), *args: typing.Optional[Tracer]):
 @apply.register()
 def _(op: Const, *_: typing.Optional[Tracer]):
     return None
+
+
+class Grad:
+    def __init__(self):
+        self._impl = core2.GradKey()
+
+    def wrt(self, *tensors, callback=None):
+        for x in tensors:
+            self._impl.attach(x, callback)
+        return self
+
+    def __call__(self, ys, dys):
+        from collections.abc import Sequence
+
+        if not isinstance(ys, Sequence):
+            ys = [ys]
+        if not isinstance(dys, Sequence):
+            dys = [dys]
+        core2.backward(self._impl, ys, dys)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _1, _2, _3):
+        del self._impl

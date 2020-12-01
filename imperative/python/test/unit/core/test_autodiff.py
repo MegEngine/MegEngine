@@ -16,12 +16,11 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 import megengine.functional as F
-from megengine.core._imperative_rt import TensorAttr, imperative
+from megengine.core._imperative_rt import TensorAttr, core2, imperative
+from megengine.core._imperative_rt.core2 import TensorWeakRef, apply
+from megengine.core._imperative_rt.imperative import sync
 from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import Elemwise
-from megengine.core.tensor.raw_tensor import as_raw_tensor
-from megengine.core.tensor.tensor import Tensor, apply
-from megengine.core.tensor.tensor_wrapper import TensorWrapper
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.distributed import remote_recv, remote_send
 
@@ -43,11 +42,11 @@ relu = _elwise(Elemwise.Mode.RELU)
 
 
 def as_tensor(x):
-    return Tensor(as_raw_tensor(x, device=mge.device.get_default_device()))
+    return mge.Tensor(x)
 
 
 def save_to(self, name="grad"):
-    def callback(tensor, grad):
+    def callback(grad):
         setattr(self, name, grad)
 
     return callback
@@ -136,14 +135,14 @@ def test_2nd_grad():
 
 def test_grad_with_tensor_wrapper():
     x_np = np.random.rand(10).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
 
     y = mul(x, x)
     y = mul(y, y)
 
-    grad(y, TensorWrapper(np.ones_like(x_np)))
+    grad(y, mge.Tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
@@ -162,8 +161,8 @@ def test_release():
         finally:
             gc.enable()
 
-    x = TensorWrapper([0.0])
-    dy = TensorWrapper(np.ones_like(x.numpy()))
+    x = mge.Tensor([0.0])
+    dy = mge.Tensor(np.ones_like(x.numpy()))
 
     @check
     def _():
@@ -173,25 +172,25 @@ def test_release():
 
     @check
     def _():
-        with Grad().wrt(x) as g:
+        with Grad().wrt(x):
             pass
 
     @check
     def _():
-        with Grad().wrt(x) as g:
+        with Grad().wrt(x):
             y = x * x
 
 
 def test_grad_inplace():
     x_np = np.random.rand(10).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
 
     y = mul(x, x)
     y *= y
 
-    grad(y, TensorWrapper(np.ones_like(x_np)))
+    grad(y, mge.Tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
@@ -199,16 +198,16 @@ def test_elemwise_add():
     x_np = np.random.rand(10).astype("float32")
     y_np = np.random.rand(10, 10).astype("float32")
     dz_np = np.random.rand(10, 10).astype("float32")
-    x = TensorWrapper(x_np)
-    y = TensorWrapper(y_np)
-    dz = TensorWrapper(dz_np)
+    x = mge.Tensor(x_np)
+    y = mge.Tensor(y_np)
+    dz = mge.Tensor(dz_np)
 
     refs = {}
 
     def f(x, y):
         x = x * 2
-        refs["x"] = weakref.ref(x.__wrapped__)
-        refs["y"] = weakref.ref(y.__wrapped__)
+        refs["x"] = TensorWeakRef(x)
+        refs["y"] = TensorWeakRef(y)
         return x + y
 
     grad = Grad().wrt(x, callback=save_to(x))
@@ -226,14 +225,14 @@ def test_elemwise_add():
 def test_elemwise_relu():
     x_np = [1.0, -1.0]
     dz_np = [1.0]
-    x = TensorWrapper(x_np)
-    dz = TensorWrapper(dz_np)
+    x = mge.Tensor(x_np)
+    dz = mge.Tensor(dz_np)
 
     refs = {}
 
     def f(x):
         x = x * 2
-        refs["x"] = weakref.ref(x.__wrapped__)
+        refs["x"] = TensorWeakRef(x)
         return relu(x)
 
     grad = Grad().wrt(x, callback=save_to(x))
@@ -258,7 +257,7 @@ def test_elemwise_relu_backward_fn():
 
 def test_reshape():
     x_np = np.random.rand(2, 5).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = x.reshape(5, 2)
@@ -269,7 +268,7 @@ def test_reshape():
 
 def test_subtensor():
     x_np = np.random.rand(3, 3).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = x[1:-1, :2]
@@ -282,7 +281,7 @@ def test_subtensor():
 
 def test_IndexingMultiAxisVec():
     x_np = np.random.rand(3, 3).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = x[[0, 2], [0, 2]]
@@ -295,7 +294,7 @@ def test_IndexingMultiAxisVec():
 
 def test_AxisAddRemove():
     x_np = np.random.rand(1, 5).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = F.squeeze(F.expand_dims(x, 2), 0)
@@ -308,7 +307,7 @@ def test_AxisAddRemove():
 
 def test_Broadcast():
     x_np = np.random.rand(3, 3, 1).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = F.broadcast_to(x, (3, 3, 10))
@@ -319,7 +318,7 @@ def test_Broadcast():
 
 def test_Reduce_sum():
     x_np = np.random.rand(3, 3).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = x.sum(axis=0)
@@ -330,7 +329,7 @@ def test_Reduce_sum():
 
 def test_Reduce_mean():
     x_np = np.random.rand(3, 3).astype("float32")
-    x = TensorWrapper(x_np)
+    x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
     y = x.mean(axis=0)

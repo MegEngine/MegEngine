@@ -11,9 +11,10 @@ from typing import Iterable, Union
 
 import numpy as np
 
+from .._imperative_rt.core2 import Tensor, apply
 from ..ops import builtin
 from ..ops.special import Const
-from ..tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
+from ..tensor.core import OpBase, TensorBase, TensorWrapperBase
 from .dtype import is_equal, is_quantize
 
 _enable_convert_inputs = True
@@ -109,7 +110,7 @@ def dtype_promotion(inputs):
 def get_device(inputs):
     device = None
     for i in inputs:
-        if isinstance(i, (TensorWrapperBase, TensorBase)):
+        if isinstance(i, Tensor):
             if device is None:
                 device = i.device
             elif device != i.device:
@@ -126,30 +127,31 @@ def concatenate(inputs, axis=0, *, device=None):
         return convert_single_value(x, inputs, dtype=dtype)
 
     inputs = tuple(map(convert, inputs))
-    (result,) = apply(builtin.Concat(axis=axis, comp_node=device.to_c()), *inputs)
+    (result,) = apply(builtin.Concat(axis=axis, comp_node=device), *inputs)
     return result
 
 
 def astype(x, dtype):
     dtype = np.dtype(dtype)
     if not is_equal(x.dtype, dtype):
-        isscalar = x.__wrapped__._data._isscalar
+        isscalar = x.isscalar()
         (x,) = apply(builtin.TypeCvt(dtype=dtype), x)
-        x.__wrapped__._data._isscalar = isscalar
+        if isscalar:
+            x.setscalar()
     return x
 
 
 def convert_single_value(v, inputs, *, dtype=None, device=None):
-    tensors = [i for i in inputs if isinstance(i, (TensorBase, TensorWrapperBase))]
+    tensors = [i for i in inputs if isinstance(i, Tensor)]
     assert len(tensors) > 0
-    if isinstance(v, (TensorWrapperBase, TensorBase)):
+    if isinstance(v, (TensorWrapperBase, Tensor)):
         v = astype(v, v.dtype if is_quantize(v.dtype) else dtype)
     else:
         (v,) = Const(v, dtype=dtype, device=device)(*tensors)
     return v
 
 
-def convert_inputs(*args: TensorBase):
+def convert_inputs(*args: Tensor):
     if not _enable_convert_inputs:
         return args
 
@@ -167,7 +169,7 @@ def convert_inputs(*args: TensorBase):
 def result_type(*args):
     dtypes = []
     for i in args:
-        if isinstance(i, (TensorWrapperBase, TensorBase)):
+        if isinstance(i, Tensor):
             dtypes.append(i.dtype)
             continue
         try:
@@ -178,25 +180,16 @@ def result_type(*args):
 
 
 def isscalar(x):
-    if isinstance(x, TensorWrapperBase):
-        x = x.__wrapped__
 
-    if hasattr(x, "_isscalar"):
-        return x._isscalar
-    if isinstance(x, TensorBase):
-        return x._data._isscalar
+    if isinstance(x, Tensor):
+        return x.isscalar()
 
     return np.isscalar(x)
 
 
 def setscalar(x):
-    if isinstance(x, TensorWrapperBase):
-        x = x.__wrapped__
-
-    if hasattr(x, "_isscalar"):
-        x._isscalar = True
-    elif isinstance(x, TensorBase):
-        x._data._isscalar = True
+    if isinstance(x, Tensor):
+        x.setscalar()
     else:
         raise NotImplementedError("Unsupport type {}".format(type(x)))
 
@@ -215,25 +208,24 @@ def astensor1d(x, *reference, dtype=None, device=None):
     else:
         if ndim != 0 and ndim != 1:
             raise ValueError("ndim != 1 or 0, get : %d" % ndim)
-        if not isinstance(x, (TensorBase, TensorWrapperBase)):
+        if not isinstance(x, Tensor):
             (x,) = Const(x, dtype=dtype, device=device)(*reference)
         return x
 
     if not isinstance(x, collections.abc.Sequence):
         raise TypeError
 
-    if any(isinstance(i, (TensorBase, TensorWrapperBase)) for i in x):
+    if any(isinstance(i, Tensor) for i in x):
         x = concatenate(x, device=device)
         if dtype is not None:
             x = astype(x, dtype)
         return x
-
     (x,) = Const(x, dtype=dtype, device=device)(*reference)
     return x
 
 
 def _expand_int(s, i):
-    if isinstance(i, (TensorBase, TensorWrapperBase)):
+    if isinstance(i, Tensor):
         i_np = i.numpy()
         if i_np.ndim == 0:
             s.append(int(i_np))
