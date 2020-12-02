@@ -32,14 +32,22 @@ SmallVector<Tensor*> to_raw_ptr_array(
     return ret;
 }
 
-void exec(const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_,
-        const SmallVector<TensorPtr>& outputs_) {
+SmallVector<LogicalTensorDesc>
+infer_output_attrs(const OpDef& def,
+        const SmallVector<TensorPtr>& inputs) {
     auto&& graph = ProxyGraph::get_default_graph();
-    auto inputs = to_raw_ptr_array(inputs_),
-         outputs = to_raw_ptr_array(outputs_);
+    return graph->infer_output_attrs(def, to_raw_ptr_array(inputs));
+}
+} // anonymous namespace
+
+void exec(const OpDef& def,
+        const SmallVector<TensorPtr>& inputs,
+        const SmallVector<TensorPtr>& outputs) {
+    auto&& graph = ProxyGraph::get_default_graph();
+    auto raw_inputs = to_raw_ptr_array(inputs),
+         raw_outputs = to_raw_ptr_array(outputs);
     CompNode::UnorderedSet used_cns;
-    for (auto&& out: outputs) {
+    for (auto&& out: raw_outputs) {
         auto cn = out->comp_node();
         if (used_cns.insert(cn).second) {
             for (auto&& in: inputs) {
@@ -50,7 +58,7 @@ void exec(const OpDef& def,
             }
         }
     }
-    graph->invoke_op(def, inputs, outputs);
+    graph->invoke_op(def, raw_inputs, raw_outputs);
     for (auto&& cn: used_cns) {
         for (auto&& in: inputs) {
             if (in->comp_node() != cn) {
@@ -59,14 +67,6 @@ void exec(const OpDef& def,
         }
     }
 }
-
-SmallVector<LogicalTensorDesc>
-infer_output_attrs(const OpDef& def,
-        const SmallVector<TensorPtr>& inputs) {
-    auto&& graph = ProxyGraph::get_default_graph();
-    return graph->infer_output_attrs(def, to_raw_ptr_array(inputs));
-}
-} // anonymous namespace
 
 SmallVector<TensorPtr>
 apply_on_physical_tensor(const OpDef& def,

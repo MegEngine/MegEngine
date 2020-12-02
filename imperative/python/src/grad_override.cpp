@@ -38,9 +38,9 @@ std::shared_ptr<Tensor> broadcast_to(Tensor* x, Tensor* s) {
 std::shared_ptr<Tensor> make_tensor(CompNode cn, Tensor* shape, float v = 0) {
     HostTensorND scalar{cn, {{1}, dtype::Float32()}};
     scalar.ptr<float>()[0] = v;
-    interpreter::Interpreter::Handle handle = interpreter_for_py->put(scalar);
+    interpreter::Interpreter::Handle handle = interpreter_for_py->put(scalar, false);
     auto&& t = std::make_shared<Tensor>(handle);
-    auto&& res = broadcast_to(t.get(), shape);
+    auto res = broadcast_to(t.get(), shape);
     return res;
 }
 

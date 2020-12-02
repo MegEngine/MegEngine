@@ -80,6 +80,22 @@ public:
 
 MGB_TYPEINFO_OBJ_IMPL(ForwardInputToOutput::MutableSrc);
 
+void ForwardInputToOutput::mixin_init_rt_force_dynamic_mem_alloc_imply_chain(
+        OperatorNodeBase &opr) {
+    VarNode *valid_out = nullptr;
+    for (auto i: opr.output()) {
+        if (!i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
+            mgb_assert(!valid_out);
+            valid_out = i;
+        }
+    }
+    mgb_assert(valid_out);
+
+    // There may be many inputs such as in opr::VirtualDep, but we only forward first one
+    opr.input(0)->add_rt_force_dynamic_mem_alloc_imply_chain(valid_out);
+    valid_out->add_rt_force_dynamic_mem_alloc_imply_chain(opr.input(0));
+}
+
 void ForwardInputToOutput::mixin_mem_plan_fwd_in2out_readonly(
         OperatorNodeBase& opr) {
     m_mem_fwd_success = opr.output(0)->set_fwd_in2out_readonly(

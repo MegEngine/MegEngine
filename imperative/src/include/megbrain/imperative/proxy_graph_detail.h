@@ -24,6 +24,10 @@ apply_on_physical_tensor(const OpDef& def,
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
 
+void exec(const OpDef& def,
+        const SmallVector<TensorPtr>& inputs,
+        const SmallVector<TensorPtr>& outputs);
+
 BackwardGraphResult
 make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,

@@ -325,7 +325,6 @@ def test_raise_on_trace():
 
     @trace
     def add_abc(a, b, c):
-        print("Hello")
         ps = a + b
         result = ps + c
         if step_count == bad_step:

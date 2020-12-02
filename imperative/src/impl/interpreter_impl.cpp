@@ -28,13 +28,13 @@ Interpreter& Interpreter::inst() {
     return inst_;
 }
 
-void* ChannelImpl::put(const HostTensorND& value) {
+void* ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     auto info = alloc();
     info->desc.layout = value.layout();
     info->desc.comp_node = value.comp_node();
     info->desc.value = value.proxy_to_default_cpu();
     m_valid_handle.insert(info);
-    m_worker.add_task(Put{info, value});
+    m_worker.add_task(Put{info, value, no_cache});
     return info;
 }
 
@@ -395,7 +395,8 @@ void ChannelImpl::process_one_task(Command& cmd) {
         using T = std::remove_reference_t<decltype(cmd)>;
         try {
             if constexpr (std::is_same_v<T, Put>) {
-                produce_tensor(cmd.dest, Tensor::make(cmd.value));
+                auto value = cmd.no_cache ? std::make_shared<Tensor>(cmd.value) : Tensor::make(cmd.value);
+                produce_tensor(cmd.dest, std::move(value));
             } else if constexpr (std::is_same_v<T, ApplyOp>) {
                 SmallVector<TensorPtr> tensor_inputs;
                 tensor_inputs.reserve(cmd.inputs.size());

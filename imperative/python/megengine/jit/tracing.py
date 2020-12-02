@@ -502,6 +502,8 @@ class trace:
         # profile
         if self._profiling:
             self._profiler = GraphProfiler(graph)
+        if int(os.getenv("MEGENGINE_INPLACE_UPDATE", "0")):
+            graph.options.var_sanity_check_first_run = False
 
     def _compile(self):
         graph = self._graph = G.Graph()
@@ -1073,7 +1075,7 @@ def apply_compiled_mode(op: OpDef, *args: RawTensor):
     return active_trace._apply_op(op, args)
 
 
-def apply_const_compiled_mode(value, dtype, device, is_const):
+def apply_const_compiled_mode(value, dtype, device, is_const, no_cache):
     if skip_tracing:
         args = [
             RawTensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
@@ -1099,7 +1101,7 @@ def apply_with_tracing(op: OpDef, *args: RawTensor):
     return list(outputs)
 
 
-def apply_const_with_tracing(value, dtype, device, is_const):
+def apply_const_with_tracing(value, dtype, device, is_const, no_cache):
     if active_trace._symbolic:
         outputs = apply_const_symbolic_mode(value, dtype, device)
     else:

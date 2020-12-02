@@ -101,6 +101,10 @@ public:
         return m_layout;
     }
 
+    size_t offset() const {
+        return m_offset;
+    }
+
     DeviceTensorND dev_tensor();
 
     static TensorPtr make_scalar(DTypeScalar value, CompNode cn);

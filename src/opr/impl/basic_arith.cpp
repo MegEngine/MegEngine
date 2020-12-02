@@ -886,12 +886,9 @@ AddUpdate::AddUpdate(VarNode *dest, VarNode *delta,
     m_param{param}
 {
     auto dest_opr = dest->owner_opr();
-    mgb_throw_if(!(dest_opr->same_type<SharedDeviceTensor>() ||
-            dest_opr->same_type<VolatileSharedDeviceTensor>()),
+    mgb_throw_if(dest_opr->same_type<ImmutableTensor>(),
             GraphError,
-            "AddUpdate must be applied on SharedDeviceTensor; "
-            "got %s{%s} actually",
-            dest_opr->cname(), dest_opr->dyn_typeinfo()->name);
+            "AddUpdate cannot be applied on ImmutableTensor; ");
     add_input({dest, delta});
 
     /*

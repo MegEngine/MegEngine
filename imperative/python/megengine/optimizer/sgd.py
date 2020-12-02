@@ -6,8 +6,10 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
 from typing import Iterable, Union
 
+from ..functional.inplace import _inplace_add_
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
@@ -54,9 +56,15 @@ class SGD(Optimizer):
 
         # since `conver_inputs` is disabled for param updates,
         # scalar should be explicitly tansforred to tensor
+
         _lr = tensor([lr])
         _weight_decay = tensor([weight_decay])
         _momentum = tensor([momentum])
+
+        inplace_mode = int(os.getenv("MEGENGINE_INPLACE_UPDATE", "0"))
+        if inplace_mode:
+            _neg_lr = tensor([-lr])
+            c1 = tensor([1.0])
 
         for param in param_group["params"]:
             if param.grad is None:
@@ -66,10 +74,21 @@ class SGD(Optimizer):
             if weight_decay != 0.0:
                 grad += param * _weight_decay
 
+            if inplace_mode:
+                if momentum:
+                    v = self._state[param]["momentum_buffer"]
+                    _inplace_add_(v, grad, alpha=_momentum, beta=c1)
+                    _inplace_add_(param, v, alpha=c1, beta=_neg_lr)
+                else:
+                    _inplace_add_(param, grad, alpha=c1, beta=_neg_lr)
+                continue
+
             if momentum:
                 v = self._state[param]["momentum_buffer"]
-                v = _momentum * v + grad
+                # v = v * _momentum + grad
+                v *= _momentum
+                v += grad
+
                 param -= _lr * v
-                self._state[param]["momentum_buffer"]._reset(v)
             else:
                 param -= _lr * grad

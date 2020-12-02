@@ -67,6 +67,7 @@ class ForwardInputToOutput: public cg::OperatorNodeMixinBase {
 
         virtual void mixin_scn_do_execute(OperatorNodeBase &opr);
 
+        void mixin_init_rt_force_dynamic_mem_alloc_imply_chain(OperatorNodeBase &opr);
         void mixin_mem_plan_fwd_in2out_readonly(OperatorNodeBase &opr);
         void mixin_init_output_static_infer_desc(OperatorNodeBase &opr);
         virtual cg::static_infer::ValueInferDesc mixin_get_static_infer_desc(OperatorNodeBase &opr);
@@ -173,8 +174,7 @@ MGB_DEFINE_CLS_WITH_SUPER(ForwardInputToOutput,
     protected:
         using Super::Super;
         void init_rt_force_dynamic_mem_alloc_imply_chain() override {
-            mixin::init_rt_force_dynamic_mem_alloc_imply_chain_for_dyn_pass_i2o(
-                    *this);
+            this->mixin_init_rt_force_dynamic_mem_alloc_imply_chain(*this);
         }
 
         void mem_plan_fwd_in2out_readonly() override {

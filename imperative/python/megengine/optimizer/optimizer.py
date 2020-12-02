@@ -96,6 +96,7 @@ class Optimizer(metaclass=ABCMeta):
                     "optimizer can only optimize Parameters, but one of the params is "
                     + str(type(param))
                 )
+            param._reset(Tensor(param.numpy(), no_cache=True))
 
         for name, default in self._defaults.items():
             if default is required and name not in param_group:
@@ -121,7 +122,7 @@ class Optimizer(metaclass=ABCMeta):
             initializer = np.zeros(param.shape, dtype=np.float32)
         state_dict = self._state.setdefault(param, {})
         assert state_name not in state_dict
-        state = Tensor(initializer)
+        state = Tensor(initializer, no_cache=True)
         state_dict[state_name] = state
 
     @abstractmethod

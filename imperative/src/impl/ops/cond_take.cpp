@@ -20,44 +20,6 @@ namespace mgb::imperative {
 
 namespace {
 
-class MegDNNDynOutMallocImpl final: public megdnn::DynOutMallocPolicy {
-    using Output = std::array<TensorPtr, 2>;
-
-    CompNode m_cn;
-    Output m_out;
-
-    public:
-        MegDNNDynOutMallocImpl(CompNode cn): m_cn{cn} {}
-
-        megdnn::TensorND alloc_output(
-                size_t id, DType dtype, const TensorShape &shape,
-                void *user_data) override;
-
-        void* alloc_workspace(size_t sz, void *user_data) override;
-        void free_workspace(void *ptr, void *user_data) override;
-        TensorPtr at(size_t id);
-};
-
-megdnn::TensorND MegDNNDynOutMallocImpl::alloc_output(
-        size_t id, DType dtype, const TensorShape &shape,
-        void * /*user_data*/) {
-    TensorLayout m_layout(shape, dtype);
-    m_out[id] = Tensor::make(m_layout, m_cn);
-    return m_out[id]->dev_tensor().as_megdnn();
-}
-
-void* MegDNNDynOutMallocImpl::alloc_workspace(size_t sz, void * /*user_data*/) {
-    return m_cn.alloc_device(sz);
-}
-
-void MegDNNDynOutMallocImpl::free_workspace(void *ptr, void * /*user_data*/) {
-    m_cn.free_device(ptr);
-}
-
-TensorPtr MegDNNDynOutMallocImpl::at(size_t id) {
-    return m_out[id];
-}
-
 cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
@@ -94,7 +56,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
                            dtype::Byte());
 
     auto dnn_workspace = dnn_op.create_workspace(m_layout);
-    MegDNNDynOutMallocImpl policy{inp->comp_node()};
+    MegDNNDynOutMallocImpl<2> policy{inp->comp_node()};
 
     dnn_op.op->exec(inp->dev_tensor().as_megdnn(),
                   msk->dev_tensor().as_megdnn(),

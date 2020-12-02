@@ -239,4 +239,6 @@ def ElemwiseMultiType: MgbHashableOp<"ElemwiseMultiType", [ElemwiseMultiTypePara
   );
 }
 
+def InplaceAdd: MgbHashableOp<"InplaceAdd", [EmptyParam]>;
+
 #endif // MGB_OPS

@@ -231,13 +231,14 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             }
         } else {
             py::detail::loader_life_support life_sup; // FIXME!!!required to cast DType
+            if (nargs != 4 && nargs != 5) {
+                throw py::type_error("expect 4 or 5 arguments");
+            }
             auto data = tup[0].cast<py::array>();
             DType dtype = tup[1].cast<DType>();
             CompNode cn = tup[2].cast<CompNode>();
             bool is_const = tup[3].cast<bool>();
-            if (nargs != 4) {
-                throw py::type_error("expect 3 arguments");
-            }
+            bool no_cache = nargs == 5 ? tup[4].cast<bool>() : false;
 
             // const op
             if (is_const && is_tracing) {
@@ -259,10 +260,10 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             interpreter::Interpreter::Handle handle;
             constexpr auto size_threshhold = TensorShape::MAX_NDIM;
             if (data.size() > size_threshhold) {
-                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype));
+                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype), no_cache);
             } else {
                 HostTensorND ret(cn);
-                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::copy_into(&ret), dtype));
+                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::copy_into(&ret), dtype), no_cache);
             }
 
             m_tensor = std::make_shared<Tensor>(handle);

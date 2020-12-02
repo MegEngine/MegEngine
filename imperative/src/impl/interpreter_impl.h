@@ -45,7 +45,7 @@ struct TensorInfo {
     HostTensorND h_value;
     size_t locked = 0;
     size_t recompute_times = 0;
-    
+
     struct ComputePath {
         std::shared_ptr<OpDef> op;
         SmallVector<TensorInfoPtr> inputs;
@@ -57,6 +57,7 @@ struct TensorInfo {
 struct Put {
     TensorInfo* dest;
     HostTensorND value;
+    bool no_cache = false;
 };
 struct ApplyOp {
     std::shared_ptr<OpDef> op;
@@ -92,7 +93,7 @@ struct ChannelImpl : Interpreter::Channel {
     ChannelImpl() : m_worker(this) {}
     ~ChannelImpl() override;
 
-    Handle put(const HostTensorND& value) override;
+    Handle put(const HostTensorND& value, bool no_cache) override;
     Handle put(const DeviceTensorND& value) override;
 
     void del(Handle) override;

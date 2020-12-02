@@ -6,6 +6,9 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import itertools
+import os
+
 import numpy as np
 
 import megengine
@@ -58,13 +61,16 @@ def test_sgd_momentum():
 
     np.testing.assert_almost_equal(loss.numpy(), 2.34 * (1.23 - 2.34), 5)
     np.testing.assert_almost_equal(
-        optim._state[net.a]["momentum_buffer"].numpy(), 0.9 * 2.34 + 2.34
+        optim._state[net.a]["momentum_buffer"].numpy(), 0.9 * 2.34 + 2.34, 5
     )
 
 
 def test_sgd_momentum_trace():
-
-    for symbolic in (True, False):
+    origin_inplace = os.getenv("MEGENGINE_INPLACE_UPDATE")
+    symbolic = (True, False)
+    inplace = (0, 1)
+    for symbolic, inplace in itertools.product(symbolic, inplace):
+        os.environ["MEGENGINE_INPLACE_UPDATE"] = str(inplace)
 
         @trace(symbolic=symbolic)
         def train_func(data, *, model=None, optim=None, gm=None):
@@ -101,5 +107,9 @@ def test_sgd_momentum_trace():
         train_func(data, model=net, optim=optim, gm=gm)
         np.testing.assert_almost_equal(loss.numpy(), 2.34 * (1.23 - 2.34), 5)
         np.testing.assert_almost_equal(
-            optim._state[net.a]["momentum_buffer"].numpy(), 0.9 * 2.34 + 2.34
+            optim._state[net.a]["momentum_buffer"].numpy(), 0.9 * 2.34 + 2.34, 5
         )
+    if origin_inplace:
+        os.environ["MEGENGINE_INPLACE_UPDATE"] = origin_inplace
+    else:
+        del os.environ["MEGENGINE_INPLACE_UPDATE"]
