@@ -65,7 +65,7 @@ TEST(TestOprAtlas, Basic) {
 }
 
 TEST(TestOprAtlas, DynamicBatch) {
-    for (size_t batch : {1, 6}) {
+    for (size_t batch : {1, 6, 20}) {
         HostTensorGenerator<> gen;
         const auto& graph = ComputingGraph::make();
         const auto& host_x = gen({batch, 3, 16, 16});

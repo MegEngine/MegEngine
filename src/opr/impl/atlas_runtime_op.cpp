@@ -278,6 +278,9 @@ void AtlasRuntimeOpr::scn_do_execute() {
         for (size_t i = 0; i < output().size(); i++) {
             auto output_size = aclmdlGetOutputSizeByIndex(m_model_desc, i);
             auto ovar = output(i);
+            output_size = std::max<size_t>(
+                    output_size,
+                    ovar->dtype().size(ovar->shape().total_nr_elems()));
             ovar->shape_alloc(ovar->shape(), output_size);
         }
     }
