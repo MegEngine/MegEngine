@@ -365,6 +365,9 @@ WARN(IndexingIncrMultiAxisVec);
 
 template <class Opr>
 void IndexingMultiAxisVecBase<Opr>::scn_do_execute() {
+    if (output(0)->layout().is_empty()) {
+        return;
+    }
     auto inp = input(0)->dev_tensor();
     inp = inp.sub(fancy_indexing_make_sub_spec(inp.layout()));
     auto &&index_desc = make_megdnn_index_desc(

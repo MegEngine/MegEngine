@@ -644,12 +644,7 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
     v0, index0 = cond_take(mask, x)
     v1, index1 = cond_take(~mask, y)
 
-    if v0.shape == (0,):
-        out = v1
-    elif v1.shape == (0,):
-        out = v0
-    else:
-        out = concat([v0, v1])
+    out = concat([v0, v1])
 
     out[index0] = v0
     out[index1] = v1

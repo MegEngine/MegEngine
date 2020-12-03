@@ -81,6 +81,11 @@ void ReadonlyFwdHelper::mixin_rofwd_init_mem_plan(OperatorNodeBase &opr) {
 void ReadonlyFwdHelper::mixin_rofwd_execute(OperatorNodeBase &opr) {
     mgb_assert(m_rofwd_subspec.layout().ndim, "rofwd uninitialized");
 
+    if (m_rofwd_subspec.layout().is_empty()) {
+        mgb_assert(opr.output(0)->shape().is_empty(), "output layout mismatch");
+        return;
+    }
+
     auto &&out = opr.output(0)->dev_tensor(),
          &&inp = opr.input(0)->dev_tensor();
     if (m_mem_fwd_success) {

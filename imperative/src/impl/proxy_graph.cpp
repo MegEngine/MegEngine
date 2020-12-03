@@ -85,7 +85,8 @@ public:
         var->m_comp_node = dev_tensor.comp_node();
         var->m_shape = dev_tensor.shape();
         var->m_dev_tensor = dev_tensor;
-        var->reset_dev_tensor_from_tensor(dev_tensor);
+        var->m_mem_plan.reset_from_owner_var().chunk()
+                .mem_alloc_status.set_from_owner_var();
         return var;
     }
 
@@ -560,7 +561,11 @@ void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs) {
             mgb_assert(var->comp_node() == tensor->comp_node() &&
                         var->shape().eq_shape(layout) &&
                         var->dtype() == layout.dtype);
-            var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
+            if (!tensor->layout().is_empty()) {
+                var->assign_dev_tensor_from_tensor(tensor->dev_tensor());
+            } else {
+                var->m_dev_tensor.storage({var->comp_node()});
+            }
             ++ j;
         }
         chk.mem_alloc_status.set_from_owner_var();
