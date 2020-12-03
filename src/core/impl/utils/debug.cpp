@@ -107,36 +107,6 @@ struct MemmapEntry {
             : low(low_), high(high_), file(file_) {}
 };
 
-#if !defined (WIN32) && ! defined (__APPLE__)
-void get_mem_map(
-        int pid,
-        thin_function<void(uintptr_t, uintptr_t, const char*, const char*)>
-                callback) {
-    char fpath[64];
-    if (pid)
-        sprintf(fpath, "/proc/%d/maps", pid);
-    else
-        strcpy(fpath, "/proc/self/maps");
-    FILE* fin = fopen(fpath, "r");
-    mgb_assert(fin, "failed to open %s", fpath);
-    char linebuf[512];
-    while (fgets(linebuf, sizeof(linebuf), fin)) {
-        uintptr_t begin, end;
-        char perm[10], offset[20], dev[10], inode[20], path_mem[256], *path;
-        int nr = sscanf(linebuf, "%zx-%zx %s %s %s %s %s", &begin, &end, perm,
-                        offset, dev, inode, path_mem);
-        if (nr == 6)
-            path = nullptr;
-        else {
-            mgb_assert(nr == 7, "failed to parse map line: %s", linebuf);
-            path = path_mem;
-        }
-        callback(begin, end, perm, path);
-    }
-    fclose(fin);
-}
-#endif
-
 #ifndef WIN32
 // FIXME: imp SigHandlerInit backtrace for windows
 class SigHandlerInit {
@@ -246,7 +216,22 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
     recursive_call = true;
     BacktraceResult result;
 
-#if defined(WIN32)
+#if defined(__linux__) || defined(__APPLE__)
+    int i = 0;
+    int depth = ::backtrace(stack_mem, MAX_DEPTH);
+    char** strs = backtrace_symbols(stack_mem, depth);
+    if (depth > nr_exclude)
+        i = nr_exclude;
+    for (; i < depth; ++i) {
+        auto frame = std::string{strs[i]};
+        result.stack.emplace_back(frame);
+    }
+    free(strs);
+
+    recursive_call = false;
+    return result;
+#elif defined(WIN32)
+    constexpr size_t MAX_NAME_LEN = 256;
     WORD i = 0;
     SYMBOL_INFO* pSymbol;
     HANDLE p = GetCurrentProcess();
@@ -255,7 +240,8 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
         recursive_call = false;
         return {};
     }
-    pSymbol = (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+    pSymbol = (SYMBOL_INFO*)calloc(
+            sizeof(SYMBOL_INFO) + MAX_NAME_LEN * sizeof(char), 1);
     WORD depth = CaptureStackBackTrace(0, MAX_DEPTH, stack_mem, NULL);
     if (depth > nr_exclude)
         i = nr_exclude;
@@ -263,7 +249,7 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
         std::ostringstream frame_info;
         DWORD64 address = (DWORD64)(stack_mem[i]);
         pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
-        pSymbol->MaxNameLen = 128;
+        pSymbol->MaxNameLen = MAX_NAME_LEN;
 
         DWORD displacementLine = 0;
         IMAGEHLP_LINE64 line;
@@ -278,102 +264,26 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
                        << "null" << std::endl;
         }
         auto frame = std::string{frame_info.str().c_str()};
-        result.stack.emplace_back(frame, i);
+        result.stack.emplace_back(frame);
     }
     free(pSymbol);
 
     recursive_call = false;
     return result;
-#elif defined(__APPLE__)
-    int i = 0;
-    int depth = ::backtrace(stack_mem, MAX_DEPTH);
-    char** strs = backtrace_symbols(stack_mem, depth);
-    if (depth > nr_exclude)
-        i = nr_exclude;
-    for (; i < depth; ++i) {
-        auto frame = std::string{strs[i]};
-        result.stack.emplace_back(frame, i);
-    }
-    free(strs);
-
-    recursive_call = false;
-    return result;
 #else
-    int depth = ::backtrace(stack_mem, MAX_DEPTH);
-    auto stack = stack_mem;
-    if (depth > nr_exclude) {
-        depth -= nr_exclude;
-        stack += nr_exclude;
-    }
-
-    static std::vector<MemmapEntry> memmap;
-    if (memmap.empty()) {
-        static std::mutex mtx;
-        MGB_LOCK_GUARD(mtx);
-        if (memmap.empty()) {
-            get_mem_map(0, [&](uintptr_t lo, uintptr_t hi, const char* /*perm*/,
-                               const char* fname) {
-                if (fname && strlen(fname))
-                    memmap.emplace_back(lo, hi, fname);
-            });
-        }
-    }
-
-    for (int i = 0; i < depth; ++i) {
-        const char* fname = nullptr;
-        auto addr = reinterpret_cast<uintptr_t>(stack[i]);
-        for (auto&& j : memmap)
-            if (j.low <= addr && j.high >= addr) {
-                // theoretically we should examine file content to find whether
-                // it is a shared library; but who would name an executable with
-                // .so ?
-                if (j.file.find(".so") != std::string::npos)
-                    addr -= j.low;
-
-                fname = j.file.c_str();
-                break;
-            }
-        auto frame = std::string{fname};
-        result.stack.emplace_back(frame, addr);
-    }
-
     recursive_call = false;
-    return result;
+    return {};
 #endif
 }
 
 void BacktraceResult::fmt_to_str(std::string& dst) {
-#if defined(WIN32) || defined(__APPLE__)
-    dst.append("bt:\n");
-    for (auto&& i : stack) {
-        dst.append(i.first);
-        dst.append("\n");
-    }
-#else
-    char addr[128];
-    bool first = true;
-    const char* prev_fname = nullptr;
-    dst.append("bt:");
-    for (auto&& i : stack) {
-        sprintf(addr, "%zx", i.second);
-        if (i.first.c_str() != prev_fname || first) {
-            if (!first)
-                dst.append("}");
-            if (i.first.c_str())
-                dst.append(i.first);
-            else
-                dst.append("unknown");
-            prev_fname = i.first.c_str();
-            first = false;
-            dst.append("{");
-            dst.append(addr);
-        } else {
-            dst.append(",");
-            dst.append(addr);
+    if (stack.size() > 0) {
+        dst.append("\nbacktrace:\n");
+        for (auto&& i : stack) {
+            dst.append(i);
+            dst.append("\n");
         }
     }
-    dst.append("}");
-#endif
 }
 
 void debug::set_fork_cuda_warning_flag(int flag) {
