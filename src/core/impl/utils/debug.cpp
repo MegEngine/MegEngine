@@ -44,7 +44,11 @@ using namespace debug;
 #include <sys/types.h>
 
 #ifdef __ANDROID__
+#include <dlfcn.h>
 #include <unwind.h>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 #else
 #ifndef WIN32
 #include <execinfo.h>
@@ -84,7 +88,7 @@ static _Unwind_Reason_Code android_unwind_callback(
     return _URC_NO_REASON;
 }
 
-size_t backtrace(void** buffer, size_t max) {
+size_t android_backtrace(void** buffer, size_t max) {
     AndroidBacktraceState state = {buffer, buffer + max};
     _Unwind_Backtrace(android_unwind_callback, &state);
     return state.current - buffer;
@@ -216,7 +220,7 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
     recursive_call = true;
     BacktraceResult result;
 
-#if defined(__linux__) || defined(__APPLE__)
+#if (defined(__linux__) || defined(__APPLE__)) && !defined(__ANDROID__)
     int i = 0;
     int depth = ::backtrace(stack_mem, MAX_DEPTH);
     char** strs = backtrace_symbols(stack_mem, depth);
@@ -268,6 +272,28 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
     }
     free(pSymbol);
 
+    recursive_call = false;
+    return result;
+#elif defined(__ANDROID__)
+    size_t idx = 0;
+    size_t depth = android_backtrace(stack_mem, MAX_DEPTH);
+    if (depth > static_cast<size_t>(nr_exclude))
+        idx = nr_exclude;
+    for (; idx < depth; ++idx) {
+        std::ostringstream frame_info;
+        const void* addr = stack_mem[idx];
+        const char* symbol = "";
+
+        Dl_info info;
+        if (dladdr(addr, &info) && info.dli_sname) {
+            symbol = info.dli_sname;
+        }
+
+        frame_info << "  #" << std::setw(2) << idx << ": " << addr << "  "
+                   << symbol;
+        auto frame = std::string{frame_info.str().c_str()};
+        result.stack.emplace_back(frame);
+    }
     recursive_call = false;
     return result;
 #else
