@@ -143,9 +143,14 @@ private:
     size_t m_enable_evict = 0;
 
     struct WorkQueue : AsyncQueueSC<Command, WorkQueue> {
-        WorkQueue(ChannelImpl* owner) : m_owner(owner) {}
+        WorkQueue(ChannelImpl* owner) : m_owner(owner) {
+            sys::set_thread_name("interpreter");
+        }
         void process_one_task(Command& cmd) {
             m_owner->process_one_task(cmd);
+        }
+        void on_async_queue_worker_thread_start() override {
+               sys::set_thread_name("worker");
         }
     private:
         ChannelImpl* m_owner;

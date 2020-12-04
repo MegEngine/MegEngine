@@ -44,6 +44,9 @@ class AsyncReleaser : public CompNodeDepedentObject {
             std::this_thread::sleep_for(1us);
             add_task(std::move(param));
         }
+        void on_async_queue_worker_thread_start() override {
+            sys::set_thread_name("releaser");
+        }
     };
     Waiter m_waiter{this};
 

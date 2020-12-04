@@ -69,6 +69,10 @@ class PyTaskDipatcher {
             pybind11::gil_scoped_acquire _;
             f();
         }
+
+        void on_async_queue_worker_thread_start() override {
+            mgb::sys::set_thread_name("py_task_worker");
+        }
     };
     Queue queue;
     bool finalized = false;
