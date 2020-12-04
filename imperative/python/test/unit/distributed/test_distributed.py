@@ -87,7 +87,7 @@ def test_init_process_group():
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 3, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_new_group():
     world_size = 3
