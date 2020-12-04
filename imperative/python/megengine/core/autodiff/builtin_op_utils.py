@@ -48,7 +48,7 @@ def _(op: OpDef, inputs, outputs, input_requires_grad):
         isinstance(op, Elemwise) and op.mode == Elemwise.Mode.ADD
     ):
         grad_fn = elemwise_add_grad_fn
-    elif isinstance(op, Reduce) and op.mode.name == "SUM":
+    elif isinstance(op, Reduce) and op.mode == Reduce.Mode.SUM:
         grad_fn = reduce_sum_grad_fn
     else:
         grad_fn = default_grad_fn

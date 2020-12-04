@@ -13,6 +13,7 @@
 
 #include "megbrain/graph.h"
 #include "megbrain/utils/persistent_cache.h"
+#include "megbrain/imperative/op_def.h"
 
 #include <Python.h>
 #include <string>
@@ -376,6 +377,32 @@ namespace detail {
         }
     };
 
+    template<> struct type_caster<mgb::imperative::OpDef> {
+    protected:
+        std::shared_ptr<mgb::imperative::OpDef> value;
+    public:
+        static constexpr auto name = _("OpDef");
+
+        operator mgb::imperative::OpDef&() { return *value; }
+        operator const mgb::imperative::OpDef&() { return *value; }
+        operator std::shared_ptr<mgb::imperative::OpDef>&() { return value; }
+        operator std::shared_ptr<mgb::imperative::OpDef>&&() && { return std::move(value); }
+
+        template <typename T> using cast_op_type = T;
+
+        bool load(handle src, bool convert);
+
+        static handle cast(const mgb::imperative::OpDef& op, return_value_policy /* policy */, handle /* parent */);
+
+        static handle cast(std::shared_ptr<mgb::imperative::OpDef> op, return_value_policy policy, handle parent) {
+            return cast(*op, policy, parent);
+        }
+    };
+
+    template <> struct type_caster<std::shared_ptr<mgb::imperative::OpDef>> :
+            public type_caster<mgb::imperative::OpDef> {
+        template <typename T> using cast_op_type = pybind11::detail::movable_cast_op_type<T>;
+    };
 } // detail
 } // PYBIND11_NAMESPACE
 

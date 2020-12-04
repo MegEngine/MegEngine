@@ -76,7 +76,7 @@ cg::OperatorNodeBase* apply_on_var_node(
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def,
         const SmallVector<TensorPtr>& inputs) {
-    auto opr = def.cast_final_safe<CondTake>();
+    auto&& opr = def.cast_final_safe<CondTake>();
     mgb_assert(opr.same_type<CondTake>());
     mgb_assert(inputs.size() == 2, "CondTake take 2 inputs, got %lu",
                inputs.size());

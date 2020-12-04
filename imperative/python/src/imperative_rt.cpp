@@ -106,13 +106,4 @@ void init_imperative_rt(py::module m) {
          });
 
     m.def("make_backward_graph", &make_backward_graph);
-
-    py::class_<OpDef, std::shared_ptr<OpDef>>(m, "OpDef")
-        .def("ctype", [](const OpDef& opdef) {
-                return opdef.dyn_typeinfo()->name;
-            })
-        .def("__eq__", [](const OpDef& lhs, const OpDef& rhs) {
-                return lhs.is_same(rhs);
-            })
-        .def("__hash__", &OpDef::hash);
 }

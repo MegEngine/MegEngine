@@ -447,8 +447,8 @@ def _(op: OpDef, *args: VarNode):
 def _(op: BackwardGraph, *args: VarNode):
     assert args
     graph = args[0].graph
-    return op.interpret(
-        lambda op, args: apply(op, *args), graph._make_const_for_backward, args
+    return BackwardGraph.interpret(
+        op, lambda op, args: apply(op, *args), graph._make_const_for_backward, args
     )
 
 

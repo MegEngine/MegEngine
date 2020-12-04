@@ -27,6 +27,7 @@ struct BackwardGraphResult {
 };
 
 class OpDef : public Hashable,
+              public NonCopyableObj,
               public std::enable_shared_from_this<OpDef> {
     mutable const OpTrait* m_trait = nullptr;
 public:
@@ -64,7 +65,7 @@ template<typename T>
 class OpDefImplBase : public OpDef {
 public:
     template<typename ...Args>
-    static std::shared_ptr<OpDef> make(Args&& ...args) {
+    static std::shared_ptr<T> make(Args&& ...args) {
         return std::make_shared<T>(std::forward<Args>(args)...);
     }
 };

@@ -63,6 +63,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         from .utils import *
         from .imperative import *
         from .graph import *
+        from .ops import OpDef
         )",
         py::getattr(m, "__dict__"));
 

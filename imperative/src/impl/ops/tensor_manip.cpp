@@ -111,7 +111,7 @@ cg::OperatorNodeBase* param_pack_split_apply_on_var_node(
 SmallVector<TensorPtr> param_pack_split_apply_on_physical_tensor(
         const OpDef& def,
         const SmallVector<TensorPtr>& inputs) {
-    auto param = def.cast_final_safe<ParamPackSplit>();
+    auto&& param = def.cast_final_safe<ParamPackSplit>();
     mgb_assert(inputs.size() == 1, "ParamPackSplit take 1 input, got %lu", inputs.size());
     auto&& inp = inputs[0];
     auto&& shp = inp->layout();
