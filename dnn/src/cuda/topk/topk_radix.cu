@@ -468,17 +468,9 @@ static size_t get_scan_workspace(uint32_t size) {
 }  // namespace select
 }  // namespace cuda_topk_impl
 
-uint32_t topk::find_kth_radix_workspace(uint32_t batch, uint32_t length) {
+uint32_t topk::find_kth_radix_workspace(uint32_t batch, uint32_t length,
+                                        uint32_t grid_dim_y_limit) {
     using namespace cuda_topk_impl::kth;
-    int device_id;
-    if (cudaGetDevice(&device_id) != cudaSuccess) {
-        megdnn_trap();
-    }
-    cudaDeviceProp prop;
-    if (cudaGetDeviceProperties(&prop, device_id) != cudaSuccess) {
-        megdnn_trap();
-    }
-    uint32_t grid_dim_y_limit = prop.maxGridSize[1];
     uint32_t limit = batch > grid_dim_y_limit ? grid_dim_y_limit : batch;
     return (limit * get_grid_dim_x(length) * NR_BUCKET + limit * 2) *
            sizeof(uint32_t);
@@ -488,6 +480,7 @@ template <typename ctype>
 cudaError_t topk::find_kth_radix(const ctype* input, ctype* output,
                                  void* workspace, uint32_t batch,
                                  uint32_t length, int32_t lda, int32_t k,
+                                 uint32_t grid_dim_y_limit,
                                  cudaStream_t stream) {
     using namespace cuda_topk_impl::kth;
     if (!k) {
@@ -501,16 +494,6 @@ cudaError_t topk::find_kth_radix(const ctype* input, ctype* output,
         // assert
         megdnn_trap();
     }
-
-    int device_id;
-    if (cudaGetDevice(&device_id) != cudaSuccess) {
-        megdnn_trap();
-    }
-    cudaDeviceProp prop;
-    if (cudaGetDeviceProperties(&prop, device_id) != cudaSuccess) {
-        megdnn_trap();
-    }
-    uint32_t grid_dim_y_limit = prop.maxGridSize[1];
 
     uint32_t batch_idx = 0;
     uint32_t grid_dim_x = get_grid_dim_x(length);
@@ -567,19 +550,10 @@ template <typename ctype>
 cudaError_t topk::topk_select(const ctype* input, const ctype* thresh,
                               ctype* output_value, int32_t* output_idx,
                               void* workspace, uint32_t batch, uint32_t length,
-                              int32_t lda, int32_t k, cudaStream_t stream) {
+                              int32_t lda, int32_t k,
+                              uint32_t batch_upper_limit, cudaStream_t stream) {
     using namespace cuda_topk_impl;
     using namespace cuda_topk_impl::select;
-
-    int device_id;
-    if (cudaGetDevice(&device_id) != cudaSuccess) {
-        megdnn_trap();
-    }
-    cudaDeviceProp prop;
-    if (cudaGetDeviceProperties(&prop, device_id) != cudaSuccess) {
-        megdnn_trap();
-    }
-    uint32_t batch_upper_limit = prop.maxGridSize[1];
 
     uint32_t length_split = DIVUP(length, REDUCE_SIZE);
 
@@ -688,10 +662,10 @@ namespace topk {
 #define INST(t)                                                             \
     template cudaError_t find_kth_radix<t>(const t*, t*, void*, uint32_t,   \
                                            uint32_t, int32_t, int32_t,      \
-                                           cudaStream_t);                   \
+                                           uint32_t, cudaStream_t);         \
     template cudaError_t topk_select<t>(const t*, const t*, t*, int32_t*,   \
                                         void*, uint32_t, uint32_t, int32_t, \
-                                        int32_t, cudaStream_t)
+                                        int32_t, uint32_t, cudaStream_t)
 INST(float);
 INST(int32_t);
 #undef INST

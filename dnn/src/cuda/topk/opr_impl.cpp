@@ -22,20 +22,25 @@ template <typename ctype>
 void TopKImpl::dispatch_with_ctype(int k, size_t m, size_t n, ptrdiff_t lda,
                                    const ctype* data, ctype* values,
                                    int* indices, void* workspace) {
-    auto stream = concrete_handle(handle())->stream();
+    auto _handle = concrete_handle(handle());
+    auto stream = _handle->stream();
+    size_t grid_dim_y_limit = _handle->device_prop().maxGridSize[1];
     switch (param().mode) {
         case Param::Mode::KTH_ONLY:
             cuda_check(topk::find_kth_radix<ctype>(data, values, workspace, m,
-                                                   n, lda, k, stream));
+                                                   n, lda, k, grid_dim_y_limit,
+                                                   stream));
             return;
         case Param::Mode::VALUE_IDX_NOSORT: {
             WorkspaceBundle wk_bundle{workspace, {m * sizeof(ctype), 1}};
             auto thresh = static_cast<ctype*>(wk_bundle.get(0));
             auto real_wk = wk_bundle.get(1);
             cuda_check(topk::find_kth_radix<ctype>(data, thresh, real_wk, m, n,
-                                                   lda, k, stream));
+                                                   lda, k, grid_dim_y_limit,
+                                                   stream));
             cuda_check(topk::topk_select<ctype>(data, thresh, values, indices,
-                                                real_wk, m, n, lda, k, stream));
+                                                real_wk, m, n, lda, k,
+                                                grid_dim_y_limit, stream));
             return;
         }
         case Param::Mode::VALUE_IDX_SORTED: {
@@ -48,10 +53,11 @@ void TopKImpl::dispatch_with_ctype(int k, size_t m, size_t n, ptrdiff_t lda,
             auto nosort_idx = static_cast<int32_t*>(wk_bundle.get(2));
             auto real_wk = wk_bundle.get(3);
             cuda_check(topk::find_kth_radix<ctype>(data, thresh, real_wk, m, n,
-                                                   lda, k, stream));
+                                                   lda, k, grid_dim_y_limit,
+                                                   stream));
             cuda_check(topk::topk_select<ctype>(data, thresh, nosort_values,
                                                 nosort_idx, real_wk, m, n, lda,
-                                                k, stream));
+                                                k, grid_dim_y_limit, stream));
             argsort::forward(nosort_values, values, indices, real_wk, m,
                              std::abs(k), k > 0, stream, nosort_idx);
             return;
@@ -89,9 +95,11 @@ size_t TopKImpl::get_workspace_in_bytes(int k, const TensorLayout& data,
     MEGDNN_MARK_USED_VAR(indices);
     size_t m = data[0], n = data[1];
     size_t kabs = std::abs(k);
+    size_t grid_dim_y_limit =
+            concrete_handle(handle())->device_prop().maxGridSize[1];
     megdnn_assert(std::max(m, n) <=
                   static_cast<size_t>(std::numeric_limits<int>::max()));
-    size_t kth = topk::find_kth_radix_workspace(m, n),
+    size_t kth = topk::find_kth_radix_workspace(m, n, grid_dim_y_limit),
            sel = topk::topk_select_workspace(m, n);
     auto ctsize = data.dtype.size();
     switch (param().mode) {
