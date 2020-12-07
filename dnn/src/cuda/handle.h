@@ -42,7 +42,7 @@ class HandleImpl: public HandleImplHelper {
         bool check_cross_dev_copy_constraint(const TensorLayout &src) override;
 
         const cudaDeviceProp& device_prop() const {
-            return m_device_prop;
+            return *m_device_prop;
         }
 
         template <typename Opr>
@@ -137,7 +137,7 @@ class HandleImpl: public HandleImplHelper {
         cusolverDnHandle_t m_cusolver_handle;
         std::once_flag m_cusolver_initialized;
 
-        cudaDeviceProp m_device_prop;
+        const cudaDeviceProp* m_device_prop;
 
         struct ConstScalars {
             union FP16 {

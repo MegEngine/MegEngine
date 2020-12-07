@@ -52,7 +52,10 @@ static inline void CUDART_CB callback_free(cudaStream_t /* stream */,
 }
 
 //! get property of currently active device
-cudaDeviceProp current_device_prop();
+const cudaDeviceProp& current_device_prop();
+
+//! get property of device specified by device
+const cudaDeviceProp* get_device_prop(int device);
 
 //! check compute capability satisfied with given sm version
 bool is_compute_capability_required(int major, int minor);

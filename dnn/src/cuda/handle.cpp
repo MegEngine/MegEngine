@@ -46,7 +46,7 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle):
         cuda_check(cudaGetDevice(&dev_id));
     }
     m_device_id = dev_id;
-    cuda_check(cudaGetDeviceProperties(&m_device_prop, dev_id));
+    m_device_prop = get_device_prop(dev_id);
     // Get stream from MegCore computing handle.
     megdnn_assert(CUDNN_VERSION == cudnnGetVersion(),
         "cudnn version mismatch: compiled with %d; detected %zu at runtime",
@@ -80,7 +80,7 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle):
     cuda_check(cudaStreamSynchronize(stream()));
 
     // check tk1
-    m_is_tegra_k1 = (strcmp(m_device_prop.name, "GK20A") == 0);
+    m_is_tegra_k1 = (strcmp(m_device_prop->name, "GK20A") == 0);
     m_cusolver_handle = nullptr;
 }
 
@@ -104,7 +104,7 @@ void HandleImpl::ConstScalars::init() {
 
 size_t HandleImpl::alignment_requirement() const {
     auto &&prop = m_device_prop;
-    return std::max(prop.textureAlignment, prop.texturePitchAlignment);
+    return std::max(prop->textureAlignment, prop->texturePitchAlignment);
 }
 
 bool HandleImpl::check_cross_dev_copy_constraint(const TensorLayout& src) {

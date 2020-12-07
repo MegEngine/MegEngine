@@ -107,19 +107,26 @@ uint32_t cuda::safe_size_in_kern(size_t size) {
     return size;
 }
 
-cudaDeviceProp cuda::current_device_prop() {
+const cudaDeviceProp& cuda::current_device_prop() {
     int dev;
     cuda_check(cudaGetDevice(&dev));
-    megdnn_assert(dev < MAX_NR_DEVICE, "device number too large: %d", dev);
-    auto&& rec = device_prop_rec[dev];
+    return *(cuda::get_device_prop(dev));
+}
+
+const cudaDeviceProp* cuda::get_device_prop(int device) {
+    megdnn_assert(device < MAX_NR_DEVICE, "device number too large: %d",
+                  device);
+    megdnn_assert(device >= 0, "device number must not be negative, got %d",
+                  device);
+    auto&& rec = device_prop_rec[device];
     if (!rec.init) {
         std::lock_guard<std::mutex> lock(rec.mtx);
         if (!rec.init) {
-            cuda_check(cudaGetDeviceProperties(&rec.prop, dev));
+            cuda_check(cudaGetDeviceProperties(&rec.prop, device));
             rec.init = true;
         }
     }
-    return rec.prop;
+    return &(rec.prop);
 }
 
 bool cuda::is_compute_capability_required(int major, int minor) {
