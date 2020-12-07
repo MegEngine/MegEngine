@@ -18,7 +18,9 @@
 namespace mgb {
 class AtlasCompNode final : public CompNodeImplHelper {
 public:
-    static constexpr Flag sm_flag = Flag::QUEUE_LIMITED | Flag::HAS_COPY_STREAM;
+    static constexpr Flag sm_flag = Flag::QUEUE_LIMITED |
+                                    Flag::HAS_COPY_STREAM |
+                                    Flag::SUPPORT_UNIFIED_ADDRESS;
 
     class CompNodeImpl;
     class EventImpl;

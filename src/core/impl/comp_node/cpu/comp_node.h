@@ -38,7 +38,8 @@ namespace mgb {
             static constexpr Flag sm_flag =
                     Flag::SUPPORT_RECORDER |
                     Flag::RECORDER_SUPPORT_DYNAMIC_ALLOC |
-                    Flag::EVENT_DTOR_UNSAFE;
+                    Flag::EVENT_DTOR_UNSAFE |
+                    Flag::SUPPORT_UNIFIED_ADDRESS;
 
             //! base class for comp nodes that can be dispatched on CPU.
             //! This is currently used by CPU, FPGA and CADENCE

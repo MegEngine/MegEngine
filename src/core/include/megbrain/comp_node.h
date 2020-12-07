@@ -436,6 +436,10 @@ class CompNode {
             //! MGB_HAVE_THREAD=0. Usually this means that execution on the
             //! CompNode is synchronous, i.e. behaves like cpu:default
             SUPPORT_NO_THREAD = 1 << 5,
+
+            //! Whether this comp node supports unified address. i.e. CPU and
+            //! CUDA supports unified address.
+            SUPPORT_UNIFIED_ADDRESS = 1 << 6,
         };
 
         bool contain_flag(Flag flag) {
