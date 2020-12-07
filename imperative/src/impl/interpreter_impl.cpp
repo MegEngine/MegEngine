@@ -132,8 +132,9 @@ SmallVector<void*> ChannelImpl::apply_op(
     } else if (m_async_level == 0) {
         sync();
         // check device error
-        for (auto&& oup : cmd.outputs) {
-            oup->ptr->comp_node().sync();
+        for (auto&& oup : outputs) {
+            auto info = reinterpret_cast<TensorInfo*>(oup);
+            info->ptr->comp_node().sync();
         }
     }
     return outputs;
