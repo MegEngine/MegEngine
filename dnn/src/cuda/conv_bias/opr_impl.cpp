@@ -6,12 +6,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-#include "src/cuda/conv_bias/opr_impl.h"
 #include "megdnn/dtype.h"
-#include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/conv_bias/algo.h"
+#include "src/cuda/conv_bias/helper.h"
+#include "src/cuda/conv_bias/opr_impl.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
@@ -124,6 +125,44 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         return nullptr;
     };
 
+    const bool is_chanwise =
+            (args.filter_meta.format == Param::Format::NCHW &&
+             args.filter_meta.group == src[1]) ||
+            (args.filter_meta.format == Param::Format::NCHW4 &&
+             args.filter_meta.group == src[1] * 4) ||
+            (args.filter_meta.format == Param::Format::NCHW32 &&
+             args.filter_meta.group == src[1] * 32);
+    // prefer special chanwise impl since as the group conv of cudnn
+    // whose version is lower than v7.5.0 is still slower than our
+    // implementation in many channel-wise cases
+    const bool slow_cudnn_chanwise_impl =
+            CUDNN_MAJOR < 7 || (CUDNN_MAJOR == 7 && CUDNN_MINOR < 5);
+    //! choose CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM default for large image
+    const int hw_size = src[2] * src[3];
+    //! choose dnn when stride != 1, may need calibrate for different cudnn
+    //! version
+    const bool prefer_dnn_chanwise =
+            slow_cudnn_chanwise_impl || args.filter_meta.stride[0] != 1 ||
+            args.filter_meta.stride[1] != 1 || hw_size < 512;
+    //! avoid bad case in cudnn, check dnn chanwise impl first
+    if (is_chanwise) {
+        if (prefer_dnn_chanwise) {
+            if (sm_algo_pack.chanwise.is_available_reproducible(
+                        args, reproducible, workspace_limit_in_bytes))
+                return &sm_algo_pack.chanwise;
+            if (sm_algo_pack.chanwise8x8x32.is_available_reproducible(
+                        args, reproducible, workspace_limit_in_bytes))
+                return &sm_algo_pack.chanwise8x8x32;
+        } else {
+            conv_args.dst_layout = &dst_layout;
+            if (is_cudnn_supported(conv_args)) {
+                if (auto algo = get_cudnn_algo(cudnn_conv_from_enum_wrapper)) {
+                    return algo;
+                }
+            }
+        }
+    }
+
     //! Prefer CUDNN CONVBIAS.
     bool cudnn_conv_bias_act_supported = false;
     for (auto&& algo : sm_algo_pack.cudnn_conv_bias_activations) {
@@ -139,22 +178,10 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
             return algo;
     }
 
-    if (args.filter_meta.group > 1) {
-#if CUDNN_MAJOR < 7 || (CUDNN_MAJOR == 7 && CUDNN_MINOR < 5)
-        // prefer special chanwise impl since as the group conv of cudnn whose
-        // version is lower than v7.5.0 is still slower than our implementation
-        // in many channel-wise cases
-        if (sm_algo_pack.chanwise.is_available_reproducible(
-                    args, reproducible, workspace_limit_in_bytes))
-            return &sm_algo_pack.chanwise;
-        if (sm_algo_pack.chanwise8x8x32.is_available_reproducible(
-                    args, reproducible, workspace_limit_in_bytes))
-            return &sm_algo_pack.chanwise8x8x32;
-#endif
-    }
-
-    if (auto algo = get_1x1_algo(args)) {
-        return algo;
+    int batch = src[0];
+    if (batch == 1 && sm_algo_pack.a1x1.is_available_reproducible(
+                              args, reproducible, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.a1x1;
     }
 
     // modify conv_args dst_layout
@@ -177,6 +204,10 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
             }
         }
         conv_args = orig_args;
+    }
+
+    if (auto algo = get_1x1_algo(args)) {
+        return algo;
     }
 
     if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {

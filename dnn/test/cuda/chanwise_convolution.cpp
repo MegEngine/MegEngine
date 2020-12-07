@@ -839,6 +839,88 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_FORWARD_FLOAT_SMALL) {
 
 }
 
+TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_FORWARD_CUDNN_DNN) {
+    CUBenchmarker<ConvBiasForward> bencher(handle_cuda());
+    size_t RUNS = 1;
+    bencher.set_display(false).set_times(RUNS);
+
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW;
+    param.sparse = ConvBias::Param::Sparse::GROUP;
+    NormalRNG rng;
+
+    auto run = [&](size_t batch, size_t c, size_t ih, size_t iw, size_t f,
+                   size_t s) {
+        param.pad_h = f / 2;
+        param.pad_w = f / 2;
+        param.stride_h = s;
+        param.stride_w = s;
+        param.compute_mode = param::ConvBias::ComputeMode::DEFAULT;
+
+        TensorShape src = {batch, c, ih, iw}, filter = {c, 1, 1, f, f},
+                    bias = {1, c, 1, 1};
+
+        TensorLayout dst_layout;
+        auto opr = handle_cuda()->create_operator<ConvBias>();
+        opr->param() = param;
+        opr->deduce_layout({src, dtype::Float32()}, {filter, dtype::Float32()},
+                           {bias, dtype::Float32()}, {}, dst_layout);
+        float computation_mops =
+                static_cast<float>(dst_layout.total_nr_elems() * f * f * 2) *
+                1e-6;
+
+        bencher.set_param(param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &rng)
+                .set_rng(1, &rng);
+        bencher.set_before_exec_callback(
+                AlgoChecker<ConvBiasForward>(".+CHANNEL_WISE.+"));
+        auto time_in_ms_dnn = bencher.execs({src, filter, bias, {}, {}}) / RUNS;
+
+        bencher.set_param(param)
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &rng)
+                .set_rng(1, &rng);
+        bencher.set_before_exec_callback(AlgoChecker<ConvBiasForward>(
+                ".+CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM.+"));
+        auto time_in_ms_cudnn =
+                bencher.execs({src, filter, bias, {}, {}}) / RUNS;
+
+        printf("stride=%zu src=%s, filter=%s, dst=%s, dnn: %.2fms %.2fGB/s "
+               "cudnn: %.2fms %.2fGB/s "
+               "speedup: "
+               "%0.2f (dnn/cudnn)\n",
+               s, src.to_string().c_str(), filter.to_string().c_str(),
+               dst_layout.to_string().c_str(), time_in_ms_dnn,
+               computation_mops / time_in_ms_dnn, time_in_ms_cudnn,
+               computation_mops / time_in_ms_cudnn,
+               time_in_ms_cudnn / time_in_ms_dnn);
+    };
+
+    // clang-format off
+    for(size_t batch:{1, 16, 32, 64, 128}){
+        run(batch, 32, 112, 112, 3, 1);
+        run(batch, 96, 112, 112, 3, 2);
+        run(batch, 96, 112, 112, 3, 1);
+        run(batch, 144, 56, 56, 3, 2);
+        run(batch, 144, 56, 56, 3, 1);
+        run(batch, 192, 28, 28, 3, 1);
+        run(batch, 384, 14, 14, 3, 1);
+        run(batch, 576, 14, 14, 3, 1);
+        run(batch, 960, 7, 7, 3, 1);
+        //! calibrate heu algo policy hw_size param
+        run(batch, 144, 24, 24, 3, 1);
+        run(batch, 144, 22, 22, 3, 1);
+        run(batch, 144, 20, 20, 3, 1);
+        run(batch, 144, 18, 18, 3, 1);
+    }
+    // clang-format on
+}
+
 TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_BACKWARD_DATA_FLOAT_SMALL) {
     CUBenchmarker<ConvolutionBackwardData> bencher(handle_cuda());
     size_t RUNS = 1;
