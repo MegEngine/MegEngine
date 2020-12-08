@@ -95,6 +95,14 @@ MatrixMulForward::Algorithm* MatrixMulForwardImpl::get_algorithm_heuristic(
     return static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo();
 }
 
+MatrixMulForward::Algorithm* MatrixMulForwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 }  // namespace naive
 }  // namespace megdnn
 

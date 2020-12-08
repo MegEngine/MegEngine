@@ -381,7 +381,7 @@ private:
 
     bool is_naive_algo(ConvBiasImpl::Algorithm* algo);
 
-    Algorithm* get_algo_from_desc(const AlgorithmDesc& desc) const;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
 
     //! get algorithm set by user or by heuristic
     Algorithm* get_algorithm(

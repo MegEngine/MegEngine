@@ -29,8 +29,8 @@ public:
     class AlgoBlas;
     class AlgoPack;
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
-    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
 private:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,

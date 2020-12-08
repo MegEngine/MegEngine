@@ -454,8 +454,8 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_with_ncb(
     return algos;
 }
 
-ConvBiasImpl::Algorithm* ConvBiasImpl::get_algo_from_desc(
-        const AlgorithmDesc& desc) const {
+ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
     if (!desc.valid()) {
         return nullptr;
     } else {
@@ -495,7 +495,7 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algo_from_desc(
 
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm(
         const NCBKernSizeParam& param, size_t workspace_size) {
-    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = get_algorithm_from_desc(execution_policy().algo.desc)) {
         return algo;
     }
     if (!m_prev_selected_algo ||

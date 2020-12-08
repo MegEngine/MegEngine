@@ -2204,6 +2204,10 @@ public:
                             const TensorLayout& p2,
                             size_t workspace_limit_in_bytes,
                             bool reproducible));
+
+    MOCK_METHOD1(get_algorithm_from_desc,
+                 Algorithm*(const AlgorithmDesc&));
+
 protected:
     const char* get_algorithm_set_name() const override {
         return m_algorithm_set_name;

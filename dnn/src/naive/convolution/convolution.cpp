@@ -285,6 +285,14 @@ ConvolutionForward::Algorithm* ConvolutionForwardImpl::get_algorithm_heuristic(
     return algo;
 }
 
+ConvolutionForward::Algorithm* ConvolutionForwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_conv_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 std::vector<ConvolutionBackwardData::Algorithm *>
 ConvolutionBackwardDataImpl:: get_all_algorithms(const TensorLayout &,
         const TensorLayout &, const TensorLayout &)
@@ -309,6 +317,15 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
     return algo;
 }
 
+ConvolutionBackwardData::Algorithm*
+ConvolutionBackwardDataImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_conv_bwd_data_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 std::vector<ConvolutionBackwardFilter::Algorithm *>
 ConvolutionBackwardFilterImpl:: get_all_algorithms(const TensorLayout &,
         const TensorLayout &, const TensorLayout &)
@@ -331,6 +348,15 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
                       algo->name());
     }
     return algo;
+}
+
+ConvolutionBackwardFilter::Algorithm*
+ConvolutionBackwardFilterImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_conv_bwd_filter_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
 }
 
 const char* ConvolutionForwardImpl::get_algorithm_set_name() const {

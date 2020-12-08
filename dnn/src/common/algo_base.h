@@ -38,11 +38,12 @@ namespace megdnn {
         return algo_pack().all_algos_map().at(desc);            \
     }
 
-#define MEGDNN_DEF_GET_ALGO_FROM_DESC(_opr)                               \
-    _opr::AlgoBase* _opr::get_algo_from_desc(const AlgorithmDesc& desc) { \
-        megdnn_assert(algo_pack().all_algos_map().find(desc) !=           \
-                      algo_pack().all_algos_map().end());                 \
-        return algo_pack().all_algos_map().at(desc);                      \
+#define MEGDNN_DEF_GET_ALGO_FROM_DESC(_opr)                     \
+    _opr::Algorithm* _opr::get_algorithm_from_desc(             \
+            const AlgorithmDesc& desc) {                        \
+        megdnn_assert(algo_pack().all_algos_map().find(desc) != \
+                      algo_pack().all_algos_map().end());       \
+        return algo_pack().all_algos_map().at(desc);            \
     }
 
 /**

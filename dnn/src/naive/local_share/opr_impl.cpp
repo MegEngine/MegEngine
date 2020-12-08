@@ -175,6 +175,15 @@ LocalShareForward::Algorithm* LocalShareForwardImpl::get_algorithm_heuristic(
     return algo;
 }
 
+LocalShareForward::Algorithm*
+LocalShareForwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_local_share_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 std::vector<LocalShareBackwardData::Algorithm*>
 LocalShareBackwardDataImpl::get_all_algorithms(const TensorLayout&,
                                                const TensorLayout&,
@@ -200,6 +209,15 @@ LocalShareBackwardDataImpl::get_algorithm_heuristic(
     return algo;
 }
 
+LocalShareBackwardData::Algorithm*
+LocalShareBackwardDataImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret = static_cast<HandleImpl*>(handle())
+                             ->default_local_share_bwd_data_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 std::vector<LocalShareBackwardFilter::Algorithm*>
 LocalShareBackwardFilterImpl::get_all_algorithms(const TensorLayout&,
                                                  const TensorLayout&,
@@ -223,6 +241,15 @@ LocalShareBackwardFilterImpl::get_algorithm_heuristic(
                       algo->name());
     }
     return algo;
+}
+
+LocalShareBackwardFilter::Algorithm*
+LocalShareBackwardFilterImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret = static_cast<HandleImpl*>(handle())
+                             ->default_local_share_bwd_filter_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
 }
 
 // vim: syntax=cpp.doxygen

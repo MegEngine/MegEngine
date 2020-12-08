@@ -81,6 +81,15 @@ BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
             ->default_batched_matmul_fwd_algo();
 }
 
+BatchedMatrixMulForward::Algorithm*
+BatchedMatrixMulForwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret = static_cast<HandleImpl*>(handle())
+                             ->default_batched_matmul_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 }  // namespace naive
 }  // namespace megdnn
 

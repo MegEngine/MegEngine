@@ -238,7 +238,8 @@ private:
     class AlgoPack;
     //! maintain all the algos of in the opr of fallback
     static const AlgoPack& algo_pack();
-    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
+
 public:
 
     /**

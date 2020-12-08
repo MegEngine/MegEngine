@@ -188,6 +188,7 @@ public:
     using AlgorithmInfo = detail::Algorithm::Info;
     using AlgorithmDesc = detail::Algorithm::Info::Desc;
     using Algorithm = detail::Algorithm;
+
     /*!
      * \brief get a string representation for current algorithm set;
      *
@@ -208,6 +209,8 @@ public:
     const ExecutionPolicy& execution_policy() const {
         return m_execution_policy;
     }
+
+    virtual Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) = 0;
 
 protected:
     ~MultiAlgoOpr() = default;

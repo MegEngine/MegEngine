@@ -66,7 +66,7 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
-    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
 
 private:
     std::vector<Algorithm*> get_all_algorithms(
@@ -112,7 +112,7 @@ public:
     class AlgoPack;
 
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
-    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
 
 private:
     std::vector<Algorithm*> get_all_algorithms(
@@ -158,7 +158,7 @@ public:
 
     class AlgoPack;
 
-    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
     static const AlgoPack& algo_pack() { return sm_algo_pack; }
 
 private:

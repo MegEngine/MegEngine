@@ -96,7 +96,7 @@ std::vector<MatrixMul::Algorithm*> MatrixMulImpl::get_all_algorithms(
     return gemv_algos;
 }
 
-MatrixMulImpl::AlgoBase* MatrixMulImpl::get_algo_from_desc(
+MatrixMulImpl::Algorithm* MatrixMulImpl::get_algorithm_from_desc(
         const AlgorithmDesc& desc) {
     if (!desc.valid()) {
         return nullptr;
@@ -133,7 +133,8 @@ MatrixMul::Algorithm* MatrixMulImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
         size_t workspace_limit_in_bytes, bool reproducible) {
     auto kern_size_param = make_kern_size_param(A, B, C);
-    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = static_cast<AlgoBase*>(
+                get_algorithm_from_desc(execution_policy().algo.desc))) {
         megdnn_assert(algo->get_workspace(kern_size_param) <
                       workspace_limit_in_bytes);
         auto cur = megdnn::get_reproducible_algo<MatrixMulImpl>(algo,

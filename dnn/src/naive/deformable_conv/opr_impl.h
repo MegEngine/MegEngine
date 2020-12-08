@@ -48,6 +48,10 @@ public:
         return "DEFORMABLE_CONV2_NAIVE";
     };
 
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override {
+        return {};
+    }
+
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
               _megdnn_tensor_in offset, _megdnn_tensor_in mask,
               _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
@@ -83,6 +87,10 @@ public:
     const char* get_algorithm_set_name() const override {
         return "DEFORMABLE_CONV2_BWD_FILTER_NAIVE";
     };
+
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override {
+        return {};
+    }
 
     void exec(_megdnn_tensor_in im, _megdnn_tensor_in offset,
               _megdnn_tensor_in mask, _megdnn_tensor_in out_grad,
@@ -129,6 +137,10 @@ public:
     const char* get_algorithm_set_name() const override {
         return "DEFORMABLE_CONV2_BWD_DATA_NAIVE";
     };
+
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override {
+        return {};
+    }
 
     void exec(_megdnn_tensor_in im, _megdnn_tensor_in filter,
               _megdnn_tensor_in offset, _megdnn_tensor_in mask,

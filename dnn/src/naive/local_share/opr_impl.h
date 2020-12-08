@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/oprs.h"
@@ -35,6 +36,7 @@ public:
                                        size_t /*workspace_limit_in_bytes*/,
                                        bool /*reproducible*/) override;
 
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
 };
 
@@ -59,6 +61,7 @@ public:
                                        size_t /*workspace_limit_in_bytes*/,
                                        bool /*reproducible*/) override;
 
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
 };
 
@@ -83,6 +86,7 @@ public:
                                        size_t /*workspace_limit_in_bytes*/,
                                        bool /*reproducible*/) override;
 
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
 };
 

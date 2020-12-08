@@ -64,6 +64,8 @@ public:
                          _megdnn_workspace) override {}
 
     const char* get_algorithm_set_name() const override;
+
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 };
 
 void handle_z_inp_and_activation_naive(

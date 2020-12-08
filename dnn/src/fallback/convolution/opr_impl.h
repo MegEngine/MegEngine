@@ -284,7 +284,7 @@ private:
     NCBKernSizeParam m_prev_selected_algo_sizep;
     Algorithm* m_prev_selected_algo = nullptr;
 
-    Algorithm* get_algo_from_desc(const AlgorithmDesc& desc) const;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
     bool is_naive_algo(ConvolutionImpl::Algorithm* algo);
     Algorithm* get_algorithm(
             const NCBKernSizeParam& param,
@@ -493,7 +493,7 @@ private:
     class AlgoDirect;
     class AlgoMatrixMul;
     class AlgoPack;
-    Algorithm* get_algo_from_desc(const AlgorithmDesc& desc) const;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
 
 public:
     //! maintain all the algos of in the opr of fallback

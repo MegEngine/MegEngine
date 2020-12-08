@@ -256,6 +256,15 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     return algo;
 }
 
+ConvBiasForward::Algorithm*
+ConvBiasForwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_conv_bias_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 const char* ConvBiasForwardImpl::get_algorithm_set_name() const {
     return "DEFAULT";
 }

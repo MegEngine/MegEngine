@@ -86,6 +86,28 @@ ConvolutionForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
                                       workspace_limit_in_bytes, reproducible);
 }
 
+ConvolutionForwardImpl::Algorithm*
+ConvolutionForwardImpl::get_algorithm_from_desc(
+        const ConvolutionForward::AlgorithmDesc& desc) {
+    auto conv_param = param();
+    auto convbias_opr = this->handle()->create_operator<ConvBiasForward>();
+    convbias_opr->param() = {param::ConvBias::NonlineMode::IDENTITY,
+                             conv_param.mode,
+                             conv_param.sparse,
+                             conv_param.format,
+                             conv_param.pad_h,
+                             conv_param.pad_w,
+                             conv_param.stride_h,
+                             conv_param.stride_w,
+                             conv_param.dilate_h,
+                             conv_param.dilate_w,
+                             conv_param.compute_mode};
+    convbias_opr->execution_policy() = {this->execution_policy().algo};
+
+    return static_cast<ConvBiasForwardImpl*>(convbias_opr.get())
+            ->get_algorithm_from_desc(desc);
+}
+
 std::vector<ConvolutionForwardImpl::Algorithm*>
 ConvolutionForwardImpl::get_all_algorithms(const TensorLayout& src,
                                            const TensorLayout& filter,

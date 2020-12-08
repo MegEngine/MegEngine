@@ -361,8 +361,8 @@ ConvolutionImpl::get_all_algorithms_with_ncb(const NCBKernSizeParam& param) {
     return ret;
 }
 
-ConvolutionImpl::Algorithm* ConvolutionImpl::get_algo_from_desc(
-        const AlgorithmDesc& desc) const {
+ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
     if (!desc.valid()) {
         return nullptr;
     } else {
@@ -387,7 +387,7 @@ ConvolutionImpl::Algorithm* ConvolutionImpl::get_algo_from_desc(
 
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm(
         const NCBKernSizeParam& param, size_t workspace_size) {
-    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = get_algorithm_from_desc(execution_policy().algo.desc)) {
         return algo;
     }
     if (!m_prev_selected_algo ||
@@ -749,8 +749,8 @@ ConvolutionBackwardDataImpl::ncb_1g_get_algorithm_heuristic(
 }
 
 ConvolutionBackwardDataImpl::Algorithm*
-ConvolutionBackwardDataImpl::get_algo_from_desc(
-        const AlgorithmDesc& desc) const {
+ConvolutionBackwardDataImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
     if (!desc.valid()) {
         return nullptr;
     } else {
@@ -783,7 +783,7 @@ ConvolutionBackwardDataImpl::get_algo_from_desc(
 
 ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm(const NCBKernSizeParam& param) {
-    if (auto algo = get_algo_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = get_algorithm_from_desc(execution_policy().algo.desc)) {
         return algo;
     }
     if (!m_prev_selected_algo ||

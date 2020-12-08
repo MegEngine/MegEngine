@@ -52,6 +52,8 @@ class ConvolutionForwardImpl: public ConvolutionForward {
             return {};
         }
 
+        Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
+
         const char* get_algorithm_set_name() const override;
 };
 
@@ -74,6 +76,8 @@ class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
                                       const TensorLayout&) override;
 
         const char* get_algorithm_set_name() const override;
+
+        Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 };
 
 class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
@@ -95,6 +99,8 @@ class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
                                       const TensorLayout&) override;
 
         const char* get_algorithm_set_name() const override;
+
+        Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 };
 
 } // namespace naive
