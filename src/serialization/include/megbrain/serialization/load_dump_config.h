@@ -51,6 +51,10 @@ struct GraphDumpConfig {
     //! tensor value without layout; useful for compression or encryption
     TensorValueDumper tensor_value_dumper;
 
+    //! a list of output nodes and names. one output node may have multiple
+    //! names. this list record the mapping between output node and it's name
+    std::vector<std::pair<std::string, SymbolVar>> alias_name_map;
+
     GraphDumpConfig(int keep_var_name_ = 1, bool keep_param_name_ = false,
                     bool keep_opr_priority_ = false,
                     const std::shared_ptr<UserDataContainer>& user_data_ =
