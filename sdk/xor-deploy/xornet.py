@@ -84,7 +84,7 @@ def main():
             minibatch = next(val_dataset)
             net.eval()
             _, loss = val_fun(data, label)
-            loss = loss.numpy()[0]
+            loss = loss.numpy()
             val_loss.append((step, loss))
             print("Step: {} loss={}".format(step, loss))
         opt.step()

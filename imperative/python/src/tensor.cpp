@@ -11,8 +11,10 @@
 
 #include "./tensor.h"
 #include "./grad.h"
+#include "./trace.h"
 #include "./common.h"
 #include "./numpy_dtypes.h"
+#include "./graph_rt.h"
 
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
@@ -22,6 +24,47 @@ namespace py = pybind11;
 namespace mgb::imperative::python {
 
 std::unique_ptr<interpreter::Interpreter::Channel> interpreter_for_py;
+
+py::object cpp_apply_with_tracing, cpp_apply_const_with_tracing,
+           cpp_apply_compiled_mode, cpp_apply_const_compiled_mode;
+
+py::object cpp_apply_backward_varnode;
+
+#define REGISTE_APPLY_FUNC(mode)                                    \
+        void set_##mode(py::object pyf) {                           \
+            mode = pybind11::reinterpret_steal<py::object>(pyf);    \
+        }
+
+REGISTE_APPLY_FUNC(cpp_apply_with_tracing)
+REGISTE_APPLY_FUNC(cpp_apply_const_with_tracing)
+REGISTE_APPLY_FUNC(cpp_apply_compiled_mode)
+REGISTE_APPLY_FUNC(cpp_apply_const_compiled_mode)
+REGISTE_APPLY_FUNC(cpp_apply_backward_varnode)
+
+#undef REGISTE_APPLY_FUNC
+
+bool is_tracing = false;
+bool is_symbolic = false;
+bool is_compiled = false;
+
+int64_t call_level = 0;
+
+
+#define SET_UNSET_PROP(mode)    \
+    void set_##mode() {         \
+        is_##mode = true;       \
+    }                           \
+    void unset_##mode() {       \
+        is_##mode = false;      \
+    }                           \
+
+SET_UNSET_PROP(tracing)
+SET_UNSET_PROP(symbolic)
+SET_UNSET_PROP(compiled)
+
+#undef SET_UNSET_PROP
+
+bool skip_tracing = false;
 
 apply_result_t apply(ApplyContext& ctx) {
     // emulating scalar should be put to specific op's apply, e.g.,
@@ -36,7 +79,7 @@ apply_result_t apply(ApplyContext& ctx) {
     }
 
     if (ctx.flags & Tensor::Flags::TRACE) {
-        // TODO: trace
+        return apply_trace(ctx);
     } else {
         SmallVector<interpreter::Interpreter::Handle> handles(ctx.nargs);
         for (size_t i = 0; i < ctx.nargs; ++i) {
@@ -58,7 +101,6 @@ apply_result_t apply(ApplyContext& ctx) {
 
 PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObject* kwnames */) {
     try {
-
         // if (kwnames && PyTuple_GET_SIZE(kwnames)) {
         //     PyErr_SetString(PyExc_TypeError, "keyword argument not allowed");
         //     return nullptr;
@@ -67,6 +109,7 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
             PyErr_SetString(PyExc_TypeError, "expect Op");
             return nullptr;
         }
+
         auto* op = args[0];
 
         PyTypeObject* pytype = args[1]->ob_type;
@@ -79,18 +122,23 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         SmallVector<Tensor*, 64> tensors(nargs);
         ctx.args = &tensors[0];
         ctx.nargs = nargs;
+        if (strstr(op->ob_type->tp_name, "BackwardGraph")) {
+            ctx.backward = true;
+        }
 
         for (size_t i = 0; i < nargs; ++i) {
-            TensorWrapper* tw = TensorWrapper::cast_safe(args[i]);
-            if (!tw) {
+            if (TensorWrapper* tw = TensorWrapper::cast_safe(args[i])) {
+                auto* t = tensors[i] = tw->m_tensor.get();
+                ctx.flags |= t->m_flags;
+            } else {
                 PyErr_SetString(PyExc_TypeError, "expect Tensor");
                 return nullptr;
             }
-            auto* t = tensors[i] = tw->m_tensor.get();
-            ctx.flags |= t->m_flags;
         }
 
-        // TODO: set TRACE flag
+        if (is_tracing) {
+            ctx.flags |= Tensor::Flags::TRACE;
+        }
 
         auto outputs = apply(ctx);
         size_t nout = outputs.size();
@@ -99,7 +147,6 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
             ret[i] = TensorWrapper::make(pytype, std::move(outputs[i]));
         }
         return ret.release().ptr();
-
     } catch (std::exception& e) {
         PyErr_SetString(PyExc_RuntimeError, e.what());
         return nullptr;
@@ -122,36 +169,116 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
         }
         m_tensor = t->m_tensor;
     } else {
-        if (nargs != 3) {
-            throw py::type_error("expect 3 arguments");
-        }
-        py::detail::loader_life_support life_sup; // required to cast DType
-        auto data = tup[0].cast<py::array>();
-        DType dtype = tup[1].cast<DType>();
-        CompNode cn = tup[2].cast<CompNode>();
-
-        interpreter::Interpreter::Handle handle;
-        constexpr auto size_threshhold = TensorShape::MAX_NDIM;
-        if (data.size() > size_threshhold) {
-            handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype));
+        if (nargs == 1) {
+            auto arg0 = PyTuple_GetItem(args, 0);
+            // for lazy_eval_tensor
+            if (strstr(arg0->ob_type->tp_name, "VarNode")) {
+                if (PyObject_HasAttrString(arg0, "_node")) {
+                    arg0 = PyObject_GetAttrString(arg0, "_node");
+                }
+                m_tensor = std::make_shared<Tensor>(py::handle(arg0).cast<cg::VarNode *>());
+            } else {
+                // for DeviceTensorND
+                if (strstr(arg0->ob_type->tp_name, "DeviceTensorND")) {
+                    auto dv = py::handle(arg0).cast<DeviceTensorND>();
+                    interpreter::Interpreter::Handle handle = interpreter_for_py->put(dv);
+                    m_tensor = std::make_shared<Tensor>(handle);
+                } else {
+                    throw py::type_error("single argument is not tensor, varnode or devicetensor");
+                }
+            }
         } else {
-            HostTensorND ret(cn);
-            handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::copy_into(&ret), dtype));
-        }
+            py::detail::loader_life_support life_sup; // required to cast DType
+            auto data = tup[0].cast<py::array>();
+            DType dtype = tup[1].cast<DType>();
+            CompNode cn = tup[2].cast<CompNode>();
+            bool is_const = tup[3].cast<bool>();
+            if (nargs != 4) {
+                throw py::type_error("expect 3 arguments");
+            }
 
-        m_tensor = std::make_shared<Tensor>(handle);
-        if (data.ndim() == 0) {
-            m_tensor->m_flags |= Tensor::Flags::SCALAR;
+            // const op
+            if (is_const && is_tracing) {
+                py::object pyf;
+                if (is_compiled) {
+                    pyf = cpp_apply_const_compiled_mode;
+                } else {
+                    pyf = cpp_apply_const_with_tracing;
+                }
+
+                auto ret = pyf(*tup);
+                auto py_ret = py::reinterpret_borrow<py::list>(ret);
+                if (auto* t = cast_safe(py_ret[0].ptr())) {
+                    m_tensor = t->m_tensor;
+                }
+                return;
+            }
+
+            interpreter::Interpreter::Handle handle;
+            constexpr auto size_threshhold = TensorShape::MAX_NDIM;
+            if (data.size() > size_threshhold) {
+                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype));
+            } else {
+                HostTensorND ret(cn);
+                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::copy_into(&ret), dtype));
+            }
+
+            m_tensor = std::make_shared<Tensor>(handle);
+
+            if (data.ndim() == 0) {
+                m_tensor->m_flags |= Tensor::Flags::SCALAR;
+            }
         }
     }
 }
 
 
+#define REGISTE_TENSORWRAPPER_FUNC(type, member)                                    \
+        PyObject* TensorWrapper::member() {                                         \
+            return py::cast(m_tensor->m_trace_info.member).release().ptr();         \
+        }                                                                           \
+        void TensorWrapper::set_##member(PyObject* dest) {                          \
+            auto py_dest = py::reinterpret_borrow<py::object>(dest);                \
+            type real_dest = py_dest.cast<type>();                                  \
+            m_tensor->m_trace_info.member = real_dest;                              \
+        }
+
+REGISTE_TENSORWRAPPER_FUNC(bool, data_read)
+REGISTE_TENSORWRAPPER_FUNC(bool, value_read)
+REGISTE_TENSORWRAPPER_FUNC(bool, shape_read)
+REGISTE_TENSORWRAPPER_FUNC(int64_t, mixin_handle)
+
+#undef REGISTE_TENSORWRAPPER_FUNC
+
+
+PyObject* TensorWrapper::handle() {
+    return py::cast(m_tensor->m_handle).release().ptr();
+}
+
+
+void TensorWrapper::set_handle(PyObject* dest) {
+    auto py_dest = py::reinterpret_borrow<py::object>(dest);
+    SharedHandle real_dest = py_dest.cast<SharedHandle>();
+    auto&& t = std::move(m_tensor->m_handle);
+    m_tensor->m_handle = std::move(real_dest);
+}
+
+
 PyObject* TensorWrapper::shape() {
+    if (!skip_tracing) {
+        set_shape_read(py::cast(true).  release().ptr());
+    }
     if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
         return PyTuple_New(0);
     }
-    auto&& shape = m_tensor->shape();
+
+    TensorShape shape;
+    if (m_tensor->m_var) {
+        shape = m_tensor->m_var->shape();
+    } else {
+        shape = m_tensor->shape();
+    }
+
     if (!shape.ndim) {
         Py_RETURN_NONE;
     }
@@ -164,16 +291,38 @@ PyObject* TensorWrapper::shape() {
 
 
 PyObject* TensorWrapper::dtype() {
+    if (m_tensor->m_var) {
+        return py::cast(m_tensor->m_var->dtype()).release().ptr();
+    }
     return py::cast(m_tensor->dtype()).release().ptr();
 }
 
 
 PyObject* TensorWrapper::device() {
+    if (m_tensor->m_var) {
+        return py::cast(m_tensor->m_var->comp_node()).release().ptr();
+    }
     return py::cast(m_tensor->comp_node()).release().ptr();
 }
 
 
 PyObject* TensorWrapper::numpy() {
+    if (!skip_tracing) {
+        set_value_read(py::cast(true).release().ptr());
+    }
+    if (m_tensor->m_handle.get() == nullptr && m_tensor->m_var != nullptr) {
+        auto&& mgr = m_tensor->m_var->owner_graph()->static_infer_manager();
+        auto&& type = mgr.get_infer_type(m_tensor->m_var);
+        using InferType = cg::static_infer::InferType;
+        if (!(type.value & (InferType::CONST | InferType::RT_STATIC))) {
+            return nullptr;
+        }
+        auto* val = mgr.infer_value_fallible(m_tensor->m_var);
+        if (!val) {
+            return nullptr;
+        }
+        return py::cast(*val).attr("numpy")().release().ptr();
+    }
     auto&& hv = interpreter_for_py->get_value(m_tensor->m_handle.get());
     auto arr = py::reinterpret_steal<py::array>(npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
     if (!arr) return nullptr;
@@ -182,6 +331,13 @@ PyObject* TensorWrapper::numpy() {
         return PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(arr.ptr()));
     }
     return arr.release().ptr();
+}
+
+PyObject* TensorWrapper::varnode() {
+    if (m_tensor->m_var) {
+        return py::cast(m_tensor->m_var).release().ptr();
+    }
+    return nullptr;
 }
 
 void TensorWrapper::reset(PyObject* tensor) {
@@ -195,13 +351,22 @@ void TensorWrapper::reset(PyObject* tensor) {
 PyObject* TensorWrapper::detach() {
     PyObject* self = wrap_t::pycast(this);
     PyTypeObject* pytype = self->ob_type;
-    auto new_tensor = std::make_shared<Tensor>(m_tensor->m_handle);
+
+    std::shared_ptr<Tensor> new_tensor;
+    if (m_tensor->m_handle.get()) {
+        new_tensor = std::make_shared<Tensor>(m_tensor->m_handle);
+    } else {
+        new_tensor = std::make_shared<Tensor>(m_tensor->m_var);
+    }
     auto ret = TensorWrapper::make(pytype, std::move(new_tensor));
     return ret.release().ptr();
 
 }
 
 PyObject* TensorWrapper::_dev_tensor(){
+    if (!skip_tracing) {
+        set_data_read(py::cast(true).release().ptr());
+    }
     auto dev_tensor = interpreter_for_py->get_dev_tensor(m_tensor->m_handle.get());
     return py::cast(dev_tensor).release().ptr();
 }
@@ -227,10 +392,13 @@ PyObject* TensorWrapper::isscalar() {
     }
 }
 
+
 void TensorWrapper::setscalar() {
     m_tensor->m_flags |= Tensor::Flags::SCALAR;
 }
 
+
+PyMethodDef apply_def{"apply", (PyCFunction)py_apply, METH_FASTCALL, nullptr};
 
 struct TensorWeakRef {
     std::weak_ptr<Tensor> wptr;
@@ -262,6 +430,12 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::_swap_out>("_swap_out")
         .def<&TensorWrapper::_swap_in>("_swap_in")
         .def<&TensorWrapper::_drop>("_drop")
+        .def_getset<&TensorWrapper::varnode>("_varnode")
+        .def_getset<&TensorWrapper::data_read, &TensorWrapper::set_data_read>("data_read")
+        .def_getset<&TensorWrapper::value_read, &TensorWrapper::set_value_read>("value_read")
+        .def_getset<&TensorWrapper::shape_read, &TensorWrapper::set_shape_read>("shape_read")
+        .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("mixin_handle")
+        .def_getset<&TensorWrapper::handle, &TensorWrapper::set_handle>("_handle")
         .finalize();
     if (!tensor_type) throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);
@@ -296,6 +470,25 @@ void init_tensor(py::module m) {
     if (!grad_key_type) throw py::error_already_set();
     py::setattr(m, "GradKey", grad_key_type);
     py::setattr(m, "backward", py::cpp_function(&GradKeyWrapper::backward));
+    m.def("set_cpp_apply_with_tracing", &set_cpp_apply_with_tracing);
+    m.def("set_cpp_apply_const_with_tracing", &set_cpp_apply_const_with_tracing);
+    m.def("set_cpp_apply_compiled_mode", &set_cpp_apply_compiled_mode);
+    m.def("set_cpp_apply_const_compiled_mode", &set_cpp_apply_const_compiled_mode);
+    m.def("set_cpp_apply_backward_varnode", &set_cpp_apply_backward_varnode);
+
+    m.attr("skip_tracing") = &skip_tracing;
+    m.attr("call_level") = &call_level;
+
+    py::class_<SharedHandle>(m, "SharedHandle")
+        .def(py::init<const SharedHandle&>());
+
+    m.def("set_tracing", &set_tracing);
+    m.def("unset_tracing", &unset_tracing);
+    m.def("set_symbolic", &set_symbolic);
+    m.def("unset_symbolic", &unset_symbolic);
+    m.def("set_compiled", &set_compiled);
+    m.def("unset_compiled", &unset_compiled);
+
 }
 
 } // namespace mgb::imperative::python

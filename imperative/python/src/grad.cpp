@@ -296,7 +296,9 @@ void accum_grad(std::shared_ptr<Tensor>& grad, std::shared_ptr<Tensor>&& delta) 
     Tensor* args[2] = {grad.get(), delta.get()};
     ctx.args = args;
     ctx.flags = grad->m_flags | delta->m_flags;
-
+    if (is_tracing) {
+        ctx.flags |= Tensor::Flags::TRACE;
+    }
     grad = apply(ctx)[0];
 }
 
@@ -353,6 +355,9 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
                 ctx.flags |= args[i]->m_flags;
             }
             ctx.args = args;
+
+            if (is_tracing)
+                ctx.flags |= Tensor::Flags::TRACE;
 
             auto grads = apply(ctx);
 

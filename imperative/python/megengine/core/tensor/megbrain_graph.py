@@ -19,10 +19,11 @@ import numpy as np
 from ...utils.comp_graph_tools import set_priority_to_id as _set_priority_to_id
 from .. import _imperative_rt
 from .._imperative_rt import GraphOptimizeOptions
+from .._imperative_rt.core2 import apply, set_cpp_apply_backward_varnode
 from .._imperative_rt.ops import BackwardGraph
 from .._wrap import device as as_device
 from ..ops.builtin import OpDef
-from .core import OpBase, TensorBase, apply
+from .core import OpBase, TensorBase
 
 
 class Graph(_imperative_rt.ComputingGraph):
@@ -269,9 +270,8 @@ def optimize_for_inference(dest_vars, **kwargs):
     if kwargs:
         raise ValueError("unknown options: %s" % list(kwargs))
 
-    res_vars = _imperative_rt.optimize_for_inference(
-        [i._node for i in dest_vars], inference_options
-    )
+    dest_vars = [var._node for var in dest_vars]
+    res_vars = _imperative_rt.optimize_for_inference(dest_vars, inference_options)
     return [VarNode(i) for i in res_vars]
 
 
@@ -437,19 +437,25 @@ def _unwrap(x):
         return x
 
 
-@apply.register()
-def _(op: OpDef, *args: VarNode):
+def apply_normal_op(op: OpDef, *args: VarNode):
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)
 
 
-@apply.register()
-def _(op: BackwardGraph, *args: VarNode):
+def apply_backward_varnode(op: BackwardGraph, *args: VarNode):
     assert args
     graph = args[0].graph
-    return BackwardGraph.interpret(
-        op, lambda op, args: apply(op, *args), graph._make_const_for_backward, args
+    outputs = op.interpret(
+        op,
+        lambda op, args: apply_normal_op(op, *args),
+        graph._make_const_for_backward,
+        args,
     )
+    outputs = [o._node if hasattr(o, "_node") else o for o in outputs]
+    return outputs
+
+
+set_cpp_apply_backward_varnode(apply_backward_varnode)
 
 
 def input_callback(callback, *args, device=None, dtype=None, shape=None, graph=None):

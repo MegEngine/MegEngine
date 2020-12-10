@@ -20,4 +20,4 @@ class Const:
 
     def __call__(self, *reference):
         Wrapper = type(reference[0])
-        return (Wrapper(self.value, self.dtype, self.device),)
+        return (Wrapper(self.value, self.dtype, self.device, True),)

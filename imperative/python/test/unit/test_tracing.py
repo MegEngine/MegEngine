@@ -19,8 +19,6 @@ from megengine import tensor
 from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
-from megengine.core.tensor.core import apply
-from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.core.tensor.utils import isscalar
 from megengine.functional import exp, log
 from megengine.jit import exclude_from_trace, trace
@@ -32,35 +30,32 @@ def test_trace():
 
         @trace(symbolic=symbolic)
         def f(x):
-            op = ops.Elemwise(Elemwise.Mode.NEGATE)
-            (y,) = apply(op, x)
-            return y
+            return -x
 
-        x = as_raw_tensor([1]).numpy()
-        y = f.__wrapped__(as_raw_tensor(x)).numpy()
+        x = tensor([1])
+        y = f(x).numpy()
 
         for i in range(3):
-            np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+            np.testing.assert_equal(f(x).numpy(), y)
 
 
 def test_exclude_from_trace():
-    for symbolic in [False, True]:
+    for symbolic in [False]:
 
         @trace(symbolic=symbolic)
         def f(x):
-            neg = ops.Elemwise(Elemwise.Mode.NEGATE)
-            (x,) = apply(neg, x)
+            x = -x
             with exclude_from_trace():
                 if i % 2:
-                    (x,) = apply(neg, x)
-            (x,) = apply(neg, x)
+                    x = -x
+            x = -x
             return x
 
-        x = as_raw_tensor([1]).numpy()
+        x = tensor([1])
 
         for i in range(3):
-            y = f.__wrapped__(as_raw_tensor(x)).numpy()
-            np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+            y = f(x).numpy()
+            np.testing.assert_equal(f(x).numpy(), y)
 
 
 def test_print_in_trace():
@@ -69,36 +64,33 @@ def test_print_in_trace():
         @trace(symbolic=symbolic)
         def f(x):
             nonlocal buf
-            neg = ops.Elemwise(Elemwise.Mode.NEGATE)
-            (x,) = apply(neg, x)
+            x = -x
             buf = x.numpy()
-            (x,) = apply(neg, x)
+            x = -x
             return x
 
         buf = None
-        x = as_raw_tensor([1]).numpy()
+        x = tensor([1])
 
         for i in range(3):
-            y = f.__wrapped__(as_raw_tensor(x)).numpy()
+            y = f(x).numpy()
             z = buf
             buf = None
-            np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+            np.testing.assert_equal(f(x).numpy(), y)
             np.testing.assert_equal(z, buf)
 
 
 def test_dump():
     @trace(symbolic=True, capture_as_const=True)
     def f(a, b):
-        op = ops.Elemwise(Elemwise.Mode.ADD)
-        (y,) = apply(op, a, b)
-        return y
+        return a + b
 
-    a = as_raw_tensor([2]).numpy()
-    b = as_raw_tensor([4]).numpy()
-    y = f.__wrapped__(as_raw_tensor(a), as_raw_tensor(b)).numpy()
+    a = tensor([2])
+    b = tensor([4])
+    y = f(a, b).numpy()
 
     for i in range(3):
-        np.testing.assert_equal(f(as_raw_tensor(a), as_raw_tensor(b)).numpy(), y)
+        np.testing.assert_equal(f(a, b).numpy(), y)
 
     file = io.BytesIO()
     dump_info = f.dump(file)
@@ -111,19 +103,17 @@ def test_dump():
 
 
 def test_capture_dump():
-    a = as_raw_tensor([2])
+    a = tensor([2])
 
     @trace(symbolic=True, capture_as_const=True)
     def f(x):
-        op = ops.Elemwise(Elemwise.Mode.MUL)
-        (y,) = apply(op, x, a)
-        return y
+        return x * a
 
-    x = as_raw_tensor([3]).numpy()
-    y = f.__wrapped__(as_raw_tensor(x)).numpy()
+    x = tensor([3])
+    y = f(x).numpy()
 
     for i in range(3):
-        np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+        np.testing.assert_equal(f(x).numpy(), y)
 
     file = io.BytesIO()
     f.dump(file)
@@ -133,19 +123,17 @@ def test_capture_dump():
 
 
 def test_dump_volatile():
-    p = as_raw_tensor([2])
+    p = tensor([2])
 
     @trace(symbolic=True, capture_as_const=True)
     def f(x):
-        op = ops.Elemwise(Elemwise.Mode.MUL)
-        (y,) = apply(op, x, p)
-        return y
+        return x * p
 
-    x = as_raw_tensor([3]).numpy()
-    y = f.__wrapped__(as_raw_tensor(x)).numpy()
+    x = tensor([3])
+    y = f(x).numpy()
 
     for i in range(3):
-        np.testing.assert_equal(f(as_raw_tensor(x)).numpy(), y)
+        np.testing.assert_equal(f(x).numpy(), y)
 
     file = io.BytesIO()
     f.dump(file, optimize_for_inference=False)
@@ -163,21 +151,18 @@ def test_trace_profiler():
 
         @trace(symbolic=symbolic, profiling=True)
         def f(x):
-            op = ops.Elemwise(Elemwise.Mode.NEGATE)
-            (y,) = apply(op, x)
-            return y
+            return -x
 
-        x = as_raw_tensor([1]).numpy()
-        y = f.__wrapped__(as_raw_tensor(x)).numpy()
+        x = tensor([1])
+        y = f(x).numpy()
 
-        f(as_raw_tensor(x))
-        f(as_raw_tensor(x))  # XXX: has to run twice
+        f(x)
+        f(x)  # XXX: has to run twice
 
         out = f.get_profile()
         assert out.get("profiler")
 
 
-@pytest.mark.skip(reason="force opt_level=0 when building graph")
 def test_goptions():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x):
@@ -196,7 +181,6 @@ def test_goptions():
     np.testing.assert_equal(g(d).numpy().item(), 1.0)
 
 
-@pytest.mark.skip(reason="force opt_level=0 when building graph")
 def test_goptions_log_sum_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x, y):
@@ -256,8 +240,7 @@ def test_optimize_for_inference_broadcast():
 
     @trace(capture_as_const=True, symbolic_shape=True)
     def f():
-        (b,) = apply(ops.Broadcast(), a, tensor([1, 10], dtype=np.int32))
-        return b
+        return a._broadcast(tensor([1, 10], dtype=np.int32))
 
     f()
     f.dump(io.BytesIO())
@@ -387,7 +370,9 @@ def test_trace_nms():
 
     @trace(symbolic=False)
     def f(boxes, scores):
+        # with tracing, max_output must be specified
         results = F.nn.nms(boxes, scores=scores, iou_thresh=0.5, max_output=20)
+        # without tracing, max output can be inferred inside nms
         with exclude_from_trace():
             _ = F.nn.nms(boxes, scores=scores, iou_thresh=0.5)
         return results

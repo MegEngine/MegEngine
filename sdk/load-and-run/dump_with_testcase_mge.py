@@ -318,7 +318,6 @@ def optimize_for_inference(args, outputs):
             ), "optimize_for_inference should be set when {} is given".format(k)
             kwargs[v] = True
 
-    outputs = [G.VarNode(output) for output in outputs]
     if args.optimize_for_inference:
         outputs = [i._node for i in G.optimize_for_inference(outputs, **kwargs)]
 

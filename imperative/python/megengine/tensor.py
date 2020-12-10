@@ -28,7 +28,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
     dmap_callback = None
     q_dict = {"mode": None, "scale": None, "zero_point": None}
 
-    def __new__(cls, data, dtype=None, device=None):
+    def __new__(cls, data, dtype=None, device=None, is_const=False):
         if device is None:
             cn = get_default_device()
         elif isinstance(device, str):
@@ -40,6 +40,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
             assert isinstance(device, CompNode)
             cn = device
 
+        # import pdb; pdb.set_trace()
         if isinstance(data, _Tensor):
             obj = _Tensor.__new__(cls, data)
         else:
@@ -47,7 +48,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
                 if 0 in data.strides:
                     data = data.squeeze().reshape(data.shape)
 
-            obj = _Tensor.__new__(cls, data, dtype, cn)
+            obj = _Tensor.__new__(cls, data, dtype, cn, is_const)
         return obj
 
     @property

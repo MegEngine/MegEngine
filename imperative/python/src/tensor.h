@@ -30,12 +30,9 @@ struct ObjectPtr : B {
 } // namespace mgb::imperative::python
 
 #include "./grad_info.h" // for struct GradInfo
+#include "./trace_info.h" // for struct TraceInfo
 
 namespace mgb::imperative::python {
-
-struct TraceInfo {
-
-};
 
 extern std::unique_ptr<interpreter::Interpreter::Channel> interpreter_for_py;
 
@@ -46,7 +43,9 @@ class SharedHandle {
 
 public:
     inline explicit SharedHandle(Handle handle) : holder(handle, [](auto* h){
-        interpreter_for_py->del(h);
+        if (h) {
+            interpreter_for_py->del(h);
+        }
     }) {}
     SharedHandle(const SharedHandle&) = default;
     SharedHandle& operator=(const SharedHandle&) = default;
@@ -71,11 +70,14 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     GradInfo m_grad_info;
     TraceInfo m_trace_info;
     SharedHandle m_handle;
+    cg::VarNode* m_var;
 
     using Handle = interpreter::Interpreter::Handle;
 
-    inline explicit Tensor(Handle handle) : m_handle(handle) {}
-    inline explicit Tensor(SharedHandle handle) : m_handle(std::move(handle)) {}
+    inline explicit Tensor(Handle handle) : m_handle(handle), m_var(nullptr) {}
+    inline explicit Tensor(SharedHandle handle) : m_handle(std::move(handle)), m_var(nullptr) {}
+    inline explicit Tensor(cg::VarNode *var) : m_handle(nullptr), m_var(var) {}
+
     ~Tensor() = default;
 
     inline std::shared_ptr<Tensor> copy() {
@@ -83,12 +85,28 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
         ret->m_flags = m_flags;
         ret->m_grad_info = m_grad_info;
         ret->m_trace_info = m_trace_info;
+        ret->m_var = m_var;
         return ret;
     }
 
-    inline DType dtype() {return interpreter_for_py->get_dtype(m_handle.get());}
-    inline CompNode comp_node() {return interpreter_for_py->get_device(m_handle.get());}
-    inline TensorShape shape() {return interpreter_for_py->get_shape(m_handle.get());}
+    inline DType dtype() {
+        if (m_var) {
+            return m_var->dtype();
+        }
+        return interpreter_for_py->get_dtype(m_handle.get());
+    }
+    inline CompNode comp_node() {
+        if (m_var) {
+            return m_var->comp_node();
+        }
+        return interpreter_for_py->get_device(m_handle.get());
+    }
+    inline TensorShape shape() {
+        if (m_var) {
+            return m_var->shape();
+        }
+        return interpreter_for_py->get_shape(m_handle.get());
+    }
 };
 
 
@@ -135,6 +153,19 @@ struct TensorWrapper {
     void _swap_in();
     void _swap_out();
     void _drop();
+    PyObject* varnode();
+    PyObject* handle();
+    void set_handle(PyObject *);
+
+    PyObject* data_read();
+    PyObject* value_read();
+    PyObject* shape_read();
+    PyObject* mixin_handle();
+
+    void set_data_read(PyObject*);
+    void set_value_read(PyObject*);
+    void set_shape_read(PyObject*);
+    void set_mixin_handle(PyObject*);
 };
 
 
@@ -145,6 +176,7 @@ struct ApplyContext {
     std::shared_ptr<OpDef> op;
     Tensor*const* args;
     size_t nargs;
+    bool backward = false;
 };
 
 using apply_result_t = SmallVector<std::shared_ptr<Tensor>, 8>;
@@ -152,6 +184,14 @@ using apply_result_t = SmallVector<std::shared_ptr<Tensor>, 8>;
 apply_result_t apply(ApplyContext& ctx);
 
 void init_tensor(pybind11::module);
+
+extern bool is_tracing;
+extern bool is_symbolic;
+extern bool is_compiled;
+extern int64_t call_level;
+
+extern pybind11::object cpp_apply_with_tracing, cpp_apply_compiled_mode;
+extern pybind11::object cpp_apply_backward_varnode;
 
 } // namespace mgb::imperative::python
 

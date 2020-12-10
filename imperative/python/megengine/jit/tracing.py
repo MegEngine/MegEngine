@@ -18,8 +18,20 @@ import weakref
 
 import numpy as np
 
-from ..core._imperative_rt import GraphProfiler
-from ..core._imperative_rt.core2 import Tensor
+from ..core._imperative_rt import GraphProfiler, common, put
+from ..core._imperative_rt.core2 import Tensor as RawTensor
+from ..core._imperative_rt.core2 import (
+    TensorWeakRef,
+    apply,
+    call_level,
+    set_compiled,
+    set_symbolic,
+    set_tracing,
+    skip_tracing,
+    unset_compiled,
+    unset_symbolic,
+    unset_tracing,
+)
 from ..core._imperative_rt.ops import (
     CollectiveComm,
     GaussianRNG,
@@ -29,10 +41,9 @@ from ..core._imperative_rt.ops import (
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import device as as_device
+from ..core.ops.builtin import OpDef
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
-from ..core.tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
-from ..core.tensor.raw_tensor import OpDef, RawTensor, as_raw_tensor
 from .sublinear_memory_config import SublinearMemoryConfig
 
 
@@ -45,7 +56,6 @@ class TraceMismatchError(RuntimeError):
 
 
 active_trace = None
-skip_tracing = False
 
 
 def is_tracing():
@@ -63,11 +73,13 @@ def exclude_from_trace():
         return
     try:
         skip_tracing = True
+        unset_tracing()
         if active_trace is not None:
             active_trace._begin_excluded_region()
         yield
     finally:
         skip_tracing = False
+        set_tracing()
 
 
 class TensorInfo:
@@ -75,9 +87,6 @@ class TensorInfo:
         # collected attributes
         "external",
         "exported",
-        "data_read",
-        "shape_read",
-        "value_read",
         "device",
         "dtype",
         "shape",
@@ -93,9 +102,6 @@ class TensorInfo:
 
     def __init__(self):
         self.exported = None
-        self.data_read = None
-        self.shape_read = None
-        self.value_read = None
         self.bound_data = None
 
         self.data_setter = None
@@ -147,6 +153,8 @@ class trace:
         self._profiler = None
         self._graph_opt_level = opt_level
         self._symbolic_shape = symbolic_shape
+        self._handle2tensors = {}
+        self._handle2compiledtensors = {}
 
         self._reset()
 
@@ -158,9 +166,9 @@ class trace:
         self._graph = None
         self._need_reset_nodes = None
         self._lazy_eval_graph = None
-        self._lazy_eval_tensors = weakref.WeakSet()
+        self._lazy_eval_tensors = set()
         self._lazy_eval_links = None
-        self._active_tensors = weakref.WeakSet()
+        self._active_tensors = set()
         self._tensor_remaps = None
         self._inputs_to_restore = None
         self._arg_bindings = None
@@ -220,66 +228,72 @@ class trace:
                         )
                     info.data_setter.set_value(x._dev_tensor())
             else:
-                if x.__class__ is not CompiledTensorProxy:
-                    if x not in self._tensor_remaps:
-                        raise TraceMismatchError(
-                            "unexpected capture: trying to use an external tensor as "
-                            "input, but that input was an internal tensor last time"
-                        )
-                    else:
-                        x = self._tensor_remaps[x]
-                if x._CompiledTensorProxy__handle != h:
-                    raise TraceMismatchError(
-                        "mis-wiring: input edge to an data flow "
-                        "graph node is different from last time"
-                    )
+                pass
+                # if x.__class__ is not CompiledTensorProxy:
+                #     if x not in self._tensor_remaps:
+                #         raise TraceMismatchError(
+                #             "unexpected capture: trying to use an external tensor as "
+                #             "input, but that input was an internal tensor last time"
+                #         )
+                #     else:
+                #         x = self._tensor_remaps[x]
+                # if x._CompiledTensorProxy__handle != h:
+                #     raise TraceMismatchError(
+                #         "mis-wiring: input edge to an data flow "
+                #         "graph node is different from last time"
+                #     )
 
         self._pc += 1
-        outputs = tuple([CompiledTensorProxy(h) for h in ohandles])
-        self._active_tensors.update(outputs)
+        for h in ohandles:
+            t = CompiledTensorProxy(h)
+            t._dev_tensor()
+            self._handle2compiledtensors[h] = t
+        outputs = [self._handle2tensors[h] for h in ohandles]
+        self._active_tensors.update([TensorWeakRef(o) for o in outputs])
         return outputs
 
-    def _apply_const(self, op, args):
+    def _apply_const(self, value, dtype, device):
         assert not self._untraced
         # check against trace
         if self._pc >= len(self._seq):
             raise TraceMismatchError("trace should end here, but more op observed")
         record = self._seq[self._pc]
         op_, ihandles, ohandles = record
-        assert isinstance(op_, Const)
+        assert isinstance(op_, str) and op_ == "Const"
 
-        eq = op_.value == op.value
-        if not isinstance(eq, bool):
-            eq = all(eq)
-        if not eq:
-            raise TraceMismatchError(
-                "const tensor violated: got a different tensor this time"
-            )
+        # TODO : assert on const value
+        # eq = value == self._tinfo[ohandles[0]].bound_data.numpy()
+        # if not isinstance(eq, bool):
+        #     eq = all(eq)
+        # if not eq:
+        #     raise TraceMismatchError(
+        #         "const tensor violated: got a different tensor this time"
+        #     )
 
         self._pc += 1
         (h,) = ohandles
-        outputs = tuple([self._tinfo[h].bound_data])
+        outputs = [self._tinfo[h].bound_data]
         return outputs
 
     def _record_op(self, op, inputs, outputs):
         if skip_tracing:
             for x in inputs:
-                h = getattr(x, "_TraceMixin__handle", None)
-                if h is not None:
-                    self._tinfo[h].data_read = True
+                h = getattr(x, "mixin_handle", -1)
+                if h >= 0:
+                    x.data_read = True
             return
 
         ihandles = []
         for x in inputs:
-            h = getattr(x, "_TraceMixin__handle", None)
-            if h is None or (not self._capture_as_const and self._tinfo[h].exported):
+            h = getattr(x, "mixin_handle", -1)
+            if h < 0 or (not self._capture_as_const and self._tinfo[h].exported):
                 h, info = self._new_handle()
                 info.external = True
                 info.device = x.device
                 info.dtype = x.dtype
                 info.shape = x.shape
                 if self._capture_as_const:
-                    info.bound_data = x
+                    info.bound_data = RawTensor(x.numpy(), x.dtype, x.device, False)
 
             ihandles.append(h)
 
@@ -288,17 +302,18 @@ class trace:
             h, info = self._new_handle()
             ohandles.append(h)
             info.external = False
-            TraceMixin._TraceMixin__inject(x, h)
+            x.mixin_handle = h
+            self._handle2tensors[h] = x
 
         self._seq.append((op, tuple(ihandles), tuple(ohandles)))
-        self._active_tensors.update(outputs)
+        self._active_tensors.update([TensorWeakRef(o) for o in outputs])
 
-    def _record_const(self, op, outputs):
+    def _record_const(self, outputs):
         if skip_tracing:
             (x,) = outputs
-            h = getattr(x, "_TraceMixin__handle", None)
-            if h is not None:
-                self._tinfo[h].data_read = True
+            h = getattr(x, "mixin_handle", -1)
+            if h >= 0:
+                x.data_read = True
             return
 
         (x,) = outputs
@@ -310,8 +325,9 @@ class trace:
         info.shape = x.shape
         info.bound_data = x
         info.is_const = True
-        TraceMixin._TraceMixin__inject(x, h)
-        self._seq.append((op, tuple(), tuple(ohandles)))
+        x.mixin_handle = h
+        self._handle2tensors[h] = x
+        self._seq.append(("Const", tuple(), tuple(ohandles)))
 
     def _set_active(self, active: bool):
         global active_trace
@@ -324,11 +340,8 @@ class trace:
             active_trace = None
 
     def _init_trace(self, symbolic: bool):
-        apply.enable(apply_with_tracing)
-        apply.enable(apply_const_with_tracing)
         if symbolic:
-            apply.enable(apply_symbolic_mode)
-            apply.enable(apply_const_symbolic_mode)
+            set_symbolic()
             self._lazy_eval_graph = G.Graph()
             self._apply_graph_options(self._lazy_eval_graph)
             self._lazy_eval_links = ()
@@ -339,10 +352,7 @@ class trace:
         return escaped_tensors
 
     def _lazy_eval(self, lazy_eval_graph, lazy_eval_tensors, lazy_eval_links):
-        readers = [
-            G.OutputNode(x._LazyEvalTensor__varnode).outputs[0]
-            for x in lazy_eval_tensors
-        ]
+        readers = [G.OutputNode(x()._varnode).outputs[0] for x in lazy_eval_tensors]
         self._apply_graph_options(lazy_eval_graph)
         # FIXME
         if self._graph_opt_level is not None:
@@ -353,20 +363,22 @@ class trace:
         lazy_eval_graph.compile(*lazy_eval_links, *readers)
         lazy_eval_graph()
         for r, x in zip(readers, lazy_eval_tensors):
-            assign_raw_tensor(x, as_raw_tensor(r.op.get_value()))
+            x()._handle = RawTensor(r.op.get_value())._handle
 
     @contextlib.contextmanager
     def _setup(self):
         interrupted = False
 
         def do_enter():
+            set_tracing()
             self._save_symbolic_shape = set_symbolic_shape(self._symbolic_shape)
             self._set_active(True)
             if self._untraced:
                 self._init_trace(self._symbolic)
             else:
-                apply.enable(apply_compiled_mode)
-                apply.enable(apply_const_compiled_mode)
+                # disable symbolic mode
+                unset_symbolic()
+                set_compiled()
                 if self._graph is None:
                     self._compile()
                 self._graph.execute()
@@ -375,12 +387,12 @@ class trace:
             escaped_tensors = self._take_escaped_tensors()
             if self._untraced:
                 for x in escaped_tensors:
-                    info = self._tinfo[x._TraceMixin__handle]
-                    info.data_read = True
-                    x._TraceMixin__restore()
+                    info = self._tinfo[x().mixin_handle]
+                    x().data_read = True
+                    x().mixin_handle = -1
                 if self._inputs_to_restore:
                     for x in self._inputs_to_restore:
-                        x._TraceMixin__restore()
+                        x.mixin_handle = -1
                 if self._symbolic and (
                     self._lazy_eval_tensors or self._lazy_eval_links
                 ):
@@ -399,7 +411,7 @@ class trace:
                 if self._pc == len(self._seq):
                     for x in escaped_tensors:
                         try:
-                            assign_raw_tensor(x, as_raw_tensor(x._dev_tensor()))
+                            assign_raw_tensor(x(), RawTensor(x()._dev_tensor()))
                         except TraceMismatchError:
                             # TraceMismatchError thrown in do_exit
                             pass
@@ -409,22 +421,20 @@ class trace:
             # reset status
             self._pc = 0
             self._tensor_remaps = None
-            apply.disable(apply_with_tracing)
-            apply.disable(apply_const_with_tracing)
-            apply.disable(apply_symbolic_mode)
-            apply.disable(apply_const_symbolic_mode)
-            apply.disable(apply_compiled_mode)
-            apply.disable(apply_const_compiled_mode)
             self._set_active(False)
-            # Restore global variable
             set_symbolic_shape(self._save_symbolic_shape)
+            unset_compiled()
+            unset_symbolic()
+            unset_tracing()
 
         def do_exit():
+            unset_tracing()
             if not self._untraced and self._pc != len(self._seq):
                 raise TraceMismatchError("premature end")
             if not self._symbolic or not self._untraced:
                 for x in self._active_tensors:
-                    x._dev_tensor()
+                    x()._dev_tensor()
+                    x().mixin_handle = -1
 
         try:
             do_enter()
@@ -447,9 +457,9 @@ class trace:
             # conditionally reading a compiled tensor in excluded region
             # is permitted, so we have to assume every tensor might be read
             for x in self._active_tensors:
-                info = self._tinfo[x._TraceMixin__handle]
+                info = self._tinfo[x().mixin_handle]
                 info.exported = True
-                info.data_read = True
+                x().data_read = True
 
     def _apply_graph_options(self, graph):
 
@@ -503,7 +513,7 @@ class trace:
                 in_out_links += opnode.outputs[1:]
 
         for op, ihandles, ohandles in self._seq:
-            if isinstance(op, Const):
+            if isinstance(op, str) and op == "Const":
                 assert len(ihandles) == 0
                 (h,) = ohandles
                 info = self._tinfo[h]
@@ -554,7 +564,10 @@ class trace:
                     io_links = (info.varnode,)
 
                 ivars.append(info.varnode)
+
+            ivars = [RawTensor(ivar) for ivar in ivars]
             ovars = apply(op, *ivars)
+            ovars = [x._varnode for x in ovars]
             if require_links and len(ovars) > 0:
                 io_links = (ovars[0],)
             assert len(ovars) == len(ohandles)
@@ -568,7 +581,8 @@ class trace:
                     readers.append(opnode.outputs[0])
                     in_out_links = opnode.outputs
 
-                if info.data_read:
+                x = self._handle2tensors[h]
+                if x.data_read:
                     # Shape can be obtained from data so doesn't need its own
                     # output node. On the other hand, value is read separately
                     # to leverage eager h2d copy
@@ -581,6 +595,7 @@ class trace:
                 if info.shape_read:
                     opnode = info.shape_reader = G.AttrOutputNode(v, *in_out_links)
                     add_reader(opnode)
+
         # FIXME
         if self._graph_opt_level is not None:
             graph.options.graph_opt_level = self._graph_opt_level
@@ -592,18 +607,6 @@ class trace:
     def _reset_exec_env(self):
         for opnode in self._need_reset_nodes:
             opnode.reset()
-
-    def _require_shape(self, handle):
-        info = self._tinfo[handle]
-        info.shape_read = True
-
-    def _require_value(self, handle):
-        info = self._tinfo[handle]
-        info.value_read = True
-
-    def _require_data(self, handle):
-        info = self._tinfo[handle]
-        info.data_read = True
 
     def __call__(self, *args, **kwargs):
         if is_tracing():
@@ -728,8 +731,9 @@ class trace:
                 dtype=info.dtype, device=dumped_device, shape=info.shape or (1,), name=k
             )
 
+        set_tracing()
         for op, ihandles, ohandles in self._seq:
-            if isinstance(op, Const):
+            if isinstance(op, str) and op == "Const":
                 assert len(ihandles) == 0
                 (h,) = ohandles
                 info = self._tinfo[h]
@@ -750,7 +754,9 @@ class trace:
                         info.bound_data.numpy(), dtype=info.dtype, device=dumped_device
                     )
                 ivars.append(h2v[h])
+            ivars = [RawTensor(ivar) for ivar in ivars]
             ovars = apply(op, *ivars)
+            ovars = [x._varnode for x in ovars]
             assert len(ovars) == len(ohandles)
             h2v.update(zip(ohandles, ovars))
 
@@ -761,6 +767,7 @@ class trace:
                 v.name = output_names[i]
             dest_vars.append(v)
 
+        dest_vars = [G.VarNode(var) for var in dest_vars]
         if optimize_for_inference:
             dest_vars = G.optimize_for_inference(dest_vars, **kwargs)
 
@@ -782,15 +789,15 @@ class trace:
                 info.external = False
                 info.device = x.device
                 info.dtype = x.dtype
-                info.shape = x.shape
-                TraceMixin._TraceMixin__inject(x, h)
+                info.shape = x.numpy().shape
+                x.mixin_handle = h
+                self._handle2tensors[h] = x
                 self._inputs_to_restore.append(x)
                 return h
 
             self._arg_bindings = []
             for i, x in enumerate(args):
-                x = find_raw_tensor(x)
-                if x is None:
+                if not isinstance(x, RawTensor):
                     raise TypeError(
                         "positional arguments should all be tensor "
                         "but args[%d] cannot be recognized as one" % i
@@ -799,8 +806,7 @@ class trace:
 
             self._kwarg_bindings = {}
             for k, x in kwargs.items():
-                x = find_raw_tensor(x)
-                if x is not None:
+                if isinstance(x, RawTensor):
                     self._kwarg_bindings[k] = record_input(x)
         else:
             if len(args) != len(self._arg_bindings):
@@ -809,8 +815,7 @@ class trace:
             self._tensor_remaps = {}
 
             for i, (h, x) in enumerate(zip(self._arg_bindings, args)):
-                x = find_raw_tensor(x)
-                if x is None:
+                if not isinstance(x, RawTensor):
                     raise TypeError(
                         "positional arguments should all be tensor "
                         "but args[%d] cannot be recognized as one" % i
@@ -825,8 +830,7 @@ class trace:
 
             kwargs_tensors = {}
             for k, x in kwargs.items():
-                x = find_raw_tensor(x)
-                if x is not None:
+                if isinstance(x, RawTensor):
                     kwargs_tensors[k] = x
             if set(kwargs_tensors) != set(self._kwarg_bindings):
                 too_many = set(kwargs_tensors) - set(self._kwarg_bindings)
@@ -877,18 +881,17 @@ class trace:
             self._output_bindings = []
 
         for i, x in enumerate(outputs):
-            x = find_raw_tensor(x)
-            if x is None:
+            if not isinstance(x, RawTensor):
                 raise TypeError("every item of return value should be tensor")
             if self._untraced:
-                if not isinstance(x, TraceMixin):
+                h = x.mixin_handle
+                if h < 0:
                     raise RuntimeError("output is not computed from inputs")
-                h = x._TraceMixin__handle
                 self._output_bindings.append(h)
             else:
-                if not isinstance(x, CompiledTensorProxy):
+                h = x.mixin_handle
+                if h not in self._handle2compiledtensors:
                     raise RuntimeError("output is not computed from inputs")
-                h = x._CompiledTensorProxy__handle
                 if h != self._output_bindings[i]:
                     raise TraceMismatchError(
                         "retval[%s] is a different tensor than last time"
@@ -912,7 +915,7 @@ class trace:
         )
 
 
-class CompiledTensorProxy(RawTensor):
+class CompiledTensorProxy:
     """
     Duck-typed RawTensor
     """
@@ -924,6 +927,8 @@ class CompiledTensorProxy(RawTensor):
         self.__shape = None
         self.__data = None
         self.__value = None
+        self.__tensor = active_trace._handle2tensors[handle]
+        self.__tensor.mixin_handle = handle
 
     @property
     def dtype(self):
@@ -938,19 +943,19 @@ class CompiledTensorProxy(RawTensor):
         if self._isscalar:
             return ()
         if self.__shape is None:
-            if self.__info.shape_read:
+            if self.__tensor.shape_read:
                 self.__shape = self.__info.shape_reader.get_value().shape
-            elif self.__info.data_read:
-                self.__shape = self._dev_tensor().shape
+            elif self.__tensor.data_read:
+                self.__shape = self.__tensor._dev_tensor().shape
             else:
                 raise TraceMismatchError("shape of this tensor is not read in trace")
         return self.__shape
 
     def numpy(self):
         if self.__value is None:
-            if self.__info.value_read:
+            if self.__tensor.value_read:
                 self.__value = self.__info.value_reader.get_value()
-            elif self.__info.data_read:
+            elif self.__tensor.data_read:
                 self.__value = self._dev_tensor().numpy()
             else:
                 raise TraceMismatchError("value of this tensor is not read in trace")
@@ -960,9 +965,11 @@ class CompiledTensorProxy(RawTensor):
 
     def _dev_tensor(self):
         if self.__data is None:
-            if not self.__info.data_read:
+            if not self.__tensor.data_read:
                 raise TraceMismatchError("raw data of this tensor is not read in trace")
             self.__data = self.__info.data_reader.get_value()
+            self.__tensor._reset(RawTensor(self.__data))
+            self.__tensor.mixin_handle = self.__handle
         return self.__data
 
     def _drop(self):
@@ -975,132 +982,31 @@ class CompiledTensorProxy(RawTensor):
         return
 
     def __del__(self):
-        if self.__info.shape_read and self.__shape is not None:
+        if self.__tensor.shape_read and self.__shape is not None:
             self.__info.shape_reader.drop_value()
-        if self.__info.value_read and self.__value is not None:
-            self.__info.value_reader.drop_value()
-        if self.__info.data_read and self.__data is not None:
+        # if self.__tensor.value_read and self.__value is not None:
+        #     self.__info.value_reader.drop_value()
+        if self.__tensor.data_read and self.__data is not None:
             self.__info.data_reader.drop_value()
 
 
-class LazyEvalTensor(RawTensor):
-    def __init__(self, varnode, isscalar=False):
-        super().__init__()
-        self.__varnode = varnode
-        self._isscalar = isscalar
-
-    @property
-    def dtype(self):
-        return self.__varnode.dtype
-
-    @property
-    def device(self):
-        return self.__varnode.device
-
-    @property
-    def shape(self):
-        if self._isscalar:
-            return ()
-        return self.__varnode.shape
-
-    def numpy(self):
-        ret = self.__varnode.value
-        if self._isscalar:
-            ret = ret.squeeze()
-        return ret
-
-    def _drop(self):
-        return
-
-    def _swap_in(self):
-        return
-
-    def _swap_out(self):
-        return
-
-    def _dev_tensor(self):
-        raise RuntimeError("cannot access data during symbolic tracing")
-
-
-class TraceMixin:
-    __subclass_cache = {}
-
-    def __inject(self, handle):
-        cache = __class__.__subclass_cache
-        cls = self.__class__
-        subcls = cache.get(cls)
-        if subcls is None:
-            subcls = cache[cls] = type("Traced" + cls.__name__, (__class__, cls), {})
-        self.__class__ = subcls
-        self.__handle = handle
-        self.__cls = cls
-        return self
-
-    def __restore(self):
-        cls = self.__cls
-        del self.__handle
-        del self.__cls
-        self.__class__ = cls
-        return self
-
-    @property
-    def shape(self):
-        if not skip_tracing:
-            active_trace._require_shape(self.__handle)
-        return super().shape
-
-    def numpy(self):
-        if not skip_tracing:
-            active_trace._require_value(self.__handle)
-        return super().numpy()
-
-    def _dev_tensor(self):
-        if not skip_tracing:
-            active_trace._require_data(self.__handle)
-        return super()._dev_tensor()
-
-    def _drop(self):
-        return
-
-    def _swap_in(self):
-        return
-
-    def _swap_out(self):
-        return
-
-
-class TracedRawTensor(TraceMixin, RawTensor):
-    pass
-
-
-class TracedLazyTensor(TraceMixin, LazyEvalTensor):
-    pass
-
-
 def assign_raw_tensor(lhs, rhs):
-    handle = rhs._handle
-    # Keep isscalar of lhs
-    isscalar = lhs._isscalar
-    rhs.__dict__.clear()
-    lhs.__dict__.clear()
-    lhs.__class__ = RawTensor
-    lhs.__init__(handle, isscalar=isscalar)
+    lhs.__init__(rhs)
 
 
-# this hook turns RawTensor into LazyEvalTensor
-@apply.register()
+# this hook turns RawTensor into LazyEvalTensor(varnode)
 def apply_symbolic_mode(op: OpDef, *args: RawTensor):
     graph = active_trace._lazy_eval_graph
     ivars = []
     for x in args:
-        var = getattr(x, "_LazyEvalTensor__varnode", None)
+        var = getattr(x, "_varnode", None)
         if var:
             ivars.append(var)
         else:
             data_setter = G.InputNode(
                 device=x.device,
                 dtype=x.dtype,
-                shape=x.shape or (1,),
+                shape=x.numpy().shape or (1,),
                 graph=graph,
                 use_static_shape=True,
             )
@@ -1119,108 +1025,75 @@ def apply_symbolic_mode(op: OpDef, *args: RawTensor):
         ivars[0] = opnode.outputs[0]
         active_trace._lazy_eval_links = (ivars[0],)
 
-    ovars = apply(op, *ivars)
+    ivars = [
+        RawTensor(ivar._node) if hasattr(ivar, "_node") else RawTensor(ivar)
+        for ivar in ivars
+    ]
+    unset_symbolic()
+    outputs = apply(op, *ivars)
+    set_symbolic()
 
     if require_links:
-        active_trace._lazy_eval_links = (ovars[0],)
+        active_trace._lazy_eval_links = (outputs[0]._varnode,)
 
-    outputs = [LazyEvalTensor(v) for v in ovars]
-    active_trace._lazy_eval_tensors.update(outputs)
+    active_trace._lazy_eval_tensors.update([TensorWeakRef(o) for o in outputs])
     return outputs
 
 
-apply.disable(apply_symbolic_mode)
-
-
-@apply.register()
-def apply_const_symbolic_mode(op: Const, *args: RawTensor):
+def apply_const_symbolic_mode(value, dtype, device):
     graph = active_trace._lazy_eval_graph
-    ret = LazyEvalTensor(
-        graph.make_const(op.value, dtype=op.dtype, device=op.device), isscalar=True
-    )
-    active_trace._lazy_eval_tensors.add(ret)
+    # don't need to unset tracing
+    # because varnode construction will ignore tracing flag
+    ret = RawTensor(graph.make_const(value, dtype=dtype, device=device))
+    active_trace._lazy_eval_tensors.add(TensorWeakRef(ret))
     return (ret,)
 
 
-apply.disable(apply_const_symbolic_mode)
-
-
-@apply.register()
 def apply_compiled_mode(op: OpDef, *args: RawTensor):
     if skip_tracing:
         args = [
-            as_raw_tensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
+            RawTensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
             for x in args
         ]
-        return apply.super(op, *args)
+        unset_tracing()
+        ret = apply(op, *args)
+        set_tracing()
+        return ret
     return active_trace._apply_op(op, args)
 
 
-apply.disable(apply_compiled_mode)
-
-
-@apply.register()
-def apply_const_compiled_mode(op: Const, *args: RawTensor):
+def apply_const_compiled_mode(value, dtype, device, is_const):
     if skip_tracing:
         args = [
-            as_raw_tensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
+            RawTensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
             for x in args
         ]
-        return apply.super(op, *args)
-    return active_trace._apply_const(op, args)
-
-
-apply.disable(apply_const_compiled_mode)
+        unset_tracing()
+        ret = RawTensor(value, dtype, device, False)
+        set_tracing()
+        return ret
+    return active_trace._apply_const(value, dtype, device)
 
 
 # this hook injects TraceMixin
-@apply.register()
 def apply_with_tracing(op: OpDef, *args: RawTensor):
-    outputs = apply.super(op, *args)
+    if active_trace._symbolic:
+        outputs = apply_symbolic_mode(op, *args)
+    else:
+        unset_tracing()
+        outputs = apply(op, *args)
+        set_tracing()
+
     active_trace._record_op(op, args, outputs)
-    return outputs
+    return list(outputs)
 
 
-apply.disable(apply_with_tracing)
-
-
-@apply.register()
-def apply_const_with_tracing(op: Const, *args: RawTensor):
-    outputs = apply.super(op, *args)
-    active_trace._record_const(op, outputs)
-    return outputs
-
-
-apply.disable(apply_const_with_tracing)
-
-
-class BrokenRawTensor(RawTensor):
-    def __getattribute__(self, _):
-        raise RuntimeError("broken due to misuse of tracing")
-
-    def __setattr__(self, *_):
-        raise RuntimeError("broken due to misuse of tracing")
-
-
-@functools.singledispatch
-def find_raw_tensor(x):
-    return None
-
-
-@find_raw_tensor.register(RawTensor)
-def _(x):
-    return x
-
-
-@find_raw_tensor.register(TensorWrapperBase)
-def _(x):
-    x = getattr(x, "__wrapped__", None)
-    if x is not None:
-        return find_raw_tensor(x)
-
-
-@find_raw_tensor.register(Tensor)
-def _(x):
-    x = getattr(x, "_data", None)
-    if x is not None:
-        return find_raw_tensor(x)
+def apply_const_with_tracing(value, dtype, device, is_const):
+    if active_trace._symbolic:
+        outputs = apply_const_symbolic_mode(value, dtype, device)
+    else:
+        unset_tracing()
+        outputs = (RawTensor(value, dtype, device, False),)
+        set_tracing()
+    active_trace._record_const(outputs)
+    return list(outputs)

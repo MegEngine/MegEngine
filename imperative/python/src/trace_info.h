@@ -1,5 +1,5 @@
 /**
- * \file imperative/python/src/trace.h
+ * \file imperative/python/src/trace_info.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -9,10 +9,16 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "./tensor.h"
+#include "inttypes.h"
 
 namespace mgb::imperative::python {
 
-apply_result_t apply_trace(ApplyContext& ctx);
+struct TraceInfo {
+    int64_t mixin_handle = -1;
+
+    bool data_read = false;
+    bool value_read = false;
+    bool shape_read = false;
+};
 
 } // namespace mgb::imperative::python
