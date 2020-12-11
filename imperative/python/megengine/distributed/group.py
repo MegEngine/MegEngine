@@ -173,5 +173,8 @@ def new_group(proc_ranks: List[int]) -> Group:
 
 def group_barrier(group: Optional[Group] = WORLD) -> None:
     """Block until all ranks in the group reach this barrier."""
+    # if running with single node, skip it
+    if _sd is None:
+        return
     assert isinstance(group, Group)
     _sd.client.group_barrier(group.key, group.size)
