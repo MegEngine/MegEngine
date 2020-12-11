@@ -10,6 +10,7 @@
  */
 
 #include "./ops.h"
+#include <string>
 
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/ops/backward_graph.h"
@@ -45,7 +46,8 @@ void init_ops(py::module m) {
             });
 
     py::class_<VirtualDep, std::shared_ptr<VirtualDep>, OpDef>(m, "VirtualDep")
-        .def(py::init<>());
+        .def(py::init<>())
+        .def(py::init<std::string>());
 
     #include "opdef.py.inl"
 }

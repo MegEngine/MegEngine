@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <string>
+#include "megbrain/graph/operator_node.h"
 #include "megbrain/imperative/op_def.h"
 
 #include "megbrain/utils/hash.h"
@@ -22,6 +24,9 @@ class VirtualDep : public OpDefImplBase<VirtualDep> {
 
 public:
     VirtualDep() = default;
+    VirtualDep(std::string dev) : device(dev) {}
+
+    std::string device;
 
     size_t hash() const override {
         return reinterpret_cast<size_t>(dyn_typeinfo());

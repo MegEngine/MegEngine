@@ -246,7 +246,7 @@ class Profiler:
             value_type = type(value)
             if value_type in cls._type_map:
                 value = cls._type_map[value_type](value)
-            results[attr] = value
+            results[attr] = str(value)
         return results
 
     def dump(self, path: Optional[str] = None):

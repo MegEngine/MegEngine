@@ -10,6 +10,8 @@
  */
 
 #include "megbrain/imperative/ops/utility.h"
+#include <string>
+#include "megbrain/comp_node.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/opr/utility.h"
 #include "../op_trait.h"
@@ -20,9 +22,12 @@ namespace {
 cg::OperatorNodeBase* virtual_dep_apply_on_var_node(
         const OpDef& def, const VarNodeArray& inputs) {
     auto&& graph = inputs[0]->owner_graph();
-
+    auto&& op = def.cast_final_safe<VirtualDep>();
     VarNodeArray inps(inputs.begin(), inputs.end());
     cg::OperatorNodeConfig config;
+    if (op.device.length() > 0) {
+        config.comp_node(CompNode::load(op.device));
+    }
     cg::OperatorNodeBase* opr =
             graph->insert_opr(std::make_unique<mgb::opr::VirtualDep>(
                     inps, config));
