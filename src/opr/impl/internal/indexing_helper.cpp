@@ -371,9 +371,11 @@ serialization::IndexDescMaskDump::from_index_desc(const IndexDesc &desc) {
     ret.nr_item = desc.size();
     for (size_t i = 0; i < desc.size(); ++ i) {
         auto &&s = desc[i];
-        ret.items[i] = {
-            static_cast<int8_t>(s.axis.get_raw()),
-            s.begin.node(), s.end.node(), s.step.node(), s.idx.node()};
+        ret.items[i] = {static_cast<int8_t>(s.axis.get_raw()),
+                        static_cast<bool>(s.begin.node()),
+                        static_cast<bool>(s.end.node()),
+                        static_cast<bool>(s.step.node()),
+                        static_cast<bool>(s.idx.node())};
     }
     return ret;
 }

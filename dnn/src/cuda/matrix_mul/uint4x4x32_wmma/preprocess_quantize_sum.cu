@@ -192,13 +192,11 @@ void megdnn::cuda::exec_span_qsum(const int32_t* qSumA, const uint32_t M,
                                   int32_t* dst, const uint32_t strd,
                                   const int32_t scaler_bias,
                                   cudaStream_t stream) {
-    constexpr size_t TX = 32, TY = 32;
-    constexpr size_t BX = 32, BY = 32;
+    constexpr uint32_t TX = 32, TY = 32, BX = 32, BY = 32;
     dim3 nthreads{TX, TY};
-    dim3 nblocks{static_cast<uint32_t>(DIVUP(N, BX)),
-                 static_cast<uint32_t>(DIVUP(M, BY))};
-    span_qsum<TX, TY, BX, BY><<<nblocks, nthreads, 0, stream>>>(qSumA, M, qSumB, N, dst, strd,
-                                                scaler_bias);
+    dim3 nblocks{DIVUP(N, BX), DIVUP(M, BY)};
+    span_qsum<TX, TY, BX, BY><<<nblocks, nthreads, 0, stream>>>(
+            qSumA, M, qSumB, N, dst, strd, scaler_bias);
     after_kernel_launch();
 }
 

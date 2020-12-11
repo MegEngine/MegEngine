@@ -26,7 +26,7 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& /*src*/,
                                   const TensorLayout& /*mask_offset*/,
                                   const TensorLayout& /*mask_val*/,
-                                  const TensorLayout& /*dst*/) {
+                                  const TensorLayout& /*dst*/) override {
         return 0;
     };
     void set_error_tracker(void* tracker) override {

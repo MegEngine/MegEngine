@@ -46,10 +46,7 @@ using namespace wmma::experimental::precision;
 
 namespace wmma_matrix_mul_u4 {
 
-constexpr size_t WMMA_M = 8;
-constexpr size_t WMMA_N = 8;
-constexpr size_t WMMA_K = 32;
-constexpr size_t WARP_SIZE = 32;
+constexpr uint32_t WMMA_M = 8, WMMA_N = 8, WMMA_K = 32, WARP_SIZE = 32;
 
 template <size_t WARP_X_, size_t WARP_Y_, size_t ROW_PER_WARP_,
           size_t COL_PER_WARP_>
@@ -334,10 +331,8 @@ __global__ void u4_gemm_template_device_nt(const uint8_t* /*A*/,
 void _do_dispatch_wmma_matrix_mul_u4(const uint8_t* A, const uint8_t* B,
                                      int32_t* C, int M, int N, int K, int lda,
                                      int ldb, int ldc, cudaStream_t stream) {
-    constexpr size_t warp_x = 4;
-    constexpr size_t warp_y = 4;
-    constexpr size_t row_per_warp = 4;
-    constexpr size_t col_per_warp = 4;
+    constexpr uint32_t warp_x = 4, warp_y = 4, row_per_warp = 4,
+                       col_per_warp = 4;
     typedef BlockConfig<warp_x, warp_y, row_per_warp, col_per_warp>
             BlockConfig_;
     dim3 block{warp_x * WARP_SIZE, warp_y};

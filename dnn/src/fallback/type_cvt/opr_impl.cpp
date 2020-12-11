@@ -110,8 +110,10 @@ void do_cvt_normal_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float dscale = 1.f / scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<int32_t, float>(std::round(sptr[i] * dscale),
-                                           -2147483648, 2147483647);
+        dptr[i] = saturate<int32_t, float>(
+                std::round(sptr[i] * dscale),
+                static_cast<float>(std::numeric_limits<int32_t>::min()),
+                static_cast<float>(std::numeric_limits<int32_t>::max()));
     }
 }
 
@@ -219,8 +221,10 @@ void do_cvt_s8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<int32_t, float>(std::round(sptr[i] * scale),
-                                           -2147483648, 2147483647);
+        dptr[i] = saturate<int32_t, float>(
+                std::round(sptr[i] * scale),
+                static_cast<float>(std::numeric_limits<int32_t>::min()),
+                static_cast<float>(std::numeric_limits<int32_t>::max()));
     }
 }
 
@@ -232,8 +236,10 @@ void do_cvt_s32_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<int32_t, float>(std::round(sptr[i] * scale),
-                                           -2147483648, 2147483647);
+        dptr[i] = saturate<int32_t, float>(
+                std::round(sptr[i] * scale),
+                static_cast<float>(std::numeric_limits<int32_t>::min()),
+                static_cast<float>(std::numeric_limits<int32_t>::max()));
     }
 }
 
@@ -247,9 +253,10 @@ void do_cvt_asymm8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] =
-                saturate<int32_t, float>(std::round((sptr[i] - src_zp) * scale),
-                                         -2147483648, 2147483647);
+        dptr[i] = saturate<int32_t, float>(
+                std::round((sptr[i] - src_zp) * scale),
+                static_cast<float>(std::numeric_limits<int32_t>::min()),
+                static_cast<float>(std::numeric_limits<int32_t>::max()));
     }
 }
 

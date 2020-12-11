@@ -43,7 +43,7 @@ public:
                                   const TensorLayout& /* out_diff */,
                                   const TensorLayout& /* out_count */,
                                   const TensorLayout& /* data_diff */,
-                                  const TensorLayout& /* trans_diff */) {
+                                  const TensorLayout& /* trans_diff */) override {
         return 0ULL;
     };
 
