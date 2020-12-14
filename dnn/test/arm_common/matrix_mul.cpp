@@ -278,7 +278,7 @@ TEST_F(ARM_COMMON, FP32_GEVM) {
 
     // M = 1
     for (size_t M : {1})
-        for (size_t K : {1000, 4096, 25088})
+        for (size_t K : {1000, 4096})
             for (size_t N : {1000, 4096})
                 run(M, K, N);
 }
