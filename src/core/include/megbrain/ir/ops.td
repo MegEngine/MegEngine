@@ -122,7 +122,7 @@ def Eye: MgbHashableOp<"Eye", [EyeParam]> {
   );
 }
 
-def GetVarShape : MgbHashableOp<"GetVarShape">;
+def GetVarShape : MgbHashableOp<"GetVarShape", [OptionalAxisV1Param]>;
 
 def Concat: MgbHashableOp<"Concat", [AxisParam]> {
   let extraArguments = (ins
