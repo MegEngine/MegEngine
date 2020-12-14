@@ -10,12 +10,10 @@
  */
 
 #include "./ops.h"
-#include <string>
 
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/opr_attr.h"
-#include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/ops/autogen.h"
 
 namespace py = pybind11;
@@ -44,10 +42,6 @@ void init_ops(py::module m) {
                 };
                 return self.graph().interpret<py::object>(f, c, inputs);
             });
-
-    py::class_<VirtualDep, std::shared_ptr<VirtualDep>, OpDef>(m, "VirtualDep")
-        .def(py::init<>())
-        .def(py::init<std::string>());
 
     #include "opdef.py.inl"
 }

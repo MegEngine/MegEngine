@@ -15,6 +15,7 @@
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/imperative/opr_utility.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/utility.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/imperative.h"
 #include "./helper.h"
@@ -561,5 +562,17 @@ void init_graph_rt(py::module m) {
             p->set(TensorAttr{TensorLayout{dv.shape(), dv.dtype()}, dv.comp_node()});
         };
         return output_callback(std::move(f), std::move(inputs), p, true);
+    });
+
+    m.def("virtual_dep", [](std::vector<cg::VarNode*> inputs, std::string device) {
+        auto&& graph = inputs[0]->owner_graph();
+        VarNodeArray inps(inputs.begin(), inputs.end());
+        cg::OperatorNodeConfig config;
+        if (device.length() > 0) {
+            config.comp_node(CompNode::load(device));
+        }
+        cg::OperatorNodeBase* opr = graph->insert_opr(
+                std::make_unique<mgb::opr::VirtualDep>(inps, config));
+        return opr;
     });
 }

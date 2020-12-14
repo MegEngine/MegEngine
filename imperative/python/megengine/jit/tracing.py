@@ -25,7 +25,6 @@ from ..core._imperative_rt.ops import (
     RemoteRecv,
     RemoteSend,
     UniformRNG,
-    VirtualDep,
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import device as as_device
@@ -548,9 +547,10 @@ class trace:
                         need_reset_nodes.append(opnode)
                         info.varnode, *in_out_links = opnode.outputs
                 if require_links and i == 0 and len(io_links) > 0:
-                    info.varnode = apply(
-                        VirtualDep(str(io_links[0].device)), info.varnode, *io_links
-                    )[0]
+                    opnode = G.VirtualDepNode(
+                        [info.varnode, *io_links], str(io_links[0].device)
+                    )
+                    info.varnode = opnode.outputs[0]
                     io_links = (info.varnode,)
 
                 ivars.append(info.varnode)
@@ -1112,11 +1112,11 @@ def apply_symbolic_mode(op: OpDef, *args: RawTensor):
 
     if require_links and active_trace._lazy_eval_links:
         assert len(ivars) > 0, "op should has at least one input"
-        ivars[0] = apply(
-            VirtualDep(str(active_trace._lazy_eval_links[0].device)),
-            ivars[0],
-            *active_trace._lazy_eval_links,
-        )[0]
+        opnode = G.VirtualDepNode(
+            [ivars[0], *active_trace._lazy_eval_links],
+            str(active_trace._lazy_eval_links[0].device),
+        )
+        ivars[0] = opnode.outputs[0]
         active_trace._lazy_eval_links = (ivars[0],)
 
     ovars = apply(op, *ivars)

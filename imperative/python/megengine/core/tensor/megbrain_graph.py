@@ -569,3 +569,9 @@ class AttrOutputNode(OpNode):
 
     def reset(self):
         self._rendezvous.reset()
+
+
+class VirtualDepNode(OpNode):
+    def __init__(self, vars, device=""):
+        out = _imperative_rt.virtual_dep(_unwrap(vars), device)
+        super().__init__(out)
