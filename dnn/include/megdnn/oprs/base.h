@@ -155,7 +155,15 @@ public:
 
     template <typename T>
     static T deserialize_read_pod(const std::string& data, size_t offset = 0) {
-        T ret = *reinterpret_cast<const T*>(&data[offset]);
+        T ret;
+        //! A pointer to an object or incomplete type may be converted to a
+        //! pointer to a different object or incomplete type. If the resulting
+        //! pointer is not correctly aligned for the pointed-to type, the
+        //! behavior is undefined.
+        //!
+        //! so here we should use memcpy instead of
+        //!     *reinterpret_cast<const T*>(&data[offset]);
+        memcpy(&ret, data.data() + offset, sizeof(T));
         return ret;
     }
 

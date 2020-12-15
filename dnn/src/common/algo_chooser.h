@@ -48,10 +48,10 @@ typename Opr::AlgoBase* get_algorithm_or_construct(Opr* opr, Args&&... args) {
     if (set.valid()) {
         return opr->algo_pack().construct_and_get_algo(set.desc);
     } else {
-        ret = opr->get_algorithm_info_heuristic(
-                std::forward<Args>(args)..., std::numeric_limits<size_t>::max(),
-                false);
-        return opr->get_algo_from_desc(ret.desc);
+        return static_cast<typename Opr::AlgoBase*>(
+                opr->get_algorithm_heuristic(std::forward<Args>(args)...,
+                                             std::numeric_limits<size_t>::max(),
+                                             false));
     }
 }
 
