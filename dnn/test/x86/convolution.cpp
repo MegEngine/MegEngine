@@ -450,6 +450,7 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
     }
 }
 #endif
+
 #endif
 
 }  // namespace test

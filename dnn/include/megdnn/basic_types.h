@@ -330,6 +330,8 @@ struct TensorLayout : public TensorShape {
     /* =================== properties =================== */
 
     std::string to_string() const;
+
+    std::string serialize() const;
 #endif  // MEGDNN_CC_HOST
 
     /*!

@@ -11,6 +11,7 @@
  */
 #pragma once
 
+#include <type_traits>
 #include "megdnn/basic_types.h"
 #include "megdnn/handle.h"
 
@@ -144,8 +145,11 @@ public:
         return {{handle_type(), type(), param()}, name(), is_reproducible()};
     }
 
+    Info::Desc desc() const { return {handle_type(), type(), param()}; }
+
     template <typename T>
     static void serialize_write_pod(const T& val, std::string& result) {
+        static_assert(std::is_standard_layout<T>::value, "invalid type");
         result.append(reinterpret_cast<const char*>(&val), sizeof(T));
     }
 
@@ -155,6 +159,7 @@ public:
 
     template <typename T>
     static T deserialize_read_pod(const std::string& data, size_t offset = 0) {
+        static_assert(std::is_standard_layout<T>::value, "invalid type");
         T ret;
         //! A pointer to an object or incomplete type may be converted to a
         //! pointer to a different object or incomplete type. If the resulting
@@ -167,8 +172,67 @@ public:
         return ret;
     }
 
+    template <typename T>
+    static T deserialize_read_pod(const char* data, size_t offset = 0) {
+        static_assert(std::is_standard_layout<T>::value, "invalid type");
+        T ret;
+        //! A pointer to an object or incomplete type may be converted to a
+        //! pointer to a different object or incomplete type. If the resulting
+        //! pointer is not correctly aligned for the pointed-to type, the
+        //! behavior is undefined.
+        //!
+        //! so here we should use memcpy instead of
+        //!     *reinterpret_cast<const T*>(&data[offset]);
+        memcpy(&ret, data + offset, sizeof(T));
+        return ret;
+    }
+
+    enum class OprType : uint32_t {
+        MATRIX_MUL_FORWARD,
+        BATCHED_MATRIX_MUL_FORWARD,
+        CONVOLUTION_FORWARD,
+        CONVOLUTION_BACKWARD_DATA,
+        CONVOLUTION_BACKWARD_FILTER,
+        CONVOLUTION3D_FORWARD,
+        CONVOLUTION3D_BACKWARD_DATA,
+        CONVOLUTION3D_BACKWARD_FILTER,
+        LOCAL_SHARE_FORWARD,
+        LOCAL_SHARE_BACKWARD_DATA,
+        LOCAL_SHARE_BACKWARD_FILTER,
+        DEFORMABLE_CONV_FORWARD,
+        DEFORMABLE_CONV_BACKWARD_DATA,
+        DEFORMABLE_CONV_BACKWARD_FILTER,
+        CONVBIAS_FORWARD,
+        BATCH_CONV_FORWARD,
+    };
+
+    struct SearchItem {
+        OprType opr_type;
+        //! serialized param
+        std::string param;
+        TensorLayoutArray layouts;
+    };
+
+    /**
+     * \brief get subopr list of the algo
+     *
+     * \param layouts origin layouts of the parent opr
+     * \param opr parent opr
+     */
+    virtual std::vector<SearchItem> get_subopr_list(const TensorLayoutArray&,
+                                                    const OperatorBase*) const {
+        return {};
+    }
+
 protected:
     Handle::HandleType m_handle_type = Handle::HandleType::NAIVE;
+};
+
+//! policy for executing the operator
+struct ExecutionPolicy {
+    //! INVALID_ALGO_TYPE algo_type means using heuristic
+    Algorithm::Info::Desc algo;
+    std::vector<ExecutionPolicy> sub_policy;
 };
 
 /*!
@@ -197,12 +261,6 @@ public:
      * validity.
      */
     virtual const char* get_algorithm_set_name() const = 0;
-
-    //! policy for executing the operator
-    struct ExecutionPolicy {
-        //! INVALID_ALGO_TYPE algo_type means using heuristic
-        AlgorithmInfo algo;
-    };
 
     ExecutionPolicy& execution_policy() { return m_execution_policy; }
 
@@ -464,6 +522,9 @@ protected:
             bool reproducible = false) = 0;
 };
 }  // namespace detail
+
+using Algorithm = detail::Algorithm;
+using ExecutionPolicy = detail::ExecutionPolicy;
 }  // namespace megdnn
 
 #include "megdnn/internal/visibility_epilogue.h"

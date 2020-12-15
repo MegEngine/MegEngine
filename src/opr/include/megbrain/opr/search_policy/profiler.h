@@ -18,6 +18,7 @@
 #include "megbrain/comp_node.h"
 
 #include "megdnn/basic_types.h"
+#include "megdnn/oprs/base.h"
 #include "megdnn/oprs/linalg.h"
 #include "megdnn/oprs/nn.h"
 
@@ -139,7 +140,17 @@ class TimedProfiler {
 
 public:
     struct Param {
-        char algo_name[128];
+        struct ExecutionPolicyBlob {
+            //! enlarge the max size if needed
+            constexpr static size_t MAX_SIZE_IN_BYTES = 10240;
+            char data[MAX_SIZE_IN_BYTES];
+            uint32_t size;
+
+            static ExecutionPolicyBlob serialize(
+                    const megdnn::ExecutionPolicy& policy);
+            megdnn::ExecutionPolicy deserialize() const;
+        };
+        ExecutionPolicyBlob execution_policy;
         size_t workspace;
         megdnn::DTypeEnum dtypes[arity];
         CompNode::Locator comp_node_loc;

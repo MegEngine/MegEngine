@@ -382,7 +382,7 @@ float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
     for (auto i : algos) {
         if (std::regex_match(i.name,
                              std::regex("(" + algo_base + ")(.*)"))) {
-            opr->execution_policy().algo = i;
+            opr->execution_policy().algo = i.desc;
             auto used = benchmark.exec(layouts);
             min_used = std::min(min_used, used);
             printf("run algo: %s used: %f ms min_used: %f ms\n", i.name.c_str(),

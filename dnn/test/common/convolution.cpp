@@ -580,7 +580,7 @@ void convolution::test_conv_config_combinations(int k_size,
         checker.set_rng(0, &rng).set_rng(1, &rng);
         for (auto algo : opr->get_all_algorithms_info(ily, fly, oly)) {
             used_algos.insert(algo.desc);
-            opr->execution_policy().algo = algo;
+            opr->execution_policy().algo = algo.desc;
             checker
                 .set_epsilon(eps_getter(dtype == 1, 0, algo.name.c_str()))
                 .execs({ishp, fshp, {}});
@@ -599,7 +599,7 @@ void convolution::test_conv_config_combinations(int k_size,
             opr->param() = param;
             for (auto algo: opr->get_all_algorithms_info(fly, oly, ily)) {
                 used_algos_bwd_data.insert(algo.desc);
-                opr->execution_policy().algo = algo;
+                opr->execution_policy().algo = algo.desc;
                 checker_bwd_data
                     .set_epsilon(eps_getter(dtype == 1, 1, algo.name.c_str()))
                     .execl({fly, oly, ily});
@@ -620,7 +620,7 @@ void convolution::test_conv_config_combinations(int k_size,
             opr->param() = param;
             for (auto algo: opr->get_all_algorithms_info(ily, oly, fly)) {
                 used_algos_bwd_flt.insert(algo.desc);
-                opr->execution_policy().algo = algo;
+                opr->execution_policy().algo = algo.desc;
                 checker_bwd_filter
                     .set_epsilon(eps_getter(dtype == 1, 2, algo.name.c_str()))
                     .execl({ily, oly, fly});

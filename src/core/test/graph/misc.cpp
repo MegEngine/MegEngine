@@ -27,6 +27,7 @@
 #include "megbrain/gopt/inference.h"
 
 #include "megbrain/test/helper.h"
+#include "megdnn/oprs/base.h"
 
 #include <atomic>
 #include <chrono>
@@ -1924,19 +1925,19 @@ TEST(TestGraph, NaiveRecord2NCHW44) {
 
 namespace {
 template <typename DnnOp, typename... Args>
-typename DnnOp::AlgorithmInfo try_find_any_weight_preprocess_algo(
+typename megdnn::ExecutionPolicy try_find_any_weight_preprocess_algo(
         DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
         Args&& ...args) {
     if (found.valid()) {
         if (found.val()) {
-            return dnn_op->execution_policy().algo;
+            return dnn_op->execution_policy();
         } else {
             return {};
         }
     }
     for (auto&& algo : dnn_op->get_all_algorithms_info(
             std::forward<Args>(args)...)) {
-        dnn_op->execution_policy().algo = algo;
+        dnn_op->execution_policy().algo = algo.desc;
         auto layouts = dnn_op->deduce_preprocessed_filter_layout(
                 std::forward<Args>(args)...);
         if (layouts.empty()) continue;
@@ -1949,7 +1950,7 @@ typename DnnOp::AlgorithmInfo try_find_any_weight_preprocess_algo(
         }
         if (valid) {
             found.emplace(true);
-            return algo;
+            return {algo.desc, {}};
         }
     }
     found.emplace(false);
@@ -1958,19 +1959,19 @@ typename DnnOp::AlgorithmInfo try_find_any_weight_preprocess_algo(
 }
 
 template <typename DnnOp, typename... Args>
-typename DnnOp::AlgorithmInfo try_find_any_bias_preprocess_algo(
+typename megdnn::ExecutionPolicy try_find_any_bias_preprocess_algo(
         DnnOp* dnn_op, const char* mgb_info, Maybe<bool>& found,
         Args&& ...args) {
     if (found.valid()) {
         if (found.val()) {
-            return dnn_op->execution_policy().algo;
+            return dnn_op->execution_policy();
         } else {
             return {};
         }
     }
     for (auto&& algo : dnn_op->get_all_algorithms_info(
             std::forward<Args>(args)...)) {
-        dnn_op->execution_policy().algo = algo;
+        dnn_op->execution_policy().algo = algo.desc;
         auto layouts = dnn_op->deduce_preprocessed_filter_layout(
                 std::forward<Args>(args)...);
         if (layouts.size() <= 1)
@@ -1981,7 +1982,7 @@ typename DnnOp::AlgorithmInfo try_find_any_bias_preprocess_algo(
         }
         if (valid) {
             found.emplace(true);
-            return algo;
+            return {algo.desc, {}};
         }
     }
     found.emplace(false);

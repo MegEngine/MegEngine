@@ -42,7 +42,7 @@ ConvolutionBackwardFilterImpl::AlgoBFloat16::float_args(
     change_dtype(fgrad);
     opr->param() = args.opr->param();
     opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-    opr->execution_policy() = {m_algorithm->info()};
+    opr->execution_policy() = {m_algorithm->desc(), {}};
     return SizeArgs(opr, fsrc, fdiff, fgrad);
 }
 
@@ -107,7 +107,7 @@ void ConvolutionBackwardFilterImpl::AlgoBFloat16::exec(
         conv_back_filter_opr->param() = args.opr->param();
         conv_back_filter_opr->param().compute_mode =
                 Param::ComputeMode::DEFAULT;
-        conv_back_filter_opr->execution_policy() = {m_algorithm->info()};
+        conv_back_filter_opr->execution_policy() = {m_algorithm->desc(), {}};
         conv_back_filter_opr->exec(fsrc_tensor, fdiff_tensor, fgrad_tensor,
                                    cvter.workspace());
     }

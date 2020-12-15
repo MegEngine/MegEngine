@@ -17,33 +17,39 @@ using namespace megdnn;
 using namespace cuda;
 using namespace convolution;
 
-ConvolutionBackwardDataImpl::AlgoBFloat16::AlgoBFloat16(
-        ConvolutionBackwardDataImpl::AlgoBase* algorithm)
-        : m_algorithm(algorithm) {
-    megdnn_assert_internal(algorithm);
-    m_name = ssprintf("CONVOLUTION_BACKWARD_DATD_BFLOAT16:%s",
-                      m_algorithm->name());
-}
-
-ConvolutionBackwardDataImpl::AlgoBase::SizeArgs
-ConvolutionBackwardDataImpl::AlgoBFloat16::float_args(
-        const SizeArgs& args, ConvolutionBackwardDataImpl* opr,
-        TensorLayout& ffilter, TensorLayout& fdiff, TensorLayout& fgrad) const {
-    ffilter = *args.filter_layout;
-    fdiff = *args.diff_layout;
-    fgrad = *args.grad_layout;
+namespace {
+std::pair<TensorLayoutArray, ConvolutionBackwardDataImpl::Param> sub_opr_config(
+        const TensorLayoutArray& layouts,
+        const ConvolutionBackwardDataImpl* opr) {
+    megdnn_assert(layouts.size() >= 3);
+    std::pair<TensorLayoutArray, ConvolutionBackwardDataImpl::Param> ret;
+    ret.first = layouts;
     auto change_dtype = [](TensorLayout& layout) {
         if (layout.dtype == dtype::BFloat16()) {
             layout.dtype = dtype::Float32();
         }
     };
-    change_dtype(ffilter);
-    change_dtype(fdiff);
-    change_dtype(fgrad);
-    opr->param() = args.opr->param();
-    opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-    opr->execution_policy() = {m_algorithm->info()};
-    return SizeArgs(opr, ffilter, fdiff, fgrad);
+    change_dtype(ret.first[0]);
+    change_dtype(ret.first[1]);
+    change_dtype(ret.first[2]);
+
+    ret.second = opr->param();
+    ret.second.compute_mode =
+            ConvolutionBackwardData::Param::ComputeMode::DEFAULT;
+    return ret;
+}
+}
+
+std::vector<Algorithm::SearchItem>
+ConvolutionBackwardDataImpl::AlgoBFloat16::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    auto&& config = sub_opr_config(
+            layouts, static_cast<const ConvolutionBackwardDataImpl*>(opr));
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::CONVOLUTION_BACKWARD_DATA, param_str,
+             config.first}};
 }
 
 bool ConvolutionBackwardDataImpl::AlgoBFloat16::is_available(
@@ -51,24 +57,30 @@ bool ConvolutionBackwardDataImpl::AlgoBFloat16::is_available(
     TensorLayout ffilter, fdiff, fgrad;
     auto conv_back_data_opr =
             args.handle->create_operator<ConvolutionBackwardData>();
-    SizeArgs fargs = float_args(
-            args,
-            static_cast<ConvolutionBackwardDataImpl*>(conv_back_data_opr.get()),
-            ffilter, fdiff, fgrad);
+    auto&& config = sub_opr_config(
+            {*args.filter_layout, *args.diff_layout, *args.grad_layout},
+            args.opr);
+    conv_back_data_opr->param() =  config.second;
     return args.diff_layout->dtype == args.filter_layout->dtype &&
            args.diff_layout->dtype == dtype::BFloat16() &&
-           m_algorithm->is_available(fargs);
+           get_algorithm(static_cast<ConvolutionBackwardDataImpl*>(
+                                 conv_back_data_opr.get()),
+                         config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle ConvolutionBackwardDataImpl::AlgoBFloat16::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
-    TensorLayout ffilter, fdiff, fgrad;
     auto conv_back_data_opr =
             args.handle->create_operator<ConvolutionBackwardData>();
-    SizeArgs fargs = float_args(
-            args,
-            static_cast<ConvolutionBackwardDataImpl*>(conv_back_data_opr.get()),
-            ffilter, fdiff, fgrad);
+    if (args.opr->execution_policy().algo.valid()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        conv_back_data_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+    auto&& config = sub_opr_config(
+            {*args.filter_layout, *args.diff_layout, *args.grad_layout},
+            args.opr);
+    conv_back_data_opr->param() =  config.second;
     SmallVector<size_t> sizes;
     auto get_workspace = [&sizes](const TensorLayout& src,
                                   const TensorLayout& dst) {
@@ -76,10 +88,12 @@ WorkspaceBundle ConvolutionBackwardDataImpl::AlgoBFloat16::get_workspace_bundle(
             sizes.push_back(dst.span().dist_byte());
         }
     };
-    get_workspace(*args.filter_layout, ffilter);
-    get_workspace(*args.diff_layout, fdiff);
-    get_workspace(*args.grad_layout, fgrad);
-    sizes.push_back(m_algorithm->get_workspace_in_bytes(fargs));
+    get_workspace(*args.filter_layout, config.first[0]);
+    get_workspace(*args.diff_layout, config.first[1]);
+    get_workspace(*args.grad_layout, config.first[2]);
+
+    sizes.push_back(conv_back_data_opr->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2]));
     return {ptr, std::move(sizes)};
 }
 
@@ -103,9 +117,13 @@ void ConvolutionBackwardDataImpl::AlgoBFloat16::exec(
     {
         auto conv_back_data_opr =
                 args.handle->create_operator<ConvolutionBackwardData>();
+        if (args.opr->execution_policy().algo.valid()) {
+            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+            conv_back_data_opr->execution_policy() =
+                    args.opr->execution_policy().sub_policy[0];
+        }
         conv_back_data_opr->param() = args.opr->param();
         conv_back_data_opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-        conv_back_data_opr->execution_policy() = {m_algorithm->info()};
         conv_back_data_opr->exec(ffilter_tensor, fdiff_tensor, fgrad_tensor,
                                  cvter.workspace());
     }

@@ -28,9 +28,9 @@ namespace mixin {
 class AlgoChooserHelper : cg::OperatorNodeMixinBase {
 public:
     using ExecutionPolicy = megdnn::param::ExecutionPolicy;
-    using AlgorithmInfo = megdnn::detail::Algorithm::Info;
+    using AlgorithmPolicy = megdnn::ExecutionPolicy;
     using AlgoChooserHook =
-            std::function<AlgorithmInfo(const cg::OperatorNodeBase*)>;
+            std::function<AlgorithmPolicy(const cg::OperatorNodeBase*)>;
 
     const ExecutionPolicy& execution_policy() const {
         if (!m_policy_accessed) {

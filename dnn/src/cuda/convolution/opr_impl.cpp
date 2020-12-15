@@ -69,7 +69,7 @@ ConvolutionForwardImpl::conv_bias_extra_data(const TensorLayout& src,
                                  conv_param.dilate_h,
                                  conv_param.dilate_w,
                                  conv_param.compute_mode};
-    ret.convbias_opr->execution_policy() = {this->execution_policy().algo};
+    ret.convbias_opr->execution_policy() = {this->execution_policy().algo, {}};
     return ret;
 }
 
@@ -102,7 +102,7 @@ ConvolutionForwardImpl::get_algorithm_from_desc(
                              conv_param.dilate_h,
                              conv_param.dilate_w,
                              conv_param.compute_mode};
-    convbias_opr->execution_policy() = {this->execution_policy().algo};
+    convbias_opr->execution_policy() = {this->execution_policy().algo, {}};
 
     return static_cast<ConvBiasForwardImpl*>(convbias_opr.get())
             ->get_algorithm_from_desc(desc);
@@ -160,7 +160,7 @@ void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
         _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, filter, diff, grad, workspace);
-    auto algo = get_algorithm(this, filter.layout, args.filter_meta,
+    auto algo = get_algorithm(this, filter.layout,
                               diff.layout, grad.layout);
     algo->check_workspace(args, workspace).exec(args);
 }

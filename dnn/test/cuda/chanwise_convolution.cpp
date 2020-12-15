@@ -514,7 +514,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_FWD) {
 
     auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
                    size_t FW) {
-        checker.proxy()->target_algo_info.reset();
+        checker.proxy()->target_execution_policy.algo.reset();
         checker.execs({{N, C, IH, IW}, {C, 1, 1, FH, FW}, {}});
     };
 
@@ -538,7 +538,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_BWD_DATA) {
 
     auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
                    size_t FW) {
-        checker.proxy()->target_algo_info.reset();
+        checker.proxy()->target_execution_policy.algo.reset();
         checker.execs({{C, 1, 1, FH, FW},
                        {N, C, IH - FH + 1, IW - FW + 1},
                        {N, C, IH, IW}});
@@ -564,7 +564,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_BWD_FILTER) {
 
     auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
                    size_t FW) {
-        checker.proxy()->target_algo_info.reset();
+        checker.proxy()->target_execution_policy.algo.reset();
         checker.execs({{N, C, IH, IW},
                        {N, C, IH - FH + 1, IW - FW + 1},
                        {C, 1, 1, FH, FW}});
@@ -614,7 +614,7 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_ALL_ALGO_FORWARD) {
                 .set_dtype(2, dtype::Float32())
                 .set_rng(0, &rng)
                 .set_rng(1, &rng);
-        bencher.proxy()->target_algo_info.reset();
+        bencher.proxy()->target_execution_policy.algo.reset();
         auto time_in_ms_fp32 = bencher.execs({src, filter, {}}) / RUNS;
 
         bencher.set_param(param)
@@ -623,10 +623,10 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_ALL_ALGO_FORWARD) {
                 .set_dtype(2, dtype::Float16())
                 .set_rng(0, &rng)
                 .set_rng(1, &rng);
-        bencher.proxy()->target_algo_info.reset();
+        bencher.proxy()->target_execution_policy.algo.reset();
         auto time_in_ms_fp16 = bencher.execs({src, filter, {}}) / RUNS;
 
-        bencher.proxy()->target_algo_info.reset();
+        bencher.proxy()->target_execution_policy.algo.reset();
         param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
         bencher.set_param(param);
         auto time_in_ms_pseudo_fp16 = bencher.execs({src, filter, {}}) / RUNS;

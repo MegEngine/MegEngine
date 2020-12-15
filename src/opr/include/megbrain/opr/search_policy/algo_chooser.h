@@ -12,9 +12,14 @@
 
 #pragma once
 
+#include <memory>
+#include "megbrain/graph/cg.h"
+#include "megbrain/graph/operator_node.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/opr/search_policy/profiler.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/blas.h"
+#include "megdnn/oprs/base.h"
 
 template <class MegDNNOpr>
 struct MegDNNOpr2MGBOpr;
@@ -49,52 +54,64 @@ class AlgoChooser {
     static constexpr int arity = OprArityTrait<Opr>::arity;
 
     using ImplAlgo = typename Opr::AlgorithmInfo;
+    using ImplExecutionPolicy = megdnn::ExecutionPolicy;
     using MGBOpr = typename MegDNNOpr2MGBOpr<Opr>::MGBOpr;
-    using TensorLayoutArray = std::array<TensorLayout, arity>;
 
+public:
+    using FixedTensorLayouts = std::array<TensorLayout, arity>;
     class ExeContext {
-        const TensorLayoutArray& m_layouts;
+        FixedTensorLayouts m_layouts;
         Opr* m_megdnn_opr;
-        const MGBOpr* m_mgb_opr;
+        std::string m_param;
+        const cg::OperatorNodeBase* m_base_mgb_opr;
+        CompNode m_cn;
+        megdnn::param::ExecutionPolicy m_execution_policy;
         bool m_allow_weight_preprocess;
 
     public:
-        ExeContext(const TensorLayoutArray& layouts, Opr* megdnn_opr,
-                   const MGBOpr* mgb_opr, bool allow_weight_preprocess)
-                : m_layouts{layouts},
-                  m_megdnn_opr{megdnn_opr},
-                  m_mgb_opr{mgb_opr},
-                  m_allow_weight_preprocess{allow_weight_preprocess} {
-            mgb_assert(m_layouts.size() == layouts.size());
-            static_assert(
-                    std::tuple_size<TensorLayoutArray>::value == 3 ||
-                            std::tuple_size<TensorLayoutArray>::value == 5 ||
-                            std::tuple_size<TensorLayoutArray>::value == 8,
-                    "Convolution AlgoChooser assumes arity = 3 , 5 or 8 (for "
-                    "deformable conv)");
-        }
+        ExeContext(const FixedTensorLayouts& layouts, Opr* megdnn_opr,
+                   const std::string& param_str,
+                   const cg::OperatorNodeBase* mgb_opr, const CompNode& cn,
+                   const megdnn::param::ExecutionPolicy& execution_policy,
+                   bool allow_weight_preprocess);
 
         Opr* megdnn_opr() const { return m_megdnn_opr; }
-
-        const MGBOpr* mgb_opr() const { return m_mgb_opr; }
 
         const TensorLayout& inp_layout(size_t idx) const {
             return m_layouts[idx];
         }
 
-        const TensorLayoutArray& layouts() const { return m_layouts; }
+        cg::ComputingGraph* owner_graph() const {
+            return m_base_mgb_opr->owner_graph();
+        }
+        const cg::OperatorNodeBase* mgb_opr() const { return m_base_mgb_opr; }
+        const megdnn::param::ExecutionPolicy& execution_policy() const {
+            return m_execution_policy;
+        }
+        CompNode comp_node() const { return m_cn; }
+        const std::string& param() const { return m_param; }
 
-        ImplAlgo choose_by_heuristic(bool reproducible = false) const;
+        bool allow_weight_preprocess() const {
+            return m_allow_weight_preprocess;
+        }
+
+        megdnn::Algorithm* get_algorithm_from_desc(
+                const megdnn::Algorithm::Info::Desc& desc) const {
+            return m_megdnn_opr->get_algorithm_from_desc(desc);
+        }
+
+        const FixedTensorLayouts& layouts() const { return m_layouts; }
+
+        ImplExecutionPolicy choose_by_heuristic(
+                bool reproducible = false) const;
 
         //! get all candidate algos, and the one choose_by_heuristic() is
         //! put first
         std::vector<ImplAlgo> get_all_candidates() const;
 
-        //! get candidate algos with workspace limit.
-        std::vector<ImplAlgo> get_all_candidates_with_workspace_limit() const;
-
-        //! get workspace size required for specific algo
-        size_t get_workspace_size_bytes(ImplAlgo algo) const;
+        //! get workspace size required for specific execution policy
+        size_t get_workspace_size_bytes(
+                const ImplExecutionPolicy& policy) const;
 
         /*!
          * \brief profile a single algorithm
@@ -106,28 +123,59 @@ class AlgoChooser {
          *      timeout used during profiling
          */
         Maybe<AlgoChooserProfileCache::ResultEntry> profile_single_algo(
-                ImplAlgo algo, double& timeout) const;
+                const ImplExecutionPolicy& policy, double& timeout) const;
+
+        //! get all profile algorithm from cache, return invalid if not exists
+        ImplAlgo get_profile_result_from_cache(bool require_reproducible) const;
+
+        /**
+         * \brief construct execution policy from cache.
+         *
+         * \param require_reproducible select algo which is reproducible
+         * \param policy execution policy
+         */
+        void construct_execution_policy_from_cache(
+                bool require_reproducible, ImplExecutionPolicy& policy) const;
 
     private:
         Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const;
     };
 
+    template<typename U>
+    friend class AlgoChooser;
+
+private:
     //! entrance for getting algorithm according to execution strategy
-    static ImplAlgo get_algo(ExeContext& ctx);
+    static ImplExecutionPolicy get_policy(ExeContext& ctx);
 
-    //! get all profile result, either by retrieving cache or profiling
-    static AlgoChooserProfileCache::Result get_profile_result(
-            ExeContext& ctx, bool enable_update);
 
-    static ImplAlgo choose_by_profile(ExeContext& ctx,
-                                      bool require_reproducible,
-                                      bool enable_update = true);
+    //! profile and save to cache
+    static void profile(ExeContext& ctx, bool require_reproducible);
+
+    static ImplExecutionPolicy choose_by_profile(ExeContext& ctx,
+                                                 bool require_reproducible,
+                                                 bool enable_update = true);
+
+    /**
+     * flatten search space in postorder traversal
+     * The subopr search construct a search tree
+     *
+     *           A
+     *        /    \
+     *       B1B2   C
+     *      /     \
+     *     D1D2D3   E
+     * We use postorder traverse the search tree.
+     * D1 -> D2 -> D3 -> E -> B1 -> B2 -> C -> A
+     */
+    static std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
+            const ExeContext& ctx);
 
 public:
     /*!
      * \brief setup algorithm and return workspace size
      */
-    static size_t setup_algo(const TensorLayoutArray& layouts, Opr* megdnn_opr,
+    static size_t setup_algo(const FixedTensorLayouts& layouts, Opr* megdnn_opr,
                              const MGBOpr* mgb_opr,
                              bool allow_weight_preprocess = false);
 };

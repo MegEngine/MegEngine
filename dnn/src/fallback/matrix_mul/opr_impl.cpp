@@ -134,7 +134,7 @@ MatrixMul::Algorithm* MatrixMulImpl::get_algorithm_heuristic(
         size_t workspace_limit_in_bytes, bool reproducible) {
     auto kern_size_param = make_kern_size_param(A, B, C);
     if (auto algo = static_cast<AlgoBase*>(
-                get_algorithm_from_desc(execution_policy().algo.desc))) {
+                get_algorithm_from_desc(execution_policy().algo))) {
         megdnn_assert(algo->get_workspace(kern_size_param) <
                       workspace_limit_in_bytes);
         auto cur = megdnn::get_reproducible_algo<MatrixMulImpl>(algo,

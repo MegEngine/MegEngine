@@ -20,11 +20,13 @@
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/gopt/inference.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megdnn/dtype.h"
 #include "megdnn/oprs/base.h"
 
 #include <gmock/gmock.h>
 
 #include <cmath>
+#include <memory>
 #include <random>
 
 using namespace mgb;
@@ -36,6 +38,73 @@ using Param3D = opr::Convolution3D::Param;
 using Mode = Param::Mode;
 
 Mode modes_to_check[] = {Mode::CONVOLUTION, Mode::CROSS_CORRELATION};
+
+void conv_bwd_data_brute(const std::vector<std::shared_ptr<HostTensorND>>& inps,
+                         std::shared_ptr<HostTensorND>& dest,
+                         const opr::ConvolutionBackwardData::Param& param) {
+    mgb_assert(param.format == Param::Format::NCHW);
+    auto &&data = *inps[0], &&filter = *inps[1];
+    size_t N = data.shape(0), IH = data.shape(2), IW = data.shape(3);
+    size_t GROUP, ICPG, OCPG, FH, FW;
+
+    if (param.sparse == Param::Sparse::DENSE) {
+        GROUP = 1, ICPG = filter.shape(0), OCPG = filter.shape(1),
+        FH = filter.shape(2), FW = filter.shape(3);
+    } else {
+        mgb_assert(param.sparse == Param::Sparse::GROUP);
+        GROUP = filter.shape(0), ICPG = filter.shape(1), OCPG = filter.shape(2),
+        FH = filter.shape(3), FW = filter.shape(4);
+    }
+    auto get_shp = [](size_t inp, size_t filter, size_t stride, size_t pad,
+                      size_t dilate) {
+        return (inp - 1) * stride + (filter - 1) * dilate + 1 - pad * 2;
+    };
+    size_t OH = get_shp(IH, FH, param.stride_h, param.pad_h, param.dilate_h),
+           OW = get_shp(IW, FW, param.stride_w, param.pad_w, param.dilate_w);
+    dest = std::make_shared<HostTensorND>(CompNode::load("xpu0"),
+                                         TensorShape{N, OCPG * GROUP, OH, OW});
+    auto&& out = *dest;
+    auto fptr = filter.ptr<float>(), dptr = data.ptr<float>(),
+         optr = out.ptr<float>();
+    memset(optr, 0, sizeof(float) * out.shape().total_nr_elems());
+    auto ol = out.layout(), fl = filter.layout();
+
+#define FOR2(a, A, b, B)           \
+    for (size_t a = 0; a < A; ++a) \
+        for (size_t b = 0; b < B; ++b)
+#define FOR3(a, A, b, B, c, C) \
+    FOR2(a, A, b, B)           \
+    for (size_t c = 0; c < C; ++c)
+
+    FOR3(n, N, group, GROUP, icg, ICPG)
+    FOR2(ih, IH, iw, IW) {
+        float scale = *(dptr++);
+
+        FOR3(ocg, OCPG, fh, FH, fw, FW) {
+            auto oc_tot = group * OCPG + ocg;
+            int oh = int(ih * param.stride_h + fh * param.dilate_h) -
+                     int(param.pad_h),
+                ow = int(iw * param.stride_w + fw * param.dilate_w) -
+                     int(param.pad_w);
+            if (oh >= 0 && ow >= 0 && oh < static_cast<int>(OH) &&
+                ow < static_cast<int>(OW)) {
+                auto out_off = n * ol.stride[0] + oc_tot * ol.stride[1] +
+                               oh * ol.stride[2] + ow;
+                size_t flt_off = 0;
+                if (param.sparse == Param::Convolution::Sparse::DENSE) {
+                    flt_off = icg * fl.stride[0] +
+                              ocg * fl.stride[1] + fh * fl.stride[2] + fw;
+                } else {
+                    flt_off = group * fl.stride[0] + icg * fl.stride[1] +
+                              ocg * fl.stride[2] + fh * fl.stride[3] + fw;
+                }
+                optr[out_off] += scale * fptr[flt_off];
+            }
+        }
+    }
+#undef FOR3
+#undef FOR2
+}
 
 void conv_bwd_flt_brute(const std::vector<std::shared_ptr<HostTensorND>>& inps,
                   std::shared_ptr<HostTensorND>& out,
@@ -370,7 +439,8 @@ TEST(TestOprDNN, ConvolutionExePolicy) {
     PersistentCacheHook cache_hook{on_get};
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy: {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE, S::PROFILE_HEURISTIC}) {
+    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
+                          S::PROFILE_HEURISTIC}) {
 #else
     for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
 #endif
@@ -406,6 +476,95 @@ TEST(TestOprDNN, ConvolutionExePolicy) {
     }
 }
 
+TEST(TestOprDNN, ConvolutionBackwardDataBfloat16ExePolicy) {
+    REQUIRE_GPU(1);
+    Param param{Mode::CROSS_CORRELATION, 1, 1, 1, 1};
+    param.compute_mode = Param::ComputeMode::FLOAT32;
+    using Policy = opr::Convolution::ExecutionPolicy;
+    using S = Policy::Strategy;
+
+    auto gen_bfp16 = [](HostTensorND& dest) {
+        RNGxorshf rng{next_rand_seed()};
+        auto rand_real = [&rng]() {
+            std::uniform_real_distribution<float> dist(-1, 1);
+            return dist(rng);
+        };
+        auto ptr = dest.ptr<dt_bfloat16>();
+        size_t elems = dest.shape().total_nr_elems();
+        for (size_t i = 0; i < elems; i++) {
+            ptr[i] = dt_bfloat16(rand_real());
+        }
+    };
+
+    auto f32_to_bf16 = [](const std::shared_ptr<HostTensorND>& src)
+            -> std::shared_ptr<HostTensorND> {
+        auto ret = std::make_shared<HostTensorND>(
+                src->comp_node(), src->shape(), dtype::BFloat16{});
+        for (size_t i = 0; i < src->layout().total_nr_elems(); i++) {
+            ret->ptr<dt_bfloat16>()[i] = src->ptr<dt_float32>()[i];
+        }
+        return ret;
+    };
+
+    auto bf16_to_f32 = [](const std::shared_ptr<HostTensorND>& src)
+            -> std::shared_ptr<HostTensorND> {
+        auto ret = std::make_shared<HostTensorND>(
+                src->comp_node(), src->shape(), dtype::Float32{});
+        for (size_t i = 0; i < src->layout().total_nr_elems(); i++) {
+            ret->ptr<dt_float32>()[i] = src->ptr<dt_bfloat16>()[i];
+        }
+        return ret;
+    };
+
+    int nr_get = 0;
+    auto on_get = [&nr_get](const std::string&, const void*, size_t,
+                            const void*, size_t) { ++nr_get; };
+    PersistentCacheHook cache_hook{on_get};
+
+#if MGB_ENABLE_FASTRUN
+    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
+                          S::PROFILE_HEURISTIC}) {
+#else
+    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+#endif
+        using Checker = AutoOprChecker<2, 1>;
+
+        auto make_graph = [&](const Checker::SymInpArray& inputs)
+                -> Checker::SymOutArray {
+            Policy policy;
+            policy.strategy = strategy;
+            return {opr::ConvolutionBackwardData::make_deconv(
+                    inputs[0], inputs[1], param, policy)};
+        };
+
+        auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+            std::shared_ptr<HostTensorND> out;
+            conv_bwd_data_brute(
+                    {bf16_to_f32(inp[0]), bf16_to_f32(inp[1])}, out,
+                    param);
+            dest[0] = *f32_to_bf16(out);
+        };
+
+        Checker::RunOptions opt;
+        opt.outputs_max_err = 1e-3;
+        nr_get = 0;
+        Checker(make_graph, fwd)
+                .disable_grad_check()
+                .set_input_dtype(0, dtype::BFloat16{})
+                .set_input_dtype(1, dtype::BFloat16{})
+                .set_input_generator(0, gen_bfp16)
+                .set_input_generator(1, gen_bfp16)
+                .run({TensorShape{3, 4, 10, 6}, {4, 2, 3, 3}}, opt)
+                .run({TensorShape{2, 2, 4, 3}, {2, 2, 3, 3}}, opt)
+                .run({TensorShape{1, 3, 10, 6}, {3, 2, 3, 3}}, opt);
+        if (strategy == S::HEURISTIC) {
+            ASSERT_EQ(0, nr_get);
+        } else {
+            ASSERT_LT(0, nr_get);
+        }
+    }
+}
+
 TEST(TestOprDNN, Deconvolution) {
     // dilated grouped deconv
     using Checker = AutoOprChecker<2, 1>;
@@ -420,55 +579,9 @@ TEST(TestOprDNN, Deconvolution) {
     };
 
     auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
-        auto &&data = *inp[0], &&filter = *inp[1];
-        size_t N = data.shape(0), IH = data.shape(2), IW = data.shape(3);
-        size_t GROUP = filter.shape(0), ICPG = filter.shape(1),
-               OCPG = filter.shape(2), FH = filter.shape(3),
-               FW = filter.shape(4);
-        auto get_shp = [](size_t inp, size_t filter, size_t stride, size_t pad,
-                          size_t dilate) {
-            return (inp - 1) * stride + (filter - 1) * dilate + 1 - pad * 2;
-        };
-        auto &&out = dest[0];
-        size_t OH = get_shp(IH, FH, param.stride_h, param.pad_h,
-                            param.dilate_h),
-               OW = get_shp(IW, FW, param.stride_w, param.pad_w,
-                            param.dilate_w);
-        out.resize({N, OCPG * GROUP, OH, OW});
-        auto fptr = filter.ptr<float>(), dptr = data.ptr<float>(),
-             optr = out.ptr<float>();
-        memset(optr, 0, sizeof(float) * out.shape().total_nr_elems());
-        auto ol = out.layout(), fl = filter.layout();
-
-#define FOR2(a, A, b, B)           \
-    for (size_t a = 0; a < A; ++a) \
-        for (size_t b = 0; b < B; ++b)
-#define FOR3(a, A, b, B, c, C) \
-    FOR2(a, A, b, B)           \
-    for (size_t c = 0; c < C; ++c)
-
-        FOR3(n, N, group, GROUP, icg, ICPG)
-        FOR2(ih, IH, iw, IW) {
-            float scale = *(dptr++);
-
-            FOR3(ocg, OCPG, fh, FH, fw, FW) {
-                auto oc_tot = group * OCPG + ocg;
-                int oh = int(ih * param.stride_h + fh * param.dilate_h) -
-                         int(param.pad_h),
-                    ow = int(iw * param.stride_w + fw * param.dilate_w) -
-                         int(param.pad_w);
-                if (oh >= 0 && ow >= 0 && oh < static_cast<int>(OH) &&
-                    ow < static_cast<int>(OW)) {
-                    auto out_off = n * ol.stride[0] + oc_tot * ol.stride[1] +
-                                   oh * ol.stride[2] + ow,
-                         flt_off = group * fl.stride[0] + icg * fl.stride[1] +
-                                   ocg * fl.stride[2] + fh * fl.stride[3] + fw;
-                    optr[out_off] += scale * fptr[flt_off];
-                }
-            }
-        }
-#undef FOR3
-#undef FOR2
+        std::shared_ptr<HostTensorND> out;
+        conv_bwd_data_brute({inp[0], inp[1]}, out, param);
+        dest[0] = *out;
     };
 
     Checker::RunOptions opt;
@@ -1547,7 +1660,8 @@ TEST(TestOprDNN, LocalShareForwardExecPolicy) {
     PersistentCacheHook cache_hook{on_get};
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy: {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE, S::PROFILE_HEURISTIC}) {
+    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
+                          S::PROFILE_HEURISTIC}) {
 #else
     for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
 #endif
@@ -2004,29 +2118,34 @@ TEST(TestOprDNN, HeuristicReproducible) {
                     .run(inp_tensor(1, 5, 3, 7, 9, 3, 3), opt)
                     .run(inp_tensor(3, 4, 4, 9, 9, 3, 3), opt);
 
-            auto algo = static_cast<megdnn::ConvolutionBackwardFilter*>(
+            auto&& megdnn_opr = static_cast<megdnn::ConvolutionBackwardFilter*>(
                                 static_cast<opr::ConvolutionBackwardFilter*>(
                                         bwd_flt->owner_opr())
-                                        ->megdnn_opr())
-                                ->execution_policy()
-                                .algo;
+                                        ->megdnn_opr());
+            auto&& algo = megdnn_opr->execution_policy().algo;
+            megdnn::Algorithm* palgo =
+                    megdnn_opr->get_algorithm_from_desc(algo);
+            mgb_assert(palgo, "Unknown algo description");
             if (strategy == S::HEURISTIC_REPRODUCIBLE) {
-                EXPECT_TRUE(algo.is_reproducible);
+                EXPECT_TRUE(palgo->is_reproducible());
             }
-            algo_name0 = algo.name.c_str();
+            algo_name0 = palgo->name();
         }
         {
             Checker checker(make_graph, fwd);
             checker.run(inp_tensor(2, 3, 4, 9, 8, 3, 3), opt)
                     .run(inp_tensor(1, 5, 3, 7, 9, 3, 3), opt)
                     .run(inp_tensor(3, 4, 4, 9, 9, 3, 3), opt);
-            auto algo = static_cast<megdnn::ConvolutionBackwardFilter*>(
-                                static_cast<opr::ConvolutionBackwardFilter*>(
-                                        bwd_flt->owner_opr())
-                                        ->megdnn_opr())
-                                ->execution_policy()
-                                .algo;
-            algo_name1 = algo.name.c_str();
+            auto&& megdnn_opr = static_cast<megdnn::ConvolutionBackwardFilter*>(
+                    static_cast<opr::ConvolutionBackwardFilter*>(
+                            bwd_flt->owner_opr())
+                            ->megdnn_opr());
+            auto&& algo = megdnn_opr->execution_policy().algo;
+            megdnn::Algorithm* palgo =
+                    megdnn_opr->get_algorithm_from_desc(algo);
+            mgb_assert(palgo, "Unknown algo description");
+
+            algo_name1 = palgo->name();
         }
         EXPECT_TRUE(algo_name0 == algo_name1);
     }
@@ -2286,6 +2405,8 @@ TEST_F(TestWeightPreprocess, NoPreprocessNeeded) {
     MockAlgorithm algo;
     EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
             .WillRepeatedly(Return(&algo));
+    EXPECT_CALL(mock, get_algorithm_from_desc(_))
+            .WillRepeatedly(Return(&algo));
     EXPECT_CALL(mock, get_workspace_in_bytes(_, _, _, _))
             .WillRepeatedly(Return(0));
     EXPECT_CALL(mock, get_preprocess_workspace_in_bytes(_, _, _))
@@ -2318,6 +2439,9 @@ TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
     EXPECT_CALL(mock, deduce_preprocessed_filter_layout(_, _, _))
             .WillRepeatedly(Return(filter_layout));
 
+    EXPECT_CALL(mock, get_algorithm_from_desc(_))
+            .WillRepeatedly(Return(&algo));
+
     Expectation algo_call =
             EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
                     .WillOnce(Return(&algo));
@@ -2349,7 +2473,6 @@ TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
                     pf->tensors[0].ptr<float>()[0] = 114.514f;
                     pf->tensors[1].ptr<float>()[0] = 1926.0817f;
                 }));
-
         // Run the graph multiple times.
         for (int i = 0; i < 3; i++) {
             if (i > 0) {
@@ -2380,6 +2503,8 @@ TEST_F(TestNoWeightPreprocess, NoPreprocess) {
 
     MockAlgorithm algo;
     EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+            .WillRepeatedly(Return(&algo));
+    EXPECT_CALL(mock, get_algorithm_from_desc(_))
             .WillRepeatedly(Return(&algo));
     EXPECT_CALL(mock, get_workspace_in_bytes(_, _, _, _))
             .WillRepeatedly(Return(0));

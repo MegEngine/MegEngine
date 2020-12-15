@@ -47,7 +47,7 @@ ConvBiasForwardImpl::AlgoBFloat16::float_args(
     change_dtype(fdst);
     opr->param() = args.opr->param();
     opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-    opr->execution_policy() = {m_impl->info()};
+    opr->execution_policy() = {m_impl->desc(), {}};
     return SizeArgs(opr, fsrc, ffilter, fbias, fz, fdst);
 }
 
@@ -110,7 +110,7 @@ void ConvBiasForwardImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
         auto convbias_opr = args.handle->create_operator<ConvBias>();
         convbias_opr->param() = args.opr->param();
         convbias_opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-        convbias_opr->execution_policy() = {m_impl->info()};
+        convbias_opr->execution_policy() = {m_impl->desc(), {}};
         convbias_opr->exec(fsrc_tensor, ffilter_tensor, fbias_tensor, fz_tensor,
                            fdst_tensor, nullptr, cvter.workspace());
     }

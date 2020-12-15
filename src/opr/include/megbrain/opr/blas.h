@@ -46,7 +46,7 @@ private:
     static bool check_layout(const TensorLayout& layout, int transpose);
 
     //! store the policy of all transpose situations
-    megdnn::MatrixMul::ExecutionPolicy m_cadidate_execution_policies[4];
+    megdnn::ExecutionPolicy m_cadidate_execution_policies[4];
 };
 
 /*!
@@ -76,7 +76,7 @@ private:
 
     static bool check_layout(const TensorLayout& layout, bool transpose);
     //! store the policy of all transpose situations
-    megdnn::BatchedMatrixMul::ExecutionPolicy m_cadidate_execution_policies[4];
+    megdnn::ExecutionPolicy m_cadidate_execution_policies[4];
 };
 
 /*!

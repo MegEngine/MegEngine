@@ -83,6 +83,17 @@ public:
                                        workspace_limit_in_bytes, reproducible)
                 ->info();
     }
+
+    AlgorithmInfo get_algorithm_info_heuristic(const TensorLayout& filter,
+                                               const TensorLayout& diff,
+                                               const TensorLayout& grad,
+                                               size_t workspace_limit_in_bytes,
+                                               bool reproducible) {
+        return get_algorithm_heuristic(filter, diff, grad,
+                                       workspace_limit_in_bytes, reproducible)
+                ->info();
+    }
+
     size_t get_workspace_in_bytes(const TensorLayout& filter,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;

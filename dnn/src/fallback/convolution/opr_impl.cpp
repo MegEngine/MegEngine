@@ -387,7 +387,7 @@ ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_from_desc(
 
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm(
         const NCBKernSizeParam& param, size_t workspace_size) {
-    if (auto algo = get_algorithm_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = get_algorithm_from_desc(execution_policy().algo)) {
         return algo;
     }
     if (!m_prev_selected_algo ||
@@ -783,7 +783,7 @@ ConvolutionBackwardDataImpl::get_algorithm_from_desc(
 
 ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm(const NCBKernSizeParam& param) {
-    if (auto algo = get_algorithm_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = get_algorithm_from_desc(execution_policy().algo)) {
         return algo;
     }
     if (!m_prev_selected_algo ||

@@ -14,6 +14,8 @@
 
 #include "../internal/invoke.h"
 #include "../internal/megdnn_opr_wrapper.inl"
+#include "megdnn/handle.h"
+#include "megdnn/oprs/base.h"
 
 #if MGB_ROCM
 #include "hcc_detail/hcc_defs_prologue.h"
@@ -32,11 +34,95 @@ MIDOUT_DECL(megbrain_opr_profile)
     }            \
     MIDOUT_END();
 
+namespace {
+std::string serialize_policy(const megdnn::ExecutionPolicy& policy) {
+    std::string ret;
+    //! serialize AlgorithmDesc
+    megdnn::Algorithm::serialize_write_pod(policy.algo.handle_type, ret);
+    megdnn::Algorithm::serialize_write_pod(policy.algo.type, ret);
+    uint32_t param_size = policy.algo.param.size();
+    megdnn::Algorithm::serialize_write_pod<uint32_t>(param_size, ret);
+    ret += policy.algo.param;
+
+    //! serialize sub_policy
+    uint32_t size = policy.sub_policy.size();
+    megdnn::Algorithm::serialize_write_pod(size, ret);
+    for (auto&& sub : policy.sub_policy) {
+        ret += serialize_policy(sub);
+    }
+    return ret;
+}
+
+megdnn::ExecutionPolicy deserialize_policy(const char* buf, uint32_t size,
+                                           uint32_t& offset) {
+    megdnn::ExecutionPolicy ret;
+#define cb(_val, _type)                                                 \
+    _val = megdnn::Algorithm::deserialize_read_pod<_type>(buf, offset); \
+    offset += sizeof(_val)
+
+    cb(ret.algo.handle_type, megdnn::Handle::HandleType);
+    cb(ret.algo.type, uint32_t);
+
+    uint32_t param_size = 0;
+    cb(param_size, uint32_t);
+    if (param_size > 0) {
+        ret.algo.param = std::string(buf + offset, param_size);
+        offset += param_size;
+    }
+
+    uint32_t nr_policy = 0;
+    cb(nr_policy, uint32_t);
+#undef cb
+
+    for (uint32_t i = 0; i < nr_policy; i++) {
+        ret.sub_policy.push_back(deserialize_policy(buf, size, offset));
+    }
+    return ret;
+}
+}
+
 namespace mgb {
 namespace opr {
 #define APPLY(statement, ...)                                  \
     mgb::apply([&](const auto&... args) { return statement; }, \
                std::tuple_cat(__VA_ARGS__))
+
+////////////// TimedProfiler::Param::ExecutionPolicyBlob //////////////////////
+
+template <typename Opr>
+typename TimedProfiler<Opr>::Param::ExecutionPolicyBlob
+TimedProfiler<Opr>::Param::ExecutionPolicyBlob::serialize(
+        const megdnn::ExecutionPolicy& policy) {
+    ExecutionPolicyBlob ret;
+    std::string serialize_bin = serialize_policy(policy);
+    mgb_assert(serialize_bin.size() < MAX_SIZE_IN_BYTES);
+    memcpy(ret.data, serialize_bin.data(), serialize_bin.size());
+    ret.size = serialize_bin.size();
+    return ret;
+}
+
+template <typename Opr>
+megdnn::ExecutionPolicy
+TimedProfiler<Opr>::Param::ExecutionPolicyBlob::deserialize() const {
+    uint32_t offset = 0;
+    auto&& ret = deserialize_policy(data, size, offset);
+    mgb_assert(offset == size);
+    return std::move(ret);
+}
+
+#define INST(Opr)                                                            \
+    template typename TimedProfiler<megdnn::Opr>::Param::ExecutionPolicyBlob \
+    TimedProfiler<megdnn::Opr>::Param::ExecutionPolicyBlob::serialize(       \
+            const megdnn::ExecutionPolicy& policy);                          \
+    template megdnn::ExecutionPolicy                                         \
+    TimedProfiler<megdnn::Opr>::Param::ExecutionPolicyBlob::deserialize()    \
+            const;
+
+MGB_FOREACH_FASTRUN_OPR(INST)
+#undef INST
+
+
+////////////////// TimedProfiler //////////////////////////////
 
 template <typename Opr>
 const double TimedProfiler<Opr>::timeout_setting =
@@ -99,18 +185,7 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     }
 
     megdnn_opr->param() = param.opr_param;
-    {
-        typename Opr::AlgorithmInfo algo;
-        for (auto i :
-             APPLY(megdnn_opr->get_all_algorithms_info(args...), layouts)) {
-            if (!strcmp(i.name.c_str(), param.algo_name)) {
-                algo = i;
-                break;
-            }
-        }
-        mgb_assert(algo.valid(), "algorithm %s not found", param.algo_name);
-        megdnn_opr->execution_policy() = {algo};
-    }
+    megdnn_opr->execution_policy() = param.execution_policy.deserialize();
 
     // Allocate preprocessed weight buffers.
     TensorLayoutArray preprocessed_layout;
@@ -222,13 +297,16 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
             });
     ev_end->record();
 
+    megdnn::Algorithm* algo = megdnn_opr->get_algorithm_from_desc(
+            megdnn_opr->execution_policy().algo);
+    mgb_assert(algo);
     double next_report_time = 0.5;
     while (!ev_end->finished()) {
         if (timer.get_secs() >= next_report_time) {
             mgb_log_warn(
                     "profiling conv algo %s already took %.3f/%.3f secs"
                     " (limit can be set by MGB_CONV_PROFILING_TIMEOUT) ",
-                    param.algo_name, timer.get_secs(), param.actual_timeout);
+                    algo->name(), timer.get_secs(), param.actual_timeout);
             next_report_time = timer.get_secs() + 1;
         }
         using namespace std::literals;

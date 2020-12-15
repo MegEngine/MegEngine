@@ -1,6 +1,5 @@
 /**
- * \file dnn/src/fallback/conv_bias/opr_impl.cpp
- * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ g * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
@@ -367,7 +366,7 @@ ConvBiasImpl::NCBKernSizeParam ConvBiasImpl::make_ncb_kern_size_param(
                   "should be equal");
     auto&& fm = check_layout_fwd(src, filter, dst);
     auto& conv_fm = reinterpret_cast<ConvolutionImpl::CanonizedFilterMeta&>(fm);
-    
+
     size_t nr_threads = static_cast<naive::HandleImpl*>(handle())
                                 ->megcore_dispatcher()
                                 ->nr_threads();
@@ -495,7 +494,7 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_from_desc(
 
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm(
         const NCBKernSizeParam& param, size_t workspace_size) {
-    if (auto algo = get_algorithm_from_desc(execution_policy().algo.desc)) {
+    if (auto algo = get_algorithm_from_desc(execution_policy().algo)) {
         return algo;
     }
     if (!m_prev_selected_algo ||

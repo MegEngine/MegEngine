@@ -46,12 +46,8 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
     megdnn_assert(all_algos_data == all_algos.data());
 
     non_cudnn_algos.push_back(all_algos.rbegin()[0]);   // group matmul
-    size_t algo_size = all_algos.size();
-    for (size_t i=0; i<algo_size; ++i) {
-        bfloat16_refhold.emplace_back(new AlgoBFloat16(all_algos[i]));
-        all_algos.push_back(bfloat16_refhold.back().get());
-        bfloat16_algos.push_back(bfloat16_refhold.back().get());
-    }
+    all_algos.push_back(&bfloat16);
+    bfloat16_algos.push_back(&bfloat16);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
