@@ -76,7 +76,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     return {{
         {TensorLayout(inputs[0].layout.dtype), cn},
         {TensorLayout(dtype::Int32()), cn}
-    }, true};
+    }, false};
 }
 
 OP_TRAIT_REG(CondTake, CondTake, opr::CondTake)

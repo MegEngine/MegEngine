@@ -60,7 +60,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
             TensorLayout out_layout;
             out_layout.ndim = 0;
             out_layout.dtype = out_dt;
-            return {{{out_layout, out_cn}}, true};
+            return {{{out_layout, out_cn}}, false};
         }
     }
 

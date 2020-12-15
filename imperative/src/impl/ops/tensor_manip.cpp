@@ -59,7 +59,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     mgb_assert(inputs.size() == 1, "GetVarShape take 1 input, got %lu", inputs.size());
     auto&& desc = inputs[0];
     if (!desc.layout.ndim) {
-        return {{{TensorLayout(dtype::Int32()), desc.comp_node}}, true};
+        return {{{TensorLayout(dtype::Int32()), desc.comp_node}}, false};
     }
     DeviceTensorND value;
     if (op_def.axis == opr::GetVarShape::Param::INVALID_AXIS){

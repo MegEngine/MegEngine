@@ -54,16 +54,13 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     SmallVector<LogicalTensorDesc> out_shapes(nr_out);
     auto&& i0 = inputs[0];
     auto&& i1 = inputs[1];
-    size_t i = 0;
-    if (!need_stat) {
-        out_shapes[0] = out_shapes[1] = {TensorLayout({0}, i0.layout.dtype, i0.layout.format), i0.comp_node};
-        i = 2;
-    }
-    for (; i < nr_out-1; ++ i) {
+    // [running_mean, running_var,] save_mean, save_var
+    for (size_t i = 0; i < nr_out-1; ++ i) {
         out_shapes[i] = {i1.layout, i1.comp_node};
     }
+    // output tensor
     out_shapes[nr_out-1] = {i0.layout, i0.comp_node};
-    return {out_shapes, true};
+    return {out_shapes, out_shapes[nr_out-1].layout.ndim != 0};
 }
 
 OP_TRAIT_REG(BatchNorm, BatchNorm, opr::BatchNorm)

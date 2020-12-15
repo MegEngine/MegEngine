@@ -176,7 +176,7 @@ TensorShape ChannelImpl::get_shape(void* handle) {
     m_buffer.enqueue(Flush{info});
     m_cv.wait(lock, [&]() {
         check_worker_exc_unsafe();
-        return bool(info->ptr);
+        return static_cast<bool>(info->ptr);
     });
     m_waitee = nullptr;
     TensorShape ret = info->ptr->layout();
@@ -212,7 +212,7 @@ DeviceTensorND ChannelImpl::get_dev_tensor(void* handle) {
     m_buffer.enqueue(Flush{info});
     m_cv.wait(lock, [&]() {
         check_worker_exc_unsafe();
-        return bool(info->ptr);
+        return static_cast<bool>(info->ptr);
     });
     m_waitee = nullptr;
     return info->ptr->dev_tensor();
@@ -232,7 +232,7 @@ void ChannelImpl::close() {
 }
 
 void ChannelImpl::config_async_level(int level) {
-    mgb_assert(level <= 2 and level >= 0, "async_level should be 0, 1 or 2");
+    mgb_assert(level <= 2 && level >= 0, "async_level should be 0, 1 or 2");
     m_async_level = level;
 }
 

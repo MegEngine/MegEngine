@@ -49,7 +49,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> BackwardGraph::InternalGraph::i
             expr_input_descs.push_back(node2attr.at(inp));
         }
 
-        auto[expr_output_descs, expr_validated] = OpDef::infer_output_attrs_fallible(
+        auto [expr_output_descs, expr_validated] = OpDef::infer_output_attrs_fallible(
             *expr_op, expr_input_descs);
         validated = validated && expr_validated;
 
