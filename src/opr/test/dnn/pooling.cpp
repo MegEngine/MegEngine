@@ -104,6 +104,17 @@ TEST(TestOprDNN, PoolingBackward)
     }
 }
 
+TEST(TestOprDNN, PoolingForwardPadding) {
+    auto graph = ComputingGraph::make();
+    Param param(Param::Mode::MAX, 2, 2, 2, 2, 2, 2);
+    SymbolVarArray symbol_inputs;
+    HostTensorGenerator<> gen;
+    auto host_tensor = gen({2, 3, 23, 24});
+    symbol_inputs.push_back(
+            mgb::opr::Host2DeviceCopy::make(*graph, host_tensor));
+    ASSERT_THROW(opr::Pooling::make(symbol_inputs[0], param), MegDNNError);
+}
+
 } // anonymous namespace
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
