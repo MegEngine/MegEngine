@@ -12,6 +12,7 @@ from .observer import HistogramObserver, Observer
 from .qconfig import (
     QConfig,
     calibration_qconfig,
+    easyquant_qconfig,
     ema_fakequant_qconfig,
     ema_lowbit_fakequant_qconfig,
     min_max_fakequant_qconfig,

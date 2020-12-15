@@ -103,7 +103,7 @@ def test_sync_exponential_moving_average_observer():
         y2 = mge.tensor(x2[rank * 3 : (rank + 1) * 3])
         m(y1)
         m(y2)
-        np.testing.assert_allclose(m.min_val.numpy(), expected_min)
-        np.testing.assert_allclose(m.max_val.numpy(), expected_max)
+        np.testing.assert_allclose(m.min_val.numpy(), expected_min, atol=1e-6)
+        np.testing.assert_allclose(m.max_val.numpy(), expected_max, atol=1e-6)
 
     worker()

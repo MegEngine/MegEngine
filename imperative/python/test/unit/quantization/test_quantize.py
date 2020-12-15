@@ -88,12 +88,14 @@ def test_propagate_qconfig():
 def init_qat_net():
     net = QATNet()
     propagate_qconfig(net, min_max_fakequant_qconfig)
-    min_val = np.random.randint(-127, 0, size=(2,))
-    max_val = np.random.randint(1, 127, size=(2,))
-    net.linear.weight_observer.min_val.set_value(min_val[0])
-    net.linear.weight_observer.max_val.set_value(max_val[0])
-    net.linear.act_observer.min_val.set_value(min_val[1])
-    net.linear.act_observer.max_val.set_value(max_val[1])
+    min_val = np.random.randint(-127, 0, size=(3,))
+    max_val = np.random.randint(1, 127, size=(3,))
+    net.quant.act_observer.min_val.set_value(min_val[0])
+    net.quant.act_observer.max_val.set_value(max_val[0])
+    net.linear.weight_observer.min_val.set_value(min_val[1])
+    net.linear.weight_observer.max_val.set_value(max_val[1])
+    net.linear.act_observer.min_val.set_value(min_val[2])
+    net.linear.act_observer.max_val.set_value(max_val[2])
     return net
 
 

@@ -138,3 +138,5 @@ passive_qconfig = QConfig(
     weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
     act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
 )
+
+easyquant_qconfig = passive_qconfig

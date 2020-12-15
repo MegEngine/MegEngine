@@ -223,11 +223,11 @@ def apply_easy_quant(module, data, start=0.8, stop=1.2, num=40):
 
         mod._forward_hooks.clear()
 
-        fp32_in = [_[:batch_size] for _ in inputs]
-        int8_in = [_[batch_size:] for _ in inputs]
+        normal_in = [_[:batch_size] for _ in inputs]
+        fakequant_in = [_[batch_size:] for _ in inputs]
 
         disable_fake_quant(mod)
-        fp32_out = mod(*fp32_in)
+        normal_out = mod(*normal_in)
         enable_fake_quant(mod)
 
         ob = getattr(mod, where)
@@ -239,19 +239,15 @@ def apply_easy_quant(module, data, start=0.8, stop=1.2, num=40):
         best_scale = 0
         for scale in np.linspace(start * orig_scale, stop * orig_scale, num):
             ob.scale = scale
-            int8_out = mod(*int8_in)
-            dis = get_cosine(fp32_out, int8_out)
+            fakequant_out = mod(*fakequant_in)
+            dis = get_cosine(normal_out, fakequant_out)
             if dis > distance:
                 distance = dis
                 best_scale = scale
         ob.scale = best_scale
 
-        if where == "act_observer":
-            int8_out = mod(*int8_in)
-            return concat([fp32_out, int8_out])
-        else:
-            int8_out = outputs[batch_size:]
-            return concat([fp32_out, int8_out])
+        fakequant_out = outputs[batch_size:]
+        return concat([normal_out, fakequant_out])
 
     data = concat([data, data])
 
