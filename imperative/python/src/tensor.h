@@ -128,6 +128,7 @@ struct TensorWrapper {
     PyObject* device();
     PyObject* numpy();
     void reset(PyObject*);
+    PyObject* detach();
     PyObject* isscalar();
     void setscalar();
 };

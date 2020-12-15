@@ -68,9 +68,6 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
             return nullptr;
         }
         auto* op = args[0];
-        if (!strcmp(op->ob_type->tp_base->tp_name,"PodOpVisitor") || !strcmp(op->ob_type->tp_base->tp_name,"IndexingOpBase")){
-            op = PyObject_CallMethod(op,"to_c","");
-        }
 
         PyTypeObject* pytype = args[1]->ob_type;
         ++args;
@@ -195,6 +192,15 @@ void TensorWrapper::reset(PyObject* tensor) {
     m_tensor = t->m_tensor;
 }
 
+PyObject* TensorWrapper::detach() {
+    PyObject* self = wrap_t::pycast(this);
+    PyTypeObject* pytype = self->ob_type;
+    auto new_tensor = std::make_shared<Tensor>(m_tensor->m_handle);
+    auto ret = TensorWrapper::make(pytype, std::move(new_tensor));
+    return ret.release().ptr();
+
+}
+
 PyObject* TensorWrapper::isscalar() {
     if(m_tensor->m_flags & Tensor::Flags::SCALAR) {
         Py_RETURN_TRUE;
@@ -233,6 +239,7 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::reset>("_reset")
         .def<&TensorWrapper::isscalar>("isscalar")
         .def<&TensorWrapper::setscalar>("setscalar")
+        .def<&TensorWrapper::detach>("detach")
         .finalize();
     if (!tensor_type) throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);

@@ -166,7 +166,7 @@ def test_interpolate():
 
 
 def _save_to(self, name="grad"):
-    def callback(tensor, grad):
+    def callback(grad):
         setattr(self, name, grad)
 
     return callback

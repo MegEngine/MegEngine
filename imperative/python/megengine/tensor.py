@@ -118,13 +118,6 @@ class Tensor(_Tensor, ArrayMethodMixin):
     def __setstate__(self, state):
         self.q_dict = state.pop("qdict")
 
-    def detach(self):
-        r"""
-        Returns a new tensor sharing the same data memory, which is treated as a constant
-        during backward gradient calcuation, i.e. its gradient is zero.
-        """
-        Wrapper = type(self)
-        return Wrapper(self)
 
 
 tensor = Tensor
