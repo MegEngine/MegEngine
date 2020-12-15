@@ -797,7 +797,6 @@ if(MGE_WITH_TEST AND MGE_ENABLE_RTTI)
     add_subdirectory(test)
 endif()
 
-
 if(TARGET _imperative_rt)
     add_custom_target(
         develop
