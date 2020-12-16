@@ -33,15 +33,15 @@ class Spinlock final: public NonCopyableObj {
 };
 
 //! recursive spinlock
-class RecursiveSpinlock final: public NonCopyableObj {
+class RecursiveSpinlock final : public NonCopyableObj {
     static const std::thread::id sm_none_owner;
-    std::atomic<std::thread::id> m_owner{sm_none_owner};
+    std::atomic<std::thread::id> m_owner;
     size_t m_recur_count = 0;
 
-    public:
-
-        void lock();
-        void unlock();
+public:
+    RecursiveSpinlock();
+    void lock();
+    void unlock();
 };
 
 }  // namespace mgb

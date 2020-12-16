@@ -18,6 +18,12 @@ using namespace mgb;
 #if MGB_THREAD_SAFE
 const std::thread::id RecursiveSpinlock::sm_none_owner = std::thread::id();
 
+//! why not use initializer_list for global var, detail:
+//! MGE-1738
+RecursiveSpinlock::RecursiveSpinlock() {
+    m_owner = sm_none_owner;
+}
+
 void RecursiveSpinlock::lock() {
     auto tid = std::this_thread::get_id();
     if (m_owner.load(std::memory_order_relaxed) != tid) {
