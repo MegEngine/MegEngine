@@ -37,7 +37,6 @@ class Linear(QuantizedModule):
         ret = ret if self.output_dtype is None else ret.astype(self.output_dtype)
         return ret
 
-
     @classmethod
     def from_qat_module(cls, qat_module: QAT.Linear):
         r"""
