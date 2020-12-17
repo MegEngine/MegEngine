@@ -15,7 +15,7 @@ import megengine as mge
 import megengine.autodiff as ad
 import megengine.functional as F
 from megengine import Tensor
-from megengine.core._imperative_rt.imperative import _set_drop_flag, _set_swap_flag
+from megengine.core._imperative_rt.core2 import _set_drop_flag, _set_swap_flag
 from megengine.module import Linear, Module
 from megengine.optimizer import SGD
 

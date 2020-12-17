@@ -905,7 +905,6 @@ def linspace(
     stop = Tensor(stop, device=device)
     num = Tensor(num, device=device)
 
-    device = device if device is None else device.to_c()
     op = builtin.Linspace(comp_node=device)
     (result,) = apply(op, start, stop, num)
     if np.dtype(dtype) == np.int32:

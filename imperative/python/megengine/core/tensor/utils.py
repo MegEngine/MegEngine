@@ -14,8 +14,8 @@ import numpy as np
 from .._imperative_rt.core2 import Tensor, apply
 from ..ops import builtin
 from ..ops.special import Const
-from ..tensor.core import OpBase, TensorBase, TensorWrapperBase
 from .dtype import is_equal, is_quantize
+from .megbrain_graph import VarNode
 
 _enable_convert_inputs = True
 
@@ -110,7 +110,7 @@ def dtype_promotion(inputs):
 def get_device(inputs):
     device = None
     for i in inputs:
-        if isinstance(i, Tensor):
+        if isinstance(i, (Tensor, VarNode)):
             if device is None:
                 device = i.device
             elif device != i.device:
@@ -142,9 +142,9 @@ def astype(x, dtype):
 
 
 def convert_single_value(v, inputs, *, dtype=None, device=None):
-    tensors = [i for i in inputs if isinstance(i, Tensor)]
+    tensors = [i for i in inputs if isinstance(i, (Tensor, VarNode))]
     assert len(tensors) > 0
-    if isinstance(v, (TensorWrapperBase, Tensor)):
+    if isinstance(v, (Tensor, VarNode)):
         v = astype(v, v.dtype if is_quantize(v.dtype) else dtype)
     else:
         (v,) = Const(v, dtype=dtype, device=device)(*tensors)

@@ -11,17 +11,13 @@ from concurrent.futures import Future
 import numpy as np
 
 import megengine.functional as F
+import megengine.tensor as Tensor
 from megengine.core.tensor import megbrain_graph as mgb_graph
-from megengine.core.tensor.raw_tensor import as_raw_tensor
-
-
-def make_dev_tensor(value, dtype=None, device=None):
-    return as_raw_tensor(value, dtype=dtype, device=device)._dev_tensor()
 
 
 def test_io():
     g = mgb_graph.Graph()
-    x = make_dev_tensor(np.random.randn(3).astype("float32"), device="xpux")
+    x = Tensor(np.random.randn(3).astype("float32"), device="xpux")._dev_tensor()
     vx, _ = mgb_graph.input_callback(
         lambda: x, device=x.comp_node, dtype=x.dtype, graph=g
     )
@@ -43,7 +39,7 @@ def test_io2():
 
     for _ in range(3):
         f.execute()
-        x = make_dev_tensor(np.random.randn(10).astype(dtype), device=device)
+        x = Tensor(np.random.randn(10).astype(dtype), device=device)._dev_tensor()
         px.set_value(x)
         y = py.get_value()
         np.testing.assert_equal(x.numpy(), y.numpy())
@@ -60,7 +56,7 @@ def test_attr_output():
 
     for shape in [(2,), (3,), (5,)]:
         f.execute()
-        x = make_dev_tensor(np.random.randn(*shape).astype(dtype), device=device)
+        x = Tensor(np.random.randn(*shape).astype(dtype), device=device)._dev_tensor()
         px.set_value(x)
         ay = py.get_value()
         assert ay.shape == shape
@@ -71,7 +67,7 @@ def test_attr_output():
 
 def test_op():
     g = mgb_graph.Graph()
-    x = make_dev_tensor(np.random.randn(10).astype("float32"), device="xpux")
+    x = Tensor(np.random.randn(10).astype("float32"), device="xpux")._dev_tensor()
     v, _ = mgb_graph.input_callback(
         lambda: x, device=x.comp_node, dtype=x.dtype, graph=g
     )

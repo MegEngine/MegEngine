@@ -119,7 +119,6 @@ class Tensor(_Tensor, ArrayMethodMixin):
         self.q_dict = state.pop("qdict")
 
 
-
 tensor = Tensor
 
 

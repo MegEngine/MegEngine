@@ -2,7 +2,7 @@ import pytest
 
 import megengine as mge
 import megengine.functional as F
-from megengine.core._imperative_rt.imperative import config_async_level, get_async_level
+from megengine.core._imperative_rt.core2 import config_async_level, get_async_level
 
 
 def test_basic():
@@ -12,7 +12,6 @@ def test_basic():
         config_async_level(3)
 
 
-@pytest.mark.skip
 def test_level1_infer_value():
     config_async_level(1)
     a = mge.tensor([[1, 2], [2, 3], [3, 4]], dtype="float32")
@@ -23,7 +22,6 @@ def test_level1_infer_value():
         d = F.reshape(a, c)
 
 
-@pytest.mark.skip
 def test_level1_infer_shape_with_unknown():
     config_async_level(2)
     a = mge.tensor([[1, 2, 2, 3]], dtype="float32")
