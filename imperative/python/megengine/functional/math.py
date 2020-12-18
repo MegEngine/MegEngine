@@ -13,7 +13,6 @@ import numbers
 from typing import Optional, Sequence, Tuple, Union
 
 from ..core.ops import builtin
-from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
 from ..core.tensor import utils
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
@@ -601,9 +600,9 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
     """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
-        order = P.Argsort.Order.DESCENDING
+        order = "DESCENDING"
     else:
-        order = P.Argsort.Order.ASCENDING
+        order = "ASCENDING"
 
     op = builtin.Argsort(order=order)
     if len(inp.shape) == 1:
@@ -643,9 +642,9 @@ def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
     """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
-        order = P.Argsort.Order.DESCENDING
+        order = "DESCENDING"
     else:
-        order = P.Argsort.Order.ASCENDING
+        order = "ASCENDING"
 
     op = builtin.Argsort(order=order)
     if len(inp.shape) == 1:
@@ -695,13 +694,12 @@ def topk(
     if descending:
         inp = -inp
 
-    Mode = P.TopK.Mode
     if kth_only:
-        mode = Mode.KTH_ONLY
+        mode = "KTH_ONLY"
     elif no_sort:
-        mode = Mode.VALUE_IDX_NOSORT
+        mode = "VALUE_IDX_NOSORT"
     else:
-        mode = Mode.VALUE_IDX_SORTED
+        mode = "VALUE_IDX_SORTED"
     op = builtin.TopK(mode=mode)
 
     if not isinstance(k, (TensorBase, TensorWrapperBase)):

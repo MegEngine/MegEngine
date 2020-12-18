@@ -11,7 +11,7 @@
 
 #include "../op_trait.h"
 
-#include "megbrain/imperative/ops/nms.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/standalone/nms_opr.h"
 
 namespace mgb {
@@ -36,8 +36,6 @@ OP_TRAIT_REG(NMSKeep, NMSKeep, NMSKeepOpr)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
 } // anonymous namespace
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(NMSKeep);
 
 }  // namespace imperative
 }  // namespace mgb

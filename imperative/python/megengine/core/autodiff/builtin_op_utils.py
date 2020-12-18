@@ -19,7 +19,6 @@ from ..ops.builtin import (
     IndexingMultiAxisVec,
     IndexingSetMultiAxisVec,
     OpDef,
-    OprAttr,
     Reduce,
     Reshape,
     SetSubtensor,
@@ -31,8 +30,6 @@ from ..tensor.function import Function
 from ..tensor.tensor import Tensor
 from ..tensor.tensor_wrapper import TensorWrapper
 
-_reduce_sum_param = Reduce(mode="SUM").to_c().param[0]
-
 
 @functools.singledispatch
 def builtin_op_get_backward_fn(op: OpDef, inputs, outputs, input_requires_grad):
@@ -41,17 +38,18 @@ def builtin_op_get_backward_fn(op: OpDef, inputs, outputs, input_requires_grad):
 
 @builtin_op_get_backward_fn.register(OpDef)
 def _(op: OpDef, inputs, outputs, input_requires_grad):
-    if isinstance(op, OprAttr):
-        grad_fn = _oprAttr_grad_fn.get(op.type, None)
-        if grad_fn is None:
-            if op.type == Reduce.name and op.param[0] == _reduce_sum_param:
-                grad_fn = reduce_sum_grad_fn
-            else:
-                grad_fn = default_grad_fn
+    if isinstance(op, Reshape):
+        grad_fn = reshape_grad_fn
+    elif isinstance(op, Subtensor):
+        grad_fn = subtensor_grad_fn
+    elif isinstance(op, IndexingMultiAxisVec):
+        grad_fn = indexingMultiAxisVec_grad_fn
     elif isinstance(op, Broadcast) or (
         isinstance(op, Elemwise) and op.mode == Elemwise.Mode.ADD
     ):
         grad_fn = elemwise_add_grad_fn
+    elif isinstance(op, Reduce) and op.mode.name == "SUM":
+        grad_fn = reduce_sum_grad_fn
     else:
         grad_fn = default_grad_fn
     return grad_fn(op, inputs, outputs, input_requires_grad)
@@ -152,9 +150,7 @@ def reshape_grad_fn(op, inputs, outputs, input_requires_grad):
 
 # override for Subtensor
 def subtensor_grad_fn(op, inputs, outputs, input_requires_grad):
-    grad_op = OprAttr()
-    grad_op.type = SetSubtensor.name
-    grad_op.param = op.param
+    grad_op = SetSubtensor(op.items)
 
     input_shape = get_shape(inputs[0])
     params = inputs[1:]
@@ -175,9 +171,7 @@ def subtensor_grad_fn(op, inputs, outputs, input_requires_grad):
 
 # override for IndexingMultiAxisVec
 def indexingMultiAxisVec_grad_fn(op, inputs, outputs, input_requires_grad):
-    grad_op = OprAttr()
-    grad_op.type = IndexingSetMultiAxisVec.name
-    grad_op.param = op.param
+    grad_op = IndexingSetMultiAxisVec(op.items)
 
     input_shape = get_shape(inputs[0])
     params = inputs[1:]
@@ -209,10 +203,3 @@ def reduce_sum_grad_fn(op, inputs, outputs, input_requires_grad):
         return (broadcast_to(dy, input_shape) if input_requires_grad[0] else None,)
 
     return backward, [True]
-
-
-_oprAttr_grad_fn = {
-    Reshape.name: reshape_grad_fn,
-    Subtensor.name: subtensor_grad_fn,
-    IndexingMultiAxisVec.name: indexingMultiAxisVec_grad_fn,
-}

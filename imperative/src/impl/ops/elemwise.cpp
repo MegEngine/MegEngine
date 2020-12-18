@@ -9,7 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/imperative/ops/elemwise.h"
+#include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/opr/basic_arith.h"
+
 #include "../op_trait.h"
 
 namespace mgb {
@@ -33,7 +35,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs) {
     auto&& op_def = def.cast_final_safe<Elemwise>();
-    auto trait = Elemwise::ModeTrait::from_mode(op_def.mode);
+    auto trait = megdnn::Elemwise::ModeTrait::from_mode(op_def.mode);
     mgb_assert(inputs.size() == trait.arity,
                "%s expects %u inputs; got %zu actually", trait.name,
                trait.arity, inputs.size());
@@ -69,8 +71,6 @@ OP_TRAIT_REG(Elemwise, Elemwise, opr::Elemwise)
     .infer_output_attrs_fallible(infer_output_attrs_fallible)
     .fallback();
 } // anonymous namespace
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(Elemwise);
 
 }  // namespace imperative
 }  // namespace mgb

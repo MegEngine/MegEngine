@@ -8,7 +8,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Optional, Tuple
 
-from ..core._imperative_rt.ops import CollectiveCommMode
 from ..core.autodiff.builtin_op_utils import builtin_op_get_backward_fn
 from ..core.autodiff.grad import (
     Tracer,
@@ -110,17 +109,20 @@ def collective_comm(inp, mode, group, device):
     assert isinstance(group, Group)
     if group is None:
         return inp
-    op = CollectiveComm()
-    op.key = group.key
-    op.nr_devices = group.size
-    op.rank = group.rank
-    op.is_root = op.rank == 0
-    op.local_grad = False
-    op.addr, op.port = get_mm_server_addr()
-    op.mode = mode
-    op.dtype = inp.dtype
-    op.backend = get_backend()
-    op.comp_node = device
+    addr, port = get_mm_server_addr()
+    op = CollectiveComm(
+        key=group.key,
+        nr_devices=group.size,
+        rank=group.rank,
+        is_root=(group.rank == 0),
+        local_grad=False,
+        addr=addr,
+        port=port,
+        mode=mode,
+        dtype=inp.dtype,
+        backend=get_backend(),
+        comp_node=device,
+    )
     return apply(op, inp)[0]
 
 
@@ -134,7 +136,7 @@ def reduce_sum(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.REDUCE_SUM
+    mode = CollectiveComm.Mode.REDUCE_SUM
     return collective_comm(inp, mode, group, device)
 
 
@@ -148,7 +150,7 @@ def broadcast(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.BROADCAST
+    mode = CollectiveComm.Mode.BROADCAST
     return collective_comm(inp, mode, group, device)
 
 
@@ -162,7 +164,7 @@ def all_gather(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.ALL_GATHER
+    mode = CollectiveComm.Mode.ALL_GATHER
     return collective_comm(inp, mode, group, device)
 
 
@@ -176,7 +178,7 @@ def reduce_scatter_sum(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.REDUCE_SCATTER_SUM
+    mode = CollectiveComm.Mode.REDUCE_SCATTER_SUM
     return collective_comm(inp, mode, group, device)
 
 
@@ -190,7 +192,7 @@ def all_reduce_sum(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.ALL_REDUCE_SUM
+    mode = CollectiveComm.Mode.ALL_REDUCE_SUM
     return collective_comm(inp, mode, group, device)
 
 
@@ -204,7 +206,7 @@ def all_reduce_max(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.ALL_REDUCE_MAX
+    mode = CollectiveComm.Mode.ALL_REDUCE_MAX
     return collective_comm(inp, mode, group, device)
 
 
@@ -218,7 +220,7 @@ def all_reduce_min(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.ALL_REDUCE_MIN
+    mode = CollectiveComm.Mode.ALL_REDUCE_MIN
     return collective_comm(inp, mode, group, device)
 
 
@@ -232,7 +234,7 @@ def gather(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.GATHER
+    mode = CollectiveComm.Mode.GATHER
     return collective_comm(inp, mode, group, device)
 
 
@@ -246,7 +248,7 @@ def scatter(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.SCATTER
+    mode = CollectiveComm.Mode.SCATTER
     return collective_comm(inp, mode, group, device)
 
 
@@ -260,7 +262,7 @@ def all_to_all(
     :param group: communication group.
     :param device: execution device.
     """
-    mode = CollectiveCommMode.ALL_TO_ALL
+    mode = CollectiveComm.Mode.ALL_TO_ALL
     return collective_comm(inp, mode, group, device)
 
 

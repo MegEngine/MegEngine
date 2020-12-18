@@ -9,7 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/imperative/ops/tensor_manip.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "../op_trait.h"
@@ -139,9 +139,5 @@ OP_TRAIT_REG(ParamPackConcat, ParamPackConcat, mgb::opr::ParamPackConcat)
         .apply_on_var_node(param_pack_concat_apply_on_var_node)
         .fallback();
 } // namespace
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(GetVarShape);
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(ParamPackSplit);
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(ParamPackConcat);
 
 } // namespace mgb::imperative

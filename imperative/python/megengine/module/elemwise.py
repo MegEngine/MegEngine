@@ -5,7 +5,6 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from ..core.ops._internal import param_defs as P
 from ..functional.elemwise import _elwise
 from ..tensor import Tensor
 from .module import Module

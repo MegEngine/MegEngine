@@ -119,7 +119,7 @@ void OprChecker::run(std::vector<InputSpec> inp_keys) {
             }, inp_keys[i]);
         sym_inp[i] = opr::SharedDeviceTensor::make(*graph, host_inp[i]).node();
     }
-    auto sym_oup = OpDef::apply_on_var_node(*m_op, sym_inp)->usable_output();
+    auto sym_oup = OpDef::apply_on_var_node(*m_op, sym_inp);
     size_t nr_oups = sym_oup.size();
     ComputingGraph::OutputSpec oup_spec(nr_oups);
     SmallVector<HostTensorND> host_sym_oup(nr_oups);

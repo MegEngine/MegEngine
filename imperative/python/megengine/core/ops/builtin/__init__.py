@@ -11,25 +11,12 @@ from typing import Union
 
 from ..._imperative_rt import OpDef, ops
 from ...tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
-from .._internal import all_ops
-from .._internal.helper import PodOpVisitor
 
 # register OpDef as a "virtual subclass" of OpBase, so any of registered
 # apply(OpBase, ...) rules could work well on OpDef
 OpBase.register(OpDef)
 
-# forward to apply(OpDef, ...)
-@apply.register()
-def _(op: PodOpVisitor, *args: Union[TensorBase, TensorWrapperBase]):
-    return apply(op.to_c(), *args)
-
-
-__all__ = ["OpDef", "PodOpVisitor"]
-
-for k, v in all_ops.__dict__.items():
-    if isinstance(v, type) and issubclass(v, PodOpVisitor):
-        globals()[k] = v
-        __all__.append(k)
+__all__ = ["OpDef"]
 
 for k, v in ops.__dict__.items():
     if isinstance(v, type) and issubclass(v, OpDef):

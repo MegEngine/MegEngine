@@ -16,7 +16,6 @@ import numpy as np
 from ..core._imperative_rt import CompNode
 from ..core._wrap import device as as_device
 from ..core.ops import builtin
-from ..core.ops._internal import param_defs as P
 from ..core.ops.special import Const
 from ..core.tensor.core import TensorBase, TensorWrapperBase, apply
 from ..core.tensor.tensor_wrapper import _broadcast, _remove_axis
@@ -722,7 +721,7 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
          [1 0]]
 
     """
-    return inp.transpose(pattern)
+    return inp.transpose(list(-1 if _ == "x" else _ for _ in pattern))
 
 
 def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
@@ -754,10 +753,6 @@ def reshape(inp: Tensor, target_shape: Iterable[int]) -> Tensor:
 
     """
     return inp.reshape(target_shape)
-
-
-AxisAddRemove = builtin.AxisAddRemove
-AxisDesc = AxisAddRemove.AxisDesc
 
 
 def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
@@ -826,7 +821,6 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         (1, 2)
 
     """
-    Param = builtin.AxisAddRemove.Param
 
     def get_axes():
         try:
@@ -839,8 +833,7 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     ndim = inp.ndim + len(axis)
     axis = sorted(i + ndim if i < 0 else i for i in axis)
 
-    param = Param(*map(builtin.AxisAddRemove.AxisDesc.make_add, axis))
-    op = builtin.AxisAddRemove(param=param)
+    op = builtin.AddAxis(axis=axis)
     (result,) = apply(op, inp)
     return result
 

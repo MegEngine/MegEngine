@@ -134,7 +134,7 @@ def astype(x, dtype):
     dtype = np.dtype(dtype)
     if not is_equal(x.dtype, dtype):
         isscalar = x.__wrapped__._data._isscalar
-        (x,) = apply(builtin.TypeCvt(param=dtype), x)
+        (x,) = apply(builtin.TypeCvt(dtype=dtype), x)
         x.__wrapped__._data._isscalar = isscalar
     return x
 

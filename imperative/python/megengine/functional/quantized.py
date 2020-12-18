@@ -41,12 +41,12 @@ def conv_bias_activation(
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
-    :type conv_mode: string or :class:`P.Convolution.Mode`.
+    :type conv_mode: string or :class:`Convolution.Mode`.
     :param conv_mode: supports 'CROSS_CORRELATION' or 'CONVOLUTION'. Default:
         'CROSS_CORRELATION'
     :param dtype: support for ``np.dtype``, Default: np.int8
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`.
+        :class:`Convolution.ComputeMode`.
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
         "Float32" would be used for accumulator and intermediate result, but only effective when input and output are of Float16 dtype.
@@ -56,7 +56,7 @@ def conv_bias_activation(
     sh, sw = _pair_nonzero(stride)
     dh, dw = _pair_nonzero(dilation)
     sparse_type = "DENSE" if groups == 1 else "GROUP"
-    op = builtin.ConvBiasForward(
+    op = builtin.ConvBias(
         stride_h=sh,
         stride_w=sw,
         pad_h=ph,
@@ -101,12 +101,12 @@ def batch_conv_bias_activation(
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
-    :type conv_mode: string or :class:`P.Convolution.Mode`.
+    :type conv_mode: string or :class:`Convolution.Mode`.
     :param conv_mode: supports 'CROSS_CORRELATION' or 'CONVOLUTION'. Default:
         'CROSS_CORRELATION'
     :param dtype: support for ``np.dtype``, Default: np.int8
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`.
+        :class:`Convolution.ComputeMode`.
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
         "Float32" would be used for accumulator and intermediate result, but only effective when input and output are of Float16 dtype.
@@ -116,7 +116,7 @@ def batch_conv_bias_activation(
     sh, sw = _pair_nonzero(stride)
     dh, dw = _pair_nonzero(dilation)
     sparse_type = "DENSE" if groups == 1 else "GROUP"
-    op = builtin.BatchConvBiasForward(
+    op = builtin.BatchConvBias(
         stride_h=sh,
         stride_w=sw,
         pad_h=ph,

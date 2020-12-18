@@ -36,7 +36,7 @@ SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
     return def.trait()->apply_on_physical_tensor(def, inputs);
 }
 
-cg::OperatorNodeBase* OpDef::apply_on_var_node(
+VarNodeArray OpDef::apply_on_var_node(
     const OpDef& def,
     const VarNodeArray& inputs) {
     return def.trait()->apply_on_var_node(def, inputs);
@@ -54,6 +54,14 @@ BackwardGraphResult OpDef::make_backward_graph(
     const SmallVector<bool>& input_requires_grad,
     const SmallVector<bool>& output_has_grad) {
     return def.trait()->make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
+}
+
+size_t OpDef::hash() const {
+    return trait()->hash(*this);
+}
+
+bool OpDef::is_same_st(const Hashable& rhs) const {
+    return trait()->is_same_st(*this, static_cast<const OpDef&>(rhs));
 }
 
 const OpTrait* OpDef::trait() const {

@@ -15,7 +15,7 @@ from typing import Iterable, List, Optional
 from ..core._imperative_rt import OperatorNodeConfig, ProfileEntry
 from ..core._imperative_rt import ProfilerImpl as _Profiler
 from ..core._imperative_rt.imperative import sync
-from ..core._imperative_rt.ops import CollectiveCommMode
+from ..core._imperative_rt.ops import CollectiveComm
 
 
 def _make_dict(**kwargs):
@@ -194,7 +194,7 @@ class Profiler:
     _type_map = {
         OperatorNodeConfig: lambda x: _print_opnode_config(x),
         bytes: lambda x: base64.encodebytes(x).decode("ascii"),
-        CollectiveCommMode: lambda x: str(x),
+        CollectiveComm.Mode: lambda x: str(x),
     }
 
     _dumper_map = {

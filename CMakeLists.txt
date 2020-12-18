@@ -230,6 +230,10 @@ endif()
 # FIXME At present, there are some conflicts between the LLVM that halide
 # depends on and the LLVM that MLIR depends on. Should be fixed in subsequent
 # versions.
+if(MGE_BUILD_IMPERATIVE_RT)
+    set(MGE_WITH_HALIDE OFF)
+    message(WARNING "cannot use HALIDE when building IMPERATIVE_RT")
+endif()
 if(MGE_WITH_JIT_MLIR)
     if(MGE_WITH_HALIDE)
         message(FATAL_ERROR "please set MGE_WITH_HALIDE to OFF with MGE_WITH_JIT_MLIR enabled")
@@ -310,7 +314,7 @@ if(MGE_INFERENCE_ONLY)
     set(MGE_BUILD_IMPERATIVE_RT OFF)
 endif()
 
-if(MGE_WITH_JIT_MLIR)
+if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
     include(cmake/llvm-project.cmake)
 endif()
 
@@ -750,7 +754,7 @@ target_include_directories(mgb_opr_param_defs
 add_dependencies(mgb_opr_param_defs _mgb_opr_param_defs)
 install(TARGETS mgb_opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
 
-if(MGE_WITH_JIT_MLIR)
+if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
     # generate param_defs.td
     set(MGE_GENFILE_DIR ${PROJECT_BINARY_DIR}/src/genfiles)
     set(MGE_GEN_IR_DIR ${PROJECT_BINARY_DIR}/src/core/include/megbrain/ir)
@@ -800,12 +804,6 @@ if(TARGET _imperative_rt)
         COMMAND ${CMAKE_COMMAND} -E create_symlink
           ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/$<TARGET_FILE_NAME:${MODULE_NAME}>
           ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/$<TARGET_FILE_NAME:${MODULE_NAME}>
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/generated_ops.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/generated_ops.py
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-          ${CMAKE_CURRENT_BINARY_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/param_defs.py
-          ${CMAKE_CURRENT_SOURCE_DIR}/imperative/python/${PACKAGE_NAME}/core/ops/_internal/param_defs.py
         DEPENDS _imperative_rt
         VERBATIM
     )

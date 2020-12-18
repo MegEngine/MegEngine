@@ -421,9 +421,7 @@ void init_graph_rt(py::module m) {
 
     common.def("invoke_op", [](const OpDef& def, const std::vector<cg::VarNode*> inputs, cg::ComputingGraph* graph) {
             cg::VarNodeArray vinputs(inputs.begin(), inputs.end());
-            auto opr = OpDef::apply_on_var_node(def, vinputs);
-            auto outputs = opr->usable_output();
-            return to_tuple(outputs);
+            return to_tuple(OpDef::apply_on_var_node(def, vinputs));
         },
         py::arg(), py::arg(), py::arg("graph") = py::none());
 

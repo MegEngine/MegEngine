@@ -590,7 +590,7 @@ cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(
     for (size_t i = 0; i < inputs.size(); ++ i) {
         vinputs[i] = InputPlaceholder::make(*m_graph, *inputs[i]).node();
     }
-    auto opr = OpDef::apply_on_var_node(opdef, vinputs);
+    auto opr = OpDef::apply_on_var_node(opdef, vinputs)[0]->owner_opr();
     mgb_assert(!opr->same_type<InputPlaceholder>());
     for (auto &&i : opr->input()) {
         mgb_assert(i->owner_opr()->same_type<InputPlaceholder>());
@@ -639,7 +639,7 @@ ProxyGraph::make_backward_graph(
         return ret.first->second;
     };
     auto inputs = make_input_place_holders(input_descs);
-    auto fwd = OpDef::apply_on_var_node(opdef, inputs);
+    auto fwd = OpDef::apply_on_var_node(opdef, inputs)[0]->owner_opr();
     auto&& outputs = fwd->usable_output();
     SmallVector<LogicalTensorDesc> output_descs;
     for (auto&& i : outputs) {
@@ -799,7 +799,7 @@ cg::OperatorNodeBase* ProxyGraph::get_proxy_opr(const OpDef& opdef,
         const SmallVector<LogicalTensorDesc>& inputs) {
     mgb_assert(!m_cur_opr);
     auto vinputs = make_input_place_holders(inputs);
-    return OpDef::apply_on_var_node(opdef, vinputs);
+    return OpDef::apply_on_var_node(opdef, vinputs)[0]->owner_opr();
 }
 
 VarNodeArray ProxyGraph::make_input_place_holders(const SmallVector<LogicalTensorDesc>& inputs) {

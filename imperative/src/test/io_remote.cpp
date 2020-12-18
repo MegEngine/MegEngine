@@ -10,7 +10,7 @@
  */
 
 #include "./helper.h"
-#include "megbrain/imperative/ops/io_remote.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/mm_handler.h"
 
 using namespace mgb;
@@ -33,24 +33,19 @@ TEST(TestImperative, IORemote) {
     }
 
     auto run_send = [&](std::shared_ptr<HostTensorND> hnd) {
-        imperative::RemoteSend def{"io_remote_test", server_addr, port, 1};
+        auto def = imperative::RemoteSend::make(
+            "io_remote_test", server_addr, port, 1);
         auto inp = Tensor::make(*hnd);
-        auto oup = OpDef::apply_on_physical_tensor(def, {inp});
+        auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
     };
 
     auto run_recv = [&](std::shared_ptr<HostTensorND> hnd) {
-        // auto&& shape = std::initializer_list{vector_size};
-        imperative::RemoteRecv def{"io_remote_test",
-                                   server_addr,
-                                   port,
-                                   0,
-                                   {
-                                           vector_size,
-                                   },
-                                   CompNode::load("gpu1"),
-                                   dtype::Float32()};
+        auto def = imperative::RemoteRecv::make(
+            "io_remote_test", server_addr, port, 0,
+            CompNode::load("gpu1"), TensorShape{vector_size},
+            dtype::Float32());
         auto inp = Tensor::make(*hnd);
-        auto oup = OpDef::apply_on_physical_tensor(def, {inp});
+        auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
         HostTensorND host_v;
         host_v.copy_from(oup[0]->dev_tensor()).sync();
         MGB_ASSERT_TENSOR_NEAR(*expect, host_v, 1e-6);

@@ -21,9 +21,10 @@ import numpy as np
 from ..core._imperative_rt import GraphProfiler
 from ..core._imperative_rt.ops import (
     CollectiveComm,
-    OprAttr,
+    GaussianRNG,
     RemoteRecv,
     RemoteSend,
+    UniformRNG,
     VirtualDep,
 )
 from ..core._trace_option import set_symbolic_shape
@@ -182,14 +183,7 @@ class trace:
         record = self._seq[self._pc]
         op_, ihandles, ohandles = record
         if op != op_:
-            # FIXME: will be removed once better rng implementation is done
-            if isinstance(op, OprAttr) and (
-                op.type in ("UniformRNG", "GaussianRNG") and op.type == op_.type
-            ):
-                if op.param[8:] != op_.param[8:]:
-                    raise TraceMismatchError("op different from last time")
-            else:
-                raise TraceMismatchError("op different from last time")
+            raise TraceMismatchError("op different from last time")
         if len(ihandles) != len(args):
             raise TraceMismatchError("op input size different from last time")
 

@@ -9,7 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/imperative/ops/broadcast.h"
+#include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/opr/tensor_manip.h"
+
 #include "../op_trait.h"
 
 namespace mgb {
@@ -86,8 +88,6 @@ OP_TRAIT_REG(Broadcast, Broadcast, opr::Broadcast)
     .infer_output_attrs_fallible(infer_output_attrs_fallible)
     .fallback();
 } // anonymous namespace
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(Broadcast);
 
 }  // namespace imperative
 }  // namespace mgb

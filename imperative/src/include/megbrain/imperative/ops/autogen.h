@@ -1,5 +1,5 @@
 /**
- * \file imperative/src/include/megbrain/imperative/ops/cond_take.h
+ * \file imperative/src/include/megbrain/imperative/ops/autogen.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -12,22 +12,15 @@
 #pragma once
 
 #include "megbrain/imperative/op_def.h"
+#include "megdnn/opr_param_defs.h"
+#include "megbrain/opr/param_defs.h"
+
+#include "megbrain/utils/hash.h"
 
 namespace mgb::imperative {
 
-class CondTake : public OpDefImplBase<CondTake> {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
-public:
-    CondTake() = default;
-
-    size_t hash() const override {
-        return reinterpret_cast<std::uintptr_t>(dyn_typeinfo());
-    }
-
-    bool is_same_st(const Hashable& rhs) const override {
-        return rhs.dyn_typeinfo() == dyn_typeinfo();
-    }
-
-};
+// TODO: split into separate files to avoid recompiling all
+// impl/ops/*.cpp on each modification of ops.td
+#include "./opdef.h.inl"
 
 } // namespace mgb::imperative

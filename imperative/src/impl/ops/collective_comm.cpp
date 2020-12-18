@@ -18,7 +18,7 @@
 #include "megbrain/utils/hash.h"
 #endif // MGB_ENABLE_OPR_MM
 
-#include "megbrain/imperative/ops/collective_comm.h"
+#include "megbrain/imperative/ops/autogen.h"
 
 namespace mgb {
 namespace imperative {
@@ -61,8 +61,8 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node) {
     auto [addr, port] = split_address(group_client->get_addr());
     auto comp_node = node->config().get_single_comp_node().to_string_logical();
     return std::make_shared<CollectiveComm>(
-            comm.key(), comm.nr_devices(), comm.rank(), comm.is_root(),
-            comm.local_grad(), addr, std::stoi(port), comm.param().mode,
+            comm.param().mode, comm.key(), comm.nr_devices(), comm.rank(),
+            comm.is_root(), comm.local_grad(), addr, std::stoi(port),
             comm.dtype(), comm.backend(), comp_node);
 }
 
@@ -72,35 +72,6 @@ OP_TRAIT_REG(CollectiveComm, CollectiveComm, opr::CollectiveComm)
     .fallback();
 } // anonymous namespace
 #endif // MGB_ENABLE_OPR_MM
-
-bool CollectiveComm::is_same_st(const Hashable& another) const{
-    auto* comm_opr = another.try_cast_final<CollectiveComm>();
-    if(!comm_opr){
-        return false;
-    }
-    return as_tuple() == comm_opr->as_tuple();
-}
-
-size_t CollectiveComm::hash() const{
-    XXHash xxhash{};
-    auto append = [&xxhash](auto field){
-        auto hash_val = HashTrait<decltype(field)>::eval(field);
-        xxhash.update(reinterpret_cast<void*>(&hash_val), sizeof(hash_val));
-    };
-    append(key); 
-    append(nr_devices); 
-    append(rank);
-    append(is_root);
-    append(local_grad);
-    append(addr);
-    append(port);
-    append(mode);
-    append(backend);
-    append(comp_node);
-    return xxhash.digest();
-}
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(CollectiveComm);
 
 }  // namespace imperative
 }  // namespace mgb

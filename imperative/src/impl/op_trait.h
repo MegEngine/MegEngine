@@ -30,6 +30,32 @@ struct OpMeth<RType(Args...)>: public thin_function<RType(Args...)> {
         return this->Base::operator ()(args...);
     }
 };
+template<typename T>
+struct ToVarNodeArray: std::false_type {};
+template<>
+struct ToVarNodeArray<SymbolVar>: std::true_type {
+    VarNodeArray operator()(const SymbolVar& inp) {
+        return {inp.node()};
+    }
+};
+template<>
+struct ToVarNodeArray<SymbolVarArray>: std::true_type {
+    VarNodeArray operator()(const SymbolVarArray& inputs) {
+        return cg::to_var_node_array(inputs);
+    }
+};
+template<size_t N>
+struct ToVarNodeArray<std::array<SymbolVar, N>>: std::true_type {
+    VarNodeArray operator()(const std::array<SymbolVar, N>& inp) {
+        return cg::to_var_node_array({inp.begin(), inp.end()});
+    }
+};
+template<>
+struct ToVarNodeArray<cg::OperatorNodeBase*>: std::true_type {
+    VarNodeArray operator()(const cg::OperatorNodeBase* opr) {
+        return opr->usable_output();
+    }
+};
 } // detail
 
 using OpDefMaker = detail::OpMeth<
@@ -42,6 +68,8 @@ using InferOutputAttrsFallible = detail::OpMeth<
         decltype(OpDef::infer_output_attrs_fallible)>;
 using GradMaker = detail::OpMeth<
         decltype(OpDef::make_backward_graph)>;
+using HashFunc = detail::OpMeth<size_t(const OpDef&)>;
+using IsSame = detail::OpMeth<bool(const OpDef&, const OpDef&)>;
 
 struct OpTrait {
     const char* name;
@@ -50,6 +78,8 @@ struct OpTrait {
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
     GradMaker make_backward_graph;
+    HashFunc hash;
+    IsSame is_same_st;
     OpTrait(const char* name);
     static OpTrait* find_by_name(const char* name);
     static OpTrait* find_by_typeinfo(Typeinfo* type);
@@ -61,7 +91,9 @@ struct OpTrait {
     cb(apply_on_physical_tensor) \
     cb(apply_on_var_node) \
     cb(infer_output_attrs_fallible) \
-    cb(make_backward_graph)
+    cb(make_backward_graph) \
+    cb(hash) \
+    cb(is_same_st)
 
 struct OpTraitRegistry {
     OpTrait* trait;
@@ -97,6 +129,15 @@ struct OpTraitRegistry {
     void do_insert(Typeinfo* type);
 
     static OpTraitRegistry do_insert(const char* name);
+
+    template<typename T,
+        typename To = detail::ToVarNodeArray<T>,
+        typename = std::enable_if_t<To::value>>
+    OpTraitRegistry& apply_on_var_node(T (*f)(const OpDef&, const VarNodeArray&)) {
+        return apply_on_var_node([=](const OpDef& opdef, const VarNodeArray& inputs) {
+            return To()(f(opdef, inputs));
+        });
+    }
 };
 
 } // namespace imperative

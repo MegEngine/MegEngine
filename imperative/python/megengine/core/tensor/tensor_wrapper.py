@@ -90,7 +90,7 @@ def _reshape(x, shape):
     if unspec_axis is None:
         op = builtin.Reshape()
     else:
-        op = builtin.Reshape(unspec_axis=unspec_axis)
+        op = builtin.Reshape(axis=unspec_axis)
     (x,) = apply(op, x, shape)
     return x
 
@@ -144,8 +144,6 @@ def _logical_binary_elwise(mode, rev=False):
 
 
 def _remove_axis(inp: Tensor, axis) -> Tensor:
-    Param = builtin.AxisAddRemove.Param
-
     def get_axes():
         if axis is None:
             return [i for i, s in enumerate(inp.shape) if s == 1]
@@ -159,8 +157,7 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
     axis = sorted(i + inp.ndim if i < 0 else i for i in axis)
     axis = [a - i for i, a in enumerate(axis)]
 
-    param = Param(*map(builtin.AxisAddRemove.AxisDesc.make_remove, axis))
-    op = builtin.AxisAddRemove(param=param)
+    op = builtin.RemoveAxis(axis=axis)
     (result,) = apply(op, inp)
     if len(axis) == inp.ndim:
         setscalar(result)

@@ -109,9 +109,6 @@ void init_imperative_rt(py::module m) {
 
     py::class_<OpDef, std::shared_ptr<OpDef>>(m, "OpDef")
         .def("ctype", [](const OpDef& opdef) {
-                if (auto attr = opdef.try_cast_final<OprAttr>()) {
-                    return attr->type.c_str();
-                }
                 return opdef.dyn_typeinfo()->name;
             })
         .def("__eq__", [](const OpDef& lhs, const OpDef& rhs) {

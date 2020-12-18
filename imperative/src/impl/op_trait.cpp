@@ -23,7 +23,7 @@ namespace detail {
 
 struct StaticData {
     std::list<OpTrait> registries;
-    std::unordered_map<const char*, OpTrait*> name2reg;
+    std::unordered_map<std::string, OpTrait*> name2reg;
     std::unordered_map<Typeinfo*, OpTrait*> type2reg;
 };
 

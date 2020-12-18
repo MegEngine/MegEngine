@@ -9,7 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/imperative/ops/batch_norm.h"
+#include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/opr/dnn/batch_norm.h"
 #include "../op_trait.h"
 
 namespace mgb {
@@ -19,9 +20,7 @@ namespace {
 
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
     auto* node = &node_->cast_final_safe<opr::BatchNorm>();
-    auto&& param = node->param();
-    return BatchNorm::make(param.param_dim, param.fwd_mode, param.epsilon, 
-                           param.avg_factor, param.scale, param.bias);
+    return BatchNorm::make(node->param());
 }
 
 cg::OperatorNodeBase* apply_on_var_node(
@@ -33,13 +32,11 @@ cg::OperatorNodeBase* apply_on_var_node(
               "BatchNorm expects 3 or 5 inputs; got %lu actually", nr_inp);
     if (nr_inp == 3) {
         return opr::BatchNorm::make(
-            inputs[0], inputs[1], inputs[2],
-            {bn_opr.param_dim, bn_opr.fwd_mode, bn_opr.epsilon, bn_opr.avg_factor, bn_opr.scale, bn_opr.bias})[0]
+            inputs[0], inputs[1], inputs[2], bn_opr.param())[0]
             .node()->owner_opr();
     } else {
         return opr::BatchNorm::make(
-            inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], 
-            {bn_opr.param_dim, bn_opr.fwd_mode, bn_opr.epsilon, bn_opr.avg_factor, bn_opr.scale, bn_opr.bias})[0]
+            inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], bn_opr.param())[0]
             .node()->owner_opr();
     }
 }
@@ -52,7 +49,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     mgb_assert(nr_inp == 3 ||nr_inp == 5,
               "BatchNorm expects 3 or 5 inputs; got %lu actually", nr_inp);
     // need running mean/variance
-    bool need_stat = (nr_inp == 5) && op_def.fwd_mode == BatchNorm::Param::FwdMode::TRAINING;
+    bool need_stat = (nr_inp == 5) && op_def.fwd_mode == BatchNorm::FwdMode::TRAINING;
     size_t nr_out = need_stat? 5 : 3;
     SmallVector<LogicalTensorDesc> out_shapes(nr_out);
     auto&& i0 = inputs[0];
@@ -75,8 +72,6 @@ OP_TRAIT_REG(BatchNorm, BatchNorm, opr::BatchNorm)
     .infer_output_attrs_fallible(infer_output_attrs_fallible)
     .fallback();
 } // anonymous namespace
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(BatchNorm);
 
 }  // namespace imperative
 }  // namespace mgb

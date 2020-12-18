@@ -9,8 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/imperative/ops/cond_take.h"
-#include "megbrain/imperative/ops/opr_attr.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/misc.h"
 #include "../dnn_op_helper.h"
 #include "../op_trait.h"
@@ -18,8 +17,6 @@
 using namespace megdnn;
 
 namespace mgb::imperative {
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondTake);
 
 namespace {
 

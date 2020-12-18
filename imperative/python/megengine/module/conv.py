@@ -10,7 +10,6 @@ from typing import Tuple, Union
 
 import numpy as np
 
-from ..core.ops._internal import param_defs as P
 from ..functional import conv1d, conv2d, conv_transpose2d, local_conv2d, relu
 from ..functional.types import _pair, _pair_nonzero
 from ..tensor import Parameter
@@ -156,8 +155,6 @@ class Conv1d(_ConvNd):
         (2, 1, 2)
 
     """
-    _conv_mode_type = P.Convolution.Mode
-    _compute_mode_type = P.Convolution.ComputeMode
 
     def __init__(
         self,
@@ -176,8 +173,8 @@ class Conv1d(_ConvNd):
         stride = stride
         padding = padding
         dilation = dilation
-        self.conv_mode = self._conv_mode_type.convert(conv_mode)
-        self.compute_mode = self._compute_mode_type.convert(compute_mode)
+        self.conv_mode = conv_mode
+        self.compute_mode = compute_mode
         super().__init__(
             in_channels,
             out_channels,
@@ -302,9 +299,6 @@ class Conv2d(_ConvNd):
 
     """
 
-    _conv_mode_type = P.Convolution.Mode
-    _compute_mode_type = P.Convolution.ComputeMode
-
     def __init__(
         self,
         in_channels: int,
@@ -322,8 +316,8 @@ class Conv2d(_ConvNd):
         stride = _pair_nonzero(stride)
         padding = _pair(padding)
         dilation = _pair_nonzero(dilation)
-        self.conv_mode = self._conv_mode_type.convert(conv_mode)
-        self.compute_mode = self._compute_mode_type.convert(compute_mode)
+        self.conv_mode = conv_mode
+        self.compute_mode = compute_mode
         super().__init__(
             in_channels,
             out_channels,
@@ -414,9 +408,6 @@ class ConvTranspose2d(_ConvNd):
         effective when input and output are of float16 dtype.
     """
 
-    _conv_mode_type = P.Convolution.Mode
-    _compute_mode_type = P.Convolution.ComputeMode
-
     def __init__(
         self,
         in_channels: int,
@@ -434,8 +425,8 @@ class ConvTranspose2d(_ConvNd):
         stride = _pair_nonzero(stride)
         padding = _pair(padding)
         dilation = _pair_nonzero(dilation)
-        self.conv_mode = self._conv_mode_type.convert(conv_mode)
-        self.compute_mode = self._compute_mode_type.convert(compute_mode)
+        self.conv_mode = conv_mode
+        self.compute_mode = compute_mode
         super().__init__(
             in_channels,
             out_channels,
@@ -508,8 +499,6 @@ class LocalConv2d(Conv2d):
         The shape of weight is `(groups, output_height, output_width,
         in_channels // groups, *kernel_size, out_channels // groups)`.
     """
-
-    _conv_mode_type = P.Convolution.Mode
 
     def __init__(
         self,

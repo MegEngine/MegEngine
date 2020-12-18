@@ -130,7 +130,7 @@ void Profiler::start(uint32_t flags) {
             // TODO: assign parent
             entry.parent = 0;
             // Record apply context and save to m_profile
-            entry.op = def.copy();
+            entry.op = const_cast<OpDef&>(def).shared_from_this();
             for (auto&& input : inputs) {
                 entry.inputs.push_back({m_tensor_recorder.record_tensor(input),
                                         shape2vector(input->layout()),
@@ -172,31 +172,31 @@ void Profiler::start(uint32_t flags) {
         if (flags & PROFILE_FOOTPRINT) {
             hook_apply_on_var_node->apply_hook(
                     [this](auto&& apply, const OpDef& def,
-                           VarNodeArray inputs) -> cg::OperatorNodeBase* {
-                        auto* operator_node = apply(def, std::move(inputs));
+                           VarNodeArray inputs) -> VarNodeArray {
+                        auto vars = apply(def, std::move(inputs));
                         std::remove_reference_t<decltype(m_entry_stack.top())>
                                 top;
                         {
                             MGB_LOCK_GUARD(m_lock);
                             if (m_entry_stack.empty()) {
-                                return operator_node;
+                                return vars;
                             }
                             top = m_entry_stack.top();
                         }
                         auto [current_op, current_entry, thread_id] = top;
                         if (current_op != &def ||
                             thread_id != std::this_thread::get_id()) {
-                            return operator_node;
+                            return vars;
                         }
                         auto&& footprint_result =
-                                footprint.calc_footprint(operator_node);
+                                footprint.calc_footprint(vars[0]->owner_opr());
                         current_entry->memory = footprint_result.memory;
                         current_entry->computation =
                                 footprint_result.computation;
 #if MGB_ENABLE_JSON
                         current_entry->param = footprint_result.param;
 #endif
-                        return operator_node;
+                        return vars;
                     });
         }
         m_hooker_list.push_back(std::move(hook_apply_on_physical_tensor));

@@ -29,18 +29,18 @@ TEST(TestImperative, BackwardGraphBasic) {
 
     using Param = opr::Elemwise::Param;
     Param param{Param::Mode::MUL};
-    OprAttr attr{"Elemwise", {}, {}};
-    attr.param.write_pod(param);
+    auto attr = OprAttr::make("Elemwise");
+    attr->cast_final_safe<OprAttr>().param.write_pod(param);
 
     SmallVector<LogicalTensorDesc> input_descs;
     for (auto&& i : inputs) {
         input_descs.push_back({i->layout(), i->comp_node()});
     }
-    auto result = OpDef::make_backward_graph(attr, input_descs, {true, true}, {true});
+    auto result = OpDef::make_backward_graph(*attr, input_descs, {true, true}, {true});
     auto&& save_for_backward = result.save_for_backward;
     auto&& input_has_grad = result.input_has_grad;
 
-    auto outputs = OpDef::apply_on_physical_tensor(attr, inputs);
+    auto outputs = OpDef::apply_on_physical_tensor(*attr, inputs);
     inputs.push_back(outputs[0]);
     hvs.push_back(*gen({42}));
     inputs.push_back(Tensor::make(hvs.back()));
@@ -82,16 +82,16 @@ TEST(TestImperative, BackwardGraphIdentity) {
     SmallVector<TensorPtr> inputs;
     inputs.push_back(a);
 
-    OprAttr attr{"Identity", {}, {}};
-    attr.param.write_pod<megdnn::param::Empty>({});
+    auto attr = OprAttr::make("Identity");
+    attr->cast_final_safe<OprAttr>().param.write_pod<megdnn::param::Empty>({});
 
     SmallVector<LogicalTensorDesc> input_descs;
     input_descs.push_back({a->layout(), a->comp_node()});
-    auto result = OpDef::make_backward_graph(attr, input_descs, {true}, {true});
+    auto result = OpDef::make_backward_graph(*attr, input_descs, {true}, {true});
     auto&& save_for_backward = result.save_for_backward;
     auto&& input_has_grad = result.input_has_grad;
 
-    auto outputs = OpDef::apply_on_physical_tensor(attr, inputs);
+    auto outputs = OpDef::apply_on_physical_tensor(*attr, inputs);
     inputs.push_back(outputs[0]);
     inputs.push_back(dc);
     mgb_assert(save_for_backward.size() == inputs.size());

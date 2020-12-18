@@ -11,10 +11,9 @@ import collections
 import numpy as np
 import pytest
 
-import megengine.core.ops.builtin
 import megengine.core.tensor.raw_tensor
 from megengine.core._trace_option import use_symbolic_shape
-from megengine.core.ops._internal import all_ops
+from megengine.core.ops import builtin
 from megengine.core.tensor import Tensor
 from megengine.core.tensor.core import apply
 from megengine.core.tensor.raw_tensor import RawTensor, as_raw_tensor
@@ -105,7 +104,7 @@ def canonize_inputs(inputs, *, config):
     need_cvt = False
     for i in old_inputs:
         if isinstance(i, RawTensor):
-            get_comp_node = lambda cn=i.device.to_c(): cn
+            get_comp_node = lambda cn=i.device: cn
         else:
             need_cvt = True
         inputs.append(i)
@@ -193,91 +192,91 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
 
 
 def transpose(*args, **kwargs):
-    op = all_ops.Dimshuffle(**kwargs).to_c()
+    op = builtin.Dimshuffle(**kwargs)
     return invoke_op(op, args)
 
 
 def broadcast(input, tshape):
-    op = all_ops.Broadcast().to_c()
+    op = builtin.Broadcast()
     return invoke_op(op, (input, tshape), canonize_reshape)
 
 
 def subtensor(input, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.Subtensor(items).to_c()
+    op = builtin.Subtensor(items)
     return invoke_op(op, (input, *tensors))
 
 
 def set_subtensor(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.SetSubtensor(items).to_c()
+    op = builtin.SetSubtensor(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def incr_subtensor(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.IncrSubtensor(items).to_c()
+    op = builtin.IncrSubtensor(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def advance_indexing(input, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.IndexingMultiAxisVec(items).to_c()
+    op = builtin.IndexingMultiAxisVec(items)
     return invoke_op(op, (input, *tensors))
 
 
 def set_advance_indexing(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.IndexingSetMultiAxisVec(items).to_c()
+    op = builtin.IndexingSetMultiAxisVec(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def incr_advance_indexing(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.IndexingIncrMultiAxisVec(items).to_c()
+    op = builtin.IndexingIncrMultiAxisVec(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def mesh_indexing(input, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.MeshIndexing(items).to_c()
+    op = builtin.MeshIndexing(items)
     return invoke_op(op, (input, *tensors))
 
 
 def set_mesh_indexing(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.SetMeshIndexing(items).to_c()
+    op = builtin.SetMeshIndexing(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def incr_mesh_indexing(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.IncrMeshIndexing(items).to_c()
+    op = builtin.IncrMeshIndexing(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def batched_mesh_indexing(input, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.BatchedMeshIndexing(items).to_c()
+    op = builtin.BatchedMeshIndexing(items)
     return invoke_op(op, (input, *tensors))
 
 
 def batched_set_mesh_indexing(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.BatchedSetMeshIndexing(items).to_c()
+    op = builtin.BatchedSetMeshIndexing(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def batched_incr_mesh_indexing(input, value, tuple_val):
     input, tensors, items = unpack_getitem(input, tuple_val)
-    op = all_ops.BatchedIncrMeshIndexing(items).to_c()
+    op = builtin.BatchedIncrMeshIndexing(items)
     return invoke_op(op, (input, value, *tensors))
 
 
 def test_transpose():
     x = np.arange(10).reshape(2, 5).astype("int32")
     xx = as_raw_tensor(x)
-    (yy,) = transpose(xx, pattern="1x0")
+    (yy,) = transpose(xx, pattern=[1, -1, 0])
     np.testing.assert_equal(np.expand_dims(x.transpose(), axis=1), yy.numpy())
 
 

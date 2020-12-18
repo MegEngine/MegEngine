@@ -26,12 +26,11 @@ struct BackwardGraphResult {
     std::vector<bool> input_has_grad;
 };
 
-class OpDef : public Hashable {
+class OpDef : public Hashable,
+              public std::enable_shared_from_this<OpDef> {
     mutable const OpTrait* m_trait = nullptr;
 public:
     virtual ~OpDef() = default;
-
-    virtual std::shared_ptr<OpDef> copy() const = 0;
 
     static std::shared_ptr<OpDef> make_from_op_node(
         cg::OperatorNodeBase* node);
@@ -40,7 +39,7 @@ public:
         const OpDef& def,
         const SmallVector<TensorPtr>& inputs);
 
-    static cg::OperatorNodeBase* apply_on_var_node(
+    static cg::VarNodeArray apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs);
 
@@ -56,25 +55,17 @@ public:
 
     const OpTrait* trait() const;
 
-    virtual size_t hash() const {
-        mgb_throw(MegBrainError, "not implemented");
-    }
+    virtual size_t hash() const;
 
-    virtual bool is_same_st(const Hashable&) const {
-        mgb_throw(MegBrainError, "not implemented");
-    }
+    virtual bool is_same_st(const Hashable&) const;
 };
 
 template<typename T>
 class OpDefImplBase : public OpDef {
 public:
-    virtual std::shared_ptr<OpDef> copy() const override {
-        return std::shared_ptr<OpDef>(new T(this->cast_final_safe<T>()));
-    }
-
     template<typename ...Args>
-    static std::shared_ptr<OpDef> make(const Args& ...args) {
-        return std::shared_ptr<OpDef>(new T(args...));
+    static std::shared_ptr<OpDef> make(Args&& ...args) {
+        return std::make_shared<T>(std::forward<Args>(args)...);
     }
 };
 

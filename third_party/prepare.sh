@@ -47,3 +47,4 @@ pushd MegRay/third_party >/dev/null
 popd >/dev/null
 
 git submodule update --init pybind11
+git submodule update --init llvm-project

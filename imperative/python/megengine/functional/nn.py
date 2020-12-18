@@ -12,7 +12,6 @@ from typing import Optional, Sequence, Tuple, Union
 from ..core._imperative_rt import CompNode
 from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
-from ..core.ops._internal import param_defs as P
 from ..core.ops.builtin import BatchNorm
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph, utils
@@ -121,11 +120,11 @@ def conv2d(
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
-    :type conv_mode: string or :class:`P.Convolution.Mode`
+    :type conv_mode: string or :class:`Convolution.Mode`
     :param conv_mode: supports "CROSS_CORRELATION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`
+        :class:`Convolution.ComputeMode`
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
         "Float32" would be used for accumulator and intermediate result, but only
@@ -139,8 +138,8 @@ def conv2d(
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
-    Sparse = P.Convolution.Sparse
-    sparse_type = Sparse.DENSE if groups == 1 else Sparse.GROUP
+    Sparse = builtin.Convolution.Sparse
+    sparse_type = "DENSE" if groups == 1 else "GROUP"
     op = builtin.Convolution(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -187,11 +186,11 @@ def conv_transpose2d(
         ``in_channels`` and ``out_channels`` must be divisible by groups,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
-    :type conv_mode: string or :class:`P.Convolution.Mode`
+    :type conv_mode: string or :class:`Convolution.Mode`
     :param conv_mode: supports "CROSS_CORRELATION". Default:
         "CROSS_CORRELATION"
     :type compute_mode: string or
-        :class:`P.Convolution.ComputeMode`
+        :class:`Convolution.ComputeMode`
     :param compute_mode: when set to "DEFAULT", no special requirements will be
         placed on the precision of intermediate results. When set to "FLOAT32",
         "Float32" would be used for accumulator and intermediate result, but only
@@ -240,8 +239,6 @@ def local_conv2d(
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
-    Sparse = P.Convolution.Sparse
-
     op = builtin.GroupLocal(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -251,7 +248,7 @@ def local_conv2d(
         dilate_w=dilate_w,
         mode=conv_mode,
         compute_mode="DEFAULT",
-        sparse=Sparse.DENSE,
+        sparse="DENSE",
     )
     inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
@@ -696,19 +693,14 @@ def batch_norm(
 
     if not training:
         op = builtin.BatchNorm(
-            BatchNorm.ParamDim.DIM_1C11, BatchNorm.FwdMode.INFERENCE, eps, 1.0, 1.0, 0.0
+            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim="DIM_1C11"
         )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
         op = builtin.BatchNorm(
-            BatchNorm.ParamDim.DIM_1C11,
-            BatchNorm.FwdMode.TRAINING,
-            eps,
-            1.0 - momentum,
-            1.0,
-            0.0,
+            avg_factor=1 - momentum, epsilon=eps, param_dim="DIM_1C11"
         )
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
@@ -1638,8 +1630,7 @@ def conv1d(
     pad_h = padding
     dilate_h = dilation
 
-    Sparse = P.Convolution.Sparse
-    sparse_type = Sparse.DENSE if groups == 1 else Sparse.GROUP
+    sparse_type = "DENSE" if groups == 1 else "GROUP"
     op = builtin.Convolution(
         stride_h=stride_h,
         stride_w=1,

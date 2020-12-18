@@ -10,7 +10,7 @@
  */
 
 #include "./helper.h"
-#include "megbrain/imperative/ops/collective_comm.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/opr/mm_handler.h"
 
 using namespace mgb;
@@ -32,12 +32,13 @@ TEST(TestImperative, AllReduceBasic) {
     }
 
     auto run = [&](std::shared_ptr<HostTensorND> hnd, uint32_t idx) {
-        imperative::CollectiveComm
-            def{"all_reduce", 2, idx, idx==0, false, server_addr, port,
+        auto def =
+            imperative::CollectiveComm::make(
                 megdnn::param::CollectiveComm::Mode::ALL_REDUCE_SUM,
-                dtype::Float32(), "nccl", ""};
+                "all_reduce", 2, idx, idx==0, false, server_addr, port,
+                dtype::Float32(), "nccl", "");
         auto inp = Tensor::make(*hnd);
-        auto oup = OpDef::apply_on_physical_tensor(def, {inp});
+        auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
         HostTensorND host_v;
         host_v.copy_from(oup[0]->dev_tensor()).sync();
         MGB_ASSERT_TENSOR_NEAR(*expect, host_v, 1e-6);

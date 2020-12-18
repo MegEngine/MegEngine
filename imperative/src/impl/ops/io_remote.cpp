@@ -18,7 +18,7 @@
 #include "megbrain/opr/mm_handler.h"
 #endif // MGB_ENABLE_OPR_MM
 
-#include "megbrain/imperative/ops/io_remote.h"
+#include "megbrain/imperative/ops/autogen.h"
 
 namespace mgb {
 namespace imperative {
@@ -59,46 +59,6 @@ OP_TRAIT_REG(RemoteRecv, RemoteRecv, mgb::opr::RemoteRecv)
         .fallback();
 }  // anonymous namespace
 #endif // MGB_ENABLE_OPR_MM
-
-bool RemoteSend::is_same_st(const Hashable& another) const{
-    return as_tuple() == another.cast_final<RemoteSend>().as_tuple();
-}
-
-size_t RemoteSend::hash() const{
-    XXHash xxhash;
-    auto append = [&xxhash](auto field){
-        auto hash_val = HashTrait<decltype(field)>::eval(field);
-        xxhash.update(reinterpret_cast<void*>(&hash_val), sizeof(hash_val));
-    };
-    append(key); 
-    append(addr);
-    append(port);
-    append(rank_to);
-    return xxhash.digest();
-}
-
-bool RemoteRecv::is_same_st(const Hashable& another) const{
-    return as_tuple() == another.cast_final<RemoteRecv>().as_tuple();
-}
-
-size_t RemoteRecv::hash() const{
-    XXHash xxhash;
-    auto append = [&xxhash](auto field){
-        auto hash_val = HashTrait<decltype(field)>::eval(field);
-        xxhash.update(reinterpret_cast<void*>(&hash_val), sizeof(hash_val));
-    };
-    append(key); 
-    append(addr);
-    append(port);
-    append(rank_from);
-    append(cn.to_string());
-    append(dtype.handle());
-    append(shape.to_string());
-    return xxhash.digest();
-}
-
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteSend);
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteRecv);
 
 }  // namespace imperative
 }  // namespace mgb

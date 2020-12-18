@@ -10,7 +10,7 @@
  */
 
 #include "./helper.h"
-#include "megbrain/imperative/ops/cond_take.h"
+#include "megbrain/imperative/ops/autogen.h"
 
 using namespace mgb;
 using namespace imperative;
