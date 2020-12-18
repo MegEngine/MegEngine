@@ -258,6 +258,9 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice = 
         MGB_LOCK_GUARD(m_mutex);
         dest->value_fetched = ptr->value_fetched();
         // update tensor desc for static infer
+        // if (dest->desc.layout.ndim) {
+        //     mgb_assert(dest->desc.layout.eq_shape(ptr->layout()));
+        // }
         dest->desc.layout = ptr->layout();
         dest->desc.comp_node = ptr->comp_node();
         dest->ptr = std::move(ptr);
@@ -363,7 +366,7 @@ void ChannelImpl::regenerate(TensorInfo* info, bool must_drop = false) {
                 }
                 inputs.push_back(i->ptr);
             }
-            auto outputs = OpDef::apply_on_physical_tensor(*path.op, inputs); 
+            auto outputs = OpDef::apply_on_physical_tensor(*path.op, inputs);
             for (size_t i = 0; i < outputs.size(); i ++) {
                 auto out_ptr = path.outputs[i].lock();
                 if (out_ptr) {

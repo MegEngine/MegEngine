@@ -89,7 +89,15 @@ public:
         return m_blob->comp_node();
     }
 
+    DType dtype() const {
+        return m_layout.dtype;
+    }
+
     TensorLayout layout() const {
+        return m_layout;
+    }
+
+    const TensorShape& shape() const {
         return m_layout;
     }
 

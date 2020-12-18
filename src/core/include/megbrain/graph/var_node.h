@@ -23,7 +23,10 @@
 
 namespace mgb {
 namespace imperative {
-    class ProxyGraph;
+class ProxyGraph;
+namespace proxy_graph {
+class ProxyGraph;
+}
 } // namespace imperative
 
 namespace cg {
@@ -587,6 +590,7 @@ class VarNode final: public GraphNodeBase {
         friend class EagerEvalManager;
         friend class MemAllocPlan;
         friend class imperative::ProxyGraph;
+        friend class imperative::proxy_graph::ProxyGraph;
 };
 
 enum class VarNode::Flag : uint32_t {

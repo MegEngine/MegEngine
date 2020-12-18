@@ -16,7 +16,10 @@
 namespace mgb {
 
 namespace imperative {
-    class ProxyGraph;
+class ProxyGraph;
+namespace proxy_graph {
+class ProxyGraph;
+} // namespace proxy_graph
 } // namespace imperative
 
 namespace cg {
@@ -56,6 +59,7 @@ namespace static_infer {
 
         friend class StaticInferManagerImpl;
         friend class imperative::ProxyGraph;
+        friend class imperative::proxy_graph::ProxyGraph;
 
         public:
             /*!
@@ -342,4 +346,3 @@ using StaticInferInpVal = static_infer::InpVal;
 } // mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
