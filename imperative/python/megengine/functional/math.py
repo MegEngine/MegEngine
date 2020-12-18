@@ -16,7 +16,6 @@ from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.ops.special import Const
 from ..core.tensor import utils
-from ..core.tensor.core import TensorBase, TensorWrapperBase
 from ..tensor import Tensor
 from .elemwise import clip, exp, log, log1p
 from .tensor import reshape, squeeze
@@ -703,7 +702,7 @@ def topk(
         mode = "VALUE_IDX_SORTED"
     op = builtin.TopK(mode=mode)
 
-    if not isinstance(k, (TensorBase, TensorWrapperBase)):
+    if not isinstance(k, Tensor):
         (k,) = Const(k, dtype="int32", device=inp.device)(inp)
 
     if len(inp.shape) == 1:

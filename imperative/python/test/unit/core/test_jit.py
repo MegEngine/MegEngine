@@ -8,8 +8,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import pytest
 
-from megengine.core import Tensor
-
 # from megengine.core.interpreter.hints import function
 
 

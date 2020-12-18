@@ -11,7 +11,7 @@ import pickle
 import numpy as np
 
 from megengine.core.tensor.dtype import bfloat16
-from megengine.core.tensor.raw_tensor import as_raw_tensor
+from megengine.tensor import Tensor
 
 
 def test_define():
@@ -42,14 +42,14 @@ def test_cast():
 
 def test_shared_nd():
     data = np.array([-3.4, 1.394683, 2.323497, -7.439948, -5.2397], dtype=bfloat16)
-    snd = as_raw_tensor(data, dtype=bfloat16, device="xpux")
+    snd = Tensor(data, dtype=bfloat16, device="xpux")
     assert snd.numpy().dtype == bfloat16
     np.testing.assert_allclose(
         snd.numpy(), [-3.40625, 1.398438, 2.328125, -7.4375, -5.25], atol=1e-6
     )
 
     data = np.array([-9.34964, -8.342, 9.4385, 0.18746, 1.48], dtype=bfloat16)
-    snd = as_raw_tensor(data, dtype=bfloat16, device="xpux")
+    snd = Tensor(data, dtype=bfloat16, device="xpux")
     np.testing.assert_allclose(
         snd.numpy(), [-9.375, -8.3125, 9.4375, 0.1875, 1.476562], atol=1e-6
     )

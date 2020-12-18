@@ -13,7 +13,7 @@ import numpy
 from ..core import _imperative_rt
 from ..core._imperative_rt import OperatorNode, VarNode
 from ..core.tensor import megbrain_graph as G
-from ..core.tensor.raw_tensor import as_raw_tensor
+from ..tensor import Tensor
 
 __all__ = [
     "get_dep_vars",
@@ -309,7 +309,7 @@ def load_and_inference(file, inp_data_list: List[numpy.ndarray]) -> List[numpy.n
     cg = new_out_list[0].graph
     func = cg.compile(new_out_list)
     for node, value in zip(inp_node_list, inp_data_list):
-        node.set_value(as_raw_tensor(value)._dev_tensor())
+        node.set_value(Tensor(value)._dev_tensor())
     func.execute()
     out_data_list = [o.get_value().numpy() for o in out_node_list]
     return out_data_list

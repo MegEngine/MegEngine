@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from megengine.core.tensor.dtype import intb1, intb2, intb4
-from megengine.core.tensor.raw_tensor import as_raw_tensor
+from megengine.tensor import Tensor
 
 
 def bit_define_test(bit, low_bit_type):
@@ -78,11 +78,11 @@ def _shared_nd_test(bit, low_bit_type):
     min_value = 1 - (1 << bit)
 
     data = np.arange(min_value, max_value + 2, 2, dtype=low_bit_type)
-    snd = as_raw_tensor(data, dtype=low_bit_type, device="xpux")
+    snd = Tensor(data, dtype=low_bit_type, device="xpux")
     np.testing.assert_allclose(snd.numpy(), range(min_value, max_value + 2, 2))
 
     data = np.arange(min_value, max_value + 2, 4, dtype=low_bit_type)
-    snd = as_raw_tensor(data, dtype=low_bit_type, device="xpux")
+    snd = Tensor(data, dtype=low_bit_type, device="xpux")
     np.testing.assert_allclose(snd.numpy(), range(min_value, max_value + 2, 4))
 
 

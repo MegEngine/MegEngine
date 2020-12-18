@@ -10,11 +10,6 @@ import warnings
 from typing import Union
 
 from ..._imperative_rt import OpDef, ops
-from ...tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
-
-# register OpDef as a "virtual subclass" of OpBase, so any of registered
-# apply(OpBase, ...) rules could work well on OpDef
-OpBase.register(OpDef)
 
 __all__ = ["OpDef"]
 

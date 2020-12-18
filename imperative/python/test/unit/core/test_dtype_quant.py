@@ -32,8 +32,8 @@ from megengine.core.tensor.dtype import (
     quint4,
     quint8,
 )
-from megengine.core.tensor.raw_tensor import as_raw_tensor
 from megengine.distributed.helper import get_device_count_by_fork
+from megengine.tensor import Tensor
 
 
 def test_dtype_quint8():
@@ -71,7 +71,7 @@ def _get_compiled_result(inp, dtype, shape, device, calc_func=None):
     temp_rst = calc_func(inp_node.outputs[0])
     oup_node = G.OutputNode(temp_rst)
     func = graph.compile(oup_node.outputs[0])
-    inp_node.set_value(as_raw_tensor(inp, dtype=dtype, device=device)._dev_tensor())
+    inp_node.set_value(Tensor(inp, dtype=dtype, device=device)._dev_tensor())
     func.execute()
     return oup_node.get_value().numpy()
 

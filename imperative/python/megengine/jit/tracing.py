@@ -19,6 +19,7 @@ import weakref
 import numpy as np
 
 from ..core._imperative_rt import GraphProfiler
+from ..core._imperative_rt.core2 import Tensor
 from ..core._imperative_rt.ops import (
     CollectiveComm,
     GaussianRNG,
@@ -32,7 +33,6 @@ from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.core import OpBase, TensorBase, TensorWrapperBase, apply
 from ..core.tensor.raw_tensor import OpDef, RawTensor, as_raw_tensor
-from ..core.tensor.tensor import Tensor
 from .sublinear_memory_config import SublinearMemoryConfig
 
 

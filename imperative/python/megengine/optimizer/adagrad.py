@@ -10,7 +10,6 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from ..core.tensor.tensor import Tensor
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 

@@ -9,5 +9,4 @@
 import os
 import sys
 
-from .tensor import Tensor
 from .tensor.megbrain_graph import Graph

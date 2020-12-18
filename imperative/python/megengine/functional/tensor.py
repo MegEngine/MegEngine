@@ -14,7 +14,7 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ..core._imperative_rt import CompNode
-from ..core._imperative_rt.core2 import Tensor, apply
+from ..core._imperative_rt.core2 import apply
 from ..core._wrap import device as as_device
 from ..core.ops import builtin
 from ..core.ops.special import Const

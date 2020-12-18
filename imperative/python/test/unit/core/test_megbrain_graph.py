@@ -11,8 +11,8 @@ from concurrent.futures import Future
 import numpy as np
 
 import megengine.functional as F
-import megengine.tensor as Tensor
 from megengine.core.tensor import megbrain_graph as mgb_graph
+from megengine.tensor import Tensor
 
 
 def test_io():

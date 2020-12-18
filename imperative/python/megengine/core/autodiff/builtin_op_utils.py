@@ -27,8 +27,6 @@ from ..ops.builtin import (
 from ..ops.special import Const
 from ..tensor.core import apply
 from ..tensor.function import Function
-from ..tensor.tensor import Tensor
-from ..tensor.tensor_wrapper import TensorWrapper
 
 
 @functools.singledispatch

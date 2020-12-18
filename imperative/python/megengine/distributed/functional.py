@@ -18,9 +18,8 @@ from ..core.autodiff.grad import (
     tracer_apply,
 )
 from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
-from ..core.tensor.tensor import Tensor, tensor_apply
 from ..device import get_default_device
-from ..tensor import tensor
+from ..tensor import Tensor
 from .group import WORLD, Group, get_backend, get_client, get_mm_server_addr, get_rank
 
 __all__ = [

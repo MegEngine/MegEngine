@@ -8,7 +8,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Union
 
-from ..core.tensor.tensor import Tensor
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 

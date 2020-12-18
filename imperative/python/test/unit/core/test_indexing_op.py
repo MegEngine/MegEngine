@@ -12,10 +12,10 @@ import numpy as np
 import pytest
 
 import megengine
-import megengine.tensor as Tensor
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops import builtin
+from megengine.tensor import Tensor
 
 
 def cvt_to_shape_desc(val, inpvar, config=None):

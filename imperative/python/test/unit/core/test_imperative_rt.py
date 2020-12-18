@@ -9,15 +9,15 @@
 import numpy as np
 import pytest
 
-import megengine.core.tensor.raw_tensor
-from megengine.core.tensor.core import apply
+import megengine
+from megengine.core._imperative_rt.core2 import apply
+from megengine.tensor import Tensor
 
 
 def elemwise(*args, mode):
-    from megengine.core._imperative_rt.imperative import apply_op
     from megengine.core.ops.builtin import Elemwise
 
-    return apply_op(Elemwise(mode), args)
+    return apply(Elemwise(mode), *args)
 
 
 def test_basic_interface():
@@ -44,11 +44,11 @@ def test_simple_arith():
     from megengine.core.ops.builtin import Elemwise
 
     x = np.random.rand(10).astype("float32")
-    xx = megengine.core._imperative_rt.put(x)
+    xx = Tensor(x)
     (yy,) = elemwise(xx, xx, mode=Elemwise.Mode.MUL)
-    np.testing.assert_allclose(x * x, megengine.core._imperative_rt.get_value(yy))
-    megengine.core._imperative_rt.delete(xx)
-    megengine.core._imperative_rt.delete(yy)
+    np.testing.assert_allclose(x * x, yy.numpy())
+    del xx
+    del yy
 
 
 def test_tensor_on_device():
@@ -62,10 +62,9 @@ def test_tensor_on_device():
 
 def test_raw_tensor():
     from megengine.core.ops.builtin import Elemwise
-    from megengine.core.tensor.raw_tensor import as_raw_tensor
 
     x = np.random.rand(10).astype("float32")
-    xx = as_raw_tensor(x)
+    xx = Tensor(x)
     (yy,) = apply(Elemwise(Elemwise.Mode.MUL), xx, xx)
     np.testing.assert_allclose(x * x, yy.numpy())
     (yy,) = apply(Elemwise(Elemwise.Mode.MUL), xx, xx)

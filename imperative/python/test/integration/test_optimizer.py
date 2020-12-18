@@ -13,7 +13,7 @@ import megengine.functional as F
 from megengine import Parameter, optimizer
 from megengine.jit import trace
 from megengine.module import Linear, Module
-from megengine.tensor import tensor
+from megengine.tensor import Tensor
 
 
 class MLP(Module):
@@ -54,7 +54,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
             for group in opt.param_groups:
                 group["lr"] += 0.01
             check_func.lr += 0.01
-        data = tensor(np.random.random(data_shape).astype(np.float32))
+        data = Tensor(np.random.random(data_shape).astype(np.float32))
 
         opt.clear_grad()
         with gm:
@@ -98,7 +98,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
                 ori_params[param] = np.copy(param.numpy())
 
             train_func(
-                tensor(np.random.random(data_shape).astype(np.float32)), opt=opt, gm=gm
+                Tensor(np.random.random(data_shape).astype(np.float32)), opt=opt, gm=gm
             )
             step += 1
             check_func(ori_params, net.parameters(), step)

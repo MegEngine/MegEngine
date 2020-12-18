@@ -19,7 +19,6 @@ from ..ops import builtin
 from ..ops.builtin import Elemwise, GetVarShape
 from ..ops.special import Const
 from . import utils
-from .core import OpBase, TensorBase, TensorWrapperBase
 from .indexing import getitem as _getitem
 from .indexing import setitem as _setitem
 from .utils import isscalar
@@ -439,98 +438,3 @@ class ArrayMethodMixin(abc.ABC):
     min = _reduce("MIN")
     max = _reduce("MAX")
     mean = _reduce("MEAN")
-
-
-class GenericTensorWrapper(ArrayMethodMixin, TensorWrapperBase):
-    def __init__(self, data):
-        self.__wrapped__ = data
-
-    def _reset(self, other):
-        if not isinstance(other, __class__):
-            raise TypeError(type(other))
-        self.__wrapped__ = other.__wrapped__
-        return self
-
-    @property
-    def dtype(self):
-        return self.__wrapped__.dtype
-
-    @property
-    def shape(self):
-        shape = self.__wrapped__.shape
-        if shape == () or not use_symbolic_shape():
-            return shape
-        return apply(GetVarShape(), self)[0]
-
-    @property
-    def device(self):
-        return self.__wrapped__.device
-
-    def numpy(self):
-        return self.__wrapped__.numpy()
-
-    def _drop(self):
-        self.__wrapped__._drop()
-
-    def _swap_in(self):
-        self.__wrapped__._swap_in()
-
-    def _swap_out(self):
-        self.__wrapped__._swap_out()
-
-
-class TensorWrapper(ArrayMethodMixin, TensorBase):
-    def __init__(self, data, dtype=None, device=None, isscalar=False):
-        self._isscalar = isscalar
-        if isinstance(data, Tensor):
-            self._tensor = data
-        else:
-            if device is None:
-                device = CompNode._get_default_device()
-            self._tensor = Tensor(data, dtype, device)
-
-    def _reset(self, other):
-        if not isinstance(other, __class__):
-            raise TypeError(type(other))
-        self._tensor = other._tensor
-        return self
-
-    @property
-    def dtype(self):
-        return self._tensor.dtype
-
-    @property
-    def shape(self):
-        if self._isscalar:
-            return ()
-        shape = self._tensor.shape
-        if shape == () or not use_symbolic_shape():
-            return shape
-        return apply(GetVarShape(), self)[0]
-
-    @property
-    def device(self):
-        return self._tensor.device
-
-    def numpy(self):
-        if self._isscalar:
-            return self._tensor.numpy().squeeze()
-        return self._tensor.numpy()
-
-    def _drop(self):
-        self._tensor._drop()
-
-    def _swap_in(self):
-        self._tensor._swap_in()
-
-    def _swap_out(self):
-        self._tensor._swap_out()
-
-    def __repr__(self):
-        piece = "Tensor("
-        with np.printoptions(precision=4, suppress=True):
-            piece += "{}".format(str(self.numpy()))
-        if self.dtype != np.float32:
-            piece += ", dtype={}".format(np.dtype(self.dtype).name)
-        piece += ", device={}".format(self.device) + ")"
-        return piece

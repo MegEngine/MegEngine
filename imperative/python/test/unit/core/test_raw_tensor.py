@@ -9,12 +9,12 @@
 import numpy as np
 
 import megengine.functional as F
-from megengine.core.tensor.raw_tensor import as_raw_tensor
+from megengine.tensor import Tensor
 
 
 def test_as_raw_tensor():
     x = np.arange(6, dtype="float32").reshape(2, 3)
-    xx = as_raw_tensor(x, device="xpux")
+    xx = Tensor(x, device="xpux")
     yy = F.add(xx, 1).numpy()
     assert xx.dtype == np.float32
     assert xx.device == "xpux"
@@ -23,7 +23,7 @@ def test_as_raw_tensor():
 
 def test_as_raw_tensor_from_int64():
     x = np.arange(6, dtype="int64").reshape(2, 3)
-    xx = as_raw_tensor(x, dtype="float32", device="xpux")
+    xx = Tensor(x, dtype="float32", device="xpux")
     yy = F.add(xx, 1).numpy()
     assert xx.dtype == np.float32
     assert xx.device == "xpux"

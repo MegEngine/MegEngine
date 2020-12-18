@@ -16,8 +16,8 @@ from .core._imperative_rt import CompNode
 from .core._imperative_rt.core2 import Tensor as _Tensor
 from .core._imperative_rt.core2 import apply
 from .core._trace_option import use_symbolic_shape
+from .core._wrap import device as as_device
 from .core.ops.builtin import Copy, GetVarShape
-from .core.tensor.raw_tensor import as_device
 from .core.tensor.tensor_wrapper import ArrayMethodMixin
 from .device import _valid_device, get_default_device
 from .utils.deprecation import deprecated
@@ -43,6 +43,10 @@ class Tensor(_Tensor, ArrayMethodMixin):
         if isinstance(data, _Tensor):
             obj = _Tensor.__new__(cls, data)
         else:
+            if isinstance(data, np.ndarray):
+                if 0 in data.strides:
+                    data = data.squeeze().reshape(data.shape)
+
             obj = _Tensor.__new__(cls, data, dtype, cn)
         return obj
 

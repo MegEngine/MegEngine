@@ -7,9 +7,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from ..ops.builtin import OpDef
 from .core import TensorBase, TensorWrapperBase, apply
-from .raw_tensor import RawTensor
-from .tensor import Tensor, push_context
-from .tensor_wrapper import TensorWrapper
 
 
 class Function:
@@ -155,13 +152,3 @@ def _(op: Function, *args: TensorWrapperBase):
                     t._extra_data[k] = i
 
     return tuple(map(Wrapper, outputs))
-
-
-@apply.register()
-def _(op: Function, *args: Tensor):
-    raise NotImplementedError
-
-
-@apply.register()
-def _(op: Function, *args: RawTensor):
-    raise NotImplementedError
