@@ -56,17 +56,15 @@ protected:
         return {};
     }
 
-    AsyncReleaser() {
-        EventPool::without_timer();
-    }
-
 public:
     static AsyncReleaser* inst() {
         static AsyncReleaser releaser;
         return &releaser;
     }
 
-    ~AsyncReleaser() { m_waiter.wait_task_queue_empty(); }
+    ~AsyncReleaser() {
+        m_waiter.wait_task_queue_empty();
+    }
 
     void add(BlobPtr blob, CompNode cn) { add(cn, std::move(blob), {}); }
 
@@ -85,8 +83,6 @@ public:
 class CompNodeSyncManager : public CompNodeDepedentObject {
     ThinHashMap<Blob*, std::unique_ptr<CompNode::Event>> m_blob2event;
     std::mutex m_mtx;
-private:
-    static CompNodeSyncManager mgr;
 public:
     std::shared_ptr<void> on_comp_node_finalize() override {
         MGB_LOCK_GUARD(m_mtx);
@@ -94,8 +90,9 @@ public:
         return {};
     }
 
-    static CompNodeSyncManager* inst() {
-        return &mgr;
+    static CompNodeSyncManager& inst() {
+        static CompNodeSyncManager sl_inst;
+        return sl_inst;
     }
 
     CompNode::Event* get_or_create_event(Blob* blob) {
@@ -113,7 +110,6 @@ public:
         m_blob2event.erase(blob);
     }
 };
-CompNodeSyncManager CompNodeSyncManager::mgr;
 
 // Cache for small blobs
 // 1. A blob has to be seen twice (within a window) to be eligible for cache
@@ -236,9 +232,12 @@ struct MultiCNConstTensorCache : CompNodeDepedentObject {
         MGB_LOCK_GUARD(mtx);
         return cn2cache[hv.comp_node()].lookup(hv);
     }
-};
 
-MultiCNConstTensorCache const_tensor_cache;
+    static MultiCNConstTensorCache& inst() {
+        static MultiCNConstTensorCache sl_inst;
+        return sl_inst;
+    }
+};
 
 }  // namespace
 
@@ -246,20 +245,26 @@ void EventDeleter::operator()(CompNode::Event* event) {
     EventPool::without_timer().free(event);
 }
 
+namespace {
+    std::atomic_uint64_t next_blob_id = 0;
+}
+
 Blob::Blob(const DeviceTensorStorage& s):
     m_comp_node{s.comp_node()}, m_storage{s.raw_storage()},
     m_size{s.size()} {
+    m_id = next_blob_id++;
     BlobManager::inst()->register_blob(this);
 }
 
 Blob::Blob(CompNode cn, size_t sz):
     m_comp_node{cn}, m_storage{}, m_size{sz} {
+    m_id = next_blob_id++;
     BlobManager::inst()->register_blob(this);
 }
 
 Blob::~Blob() {
     BlobManager::inst()->unregister_blob(this);
-    CompNodeSyncManager::inst()->remove(this);
+    CompNodeSyncManager::inst().remove(this);
 }
 
 const Blob::RawStorage& Blob::storage() {
@@ -302,7 +307,7 @@ Tensor::Tensor(const BlobPtr blob, const size_t offset, const TensorLayout& layo
     : m_layout{layout}, m_blob{blob}, m_offset{offset} {}
 
 TensorPtr Tensor::make(const HostTensorND& hv) {
-    auto&& blob = const_tensor_cache.lookup(hv);
+    auto&& blob = MultiCNConstTensorCache::inst().lookup(hv);
     if (blob) {
         return make(std::forward<decltype(blob)>(blob), hv.layout(), hv);
     }
@@ -366,13 +371,17 @@ void Tensor::add_release_callback(CompNode cn) {
 }
 
 CompNode::Event* Tensor::get_or_create_event() {
-    auto e = CompNodeSyncManager::inst()->get_or_create_event(m_blob.get());
+    auto e = CompNodeSyncManager::inst().get_or_create_event(m_blob.get());
     e->record();
     return e;
 }
 
-void Tensor::_static_init() {
+void Tensor::static_initialize() {
+    EventPool::with_timer();
     EventPool::without_timer();
+    AsyncReleaser::inst();
+    CompNodeSyncManager::inst();
+    MultiCNConstTensorCache::inst();
 }
 
 }  // namespace imperative

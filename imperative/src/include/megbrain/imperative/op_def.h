@@ -38,7 +38,7 @@ public:
 
     static SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def,
-        const SmallVector<TensorPtr>& inputs);
+        SmallVector<TensorPtr> inputs);
 
     static cg::VarNodeArray apply_on_var_node(
         const OpDef& def,

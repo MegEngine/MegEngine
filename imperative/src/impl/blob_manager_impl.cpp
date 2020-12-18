@@ -111,6 +111,11 @@ void BlobManagerImpl::defrag(const CompNode& cn) {
     MGB_TRY{cn.free_device(cn.alloc_device(tot_sz));}
     MGB_CATCH(MemAllocError&, {})
 
+    // sort blobs by created time, may be helpful for reduce memory fragment
+    std::sort(blob_data_arrary.begin(), blob_data_arrary.end(), [](auto& lhs, auto& rhs){
+        return lhs.blob->id() < rhs.blob->id();
+    });
+
     // allocate for each storage
     for (auto i : blob_data_arrary) {
         DeviceTensorStorage d_storage = DeviceTensorStorage(cn);

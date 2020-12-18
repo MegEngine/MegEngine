@@ -34,7 +34,7 @@ struct ObjectPtr : B {
 
 namespace mgb::imperative::python {
 
-extern std::unique_ptr<interpreter::Interpreter::Channel> interpreter_for_py;
+extern interpreter::Interpreter::Channel* interpreter_for_py;
 
 class SharedHandle {
     using Handle = interpreter::Interpreter::Handle;

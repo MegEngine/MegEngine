@@ -44,6 +44,7 @@ struct Interpreter {
         virtual void close() = 0;
         virtual void set_swap_flag(bool) = 0;
         virtual void set_drop_flag(bool) = 0;
+        virtual void set_buffer_length(int) = 0;
 
         virtual void config_async_level(int level) = 0;
         virtual int get_async_level() = 0;

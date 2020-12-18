@@ -32,7 +32,7 @@ namespace views = ranges::views;
 
 namespace mgb::imperative::python {
 
-std::unique_ptr<interpreter::Interpreter::Channel> interpreter_for_py;
+interpreter::Interpreter::Channel* interpreter_for_py;
 
 PyObject *cpp_apply_with_tracing, *cpp_apply_const_with_tracing,
            *cpp_apply_compiled_mode, *cpp_apply_const_compiled_mode;
@@ -673,7 +673,9 @@ py::object make_empty_tensorwrapper() {
 }
 
 void init_tensor(py::module m) {
-    interpreter_for_py = interpreter::Interpreter::inst().create_channel();
+    imperative::Tensor::static_initialize();
+    static auto sl_interpreter_for_py = interpreter::Interpreter::inst().create_channel();
+    interpreter_for_py = sl_interpreter_for_py.get();
 
     auto* tensor_type = TensorWrapper::wrap_t::type()
         .def<&TensorWrapper::numpy>("numpy")
@@ -724,6 +726,8 @@ void init_tensor(py::module m) {
           [](int level) { interpreter_for_py->config_async_level(level); });
     m.def("get_async_level",
           []() { return interpreter_for_py->get_async_level(); });
+    m.def("set_buffer_length",
+          [](int length) { interpreter_for_py->set_buffer_length(length); });
     m.def("sync",
           []() {
               interpreter_for_py->sync();

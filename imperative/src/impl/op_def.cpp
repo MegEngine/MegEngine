@@ -32,8 +32,8 @@ std::shared_ptr<OpDef> OpDef::make_from_op_node(
 
 SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
     const OpDef& def,
-    const SmallVector<TensorPtr>& inputs) {
-    return def.trait()->apply_on_physical_tensor(def, inputs);
+    SmallVector<TensorPtr> inputs) {
+    return def.trait()->apply_on_physical_tensor(def, std::move(inputs));
 }
 
 VarNodeArray OpDef::apply_on_var_node(

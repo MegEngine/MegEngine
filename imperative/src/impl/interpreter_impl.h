@@ -9,12 +9,14 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include <variant>
+#include <deque>
 #include <future>
+#include <list>
+#include <unordered_set>
+#include <variant>
 
 #include "megbrain/utils/mempool.h"
 #include "megbrain/imperative/interpreter.h"
-
 
 namespace mgb::imperative::interpreter::intl {
 
@@ -58,39 +60,99 @@ struct Put {
     TensorInfo* dest;
     HostTensorND value;
     bool no_cache = false;
+
+    std::string to_string() const { return ssprintf("Command: Put %p", dest); }
 };
 struct ApplyOp {
     std::shared_ptr<OpDef> op;
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;
+    SmallVector<TensorInfo*> dels;
+
+    std::string to_string() const {
+        std::string builder{"Command: ApplyOp {"};
+        builder += "inputs [";
+        for (auto* input : inputs) {
+            builder += ssprintf("%p, ", input);
+        }
+        builder += "], outputs [";
+        for (auto* output : outputs) {
+            builder += ssprintf("%p, ", output);
+        }
+        builder += "], dels [";
+        for (auto* del : dels) {
+            builder += ssprintf("%p, ", del);
+        }
+        builder += "]";
+        return builder;
+    }
 };
 struct Del {
     TensorInfo* dest;
+
+    std::string to_string() const { return ssprintf("Command: Del %p", dest); }
 };
 struct GetValue {
     TensorInfo* dest;
-};
 
+    std::string to_string() const {
+        return ssprintf("Command: GetValue %p", dest);
+    }
+};
 struct SwapIn {
     TensorInfo* dest;
+
+    std::string to_string() const {
+        return ssprintf("Command: SwapIn %p", dest);
+    }
 };
 struct SwapOut {
     TensorInfo* dest;
+
+    std::string to_string() const {
+        return ssprintf("Command: SwapOut %p", dest);
+    }
 };
 struct Drop {
     TensorInfo* dest;
-};
 
+    std::string to_string() const {
+        return ssprintf("Command: Drop %p", dest);
+    }
+};
+struct Move {
+    TensorInfo* src;
+    TensorInfo* dest;
+
+    std::string to_string() const {
+        return ssprintf("Command: Move %s to %s",
+                        src->desc.layout.to_string().c_str(),
+                        dest->desc.layout.to_string().c_str());
+    }
+};
+struct Flush {
+    TensorInfo* dest = nullptr;
+
+    std::string to_string() const {
+        return ssprintf("Command: Flush %p", dest);
+    }
+};
+struct Nop {
+    std::string to_string() const { return "Command: Nop"; }
+};
 using Command = std::variant<Put,
                              ApplyOp,
                              Del,
                              GetValue,
                              SwapIn,
                              SwapOut,
-                             Drop>;
+                             Drop,
+                             Move,
+                             Flush,
+                             Nop>;
 
 struct ChannelImpl : Interpreter::Channel {
-    ChannelImpl() : m_worker(this) {}
+    ChannelImpl() : m_worker(this), m_buffer(this) {}
     ~ChannelImpl() override;
 
     Handle put(const HostTensorND& value, bool no_cache) override;
@@ -116,6 +178,7 @@ struct ChannelImpl : Interpreter::Channel {
     void close() override;
     void set_swap_flag(bool) override;
     void set_drop_flag(bool) override;
+    void set_buffer_length(int) override;
 
     void config_async_level(int level) override;
     int get_async_level() override;
@@ -174,7 +237,56 @@ private:
         std::mutex mtx;
         std::unordered_map<TensorInfo*, TensorInfoPtr> tmap;
     }m_st;
-    
+
+    /**
+     * Buf a command window for following fuse
+     * example:
+     *     ---------------------------------------------------------------------
+     *     | ..., Apply{in: (i0, i1), out: (o0, o1)}, ... + Del{i0} + Del{i1}  |
+     *     ---------------------------------------------------------------------
+     *     | ..., Apply{in: (i0, i1), out: (o0, o1), del: (i0)}, ... + Del{i1} |
+     *     ---------------------------------------------------------------------
+     *     | ..., Apply{in: (i0, i1), out: (o0, o1), del: (i0, i1)}, ...       |
+     *     ---------------------------------------------------------------------
+     *     Then the fused Apply may be invoked inplace. see: ChannelImpl::process_one_task
+     */
+    struct CommandBuffer {
+        CommandBuffer(ChannelImpl* owner) : m_owner(owner) {
+            int capacity = 3;
+            if(const char* capacity_str = MGB_GETENV("MEGENGINE_COMMAND_BUFFER_LENGTH")) {
+                capacity = atoi(capacity_str);
+            }
+            set_capacity(capacity);
+        }
+        void enqueue(Command cmd);
+        bool empty() const {
+            return m_commands.empty();
+        }
+        void set_capacity(int capacity) {
+            mgb_assert(capacity >= 0 && capacity < 100, "invalid command buffer length");
+            m_capacity = capacity;
+        }
+    private:
+        ChannelImpl* m_owner;
+        size_t m_capacity;
+        std::deque<Command> m_commands;
+
+        using Handle = decltype(m_commands)::iterator;
+        // [begin, end)
+        using Range = std::array<Handle, 2>;
+
+        // Launch commands in range [m_commands.begin(), pos)
+        void flush(Handle pos);
+        // Select flush position for incoming cmd
+        Handle flush_pos_for(const Command& cmd);
+        // Fuse del command into suitable ApplyOp
+        bool fuse_del(const Del& cmd);
+        // Returns the last handle that dest is used within range. If dest is not used, returns range[1]
+        Handle find_last_usage(TensorInfo* dest, Range range);
+        // Returns the produce position of dest. If not found, returns range[1]
+        Handle find_produce(TensorInfo* dest, Range range);
+    } m_buffer;
+
     //! config whether raise error exactly when invoking op.
     //! level 2: both device and user side errors are async;
     //! level 1: user side errors are sync;

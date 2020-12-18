@@ -19,7 +19,7 @@ namespace proxy_graph_detail {
 
 SmallVector<TensorPtr>
 apply_on_physical_tensor(const OpDef& def,
-        const SmallVector<TensorPtr>& inputs);
+        SmallVector<TensorPtr> inputs);
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);

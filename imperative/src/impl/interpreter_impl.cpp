@@ -11,20 +11,20 @@
 
 #include "./interpreter_impl.h"
 #include "megbrain/common.h"
-
+#include "megbrain/imperative/opr_utility.h"
+#include "megbrain/imperative/ops/backward_graph.h"
+#include "megbrain/imperative/ops/autogen.h"
 
 using namespace mgb;
 using namespace imperative;
 using namespace interpreter;
 using namespace interpreter::intl;
 
-
 std::unique_ptr<Interpreter::Channel> InterpreterImpl::create_channel() {
     return std::make_unique<ChannelImpl>();
 }
 
 Interpreter& Interpreter::inst() {
-    Tensor::_static_init();
     static InterpreterImpl inst_;
     return inst_;
 }
@@ -35,7 +35,7 @@ void* ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     info->desc.comp_node = value.comp_node();
     info->desc.value = value.proxy_to_default_cpu();
     m_valid_handle.insert(info);
-    m_worker.add_task(Put{info, value, no_cache});
+    m_buffer.enqueue(Put{info, value, no_cache});
     return info;
 }
 
@@ -50,14 +50,14 @@ void* ChannelImpl::put(const DeviceTensorND& data) {
 
 void ChannelImpl::del(void* handle) {
     mgb_assert(m_valid_handle.erase(handle), "invalid handle: %p", handle);
-    m_worker.add_task(Del{reinterpret_cast<TensorInfo*>(handle)});
+    m_buffer.enqueue(Del{reinterpret_cast<TensorInfo*>(handle)});
 }
 
 void ChannelImpl::swap_in(void* handle) {
     if (m_enable_evict & SWAP) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
-        m_worker.add_task(SwapIn{reinterpret_cast<TensorInfo*>(handle)});
+        m_buffer.enqueue(SwapIn{reinterpret_cast<TensorInfo*>(handle)});
     }
 }
 
@@ -65,7 +65,7 @@ void ChannelImpl::swap_out(void* handle) {
     if (m_enable_evict & SWAP) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
-        m_worker.add_task(SwapOut{reinterpret_cast<TensorInfo*>(handle)});
+        m_buffer.enqueue(SwapOut{reinterpret_cast<TensorInfo*>(handle)});
     }
 }
 
@@ -73,7 +73,7 @@ void ChannelImpl::drop(void* handle) {
     if (m_enable_evict & DROP) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
-        m_worker.add_task(Drop{reinterpret_cast<TensorInfo*>(handle)});
+        m_buffer.enqueue(Drop{reinterpret_cast<TensorInfo*>(handle)});
     }
 }
 
@@ -88,14 +88,16 @@ SmallVector<void*> ChannelImpl::apply_op(
     input_infos.reserve(inputs.size());
     SmallVector<LogicalTensorDesc> input_descs;
     input_descs.reserve(inputs.size());
-    std::unique_lock<decltype(m_mutex)> lock(m_mutex);
-    for (auto i : inputs) {
-        auto info = reinterpret_cast<TensorInfo*>(i);
-        mgb_assert(!info->invalid, "Invalid tensor, unable to apply_op!");
-        input_infos.push_back(info);
-        input_descs.push_back(info->desc);
+
+    {
+        MGB_LOCK_GUARD(m_mutex);
+        for (auto i : inputs) {
+            auto info = reinterpret_cast<TensorInfo*>(i);
+            mgb_assert(!info->invalid, "Invalid tensor, unable to apply_op!");
+            input_infos.push_back(info);
+            input_descs.push_back(info->desc);
+        }
     }
-    lock.unlock();
 
     auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
     ApplyOp cmd{std::move(op)};
@@ -127,7 +129,7 @@ SmallVector<void*> ChannelImpl::apply_op(
             }
         }
     }
-    m_worker.add_task(std::move(cmd));
+    m_buffer.enqueue(std::move(cmd));
     if (!(validated && validated_bkp) && m_async_level == 1) {
         sync();
     } else if (m_async_level == 0) {
@@ -150,7 +152,7 @@ HostTensorND ChannelImpl::get_value(void* handle) {
     if (!info->value_fetched) {
         mgb_assert(!info->invalid, "Invalid tensor, unable to get_value!");
         m_waitee = info;
-        m_worker.add_task(GetValue{info});
+        m_buffer.enqueue(GetValue{info});
         m_cv.wait(lock, [&]() {
             check_worker_exc_unsafe();
             return info->value_fetched;
@@ -171,6 +173,7 @@ TensorShape ChannelImpl::get_shape(void* handle) {
     std::unique_lock<decltype(m_mutex)> lock(m_mutex);
     mgb_assert(!m_waitee);
     m_waitee = info;
+    m_buffer.enqueue(Flush{info});
     m_cv.wait(lock, [&]() {
         check_worker_exc_unsafe();
         return bool(info->ptr);
@@ -206,6 +209,7 @@ DeviceTensorND ChannelImpl::get_dev_tensor(void* handle) {
     std::unique_lock<decltype(m_mutex)> lock(m_mutex);
     mgb_assert(!m_waitee);
     m_waitee = info;
+    m_buffer.enqueue(Flush{info});
     m_cv.wait(lock, [&]() {
         check_worker_exc_unsafe();
         return bool(info->ptr);
@@ -215,6 +219,9 @@ DeviceTensorND ChannelImpl::get_dev_tensor(void* handle) {
 }
 
 void ChannelImpl::sync() {
+    if (!m_buffer.empty()) {
+        m_buffer.enqueue(Flush{});
+    }
     m_worker.wait_all_task_finish();
     MGB_LOCK_GUARD(m_mutex);
     check_worker_exc_unsafe();
@@ -350,6 +357,10 @@ void ChannelImpl::set_drop_flag(bool flag) {
     }
 }
 
+void ChannelImpl::set_buffer_length(int length) {
+    m_buffer.set_capacity(length);
+}
+
 void ChannelImpl::regenerate(TensorInfo* info, bool must_drop = false) {
     if (!info->ptr && info->evict_type != NONE) {
         if (info->evict_type == SWAP) {
@@ -401,6 +412,7 @@ void ChannelImpl::process_one_task(Command& cmd) {
             } else if constexpr (std::is_same_v<T, ApplyOp>) {
                 SmallVector<TensorPtr> tensor_inputs;
                 tensor_inputs.reserve(cmd.inputs.size());
+                // refcnt == 1, owners: [TensorInfo::ptr]
                 for (auto i : cmd.inputs) {
                     if (m_enable_evict && i->evict_type != NONE) {
                         if (!i->ptr) {
@@ -408,9 +420,20 @@ void ChannelImpl::process_one_task(Command& cmd) {
                         }
                     }
                     mgb_assert(i->ptr, "Invalid input tensor ptr!");
+                    // refcnt ++, owners: [i->ptr, tensor_inputs]
                     tensor_inputs.push_back(i->ptr);
                 }
-                auto tensor_outputs = OpDef::apply_on_physical_tensor(*cmd.op, tensor_inputs);
+                // Fused by command buffer. @see: CommandBuffer::fuse_del
+                // Now if dest is inplacable, it's refcnt would be decreased to 1 and owned by tensor_inputs after Del.
+                // Note for exprs like 'y = x op x', inplace is unsupported yet but Del would be also fused.
+                for (auto* del : cmd.dels) {
+                    // refcnt --, owners: [tensor_inputs]
+                    // if it's decreased to 1, would be detected at @see: proxy_graph_detail::apply_on_physical_tensor
+                    free(del);
+                }
+                // Here std::move is REQUIRED for removing duplicated references.
+                auto tensor_outputs = OpDef::apply_on_physical_tensor(
+                    *cmd.op, std::move(tensor_inputs));
                 mgb_assert(tensor_outputs.size() == cmd.outputs.size());
                 for (size_t i = 0; i < tensor_outputs.size(); ++i) {
                     produce_tensor(cmd.outputs[i], std::move(tensor_outputs[i]));
@@ -436,8 +459,12 @@ void ChannelImpl::process_one_task(Command& cmd) {
                 do_swap_out(cmd.dest);
             } else if constexpr (std::is_same_v<T, Drop>) {
                 do_drop(cmd.dest);
+            } else if constexpr (std::is_same_v<T, Move>) {
+                produce_tensor(cmd.dest, cmd.src->ptr);
+                free(cmd.src);
             } else {
-                static_assert(!std::is_same_v<T, T>);
+                static_assert(std::is_same_v<T, Flush> ||
+                        std::is_same_v<T, Nop>);
             }
         } catch (...) {
             MGB_LOCK_GUARD(m_mutex);
@@ -454,11 +481,127 @@ void ChannelImpl::process_one_task(Command& cmd) {
     }, cmd);
 }
 
-
 void ChannelImpl::check_worker_exc_unsafe() {
     if (m_worker_exc) {
         std::exception_ptr exc;
         std::swap(exc, m_worker_exc);
         std::rethrow_exception(exc);
     }
+}
+
+void ChannelImpl::CommandBuffer::enqueue(Command cmd) {
+    if (std::get_if<Del>(&cmd) && fuse_del(std::get<Del>(cmd))) {
+        return;
+    }
+    auto command_repr = std::visit([](auto& cmd){ return cmd.to_string(); }, cmd);
+    mgb_log_debug("%s Enqueued", command_repr.c_str());
+    m_commands.push_back(std::move(cmd));
+    auto flush_pos = flush_pos_for(m_commands.back());
+    flush(flush_pos);
+}
+
+void ChannelImpl::CommandBuffer::flush(Handle pos) {
+    for (auto iter = m_commands.begin(); iter != pos; ++iter) {
+        auto command_repr = std::visit([](auto& cmd){ return cmd.to_string(); }, *iter);
+        mgb_log_debug("%s Flushed", command_repr.c_str());
+        m_owner->m_worker.add_task(std::move(*iter));
+    }
+    m_commands.erase(m_commands.begin(), pos);
+}
+
+auto ChannelImpl::CommandBuffer::flush_pos_for(const Command& cmd) -> Handle {
+    return std::visit([this](const auto& cmd) {
+        using T = std::decay_t<decltype(cmd)>;
+        if constexpr (std::is_same_v<T, ApplyOp>) {
+            auto* op_type = cmd.op->dyn_typeinfo();
+            if (op_type == RemoteRecv::typeinfo() ||
+                op_type == RemoteSend::typeinfo() ||
+                op_type == CollectiveComm::typeinfo() ||
+                op_type == opr::InputCallback::typeinfo() ||
+                op_type == opr::OutputCallback::typeinfo() ||
+                op_type == BackwardGraph::typeinfo()) {
+                return m_commands.end();
+            }
+        } else if constexpr (std::is_same_v<T, GetValue>) {
+            return m_commands.end();
+        } else if constexpr (std::is_same_v<T, Flush>) {
+            if (cmd.dest == nullptr) {
+                return m_commands.end();
+            }
+            auto produce_iter = find_produce(cmd.dest, {m_commands.begin(), m_commands.end()});
+            if (produce_iter != m_commands.end()) {
+                return produce_iter + 1;
+            }
+        }
+        if (m_commands.size() > m_capacity) {
+            return m_commands.begin() + (m_commands.size() - m_capacity);
+        }
+        return m_commands.begin();
+    }, cmd);
+}
+
+/**
+ * 1. Find ApplyOp(dest) in buffered commands
+ * 2. Check if there are other usages between ApplyOp and Del, return false if not
+ * 3. Fuse Del into ApplyOp, return true
+ */
+bool ChannelImpl::CommandBuffer::fuse_del(const Del& cmd) {
+    auto* dest = cmd.dest;
+    // TODO: eliminate Puts
+    auto begin = m_commands.begin(), end = m_commands.end();
+    auto apply_iter = std::find_if(begin, end, [dest](const Command& cmd){
+        if (auto* apply = std::get_if<ApplyOp>(&cmd)) {
+            return std::count(apply->inputs.begin(), apply->inputs.end(), dest) > 0;
+        }
+        return false;
+    });
+    if (apply_iter == end || find_last_usage(dest, {apply_iter+1, end}) != end) {
+        return false;
+    }
+    mgb_log_debug("%s Fused", cmd.to_string().c_str());
+    std::get<ApplyOp>(*apply_iter).dels.push_back(dest);
+    return true;
+}
+
+auto ChannelImpl::CommandBuffer::find_last_usage(TensorInfo* dest, Range range)
+        -> Handle {
+    auto found = range[1];
+    for (auto iter = range[0]; iter != range[1]; ++iter) {
+        std::visit([&](const auto& cmd) {
+            using T = std::decay_t<decltype(cmd)>;
+            if constexpr (std::is_same_v<T, ApplyOp>) {
+                if (std::count(cmd.inputs.begin(), cmd.inputs.end(),
+                               dest) > 0) {
+                    found = iter;
+                }
+            } else if constexpr (std::is_same_v<T, GetValue>) {
+                if (cmd.dest == dest) {
+                    found = iter;
+                }
+            } else if constexpr (std::is_same_v<T, SwapIn> ||
+                    std::is_same_v<T, SwapOut> ||
+                    std::is_same_v<T, Drop>) {
+                //TODO: ignore swap-like commands, just remove them from buffer
+                if (cmd.dest == dest) {
+                    found = iter;
+                }
+            }
+        }, *iter);
+    };
+    return found;
+}
+
+auto ChannelImpl::CommandBuffer::find_produce(TensorInfo* dest, Range range)
+        -> Handle {
+    return std::find_if(range[0], range[1], [dest](auto& cmd) {
+        return std::visit([dest](const auto& cmd){
+            using T = std::decay_t<decltype(cmd)>;
+            if constexpr (std::is_same_v<T, ApplyOp>) {
+                return std::count(cmd.outputs.begin(), cmd.outputs.end(), dest) > 0;
+            } else if constexpr (std::is_same_v<T, Put>) {
+                return cmd.dest == dest;
+            }
+            return false;
+        }, cmd);
+    });
 }

@@ -17,17 +17,17 @@ namespace mgb {
 namespace imperative {
 
 namespace detail {
-template<typename Signature>
+template <typename Signature>
 struct OpMeth;
-template<typename RType, typename ...Args>
-struct OpMeth<RType(Args...)>: public thin_function<RType(Args...)> {
+template <typename RType, typename... Args>
+struct OpMeth<RType(Args...)> : public thin_function<RType(Args...)> {
     using Base = thin_function<RType(Args...)>;
     using Base::Base;
     RType operator()(Args... args) const {
         if (!this->Base::operator bool()) {
             mgb_throw(MegBrainError, "Not Implemented");
         }
-        return this->Base::operator ()(args...);
+        return this->Base::operator()(std::forward<Args>(args)...);
     }
 };
 template<typename T>
@@ -56,7 +56,7 @@ struct ToVarNodeArray<cg::OperatorNodeBase*>: std::true_type {
         return opr->usable_output();
     }
 };
-} // detail
+}  // namespace detail
 
 using OpDefMaker = detail::OpMeth<
         decltype(OpDef::make_from_op_node)>;

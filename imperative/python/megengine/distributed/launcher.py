@@ -33,7 +33,7 @@ def _run_wrapped(
 
 class launcher:
     """Decorator for launching multiple processes in single-machine multi-gpu training.
-    
+
     :param func: the function you want to launch in distributed mode.
     :param n_gpus: how many devices each node.
     :param world_size: how many devices totally.

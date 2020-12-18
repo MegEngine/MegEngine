@@ -46,11 +46,16 @@ public:
     size_t size() const {
         return m_size;
     }
+
+    size_t id() const {
+        return m_id;
+    }
 private:
     friend class BlobManagerImpl;
     CompNode m_comp_node;
     mutable RawStorage m_storage;
     size_t m_size = 0;
+    size_t m_id;
 };
 
 struct EventDeleter {
@@ -134,8 +139,7 @@ public:
     // Make sure all static objects required to destruct a tensor has completed
     // construction. All static storage duration object that holds tensors must
     // call this method before their constructors completes.
-    static void _static_init();
-
+    static void static_initialize();
 private:
 
     TensorLayout m_layout;

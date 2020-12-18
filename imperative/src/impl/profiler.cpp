@@ -117,7 +117,7 @@ void Profiler::start(uint32_t flags) {
         auto hook_apply_on_var_node =
                 make_shared_hook(&trait.apply_on_var_node);
         hook_apply_on_physical_tensor->apply_hook([this, flags]
-                (auto&& apply, const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+                (auto&& apply, const OpDef& def, SmallVector<TensorPtr> inputs) {
             auto shape2vector = [](const TensorShape& shape) {
                 std::vector<size_t> vector_shape;
                 for (size_t i = 0; i < shape.ndim; i++) {
