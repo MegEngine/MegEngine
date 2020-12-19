@@ -404,8 +404,6 @@ void TensorWrapper::setscalar() {
 }
 
 
-PyMethodDef apply_def{"apply", (PyCFunction)py_apply, METH_FASTCALL, nullptr};
-
 struct TensorWeakRef {
     std::weak_ptr<Tensor> wptr;
 
@@ -612,6 +610,24 @@ PyObject* get_device(PyObject* self, PyObject*const* args, size_t nargs) {
     }
 }
 
+#ifdef METH_FASTCALL
+#define MGE_PY_INTERFACE(NAME, FUNC) \
+    { #NAME, (PyCFunction)FUNC, METH_FASTCALL, nullptr }
+#else
+#define WRAP_FUNC_PY35(FUNC)                                \
+    PyObject* py35_##FUNC(PyObject* self, PyObject* args) { \
+        auto* arr = &PyTuple_GET_ITEM(args, 0);             \
+        auto size = PyTuple_GET_SIZE(args);                 \
+        return FUNC(self, arr, size);                       \
+    }
+WRAP_FUNC_PY35(py_apply);
+WRAP_FUNC_PY35(dtype_promotion);
+WRAP_FUNC_PY35(get_device);
+#undef WRAP_FUNC_PY35
+#define MGE_PY_INTERFACE(NAME, FUNC) \
+    { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
+#endif
+
 void init_tensor(py::module m) {
     interpreter_for_py = interpreter::Interpreter::inst().create_channel();
 
@@ -643,11 +659,10 @@ void init_tensor(py::module m) {
         .def("__call__", &TensorWeakRef::operator());
 
     static PyMethodDef method_defs[] = {
-        {"apply", (PyCFunction)py_apply, METH_FASTCALL, nullptr},
-        {"dtype_promotion", (PyCFunction)dtype_promotion, METH_FASTCALL, nullptr},
-        {"get_device", (PyCFunction)get_device, METH_FASTCALL, nullptr},
-        {nullptr, nullptr, 0, nullptr}
-    };
+            MGE_PY_INTERFACE(apply, py_apply),
+            MGE_PY_INTERFACE(dtype_promotion, dtype_promotion),
+            MGE_PY_INTERFACE(get_device, get_device),
+            {nullptr, nullptr, 0, nullptr}};
     for (auto&& def: method_defs) {
         if (def.ml_meth != nullptr) {
             auto* func = PyCFunction_NewEx(&def, nullptr, nullptr);
@@ -697,5 +712,7 @@ void init_tensor(py::module m) {
     m.def("unset_compiled", &unset_compiled);
 
 }
+
+#undef MGE_PY_INTERFACE
 
 } // namespace mgb::imperative::python

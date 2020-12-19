@@ -117,6 +117,12 @@ struct _wrap {
         }
     }();
 
+    static PyObject* impl_py35(PyObject* self, PyObject* args) {
+        auto* arr = &PyTuple_GET_ITEM(args, 0);
+        auto size = PyTuple_GET_SIZE(args);
+        return impl(self, arr, size);
+    }
+
     static PyObject* impl(PyObject* self, PyObject*const* args, size_t nargs) {
         if (nargs != n_args) {
             PyErr_Format(PyExc_ValueError, "expected %lu arguments", n_args);
@@ -159,14 +165,21 @@ struct _wrap {
 
 } // anonymous namespace
 
+#ifdef METH_FASTCALL
+#define MGE_PY_INTERFACE(NAME, FUN) \
+    { #NAME, (PyCFunction)_wrap < &(FUN) > ::impl, METH_FASTCALL, nullptr }
+#else
+#define MGE_PY_INTERFACE(NAME, FUN) \
+    { #NAME, (PyCFunction)_wrap < &(FUN) > ::impl_py35, METH_VARARGS, nullptr }
+#endif
+
 void init_dtypes(py::module m) {
     static PyMethodDef method_defs[] = {
-        {"is_quantize",     (PyCFunction)_wrap<&_is_quantize>::impl,    METH_FASTCALL, nullptr},
-        {"get_scale",       (PyCFunction)_wrap<&_get_scale>::impl,      METH_FASTCALL, nullptr},
-        {"get_zero_point",  (PyCFunction)_wrap<&_get_zero_point>::impl, METH_FASTCALL, nullptr},
-        {"is_dtype_equal",  (PyCFunction)_wrap<&_is_dtype_equal>::impl, METH_FASTCALL, nullptr},
-        {nullptr, nullptr, 0, nullptr}
-    };
+            MGE_PY_INTERFACE(is_quantize, _is_quantize),
+            MGE_PY_INTERFACE(get_scale, _get_scale),
+            MGE_PY_INTERFACE(get_zero_point, _get_zero_point),
+            MGE_PY_INTERFACE(is_dtype_equal, _is_dtype_equal),
+            {nullptr, nullptr, 0, nullptr}};
     for (auto&& def: method_defs) {
         if (def.ml_meth != nullptr) {
             auto* func = PyCFunction_NewEx(&def, nullptr, nullptr);
@@ -175,5 +188,7 @@ void init_dtypes(py::module m) {
         }
     }
 }
+
+#undef MGE_PY_INTERFACE
 
 } // namespace mgb
