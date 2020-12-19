@@ -18,23 +18,28 @@ using namespace megdnn;
 // FIXME: remove this when mgb::hash support tuple_hash
 namespace mgb {
 namespace {
-template<typename T, size_t ...Ns>
-auto tail(T t, std::index_sequence<Ns...>) {
-    return std::make_tuple(std::get<Ns+1>(t)...);
+
+struct HashWrapper {
+    size_t hash;
+    constexpr operator size_t() {return hash;}
+
+    constexpr HashWrapper operator+(HashWrapper rhs) {
+        // NOTE: use a + b + c + d, not a + (b + (c + d)) !!!
+        return {hash * 20141203 + rhs.hash};
+    }
+};
+
+template <typename... Args>
+constexpr size_t hash_many(const Args&... args) {
+    return (... + HashWrapper{mgb::hash(args)});
 }
+
 } // anonymous namespace
+
 template<typename T, typename ...Args>
-class HashTrait<std::tuple<T, Args...>> {
-    constexpr static size_t length = sizeof...(Args);
-public:
+struct HashTrait<std::tuple<T, Args...>> {
     static size_t eval(const std::tuple<T, Args...> &t) {
-        const T& val = std::get<0>(t);
-        if constexpr (!length) {
-            return mgb::hash(val);
-        } else {
-            return mgb::hash_pair_combine(mgb::hash(val),
-                mgb::hash(tail(t, std::make_index_sequence<length - 1>{})));
-        }
+        return std::apply(hash_many<T, Args...>, t);
     }
 };
 } // namespace mgb
