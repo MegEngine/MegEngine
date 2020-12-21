@@ -92,6 +92,24 @@ def test_attach_temporary():
     #         gm.backward(y)
 
 
+def test_no_dependency():
+    x = mge.tensor(3)
+
+    w = mge.Parameter(1.0)
+    w_no_dep = mge.Parameter(1.0)
+    gm = GradManager()
+    gm.attach(w)
+    gm.attach(w_no_dep)
+
+    with gm:
+        out1 = x * w
+        out2 = w_no_dep * out1
+        gm.backward(out1.sum())
+
+    assert w.grad is not None
+    assert w_no_dep.grad is None
+
+
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
