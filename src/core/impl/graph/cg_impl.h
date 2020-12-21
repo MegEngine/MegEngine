@@ -40,6 +40,28 @@ class ComputingGraphImpl final : public ComputingGraph {
         const OprNodeArray* opr_seq = nullptr;
     };
 
+    struct CallbackCallerKey {
+        OperatorNodeBase* opr;
+        CompNode comp_node;
+
+        bool operator==(const CallbackCallerKey& rhs) const {
+            return opr == rhs.opr && comp_node == rhs.comp_node;
+        }
+
+        struct Hash {
+            size_t operator()(const CallbackCallerKey& b) const {
+                return hash_pair_combine(mgb::hash(b.opr),
+                                         mgb::hash(b.comp_node));
+            }
+        };
+    };
+
+    struct CallbackCallerVal {
+        SmallVector<VarNode*> vars;
+        //! indexs of vars in out_spec.
+        SmallVector<SmallVector<size_t>> indexs;
+    };
+
     /*!
      * Components for implementing algorithms on a computing graph.
      *

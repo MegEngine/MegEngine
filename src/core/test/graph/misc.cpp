@@ -17,6 +17,7 @@
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/misc.h"
 #include "megbrain/opr/indexing.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/graph/helper.h"
 #include "megbrain/graph/grad_impl.h"
 #include "megbrain/graph/event.h"
@@ -30,6 +31,7 @@
 #include <atomic>
 #include <chrono>
 #include <array>
+#include <memory>
 
 using namespace mgb;
 
@@ -2233,6 +2235,54 @@ TEST(TestGraph, FreeBias) {
     ASSERT_TRUE(wp1.valid());
     if (wp1.val()) {
         check(b1);
+    }
+}
+
+TEST(TestGraph, CallbackCaller) {
+    using namespace opr;
+    auto cns = load_multiple_xpus(3);
+    constexpr size_t C1 = 20, C2 = 30, C3 = 10, C4 = 40;
+    constexpr size_t N = 2, C = C1 + C2;
+    HostTensorGenerator<> gen;
+    auto host_opr0 = gen({N, C}, cns[0]);
+    auto graph = ComputingGraph::make();
+    SymbolVar opr0 = opr::Host2DeviceCopy::make(*graph, host_opr0, {"opr0"});
+
+    auto spl0 = opr::Split::make(
+            opr0, Split::Options::make_partition(opr0, 1, {C1, C2}),
+            OperatorNodeConfig("split0").comp_node_arr({cns[1], cns[2]}));
+
+    auto spl1 = opr::Split::make(
+            opr0, Split::Options::make_partition(opr0, 1, {C3, C4}),
+            OperatorNodeConfig("split1"));
+
+    HostTensorND host_spl00, host_spl01, host_spl10, host_spl11;
+    auto func = graph->compile({make_callback_copy(spl0[0], host_spl00),
+                                make_callback_copy(spl0[1], host_spl01),
+                                make_callback_copy(spl1[0], host_spl10),
+                                make_callback_copy(spl1[1], host_spl11)});
+    func->execute();
+    auto o00 = host_spl00.ptr<float>(),
+         o01 = host_spl01.ptr<float>(),
+         o10 = host_spl10.ptr<float>(),
+         o11 = host_spl11.ptr<float>(), c = host_opr0->ptr<float>();
+    for (size_t i = 0, it = host_opr0->layout().total_nr_elems(); i < it; i++) {
+        auto ch = i % C;
+        auto n = i / C;
+        if (ch < C1) {
+            MGB_ASSERT_FLOAT_EQ(o00[n * C1 + ch], c[i])
+                    << ssprintf("failed at %zd", i);
+        } else {
+            MGB_ASSERT_FLOAT_EQ(o01[n * C2 + ch - C1], c[i])
+                    << ssprintf("failed at %zd", i);
+        }
+        if (ch < C3) {
+            MGB_ASSERT_FLOAT_EQ(o10[n * C3 + ch], c[i])
+                    << ssprintf("failed at %zd", i);
+        } else {
+            MGB_ASSERT_FLOAT_EQ(o11[n * C4 + ch - C3], c[i])
+                    << ssprintf("failed at %zd", i);
+        }
     }
 }
 
