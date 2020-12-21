@@ -37,8 +37,10 @@ class Tensor(_Tensor, ArrayMethodMixin):
             else:
                 cn = CompNode(device)
         else:
-            assert isinstance(device, CompNode)
-            cn = device
+            if isinstance(device, CompNode):
+                cn = device
+            else:
+                cn = device._cn
 
         # import pdb; pdb.set_trace()
         if isinstance(data, _Tensor):

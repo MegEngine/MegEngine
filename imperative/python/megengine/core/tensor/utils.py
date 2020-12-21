@@ -11,10 +11,10 @@ from typing import Iterable, Union
 
 import numpy as np
 
-from .._imperative_rt.core2 import Tensor, apply
+from .._imperative_rt.core2 import Tensor, apply, dtype_promotion, get_device
 from ..ops import builtin
 from ..ops.special import Const
-from .dtype import is_equal, is_quantize
+from .dtype import is_dtype_equal, is_quantize
 from .megbrain_graph import VarNode
 
 _enable_convert_inputs = True
@@ -37,94 +37,12 @@ def set_convert_inputs(flag):
     return backup
 
 
-def dtype_promotion(inputs):
-    """
-    Returns the dtype that would result from performing an arithmetic
-    operation on the provided input tensors and scalars.
-    """
-    # map numpy.dtype.kind to priority
-    category_priority = {
-        "f": 3,  # floating-point
-        "i": 2,  # signed integer
-        "u": 2,  # unsigned integer
-        "b": 1,  # boolean
-    }
-
-    def scalar2dtype(x):
-        """
-        For scalar `x`, returns its corresponding type. A floating point scalar
-        has dtype 'float32'. An integral non-boolean scalar has dtype 'int32'.
-        A boolean scalar has dtype 'bool'.
-        """
-        if isinstance(x, bool):
-            return np.bool_
-        if isinstance(x, int):
-            return np.int32
-        if isinstance(x, float):
-            return np.float32
-
-    def promote_types(types, cat):
-        """
-        Returns the data type with sufficient size to hold all types of
-        category `cat` in the list `types`.
-        """
-        used_types = [
-            i for i in types if category_priority.get(np.dtype(i).kind, 0) == cat
-        ]
-        assert len(used_types) > 0
-        res = used_types[0]
-        for i in used_types:
-            res = np.promote_types(res, i)
-        return res
-
-    def max_priority(types):
-        """
-        Returns the maximum value of the priority of each type in the list
-        `types`.
-        """
-        if not types:
-            return 0
-        else:
-            return max([category_priority.get(np.dtype(i).kind, 0) for i in types])
-
-    scalars = []
-    tensors = []
-
-    for data in inputs:
-        if hasattr(data, "dtype"):
-            tensors.append(data.dtype)
-        elif isinstance(data, (float, int, bool)):
-            scalars.append(scalar2dtype(data))
-
-    max_pri_scalars = max_priority(scalars)
-    max_pri_tensors = max_priority(tensors)
-
-    assert max_pri_scalars > 0 or max_pri_tensors > 0
-
-    if max_pri_scalars > max_pri_tensors:
-        return promote_types(scalars, max_pri_scalars)
-    else:
-        return promote_types(tensors, max_pri_tensors)
-
-
-def get_device(inputs):
-    device = None
-    for i in inputs:
-        if isinstance(i, (Tensor, VarNode)):
-            if device is None:
-                device = i.device
-            elif device != i.device:
-                raise ValueError("ambiguous device: {} vs {}".format(device, i.device))
-    assert device is not None
-    return device
-
-
 def concatenate(inputs, axis=0, *, device=None):
     dtype = dtype_promotion(inputs)
     device = get_device(inputs)
 
     def convert(x):
-        return convert_single_value(x, inputs, dtype=dtype)
+        return convert_single_value(x, dtype=dtype, device=device)
 
     inputs = tuple(map(convert, inputs))
     (result,) = apply(builtin.Concat(axis=axis, comp_node=device), *inputs)
@@ -133,7 +51,7 @@ def concatenate(inputs, axis=0, *, device=None):
 
 def astype(x, dtype):
     dtype = np.dtype(dtype)
-    if not is_equal(x.dtype, dtype):
+    if not is_dtype_equal(x.dtype, dtype):
         isscalar = x.isscalar()
         (x,) = apply(builtin.TypeCvt(dtype=dtype), x)
         if isscalar:
@@ -141,13 +59,12 @@ def astype(x, dtype):
     return x
 
 
-def convert_single_value(v, inputs, *, dtype=None, device=None):
-    tensors = [i for i in inputs if isinstance(i, (Tensor, VarNode))]
-    assert len(tensors) > 0
+def convert_single_value(v, *, dtype=None, device=None):
     if isinstance(v, (Tensor, VarNode)):
-        v = astype(v, v.dtype if is_quantize(v.dtype) else dtype)
+        if not is_quantize(v.dtype):
+            v = astype(v, dtype)
     else:
-        (v,) = Const(v, dtype=dtype, device=device)(*tensors)
+        (v,) = Const(v, dtype=dtype, device=device)()
     return v
 
 
@@ -161,7 +78,7 @@ def convert_inputs(*args: Tensor):
     def convert(value):
         if value is None:
             return value
-        return convert_single_value(value, args, dtype=dtype, device=device)
+        return convert_single_value(value, dtype=dtype, device=device)
 
     return tuple(map(convert, args))
 

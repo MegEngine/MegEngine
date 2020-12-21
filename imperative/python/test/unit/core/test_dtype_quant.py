@@ -113,7 +113,7 @@ def test_quint8_typecvt():
     data = np.random.random(shape).astype(np.float32) * 5 - 1
 
     def typecvt(x, dt=None):
-        (y,) = apply(ops.TypeCvt(dtype=dt), x)
+        (y,) = G.apply_normal_op(ops.TypeCvt(dtype=dt), x)
         return y
 
     # convert to quint8
@@ -194,7 +194,7 @@ def test_quint4_typecvt():
     data = np.random.random(shape).astype(np.float32) * 5 - 1
 
     def typecvt(x, dt=None):
-        (y,) = apply(ops.TypeCvt(dtype=dt), x)
+        (y,) = G.apply_normal_op(ops.TypeCvt(dtype=dt), x)
         return y
 
     # convert to quint4

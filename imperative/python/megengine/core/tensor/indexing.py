@@ -151,9 +151,9 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
         def get_index(i):
             if not isinstance(i, (Tensor)):
                 if is_bool_list(i) or isinstance(i, np.ndarray) and i.dtype == np.bool_:
-                    (i,) = Const(i, dtype=np.bool_, device=inp.device)(inp)
+                    (i,) = Const(i, dtype=np.bool_, device=inp.device)()
                 else:
-                    (i,) = Const(i, dtype=np.int32, device=inp.device)(inp)
+                    (i,) = Const(i, dtype=np.int32, device=inp.device)()
                     return i
             assert isinstance(i, Tensor)
             if i.dtype != np.bool_:
@@ -197,7 +197,7 @@ def try_condtake(tensor, index):
     ):
         return []
     if isinstance(index, np.ndarray):
-        (index,) = Const(index, dtype=np.bool_, device=tensor.device)(tensor)
+        (index,) = Const(index, dtype=np.bool_, device=tensor.device)()
     assert isinstance(index, Tensor)
     if not isinstance(tensor, Tensor):
         raise TypeError("input must be a tensor")
@@ -217,9 +217,7 @@ def getitem(tensor, index):
         if isinstance(v.shape, v.__class__):
             break
         if len(v.shape) > 0 and v.shape[0] == 0:
-            (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)(
-                tensor
-            )
+            (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)()
             return empty_tensor
     if use_subtensor:
         op = builtin.Subtensor(items=items)
@@ -240,8 +238,7 @@ def setitem(tensor, index, value):
             return tensor
         tensor = tensor.reshape(-1)
     if not isinstance(value, Tensor):
-        op = Const(value, dtype=tensor.dtype, device=tensor.device)
-        (value,) = op(tensor)
+        (value,) = Const(value, dtype=tensor.dtype, device=tensor.device)()
     tensor, tensors, items, use_subtensor, _ = unpack_getitem(tensor, index)
     for v in tensors:
         if len(v.shape) > 0 and v.shape[0] == 0:

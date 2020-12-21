@@ -158,7 +158,7 @@ void PyExceptionForward::throw_() {
 
 /* ============== namespace npy ============== */
 
-namespace {
+namespace npy {
 
 int to_mgb_supported_dtype_raw(int dtype) {
     if (dtype == NPY_INT64)
@@ -198,12 +198,6 @@ int dtype_mgb2np_raw(DType dtype) {
     throw ConversionError(ssprintf(
                 "can not convert dtype %s to numpy dtype", dtype.name()));
 }
-
-struct PyArrayDescrDeleter {
-    void operator()(PyArray_Descr* obj) {
-        Py_XDECREF(obj);
-    }
-};
 
 //! Convert MegBrain DType to NumPy DType descriptor, the caller receives a new
 //! reference to the descriptor.
@@ -585,9 +579,7 @@ void ndarray_shared_from_tensor_py_capsule_dtor(PyObject *cap) {
     HostTensorNDRefHolder::free(static_cast<HostTensorNDRefHolder*>(ptr));
 }
 
-} // anonymous namespace
-
-PyObject* npy::ndarray_from_tensor(
+PyObject* ndarray_from_tensor(
         const HostTensorND &val, ShareType share_type) {
     if (!val.layout().is_contiguous() && !val.shape().is_empty()) {
         mgb_assert(share_type != ShareType::MUST_SHARE);
@@ -634,7 +626,7 @@ PyObject* npy::ndarray_from_tensor(
     return ret;
 }
 
-HostTensorND npy::np2tensor(PyObject* obj, const Meth& meth, DType dtype) {
+HostTensorND np2tensor(PyObject* obj, const Meth& meth, DType dtype) {
     auto ret_full = np2tensor_try_borrow(obj, meth, dtype);
     if (meth.must_borrow_) {
         mgb_assert(ret_full.second,
@@ -645,7 +637,7 @@ HostTensorND npy::np2tensor(PyObject* obj, const Meth& meth, DType dtype) {
     return ret_full.first;
 }
 
-PyObject* npy::dtype_mgb2np(mgb::DType dtype) {
+PyObject* dtype_mgb2np(mgb::DType dtype) {
     PYTHON_GIL;
     // According to
     // https://docs.scipy.org/doc/numpy/reference/c-api.array.html#c.PyArray_TypeObjectFromType
@@ -668,7 +660,7 @@ PyObject* npy::dtype_mgb2np(mgb::DType dtype) {
     return typeobj;
 }
 
-mgb::DType npy::dtype_np2mgb(PyObject *obj) {
+mgb::DType dtype_np2mgb(PyObject *obj) {
     mgb_assert(obj && obj != Py_None,
                "can not convert null PyObject to numpy dtype");
     // see
@@ -686,7 +678,7 @@ mgb::DType npy::dtype_np2mgb(PyObject *obj) {
     return result;
 }
 
-PyObject* npy::to_mgb_supported_dtype(PyObject* dtype) {
+PyObject* to_mgb_supported_dtype(PyObject* dtype) {
     PYTHON_GIL;
 
     PyArray_Descr* descr;
@@ -702,7 +694,7 @@ PyObject* npy::to_mgb_supported_dtype(PyObject* dtype) {
     return PyArray_TypeObjectFromType(type_num);
 }
 
-TensorShape npy::vec2shape(const std::vector<size_t> &vec) {
+TensorShape vec2shape(const std::vector<size_t> &vec) {
     TensorShape shape;
     mgb_assert(vec.size() <= TensorShape::MAX_NDIM,
             "dim too large: %zd (max %zd)",
@@ -718,3 +710,5 @@ TensorShape npy::vec2shape(const std::vector<size_t> &vec) {
     mgb_assert(shape.ndim, "shape should not be empty");
     return shape;
 }
+
+} // namespace npy

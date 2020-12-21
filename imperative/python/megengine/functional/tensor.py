@@ -107,9 +107,7 @@ def full(shape, value, dtype="float32", device=None):
         shape = (shape,)
     if device is None:
         device = get_default_device()
-    (x,) = Const(value, dtype=dtype, device=device)(
-        Tensor(value, dtype=dtype, device=device)
-    )
+    (x,) = Const(value, dtype=dtype, device=device)()
     if len(shape) == 0:  # scalar
         return x
     return broadcast_to(x, shape)
@@ -265,7 +263,7 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
     device = as_device(device)
 
     def convert(x):
-        return convert_single_value(x, inps, dtype=dtype)
+        return convert_single_value(x, dtype=dtype, device=device)
 
     inps = tuple(map(convert, inps))
     (result,) = apply(builtin.Concat(axis=axis, comp_node=device.to_c()), *inps)

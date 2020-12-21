@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from .._imperative_rt.core2 import Tensor
+# from .._imperative_rt.core2 import Tensor
 from ..tensor.core import OpBase, TensorBase, apply
 
 
@@ -19,5 +19,10 @@ class Const:
         self.device = device
 
     def __call__(self, *reference):
-        Wrapper = type(reference[0])
-        return (Wrapper(self.value, self.dtype, self.device, True),)
+        from ...tensor import Tensor
+
+        device = self.device
+        if device is None:
+            device = reference[0].device
+
+        return (Tensor(self.value, self.dtype, self.device, True),)

@@ -13,6 +13,12 @@ import numpy as np
 
 # normal dtype related
 from .._imperative_rt import bfloat16, intb1, intb2, intb4
+from .._imperative_rt.common import (
+    get_scale,
+    get_zero_point,
+    is_dtype_equal,
+    is_quantize,
+)
 
 
 def is_lowbit(dtype):
@@ -40,41 +46,6 @@ _metadata_dict = {
     "quint2": _QuantDtypeMetadata(None, "uint8", True, 0, 3),
     "qint2": _QuantDtypeMetadata(None, "int8", False, -2, 1),
 }
-
-
-def is_quantize(dtype):
-    return (
-        hasattr(dtype, "metadata")
-        and dtype.metadata is not None
-        and "mgb_dtype" in dtype.metadata
-    )
-
-
-def get_scale(dtype):
-    assert is_quantize(dtype)
-    return dtype.metadata["mgb_dtype"]["scale"]
-
-
-def get_zero_point(dtype):
-    assert is_quantize(dtype)
-    metadata = dtype.metadata["mgb_dtype"]
-    assert metadata["name"] in ("Quantized8Asymm", "Quantized4Asymm")
-    return metadata["zero_point"]
-
-
-def is_equal(dt0, dt1):
-    def _get_zero_point(dtype):
-        assert is_quantize(dtype)
-        metadata = dtype.metadata["mgb_dtype"]
-        return metadata.get("zero_point")
-
-    if is_quantize(dt0) and is_quantize(dt1):
-        return get_scale(dt0) == get_scale(dt1) and _get_zero_point(
-            dt0
-        ) == _get_zero_point(dt1)
-    if not (is_quantize(dt0) or is_quantize(dt1)):
-        return dt0 == dt1
-    return False
 
 
 def _check_zero_point(zp: int, dtype_str: str):

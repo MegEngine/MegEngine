@@ -36,6 +36,7 @@ namespace mgb {
     int npy_num_intb##n();
 FOREACH_MGB_LOW_BIT(DEFINE_NPY_INTBX)
 #undef DEFINE_NPY_INTBX
+    void init_dtypes(pybind11::module m);
     void init_npy_num_intbx(pybind11::module m);
 
     //! numpy type num for bfloat16 type

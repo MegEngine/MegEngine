@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "megbrain/graph.h"
+#include "megbrain/common.h"
 #include "megbrain/utils/persistent_cache.h"
 #include "megbrain/imperative/op_def.h"
 
@@ -25,6 +25,8 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <pybind11/functional.h>
+
+#include "./numpy_dtypes.h"
 
 pybind11::module submodule(pybind11::module parent, const char* name, const char* doc = nullptr);
 
@@ -181,6 +183,18 @@ namespace npy {
 
     //! convert raw vector to tensor shape
     mgb::TensorShape vec2shape(const std::vector<size_t> &vec);
+
+    struct PyArrayDescrDeleter {
+        void operator()(PyArray_Descr* obj) {
+            Py_XDECREF(obj);
+        }
+    };
+
+    //! Convert MegBrain DType to NumPy DType descriptor, the caller receives a new
+    //! reference to the descriptor.
+    std::unique_ptr<PyArray_Descr, PyArrayDescrDeleter> dtype_mgb2np_descr(mgb::DType dtype);
+
+    mgb::DType dtype_np2mgb_descr(PyArray_Descr* descr);
 
     //! convert megbrain dtype to numpy dtype object; return new reference
     PyObject* dtype_mgb2np(mgb::DType dtype);

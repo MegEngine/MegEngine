@@ -703,7 +703,7 @@ def topk(
     op = builtin.TopK(mode=mode)
 
     if not isinstance(k, Tensor):
-        (k,) = Const(k, dtype="int32", device=inp.device)(inp)
+        (k,) = Const(k, dtype="int32", device=inp.device)()
 
     if len(inp.shape) == 1:
         inp = inp.reshape(1, -1)

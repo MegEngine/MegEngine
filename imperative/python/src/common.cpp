@@ -179,4 +179,5 @@ void init_common(py::module m) {
 
     init_npy_num_bfloat16(m);
     init_npy_num_intbx(m);
+    init_dtypes(m);
 }

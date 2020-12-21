@@ -658,7 +658,7 @@ def batch_norm(
 
     def make_full_if_none(x, value):
         if x is None:
-            (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
+            (x,) = Const(value, dtype=inp.dtype, device=inp.device)()
             shape = utils.astensor1d(
                 (1, C, 1, 1), inp, dtype="int32", device=inp.device
             )
@@ -1567,7 +1567,7 @@ def indexing_one_hot(
     """
     assert isinstance(src, Tensor), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
-    index = utils.convert_single_value(index, (src,), dtype="int32", device=src.device)
+    index = utils.convert_single_value(index, dtype="int32", device=src.device)
     (result,) = apply(op, src, index)
     if not keepdims:
         result = squeeze(result, axis)

@@ -9,16 +9,22 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/dtype.h"
+#include "megbrain/common.h"
+
 #include "./tensor.h"
 #include "./grad.h"
 #include "./trace.h"
 #include "./common.h"
 #include "./numpy_dtypes.h"
 #include "./graph_rt.h"
+#include "./helper.h"
 
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
-#include "./helper.h"
+
+#include <unordered_map>
+
 namespace py = pybind11;
 
 namespace mgb::imperative::python {
@@ -413,6 +419,198 @@ struct TensorWeakRef {
     }
 };
 
+/* ============== convert inputs ============== */
+
+// map numpy.dtype.kind to priority
+inline uint8_t category_priority(char c) {
+    switch (c) {
+        case 'f': return 3; // floating-point
+        case 'i': return 2; // signed integer
+        case 'u': return 2; // unsigned integer
+        case 'b': return 1; // boolean
+        default: return 0;
+    }
+}
+
+// Returns the maximum value of the priority of each type in the list `types`.
+uint8_t max_priority(SmallVector<PyArray_Descr*> types) {
+    if (types.size() == 0) {
+        return 0;
+    } else {
+        uint8_t max_p = 0;
+        for (auto&& desc: types) {
+            max_p = std::max(max_p, category_priority(desc->kind));
+        }
+        return max_p;
+    }
+}
+
+// Returns the data type with sufficient size to hold all types of 
+// category `cat` in the list `types`.
+PyArray_Descr* promote_types(SmallVector<PyArray_Descr*> types, uint8_t cat) {
+    // Return value: New reference
+    SmallVector<PyArray_Descr*> used_types;
+    for (auto&& desc: types) {
+        auto&& v = category_priority(desc->kind);
+        if (v == cat) {
+            used_types.emplace_back(desc);
+        }
+    }
+    mgb_assert(used_types.size() > 0, "size of used_types is 0");
+    PyArray_Descr* res = used_types[0];
+    Py_INCREF(res);
+
+    for (size_t i = 1; i < used_types.size(); ++i) {
+        PyArray_Descr* tmp = PyArray_PromoteTypes(used_types[i], res);
+        Py_DECREF(res);
+        res = tmp;
+    }
+    return res;
+}
+
+PyArray_Descr* scalar2dtype(PyObject* arg) {
+    // Return value: New reference
+    if (PyBool_Check(arg)) {
+        auto&& descr = PyArray_DescrFromType(NPY_BOOL);
+        return descr;
+    }
+    if (PyLong_CheckExact(arg)) {
+        auto&& descr = PyArray_DescrFromType(NPY_INT32);
+        return descr;
+    }
+    if (PyFloat_CheckExact(arg)) {
+        auto&& descr = PyArray_DescrFromType(NPY_FLOAT32);
+        return descr;
+    }
+    return nullptr;
+}
+
+PyArray_Descr* _dtype_promotion(PyObject*const* args, size_t nargs) {
+    // Return value: New reference
+    SmallVector<PyArray_Descr*> tensors;
+    SmallVector<PyArray_Descr*> scalars;
+
+    bool is_tuple = false;
+    PyObject* tuple;
+    if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
+        if (PyList_Check(args[0])) {
+            tuple = PyList_AsTuple(args[0]);
+        } else {
+            tuple = args[0];
+            Py_INCREF(tuple);
+        }
+        nargs = PyTuple_Size(tuple);
+        is_tuple = true;
+    }
+
+    for (size_t i = 0; i < nargs; ++i) {
+        PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i): args[i];
+        if (handle == Py_None) continue;
+        TensorWrapper* tw = TensorWrapper::cast_safe(handle);
+        if (tw) {
+            mgb::DType type = tw->m_tensor->dtype();
+            auto&& descr = npy::dtype_mgb2np_descr(type);
+            Py_INCREF(descr.get());
+            tensors.emplace_back(descr.get());
+        }else{
+            if (PyArray_Check(handle) || PyArray_CheckScalar(handle)) {
+                auto&& descr = PyArray_DescrFromObject(handle, nullptr);
+                tensors.emplace_back(descr);
+                continue;
+            }
+            PyArray_Descr* descr = scalar2dtype(handle);
+            if (descr) {
+                scalars.emplace_back(descr);
+                continue;
+            }
+        }
+    }
+
+    auto max_pri_scalars = max_priority(scalars);
+    auto max_pri_tensors = max_priority(tensors);
+
+    if (max_pri_scalars <= 0 && max_pri_tensors <= 0) {
+        throw py::value_error("invalid input, no dtype avaliable");
+    }
+    PyArray_Descr* res;
+    if (max_pri_scalars > max_pri_tensors) {
+        res = promote_types(scalars, max_pri_scalars);
+    }else{
+        res = promote_types(tensors, max_pri_tensors);
+    }
+    for (auto *p: tensors) { Py_DECREF(p); }
+    for (auto *p: scalars) { Py_DECREF(p); }
+    Py_DECREF(tuple);
+    return res;
+}
+
+CompNode _get_device(PyObject*const* args, size_t nargs) {
+    bool is_tuple = false;
+    PyObject* tuple;
+    if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
+        if (PyList_Check(args[0])) {
+            tuple = PyList_AsTuple(args[0]);
+        } else {
+            tuple = args[0];
+            Py_INCREF(tuple);
+        }
+        nargs = PyTuple_Size(tuple);
+        is_tuple = true;
+    }
+    bool valid = false;
+    CompNode cn;
+    for (size_t i = 0; i < nargs; ++i) {
+        PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i): args[i];
+        TensorWrapper* tw = TensorWrapper::cast_safe(handle);
+        if (tw) {
+            if (!valid) {
+                cn = tw->m_tensor->comp_node();
+                valid = true;
+            } else {
+                CompNode cn1 = tw->m_tensor->comp_node();
+                if (cn1 != cn) {
+                    throw py::value_error(ssprintf("ambiguous device: %s vs %s",
+                        cn.to_string().c_str(), cn1.to_string().c_str()));
+                }
+            }
+        }
+    }
+    if (!valid) {
+        mgb_assert(0, "expact at least 1 device");
+    }
+    Py_DECREF(tuple);
+    return cn;
+}
+
+// Returns the dtype that would result from performing an arithmetic
+// operation on the provided input tensors and scalars.
+PyObject* dtype_promotion(PyObject* self, PyObject*const* args, size_t nargs) {
+    if (!nargs) {
+        PyErr_SetString(PyExc_TypeError, "empty input is not allowed");
+        return nullptr;
+    }
+    try {
+        PyArray_Descr* res = _dtype_promotion(args, nargs);
+        return py::cast(npy::dtype_np2mgb_descr(res)).release().ptr();
+    } catch (std::exception& e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return nullptr;
+    }
+}
+
+PyObject* get_device(PyObject* self, PyObject*const* args, size_t nargs) {
+    if (!nargs) {
+        PyErr_SetString(PyExc_TypeError, "empty input is not allowed");
+        return nullptr;
+    }
+    try {
+        CompNode cn = _get_device(args, nargs);
+        return py::cast(cn).release().ptr();
+    } catch (std::exception& e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return nullptr;
+    }
+}
 
 void init_tensor(py::module m) {
     interpreter_for_py = interpreter::Interpreter::inst().create_channel();
@@ -444,10 +642,19 @@ void init_tensor(py::module m) {
         .def(py::init<const TensorWrapper&>())
         .def("__call__", &TensorWeakRef::operator());
 
-    static PyMethodDef apply_def{"apply", (PyCFunction)py_apply, METH_FASTCALL, nullptr};
-    auto* apply_func = PyCFunction_NewEx(&apply_def, nullptr, nullptr);
-    if (!apply_func) throw py::error_already_set();
-    py::setattr(m, "apply", apply_func);
+    static PyMethodDef method_defs[] = {
+        {"apply", (PyCFunction)py_apply, METH_FASTCALL, nullptr},
+        {"dtype_promotion", (PyCFunction)dtype_promotion, METH_FASTCALL, nullptr},
+        {"get_device", (PyCFunction)get_device, METH_FASTCALL, nullptr},
+        {nullptr, nullptr, 0, nullptr}
+    };
+    for (auto&& def: method_defs) {
+        if (def.ml_meth != nullptr) {
+            auto* func = PyCFunction_NewEx(&def, nullptr, nullptr);
+            if (!func) throw py::error_already_set();
+            py::setattr(m, def.ml_name, func);
+        }
+    }
 
     m.def("_set_swap_flag",
           [](bool flag) { interpreter_for_py->set_swap_flag(flag); });
