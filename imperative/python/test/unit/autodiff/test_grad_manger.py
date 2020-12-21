@@ -110,6 +110,29 @@ def test_no_dependency():
     assert w_no_dep.grad is None
 
 
+def test_regression_1762():
+    x = F.ones((10, 10, 3, 3))
+
+    conv = M.Conv2d(10, 10, kernel_size=3, padding=1)
+
+    t_shape = (1, 10, 1, 1)
+    weight = mge.Parameter(np.ones(t_shape, dtype=np.float32))
+    bias = mge.Parameter(np.zeros(t_shape, dtype=np.float32))
+
+    gm = GradManager()
+    gm.attach(list(conv.parameters()) + [weight, bias])
+
+    with gm:
+        out1 = conv(x)
+
+        out2 = F.batch_norm(out1, None, None, weight, bias, training=True,)
+
+        # Weird error only occur when this action is placed after BN
+        # Op type is not relevant
+        loss = out1 + 1
+        gm.backward(loss)
+
+
 @pytest.mark.skipif(
     platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
 )
