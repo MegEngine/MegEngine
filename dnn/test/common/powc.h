@@ -12,12 +12,11 @@
 
 #include "megdnn/handle.h"
 #include "megdnn/oprs/general.h"
-#include "test/common/opr_proxy.h"
+
+#include "src/common/opr_trait.h"
 
 namespace megdnn {
 namespace test {
-
-DEF(PowC, 2, false, true);
 
 void run_powc_test(Handle* handle, DType dtype);
 

@@ -1,5 +1,5 @@
 /**
- * \file dnn/test/common/opr_trait.h
+ * \file dnn/src/common/opr_trait.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -14,7 +14,6 @@
 #include <cstddef>
 
 namespace megdnn {
-namespace test {
 
 template <typename Opr>
 struct OprTrait {};
@@ -114,7 +113,10 @@ DEF(FakeQuantForward, 4, true, true);
 DEF(FakeQuantBackward, 5, true, false);
 DEF(TQTForward, 3, true, true);
 DEF(TQTBackward, 5, true, false);
-}  // namespace test
+DEF(PowC, 2, false, true);
+DEF(UniformRNG, 1, true, true);
+DEF(GaussianRNG, 1, true, true);
+
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

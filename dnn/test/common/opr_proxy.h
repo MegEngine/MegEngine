@@ -11,12 +11,13 @@
  */
 #pragma once
 
+#include "src/common/opr_trait.h"
+
 #include "test/common/deduce_layout_proxy.h"
 #include "test/common/exec_proxy.h"
 #include "test/common/fast_run_cache.h"
 #include "test/common/inspect_type.h"
 #include "test/common/opr_algo_proxy.h"
-#include "test/common/opr_trait.h"
 #include "test/common/timer.h"
 #include "test/common/workspace_wrapper.h"
 

@@ -12,7 +12,7 @@
 #pragma once
 
 #include "megdnn/basic_types.h"
-#include "test/common/opr_trait.h"
+#include "src/common/opr_trait.h"
 #include "test/common/utils.h"
 
 namespace megdnn {
