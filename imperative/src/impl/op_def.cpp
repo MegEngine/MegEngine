@@ -30,10 +30,24 @@ std::shared_ptr<OpDef> OpDef::make_from_op_node(
     return trait->make_from_op_node(node);
 }
 
+DispatchMode OpDef::decide_dispatch_mode(
+    const OpDef& def,
+    const SmallVector<LogicalTensorDesc>& inputs) {
+    return def.trait()->decide_dispatch_mode(def, inputs);
+}
+
 SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
     const OpDef& def,
     SmallVector<TensorPtr> inputs) {
     return def.trait()->apply_on_physical_tensor(def, std::move(inputs));
+}
+
+void OpDef::apply_on_device_tensornd(
+    const OpDef& def,
+    const SmallVector<DeviceTensorND>& inputs,
+    SmallVector<DeviceTensorND>* outputs) {
+    def.trait()->apply_on_device_tensornd(def, inputs, outputs);
+    return;
 }
 
 VarNodeArray OpDef::apply_on_var_node(

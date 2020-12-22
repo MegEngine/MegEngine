@@ -68,23 +68,46 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     return {{{TensorLayout(out_shape, out_dt, inputs[0].layout.format), out_cn}}, true};
 }
 
-SmallVector<TensorPtr> apply_on_physical_tensor(
+DispatchMode decide_dispatch_mode(
         const OpDef& def,
-        const SmallVector<TensorPtr>& inputs) {
+        const SmallVector<LogicalTensorDesc>& inputs) {
+    bool host_computable = true;
+    constexpr int size_threshhold = TensorShape::MAX_NDIM;
+    for (auto&& inp : inputs) {
+        if (inp.value.empty() || inp.value.layout().ndim == 0
+                || inp.value.layout().total_nr_elems() > size_threshhold) {
+            host_computable = false;
+            break;
+        }
+    }
+    return host_computable ? DEFAULT_CPU : KERNEL;
+}
+
+
+void apply_on_device_tensornd(
+        const OpDef& def,
+        const SmallVector<DeviceTensorND>& inputs,
+        SmallVector<DeviceTensorND>* outputs) {
     auto&& op_def = def.cast_final_safe<Elemwise>();
     auto trait = megdnn::Elemwise::ModeTrait::from_mode(op_def.mode);
     mgb_assert(inputs.size() == trait.arity,
                "%s expects %u inputs; got %zu actually", trait.name,
                trait.arity, inputs.size());
+    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::Elemwise>(inputs[0].comp_node());
+    opr::Elemwise::perform(op_def.mode, (*outputs)[0], inputs, dnn_opr);
+}
 
-    DeviceTensorND out;
-    SmallVector<DeviceTensorND> dt_inputs(inputs.size());
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def,
+        const SmallVector<TensorPtr>& inputs) {
+
+    SmallVector<DeviceTensorND> inp_tensornds(inputs.size());
     for (unsigned i = 0; i < inputs.size(); ++i){
-        dt_inputs[i] = inputs[i]->dev_tensor();
+        inp_tensornds[i] = inputs[i]->dev_tensor();
     }
-    auto&& dnn_opr = opr::intl::create_megdnn_opr<megdnn::Elemwise>(inputs[0]->comp_node());
-    opr::Elemwise::perform(op_def.mode, out, dt_inputs, dnn_opr);
-    return {Tensor::make(out)};
+    SmallVector<DeviceTensorND> oup_tensornds = {{inp_tensornds[0].comp_node(), inp_tensornds[0].dtype()}};
+    apply_on_device_tensornd(def, inp_tensornds, &oup_tensornds);
+    return {Tensor::make(oup_tensornds[0])};
 }
 
 MGB_DEFINE_OPR_CLASS(ForceInplaceElemwise, cg::SingleCNOperatorNodeBaseT<opr::mixin::MegDNNOprHolder>) //{
@@ -214,8 +237,10 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_inplace_add_output_attrs_
 
 OP_TRAIT_REG(Elemwise, Elemwise, opr::Elemwise)
     .make_from_op_node(make_from_op_node)
+    .decide_dispatch_mode(decide_dispatch_mode)
     .apply_on_var_node(apply_on_var_node)
     .infer_output_attrs_fallible(infer_output_attrs_fallible)
+    .apply_on_device_tensornd(apply_on_device_tensornd)
     .apply_on_physical_tensor(apply_on_physical_tensor)
     .fallback();
 

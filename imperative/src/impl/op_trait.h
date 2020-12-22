@@ -60,8 +60,12 @@ struct ToVarNodeArray<cg::OperatorNodeBase*>: std::true_type {
 
 using OpDefMaker = detail::OpMeth<
         decltype(OpDef::make_from_op_node)>;
+using DecideDispatchMode = detail::OpMeth<
+        decltype(OpDef::decide_dispatch_mode)>;
 using ApplyOnPhysicalTensor = detail::OpMeth<
         decltype(OpDef::apply_on_physical_tensor)>;
+using ApplyOnDeviceTensorND = detail::OpMeth<
+        decltype(OpDef::apply_on_device_tensornd)>;
 using ApplyOnVarNode = detail::OpMeth<
         decltype(OpDef::apply_on_var_node)>;
 using InferOutputAttrsFallible = detail::OpMeth<
@@ -74,7 +78,9 @@ using IsSame = detail::OpMeth<bool(const OpDef&, const OpDef&)>;
 struct OpTrait {
     const char* name;
     OpDefMaker make_from_op_node;
+    DecideDispatchMode decide_dispatch_mode;
     ApplyOnPhysicalTensor apply_on_physical_tensor;
+    ApplyOnDeviceTensorND apply_on_device_tensornd;
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
     GradMaker make_backward_graph;
@@ -88,7 +94,9 @@ struct OpTrait {
 
 #define FOR_EACH_OP_METH(cb) \
     cb(make_from_op_node) \
+    cb(decide_dispatch_mode) \
     cb(apply_on_physical_tensor) \
+    cb(apply_on_device_tensornd) \
     cb(apply_on_var_node) \
     cb(infer_output_attrs_fallible) \
     cb(make_backward_graph) \

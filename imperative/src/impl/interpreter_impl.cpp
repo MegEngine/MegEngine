@@ -29,7 +29,7 @@ Interpreter& Interpreter::inst() {
     return inst_;
 }
 
-void* ChannelImpl::put(const HostTensorND& value, bool no_cache) {
+Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     auto info = alloc();
     info->desc.layout = value.layout();
     info->desc.comp_node = value.comp_node();
@@ -39,7 +39,7 @@ void* ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     return info;
 }
 
-void* ChannelImpl::put(const DeviceTensorND& data) {
+Handle ChannelImpl::put(const DeviceTensorND& data) {
     auto info = alloc();
     info->desc.layout = data.layout();
     info->desc.comp_node = data.comp_node();
@@ -48,12 +48,12 @@ void* ChannelImpl::put(const DeviceTensorND& data) {
     return info;
 }
 
-void ChannelImpl::del(void* handle) {
+void ChannelImpl::del(Handle handle) {
     mgb_assert(m_valid_handle.erase(handle), "invalid handle: %p", handle);
     m_buffer.enqueue(Del{reinterpret_cast<TensorInfo*>(handle)});
 }
 
-void ChannelImpl::swap_in(void* handle) {
+void ChannelImpl::swap_in(Handle handle) {
     if (m_enable_evict & SWAP) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
@@ -61,7 +61,7 @@ void ChannelImpl::swap_in(void* handle) {
     }
 }
 
-void ChannelImpl::swap_out(void* handle) {
+void ChannelImpl::swap_out(Handle handle) {
     if (m_enable_evict & SWAP) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
@@ -69,7 +69,7 @@ void ChannelImpl::swap_out(void* handle) {
     }
 }
 
-void ChannelImpl::drop(void* handle) {
+void ChannelImpl::drop(Handle handle) {
     if (m_enable_evict & DROP) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
@@ -77,45 +77,91 @@ void ChannelImpl::drop(void* handle) {
     }
 }
 
-SmallVector<void*> ChannelImpl::apply_op(
+void ChannelImpl::dispatch_default_cpu(
         std::shared_ptr<OpDef> op,
-        const SmallVector<void*>& inputs) {
-    for (auto i : inputs) {
-        mgb_assert(m_valid_handle.find(i) != m_valid_handle.end(),
-                "invalid handle: %p", i);
-    }
-    SmallVector<TensorInfo*> input_infos;
-    input_infos.reserve(inputs.size());
-    SmallVector<LogicalTensorDesc> input_descs;
-    input_descs.reserve(inputs.size());
+        const SmallVector<TensorInfo*>& input_infos,
+        const SmallVector<LogicalTensorDesc>& input_descs,
+        SmallVector<Handle>* outputs) {
+    auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
 
+    SmallVector<DeviceTensorND> input_tensornds;
+    input_tensornds.reserve(input_descs.size());
+    CompNode output_cn;
     {
         MGB_LOCK_GUARD(m_mutex);
-        for (auto i : inputs) {
-            auto info = reinterpret_cast<TensorInfo*>(i);
-            mgb_assert(!info->invalid, "Invalid tensor, unable to apply_op!");
-            input_infos.push_back(info);
-            input_descs.push_back(info->desc);
+        for (auto&& info : input_infos) {
+            mgb_assert(info->ptr, "invalid tensor ptr!");
+            if (!output_cn.valid()) {
+                output_cn = info->ptr->comp_node();
+            } else {
+                mgb_assert(output_cn == info->ptr->comp_node(), "cannot decide output comp node");
+            }
+            mgb_assert(info->ptr->try_get_value(), "no valid host value");
+            input_tensornds.emplace_back(info->ptr->get_value().proxy_to_default_cpu());
         }
     }
 
+    outputs->reserve(output_descs.size());
+    SmallVector<DeviceTensorND> output_tensornds;
+    output_tensornds.reserve(output_descs.size());
+    for (auto&& desc : output_descs) {
+        // TODO: may conflict with condtake, which need alloc inside
+        mgb_assert(!desc.layout.is_empty());
+        // use HostTensorND alloc_host for cuda pinned memory
+        output_tensornds.emplace_back(HostTensorND(output_cn, desc.layout).proxy_to_default_cpu());
+    }
+
+    OpDef::apply_on_device_tensornd(*op, input_tensornds, &output_tensornds);
+
+    SmallVector<TensorInfo*> output_infos;
+    output_infos.reserve(output_descs.size());
+    for (auto&& tensornd : output_tensornds) {
+        // tensornd -> host_tensornd
+        HostTensorND host_tensornd = HostTensorND::make_proxy(tensornd)
+            .proxy_to_comp_node(output_cn);
+        // tensornd -> desc
+        LogicalTensorDesc desc = {tensornd.layout(), output_cn, tensornd};
+        // tensornd -> tensor
+        auto info = alloc();
+        info->desc = desc;
+        m_valid_handle.insert(info);
+        output_infos.push_back(info);
+        info->ptr = Tensor::make(host_tensornd, true);  // host_only=true
+        info->value_fetched = true;
+        outputs->push_back(info);
+    }
+
+    if (m_enable_evict & DROP) {
+        for (auto out : output_infos) {
+            out->path.op = op;
+            for (auto out_ : output_infos) {
+                out->path.outputs.push_back(m_st.at(out_));
+            }
+            for (auto inp : input_infos) {
+                out->path.inputs.push_back(m_st.at(inp));
+                inp->path.dep_outputs.push_back(m_st.at(out));
+            }
+        }
+    }
+}
+
+void ChannelImpl::dispatch_kernel(
+        std::shared_ptr<OpDef> op,
+        const SmallVector<TensorInfo*>& input_infos,
+        const SmallVector<LogicalTensorDesc>& input_descs,
+        SmallVector<Handle>* outputs) {
     auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
+
     ApplyOp cmd{std::move(op)};
     cmd.inputs = std::move(input_infos);
     cmd.outputs.reserve(output_descs.size());
-    SmallVector<void*> outputs;
-    // FIXME: remove this check when op check is correct
-    bool validated_bkp = true;
-    for (size_t i = 0;i < output_descs.size();i ++) {
-        auto&& desc = output_descs[i];
-        if (desc.layout.ndim == 0) {
-            validated_bkp = false;
-        }
+    outputs->reserve(output_descs.size());
+    for (auto&& desc : output_descs) {
         auto info = alloc();
         info->desc = desc;
         m_valid_handle.insert(info);
         cmd.outputs.push_back(info);
-        outputs.push_back(info);
+        outputs->push_back(info);
     }
     if (m_enable_evict & DROP) {
         for (auto out : cmd.outputs) {
@@ -130,20 +176,55 @@ SmallVector<void*> ChannelImpl::apply_op(
         }
     }
     m_buffer.enqueue(std::move(cmd));
-    if (!(validated && validated_bkp) && m_async_level == 1) {
+    if (!validated && m_async_level == 1) {
         sync();
     } else if (m_async_level == 0) {
         sync();
         // check device error
-        for (auto&& oup : outputs) {
+        for (auto&& oup : *outputs) {
             auto info = reinterpret_cast<TensorInfo*>(oup);
             info->ptr->comp_node().sync();
         }
     }
+}
+
+SmallVector<Handle> ChannelImpl::apply_op(
+        std::shared_ptr<OpDef> op,
+        const SmallVector<Handle>& inputs) {
+    for (auto i : inputs) {
+        mgb_assert(m_valid_handle.find(i) != m_valid_handle.end(),
+                "invalid handle: %p", i);
+    }
+    SmallVector<TensorInfo*> input_infos;
+    input_infos.reserve(inputs.size());
+    SmallVector<LogicalTensorDesc> input_descs;
+    input_descs.reserve(inputs.size());
+    {
+        MGB_LOCK_GUARD(m_mutex);
+        for (auto i : inputs) {
+            auto info = reinterpret_cast<TensorInfo*>(i);
+            mgb_assert(!info->invalid, "Invalid tensor, unable to apply_op!");
+            input_infos.push_back(info);
+            input_descs.push_back(info->desc);
+        }
+    }
+
+    SmallVector<Handle> outputs;
+    switch (OpDef::decide_dispatch_mode(*op, input_descs)) {
+        case DEFAULT_CPU: {
+            dispatch_default_cpu(op, input_infos, input_descs, &outputs);
+            break;
+        }
+        case KERNEL: {
+            dispatch_kernel(op, input_infos, input_descs, &outputs);
+            break;
+        }
+    }
+    mgb_assert(outputs.size() > 0, "Invalid dispatch mode!");
     return outputs;
 }
 
-HostTensorND ChannelImpl::get_value(void* handle) {
+HostTensorND ChannelImpl::get_value(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
@@ -163,7 +244,7 @@ HostTensorND ChannelImpl::get_value(void* handle) {
     return info->ptr->get_value();
 }
 
-TensorShape ChannelImpl::get_shape(void* handle) {
+TensorShape ChannelImpl::get_shape(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
@@ -184,7 +265,7 @@ TensorShape ChannelImpl::get_shape(void* handle) {
     return ret;
 }
 
-DType ChannelImpl::get_dtype(void* handle) {
+DType ChannelImpl::get_dtype(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
@@ -193,7 +274,7 @@ DType ChannelImpl::get_dtype(void* handle) {
     return ret;
 }
 
-CompNode ChannelImpl::get_device(void* handle) {
+CompNode ChannelImpl::get_device(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
@@ -202,7 +283,7 @@ CompNode ChannelImpl::get_device(void* handle) {
     return ret;
 }
 
-DeviceTensorND ChannelImpl::get_dev_tensor(void* handle) {
+DeviceTensorND ChannelImpl::get_dev_tensor(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
@@ -262,25 +343,15 @@ ChannelImpl::~ChannelImpl() {
 }
 
 void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice = true) {
-    if (notice) {
-        MGB_LOCK_GUARD(m_mutex);
-        dest->value_fetched = ptr->value_fetched();
-        // update tensor desc for static infer
-        // if (dest->desc.layout.ndim) {
-        //     mgb_assert(dest->desc.layout.eq_shape(ptr->layout()));
-        // }
-        dest->desc.layout = ptr->layout();
-        dest->desc.comp_node = ptr->comp_node();
-        dest->ptr = std::move(ptr);
-        if (m_waitee == dest) {
-            m_cv.notify_all();
-        }
-    } else {
-        dest->value_fetched = ptr->value_fetched();
-        // update tensor desc for static infer
-        dest->desc.layout = ptr->layout();
-        dest->desc.comp_node = ptr->comp_node();
-        dest->ptr = std::move(ptr);
+    auto lock = notice ? std::unique_lock<std::mutex>(m_mutex)
+                       : std::unique_lock<std::mutex>();
+    dest->value_fetched = ptr->value_fetched();
+    // update tensor desc for static infer
+    dest->desc.layout = ptr->layout();
+    dest->desc.comp_node = ptr->comp_node();
+    dest->ptr = std::move(ptr);
+    if (notice && m_waitee == dest) {
+        m_cv.notify_all();
     }
 }
 
@@ -295,7 +366,7 @@ void ChannelImpl::do_swap_out(TensorInfo* dest) {
     dest->evict_type = SWAP;
     dest->value_fetched = false;
     // TODO: swap in parallel
-    dest->h_value.copy_from(dest->ptr->dev_tensor()).sync();
+    dest->h_value = dest->ptr->get_value();
     dest->ptr.reset();
 }
 

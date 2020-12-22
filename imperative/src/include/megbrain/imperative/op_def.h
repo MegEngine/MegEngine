@@ -20,6 +20,11 @@ namespace imperative {
 class OpDef;
 struct OpTrait;
 
+enum DispatchMode {
+    DEFAULT_CPU = 0,
+    KERNEL = 1
+};
+
 struct BackwardGraphResult {
     std::shared_ptr<OpDef> backward;
     std::vector<bool> save_for_backward;
@@ -36,9 +41,30 @@ public:
     static std::shared_ptr<OpDef> make_from_op_node(
         cg::OperatorNodeBase* node);
 
+    /*!
+     * \brief Decide which dispatch method to be used according to the inputs'
+     * host value and size.
+     *
+     * \param def Specific :c:expr:`OpDef` to be executed.
+     * \param inputs Input tensor descriptions.
+     * \return Which DispatchMode to be used, such as `CUDA` or `DEFAULT_CPU`.
+     */
+    static DispatchMode decide_dispatch_mode(
+        const OpDef& def,
+        const SmallVector<LogicalTensorDesc>& inputs);
+
     static SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def,
         SmallVector<TensorPtr> inputs);
+
+    /*!
+     * \brief Call the corresponding dnn op to calculate results. Output
+     * tensors' device memory should be allocated outside.
+     */
+    static void apply_on_device_tensornd(
+        const OpDef& def,
+        const SmallVector<DeviceTensorND>& inputs,
+        SmallVector<DeviceTensorND>* outputs);
 
     static cg::VarNodeArray apply_on_var_node(
         const OpDef& def,

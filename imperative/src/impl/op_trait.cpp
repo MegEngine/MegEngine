@@ -9,12 +9,16 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include <exception>
 #include <sstream>
+#include <stdexcept>
 
+#include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/ops/opr_attr.h"
+#include "megbrain/imperative/proxy_graph_detail.h"
+#include "megbrain/tensor.h"
 
 #include "./op_trait.h"
-#include "megbrain/imperative/proxy_graph_detail.h"
 
 namespace mgb {
 namespace imperative {
@@ -62,6 +66,12 @@ void OpTrait::for_each_trait(thin_function<void(OpTrait&)> visitor){
     }
 }
 
+DispatchMode fallback_decide_dispatch_mode(
+    const OpDef& def,
+    const SmallVector<LogicalTensorDesc>& inputs) {
+    return KERNEL;
+}
+
 OpTraitRegistry& OpTraitRegistry::fallback() {
     if (trait->apply_on_var_node) {
         // fallback to proxy graph impl
@@ -77,6 +87,9 @@ OpTraitRegistry& OpTraitRegistry::fallback() {
             trait->make_backward_graph =
                     proxy_graph_detail::make_backward_graph;
         }
+    }
+    if (!trait->decide_dispatch_mode) {
+        trait->decide_dispatch_mode = fallback_decide_dispatch_mode;
     }
     return *this;
 }

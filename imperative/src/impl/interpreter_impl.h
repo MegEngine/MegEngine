@@ -198,6 +198,17 @@ private:
     void do_drop(TensorInfo* dest);
     void regenerate(TensorInfo* dest, bool must_drop);
 
+    void dispatch_default_cpu(
+        std::shared_ptr<OpDef> op,
+        const SmallVector<TensorInfo*>& input_infos,
+        const SmallVector<LogicalTensorDesc>& input_descs,
+        SmallVector<Handle>* outputs);
+    void dispatch_kernel(
+        std::shared_ptr<OpDef> op,
+        const SmallVector<TensorInfo*>& input_infos,
+        const SmallVector<LogicalTensorDesc>& input_descs,
+        SmallVector<Handle>* outputs);
+
     std::mutex m_mutex;
     std::condition_variable m_cv;
     MemPool<TensorInfo> m_pool;

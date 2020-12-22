@@ -15,8 +15,8 @@
 #include "../op_trait.h"
 
 namespace mgb::imperative {
-namespace {
 
+namespace get_var_shape {
 cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
@@ -24,17 +24,38 @@ cg::OperatorNodeBase* apply_on_var_node(
     return opr::GetVarShape::make(inputs, op_def.param()).node()->owner_opr();
 }
 
-SmallVector<TensorPtr> apply_on_physical_tensor(
+DispatchMode decide_dispatch_mode(
         const OpDef& def,
-        const SmallVector<TensorPtr>& inputs) {
+        const SmallVector<LogicalTensorDesc>& inputs) {
+    bool host_computable = true;
+    for (auto&& inp : inputs) {
+        // FIXME(czh): remove value chech after proxy graph's
+        // apply_on_device_tensornd is supported and output Tensor
+        // is made before add_task.
+        // then if layout is valid, ptr->layout must be ready
+        if (inp.value.empty() || inp.value.layout().ndim == 0) {
+            host_computable = false;
+            break;
+        }
+    }
+    return host_computable ? DEFAULT_CPU : KERNEL;
+}
+
+void apply_on_device_tensornd(
+        const OpDef& def,
+        const SmallVector<DeviceTensorND>& inputs,
+        SmallVector<DeviceTensorND>* outputs) {
     auto&& op_def = def.cast_final_safe<GetVarShape>();
     mgb_assert(inputs.size() == 1, "GetVarShape take 1 input, got %lu", inputs.size());
     auto&& inp = inputs[0];
-    auto&& shp = inp->layout();
+    auto&& shp = inp.layout();
     mgb_assert(shp.ndim != 0, "input shape invalid");
+    mgb_assert((*outputs)[0].comp_node() == CompNode::default_cpu(),
+        "GetVarShape's apply_on_device_tensornd should receive default_cpu outputs.");
+
     HostTensorND hv;
-    if (op_def.axis == opr::GetVarShape::Param::INVALID_AXIS){
-        hv = HostTensorND(inp->comp_node(), {shp.ndim}, dtype::Int32());
+    if (op_def.axis == opr::GetVarShape::Param::INVALID_AXIS) {
+        hv = HostTensorND(CompNode::default_cpu(), {shp.ndim}, dtype::Int32());
         auto* ptr = hv.ptr<dt_int32>();
         for (size_t i = 0; i < shp.ndim; ++i) {
             ptr[i] = shp.shape[i];
@@ -45,11 +66,29 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             axis += shp.ndim;
         }
         mgb_assert(axis >= 0 && axis < (int32_t)shp.ndim);
-        hv = HostTensorND(inp->comp_node(), {1}, dtype::Int32());
+        hv = HostTensorND(CompNode::default_cpu(), {1}, dtype::Int32());
         auto* ptr = hv.ptr<dt_int32>();
         ptr[0] = shp.shape[axis];
     }
-    return {Tensor::make(std::move(hv))};
+    (*outputs)[0] = DeviceTensorND::make_proxy(hv);
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def,
+        const SmallVector<TensorPtr>& inputs) {
+    SmallVector<DeviceTensorND> input_tensornds;
+    input_tensornds.reserve(inputs.size());
+    for (auto&& inp : inputs) {
+        input_tensornds.push_back(inp->dev_tensor());
+    }
+    SmallVector<DeviceTensorND> output_tensornds = {{CompNode::default_cpu(), dtype::Int32()}};
+
+    apply_on_device_tensornd(def, input_tensornds, &output_tensornds);
+
+    // restore to input comp_node
+    HostTensorND host_tensornd = HostTensorND::make_proxy(output_tensornds[0])
+        .proxy_to_comp_node(inputs[0]->comp_node());
+    return {Tensor::make(std::move(host_tensornd))};
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
@@ -62,7 +101,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         return {{{TensorLayout(dtype::Int32()), desc.comp_node}}, false};
     }
     DeviceTensorND value;
-    if (op_def.axis == opr::GetVarShape::Param::INVALID_AXIS){
+    if (op_def.axis == opr::GetVarShape::Param::INVALID_AXIS) {
         value = DeviceTensorND(CompNode::default_cpu(), {desc.layout.ndim}, dtype::Int32());
         auto* ptr = value.ptr<dt_int32>();
         for (size_t i = 0; i < desc.layout.ndim; ++i) {
@@ -88,11 +127,15 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
 
 OP_TRAIT_REG(GetVarShape, GetVarShape, opr::GetVarShape)
     .make_from_op_node(make_from_op_node)
+    .decide_dispatch_mode(decide_dispatch_mode)
     .infer_output_attrs_fallible(infer_output_attrs_fallible)
     .apply_on_var_node(apply_on_var_node)
+    .apply_on_device_tensornd(apply_on_device_tensornd)
     .apply_on_physical_tensor(apply_on_physical_tensor)
     .fallback();
+} // get_var_shape
 
+namespace param_pack {
 TensorShapeArray get_shapes(const std::vector<std::vector<size_t>>& shapes) {
     TensorShapeArray ret;
     for (auto&& i:shapes) {
@@ -156,6 +199,6 @@ cg::OperatorNodeBase* param_pack_concat_apply_on_var_node(
 OP_TRAIT_REG(ParamPackConcat, ParamPackConcat, mgb::opr::ParamPackConcat)
         .apply_on_var_node(param_pack_concat_apply_on_var_node)
         .fallback();
-} // namespace
+} // param_pack
 
 } // namespace mgb::imperative
