@@ -149,22 +149,17 @@ void add_cuda_lowering_pass(mlir::PassManager& manager,
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
         opt_pm.addPass(mlir::createCanonicalizerPass());
         opt_pm.addPass(mlir::createCSEPass());
-    }
-    {
-        mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
-        opt_pm.addPass(create_lower_to_gpu_pass());
-        opt_pm.addPass(mlir::createLowerToCFGPass());
-        opt_pm.addPass(mlir::createCanonicalizerPass());
-        opt_pm.addPass(mlir::createCSEPass());
         opt_pm.addPass(mlir::createLoopFusionPass());
         opt_pm.addPass(mlir::createMemRefDataFlowOptPass());
     }
-    manager.addPass(create_gpu_kernel_outlining_pass());
+    manager.addPass(create_lower_to_gpu_pass());
     {
-        auto& kernel_pm = manager.nest<gpu::GPUModuleOp>();
-        kernel_pm.addPass(mlir::createLowerGpuOpsToNVVMOpsPass());
-
-        kernel_pm.addPass(mlir::createConvertGPUKernelToBlobPass(
+        mlir::OpPassManager& opt_pm = manager.nest<gpu::GPUModuleOp>();
+        opt_pm.addPass(mlir::createLowerToCFGPass());
+        opt_pm.addPass(mlir::createCanonicalizerPass());
+        opt_pm.addPass(mlir::createCSEPass());
+        opt_pm.addPass(mlir::createLowerGpuOpsToNVVMOpsPass());
+        opt_pm.addPass(mlir::createConvertGPUKernelToBlobPass(
                 translate_module_to_nvvm_ir_and_link_device,
                 compile_ptx_to_cubin, "nvptx64-nvidia-cuda", target_chip,
                 "+ptx60", MLIRCUDAExecutable::sm_blob_annotation));

@@ -187,7 +187,8 @@ struct ReturnOpLowering : public ConversionPattern {
 
     LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value>,
                                   Rewriter& rewriter) const final {
-        rewriter.replaceOpWithNewOp<mlir::ReturnOp>(op);
+        rewriter.setInsertionPointToEnd(op->getBlock());
+        rewriter.replaceOpWithNewOp<gpu::ReturnOp>(op);
         return success();
     }
 };
@@ -214,10 +215,10 @@ struct TypeCvtLowering : public ConversionPattern, public GpuLoweringHelper {
 /* ===================== MgbToGpuLoweringPass ===================== */
 
 class MgbToGpuLoweringPass
-        : public PassWrapper<MgbToGpuLoweringPass, FunctionPass> {
+        : public PassWrapper<MgbToGpuLoweringPass, OperationPass<ModuleOp>> {
 public:
     void getDependentDialects(DialectRegistry& registry) const override;
-    void runOnFunction() final;
+    void runOnOperation() final;
 
 private:
     Value get_idx(OpBuilder& builder, Location loc);
@@ -229,16 +230,19 @@ void MgbToGpuLoweringPass::getDependentDialects(
     registry.insert<gpu::GPUDialect, scf::SCFDialect, StandardOpsDialect>();
 }
 
-void MgbToGpuLoweringPass::runOnFunction() {
-    FuncOp func_op = getFunction();
-    Location loc = func_op.getLoc();
-    OpBuilder builder(func_op.getBody());
+void MgbToGpuLoweringPass::runOnOperation() {
+    ModuleOp module_op = getOperation();
 
-    // create gpu::LaunchOp
-    Value one = builder.create<ConstantIndexOp>(loc, 1);
-    gpu::LaunchOp launch_op =
-            builder.create<gpu::LaunchOp>(loc, one, one, one, one, one, one);
-    builder.setInsertionPointToEnd(&(launch_op.body().front()));
+    // find FuncOp
+    FuncOp func_op;
+    module_op.walk([&](FuncOp fop) {
+        func_op = fop;
+        return WalkResult::interrupt();
+    });
+    mgb_assert(func_op, "FuncOp not found in the body of ModuleOp");
+
+    Location loc = func_op.getLoc();
+    OpBuilder builder(&(func_op.getBody().front().back()));
 
     // create scf::ForOp
     auto it = func_op.getArguments().end();
@@ -247,10 +251,8 @@ void MgbToGpuLoweringPass::runOnFunction() {
     Value idx = get_idx(builder, loc);
     auto for_op = builder.create<scf::ForOp>(loc, idx, nr_elements, nr_threads);
 
-    builder.create<gpu::TerminatorOp>(loc);
-
     Layout dest = get_dest_layout(func_op);
-    Value for_idx = for_op.getLoopBody().getArgument(0);
+    Value for_idx = for_op.getInductionVar();
 
     OwningRewritePatternList patterns;
     patterns.insert<AssignOpLowering, ConstantScalarOpLowering,
@@ -265,6 +267,23 @@ void MgbToGpuLoweringPass::runOnFunction() {
     if (failed(applyPartialConversion(func_op, target, std::move(patterns)))) {
         signalPassFailure();
     }
+
+    // create GPUModuleOp
+    std::string kernel_name = func_op.getName().str() + "_kernel";
+    builder.setInsertionPoint(func_op);
+    gpu::GPUModuleOp gpu_module_op =
+            builder.create<gpu::GPUModuleOp>(loc, kernel_name);
+
+    // create GPUFuncOp
+    builder.setInsertionPointToStart(&gpu_module_op.body().front());
+    gpu::GPUFuncOp gpu_func_op =
+            builder.create<gpu::GPUFuncOp>(loc, kernel_name, func_op.getType());
+    gpu_func_op.setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
+                        builder.getUnitAttr());
+
+    // move func body
+    gpu_func_op.body().takeBody(func_op.getBody());
+    SymbolTable(module_op).erase(func_op);
 }
 
 //! block_dim * block_idx + thread_idx
