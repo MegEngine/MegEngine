@@ -53,9 +53,6 @@ bool is_tracing = false;
 bool is_symbolic = false;
 bool is_compiled = false;
 
-int64_t call_level = 0;
-
-
 #define SET_UNSET_PROP(mode)    \
     void set_##mode() {         \
         is_##mode = true;       \
@@ -321,17 +318,22 @@ PyObject* TensorWrapper::numpy() {
         auto&& type = mgr.get_infer_type(m_tensor->m_var);
         using InferType = cg::static_infer::InferType;
         if (!(type.value & (InferType::CONST | InferType::RT_STATIC))) {
+            PyErr_SetString(PyExc_ValueError, "tensor invalid");
             return nullptr;
         }
         auto* val = mgr.infer_value_fallible(m_tensor->m_var);
         if (!val) {
+            PyErr_SetString(PyExc_ValueError, "tensor invalid");
             return nullptr;
         }
         return py::cast(*val).attr("numpy")().release().ptr();
     }
     auto&& hv = interpreter_for_py->get_value(m_tensor->m_handle.get());
     auto arr = py::reinterpret_steal<py::array>(npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
-    if (!arr) return nullptr;
+    if (!arr) {
+        PyErr_SetString(PyExc_ValueError, "tensor invalid");
+        return nullptr;
+    }
     if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
         mgb_assert(PyArray_Check(arr.ptr()));
         return PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(arr.ptr()));
@@ -343,7 +345,7 @@ PyObject* TensorWrapper::varnode() {
     if (m_tensor->m_var) {
         return py::cast(m_tensor->m_var).release().ptr();
     }
-    return nullptr;
+    return py::none().release().ptr();
 }
 
 void TensorWrapper::reset(PyObject* tensor) {
@@ -364,6 +366,7 @@ PyObject* TensorWrapper::detach() {
     } else {
         new_tensor = std::make_shared<Tensor>(m_tensor->m_var);
     }
+    new_tensor->m_trace_info = m_tensor->m_trace_info;
     auto ret = TensorWrapper::make(pytype, std::move(new_tensor));
     return ret.release().ptr();
 
@@ -628,6 +631,10 @@ WRAP_FUNC_PY35(get_device);
     { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
 #endif
 
+py::object make_empty_tensorwrapper() {
+    return TensorWrapper::make(std::move(std::make_shared<Tensor>()));
+}
+
 void init_tensor(py::module m) {
     interpreter_for_py = interpreter::Interpreter::inst().create_channel();
 
@@ -699,7 +706,6 @@ void init_tensor(py::module m) {
     m.def("set_cpp_apply_backward_varnode", &set_cpp_apply_backward_varnode);
 
     m.attr("skip_tracing") = &skip_tracing;
-    m.attr("call_level") = &call_level;
 
     py::class_<SharedHandle>(m, "SharedHandle")
         .def(py::init<const SharedHandle&>());
@@ -711,6 +717,7 @@ void init_tensor(py::module m) {
     m.def("set_compiled", &set_compiled);
     m.def("unset_compiled", &unset_compiled);
 
+    m.def("__make_empty_tensor", &make_empty_tensorwrapper);
 }
 
 #undef MGE_PY_INTERFACE

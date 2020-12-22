@@ -74,6 +74,7 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
 
     using Handle = interpreter::Interpreter::Handle;
 
+    inline Tensor() : m_handle(nullptr), m_var(nullptr) {}
     inline explicit Tensor(Handle handle) : m_handle(handle), m_var(nullptr) {}
     inline explicit Tensor(SharedHandle handle) : m_handle(std::move(handle)), m_var(nullptr) {}
     inline explicit Tensor(cg::VarNode *var) : m_handle(nullptr), m_var(var) {}
@@ -188,7 +189,6 @@ void init_tensor(pybind11::module);
 extern bool is_tracing;
 extern bool is_symbolic;
 extern bool is_compiled;
-extern int64_t call_level;
 
 extern pybind11::object cpp_apply_with_tracing, cpp_apply_compiled_mode;
 extern pybind11::object cpp_apply_backward_varnode;
