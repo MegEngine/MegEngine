@@ -15,6 +15,7 @@
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/fake_quant.h"
+#include "megbrain/opr/dnn/tqt.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/roi_align.h"
@@ -625,6 +626,18 @@ OP_TRAIT_REG(FakeQuant, FakeQuant)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
 }} // fake_quant
+namespace { namespace tqt {
+auto apply_on_var_node(
+        const OpDef& def,
+        const VarNodeArray& inputs) {
+    auto&& op = static_cast<const TQT&>(def);
+    mgb_assert(inputs.size() == 2);
+    return opr::TQT::make(inputs[0], inputs[1], op.param());
+}
+OP_TRAIT_REG(TQT, TQT)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+}}  // tqt
 namespace { namespace elemwise_multi_type {
 auto apply_on_var_node(
         const OpDef& def,
@@ -636,7 +649,7 @@ auto apply_on_var_node(
 OP_TRAIT_REG(ElemwiseMultiType, ElemwiseMultiType)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
-}} // fake_quant
+}} // elemwise_multi_type
 
 namespace { namespace svd {
 auto apply_on_var_node(

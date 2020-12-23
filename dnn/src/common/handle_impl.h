@@ -202,7 +202,9 @@ private:
     cb(AdaptivePoolingBackward) \
     cb(DctChannelSelectForward) \
     cb(FakeQuantForward) \
-    cb(FakeQuantBackward)
+    cb(FakeQuantBackward) \
+    cb(TQTForward) \
+    cb(TQTBackward)
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;

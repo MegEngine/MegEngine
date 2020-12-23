@@ -59,6 +59,16 @@ struct DeduceLayoutProxy<Opr, 5, true> {
 };
 
 template <typename Opr>
+struct DeduceLayoutProxy<Opr, 5, false> {
+    static void deduce_layout(Opr*, TensorLayoutArray&) {}
+};
+
+template <typename Opr>
+struct DeduceLayoutProxy<Opr, 6, false> {
+    static void deduce_layout(Opr*, TensorLayoutArray&) {}
+};
+
+template <typename Opr>
 struct DeduceLayoutProxy<Opr, 7, false> {
     static void deduce_layout(Opr*, TensorLayoutArray&) {}
 };

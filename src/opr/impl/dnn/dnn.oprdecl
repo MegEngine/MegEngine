@@ -319,5 +319,8 @@ decl_opr('FakeQuant',
          inputs=[Doc('src','input tenosr'),Doc('scale','scale tensor'),Doc('zero_point','zero point tensor')],
          params='FakeQuant')
 
+decl_opr('TQT',
+         inputs=[Doc('src','input tensor'),Doc('scale','scale tensor')],
+         params='TQT')
 
 # vim: ft=python

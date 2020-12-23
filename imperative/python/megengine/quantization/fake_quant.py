@@ -15,7 +15,7 @@ from ..core.autodiff.grad import Function
 from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
 from ..module import Module
 from ..tensor import Parameter, Tensor
-from .utils import QuantMode, fake_quant_tensor, get_qparam_dict
+from .utils import QuantMode, fake_quant_tensor, get_qparam_dict, tqt_forward
 
 
 class _FakeQuantize(Module):
@@ -65,51 +65,6 @@ class _FakeQuantize(Module):
             return self.normal_foward(inp, q_dict=q_dict)
 
 
-class TQT_Function(Function):
-    def __init__(self, lowerbound, upperbound):
-        super().__init__()
-        self.lowerbound = lowerbound
-        self.upperbound = upperbound
-        self.saved_tensors = ()
-
-    def save_for_backward(self, *tensors: Iterable[Tensor]):
-        """
-        Saves tensors needed for gradient computation. This method should be called only
-        once in :meth:`~.function.Function.forward`, additional calls will replace values saved previously.
-
-        The saved tensors can be accessed through the ``saved_tensors`` attribute.
-        """
-        self.saved_tensors = tensors
-
-    def forward(self, inp, scale):
-        t = 2 ** scale
-        # t = F.maximum(t, 1e-4)
-        inp_scaled = inp / t
-        inp_clipped = F.maximum(F.minimum(inp_scaled, self.upperbound), self.lowerbound)
-        inp_rounded = F.round(inp_clipped)
-        inp_flq = inp_rounded * t
-        self.save_for_backward(inp_scaled, inp_rounded, t)
-        return inp_flq
-
-    def backward(self, grad_inp_flq):
-        (inp_scaled, inp_rounded, t) = self.saved_tensors
-        mask_clip = F.logical_and(
-            inp_scaled < -0.5 + self.lowerbound, inp_scaled > self.upperbound + 0.5
-        )  # mask for accumulating the gradients of |data_scaled|>L
-        mask_quant = F.logical_not(mask_clip)
-        grad_quant = (
-            grad_inp_flq * mask_quant * (inp_rounded - inp_scaled)
-        )  # gradient within |data_scaled|<=L
-        grad_clip = (
-            grad_inp_flq * mask_clip * inp_rounded
-        )  # gradient with   | data_scaled|>L
-        grad_s = grad_clip.sum() + grad_quant.sum()
-        # dL/ds = dL/dt * t * ln(2)
-        grad_s = grad_s * t * math.log(2)
-        grad_inp = grad_inp_flq * mask_quant
-        return grad_inp, grad_s
-
-
 class TQT(_FakeQuantize):
     r"""
     TQT: https://arxiv.org/abs/1903.08066 Trained Quantization Thresholds
@@ -130,11 +85,11 @@ class TQT(_FakeQuantize):
         ), "only symmetric quantization is supported by TQT"
         if "scale" not in q_dict or q_dict["scale"] is None:
             raise AssertionError("Can not get an initialized scale")
-        self.scale = F.log(q_dict["scale"]) / math.log(2)
+        self.scale = Tensor(F.log(q_dict["scale"]) / math.log(2))
 
     def fake_quant_forward(self, inp, q_dict=None):
         # when enable, TQT will do fakequant forward, finetune the scale
-        return TQT_Function(self.qmin, self.qmax)(inp, self.scale)
+        return tqt_forward(self.qmin, self.qmax, inp, self.scale)
 
     def get_qparams(self):
         q_dict = get_qparam_dict(QuantMode.SYMMERTIC)

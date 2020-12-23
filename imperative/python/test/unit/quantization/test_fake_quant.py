@@ -13,12 +13,11 @@ import megengine as mge
 from megengine import tensor
 from megengine.core.autodiff.grad import Function, Grad
 from megengine.core.tensor.utils import make_shape_tuple
-from megengine.quantization.fake_quant import TQT_Function
 from megengine.quantization.internal_fake_quant import *
-from megengine.quantization.utils import QuantMode, fake_quant_tensor
+from megengine.quantization.utils import QuantMode, fake_quant_tensor, tqt_forward
 
 
-class numpy_TQT_Function:
+class TQT_numpy:
     def __init__(self, lowerbound, upperbound):
         super().__init__()
         self.lowerbound = lowerbound
@@ -57,27 +56,32 @@ class numpy_TQT_Function:
         return grad_inp, grad_s
 
 
-def test_TQT():
-    f = TQT_Function(-127, 127)
-    nf = numpy_TQT_Function(-127, 127)
+def test_tqt():
 
-    def check_inp(a, b, c, a_np, b_np, c_np):
-        np.testing.assert_allclose(
-            f.forward(a, b).numpy(),
-            nf.forward(a_np, b_np).astype("float32"),
-            rtol=1e-6,
-            atol=1e-6,
-        )
-        c1, c2 = f.backward(c)
-        c1_np, c2_np = nf.backward(c_np)
-        np.testing.assert_allclose(c1.numpy(), c1_np.astype("float32"), rtol=1e-6)
-        np.testing.assert_allclose(c2.numpy(), c2_np.astype("float32"), rtol=5e-5)
+    g = []
 
-    a_np = np.random.random((4, 3)).astype("float32")
-    b_np = np.random.random((1)).astype("float32")
-    a = tensor(a_np)
-    b = tensor(b_np)
-    check_inp(a, b, b, a_np, b_np, b_np)
+    def cb(grad):
+        g.append(grad)
+
+    x = np.random.normal(size=(1, 2, 3, 4))
+    s = np.random.rand(1) + 1
+    g_y = np.ones(shape=(1, 2, 3, 4), dtype="float32")
+
+    n = TQT_numpy(-127, 127)
+    y_np = n.forward(x, s)
+    g_x_np, g_s_np = n.backward(g_y)
+
+    x = mge.tensor(x, dtype="float32")
+    s = mge.tensor(s, dtype="float32")
+    g_y = mge.tensor(g_y, dtype="float32")
+    grad = Grad().wrt(x, s, callback=cb)
+    y = tqt_forward(-127, 127, x, s)
+    grad(y, g_y)
+    g_x, g_s = g
+
+    np.testing.assert_allclose(y.numpy(), y_np, atol=1e-6)
+    np.testing.assert_allclose(g_x.numpy(), g_x_np, atol=1e-6)
+    np.testing.assert_allclose(g_s.numpy(), g_s_np, atol=1e-6)
 
 
 

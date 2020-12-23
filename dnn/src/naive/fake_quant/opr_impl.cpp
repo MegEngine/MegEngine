@@ -12,7 +12,6 @@
 
 #include "src/naive/fake_quant/opr_impl.h"
 #include <cmath>
-#include <iostream>
 #include "megdnn/tensor_iter.h"
 #include "src/common/elemwise_helper.cuh"
 #include "src/common/utils.h"

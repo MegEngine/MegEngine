@@ -224,8 +224,8 @@ public:
                       const PreprocessedFilter* preprocessed_filter,
                       _megdnn_workspace workspace) = 0;
     /**
-     * \brief execute weight preprocessing, read weights form filter and write to
-     * preprocessed_filter after preprocessed.
+     * \brief execute weight preprocessing, read weights form filter and write
+     * to preprocessed_filter after preprocessed.
      *
      * \praram[in] workspace the needed tmp workspace when exec_preprocess
      */
@@ -1682,6 +1682,55 @@ protected:
     void check_exec(const TensorLayout& diff, const TensorLayout& input,
                     const TensorLayout& scale, const TensorLayout& zero_point,
                     const TensorLayout& grad, size_t workspace_in_bytes);
+};
+
+class TQTBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(TQTBase, OperatorBase);
+    DEF_OPR_PARAM(TQT);
+
+protected:
+    void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
+    void check_layout_fwd(const TensorLayout& input, const TensorLayout& scale,
+                          const TensorLayout& output);
+};
+
+class TQTForward : public TQTBase {
+    DEF_OPR_IMPL(TQTForward, TQTBase, 2, 1);
+
+public:
+    virtual void exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
+                      _megdnn_tensor_out output,
+                      _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& input, const TensorLayout& scale,
+                       TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& input,
+                                          const TensorLayout& scale,
+                                          const TensorLayout& output) = 0;
+
+protected:
+    void check_exec(const TensorLayout& input, const TensorLayout& scale,
+                    const TensorLayout& output, size_t workspace_in_bytes);
+};
+using TQT = TQTForward;
+
+class TQTBackward : public TQTBase {
+    DEF_OPR_IMPL(TQTBackward, TQTBase, 3, 2);
+
+public:
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
+                      _megdnn_tensor_in scale, _megdnn_tensor_out grad_x,
+                      _megdnn_tensor_out grad_s,
+                      _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& input,
+                                          const TensorLayout& scale,
+                                          const TensorLayout& grad_x,
+                                          const TensorLayout& grad_s) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& input,
+                    const TensorLayout& scale, const TensorLayout& grad_x,
+                    const TensorLayout& grad_s, size_t workspace_in_bytes);
 };
 
 }  // namespace megdnn

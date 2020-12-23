@@ -33,6 +33,12 @@ class Round(Function):
         return output_grads
 
 
+def tqt_forward(qmin, qmax, inp, scale):
+    op = builtin.TQT(qmin=qmin, qmax=qmax)
+    (output,) = apply(op, inp, scale)
+    return output
+
+
 def register_method_to_class(cls):
     def decorator(func):
         @wraps(func)

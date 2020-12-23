@@ -19,6 +19,7 @@
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/fake_quant.h"
+#include "megbrain/opr/dnn/tqt.h"
 
 #include "megbrain/serialization/sereg.h"
 
@@ -238,6 +239,19 @@ namespace serialization {
         }
     };
 
+    template <>
+    struct OprMaker<opr::TQTBackward, 3> {
+        using Param = opr::TQTBackward::Param;
+        static cg::OperatorNodeBase* make(const Param& param,
+                const cg::VarNodeArray& i, ComputingGraph& graph,
+                const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            return opr::TQTBackward::make(i[0], i[1], i[2], param, config)[0]
+                        .node()
+                        ->owner_opr();
+        }
+    };
+
     template<class MegDNNConv = megdnn::LocalShare>
     struct MakeLocalShareCaller2 {
         template<typename Opr>
@@ -426,6 +440,8 @@ namespace opr {
     MGB_SEREG_OPR(BatchConvBiasForward, 0);
     MGB_SEREG_OPR(FakeQuant, 3);
     MGB_SEREG_OPR(FakeQuantBackward, 4);
+    MGB_SEREG_OPR(TQT, 2);
+    MGB_SEREG_OPR(TQTBackward, 3);
 } // namespace opr
 
 

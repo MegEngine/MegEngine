@@ -163,6 +163,11 @@ namespace {
 #define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _o(0), _o(1)
 #include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
 
+#define _NR_INPUTS 3
+#define _NR_OUTPUTS 3
+#define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _o(0), _o(1), _o(2)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
 #define _NR_INPUTS 4
 #define _NR_OUTPUTS 1
 #define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _o(0)

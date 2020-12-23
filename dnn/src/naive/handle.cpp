@@ -80,6 +80,7 @@
 #include "src/naive/warp_perspective/opr_impl.h"
 #include "src/naive/remap/opr_impl.h"
 #include "src/naive/fake_quant/opr_impl.h"
+#include "src/naive/tqt/opr_impl.h"
 
 static size_t g_image2d_pitch_alignment = 1;
 

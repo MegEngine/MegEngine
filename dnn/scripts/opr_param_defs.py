@@ -948,5 +948,7 @@ when the ``I`` suffix is present.
  add_fields('int32','qmin','-2147483648').
  add_fields('int32','qmax','2147483647')
  )
-
-
+(pdef('TQT').
+ add_fields('int32', 'qmin', '-2147483648').
+ add_fields('int32', 'qmax', '2147483647')
+ )
