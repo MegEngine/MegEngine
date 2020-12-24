@@ -840,4 +840,57 @@ SymbolVar RequireInputDynamicStorage::make(const SymbolVar input,
             input.node(), config);
 }
 
+/* ===================== ShapeHint ===================== */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ShapeHint);
+
+void ShapeHint::scn_do_execute() {
+    mgb_assert(0);
+}
+
+void ShapeHint::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto infer_shp = [this](TensorShape& dest, const InpVal&) -> bool {
+        const TensorShape* inferred = nullptr;
+        if (cg::is_static_var_shape(input(0))) {
+            inferred = owner_graph()->static_infer_manager().infer_shape_fallible(input(0));
+        }
+        if (inferred) {
+            dest = *inferred;
+            if (!dest.eq_shape(m_shape)) {
+                mgb_log_warn(
+                    "given shape hint on var %s is different from inferred shape, "
+                    "hint %s vs inferred %s", cg::dump_var_info({input(0)}).c_str(),
+                    m_shape.to_string().c_str(), dest.to_string().c_str());
+            }
+        } else {
+            dest = m_shape;
+        }
+        return dest.ndim;
+    };
+    owner_graph()->static_infer_manager().register_shape_infer(
+            output(0), {m_is_const ? SourceType::CONSTANT : SourceType::MUTABLE, {}, infer_shp});
+}
+
+ShapeHint::ShapeHint(VarNode* inp, TensorShape shape,
+                     bool is_const, const OperatorNodeConfig& config)
+    : Super{inp->owner_graph(), config, "shape_hint", {inp}},
+        m_shape(shape), m_is_const(is_const) {
+    add_input({inp});
+    add_output(None);
+}
+
+SymbolVar ShapeHint::make(SymbolVar inp, TensorShape shape,
+                          bool is_const, const OperatorNodeConfig& config) {
+    return inp.insert_single_output_opr<ShapeHint>(inp.node(), shape, is_const, config);
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(ShapeHint) {
+    // since the shape of output(0) could be inferred, no need to
+    // give hint on out_grad(0)
+    return out_grad.at(0);
+}
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

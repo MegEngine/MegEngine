@@ -141,6 +141,12 @@ namespace gopt {
                 ThinHashMap<VarNode*, VarNode*>& replace_map, int priority);
     };
 
+    class RemoveShapeHintPass final : public Pass {
+    public:
+        const char* name() const override;
+        void apply(OptState& opt) const override;
+    };
+
 } // namespace gopt
 } // namespace mgb
 

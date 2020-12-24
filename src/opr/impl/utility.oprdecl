@@ -90,4 +90,15 @@ decl_opr(
     params='Empty'
 )
 
+decl_raw_opr(
+    'shape_hint',
+    desc='a special op providing shape hint only used in graph compilation',
+    inputs=[Doc('input', 'input var the shape hint was on'),
+            Doc('shape', 'given hint shape', 'list of int'),
+            Doc('is_const', 'whether treat given shape as constant', 'bool', 'False')],
+    body=[
+        'output = _mgb._Opr.shape_hint(input, shape, is_const, config)'
+    ]
+)
+
 # vim: ft=python

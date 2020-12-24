@@ -1055,4 +1055,30 @@ void PackAllReduceReplacePass::insert_packed_oprs(
 
 #endif  // MGB_ENABLE_OPR_MM
 
+/* ======================= RemoveShapeHintPass ====================== */
+
+const char* RemoveShapeHintPass::name() const {
+    return "remove_shape_hint";
+}
+
+void RemoveShapeHintPass::apply(OptState& opt) const {
+    MIDOUT_B("RemoveShapeHintPass::apply")
+    opt.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_DTYPE);
+    auto rewriter = opt.graph().make_rewriter();
+
+    auto on_opr = [&](OperatorNodeBase* opr) {
+        if (auto sh = try_cast_as_op<opr::ShapeHint>(opr)) {
+            auto inp = rewriter.get_var(sh->input(0));
+            rewriter.replace_var(sh->output(0), inp,
+                mgb_cstr_log("remove shape hint"));
+            return;
+        }
+        rewriter.auto_replace_outputs(opr);
+    };
+
+    opt.graph().iter(on_opr);
+    rewriter.apply_inplace();
+    MIDOUT_E
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

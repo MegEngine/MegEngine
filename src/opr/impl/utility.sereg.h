@@ -153,6 +153,17 @@ namespace opr {
 #endif
 
     MGB_SEREG_OPR(PersistentOutputStorage, 1);
+
+    cg::OperatorNodeBase* opr_shallow_copy_shape_hint(
+            const serialization::OprShallowCopyContext &ctx,
+            const cg::OperatorNodeBase &opr_, const VarNodeArray &inputs,
+            const OperatorNodeConfig &config) {
+        auto &&opr = opr_.cast_final_safe<ShapeHint>();
+        mgb_assert(inputs.size() == 1);
+        return ShapeHint::make(inputs[0], opr.shape(), opr.is_const(), config)
+                .node()->owner_opr();
+    }
+    MGB_REG_OPR_SHALLOW_COPY(ShapeHint, opr_shallow_copy_shape_hint);
 } // namespace opr
 } // namespace mgb
 

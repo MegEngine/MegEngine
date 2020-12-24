@@ -149,6 +149,7 @@ SymbolVar current_grad_target(ComputingGraph &graph);
 
 struct SpecialOprStat {
     bool has_virtual_grad = false;
+    bool has_shape_hint = false;
 };
 
 /*!

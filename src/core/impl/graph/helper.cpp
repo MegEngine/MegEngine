@@ -564,6 +564,9 @@ void ExtraDependencyMerger::on_opr(OperatorNodeBase* opr) {
             sopr_stat->has_virtual_grad = true;
         }
 #endif
+        if (sopr_stat && opr->same_type<opr::ShapeHint>()) {
+            sopr_stat->has_shape_hint = true;
+        }
     }
 }
 

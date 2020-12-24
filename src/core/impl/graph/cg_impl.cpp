@@ -514,6 +514,16 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     optimizer.add_passes_for_optimize_options(options().graph_opt, true);
     optimizer.apply_inplace(dest_vars);
 
+    if (sopr_stat.has_shape_hint) {
+        // FIXME(zhangxuanrun): strictly speaking, it could and has to remove
+        // ShapeHints even they were occured in subgraph
+        mgb_assert(!m_parent_graph, "can not use ShapeHint in subgraph");
+        // always need remove shape hint
+        gopt::GraphOptimizer opt;
+        opt.add_pass<gopt::RemoveShapeHintPass>();
+        opt.apply_inplace(dest_vars);
+    }
+
     const OprNodeArray* opr_seq = nullptr;
     CompSeqExtraInfo extra_info;
     cmpnt.seq_comp_node_opt.optimize_comp_nodes(dest_vars);

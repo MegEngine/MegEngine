@@ -12,6 +12,7 @@
 #include "megbrain/opr/utility.h"
 #include "megbrain/gopt/framework.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/test/helper.h"
 
 using namespace mgb;
@@ -467,4 +468,64 @@ TEST(TestOprUtility, RequireInputDynamicStorage) {
     ASSERT_LT(nr_opr(func), nr0);
 }
 
+TEST(TestOprUtility, ShapeHint) {
+    HostTensorGenerator<> gen;
+    HostTensorGenerator<dtype::Int32> gen_int;
+    constexpr size_t length = 233;
+    { // basic
+        for (bool dynamic : {false, true}) {
+            auto host_x = gen_int({length});
+            auto graph = ComputingGraph::make();
+            SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x), x_shape_hint, y;
+            if (dynamic) {
+                x_shape_hint = opr::ShapeHint::make(opr::MarkDynamicVar::make(x), TensorShape{length * 2});
+            } else {
+                x_shape_hint = opr::ShapeHint::make(x, TensorShape{length * 2});
+            }
+            y = x_shape_hint * 2 + 1;
+            if (dynamic) {
+                ASSERT_TRUE(y.shape().eq_shape({length * 2}));
+            } else {
+                ASSERT_TRUE(y.shape().eq_shape({length}));
+            }
+            HostTensorND host_y;
+            auto func = graph->compile({make_callback_copy(y, host_y)});
+            func->execute();
+            ASSERT_TRUE(host_y.shape().eq_shape({length}));
+            for (size_t i = 0; i < length; ++ i) {
+                ASSERT_EQ((*host_x->ptr<int32_t>()) * 2 + 1, *host_y.ptr<int32_t>());
+            }
+        }
+    }
+    { // shallow copy
+        auto graph = ComputingGraph::make();
+        auto host_x = gen({length});
+        SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x),
+                  y = opr::ShapeHint::make(x, TensorShape{length * 2}),
+                  x_unknown = opr::MarkDynamicVar::make(x),
+                  y_copy = serialization::copy_opr_shallow(
+                        *y.node()->owner_opr(), {x_unknown.node()})->output(0);
+        ASSERT_TRUE(y.shape().eq_shape({length}));
+        ASSERT_TRUE(y_copy.shape().eq_shape({length * 2}));
+    }
+    { // grad
+        auto host_x = gen({1}), host_y = gen({1});
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Host2DeviceCopy::make(*graph, host_y),
+             x_shape_hint = opr::ShapeHint::make(opr::MarkDynamicVar::make(x), TensorShape{1}),
+             y_shape_hint = opr::ShapeHint::make(y, TensorShape{1}),
+             t = x_shape_hint * y_shape_hint;
+        HostTensorND host_gx, host_gy;
+        auto func = graph->compile({
+            make_callback_copy(cg::grad(t, x), host_gx),
+            make_callback_copy(cg::grad(t, y), host_gy)
+        });
+        func->execute();
+        ASSERT_TRUE(host_gx.shape().is_scalar());
+        ASSERT_TRUE(host_gy.shape().is_scalar());
+        ASSERT_FLOAT_EQ(*host_x->ptr<float>(), *host_gy.ptr<float>());
+        ASSERT_FLOAT_EQ(*host_y->ptr<float>(), *host_gx.ptr<float>());
+    }
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

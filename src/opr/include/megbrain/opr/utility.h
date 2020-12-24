@@ -512,6 +512,27 @@ public:
                           const OperatorNodeConfig& config = {});
 };
 
+/*
+ * \brief a special op providing shape hint only used in graph compilation (gopt)
+ */
+MGB_DEFINE_OPR_CLASS(ShapeHint, cg::SingleCNOperatorNodeBase) // {
+    TensorShape m_shape;
+    bool m_is_const;
+
+    void scn_do_execute() override;
+    void init_output_static_infer_desc() override;
+
+    public:
+        ShapeHint(VarNode* inp, const TensorShape shape,
+                  bool is_const, const OperatorNodeConfig& config);
+
+        static SymbolVar make(SymbolVar inp, const TensorShape shape,
+                              bool is_const=false, const OperatorNodeConfig& config = {});
+
+        TensorShape shape() const { return m_shape; }
+        bool is_const() const { return m_is_const; }
+};
+
 } // namespace opr
 } // namespace mgb
 

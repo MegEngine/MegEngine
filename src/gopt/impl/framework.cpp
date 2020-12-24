@@ -678,6 +678,11 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
         add_pass<ParamMergePass>();
         add_pass<FuseDeconvCvtPass>();
     }
+
+    if (inference_opt) {
+        // remove shape hint after inference optimization
+        add_pass<RemoveShapeHintPass>();
+    }
     return *this;
 }
 
