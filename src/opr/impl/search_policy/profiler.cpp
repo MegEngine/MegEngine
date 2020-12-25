@@ -234,6 +234,9 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
         using namespace std::literals;
         std::this_thread::sleep_for(1000us);
     }
+    // release all free blocks owned by child process,
+    // in order to avoid main process running out of memory
+    cn.try_coalesce_all_free_memory();
 
     mgb_assert(ev_start->finished());
     return TResult::from_pod(Result{ev_start->elapsed_time_until(*ev_end)});
