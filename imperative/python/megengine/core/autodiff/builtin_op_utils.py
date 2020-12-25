@@ -12,6 +12,7 @@ import itertools
 import numpy as np
 
 from .._imperative_rt import TensorAttr, imperative
+from .._imperative_rt.core2 import apply
 from ..ops.builtin import (
     Broadcast,
     Elemwise,
@@ -25,37 +26,6 @@ from ..ops.builtin import (
     Subtensor,
 )
 from ..ops.special import Const
-from ..tensor.core import apply
-from ..tensor.function import Function
-
-
-@functools.singledispatch
-def builtin_op_get_backward_fn(op: OpDef, inputs, outputs, input_requires_grad):
-    assert 0
-
-
-@builtin_op_get_backward_fn.register(OpDef)
-def _(op: OpDef, inputs, outputs, input_requires_grad):
-    if isinstance(op, Reshape):
-        grad_fn = reshape_grad_fn
-    elif isinstance(op, Subtensor):
-        grad_fn = subtensor_grad_fn
-    elif isinstance(op, IndexingMultiAxisVec):
-        grad_fn = indexingMultiAxisVec_grad_fn
-    elif isinstance(op, Broadcast) or (
-        isinstance(op, Elemwise) and op.mode == Elemwise.Mode.ADD
-    ):
-        grad_fn = elemwise_add_grad_fn
-    elif isinstance(op, Reduce) and op.mode == Reduce.Mode.SUM:
-        grad_fn = reduce_sum_grad_fn
-    else:
-        grad_fn = default_grad_fn
-    return grad_fn(op, inputs, outputs, input_requires_grad)
-
-
-@builtin_op_get_backward_fn.register(Function)
-def _(op: Function, inputs, outputs, input_requires_grad):
-    return op.get_backward_fn(), [True,] * len(outputs)
 
 
 def default_grad_fn(op, inputs, outputs, input_requires_grad):

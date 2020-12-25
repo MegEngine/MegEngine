@@ -67,7 +67,7 @@ def param_pack_split(inp: Tensor, offsets: list, shapes: list):
     outputs = apply(op, inp)
     for s, x in zip(shapes, outputs):
         if not s:
-            x._isscalar = True
+            x.setscalar()
     return outputs
 
 

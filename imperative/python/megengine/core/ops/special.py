@@ -8,9 +8,6 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-# from .._imperative_rt.core2 import Tensor
-from ..tensor.core import OpBase, TensorBase, apply
-
 
 class Const:
     def __init__(self, value=None, *, dtype=None, device=None):

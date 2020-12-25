@@ -12,10 +12,10 @@ from typing import Dict
 import numpy as np
 
 from .. import functional as F
+from ..core._imperative_rt.core2 import apply
 from ..core.autodiff.grad import Function
 from ..core.ops import builtin
 from ..core.tensor import megbrain_graph
-from ..core.tensor.core import apply
 from ..core.tensor.dtype import _metadata_dict
 from ..tensor import Tensor
 

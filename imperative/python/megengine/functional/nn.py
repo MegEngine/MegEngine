@@ -10,7 +10,7 @@
 from typing import Optional, Sequence, Tuple, Union
 
 from ..core._imperative_rt import CompNode
-from ..core._imperative_rt.core2 import Tensor, apply
+from ..core._imperative_rt.core2 import apply
 from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm

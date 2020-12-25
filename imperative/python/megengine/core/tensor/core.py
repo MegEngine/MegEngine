@@ -13,12 +13,9 @@ import sys
 import typing
 from abc import ABC
 
-from .multipledispatch import Dispatcher
 
-
-class OpBase(ABC):
-    def __call__(self, *args):
-        return apply(self, *args)
+class OpBase:
+    pass
 
 
 class TensorBase:
@@ -27,22 +24,3 @@ class TensorBase:
 
 class TensorWrapperBase:
     pass
-
-
-apply = Dispatcher("apply")
-
-OpBase.apply = apply
-
-
-@apply.register()
-def _(op: OpBase, *args: TensorBase):
-    raise NotImplementedError
-
-
-@apply.register()
-def _(op: OpBase, *args: TensorWrapperBase):
-    assert args
-    Wrapper = type(args[0])
-    outputs = apply(op, *(i.__wrapped__ for i in args))
-    assert isinstance(outputs, tuple)
-    return tuple(map(Wrapper, outputs))

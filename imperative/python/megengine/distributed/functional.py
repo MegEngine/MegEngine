@@ -9,14 +9,7 @@
 from typing import Optional, Tuple
 
 from ..core._imperative_rt.core2 import apply
-from ..core.autodiff.builtin_op_utils import builtin_op_get_backward_fn
-from ..core.autodiff.grad import (
-    Tracer,
-    check_backward_allow_noinput,
-    get_grad_managers,
-    get_op_has_grad_fn,
-    tracer_apply,
-)
+from ..core.autodiff.grad import get_grad_managers
 from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
 from ..device import get_default_device
 from ..tensor import Tensor
@@ -236,7 +229,7 @@ def remote_recv(
         device = get_default_device()
     # dummy input
     if inp == None:
-        inp = tensor([0], device=device)
+        inp = Tensor([0], device=device)
     tracer_set = get_client().check_remote_tracer(key)
     for grad_manager in get_grad_managers():
         if grad_manager.name in tracer_set:

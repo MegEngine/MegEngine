@@ -13,7 +13,6 @@ import pytest
 
 import megengine.core.tensor.megbrain_graph as G
 from megengine.core.ops import builtin as ops
-from megengine.core.tensor.core import apply
 from megengine.core.tensor.dtype import (
     _metadata_dict,
     convert_from_qint4,

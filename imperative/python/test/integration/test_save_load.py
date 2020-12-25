@@ -4,7 +4,6 @@ import megengine as mge
 import megengine.autodiff as ad
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
-from megengine.core.tensor.raw_tensor import RawTensor
 from megengine.module import Module
 
 
