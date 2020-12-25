@@ -191,10 +191,6 @@ R"__usage__(
     Execute supported operators with JIT(now only support NVRTC). Can only be used on Nvidia GPUs.
 )__usage__"
 R"__usage__(
-  --winograd-transform
-    Execute opr replace, replace weights by winograd transform. Currently support on conv bias opr.
-)__usage__"
-R"__usage__(
   --enable-chwn4
     Execute operators with kernels implemented in MegDNN with CHWN4 tensor format. Can only be used
     on Nvidia GPUs, whose compute capability is above 6.1.
@@ -1389,11 +1385,6 @@ Args Args::from_argv(int argc, char **argv) {
         }
         if (!strcmp(argv[i], "--enable-jit")) {
             graph_opt.graph_opt.jit = 1;
-            continue;
-        }
-        if (!strcmp(argv[i], "--winograd-transform")) {
-            mgb_log_warn("enable winograd transform");
-            graph_opt.graph_opt.weight_winograd_transform = true;
             continue;
         }
         if (!strcmp(argv[i], "--weight-preprocess")) {

@@ -95,8 +95,6 @@ struct GraphCommonOptimizeOptions {
     //! fuse pattern like ReLU(conv_bias(x, w, b) + z) or conv_bias(x, w, b)
     //! + z -> conv_bias(x, w, b, z)
     bool fuse_conv_bias_with_z = false;
-    //! whether to enable fast-run profiled winograd opr replace
-    bool weight_winograd_transform = false;
     //! whether to enable weight preprocess, if enabled it may use more
     //! memory, default disable now, when weight preprocess is enabled, the
     //! input shape should no change
@@ -133,7 +131,6 @@ struct GraphCommonOptimizeOptions {
     SET(fuse_conv_bias_nonlinearity);
     SET(fuse_conv_bias_with_z);
     SET(fuse_preprocess);
-    SET(weight_winograd_transform);
     SET(weight_preprocess);
 #undef SET
 #define SET(_trans, _trans_capital)                                 \
