@@ -11,6 +11,7 @@
 
 #include "megbrain/dtype.h"
 #include "megbrain/common.h"
+#include "megbrain/imperative/ops/utility.h"
 
 #include "./tensor.h"
 #include "./grad.h"
@@ -22,10 +23,12 @@
 
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
+#include <range/v3/all.hpp>
 
 #include <unordered_map>
 
 namespace py = pybind11;
+namespace views = ranges::views;
 
 namespace mgb::imperative::python {
 
@@ -69,21 +72,45 @@ SET_UNSET_PROP(compiled)
 
 bool skip_tracing = false;
 
+Tensor::flags_t ApplyContext::global_disable = 0;
+
 apply_result_t apply(ApplyContext& ctx) {
     // emulating scalar should be put to specific op's apply, e.g.,
     // elementwise, reduce, typecvt. Currently it's still handled at python
     // side. It could be move to C++ side if it has an impact on performance
-    if (ctx.flags & Tensor::Flags::SCALAR) {
+    auto flags = ctx.flags & ~ApplyContext::global_disable;
+
+    if (flags & Tensor::Flags::SCALAR) {
         // TODO: emulate scalar
     }
 
-    if (ctx.flags & Tensor::Flags::GRAD) {
+    if (flags & Tensor::Flags::GRAD) {
         return apply_grad(ctx);
     }
 
-    if (ctx.flags & Tensor::Flags::TRACE) {
+    if (flags & Tensor::Flags::TRACE) {
         return apply_trace(ctx);
     } else {
+        if (auto* op = ctx.op->try_cast_final<GenericPyOp>()) {
+            py::tuple pyin(ctx.nargs);
+            for (size_t i = 0; i < ctx.nargs; ++i) {
+                pyin[i] = TensorWrapper::make(ctx.pytype, ctx.args[i]->shared_from_this());
+            }
+            auto f = py::getattr(op->obj, "_default_rule");
+            auto pyout = py::reinterpret_steal<py::object>(PyObject_Call(f.ptr(), pyin.ptr(), nullptr));
+            if (auto* tw = TensorWrapper::try_cast(pyout.ptr())) {
+                return {tw->m_tensor};
+            }
+            apply_result_t ret;
+            ret.reserve(py::len(pyout));
+            for (auto&& i : pyout) {
+                auto* tw = TensorWrapper::try_cast(i.ptr());
+                mgb_assert(tw);
+                ret.push_back(tw->m_tensor);
+            }
+            return ret;
+        }
+
         SmallVector<interpreter::Interpreter::Handle> handles(ctx.nargs);
         for (size_t i = 0; i < ctx.nargs; ++i) {
             handles[i] = ctx.args[i]->m_handle.get();
@@ -125,12 +152,13 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         SmallVector<Tensor*, 64> tensors(nargs);
         ctx.args = &tensors[0];
         ctx.nargs = nargs;
+        ctx.pytype = pytype;
         if (strstr(op->ob_type->tp_name, "BackwardGraph")) {
             ctx.backward = true;
         }
 
         for (size_t i = 0; i < nargs; ++i) {
-            if (TensorWrapper* tw = TensorWrapper::cast_safe(args[i])) {
+            if (TensorWrapper* tw = TensorWrapper::try_cast(args[i])) {
                 auto* t = tensors[i] = tw->m_tensor.get();
                 ctx.flags |= t->m_flags;
             } else {
@@ -166,7 +194,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
     if (nargs == 0) {
         throw py::type_error("too few arguments");
     }
-    if (auto* t = cast_safe(tup[0].ptr())) {
+    if (auto* t = try_cast(tup[0].ptr())) {
         if (nargs > 1) {
             throw py::type_error("expect 1 argument");
         }
@@ -211,7 +239,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
 
                 auto ret = pyf(*tup);
                 auto py_ret = py::reinterpret_borrow<py::list>(ret);
-                if (auto* t = cast_safe(py_ret[0].ptr())) {
+                if (auto* t = try_cast(py_ret[0].ptr())) {
                     m_tensor = t->m_tensor;
                 }
                 return;
@@ -349,7 +377,7 @@ PyObject* TensorWrapper::varnode() {
 }
 
 void TensorWrapper::reset(PyObject* tensor) {
-    TensorWrapper* t = TensorWrapper::cast_safe(tensor);
+    TensorWrapper* t = TensorWrapper::try_cast(tensor);
     if (!t) {
         throw py::type_error("expect Tensor");
     }
@@ -446,7 +474,7 @@ uint8_t max_priority(SmallVector<PyArray_Descr*> types) {
     }
 }
 
-// Returns the data type with sufficient size to hold all types of 
+// Returns the data type with sufficient size to hold all types of
 // category `cat` in the list `types`.
 PyArray_Descr* promote_types(SmallVector<PyArray_Descr*> types, uint8_t cat) {
     // Return value: New reference
@@ -507,7 +535,7 @@ PyArray_Descr* _dtype_promotion(PyObject*const* args, size_t nargs) {
     for (size_t i = 0; i < nargs; ++i) {
         PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i): args[i];
         if (handle == Py_None) continue;
-        TensorWrapper* tw = TensorWrapper::cast_safe(handle);
+        TensorWrapper* tw = TensorWrapper::try_cast(handle);
         if (tw) {
             mgb::DType type = tw->m_tensor->dtype();
             auto&& descr = npy::dtype_mgb2np_descr(type);
@@ -562,7 +590,7 @@ CompNode _get_device(PyObject*const* args, size_t nargs) {
     CompNode cn;
     for (size_t i = 0; i < nargs; ++i) {
         PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i): args[i];
-        TensorWrapper* tw = TensorWrapper::cast_safe(handle);
+        TensorWrapper* tw = TensorWrapper::try_cast(handle);
         if (tw) {
             if (!valid) {
                 cn = tw->m_tensor->comp_node();

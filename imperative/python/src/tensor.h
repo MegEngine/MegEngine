@@ -124,7 +124,7 @@ struct TensorWrapper {
     friend wrap_t;
 
     inline static TensorWrapper* cast(PyObject* op) {return reinterpret_cast<wrap_t*>(op)->inst();}
-    inline static TensorWrapper* cast_safe(PyObject* op) {
+    inline static TensorWrapper* try_cast(PyObject* op) {
         if (!wrap_t::type().isinstance(op)) return nullptr;
         return cast(op);
     }
@@ -173,11 +173,26 @@ struct TensorWrapper {
 PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObject* kwnames */);
 
 struct ApplyContext {
+    static Tensor::flags_t global_disable;
+
     Tensor::flags_t flags;
     std::shared_ptr<OpDef> op;
     Tensor*const* args;
     size_t nargs;
+    PyTypeObject* pytype = nullptr;
     bool backward = false;
+
+    class scoped_disable : NonCopyableObj {
+        Tensor::flags_t saved_flags;
+
+    public:
+        scoped_disable(Tensor::flags_t flags) : saved_flags(ApplyContext::global_disable) {
+            ApplyContext::global_disable |= flags;
+        }
+        ~scoped_disable() {
+            ApplyContext::global_disable = saved_flags;
+        }
+    };
 };
 
 using apply_result_t = SmallVector<std::shared_ptr<Tensor>, 8>;

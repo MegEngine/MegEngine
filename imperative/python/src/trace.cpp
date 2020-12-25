@@ -85,7 +85,7 @@ apply_result_t apply_trace(ApplyContext& ctx) {
     // assumption: python function always returns PyList
     auto tup = py::reinterpret_borrow<py::list>(ret);
     for (auto i = 0; i < tup.size(); i++) {
-        auto tw = TensorWrapper::cast_safe(tup[i].ptr());
+        auto tw = TensorWrapper::try_cast(tup[i].ptr());
         outputs.emplace_back(tw->m_tensor);
     }
     return outputs;
