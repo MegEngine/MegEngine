@@ -12,7 +12,7 @@ from functools import partial
 import numpy as np
 
 from .. import functional as F
-from ..core.tensor.function import Function
+from ..core.autodiff.grad import Function
 from .fake_quant import _FakeQuantize
 from .observer import MinMaxObserver
 from .qconfig import QConfig

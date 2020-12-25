@@ -6,11 +6,11 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import os
-import sys
-import platform
-import ctypes
 import atexit
+import ctypes
+import os
+import platform
+import sys
 
 if sys.platform == "win32":
     lib_path = os.path.join(os.path.dirname(__file__), "core/lib")
@@ -71,14 +71,15 @@ if sys.platform == "win32":
 
     kernel32.SetErrorMode(old_error_mode)
 
-from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .core._imperative_rt.core2 import sync
+from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .device import *
 from .logger import enable_debug_log, get_logger, set_log_file, set_log_level
 from .serialization import load, save
 from .tensor import Parameter, Tensor, tensor
+from .utils import comp_graph_tools as cgtools
+from .utils import persistent_cache
 from .version import __version__
-from .utils import persistent_cache, comp_graph_tools as cgtools
 
 _set_fork_exec_path_for_timed_func(
     sys.executable,

@@ -11,8 +11,7 @@ import pytest
 
 import megengine as mge
 from megengine import tensor
-from megengine.core.autodiff.grad import Grad
-from megengine.core.tensor.function import Function
+from megengine.core.autodiff.grad import Function, Grad
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.quantization.fake_quant import TQT_Function
 from megengine.quantization.internal_fake_quant import *

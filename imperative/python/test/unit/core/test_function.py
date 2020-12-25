@@ -15,7 +15,7 @@ import megengine.optimizer as optimizer
 from megengine import Parameter
 from megengine import Tensor as tensor
 from megengine import tensor
-from megengine.core.tensor.function import Function
+from megengine.core.autodiff.grad import Function
 from megengine.module import Module
 
 
@@ -239,7 +239,7 @@ def test_none_in_out_grad():
 
         def backward(self, grad_a, grad_b):
             assert grad_b is None
-            return (grad_a, 0.0)
+            return (grad_a, None)
 
     class Simple(Module):
         def __init__(self, a, b):
