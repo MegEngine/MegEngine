@@ -17,7 +17,6 @@ import megengine as mge
 import megengine.distributed as dist
 import megengine.functional as F
 from megengine.core._imperative_rt import TensorAttr, imperative
-from megengine.core._imperative_rt.imperative import sync
 from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.raw_tensor import as_raw_tensor
@@ -65,47 +64,31 @@ def save_to(self, name="grad"):
 def test_dist_grad():
     world_size = 2
     x_np = np.random.rand(10).astype("float32")
-    server = dist.Server()
-    port = server.py_server_port
 
-    def worker0():
-        dist.init_process_group("localhost", port, world_size, 0, 0)
-        mge.device.set_default_device("gpu0")
-        grad = Grad()
+    @dist.launcher
+    def worker():
+        rank = dist.get_rank()
+        if rank == 0:
+            grad = Grad()
 
-        x = as_tensor(x_np)
-        grad.wrt(x, callback=save_to(x))
-        # need a placeholder to trace operator
-        send_x = remote_send(x, 1)
-        recv_x = remote_recv(1, x_np.shape, x_np.dtype, "gpu0")
-        y = recv_x * recv_x
+            x = as_tensor(x_np)
+            grad.wrt(x, callback=save_to(x))
+            # need a placeholder to trace operator
+            send_x = remote_send(x, 1)
+            recv_x = remote_recv(1, x_np.shape, x_np.dtype)
+            y = recv_x * recv_x
 
-        grad([y], [as_tensor(np.ones_like(x_np))])
-        np.testing.assert_almost_equal(x.grad.numpy(), x.numpy() * 2)
+            grad([y], [as_tensor(np.ones_like(x_np))])
+            np.testing.assert_almost_equal(x.grad.numpy(), x.numpy() * 2)
+        elif rank == 1:
+            grad = Grad()
 
-    def worker1():
-        dist.init_process_group("localhost", port, world_size, 1, 1)
-        mge.device.set_default_device("gpu1")
-        grad = Grad()
+            recv_x = remote_recv(0, x_np.shape, x_np.dtype)
+            send_x = remote_send(recv_x, 0)
 
-        recv_x = remote_recv(0, x_np.shape, x_np.dtype, "gpu1")
-        send_x = remote_send(recv_x, 0)
+            grad([], [])
 
-        grad([], [])
-
-        # sync because grad has a send operator
-        sync()
-        send_x.device._cn._sync_all()
-
-    import multiprocessing as mp
-
-    p0 = mp.Process(target=worker0)
-    p1 = mp.Process(target=worker1)
-    p0.start()
-    p1.start()
-    p0.join(10)
-    p1.join(10)
-    assert p0.exitcode == 0 and p1.exitcode == 0
+    worker()
 
 
 def test_grad():

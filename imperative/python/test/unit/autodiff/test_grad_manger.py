@@ -17,7 +17,6 @@ import megengine.functional as F
 import megengine.module as M
 import megengine.optimizer as optim
 from megengine.autodiff import GradManager
-from megengine.core._imperative_rt.imperative import sync
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.jit import trace
 
@@ -135,6 +134,5 @@ def test_remote_grad():
         for func in train_funcs:
             for i in range(3):
                 func(x)
-            sync()
 
     worker()

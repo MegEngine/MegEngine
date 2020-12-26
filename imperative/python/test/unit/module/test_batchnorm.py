@@ -7,7 +7,6 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import functools
-import multiprocessing as mp
 import platform
 
 import numpy as np
@@ -17,6 +16,7 @@ import megengine as mge
 import megengine.distributed as dist
 from megengine import Tensor
 from megengine.core._trace_option import use_symbolic_shape
+from megengine.distributed.helper import get_device_count_by_fork
 from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 
 _assert_allclose = functools.partial(np.testing.assert_allclose, atol=5e-6, rtol=5e-6)
@@ -28,6 +28,7 @@ _assert_allclose = functools.partial(np.testing.assert_allclose, atol=5e-6, rtol
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
 )
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 def test_syncbn():
     nr_chan = 8
@@ -41,15 +42,14 @@ def test_syncbn():
     server = dist.Server()
     port = server.py_server_port
 
-    def worker(rank, data, yv_expect, running_mean, running_var):
-        if mge.get_device_count("gpu") < nr_ranks:
-            return
-        dist.init_process_group("localhost", port, nr_ranks, rank, rank)
+    @dist.launcher(n_gpus=2)
+    def worker(data, yv_expect, running_mean, running_var):
+        rank = dist.get_rank()
         bn = SyncBatchNorm(nr_chan, momentum=momentum, eps=eps)
         for i in range(steps):
-            yv = bn(Tensor(data[i]))
+            yv = bn(Tensor(data[rank][i]))
 
-        _assert_allclose(yv.numpy(), yv_expect)
+        _assert_allclose(yv.numpy(), yv_expect[rank])
         _assert_allclose(bn.running_mean.numpy(), running_mean)
         _assert_allclose(bn.running_var.numpy(), running_var)
 
@@ -77,24 +77,9 @@ def test_syncbn():
         for j in range(steps):
             data[i].append(xv[j][:, :, :, i * 8 : i * 8 + 8])
 
-    procs = []
-    for rank in range(nr_ranks):
-        p = mp.Process(
-            target=worker,
-            args=(
-                rank,
-                data[rank],
-                yv_expect[:, :, :, rank * 8 : rank * 8 + 8],
-                running_mean,
-                running_var,
-            ),
-        )
-        p.start()
-        procs.append(p)
+    yv_expect = [yv_expect[:, :, :, i * 8 : i * 8 + 8] for i in range(nr_ranks)]
 
-    for p in procs:
-        p.join(10)
-        assert p.exitcode == 0
+    worker(data, yv_expect, running_mean, running_var)
 
 
 def test_batchnorm():
