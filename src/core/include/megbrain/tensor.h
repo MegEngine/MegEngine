@@ -548,6 +548,15 @@ class TensorND {
             ret.reset(storage().proxy_to_default_cpu(), layout());
             return ret;
         }
+
+        template<bool x = true, typename = std::enable_if_t<x && std::is_same<TensorStorage, HostTensorStorage>::value>>
+        HostTensorND proxy_to_comp_node(CompNode cn) const {
+            HostTensorStorage host_storage;
+            host_storage.reset(cn, m_storage.size(), m_storage.raw_storage());
+            HostTensorND ret;
+            ret.reset(host_storage, m_layout);
+            return ret;
+        }
 };
 
 /*!
