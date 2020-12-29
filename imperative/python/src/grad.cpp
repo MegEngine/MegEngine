@@ -70,7 +70,7 @@ std::shared_ptr<BackwardGraphResult> make_backward_graph(
     for (size_t i = 0; i < ctx.nargs; ++i) {
         inputs[i].comp_node = ctx.args[i]->comp_node();
         inputs[i].layout.dtype = ctx.args[i]->dtype();
-        input_requires_grad[i] = bool(ctx.args[i]->m_grad_info.grad_fn);
+        input_requires_grad[i] = python::input_requires_grad(ctx, i);
     }
     auto result = std::make_shared<BackwardGraphResult>(
         proxy_graph_detail::make_backward_graph(
@@ -81,21 +81,6 @@ std::shared_ptr<BackwardGraphResult> make_backward_graph(
     backward_graph_cache.emplace(key, result);
     return result;
 }
-
-struct BackwardContext {
-    PyTypeObject* pytype = nullptr;
-
-    auto wrap_tensor(std::shared_ptr<Tensor> t) {
-        if (pytype) {
-            return TensorWrapper::make(pytype, std::move(t));
-        }
-        return TensorWrapper::make(std::move(t));
-    }
-
-    auto wrap_tensor(Tensor* t) {
-        return wrap_tensor(t->shared_from_this());
-    }
-};
 
 struct BackwardGraphWithClosure {
     std::shared_ptr<BackwardGraphResult> backward_graph;
@@ -270,7 +255,7 @@ struct GradFn : std::enable_shared_from_this<GradFn> {
     // same length as inputs (of forward op)
     SmallVector<GradSlotProducerPtr> dsts;
     // encapsules actual function to compute gradient
-    std::variant<std::monostate, BackwardGraphWithClosure, PythonBackward> backward;
+    std::variant<std::monostate, BackwardGraphWithClosure, PythonBackward, CustomBackward> backward;
     // a flag used during backward
     bool in_ref_keeper = false;
 
@@ -335,8 +320,7 @@ apply_result_t python_grad_rule(ApplyContext& ctx, GradFnHelper& ret_grad_fn) {
         pyin[i] = TensorWrapper::make(ctx.pytype, ctx.args[i]->shared_from_this());
     }
     auto grad_rule = py::getattr(op->obj, "_grad_rule");
-    auto pyret = (scoped_disable(Flags::GRAD),
-                  py::reinterpret_steal<py::object>(PyObject_Call(grad_rule.ptr(), pyin.ptr(), nullptr))); // comma expression
+    auto pyret = py::reinterpret_steal<py::object>(PyObject_Call(grad_rule.ptr(), pyin.ptr(), nullptr));
     auto [outputs, backward] = py::cast<std::tuple<py::object, py::function>>(pyret);
     ret_grad_fn.emplace<PythonBackward>(std::move(backward), ctx.nargs);
     if (auto* tw = TensorWrapper::try_cast(outputs.ptr())) {
@@ -388,9 +372,25 @@ apply_result_t apply_grad(ApplyContext& ctx) {
     }
 
     GradFnHelper grad_fn_holder;
-    auto outputs = ctx.op->same_type<GenericPyOp>() ?
-            python_grad_rule(ctx, grad_fn_holder) :
-            backward_graph_grad_rule(ctx, grad_fn_holder);
+    auto outputs = [&]() {
+        auto _ = scoped_disable(Flags::GRAD);
+        if (ctx.op->same_type<GenericPyOp>()) {
+            return python_grad_rule(ctx, grad_fn_holder);
+        }
+        auto&& registry = grad_rule_registry();
+        auto&& it = registry.find(ctx.op->dyn_typeinfo());
+        if (it != registry.end()) {
+            auto&& maker = grad_fn_holder.emplace<CustomBackward>().maker(ctx);
+            try {
+                auto ret = it->second(ctx, maker);
+                maker.finalize();
+                return ret;
+            } catch (GradRuleFallback&) {
+                grad_fn_holder.emplace<std::monostate>();
+            }
+        }
+        return backward_graph_grad_rule(ctx, grad_fn_holder);
+    }();
 
     auto& grad_fn = grad_fn_holder.grad_fn;
     if (!grad_fn) {
@@ -407,7 +407,7 @@ apply_result_t apply_grad(ApplyContext& ctx) {
             mgb_assert(0);
         } else {
             for (size_t i = 0; i < ctx.nargs; ++i) {
-                if (backward.input_has_grad(i)) {
+                if (backward.input_has_grad(i) && input_requires_grad(ctx, i)) {
                     auto& input_grad_info = ctx.args[i]->m_grad_info;
                     grad_fn->dsts.emplace_back(input_grad_info);
                     // register as grad producer
@@ -487,18 +487,8 @@ void accum_grad(std::shared_ptr<Tensor>& grad, T&& delta) {
         grad = std::forward<T>(delta);
         return;
     }
-    static ApplyContext ctx;
-    if (!ctx.op) {
-        ctx.op = std::shared_ptr<OpDef>(new Elemwise(Elemwise::Mode::ADD));
-        ctx.nargs = 2;
-    }
-    Tensor* args[2] = {grad.get(), delta.get()};
-    ctx.args = args;
-    ctx.flags = grad->m_flags | delta->m_flags;
-    if (is_tracing) {
-        ctx.flags |= Flags::TRACE;
-    }
-    grad = apply(ctx)[0];
+    static std::shared_ptr<OpDef> op = std::shared_ptr<OpDef>(new Elemwise(Elemwise::Mode::ADD));
+    grad = apply(op, grad, std::forward<T>(delta))[0];
 }
 
 void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWrapper*> grads) {
@@ -580,6 +570,11 @@ void GradKeyWrapper::backward(std::vector<TensorWrapper*> tensors, std::vector<T
 
 GradKey::~GradKey() {
     cleanup();
+}
+
+std::unordered_map<Typeinfo*, GradRuleFn>& grad_rule_registry() {
+    static std::unordered_map<Typeinfo*, GradRuleFn> registry;
+    return registry;
 }
 
 } // namespace mgb::imperative::python

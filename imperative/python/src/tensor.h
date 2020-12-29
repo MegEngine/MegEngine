@@ -199,11 +199,58 @@ using apply_result_t = SmallVector<std::shared_ptr<Tensor>, 8>;
 
 apply_result_t apply(ApplyContext& ctx);
 
-void init_tensor(pybind11::module);
+template <typename T>
+decltype(auto) resolve_arrow(T&& p) {
+    if constexpr (std::is_pointer_v<std::remove_reference_t<T>>) {
+        auto* ret = p;
+        return ret;
+    } else {
+        auto probe = [](auto&& p) -> decltype(p.operator->()) {};
+        if constexpr (std::is_invocable_v<decltype(probe), decltype(p)>) {
+            return resolve_arrow(p.operator->());
+        } else {
+            return p;
+        }
+    }
+}
 
-extern bool is_tracing;
+template <typename... Args>
+constexpr bool is_all_tensor_ptr = (... && std::is_same_v<decltype(resolve_arrow(std::declval<Args>())), Tensor*>);
+
+extern bool is_tracing; // FIXME: should use ApplyContext::global_enable
 extern bool is_symbolic;
 extern bool is_compiled;
+
+template <typename... Args, std::enable_if_t<is_all_tensor_ptr<Args...>, int> = 0>
+apply_result_t apply(std::shared_ptr<OpDef> op, Args&&... args) {
+    ApplyContext ctx;
+    Tensor* arg_arr[] = {resolve_arrow(args)...};
+    ctx.flags = (0 | ... | args->m_flags);
+    ctx.flags |= is_tracing ? Tensor::Flags::TRACE : 0;
+    ctx.args = arg_arr;
+    ctx.nargs = sizeof...(args);
+    ctx.op = std::move(op);
+    return apply(ctx);
+}
+
+template <typename T>
+auto apply(std::shared_ptr<OpDef> op, T&& tensors)
+        -> std::enable_if_t<std::is_same_v<decltype(resolve_arrow(tensors[0])), Tensor*>,
+                            apply_result_t> {
+    ApplyContext ctx;
+    ctx.op = std::move(op);
+    ctx.flags = is_tracing ? Tensor::Flags::TRACE : 0;
+    ctx.nargs = tensors.size();
+    Tensor* args[ctx.nargs];
+    ctx.args = args;
+    for (size_t i = 0; i < ctx.nargs; ++i) {
+        args[i] = resolve_arrow(tensors[i]);
+        ctx.flags |= args[i]->m_flags;
+    }
+    return apply(ctx);
+}
+
+void init_tensor(pybind11::module);
 
 extern pybind11::object cpp_apply_with_tracing, cpp_apply_compiled_mode;
 extern pybind11::object cpp_apply_backward_varnode;
