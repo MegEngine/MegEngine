@@ -41,7 +41,7 @@ from ..core._imperative_rt.ops import (
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import device as as_device
-from ..core.ops.builtin import OpDef
+from ..core.ops.builtin import BackwardGraph, OpDef
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from .sublinear_memory_config import SublinearMemoryConfig
@@ -372,6 +372,7 @@ class trace:
         lazy_eval_graph()
         for r, x in zip(readers, lazy_eval_tensors):
             x()._handle = RawTensor(r.op.get_value())._handle
+            x()._reset_varnode()
 
     @contextlib.contextmanager
     def _setup(self):
@@ -580,9 +581,11 @@ class trace:
 
                 ivars.append(info.varnode)
 
-            ivars = [RawTensor(ivar) for ivar in ivars]
-            ovars = apply(op, *ivars)
-            ovars = [x._varnode for x in ovars]
+            if isinstance(op, BackwardGraph):
+                ovars = G.apply_backward_varnode(op, *ivars)
+            else:
+                ovars = G.apply_normal_varnode(op, *ivars)
+
             if require_links and len(ovars) > 0:
                 io_links = (ovars[0],)
             assert len(ovars) == len(ohandles)
@@ -768,11 +771,10 @@ class trace:
                         info.bound_data.numpy(), dtype=info.dtype, device=dumped_device
                     )
                 ivars.append(h2v[h])
-            ivars = [RawTensor(ivar) for ivar in ivars]
-            ovars = apply(op, *ivars)
-            ovars = [x._varnode for x in ovars]
+            ovars = G.apply_normal_varnode(op, *ivars)
             assert len(ovars) == len(ohandles)
             h2v.update(zip(ohandles, ovars))
+        unset_tracing()
 
         dest_vars = []
         for i, h in enumerate(self._output_bindings):
@@ -781,7 +783,6 @@ class trace:
                 v.name = output_names[i]
             dest_vars.append(v)
 
-        dest_vars = [G.VarNode(var) for var in dest_vars]
         if optimize_for_inference:
             dest_vars = G.optimize_for_inference(dest_vars, **kwargs)
 
@@ -1007,7 +1008,6 @@ def assign_raw_tensor(lhs, rhs):
     lhs.__init__(rhs)
 
 
-# this hook turns RawTensor into LazyEvalTensor(varnode)
 def apply_symbolic_mode(op: OpDef, *args: RawTensor):
     graph = active_trace._lazy_eval_graph
     ivars = []
@@ -1038,13 +1038,11 @@ def apply_symbolic_mode(op: OpDef, *args: RawTensor):
         ivars[0] = opnode.outputs[0]
         active_trace._lazy_eval_links = (ivars[0],)
 
-    ivars = [
-        RawTensor(ivar._node) if hasattr(ivar, "_node") else RawTensor(ivar)
-        for ivar in ivars
-    ]
-    unset_symbolic()
-    outputs = apply(op, *ivars)
-    set_symbolic()
+    if isinstance(op, BackwardGraph):
+        ovars = G.apply_backward_varnode(op, *ivars)
+    else:
+        ovars = G.apply_normal_varnode(op, *ivars)
+    outputs = [RawTensor(o) for o in ovars]
 
     if require_links:
         active_trace._lazy_eval_links = (outputs[0]._varnode,)

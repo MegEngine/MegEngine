@@ -437,7 +437,7 @@ def _unwrap(x):
         return x
 
 
-def apply_normal_op(op: OpDef, *args: VarNode):
+def apply_normal_varnode(op: OpDef, *args: VarNode):
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)
 
@@ -447,7 +447,7 @@ def apply_backward_varnode(op: BackwardGraph, *args: VarNode):
     graph = args[0].graph
     outputs = op.interpret(
         op,
-        lambda op, args: apply_normal_op(op, *args),
+        lambda op, args: apply_normal_varnode(op, *args),
         graph._make_const_for_backward,
         args,
     )

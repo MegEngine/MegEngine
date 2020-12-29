@@ -392,6 +392,10 @@ void TensorWrapper::reset(PyObject* tensor) {
     m_tensor = t->m_tensor;
 }
 
+void TensorWrapper::reset_varnode() {
+    m_tensor->m_var = nullptr;
+}
+
 PyObject* TensorWrapper::detach() {
     PyObject* self = wrap_t::pycast(this);
     PyTypeObject* pytype = self->ob_type;
@@ -687,6 +691,7 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::_swap_out>("_swap_out")
         .def<&TensorWrapper::_swap_in>("_swap_in")
         .def<&TensorWrapper::_drop>("_drop")
+        .def<&TensorWrapper::reset_varnode>("_reset_varnode")
         .def_getset<&TensorWrapper::varnode>("_varnode")
         .def_getset<&TensorWrapper::data_read, &TensorWrapper::set_data_read>("data_read")
         .def_getset<&TensorWrapper::value_read, &TensorWrapper::set_value_read>("value_read")

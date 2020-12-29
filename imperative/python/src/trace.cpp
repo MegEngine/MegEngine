@@ -17,29 +17,8 @@ namespace py = pybind11;
 
 namespace mgb::imperative::python {
 
-apply_result_t apply_tensor_on_var_node(ApplyContext& ctx) {
-    apply_result_t outputs;
-
-    cg::VarNodeArray vinputs(ctx.nargs);
-    for (size_t i = 0; i < ctx.nargs; i++) {
-        vinputs[i] = ctx.args[i]->m_var;
-    }
-    auto ovars = OpDef::apply_on_var_node(*ctx.op, vinputs);
-
-    for (size_t i = 0; i < ovars.size(); i++) {
-        outputs.emplace_back(std::make_shared<Tensor>(ovars[i]));
-    }
-
-    return outputs;
-}
-
 apply_result_t apply_trace(ApplyContext& ctx) {
     apply_result_t outputs;
-
-    bool run_apply_on_var_node = false;
-    for (size_t i = 0; i < ctx.nargs; i++) {
-        run_apply_on_var_node |= ((ctx.args[i]->m_handle.get() == nullptr) & (ctx.args[i]->m_var != nullptr));
-    }
 
     if (ctx.backward) {
         // reach here when symbolic=True or compiled=True
@@ -61,10 +40,6 @@ apply_result_t apply_trace(ApplyContext& ctx) {
             outputs.emplace_back(std::make_shared<Tensor>(pitem));
         }
         return outputs;
-    }
-
-    if (run_apply_on_var_node && !is_symbolic) {
-        return apply_tensor_on_var_node(ctx);
     }
 
     py::object pyf;

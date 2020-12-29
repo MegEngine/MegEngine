@@ -72,7 +72,7 @@ def test_op():
         lambda: x, device=x.comp_node, dtype=x.dtype, graph=g
     )
     neg = Elemwise(Elemwise.Mode.NEGATE)
-    v = mgb_graph.apply_normal_op(neg, v)[0]
+    v = mgb_graph.apply_normal_varnode(neg, v)[0]
     y = Future()
     v = mgb_graph.output_callback(y.set_result, v)
     f = g.compile(v)
@@ -90,7 +90,7 @@ def test_exception():
     g = mgb_graph.Graph()
     x, _ = mgb_graph.input_callback(throw_exc, device="xpux", dtype="float32", graph=g)
     neg = Elemwise(Elemwise.Mode.NEGATE)
-    y = mgb_graph.OutputNode(mgb_graph.apply_normal_op(neg, x)[0])
+    y = mgb_graph.OutputNode(mgb_graph.apply_normal_varnode(neg, x)[0])
     f = g.compile(y.outputs[0])
     try:
         f.execute()

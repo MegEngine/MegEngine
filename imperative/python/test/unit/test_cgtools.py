@@ -16,7 +16,7 @@ import megengine.module as M
 import megengine.utils.comp_graph_tools as cgtools
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor import megbrain_graph as mgb_graph
-from megengine.core.tensor.megbrain_graph import apply_normal_op
+from megengine.core.tensor.megbrain_graph import apply_normal_varnode
 from megengine.core.tensor.utils import astensor1d
 from megengine.jit import trace
 
@@ -34,9 +34,9 @@ def test_replace_vars():
     const = g.make_const(1.234, device=device)
     add_op = Elemwise(Elemwise.Mode.ADD)
     mul_op = Elemwise(Elemwise.Mode.MUL)
-    a_plus_a = apply_normal_op(add_op, a.outputs[0], a.outputs[0])[0]
-    a_plus_a_mul_const = apply_normal_op(mul_op, a_plus_a, const)[0]
-    rst = apply_normal_op(add_op, a_plus_a_mul_const, a.outputs[0])[0]
+    a_plus_a = apply_normal_varnode(add_op, a.outputs[0], a.outputs[0])[0]
+    a_plus_a_mul_const = apply_normal_varnode(mul_op, a_plus_a, const)[0]
+    rst = apply_normal_varnode(add_op, a_plus_a_mul_const, a.outputs[0])[0]
     (new,) = cgtools.replace_vars([rst._node], {const._node: a_plus_a._node})
     out = mgb_graph.OutputNode(mgb_graph.VarNode(new))
     func = g.compile(out.outputs[0])
@@ -56,10 +56,10 @@ def test_replace_oprs():
     const = g.make_const(1.25, device=device)
     add_op = Elemwise(Elemwise.Mode.ADD)
     mul_op = Elemwise(Elemwise.Mode.MUL)
-    a_plus_a = apply_normal_op(add_op, a.outputs[0], a.outputs[0])[0]
+    a_plus_a = apply_normal_varnode(add_op, a.outputs[0], a.outputs[0])[0]
     old_opr = a_plus_a.op
-    a_plus_a_mul_const = apply_normal_op(mul_op, a_plus_a, const)[0]
-    a_mul_a = apply_normal_op(mul_op, a.outputs[0], a.outputs[0])[0]
+    a_plus_a_mul_const = apply_normal_varnode(mul_op, a_plus_a, const)[0]
+    a_mul_a = apply_normal_varnode(mul_op, a.outputs[0], a.outputs[0])[0]
     new_opr = a_mul_a.op
     (new,) = cgtools.replace_oprs(
         [a_plus_a_mul_const._node], {old_opr._node: new_opr._node}

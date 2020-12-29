@@ -155,6 +155,7 @@ struct TensorWrapper {
     void _swap_out();
     void _drop();
     PyObject* varnode();
+    void reset_varnode();
     PyObject* handle();
     void set_handle(PyObject *);
 

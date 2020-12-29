@@ -163,6 +163,7 @@ def test_trace_profiler():
         assert out.get("profiler")
 
 
+@pytest.mark.skip(reason="force opt_level=0 when building graph")
 def test_goptions():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x):
@@ -181,6 +182,7 @@ def test_goptions():
     np.testing.assert_equal(g(d).numpy().item(), 1.0)
 
 
+@pytest.mark.skip(reason="force opt_level=0 when building graph")
 def test_goptions_log_sum_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x, y):
