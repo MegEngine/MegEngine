@@ -60,6 +60,8 @@ cg::OperatorNodeBase::NodeProp* RNGOprBase::do_make_node_prop() const {
 
 void RNGOprBase::ensure_megdnn_opr() {
     if (!m_megdnn_opr || m_megdnn_opr.comp_node() != comp_node()) {
+        // activate comp_node for curandCreateGenerator in create_megdnn_opr
+        comp_node().activate();
         m_megdnn_opr = create_megdnn_opr();
     }
 }
