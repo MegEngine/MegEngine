@@ -14,7 +14,6 @@ import numpy as np
 
 from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import Tensor, apply
-from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.builtin import Elemwise, GetVarShape
 from ..ops.special import Const

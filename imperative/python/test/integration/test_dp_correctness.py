@@ -194,7 +194,7 @@ def run_test(
     worker(max_err)
 
 
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 4, reason="need more gpu device")
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
 @pytest.mark.skipif(
     platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
