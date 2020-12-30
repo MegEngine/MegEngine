@@ -92,10 +92,12 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
     size_t sw = this->param().stride_w;
     size_t ph = this->param().pad_h;
     size_t pw = this->param().pad_w;
-    megdnn_assert(ph < fh && pw < fw,
-                  "pooling padding size (%zu %zu) should not be bigger than "
-                  "window size (%zu %zu)",
-                  pw, ph, fw, fh);
+    if (ph < fh && pw < fw) {
+        megdnn_log_error(
+                "pooling padding size (%zu %zu) should not be bigger than "
+                "window size (%zu %zu), it only can be used in CaffePooling",
+                pw, ph, fw, fh);
+    }
     infer_conv_shape2d(ih, iw, fh, fw, sh, sw, ph, pw, oh, ow);
     if (param().format == Param::Format::NCHW) {
         dst = TensorLayout(TensorShape({n, c, oh, ow}), src.dtype);
