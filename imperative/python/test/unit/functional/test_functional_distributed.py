@@ -14,6 +14,7 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 from megengine import Parameter, Tensor, tensor
+from megengine.core._imperative_rt.core2 import sync
 from megengine.device import get_default_device, set_default_device
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.distributed import (
@@ -333,8 +334,8 @@ def test_io_remote():
         rank = dist.get_rank()
         if rank == 0:  # remote send
             x = Tensor(val, device="gpu0")
-            y = remote_send(x, 1)
-            assert y.numpy()[0] == 0
+            remote_send(x, 1)
+            sync()
         else:  # remote recv
             y = remote_recv(0, val.shape, val.dtype)
             assert y.device == "gpu1"

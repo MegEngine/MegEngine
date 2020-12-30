@@ -9,8 +9,8 @@
 from typing import Optional, Tuple
 
 from ..core._imperative_rt.core2 import apply
-from ..core.autodiff.grad import get_grad_managers
-from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
+from ..core.autodiff.grad import _grad_manager_dict
+from ..core.ops.builtin import CollectiveComm, Copy, PyOpBase, RemoteRecv, RemoteSend
 from ..device import get_default_device
 from ..tensor import Tensor
 from .group import WORLD, Group, get_backend, get_client, get_mm_server_addr, get_rank
@@ -193,6 +193,48 @@ def all_to_all(
     return collective_comm(inp, mode, group, device)
 
 
+class _RemoteSend(PyOpBase):
+    def __init__(self, op: RemoteSend):
+        self.op = op
+
+    def _default_rule(self, data):
+        return apply(self.op, data)
+
+    def _grad_rule(self, data):
+        self.dtype = data.dtype
+        self.shape = data.shape
+        self.device = data.device
+        (self.dummy,) = self._default_rule(data)
+        return self.dummy, self.backward
+
+    def backward(self, grad):
+        assert grad is None
+        if get_client().check_is_grad(self.op.key):
+            return remote_recv(
+                self.op.rank_to,
+                self.shape,
+                self.dtype,
+                device=str(self.device),
+                inp=self.dummy,
+            )
+
+
+class _RemoteRecv(PyOpBase):
+    def __init__(self, op: RemoteRecv):
+        self.op = op
+
+    def _default_rule(self, dummy):
+        return apply(self.op, dummy)
+
+    def _grad_rule(self, dummy):
+        return self._default_rule(dummy), self.backward
+
+    def backward(self, grad):
+        get_client().set_is_grad(self.op.key, grad is not None)
+        if grad is not None:
+            remote_send(grad, self.op.rank_from)
+
+
 def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
     """
     Send a Tensor to a remote process.
@@ -200,11 +242,21 @@ def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
     :param inp: tensor to send.
     :param dest_rank: destination process rank.
     """
+    key = "{}->{}".format(get_rank(), dest_rank)
+    grad_keys = {}
+    for n, g in _grad_manager_dict.items():
+        if g._is_attached_to(inp):
+            grad_keys[n] = g
+    get_client().set_remote_tracer(key, grad_keys)
+
     op = RemoteSend()
-    op.key = "{}->{}".format(get_rank(), dest_rank)
+    op.key = key
     op.addr, op.port = get_mm_server_addr()
     op.rank_to = dest_rank
-    return apply(op, inp)[0]
+    (dummy,) = apply(_RemoteSend(op), inp)
+
+    for g in grad_keys.values():
+        g._refkeeper.append(dummy)
 
 
 def remote_recv(
@@ -228,12 +280,14 @@ def remote_recv(
     if device is None:
         device = get_default_device()
     # dummy input
-    if inp == None:
+    if inp is None:
         inp = Tensor([0], device=device)
     tracer_set = get_client().check_remote_tracer(key)
-    for grad_manager in get_grad_managers():
-        if grad_manager.name in tracer_set:
-            grad_manager.wrt(inp)
+    for n in tracer_set:
+        g = _grad_manager_dict.get(n)
+        if g is not None:
+            g.wrt(inp)
+            g._refkeeper.append(inp)
 
     op = RemoteRecv()
     op.key = key
@@ -243,4 +297,5 @@ def remote_recv(
     op.addr, op.port = get_mm_server_addr()
     op.rank_from = src_rank
 
-    return apply(op, inp)[0]
+    (ret,) = apply(_RemoteRecv(op), inp)
+    return ret

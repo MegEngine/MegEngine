@@ -46,9 +46,31 @@ def get_grad_managers():
     return [_grad_manager_dict[key] for key in _grad_manager_dict]
 
 
+class GradKey(core2.GradKey):
+    def __init__(self, name=None):
+        if name:
+            self.name = name
+
+    def backward(self, ys, dys):
+        return core2.backward(self, ys, dys)
+
+
 class Grad:
-    def __init__(self):
-        self._impl = core2.GradKey()
+    def __init__(self, name=None):
+        global _grad_count
+        if name is None:
+            name = "grad_%d" % _grad_count
+            _grad_count += 1
+        self._refkeeper = []
+        self._impl = GradKey(name)
+        _grad_manager_dict[self._name] = self
+
+    @property
+    def _name(self):
+        return self._impl.name
+
+    def _is_attached_to(self, tensor):
+        return self._impl.is_attached_to(tensor)
 
     def wrt(self, *tensors, callback=None):
         for x in tensors:
@@ -62,12 +84,16 @@ class Grad:
             ys = [ys]
         if not isinstance(dys, Sequence):
             dys = [dys]
-        core2.backward(self._impl, ys, dys)
+
+        self._impl.backward(ys, dys)
+
+        self._refkeeper = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, _1, _2, _3):
+        self._refkeeper = None
         del self._impl
 
 

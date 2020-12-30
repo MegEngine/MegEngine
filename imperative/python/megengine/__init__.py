@@ -71,7 +71,7 @@ if sys.platform == "win32":
 
     kernel32.SetErrorMode(old_error_mode)
 
-from .core._imperative_rt.core2 import sync, release_trace_apply_func
+from .core._imperative_rt.core2 import release_trace_apply_func, sync
 from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .device import *
 from .logger import enable_debug_log, get_logger, set_log_file, set_log_level

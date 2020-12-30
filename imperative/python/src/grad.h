@@ -41,8 +41,11 @@ struct GradKeyWrapper {
 
     inline GradKeyWrapper() : m_key(std::make_shared<GradKey>()) {}
 
+    PyObject* get_name();
+    void set_name(pybind11::handle name);
     void attach(PyObject*const* args, size_t nargs);
     void backward(std::vector<TensorWrapper*>, std::vector<TensorWrapper*>);
+    PyObject* is_attached_to(PyObject*const* args, size_t nargs);
 };
 
 struct BackwardContext {

@@ -733,15 +733,18 @@ void init_tensor(py::module m) {
               py_task_q.wait_all_task_finish();
           },
           py::call_guard<py::gil_scoped_release>());
-    
+
     m.def("release_trace_apply_func", &release_trace_apply_func);
 
     py::handle grad_key_type = GradKeyWrapper::wrap_t::type()
         .def<&GradKeyWrapper::attach>("attach")
+        .def<&GradKeyWrapper::is_attached_to>("is_attached_to")
+        .def_getset<&GradKeyWrapper::get_name, &GradKeyWrapper::set_name>("name")
         .finalize();
     if (!grad_key_type) throw py::error_already_set();
     py::setattr(m, "GradKey", grad_key_type);
-    py::setattr(m, "backward", py::cpp_function(&GradKeyWrapper::backward));
+    m.def("backward", &GradKeyWrapper::backward);
+
     m.def("set_cpp_apply_with_tracing", &set_cpp_apply_with_tracing);
     m.def("set_cpp_apply_const_with_tracing", &set_cpp_apply_const_with_tracing);
     m.def("set_cpp_apply_compiled_mode", &set_cpp_apply_compiled_mode);

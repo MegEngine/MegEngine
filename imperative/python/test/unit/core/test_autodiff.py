@@ -16,9 +16,8 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 import megengine.functional as F
-from megengine.core._imperative_rt import TensorAttr, core2, imperative
-from megengine.core._imperative_rt.core2 import TensorWeakRef, apply
-from megengine.core._imperative_rt.imperative import sync
+from megengine.core._imperative_rt import CompNode, TensorAttr, core2, imperative
+from megengine.core._imperative_rt.core2 import TensorWeakRef, apply, sync
 from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import Elemwise
 from megengine.distributed.helper import get_device_count_by_fork
@@ -73,7 +72,7 @@ def test_dist_grad():
             x = as_tensor(x_np)
             grad.wrt(x, callback=save_to(x))
             # need a placeholder to trace operator
-            send_x = remote_send(x, 1)
+            remote_send(x, 1)
             recv_x = remote_recv(1, x_np.shape, x_np.dtype)
             y = recv_x * recv_x
 
@@ -83,12 +82,11 @@ def test_dist_grad():
             grad = Grad()
 
             recv_x = remote_recv(0, x_np.shape, x_np.dtype)
-            send_x = remote_send(recv_x, 0)
+            remote_send(recv_x, 0)
 
             grad([], [])
 
     worker()
-
 
 def test_grad():
     x_np = np.random.rand(10).astype("float32")

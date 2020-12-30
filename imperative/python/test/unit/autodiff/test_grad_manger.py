@@ -141,6 +141,7 @@ def test_regression_1762():
 )
 @pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
 @pytest.mark.isolated_distributed
+@pytest.mark.skip(reason="FIXME: remote_send/recv")
 def test_remote_grad():
     @dist.launcher
     def worker():

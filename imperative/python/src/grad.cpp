@@ -193,10 +193,14 @@ struct PythonBackward {
             args[i] = g ? ctx.wrap_tensor(g) : py::none();
         }
         auto input_grads = py::reinterpret_steal<py::object>(PyObject_Call(pyfunc.ptr(), args.ptr(), nullptr));
+        if (!input_grads) throw py::error_already_set();
         if (input_grads.is_none()) return;
         if (auto* tw = TensorWrapper::try_cast(input_grads.ptr())) {
             if (input_size != 1) {
                 throw py::value_error("custom grad rule returned wrong number of grads");
+            }
+            if (!ctx.pytype) {
+                ctx.pytype = Py_TYPE(input_grads.ptr());
             }
             receiver(0, tw->m_tensor);
             return;
@@ -209,6 +213,9 @@ struct PythonBackward {
             auto* tw = TensorWrapper::try_cast(g.ptr());
             if (!tw) {
                 throw py::type_error("custom grad rule returned non-tensor");
+            }
+            if (!ctx.pytype) {
+                ctx.pytype = Py_TYPE(g.ptr());
             }
             receiver(i, tw->m_tensor);
         }
@@ -321,6 +328,7 @@ apply_result_t python_grad_rule(ApplyContext& ctx, GradFnHelper& ret_grad_fn) {
     }
     auto grad_rule = py::getattr(op->obj, "_grad_rule");
     auto pyret = py::reinterpret_steal<py::object>(PyObject_Call(grad_rule.ptr(), pyin.ptr(), nullptr));
+    if (!pyret) throw py::error_already_set();
     auto [outputs, backward] = py::cast<std::tuple<py::object, py::function>>(pyret);
     ret_grad_fn.emplace<PythonBackward>(std::move(backward), ctx.nargs);
     if (auto* tw = TensorWrapper::try_cast(outputs.ptr())) {
@@ -507,8 +515,12 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
         ~CleanupGuard() {owner->cleanup();}
     } _cleanup_guard(this);
 
-    if (tape.empty() || grads.empty()) return;
-    PyTypeObject* pytype = Py_TYPE(grads[0]->self().ptr());
+    if (tape.empty()) return;
+
+    BackwardContext bctx;
+    if (!grads.empty()) {
+        bctx.pytype = Py_TYPE(grads[0]->self().ptr());
+    }
 
     for (size_t i = 0; i < tensors.size(); ++i) {
         auto& grad_info = tensors[i]->m_tensor->m_grad_info;
@@ -517,7 +529,6 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
         }
     }
 
-    BackwardContext bctx{pytype};
     std::vector<std::shared_ptr<GradFn>> ref_keeper;
     ref_keeper.reserve(tape.size());
     // back-propagation in reverse order
@@ -548,7 +559,7 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
             }
             if (!dst.producer_record.next && dst->callback && dst->grad) {
                 // I'm the last grad producer, invoke callback
-                dst->callback(TensorWrapper::make(pytype, dst->grad));
+                dst->callback(bctx.wrap_tensor(dst->grad));
             }
         }
         grad_fn->clear();
@@ -566,6 +577,31 @@ void GradKey::cleanup() {
 
 void GradKeyWrapper::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWrapper*> grads) {
     m_key->backward(std::move(tensors), std::move(grads));
+}
+
+PyObject* GradKeyWrapper::get_name() {
+    return py::cast(m_key->name).release().ptr();
+}
+
+void GradKeyWrapper::set_name(py::handle name) {
+    m_key->name = py::cast<std::string>(name);
+}
+
+PyObject* GradKeyWrapper::is_attached_to(PyObject*const* args, size_t nargs) {
+    if (nargs != 1) {
+        PyErr_SetString(PyExc_TypeError, "expect 1 argument");
+        return nullptr;
+    }
+    auto* tw = TensorWrapper::try_cast(args[0]);
+    if (!tw) {
+        PyErr_SetString(PyExc_TypeError, "expect Tensor");
+        return nullptr;
+    }
+    auto&& grad_fn = tw->m_tensor->m_grad_info.grad_fn;
+    if (grad_fn && grad_fn->key.lock() == m_key) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
 }
 
 GradKey::~GradKey() {
