@@ -58,7 +58,8 @@ namespace intl {
  * The operands are broadcasted automatically on dimensions of shape one to
  * match shapes of each other; it works like broadcasting in numpy.
  */
-MGB_DEFINE_OPR_CLASS(Elemwise, intl::ElemwiseBase) // {
+MGB_DEFINE_OPR_CLASS(Elemwise, intl::ElemwiseBase,
+                     mixin::FwdIn2OutWritableHelper) // {
     using ModeTrait = megdnn::Elemwise::ModeTrait;
 
     public:

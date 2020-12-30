@@ -19,6 +19,19 @@ namespace opr {
 
 namespace mixin {
 
+/*!
+ * \brief mixin for operators which essentially works by forward input to output
+ */
+class FwdIn2OutWritableHelper : public cg::OperatorNodeMixinBase {
+protected:
+    /*!
+     * \brief call this function in mem_plan_fwd_in2out_writable(),
+     *     this function will check if the input have conflict to find if the
+     *     output can be forward.
+     */
+    void mixin_mem_plan_fwd_in2out_writable(OperatorNodeBase &opr);
+};
+
 //! for internal use by DynamicOutputIfInputDynamic
 void init_rt_force_dynamic_mem_alloc_imply_chain_for_dyn_pass_i2o(
         OperatorNodeBase &opr);

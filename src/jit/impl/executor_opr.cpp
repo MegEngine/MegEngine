@@ -135,6 +135,13 @@ void JITExecutor::init_output_mem_plan(bool dynamic) {
     m_args.need_update = true;
 }
 
+void JITExecutor::mem_plan_fwd_in2out_writable() {
+    //! currently mem fwd only support elemwise fusion
+    if (m_feature_bits != JITFeatureBits::NONE) return;
+    mixin_mem_plan_fwd_in2out_writable(*this);
+}
+
+
 SymbolVar JITExecutor::make(const InternalGraphPtr& internal_graph,
                             const VarNodeArray& inputs,
                             const OperatorNodeConfig& config) {

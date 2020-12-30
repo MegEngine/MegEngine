@@ -338,32 +338,7 @@ void Elemwise::broadcast_collective_collapse(
 }
 
 void Elemwise::mem_plan_fwd_in2out_writable() {
-    auto &&inp = input();
-    auto isize = inp.size();
-    mgb_assert(isize <= 6);
-    bool have_conflict[6] = {false};
-    for (size_t i = 0; i < isize; ++i) {
-        for (size_t j = i + 1; j < isize; ++j) {
-            auto type = cg::get_mem_plan_intersection_type(inp[i], inp[j]);
-            using Type = cg::MemPlanIntersectionType;
-            bool overlap = type == Type::OVERLAP;
-            bool self_fwd = type == Type::IDENTICAL &&
-                            (!inp[i]->layout().is_contiguous() ||
-                             !inp[j]->layout().is_contiguous());
-            if (overlap || self_fwd) {
-                have_conflict[i] = true;
-                have_conflict[j] = true;
-            }
-        }
-    }
-    auto o = output(0);
-    for (size_t idx = 0; idx < isize; ++ idx) {
-        auto i = inp[idx];
-        // equal shape means no broadcast
-        if (!have_conflict[idx] &&
-                o->shape().eq_shape(i->shape()) && i->layout().is_contiguous())
-            o->set_fwd_in2out_writable(i);
-    }
+    mixin_mem_plan_fwd_in2out_writable(*this);
 }
 
 void Elemwise::scn_do_execute() {

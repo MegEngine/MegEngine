@@ -137,6 +137,12 @@ void run<basic>(Backend backend, CompNode cn) {
     // only one broadcast is allowed in JIT fusion
     ASSERT_EQ(1u, jits[0]->input().size());
     ASSERT_EQ(4u, jits[1]->input().size());
+
+    //! check memfwd
+    ASSERT_EQ(prev_dev_ptr(jits[0]->input(0)),
+              prev_dev_ptr(jits[0]->output(0)));
+    ASSERT_EQ(prev_dev_ptr(jits[1]->input(0)),
+              prev_dev_ptr(jits[1]->output(0)));
 }
 
 template <>

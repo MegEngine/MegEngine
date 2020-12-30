@@ -13,6 +13,7 @@
 
 #include "megbrain/graph/operator_node.h"
 #include "megbrain/jit/internal_graph.h"
+#include "megbrain/opr/internal/identical_fwd.h"
 
 #if MGB_JIT
 
@@ -31,7 +32,8 @@ class Compiler;
  * JITExecutor generates runtime Args for this specific inputs, and calls
  * methods in Compiler to get the Executable object for actual computing.
  */
-MGB_DEFINE_OPR_CLASS(JITExecutor, cg::SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS(JITExecutor, cg::SingleCNOperatorNodeBase,
+        opr::mixin::FwdIn2OutWritableHelper) // {
     using ModeTrait = megdnn::Elemwise::ModeTrait;
 
     InternalGraphPtr m_internal_graph;
@@ -56,6 +58,8 @@ public:
     void add_input_layout_constraint() override;
 
     void init_output_mem_plan(bool dynamic) override;
+
+    void mem_plan_fwd_in2out_writable() override;
 
     const InternalGraph& internal_graph() const { return *m_internal_graph; }
 
