@@ -231,6 +231,7 @@ def BatchedIncrMeshIndexing: FancyIndexingBase<"BatchedIncrMeshIndexing">;
 def BatchedSetMeshIndexing: FancyIndexingBase<"BatchedSetMeshIndexing">;
 
 def FakeQuant: MgbHashableOp<"FakeQuant", [FakeQuantParam]>;
+def AssertEqual: MgbHashableOp<"AssertEqual",[AssertEqualParam]>;
 def ElemwiseMultiType: MgbHashableOp<"ElemwiseMultiType", [ElemwiseMultiTypeParam]> {
   let extraArguments = (ins
     MgbDTypeAttr:$dtype

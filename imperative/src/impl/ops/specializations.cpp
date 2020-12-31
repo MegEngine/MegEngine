@@ -418,6 +418,22 @@ OP_TRAIT_REG(Identity, Identity)
     .fallback();
 }} // identity
 
+namespace { namespace assert_equal {
+auto apply_on_var_node(
+    const OpDef& def,
+    const VarNodeArray& inputs) {
+        auto&& op = static_cast<const AssertEqual&>(def);
+        mgb_assert(inputs.size() == 2);
+        return opr::AssertEqual::make(inputs[0],inputs[1],op.param());
+
+    }
+    
+OP_TRAIT_REG(AssertEqual, AssertEqual)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+
+}}
+
 namespace { namespace uniform_rng {
 auto apply_on_var_node(
         const OpDef& def,

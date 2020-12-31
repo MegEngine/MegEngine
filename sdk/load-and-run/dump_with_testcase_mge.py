@@ -19,9 +19,9 @@ import megengine.core._imperative_rt as rt
 import megengine.core.tensor.megbrain_graph as G
 from megengine.utils import comp_graph_tools as cgtools
 from megengine.core.ops import builtin
-from megengine.core.tensor.core import apply
+from megengine.core._imperative_rt.core2 import apply
 from megengine.core.tensor.megbrain_graph import VarNode
-from megengine.core.tensor.raw_tensor import as_raw_tensor
+from megengine import tensor
 
 logger = mge.get_logger(__name__)
 
@@ -195,7 +195,7 @@ def make_feeds(args):
         func = cg_rt.compile([node.outputs[0] for node in output_nodes])
 
         def make_dev_tensor(value, dtype=None, device=None):
-            return as_raw_tensor(value, dtype=dtype, device=device)._dev_tensor()
+            return tensor(value, dtype=dtype, device=device)._dev_tensor()
 
         def calculate(*args, **kwargs):
             output_val = []
@@ -268,8 +268,8 @@ def make_feeds(args):
 
         def assert_equal(expect, real, **kwargs):
             op = builtin.AssertEqual(**kwargs)
-            (res,) = apply(op, expect, real)
-            return res
+            (res,) = G.apply_normal_varnode(op, expect, real)
+            return G.VarNode(res)
 
         verbose = not args.silent
 
@@ -509,7 +509,7 @@ def main():
         )
 
     def make_dev_tensor(value, dtype=None, device=None):
-        return as_raw_tensor(value, dtype=dtype, device=device)._dev_tensor()
+        return tensor(value, dtype=dtype, device=device)._dev_tensor()
 
     for testcase in feeds["testcases"]:
         assert isinstance(testcase, dict)
