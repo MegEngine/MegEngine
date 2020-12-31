@@ -13,6 +13,7 @@ import numpy
 from ..core import _imperative_rt
 from ..core._imperative_rt import OperatorNode, VarNode
 from ..core.tensor import megbrain_graph as G
+from ..core.tensor.megbrain_graph import set_priority_to_id
 from ..tensor import Tensor
 
 __all__ = [
@@ -269,19 +270,6 @@ def replace_oprs(
         repl_dst_vec.append(j)
 
     return _imperative_rt.graph._replace_oprs(repl_src_vec, repl_dst_vec, dst_vec)
-
-
-def set_priority_to_id(dest_vars):
-    """
-    For all oprs in the subgraph constructed by dest_vars,
-       sets its priority to id if its original priority is zero.
-    :param dest_vars: target vars representing the graph.
-    """
-    dest_vec = []
-    for i in dest_vars:
-        assert isinstance(i, VarNode)
-        dest_vec.append(i)
-    _imperative_rt.graph._set_priority_to_id(dest_vec)
 
 
 def load_and_inference(file, inp_data_list: List[numpy.ndarray]) -> List[numpy.ndarray]:

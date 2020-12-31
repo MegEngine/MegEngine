@@ -367,7 +367,7 @@ class trace:
             lazy_eval_graph.options.graph_opt_level = self._graph_opt_level
         else:
             lazy_eval_graph.options.graph_opt_level = 2
-        lazy_eval_graph.set_priority_to_id([*lazy_eval_links, *readers])
+        lazy_eval_graph._set_priority_to_id([*lazy_eval_links, *readers])
         lazy_eval_graph.compile(*lazy_eval_links, *readers)
         lazy_eval_graph()
         for r, x in zip(readers, lazy_eval_tensors):
@@ -618,7 +618,7 @@ class trace:
             graph.options.graph_opt_level = self._graph_opt_level
         else:
             graph.options.graph_opt_level = 2
-        graph.set_priority_to_id([*readers, *in_out_links, *io_links])
+        graph._set_priority_to_id([*readers, *in_out_links, *io_links])
         graph.compile(*readers, *in_out_links, *io_links)
 
     def _reset_exec_env(self):

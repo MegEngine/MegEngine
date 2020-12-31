@@ -143,8 +143,10 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         //     PyErr_SetString(PyExc_TypeError, "keyword argument not allowed");
         //     return nullptr;
         // }
-        if (!nargs) {
-            PyErr_SetString(PyExc_TypeError, "expect Op");
+        if (nargs < 2) {
+            PyErr_SetString(PyExc_TypeError,
+                            "py_apply expects one Op and at least one tensor "
+                            "as argument");
             return nullptr;
         }
 
@@ -227,7 +229,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
                 }
             }
         } else {
-            py::detail::loader_life_support life_sup; // required to cast DType
+            py::detail::loader_life_support life_sup; // FIXME!!!required to cast DType
             auto data = tup[0].cast<py::array>();
             DType dtype = tup[1].cast<DType>();
             CompNode cn = tup[2].cast<CompNode>();
@@ -298,7 +300,6 @@ PyObject* TensorWrapper::handle() {
 void TensorWrapper::set_handle(PyObject* dest) {
     auto py_dest = py::reinterpret_borrow<py::object>(dest);
     SharedHandle real_dest = py_dest.cast<SharedHandle>();
-    auto&& t = std::move(m_tensor->m_handle);
     m_tensor->m_handle = std::move(real_dest);
 }
 
@@ -617,7 +618,7 @@ CompNode _get_device(PyObject*const* args, size_t nargs) {
         }
     }
     if (!valid) {
-        mgb_assert(0, "expact at least 1 device");
+        mgb_assert(0, "expect at least 1 device");
     }
     Py_DECREF(tuple);
     return cn;

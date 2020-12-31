@@ -32,7 +32,7 @@ struct GradSlotWeakPtr {
     size_t idx;
 };
 
-struct BackwardGraphCache : std::unordered_map<size_t, std::shared_ptr<BackwardGraphResult>>, CompNodeDepedentObject {
+struct BackwardGraphCache : std::unordered_map<uint64_t, std::shared_ptr<BackwardGraphResult>>, CompNodeDepedentObject {
     std::shared_ptr<void> on_comp_node_finalize() override {
         clear();
         return {};
@@ -56,7 +56,7 @@ std::shared_ptr<BackwardGraphResult> make_backward_graph(
     }
     mgb_assert(bool_ptr0 == reinterpret_cast<bool*>(size_t_ptr) &&
                bool_ptr == reinterpret_cast<bool*>(buf + buf_size));
-    size_t key = XXHash{}.update(buf, buf_size).digest();
+    uint64_t key = XXHash{}.update(buf, buf_size).digest();
 
     auto&& iter = backward_graph_cache.find(key);
     if (iter != backward_graph_cache.end()) {

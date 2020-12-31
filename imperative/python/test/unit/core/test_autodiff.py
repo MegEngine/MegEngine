@@ -88,6 +88,7 @@ def test_dist_grad():
 
     worker()
 
+
 def test_grad():
     x_np = np.random.rand(10).astype("float32")
     x = as_tensor(x_np)

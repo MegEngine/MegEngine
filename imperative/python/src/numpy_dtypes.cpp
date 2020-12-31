@@ -32,7 +32,7 @@ inline bool _is_quantize(PyArray_Descr* dtype) {
 PyObject* _get_mgb_dtype(PyArray_Descr* dtype) {
     // Return value: New reference.
     if (!_is_quantize(dtype)) {
-        throw py::type_error("expact quantize dtype");
+        throw py::type_error("expect quantize dtype");
     }
     PyObject* ob = PyDict_GetItemString(dtype->metadata, "mgb_dtype");
     if (!PyDict_CheckExact(ob)) {
