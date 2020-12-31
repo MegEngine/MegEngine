@@ -54,10 +54,10 @@ def test_simple_arith():
 def test_tensor_on_device():
     device = megengine.core._imperative_rt.CompNode("cpu0:1")
     x = np.random.rand(10).astype("float32")
-    xx = megengine.core._imperative_rt.put(x, device=device)
-    assert str(megengine.core._imperative_rt.get_device(xx)) == "cpu0:1"
-    np.testing.assert_equal(x, megengine.core._imperative_rt.get_value(xx))
-    megengine.core._imperative_rt.delete(xx)
+    xx = megengine.tensor(x, device=device)
+    assert str(xx.device) == "cpu0:1"
+    np.testing.assert_equal(x, xx.numpy())
+    del xx
 
 
 def test_raw_tensor():

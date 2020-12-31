@@ -1,5 +1,5 @@
 from ..core._imperative_rt import TensorSanityCheckImpl
-from ..core._imperative_rt.imperative import sync
+from ..core._imperative_rt.core2 import sync
 
 
 class TensorSanityCheck:

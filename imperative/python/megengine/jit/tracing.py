@@ -18,7 +18,7 @@ import weakref
 
 import numpy as np
 
-from ..core._imperative_rt import GraphProfiler, common, put
+from ..core._imperative_rt import GraphProfiler, common
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import TensorWeakRef
 from ..core._imperative_rt.core2 import __make_empty_tensor as make_empty_tensor

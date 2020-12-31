@@ -14,7 +14,7 @@ from typing import Iterable, List, Optional
 
 from ..core._imperative_rt import OperatorNodeConfig, ProfileEntry
 from ..core._imperative_rt import ProfilerImpl as _Profiler
-from ..core._imperative_rt.imperative import sync
+from ..core._imperative_rt.core2 import sync
 from ..core._imperative_rt.ops import CollectiveComm
 
 

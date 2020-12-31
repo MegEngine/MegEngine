@@ -21,8 +21,6 @@
 #include "./graph_rt.h"
 #include "./ops.h"
 
-#include "./dispatcher.h"
-
 #include "./tensor.h"
 
 namespace py = pybind11;
@@ -69,8 +67,6 @@ PYBIND11_MODULE(MODULE_NAME, m) {
         from .ops import OpDef
         )",
         py::getattr(m, "__dict__"));
-
-    init_dispatcher(submodule(m, "dispatcher"));
 
     init_tensor(submodule(m, "core2"));
 }

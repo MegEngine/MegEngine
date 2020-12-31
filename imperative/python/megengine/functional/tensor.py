@@ -18,7 +18,7 @@ from ..core._imperative_rt.core2 import apply
 from ..core._wrap import device as as_device
 from ..core.ops import builtin
 from ..core.ops.special import Const
-from ..core.tensor.tensor_wrapper import _broadcast, _remove_axis
+from ..core.tensor.array_method import _broadcast, _remove_axis
 from ..core.tensor.utils import (
     astensor1d,
     convert_inputs,
