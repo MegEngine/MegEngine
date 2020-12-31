@@ -12,17 +12,7 @@ from typing import Tuple
 
 class Dataset(ABC):
     r"""
-    An abstract class for all Datasets.
-    """
-
-    @abstractmethod
-    def __init__(self):
-        pass
-
-
-class MapDataset(Dataset):
-    r"""
-    An abstract class for map data.
+    An abstract class for all datasets.
     __getitem__ and __len__ method are aditionally needed.
     """
 
@@ -53,8 +43,14 @@ class StreamDataset(Dataset):
     def __iter__(self):
         pass
 
+    def __getitem__(self):
+        raise AssertionError("can not get item from StreamDataset by index")
 
-class ArrayDataset(MapDataset):
+    def __len__(self):
+        raise AssertionError("StreamDataset does not have length")
+
+
+class ArrayDataset(Dataset):
     def __init__(self, *arrays):
         r"""
         ArrayDataset is a dataset for numpy array data, one or more numpy arrays

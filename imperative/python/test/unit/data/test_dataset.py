@@ -12,14 +12,12 @@ import sys
 import numpy as np
 import pytest
 
-from megengine.data.dataset import ArrayDataset, Dataset, MapDataset, StreamDataset
+from megengine.data.dataset import ArrayDataset, Dataset, StreamDataset
 
 
 def test_abstract_cls():
     with pytest.raises(TypeError):
         Dataset()
-    with pytest.raises(TypeError):
-        MapDataset()
     with pytest.raises(TypeError):
         StreamDataset()
 

@@ -9,10 +9,10 @@
 import collections.abc
 import os
 
-from ..meta_dataset import MapDataset
+from ..meta_dataset import Dataset
 
 
-class VisionDataset(MapDataset):
+class VisionDataset(Dataset):
     _repr_indent = 4
 
     def __init__(self, root, *, order=None, supported_order=None):

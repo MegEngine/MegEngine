@@ -6,5 +6,5 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from .meta_dataset import ArrayDataset, Dataset, MapDataset, StreamDataset
+from .meta_dataset import ArrayDataset, Dataset, StreamDataset
 from .vision import *
