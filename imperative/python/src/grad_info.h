@@ -22,6 +22,7 @@ struct GradSlotPtr {
     std::shared_ptr<GradFn> grad_fn;
     size_t idx;
 
+    operator bool() const;
     GradSlot* operator->();
 };
 
