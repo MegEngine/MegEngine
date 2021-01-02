@@ -19,7 +19,6 @@ import megengine as mge
 from .._imperative_rt import core2, ops
 from ..ops.builtin import Elemwise, OpDef, RemoteSend
 from ..ops.special import Const
-from . import builtin_op_utils
 
 """ Some notes:
     1. Initialize the optimizer:
