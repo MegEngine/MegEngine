@@ -450,6 +450,9 @@ def _unwrap(x):
 
 
 def apply_normal_varnode(op: OpDef, *args: VarNode):
+    # for PyOp like RemoteSend/Recv
+    if getattr(op, "op", None):
+        op = op.op
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)
 

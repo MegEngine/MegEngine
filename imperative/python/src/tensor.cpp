@@ -760,7 +760,14 @@ void init_tensor(py::module m) {
     m.attr("skip_tracing") = &skip_tracing;
 
     py::class_<SharedHandle>(m, "SharedHandle")
-        .def(py::init<const SharedHandle&>());
+        .def(py::init<const SharedHandle&>())
+        .def("__eq__", [](SharedHandle &thish, SharedHandle &thath) {
+            return (thish.get() == thath.get());
+        })
+        .def("__hash__", [](SharedHandle &sh) {
+            return reinterpret_cast<int64_t>(sh.get());
+        })
+        ;
 
     m.def("set_tracing", &set_tracing);
     m.def("unset_tracing", &unset_tracing);
