@@ -158,7 +158,7 @@ def div(x, y):
 
 def floor_div(x, y):
     """Element-wise `floor(x / y)`."""
-    return _elwise(x, y, mode=Elemwise.Mode.FLOOR_DIVIDE)
+    return _elwise(x, y, mode=Elemwise.Mode.FLOOR_DIV)
 
 
 def neg(x):

@@ -77,13 +77,33 @@ def test_stack():
 
 def test_split():
     data = np.random.random((2, 3, 4, 5)).astype(np.float32)
-    mge_out1 = F.split(tensor(data), 2, axis=3)
-    mge_out2 = F.split(tensor(data), [3, 5], axis=3)
+    inp = tensor(data)
+
+    mge_out0 = F.split(inp, 2, axis=3)
+    mge_out1 = F.split(inp, [3], axis=3)
 
     np_out = np.split(data, [3, 5], axis=3)
 
-    np.testing.assert_equal(mge_out1[0].numpy(), mge_out2[0].numpy())
+    assert len(mge_out0) == 2
+    assert len(mge_out1) == 2
+
+    np.testing.assert_equal(mge_out0[0].numpy(), np_out[0])
     np.testing.assert_equal(mge_out1[0].numpy(), np_out[0])
+
+    np.testing.assert_equal(mge_out0[1].numpy(), np_out[1])
+    np.testing.assert_equal(mge_out1[1].numpy(), np_out[1])
+
+    try:
+        F.split(inp, 4)
+        assert False
+    except ValueError as e:
+        pass
+
+    try:
+        F.split(inp, [3, 3, 5], axis=3)
+        assert False
+    except ValueError as e:
+        assert str(e) == "Invalid nsplits_or_secions: [3, 3, 5]"
 
 
 def test_reshape():
