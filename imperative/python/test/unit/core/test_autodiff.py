@@ -335,3 +335,25 @@ def test_Reduce_mean():
 
     grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3), dtype=np.float32) / 3, x.grad.numpy())
+
+
+def test_addAxis():
+    x_np = np.random.rand(3, 3).astype("float32")
+    x = mge.Tensor(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = F.expand_dims(x, [2, 3])
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((3, 3), dtype=np.float32), x.grad.numpy())
+
+
+def test_removeAxis():
+    x_np = np.random.rand(3, 3, 1, 1).astype("float32")
+    x = mge.Tensor(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = F.squeeze(x, [2, 3])
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((3, 3, 1, 1), dtype=np.float32), x.grad.numpy())

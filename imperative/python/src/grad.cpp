@@ -309,6 +309,8 @@ public:
     auto& emplace(Args&&... args) {
         return get()->backward.emplace<T>(std::forward<Args>(args)...);
     }
+
+    void reset() { grad_fn = nullptr; }
 };
 
 apply_result_t backward_graph_grad_rule(ApplyContext& ctx, GradFnHelper& ret_grad_fn) {
@@ -398,7 +400,7 @@ apply_result_t apply_grad(ApplyContext& ctx) {
                 maker.finalize();
                 return ret;
             } catch (GradRuleFallback&) {
-                grad_fn_holder.emplace<std::monostate>();
+                grad_fn_holder.reset();
             }
         }
         return backward_graph_grad_rule(ctx, grad_fn_holder);
