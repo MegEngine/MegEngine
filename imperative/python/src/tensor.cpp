@@ -34,22 +34,15 @@ namespace mgb::imperative::python {
 
 std::unique_ptr<interpreter::Interpreter::Channel> interpreter_for_py;
 
-py::object cpp_apply_with_tracing, cpp_apply_const_with_tracing,
-           cpp_apply_compiled_mode, cpp_apply_const_compiled_mode;
+PyObject *cpp_apply_with_tracing, *cpp_apply_const_with_tracing,
+           *cpp_apply_compiled_mode, *cpp_apply_const_compiled_mode;
 
-py::object cpp_apply_backward_varnode;
+PyObject *cpp_apply_backward_varnode;
 
-void release_trace_apply_func(){
-    cpp_apply_with_tracing.release();
-    cpp_apply_const_with_tracing.release();
-    cpp_apply_compiled_mode.release();
-    cpp_apply_const_compiled_mode.release();
-    cpp_apply_backward_varnode.release();
-}
 
 #define REGISTE_APPLY_FUNC(mode)                                    \
         void set_##mode(py::object pyf) {                           \
-            mode = pybind11::reinterpret_steal<py::object>(pyf);    \
+            mode = pyf.ptr();                                       \
         }
 
 REGISTE_APPLY_FUNC(cpp_apply_with_tracing)
@@ -242,14 +235,15 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
 
             // const op
             if (is_const && is_tracing) {
-                py::object pyf;
+                PyObject *pyf;
                 if (is_compiled) {
                     pyf = cpp_apply_const_compiled_mode;
                 } else {
                     pyf = cpp_apply_const_with_tracing;
                 }
 
-                auto ret = pyf(*tup);
+                auto ret = py::reinterpret_steal<py::object>(
+                        PyObject_Call(pyf, tup.ptr(), nullptr));
                 auto py_ret = py::reinterpret_borrow<py::list>(ret);
                 if (auto* t = try_cast(py_ret[0].ptr())) {
                     m_tensor = t->m_tensor;
@@ -743,8 +737,6 @@ void init_tensor(py::module m) {
               py_task_q.wait_all_task_finish();
           },
           py::call_guard<py::gil_scoped_release>());
-
-    m.def("release_trace_apply_func", &release_trace_apply_func);
 
     py::handle grad_key_type = GradKeyWrapper::wrap_t::type()
         .def<&GradKeyWrapper::attach>("attach")

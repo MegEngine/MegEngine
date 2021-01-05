@@ -253,8 +253,8 @@ auto apply(std::shared_ptr<OpDef> op, T&& tensors)
 
 void init_tensor(pybind11::module);
 
-extern pybind11::object cpp_apply_with_tracing, cpp_apply_compiled_mode;
-extern pybind11::object cpp_apply_backward_varnode;
+extern PyObject *cpp_apply_with_tracing, *cpp_apply_compiled_mode;
+extern PyObject *cpp_apply_backward_varnode;
 
 } // namespace mgb::imperative::python
 

@@ -72,7 +72,6 @@ if sys.platform == "win32":
     kernel32.SetErrorMode(old_error_mode)
 
 from .core._imperative_rt.core2 import full_sync as _full_sync
-from .core._imperative_rt.core2 import release_trace_apply_func
 from .core._imperative_rt.core2 import sync as _sync
 from .core._imperative_rt.utils import _set_fork_exec_path_for_timed_func
 from .device import *
@@ -92,9 +91,7 @@ _persistent_cache_impl_ins = persistent_cache.PersistentCacheOnServer()
 _persistent_cache_impl_ins.reg()
 
 atexit.register(_full_sync)
-atexit.register(release_trace_apply_func)
 
-del release_trace_apply_func
 del _set_fork_exec_path_for_timed_func
 del _persistent_cache_impl_ins
 
