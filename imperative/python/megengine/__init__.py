@@ -96,3 +96,16 @@ del sync
 del release_trace_apply_func
 del _set_fork_exec_path_for_timed_func
 del _persistent_cache_impl_ins
+
+# subpackages
+import megengine.autodiff
+import megengine.data
+import megengine.distributed
+import megengine.functional
+import megengine.hub
+import megengine.jit
+import megengine.module
+import megengine.optimizer
+import megengine.quantization
+import megengine.random
+import megengine.utils
