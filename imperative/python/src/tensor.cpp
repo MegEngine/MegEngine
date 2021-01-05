@@ -736,6 +736,13 @@ void init_tensor(py::module m) {
               py_task_q.wait_all_task_finish();
           },
           py::call_guard<py::gil_scoped_release>());
+    m.def("full_sync",
+          []() {
+              interpreter_for_py->sync();
+              CompNode::sync_all();
+              py_task_q.wait_all_task_finish();
+          },
+          py::call_guard<py::gil_scoped_release>());
 
     m.def("release_trace_apply_func", &release_trace_apply_func);
 
