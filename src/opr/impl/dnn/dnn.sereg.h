@@ -514,19 +514,19 @@ MGB_SEREG_OPR(ConvolutionBackwardFilterV2, 0);
 MGB_SEREG_OPR(Images2Neibs, 1);
 MGB_SEREG_OPR(Images2NeibsBackward, 2);
 
-using LocalV1 = Local;
-using LocalBackwardDataV1 = LocalBackwardData;
-using LocalBackwardFilterV1 = LocalBackwardFilter;
-MGB_SEREG_OPR(LocalV1, 2);
-MGB_SEREG_OPR(LocalBackwardDataV1, 3);
-MGB_SEREG_OPR(LocalBackwardFilterV1, 3);
+using LocalV2 = Local;
+using LocalBackwardDataV2 = LocalBackwardData;
+using LocalBackwardFilterV2 = LocalBackwardFilter;
+MGB_SEREG_OPR(LocalV2, 2);
+MGB_SEREG_OPR(LocalBackwardDataV2, 3);
+MGB_SEREG_OPR(LocalBackwardFilterV2, 3);
 
-using GroupLocalV1 = GroupLocal;
-using GroupLocalBackwardDataV1 = GroupLocalBackwardData;
-using GroupLocalBackwardFilterV1 = GroupLocalBackwardFilter;
-MGB_SEREG_OPR(GroupLocalV1, 2);
-MGB_SEREG_OPR(GroupLocalBackwardDataV1, 3);
-MGB_SEREG_OPR(GroupLocalBackwardFilterV1, 3);
+using GroupLocalV2 = GroupLocal;
+using GroupLocalBackwardDataV2 = GroupLocalBackwardData;
+using GroupLocalBackwardFilterV2 = GroupLocalBackwardFilter;
+MGB_SEREG_OPR(GroupLocalV2, 2);
+MGB_SEREG_OPR(GroupLocalBackwardDataV2, 3);
+MGB_SEREG_OPR(GroupLocalBackwardFilterV2, 3);
 
 MGB_SEREG_OPR(LRN, 1);
 MGB_SEREG_OPR(LRNBackward, 3);
@@ -542,8 +542,8 @@ MGB_SEREG_OPR(AdaptivePoolingBackwardV1, 4);
 MGB_SEREG_OPR(ROIPooling, 3);
 MGB_SEREG_OPR(ROIPoolingBackward, 4);
 
-using MaskConvolutionV1 = MaskConvolution;
-MGB_SEREG_OPR(MaskConvolutionV1, 3);
+using MaskConvolutionV2 = MaskConvolution;
+MGB_SEREG_OPR(MaskConvolutionV2, 3);
 MGB_SEREG_OPR(MaskPropagate, 1);
 
 MGB_SEREG_OPR(Convolution3D, 0);
@@ -567,9 +567,12 @@ using ROIAlignV1 = ROIAlign;
 using ROIAlignBackwardV1 = ROIAlignBackward;
 MGB_SEREG_OPR(ROIAlignV1, 2);
 MGB_SEREG_OPR(ROIAlignBackwardV1, 4);
-MGB_SEREG_OPR(DeformableConvForward, 0);
-MGB_SEREG_OPR(DeformableConvBackwardData, 0);
-MGB_SEREG_OPR(DeformableConvBackwardFilter, 0);
+using DeformableConvForwardV1 = DeformableConvForward;
+using DeformableConvBackwardDataV1 = DeformableConvBackwardData;
+using DeformableConvBackwardFilterV1 = DeformableConvBackwardFilter;
+MGB_SEREG_OPR(DeformableConvForwardV1, 0);
+MGB_SEREG_OPR(DeformableConvBackwardDataV1, 0);
+MGB_SEREG_OPR(DeformableConvBackwardFilterV1, 0);
 
 MGB_SEREG_OPR(DeformablePSROIPoolingForward, 3);
 MGB_SEREG_OPR(DeformablePSROIPoolingBackward, 5);

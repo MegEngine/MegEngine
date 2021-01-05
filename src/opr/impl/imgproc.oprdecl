@@ -24,8 +24,8 @@ decl_opr(
     params='WarpPerspective',
     desc='like :func:`warp_perspective`, but the **mat** param does not have '
     'to have the same batch size as **src**; instead, **mat_idx** specifies '
-    'the batch number of each matrix in **mat**'
-)
+    'the batch number of each matrix in **mat**',
+    version=2)
 
 decl_opr('Rotate',
     inputs=[
@@ -111,7 +111,7 @@ decl_raw_opr(
         'assert not kwargs, "extra kwargs: {}".format(kwargs)',
         'all_params = []',
         'all_params.append(param.serialize())',
-        'output = _mgb._create_opr("DctChannelSelect", all_inputs, all_params, config)',
+        'output = _mgb._create_opr("DctChannelSelectV1", all_inputs, all_params, config)',
     ],
     has_out_dtype=True,
     desc='DctChannelSelect do DCT with channel select'

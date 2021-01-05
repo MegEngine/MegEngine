@@ -65,7 +65,7 @@ decl_opr('MaskConvolution',
          params=[('param', 'Convolution')],
          desc=('batched mask conv on channeled 2D images, mask is correspoding '
                'to output'),
-         version=1)
+         version=2)
 
 decl_opr('MaskPropagate',
          inputs=[Doc('src',
@@ -102,10 +102,11 @@ decl_opr('Local',
                      'convolution kernel in '
                      '(out row, out col, in channel, '
                      'kern row, kern col, out channel) format')],
-         params='ConvolutionV0',
+         params='Convolution',
          desc='batched convolution on channeled 2D images, but kernels are '
-         'not shared across different output positions')
+         'not shared across different output positions', version=2)
 
+"""
 decl_opr('Local',
          pyname='local_v1',
          inputs=[Doc('src',
@@ -118,6 +119,7 @@ decl_opr('Local',
          desc='batched convolution on channeled 2D images, but kernels are '
          'not shared across different output positions',
          version=1)
+"""
 
 decl_opr('GroupLocal',
          inputs=[Doc('src',
@@ -129,7 +131,7 @@ decl_opr('GroupLocal',
          params=[('param', 'Convolution')],
          desc='batched convolution on groupped channeled 2D images, but '
          'kernels are not shared across different output positions',
-         version=1)
+         version=2)
 
 decl_opr('LRN',
          inputs=['src'],
@@ -280,7 +282,7 @@ decl_opr('DeformableConvForward',
                  Doc('mask', 'deformable mask in (batch, deformable group * filter row * filter col, output row, output col) format')],
          params=[('param', 'Convolution'), ('execution_policy', 'ExecutionPolicy')],
          desc=Doc(None, r""" Apply a deformable convolution to input tensor and filter tensor. The offset tensor will adjust the position of each grid of a convolution filter. The mask tensor will be applied to the deformed input tensor. """),
-         has_out_dtype=True)
+         has_out_dtype=True, version=1)
 
 decl_opr('DeformablePSROIPoolingForward',
          pyname='deformable_psroi_pooling',
