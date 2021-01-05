@@ -24,6 +24,7 @@ std::unique_ptr<Interpreter::Channel> InterpreterImpl::create_channel() {
 }
 
 Interpreter& Interpreter::inst() {
+    Tensor::_static_init();
     static InterpreterImpl inst_;
     return inst_;
 }

@@ -130,6 +130,12 @@ public:
 
     void add_release_callback(CompNode cn);
     CompNode::Event* get_or_create_event();
+
+    // Make sure all static objects required to destruct a tensor has completed
+    // construction. All static storage duration object that holds tensors must
+    // call this method before their constructors completes.
+    static void _static_init();
+
 private:
 
     TensorLayout m_layout;

@@ -56,6 +56,10 @@ protected:
         return {};
     }
 
+    AsyncReleaser() {
+        EventPool::without_timer();
+    }
+
 public:
     static AsyncReleaser* inst() {
         static AsyncReleaser releaser;
@@ -365,6 +369,10 @@ CompNode::Event* Tensor::get_or_create_event() {
     auto e = CompNodeSyncManager::inst()->get_or_create_event(m_blob.get());
     e->record();
     return e;
+}
+
+void Tensor::_static_init() {
+    EventPool::without_timer();
 }
 
 }  // namespace imperative
