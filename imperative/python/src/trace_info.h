@@ -10,15 +10,38 @@
  */
 
 #include "inttypes.h"
+#include "Python.h"
 
 namespace mgb::imperative::python {
 
 struct TraceInfo {
     int64_t mixin_handle = -1;
+    bool recording = false;
 
-    bool data_read = false;
-    bool value_read = false;
-    bool shape_read = false;
+    PyObject* compiled_info = nullptr;
+    PyObject* trace_mixin_info = nullptr;
+
+    TraceInfo() = default;
+
+    TraceInfo& operator=(const TraceInfo& that) {
+        mixin_handle = that.mixin_handle;
+        recording = that.recording;
+
+        compiled_info = that.compiled_info;
+        Py_XINCREF(compiled_info);
+        trace_mixin_info = that.trace_mixin_info;
+        Py_XINCREF(trace_mixin_info);
+
+        return *this;
+    }
+
+    ~TraceInfo()  {
+        Py_XDECREF(trace_mixin_info);
+        // Py_XDECREF(compiled_info);
+    }
+
+private:
+    TraceInfo(const TraceInfo& that) = default;
 };
 
 } // namespace mgb::imperative::python

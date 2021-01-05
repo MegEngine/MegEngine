@@ -22,7 +22,7 @@ apply_result_t apply_trace(ApplyContext& ctx) {
     apply_result_t outputs;
 
     if (ctx.backward) {
-        // reach here when symbolic=True or compiled=True
+        // reach here when compiled=True
         // call megbrain_graph.py apply(BackwardGraph, *args)
         auto args = py::tuple(ctx.nargs + 1);
         args[0] = py::cast(ctx.op);

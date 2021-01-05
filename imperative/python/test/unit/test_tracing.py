@@ -311,6 +311,7 @@ def test_trace_warp_perspective():
         f(x, M)
 
 
+@pytest.mark.skip(reason="skip")
 def test_raise_on_trace():
     step_count = 0
     catch_count = 0

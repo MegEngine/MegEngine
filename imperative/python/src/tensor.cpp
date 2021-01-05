@@ -54,7 +54,6 @@ REGISTE_APPLY_FUNC(cpp_apply_backward_varnode)
 #undef REGISTE_APPLY_FUNC
 
 bool is_tracing = false;
-bool is_symbolic = false;
 bool is_compiled = false;
 
 #define SET_UNSET_PROP(mode)    \
@@ -66,7 +65,6 @@ bool is_compiled = false;
     }                           \
 
 SET_UNSET_PROP(tracing)
-SET_UNSET_PROP(symbolic)
 SET_UNSET_PROP(compiled)
 
 #undef SET_UNSET_PROP
@@ -280,12 +278,25 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             m_tensor->m_trace_info.member = real_dest;                              \
         }
 
-REGISTE_TENSORWRAPPER_FUNC(bool, data_read)
-REGISTE_TENSORWRAPPER_FUNC(bool, value_read)
-REGISTE_TENSORWRAPPER_FUNC(bool, shape_read)
 REGISTE_TENSORWRAPPER_FUNC(int64_t, mixin_handle)
+REGISTE_TENSORWRAPPER_FUNC(bool, recording)
 
 #undef REGISTE_TENSORWRAPPER_FUNC
+
+
+#define REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(member)                                 \
+        PyObject* TensorWrapper::member() {                                         \
+            return m_tensor->m_trace_info.member;                                   \
+        }                                                                           \
+        void TensorWrapper::set_##member(PyObject* dest) {                          \
+            Py_INCREF(dest);                                                        \
+            m_tensor->m_trace_info.member = dest;                                   \
+        }
+
+REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(compiled_info)
+REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(trace_mixin_info)
+
+#undef REGISTE_TENSORWRAPPER_PYOBJECT_FUNC
 
 
 PyObject* TensorWrapper::handle() {
@@ -301,8 +312,14 @@ void TensorWrapper::set_handle(PyObject* dest) {
 
 
 PyObject* TensorWrapper::shape() {
-    if (!skip_tracing) {
-        set_shape_read(py::cast(true).  release().ptr());
+    if (m_tensor->m_trace_info.compiled_info != nullptr) {
+        if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
+            return PyTuple_New(0);
+        }
+        return PyObject_GetAttrString(m_tensor->m_trace_info.compiled_info, "shape");
+    }
+    if (m_tensor->m_trace_info.recording && !skip_tracing) {
+        PyObject_SetAttrString(m_tensor->m_trace_info.trace_mixin_info, "shape_read", py::cast(true).release().ptr());
     }
     if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
         return PyTuple_New(0);
@@ -310,7 +327,12 @@ PyObject* TensorWrapper::shape() {
 
     TensorShape shape;
     if (m_tensor->m_var) {
-        shape = m_tensor->m_var->shape();
+        auto&& mgr = m_tensor->m_var->owner_graph()->static_infer_manager();
+        auto *tshp = mgr.infer_shape_fallible(m_tensor->m_var);
+        if (!tshp) {
+            Py_RETURN_NONE;
+        }
+        shape = *tshp;
     } else {
         shape = m_tensor->shape();
     }
@@ -343,8 +365,15 @@ PyObject* TensorWrapper::device() {
 
 
 PyObject* TensorWrapper::numpy() {
-    if (!skip_tracing) {
-        set_value_read(py::cast(true).release().ptr());
+    if (m_tensor->m_trace_info.compiled_info != nullptr) {
+        PyObject* np_val = PyObject_CallMethod(m_tensor->m_trace_info.compiled_info, "numpy", nullptr);
+        if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
+            np_val = PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(np_val));
+        }
+        return np_val;
+    }
+    if (m_tensor->m_trace_info.recording && !skip_tracing) {
+        PyObject_SetAttrString(m_tensor->m_trace_info.trace_mixin_info, "value_read", py::cast(true).release().ptr());
     }
     if (m_tensor->m_handle.get() == nullptr && m_tensor->m_var != nullptr) {
         auto&& mgr = m_tensor->m_var->owner_graph()->static_infer_manager();
@@ -359,7 +388,11 @@ PyObject* TensorWrapper::numpy() {
             PyErr_SetString(PyExc_ValueError, "tensor invalid");
             return nullptr;
         }
-        return py::cast(*val).attr("numpy")().release().ptr();
+        auto np_val = py::cast(*val).attr("numpy")();
+        if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
+            return PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(np_val.release().ptr()));
+        }
+        return np_val.release().ptr();
     }
     auto&& hv = interpreter_for_py->get_value(m_tensor->m_handle.get());
     auto arr = py::reinterpret_steal<py::array>(npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
@@ -410,8 +443,14 @@ PyObject* TensorWrapper::detach() {
 }
 
 PyObject* TensorWrapper::_dev_tensor(){
-    if (!skip_tracing) {
-        set_data_read(py::cast(true).release().ptr());
+    if (m_tensor->m_trace_info.compiled_info != nullptr) {
+        auto *dev_tensor = PyObject_CallMethod(m_tensor->m_trace_info.compiled_info, "_dev_tensor", nullptr);
+        auto py_dev_tensor = py::reinterpret_borrow<py::object>(dev_tensor);
+        auto sh = interpreter_for_py->put(py_dev_tensor.cast<DeviceTensorND>());
+        m_tensor->m_handle = std::move(SharedHandle(sh));
+    }
+    if (m_tensor->m_trace_info.recording && !skip_tracing) {
+        PyObject_SetAttrString(m_tensor->m_trace_info.trace_mixin_info, "data_read", py::cast(true).release().ptr());
     }
     auto dev_tensor = interpreter_for_py->get_dev_tensor(m_tensor->m_handle.get());
     return py::cast(dev_tensor).release().ptr();
@@ -668,9 +707,6 @@ WRAP_FUNC_PY35(get_device);
     { #NAME, (PyCFunction)py35_##FUNC, METH_VARARGS, nullptr }
 #endif
 
-py::object make_empty_tensorwrapper() {
-    return TensorWrapper::make(std::move(std::make_shared<Tensor>()));
-}
 
 void init_tensor(py::module m) {
     imperative::Tensor::static_initialize();
@@ -692,11 +728,11 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::_drop>("_drop")
         .def<&TensorWrapper::reset_varnode>("_reset_varnode")
         .def_getset<&TensorWrapper::varnode>("_varnode")
-        .def_getset<&TensorWrapper::data_read, &TensorWrapper::set_data_read>("data_read")
-        .def_getset<&TensorWrapper::value_read, &TensorWrapper::set_value_read>("value_read")
-        .def_getset<&TensorWrapper::shape_read, &TensorWrapper::set_shape_read>("shape_read")
         .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("mixin_handle")
+        .def_getset<&TensorWrapper::recording, &TensorWrapper::set_recording>("recording")
         .def_getset<&TensorWrapper::handle, &TensorWrapper::set_handle>("_handle")
+        .def_getset<&TensorWrapper::compiled_info, &TensorWrapper::set_compiled_info>("_compiled_info")
+        .def_getset<&TensorWrapper::trace_mixin_info, &TensorWrapper::set_trace_mixin_info>("_trace_mixin_info")
         .finalize();
     if (!tensor_type) throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);
@@ -771,12 +807,8 @@ void init_tensor(py::module m) {
 
     m.def("set_tracing", &set_tracing);
     m.def("unset_tracing", &unset_tracing);
-    m.def("set_symbolic", &set_symbolic);
-    m.def("unset_symbolic", &unset_symbolic);
     m.def("set_compiled", &set_compiled);
     m.def("unset_compiled", &unset_compiled);
-
-    m.def("__make_empty_tensor", &make_empty_tensorwrapper);
 }
 
 #undef MGE_PY_INTERFACE

@@ -159,15 +159,16 @@ struct TensorWrapper {
     PyObject* handle();
     void set_handle(PyObject *);
 
-    PyObject* data_read();
-    PyObject* value_read();
-    PyObject* shape_read();
     PyObject* mixin_handle();
+    PyObject* recording();
 
-    void set_data_read(PyObject*);
-    void set_value_read(PyObject*);
-    void set_shape_read(PyObject*);
     void set_mixin_handle(PyObject*);
+    void set_recording(PyObject*);
+
+    PyObject* compiled_info();
+    void set_compiled_info(PyObject *);
+    PyObject* trace_mixin_info();
+    void set_trace_mixin_info(PyObject *);
 };
 
 
@@ -219,7 +220,6 @@ template <typename... Args>
 constexpr bool is_all_tensor_ptr = (... && std::is_same_v<decltype(resolve_arrow(std::declval<Args>())), Tensor*>);
 
 extern bool is_tracing; // FIXME: should use ApplyContext::global_enable
-extern bool is_symbolic;
 extern bool is_compiled;
 
 template <typename... Args, std::enable_if_t<is_all_tensor_ptr<Args...>, int> = 0>
