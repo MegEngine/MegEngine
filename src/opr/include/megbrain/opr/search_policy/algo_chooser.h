@@ -48,16 +48,16 @@ class AlgoChooser {
 
     using ImplAlgo = typename Opr::AlgorithmInfo;
     using MGBOpr = typename MegDNNOpr2MGBOpr<Opr>::MGBOpr;
-    using ConvTensorLayouts = std::array<TensorLayout, arity>;
+    using TensorLayoutArray = std::array<TensorLayout, arity>;
 
     class ExeContext {
-        const ConvTensorLayouts& m_layouts;
+        const TensorLayoutArray& m_layouts;
         Opr* m_megdnn_opr;
         const MGBOpr* m_mgb_opr;
         bool m_allow_weight_preprocess;
 
     public:
-        ExeContext(const ConvTensorLayouts& layouts, Opr* megdnn_opr,
+        ExeContext(const TensorLayoutArray& layouts, Opr* megdnn_opr,
                    const MGBOpr* mgb_opr, bool allow_weight_preprocess)
                 : m_layouts{layouts},
                   m_megdnn_opr{megdnn_opr},
@@ -65,9 +65,9 @@ class AlgoChooser {
                   m_allow_weight_preprocess{allow_weight_preprocess} {
             mgb_assert(m_layouts.size() == layouts.size());
             static_assert(
-                    std::tuple_size<ConvTensorLayouts>::value == 3 ||
-                            std::tuple_size<ConvTensorLayouts>::value == 5 ||
-                            std::tuple_size<ConvTensorLayouts>::value == 8,
+                    std::tuple_size<TensorLayoutArray>::value == 3 ||
+                            std::tuple_size<TensorLayoutArray>::value == 5 ||
+                            std::tuple_size<TensorLayoutArray>::value == 8,
                     "Convolution AlgoChooser assumes arity = 3 , 5 or 8 (for "
                     "deformable conv)");
         }
@@ -80,7 +80,7 @@ class AlgoChooser {
             return m_layouts[idx];
         }
 
-        const ConvTensorLayouts& layouts() const { return m_layouts; }
+        const TensorLayoutArray& layouts() const { return m_layouts; }
 
         ImplAlgo choose_by_heuristic(bool reproducible = false) const;
 
@@ -125,7 +125,7 @@ public:
     /*!
      * \brief setup algorithm and return workspace size
      */
-    static size_t setup_algo(const ConvTensorLayouts& layouts, Opr* megdnn_opr,
+    static size_t setup_algo(const TensorLayoutArray& layouts, Opr* megdnn_opr,
                              const MGBOpr* mgb_opr,
                              bool allow_weight_preprocess = false);
 };

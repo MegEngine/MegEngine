@@ -74,11 +74,7 @@ class Convolution {
         mutable bool m_policy_accessed = false;
         ExecutionPolicy m_policy;
 
-        std::unique_ptr<AlgoChooserProfileCache> m_profile_cache;
-
         AlgoChooserHook m_algo_chooser;
-
-        virtual void init_profile_cache() = 0;
 
         //! init output desc for conv backward data oprs; it handles both grad
         //! usage and deconv usage
@@ -159,7 +155,6 @@ class ConvolutionTestingPeer;
 MGB_DEFINE_OPR_CLASS(ConvolutionForward,
         intl::ConvolutionForwardBase, public mixin::Convolution) // {
 
-    void init_profile_cache() override;
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
             const TensorShapeArray &input_shapes,
@@ -245,7 +240,6 @@ public:
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
 
-    void init_profile_cache() override;
     std::pair<const void*, size_t> param_blob() const override;
 
     static void check_winograd_param_valid(
@@ -268,7 +262,6 @@ MGB_DEFINE_OPR_CLASS(ConvolutionBackwardData,
     void init_output_format() override;
 
     void add_input_layout_constraint() override;
-    void init_profile_cache() override;
 
     void scn_do_execute() override;
     NodeProp *do_make_node_prop() const override;
@@ -310,7 +303,6 @@ MGB_DEFINE_OPR_CLASS(ConvolutionBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::ConvolutionBackwardFilter>,
         public mixin::Convolution ) // {
 
-    void init_profile_cache() override final;
 
     size_t get_workspace_size_bytes(
             const TensorShapeArray &input_shapes,
@@ -360,7 +352,6 @@ MGB_DEFINE_OPR_CLASS(Convolution3DForward,
         intl::MegDNNOprWrapperFwd<megdnn::Convolution3DForward>,
         public mixin::Convolution) // {
 
-    void init_profile_cache() override;
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
             const TensorShapeArray &input_shapes,
@@ -391,7 +382,6 @@ MGB_DEFINE_OPR_CLASS(Convolution3DBackwardData,
     void init_output_static_infer_desc() override;
 
     void add_input_layout_constraint() override;
-    void init_profile_cache() override;
 
     void scn_do_execute() override;
     NodeProp *do_make_node_prop() const override;
@@ -433,8 +423,6 @@ MGB_DEFINE_OPR_CLASS(Convolution3DBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::Convolution3DBackwardFilter>,
         public mixin::Convolution) // {
 
-    void init_profile_cache() override final;
-
     size_t get_workspace_size_bytes(
             const TensorShapeArray &input_shapes,
             const TensorShapeArray &output_shapes) const override final;
@@ -455,7 +443,6 @@ MGB_DEFINE_OPR_CLASS(Convolution3DBackwardFilter,
 MGB_DEFINE_OPR_CLASS(LocalShareForward,
                      intl::MegDNNOprWrapperFwd<megdnn::LocalShareForward>,
                      public mixin::Convolution)  // {
-    void init_profile_cache() override final;
     void init_output_dtype() override;
     void init_output_format() override;
 
@@ -483,7 +470,6 @@ MGB_DEFINE_OPR_CLASS(
     void init_output_dtype() override;
 
     void add_input_layout_constraint() override;
-    void init_profile_cache() override;
 
     void scn_do_execute() override;
     NodeProp* do_make_node_prop() const override;
@@ -506,7 +492,6 @@ MGB_DEFINE_OPR_CLASS(
         LocalShareBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::LocalShareBackwardFilter>,
         public mixin::Convolution) // {
-    void init_profile_cache() override final;
 
     size_t get_workspace_size_bytes(
             const TensorShapeArray& input_shapes,
@@ -542,7 +527,6 @@ MGB_DEFINE_OPR_CLASS(DeformableConvForward,
 
         std::pair<const void*, size_t> param_blob() const override;
     private:
-        void init_profile_cache() override;
         void init_output_dtype() override;
         void init_output_format() override;
         size_t get_workspace_size_bytes(
@@ -589,7 +573,6 @@ private:
     void add_input_layout_constraint() override {
         mixin::megdnn_utils::add_input_layout_constraint_contig(*this);
     }
-    void init_profile_cache() override;
 };
 
 MGB_DEFINE_OPR_CLASS(
@@ -612,7 +595,6 @@ public:
     std::pair<const void*, size_t> param_blob() const override;
 
 private:
-    void init_profile_cache() override;
     size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
                                     const TensorShapeArray& output_shapes)
             const override final;
@@ -668,7 +650,6 @@ public:
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
 
-    void init_profile_cache() override;
     std::pair<const void*, size_t> param_blob() const override;
 };
 using BatchConvBias = BatchConvBiasForward;

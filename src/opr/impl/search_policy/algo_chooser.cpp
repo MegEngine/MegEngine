@@ -36,15 +36,29 @@ using mgb::opr::intl::WorkspaceLimitGetter;
 // timeout delta to be added with fastest known algorithm for new algos
 constexpr double TIMEOUT_TOLERANCE = 2;
 
+#define CACHE_KEY_VERSION "v3"
+
+namespace {
+template <typename Opr>
+std::string profile_name(Opr* opr) {
+    std::string ret =
+            std::string(MegDNNOpr2MGBOpr<Opr>::MGBOpr::typeinfo()->name) +
+            CACHE_KEY_VERSION;
+    ret.append(opr->get_algorithm_set_name());
+    return ret;
+}
+}
+
 namespace mgb {
 namespace opr {
 
 template <typename Opr>
 AlgoChooserProfileCache::Result AlgoChooser<Opr>::get_profile_result(
         ExeContext& ctx, bool enable_update) {
-    AlgoChooserProfileCache& cache = ctx.mgb_opr()->profile_cache();
+    AlgoChooserProfileCache cache(ctx.mgb_opr()->comp_node(),
+                                  profile_name(ctx.megdnn_opr()).c_str());
 
-    ConvTensorLayouts origin_layouts = ctx.layouts();
+    TensorLayoutArray origin_layouts = ctx.layouts();
     typename Opr::Param origin_param = ctx.mgb_opr()->param();
     AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
                                            origin_layouts.size(), &origin_param,
@@ -131,12 +145,12 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
                        "profiling result but not in algo_map; please "
                        "report this "
                        "bug; opr: %s{%s}, shapes: %s %s %s",
+                       i.algo.c_str(),
                        ctx.mgb_opr()->cname(),
                        ctx.mgb_opr()->dyn_typeinfo()->name,
                        ctx.layouts()[0].TensorShape::to_string().c_str(),
                        ctx.layouts()[1].TensorShape::to_string().c_str(),
-                       ctx.layouts()[2].TensorShape::to_string().c_str(),
-                       i.algo.c_str());
+                       ctx.layouts()[2].TensorShape::to_string().c_str());
             return iter->second;
         }
     }
@@ -153,7 +167,7 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::choose_by_profile(
 }
 
 template <typename Opr>
-size_t AlgoChooser<Opr>::setup_algo(const ConvTensorLayouts& layouts,
+size_t AlgoChooser<Opr>::setup_algo(const TensorLayoutArray& layouts,
                                     Opr* megdnn_opr, const MGBOpr* mgb_opr,
                                     bool allow_weight_preprocess) {
     if (WorkspaceLimitGetter::is_prealloc_run(mgb_opr->owner_graph())) {
@@ -220,7 +234,7 @@ typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::get_algo(
     AlgoChooser<megdnn::Opr>::choose_by_profile(                             \
             ExeContext& ctx, bool require_reproducible, bool enable_update); \
     template size_t AlgoChooser<megdnn::Opr>::setup_algo(                    \
-            const ConvTensorLayouts& layouts, megdnn::Opr* megdnn_opr,       \
+            const TensorLayoutArray& layouts, megdnn::Opr* megdnn_opr,       \
             const MGBOpr* mgb_opr, bool allow_weight_preprocess);
 
 MGB_FOREACH_FASTRUN_OPR(INST)

@@ -36,8 +36,6 @@ using namespace opr;
 using namespace cg::static_infer;
 using intl::WorkspaceLimitGetter;
 
-#define CACHE_KEY_VERSION "v2"
-
 /* ==================== misc impl  ==================== */
 
 mixin::Convolution::~Convolution() = default;
@@ -103,25 +101,11 @@ void mixin::Convolution::init_output_static_infer_desc_for_bwd_data(
                              {SourceType::DEP, inp_deps, infer_wk});
 }
 
-#define IMPL_CONV(_cls, _prof_name)                                  \
-    void _cls::init_profile_cache() {                                \
-        std::string name(_prof_name CACHE_KEY_VERSION);              \
-        name.append(megdnn_opr()->get_algorithm_set_name());         \
-        m_profile_cache = std::make_unique<AlgoChooserProfileCache>( \
-                comp_node(), name.c_str());                          \
-    }                                                                \
-    std::pair<const void*, size_t> _cls::param_blob() const {        \
-        return {&param(), sizeof(Param)};                            \
-    }                                                                \
+#define IMPL_CONV(_cls)                                       \
+    std::pair<const void*, size_t> _cls::param_blob() const { \
+        return {&param(), sizeof(Param)};                     \
+    }                                                         \
     MGB_DYN_TYPE_OBJ_FINAL_IMPL(_cls)
-
-AlgoChooserProfileCache& mixin::Convolution::profile_cache() const {
-    if (!m_profile_cache) {
-        const_cast<Convolution*>(this)->init_profile_cache();
-        mgb_assert(m_profile_cache);
-    }
-    return *m_profile_cache;
-}
 
 class mixin::WeightPreprocessExecutor::PreprocessedFilterExecDep final
         : public cg::GraphExecutable::ExecDependency {
@@ -209,7 +193,7 @@ bool mixin::WeightPreprocessExecutor::mixin_allow_weight_preprocess(
 
 /* ==================== ConvolutionForward  ==================== */
 
-IMPL_CONV(ConvolutionForward, "conv_fwd");
+IMPL_CONV(ConvolutionForward);
 
 ConvolutionForward::ConvolutionForward(VarNode* src, VarNode* filter,
                                        const Param& param,
@@ -335,7 +319,7 @@ void ConvolutionForward::scn_do_execute_preprocess() {
 }
 
 /* ==================== ConvolutionBackwardData  ==================== */
-IMPL_CONV(ConvolutionBackwardData, "conv_bwd_data");
+IMPL_CONV(ConvolutionBackwardData);
 
 ConvolutionBackwardData::ConvolutionBackwardData(
         VarNode* filter, VarNode* diff, VarNode* src_for_shp,
@@ -426,7 +410,7 @@ MGB_IMPL_OPR_GRAD(ConvolutionBackwardData) {
 #endif
 
 /* ==================== ConvolutionBackwardFilter  ==================== */
-IMPL_CONV(ConvolutionBackwardFilter, "conv_bwd_filter");
+IMPL_CONV(ConvolutionBackwardFilter);
 
 ConvolutionBackwardFilter::ConvolutionBackwardFilter(
         VarNode* src, VarNode* diff, VarNode* filter, const Param& param,
@@ -480,7 +464,7 @@ MGB_IMPL_OPR_GRAD(ConvolutionBackwardFilter) {
 #endif
 /* ==================== Convolution3DForward ==================== */
 
-IMPL_CONV(Convolution3DForward, "conv3d_fwd");
+IMPL_CONV(Convolution3DForward);
 
 Convolution3DForward::Convolution3DForward(VarNode* src, VarNode* filter,
                                            const Param& param,
@@ -553,7 +537,7 @@ size_t Convolution3DForward::get_workspace_size_bytes(
 }
 
 /* ==================== Convolution3DBackwardData  ==================== */
-IMPL_CONV(Convolution3DBackwardData, "conv3d_bwd_data");
+IMPL_CONV(Convolution3DBackwardData);
 
 Convolution3DBackwardData::Convolution3DBackwardData(
         VarNode* filter, VarNode* diff, VarNode* src_for_shp,
@@ -631,7 +615,7 @@ MGB_IMPL_OPR_GRAD(Convolution3DBackwardData) {
 #endif
 
 /* ==================== Convolution3DBackwardFilter  ==================== */
-IMPL_CONV(Convolution3DBackwardFilter, "conv3d_bwd_filter");
+IMPL_CONV(Convolution3DBackwardFilter);
 
 Convolution3DBackwardFilter::Convolution3DBackwardFilter(
         VarNode* src, VarNode* diff, VarNode* filter, const Param& param,
@@ -719,7 +703,7 @@ SymbolVar MaskPropagate::make(SymbolVar src, const Param& param,
 }
 
 /* ==================== ConvBiasForward  ==================== */
-IMPL_CONV(ConvBiasForward, "conv_bias_fwd");
+IMPL_CONV(ConvBiasForward);
 
 ConvBiasForward::ConvBiasForward(VarNode* src, VarNode* filter,
                                  const Param& param,
@@ -1005,7 +989,7 @@ void ConvBiasForward::scn_do_execute_preprocess() {
 
 /* ===================== LocalShareForward ==================== */
 
-IMPL_CONV(LocalShareForward, "local_share");
+IMPL_CONV(LocalShareForward);
 
 LocalShareForward::LocalShareForward(VarNode* src, VarNode* filter,
                                      const Param& param,
@@ -1073,7 +1057,7 @@ MGB_IMPL_OPR_GRAD(LocalShareForward) {
 
 /* ===================== LocalShareBackwardData ==================== */
 
-IMPL_CONV(LocalShareBackwardData, "local_share_bwd_data");
+IMPL_CONV(LocalShareBackwardData);
 
 LocalShareBackwardData::LocalShareBackwardData(VarNode* filter, VarNode* diff,
                                                VarNode* src_for_shp,
@@ -1153,7 +1137,7 @@ MGB_IMPL_OPR_GRAD(LocalShareBackwardData) {
 
 /* ==================== LocalShareBackwardFilter  ==================== */
 
-IMPL_CONV(LocalShareBackwardFilter, "local_share_bwd_filter");
+IMPL_CONV(LocalShareBackwardFilter);
 
 LocalShareBackwardFilter::LocalShareBackwardFilter(
         VarNode* src, VarNode* diff, VarNode* filter, const Param& param,
@@ -1208,7 +1192,7 @@ MGB_IMPL_OPR_GRAD(LocalShareBackwardFilter) {
 
 /* ===================== DeformableConvForward ==================== */
 
-IMPL_CONV(DeformableConvForward, "deformable_conv");
+IMPL_CONV(DeformableConvForward);
 
 DeformableConvForward::DeformableConvForward(VarNode* src, VarNode* filter,
                                              VarNode* offset, VarNode* mask,
@@ -1293,7 +1277,7 @@ MGB_IMPL_OPR_GRAD(DeformableConvForward) {
 
 /* ==================== DeformableConvBackwardData  ==================== */
 
-IMPL_CONV(DeformableConvBackwardData, "deformalbe_conv_backward_data");
+IMPL_CONV(DeformableConvBackwardData);
 
 DeformableConvBackwardData::DeformableConvBackwardData(
         VarNode* src, VarNode* filter, VarNode* offset, VarNode* mask,
@@ -1425,7 +1409,7 @@ void DeformableConvBackwardData::init_output_static_infer_desc() {
 
 /* ==================== DeformableConvBackwardFilter  ==================== */
 
-IMPL_CONV(DeformableConvBackwardFilter, "deformalbe_conv_backward_filter");
+IMPL_CONV(DeformableConvBackwardFilter);
 
 DeformableConvBackwardFilter::DeformableConvBackwardFilter(
         VarNode* src, VarNode* filter, VarNode* offset, VarNode* mask,
@@ -1484,7 +1468,7 @@ size_t DeformableConvBackwardFilter::get_workspace_size_bytes(
 }
 
 /* ==================== BatchConvBiasForward  ==================== */
-IMPL_CONV(BatchConvBiasForward, "batch_conv_bias_fwd");
+IMPL_CONV(BatchConvBiasForward);
 
 BatchConvBiasForward::BatchConvBiasForward(VarNode* src, VarNode* filter,
                                            const Param& param,
