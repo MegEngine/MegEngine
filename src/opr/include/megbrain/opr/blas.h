@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/exception.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/tensor.h"
 #include "megbrain/graph.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
@@ -24,51 +25,58 @@ namespace opr {
 /*!
  * \brief matrix_mul(trans0(opr0), trans1(opr1))
  */
-MGB_DEFINE_OPR_CLASS(MatrixMul,
-        intl::MegDNNOprWrapperFwd<megdnn::MatrixMul>) // {
+MGB_DEFINE_OPR_CLASS(MatrixMul, intl::MegDNNOprWrapperFwd<megdnn::MatrixMul>,
+                     public mixin::AlgoChooserHelper) // {
+public:
+    using AlgorithmInfo = megdnn::detail::Algorithm::Info;
+    MatrixMul(VarNode* opr0, VarNode* opr1, const Param& param,
+              const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    public:
+    static SymbolVar make(SymbolVar opr0, SymbolVar opr1,
+                          const Param& param = {},
+                          const ExecutionPolicy& policy = {},
+                          const OperatorNodeConfig& config = {});
+private:
+    void add_input_layout_constraint() override;
+    void scn_do_execute() override;
+    void init_output_dtype() override;
+    size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
+                                    const TensorShapeArray& output_shapes)
+            const override;
+    static bool check_layout(const TensorLayout& layout, int transpose);
 
-        MatrixMul(VarNode *opr0, VarNode *opr1,
-                const Param &param, const OperatorNodeConfig &config);
-
-        static SymbolVar make(SymbolVar opr0, SymbolVar opr1,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
-    private:
-        void add_input_layout_constraint() override;
-        void scn_do_execute() override;
-        void init_output_dtype() override;
-        size_t get_workspace_size_bytes(
-                const TensorShapeArray &input_shapes,
-                const TensorShapeArray &output_shapes) const override;
-
-        static bool check_layout(const TensorLayout &layout, int transpose);
+    //! store the policy of all transpose situations
+    megdnn::MatrixMul::ExecutionPolicy m_cadidate_execution_policies[4];
 };
 
 /*!
  * \brief batched matrix multiplication on 3D inputs
  */
 MGB_DEFINE_OPR_CLASS(BatchedMatrixMul,
-        intl::MegDNNOprWrapperFwd<megdnn::BatchedMatrixMul>) // {
+                     intl::MegDNNOprWrapperFwd<megdnn::BatchedMatrixMul>,
+                     public mixin::AlgoChooserHelper) // {
+public:
+    using AlgorithmInfo = megdnn::detail::Algorithm::Info;
+    BatchedMatrixMul(VarNode* opr0, VarNode* opr1, const Param& param,
+                     const ExecutionPolicy& policy,
+                     const OperatorNodeConfig& config);
 
-    public:
+    static SymbolVar make(SymbolVar opr0, SymbolVar opr1,
+                          const Param& param = {},
+                          const ExecutionPolicy& policy = {},
+                          const OperatorNodeConfig& config = {});
 
-        BatchedMatrixMul(VarNode *opr0, VarNode *opr1,
-                const Param &param, const OperatorNodeConfig &config);
+private:
+    void add_input_layout_constraint() override;
+    void init_output_dtype() override;
+    void scn_do_execute() override;
+    size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
+                                    const TensorShapeArray& output_shapes)
+            const override;
 
-        static SymbolVar make(SymbolVar opr0, SymbolVar opr1,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
-    private:
-        void add_input_layout_constraint() override;
-        void init_output_dtype() override;
-        void scn_do_execute() override;
-        size_t get_workspace_size_bytes(
-                const TensorShapeArray &input_shapes,
-                const TensorShapeArray &output_shapes) const override;
-
-        static bool check_layout(const TensorLayout &layout, bool transpose);
+    static bool check_layout(const TensorLayout& layout, bool transpose);
+    //! store the policy of all transpose situations
+    megdnn::BatchedMatrixMul::ExecutionPolicy m_cadidate_execution_policies[4];
 };
 
 /*!
@@ -109,4 +117,3 @@ MGB_DEFINE_OPR_CLASS(SVD, intl::MegDNNOprWrapperFwd<megdnn::SVD>) // {
 } // mgb
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

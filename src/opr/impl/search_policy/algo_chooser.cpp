@@ -251,6 +251,7 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             opr->owner_graph(), opr->comp_node(),
             opr->execution_policy().workspace_limit);
+    m_megdnn_opr->execution_policy() = {};
     return APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
                          args..., workspace_limit, reproducible),
                  m_layouts);

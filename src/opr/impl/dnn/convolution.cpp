@@ -1636,6 +1636,5 @@ void BatchConvBiasForward::init_output_format() {
 }
 
 #undef IMPL_CONV
-#undef MGB_FOREACH_FASTRUN_OPR
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

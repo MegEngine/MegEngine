@@ -98,7 +98,7 @@ namespace serialization {
             return nullptr;
         }
     };
-    
+
 
     template<class Opr, class Maker0, class MegDNNConv,
          class Maker1=MakeConvCallerEmpty<MegDNNConv>,
@@ -292,7 +292,7 @@ namespace serialization {
             return nullptr;
         }
     };
- 
+
     template<class Opr, class Maker0, class MegDNNConv,
          class Maker1=MakeLocalShareCallerEmpty<MegDNNConv>,
          class Maker2=MakeLocalShareCallerEmpty<MegDNNConv>,

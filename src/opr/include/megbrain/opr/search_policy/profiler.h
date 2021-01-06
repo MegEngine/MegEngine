@@ -18,26 +18,31 @@
 #include "megbrain/comp_node.h"
 
 #include "megdnn/basic_types.h"
+#include "megdnn/oprs/linalg.h"
 #include "megdnn/oprs/nn.h"
 
 namespace mgb {
 namespace opr {
 
-#define MGB_FOREACH_FASTRUN_OPR(cb)   \
-    cb(ConvolutionForward);           \
-    cb(ConvBiasForward);              \
-    cb(ConvolutionBackwardData);      \
-    cb(ConvolutionBackwardFilter);    \
-    cb(Convolution3DForward);         \
-    cb(Convolution3DBackwardData);    \
-    cb(Convolution3DBackwardFilter);  \
-    cb(LocalShareForward);            \
-    cb(LocalShareBackwardData);       \
-    cb(LocalShareBackwardFilter);     \
-    cb(DeformableConvForward);        \
-    cb(DeformableConvBackwardFilter); \
-    cb(DeformableConvBackwardData);   \
-    cb(BatchConvBiasForward);
+// clang-format off
+#define MGB_FOREACH_FASTRUN_OPR(cb)  \
+    cb(ConvolutionForward)           \
+    cb(ConvBiasForward)              \
+    cb(ConvolutionBackwardData)      \
+    cb(ConvolutionBackwardFilter)    \
+    cb(Convolution3DForward)         \
+    cb(Convolution3DBackwardData)    \
+    cb(Convolution3DBackwardFilter)  \
+    cb(LocalShareForward)            \
+    cb(LocalShareBackwardData)       \
+    cb(LocalShareBackwardFilter)     \
+    cb(DeformableConvForward)        \
+    cb(DeformableConvBackwardFilter) \
+    cb(DeformableConvBackwardData)   \
+    cb(BatchConvBiasForward)         \
+    cb(MatrixMul)                    \
+    cb(BatchedMatrixMul)
+// clang-format on
 
 template <typename Opr>
 struct OprArityTrait;
@@ -67,6 +72,8 @@ INST_ARITY(megdnn::DeformableConvBackwardFilter, 4, 1);
 INST_ARITY(megdnn::BatchConvBiasForward, 4, 1);
 INST_ARITY(megdnn::ConvBias, 4, 1);
 INST_ARITY(megdnn::DeformableConvBackwardData, 5, 3);
+INST_ARITY(megdnn::MatrixMul, 2, 1);
+INST_ARITY(megdnn::BatchedMatrixMul, 2, 1);
 
 #undef INST_ARITY
 

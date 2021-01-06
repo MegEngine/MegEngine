@@ -16,6 +16,7 @@
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
+#include "megbrain/opr/search_policy/profiler.h"
 #include "megbrain/utils/shared_set.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/opr/basic_arith.h"
@@ -149,15 +150,6 @@ void inplace_conv_opr_workspace_limit_modifier(OperatorNodeBase& opr,
 
 }  // anonymous namespace
 
-#define MGB_FOREACH_FASTRUN_OPR(cb)                                           \
-    cb(ConvolutionForward), cb(ConvBiasForward), cb(ConvolutionBackwardData), \
-            cb(ConvolutionBackwardFilter), cb(Convolution3DForward),          \
-            cb(Convolution3DBackwardData), cb(Convolution3DBackwardFilter),   \
-            cb(LocalShareForward), cb(LocalShareBackwardData),                \
-            cb(LocalShareBackwardFilter), cb(DeformableConvForward),          \
-            cb(DeformableConvBackwardFilter), cb(DeformableConvBackwardData), \
-            cb(BatchConvBiasForward),
-
 void gopt::modify_opr_algo_strategy_inplace(
         const VarNodeArrayView& dest_vars,
         opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy) {
@@ -171,7 +163,7 @@ void gopt::modify_opr_algo_strategy_inplace(
             modifiers = {
 #define CONV(t)                                                       \
     {opr::t::typeinfo(), std::bind(inplace_conv_opr_modifier<opr::t>, \
-                                   std::placeholders::_1, strategy)}
+                                   std::placeholders::_1, strategy)},
                     MGB_FOREACH_FASTRUN_OPR(CONV)
 #undef CONV
             };
@@ -209,7 +201,7 @@ void gopt::set_opr_algo_workspace_limit_inplace(
     static const ThinHashMap<Typeinfo*, void (*)(OperatorNodeBase&, size_t)>
             modifiers = {
 #define CONV(t) \
-    {opr::t::typeinfo(), &inplace_conv_opr_workspace_limit_modifier<opr::t>}
+    {opr::t::typeinfo(), &inplace_conv_opr_workspace_limit_modifier<opr::t>},
                     MGB_FOREACH_FASTRUN_OPR(CONV)
 #undef CONV
             };
@@ -226,7 +218,6 @@ void gopt::set_opr_algo_workspace_limit_inplace(
         dep_iter.add(i);
     }
 }
-#undef MGB_FOREACH_FASTRUN_OPR
 
 /* ================ ParamRedistributePass ================ */
 const char* ParamRedistributePass::name() const {
@@ -790,8 +781,8 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
                    new_inp[1]->name().c_str(),
                    new_inp[1]->owner_opr()->name().c_str());
         auto new_deconv_opr = opr::ConvolutionBackwardData::make(
-                new_inp[0], new_inp[1], new_param, deconv_opr.execution_policy(),
-                deconv_opr.config());
+                new_inp[0], new_inp[1], new_param,
+                deconv_opr.execution_policy(), deconv_opr.config());
         return new_deconv_opr.node()->owner_opr();
     };
 
@@ -813,20 +804,20 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
                    new_inp[1]->owner_opr()->name().c_str());
         if(opr->input().size() == 2) {
             auto new_conv_opr = opr::ConvBias::make(
-                    new_inp[0], new_inp[1], new_param, convbias_opr.execution_policy(),
-                    convbias_opr.config());
+                    new_inp[0], new_inp[1], new_param,
+                    convbias_opr.execution_policy(), convbias_opr.config());
             return new_conv_opr.node()->owner_opr();
         } else if(opr->input().size() == 3) {
             auto new_conv_opr = opr::ConvBias::make(
-                    new_inp[0], new_inp[1], new_inp[2], new_param, convbias_opr.execution_policy(),
-                    convbias_opr.config());
+                    new_inp[0], new_inp[1], new_inp[2], new_param,
+                    convbias_opr.execution_policy(), convbias_opr.config());
             return new_conv_opr.node()->owner_opr();
         } else {
             mgb_assert(opr->input().size() == 4, "invalid input size %zu",
                        opr->input().size());
             auto new_conv_opr = opr::ConvBias::make(
-                    new_inp[0], new_inp[1], new_inp[2], new_inp[3], new_param, convbias_opr.execution_policy(),
-                    convbias_opr.config());
+                    new_inp[0], new_inp[1], new_inp[2], new_inp[3], new_param,
+                    convbias_opr.execution_policy(), convbias_opr.config());
             return new_conv_opr.node()->owner_opr();
         }
     };
@@ -841,7 +832,8 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
                     megdnn::param::MatrixMul::ComputeMode::FLOAT32;
         }
         auto new_matmul_opr = opr::MatrixMul::make(
-                new_inp[0], new_inp[1], new_param, matmul_opr.config());
+                new_inp[0], new_inp[1], new_param,
+                matmul_opr.execution_policy(), matmul_opr.config());
         return new_matmul_opr.node()->owner_opr();
     };
 
@@ -864,7 +856,8 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
                    new_inp[1]->name().c_str(),
                    new_inp[1]->owner_opr()->name().c_str());
         auto new_matmul_opr = opr::BatchedMatrixMul::make(
-                new_inp[0], new_inp[1], new_param, matmul_opr.config());
+                new_inp[0], new_inp[1], new_param,
+                matmul_opr.execution_policy(), matmul_opr.config());
         return new_matmul_opr.node()->owner_opr();
     };
 
@@ -915,8 +908,8 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
                 new_mat->owner_opr()->input(0)->dtype() == dtype::Float32())
                 new_mat = new_mat->owner_opr()->input(0);
             else
-                new_mat =
-                        opr::TypeCvt::make(new_inp[1], dtype::Float32(), {}).node();
+                new_mat = opr::TypeCvt::make(new_inp[1], dtype::Float32(), {})
+                                  .node();
         }
         SymbolVar new_warp;
         if (new_inp.size() == 3) {
@@ -944,8 +937,8 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(
                 new_map->owner_opr()->input(0)->dtype() == dtype::Float32())
                 new_map = new_map->owner_opr()->input(0);
             else
-                new_map =
-                        opr::TypeCvt::make(new_inp[1], dtype::Float32(), {}).node();
+                new_map = opr::TypeCvt::make(new_inp[1], dtype::Float32(), {})
+                                  .node();
         }
         SymbolVar new_remap;
 

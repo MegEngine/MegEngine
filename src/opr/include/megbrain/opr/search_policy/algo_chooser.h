@@ -14,6 +14,7 @@
 
 #include "megbrain/opr/search_policy/profiler.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/blas.h"
 
 template <class MegDNNOpr>
 struct MegDNNOpr2MGBOpr;

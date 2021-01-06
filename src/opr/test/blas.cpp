@@ -269,7 +269,7 @@ void run_trans_inp_test_case(bool trans_a, bool trans_b) {
     if (DTypeTrait<dt_dst>::enumv == DTypeEnum::Int16) {
         config.output_dtype(dtype::Int16());
     }
-    auto z = opr::MatrixMul::make(x, y, {}, config);
+    auto z = opr::MatrixMul::make(x, y, {}, {}, config);
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
 
@@ -359,7 +359,7 @@ void run_bgemm_trans_inp_test_case(bool trans_a, bool trans_b) {
     trans_a ? (x = opr::Dimshuffle::make(x, {0, 2, 1})) : 0;
     trans_b ? (y = opr::Dimshuffle::make(y, {0, 2, 1})) : 0;
 
-    auto z = opr::BatchedMatrixMul::make(x, y, {}, OperatorNodeConfig{});
+    auto z = opr::BatchedMatrixMul::make(x, y, {}, {}, OperatorNodeConfig{});
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     auto run = [&](size_t B, size_t M, size_t K, size_t N) {
@@ -419,6 +419,43 @@ TEST(TestOprBlas, MatrixMul_TN) {
 TEST(TestOprBlas, MatrixMul_TT) {
     run_sgemm_test(true, true);
 }
+
+TEST(TestOprDNN, MatrixMulExePolicy) {
+    using Param = opr::MatrixMul::Param;
+    Param param;
+    using Policy = opr::MatrixMul::ExecutionPolicy;
+    using S = Policy::Strategy;
+
+    auto cn = CompNode::load("cpux");
+
+#if MGB_ENABLE_FASTRUN
+    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
+                          S::PROFILE_HEURISTIC}) {
+#else
+    for (auto strategy: {S:HEURISTIC, S::PROFILE_HEURISTIC}) {
+#endif
+
+        auto graph = ComputingGraph::make();
+        HostTensorGenerator<> gen;
+
+        auto mkvar = [&](const char* name, const TensorShape& shp) {
+            return opr::Host2DeviceCopy::make(*graph, gen(shp), cn)
+                    .rename(name);
+        };
+
+        auto A = mkvar("A", {32, 64});
+        auto B = mkvar("B", {64, 32});
+
+        Policy policy;
+        policy.strategy = strategy;
+
+        auto C = opr::MatrixMul::make(A, B, param, policy);
+        HostTensorND host_c;
+        auto func = graph->compile({make_callback_copy(C, host_c)});
+        func->execute();
+    }
+}
+
 
 TEST(TestOprBlas, BatchedMatrixMulFp32_NN) {
     run_batched_sgemm_test(false, false);
