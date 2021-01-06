@@ -11,6 +11,7 @@
  */
 
 #include "megbrain/opr/search_policy/algo_chooser.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/opr/search_policy/profiler.h"
 
 #include "../internal/invoke.h"
@@ -200,7 +201,7 @@ size_t AlgoChooser<Opr>::setup_algo(const TensorLayoutArray& layouts,
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplAlgo AlgoChooser<Opr>::get_algo(
         ExeContext& ctx) {
-    using S = mixin::Convolution::ExecutionPolicy::Strategy;
+    using S = mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     MGB_MARK_USED_VAR(TIMEOUT_TOLERANCE);
     switch (ctx.mgb_opr()->execution_policy().strategy) {
         case S::HEURISTIC:

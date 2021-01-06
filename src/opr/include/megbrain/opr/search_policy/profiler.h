@@ -12,9 +12,10 @@
 
 #pragma once
 
-#include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/utils/hash_ct.h"
 #include "megbrain/utils/timer.h"
+#include "megbrain/system.h"
+#include "megbrain/comp_node.h"
 
 #include "megdnn/basic_types.h"
 #include "megdnn/oprs/nn.h"
@@ -127,15 +128,15 @@ class TimedProfiler {
     static constexpr int arity_out = OprArityTrait<Opr>::arity_out;
     static constexpr int arity = OprArityTrait<Opr>::arity;
 
-    using ConvTensorShapes = std::array<TensorShape, arity>;
+    using TensorShapeArray = std::array<megdnn::TensorShape, arity>;
 
 public:
     struct Param {
         char algo_name[128];
         size_t workspace;
-        DTypeEnum dtypes[arity];
+        megdnn::DTypeEnum dtypes[arity];
         CompNode::Locator comp_node_loc;
-        ConvTensorShapes shapes;
+        TensorShapeArray shapes;
         typename Opr::Param opr_param;
         bool allow_weight_preprocess;
 

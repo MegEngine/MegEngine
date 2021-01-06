@@ -13,7 +13,7 @@
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/search_policy/algo_chooser.h"
-#include "megbrain/opr/search_policy/profiler.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 
 #include "megbrain/graph/grad_impl.h"
 #include "megbrain/system.h"
@@ -38,18 +38,9 @@ using intl::WorkspaceLimitGetter;
 
 /* ==================== misc impl  ==================== */
 
-mixin::Convolution::~Convolution() = default;
-
-void mixin::Convolution::set_execution_policy(const ExecutionPolicy& policy) {
-    mgb_throw_if(
-            m_policy_accessed, InternalError,
-            "attempt to modify ExecutionPolicy after it has been accessed");
-    m_policy = policy;
-}
-
 template <class MgbOpr, class MegDNNOpr>
-void mixin::Convolution::init_output_static_infer_desc_for_bwd_data(
-        cg::OperatorNodeBase* self) {
+void mixin::ConvolutionBackwardDataMixin::
+        init_output_static_infer_desc_for_bwd_data(cg::OperatorNodeBase* self) {
     using namespace cg::static_infer;
     auto&& mgr = self->owner_graph()->static_infer_manager();
 
@@ -93,7 +84,7 @@ void mixin::Convolution::init_output_static_infer_desc_for_bwd_data(
     };
     inp_deps.push_back({self->output(0), DepType::SHAPE});
     auto workspace_dep_var =
-            WorkspaceLimitGetter::register_to_graph(self->owner_graph());
+            intl::WorkspaceLimitGetter::register_to_graph(self->owner_graph());
     if (workspace_dep_var) {
         inp_deps.push_back({workspace_dep_var, DepType::VALUE});
     }
@@ -101,11 +92,7 @@ void mixin::Convolution::init_output_static_infer_desc_for_bwd_data(
                              {SourceType::DEP, inp_deps, infer_wk});
 }
 
-#define IMPL_CONV(_cls)                                       \
-    std::pair<const void*, size_t> _cls::param_blob() const { \
-        return {&param(), sizeof(Param)};                     \
-    }                                                         \
-    MGB_DYN_TYPE_OBJ_FINAL_IMPL(_cls)
+#define IMPL_CONV(_cls) MGB_DYN_TYPE_OBJ_FINAL_IMPL(_cls)
 
 class mixin::WeightPreprocessExecutor::PreprocessedFilterExecDep final
         : public cg::GraphExecutable::ExecDependency {

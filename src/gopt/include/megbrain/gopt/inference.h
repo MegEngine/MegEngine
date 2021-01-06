@@ -14,6 +14,7 @@
 #include "megbrain/gopt/framework.h"
 #include "megbrain/graph/cg.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 
 namespace mgb {
 namespace gopt {
@@ -342,7 +343,7 @@ namespace gopt {
      */
     void modify_opr_algo_strategy_inplace(
             const VarNodeArrayView& dest_vars,
-            opr::mixin::Convolution::ExecutionPolicy::Strategy strategy);
+            opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy);
 
     /*!
      * \brief enable PROFILE execution strategy for oprs with multiple

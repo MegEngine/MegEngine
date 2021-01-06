@@ -13,6 +13,7 @@
 #pragma once
 
 #include "megbrain/opr/search_policy/profiler.h"
+#include "megbrain/opr/dnn/convolution.h"
 
 template <class MegDNNOpr>
 struct MegDNNOpr2MGBOpr;

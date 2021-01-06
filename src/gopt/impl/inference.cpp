@@ -15,6 +15,7 @@
 #include "megbrain/graph/event.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/local.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/utils/shared_set.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/opr/basic_arith.h"
@@ -116,8 +117,8 @@ SymbolVarArray gopt::optimize_for_inference(
 
 namespace {
 void modify_conv_strategy(
-        opr::mixin::Convolution& conv,
-        opr::mixin::Convolution::ExecutionPolicy::Strategy strategy) {
+        opr::mixin::AlgoChooserHelper& conv,
+        opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy) {
     auto policy = conv.execution_policy_transient();
     policy.strategy = strategy;
     conv.set_execution_policy(policy);
@@ -126,13 +127,13 @@ void modify_conv_strategy(
 template <typename Opr>
 void inplace_conv_opr_modifier(
         OperatorNodeBase& opr,
-        opr::mixin::Convolution::ExecutionPolicy::Strategy strategy) {
+        opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy) {
     modify_conv_strategy(
             opr.cast_final_safe<Opr>(),
             strategy);
 }
 
-void modify_conv_policy_workspace_limit(opr::mixin::Convolution& conv,
+void modify_conv_policy_workspace_limit(opr::mixin::AlgoChooserHelper& conv,
                                         size_t workspace_limit) {
     auto policy = conv.execution_policy_transient();
     policy.workspace_limit = workspace_limit;
@@ -159,9 +160,9 @@ void inplace_conv_opr_workspace_limit_modifier(OperatorNodeBase& opr,
 
 void gopt::modify_opr_algo_strategy_inplace(
         const VarNodeArrayView& dest_vars,
-        opr::mixin::Convolution::ExecutionPolicy::Strategy strategy) {
+        opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy) {
 #if !MGB_ENABLE_FASTRUN
-    using S = opr::mixin::Convolution::ExecutionPolicy::Strategy;
+    using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     if (strategy == S::PROFILE || strategy == S::PROFILE_REPRODUCIBLE) {
         mgb_throw(MegBrainError, "fastrun is disabled at compile time");
     }
@@ -190,16 +191,16 @@ void gopt::modify_opr_algo_strategy_inplace(
 
 void gopt::enable_opr_algo_profiling_inplace(
         const VarNodeArrayView& dest_vars) {
-    modify_opr_algo_strategy_inplace(dest_vars,
-                                     opr::mixin::Convolution::ExecutionPolicy::
-                                             Strategy::PROFILE);
+    modify_opr_algo_strategy_inplace(
+            dest_vars,
+            opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy::PROFILE);
 }
 
 void gopt::enable_opr_use_profiling_cache_inplace(
         const VarNodeArrayView& dest_vars) {
-    modify_opr_algo_strategy_inplace(dest_vars,
-                                     opr::mixin::Convolution::ExecutionPolicy::
-                                             Strategy::PROFILE_HEURISTIC);
+    modify_opr_algo_strategy_inplace(
+            dest_vars, opr::mixin::AlgoChooserHelper::ExecutionPolicy::
+                               Strategy::PROFILE_HEURISTIC);
 }
 
 

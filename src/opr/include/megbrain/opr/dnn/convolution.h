@@ -11,6 +11,7 @@
 #pragma once
 
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/utils/persistent_cache.h"
 #include "megbrain/opr/param_defs.h"
 #include "megdnn/oprs/nn.h"
@@ -19,68 +20,14 @@ namespace mgb {
 namespace opr {
 namespace mixin {
 
-/*!
- * \brief Convolution base class
- */
-class Convolution {
-    public:
-        using ExecutionPolicy = megdnn::param::ExecutionPolicy;
-        using AlgorithmInfo = megdnn::detail::Algorithm::Info;
-        using AlgoChooserHook =
-                std::function<AlgorithmInfo(const OperatorNodeBase*)>;
+class ConvolutionBackwardDataMixin : public cg::OperatorNodeMixinBase {
+protected:
+    //! init output desc for conv backward data oprs; it handles both grad
+    //! usage and deconv usage
+    template <class MgbOpr, class MegDNNOpr>
+    static void init_output_static_infer_desc_for_bwd_data(
+            cg::OperatorNodeBase* self);
 
-        const ExecutionPolicy& execution_policy() const {
-            if (!m_policy_accessed) {
-                m_policy_accessed = true;
-            }
-            return m_policy;
-        }
-
-        /*!
-         * \brief get current policy without marking it as having been accessed
-         *
-         * This is primarily used for getting current policy before calling
-         * set_execution_policy().
-         */
-        const ExecutionPolicy& execution_policy_transient() const {
-            return m_policy;
-        }
-
-        /*!
-         * \brief modify execution policy
-         *
-         * Exception would be thrown if execution_policy() has been accessed,
-         * since it would influence cache and many other decisions.
-         */
-        void set_execution_policy(const ExecutionPolicy& policy);
-
-        AlgoChooserProfileCache& profile_cache() const;
-
-        virtual std::pair<const void*, size_t> param_blob() const = 0;
-
-        /*!
-         * \brief register a hook to implement custom algo chooser
-         */
-        void setup_algo_chooser(AlgoChooserHook&& func) {
-            m_algo_chooser = func;
-        }
-        AlgoChooserHook algo_chooser() const {
-            return m_algo_chooser;
-        }
-
-    protected:
-        ~Convolution();
-
-        mutable bool m_policy_accessed = false;
-        ExecutionPolicy m_policy;
-
-        AlgoChooserHook m_algo_chooser;
-
-        //! init output desc for conv backward data oprs; it handles both grad
-        //! usage and deconv usage
-        template <class MgbOpr, class MegDNNOpr>
-        static void init_output_static_infer_desc_for_bwd_data(
-                cg::OperatorNodeBase* self);
 };
 
 class WeightPreprocessExecutor : public cg::OperatorNodeMixinBase {
@@ -153,7 +100,7 @@ class ConvolutionTestingPeer;
 }  // namespace testing
 
 MGB_DEFINE_OPR_CLASS(ConvolutionForward,
-        intl::ConvolutionForwardBase, public mixin::Convolution) // {
+        intl::ConvolutionForwardBase, public mixin::AlgoChooserHelper) // {
 
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
@@ -183,12 +130,11 @@ MGB_DEFINE_OPR_CLASS(ConvolutionForward,
                 const ExecutionPolicy &policy = {},
                 const OperatorNodeConfig &config = {});
 
-        std::pair<const void*, size_t> param_blob() const override;
 };
 using Convolution = ConvolutionForward;
 
 MGB_DEFINE_OPR_CLASS(ConvBiasForward, intl::ConvBiasForwardBase,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
 
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
@@ -240,7 +186,6 @@ public:
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
 
-    std::pair<const void*, size_t> param_blob() const override;
 
     static void check_winograd_param_valid(
             const megdnn::ConvBias::WinogradParam& param,
@@ -253,10 +198,12 @@ using ConvBias = ConvBiasForward;
 /*!
  * \brief Can be used in two ways: compute gradient of conv, or deconv
  */
-MGB_DEFINE_OPR_CLASS(ConvolutionBackwardData,
+MGB_DEFINE_OPR_CLASS(
+        ConvolutionBackwardData,
         cg::SingleCNOperatorNodeBaseT<
-            mixin::MegDNNOprHolderImpl<megdnn::ConvolutionBackwardData>>,
-        public mixin::Convolution) // {
+                mixin::MegDNNOprHolderImpl<megdnn::ConvolutionBackwardData>>,
+        public mixin::AlgoChooserHelper,
+        public mixin::ConvolutionBackwardDataMixin) // {
     void init_output_static_infer_desc() override;
     void init_output_dtype() override;
     void init_output_format() override;
@@ -296,12 +243,11 @@ MGB_DEFINE_OPR_CLASS(ConvolutionBackwardData,
             return make(filter, data, param, policy, config);
         }
 
-        std::pair<const void*, size_t> param_blob() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(ConvolutionBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::ConvolutionBackwardFilter>,
-        public mixin::Convolution ) // {
+        public mixin::AlgoChooserHelper ) // {
 
 
     size_t get_workspace_size_bytes(
@@ -318,7 +264,6 @@ MGB_DEFINE_OPR_CLASS(ConvolutionBackwardFilter,
                 const ExecutionPolicy &policy = {},
                 const OperatorNodeConfig &config = {});
 
-        std::pair<const void*, size_t> param_blob() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(MaskConvolution,
@@ -350,7 +295,7 @@ public:
 
 MGB_DEFINE_OPR_CLASS(Convolution3DForward,
         intl::MegDNNOprWrapperFwd<megdnn::Convolution3DForward>,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
 
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
@@ -368,17 +313,18 @@ MGB_DEFINE_OPR_CLASS(Convolution3DForward,
                 const ExecutionPolicy &policy = {},
                 const OperatorNodeConfig &config = {});
 
-        std::pair<const void*, size_t> param_blob() const override;
 };
 using Convolution3D = Convolution3DForward;
 
 /*!
  * \brief Can be used in two ways: compute gradient of conv, or deconv
  */
-MGB_DEFINE_OPR_CLASS(Convolution3DBackwardData,
+MGB_DEFINE_OPR_CLASS(
+        Convolution3DBackwardData,
         cg::SingleCNOperatorNodeBaseT<
-            mixin::MegDNNOprHolderImpl<megdnn::Convolution3DBackwardData>>,
-        public mixin::Convolution) // {
+                mixin::MegDNNOprHolderImpl<megdnn::Convolution3DBackwardData>>,
+        public mixin::AlgoChooserHelper,
+        public mixin::ConvolutionBackwardDataMixin) // {
     void init_output_static_infer_desc() override;
 
     void add_input_layout_constraint() override;
@@ -416,12 +362,11 @@ MGB_DEFINE_OPR_CLASS(Convolution3DBackwardData,
             return make(filter, data, param, policy, config);
         }
 
-        std::pair<const void*, size_t> param_blob() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(Convolution3DBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::Convolution3DBackwardFilter>,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
 
     size_t get_workspace_size_bytes(
             const TensorShapeArray &input_shapes,
@@ -437,12 +382,11 @@ MGB_DEFINE_OPR_CLASS(Convolution3DBackwardFilter,
                 const ExecutionPolicy &policy = {},
                 const OperatorNodeConfig &config = {});
 
-        std::pair<const void*, size_t> param_blob() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(LocalShareForward,
                      intl::MegDNNOprWrapperFwd<megdnn::LocalShareForward>,
-                     public mixin::Convolution)  // {
+                     public mixin::AlgoChooserHelper)  // {
     void init_output_dtype() override;
     void init_output_format() override;
 
@@ -457,7 +401,6 @@ public:
     static SymbolVar make(SymbolVar src, SymbolVar filter, const Param& param = {},
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
-    std::pair<const void*, size_t> param_blob() const override;
 };
 using LocalShare = LocalShareForward;
 
@@ -465,7 +408,8 @@ MGB_DEFINE_OPR_CLASS(
         LocalShareBackwardData,
         cg::SingleCNOperatorNodeBaseT<
                 mixin::MegDNNOprHolderImpl<megdnn::LocalShareBackwardData>>,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper,
+        public mixin::ConvolutionBackwardDataMixin) // {
     void init_output_static_infer_desc() override;
     void init_output_dtype() override;
 
@@ -485,13 +429,12 @@ public:
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
 
-    std::pair<const void*, size_t> param_blob() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(
         LocalShareBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::LocalShareBackwardFilter>,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
 
     size_t get_workspace_size_bytes(
             const TensorShapeArray& input_shapes,
@@ -506,12 +449,11 @@ public:
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
 
-    std::pair<const void*, size_t> param_blob() const override;
 };
 
 MGB_DEFINE_OPR_CLASS(DeformableConvForward,
         intl::MegDNNOprWrapperFwd<megdnn::DeformableConvForward>,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
     public:
         DeformableConvForward(
                 VarNode *src, VarNode *filter, VarNode *offset, VarNode *mask,
@@ -525,7 +467,6 @@ MGB_DEFINE_OPR_CLASS(DeformableConvForward,
                 const ExecutionPolicy &policy = {},
                 const OperatorNodeConfig &config = {});
 
-        std::pair<const void*, size_t> param_blob() const override;
     private:
         void init_output_dtype() override;
         void init_output_format() override;
@@ -537,7 +478,8 @@ using DeformableConv = DeformableConvForward;
 
 MGB_DEFINE_OPR_CLASS(DeformableConvBackwardData,
                      intl::DeformableConvBackwardDataBase,
-                     public mixin::Convolution) // {
+                     public mixin::AlgoChooserHelper,
+                     public mixin::ConvolutionBackwardDataMixin) // {
 public:
     DeformableConvBackwardData(
             VarNode * src, VarNode * filter, VarNode * offset, VarNode * mask,
@@ -557,7 +499,6 @@ public:
                           const OperatorNodeConfig& config = {});
 
     void scn_do_execute() override;
-    std::pair<const void*, size_t> param_blob() const override;
 
 private:
     void get_output_var_shape(const TensorShapeArray& inp_shape,
@@ -578,7 +519,7 @@ private:
 MGB_DEFINE_OPR_CLASS(
         DeformableConvBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::DeformableConvBackwardFilter>,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
 public:
     DeformableConvBackwardFilter(
             VarNode * src, VarNode * filter, VarNode * offset, VarNode * mask,
@@ -592,7 +533,6 @@ public:
                           const OperatorNodeConfig& config = {});
 
     void scn_do_execute() override;
-    std::pair<const void*, size_t> param_blob() const override;
 
 private:
     size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
@@ -601,7 +541,7 @@ private:
 };
 
 MGB_DEFINE_OPR_CLASS(BatchConvBiasForward, intl::BatchConvBiasForwardBase,
-        public mixin::Convolution) // {
+        public mixin::AlgoChooserHelper) // {
 
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
@@ -650,7 +590,6 @@ public:
                           const ExecutionPolicy& policy = {},
                           const OperatorNodeConfig& config = {});
 
-    std::pair<const void*, size_t> param_blob() const override;
 };
 using BatchConvBias = BatchConvBiasForward;
 

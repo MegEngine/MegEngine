@@ -19,6 +19,7 @@
 #include "megbrain/graph/extern_copr_api.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/plugin/cpu_dispatch_checker.h"
 #include "megbrain/plugin/num_range_checker.h"
@@ -691,7 +692,7 @@ void run_test_st(Args &env) {
     }
 
     mgb::gopt::set_opr_algo_workspace_limit_inplace(vars, env.workspace_limit);
-    using S = opr::mixin::Convolution::ExecutionPolicy::Strategy;
+    using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::HEURISTIC;
 #if MGB_ENABLE_FASTRUN
     if (env.use_fast_run) {

@@ -13,6 +13,7 @@
 #include "megbrain/opr/search_policy/profiler.h"
 
 #include "../internal/invoke.h"
+#include "../internal/megdnn_opr_wrapper.inl"
 
 #if MGB_ROCM
 #include "hcc_detail/hcc_defs_prologue.h"
