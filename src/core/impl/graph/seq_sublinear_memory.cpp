@@ -930,8 +930,8 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_genetic() {
             while (true) {
                 if (it == m_cur_records.end())
                     it = m_cur_records.begin();
-                if (8 * (rng() % m_cur_records.begin()->second) <
-                    7 * it->second) {
+                if (8 * (rng() % std::max((size_t)1, m_cur_records.begin()->second)) <
+                    7 * std::max((size_t)1, it->second)) {
                     records.push_back(*it);
                     it = m_cur_records.erase(it);
                     break;
