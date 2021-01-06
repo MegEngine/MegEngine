@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/oprs.h"
@@ -17,36 +18,35 @@ namespace rocm {
 class BatchedMatrixMulForwardImpl : public BatchedMatrixMulForward {
 public:
     using BatchedMatrixMulForward::BatchedMatrixMulForward;
-    BatchedMatrixMulForwardImpl(Handle* handle)
-            : BatchedMatrixMul(handle),
-              m_opr(handle->create_operator<MatrixMul>()) {}
     void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
               _megdnn_workspace workspace) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
-        return 0;
-    }
+                                  const TensorLayout&) override;
 
+    bool is_thread_safe() const override { return true; }
+
+    class AlgoBase;
+    class AlgoBlas;
+    class AlgoPack;
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+private:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
-            const TensorLayout& /*C*/) override {
-        return {};
-    }
+            const TensorLayout& /*C*/) override;
 
     Algorithm* get_algorithm_heuristic(const TensorLayout& /*A*/,
                                        const TensorLayout& /*B*/,
                                        const TensorLayout& /*C*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /* reproducible */) override {
-        return nullptr;
+                                       bool /*reproducible*/) override;
+
+    const char* get_algorithm_set_name() const override {
+        return "ROCM BATCHED MATMUL";
     }
 
-    const char* get_algorithm_set_name() const override { return "DEFAULT"; }
-
-    bool is_thread_safe() const override { return true; }
-
-private:
-    std::unique_ptr<MatrixMul> m_opr;
+    static AlgoPack sm_algo_pack;
 };
 
 }  // namespace rocm

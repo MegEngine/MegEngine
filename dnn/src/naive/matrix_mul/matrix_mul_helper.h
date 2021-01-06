@@ -141,20 +141,39 @@ void run_matrix_mul_mk8_tpl(const itype* A, const itype* B, otype* C, size_t M,
 }
 
 template <bool transA, bool transB>
-void exec_matrix_mul_quint4x4x32_helper(_megdnn_tensor_in A,
-                                        _megdnn_tensor_in B,
-                                        _megdnn_tensor_out C,
-                                        _megdnn_workspace workspace,
-                                        const param::MatrixMul& param) {
+void exec_matrix_mul_quint4x4x32_helper(
+        const void* A, const void* B, void* C, void* workspace, size_t M,
+        size_t N, size_t K, ptrdiff_t LDA, ptrdiff_t LDB, ptrdiff_t LDC,
+        DType A_type, DType B_type, DType C_type,
+        const MatrixMul::Param::Format& format,
+        const MatrixMul::Param::ComputeMode& compute_mode) {
+    MEGDNN_MARK_USED_VAR(C_type);
+    MEGDNN_MARK_USED_VAR(format);
+    MEGDNN_MARK_USED_VAR(compute_mode);
     auto convert_layout = [](const TensorLayout& layout) {
         auto ret = layout;
         auto param = layout.dtype.param<dtype::Quantized4Asymm>();
         ret.dtype = dtype::Quantized8Asymm(param.scale, param.zero_point);
         return ret;
     };
-    TensorND nA = {workspace.raw_ptr, convert_layout(A.layout)};
-    TensorND nB = {workspace.raw_ptr + nA.layout.span().dist_byte(),
-                   convert_layout(B.layout)};
+    TensorLayout A_layout, B_layout;
+    if (transA) {
+        A_layout = TensorLayout({K, M}, {LDA, 1}, A_type);
+    } else {
+        A_layout = TensorLayout({M, K}, {LDA, 1}, A_type);
+    }
+    if (transB) {
+        B_layout = TensorLayout({N, K}, {LDB, 1}, B_type);
+    } else {
+        B_layout = TensorLayout({K, N}, {LDB, 1}, B_type);
+    }
+
+    TensorND tensorA{const_cast<void*>(A), A_layout};
+    TensorND tensorB{const_cast<void*>(B), B_layout};
+    TensorND nA = {workspace, convert_layout(A_layout)};
+    TensorND nB = {
+            static_cast<uint8_t*>(workspace) + nA.layout.span().dist_byte(),
+            convert_layout(B_layout)};
     auto convert_4to8 = [](const TensorND& in, const TensorND& out) {
         auto ptr =
                 static_cast<uint8_t*>(in.raw_ptr) + in.layout.span().low_byte;
@@ -168,31 +187,48 @@ void exec_matrix_mul_quint4x4x32_helper(_megdnn_tensor_in A,
             out_ptr[i + 1] = val1;
         }
     };
-    convert_4to8(A, nA);
-    convert_4to8(B, nB);
-    auto M = C.layout.shape[0], N = C.layout.shape[1];
-    auto K = A.layout.shape[param.transposeA ? 0 : 1];
-    auto LDA = A.layout.stride[0], LDB = B.layout.stride[0],
-         LDC = C.layout.stride[0];
+    convert_4to8(tensorA, nA);
+    convert_4to8(tensorB, nB);
     run_matrix_mul_tpl<uint8_t, dt_int32, transA, transB, dt_int32>(
             nA.compatible_ptr<uint8_t>(), nB.compatible_ptr<uint8_t>(),
-            C.compatible_ptr<dt_int32>(), M, N, K, LDA, LDB, LDC,
-            nA.layout.dtype, nB.layout.dtype);
+            static_cast<dt_int32*>(C), M, N, K, LDA, LDB, LDC, nA.layout.dtype,
+            nB.layout.dtype);
 }
 template <bool transA, bool transB>
-void exec_matrix_mul_qint4x4x16_helper(_megdnn_tensor_in A, _megdnn_tensor_in B,
-                                       _megdnn_tensor_out C,
-                                       _megdnn_workspace workspace,
-                                       const param::MatrixMul& param) {
+void exec_matrix_mul_qint4x4x16_helper(
+        const void* A, const void* B, void* C, void* workspace, size_t M,
+        size_t N, size_t K, ptrdiff_t LDA, ptrdiff_t LDB, ptrdiff_t LDC,
+        DType A_type, DType B_type, DType C_type,
+        const MatrixMul::Param::Format& format,
+        const MatrixMul::Param::ComputeMode& compute_mode) {
+    MEGDNN_MARK_USED_VAR(C_type);
+    MEGDNN_MARK_USED_VAR(format);
+    MEGDNN_MARK_USED_VAR(compute_mode);
     auto convert_layout = [](const TensorLayout& layout) {
         auto ret = layout;
         auto param = layout.dtype.param<dtype::QuantizedS4>();
         ret.dtype = dtype::QuantizedS8(param.scale);
         return ret;
     };
-    TensorND nA = {workspace.raw_ptr, convert_layout(A.layout)};
-    TensorND nB = {workspace.raw_ptr + nA.layout.span().dist_byte(),
-                   convert_layout(B.layout)};
+    TensorLayout A_layout, B_layout;
+    if (transA) {
+        A_layout = TensorLayout({K, M}, {LDA, 1}, A_type);
+    } else {
+        A_layout = TensorLayout({M, K}, {LDA, 1}, A_type);
+    }
+    if (transB) {
+        B_layout = TensorLayout({N, K}, {LDB, 1}, B_type);
+    } else {
+        B_layout = TensorLayout({K, N}, {LDB, 1}, B_type);
+    }
+
+    TensorND tensorA{const_cast<void*>(A), A_layout};
+    TensorND tensorB{const_cast<void*>(B), B_layout};
+
+    TensorND nA = {workspace, convert_layout(A_layout)};
+    TensorND nB = {
+            static_cast<uint8_t*>(workspace) + nA.layout.span().dist_byte(),
+            convert_layout(B_layout)};
     auto convert_4to8 = [](const TensorND& in, const TensorND& out) {
         auto ptr = static_cast<int8_t*>(in.raw_ptr) + in.layout.span().low_byte;
         auto out_ptr =
@@ -204,17 +240,97 @@ void exec_matrix_mul_qint4x4x16_helper(_megdnn_tensor_in A, _megdnn_tensor_in B,
             out_ptr[i + 1] = cur >> 4;
         }
     };
-    convert_4to8(A, nA);
-    convert_4to8(B, nB);
-    auto M = C.layout.shape[0], N = C.layout.shape[1];
-    auto K = A.layout.shape[param.transposeA ? 0 : 1];
-    auto LDA = A.layout.stride[0], LDB = B.layout.stride[0],
-         LDC = C.layout.stride[0];
+    convert_4to8(tensorA, nA);
+    convert_4to8(tensorB, nB);
     run_matrix_mul_tpl<int8_t, dt_int16, transA, transB, dt_int16>(
             nA.compatible_ptr<int8_t>(), nB.compatible_ptr<int8_t>(),
-            C.compatible_ptr<dt_int16>(), M, N, K, LDA, LDB, LDC,
-            nA.layout.dtype, nB.layout.dtype);
+            static_cast<dt_int16*>(C), M, N, K, LDA, LDB, LDC, nA.layout.dtype,
+            nB.layout.dtype);
 }
+
+template <bool TA, bool TB>
+void dispatch_ta_tb(const void* A, const void* B, void* C, void* workspace,
+                    size_t M, size_t N, size_t K, ptrdiff_t LDA, ptrdiff_t LDB,
+                    ptrdiff_t LDC, DType A_type, DType B_type, DType C_type,
+                    const MatrixMul::Param::Format& format,
+                    const MatrixMul::Param::ComputeMode& compute_mode) {
+#define cb(_itype, _otype, _comp_type)                                         \
+    if (format == param::MatrixMul::Format::DEFAULT) {                         \
+        return run_matrix_mul_tpl<_itype, _otype, TA, TB, _comp_type>(         \
+                static_cast<const _itype*>(A), static_cast<const _itype*>(B),  \
+                static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type,       \
+                B_type);                                                       \
+    } else if (format == param::MatrixMul::Format::MK4) {                      \
+        return run_matrix_mul_mk4_tpl<_itype, _otype, TA, TB, _comp_type>(     \
+                static_cast<const _itype*>(A), static_cast<const _itype*>(B),  \
+                static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type,       \
+                B_type);                                                       \
+    } else if (format == param::MatrixMul::Format::MK4_DOT) {                  \
+        return run_matrix_mul_mk4_dot_tpl<_itype, _otype, TA, TB, _comp_type>( \
+                static_cast<const _itype*>(A), static_cast<const _itype*>(B),  \
+                static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type,       \
+                B_type);                                                       \
+    } else if (format == param::MatrixMul::Format::MK8) {                      \
+        return run_matrix_mul_mk8_tpl<_itype, _otype, TA, TB, _comp_type>(     \
+                static_cast<const _itype*>(A), static_cast<const _itype*>(B),  \
+                static_cast<_otype*>(C), M, N, K, LDA, LDB, LDC, A_type,       \
+                B_type);                                                       \
+    }
+
+    if (A_type == dtype::Float32()) {
+        cb(dt_float32, dt_float32, dt_float32);
+#if !MEGDNN_DISABLE_FLOAT16
+    } else if (A_type == dtype::Float16()) {
+        using Param = MatrixMul::Param;
+        if (compute_mode == Param::ComputeMode::DEFAULT) {
+            cb(dt_float16, dt_float16, dt_float16);
+        } else if (compute_mode == Param::ComputeMode::FLOAT32) {
+            cb(dt_float16, dt_float16, dt_float32);
+        }
+    } else if (A_type == dtype::BFloat16()) {
+        using Param = MatrixMul::Param;
+        if (compute_mode == Param::ComputeMode::DEFAULT) {
+            cb(dt_bfloat16, dt_bfloat16, dt_bfloat16);
+        } else if (compute_mode == Param::ComputeMode::FLOAT32) {
+            cb(dt_bfloat16, dt_bfloat16, dt_float32);
+        }
+#endif
+    } else if (A_type == dtype::Int8() &&
+               C_type == dtype::Int16()) {
+        cb(dt_int8, dt_int16, dt_int16);
+    } else if (A_type == dtype::Int16() &&
+               C_type == dtype::Int32()) {
+        cb(dt_int16, dt_int32, dt_int32);
+    } else if ((A_type == dtype::Int8() ||
+                A_type.enumv() == DTypeEnum::QuantizedS8) &&
+               (C_type == dtype::Int32() ||
+                C_type.enumv() == DTypeEnum::QuantizedS32)) {
+        cb(dt_int8, dt_int32, dt_int32);
+    } else if (A_type.enumv() == DTypeEnum::Quantized8Asymm &&
+               C_type.enumv() == DTypeEnum::QuantizedS32) {
+        cb(uint8_t, dt_int32, dt_int32);
+    } else if (A_type.enumv() == DTypeEnum::Quantized4Asymm &&
+               C_type.enumv() == DTypeEnum::QuantizedS32 &&
+               format == param::MatrixMul::Format::DEFAULT) {
+        exec_matrix_mul_quint4x4x32_helper<TA, TB>(
+                A, B, C, workspace, M, N, K, LDA, LDB, LDC, A_type, B_type,
+                C_type, format, compute_mode);
+        return;
+    } else if (A_type.enumv() == DTypeEnum::QuantizedS4 &&
+               C_type.enumv() == DTypeEnum::QuantizedS16 &&
+               format == param::MatrixMul::Format::DEFAULT) {
+        exec_matrix_mul_qint4x4x16_helper<TA, TB>(
+                A, B, C, workspace, M, N, K, LDA, LDB, LDC, A_type, B_type,
+                C_type, format, compute_mode);
+        return;
+    }
+#undef cb
+    megdnn_throw(
+            ssprintf("unsupported naive MatrixMul(%s, %s) -> %s (cmode = %d)",
+                     A_type.name(), B_type.name(), C_type.name(),
+                     static_cast<int>(compute_mode)));
+}
+
 
 }  // namespace naive
 }  // namespace megdnn

@@ -35,6 +35,7 @@ using namespace fallback;
 class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF32K8x12x1 f32_k8x12x1;
     AlgoGemv gemv;
+    AlgoNaive naive;
     SmallVector<AlgoBase*> m_all_algos;
     AlgoBase::Mapper m_all_algos_map;
 
@@ -42,6 +43,7 @@ public:
     AlgoPack() {
         m_all_algos.emplace_back(&gemv);
         m_all_algos.emplace_back(&f32_k8x12x1);
+        m_all_algos.emplace_back(&naive);
         for (auto&& algo : m_all_algos) {
             m_all_algos_map.emplace(algo->info().desc, algo);
         }
@@ -147,19 +149,26 @@ MatrixMul::Algorithm* MatrixMulImpl::get_algorithm_heuristic(
     algo_type.format = kern_size_param.format;
     auto algos = select_algo_type(algo_type);
     Algorithm *heuristic_algo = nullptr;
+    Algorithm *usable_algo = nullptr;
     for (auto&& algo : algos) {
         if (static_cast<AlgoBase*>(algo)->usable(kern_size_param) &&
-            static_cast<AlgoBase*>(algo)->preferred_reproducible(
-                    kern_size_param, reproducible) &&
             static_cast<AlgoBase*>(algo)->get_workspace(kern_size_param) <=
                     workspace_limit_in_bytes) {
-            if (algo->algoset() == AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
-                return algo;
-            } else if (!heuristic_algo) {
-                heuristic_algo = algo;
+            if (static_cast<AlgoBase*>(algo)->preferred_reproducible(
+                        kern_size_param, reproducible)) {
+                //! use gemv algo if it's prefered
+                if (algo->algoset() == AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
+                    return algo;
+                } else if (!heuristic_algo) {
+                    heuristic_algo = algo;
+                }
+            } else if (!usable_algo) {
+                usable_algo = algo;
             }
         }
     }
+    if (!heuristic_algo) heuristic_algo = usable_algo;
+    megdnn_assert(heuristic_algo, "No usable algorithm found");
     return heuristic_algo;
 }
 

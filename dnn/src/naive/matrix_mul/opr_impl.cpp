@@ -45,77 +45,10 @@ void dispatch_ta_tb(_megdnn_tensor_in A, _megdnn_tensor_in B,
     auto LDA = A.layout.stride[0], LDB = B.layout.stride[0],
          LDC = C.layout.stride[0];
 
-#define cb(_itype, _otype, _comp_type)                                         \
-    if (param.format == param::MatrixMul::Format::DEFAULT) {                   \
-        return run_matrix_mul_tpl<_itype, _otype, TA, TB, _comp_type>(         \
-                A.compatible_ptr<_itype>(), B.compatible_ptr<_itype>(),        \
-                C.compatible_ptr<_otype>(), M, N, K, LDA, LDB, LDC,            \
-                A.layout.dtype, B.layout.dtype);                               \
-    } else if (param.format == param::MatrixMul::Format::MK4) {                \
-        return run_matrix_mul_mk4_tpl<_itype, _otype, TA, TB, _comp_type>(     \
-                A.compatible_ptr<_itype>(), B.compatible_ptr<_itype>(),        \
-                C.compatible_ptr<_otype>(), M, N, K, LDA, LDB, LDC,            \
-                A.layout.dtype, B.layout.dtype);                               \
-    } else if (param.format == param::MatrixMul::Format::MK4_DOT) {            \
-        return run_matrix_mul_mk4_dot_tpl<_itype, _otype, TA, TB, _comp_type>( \
-                A.compatible_ptr<_itype>(), B.compatible_ptr<_itype>(),        \
-                C.compatible_ptr<_otype>(), M, N, K, LDA, LDB, LDC,            \
-                A.layout.dtype, B.layout.dtype);                               \
-    } else if (param.format == param::MatrixMul::Format::MK8) {                \
-        return run_matrix_mul_mk8_tpl<_itype, _otype, TA, TB, _comp_type>(     \
-                A.compatible_ptr<_itype>(), B.compatible_ptr<_itype>(),        \
-                C.compatible_ptr<_otype>(), M, N, K, LDA, LDB, LDC,            \
-                A.layout.dtype, B.layout.dtype);                               \
-    }
-
-    if (A.layout.dtype == dtype::Float32()) {
-        cb(dt_float32, dt_float32, dt_float32);
-#if !MEGDNN_DISABLE_FLOAT16
-    } else if (A.layout.dtype == dtype::Float16()) {
-        using Param = MatrixMul::Param;
-        if (param.compute_mode == Param::ComputeMode::DEFAULT) {
-            cb(dt_float16, dt_float16, dt_float16);
-        } else if (param.compute_mode == Param::ComputeMode::FLOAT32) {
-            cb(dt_float16, dt_float16, dt_float32);
-        }
-    } else if (A.layout.dtype == dtype::BFloat16()) {
-        using Param = MatrixMul::Param;
-        if (param.compute_mode == Param::ComputeMode::DEFAULT) {
-            cb(dt_bfloat16, dt_bfloat16, dt_bfloat16);
-        } else if (param.compute_mode == Param::ComputeMode::FLOAT32) {
-            cb(dt_bfloat16, dt_bfloat16, dt_float32);
-        }
-#endif
-    } else if (A.layout.dtype == dtype::Int8() &&
-               C.layout.dtype == dtype::Int16()) {
-        cb(dt_int8, dt_int16, dt_int16);
-    } else if (A.layout.dtype == dtype::Int16() &&
-               C.layout.dtype == dtype::Int32()) {
-        cb(dt_int16, dt_int32, dt_int32);
-    } else if ((A.layout.dtype == dtype::Int8() ||
-                A.layout.dtype.enumv() == DTypeEnum::QuantizedS8) &&
-               (C.layout.dtype == dtype::Int32() ||
-                C.layout.dtype.enumv() == DTypeEnum::QuantizedS32)) {
-        cb(dt_int8, dt_int32, dt_int32);
-    } else if (A.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm &&
-               C.layout.dtype.enumv() == DTypeEnum::QuantizedS32) {
-        cb(uint8_t, dt_int32, dt_int32);
-    } else if (A.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
-               C.layout.dtype.enumv() == DTypeEnum::QuantizedS32 &&
-               param.format == param::MatrixMul::Format::DEFAULT) {
-        exec_matrix_mul_quint4x4x32_helper<TA, TB>(A, B, C, workspace, param);
-        return;
-    } else if (A.layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
-               C.layout.dtype.enumv() == DTypeEnum::QuantizedS16 &&
-               param.format == param::MatrixMul::Format::DEFAULT) {
-        exec_matrix_mul_qint4x4x16_helper<TA, TB>(A, B, C, workspace, param);
-        return;
-    }
-#undef cb
-    megdnn_throw(ssprintf(
-            "unsupported naive MatrixMul(%s, %s) -> %s (cmode = %d)",
-            A.layout.dtype.name(), B.layout.dtype.name(), C.layout.dtype.name(),
-            static_cast<int>(param.compute_mode)));
+    dispatch_ta_tb<TA, TB>(A.raw_ptr, B.raw_ptr, C.raw_ptr, workspace.raw_ptr,
+                           M, N, K, LDA, LDB, LDC, A.layout.dtype,
+                           B.layout.dtype, C.layout.dtype, param.format,
+                           param.compute_mode);
 }
 
 void MatrixMulForwardImpl::exec_internal(_megdnn_tensor_in A,

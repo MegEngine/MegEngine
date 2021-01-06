@@ -110,6 +110,7 @@ public:
             //! fallback
             FB_F32K8x12x1 = 1 << 0,
             FB_GEMV,
+            FB_NAIVE,
 
 #if MEGDNN_X86
             //! x86
@@ -233,6 +234,7 @@ public:
 private:
     class AlgoF32K8x12x1;  // Fallback F32 Kernel 8x12x1
     class AlgoGemv;
+    class AlgoNaive;
     class AlgoPack;
     //! maintain all the algos of in the opr of fallback
     static const AlgoPack& algo_pack();

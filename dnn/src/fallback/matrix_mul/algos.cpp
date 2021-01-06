@@ -10,13 +10,18 @@
  */
 
 #include "src/fallback/matrix_mul/algos.h"
+#include "megdnn/opr_param_defs.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"
 #include "src/fallback/matrix_mul/gemv.h"
 #include "src/fallback/matrix_mul/generic_strategy.h"
+
+#include "src/naive/matrix_mul/matrix_mul_helper.h"
+
 #include "midout.h"
 
 MIDOUT_DECL(megdnn_fb_matmul_f32_kern)
 MIDOUT_DECL(megdnn_fb_matmul_f32_gemm_gemv_like)
+MIDOUT_DECL(megdnn_fb_matmul_naive)
 
 using namespace megdnn;
 using namespace fallback;
@@ -38,6 +43,32 @@ void f32_8x12x1_kern(const MatrixMulImpl::KernParam& kern_param) {
                          kern_param.workspace_ptr);
     }
     MIDOUT_END();
+}
+
+void kern_naive(const MatrixMulImpl::KernParam& kern_param) {
+    MIDOUT_BEGIN(megdnn_fb_matmul_naive, void) {
+        size_t M = kern_param.M, N = kern_param.N, K = kern_param.K;
+        size_t LDA = kern_param.LDA, LDB = kern_param.LDB, LDC = kern_param.LDC;
+
+#define DISPATCH(TA, TB)                                                 \
+    if (kern_param.trA == TA && kern_param.trB == TB) {                  \
+        naive::dispatch_ta_tb<TA, TB>(                                   \
+                kern_param.A_ptr, kern_param.B_ptr, kern_param.C_ptr,    \
+                kern_param.workspace_ptr, M, N, K, LDA, LDB, LDC,        \
+                kern_param.A_type, kern_param.B_type, kern_param.C_type, \
+                kern_param.format, kern_param.compute_mode);             \
+        return;                                                          \
+    }
+        DISPATCH(true, true);
+        DISPATCH(true, false);
+        DISPATCH(false, true);
+        DISPATCH(false, false);
+#undef DISPATCH
+    megdnn_assert_internal(0);
+
+    }
+    MIDOUT_END();
+
 }
 }  // anonymous namespace
 
@@ -84,11 +115,14 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoF32K8x12x1, megdnn_fb_matmul_f32_kern,
 bool MatrixMulImpl::AlgoGemv::usable(
         const KernSizeParam& kern_size_param) const {
     return !kern_size_param.trA && !kern_size_param.trB &&
-           kern_size_param.format == param::MatrixMul::Format::DEFAULT &&
-           !((kern_size_param.A_type.enumv() ==
-              kern_size_param.B_type.enumv()) &&
-             (kern_size_param.A_type.enumv() == DTypeEnum::Int16) &&
-             (kern_size_param.C_type.enumv() == DTypeEnum::Int32));
+                   kern_size_param.format ==
+                           param::MatrixMul::Format::DEFAULT &&
+                   kern_size_param.compute_mode ==
+                   param::MatrixMul::ComputeMode::DEFAULT &&
+                   !((kern_size_param.A_type.enumv() ==
+                      kern_size_param.B_type.enumv()) &&
+                     (kern_size_param.A_type.enumv() == DTypeEnum::Int16) &&
+                     (kern_size_param.C_type.enumv() == DTypeEnum::Int32));
 }
 
 bool MatrixMulImpl::AlgoGemv::preferred(
@@ -126,6 +160,46 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoGemv::get_kern(
     }
 #undef DISPATCH
     megdnn_assert(0);
+}
+
+/* ===================== naive algo ===================== */
+bool MatrixMulImpl::AlgoNaive::usable(const KernSizeParam&) const {
+    return true;
+}
+
+bool MatrixMulImpl::AlgoNaive::preferred(const KernSizeParam&) const {
+    return false;
+}
+
+size_t MatrixMulImpl::AlgoNaive::get_workspace(
+        const KernSizeParam& kern_param) const {
+    MIDOUT_BEGIN(
+            megdnn_fb_matmul_naive,
+            midout_iv("MatrixMulForwardImpl::get_workspace_in_bytes"_hash)) {
+        if (kern_param.A_type.enumv() == DTypeEnum::Quantized4Asymm ||
+            kern_param.A_type.enumv() == DTypeEnum::QuantizedS4) {
+            size_t ret = 0;
+            if (kern_param.trA) {
+                ret += kern_param.LDA * kern_param.K;
+            } else {
+                ret += kern_param.LDA * kern_param.M;
+            }
+            if (kern_param.trB) {
+                ret += kern_param.LDB * kern_param.N;
+            } else {
+                ret += kern_param.LDB * kern_param.K;
+            }
+            return ret;
+        }
+        return 0;
+    }
+    MIDOUT_END();
+
+}
+
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoNaive::get_kern(
+        const KernSizeParam&) const {
+    return kern_naive;
 }
 
 // vim: syntax=cpp.doxygen

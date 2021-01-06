@@ -6,67 +6,61 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "./opr_impl.h"
-#include "src/naive/handle.h"
+#include "./algos.h"
+#include "hcc_detail/hcc_defs_prologue.h"
+
+#include "src/common/algo_chooser.h"
+#include "src/common/utils.cuh"
+#include "src/fallback/handle.h"
 
 using namespace megdnn;
 using namespace fallback;
 
-BatchedMatrixMulImpl::BatchedMatrixMulImpl(Handle *handle):
-    BatchedMatrixMulForwardImpl(handle),
-    m_storage(new CpuOprDelegationStorage<>),
-    m_opr(m_storage->get<MatrixMul>())
-{
+std::vector<BatchedMatrixMulForwardImpl::Algorithm*>
+BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& A,
+                                                const TensorLayout& B,
+                                                const TensorLayout& C) {
+    AlgoBase::SizeArgs args{this, A, B, C};
+    return megdnn::get_all_algorithms<BatchedMatrixMulForwardImpl>(args);
 }
 
-size_t BatchedMatrixMulImpl::get_workspace_in_bytes(
-        const TensorLayout &A, const TensorLayout &B,
-        const TensorLayout &C) {
-    auto A_ = A.remove_axis(0), B_ = B.remove_axis(0), C_ = C.remove_axis(0);
-    m_opr->param() = param();
-    return m_opr->get_workspace_in_bytes(A_, B_, C_);
+BatchedMatrixMulForwardImpl::Algorithm*
+BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
+        size_t workspace_limit_in_bytes, bool reproducible) {
+    AlgoBase::SizeArgs args{this, A, B, C};
+    if (sm_algo_pack.algo_default.is_available_reproducible(
+                args, reproducible, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.algo_default;
+    }
+    if (reproducible) {
+        return megdnn::get_reproducible_algo<BatchedMatrixMulForwardImpl>(
+                sm_algo_pack.all_algos, args, workspace_limit_in_bytes,
+                "batched matrix mul forward");
+    } else {
+        return megdnn::get_usable_algo<BatchedMatrixMulForwardImpl>(
+                sm_algo_pack.all_algos, args, workspace_limit_in_bytes,
+                "batched matrix mul forward");
+    }
 }
 
-void BatchedMatrixMulImpl::exec(_megdnn_tensor_in A,
-        _megdnn_tensor_in B,
-        _megdnn_tensor_out C,
-        _megdnn_workspace workspace) {
+size_t BatchedMatrixMulForwardImpl::get_workspace_in_bytes(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
+    AlgoBase::SizeArgs args{this, A, B, C};
+    return megdnn::get_algorithm(this, A, B, C)->get_workspace_in_bytes(args);
+}
+
+void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
+                                       _megdnn_tensor_out C,
+                                       _megdnn_workspace workspace) {
     check_exec(A.layout, B.layout, C.layout, workspace.size);
-
-    m_opr->param() = this->param();
-    auto kern = [this, A, B, C, workspace]() {
-        auto N = A.layout.shape[0];
-        TensorND A_, B_, C_;
-        A_.raw_ptr = A.raw_ptr;
-        A_.layout = A.layout.remove_axis(0);
-        B_.raw_ptr = B.raw_ptr;
-        B_.layout = B.layout.remove_axis(0);
-        C_.raw_ptr = C.raw_ptr;
-        C_.layout = C.layout.remove_axis(0);
-
-        auto Astrd = A.layout.dtype.size() * A.layout.stride[0],
-             Bstrd = B.layout.dtype.size() * B.layout.stride[0],
-             Cstrd = C.layout.dtype.size() * C.layout.stride[0];
-
-        auto advance_ptr = [](TensorND &dest, ptrdiff_t d) {
-            dest.raw_ptr = static_cast<void*>(
-                    static_cast<dt_byte*>(dest.raw_ptr) + d);
-        };
-
-        rep(n, N) {
-            m_opr->exec(A_, B_, C_, workspace);
-            advance_ptr(A_, Astrd);
-            advance_ptr(B_, Bstrd);
-            advance_ptr(C_, Cstrd);
-        }
-    };
-
-    static_cast<naive::HandleImpl*>(handle())->dispatch_kern(kern);
+    AlgoBase::ExecArgs args(this, A, B, C, workspace);
+    auto&& algo = get_algorithm(this, A.layout, B.layout, C.layout);
+    algo->check_workspace(args, workspace).exec(args);
 }
-
 
 // vim: syntax=cpp.doxygen
-
-

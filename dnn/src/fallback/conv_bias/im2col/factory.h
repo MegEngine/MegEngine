@@ -474,6 +474,13 @@ public:
                     "NoPackStrategyType::FLOAT16_FLOAT16"_hash);
                 break;
 #endif
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+            case StrategyType::FLOAT_FP16:
+                cb1(NCHW, NO_PACK, dt_float16, __fp16,
+                    PostprocessMode::NO_PROCESS,
+                    "NoPackStrategyType::FLOAT_FP16"_hash);
+                break;
+#endif
             case StrategyType::INT8x8x16:
                 cb3(NCHW, NO_PACK, dt_int8, dt_int16, dt_int16, dt_int8,
                     dt_int16, dt_int16, PostprocessMode::ADD_BIAS,

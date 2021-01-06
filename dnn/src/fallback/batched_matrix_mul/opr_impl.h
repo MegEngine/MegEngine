@@ -15,26 +15,42 @@
 namespace megdnn {
 namespace fallback {
 
-class BatchedMatrixMulImpl: public naive::BatchedMatrixMulForwardImpl {
-    public:
-        BatchedMatrixMulImpl(Handle *handle);
-        void exec(
-                _megdnn_tensor_in A,
-                _megdnn_tensor_in B,
-                _megdnn_tensor_out C,
-                _megdnn_workspace workspace) override;
+class BatchedMatrixMulForwardImpl: public naive::BatchedMatrixMulForwardImpl {
+public:
+    using naive::BatchedMatrixMulForwardImpl::BatchedMatrixMulForwardImpl;
+    void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+              _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
+                                  const TensorLayout&) override;
 
-        size_t get_workspace_in_bytes(const TensorLayout &A,
-                const TensorLayout &B,
-                const TensorLayout &C) override;
+    bool is_thread_safe() const override { return true; }
 
-    private:
-        std::unique_ptr<CpuOprDelegationStorage<>> m_storage;
-        MatrixMulForward* m_opr;
+    class AlgoBase;
+    class AlgoDefault;
+    class AlgoPack;
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+
+    static AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc);
+
+private:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/) override;
+
+    Algorithm* get_algorithm_heuristic(const TensorLayout& /*A*/,
+                                       const TensorLayout& /*B*/,
+                                       const TensorLayout& /*C*/,
+                                       size_t /*workspace_limit_in_bytes*/,
+                                       bool /*reproducible*/) override;
+
+    const char* get_algorithm_set_name() const override {
+        return "FALLBACK BATCHED MATMUL";
+    }
+
+    static AlgoPack sm_algo_pack;
 };
 
-} // namespace fallback
-} // namespace megdnn
+}  // namespace fallback
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

@@ -52,6 +52,28 @@ public:
             DEFAULT)
 };
 
+class MatrixMulImpl::AlgoNaive final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "FB_NAIVE"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    AlgoSet algoset() const override { return AlgoSet::ALGO_TYPE_GEMM; }
+    PackMode packmode() const override { return PackMode::NO_PACK; }
+    MEGDNN_DECL_ALGO_TYPE(FB_NAIVE)
+    MEGDNN_OVERRIDE_MATMUL_DESC(
+            8, 16, 1, 4,
+            static_cast<AlgoDataType>(
+                    static_cast<uint32_t>(AlgoDataType::FLOAT16) |
+                    static_cast<uint32_t>(AlgoDataType::FLOAT32) |
+                    static_cast<uint32_t>(AlgoDataType::INT8X8X16) |
+                    static_cast<uint32_t>(AlgoDataType::QINT8X8X32) |
+                    static_cast<uint32_t>(AlgoDataType::QUINT8X8X32)),
+            DEFAULT)
+};
+
 }  // namespace fallback
 }  // namespace megdnn
 
