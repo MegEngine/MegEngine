@@ -170,6 +170,7 @@ struct TensorWrapper {
     void set_compiled_info(PyObject *);
     PyObject* trace_mixin_info();
     void set_trace_mixin_info(PyObject *);
+    PyObject* _use_cnt() { return PyLong_FromSize_t(m_tensor.use_count()); };
 };
 
 

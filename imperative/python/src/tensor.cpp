@@ -541,6 +541,7 @@ struct TensorWeakRef {
         }
         return py::none();
     }
+    int _use_cnt() { return wptr.use_count(); }
 };
 
 /* ============== convert inputs ============== */
@@ -774,6 +775,7 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::_swap_in>("_swap_in")
         .def<&TensorWrapper::_drop>("_drop")
         .def<&TensorWrapper::reset_varnode>("_reset_varnode")
+        .def<&TensorWrapper::_use_cnt>("_use_cnt")
         .def_getset<&TensorWrapper::varnode>("_varnode")
         .def_getset<&TensorWrapper::copied>("_copied")
         .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("_mixin_handle")
@@ -787,7 +789,8 @@ void init_tensor(py::module m) {
 
     py::class_<TensorWeakRef>(m, "TensorWeakRef")
         .def(py::init<const TensorWrapper&>())
-        .def("__call__", &TensorWeakRef::operator());
+        .def("__call__", &TensorWeakRef::operator())
+        .def("_use_cnt", &TensorWeakRef::_use_cnt);
 
     static PyMethodDef method_defs[] = {
             MGE_PY_INTERFACE(apply, py_apply),
