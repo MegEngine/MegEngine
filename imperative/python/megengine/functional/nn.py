@@ -1106,6 +1106,7 @@ def matmul(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
+            strategy=get_conv_execution_strategy(),
         )
     else:
         op = builtin.MatrixMul(
@@ -1113,6 +1114,7 @@ def matmul(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
+            strategy=get_conv_execution_strategy(),
         )
 
     (result,) = apply(op, inp1, inp2)
