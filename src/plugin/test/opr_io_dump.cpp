@@ -181,6 +181,24 @@ TEST(TestOprIODump, Text) {
     run_test(make_plugin, check_result);
 }
 
+TEST(TestOprIODump, StdErr) {
+    HostTensorGenerator<> gen;
+    auto host_x = gen({5});
+    auto host_y = gen({5});
+
+    auto graph = ComputingGraph::make();
+    std::shared_ptr<FILE> sp(stdout, [](FILE*){});
+    auto plugin = std::make_unique<TextOprIODump>(graph.get(), sp);
+
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+    auto y = opr::Host2DeviceCopy::make(*graph, host_y);
+    auto z = x + y;
+
+    HostTensorND host_z;
+    auto func = graph->compile({make_callback_copy(z, host_z)});
+    func->execute();
+}
+
 TEST(TestOprIODump, Binary) {
     auto fname = output_file("");
     auto make_plugin = [&](ComputingGraph* graph, int level) {

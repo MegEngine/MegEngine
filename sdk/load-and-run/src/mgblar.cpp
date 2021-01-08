@@ -94,6 +94,8 @@ R"__usage__(
     Dump input/output values of all internal variables to output file or
     directory, in text or binary format. The binary file can be parsed by
     `megbrain.plugin.load_tensor_binary`.
+  --io-dump-stdout | --io-dump-stderr
+    Dump input/output values of all internal variables to stdout or stderr in text format
   --bin-out-dump <output dir>
     Dump output tensor values in binary format to given directory.
   --iter <num>
@@ -1196,6 +1198,24 @@ Args Args::from_argv(int argc, char **argv) {
             mgb_assert(i < argc, "output file not given for --io-dump");
             auto iodump = std::make_unique<TextOprIODump>(
                     ret.load_config.comp_graph.get(), argv[i]);
+            iodump->print_addr(false);
+            ret.iodump = std::move(iodump);
+            continue;
+        }
+        if (!strcmp(argv[i], "--io-dump-stdout")) {
+            mgb_log_warn("enable opr io dump to stdout");
+            std::shared_ptr<FILE> sp(stdout, [](FILE*){});
+            auto iodump = std::make_unique<TextOprIODump>(
+                    ret.load_config.comp_graph.get(), sp);
+            iodump->print_addr(false);
+            ret.iodump = std::move(iodump);
+            continue;
+        }
+        if (!strcmp(argv[i], "--io-dump-stderr")) {
+            mgb_log_warn("enable opr io dump to stderr");
+            std::shared_ptr<FILE> sp(stderr, [](FILE*){});
+            auto iodump = std::make_unique<TextOprIODump>(
+                    ret.load_config.comp_graph.get(), sp);
             iodump->print_addr(false);
             ret.iodump = std::move(iodump);
             continue;
