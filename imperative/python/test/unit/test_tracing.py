@@ -14,14 +14,17 @@ import pytest
 
 import megengine.core.tensor.megbrain_graph as G
 import megengine.functional as F
+import megengine.optimizer as optim
 import megengine.utils.comp_graph_tools as cgtools
-from megengine import tensor
+from megengine import Parameter, tensor
+from megengine.autodiff import GradManager
 from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.utils import isscalar
 from megengine.functional import exp, log
 from megengine.jit import exclude_from_trace, trace
+from megengine.module import Module
 from megengine.random import normal, uniform
 
 
@@ -39,8 +42,48 @@ def test_trace():
             np.testing.assert_equal(f(x).numpy(), y)
 
 
+def test_output_copy_trace():
+    class Simple(Module):
+        def __init__(self):
+            super().__init__()
+            self.a = Parameter([1.0], dtype=np.float32)
+
+        def forward(self, x):
+            x = x * self.a
+            # will result into a copy of output in grad
+            x = F.exp(x)
+            return x
+
+    net = Simple()
+
+    gm = GradManager().attach(net.parameters())
+    opt = optim.SGD(net.parameters(), 1e-3, momentum=0.9)
+    data = tensor(np.arange(4).reshape(2, 2), dtype="float32")
+
+    @trace(symbolic=False)
+    def train_f1(d):
+        with gm:
+            loss = net(d)
+            gm.backward(loss)
+            opt.step().clear_grad()
+        return loss
+
+    @trace(symbolic=True)
+    def train_f2(d):
+        with gm:
+            loss = net(d)
+            gm.backward(loss)
+            opt.step().clear_grad()
+        return loss
+
+        for i in range(2):
+            y1 = train_f1(data).numpy()
+            y2 = train_f2(data).numpy()
+            np.testing.assert_equal(y1, y2)
+
+
 def test_exclude_from_trace():
-    for symbolic in [False]:
+    for symbolic in [False, True]:
 
         @trace(symbolic=symbolic)
         def f(x):

@@ -291,7 +291,11 @@ PyObject* TensorWrapper::copied() {
 
 #define REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(member)                                 \
         PyObject* TensorWrapper::member() {                                         \
-            return m_tensor->m_trace_info.member;                                   \
+            if (m_tensor->m_trace_info.member) {                                    \
+                return m_tensor->m_trace_info.member;                               \
+            } else {                                                                \
+                Py_RETURN_NONE;                                                     \
+            }                                                                       \
         }                                                                           \
         void TensorWrapper::set_##member(PyObject* dest) {                          \
             if (dest == Py_None) {                                                  \
@@ -322,6 +326,7 @@ void TensorWrapper::set_handle(PyObject* dest) {
 
 
 PyObject* TensorWrapper::shape() {
+    // if it's tracing compiled mode, get value from compiled_info 
     if (m_tensor->m_trace_info.compiled_info != nullptr) {
         if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
             return PyTuple_New(0);
@@ -332,15 +337,18 @@ PyObject* TensorWrapper::shape() {
         }
         return shp;
     }
+
+    // inside trace, if tensor shape is useful for other operations, set shape_read = true
     if (m_tensor->m_trace_info.recording && !skip_tracing) {
         PyObject_SetAttrString(m_tensor->m_trace_info.trace_mixin_info, "shape_read", py::cast(true).release().ptr());
     }
+
     if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
         return PyTuple_New(0);
     }
 
     TensorShape shape;
-    if (m_tensor->m_var) {
+    if (m_tensor->m_var) {      // get shape from m_var
         auto&& mgr = m_tensor->m_var->owner_graph()->static_infer_manager();
         auto *tshp = mgr.infer_shape_fallible(m_tensor->m_var);
         if (!tshp) {
@@ -389,9 +397,11 @@ PyObject* TensorWrapper::numpy() {
         }
         return np_val;
     }
+
     if (m_tensor->m_trace_info.recording && !skip_tracing) {
         PyObject_SetAttrString(m_tensor->m_trace_info.trace_mixin_info, "value_read", py::cast(true).release().ptr());
     }
+
     if (m_tensor->m_handle.get() == nullptr && m_tensor->m_var != nullptr) {
         auto&& mgr = m_tensor->m_var->owner_graph()->static_infer_manager();
         auto&& type = mgr.get_infer_type(m_tensor->m_var);
@@ -411,12 +421,14 @@ PyObject* TensorWrapper::numpy() {
         }
         return np_val.release().ptr();
     }
+
     auto&& hv = interpreter_for_py->get_value(m_tensor->m_handle.get());
     auto arr = py::reinterpret_steal<py::array>(npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
     if (!arr) {
         PyErr_SetString(PyExc_ValueError, "tensor invalid");
         return nullptr;
     }
+
     if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
         mgb_assert(PyArray_Check(arr.ptr()));
         return PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(arr.ptr()));
@@ -428,7 +440,7 @@ PyObject* TensorWrapper::varnode() {
     if (m_tensor->m_var) {
         return py::cast(m_tensor->m_var).release().ptr();
     }
-    return py::none().release().ptr();
+    Py_RETURN_NONE;
 }
 
 void TensorWrapper::reset(PyObject* tensor) {
@@ -465,9 +477,13 @@ PyObject* TensorWrapper::_dev_tensor(){
         if (dev_tensor == Py_None) {
             throw TraceReadError("raw data of this tensor is not read in trace");
         }
+
+        // set m_handle to make it a real tensor
         auto py_dev_tensor = py::reinterpret_borrow<py::object>(dev_tensor);
         auto sh = interpreter_for_py->put(py_dev_tensor.cast<DeviceTensorND>());
         m_tensor->m_handle = std::move(SharedHandle(sh));
+
+        // compiled info is useless after m_handle is set
         Py_DECREF(m_tensor->m_trace_info.compiled_info);
         m_tensor->m_trace_info.compiled_info = nullptr;
 
@@ -753,8 +769,8 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::reset_varnode>("_reset_varnode")
         .def_getset<&TensorWrapper::varnode>("_varnode")
         .def_getset<&TensorWrapper::copied>("_copied")
-        .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("mixin_handle")
-        .def_getset<&TensorWrapper::recording, &TensorWrapper::set_recording>("recording")
+        .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("_mixin_handle")
+        .def_getset<&TensorWrapper::recording, &TensorWrapper::set_recording>("_recording")
         .def_getset<&TensorWrapper::handle, &TensorWrapper::set_handle>("_handle")
         .def_getset<&TensorWrapper::compiled_info, &TensorWrapper::set_compiled_info>("_compiled_info")
         .def_getset<&TensorWrapper::trace_mixin_info, &TensorWrapper::set_trace_mixin_info>("_trace_mixin_info")

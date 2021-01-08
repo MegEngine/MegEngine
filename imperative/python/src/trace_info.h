@@ -19,7 +19,9 @@ struct TraceInfo {
     bool recording = false;
     bool copied = false;
 
+    // refer to CompiledTensorProxy in tracing.py, works from second trace step
     PyObject* compiled_info = nullptr;
+    // refer to TensorInfo in tracing.py, only works in first trace step
     PyObject* trace_mixin_info = nullptr;
 
     TraceInfo() = default;
@@ -37,7 +39,7 @@ struct TraceInfo {
         return *this;
     }
 
-    ~TraceInfo()  {
+    ~TraceInfo() {
         Py_XDECREF(trace_mixin_info);
         Py_XDECREF(compiled_info);
     }

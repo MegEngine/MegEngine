@@ -292,8 +292,6 @@ def remote_recv(
     op = RemoteRecv()
     op.key = key
     op.cn = device
-    if isinstance(shape, Tensor):
-        shape = shape.numpy()
     op.shape = shape
     op.dtype = dtype
     op.addr, op.port = get_mm_server_addr()
