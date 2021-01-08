@@ -294,8 +294,13 @@ PyObject* TensorWrapper::copied() {
             return m_tensor->m_trace_info.member;                                   \
         }                                                                           \
         void TensorWrapper::set_##member(PyObject* dest) {                          \
-            Py_INCREF(dest);                                                        \
-            m_tensor->m_trace_info.member = dest;                                   \
+            if (dest == Py_None) {                                                  \
+                Py_XDECREF(m_tensor->m_trace_info.member);                          \
+                m_tensor->m_trace_info.member = nullptr;                            \
+            } else {                                                                \
+                Py_INCREF(dest);                                                    \
+                m_tensor->m_trace_info.member = dest;                               \
+            }                                                                       \
         }
 
 REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(compiled_info)
@@ -463,6 +468,8 @@ PyObject* TensorWrapper::_dev_tensor(){
         auto py_dev_tensor = py::reinterpret_borrow<py::object>(dev_tensor);
         auto sh = interpreter_for_py->put(py_dev_tensor.cast<DeviceTensorND>());
         m_tensor->m_handle = std::move(SharedHandle(sh));
+        Py_DECREF(m_tensor->m_trace_info.compiled_info);
+        m_tensor->m_trace_info.compiled_info = nullptr;
 
         return dev_tensor;
     }

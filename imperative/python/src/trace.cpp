@@ -55,10 +55,9 @@ apply_result_t apply_trace(ApplyContext& ctx) {
 
     auto args = py::tuple(ctx.nargs + 1);
     args[0] = py::cast(ctx.op);
+    py::tuple args(ctx.nargs);
     for (size_t i = 0; i < ctx.nargs; i++) {
-        args[i + 1] = TensorWrapper::make(
-                              std::move(std::shared_ptr<Tensor>(ctx.args[i])))
-                              .release();
+        args[i + 1] = TensorWrapper::make(ctx.args[i]->shared_from_this());
     }
     auto ret = py::reinterpret_steal<py::object>(
             PyObject_Call(pyf, args.ptr(), nullptr));

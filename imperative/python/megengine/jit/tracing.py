@@ -350,12 +350,16 @@ class trace:
             self._lazy_eval_links = ()
 
     def _take_escaped_tensors(self):
-        escaped_tensors = tuple(filter(lambda x: x() is not None, self._active_tensors.values()))
+        escaped_tensors = tuple(
+            filter(lambda x: x() is not None, self._active_tensors.values())
+        )
         self._active_tensors.clear()
         return escaped_tensors
 
     def _lazy_eval(self, lazy_eval_graph, lazy_eval_tensors, lazy_eval_links):
-        lazy_eval_tensors = list(filter(lambda x: x() is not None, lazy_eval_tensors.values()))
+        lazy_eval_tensors = list(
+            filter(lambda x: x() is not None, lazy_eval_tensors.values())
+        )
         readers = [G.OutputNode(x()._varnode).outputs[0] for x in lazy_eval_tensors]
         self._apply_graph_options(lazy_eval_graph)
         # FIXME
@@ -443,6 +447,7 @@ class trace:
                         x()._reset_varnode()
                         x().mixin_handle = -1
                         x().recording = False
+                        x()._trace_mixin_info = None
 
         try:
             do_enter()

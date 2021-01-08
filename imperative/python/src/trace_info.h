@@ -28,10 +28,10 @@ struct TraceInfo {
         mixin_handle = that.mixin_handle;
         recording = that.recording;
 
-        compiled_info = that.compiled_info;
-        Py_XINCREF(compiled_info);
         trace_mixin_info = that.trace_mixin_info;
         Py_XINCREF(trace_mixin_info);
+        compiled_info = that.compiled_info;
+        Py_XINCREF(compiled_info);
 
         copied = true;
         return *this;
@@ -39,7 +39,7 @@ struct TraceInfo {
 
     ~TraceInfo()  {
         Py_XDECREF(trace_mixin_info);
-        // Py_XDECREF(compiled_info);
+        Py_XDECREF(compiled_info);
     }
 
 private:
