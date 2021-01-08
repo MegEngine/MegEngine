@@ -161,6 +161,7 @@ struct TensorWrapper {
 
     PyObject* mixin_handle();
     PyObject* recording();
+    PyObject* copied();
 
     void set_mixin_handle(PyObject*);
     void set_recording(PyObject*);

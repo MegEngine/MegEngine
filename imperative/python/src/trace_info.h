@@ -17,6 +17,7 @@ namespace mgb::imperative::python {
 struct TraceInfo {
     int64_t mixin_handle = -1;
     bool recording = false;
+    bool copied = false;
 
     PyObject* compiled_info = nullptr;
     PyObject* trace_mixin_info = nullptr;
@@ -32,6 +33,7 @@ struct TraceInfo {
         trace_mixin_info = that.trace_mixin_info;
         Py_XINCREF(trace_mixin_info);
 
+        copied = true;
         return *this;
     }
 

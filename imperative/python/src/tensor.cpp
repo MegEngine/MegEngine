@@ -284,6 +284,11 @@ REGISTE_TENSORWRAPPER_FUNC(bool, recording)
 #undef REGISTE_TENSORWRAPPER_FUNC
 
 
+PyObject* TensorWrapper::copied() {
+    return py::cast(m_tensor->m_trace_info.copied).release().ptr();
+}
+
+
 #define REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(member)                                 \
         PyObject* TensorWrapper::member() {                                         \
             return m_tensor->m_trace_info.member;                                   \
@@ -740,6 +745,7 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::_drop>("_drop")
         .def<&TensorWrapper::reset_varnode>("_reset_varnode")
         .def_getset<&TensorWrapper::varnode>("_varnode")
+        .def_getset<&TensorWrapper::copied>("_copied")
         .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("mixin_handle")
         .def_getset<&TensorWrapper::recording, &TensorWrapper::set_recording>("recording")
         .def_getset<&TensorWrapper::handle, &TensorWrapper::set_handle>("_handle")
