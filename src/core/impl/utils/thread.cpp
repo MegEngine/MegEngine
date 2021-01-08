@@ -72,26 +72,28 @@ namespace {
 }
 
 /* =============== SCQueueSynchronizer ===============  */
-size_t SCQueueSynchronizer::cached_max_spin = 0;
+size_t SCQueueSynchronizer::cached_default_max_spin = 0;
 #ifdef WIN32
 bool SCQueueSynchronizer::is_into_atexit = false;
 #endif
 
-size_t SCQueueSynchronizer::max_spin() {
-    if (cached_max_spin)
-        return cached_max_spin;
+size_t SCQueueSynchronizer::get_default_max_spin() {
+    if (cached_default_max_spin)
+        return cached_default_max_spin;
 
     if (MGB_GETENV("MGB_WORKER_NO_SLEEP")) {
         mgb_log_warn("worker would not sleep");
-        return cached_max_spin = std::numeric_limits<size_t>::max();
+        return cached_default_max_spin = std::numeric_limits<size_t>::max();
     }
 
     if (auto spin_string = MGB_GETENV("MGB_WORKER_MAX_SPIN")) {
         auto spin = std::stoi(spin_string);
         mgb_log_warn("worker would execute with spin of %d", spin);
-        return cached_max_spin = spin;
+        return cached_default_max_spin = spin;
     }
 
+    // heuristically, let CPU spinning around 5ms at most before CPU yield.
+    // we are going to measure how many spins will spent 5ms on current platform.
     std::atomic_bool start{false}, stop{false};
     size_t cnt;
     double cnt_time;
@@ -115,11 +117,13 @@ size_t SCQueueSynchronizer::max_spin() {
     }
     stop.store(true);
     worker.join();
-    cached_max_spin = std::max<size_t>(cnt * (5 / cnt_time), 100000);
-    return cached_max_spin;
+    cached_default_max_spin = std::max<size_t>(cnt * (5 / cnt_time), 100000);
+    return cached_default_max_spin;
 }
 
-SCQueueSynchronizer::SCQueueSynchronizer() = default;
+SCQueueSynchronizer::SCQueueSynchronizer(size_t max_spin) {
+    m_max_spin = max_spin;
+}
 
 SCQueueSynchronizer::~SCQueueSynchronizer() noexcept {
     if (!m_worker_started)
@@ -203,13 +207,13 @@ void SCQueueSynchronizer::producer_wait() {
 
 size_t SCQueueSynchronizer::consumer_fetch(size_t max, size_t min) {
     mgb_assert(max >= min && min >= 1);
-    size_t spin = 0, max_spin = SCQueueSynchronizer::max_spin(),
+    size_t spin = 0,
            cur_finished = m_finished_task.load(std::memory_order_relaxed);
 
     // relaxed mem order suffices because acquire would be called for ret
     while (m_tot_task.load(std::memory_order_relaxed) < cur_finished + min) {
         ++ spin;
-        if (spin >= max_spin) {
+        if (spin >= m_max_spin) {
             while (m_consumer_waiting.test_and_set(std::memory_order_relaxed));
             SpinlockReleaser releaser(m_consumer_waiting);
 

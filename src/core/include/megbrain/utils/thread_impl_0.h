@@ -46,15 +46,18 @@ namespace mgb {
 
     class SCQueueSynchronizer {
         public:
-            static size_t max_spin() {
-                return 0;
-            }
+            SCQueueSynchronizer(size_t max_spin) {}
+
+            static size_t get_default_max_spin() { return 0; }
     };
 
     // tasks would be dispatched inplace
     template<typename Param, class TaskImpl>
     class AsyncQueueSC: public NonCopyableObj {
         public:
+            AsyncQueueSC() {}
+            AsyncQueueSC(size_t max_spin) {}
+
             virtual ~AsyncQueueSC() = default;
 
             void add_task(const Param &param) {

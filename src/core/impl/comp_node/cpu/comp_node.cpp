@@ -995,7 +995,7 @@ bool CpuCompNode::CpuDispatchableBase::EventImpl::do_finished() {
 }
 
 void CpuCompNode::CpuDispatchableBase::EventImpl::host_wait_cv() {
-    for (size_t i = 0, it = SCQueueSynchronizer::max_spin() / 20; i < it; ++i) {
+    for (size_t i = 0, it = SCQueueSynchronizer::get_default_max_spin() / 20; i < it; ++i) {
         if (finished()) {
             return;
         }

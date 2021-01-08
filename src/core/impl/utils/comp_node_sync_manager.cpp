@@ -73,7 +73,7 @@ CompNodeSyncManager& CompNodeSyncManager::busy_wait_set_ready() {
                "before actually waiting on a tensor,"
                " you must call set_has_waiter first");
 
-    size_t spin = 0, max_spin = SCQueueSynchronizer::max_spin();
+    size_t spin = 0, max_spin = SCQueueSynchronizer::get_default_max_spin();
     while (!m_nr_ready.load()) {
         ++spin;
         if (spin >= max_spin) {

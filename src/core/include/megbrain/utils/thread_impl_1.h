@@ -50,7 +50,11 @@ namespace mgb {
      * wrap around within a practical time, which would crash the system.
      */
     class SCQueueSynchronizer {
-        static size_t cached_max_spin;
+        //! cached value for global default max spin, read and stored by get_default_max_spin
+        static size_t cached_default_max_spin;
+
+        //! synchronizer wait at most m_max_spin before CPU yield
+        size_t m_max_spin;
         std::atomic_flag m_consumer_waiting = ATOMIC_FLAG_INIT;
         std::atomic_bool m_should_exit{false};
         bool m_worker_started = false, m_wait_finish_called = false;
@@ -65,7 +69,8 @@ namespace mgb {
         std::thread m_worker_thread;
 
         public:
-            SCQueueSynchronizer();
+            SCQueueSynchronizer(size_t max_spin);
+
             ~SCQueueSynchronizer() noexcept;
 
             bool worker_started() const {
@@ -79,7 +84,8 @@ namespace mgb {
             }
 #endif
 
-            static size_t max_spin();
+            //! get global default max spin from env
+            static size_t get_default_max_spin();
 
             void start_worker(std::thread thread);
 
@@ -150,6 +156,11 @@ namespace mgb {
         };
 
         public:
+            AsyncQueueSC() : m_synchronizer(SCQueueSynchronizer::get_default_max_spin()) {}
+
+            //! specify max spin manually, caller must ensure the given value is optimal,
+            //! otherwise caller should leave the value adjustable by user.
+            AsyncQueueSC(size_t max_spin) : m_synchronizer(max_spin) {}
 #ifdef WIN32
             bool check_is_into_atexit() {
                 if (SCQueueSynchronizer::is_into_atexit) {
