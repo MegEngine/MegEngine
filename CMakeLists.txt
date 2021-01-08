@@ -30,7 +30,7 @@ set (MGE_EXPORT_TARGETS MegEngine-targets)
 
 option(MGE_WITH_JIT "Build MegEngine with JIT." ON)
 option(MGE_WITH_JIT_MLIR "Build MegEngine with MLIR JIT." OFF)
-option(MGE_WITH_HALIDE "Build MegEngine with Halide JIT" ON)
+option(MGE_WITH_HALIDE "Build MegEngine with Halide JIT" OFF)
 option(MGE_WITH_MIDOUT_PROFILE "Build MegEngine with Midout profile." OFF)
 option(MGE_WITH_MINIMUM_SIZE "Swith off MGE_ENABLE_RTTI、MGE_ENABLE_EXCEPTIONS、MGE_ENABLE_LOGGING and switch on MGE_INFERENCE_ONLY so that compile minimum load_and_run. Take effect only when MGE_BIN_REDUCE was set" OFF)
 option(MGE_ARMV8_2_FEATURE_FP16 "Enable armv8.2-a+fp16 support" OFF)
@@ -230,14 +230,11 @@ endif()
 # FIXME At present, there are some conflicts between the LLVM that halide
 # depends on and the LLVM that MLIR depends on. Should be fixed in subsequent
 # versions.
-if(MGE_BUILD_IMPERATIVE_RT)
-    set(MGE_WITH_HALIDE OFF)
-    message(WARNING "cannot use HALIDE when building IMPERATIVE_RT")
+if(MGE_BUILD_IMPERATIVE_RT AND MGE_WITH_HALIDE)
+    message(FATAL_ERROR "cannot use HALIDE when building IMPERATIVE_RT")
 endif()
-if(MGE_WITH_JIT_MLIR)
-    if(MGE_WITH_HALIDE)
-        message(FATAL_ERROR "please set MGE_WITH_HALIDE to OFF with MGE_WITH_JIT_MLIR enabled")
-    endif()
+if(MGE_WITH_JIT_MLIR AND MGE_WITH_HALIDE)
+    message(FATAL_ERROR "cannot use HALIDE with MGE_WITH_JIT_MLIR enabled")
 endif()
 
 if(MGE_WITH_CUDA)
