@@ -10,8 +10,18 @@
  */
 
 #include "./tensor.h"
+#include <stdexcept>
 
 namespace mgb::imperative::python {
+
+class TraceReadError : public std::exception {
+public:
+    explicit TraceReadError(const char * m) : message{m} {}
+    const char * what() const noexcept override {return message.c_str();}
+private:
+    std::string message = "";
+};
+
 
 apply_result_t apply_trace(ApplyContext& ctx);
 

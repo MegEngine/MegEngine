@@ -414,7 +414,7 @@ class trace:
                     for x in escaped_tensors:
                         try:
                             assign_raw_tensor(x(), RawTensor(x()._dev_tensor()))
-                        except TraceMismatchError:
+                        except RuntimeError:
                             # TraceMismatchError thrown in do_exit
                             pass
                     self._graph.wait()
@@ -954,7 +954,8 @@ class CompiledTensorProxy:
             elif self.__info.data_read:
                 self.__shape = self._dev_tensor().shape
             else:
-                raise TraceMismatchError("shape of this tensor is not read in trace")
+                # c++ will throw TraceReadError
+                return None
         return self.__shape
 
     def numpy(self):
@@ -964,7 +965,8 @@ class CompiledTensorProxy:
             elif self.__info.data_read:
                 self.__value = self._dev_tensor().numpy()
             else:
-                raise TraceMismatchError("value of this tensor is not read in trace")
+                # c++ will throw TraceReadError
+                return None
             if self._isscalar:
                 self.__value = self.__value.squeeze()
         return self.__value
@@ -972,7 +974,8 @@ class CompiledTensorProxy:
     def _dev_tensor(self):
         if self.__data is None:
             if not self.__info.data_read:
-                raise TraceMismatchError("raw data of this tensor is not read in trace")
+                # c++ will throw TraceReadError
+                return None
             self.__data = self.__info.data_reader.get_value()
         return self.__data
 
