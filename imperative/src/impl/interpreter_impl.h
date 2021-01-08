@@ -207,7 +207,11 @@ private:
     size_t m_enable_evict = 0;
 
     struct WorkQueue : AsyncQueueSC<Command, WorkQueue> {
-        WorkQueue(ChannelImpl* owner) : m_owner(owner) {
+        // set max_spin=0 to prevent Queue fetch task in busy wait manner.
+        // this won't affect throughput when python interpreter is sending enough task,
+        // but will significantly save CPU time when waiting for task, e.g. wait for data input
+        WorkQueue(ChannelImpl* owner)
+                : AsyncQueueSC<Command, WorkQueue>(0), m_owner(owner) {
             sys::set_thread_name("interpreter");
         }
         void process_one_task(Command& cmd) {

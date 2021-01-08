@@ -67,6 +67,12 @@ auto to_tuple(T begin, T end, pybind11::return_value_policy policy = pybind11::r
 class PyTaskDipatcher {
     struct Queue : mgb::AsyncQueueSC<std::function<void(void)>, Queue> {
         using Task = std::function<void(void)>;
+
+        // set max_spin=0 to prevent Queue fetch task in busy wait manner.
+        // this won't affect throughput when python interpreter is sending enough task,
+        // but will significantly save CPU time when waiting for task, e.g. wait for data input
+        Queue() : mgb::AsyncQueueSC<std::function<void(void)>, Queue>(0) {}
+
         void process_one_task(Task& f) {
             if (!Py_IsInitialized()) return;
             pybind11::gil_scoped_acquire _;

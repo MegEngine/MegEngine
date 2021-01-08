@@ -30,7 +30,10 @@ class AsyncReleaser : public CompNodeDepedentObject {
         AsyncReleaser* m_par_releaser;
 
     public:
-        Waiter(AsyncReleaser* releaser) : m_par_releaser(releaser) {}
+        // disable busy wait by set max_spin=0 to save CPU cycle
+        Waiter(AsyncReleaser* releaser)
+                : AsyncQueueSC<WaiterParam, Waiter>(0),
+                  m_par_releaser(releaser) {}
 
         void process_one_task(WaiterParam& param) {
             if (param.event->finished()) {
