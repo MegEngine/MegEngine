@@ -247,6 +247,19 @@ class Conv2d(_ConvNd):
     :math:`H` is height of input planes in pixels, and :math:`W` is
     width in pixels.
 
+    In general, output feature maps' shapes can be inferred as follows:
+
+    input: :math:`(N, C_{\text{in}}, H_{\text{in}}, W_{\text{in}})`
+    output: :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})` where
+
+    .. math::
+        \text{H}_{out} = \lfloor \frac{\text{H}_{in} + 2 * \text{padding[0]} - 
+        \text{dilation[0]} * (\text{kernel_size[0]} - 1)}{\text{stride[0]}} + 1 \rfloor
+
+    .. math::
+        \text{W}_{out} = \lfloor \frac{\text{W}_{in} + 2 * \text{padding[1]} - 
+        \text{dilation[1]} * (\text{kernel_size[1]} - 1)}{\text{stride[1]}} + 1 \rfloor
+
     When `groups == in_channels` and `out_channels == K * in_channels`,
     where K is a positive integer, this operation is also known as depthwise
     convolution.
