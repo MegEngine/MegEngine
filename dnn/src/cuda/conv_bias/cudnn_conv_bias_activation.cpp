@@ -27,9 +27,12 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         args.src_layout->dtype == dtype::BFloat16()) {
         return false;
     }
+
     if (args.bias_layout->ndim == 0 ||
-        args.bias_layout->eq_shape(*args.dst_layout))
+        !conv_bias::check_bias_share_in_channel(*(args.bias_layout),
+                                                args.opr->param().format)) {
         return false;
+    }
     auto&& param = args.opr->param();
     if (param.format == param::ConvBias::Format::NCHW4_NCHW32 ||
         param.format == param::ConvBias::Format::NCHW32_NCHW4)
