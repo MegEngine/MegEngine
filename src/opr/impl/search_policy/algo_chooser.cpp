@@ -185,15 +185,30 @@ size_t AlgoChooser<Opr>::setup_algo(const TensorLayoutArray& layouts,
         algo = get_algo(ctx);
     }
     size_t workspace = ctx.get_workspace_size_bytes(algo);
-    mgb_log_debug(
-            "%s: tensor layouts(%s %s, %s %s) -> (%s %s): algo=%s "
-            "workspace=%.2fMiB reproducible=%d",
-            mgb_opr->dyn_typeinfo()->name, layouts[0].to_string().c_str(),
-            layouts[0].dtype.name(), layouts[1].to_string().c_str(),
-            layouts[1].dtype.name(),
-            layouts[layouts.size() - 1].to_string().c_str(),
-            layouts[layouts.size() - 1].dtype.name(), algo.name.c_str(),
-            workspace / (1024 * 1024.0), algo.is_reproducible);
+
+    std::string ret;
+    ret.append(mgb_opr->dyn_typeinfo()->name);
+    ret.append(": tensor layouts(");
+    for (size_t i = 0; i < arity_in; ++i) {
+        if (i) {
+            ret.append(", ");
+        }
+        ret.append(layouts[i].to_string() + " ");
+        ret.append(layouts[i].dtype.name());
+    }
+    ret.append(") -> (");
+    for (size_t i = 0; i < arity_out; ++i) {
+        if (i) {
+            ret.append(", ");
+        }
+        ret.append(layouts[i + arity_in].to_string() + " ");
+        ret.append(layouts[i + arity_in].dtype.name());
+    }
+    ret.append("): algo=" + algo.name);
+    ret.append(ssprintf(" workspace=%.2fMiB reproducible=%d",
+                        workspace / (1024 * 1024.0), algo.is_reproducible));
+    mgb_log_debug("%s", ret.c_str());
+
     megdnn_opr->execution_policy() = {algo};
     return workspace;
 }
