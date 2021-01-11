@@ -8,6 +8,7 @@ import megengine.distributed as dist
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.quantization.observer import (
     ExponentialMovingAverageObserver,
+    HistogramObserver,
     MinMaxObserver,
     Observer,
     PassiveObserver,
@@ -42,6 +43,16 @@ def test_exponential_moving_average_observer():
     m(mge.tensor(x2, dtype=np.float32))
     np.testing.assert_allclose(m.min_val.numpy(), expected_min)
     np.testing.assert_allclose(m.max_val.numpy(), expected_max)
+
+
+def test_histogram_observer():
+    x = np.random.rand(3, 3, 3, 3).astype("float32")
+    np_min, np_max = x.min(), x.max()
+    x = mge.tensor(x)
+    m = HistogramObserver()
+    m(x)
+    np.testing.assert_allclose(m.min_val.numpy(), np_min)
+    np.testing.assert_allclose(m.max_val.numpy(), np_max)
 
 
 def test_passive_observer():
