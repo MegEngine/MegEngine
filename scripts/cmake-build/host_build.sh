@@ -199,7 +199,7 @@ function prepare_env_for_windows_build() {
     export PATH=/c/Users/${USER}/swigwin-4.0.2::$PATH
 }
 
-WINDOWS_BUILD_TARGET="Ninja all > build.log"
+WINDOWS_BUILD_TARGET="Ninja all"
 if [[ -z ${MAKE_DEVELOP} ]]
 then
     MAKE_DEVELOP="false"
@@ -207,7 +207,7 @@ fi
 function config_windows_build_target() {
     if [ ${MAKE_DEVELOP} = "true" ]; then
         echo "build all and develop for pytest test"
-        WINDOWS_BUILD_TARGET="Ninja all > build.log && Ninja develop"
+        WINDOWS_BUILD_TARGET="Ninja all && Ninja develop"
     fi
 }
 
@@ -245,7 +245,6 @@ function cmake_build_windows() {
         -DCMAKE_MAKE_PROGRAM=ninja.exe \
         ${EXTRA_CMAKE_ARGS} \
         ../../.. && \
-        echo \"start Ninja build log to build.log, may take serval min...\" && \
         ${WINDOWS_BUILD_TARGET}"
 }
 
