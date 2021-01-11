@@ -421,8 +421,10 @@ PyObject* TensorWrapper::numpy() {
         }
         return np_val.release().ptr();
     }
-
-    auto&& hv = interpreter_for_py->get_value(m_tensor->m_handle.get());
+    auto&& hv = [&]() {
+        py::gil_scoped_release _;
+        return interpreter_for_py->get_value(m_tensor->m_handle.get());
+    }();
     auto arr = py::reinterpret_steal<py::array>(npy::ndarray_from_tensor(hv, npy::ShareType::TRY_SHARE));
     if (!arr) {
         PyErr_SetString(PyExc_ValueError, "tensor invalid");
@@ -492,7 +494,10 @@ PyObject* TensorWrapper::_dev_tensor(){
     if (m_tensor->m_trace_info.recording && !skip_tracing) {
         PyObject_SetAttrString(m_tensor->m_trace_info.trace_mixin_info, "data_read", py::cast(true).release().ptr());
     }
-    auto dev_tensor = interpreter_for_py->get_dev_tensor(m_tensor->m_handle.get());
+    auto dev_tensor = [&](){
+        py::gil_scoped_release _;
+        return interpreter_for_py->get_dev_tensor(m_tensor->m_handle.get());
+    }();
     return py::cast(dev_tensor).release().ptr();
 }
 

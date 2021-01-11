@@ -366,7 +366,7 @@ namespace detail {
             return true;
         }
         static handle cast(mgb::PersistentCache::Blob blob, return_value_policy /* policy */, handle /* parent */) {
-            return bytes((const char*)blob.ptr, blob.size);
+            return bytes((const char*)blob.ptr, blob.size).release();
         }
     };
 

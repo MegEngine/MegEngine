@@ -93,7 +93,6 @@ _persistent_cache_impl_ins.reg()
 atexit.register(_full_sync)
 
 del _set_fork_exec_path_for_timed_func
-del _persistent_cache_impl_ins
 
 # subpackages
 import megengine.autodiff
