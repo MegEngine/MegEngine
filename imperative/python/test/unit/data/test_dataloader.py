@@ -61,13 +61,17 @@ def test_dataloader_init():
 
 
 class MyStream(StreamDataset):
-    def __init__(self, number, batch=False, error=False):
+    def __init__(self, number, batch=False, error=False, block=False):
         self.number = number
         self.batch = batch
         self.error = error
+        self.block = block
 
     def __iter__(self):
         for cnt in range(self.number):
+            if self.block:
+                for _ in range(10):
+                    time.sleep(1)
             if self.batch:
                 data = np.random.randint(0, 256, (2, 32, 32, 3), dtype="uint8")
                 yield (True, (data, [cnt, cnt - self.number]))
@@ -115,20 +119,10 @@ def test_stream_dataloader_error():
 
 @pytest.mark.parametrize("num_workers", [0, 2])
 def test_stream_dataloader_timeout(num_workers):
-    dataset = MyStream(100, False)
+    dataset = MyStream(100, False, block=True)
     sampler = StreamSampler(batch_size=4)
 
-    class TimeoutTransform(Transform):
-        def __init__(self):
-            pass
-
-        def apply(self, input):
-            time.sleep(10)
-            return input
-
-    dataloader = DataLoader(
-        dataset, sampler, TimeoutTransform(), num_workers=num_workers, timeout=5
-    )
+    dataloader = DataLoader(dataset, sampler, num_workers=num_workers, timeout=5)
     with pytest.raises(RuntimeError, match=r".*timeout.*"):
         data_iter = iter(dataloader)
         next(data_iter)
