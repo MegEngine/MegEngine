@@ -483,6 +483,8 @@ void ChannelImpl::process_one_task(Command& cmd) {
 
 void ChannelImpl::check_worker_exc_unsafe() {
     if (m_worker_exc) {
+        // for reuse interpreter_for_py after some exception tests
+        m_waitee = nullptr;
         std::exception_ptr exc;
         std::swap(exc, m_worker_exc);
         std::rethrow_exception(exc);
