@@ -208,7 +208,8 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_inplace_add_output_attrs_
     }
     mgb_assert(alpha.layout.dtype == dtype::Float32(), "alpha should be float32");
     mgb_assert(beta.layout.dtype == dtype::Float32(), "beta should be float32");
-    return {{dest}, succeed};
+    // inplace op result's desc value is changed
+    return {{{dest.layout, dest.comp_node}}, succeed};
 }
 
 OP_TRAIT_REG(Elemwise, Elemwise, opr::Elemwise)
