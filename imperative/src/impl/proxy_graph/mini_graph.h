@@ -606,6 +606,7 @@ public:
             desc.comp_node = minigraph.output_var(i)->comp_node();
             if (auto* shape = sess.infer_shape(i, false)) {
                 desc.layout.init_contiguous_stride(*shape);
+                noerr = true;
             } else {
                 noerr = false;
             }
