@@ -393,7 +393,9 @@ PyObject* TensorWrapper::numpy() {
             throw TraceReadError("value of this tensor is not read in trace");
         }
         if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
-            np_val = PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(np_val));
+            PyObject *np_scalar = PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(np_val));
+            Py_DECREF(np_val);
+            return np_scalar;
         }
         return np_val;
     }

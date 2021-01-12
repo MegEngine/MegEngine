@@ -1002,8 +1002,7 @@ class CompiledTensorProxy:
             else:
                 # c++ will throw TraceReadError
                 return None
-            if self._isscalar:
-                self.__value = self.__value.squeeze()
+        # c++ side will handle scalar case
         return self.__value
 
     def _dev_tensor(self):
