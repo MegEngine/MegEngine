@@ -548,19 +548,6 @@ OP_TRAIT_REG(Remap, Remap)
     .fallback();
 }} // remap
 
-namespace { namespace reshape {
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
-    auto&& op = static_cast<const Reshape&>(def);
-    mgb_assert(inputs.size() == 2);
-    return opr::Reshape::make(inputs[0], inputs[1], op.param());
-}
-OP_TRAIT_REG(Reshape, Reshape)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // reshape
-
 namespace {
 auto get_index(
     const VarNodeArray& inputs, size_t vidx,
