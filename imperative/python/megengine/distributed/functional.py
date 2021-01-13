@@ -11,6 +11,7 @@ from typing import Optional, Tuple
 from ..core._imperative_rt.core2 import apply
 from ..core.autodiff.grad import _grad_manager_dict
 from ..core.ops.builtin import CollectiveComm, Copy, PyOpBase, RemoteRecv, RemoteSend
+from ..core.tensor.utils import isscalar, setscalar
 from ..device import get_default_device
 from ..tensor import Tensor
 from .group import WORLD, Group, get_backend, get_client, get_mm_server_addr, get_rank
@@ -50,7 +51,18 @@ def collective_comm(inp, mode, group, device):
         backend=get_backend(),
         comp_node=device,
     )
-    return apply(op, inp)[0]
+    (result,) = apply(op, inp)
+    # assume all workers have homogeneous shape
+    if mode in (
+        CollectiveComm.Mode.REDUCE_SUM,
+        CollectiveComm.Mode.BROADCAST,
+        CollectiveComm.Mode.ALL_REDUCE_SUM,
+        CollectiveComm.Mode.ALL_REDUCE_MAX,
+        CollectiveComm.Mode.ALL_REDUCE_MIN,
+    ):
+        if isscalar(inp):
+            setscalar(result)
+    return result
 
 
 def reduce_sum(
@@ -289,6 +301,11 @@ def remote_recv(
             g.wrt(inp)
             g._refkeeper.append(inp)
 
+    _isscalar = False
+    if len(shape) == 0:
+        shape = (1,)
+        _isscalar = True
+
     op = RemoteRecv()
     op.key = key
     op.cn = device
@@ -298,4 +315,6 @@ def remote_recv(
     op.rank_from = src_rank
 
     (ret,) = apply(_RemoteRecv(op), inp)
+    if _isscalar:
+        setscalar(ret)
     return ret
