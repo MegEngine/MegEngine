@@ -322,6 +322,15 @@ NormalizeArithChainPass::Impl::AddTrait::extract_coeff(
         return AbstractOpr::make_coeff(
                 i1.node(), i0v->get_cast<dt_max_float>());
     }
+    if (mode == Mode::TRUE_DIV) {
+        SymbolVar i0 = opr->input(0), i1 = opr->input(1),
+                  i1r = opr::powf(i1, -1);
+        auto i1rv = i1r.as_immutable_scalar_require_shape();
+        if (!i1rv.valid())
+            return None;
+        return AbstractOpr::make_coeff(
+                i0.node(), i1rv->get_cast<dt_max_float>());
+    }
     return None;
 }
 
