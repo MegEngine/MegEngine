@@ -9,6 +9,7 @@
 import numpy as np
 
 import megengine.functional as F
+import megengine.functional.elemwise as elemwise
 from megengine import tensor
 from megengine.core.tensor import dtype
 from megengine.functional.elemwise import _elwise
@@ -166,3 +167,20 @@ def test_qadd():
     result_mge = result_mge.astype("float32").numpy()
     result_expect = x.astype("float32").numpy() + y.astype("float32").numpy()
     np.testing.assert_almost_equal(result_mge, result_expect, decimal=6)
+
+
+def test_int32_input():
+    x = tensor(np.array([1, 2, 3, 4, 5]), dtype="int32")
+    for op_name in elemwise.__all__:
+        op = getattr(elemwise, op_name)
+        nargs = op.__code__.co_argcount
+        if op_name == "clip":
+            inp = (x, 0, 1)
+        elif op_name.endswith("_shift"):
+            inp = (x, 1)
+        elif op_name.startswith("logical_"):
+            continue
+        else:
+            inp = (x,) * nargs
+        y = op(*inp)
+        y.numpy()

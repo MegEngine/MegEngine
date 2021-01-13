@@ -27,9 +27,31 @@ from .utils import setscalar
 _ElwMod = Elemwise.Mode
 
 
-def _elwise(*args, mode):
+def _elwise_apply(args, mode):
     op = builtin.Elemwise(mode)
-    if mode in (_ElwMod.TRUE_DIV, _ElwMod.POW):
+    _isscalar = True
+    for i in args:
+        if isscalar(i) == False:
+            _isscalar = False
+            break
+    (result,) = apply(op, *args)
+    if _isscalar:
+        setscalar(result)
+    return result
+
+
+def _elwise(*args, mode):
+    if mode in (
+        _ElwMod.TRUE_DIV,
+        _ElwMod.POW,
+        _ElwMod.CEIL,
+        _ElwMod.FLOOR,
+        _ElwMod.ROUND,
+    ):
+        if mode in (_ElwMod.CEIL, _ElwMod.FLOOR, _ElwMod.ROUND) and np.issubdtype(
+            args[0].dtype, np.integer
+        ):
+            return args[0]
         args = tuple(
             map(
                 lambda x: x.astype("float32")
@@ -39,16 +61,7 @@ def _elwise(*args, mode):
             )
         )
     args = utils.convert_inputs(*args)
-    (result,) = apply(op, *args)
-
-    _isscalar = True
-    for i in args:
-        if isscalar(i) == False:
-            _isscalar = False
-            break
-    if _isscalar:
-        setscalar(result)
-    return result
+    return _elwise_apply(args, mode)
 
 
 def _matmul(inp1, inp2):
