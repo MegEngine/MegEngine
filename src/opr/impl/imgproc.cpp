@@ -93,6 +93,7 @@ void WarpPerspectiveForward::outshape_by_symvar_do_get_output_shape(
             dest.shape[4] = 4;
             break;
         case Param::Format::NHWC_NCHW:
+            dest.ndim = 4;
             dest[0] = matshp[0];
             dest.shape[1] = imgshp.shape[3];
             dest.shape[2] = oshp2d.shape[0];

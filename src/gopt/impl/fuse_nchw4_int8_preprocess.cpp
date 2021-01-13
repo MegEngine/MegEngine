@@ -676,9 +676,9 @@ void FuseWarpPerspectiveDimshufflePass::apply(OptState& opt) const {
     auto on_opr = [&try_warp_nchw_typecvt, &try_warp_nhwc2nchw_typecvt,
                    &try_warp_nhwc2nchw4_typecvt, &try_warp_nchw2nchw4_typecvt,
                    &rewriter](OperatorNodeBase* opr) {
-        if (!try_warp_nchw_typecvt(opr) && !try_warp_nhwc2nchw_typecvt(opr) &&
-            !try_warp_nhwc2nchw4_typecvt(opr) &&
-            !try_warp_nchw2nchw4_typecvt(opr)) {
+        if (!try_warp_nhwc2nchw4_typecvt(opr) &&
+            !try_warp_nchw2nchw4_typecvt(opr) && 
+            !try_warp_nchw_typecvt(opr) && !try_warp_nhwc2nchw_typecvt(opr)) {
             rewriter.auto_replace_outputs(opr);
         }
     };
