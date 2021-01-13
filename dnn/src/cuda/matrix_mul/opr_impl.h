@@ -42,6 +42,7 @@ public:
     class AlgoBFloat16;
 #endif
     class AlgoFloat32SIMT;
+    class AlgoFloat32SIMTSplitK;
     class AlgoPack;
 
     static const AlgoPack& algo_pack() {

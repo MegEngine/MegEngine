@@ -53,6 +53,7 @@ struct TestArg {
 std::vector<TestArg> get_matmul_args_no_mask();
 std::vector<TestArg> get_matmul_args_mask(uint8_t mask);
 std::vector<TestArg> get_matmul_args();
+std::vector<TestArg> get_matmul_args_split_k();
 std::vector<TestArg> get_batched_matmul_args_mask(uint8_t mask);
 std::vector<TestArg> get_batched_matmul_args();
 std::vector<TestArg> get_batched_matmul_broadcast_args();

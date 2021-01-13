@@ -11,6 +11,7 @@
  * implied.
  */
 #include "cutlass/gemm/device/gemm.h"
+#include "cutlass/gemm/device/gemm_splitk_parallel.h"
 #include "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper.cuh"
 
 using namespace megdnn;
@@ -24,17 +25,21 @@ void megdnn::cuda::cutlass_wrapper::cutlass_matrix_mul_wrapper(
         typename Gemm::ElementC* d_C, size_t ldc, int* workspace,
         GemmCoord const& problem_size,
         typename Gemm::EpilogueOutputOp::Params const& epilogue,
-        cudaStream_t stream) {
-    typename Gemm::TensorRefA tensor_a{
-            const_cast<typename Gemm::ElementA*>(d_A),
-            typename Gemm::LayoutA{static_cast<int>(lda)}};
-    typename Gemm::TensorRefB tensor_b{
-            const_cast<typename Gemm::ElementB*>(d_B),
-            typename Gemm::LayoutB{static_cast<int>(ldb)}};
-    typename Gemm::TensorRefC tensor_c{
-            nullptr, typename Gemm::LayoutC{static_cast<int>(ldc)}};
-    typename Gemm::TensorRefD tensor_d{
-            d_C, typename Gemm::LayoutC{static_cast<int>(ldc)}};
+        cudaStream_t stream, int split_k_slices) {
+    using TensorRefA = cutlass::TensorRef<typename Gemm::ElementA const,
+                                          typename Gemm::LayoutA>;
+    using TensorRefB = cutlass::TensorRef<typename Gemm::ElementB const,
+                                          typename Gemm::LayoutB>;
+    using TensorRefC = cutlass::TensorRef<typename Gemm::ElementC const,
+                                          typename Gemm::LayoutC>;
+    using TensorRefD =
+            cutlass::TensorRef<typename Gemm::ElementC, typename Gemm::LayoutC>;
+    TensorRefA tensor_a{const_cast<typename Gemm::ElementA*>(d_A),
+                        typename Gemm::LayoutA{static_cast<int>(lda)}};
+    TensorRefB tensor_b{const_cast<typename Gemm::ElementB*>(d_B),
+                        typename Gemm::LayoutB{static_cast<int>(ldb)}};
+    TensorRefC tensor_c{nullptr, typename Gemm::LayoutC{static_cast<int>(ldc)}};
+    TensorRefD tensor_d{d_C, typename Gemm::LayoutC{static_cast<int>(ldc)}};
 
     typename Gemm::Arguments arguments{problem_size,
                                        tensor_a,
@@ -42,7 +47,7 @@ void megdnn::cuda::cutlass_wrapper::cutlass_matrix_mul_wrapper(
                                        tensor_c,
                                        tensor_d.non_const_ref(),
                                        epilogue,
-                                       1};
+                                       split_k_slices};
     Gemm gemm_op;
     cutlass_check(gemm_op.initialize(arguments, workspace));
     cutlass_check(gemm_op(stream));

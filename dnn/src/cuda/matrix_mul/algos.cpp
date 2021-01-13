@@ -37,6 +37,9 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : simt_float32) {
         all_algos.push_back(&algo);
     }
+    for (auto&& algo : simt_float32_split_k) {
+        all_algos.push_back(&algo);
+    }
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
@@ -62,6 +65,23 @@ void MatrixMulForwardImpl::AlgoPack::fill_cutlass_algos() {
     simt_float32.emplace_back(AlgoParam{16, 32, 8, 16, 32, 8});
     simt_float32.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8});
     simt_float32.emplace_back(AlgoParam{16, 128, 8, 16, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{64, 256, 8, 32, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{256, 64, 8, 64, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{32, 256, 8, 16, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{256, 32, 8, 64, 16, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{128, 128, 8, 32, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{128, 64, 8, 64, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{64, 128, 8, 32, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{128, 32, 8, 64, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{32, 128, 8, 32, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{64, 64, 8, 32, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{32, 64, 8, 32, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{64, 32, 8, 64, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{32, 32, 8, 32, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{8, 32, 8, 8, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{16, 32, 8, 16, 32, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8});
+    simt_float32_split_k.emplace_back(AlgoParam{16, 128, 8, 16, 64, 8});
 }
 
 MatrixMulForwardImpl::AlgoPack MatrixMulForwardImpl::sm_algo_pack;

@@ -9,9 +9,9 @@ ELEMWISE_IMPL := ../src/cuda/cond_take/kimpl \
 	../src/cuda/elemwise_multi_type/kimpl
 
 CUDA_CONV_IMPL := ../src/cuda/conv_bias/int8/kimpl ../src/cuda/conv_bias/int8_imma/kimpl ../src/cuda/batch_conv_bias/int8/kimpl 
-CUDA_MATMUL_KIMPL := ../src/cuda/matrix_mul/fp32_simt/kimpl
+CUDA_MATMUL_IMPL := ../src/cuda/matrix_mul/fp32_simt/kimpl
 
-all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL} $(CUDA_MATMUL_KIMPL)
+all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL} $(CUDA_MATMUL_IMPL)
 
 ../src/common/elemwise/each_mode.inl: gen_elemwise_each_mode.py
 	./$^ $@

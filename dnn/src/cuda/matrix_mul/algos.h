@@ -43,6 +43,7 @@ public:
         CUDA_NAIVE,
         CUDA_BFLOAT16, 
         CUDA_FLOAT32_SIMT, 
+        CUDA_FLOAT32_SIMT_SPLIT_K, 
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -198,6 +199,31 @@ private:
     std::string m_name;
 };
 
+class MatrixMulForwardImpl::AlgoFloat32SIMTSplitK final : public AlgoBase {
+public:
+    using AlgoParam = MatrixMulForwardImpl::AlgoFloat32SIMT::AlgoParam;
+    AlgoFloat32SIMTSplitK(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_SPLIT_K_%s",
+                              m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    void exec(const ExecArgs& args) const override;
+    bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_SPLIT_K)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algo_param, ret);
+        return ret;
+    }
+
+private:
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
 class MatrixMulForwardImpl::AlgoPack : NonCopyableObj {
 private:
     AlgoBase::Mapper m_all_algos_map;
@@ -216,6 +242,7 @@ public:
     AlgoBFloat16 bfloat16;
 #endif
     std::vector<AlgoFloat32SIMT> simt_float32;
+    std::vector<AlgoFloat32SIMTSplitK> simt_float32_split_k;
     std::vector<AlgoBase*> all_algos;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }

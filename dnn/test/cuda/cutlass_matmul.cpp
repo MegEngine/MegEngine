@@ -21,7 +21,6 @@
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
 
-
 #if CUDA_VERSION >= 9020
 namespace megdnn {
 namespace test {
@@ -284,6 +283,15 @@ TEST_F(CUDA, CUTLASS_GEMM_MULTI_BATCHSIZE) {
                         param::MatrixMul::Format::DEFAULT);
 }
 
+TEST_F(CUDA, CUTLASS_GEMM_SPLIT_K_MULTI_BATCHSIZE) {
+    auto args = matrix_mul::get_matmul_args_no_mask();
+    test_multibatchsize(
+            handle_cuda(), dtype::Float32(), dtype::Float32(), dtype::Float32(),
+            "CUTLASS_FLOAT32_SIMT_SPLIT_K_128X128X8_32X64X8", args,
+            param::MatrixMul::Format::DEFAULT,
+            [](const matrix_mul::TestArg& arg) { return arg.k <= arg.n; });
+}
+
 #define MEGDNN_FOREACH_CUTLASS_KERNEL(cb) \
     cb(1, 64, 256, 8, 32, 64, 8);         \
     cb(2, 256, 64, 8, 64, 32, 8);         \
@@ -310,6 +318,21 @@ TEST_F(CUDA, CUTLASS_GEMM_MULTI_BATCHSIZE) {
                 handle_cuda(),                                                 \
                 "CUTLASS_FLOAT32_SIMT_" #tbm "X" #tbn "X" #tbk "_" #wm "X" #wn \
                 "X" #wk);                                                      \
+    }
+
+MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
+
+#undef cb
+
+#define cb(name, tbm, tbn, tbk, wm, wn, wk)                                    \
+    TEST_F(CUDA, CUTLASS_GEMM_SPLIT_K_##name) {                                \
+        matrix_mul::check_matrix_mul<MatrixMulForward>(                        \
+                dtype::Float32(), dtype::Float32(), dtype::Float32(),          \
+                handle_cuda(),                                                 \
+                "CUTLASS_FLOAT32_SIMT_SPLIT_K_" #tbm "X" #tbn "X" #tbk "_" #wm \
+                "X" #wn "X" #wk,                                               \
+                param::MatrixMul::Format::DEFAULT, 8, 1e-3,                    \
+                matrix_mul::get_matmul_args_split_k());                        \
     }
 
 MEGDNN_FOREACH_CUTLASS_KERNEL(cb)

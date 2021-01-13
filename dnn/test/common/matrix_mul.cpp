@@ -117,6 +117,18 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args() {
     return args;
 }
 
+std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_split_k() {
+    std::vector<TestArg> args = get_matmul_args();
+    for (auto iter = args.begin(); iter < args.end();) {
+        if (iter->k <= iter->n) {
+            iter = args.erase(iter);
+        } else {
+            iter++;
+        }
+    }
+    return args;
+}
+
 std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args_mask(
         uint8_t mask) {
     std::vector<TestArg> args;

@@ -5,6 +5,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include "src/cuda/matrix_mul/fp32_simt/matrix_mul_float_simt_cutlass_wrapper.cuinl"
 
 using LayoutA = cutlass::layout::ColumnMajor;
@@ -28,6 +29,7 @@ template void megdnn::cuda::cutlass_wrapper::cutlass_matrix_mul_wrapper<Gemm>(
         int* workspace, 
         cutlass::gemm::GemmCoord const& problem_size,   
         typename Gemm::EpilogueOutputOp::Params const& epilogue, 
-        cudaStream_t stream);
+        cudaStream_t stream, int split_k_slices);
+
 #pragma GCC diagnostic pop
 #endif
