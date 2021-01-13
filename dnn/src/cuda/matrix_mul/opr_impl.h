@@ -41,6 +41,7 @@ public:
 #if !MEGDNN_DISABLE_FLOAT16
     class AlgoBFloat16;
 #endif
+    class AlgoFloat32SIMT;
     class AlgoPack;
 
     static const AlgoPack& algo_pack() {

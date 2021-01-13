@@ -41,7 +41,8 @@ public:
         CUDA_WMMA_UINT4X4X32,
         CUDA_CUBLASLT,
         CUDA_NAIVE,
-        CUDA_BFLOAT16
+        CUDA_BFLOAT16, 
+        CUDA_FLOAT32_SIMT, 
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -165,6 +166,38 @@ private:
 };
 #endif
 
+class MatrixMulForwardImpl::AlgoFloat32SIMT final : public AlgoBase {
+public:
+    struct AlgoParam {
+        int threadblock_m, threadblock_n, threadblock_k;
+        int warp_m, warp_n, warp_k;
+        std::string to_string() {
+            return ssprintf("%dX%dX%d_%dX%dX%d", threadblock_m, threadblock_n,
+                            threadblock_k, warp_m, warp_n, warp_k);
+        }
+    };
+    AlgoFloat32SIMT(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_%s",
+                              m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    void exec(const ExecArgs& args) const override;
+    bool is_reproducible() const override { return true; }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algo_param, ret);
+        return ret;
+    }
+
+private:
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
 class MatrixMulForwardImpl::AlgoPack : NonCopyableObj {
 private:
     AlgoBase::Mapper m_all_algos_map;
@@ -182,9 +215,11 @@ public:
 #if !MEGDNN_DISABLE_FLOAT16
     AlgoBFloat16 bfloat16;
 #endif
+    std::vector<AlgoFloat32SIMT> simt_float32;
     std::vector<AlgoBase*> all_algos;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
+    void fill_cutlass_algos();
 };
 
 }  // namespace cuda
