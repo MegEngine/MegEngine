@@ -13,67 +13,10 @@
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/imperative/ops/opr_attr.h"
-#include "megbrain/imperative/ops/autogen.h"
-#include "megbrain/imperative/backward_graph_opt.h"
 
 using namespace mgb;
 using namespace cg;
 using namespace imperative;
-
-template <typename T>
-T prepare_backward_graph_inputs(const BackwardGraphResult& bg, const T& inputs, const T& outputs, const T& grads) {
-    T ret;
-    size_t i = 0;
-    for (auto&& t : inputs) {
-        if (bg.save_for_backward[i++]) {
-            ret.push_back(t);
-        }
-    }
-    for (auto&& t : outputs) {
-        if (bg.save_for_backward[i++]) {
-            ret.push_back(t);
-        }
-    }
-    for (auto&& t : grads) {
-        if (bg.save_for_backward[i++]) {
-            ret.push_back(t);
-        }
-    }
-    return ret;
-}
-
-template <typename T, typename U>
-T expand_grads(const U& bg, const T& outputs) {
-    T ret(bg.input_has_grad.size());
-    for (size_t i = 0, j = 0; i < bg.input_has_grad.size(); ++i) {
-        if (bg.input_has_grad[i]) {
-            ret[i] = outputs[j++];
-        }
-    }
-    return ret;
-}
-
-template <typename T>
-T prepare_optimized_backward_inputs(const OptimizedBackwardGraphResult& bg, const T& precomp, const T& inputs, const T& outputs, const T& grads) {
-    T ret = precomp;
-    size_t i = 0;
-    for (auto&& t : inputs) {
-        if (bg.save_for_backward[i++]) {
-            ret.push_back(t);
-        }
-    }
-    for (auto&& t : outputs) {
-        if (bg.save_for_backward[i++]) {
-            ret.push_back(t);
-        }
-    }
-    for (auto&& t : grads) {
-        if (bg.save_for_backward[i++]) {
-            ret.push_back(t);
-        }
-    }
-    return ret;
-}
 
 TEST(TestImperative, BackwardGraphBasic) {
     HostTensorGenerator<> gen;
@@ -178,65 +121,27 @@ TEST(TestImperative, BackwardGraphIdentity) {
 }
 
 TEST(TestImperative, BatchNormGrad) {
-    auto cn = CompNode::load("xpux");
-    using Param = opr::BatchNorm::Param;
-    size_t N=2, C=3, H=5, W=5;
-    LogicalTensorDesc inp{TensorLayout{{N, C, H, W}, dtype::Float32()}, cn};
-    LogicalTensorDesc stat{TensorLayout{{C}, dtype::Float32()}, cn};
-    {
-        auto op = OprAttr::make("BatchNorm");
-        auto&& attr = op->cast_final_safe<OprAttr>();
-        Param param;
-        param.fwd_mode = Param::FwdMode::TRAINING;
-        attr.param.write_pod(param);
-        OpDef::make_backward_graph(attr, {inp, stat, stat, stat, stat},
-            {true, true ,true, false, false}, {false, false, false, false, true});
-    }
-    {
-        auto op = OprAttr::make("BatchNorm");
-        auto&& attr = op->cast_final_safe<OprAttr>();
-        Param param;
-        param.fwd_mode = Param::FwdMode::TRAINING;
-        attr.param.write_pod(param);
-        OpDef::make_backward_graph(attr, {inp, stat, stat},
-            {true, true ,true}, {false, false, true});
-    }
-}
-
-TEST(TestImperative, OptimizedBackwardGraphBasic) {
-    auto cn = CompNode::load("xpux");
-    LogicalTensorDesc desc = {TensorLayout(dtype::Float32()), cn};
-    HostTensorGenerator<> gen;
-    auto op = std::shared_ptr<OpDef>(Elemwise::make(Elemwise::Mode::ADD));
-    auto bg = OpDef::make_backward_graph(*op, {desc, desc}, {true, true}, {true});
-    auto obg = OptimizedBackwardGraphResult(bg);
-    ASSERT_EQ(obg.save_for_backward.size(), 4);
-    ASSERT_FALSE(obg.save_for_backward[0]);
-    ASSERT_FALSE(obg.save_for_backward[1]);
-    ASSERT_FALSE(obg.save_for_backward[2]);
-
-    auto a_hv = gen({42});
-    auto b_hv = gen({5, 42});
-    auto dc_hv = gen({5, 42});
-    auto a_tn = Tensor::make(*a_hv);
-    auto b_tn = Tensor::make(*b_hv);
-    auto dc_tn = Tensor::make(*dc_hv);
-    auto c_tn = OpDef::apply_on_physical_tensor(*op, {a_tn, b_tn})[0];
-
-    auto backward_graph_inputs = prepare_backward_graph_inputs<SmallVector<TensorPtr>>(bg, {a_tn, b_tn}, {c_tn}, {dc_tn});
-    auto grads = expand_grads(bg, OpDef::apply_on_physical_tensor(*bg.backward, backward_graph_inputs));
-
-    auto precomp = OpDef::apply_on_physical_tensor(*obg.precomp, {a_tn, b_tn, c_tn});
-    ASSERT_EQ(precomp.size(), 2);
-    ASSERT_EQ(precomp[0]->shape().ndim, 1);
-    ASSERT_LE(precomp[0]->shape()[0], 2);
-    ASSERT_EQ(precomp[1]->shape().ndim, 1);
-    ASSERT_LE(precomp[1]->shape()[0], 2);
-
-    auto backward_inputs = prepare_optimized_backward_inputs<SmallVector<TensorPtr>>(obg, precomp, {a_tn, b_tn}, {c_tn}, {dc_tn});
-    auto grads2 = expand_grads(obg, OpDef::apply_on_physical_tensor(*obg.backward, backward_inputs));
-
-    ASSERT_EQ(grads2.size(), 2);
-    MGB_ASSERT_TENSOR_EQ(grads[0]->get_value(), grads2[0]->get_value());
-    MGB_ASSERT_TENSOR_EQ(grads[1]->get_value(), grads2[1]->get_value());
+     auto cn = CompNode::load("xpux");
+     using Param = opr::BatchNorm::Param;
+     size_t N=2, C=3, H=5, W=5;
+     LogicalTensorDesc inp{TensorLayout{{N, C, H, W}, dtype::Float32()}, cn};
+     LogicalTensorDesc stat{TensorLayout{{C}, dtype::Float32()}, cn};
+     {
+          auto op = OprAttr::make("BatchNorm");
+          auto&& attr = op->cast_final_safe<OprAttr>();
+          Param param;
+          param.fwd_mode = Param::FwdMode::TRAINING;
+          attr.param.write_pod(param);
+          OpDef::make_backward_graph(attr, {inp, stat, stat, stat, stat},
+               {true, true ,true, false, false}, {false, false, false, false, true});
+     }
+     {
+          auto op = OprAttr::make("BatchNorm");
+          auto&& attr = op->cast_final_safe<OprAttr>();
+          Param param;
+          param.fwd_mode = Param::FwdMode::TRAINING;
+          attr.param.write_pod(param);
+          OpDef::make_backward_graph(attr, {inp, stat, stat},
+               {true, true ,true}, {false, false, true});
+     }
 }

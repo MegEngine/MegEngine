@@ -212,7 +212,7 @@ decltype(auto) resolve_arrow(T&& p) {
         if constexpr (std::is_invocable_v<decltype(probe), decltype(p)>) {
             return resolve_arrow(p.operator->());
         } else {
-            return std::forward<T>(p);
+            return p;
         }
     }
 }

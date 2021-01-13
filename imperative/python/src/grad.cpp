@@ -11,7 +11,6 @@
 
 #include "./grad.h"
 #include "megbrain/imperative/proxy_graph_detail.h"
-#include "megbrain/imperative/backward_graph_opt.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/utils/mempool.h"
@@ -33,14 +32,14 @@ struct GradSlotWeakPtr {
     size_t idx;
 };
 
-struct BackwardGraphCache : std::unordered_map<uint64_t, std::shared_ptr<OptimizedBackwardGraphResult>>, CompNodeDepedentObject {
+struct BackwardGraphCache : std::unordered_map<uint64_t, std::shared_ptr<BackwardGraphResult>>, CompNodeDepedentObject {
     std::shared_ptr<void> on_comp_node_finalize() override {
         clear();
         return {};
     }
 } backward_graph_cache;
 
-std::shared_ptr<OptimizedBackwardGraphResult> make_backward_graph(
+std::shared_ptr<BackwardGraphResult> make_backward_graph(
         ApplyContext& ctx, const apply_result_t& outputs) {
     // hash
     static_assert(alignof(size_t) % alignof(bool) == 0);
@@ -73,23 +72,23 @@ std::shared_ptr<OptimizedBackwardGraphResult> make_backward_graph(
         inputs[i].layout.dtype = ctx.args[i]->dtype();
         input_requires_grad[i] = python::input_requires_grad(ctx, i);
     }
-    std::shared_ptr<OptimizedBackwardGraphResult> ret;
-    auto bg = proxy_graph_detail::make_backward_graph(
-            *ctx.op, inputs, input_requires_grad, output_has_grad);
-    if (bg.backward) {
-        ret = std::make_shared<OptimizedBackwardGraphResult>(bg);
+    auto result = std::make_shared<BackwardGraphResult>(
+        proxy_graph_detail::make_backward_graph(
+            *ctx.op, inputs, input_requires_grad, output_has_grad));
+    if (!result->backward) {
+        result.reset();
     }
-    backward_graph_cache.emplace(key, ret);
-    return ret;
+    backward_graph_cache.emplace(key, result);
+    return result;
 }
 
 struct BackwardGraphWithClosure {
-    std::shared_ptr<OptimizedBackwardGraphResult> backward_graph;
+    std::shared_ptr<BackwardGraphResult> backward_graph;
     SmallVector<std::shared_ptr<Tensor>> closure;
     size_t output_mask_offset;
     size_t grad_mask_offset;
 
-    BackwardGraphWithClosure(std::shared_ptr<OptimizedBackwardGraphResult> backward_graph_,
+    BackwardGraphWithClosure(std::shared_ptr<BackwardGraphResult> backward_graph_,
                              ApplyContext& ctx, const apply_result_t& outputs)
             : backward_graph(backward_graph_),
               output_mask_offset(ctx.nargs),
@@ -108,18 +107,9 @@ struct BackwardGraphWithClosure {
         //     b.requires_grad == False, save_for_backward = [0, 1, 0, 1]
         auto& save_for_backward = backward_graph->save_for_backward;
         mgb_assert(save_for_backward.size() == ctx.nargs + 2 * outputs.size());
-        size_t count = std::count_if(save_for_backward.begin(),
-                                     save_for_backward.end(),
-                                     ranges::identity{});
-        if (backward_graph->precomp) {
-            auto&& irng = ranges::span(ctx.args, ctx.nargs);
-            auto&& orng = views::transform(outputs, [](auto&& i){return i.get();});
-            auto precomp = apply(backward_graph->precomp, views::concat(irng, orng));
-            closure.reserve(precomp.size() + count);
-            std::copy(precomp.begin(), precomp.end(), std::back_inserter(closure));
-        } else {
-            closure.reserve(count);
-        }
+        closure.reserve(std::count_if(save_for_backward.begin(),
+                                      save_for_backward.end(),
+                                      ranges::identity{}));
         for (size_t i = 0; i < ctx.nargs; ++i) {
             if (save_for_backward[i]) {
                 closure.push_back(ctx.args[i]->shared_from_this());
