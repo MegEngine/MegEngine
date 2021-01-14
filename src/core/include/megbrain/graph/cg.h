@@ -399,6 +399,12 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             //! force dynamic memory alloc for all vars
             bool force_dynamic_alloc = false;
 
+            /*!
+             * force dynamic memory alloc for output vars which are used as
+             * CallbackCaller input when call compile() function
+             */
+            bool force_output_dynamic_alloc = false;
+
             //! whether to perform var sanity check on first run
             bool var_sanity_check_first_run = true;
 
@@ -656,6 +662,7 @@ SymbolVar SymbolVar::insert_single_output_opr(Args &&...args) const {
     return m_node->owner_graph()->insert_opr(
             std::make_unique<Node>(std::forward<Args>(args)...))->output(0);
 }
+
 
 } // namespace cg
 } // namespace mgb

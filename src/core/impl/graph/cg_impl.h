@@ -38,6 +38,7 @@ class ComputingGraphImpl final : public ComputingGraph {
         //! extra info that must be set in the ComputingSequence
         CompSeqExtraInfo extra_info;
         const OprNodeArray* opr_seq = nullptr;
+        VarNodeArray dest_vars;
     };
 
     struct CallbackCallerKey {

@@ -2287,4 +2287,39 @@ TEST(TestGraph, CallbackCaller) {
     }
 }
 
+TEST(TestGraph, DynamicOutput) {
+    using namespace opr;
+    REQUIRE_GPU(1);
+    auto cn0 = CompNode::load("gpu0");
+    constexpr size_t C1 = 20, C2 = 20;
+    constexpr size_t C = C1 + C2;
+    HostTensorGenerator<> gen;
+    auto host_opr0 = gen({C}, cn0);
+    auto graph = ComputingGraph::make();
+    graph->options().force_output_dynamic_alloc = true;
+    SymbolVar opr0 = opr::Host2DeviceCopy::make(*graph, host_opr0);
+
+    auto spl_0 = opr::Split::make(
+            opr0, Split::Options::make_partition(opr0, 0, {C1, C2}));
+
+    auto sum = opr::add(spl_0[1], spl_0[1]);
+
+    HostTensorND expect_sum, expect_spl_0_0, result_sum, result_spl_0_0;
+
+    auto func1 = graph->compile({make_callback_copy(sum, expect_sum),
+                                 make_callback_copy(spl_0[0], expect_spl_0_0)});
+
+    func1->execute().wait();
+
+    auto func2 = graph->compile({{sum, nullptr}, {spl_0[0], nullptr}});
+    auto&& dest_vars = func2->get_output_vars();
+
+    func2->execute().wait();
+
+    result_sum.copy_from(dest_vars[0]->dev_tensor()).sync();
+    MGB_ASSERT_TENSOR_NEAR(expect_sum, result_sum, 1e-4);
+    result_spl_0_0.copy_from(dest_vars[1]->dev_tensor()).sync();
+    MGB_ASSERT_TENSOR_NEAR(expect_spl_0_0, result_spl_0_0, 1e-4);
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

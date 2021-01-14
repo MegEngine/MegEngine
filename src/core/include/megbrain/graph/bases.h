@@ -67,9 +67,10 @@ namespace static_infer {
 };
 
 using GraphError = mgb::GraphError;
+class VarNode;
 class OperatorNodeBase;
 class ComputingGraph;
-
+using VarNodeArray = mgb::SmallVector<VarNode*>;
 /*!
  * \brief Base class for a node in the graph.
  *
@@ -100,6 +101,17 @@ class GraphNodeBase: public json::Serializable, public NonCopyableObj {
         size_t id() const {
             return m_id;
         }
+};
+
+class OutputVarsUserData final : public mgb::UserDataContainer::UserData {
+    MGB_TYPEINFO_OBJ_DECL;
+
+private:
+    VarNodeArray m_output_vars;
+
+public:
+    void set_output_vars(VarNodeArray vars) { m_output_vars = std::move(vars); }
+    const VarNodeArray& get_output_vars() const { return m_output_vars; }
 };
 
 /*!
@@ -164,6 +176,19 @@ class AsyncExecutable : public json::Serializable,
         //! user data associated with a compiled executable
         UserDataContainer& user_data() {
             return m_user_data;
+        }
+
+        void set_output_vars(const VarNodeArray& vars) {
+            std::shared_ptr<OutputVarsUserData> ud =
+                    std::make_shared<OutputVarsUserData>();
+            ud->set_output_vars(vars);
+            m_user_data.add_user_data(ud);
+        }
+
+        const VarNodeArray& get_output_vars() const {
+            auto output_vars_pair =
+                    m_user_data.get_user_data<OutputVarsUserData>();
+            return (*(output_vars_pair.first))->get_output_vars();
         }
 };
 

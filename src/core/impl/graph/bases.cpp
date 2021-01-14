@@ -14,6 +14,8 @@
 
 using namespace mgb::cg;
 
+MGB_TYPEINFO_OBJ_IMPL(OutputVarsUserData);
+
 GraphNodeBase::GraphNodeBase(ComputingGraph *owner_graph):
     m_owner_graph{owner_graph}
 {

@@ -34,7 +34,7 @@ namespace static_infer {
     class StaticInferManagerImpl;
 }
 
-class VarNode;
+
 class VarDevMemDefragmenter;
 class EagerEvalManager;
 
@@ -685,7 +685,6 @@ bool VarNode::contain_flag(Flag flag) const {
     return static_cast<bool>(m_flag & flag);
 }
 
-using VarNodeArray = mgb::SmallVector<VarNode*>;
 using VarNodeSet = ThinHashSet<VarNode*>;
 
 DType MemAllocPlan::dtype() const {

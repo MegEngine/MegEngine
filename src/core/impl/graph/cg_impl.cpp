@@ -563,6 +563,22 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         std::unordered_map<CallbackCallerKey, CallbackCallerVal,
                            CallbackCallerKey::Hash>
                 opr2vars;
+        using F = VarNode::Flag;
+        if (dest_vars[0]->owner_graph()->options().force_output_dynamic_alloc) {
+            for (auto&& i : dest_vars) {
+                if (!i->contain_flag(F::NO_SYS_MEM_ALLOC |
+                                     F::NO_SYS_STATIC_MEM_ALLOC)) {
+                    mgb_assert(
+                            !i->contain_flag(
+                                    F::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC),
+                            "Can not force graph output dynamic alloc with "
+                            "DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC flag, var: %s",
+                            i->cname());
+                    i->add_flag(F::NO_SYS_STATIC_MEM_ALLOC);
+                }
+                i->add_flag(F::NO_MEM_RECLAIM);
+            }
+        }
         for (size_t i = 0; i < out_spec.size(); ++i) {
             auto&& cb = out_spec[i].second;
             if (cb) {
@@ -641,13 +657,14 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     init_opr_seq();
 #endif  //  MGB_ENABLE_SUBLINEAR
 
-    return {std::move(extra_info), opr_seq};
+    return {std::move(extra_info), opr_seq, std::move(dest_vars)};
 }
 
 std::unique_ptr<AsyncExecutable> ComputingGraphImpl::compile_commit(
         CompileState state) {
     auto comp_seq = std::make_unique<ComputingSequence>(shared_from_this());
     comp_seq->extra_info = std::move(state.extra_info);
+    comp_seq->set_output_vars(state.dest_vars);
     auto opr_seq = state.opr_seq;
     auto&& cmpnt = components();
 
