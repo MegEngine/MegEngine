@@ -61,10 +61,10 @@ def test_dataloader_init():
 
 
 class MyStream(StreamDataset):
-    def __init__(self, number, batch=False, error=False, block=False):
+    def __init__(self, number, batch=False, error_foramt=False, block=False):
         self.number = number
         self.batch = batch
-        self.error = error
+        self.error_format = error_foramt
         self.block = block
 
     def __iter__(self):
@@ -73,11 +73,11 @@ class MyStream(StreamDataset):
                 for _ in range(10):
                     time.sleep(1)
             if self.batch:
-                data = np.random.randint(0, 256, (2, 32, 32, 3), dtype="uint8")
+                data = np.random.randint(0, 256, (2, 2, 2, 3), dtype="uint8")
                 yield (True, (data, [cnt, cnt - self.number]))
             else:
-                data = np.random.randint(0, 256, (32, 32, 3), dtype="uint8")
-                if self.error:
+                data = np.random.randint(0, 256, (2, 2, 3), dtype="uint8")
+                if self.error_format:
                     yield (data, cnt)
                 else:
                     yield (False, (data, cnt))
@@ -87,7 +87,7 @@ class MyStream(StreamDataset):
 @pytest.mark.parametrize("batch", [True, False])
 @pytest.mark.parametrize("num_workers", [0, 2])
 def test_stream_dataloader(batch, num_workers):
-    dataset = MyStream(100, batch)
+    dataset = MyStream(100, batch=batch)
     sampler = StreamSampler(batch_size=4)
     dataloader = DataLoader(
         dataset,
@@ -101,7 +101,7 @@ def test_stream_dataloader(batch, num_workers):
     for step, data in enumerate(dataloader):
         if step == 10:
             break
-        assert data[0].shape == (4, 3, 32, 32)
+        assert data[0].shape == (4, 3, 2, 2)
         assert data[1].shape == (4,)
         for i in data[1]:
             assert i not in check_set
@@ -109,7 +109,7 @@ def test_stream_dataloader(batch, num_workers):
 
 
 def test_stream_dataloader_error():
-    dataset = MyStream(100, error=True)
+    dataset = MyStream(100, error_foramt=True)
     sampler = StreamSampler(batch_size=4)
     dataloader = DataLoader(dataset, sampler)
     with pytest.raises(AssertionError, match=r".*tuple.*"):
@@ -122,7 +122,7 @@ def test_stream_dataloader_timeout(num_workers):
     dataset = MyStream(100, False, block=True)
     sampler = StreamSampler(batch_size=4)
 
-    dataloader = DataLoader(dataset, sampler, num_workers=num_workers, timeout=5)
+    dataloader = DataLoader(dataset, sampler, num_workers=num_workers, timeout=2)
     with pytest.raises(RuntimeError, match=r".*timeout.*"):
         data_iter = iter(dataloader)
         next(data_iter)
@@ -264,3 +264,20 @@ def test_dataloader_parallel_multi_instances_multiprocessing():
 
     for p in processes:
         p.join()
+
+
+@pytest.mark.parametrize("num_workers", [0, 2])
+def test_timeout_event(num_workers):
+    def cb():
+        return (True, (np.zeros(shape=(2, 2, 2, 3)), np.ones(shape=(2,))))
+
+    dataset = MyStream(100, block=True)
+    sampler = StreamSampler(batch_size=4)
+
+    dataloader = DataLoader(
+        dataset, sampler, num_workers=num_workers, timeout=2, timeout_event=cb
+    )
+    for _, data in enumerate(dataloader):
+        np.testing.assert_equal(data[0], np.zeros(shape=(4, 2, 2, 3)))
+        np.testing.assert_equal(data[1], np.ones(shape=(4,)))
+        break

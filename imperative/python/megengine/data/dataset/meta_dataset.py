@@ -43,7 +43,7 @@ class StreamDataset(Dataset):
     def __iter__(self):
         pass
 
-    def __getitem__(self):
+    def __getitem__(self, idx):
         raise AssertionError("can not get item from StreamDataset by index")
 
     def __len__(self):
