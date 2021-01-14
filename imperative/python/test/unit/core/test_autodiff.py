@@ -19,7 +19,7 @@ import megengine.functional as F
 from megengine.core._imperative_rt import CompNode, TensorAttr, imperative
 from megengine.core._imperative_rt.core2 import TensorWeakRef, apply, sync
 from megengine.core.autodiff.grad import Grad
-from megengine.core.ops.builtin import Elemwise
+from megengine.core.ops.builtin import Elemwise, Identity
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.distributed import remote_recv, remote_send
 
@@ -191,6 +191,20 @@ def test_grad_inplace():
 
     grad(y, mge.Tensor(np.ones_like(x_np)))
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
+
+
+def test_identity():
+    x_np = np.random.rand(10).astype("float32")
+    x = mge.Tensor(x_np)
+    dy_np = np.random.rand(*x.shape).astype("float32")
+    dy = mge.Tensor(dy_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+
+    (y,) = apply(Identity(), x)
+
+    grad(y, dy)
+    np.testing.assert_array_equal(x.grad.numpy(), dy_np)
 
 
 def test_elemwise_add():

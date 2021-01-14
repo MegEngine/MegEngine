@@ -58,7 +58,7 @@ OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const BackwardGraphRe
     // should be marked as always appears in backward
     for (size_t i = 0, j = 0; i < mask.size(); ++i) {
         if (!mask[i]) continue;
-        if (i > input_size + output_size) {
+        if (i >= input_size + output_size) {
             vinfo[graph.inputs[j]].appears_in_backward = true;
         }
         ++j;
