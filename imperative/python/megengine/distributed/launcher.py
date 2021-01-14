@@ -12,7 +12,7 @@ import multiprocessing as mp
 from ..core._imperative_rt.core2 import sync
 from .group import group_barrier, init_process_group
 from .helper import get_device_count_by_fork
-from .server import Server
+from .server import Client, Server
 from .util import get_free_ports
 
 
