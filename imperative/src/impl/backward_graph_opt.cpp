@@ -111,4 +111,8 @@ OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const BackwardGraphRe
             }
         }
     }
+
+    if (!fgraph.outputs.size()) {
+        precomp.reset();
+    }
 }

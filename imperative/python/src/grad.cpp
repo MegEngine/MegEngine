@@ -155,17 +155,7 @@ struct BackwardGraphWithClosure {
         }
         if (null_grad) return;
 
-        ApplyContext ctx;
-        ctx.op = backward_graph->backward;
-        ctx.flags = is_tracing ? Flags::TRACE : 0;
-        ctx.nargs = nargs;
-        ctx.args = args;
-        for (size_t i = 0; i < nargs; ++i) {
-            ctx.flags |= args[i]->m_flags;
-            mgb_assert(args[i]);
-        }
-
-        auto igrads = apply(ctx);
+        auto igrads = apply(backward_graph->backward, args, nargs);
         auto&& it = igrads.begin();
         for (auto [i, p] : views::enumerate(backward_graph->input_has_grad)) {
             if (p) {

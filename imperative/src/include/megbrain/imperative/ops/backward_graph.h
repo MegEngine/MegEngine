@@ -71,6 +71,8 @@ public:
             }
             return ret;
         }
+
+        std::string repr();
     };
 
     const InternalGraph& graph() const {
@@ -92,6 +94,8 @@ public:
         // FIXME
         return false;
     }
+
+    std::string repr() {return m_graph.repr();}
 
 private:
     InternalGraph m_graph;

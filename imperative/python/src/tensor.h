@@ -252,6 +252,18 @@ auto apply(std::shared_ptr<OpDef> op, T&& tensors)
     return apply(ctx);
 }
 
+inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
+    ApplyContext ctx;
+    ctx.op = std::move(op);
+    ctx.flags = is_tracing ? Tensor::Flags::TRACE : 0;
+    ctx.nargs = nargs;
+    ctx.args = args;
+    for (size_t i = 0; i < nargs; ++i) {
+        ctx.flags |= args[i]->m_flags;
+    }
+    return apply(ctx);
+}
+
 void init_tensor(pybind11::module);
 
 extern PyObject *cpp_apply_with_tracing, *cpp_apply_compiled_mode;
