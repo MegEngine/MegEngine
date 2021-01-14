@@ -6,14 +6,20 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import io
 import os
+import platform
 
 import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.utils.comp_graph_tools as cgtools
 from megengine import Tensor
+from megengine.distributed.helper import get_device_count_by_fork
+from megengine.jit import trace
 from megengine.module import Module
+from megengine.module.external import TensorrtRuntimeSubgraph
 
 
 class MyModule(Module):
@@ -44,3 +50,5 @@ def test_cambricon_module():
             return pred
 
         pred = inference([inp])
+
+

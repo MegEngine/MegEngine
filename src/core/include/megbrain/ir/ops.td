@@ -241,4 +241,11 @@ def ElemwiseMultiType: MgbHashableOp<"ElemwiseMultiType", [ElemwiseMultiTypePara
 
 def InplaceAdd: MgbHashableOp<"InplaceAdd", [EmptyParam]>;
 
+def TensorRTRuntime: MgbHashableOp<"TensorRTRuntime"> {
+  let extraArguments = (ins
+    MgbStringAttr:$buf,
+    MgbSizeTAddr:$buf_size
+  );
+}
+
 #endif // MGB_OPS
