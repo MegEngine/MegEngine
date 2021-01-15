@@ -44,6 +44,8 @@ __all__ = [
     "batch_norm",
     "conv2d",
     "conv_transpose2d",
+    "deformable_conv2d",
+    "deformable_psroi_pooling",
     "dot",
     "dropout",
     "indexing_one_hot",
@@ -119,7 +121,8 @@ def conv2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided, 
+        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
@@ -141,7 +144,6 @@ def conv2d(
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
-    Sparse = builtin.Convolution.Sparse
     sparse_type = "DENSE" if groups == 1 else "GROUP"
     op = builtin.Convolution(
         stride_h=stride_h,
@@ -185,7 +187,8 @@ def conv_transpose2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided, 
+        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by groups,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
@@ -221,6 +224,74 @@ def conv_transpose2d(
     )
     weight, inp = utils.convert_inputs(weight, inp)
     (output,) = apply(op, weight, inp)
+    if bias is not None:
+        output += bias
+    return output
+
+
+def deformable_conv2d(
+    inp: Tensor,
+    weight: Tensor,
+    offset: Tensor,
+    mask: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: Union[int, Tuple[int, int]] = 1,
+    padding: Union[int, Tuple[int, int]] = 0,
+    dilation: Union[int, Tuple[int, int]] = 1,
+    groups: int = 1,
+    conv_mode="CROSS_CORRELATION",
+    compute_mode="DEFAULT",
+) -> Tensor:
+    """
+    Deformable Convolution.
+
+    :param inp: input feature map.
+    :param weight: convolution kernel.
+    :param offset: input offset to kernel, channel of this tensor should match the deformable settings.
+    :param mask: input mask to kernel, channel of this tensor should match the deformable settings.
+    :param bias: bias added to the result of convolution (if given).
+    :param stride: stride of the 2D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 2D convolution operation. Default: 1
+    :param groups: number of groups into which the input and output channels are divided, 
+        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by groups,
+        and the shape of weight should be `(groups, out_channel // groups,
+        in_channels // groups, height, width)`. Default: 1
+    :type conv_mode: string or :class:`Convolution.Mode`
+    :param conv_mode: supports "CROSS_CORRELATION". Default:
+        "CROSS_CORRELATION"
+    :type compute_mode: string or
+        :class:`Convolution.ComputeMode`
+    :param compute_mode: when set to "DEFAULT", no special requirements will be
+        placed on the precision of intermediate results. When set to "FLOAT32",
+        "Float32" would be used for accumulator and intermediate result, but only
+        effective when input and output are of Float16 dtype.
+    :return: output tensor.
+    """
+    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
+    assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
+
+    stride_h, stride_w = expand_hw(stride)
+    pad_h, pad_w = expand_hw(padding)
+    dilate_h, dilate_w = expand_hw(dilation)
+
+    sparse_type = "DENSE" if groups == 1 else "GROUP"
+    op = builtin.DeformableConv(
+        stride_h=stride_h,
+        stride_w=stride_w,
+        pad_h=pad_h,
+        pad_w=pad_w,
+        dilate_h=dilate_h,
+        dilate_w=dilate_w,
+        strategy=get_conv_execution_strategy(),
+        mode=conv_mode,
+        compute_mode=compute_mode,
+        sparse=sparse_type,
+    )
+    inp, weight, offset, mask = utils.convert_inputs(inp, weight, offset, mask)
+    (output,) = apply(op, inp, weight, offset, mask)
     if bias is not None:
         output += bias
     return output
@@ -377,6 +448,45 @@ def adaptive_avg_pool2d(
     op = builtin.AdaptivePooling(mode="AVERAGE", format="NCHW",)
     oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
     (output,) = apply(op, inp, oshp)
+    return output
+
+
+def deformable_psroi_pooling(
+    inp: Tensor,
+    rois: Tensor,
+    trans: Tensor,
+    no_trans: bool,
+    part_size: int,
+    pooled_h: int,
+    pooled_w: int,
+    sample_per_part: int,
+    spatial_scale: float,
+    trans_std: float = 0.1,
+):
+    """
+    Deformable PSROI(Position Sensitive Region of Interest) Pooling.
+
+    :param inp: input feature map.
+    :param rois: the rois for feature pooling.
+    :param trans: input offset to psroi_pooling.
+    :param no_trans: check the phase of DeformablePSROIPooling. False to the
+                        1st phase, True to the 2nd phase.
+    :param part_size: part size.
+    :param sample_per_part: sample points of each part.
+    :param pooled_shape: kernel shape of convolution.
+    :param spatial_scale: the spatial_scale w.r.t input image.
+    :param trans_std: multiplier used in 2nd phase.
+    """
+    op = builtin.DeformablePSROIPooling(
+        no_trans=no_trans,
+        part_size=part_size,
+        pooled_h=pooled_h,
+        pooled_w=pooled_w,
+        sample_per_part=sample_per_part,
+        spatial_scale=spatial_scale,
+        trans_std=trans_std,
+    )
+    output, _ = apply(op, inp, rois, trans)
     return output
 
 

@@ -10,7 +10,14 @@ from typing import Tuple, Union
 
 import numpy as np
 
-from ..functional import conv1d, conv2d, conv_transpose2d, local_conv2d, relu
+from ..functional import (
+    conv1d,
+    conv2d,
+    conv_transpose2d,
+    deformable_conv2d,
+    local_conv2d,
+    relu,
+)
 from ..tensor import Parameter
 from ..utils.tuple_function import _pair, _pair_nonzero
 from . import init
@@ -121,7 +128,8 @@ class Conv1d(_ConvNd):
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 1D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided,
+    so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be `(groups,
@@ -250,15 +258,16 @@ class Conv2d(_ConvNd):
     In general, output feature maps' shapes can be inferred as follows:
 
     input: :math:`(N, C_{\text{in}}, H_{\text{in}}, W_{\text{in}})`
+
     output: :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})` where
 
     .. math::
         \text{H}_{out} = \lfloor \frac{\text{H}_{in} + 2 * \text{padding[0]} - 
-        \text{dilation[0]} * (\text{kernel_size[0]} - 1)}{\text{stride[0]}} + 1 \rfloor
+        \text{dilation[0]} * (\text{kernel_size[0]} - 1) - 1}{\text{stride[0]}} + 1 \rfloor
 
     .. math::
         \text{W}_{out} = \lfloor \frac{\text{W}_{in} + 2 * \text{padding[1]} - 
-        \text{dilation[1]} * (\text{kernel_size[1]} - 1)}{\text{stride[1]}} + 1 \rfloor
+        \text{dilation[1]} * (\text{kernel_size[1]} - 1) - 1}{\text{stride[1]}} + 1 \rfloor
 
     When `groups == in_channels` and `out_channels == K * in_channels`,
     where K is a positive integer, this operation is also known as depthwise
@@ -277,7 +286,8 @@ class Conv2d(_ConvNd):
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided,
+    so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be `(groups,
@@ -406,7 +416,8 @@ class ConvTranspose2d(_ConvNd):
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided,
+    so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be ``(groups,
@@ -579,3 +590,107 @@ class ConvRelu2d(Conv2d):
 
     def forward(self, inp):
         return relu(self.calc_conv(inp, self.weight, self.bias))
+
+
+class DeformableConv2d(_ConvNd):
+    """
+    Deformable Convolution.
+
+    :param in_channels: number of input channels.
+    :param out_channels: number of output channels.
+    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
+        an :class:`int`, the actual kernel size would be
+        `(kernel_size, kernel_size)`. Default: 1
+    :param stride: stride of the 2D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 2D convolution operation. Default: 1
+    :param groups: number of groups into which the input and output channels are divided,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and there would be an extra dimension at the beginning of the weight's
+        shape. Specifically, the shape of weight would be `(groups,
+        out_channel // groups, in_channels // groups, *kernel_size)`.
+    :param bias: whether to add a bias onto the result of convolution. Default:
+        True
+    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
+        `CROSS_CORRELATION`
+    :param compute_mode: When set to "DEFAULT", no special requirements will be
+        placed on the precision of intermediate results. When set to "FLOAT32",
+        "Float32" would be used for accumulator and intermediate result, but only
+        effective when input and output are of float16 dtype.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        groups: int = 1,
+        bias: bool = True,
+        conv_mode: str = "CROSS_CORRELATION",
+        compute_mode: str = "DEFAULT",
+    ):
+        kernel_size = _pair_nonzero(kernel_size)
+        stride = _pair_nonzero(stride)
+        padding = _pair(padding)
+        dilation = _pair_nonzero(dilation)
+        self.conv_mode = conv_mode
+        self.compute_mode = compute_mode
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+        )
+
+    def _get_fanin(self):
+        kh, kw = self.kernel_size
+        ic = self.in_channels
+        return kh * kw * ic
+
+    def _infer_weight_shape(self):
+        group = self.groups
+        ichl = self.in_channels
+        ochl = self.out_channels
+        kh, kw = self.kernel_size
+        if group == 1:
+            # Assume format is NCHW
+            return (ochl, ichl, kh, kw)
+
+        assert (
+            ichl % group == 0 and ochl % group == 0
+        ), "invalid config: input_channels={} output_channels={} group={}".format(
+            ichl, ochl, group
+        )
+        # Assume format is NCHW
+        return (group, ochl // group, ichl // group, kh, kw)
+
+    def _infer_bias_shape(self):
+        # Assume format is NCHW
+        return (1, self.out_channels, 1, 1)
+
+    def calc_conv(self, inp, weight, offset, mask, bias):
+        return deformable_conv2d(
+            inp,
+            weight,
+            offset,
+            mask,
+            bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.conv_mode,
+            self.compute_mode,
+        )
+
+    def forward(self, inp, offset, mask):
+        return self.calc_conv(inp, self.weight, offset, mask, self.bias)

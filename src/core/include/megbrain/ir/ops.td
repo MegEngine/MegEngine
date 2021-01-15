@@ -48,6 +48,8 @@ def Convolution : MgbHashableOp<"Convolution", [ConvolutionParam, ExecutionPolic
 
 def ConvolutionBackwardData: MgbHashableOp<"ConvolutionBackwardData", [ConvolutionParam, ExecutionPolicyParamBase<"policy">]>;
 
+def DeformableConv : MgbHashableOp<"DeformableConv", [ConvolutionParam, ExecutionPolicyParamBase<"policy">]>;
+
 def GroupLocal: MgbHashableOp<"GroupLocal", [ConvolutionParam]>;
 
 def Pooling: MgbHashableOp<"Pooling", [PoolingParam]>;
@@ -55,6 +57,8 @@ def Pooling: MgbHashableOp<"Pooling", [PoolingParam]>;
 def AdaptivePooling : MgbHashableOp<"AdaptivePooling", [AdaptivePoolingParam]>;
 
 def ROIPooling: MgbHashableOp<"ROIPooling", [ROIPoolingParam]>;
+
+def DeformablePSROIPooling : MgbHashableOp<"DeformablePSROIPooling", [DeformablePSROIPoolingParam]>;
 
 def ConvBias : MgbHashableOp<"ConvBias", [ConvBiasParam, ExecutionPolicyParamBase<"policy">]> {
   let extraArguments = (ins

@@ -12,8 +12,16 @@ from .adaptive_pooling import AdaptiveAvgPool2d, AdaptiveMaxPool2d
 from .batch_matmul_activation import BatchMatMulActivation
 from .batchnorm import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 from .concat import Concat
-from .conv import Conv1d, Conv2d, ConvRelu2d, ConvTranspose2d, LocalConv2d
+from .conv import (
+    Conv1d,
+    Conv2d,
+    ConvRelu2d,
+    ConvTranspose2d,
+    DeformableConv2d,
+    LocalConv2d,
+)
 from .conv_bn import ConvBn2d, ConvBnRelu2d
+from .deformable_psroi_pooling import DeformablePSROIPooling
 from .dropout import Dropout
 from .elemwise import Elemwise
 from .embedding import Embedding

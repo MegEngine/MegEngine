@@ -703,6 +703,33 @@ def test_argmxx_on_inf():
     assert all(run_argmin() >= 0)
 
 
+def test_deformable_psroi_pooling():
+    inp = np.random.random((1, 256, 64, 64)).astype("float32")
+    rois = np.random.random((1, 5)).astype("float32")
+    trans = np.random.random((24, 2, 7, 7)).astype("float32")
+
+    pooled_h = 7
+    pooled_w = 7
+    sample_per_part = 4
+    no_trans = False
+    part_size = 7
+    spatial_scale = 1.0 / 64
+    trans_std = 0.1
+
+    y = F.deformable_psroi_pooling(
+        tensor(inp),
+        tensor(rois),
+        tensor(trans),
+        no_trans,
+        part_size,
+        pooled_h,
+        pooled_w,
+        sample_per_part,
+        spatial_scale,
+        trans_std,
+    )
+
+
 def test_cvt_color():
     def rgb2gray(rgb):
         return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
