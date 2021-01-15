@@ -476,6 +476,7 @@ def main():
 
     output_mgbvars = feeds["outputs"]
     output_mgbvars = optimize_for_inference(args, output_mgbvars)
+    output_mgbvars = [var._node for var in output_mgbvars]
 
     inputs = cgtools.get_dep_vars(output_mgbvars, "Host2DeviceCopy")
     inputs = sorted((i.name, i.dtype) for i in inputs)

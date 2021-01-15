@@ -96,7 +96,7 @@ class Graph(_imperative_rt.ComputingGraph):
         data = data.numpy()
         return self._wrap(_imperative_rt.make_const(self, data, device, data.dtype))
 
-    def make_const(self, data, dtype=None, device=None):
+    def make_const(self, data, dtype=None, device=None, name=None):
         if isinstance(data, _imperative_rt.DeviceTensorND):
             assert dtype is None and device is None
             return self._wrap(_imperative_rt.make_shared(self, data))
@@ -107,7 +107,9 @@ class Graph(_imperative_rt.ComputingGraph):
             elif data.dtype == np.int64:
                 data = data.astype(np.int32)
             device = as_device(device).to_c()
-            return self._wrap(_imperative_rt.make_const(self, data, device, dtype))
+            return self._wrap(
+                _imperative_rt.make_const(self, data, device, dtype, name)
+            )
 
     def make_input(self, *args: "VarNode", device=None, dtype=None, shape=None):
         opnode = InputNode(*args, device=device, dtype=dtype, shape=shape, graph=self)
@@ -305,7 +307,7 @@ def dump_graph(
     output_vars: Union[Dict[str, VarNode], List[VarNode]],
     *,
     keep_var_name: int = 1,
-    keep_op_name: bool = True,
+    keep_opr_name: bool = False,
     keep_param_name: bool = False,
     keep_opr_priority: bool = False,
     strip_info_file=None,
@@ -326,7 +328,7 @@ def dump_graph(
         * 0: none of the names are kept
         * 1: (default)keep names of output vars
         * 2: keep names of all (output and internal) vars
-    :param keep_op_name: whether to keep operator names.
+    :param keep_opr_name: whether to keep operator names.
     :param keep_param_name: whether to keep param names, so param values can be
         easily manipulated after loading model
     :param keep_opr_priority: whether to keep priority setting for operators
@@ -370,7 +372,7 @@ def dump_graph(
     dump_content = _imperative_rt.dump_graph(
         ov,
         keep_var_name,
-        keep_op_name,
+        keep_opr_name,
         keep_param_name,
         keep_opr_priority,
         stat,

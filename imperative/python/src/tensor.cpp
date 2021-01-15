@@ -24,6 +24,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
 #include <range/v3/all.hpp>
+#include <string>
 
 #include <unordered_map>
 
@@ -222,14 +223,15 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             }
         } else {
             py::detail::loader_life_support life_sup; // FIXME!!!required to cast DType
-            if (nargs != 4 && nargs != 5) {
-                throw py::type_error("expect 4 or 5 arguments");
+            if (nargs != 5 && nargs != 6) {
+                throw py::type_error("expect 5 or 6 arguments");
             }
             auto data = tup[0].cast<py::array>();
             DType dtype = tup[1].cast<DType>();
             CompNode cn = tup[2].cast<CompNode>();
             bool is_const = tup[3].cast<bool>();
-            bool no_cache = nargs == 5 ? tup[4].cast<bool>() : false;
+            bool no_cache = nargs == 6 ? tup[4].cast<bool>() : false;
+            std::string name = tup[nargs - 1].cast<std::string>();
 
             // const op
             if (is_const && is_tracing) {
@@ -259,6 +261,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             }
 
             m_tensor = std::make_shared<Tensor>(handle);
+            m_tensor->user_custom_name = name;
 
             if (data.ndim() == 0) {
                 m_tensor->m_flags |= Tensor::Flags::SCALAR;
@@ -311,6 +314,19 @@ REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(compiled_info)
 REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(trace_mixin_info)
 
 #undef REGISTE_TENSORWRAPPER_PYOBJECT_FUNC
+
+
+#define SET_GET_NAME(member)                                     \
+    PyObject* TensorWrapper::member() {                          \
+        return py::cast(m_tensor->member).release().ptr();       \
+    }                                                            \
+    void TensorWrapper::set_##member(PyObject* dest) {           \
+        auto py_dest = py::reinterpret_borrow<py::object>(dest); \
+        m_tensor->member = py_dest.cast<std::string>();          \
+    }
+SET_GET_NAME(user_custom_name)
+SET_GET_NAME(automatic_name)
+#undef SET_GET_NAME
 
 
 PyObject* TensorWrapper::handle() {
@@ -453,7 +469,11 @@ void TensorWrapper::reset(PyObject* tensor) {
     if (!t) {
         throw py::type_error("expect Tensor");
     }
+    std::string user_custom_name = m_tensor->user_custom_name;
+    std::string automatic_name = m_tensor->automatic_name;
     m_tensor = t->m_tensor;
+    m_tensor->user_custom_name = user_custom_name;
+    m_tensor->automatic_name = automatic_name;
 }
 
 void TensorWrapper::reset_varnode() {
@@ -785,6 +805,8 @@ void init_tensor(py::module m) {
         .def_getset<&TensorWrapper::handle, &TensorWrapper::set_handle>("_handle")
         .def_getset<&TensorWrapper::compiled_info, &TensorWrapper::set_compiled_info>("_compiled_info")
         .def_getset<&TensorWrapper::trace_mixin_info, &TensorWrapper::set_trace_mixin_info>("_trace_mixin_info")
+        .def_getset<&TensorWrapper::user_custom_name, &TensorWrapper::set_user_custom_name>("c_name")
+        .def_getset<&TensorWrapper::automatic_name, &TensorWrapper::set_automatic_name>("_name")
         .finalize();
     if (!tensor_type) throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);

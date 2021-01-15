@@ -113,9 +113,10 @@ static void gen_op_def_c_header_single(raw_ostream &os, MgbOp& op) {
                 "{0}({0}_)", i.name
             ));
         }
+        paramList.push_back("std::string scope_ = {}");
         gen_ctor(llvm::join(paramList, ", "),
                  ": " + llvm::join(initList, ", "),
-                 " {}");
+                 " { set_scope(scope_); }");
     }
 
     auto packedParams = op.getPackedParams();
@@ -236,11 +237,19 @@ static void gen_op_def_c_body_single(raw_ostream &os, MgbOp& op) {
         os << mlir::tblgen::tgfmt(hashable->getPropsFunctionTemplate(), &ctx);
         os << "}\n";
 
+        // generate make_name()
+        os << formatv(
+            "std::string {0}(const OpDef& def_) {{\n", formatMethImpl("make_name")
+        );
+        os << mlir::tblgen::tgfmt(hashable->getNameFunctionTemplate(), &ctx);
+        os << "}\n";
+
         os << "} // anonymous namespace\n";
 
         methods.push_back("hash");
         methods.push_back("is_same_st");
         methods.push_back("props");
+        methods.push_back("make_name");
     }
     if (!methods.empty()) {
         os << formatv(
@@ -327,7 +336,7 @@ static void gen_op_def_pybind11_single(raw_ostream &os, MgbOp& op, EnumContext& 
             targs.push_back(i.attr.getReturnType());
         }
         os << llvm::join(targs, ", ");
-        os << ">()";
+        os << ", std::string>()";
         for (auto &&i : op.getMgbAttributes()) {
             os << formatv(", py::arg(\"{0}\")", i.name);
             auto defaultValue = i.attr.getDefaultValue();
@@ -337,7 +346,7 @@ static void gen_op_def_pybind11_single(raw_ostream &os, MgbOp& op, EnumContext& 
                 hasDefaultCtor = true;
             }
         }
-        os << ")";
+        os << ", py::arg(\"scope\") = {})";
     }
     if (hasDefaultCtor) {
         os << "\n    .def(py::init<>())";
@@ -442,6 +451,10 @@ EnumWrapper<{0}::{1}>::type2str = {{
             className, i.name));
     }
 
+    getsetters.push_back(formatv(
+        "{{\"scope\", py_get_scope({0}), py_set_scope({0}), \"scope\", NULL},",
+        className));
+
     // generate tp_init
     std::string initBody;
     if (!op.getMgbAttributes().empty()) {
@@ -449,6 +462,7 @@ EnumWrapper<{0}::{1}>::type2str = {{
         llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
             initBody += formatv("\"{0}\", ", attr.name);
         });
+        initBody += "\"scope\", ";
         initBody += "NULL};\n";
         initBody += "    PyObject ";
         std::vector<std::string> attrs;
@@ -456,12 +470,15 @@ EnumWrapper<{0}::{1}>::type2str = {{
             attrs.push_back(formatv("*{0} = NULL", attr.name));
         });
         initBody += llvm::join(attrs, ", ") + ";\n";
+        initBody += "    PyObject *scope = NULL;\n";
         initBody += "    if (!PyArg_ParseTupleAndKeywords(args, kwds, \"|";
-        initBody += std::string(op.getMgbAttributes().size(), 'O');
+        // an extra slot created for name
+        initBody += std::string(op.getMgbAttributes().size() + 1, 'O');
         initBody += "\", const_cast<char**>(kwlist)";
         llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
-            initBody += formatv(" ,&{0}", attr.name);
+            initBody += formatv(", &{0}", attr.name);
         });
+        initBody += ", &scope";
         initBody += "))\n";
         initBody += "    return -1;\n";
         llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
@@ -483,6 +500,25 @@ EnumWrapper<{0}::{1}>::type2str = {{
     }
 )", className, attr.name);
         });
+
+        initBody += formatv(R"(
+    if (scope) {{
+        try {{
+            reinterpret_cast<PyOp({0})*>(self)->inst().set_scope(
+                pyobj_convert_generic<std::string>::from(scope));
+        } catch(py::error_already_set& e) {{
+            e.restore();
+            return -1;
+        } catch(py::builtin_exception& e) {{
+            e.set_error();
+            return -1;
+        } catch(...) {{
+            PyErr_SetString(PyExc_RuntimeError, "Unknown Error");
+            return -1;
+        }
+    }
+)", className);
+
     }
     initBody += "\n    return 0;";
 

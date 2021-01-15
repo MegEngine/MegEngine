@@ -75,10 +75,6 @@ std::vector<std::pair<const char*, std::string>> OpDef::props(
     return def.trait()->props(def);
 }
 
-const char* OpDef::name() const {
-    return trait()->name;
-}
-
 std::string OpDef::to_string() const {
     std::string builder = "{";
     for (auto&& [name, value]: props(*this)) {
@@ -105,6 +101,20 @@ const OpTrait* OpDef::trait() const {
             "can not find op_trait by %s", dyn_typeinfo()->name);
     }
     return m_trait;
+}
+
+const std::string OpDef::scope() const {
+    return m_scope;
+}
+
+void OpDef::set_scope(const std::string& scope) {
+    m_scope = scope;
+}
+
+const std::string OpDef::make_name() const {
+    if (m_scope.empty())
+        return trait()->make_name(*this);
+    return m_scope + "." + trait()->make_name(*this);
 }
 
 } // namespace imperative

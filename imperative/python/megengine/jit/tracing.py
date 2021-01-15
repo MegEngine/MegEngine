@@ -36,6 +36,7 @@ from ..core.ops.builtin import BackwardGraph, OpDef
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
+from ..utils.naming import auto_naming
 from .sublinear_memory_config import SublinearMemoryConfig
 
 
@@ -77,6 +78,7 @@ def exclude_from_trace():
 class TensorInfo:
     __slots__ = (
         # collected attributes
+        "name",
         "external",
         "data_read",
         "shape_read",
@@ -96,6 +98,7 @@ class TensorInfo:
     )
 
     def __init__(self):
+        self.name = None
         self.exported = None
         self.data_read = None
         self.shape_read = None
@@ -290,12 +293,16 @@ class trace:
             h = getattr(x, "_mixin_handle", -1)
             if h < 0 or (not self._capture_as_const and self._tinfo[h].exported):
                 h, info = self._new_handle()
+                name = auto_naming.get_scope() + "." + x.c_name if x.c_name else x._name
+                info.name = name
                 info.external = True
                 info.device = x.device
                 info.dtype = x.dtype
                 info.shape = x.shape
                 if self._capture_as_const:
-                    info.bound_data = RawTensor(x.numpy(), x.dtype, x.device, False)
+                    info.bound_data = RawTensor(
+                        x.numpy(), x.dtype, x.device, False, name
+                    )
 
             ihandles.append(h)
 
@@ -669,6 +676,12 @@ class trace:
         arg_names=None,
         output_names=None,
         append=False,
+        keep_var_name: int = 1,
+        keep_opr_name: bool = False,
+        keep_param_name: bool = False,
+        keep_opr_priority: bool = False,
+        strip_info_file=None,
+        append_json=False,
         optimize_for_inference=True,
         **kwargs
     ):
@@ -681,6 +694,20 @@ class trace:
             use the default name if not specified.
         :param append: whether output is appended to ``file``.
             Only works when ``file`` is str.
+        :param keep_var_name: level for keeping variable names:
+
+            * 0: none of the names are kept
+            * 1: (default)keep names of output vars
+            * 2: keep names of all (output and internal) vars
+        :param keep_opr_name: whether to keep operator names.
+        :param keep_param_name: whether to keep param names, so param values can be
+            easily manipulated after loading model
+        :param keep_opr_priority: whether to keep priority setting for operators
+        :param strip_info_file: a string for path or a file handler. if is not None,
+            then the dump information for code strip would be written to ``strip_info_file``
+        :param append_json: will be check when `strip_info_file` is not None. if set
+            true, the information for code strip will be append to strip_info_file.
+            if set false, will rewrite strip_info_file
         :param optimize_for_inference: enbale optmizations,
             will skip all optimize options if this is False. Default: True
 
@@ -785,7 +812,10 @@ class trace:
                     assert info.external
                     assert info.bound_data
                     h2v[h] = graph.make_const(
-                        info.bound_data.numpy(), dtype=info.dtype, device=info.device,
+                        info.bound_data.numpy(),
+                        dtype=info.dtype,
+                        device=info.device,
+                        name=info.name,
                     )
                 continue
             ivars = []
@@ -795,12 +825,25 @@ class trace:
                     assert info.external
                     assert info.bound_data
                     h2v[h] = graph.make_const(
-                        info.bound_data.numpy(), dtype=info.dtype, device=dumped_device
+                        info.bound_data.numpy(),
+                        dtype=info.dtype,
+                        device=dumped_device,
+                        name=info.name,
                     )
                 ivars.append(h2v[h])
             ovars = G.apply_normal_varnode(op, *ivars)
+
+            auto_naming.record_opnode(ovars[0].op)
+
             assert len(ovars) == len(ohandles)
             h2v.update(zip(ohandles, ovars))
+
+            for i in ohandles:
+                name = auto_naming.get_var_name(i)
+                if name is not None:
+                    h2v[i].name = name
+
+        auto_naming.remove_duplicate_names()
 
         dest_vars = []
         for i, h in enumerate(self._output_bindings):
@@ -815,7 +858,15 @@ class trace:
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"
             file = open(file, permission)
-        dump_content, dump_info = G.dump_graph(dest_vars)
+        dump_content, dump_info = G.dump_graph(
+            dest_vars,
+            keep_var_name=keep_var_name,
+            keep_opr_name=keep_opr_name,
+            keep_param_name=keep_param_name,
+            keep_opr_priority=keep_opr_priority,
+            strip_info_file=strip_info_file,
+            append_json=append_json,
+        )
         file.write(dump_content)
         return dump_info
 
@@ -1095,20 +1146,22 @@ def apply_compiled_mode(op: OpDef, *args: RawTensor):
     return active_trace._apply_op(op, args)
 
 
-def apply_const_compiled_mode(value, dtype, device, is_const, no_cache):
+def apply_const_compiled_mode(value, dtype, device, is_const, no_cache, name):
     if skip_tracing:
         args = [
             RawTensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
             for x in args
         ]
         unset_tracing()
-        ret = RawTensor(value, dtype, device, False)
+        ret = RawTensor(value, dtype, device, False, name)
         set_tracing()
         return ret
     return active_trace._apply_const(value, dtype, device)
 
 
 def apply_with_tracing(op: OpDef, *args: RawTensor):
+    if hasattr(op, "scope"):
+        op.scope = auto_naming.get_scope()
     if active_trace._symbolic:
         outputs = apply_symbolic_mode(op, *args)
     else:
@@ -1120,12 +1173,12 @@ def apply_with_tracing(op: OpDef, *args: RawTensor):
     return list(outputs)
 
 
-def apply_const_with_tracing(value, dtype, device, is_const, no_cache):
+def apply_const_with_tracing(value, dtype, device, is_const, no_cache, name):
     if active_trace._symbolic:
         outputs = apply_const_symbolic_mode(value, dtype, device)
     else:
         unset_tracing()
-        outputs = (RawTensor(value, dtype, device, False),)
+        outputs = (RawTensor(value, dtype, device, False, name),)
         set_tracing()
     active_trace._record_const(outputs)
     return list(outputs)

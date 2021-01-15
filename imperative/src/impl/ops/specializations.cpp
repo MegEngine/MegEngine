@@ -46,7 +46,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& conv = static_cast<const Convolution&>(def);
-    return opr::Convolution::make(inputs[0], inputs[1], conv.param(), conv.policy());
+    OperatorNodeConfig config{conv.make_name()};
+    return opr::Convolution::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
 }
 
 OP_TRAIT_REG(Convolution, Convolution, opr::Convolution)
@@ -60,7 +61,7 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& conv = static_cast<const ConvolutionBackwardData&>(def);
-    cg::OperatorNodeConfig config;
+    OperatorNodeConfig config{conv.make_name()};
     if (inputs.size() == 2) {
         return opr::ConvolutionBackwardData::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else {
@@ -88,7 +89,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& ds = static_cast<const Dimshuffle&>(def);
-    return opr::Dimshuffle::make(inputs[0], ds.pattern);
+    OperatorNodeConfig config{ds.make_name()};
+    return opr::Dimshuffle::make(inputs[0], ds.pattern, 0UL, config);
 }
 
 OP_TRAIT_REG(Dimshuffle, Dimshuffle, opr::Dimshuffle)
@@ -107,7 +109,8 @@ auto apply_on_var_node(
     for (auto&& i : add_axis.axis) {
         param.push_back(Desc::make_add(i));
     }
-    return opr::AxisAddRemove::make(inputs[0], param);
+    OperatorNodeConfig config{add_axis.make_name()};
+    return opr::AxisAddRemove::make(inputs[0], param, config);
 }
 
 OP_TRAIT_REG(AddAxis, AddAxis)
@@ -125,7 +128,8 @@ auto apply_on_var_node(
     for (auto&& i : remove_axis.axis) {
         param.push_back(Desc::make_remove(i));
     }
-    return opr::AxisAddRemove::make(inputs[0], param);
+    OperatorNodeConfig config{remove_axis.make_name()};
+    return opr::AxisAddRemove::make(inputs[0], param, config);
 }
 
 OP_TRAIT_REG(RemoveAxis, RemoveAxis)
@@ -138,7 +142,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& topk = static_cast<const TopK&>(def);
-    return opr::TopK::make(inputs[0], inputs[1], topk.param())[0]
+    OperatorNodeConfig config{topk.make_name()};
+    return opr::TopK::make(inputs[0], inputs[1], topk.param(), config)[0]
             .node()->owner_opr();
 }
 
@@ -152,10 +157,12 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& reduce = static_cast<const Reduce&>(def);
+    OperatorNodeConfig config{reduce.make_name()};
     if (inputs.size() > 1) {
-        return opr::Reduce::make(inputs[0], reduce.param(), inputs[1]);
+        return opr::Reduce::make(inputs[0], reduce.param(), inputs[1], config);
     } else {
-        return opr::Reduce::make(inputs[0], reduce.param());
+        return opr::Reduce::make(
+            inputs[0], reduce.param(), (cg::VarNode*)nullptr, config);
     }
 }
 
@@ -175,7 +182,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& pool = static_cast<const AdaptivePooling&>(def);
-    return opr::AdaptivePooling::make(inputs[0], inputs[1], pool.param());
+    OperatorNodeConfig config{pool.make_name()};
+    return opr::AdaptivePooling::make(inputs[0], inputs[1], pool.param(), config);
 }
 
 OP_TRAIT_REG(AdaptivePooling, AdaptivePooling)
@@ -189,6 +197,7 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& conv = static_cast<const ConvBias&>(def);
     cg::OperatorNodeConfig config{conv.dtype};
+    config.name(conv.make_name());
     if (inputs.size() == 2) {
         return opr::ConvBias::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else if (inputs.size() == 3) {
@@ -210,6 +219,7 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& conv = static_cast<const BatchConvBias&>(def);
     cg::OperatorNodeConfig config{conv.dtype};
+    config.name(conv.make_name());
     if (inputs.size() == 2) {
         return opr::BatchConvBias::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else if (inputs.size() == 3) {
@@ -230,7 +240,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& pool = static_cast<const Pooling&>(def);
-    return opr::Pooling::make(inputs[0], pool.param());
+    OperatorNodeConfig config{pool.make_name()};
+    return opr::Pooling::make(inputs[0], pool.param(), config);
 }
 OP_TRAIT_REG(Pooling, Pooling)
     .apply_on_var_node(apply_on_var_node)
@@ -243,8 +254,9 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& matmul = static_cast<const MatrixMul&>(def);
     mgb_assert(inputs.size() == 2);
+    OperatorNodeConfig config{matmul.make_name()};
     return opr::MatrixMul::make(inputs[0], inputs[1], matmul.param(),
-                                matmul.policy());
+                                matmul.policy(), config);
 }
 OP_TRAIT_REG(MatrixMul, MatrixMul)
     .apply_on_var_node(apply_on_var_node)
@@ -257,8 +269,9 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& matmul = static_cast<const BatchedMatrixMul&>(def);
     mgb_assert(inputs.size() == 2);
+    OperatorNodeConfig config{matmul.make_name()};
     return opr::BatchedMatrixMul::make(inputs[0], inputs[1], matmul.param(),
-                                       matmul.policy());
+                                       matmul.policy(), config);
 }
 OP_TRAIT_REG(BatchedMatrixMul, BatchedMatrixMul)
     .apply_on_var_node(apply_on_var_node)
@@ -267,10 +280,12 @@ OP_TRAIT_REG(BatchedMatrixMul, BatchedMatrixMul)
 
 namespace { namespace dot {
 auto apply_on_var_node(
-        const OpDef&,
+        const OpDef& def,
         const VarNodeArray& inputs) {
+    auto&& op = def.cast_final_safe<Dot>();
     mgb_assert(inputs.size() == 2);
-    return opr::Dot::make(inputs[0], inputs[1]);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Dot::make(inputs[0], inputs[1], config);
 }
 OP_TRAIT_REG(Dot, Dot)
     .apply_on_var_node(apply_on_var_node)
@@ -282,7 +297,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& argsort = static_cast<const Argsort&>(def);
-    return opr::Argsort::make(inputs[0], argsort.param());
+    OperatorNodeConfig config{argsort.make_name()};
+    return opr::Argsort::make(inputs[0], argsort.param(), config);
 }
 OP_TRAIT_REG(Argsort, Argsort)
     .apply_on_var_node(apply_on_var_node)
@@ -294,7 +310,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& argmax = static_cast<const Argmax&>(def);
-    return opr::Argmax::make(inputs[0], argmax.param());
+    OperatorNodeConfig config{argmax.make_name()};
+    return opr::Argmax::make(inputs[0], argmax.param(), config);
 }
 OP_TRAIT_REG(Argmax, Argmax)
     .apply_on_var_node(apply_on_var_node)
@@ -306,7 +323,8 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& argmin = static_cast<const Argmin&>(def);
-    return opr::Argmin::make(inputs[0], argmin.param());
+    OperatorNodeConfig config{argmin.make_name()};
+    return opr::Argmin::make(inputs[0], argmin.param(), config);
 }
 OP_TRAIT_REG(Argmin, Argmin)
     .apply_on_var_node(apply_on_var_node)
@@ -318,11 +336,13 @@ auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& warp = static_cast<const WarpPerspective&>(def);
+    OperatorNodeConfig config{warp.make_name()};
     if (inputs.size() == 3) {
-        return opr::WarpPerspective::make(inputs[0], inputs[1], inputs[2], warp.param());
+        return opr::WarpPerspective::make(inputs[0], inputs[1], inputs[2], warp.param(), config);
     } else {
         mgb_assert(inputs.size() == 4);
-        return opr::WarpPerspective::make(inputs[0], inputs[1], inputs[2], inputs[3], warp.param());
+        return opr::WarpPerspective::make(
+            inputs[0], inputs[1], inputs[2], inputs[3], warp.param(), config);
     }
 }
 OP_TRAIT_REG(WarpPerspective, WarpPerspective)
@@ -336,7 +356,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& local = static_cast<const GroupLocal&>(def);
     mgb_assert(inputs.size() == 2);
-    return opr::GroupLocal::make(inputs[0], inputs[1], local.param());
+    OperatorNodeConfig config{local.make_name()};
+    return opr::GroupLocal::make(inputs[0], inputs[1], local.param(), config);
 }
 OP_TRAIT_REG(GroupLocal, GroupLocal)
     .apply_on_var_node(apply_on_var_node)
@@ -349,7 +370,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const IndexingOneHot&>(def);
     mgb_assert(inputs.size() == 2);
-    return opr::IndexingOneHot::make(inputs[0], inputs[1], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::IndexingOneHot::make(inputs[0], inputs[1], op.param(), config);
 }
 OP_TRAIT_REG(IndexingOneHot, IndexingOneHot)
     .apply_on_var_node(apply_on_var_node)
@@ -362,7 +384,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const IndexingSetOneHot&>(def);
     mgb_assert(inputs.size() == 3);
-    return opr::IndexingSetOneHot::make(inputs[0], inputs[1], inputs[2], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::IndexingSetOneHot::make(inputs[0], inputs[1], inputs[2], op.param(), config);
 }
 OP_TRAIT_REG(IndexingSetOneHot, IndexingSetOneHot)
     .apply_on_var_node(apply_on_var_node)
@@ -375,7 +398,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const TypeCvt&>(def);
     mgb_assert(inputs.size() == 1);
-    return opr::TypeCvt::make(inputs[0], op.dtype);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::TypeCvt::make(inputs[0], op.dtype, config);
 }
 OP_TRAIT_REG(TypeCvt, TypeCvt)
     .apply_on_var_node(apply_on_var_node)
@@ -388,6 +412,7 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const Concat&>(def);
     cg::OperatorNodeConfig config{op.comp_node};
+    config.name(op.make_name());
     return opr::Concat::make(inputs, op.axis, config);
 }
 OP_TRAIT_REG(Concat, Concat)
@@ -402,6 +427,7 @@ auto apply_on_var_node(
     auto&& op = static_cast<const Copy&>(def);
     mgb_assert(inputs.size() == 1);
     cg::OperatorNodeConfig config{op.comp_node};
+    config.name(op.make_name());
     return opr::Copy::make(inputs[0], config);
 }
 OP_TRAIT_REG(Copy, Copy)
@@ -411,10 +437,12 @@ OP_TRAIT_REG(Copy, Copy)
 
 namespace { namespace identity {
 auto apply_on_var_node(
-        const OpDef&,
+        const OpDef& def,
         const VarNodeArray& inputs) {
+    auto&& op = def.cast_final_safe<Identity>();
     mgb_assert(inputs.size() == 1);
-    return opr::Identity::make(inputs[0]);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Identity::make(inputs[0], config);
 }
 OP_TRAIT_REG(Identity, Identity)
     .apply_on_var_node(apply_on_var_node)
@@ -427,7 +455,8 @@ auto apply_on_var_node(
     const VarNodeArray& inputs) {
         auto&& op = static_cast<const AssertEqual&>(def);
         mgb_assert(inputs.size() == 2);
-        return opr::AssertEqual::make(inputs[0],inputs[1],op.param());
+        OperatorNodeConfig config{op.make_name()};
+        return opr::AssertEqual::make(inputs[0], inputs[1], op.param(), config);
 
     }
 
@@ -443,7 +472,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const UniformRNG&>(def);
     mgb_assert(inputs.size() == 1);
-    return opr::UniformRNG::make(inputs[0], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::UniformRNG::make(inputs[0], op.param(), config);
 }
 OP_TRAIT_REG(UniformRNG, UniformRNG)
     .apply_on_var_node(apply_on_var_node)
@@ -456,7 +486,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const GaussianRNG&>(def);
     mgb_assert(inputs.size() == 1);
-    return opr::GaussianRNG::make(inputs[0], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::GaussianRNG::make(inputs[0], op.param(), config);
 }
 OP_TRAIT_REG(GaussianRNG, GaussianRNG)
     .apply_on_var_node(apply_on_var_node)
@@ -469,7 +500,9 @@ VarNodeArray apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const ROIAlign&>(def);
     mgb_assert(inputs.size() == 2);
-    auto* opr = opr::ROIAlign::make(inputs[0], inputs[1], op.param()).node()->owner_opr();
+    OperatorNodeConfig config{op.make_name()};
+    auto* opr = opr::ROIAlign::make(
+        inputs[0], inputs[1], op.param(), config).node()->owner_opr();
     return {opr->output(0), opr->output(1)};
 }
 OP_TRAIT_REG(ROIAlign, ROIAlign)
@@ -484,7 +517,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const NvOf&>(def);
     mgb_assert(inputs.size() == 1);
-    return opr::NvOf::make(inputs[0], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::NvOf::make(inputs[0], op.param(), config);
 }
 OP_TRAIT_REG(NvOf, NvOf)
     .apply_on_var_node(apply_on_var_node)
@@ -499,6 +533,7 @@ auto apply_on_var_node(
     auto&& op = static_cast<const Linspace&>(def);
     mgb_assert(inputs.size() == 3);
     cg::OperatorNodeConfig config{op.comp_node};
+    config.name(op.make_name());
     return opr::Linspace::make(inputs[0], inputs[1], inputs[2], op.param(), config);
 }
 OP_TRAIT_REG(Linspace, Linspace)
@@ -513,6 +548,7 @@ auto apply_on_var_node(
     auto&& op = static_cast<const Eye&>(def);
     mgb_assert(inputs.size() == 1);
     cg::OperatorNodeConfig config{op.comp_node};
+    config.name(op.make_name());
     opr::Eye::Param param{op.k, op.dtype.enumv()};
     return opr::Eye::make(inputs[0], param, config);
 }
@@ -527,7 +563,10 @@ VarNodeArray apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const ROIPooling&>(def);
     mgb_assert(inputs.size() == 3);
-    auto* opr = opr::ROIPooling::make(inputs[0], inputs[1], inputs[2], op.param()).node()->owner_opr();
+    OperatorNodeConfig config{op.make_name()};
+    auto* opr = opr::ROIPooling::make(
+        inputs[0], inputs[1], inputs[2], op.param(), config
+    ).node()->owner_opr();
     return {opr->output(0), opr->output(1)};
 }
 OP_TRAIT_REG(ROIPooling, ROIPooling)
@@ -541,7 +580,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const Remap&>(def);
     mgb_assert(inputs.size() == 2);
-    return opr::Remap::make(inputs[0], inputs[1], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Remap::make(inputs[0], inputs[1], op.param(), config);
 }
 OP_TRAIT_REG(Remap, Remap)
     .apply_on_var_node(apply_on_var_node)
@@ -578,7 +618,8 @@ auto apply_on_var_node( \
         const OpDef& def, \
         const VarNodeArray& inputs) { \
     auto&& op = static_cast<const NAME&>(def); \
-    return opr::NAME::make(IN##NR_INPUT, get_index(inputs, NR_INPUT, op.items)); \
+    OperatorNodeConfig config{op.make_name()}; \
+    return opr::NAME::make(IN##NR_INPUT, get_index(inputs, NR_INPUT, op.items), config); \
 } \
 OP_TRAIT_REG(NAME, NAME) \
     .apply_on_var_node(apply_on_var_node) \
@@ -609,30 +650,35 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const FakeQuant&>(def);
     mgb_assert(inputs.size() == 3);
-    return opr::FakeQuant::make(inputs[0], inputs[1], inputs[2], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::FakeQuant::make(inputs[0], inputs[1], inputs[2], op.param(), config);
 }
 OP_TRAIT_REG(FakeQuant, FakeQuant)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
 }} // fake_quant
+
 namespace { namespace tqt {
 auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const TQT&>(def);
     mgb_assert(inputs.size() == 2);
-    return opr::TQT::make(inputs[0], inputs[1], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::TQT::make(inputs[0], inputs[1], op.param(), config);
 }
 OP_TRAIT_REG(TQT, TQT)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
 }}  // tqt
+
 namespace { namespace elemwise_multi_type {
 auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const ElemwiseMultiType&>(def);
     OperatorNodeConfig config{op.dtype};
+    config.name(op.make_name());
     return opr::ElemwiseMultiType::make(inputs, op.param(), config);
 }
 OP_TRAIT_REG(ElemwiseMultiType, ElemwiseMultiType)
@@ -646,7 +692,9 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const SVD&>(def);
     mgb_assert(inputs.size() == 1);
-    return opr::SVD::make(inputs[0], op.param())[0].node()->owner_opr()->usable_output();
+    OperatorNodeConfig config{op.make_name()};
+    return opr::SVD::make(inputs[0], op.param(), config)[0]
+        .node()->owner_opr()->usable_output();
 }
 OP_TRAIT_REG(SVD, SVD)
     .apply_on_var_node(apply_on_var_node)

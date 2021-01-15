@@ -79,11 +79,13 @@ public:
 cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def, const VarNodeArray& inputs) {
     auto&& attr = def.cast_final_safe<OprAttr>();
+    auto config = attr.config;
+    config.name(attr.make_name());
     mgb_assert(!inputs.empty());
     auto registry = serialization::OprRegistry::find_by_name(attr.type);
     mgb_assert(registry, "operator %s not found", attr.type.c_str());
     OprParamsLoadContext ctx{attr.param, inputs[0]->owner_graph()};
-    return registry->loader(ctx, inputs, attr.config);
+    return registry->loader(ctx, inputs, config);
 }
 
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* opr) {
@@ -99,10 +101,15 @@ std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
     return {};
 }
 
+std::string make_name(const OpDef& def) {
+    return "OprAttr";
+}
+
 OP_TRAIT_REG(OprAttr, OprAttr)
     .make_from_op_node(make_from_op_node)
     .apply_on_var_node(apply_on_var_node)
     .props(props)
+    .make_name(make_name)
     .fallback();
 
 } // anonymous namespace

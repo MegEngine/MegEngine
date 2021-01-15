@@ -99,6 +99,14 @@ PyObject* py_get_generic_impl(PyObject* obj, void* /* closure */) {
 #define py_get_generic(name, attr) \
     py_get_generic_impl<PyOp(name), decltype(std::declval<name>().attr), &name::attr>
 
+template<typename T>
+PyObject* py_get_scope_impl(PyObject* obj, void* /* closure */) {
+    // T: PyOpXXX  inst(): return XXX in opdef.h.inl
+    auto& op = reinterpret_cast<T*>(obj)->inst();
+    return pyobj_convert_generic<std::string>::to(op.scope());
+}
+#define py_get_scope(class) py_get_scope_impl<PyOp(class)>
+
 template<typename T, typename U, U T::Ty::*attr>
 int py_set_generic_impl(PyObject* obj, PyObject* value, void* /* closure */) {
     if (value == NULL) {
@@ -120,6 +128,27 @@ int py_set_generic_impl(PyObject* obj, PyObject* value, void* /* closure */) {
 }
 #define py_set_generic(name, attr) \
     py_set_generic_impl<PyOp(name), decltype(std::declval<name>().attr), &name::attr>
+
+template<typename T>
+int py_set_scope_impl(PyObject* obj, PyObject* value, void* /* closure */) {
+    if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the attribute");
+        return -1;
+    }
+    auto& op = reinterpret_cast<T*>(obj)->inst();
+    try {
+        op.set_scope(pyobj_convert_generic<std::string>::from(value));
+        return 0;
+    } catch(py::error_already_set& e) {
+        e.restore();
+    } catch(py::builtin_exception& e) {
+        e.set_error();
+    } catch(...) {
+        PyErr_SetString(PyExc_RuntimeError, "Unknown Error");
+    }
+    return -1;
+}
+#define py_set_scope(class) py_set_scope_impl<PyOp(class)>
 
 struct PyOpDef {
     PyObject_HEAD

@@ -23,12 +23,12 @@ namespace {
 cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
-    def.cast_final_safe<CondTake>();
+    auto&& op = def.cast_final_safe<CondTake>();
     auto&& graph = inputs[0]->owner_graph();
 
     opr::CondTake::Param param;
     param.val = 1;
-    cg::OperatorNodeConfig config;
+    OperatorNodeConfig config{op.make_name()};
     cg::OperatorNodeBase* opr = graph->insert_opr(
             std::make_unique<opr::CondTake>(
                     inputs[0], inputs[1], param, config));

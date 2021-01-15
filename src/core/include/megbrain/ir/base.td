@@ -242,6 +242,7 @@ class MgbPackedParamBase<string className, string accessor>:
 class MgbHashableOpMixin {
   string hashFunction = ?;
   string cmpFunction = ?;
+  bit usingModeName = 0;
 }
 
 class MgbOp<string mnemonic, list<MgbParamBase> params=[], list<OpTrait> traits=[]>:

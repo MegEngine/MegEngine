@@ -32,7 +32,7 @@ cg::OperatorNodeBase* apply_on_var_node_remote_send(
             ssprintf("%s:%d", send.addr.data(), send.port));
     auto&& graph = inputs[0]->owner_graph();
 
-    cg::OperatorNodeConfig config;
+    OperatorNodeConfig config{send.make_name()};
     cg::OperatorNodeBase* opr =
             graph->insert_opr(std::make_unique<mgb::opr::RemoteSend>(
                     send.key, inputs[0], group_client, true, config));
@@ -42,11 +42,13 @@ cg::OperatorNodeBase* apply_on_var_node_remote_send(
 cg::OperatorNodeBase* apply_on_var_node_remote_recv(
         const OpDef& def, const VarNodeArray& inputs) {
     auto&& recv = def.cast_final_safe<RemoteRecv>();
+    OperatorNodeConfig config{recv.cn};
+    config.name(recv.make_name());
     auto group_client = std::make_shared<GroupClientProxy>(
             ssprintf("%s:%d", recv.addr.data(), recv.port));
     auto&& graph = inputs[0]->owner_graph();
     return graph->insert_opr(std::make_unique<mgb::opr::RemoteRecv>(
-            recv.key, inputs[0], *graph, group_client, OperatorNodeConfig{recv.cn},
+            recv.key, inputs[0], *graph, group_client, config,
             recv.shape, recv.dtype));
 }
 

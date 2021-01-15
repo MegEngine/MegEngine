@@ -21,8 +21,10 @@ namespace {
 auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
+    auto&& op = def.cast_final_safe<MatrixInverse>();
     mgb_assert(inputs.size() == 1);
-    return opr::MatrixInverse::make(inputs[0]);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::MatrixInverse::make(inputs[0], {}, config);
 }
 OP_TRAIT_REG(MatrixInverse, MatrixInverse)
     .apply_on_var_node(apply_on_var_node)

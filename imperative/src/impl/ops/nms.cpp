@@ -29,7 +29,9 @@ cg::OperatorNodeBase* apply_on_var_node(
     param.iou_thresh = nms_keep.iou_thresh;
     param.max_output = nms_keep.max_output;
 
-    return NMSKeepOpr::make(inputs[0], param).node()->owner_opr();
+    OperatorNodeConfig config{nms_keep.make_name()};
+
+    return NMSKeepOpr::make(inputs[0], param, config).node()->owner_opr();
 }
 
 OP_TRAIT_REG(NMSKeep, NMSKeep, NMSKeepOpr)

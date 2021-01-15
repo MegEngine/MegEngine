@@ -21,7 +21,8 @@ namespace { namespace warp_affine {
             const VarNodeArray& inputs) {
         mgb_assert(inputs.size() == 3);
         auto&& op = static_cast<const WarpAffine&>(def);
-        return opr::WarpAffine::make(inputs[0], inputs[1], inputs[2], op.param());
+        OperatorNodeConfig config{op.make_name()};
+        return opr::WarpAffine::make(inputs[0], inputs[1], inputs[2], op.param(), config);
     }
 
 OP_TRAIT_REG(WarpAffine, WarpAffine)

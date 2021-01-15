@@ -30,13 +30,14 @@ cg::OperatorNodeBase* apply_on_var_node(
     size_t nr_inp = inputs.size();
     mgb_assert(nr_inp == 3 ||nr_inp == 5,
               "BatchNorm expects 3 or 5 inputs; got %lu actually", nr_inp);
+    OperatorNodeConfig config{bn_opr.make_name()};
     if (nr_inp == 3) {
         return opr::BatchNorm::make(
-            inputs[0], inputs[1], inputs[2], bn_opr.param())[0]
+            inputs[0], inputs[1], inputs[2], bn_opr.param(), config)[0]
             .node()->owner_opr();
     } else {
         return opr::BatchNorm::make(
-            inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], bn_opr.param())[0]
+            inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], bn_opr.param(), config)[0]
             .node()->owner_opr();
     }
 }

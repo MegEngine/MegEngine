@@ -15,6 +15,7 @@
 
 #include "megbrain/imperative/interpreter.h"
 #include "pybind11/pybind11.h"
+#include <string>
 
 #include "./pyext17.h"
 
@@ -70,6 +71,8 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     GradInfo m_grad_info;
     TraceInfo m_trace_info;
     SharedHandle m_handle;
+    std::string user_custom_name;
+    std::string automatic_name;
     cg::VarNode* m_var;
 
     using Handle = interpreter::Interpreter::Handle;
@@ -170,6 +173,10 @@ struct TensorWrapper {
     void set_compiled_info(PyObject *);
     PyObject* trace_mixin_info();
     void set_trace_mixin_info(PyObject *);
+    PyObject* user_custom_name();
+    void set_user_custom_name(PyObject *);
+    PyObject* automatic_name();
+    void set_automatic_name(PyObject *);
     PyObject* _use_cnt() { return PyLong_FromSize_t(m_tensor.use_count()); };
 };
 

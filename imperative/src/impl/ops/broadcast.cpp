@@ -27,10 +27,11 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
 cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
-    def.cast_final_safe<Broadcast>();
+    auto&& op = def.cast_final_safe<Broadcast>();
     size_t nr_inp = inputs.size();
     mgb_assert(nr_inp == 2, "Broadcast expects 2 inputs; got %lu actually", nr_inp);
-    return opr::Broadcast::make(inputs[0], inputs[1]).node()->owner_opr();
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Broadcast::make(inputs[0], inputs[1], config).node()->owner_opr();
 }
 
 bool valid_broadcast(const TensorShape& src_shape,
@@ -96,7 +97,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const Reshape&>(def);
     mgb_assert(inputs.size() == 2);
-    return opr::Reshape::make(inputs[0], inputs[1], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Reshape::make(inputs[0], inputs[1], op.param(), config);
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

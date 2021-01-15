@@ -294,7 +294,7 @@ void init_graph_rt(py::module m) {
     m.def("dump_graph", [](
         const std::vector<VarNode*>& dest_vars,
         int keep_var_name,
-        bool keep_op_name,
+        bool keep_opr_name,
         bool keep_param_name,
         bool keep_opr_priority,
         py::list& stat,
@@ -307,7 +307,7 @@ void init_graph_rt(py::module m) {
         SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
 
         ser::GraphDumper::DumpConfig config{keep_var_name, keep_param_name,
-                                       keep_opr_priority, keep_op_name};
+                                       keep_opr_priority, keep_opr_name};
 
         auto rst = dumper->dump(symvars, config);
         for (auto i : rst.inputs) {
@@ -457,13 +457,17 @@ void init_graph_rt(py::module m) {
             return opr::SharedDeviceTensor::make(*graph, std::make_shared<DeviceTensorND>(data)).node();
         });
 
-    m.def("make_const", [](cg::ComputingGraph* graph, py::array data, CompNode cn, DType dtype) {
+    m.def("make_const", [](cg::ComputingGraph* graph, py::array data, CompNode cn, DType dtype, std::optional<std::string> name) {
             if (!cn.valid()) {
                 cn = CompNode::load(get_default_device());
             }
+            OperatorNodeConfig config(cn);
+            if (name) {
+                config.name(*name);
+            }
             auto hv = npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype);
-            return opr::ImmutableTensor::make(*graph, hv, OperatorNodeConfig(cn)).node();
-        });
+            return opr::ImmutableTensor::make(*graph, hv, config).node();
+        }, py::arg(), py::arg(), py::arg(), py::arg(), py::arg() = py::none());
 
     m.def("make_h2d", [](cg::ComputingGraph& graph, CompNode cn, DType dtype, TensorShape shape, std::optional<std::string> name) {
             if (!cn.valid()) {

@@ -20,6 +20,7 @@ from .core.tensor.array_method import ArrayMethodMixin
 from .device import _valid_device, get_default_device
 from .logger import get_logger
 from .utils.deprecation import deprecated
+from .utils.naming import auto_naming
 
 
 class Tensor(_Tensor, ArrayMethodMixin):
@@ -27,7 +28,9 @@ class Tensor(_Tensor, ArrayMethodMixin):
     dmap_callback = None
     _q_dict = None
 
-    def __new__(cls, data, dtype=None, device=None, is_const=False, no_cache=False):
+    def __new__(
+        cls, data, dtype=None, device=None, is_const=False, no_cache=False, name=""
+    ):
         if device is None:
             cn = get_default_device()
         elif isinstance(device, str):
@@ -51,8 +54,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
             if isinstance(data, np.ndarray):
                 if 0 in data.strides:
                     data = data.squeeze().reshape(data.shape)
-
-            obj = _Tensor.__new__(cls, data, dtype, cn, is_const, no_cache)
+            obj = _Tensor.__new__(cls, data, dtype, cn, is_const, no_cache, name)
         return obj
 
     @property
@@ -90,6 +92,15 @@ class Tensor(_Tensor, ArrayMethodMixin):
             piece += ", dtype={}".format(np.dtype(self.dtype).name)
         piece += ", device={}".format(self.device) + ")"
         return piece
+
+    @property
+    def name(self):
+        return self.c_name
+
+    @name.setter
+    def name(self, name):
+        self.c_name = name
+        auto_naming.record_var_name(self._mixin_handle, name)
 
     @deprecated(version="1.0", reason="no need to reuse an existing tensor since 1.0")
     def set_value(self, value):

@@ -75,6 +75,7 @@ using GradMaker = detail::OpMeth<
 using Props = detail::OpMeth<decltype(OpDef::props)>;
 using HashFunc = detail::OpMeth<size_t(const OpDef&)>;
 using IsSame = detail::OpMeth<bool(const OpDef&, const OpDef&)>;
+using MakeNameFunc = detail::OpMeth<std::string(const OpDef&)>;
 
 struct OpTrait {
     const char* name;
@@ -88,6 +89,7 @@ struct OpTrait {
     Props props;
     HashFunc hash;
     IsSame is_same_st;
+    MakeNameFunc make_name;
     OpTrait(const char* name);
     static OpTrait* find_by_name(const char* name);
     static OpTrait* find_by_typeinfo(Typeinfo* type);
@@ -104,7 +106,8 @@ struct OpTrait {
     cb(make_backward_graph) \
     cb(props) \
     cb(hash) \
-    cb(is_same_st)
+    cb(is_same_st) \
+    cb(make_name)
 
 struct OpTraitRegistry {
     OpTrait* trait;

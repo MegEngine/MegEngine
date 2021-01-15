@@ -20,8 +20,9 @@ namespace { namespace tensorrt_runtime {
             const OpDef& def,
             const VarNodeArray& inputs) {
         auto&& op = static_cast<const TensorRTRuntime&>(def);
+        OperatorNodeConfig config{op.make_name()};
         SymbolVarArray sinputs(inputs.begin(), inputs.end());
-        return opr::TensorRTRuntimeOpr::make(op.buf.c_str(), op.buf_size, sinputs);
+        return opr::TensorRTRuntimeOpr::make(op.buf.c_str(), op.buf_size, sinputs, config);
     }
 OP_TRAIT_REG(TensorRTRuntime, TensorRTRuntime)
     .apply_on_var_node(apply_on_var_node)

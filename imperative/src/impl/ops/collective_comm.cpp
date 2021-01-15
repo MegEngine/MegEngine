@@ -35,7 +35,7 @@ cg::OperatorNodeBase* apply_on_var_node(
     auto disable = std::make_shared<DTypeScalar>();
     disable->set(0);
 
-    cg::OperatorNodeConfig config;
+    OperatorNodeConfig config{comm.make_name()};
     if (comm.comp_node.size() > 0) {
         config.comp_node(CompNode::load(comm.comp_node));
     }

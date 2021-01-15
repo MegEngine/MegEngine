@@ -36,6 +36,7 @@ class OpDef : public Hashable,
               public NonCopyableObj,
               public std::enable_shared_from_this<OpDef> {
     mutable const OpTrait* m_trait = nullptr;
+    std::string m_scope;
 public:
     virtual ~OpDef() = default;
 
@@ -86,9 +87,13 @@ public:
 
     const OpTrait* trait() const;
 
-    const char* name() const;
-
     std::string to_string() const;
+
+    const std::string scope() const;
+
+    const std::string make_name() const;
+
+    void set_scope(const std::string& scope);
 
     virtual size_t hash() const;
 

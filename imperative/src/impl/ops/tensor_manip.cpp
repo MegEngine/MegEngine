@@ -21,7 +21,8 @@ cg::OperatorNodeBase* apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& op_def = def.cast_final_safe<GetVarShape>();
-    return opr::GetVarShape::make(inputs, op_def.param()).node()->owner_opr();
+    OperatorNodeConfig config{op_def.make_name()};
+    return opr::GetVarShape::make(inputs, op_def.param(), config).node()->owner_opr();
 }
 
 DispatchMode decide_dispatch_mode(
@@ -152,7 +153,7 @@ cg::OperatorNodeBase* param_pack_split_apply_on_var_node(
     auto&& graph = inputs[0]->owner_graph();
 
     auto&& shapes = get_shapes(param.shapes);
-    cg::OperatorNodeConfig config;
+    OperatorNodeConfig config(param.make_name());
     cg::OperatorNodeBase* opr =
             graph->insert_opr(std::make_unique<mgb::opr::ParamPackSplit>(
                     inputs[0], param.offsets, shapes, config));
@@ -189,7 +190,7 @@ cg::OperatorNodeBase* param_pack_concat_apply_on_var_node(
     auto&& graph = inputs[0]->owner_graph();
 
     VarNodeArray inps(inputs.begin(), inputs.end() - 1);
-    cg::OperatorNodeConfig config;
+    OperatorNodeConfig config{param.make_name()};
     cg::OperatorNodeBase* opr =
             graph->insert_opr(std::make_unique<mgb::opr::ParamPackConcat>(
                     inps, inputs.back(), param.offsets, config));

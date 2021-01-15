@@ -12,12 +12,12 @@ from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
 
 import numpy as np
 
-from ..core._imperative_rt.core2 import pop_scope, push_scope
 from ..core.tensor.utils import make_shape_tuple
 from ..logger import get_logger
 from ..tensor import Parameter, Tensor
 from ..utils.deprecation import deprecated
 from ..utils.hook import HookHandler
+from ..utils.naming import auto_naming
 
 logger = get_logger(__name__)
 
@@ -69,7 +69,9 @@ class Module(metaclass=ABCMeta):
     Base Module class.
     """
 
-    def __init__(self):
+    def __init__(self, name=""):
+        self.name = name
+
         # runtime attributes
         self.training = True
         self.quantize_disabled = False
@@ -79,6 +81,8 @@ class Module(metaclass=ABCMeta):
         self._forward_hooks = OrderedDict()
 
         self._modules = []
+
+        # used for profiler and automatic naming
         self._name = "{anonymous}"
 
     @abstractmethod
@@ -105,7 +109,7 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_hooks, hook)
 
     def __call__(self, *inputs, **kwargs):
-        push_scope(self._name)
+        auto_naming.push_scope(self.name if self.name else self._name)
         for hook in self._forward_pre_hooks.values():
             modified_inputs = hook(self, inputs)
             if modified_inputs is not None:
@@ -119,7 +123,7 @@ class Module(metaclass=ABCMeta):
             modified_outputs = hook(self, inputs, outputs)
             if modified_outputs is not None:
                 outputs = modified_outputs
-        pop_scope(self._name)
+        auto_naming.pop_scope()
         return outputs
 
     def _flatten(
@@ -579,7 +583,7 @@ class Module(metaclass=ABCMeta):
         value = super().__getattribute__(name)
         if name == "_name":
             return value
-        if _is_module(value):
+        if isinstance(value, (Tensor, Module)):
             value._name = name
         return value
 

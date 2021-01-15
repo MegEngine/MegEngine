@@ -24,7 +24,8 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& op = static_cast<const Resize&>(def);
     mgb_assert(inputs.size() == 2);
-    return opr::Resize::make(inputs[0], inputs[1], op.param());
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Resize::make(inputs[0], inputs[1], op.param(), config);
 }
 
 OP_TRAIT_REG(Resize, Resize)

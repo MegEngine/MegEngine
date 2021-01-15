@@ -148,7 +148,7 @@ def test_dump():
     dump_info = f.dump(file)
     assert dump_info.nr_opr == 3
     np.testing.assert_equal(dump_info.inputs, ["arg_0", "arg_1"])
-    np.testing.assert_equal(dump_info.outputs, ["ADD(arg_0,arg_1)[4]"])
+    np.testing.assert_equal(dump_info.outputs, ["ADD"])
     file.seek(0)
     infer_cg = cgtools.GraphInference(file)
     result = list((infer_cg.run(a, b)).values())[0]
