@@ -304,6 +304,7 @@ MGB_DEFINE_OPR_CLASS(Reduce, intl::DynamicOutputIfInputDynamic<
         static void perform(Mode mode, DeviceTensorND& dest,
                             DeviceTensorND& workspace,
                             const DeviceTensorND& input,
+                            const DType& target_dtype,
                             const TensorShape& target_shape,
                             intl::UniqPtrWithCN<megdnn::Reduce>& opr,
                             const Param::DataType data_type=Param::DataType::DEFAULT);

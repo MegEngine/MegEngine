@@ -1501,8 +1501,9 @@ void Reduce::init_output_static_infer_desc() {
     auto infer_value = [this](DeviceTensorND &dest, const InpVal &inp) {
         DeviceTensorND workspace;
         auto sopr = static_infer_opr.lock();
-        perform(m_param.mode, dest, workspace,
-                inp.val[0].value(), inp.val.at(1).shape(), sopr(), m_param.data_type);
+        perform(m_param.mode, dest, workspace, inp.val[0].value(),
+                output(0)->dtype(), inp.val.at(1).shape(), sopr(),
+                m_param.data_type);
         return true;
     };
 
@@ -1632,6 +1633,7 @@ void Reduce::perform(
         Mode mode,
         DeviceTensorND &dest, DeviceTensorND &workspace,
         const DeviceTensorND &input,
+        const DType &target_dtype,
         const TensorShape &target_shape,
         intl::UniqPtrWithCN<megdnn::Reduce> &opr, const Param::DataType data_type) {
 
@@ -1674,7 +1676,7 @@ void Reduce::perform(
     }
 
     opr.comp_node().activate();
-    dest.comp_node(opr.comp_node()).dtype(input.dtype()).resize(target_shape);
+    dest.comp_node(opr.comp_node()).dtype(target_dtype).resize(target_shape);
     ksched.update_ptr(*input_contig, dest, workspace);
     ksched.execute(opr.get(), *input_contig, dest);
 }
