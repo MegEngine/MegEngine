@@ -974,3 +974,4 @@ if(MGE_WITH_CUDA AND MGE_CUDA_USE_STATIC AND("${CUDNN_VERSION}" VERSION_GREATER 
     message(WARNING "Static link CUDNN8 with many sm is unworkable, please use -DMGE_WITH_CUDNN_SHARED=ON or -DMGE_WITH_LARGE_ARCHIVE=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_70,code=sm_70 arch=compute_75,code=sm_75\" ")
     message(WARNING "Static link CUDNN8 with many sm is unworkable, please use -DMGE_WITH_CUDNN_SHARED=ON or -DMGE_WITH_LARGE_ARCHIVE=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_70,code=sm_70 arch=compute_75,code=sm_75\" ")
 endif()
+
