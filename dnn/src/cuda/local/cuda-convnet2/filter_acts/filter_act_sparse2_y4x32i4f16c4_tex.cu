@@ -2,7 +2,7 @@
  * \file dnn/src/cuda/local/cuda-convnet2/filter_acts/filter_act_sparse2_y4x32i4f16c4_tex.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
- * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an

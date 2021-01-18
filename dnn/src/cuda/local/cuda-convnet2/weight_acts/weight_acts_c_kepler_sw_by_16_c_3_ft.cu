@@ -2,7 +2,7 @@
  * \file dnn/src/cuda/local/cuda-convnet2/weight_acts/weight_acts_c_kepler_sw_by_16_c_3_ft.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
- * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -23,7 +23,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * --------------------------------------------------------------------------
- * \copyright Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * \copyright Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  * * Refactor kernels for seperate compilation
  * --------------------------------------------------------------------------

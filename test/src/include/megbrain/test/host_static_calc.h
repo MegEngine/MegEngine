@@ -5,7 +5,7 @@
  *
  * \brief static calculating on host to check opr correctness
  *
- * \copyright Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * \copyright Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  */
 

@@ -1,7 +1,7 @@
 /**
  * \file src/opr/test/standalone/nms.cpp
  *
- * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  */
 
 #include "megbrain/opr/standalone/nms_opr.h"

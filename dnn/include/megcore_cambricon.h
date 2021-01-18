@@ -4,7 +4,7 @@
  * This file is part of MegDNN, a deep neural network run-time library
  * developed by Megvii.
  *
- * \copyright Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * \copyright Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  */
 
 #pragma once
