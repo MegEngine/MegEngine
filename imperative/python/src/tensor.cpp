@@ -615,7 +615,7 @@ PyArray_Descr* _dtype_promotion(PyObject*const* args, size_t nargs) {
     SmallVector<PyArray_Descr*> scalars;
 
     bool is_tuple = false;
-    PyObject* tuple;
+    PyObject* tuple = nullptr;
     if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
         if (PyList_Check(args[0])) {
             tuple = PyList_AsTuple(args[0]);
@@ -664,13 +664,13 @@ PyArray_Descr* _dtype_promotion(PyObject*const* args, size_t nargs) {
     }
     for (auto *p: tensors) { Py_DECREF(p); }
     for (auto *p: scalars) { Py_DECREF(p); }
-    Py_DECREF(tuple);
+    Py_XDECREF(tuple);
     return res;
 }
 
 CompNode _get_device(PyObject*const* args, size_t nargs) {
     bool is_tuple = false;
-    PyObject* tuple;
+    PyObject* tuple = nullptr;
     if (nargs == 1 && (PyTuple_Check(args[0]) || PyList_Check(args[0]))) {
         if (PyList_Check(args[0])) {
             tuple = PyList_AsTuple(args[0]);
@@ -702,7 +702,7 @@ CompNode _get_device(PyObject*const* args, size_t nargs) {
     if (!valid) {
         mgb_assert(0, "expect at least 1 device");
     }
-    Py_DECREF(tuple);
+    Py_XDECREF(tuple);
     return cn;
 }
 
