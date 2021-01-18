@@ -11,7 +11,7 @@ from typing import Iterable
 import numpy as np
 
 from .. import functional as F
-from ..core.autodiff.grad import Function
+from ..autodiff import Function
 from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
 from ..module import Module
 from ..tensor import Parameter, Tensor

@@ -15,7 +15,7 @@ import megengine.optimizer as optimizer
 from megengine import Parameter
 from megengine import Tensor as tensor
 from megengine import tensor
-from megengine.core.autodiff.grad import Function
+from megengine.autodiff import Function
 from megengine.module import Module
 
 

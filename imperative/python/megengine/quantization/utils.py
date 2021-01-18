@@ -12,8 +12,8 @@ from typing import Dict
 import numpy as np
 
 from .. import functional as F
+from ..autodiff import Function
 from ..core._imperative_rt.core2 import apply
-from ..core.autodiff.grad import Function
 from ..core.ops import builtin
 from ..core.tensor import megbrain_graph
 from ..core.tensor.dtype import _metadata_dict
