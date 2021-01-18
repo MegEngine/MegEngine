@@ -17,7 +17,6 @@ from xmlrpc.server import SimpleXMLRPCServer
 
 from ..core._imperative_rt.utils import create_mm_server
 from ..utils.future import Future
-from .util import get_free_ports
 
 
 class Methods:
