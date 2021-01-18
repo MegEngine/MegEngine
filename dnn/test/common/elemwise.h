@@ -40,6 +40,9 @@ namespace elemwise {
     cb(unary3) \
     cb(binary3) \
     cb(all_modes) \
+    cb(unary_negative_stride) \
+    cb(binary_negative_stride) \
+    cb(ternary_negative_stride) \
 
 #define FOREACH_ELEMWISE_CASE(cb) \
     cb(FIRST_ELEMWISE_CASE) \
