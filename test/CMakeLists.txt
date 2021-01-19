@@ -18,11 +18,7 @@ endif()
 
 add_executable(megbrain_test ${SOURCES})
 target_link_libraries(megbrain_test gtest gmock)
-if(MSVC OR WIN32)
-    target_link_libraries(megbrain_test megbrain megdnn)
-else()
-    target_link_libraries(megbrain_test megengine)
-endif()
+target_link_libraries(megbrain_test megbrain megdnn ${MGE_CUDA_LIBS})
 if(CXX_SUPPORT_WCLASS_MEMACCESS)
     if(MGE_WITH_CUDA)
         target_compile_options(megbrain_test PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-class-memaccess>"

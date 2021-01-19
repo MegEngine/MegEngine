@@ -48,7 +48,7 @@ endif()
 add_executable(megdnn_test ${SOURCES})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")
 target_link_libraries(megdnn_test gtest)
-target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS})
+target_link_libraries(megdnn_test megdnn ${MGE_BLAS_LIBS} ${MGE_CUDA_LIBS})
 
 if (MGE_WITH_CUDA)
     target_link_libraries(megdnn_test cutlass)

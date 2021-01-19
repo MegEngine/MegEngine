@@ -4,7 +4,7 @@ add_executable (load_and_run  ${SOURCES})
 
 if (WIN32)
     # Windows does not support implicitly importing data members from DLL.
-    target_link_libraries(load_and_run megbrain megdnn)
+    target_link_libraries(load_and_run megbrain megdnn ${MGE_CUDA_LIBS})
 else()
     target_link_libraries (load_and_run megengine)
 endif()

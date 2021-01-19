@@ -53,10 +53,8 @@ option(MGE_WITH_DISTRIBUTED "Build with distributed support" ON)
 option(MGE_BUILD_IMPERATIVE_RT "Build _imperative_rt Python Module " ON)
 option(MGE_BUILD_SDK "Build load_and_run" ON)
 option(MGE_INFERENCE_ONLY "Build inference only library." OFF)
-option(MGE_WITH_PYTHON_MODULE "Build MegEngine legacy Python Module." OFF)
 option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
 option(MGE_WITH_ROCM "Enable ROCM support" OFF)
-
 
 if(NOT ${MGE_BIN_REDUCE} STREQUAL "")
     message(STATUS "build with BIN REDUCE")

@@ -34,6 +34,9 @@ function patch_elf_depend_lib() {
 
     patchelf --remove-rpath ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
     patchelf --force-rpath --set-rpath '$ORIGIN/lib' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
+    cp ${BUILD_DIR}/src/libmegengine_export.so ${LIBS_DIR}
+    patchelf --remove-rpath ${LIBS_DIR}/libmegengine_export.so
+    patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_export.so
 
 
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then

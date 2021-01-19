@@ -92,7 +92,6 @@ if(MGE_WITH_DISTRIBUTED)
     target_include_directories(megbrain PRIVATE ${CPPZMQ_INC} ${CMAKE_CURRENT_BINARY_DIR})
     target_link_libraries (megbrain PRIVATE megray)
 endif()
-target_link_libraries(megbrain PRIVATE ${MGE_CUDA_LIBS})
 target_link_libraries(megbrain PUBLIC ${MGE_CAMBRICON_LIBS})
 target_link_libraries(megbrain PUBLIC ${MGE_ATLAS_LIBS})
 if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
@@ -189,6 +188,7 @@ if(MGE_BUILD_IMPERATIVE_RT
     message(VERBOSE "create a export SHARED lib for python use")
     add_library(megengine_export SHARED)
     target_link_libraries(megengine_export PUBLIC megbrain megdnn)
+    target_link_libraries(megengine_export PRIVATE ${MGE_CUDA_LIBS})
     if (MGE_WITH_DISTRIBUTED)
         message(VERBOSE "megengine_export configured to link megray")
         target_link_libraries(megengine_export PUBLIC megray)
@@ -196,6 +196,7 @@ if(MGE_BUILD_IMPERATIVE_RT
 endif()
 # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
 add_library(megengine)
+target_link_libraries(megengine PRIVATE ${MGE_CUDA_LIBS})
 target_link_libraries(megengine PUBLIC megbrain megdnn)
 if (UNIX AND NOT APPLE)
     # TODO: Use target_link_options after upgrading to CMake 3.13
