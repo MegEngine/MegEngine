@@ -64,9 +64,24 @@ void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A,
 
 }
 
-} // namespace naive
-} // namespace megdnn
+std::vector<BatchedMatrixMulForward::Algorithm*>
+BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& /*A*/,
+                                                const TensorLayout& /*B*/,
+                                                const TensorLayout& /*C*/) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_batched_matmul_fwd_algo()};
+}
+
+BatchedMatrixMulForward::Algorithm*
+BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+        const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
+        bool /* reproducible */) {
+    return static_cast<HandleImpl*>(handle())
+            ->default_batched_matmul_fwd_algo();
+}
+
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-
-

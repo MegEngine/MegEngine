@@ -13,6 +13,7 @@
 
 #include "src/common/handle_impl.h"
 #include "src/naive/convolution/algorithms.h"
+#include "src/naive/matrix_mul/algorithms.h"
 #include "src/naive/local_share/algorithms.h"
 #include "src/naive/convolution3d/algorithms.h"
 
@@ -45,6 +46,9 @@ class HandleImpl : public HandleImplHelper {
             m_default_local_share_bwd_data_algo;
     static DefaultLocalShareBackwardFilterAlgorithm
             m_default_local_share_bwd_filter_algo;
+
+    static DefaultMatrixMulAlgorithm m_default_matmul_fwd_algo;
+    static DefaultBatchedMatrixMulAlgorithm m_default_batched_matmul_fwd_algo;
 
     //! move KernFunc to alloc_kern()->func, destruct func, and call dispatch
     template <typename T>
@@ -107,6 +111,14 @@ public:
 
     LocalShareBackwardFilter::Algorithm* default_local_share_bwd_filter_algo() {
         return &m_default_local_share_bwd_filter_algo;
+    }
+
+    MatrixMulForward::Algorithm* default_matmul_fwd_algo() {
+        return &m_default_matmul_fwd_algo;
+    }
+
+    BatchedMatrixMulForward::Algorithm* default_batched_matmul_fwd_algo() {
+        return &m_default_batched_matmul_fwd_algo;
     }
 
     Relayout* relayout_opr() override {

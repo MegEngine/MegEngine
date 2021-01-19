@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/oprs.h"
@@ -25,17 +26,13 @@ public:
 
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
-            const TensorLayout& /*C*/) override {
-        return {};
-    }
+            const TensorLayout& /*C*/) override;
 
     Algorithm* get_algorithm_heuristic(const TensorLayout& /*A*/,
                                        const TensorLayout& /*B*/,
                                        const TensorLayout& /*C*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /* reproducible */) override {
-        return nullptr;
-    }
+                                       bool /* reproducible */) override;
 
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
 

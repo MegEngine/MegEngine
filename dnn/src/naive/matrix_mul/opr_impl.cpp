@@ -81,6 +81,20 @@ void MatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
     MIDOUT_END();
 }
 
+std::vector<MatrixMulForward::Algorithm*>
+MatrixMulForwardImpl::get_all_algorithms(const TensorLayout& /*A*/,
+                                         const TensorLayout& /*B*/,
+                                         const TensorLayout& /*C*/)  {
+    return {static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo()};
+}
+
+MatrixMulForward::Algorithm* MatrixMulForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+        const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
+        bool /* reproducible */) {
+    return static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo();
+}
+
 }  // namespace naive
 }  // namespace megdnn
 
