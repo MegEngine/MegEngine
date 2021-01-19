@@ -181,11 +181,6 @@ def synchronized(func: Callable):
     return wrapper
 
 
-def _get_device_count_worker(queue, device_type):
-    num = get_device_count(device_type)
-    queue.put(num)
-
-
 def _check_device_initialized(device_type: str, rank: int):
     try:
         test = Tensor(1, device=(device_type + str(rank)))
@@ -196,19 +191,6 @@ def _check_device_initialized(device_type: str, rank: int):
     errmsg = "The cuda env is set before the forked thread starts. Please do not use any cuda function or variable before forking."
     if inited:
         raise RuntimeError(errmsg)
-
-
-def get_device_count_by_fork(device_type: str):
-    """
-    Get device count in fork thread.
-    See https://stackoverflow.com/questions/22950047/cuda-initialization-error-after-fork
-    for more information.
-    """
-    q = mp.Queue()
-    p = mp.Process(target=_get_device_count_worker, args=(q, device_type))
-    p.start()
-    p.join()
-    return q.get()
 
 
 def bcast_list_(inps: list, group: Group = WORLD):

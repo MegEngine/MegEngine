@@ -22,8 +22,7 @@ from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
-from megengine.distributed.helper import get_device_count_by_fork
-from megengine.jit import trace
+from megengine.device import get_device_count
 
 
 def test_where():
@@ -613,7 +612,7 @@ def test_nms():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("gpu") > 0, reason="cuda does not support nchw int8"
+    get_device_count("gpu") > 0, reason="cuda does not support nchw int8"
 )
 def test_conv_bias():
     inp_scale = 1.5
@@ -715,9 +714,7 @@ def test_conv_bias():
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "relu")
 
 
-@pytest.mark.skipif(
-    get_device_count_by_fork("gpu") > 0, reason="no int8 algorithm on cuda"
-)
+@pytest.mark.skipif(get_device_count("gpu") > 0, reason="no int8 algorithm on cuda")
 def test_batch_conv_bias():
     inp_scale = 1.5
     w_scale = 2.5

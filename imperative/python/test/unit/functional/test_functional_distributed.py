@@ -16,7 +16,6 @@ import megengine.distributed as dist
 from megengine import Parameter, tensor
 from megengine.core._imperative_rt.core2 import sync
 from megengine.device import get_default_device, set_default_device
-from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.distributed import (
     all_gather,
     all_reduce_max,

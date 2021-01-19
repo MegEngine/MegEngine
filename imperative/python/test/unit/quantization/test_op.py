@@ -12,7 +12,7 @@ import pytest
 import megengine as mge
 import megengine.functional as F
 from megengine.core.tensor import dtype
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine.device import get_device_count
 from megengine.functional.elemwise import _elemwise_multi_type, _elwise
 from megengine.quantization import QuantMode, create_qparams
 
@@ -68,7 +68,7 @@ def test_elemwise(kind):
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("gpu") > 0, reason="cuda does not support nchw int8"
+    get_device_count("gpu") > 0, reason="cuda does not support nchw int8"
 )
 def test_conv_bias():
     inp_scale = np.float32(np.random.rand() + 1)

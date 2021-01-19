@@ -16,7 +16,6 @@ import megengine as mge
 import megengine.distributed as dist
 from megengine import Tensor
 from megengine.core._trace_option import use_symbolic_shape
-from megengine.distributed.helper import get_device_count_by_fork
 from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 
 _assert_allclose = functools.partial(np.testing.assert_allclose, atol=5e-6, rtol=5e-6)

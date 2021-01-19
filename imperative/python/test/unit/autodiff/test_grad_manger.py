@@ -18,7 +18,6 @@ import megengine.functional as F
 import megengine.module as M
 import megengine.optimizer as optim
 from megengine.autodiff import GradManager
-from megengine.distributed.helper import get_device_count_by_fork
 from megengine.jit import trace
 
 

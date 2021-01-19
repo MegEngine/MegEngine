@@ -27,7 +27,13 @@ using namespace mgb;
 
 #include <thread>
 
+#include <cuda.h>
 #include <cuda_runtime.h>
+
+#ifdef __unix__
+#include <unistd.h>
+#include <sys/wait.h>
+#endif
 
 using CudaCompNodeImpl = CudaCompNode::CompNodeImpl;
 
@@ -700,19 +706,90 @@ void CudaCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
 
 /* ===================== CudaCompNode static methods ===================== */
 
+namespace {
+
+#ifndef __unix__
+CUresult get_device_count_forksafe(int* pcnt) {
+    cuInit(0);
+    return cuDeviceGetCount(pcnt);
+}
+#else
+struct RAIICloseFD : NonCopyableObj {
+    int m_fd = -1;
+
+    RAIICloseFD(int fd) : m_fd(fd) {}
+    ~RAIICloseFD() {close();}
+    void close() {
+        if (m_fd != -1) {
+            ::close(m_fd);
+            m_fd = -1;
+        }
+    }
+};
+// an implementation that does not call cuInit
+CUresult get_device_count_forksafe(int* pcnt) {
+    auto err = cuDeviceGetCount(pcnt);
+    if (err != CUDA_ERROR_NOT_INITIALIZED) return err;
+    // cuInit not called, call it in child process
+    int fd[2];
+    mgb_assert(pipe(fd) == 0, "pipe() failed");
+    int fdr = fd[0], fdw = fd[1];
+    RAIICloseFD fdr_guard(fdr);
+    RAIICloseFD fdw_guard(fdw);
+    auto cpid = fork();
+    mgb_assert(cpid != -1, "fork() failed");
+    if (cpid == 0) {
+        fdr_guard.close();
+        do {
+            err = cuInit(0);
+            if (err != CUDA_SUCCESS) break;
+            err = cuDeviceGetCount(pcnt);
+        } while (0);
+        auto sz = write(fdw, &err, sizeof(err));
+        if (sz == sizeof(err) && err == CUDA_SUCCESS) {
+            sz = write(fdw, pcnt, sizeof(*pcnt));
+        }
+        fdw_guard.close();
+        std::quick_exit(0);
+    }
+    fdw_guard.close();
+    auto sz = read(fdr, &err, sizeof(err));
+    mgb_assert(sz == sizeof(err), "failed to read error code from child");
+    if (err == CUDA_SUCCESS) {
+        sz = read(fdr, pcnt, sizeof(*pcnt));
+        mgb_assert(sz == sizeof(*pcnt), "failed to read device count from child");
+        return err;
+    }
+    // try again, maybe another thread called cuInit while we fork
+    auto err2 = cuDeviceGetCount(pcnt);
+    if (err2 == CUDA_SUCCESS) return err2;
+    if (err2 == CUDA_ERROR_NOT_INITIALIZED) return err;
+    return err2;
+}
+#endif
+
+const char* cu_get_error_string(CUresult err) {
+    const char* ret = nullptr;
+    cuGetErrorString(err, &ret);
+    if (!ret) ret = "unknown cuda error";
+    return ret;
+}
+
+} // namespace
+
 bool CudaCompNode::available() {
     static int result = -1;
     static Spinlock mtx;
     MGB_LOCK_GUARD(mtx);
     if (result == -1) {
         int ndev = -1;
-        auto err = cudaGetDeviceCount(&ndev);
-        result = err == cudaSuccess && ndev > 0;
+        auto err = get_device_count_forksafe(&ndev);
+        result = err == CUDA_SUCCESS && ndev > 0;
         if (!result) {
             mgb_log_warn("cuda unavailable: %s(%d) ndev=%d",
-                         cudaGetErrorString(err), static_cast<int>(err), ndev);
+                         cu_get_error_string(err), static_cast<int>(err), ndev);
         }
-        if (err == cudaErrorInitializationError) {
+        if (err == CUDA_ERROR_NOT_INITIALIZED) {
             mgb_throw(std::runtime_error, "cuda initialization error.");
         }
     }
@@ -857,11 +934,11 @@ size_t CudaCompNode::get_device_count(bool warn) {
     static Spinlock mtx;
     MGB_LOCK_GUARD(mtx);
     if (cnt == -1) {
-        auto err = cudaGetDeviceCount(&cnt);
-        if (err != cudaSuccess) {
+        auto err = get_device_count_forksafe(&cnt);
+        if (err != CUDA_SUCCESS) {
             if (warn)
                 mgb_log_error("cudaGetDeviceCount failed: %s (err %d)",
-                              cudaGetErrorString(err), int(err));
+                              cu_get_error_string(err), int(err));
             cnt = 0;
         }
         mgb_assert(cnt >= 0);

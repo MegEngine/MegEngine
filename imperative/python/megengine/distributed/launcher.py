@@ -13,9 +13,10 @@ import queue
 
 from .. import _exit
 from ..core._imperative_rt.core2 import full_sync
+from ..device import get_device_count
 from ..logger import get_logger
 from .group import _set_machine_ranks, group_barrier, init_process_group
-from .helper import _check_device_initialized, get_device_count_by_fork
+from .helper import _check_device_initialized
 from .server import Client, Server
 
 WARN_SUBPROCESS_EXIT_WITHOUT_RETURN = (
@@ -91,9 +92,7 @@ class launcher:
         backend="auto",
     ):
         self.func = func
-        self.n_gpus = (
-            n_gpus if n_gpus is not None else get_device_count_by_fork(device_type)
-        )
+        self.n_gpus = n_gpus if n_gpus is not None else get_device_count(device_type)
         self.world_size = world_size if world_size is not None else self.n_gpus
         self.rank_start = rank_start
         self.master_ip = master_ip
