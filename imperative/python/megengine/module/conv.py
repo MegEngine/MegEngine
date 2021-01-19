@@ -11,8 +11,8 @@ from typing import Tuple, Union
 import numpy as np
 
 from ..functional import conv1d, conv2d, conv_transpose2d, local_conv2d, relu
-from ..functional.types import _pair, _pair_nonzero
 from ..tensor import Parameter
+from ..utils.tuple_function import _pair, _pair_nonzero
 from . import init
 from .module import Module
 

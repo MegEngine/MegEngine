@@ -21,6 +21,7 @@ from ..distributed import WORLD, is_distributed
 from ..jit.tracing import is_tracing
 from ..random import uniform
 from ..tensor import Tensor
+from ..utils.tuple_function import _pair, _pair_nonzero
 from .debug_param import get_conv_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import exp, floor, log, log1p, maximum, minimum, relu
@@ -35,7 +36,6 @@ from .tensor import (
     squeeze,
     zeros,
 )
-from .types import _pair, _pair_nonzero
 
 __all__ = [
     "adaptive_avg_pool2d",

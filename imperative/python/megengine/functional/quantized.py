@@ -11,8 +11,8 @@ from typing import Tuple, Union
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..tensor import Tensor
+from ..utils.tuple_function import _pair, _pair_nonzero
 from .debug_param import get_conv_execution_strategy
-from .types import _pair, _pair_nonzero
 
 
 def conv_bias_activation(
