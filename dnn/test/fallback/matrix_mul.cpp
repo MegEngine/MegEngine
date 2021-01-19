@@ -46,6 +46,24 @@ TEST_F(FALLBACK, MATRIX_MUL) {
     }
 }
 
+TEST_F(FALLBACK, MATRIX_MUL_NAIVE_MK4) {
+    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
+                                 dtype::Float32{}, handle(), "FB_NAIVE",
+                                 param::MatrixMul::Format::MK4, 1);
+}
+
+TEST_F(FALLBACK, MATRIX_MUL_NAIVE_MK8) {
+    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
+                                 dtype::Float32{}, handle(), "FB_NAIVE",
+                                 param::MatrixMul::Format::MK8, 1);
+}
+
+TEST_F(FALLBACK, MATRIX_MUL_NAIVE_MK4_DOT) {
+    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
+                                 dtype::Float32{}, handle(), "FB_NAIVE",
+                                 param::MatrixMul::Format::MK4_DOT, 1);
+}
+
 TEST_F(FALLBACK, MATRIX_MUL_NAIVE) {
     Checker<MatrixMul> checker(handle());
     checker.set_before_exec_callback(AlgoChecker<MatrixMul>("FB_NAIVE"));
