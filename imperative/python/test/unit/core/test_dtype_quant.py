@@ -31,7 +31,7 @@ from megengine.core.tensor.dtype import (
     quint4,
     quint8,
 )
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine.device import get_device_count
 from megengine.tensor import Tensor
 
 
@@ -184,8 +184,7 @@ def test_dtype_int4_ffi_handle():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("gpu") != 0,
-    reason="TypeCvt to quint4 is not supported on GPU",
+    get_device_count("gpu") != 0, reason="TypeCvt to quint4 is not supported on GPU",
 )
 def test_quint4_typecvt():
     device = "xpux"

@@ -17,11 +17,7 @@ import megengine as mge
 import megengine.distributed as dist
 from megengine.core.ops.builtin import CollectiveComm, ParamPackConcat, ParamPackSplit
 from megengine.device import get_default_device
-from megengine.distributed.helper import (
-    get_device_count_by_fork,
-    param_pack_concat,
-    param_pack_split,
-)
+from megengine.distributed.helper import param_pack_concat, param_pack_split
 
 
 def _assert_q_empty(q):

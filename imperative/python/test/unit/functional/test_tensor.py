@@ -18,7 +18,6 @@ from megengine import tensor
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.utils import astensor1d
-from megengine.distributed.helper import get_device_count_by_fork
 from megengine.jit import trace
 from megengine.utils.network import Network, set_symbolic_shape
 from megengine.utils.network_node import VarNode

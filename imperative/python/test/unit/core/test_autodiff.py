@@ -20,7 +20,6 @@ from megengine.core._imperative_rt import CompNode, TensorAttr, imperative
 from megengine.core._imperative_rt.core2 import TensorWeakRef, apply, sync
 from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import Elemwise, Identity
-from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.distributed import remote_recv, remote_send
 
 

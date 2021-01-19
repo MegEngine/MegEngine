@@ -16,7 +16,6 @@ import megengine.autodiff as ad
 import megengine.distributed as dist
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
-from megengine.distributed.helper import get_device_count_by_fork
 from megengine.module import Module
 from megengine.optimizer import SGD
 

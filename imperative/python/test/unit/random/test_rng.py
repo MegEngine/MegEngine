@@ -26,12 +26,12 @@ from megengine.core.ops.builtin import (
     PoissonRNG,
     UniformRNG,
 )
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine.device import get_device_count
 from megengine.random import RNG, seed, uniform
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_gaussian_op():
     shape = (
@@ -61,7 +61,7 @@ def test_gaussian_op():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_uniform_op():
     shape = (
@@ -89,7 +89,7 @@ def test_uniform_op():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_gamma_op():
     _shape, _scale = 2, 0.8
@@ -117,7 +117,7 @@ def test_gamma_op():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_beta_op():
     _alpha, _beta = 2, 0.8
@@ -148,7 +148,7 @@ def test_beta_op():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_poisson_op():
     lam = F.full([8, 9, 11, 12], value=2, dtype="float32")
@@ -171,7 +171,7 @@ def test_poisson_op():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
 )
 def test_permutation_op():
     n = 1000
@@ -205,7 +205,7 @@ def test_permutation_op():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
 def test_UniformRNG():
     m1 = RNG(seed=111, device="xpu0")
@@ -233,7 +233,7 @@ def test_UniformRNG():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
 def test_NormalRNG():
     m1 = RNG(seed=111, device="xpu0")
@@ -262,7 +262,7 @@ def test_NormalRNG():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
 def test_GammaRNG():
     m1 = RNG(seed=111, device="xpu0")
@@ -295,7 +295,7 @@ def test_GammaRNG():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
 def test_BetaRNG():
     m1 = RNG(seed=111, device="xpu0")
@@ -330,7 +330,7 @@ def test_BetaRNG():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
 def test_PoissonRNG():
     m1 = RNG(seed=111, device="xpu0")
@@ -359,7 +359,7 @@ def test_PoissonRNG():
 
 
 @pytest.mark.skipif(
-    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
 def test_PermutationRNG():
     m1 = RNG(seed=111, device="xpu0")

@@ -6,7 +6,7 @@ import pytest
 
 import megengine.utils.comp_graph_tools as cgtools
 from megengine import jit, tensor
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine.device import get_device_count
 from megengine.functional import expand_dims
 from megengine.module import (
     BatchMatMulActivation,
@@ -101,9 +101,7 @@ def test_qat_conv():
         np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())
 
 
-@pytest.mark.skipif(
-    get_device_count_by_fork("gpu") > 0, reason="no int8 algorithm on cuda"
-)
+@pytest.mark.skipif(get_device_count("gpu") > 0, reason="no int8 algorithm on cuda")
 def test_qat_batchmatmul_activation():
     batch = 4
     in_features = 8

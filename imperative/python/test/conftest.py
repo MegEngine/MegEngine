@@ -15,7 +15,7 @@ import megengine.functional
 import megengine.module
 from megengine import Parameter
 from megengine.core._imperative_rt.core2 import sync
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine.device import get_device_count
 from megengine.experimental.autograd import (
     disable_higher_order_directive,
     enable_higher_order_directive,
@@ -25,7 +25,7 @@ from megengine.module import Linear, Module
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "helpers"))
 
-_ngpu = get_device_count_by_fork("gpu")
+_ngpu = get_device_count("gpu")
 
 
 @pytest.fixture(autouse=True)
