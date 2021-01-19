@@ -13,11 +13,13 @@
 #include "cutlass/gemm/gemm.h"
 #include "src/cuda/utils.cuh"
 
+#if CUDA_VERSION >= 9020
 namespace megdnn {
 namespace cuda {
 namespace cutlass_wrapper {
 
 using GemmCoord = cutlass::gemm::GemmCoord;
+using BatchedGemmCoord = cutlass::gemm::BatchedGemmCoord;
 
 template <typename Gemm>
 void cutlass_matrix_mul_wrapper(
@@ -38,10 +40,26 @@ void cutlass_matrix_mul_float32_simt(
 size_t cutlass_matrix_mul_float32_simt_get_workspace_size(
         bool transpose_A, size_t lda, bool transpose_B, size_t ldb, size_t ldc,
         GemmCoord const& problem_size, float alpha, float beta,
-        const GemmCoord& threadblock_shape, const GemmCoord& warp_shape, int split_k_slices = 1);
+        const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
+        int split_k_slices = 1);
+
+template <typename GemvKernel>
+void cutlass_vector_matrix_mul_batched_strided_wrapper(
+        BatchedGemmCoord const& problem_size,
+        const typename GemvKernel::ElementA* d_A, size_t lda,
+        size_t batch_stride_a, const typename GemvKernel::ElementB* d_B,
+        size_t ldb, size_t batch_stride_b, typename GemvKernel::ElementCD* d_C,
+        size_t ldc, size_t batch_stride_c, cudaStream_t stream);
+
+void cutlass_matrix_mul_float32_simt_gemv_batched_strided(
+        const float* d_A, size_t lda, size_t batch_stride_a, const float* d_B,
+        size_t ldb, size_t batch_stride_b, float* d_C, size_t ldc,
+        size_t batch_stride_c, BatchedGemmCoord const& problem_size,
+        int threadblock_n, cudaStream_t stream);
 
 }  // namespace cutlass_wrapper
 }  // namespace cuda
 }  // namespace megdnn
+#endif
 
 // vim: syntax=cuda.doxygen

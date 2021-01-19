@@ -9,7 +9,7 @@ ELEMWISE_IMPL := ../src/cuda/cond_take/kimpl \
 	../src/cuda/elemwise_multi_type/kimpl
 
 CUDA_CONV_IMPL := ../src/cuda/conv_bias/int8/kimpl ../src/cuda/conv_bias/int8_imma/kimpl ../src/cuda/batch_conv_bias/int8/kimpl 
-CUDA_MATMUL_IMPL := ../src/cuda/matrix_mul/fp32_simt/kimpl
+CUDA_MATMUL_IMPL := ../src/cuda/matrix_mul/fp32_simt/kimpl ../src/cuda/matrix_mul/fp32_simt_gemv/kimpl
 
 all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL} $(CUDA_MATMUL_IMPL)
 
@@ -49,6 +49,9 @@ all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL} $(CUDA_MATMUL_IMPL)
 	./$^ --type dp4a $@
 
 ../src/cuda/matrix_mul/fp32_simt/kimpl: gen_cutlass_matmul_kern_impls.py
+	./$^ $@
+
+../src/cuda/matrix_mul/fp32_simt_gemv/kimpl: gen_cutlass_gemv_batched_strided_kern_impls.py
 	./$^ $@
 
 .PHONY: all

@@ -33,6 +33,7 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
 #if !MEGDNN_DISABLE_FLOAT16
     all_algos.push_back(&bfloat16);
 #endif
+#if CUDA_VERSION >= 9020
     fill_cutlass_algos();
     for (auto&& algo : simt_float32) {
         all_algos.push_back(&algo);
@@ -40,12 +41,17 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : simt_float32_split_k) {
         all_algos.push_back(&algo);
     }
+    for (auto&& algo : simt_float32_gemv_batched_strided) {
+        all_algos.push_back(&algo);
+    }
+#endif
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
     }
 }
 
+#if CUDA_VERSION >= 9020
 void MatrixMulForwardImpl::AlgoPack::fill_cutlass_algos() {
     using AlgoParam = AlgoFloat32SIMT::AlgoParam;
     simt_float32.emplace_back(AlgoParam{64, 256, 8, 32, 64, 8});
@@ -82,7 +88,11 @@ void MatrixMulForwardImpl::AlgoPack::fill_cutlass_algos() {
     simt_float32_split_k.emplace_back(AlgoParam{16, 32, 8, 16, 32, 8});
     simt_float32_split_k.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8});
     simt_float32_split_k.emplace_back(AlgoParam{16, 128, 8, 16, 64, 8});
+    simt_float32_gemv_batched_strided.emplace_back(128);
+    simt_float32_gemv_batched_strided.emplace_back(64);
+    simt_float32_gemv_batched_strided.emplace_back(32);
 }
+#endif
 
 MatrixMulForwardImpl::AlgoPack MatrixMulForwardImpl::sm_algo_pack;
 

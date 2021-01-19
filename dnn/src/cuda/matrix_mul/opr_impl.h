@@ -41,8 +41,11 @@ public:
 #if !MEGDNN_DISABLE_FLOAT16
     class AlgoBFloat16;
 #endif
+#if CUDA_VERSION >= 9020
     class AlgoFloat32SIMT;
     class AlgoFloat32SIMTSplitK;
+    class AlgoFloat32SIMTGemvBatchedStrided;
+#endif
     class AlgoPack;
 
     static const AlgoPack& algo_pack() {

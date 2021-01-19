@@ -1,0 +1,70 @@
+/**
+ * \file
+ * dnn/src/cuda/matrix_mul/matrix_mul_float_simt_gemv_batched_strided_cutlass_wrapper.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ */
+#include "cutlass/gemm/kernel/default_gemv.h"
+#include "cutlass/gemm/kernel/gemv_batched_strided.h"
+#include "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper.cuh"
+#include "src/cuda/query_blocksize.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace cutlass_wrapper;
+
+template <typename GemvKernel>
+void megdnn::cuda::cutlass_wrapper::
+        cutlass_vector_matrix_mul_batched_strided_wrapper(
+                BatchedGemmCoord const& problem_size,
+                const typename GemvKernel::ElementA* d_A, size_t lda,
+                size_t batch_stride_a, const typename GemvKernel::ElementB* d_B,
+                size_t ldb, size_t batch_stride_b,
+                typename GemvKernel::ElementCD* d_C, size_t ldc,
+                size_t batch_stride_c, cudaStream_t stream) {
+    typename GemvKernel::IteratorA::TensorRef tensor_a{
+            const_cast<typename GemvKernel::ElementA*>(d_A),
+            typename GemvKernel::LayoutA{static_cast<int>(lda)}};
+    typename GemvKernel::IteratorB::TensorRef tensor_b{
+            const_cast<typename GemvKernel::ElementB*>(d_B),
+            typename GemvKernel::LayoutB{static_cast<int>(ldb)}};
+    typename GemvKernel::IteratorCD::TensorRef tensor_c{
+            d_C, typename GemvKernel::LayoutCD{static_cast<int>(ldc)}};
+    static int constexpr kThreadsPerN = GemvKernel::Core::kThreadsPerN;
+    static int constexpr kThreadsPerK = GemvKernel::Core::kThreadsPerK;
+    void (*kern)(BatchedGemmCoord, typename GemvKernel::IteratorA::TensorRef,
+                 typename GemvKernel::IteratorA::TensorRef::LongIndex,
+                 typename GemvKernel::IteratorB::TensorRef,
+                 typename GemvKernel::IteratorB::TensorRef::LongIndex,
+                 typename GemvKernel::IteratorCD::TensorRef,
+                 typename GemvKernel::IteratorCD::TensorRef::LongIndex);
+    kern = cutlass::gemm::kernel::GemvBatchedStrided<GemvKernel>;
+//    int nr_threads = static_cast<int>(
+//            query_blocksize_for_kernel(reinterpret_cast<const void*>(kern)));
+//    nr_threads = std::max(nr_threads, kThreadsPerN);
+//    megdnn_assert(nr_threads % kThreadsPerN == 0);
+//    int batch = nr_threads / kThreadsPerN;
+//    batch = std::min(batch, problem_size.batch());
+    auto tile_size = BatchedGemmCoord(GemvKernel::ThreadBlockShape::kM,
+                                      GemvKernel::ThreadBlockShape::kN,
+                                      GemvKernel::ThreadBlockShape::kK, 1);
+    typename GemvKernel::ThreadBlockSwizzle swizzler;
+    auto tiled_shape = swizzler.get_tiled_shape(problem_size, tile_size);
+    dim3 grid = swizzler.get_grid_shape(tiled_shape);
+    dim3 block(kThreadsPerN, kThreadsPerK, 1);
+    int smem_size =
+            int(sizeof(typename GemvKernel::ThreadBlockGemv::SharedStorage));
+    megdnn_assert(smem_size < (48 << 10));
+    kern<<<grid, block, smem_size, stream>>>(
+            problem_size, tensor_a, batch_stride_a, tensor_b, batch_stride_b,
+            tensor_c, batch_stride_c);
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

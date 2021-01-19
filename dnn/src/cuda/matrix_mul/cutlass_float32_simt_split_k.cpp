@@ -15,6 +15,7 @@
 #include "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper.cuh"
 #include "src/cuda/utils.h"
 
+#if CUDA_VERSION >= 9020
 using namespace megdnn;
 using namespace cuda;
 using namespace cutlass_wrapper;
@@ -22,12 +23,12 @@ using namespace cutlass_wrapper;
 bool MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::is_available(
         const SizeArgs& args) const {
     auto&& param = args.opr->param();
-    int m = args.layout_c.shape[0], n = args.layout_c.shape[1],
+    int n = args.layout_c.shape[1],
         k = args.layout_a.shape[param.transposeA ? 0 : 1];
     return args.opr->param().format == param::MatrixMul::Format::DEFAULT &&
            args.layout_a.dtype == dtype::Float32() &&
            args.layout_b.dtype == dtype::Float32() &&
-           args.layout_c.dtype == dtype::Float32() && k > std::max(m, n);
+           args.layout_c.dtype == dtype::Float32() && k > n;
 }
 
 size_t MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::get_workspace_in_bytes(
@@ -38,7 +39,7 @@ size_t MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::get_workspace_in_bytes(
     int m = args.layout_c.shape[0], n = args.layout_c.shape[1],
         k = args.layout_a.shape[param.transposeA ? 0 : 1];
     GemmCoord problem_size{m, n, k};
-    int split_k_slices = k / std::max(m, n);
+    int split_k_slices = k / n;
     return cutlass_matrix_mul_float32_simt_get_workspace_size(
             param.transposeA, lda, param.transposeB, ldb, ldc, problem_size,
             1.f, 0.f,
@@ -58,7 +59,7 @@ void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::exec(
     int m = args.tensor_c.layout.shape[0], n = args.tensor_c.layout.shape[1],
         k = args.tensor_a.layout.shape[param.transposeA ? 0 : 1];
     GemmCoord problem_size{m, n, k};
-    int split_k_slices = k / std::max(m, n);
+    int split_k_slices = k / n;
     auto&& stream = cuda_stream(args.opr->handle());
     int* workspace = reinterpret_cast<int*>(args.workspace.raw_ptr);
     return cutlass_matrix_mul_float32_simt(
@@ -72,5 +73,6 @@ void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::exec(
                       m_algo_param.warp_k},
             stream, split_k_slices);
 }
+#endif
 
 // vim: syntax=cpp.doxygen

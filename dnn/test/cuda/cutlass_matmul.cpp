@@ -90,7 +90,7 @@ void test_multibatchsize(
                 if (std::regex_match(
                             i.name.c_str(),
                             std::regex("(" + std::string(algo) + ")(.*)"))) {
-                    opr_reference->execution_policy().algo = i;
+                    opr_reference->execution_policy().algo = i.desc;
                     break;
                 }
             }
@@ -119,7 +119,7 @@ void test_multibatchsize(
                 if (std::regex_match(
                             i.name.c_str(),
                             std::regex("(" + std::string(algo) + ")(.*)"))) {
-                    opr_reference->execution_policy().algo = i;
+                    opr_reference->execution_policy().algo = i.desc;
                     break;
                 }
             }
@@ -290,6 +290,30 @@ TEST_F(CUDA, CUTLASS_GEMM_SPLIT_K_MULTI_BATCHSIZE) {
             "CUTLASS_FLOAT32_SIMT_SPLIT_K_128X128X8_32X64X8", args,
             param::MatrixMul::Format::DEFAULT,
             [](const matrix_mul::TestArg& arg) { return arg.k <= arg.n; });
+}
+
+TEST_F(CUDA, CUTLASS_GEMV_BATCHED_STRIDED_128_MULTI_BATCHSIZE) {
+    auto args = matrix_mul::get_matmul_args_no_mask();
+    test_multibatchsize(handle_cuda(), dtype::Float32(), dtype::Float32(),
+                        dtype::Float32(),
+                        "CUTLASS_FLOAT32_SIMT_GEMV_BATCHED_STRIDED_128", args,
+                        param::MatrixMul::Format::DEFAULT);
+}
+
+TEST_F(CUDA, CUTLASS_GEMV_BATCHED_STRIDED_64_MULTI_BATCHSIZE) {
+    auto args = matrix_mul::get_matmul_args_no_mask();
+    test_multibatchsize(handle_cuda(), dtype::Float32(), dtype::Float32(),
+                        dtype::Float32(),
+                        "CUTLASS_FLOAT32_SIMT_GEMV_BATCHED_STRIDED_64", args,
+                        param::MatrixMul::Format::DEFAULT);
+}
+
+TEST_F(CUDA, CUTLASS_GEMV_BATCHED_STRIDED_32_MULTI_BATCHSIZE) {
+    auto args = matrix_mul::get_matmul_args_no_mask();
+    test_multibatchsize(handle_cuda(), dtype::Float32(), dtype::Float32(),
+                        dtype::Float32(),
+                        "CUTLASS_FLOAT32_SIMT_GEMV_BATCHED_STRIDED_32", args,
+                        param::MatrixMul::Format::DEFAULT);
 }
 
 #define MEGDNN_FOREACH_CUTLASS_KERNEL(cb) \

@@ -15,20 +15,17 @@
 #include "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper.cuh"
 #include "src/cuda/utils.h"
 
+#if CUDA_VERSION >= 9020
 using namespace megdnn;
 using namespace cuda;
 using namespace cutlass_wrapper;
 
 bool MatrixMulForwardImpl::AlgoFloat32SIMT::is_available(
         const SizeArgs& args) const {
-#if CUDA_VERSION >= 9200
     return args.opr->param().format == param::MatrixMul::Format::DEFAULT &&
            args.layout_a.dtype == dtype::Float32() &&
            args.layout_b.dtype == dtype::Float32() &&
            args.layout_c.dtype == dtype::Float32();
-#else
-    return false;
-#endif
 }
 
 size_t MatrixMulForwardImpl::AlgoFloat32SIMT::get_workspace_in_bytes(
@@ -69,5 +66,6 @@ void MatrixMulForwardImpl::AlgoFloat32SIMT::exec(const ExecArgs& args) const {
                       m_algo_param.warp_k},
             stream);
 }
+#endif
 
 // vim: syntax=cpp.doxygen
