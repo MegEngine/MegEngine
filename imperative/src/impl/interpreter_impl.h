@@ -38,22 +38,77 @@ using TensorInfoPtr = std::shared_ptr<TensorInfo>;
 struct TensorInfo {
     TensorPtr ptr;
     LogicalTensorDesc desc;
+
+    // FIXME: broken by drop
     bool value_fetched = false;
     bool invalid = false;
-    bool allow_delete = false;
 
     EvictType evict_type = NONE;
 
     HostTensorND h_value;
-    size_t locked = 0;
+
+    // reserved for auto drop
+    size_t pinned = 0;
     size_t recompute_times = 0;
 
     struct ComputePath {
         std::shared_ptr<OpDef> op;
-        SmallVector<TensorInfoPtr> inputs;
-        SmallVector<std::weak_ptr<TensorInfo>> outputs;
-        SmallVector<std::weak_ptr<TensorInfo>> dep_outputs;
-    } path;
+        SmallVector<TensorInfo*> inputs;
+        SmallVector<TensorInfo*> unique_inputs;
+        SmallVector<TensorInfo*> outputs;
+
+        size_t ref_cnt() {
+            return outputs.size() - std::count(outputs.begin(), outputs.end(), nullptr);
+        }
+
+        static ComputePath* make(std::shared_ptr<OpDef> op, SmallVector<TensorInfo*> inputs, SmallVector<TensorInfo*> outputs) {
+            auto* path = new TensorInfo::ComputePath();
+            path->op = op;
+            path->inputs = inputs;
+            path->outputs = outputs;
+            // dedup
+            SmallVector<TensorInfo*> unique_inputs = inputs;
+            std::sort(unique_inputs.begin(), unique_inputs.end());
+            unique_inputs.erase(std::unique(unique_inputs.begin(), unique_inputs.end()), unique_inputs.end());
+            path->unique_inputs = unique_inputs;
+            // attach users
+            for (auto input: unique_inputs) {
+                input->users.push_back(path);
+            }
+            // attach producer
+            for (auto output: outputs) {
+                output->producer = path;
+            }
+            return path;
+        }
+    }* producer = nullptr;
+
+    void pin() {
+        ++pinned;
+    }
+
+    void unpin() {
+        --pinned;
+    }
+
+    void detach_producer() {
+        if (!producer) {
+            return;
+        }
+        auto output = std::find(producer->outputs.begin(), producer->outputs.end(), this);
+        mgb_assert(output != producer->outputs.end());
+        *output = nullptr;
+        if (producer->ref_cnt() == 0) {
+            for (auto* input: producer->unique_inputs) {
+                input->users.erase(std::find(input->users.begin(), input->users.end(), producer));
+            }
+            delete producer;
+        }
+        producer = nullptr;
+    }
+
+    SmallVector<ComputePath*> users;
+
 };
 
 struct Put {
@@ -186,17 +241,16 @@ struct ChannelImpl : Interpreter::Channel {
 private:
     TensorInfo* alloc();
     void free(TensorInfo*);
-    void remove_dep(TensorInfo*);
+    void detach_users(TensorInfo*);
 
     void process_one_task(Command&);
 
     void check_worker_exc_unsafe();
 
-    void produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice);
-    void do_swap_out(TensorInfo* dest);
-    void do_swap_in(TensorInfo* dest);
-    void do_drop(TensorInfo* dest);
-    void regenerate(TensorInfo* dest, bool must_drop);
+    void produce_tensor(TensorInfo* dest, TensorPtr ptr);
+
+    void regenerate(TensorInfo* dest);
+    void recompute(TensorInfo::ComputePath* path);
 
     void dispatch_default_cpu(
         std::shared_ptr<OpDef> op,
@@ -234,24 +288,6 @@ private:
     private:
         ChannelImpl* m_owner;
     } m_worker;
-
-    struct SharedTensorInfoMap {
-        void insert(TensorInfo* info) {
-            MGB_LOCK_GUARD(mtx);
-            tmap.emplace(info, TensorInfoPtr{info, [](TensorInfo* ptr){ ptr->allow_delete = true;}});
-        }
-        void erase(TensorInfo* info) {
-            MGB_LOCK_GUARD(mtx);
-            tmap.erase(info);
-        }
-        TensorInfoPtr at(TensorInfo* info) {
-            MGB_LOCK_GUARD(mtx);
-            return tmap.at(info);
-        }
-    private:
-        std::mutex mtx;
-        std::unordered_map<TensorInfo*, TensorInfoPtr> tmap;
-    }m_st;
 
     /**
      * Buf a command window for following fuse
