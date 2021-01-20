@@ -34,6 +34,8 @@ def TypeCvt: MgbHashableOp<"TypeCvt", [], [NoSideEffect]> {
   let results = (outs AnyType);
 }
 
+def MatrixInverse: MgbHashableOp<"MatrixInverse", [EmptyParam]>;
+
 def MatrixMul: MgbHashableOp<"MatrixMul", [MatrixMulParam, ExecutionPolicyParamBase<"policy">]>;
 
 def BatchedMatrixMul: MgbHashableOp<"BatchedMatmul", [MatrixMulParam, ExecutionPolicyParamBase<"policy">]>;

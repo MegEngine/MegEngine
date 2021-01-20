@@ -60,6 +60,25 @@ def test_dropout():
     assert out.numpy().sum() >= 0.0
 
 
+def test_matinv():
+    shape1 = (5, 5)
+    shape2 = (3, 9, 9)
+    data1 = np.random.random(shape1).astype("float32")
+    data2 = np.random.random(shape2).astype("float32")
+
+    cases = [
+        {"input": data1},
+        {"input": data2},
+    ]
+
+    opr_test(
+        cases,
+        F.matinv,
+        compare_fn=lambda x, y: np.testing.assert_allclose(x.numpy(), y, rtol=1e-5),
+        ref_fn=np.linalg.inv,
+    )
+
+
 def test_matmul():
     shape1 = 3
     shape2 = 3
