@@ -31,9 +31,7 @@ apply_result_t apply_trace(ApplyContext& ctx) {
         }
         py::object ret = py::reinterpret_steal<py::object>(
                 PyObject_Call(cpp_apply_backward_varnode, args.ptr(), nullptr));
-        if (!ret) {
-            throw py::value_error("invalid py object call");
-        }
+        if (!ret) throw py::error_already_set();
 
         // assumption: python function always returns PyList
         auto tup = py::reinterpret_borrow<py::list>(ret);
@@ -58,8 +56,9 @@ apply_result_t apply_trace(ApplyContext& ctx) {
     for (size_t i = 0; i < ctx.nargs; i++) {
         args[i + 1] = TensorWrapper::make(ctx.args[i]->shared_from_this());
     }
-    auto ret = py::reinterpret_steal<py::object>(
-            PyObject_Call(pyf, args.ptr(), nullptr));
+    auto pyout = PyObject_Call(pyf, args.ptr(), nullptr);
+    if (!pyout) throw py::error_already_set();
+    auto ret = py::reinterpret_steal<py::object>(pyout);
 
     // assumption: python function always returns PyList
     auto tup = py::reinterpret_borrow<py::list>(ret);
