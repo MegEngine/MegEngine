@@ -139,3 +139,48 @@ def test_get_opr_seq():
 
     seq_2 = cgtools.get_oprs_seq(outputs, False)
     assert len(seq_2) == 6
+
+
+def test_graph_function():
+    class Net(M.Module):
+        def forward(self, a, b):
+            return a - b, a * b
+
+    net = Net()
+
+    @trace(symbolic=True, capture_as_const=True)
+    def function(a, b, *, net=None):
+        return net(a, b)
+
+    a = np.array([1, 2, 3])
+    b = np.array([3])
+    x, y = function(megengine.tensor(a), megengine.tensor(b), net=net)
+
+    file = io.BytesIO()
+    function.dump(
+        file,
+        arg_names=["a", "b"],
+        output_names=["x", "y"],
+        optimize_for_inference=False,
+    )
+    file.seek(0)
+
+    graph = cgtools.GraphInference(file)
+    results = graph.run(inp_dict={"a": a, "b": b})
+    np.testing.assert_equal(x.numpy(), results["x"])
+    np.testing.assert_equal(y.numpy(), results["y"])
+
+    results = graph.run(a, inp_dict={"b": b})
+    np.testing.assert_equal(x.numpy(), results["x"])
+    np.testing.assert_equal(y.numpy(), results["y"])
+
+    results = graph.run(a, b)
+    np.testing.assert_equal(x.numpy(), results["x"])
+    np.testing.assert_equal(y.numpy(), results["y"])
+
+    file.seek(0)
+
+    graph1 = cgtools.GraphInference(file, outputs=["x"])
+    results = graph1.run(inp_dict={"a": a, "b": b})
+    np.testing.assert_equal(x.numpy(), results["x"])
+    assert "y" not in results
