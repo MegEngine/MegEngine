@@ -76,6 +76,8 @@ def WarpPerspective: MgbHashableOp<"WarpPerspective", [WarpPerspectiveParam]>;
 
 def Remap: MgbHashableOp<"Remap", [RemapParam]>;
 
+def Resize: MgbHashableOp<"Resize", [ResizeParam]>;
+
 def IndexingOneHot: MgbHashableOp<"IndexingOneHot", [AxisParam]>;
 
 def IndexingSetOneHot: MgbHashableOp<"IndexingSetOneHot", [AxisParam]>;

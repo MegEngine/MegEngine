@@ -373,6 +373,17 @@ def test_Broadcast():
     np.testing.assert_equal(np.ones((3, 3, 1), dtype=np.float32) * 10, x.grad.numpy())
 
 
+def test_resize():
+    x_np = np.random.rand(3, 3, 32, 32).astype("float32")
+    x = mge.Tensor(x_np)
+
+    grad = Grad().wrt(x, callback=save_to(x))
+    y = F.resize(x, (16, 16))
+
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones(x_np.shape, dtype=np.float32) / 4, x.grad.numpy())
+
+
 def test_Reduce_sum():
     x_np = np.random.rand(3, 3).astype("float32")
     x = mge.Tensor(x_np)

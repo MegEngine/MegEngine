@@ -7,7 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=too-many-lines
-from typing import Optional, Sequence, Tuple, Union
+from typing import Iterable, Optional, Sequence, Tuple, Union
 
 from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import apply
@@ -58,6 +58,7 @@ __all__ = [
     "one_hot",
     "prelu",
     "remap",
+    "resize",
     "softmax",
     "softplus",
     "svd",
@@ -875,6 +876,41 @@ def one_hot(inp: Tensor, num_classes: int) -> Tensor:
 
     op = builtin.IndexingSetOneHot(axis=inp.ndim)
     (result,) = apply(op, zeros_tensor, inp, ones_tensor)
+    return result
+
+
+def resize(
+    inp: Tensor, target_shape: Iterable[int], interp_mode: str = "LINEAR"
+) -> Tensor:
+    r"""
+    Applies resize transformation to batched 2D images.
+
+    :param inp: `(N, C, H, W)` input tensor. Currently only support "NCHW" format.
+    :param target_shape: `(H, W)` target images shape.
+    :param interp_mode: interpolation methods. Defaule mode is "LINEAR", Currently only support "LINEAR".
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.random.randn(10, 3, 32, 32))
+        out = F.resize(x, (16, 16))
+        print(out.numpy().shape)
+
+    Outputs:
+
+    .. testoutput::
+
+        (10, 3, 16, 16)
+
+    """
+    op = builtin.Resize(imode=interp_mode, format="NCHW")
+    shape = astensor1d(target_shape, inp, dtype="int32", device=inp.device)
+    (result,) = apply(op, inp, shape)
     return result
 
 
