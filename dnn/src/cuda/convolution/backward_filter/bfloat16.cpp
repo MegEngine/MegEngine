@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "./algo.h"
@@ -17,33 +18,39 @@ using namespace megdnn;
 using namespace cuda;
 using namespace convolution;
 
-ConvolutionBackwardFilterImpl::AlgoBFloat16::AlgoBFloat16(
-        ConvolutionBackwardFilterImpl::AlgoBase* algorithm)
-        : m_algorithm(algorithm) {
-    megdnn_assert_internal(algorithm);
-    m_name = ssprintf("CONVOLUTION_BACKWARD_Filter_BFLOAT16:%s",
-                      m_algorithm->name());
-}
-
-ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs
-ConvolutionBackwardFilterImpl::AlgoBFloat16::float_args(
-        const SizeArgs& args, ConvolutionBackwardFilterImpl* opr,
-        TensorLayout& fsrc, TensorLayout& fdiff, TensorLayout& fgrad) const {
-    fsrc = *args.src_layout;
-    fdiff = *args.diff_layout;
-    fgrad = *args.grad_layout;
+namespace {
+std::pair<TensorLayoutArray, ConvolutionBackwardFilterImpl::Param>
+sub_opr_config(const TensorLayoutArray& layouts,
+               const ConvolutionBackwardFilterImpl* opr) {
+    megdnn_assert(layouts.size() >= 3);
+    std::pair<TensorLayoutArray, ConvolutionBackwardFilterImpl::Param> ret;
+    ret.first = layouts;
     auto change_dtype = [](TensorLayout& layout) {
         if (layout.dtype == dtype::BFloat16()) {
             layout.dtype = dtype::Float32();
         }
     };
-    change_dtype(fsrc);
-    change_dtype(fdiff);
-    change_dtype(fgrad);
-    opr->param() = args.opr->param();
-    opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-    opr->execution_policy() = {m_algorithm->desc(), {}};
-    return SizeArgs(opr, fsrc, fdiff, fgrad);
+    change_dtype(ret.first[0]);
+    change_dtype(ret.first[1]);
+    change_dtype(ret.first[2]);
+
+    ret.second = opr->param();
+    ret.second.compute_mode =
+            ConvolutionBackwardFilter::Param::ComputeMode::DEFAULT;
+    return ret;
+}
+}  // namespace
+
+std::vector<Algorithm::SearchItem>
+ConvolutionBackwardFilterImpl::AlgoBFloat16::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    auto&& config = sub_opr_config(
+            layouts, static_cast<const ConvolutionBackwardFilterImpl*>(opr));
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER, param_str,
+             config.first}};
 }
 
 bool ConvolutionBackwardFilterImpl::AlgoBFloat16::is_available(
@@ -51,25 +58,33 @@ bool ConvolutionBackwardFilterImpl::AlgoBFloat16::is_available(
     TensorLayout fsrc, fdiff, fgrad;
     auto conv_back_filter_opr =
             args.handle->create_operator<ConvolutionBackwardFilter>();
-    SizeArgs fargs = float_args(args,
-                                static_cast<ConvolutionBackwardFilterImpl*>(
-                                        conv_back_filter_opr.get()),
-                                fsrc, fdiff, fgrad);
+
+    auto&& config = sub_opr_config(
+            {*args.src_layout, *args.diff_layout, *args.grad_layout},
+            args.opr);
+    conv_back_filter_opr->param() =  config.second;
     return args.src_layout->dtype == args.diff_layout->dtype &&
            args.src_layout->dtype == dtype::BFloat16() &&
-           m_algorithm->is_available(fargs);
+           get_algorithm(static_cast<ConvolutionBackwardFilterImpl*>(
+                                 conv_back_filter_opr.get()),
+                         config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle
 ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
-    TensorLayout fsrc, fdiff, fgrad;
     auto conv_back_filter_opr =
             args.handle->create_operator<ConvolutionBackwardFilter>();
-    SizeArgs fargs = float_args(args,
-                                static_cast<ConvolutionBackwardFilterImpl*>(
-                                        conv_back_filter_opr.get()),
-                                fsrc, fdiff, fgrad);
+    if (args.opr->execution_policy().algo.valid()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        conv_back_filter_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+    auto&& config = sub_opr_config(
+            {*args.src_layout, *args.diff_layout, *args.grad_layout},
+            args.opr);
+
+    conv_back_filter_opr->param() = config.second;
     SmallVector<size_t> sizes;
     auto get_workspace = [&sizes](const TensorLayout& src,
                                   const TensorLayout& dst) {
@@ -77,11 +92,14 @@ ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_bundle(
             sizes.push_back(dst.span().dist_byte());
         }
     };
-    get_workspace(*args.src_layout, fsrc);
-    get_workspace(*args.diff_layout, fdiff);
-    get_workspace(*args.grad_layout, fgrad);
-    sizes.push_back(m_algorithm->get_workspace_in_bytes(fargs));
-    return {ptr, std::move(sizes)};
+
+    get_workspace(*args.src_layout, config.first[0]);
+    get_workspace(*args.diff_layout, config.first[1]);
+    get_workspace(*args.grad_layout, config.first[2]);
+    sizes.push_back(conv_back_filter_opr->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2]));
+    auto ret = WorkspaceBundle{ptr, std::move(sizes)};
+    return ret;
 }
 
 size_t ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_in_bytes(
@@ -107,7 +125,12 @@ void ConvolutionBackwardFilterImpl::AlgoBFloat16::exec(
         conv_back_filter_opr->param() = args.opr->param();
         conv_back_filter_opr->param().compute_mode =
                 Param::ComputeMode::DEFAULT;
-        conv_back_filter_opr->execution_policy() = {m_algorithm->desc(), {}};
+
+        if (args.opr->execution_policy().algo.valid()) {
+            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+            conv_back_filter_opr->execution_policy() =
+                    args.opr->execution_policy().sub_policy[0];
+        }
         conv_back_filter_opr->exec(fsrc_tensor, fdiff_tensor, fgrad_tensor,
                                    cvter.workspace());
     }

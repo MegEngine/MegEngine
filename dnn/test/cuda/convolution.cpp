@@ -328,12 +328,18 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
                 .set_epsilon(1e-1)
                 .set_param(arg.param)
                 .exec(TensorLayoutArray{src, dst, filter});
+
+        checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
+                ExecutionPolicyAlgoName{"CONVOLUTION_BACKWARD_FILTER_BFLOAT16",
+                                        {{"MATMUL", {}}}}));
         src.dtype = dst.dtype = filter.dtype = dtype::BFloat16();
         checker.set_rng(0, &rng)
                 .set_rng(1, &rng)
                 .set_epsilon(1e-1)
                 .set_param(arg.param)
                 .exec(TensorLayoutArray{src, dst, filter});
+        checker.reset_before_exec_callback();
+        checker.opr()->execution_policy() = {};
     }
 }
 

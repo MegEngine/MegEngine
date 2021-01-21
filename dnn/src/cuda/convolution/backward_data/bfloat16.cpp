@@ -60,7 +60,7 @@ bool ConvolutionBackwardDataImpl::AlgoBFloat16::is_available(
     auto&& config = sub_opr_config(
             {*args.filter_layout, *args.diff_layout, *args.grad_layout},
             args.opr);
-    conv_back_data_opr->param() =  config.second;
+    conv_back_data_opr->param() = config.second;
     return args.diff_layout->dtype == args.filter_layout->dtype &&
            args.diff_layout->dtype == dtype::BFloat16() &&
            get_algorithm(static_cast<ConvolutionBackwardDataImpl*>(
@@ -80,7 +80,7 @@ WorkspaceBundle ConvolutionBackwardDataImpl::AlgoBFloat16::get_workspace_bundle(
     auto&& config = sub_opr_config(
             {*args.filter_layout, *args.diff_layout, *args.grad_layout},
             args.opr);
-    conv_back_data_opr->param() =  config.second;
+    conv_back_data_opr->param() = config.second;
     SmallVector<size_t> sizes;
     auto get_workspace = [&sizes](const TensorLayout& src,
                                   const TensorLayout& dst) {
