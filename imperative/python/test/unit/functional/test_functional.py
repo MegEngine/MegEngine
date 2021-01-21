@@ -704,3 +704,14 @@ def test_argmxx_on_inf():
 
     assert all(run_argmax() >= 0)
     assert all(run_argmin() >= 0)
+
+
+def test_cvt_color():
+    def rgb2gray(rgb):
+        return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
+
+    inp = np.random.randn(3, 3, 3, 3).astype(np.float32)
+    out = np.expand_dims(rgb2gray(inp), 3).astype(np.float32)
+    x = tensor(inp)
+    y = F.img_proc.cvt_color(x, mode="RGB2GRAY")
+    np.testing.assert_allclose(y.numpy(), out, atol=1e-5)

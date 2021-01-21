@@ -254,4 +254,6 @@ def TensorRTRuntime: MgbHashableOp<"TensorRTRuntime"> {
   );
 }
 
+def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
+
 #endif // MGB_OPS

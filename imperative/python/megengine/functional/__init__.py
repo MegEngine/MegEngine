@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=redefined-builtin
 from .elemwise import *
+from .img_proc import *
 from .math import *
 from .nn import *
 from .tensor import *
