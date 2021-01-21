@@ -233,18 +233,17 @@ HostTensorND ChannelImpl::get_value(Handle handle) {
     mgb_assert(!m_waitee);
     // donnot use info->value_fetched, it's unsafe
     mgb_assert(!info->invalid, "Invalid tensor, unable to get_value!");
+    std::unique_lock<decltype(m_mutex)> lock(m_mutex);
     TensorPtr tensor_ptr = info->ptr;
     auto value_fetched = [&]() {
         return tensor_ptr && tensor_ptr->value_fetched();
     };
     if (!value_fetched()) {
-        std::unique_lock<decltype(m_mutex)> lock(m_mutex);
         m_waitee = info;
         regenerate(info);
         m_buffer.enqueue(GetValue{info});
         m_cv.wait(lock, [&]() {
             check_worker_exc_unsafe();
-            // get tensor ptr in lock to ensure safety
             tensor_ptr = info->ptr;
             return value_fetched();
         });
@@ -357,6 +356,11 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
     if (m_waitee == dest) {
         m_cv.notify_all();
     }
+}
+
+void ChannelImpl::release_tensor(TensorInfo* dest) {
+    MGB_LOCK_GUARD(m_mutex);
+    dest->ptr.reset();
 }
 
 void ChannelImpl::regenerate(TensorInfo* dest) {
@@ -481,9 +485,9 @@ void ChannelImpl::process_one_task(Command& cmd) {
                 produce_tensor(cmd.dest, Tensor::make(cmd.dest->h_value));
             } else if constexpr (std::is_same_v<T, SwapOut>) {
                 cmd.dest->h_value = cmd.dest->ptr->get_value();
-                cmd.dest->ptr.reset();
+                release_tensor(cmd.dest);
             } else if constexpr (std::is_same_v<T, Drop>) {
-                cmd.dest->ptr.reset();
+                release_tensor(cmd.dest);
             } else if constexpr (std::is_same_v<T, Move>) {
                 produce_tensor(cmd.dest, cmd.src->ptr);
                 free(cmd.src);

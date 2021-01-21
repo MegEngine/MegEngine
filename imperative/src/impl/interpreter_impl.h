@@ -249,6 +249,8 @@ private:
 
     void produce_tensor(TensorInfo* dest, TensorPtr ptr);
 
+    void release_tensor(TensorInfo* dest);
+
     void regenerate(TensorInfo* dest);
     void recompute(TensorInfo::ComputePath* path);
 
