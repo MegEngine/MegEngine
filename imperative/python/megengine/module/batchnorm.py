@@ -35,6 +35,10 @@ class _BatchNorm(Module):
         self.track_running_stats = track_running_stats
         self._track_running_stats_saved = track_running_stats
         self.freeze = freeze
+        if self.freeze:
+            assert (
+                self._track_running_stats_saved
+            ), "track_running_stats must be initilized to True if freeze is True"
         tshape = (1, self.num_features, 1, 1)
         if self.affine:
             self.weight = Parameter(np.ones(tshape, dtype=np.float32))
@@ -84,10 +88,24 @@ class _BatchNorm(Module):
 
             inp = inp.reshape(new_shape)
 
-        if self.freeze and self.training and self._track_running_stats_saved:
-            scale = self.weight * (self.running_var + self.eps) ** (-0.5)
-            bias = self.bias - self.running_mean * scale
-            return inp * scale.detach() + bias.detach()
+        _weight = self.weight
+        _bias = self.bias
+
+        if self.freeze:
+            if _weight is not None:
+                _weight = _weight.detach()
+            if _bias is not None:
+                _bias = _bias.detach()
+
+            # Need to expand to elementwise operations here
+            # see MGB_IMPL_OPR_GRAD(BatchNormForward) in src/opr/impl/dnn/batch_norm.cpp
+            scale = (self.running_var + self.eps) ** (-0.5)
+            if _weight is not None:
+                scale *= _weight
+            bias = -self.running_mean * scale
+            if _bias is not None:
+                bias += _bias
+            return inp * scale + bias
 
         if self.training and self.track_running_stats:
             exponential_average_factor = self.momentum
@@ -98,8 +116,8 @@ class _BatchNorm(Module):
             inp,
             self.running_mean if self.track_running_stats else None,
             self.running_var if self.track_running_stats else None,
-            self.weight,
-            self.bias,
+            _weight,
+            _bias,
             training=self.training
             or ((self.running_mean is None) and (self.running_var is None)),
             momentum=exponential_average_factor,
@@ -121,7 +139,7 @@ class _BatchNorm(Module):
 
 class SyncBatchNorm(_BatchNorm):
     r"""
-    Applies Synchronization Batch Normalization.
+    Applies Synchronized Batch Normalization for distributed training.
     """
 
     def __init__(
@@ -169,15 +187,25 @@ class SyncBatchNorm(_BatchNorm):
         else:
             exponential_average_factor = 0.0  # useless
 
+        _weight = self.weight
+        _bias = self.bias
+
+        if self.freeze:
+            if _weight is not None:
+                _weight = _weight.detach()
+            if _bias is not None:
+                _bias = _bias.detach()
+
         output = sync_batch_norm(
             inp,
             self.running_mean,
             self.running_var,
-            self.weight,
-            self.bias,
-            self.training or not self.track_running_stats,
-            exponential_average_factor,
-            self.eps,
+            _weight,
+            _bias,
+            training=(self.training and not self.freeze)
+            or ((self.running_mean is None) and (self.running_var is None)),
+            momentum=exponential_average_factor,
+            eps=self.eps,
             group=self.group,
         )
 
@@ -257,8 +285,7 @@ class BatchNorm2d(_BatchNorm):
     :param freeze: when set to True, this module does not update the
         running mean and variance, and uses the running mean and variance instead of
         the batch mean and batch variance to normalize the input. The parameter takes effect
-        only when the module is initilized with track_running_stats as True and
-        the module is in training mode.
+        only when the module is initilized with track_running_stats as True.
         Default: False
 
     Examples:

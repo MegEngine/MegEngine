@@ -11,15 +11,23 @@ import pytest
 
 import megengine
 import megengine.autodiff as ad
+import megengine.distributed as dist
+import megengine.functional as F
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
+from megengine.distributed.helper import get_device_count_by_fork
 from megengine.jit import trace
-from megengine.module import BatchNorm2d, Module
+from megengine.module import BatchNorm2d, Module, SyncBatchNorm
 
 
-def test_frozen_bn():
+def run_frozen_bn(BNModule, use_trace=False, use_symbolic=False):
     nchannel = 3
-    m = BatchNorm2d(nchannel, freeze=True)
+    m = BNModule(nchannel, freeze=True)
+    var = 4.0
+    bias = 1.0
+    shape = (1, nchannel, 1, 1)
+    m.running_var[...] = var * F.ones(shape)
+    m.running_mean[...] = bias * F.ones(shape)
 
     saved_var = m.running_var.numpy()
     saved_mean = m.running_mean.numpy()
@@ -31,16 +39,45 @@ def test_frozen_bn():
     optim.clear_grad()
 
     data = np.random.random((6, nchannel, 2, 2)).astype("float32")
-    with gm:
-        loss = m(data).mean()
-        gm.backward(loss)
-    optim.step()
 
-    np.testing.assert_equal(m.running_var.numpy(), saved_var)
-    np.testing.assert_equal(m.running_mean.numpy(), saved_mean)
-    np.testing.assert_equal(m.weight.numpy(), saved_wt)
-    np.testing.assert_equal(m.bias.numpy(), saved_bias)
-    np.testing.assert_almost_equal(loss.numpy(), data.mean(), 5)
+    def train_fn(d):
+        for _ in range(3):
+            with gm:
+                loss = m(d).mean()
+                gm.backward(loss)
+            optim.step()
+        return loss
+
+    if use_trace:
+        train_fn = trace(train_fn, symbolic=use_symbolic)
+
+    for _ in range(3):
+        loss = train_fn(megengine.Tensor(data))
+        np.testing.assert_equal(m.running_var.numpy(), saved_var)
+        np.testing.assert_equal(m.running_mean.numpy(), saved_mean)
+        np.testing.assert_equal(m.weight.numpy(), saved_wt)
+        np.testing.assert_equal(m.bias.numpy(), saved_bias)
+        np.testing.assert_almost_equal(
+            loss.numpy(), ((data - bias) / np.sqrt(var)).mean(), 5
+        )
+
+
+def test_frozen_bn():
+    run_frozen_bn(BatchNorm2d)
+    run_frozen_bn(BatchNorm2d, True, False)
+    run_frozen_bn(BatchNorm2d, True, True)
+
+
+@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.isolated_distributed
+def test_frozen_synced_bn():
+    @dist.launcher(n_gpus=2)
+    def worker():
+        run_frozen_bn(SyncBatchNorm)
+        run_frozen_bn(SyncBatchNorm, True, False)
+        run_frozen_bn(SyncBatchNorm, True, True)
+
+    worker()
 
 
 def test_bn_no_track_stat():
@@ -112,3 +149,11 @@ def test_trace_bn_forward_twice():
     x = np.ones((1, 1, 32, 32), dtype=np.float32)
     y = train_bn(x, net=Simple())
     np.testing.assert_equal(y.numpy(), 0)
+
+
+# https://github.com/MegEngine/MegEngine/issues/145
+def test_frozen_bn_no_affine():
+    nchannel = 3
+    m = BatchNorm2d(nchannel, freeze=True, affine=False)
+    data = megengine.Tensor(np.random.random((6, nchannel, 2, 2)).astype("float32"))
+    m(data).numpy()
