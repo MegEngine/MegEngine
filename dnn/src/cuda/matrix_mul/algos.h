@@ -148,25 +148,20 @@ public:
 #if !MEGDNN_DISABLE_FLOAT16
 class MatrixMulForwardImpl::AlgoBFloat16 final : public AlgoBase {
 public:
-    AlgoBFloat16(MatrixMulForwardImpl::AlgoBase*);
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
-    bool is_reproducible() const override { return true; }
-    MEGDNN_DECL_ALGO_TYPE(CUDA_NAIVE)
+    MEGDNN_DECL_ALGO_TYPE(CUDA_BFLOAT16)
 
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_algorithm, ret);
-        return ret;
-    }
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
+
+    const char* name() const override { return "MATMUL_BFLOAT16"; }
+    bool is_reproducible() const override { return true; }
 
 private:
-    MatrixMulForwardImpl::AlgoBase* m_algorithm = nullptr;
-    std::string m_name;
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
-    SizeArgs float_args(const SizeArgs& args) const;
 };
 #endif
 
@@ -185,7 +180,7 @@ public:
     AlgoCuBlasLt cublas_lt;
 #endif
 #if !MEGDNN_DISABLE_FLOAT16
-    std::unique_ptr<AlgoBFloat16> cublas_bfloat16;
+    AlgoBFloat16 bfloat16;
 #endif
     std::vector<AlgoBase*> all_algos;
 

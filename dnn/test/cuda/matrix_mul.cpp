@@ -218,6 +218,9 @@ TEST_F(CUDA, MATRIX_MUL) {
                 B = TensorShape{k, n};
             if (dtype == dtype::BFloat16()) {
                 param.compute_mode = param::MatrixMul::ComputeMode::FLOAT32;
+                checker.set_before_exec_callback(
+                        AlgoChecker<MatrixMulForward>(ExecutionPolicyAlgoName{
+                                "MATMUL_BFLOAT16", {{"CUBLAS", {}}}}));
             }
             checker.set_param(param)
                     .set_dtype(0, stype)
@@ -228,6 +231,10 @@ TEST_F(CUDA, MATRIX_MUL) {
                                          ? 5e-2
                                          : 5e-3)
                     .execs({A, B, {}});
+            if (dtype == dtype::BFloat16()) {
+                checker.reset_before_exec_callback();
+                checker.opr()->execution_policy() = {};
+            }
         }
     }
 
