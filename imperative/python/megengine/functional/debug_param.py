@@ -8,23 +8,31 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import os
 
-_conv_execution_strategy = os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY", "HEURISTIC")
+from ..logger import get_logger
+from ..utils.deprecation import deprecated
+
+_execution_strategy = os.getenv("MEGENGINE_EXECUTION_STRATEGY", "HEURISTIC")
+
+if os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY") != None:
+    get_logger().warning(
+        "Environment variable `MEGENGINE_CONV_EXECUTION_STRATEGY` is deprecated, please use `MEGENGINE_EXECUTION_STRATEGY`"
+    )
 
 
-def get_conv_execution_strategy() -> str:
+def get_execution_strategy() -> str:
     """
-    Returns the execuation strategy of :class:`~.Conv2d`.
+    Returns the execution strategy of :class:`~.Conv2d` and :func:'~.matmul'
 
-    See :func:`~.set_conv_execution_strategy` for possible return values
+    See :func:`~.set_execution_strategy` for possible return values
     """
-    return _conv_execution_strategy
+    return _execution_strategy
 
 
-def set_conv_execution_strategy(option: str):
+def set_execution_strategy(option: str):
     """
-    Sets the execuation strategy of :class:`~.Conv2d`.
+    Sets the execution strategy of :class:`~.Conv2d` and :func:'~.matmul'
 
-    :param option: Decides how :class:`~.Conv2d` algorithm is chosen.
+    :param option: Decides how :class:`~.Conv2d` and :func:'~.matmul' algorithms are chosen.
         Available values:
 
         * 'HEURISTIC' uses heuristic to choose the fastest algorithm.
@@ -35,7 +43,7 @@ def set_conv_execution_strategy(option: str):
 
         The default strategy is 'HEURISTIC'.
 
-        It can also be set through the environment variable 'MEGENGINE_CONV_EXECUTION_STRATEGY'.
+        It can also be set through the environment variable 'MEGENGINE_EXECUTION_STRATEGY'.
     """
     valid_option = (
         "HEURISTIC",
@@ -47,5 +55,15 @@ def set_conv_execution_strategy(option: str):
     if not option in valid_option:
         raise ValueError("Valid option can only be one of {}".format(valid_option))
 
-    global _conv_execution_strategy  # pylint: disable=global-statement
-    _conv_execution_strategy = option
+    global _execution_strategy  # pylint: disable=global-statement
+    _execution_strategy = option
+
+
+@deprecated(version="1.3", reason="use get_execution_strategy() instead")
+def get_conv_execution_strategy() -> str:
+    return get_execution_strategy()
+
+
+@deprecated(version="1.3", reason="use set_execution_strategy() instead")
+def set_conv_execution_strategy(option: str):
+    return set_execution_strategy(option)

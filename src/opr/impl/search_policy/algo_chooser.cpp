@@ -336,8 +336,10 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx, bool require_reproducible) {
                       rst.workspace, rst.time);
         prof_rst.push_back(rst);
     }
-    mgb_assert(!prof_rst.empty(), "no usable convolution algorithm %s",
-               str_on_inp_shape.c_str());
+    std::string msg = ssprintf("no usable %s algorithm %s",
+                                ctx.mgb_opr()->dyn_typeinfo()->name,
+                                str_on_inp_shape.c_str());
+    mgb_assert(!prof_rst.empty(), "%s", msg.c_str());
 
     FixedTensorLayouts origin_layouts = ctx.layouts();
     typename Opr::Param origin_param = ctx.megdnn_opr()->param();

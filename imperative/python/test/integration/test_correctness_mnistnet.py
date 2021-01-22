@@ -20,7 +20,7 @@ import megengine.functional as F
 from megengine import jit
 from megengine.core._trace_option import set_symbolic_shape
 from megengine.core.tensor.utils import make_shape_tuple
-from megengine.functional.debug_param import set_conv_execution_strategy
+from megengine.functional.debug_param import set_execution_strategy
 from megengine.jit import SublinearMemoryConfig
 from megengine.module import (
     AdaptiveAvgPool2d,
@@ -242,7 +242,7 @@ def test_correctness():
     else:
         model_name = "mnist_model_with_test_cpu.mge"
     model_path = os.path.join(os.path.dirname(__file__), model_name)
-    set_conv_execution_strategy("HEURISTIC_REPRODUCIBLE")
+    set_execution_strategy("HEURISTIC_REPRODUCIBLE")
 
     run_train(model_path, False, False, max_err=1e-5)
     run_train(model_path, True, False, max_err=1e-5)
@@ -265,7 +265,7 @@ def test_correctness_use_adaptive_pooling():
     else:
         model_name = "mnist_model_with_test_cpu.mge"
     model_path = os.path.join(os.path.dirname(__file__), model_name)
-    set_conv_execution_strategy("HEURISTIC_REPRODUCIBLE")
+    set_execution_strategy("HEURISTIC_REPRODUCIBLE")
 
     run_train(model_path, False, False, max_err=1e-5, use_adaptive_pooling=True)
     run_train(model_path, True, False, max_err=1e-5, use_adaptive_pooling=True)

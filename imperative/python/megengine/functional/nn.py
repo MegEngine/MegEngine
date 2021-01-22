@@ -22,7 +22,7 @@ from ..jit.tracing import is_tracing
 from ..random import uniform
 from ..tensor import Tensor
 from ..utils.tuple_function import _pair, _pair_nonzero
-from .debug_param import get_conv_execution_strategy
+from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import exp, floor, log, log1p, maximum, minimum, relu
 from .math import argsort, matmul, max, prod, sum
@@ -149,7 +149,7 @@ def conv2d(
         pad_w=pad_w,
         dilate_h=dilate_h,
         dilate_w=dilate_w,
-        strategy=get_conv_execution_strategy(),
+        strategy=get_execution_strategy(),
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,
@@ -217,7 +217,7 @@ def conv_transpose2d(
         pad_w=pad_w,
         dilate_h=dilate_h,
         dilate_w=dilate_w,
-        strategy=get_conv_execution_strategy(),
+        strategy=get_execution_strategy(),
     )
     weight, inp = utils.convert_inputs(weight, inp)
     (output,) = apply(op, weight, inp)
@@ -282,7 +282,7 @@ def deformable_conv2d(
         pad_w=pad_w,
         dilate_h=dilate_h,
         dilate_w=dilate_w,
-        strategy=get_conv_execution_strategy(),
+        strategy=get_execution_strategy(),
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,
@@ -1658,7 +1658,7 @@ def conv1d(
         pad_w=0,
         dilate_h=dilate_h,
         dilate_w=1,
-        strategy=get_conv_execution_strategy(),
+        strategy=get_execution_strategy(),
         mode=conv_mode,
         compute_mode=compute_mode,
         sparse=sparse_type,

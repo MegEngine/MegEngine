@@ -21,7 +21,7 @@ import megengine.autodiff as ad
 import megengine.distributed as dist
 import megengine.functional as F
 from megengine.device import get_default_device, set_default_device
-from megengine.functional.debug_param import set_conv_execution_strategy
+from megengine.functional.debug_param import set_execution_strategy
 from megengine.module import AvgPool2d, BatchNorm2d, Conv2d, Linear, Module
 from megengine.optimizer import SGD
 from megengine.tensor import Tensor
@@ -198,5 +198,5 @@ def run_test(
 def test_dp_correctness():
     model_name = "mnist_model_with_test.mge"
     model_path = os.path.join(os.path.dirname(__file__), model_name)
-    set_conv_execution_strategy("HEURISTIC_REPRODUCIBLE")
+    set_execution_strategy("HEURISTIC_REPRODUCIBLE")
     run_test(model_path, False, False, max_err=1e-5)

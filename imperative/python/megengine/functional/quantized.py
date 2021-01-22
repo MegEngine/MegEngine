@@ -12,7 +12,7 @@ from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..tensor import Tensor
 from ..utils.tuple_function import _pair, _pair_nonzero
-from .debug_param import get_conv_execution_strategy
+from .debug_param import get_execution_strategy
 
 
 def conv_bias_activation(
@@ -65,7 +65,7 @@ def conv_bias_activation(
         dilate_w=dw,
         dtype=dtype,
         format="NCHW",
-        strategy=get_conv_execution_strategy(),
+        strategy=get_execution_strategy(),
         nonlineMode=nonlinear_mode,
         mode=conv_mode,
         compute_mode=compute_mode,
@@ -125,7 +125,7 @@ def batch_conv_bias_activation(
         dilate_w=dw,
         dtype=dtype,
         format="NCHW",
-        strategy=get_conv_execution_strategy(),
+        strategy=get_execution_strategy(),
         nonlineMode=nonlinear_mode,
         mode=conv_mode,
         compute_mode=compute_mode,
