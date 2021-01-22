@@ -62,6 +62,7 @@ __all__ = [
     "softmax",
     "softplus",
     "svd",
+    "warp_affine",
     "warp_perspective",
     "conv1d",
 ]
@@ -911,6 +912,45 @@ def resize(
     op = builtin.Resize(imode=interp_mode, format="NCHW")
     shape = astensor1d(target_shape, inp, dtype="int32", device=inp.device)
     (result,) = apply(op, inp, shape)
+    return result
+
+
+def warp_affine(
+    inp: Tensor,
+    weight: Tensor,
+    out_shape,
+    border_mode="REPLICATE",
+    border_val=0,
+    format="NHWC",
+    imode="LINEAR",
+):
+    """
+    Batched affine transform on 2D images.
+
+    :param inp: input image.
+    :param weight: weight tensor.
+    :param out_shape: output tensor shape.
+    :param border_mode: pixel extrapolation method.
+        Default: "WRAP". Currently "CONSTANT", "REFLECT",
+        "REFLECT_101", "ISOLATED", "WRAP", "REPLICATE", "TRANSPARENT" are supported.
+    :param border_val: value used in case of a constant border. Default: 0
+    :param format: "NHWC" as default based on historical concerns,
+        "NCHW" is also supported. Default: "NCHW".
+    :param imode: interpolation methods. Could be "LINEAR", "NEAREST", "CUBIC", "AREA".
+        Default: "LINEAR".
+    :return: output tensor.
+
+    .. note::
+
+    Here all available options for params are listed,
+    however it does not mean that you can use all the combinations.
+    On different platforms, different combinations are supported.
+    """
+    op = builtin.WarpAffine(
+        border_mode=border_mode, border_val=border_val, format=format, imode=imode
+    )
+    out_shape = utils.astensor1d(out_shape, inp, dtype="int32", device=inp.device)
+    (result,) = apply(op, inp, weight, out_shape)
     return result
 
 

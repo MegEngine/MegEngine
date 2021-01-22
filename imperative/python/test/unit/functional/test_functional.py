@@ -369,6 +369,24 @@ def test_warp_perspective():
     )
 
 
+def test_warp_affine():
+    inp_shape = (1, 3, 3, 3)
+    x = tensor(np.arange(27, dtype=np.float32).reshape(inp_shape))
+    weightv = [[[1.26666667, 0.6, -83.33333333], [-0.33333333, 1, 66.66666667]]]
+    outp = F.warp_affine(x, tensor(weightv), (2, 2), border_mode="WRAP")
+    res = np.array(
+        [
+            [
+                [[7.875, 8.875, 9.875], [8.90625, 9.90625, 10.90625]],
+                [[18.75, 19.75, 20.75], [14.90625, 15.90625, 16.90625]],
+            ]
+        ],
+        dtype=np.float32,
+    )
+    if not is_cuda_available():
+        np.testing.assert_almost_equal(outp.numpy(), res, 5)
+
+
 def test_remap():
     inp_shape = (1, 1, 4, 4)
     inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))

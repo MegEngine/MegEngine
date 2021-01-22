@@ -74,6 +74,8 @@ def ROIAlign: MgbHashableOp<"ROIAlign", [ROIAlignParam]>;
 
 def WarpPerspective: MgbHashableOp<"WarpPerspective", [WarpPerspectiveParam]>;
 
+def WarpAffine: MgbHashableOp<"WarpAffine", [WarpAffineParam]>;
+
 def Remap: MgbHashableOp<"Remap", [RemapParam]>;
 
 def Resize: MgbHashableOp<"Resize", [ResizeParam]>;
