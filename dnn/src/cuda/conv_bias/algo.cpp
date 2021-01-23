@@ -63,12 +63,8 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     non_cudnn_algos.push_back(all_algos.rbegin()[1]);  // group batched_matmul
     non_cudnn_algos.push_back(all_algos.rbegin()[0]);  // group 1x1
 
-    algo_size = all_algos.size();
-    for (size_t i = 0; i < algo_size; ++i) {
-        bfloat16_refhold.emplace_back(new AlgoBFloat16(all_algos[i]));
-        all_algos.push_back(bfloat16_refhold.back().get());
-        bfloat16_algos.push_back(bfloat16_refhold.back().get());
-    }
+    all_algos.push_back(&bfloat16);
+    bfloat16_algos.push_back(&bfloat16);
 
     size_t all_algo_size = all_algos.size();
 #if CUDA_VERSION >= 10000

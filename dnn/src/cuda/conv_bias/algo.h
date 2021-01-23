@@ -702,32 +702,20 @@ private:
 
 class ConvBiasForwardImpl::AlgoBFloat16 final : public AlgoBase {
 public:
-    AlgoBFloat16(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    const char* name() const override { return m_name.c_str(); }
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 
-    bool is_reproducible() const override { return m_impl->is_reproducible(); }
+    const char* name() const override { return "CONVBIAS_BFLOAT16"; }
+    bool is_reproducible() const override { return true; }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_BFLOAT16)
-
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_impl, ret);
-        return ret;
-    }
-
 private:
-    SizeArgs float_args(const SizeArgs& args, ConvBiasForwardImpl* opr,
-                        TensorLayout& fsrc, TensorLayout& ffilter,
-                        TensorLayout& fbias, TensorLayout& fz,
-                        TensorLayout& fdst) const;
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
-    AlgoBase* m_impl;
-    std::string m_name;
 };
 
 
@@ -766,7 +754,7 @@ public:
     std::vector<AlgoInt8NCHW32IMMAImplicitGemm> int8_nchw32_imma;
 #endif
     std::vector<std::unique_ptr<AlgoGroupConvGeneral>> gconv_refhold;
-    std::vector<std::unique_ptr<AlgoBFloat16>> bfloat16_refhold;
+    AlgoBFloat16 bfloat16;
     std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
 
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);

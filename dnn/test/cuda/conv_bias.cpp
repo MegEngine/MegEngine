@@ -8,6 +8,7 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "megdnn/dtype.h"
 #include "test/cuda/fixture.h"
 
 #include "megdnn/opr_param_defs.h"
@@ -107,6 +108,32 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_F32) {
                 .execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
+
+TEST_F(CUDA, CONV_BIAS_FORWARD_BF16) {
+    using namespace conv_bias;
+    std::vector<TestArg> args = get_args();
+    Checker<ConvBiasForward> checker(handle_cuda());
+
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvBiasForward>(ExecutionPolicyAlgoName{
+                    "CONVBIAS_BFLOAT16", {{"MATMUL", {}}}}));
+    NormalRNG default_rng;
+    for (auto&& arg : args) {
+        arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+        checker.set_dtype(0, dtype::BFloat16())
+                .set_dtype(1, dtype::BFloat16())
+                .set_dtype(2, dtype::BFloat16())
+                .set_dtype(3, dtype::BFloat16())
+                .set_dtype(4, dtype::BFloat16())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_rng(2, &default_rng)
+                .set_epsilon(2e-2)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
+}
+
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
     require_compute_capability(6, 1);

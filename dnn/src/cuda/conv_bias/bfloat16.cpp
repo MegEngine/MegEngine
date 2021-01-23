@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/cuda/conv_bias/algo.h"
@@ -18,58 +19,70 @@ using namespace megdnn;
 using namespace cuda;
 using namespace conv_bias;
 
-ConvBiasForwardImpl::AlgoBFloat16::AlgoBFloat16(
-        ConvBiasForwardImpl::AlgoBase* algorithm)
-        : m_impl(algorithm) {
-    megdnn_assert_internal(algorithm);
-    m_name = ssprintf("BFLOAT16:%s", m_impl->name());
-}
-
-ConvBiasForwardImpl::AlgoBase::SizeArgs
-ConvBiasForwardImpl::AlgoBFloat16::float_args(
-        const SizeArgs& args, ConvBiasForwardImpl* opr, TensorLayout& fsrc,
-        TensorLayout& ffilter, TensorLayout& fbias, TensorLayout& fz,
-        TensorLayout& fdst) const {
-    fsrc = *args.src_layout;
-    ffilter = *args.filter_layout;
-    fbias = *args.bias_layout;
-    fz = *args.z_layout;
-    fdst = *args.dst_layout;
+namespace {
+std::pair<TensorLayoutArray, ConvBiasForwardImpl::Param> sub_opr_config(
+        const TensorLayoutArray& layouts, const ConvBiasForwardImpl* opr) {
+    megdnn_assert(layouts.size() >= 3);
+    std::pair<TensorLayoutArray, ConvBiasForwardImpl::Param> ret;
+    ret.first = layouts;
     auto change_dtype = [](TensorLayout& layout) {
         if (layout.dtype == dtype::BFloat16()) {
             layout.dtype = dtype::Float32();
         }
     };
-    change_dtype(fsrc);
-    change_dtype(ffilter);
-    change_dtype(fbias);
-    change_dtype(fz);
-    change_dtype(fdst);
-    opr->param() = args.opr->param();
-    opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-    opr->execution_policy() = {m_impl->desc(), {}};
-    return SizeArgs(opr, fsrc, ffilter, fbias, fz, fdst);
+    change_dtype(ret.first[0]);
+    change_dtype(ret.first[1]);
+    change_dtype(ret.first[2]);
+    change_dtype(ret.first[3]);
+    change_dtype(ret.first[4]);
+
+    ret.second = opr->param();
+    ret.second.compute_mode = ConvBiasForwardImpl::Param::ComputeMode::DEFAULT;
+    return ret;
+}
+}  // namespace
+
+std::vector<Algorithm::SearchItem>
+ConvBiasForwardImpl::AlgoBFloat16::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    auto&& config = sub_opr_config(
+            layouts, static_cast<const ConvBiasForwardImpl*>(opr));
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::CONVBIAS_FORWARD, param_str, config.first}};
 }
 
 bool ConvBiasForwardImpl::AlgoBFloat16::is_available(
         const SizeArgs& args) const {
-    TensorLayout fsrc, ffilter, fbias, fz, fdst;
     auto convbias_opr = args.handle->create_operator<ConvBias>();
-    SizeArgs fargs = float_args(
-            args, static_cast<ConvBiasForwardImpl*>(convbias_opr.get()), fsrc,
-            ffilter, fbias, fz, fdst);
+    auto&& config = sub_opr_config(
+            {*args.src_layout, *args.filter_layout, *args.bias_layout,
+             *args.z_layout, *args.dst_layout},
+            args.opr);
+    convbias_opr->param() = config.second;
+
     return args.src_layout->dtype == args.filter_layout->dtype &&
            args.src_layout->dtype == dtype::BFloat16() &&
-           m_impl->is_available(fargs);
+           get_algorithm(static_cast<ConvBiasForwardImpl*>(convbias_opr.get()),
+                         config.first[0], config.first[1], config.first[2],
+                         config.first[3], config.first[4]);
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoBFloat16::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
-    TensorLayout fsrc, ffilter, fbias, fz, fdst;
     auto convbias_opr = args.handle->create_operator<ConvBias>();
-    SizeArgs fargs = float_args(
-            args, static_cast<ConvBiasForwardImpl*>(convbias_opr.get()), fsrc,
-            ffilter, fbias, fz, fdst);
+    if (args.opr->execution_policy().algo.valid()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        convbias_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+    auto&& config = sub_opr_config(
+            {*args.src_layout, *args.filter_layout, *args.bias_layout,
+             *args.z_layout, *args.dst_layout},
+            args.opr);
+    convbias_opr->param() = config.second;
+
     SmallVector<size_t> sizes;
     auto get_workspace = [&sizes](const TensorLayout& src,
                                   const TensorLayout& dst) {
@@ -77,12 +90,15 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoBFloat16::get_workspace_bundle(
             sizes.push_back(dst.span().dist_byte());
         }
     };
-    get_workspace(*args.src_layout, fsrc);
-    get_workspace(*args.filter_layout, ffilter);
-    get_workspace(*args.bias_layout, fbias);
-    get_workspace(*args.z_layout, fz);
-    get_workspace(*args.dst_layout, fdst);
-    sizes.push_back(m_impl->get_workspace_in_bytes(fargs));
+    get_workspace(*args.src_layout, config.first[0]);
+    get_workspace(*args.filter_layout, config.first[1]);
+    get_workspace(*args.bias_layout, config.first[2]);
+    get_workspace(*args.z_layout, config.first[3]);
+    get_workspace(*args.dst_layout, config.first[4]);
+    sizes.push_back(convbias_opr->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2], config.first[3],
+            config.first[4], nullptr));
+
     return {ptr, std::move(sizes)};
 }
 
@@ -110,7 +126,12 @@ void ConvBiasForwardImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
         auto convbias_opr = args.handle->create_operator<ConvBias>();
         convbias_opr->param() = args.opr->param();
         convbias_opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-        convbias_opr->execution_policy() = {m_impl->desc(), {}};
+        if (args.opr->execution_policy().algo.valid()) {
+            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+            convbias_opr->execution_policy() =
+                    args.opr->execution_policy().sub_policy[0];
+        }
+
         convbias_opr->exec(fsrc_tensor, ffilter_tensor, fbias_tensor, fz_tensor,
                            fdst_tensor, nullptr, cvter.workspace());
     }

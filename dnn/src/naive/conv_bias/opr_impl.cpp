@@ -214,6 +214,9 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         DISPATCH_RAW(Float16, Float16, Float16, FLOAT32,
                      (convolution::forward_bias<dt_float16, dt_float16,
                                                 dt_float16, dt_float32>))
+        DISPATCH_RAW(BFloat16, BFloat16, BFloat16, FLOAT32,
+                     (convolution::forward_bias<dt_bfloat16, dt_bfloat16,
+                                                dt_bfloat16, dt_float32>))
 #endif
         else {
             megdnn_throw(ssprintf(

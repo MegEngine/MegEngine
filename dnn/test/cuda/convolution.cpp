@@ -80,7 +80,8 @@ TEST_F(CUDA, CONVOLUTION_FORWARD)
     Checker<ConvolutionForward> checker(handle_cuda());
     NormalRNG default_rng;
     for (auto &&arg: args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        float scale =
+                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.
             set_dtype(0, dtype::Float32()).
@@ -115,7 +116,6 @@ TEST_F(CUDA, CONVOLUTION_FORWARD)
                 .set_epsilon(1e-1)
                 .set_param(arg.param)
                 .execs({arg.src, arg.filter, {}});
-
     }
 }
 
