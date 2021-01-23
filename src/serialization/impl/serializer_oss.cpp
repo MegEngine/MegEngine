@@ -756,9 +756,15 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
 GraphLoader::LoadResult GraphLoaderOSS::OprLoadContextImpl::load_oprs() {
     // load oprs
     const auto* oprs = m_loader->m_graph->oprs();
-    for (flatbuffers::uoffset_t i = 0; i < oprs->size(); ++i) {
-        m_current_opr = oprs->Get(i);
-        load_single_opr(m_current_opr);
+    {
+        // inplace arith graph optimization is disabled during opr load
+        // it tries to restore the same graph as it was dumped
+        // see test TestSerializer2.LOGEXP for example
+        GraphLoader::ScopedGraphOptDisabler _(m_graph);
+        for (flatbuffers::uoffset_t i = 0; i < oprs->size(); ++i) {
+            m_current_opr = oprs->Get(i);
+            load_single_opr(m_current_opr);
+        }
     }
 
     // batched loading device values

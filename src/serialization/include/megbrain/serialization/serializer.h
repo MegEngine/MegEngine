@@ -61,6 +61,21 @@ namespace serialization {
                         const ComputingGraph::OutputSpec &outspec);
             };
 
+            //! helper to disable inplace arith graph optimization during
+            //! de-serialization
+            struct ScopedGraphOptDisabler {
+                bool option_saved;
+                std::shared_ptr<ComputingGraph> cg;
+                ScopedGraphOptDisabler(std::shared_ptr<ComputingGraph>& cg_p)
+                        : option_saved(true), cg(cg_p) {
+                    std::swap(option_saved,
+                              cg->options().disable_inplace_arith_opt);
+                }
+                ~ScopedGraphOptDisabler() {
+                    cg->options().disable_inplace_arith_opt = option_saved;
+                }
+            };
+
             //! mem_node => tensor_value
             using SharedTensorMapEntry =
                     ThinHashMap<MemNode, std::shared_ptr<DeviceTensorND>>;

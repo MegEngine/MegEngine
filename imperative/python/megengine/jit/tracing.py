@@ -755,8 +755,10 @@ class trace:
 
         h2v = {}
         graph = G.Graph()
-        # only graph_opt_level takes effect in dump
-        self._apply_graph_options(graph)
+
+        # apply graph_opt_level in dump
+        if self._graph_opt_level is not None:
+            graph.options.graph_opt_level = self._graph_opt_level
 
         for i, h in enumerate(self._arg_bindings):
             info = self._tinfo[h]

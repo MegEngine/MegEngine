@@ -761,4 +761,41 @@ TEST(TestSerializer2, HasOutputDtype) {
     load();
 }
 
+TEST(TestSerializer2, LOGEXP) {
+    auto fname = GET_OUTPUT_FILE();
+    TensorShape shape{2, 3};
+    using Mode = opr::Elemwise::Mode;
+    bool inplace_opt = true;
+    auto dump = [&]() {
+        auto cn = CompNode::load("xpu0");
+        auto host_x = std::make_shared<HostTensorND>(cn, shape);
+        for (size_t i = 0, it = shape.total_nr_elems(); i < it; ++i)
+            host_x->ptr<float>()[i] = 0.0;  // To avoid NAN
+        auto graph = ComputingGraph::make();
+        if (!inplace_opt)
+            graph->options().graph_opt_level = 0;
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"});
+        auto y = opr::Elemwise::make({x}, Mode::EXP);
+        auto z = opr::Elemwise::make({y}, Mode::LOG);
+
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        auto rst = dumper->dump({z.rename("z"), z});
+        size_t expected_nr_opr = inplace_opt? 1: 3;
+        ASSERT_EQ(expected_nr_opr, rst.nr_opr);
+    };
+
+    auto load = [&]() {
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        auto rst = loader->load();
+    };
+
+    dump();
+    load();
+
+    inplace_opt = !inplace_opt;
+    dump();
+    load();
+}
 #endif

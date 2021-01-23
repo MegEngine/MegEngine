@@ -221,7 +221,8 @@ SymbolVar Elemwise::make(const VarNodeArrayView& inputs, Param param,
                  trait.name, cg::dump_var_info(inputs).c_str());
 
 #if !MGB_BUILD_SLIM_SERVING
-    if (inputs[0]->owner_graph()->options().graph_opt_level) {
+    auto&& options = inputs[0]->owner_graph()->options();
+    if (options.graph_opt_level && !(options.disable_inplace_arith_opt)) {
         auto repl = gopt::optimize_elemwise_expr_inplace(dtp.get_vars(), param,
                                                          config);
         if (repl)

@@ -244,7 +244,6 @@ def test_goptions_log_sum_exp():
     np.testing.assert_almost_equal(g(d, o), val)
 
 
-@pytest.mark.skip(reason="could not use opt_level=0 with dump")
 def test_goptions_log_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x):

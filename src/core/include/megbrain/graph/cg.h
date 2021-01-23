@@ -356,6 +356,14 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             int16_t graph_opt_level = 2;
 
             /*!
+             * disable inplace arith transformations during graph
+             *    construction
+             * it effectively disable level-1 graph optimization
+             * only for internal use during de-serialization
+             */
+            bool disable_inplace_arith_opt = false;
+
+            /*!
              * max size of allreduce packs in MB
              * set this option to zero to disable PackAllReducePass
              */
