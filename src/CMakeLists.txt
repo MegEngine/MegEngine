@@ -57,6 +57,9 @@ endif()
 
 add_library(megbrain OBJECT ${SOURCES})
 target_link_libraries(megbrain PUBLIC mgb_opr_param_defs)
+if(MGE_WITH_CUDA)
+    target_include_directories(megbrain PUBLIC ${TRT_INCLUDE_DIR})
+endif()
 target_include_directories(megbrain
     PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE ${PROJECT_SOURCE_DIR}/third_party/midout/src

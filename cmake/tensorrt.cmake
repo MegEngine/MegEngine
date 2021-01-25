@@ -2,6 +2,10 @@ if(NOT "$ENV{LIBRARY_PATH}" STREQUAL "")
     string(REPLACE ":" ";" SYSTEM_LIBRARY_PATHS $ENV{LIBRARY_PATH})
 endif()
 
+if("${TRT_ROOT_DIR}" STREQUAL "" AND NOT "$ENV{TRT_ROOT_DIR}"  STREQUAL "")
+    set(TRT_ROOT_DIR $ENV{TRT_ROOT_DIR})
+endif()
+
 if(MGE_CUDA_USE_STATIC)
     find_library(TRT_LIBRARY 
         NAMES libnvinfer_static.a nvinfer.lib
