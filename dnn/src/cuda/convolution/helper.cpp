@@ -48,7 +48,7 @@ bool convolution::is_cudnn_supported(const ForwardSizeArgs &args) {
     return supported;
 }
 
-WorkspaceBundle convolution::matmul_get_workspace_bundle(
+SmallVector<size_t> convolution::matmul_get_workspace_bundle(
         const ForwardSizeArgs &args) {
     auto dtype = args.src_layout->dtype;
     auto &&fm = args.filter_meta;
@@ -67,7 +67,7 @@ WorkspaceBundle convolution::matmul_get_workspace_bundle(
     if (args.filter_meta.should_flip) {
         sizes.push_back(dtype.size() * OC * IC * FH * FW);
     }
-    return {nullptr, std::move(sizes)};
+    return sizes;
 }
 
 void convolution::flip_filter(const ForwardSizeArgs &args,

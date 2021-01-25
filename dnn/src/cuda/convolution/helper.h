@@ -34,7 +34,8 @@ namespace convolution {
     bool is_cudnn_supported(const ForwardSizeArgs &args);
 
     //! get workspace bundle for matmul algo
-    WorkspaceBundle matmul_get_workspace_bundle(const ForwardSizeArgs &args);
+    SmallVector<size_t> matmul_get_workspace_bundle(
+            const ForwardSizeArgs& args);
 
     struct CUDNNForwardDescs {
         TensorDesc src_desc, dst_desc;

@@ -31,8 +31,9 @@ bool ConvolutionBackwardFilterImpl::AlgoMatmul::is_available(
 
 size_t ConvolutionBackwardFilterImpl::AlgoMatmul::get_workspace_in_bytes(
         const SizeArgs &args) const {
-    return matmul_get_workspace_bundle(
-            args.as_fwd_args()).total_size_in_bytes();
+    return WorkspaceBundle(nullptr,
+                           matmul_get_workspace_bundle(args.as_fwd_args()))
+            .total_size_in_bytes();
 }
 
 void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(
@@ -69,7 +70,8 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
            DH = fm.dilation[0],
            DW = fm.dilation[1];
     auto stream = cuda_stream(args.handle);
-    auto wbundle = matmul_get_workspace_bundle(args.as_fwd_args());
+    auto wbundle = WorkspaceBundle(
+            nullptr, matmul_get_workspace_bundle(args.as_fwd_args()));
     wbundle.set(args.workspace.raw_ptr);
     T *diff_t = static_cast<T *>(wbundle.get(0));
     T *col = static_cast<T *>(wbundle.get(1));

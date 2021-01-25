@@ -230,7 +230,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
         }
         checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
                 ExecutionPolicyAlgoName{"CONVOLUTION_BACKWARD_DATD_BFLOAT16",
-                                        {{"MATMUL", {}}}}));
+                                        {{"MATMUL", {{"CUBLAS", {}}}}}}));
         src.dtype = dst.dtype = filter.dtype = dtype::BFloat16();
         arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
         checker.set_rng(0, &rng)
@@ -242,6 +242,37 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
         checker.opr()->execution_policy() = {};
     }
 }
+
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL)
+{
+    using namespace convolution;
+    std::vector<TestArg> args = get_args_cuda_conv_bwd_data();
+    Checker<ConvolutionBackwardData> checker(handle_cuda());
+
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
+            ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
+    NormalRNG default_rng;
+    for (auto &&arg: args) {
+        float scale =
+                64.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        auto src = TensorLayout(arg.src, dtype::Float32());
+        auto filter = TensorLayout(arg.filter, dtype::Float32());
+        TensorLayout dst;
+        {
+            auto opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = arg.param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        src.dtype = dst.dtype = filter.dtype = dtype::Float32();
+        checker.set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{filter, dst, src});
+    }
+}
+
 
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5)
 {
