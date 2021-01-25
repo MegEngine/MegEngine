@@ -365,7 +365,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
 
         checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
                 ExecutionPolicyAlgoName{"CONVOLUTION_BACKWARD_FILTER_BFLOAT16",
-                                        {{"MATMUL", {}}}}));
+                                        {{"MATMUL", {{"CUBLAS", {}}}}}}));
         src.dtype = dst.dtype = filter.dtype = dtype::BFloat16();
         checker.set_rng(0, &rng)
                 .set_rng(1, &rng)
@@ -374,6 +374,34 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
                 .exec(TensorLayoutArray{src, dst, filter});
         checker.reset_before_exec_callback();
         checker.opr()->execution_policy() = {};
+    }
+}
+
+TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER_MATMUL)
+{
+    using namespace convolution;
+    std::vector<TestArg> args = get_args();
+    Checker<ConvolutionBackwardFilter> checker(handle_cuda());
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
+            ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
+    for (auto &&arg: args) {
+        auto src = TensorLayout(arg.src, dtype::Float32());
+        auto filter = TensorLayout(arg.filter, dtype::Float32());
+        TensorLayout dst;
+        {
+            auto opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = arg.param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        float scale = 1.0f / sqrt(dst[2] * dst[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        src.dtype = dst.dtype = filter.dtype = dtype::Float32();
+        checker.
+            set_rng(0, &rng).
+            set_rng(1, &rng).
+            set_epsilon(1e-3).
+            set_param(arg.param).
+            exec(TensorLayoutArray{src, dst, filter});
     }
 }
 

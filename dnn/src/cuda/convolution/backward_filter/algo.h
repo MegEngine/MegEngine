@@ -140,6 +140,10 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
+
     const char* name() const override { return "MATMUL"; }
     bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
