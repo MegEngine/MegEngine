@@ -12,6 +12,7 @@
 #include "src/cuda/convolution/opr_impl.h"
 #include "megdnn/dtype.h"
 #include "src/cuda/convolution/helper.h"
+#include "src/cuda/convolution/forward/algos.h"
 #include "src/cuda/convolution/backward_data/algo.h"
 #include "src/cuda/convolution/backward_filter/algo.h"
 #include "src/cuda/conv_bias/opr_impl.h"
@@ -28,108 +29,34 @@ using namespace convolution;
     TO_STRING(CUDNN_MINOR) "." TO_STRING(CUDNN_PATCHLEVEL)
 
 /* ============== ConvolutionForwardImpl ============== */
-ConvolutionForwardImpl::ConvBiasExtraData
-ConvolutionForwardImpl::conv_bias_extra_data(const TensorLayout& src,
-                                             const TensorLayout& filter,
-                                             const TensorLayout& dst) {
-    auto conv_param = param();
-    DType bias_type;
-    if (src.dtype.enumv() == DTypeEnum::QuantizedS8) {
-        bias_type = dtype::QuantizedS32(
-                src.dtype.param<dtype::QuantizedS8>().scale *
-
-                filter.dtype.param<dtype::QuantizedS8>().scale);
-    } else if (src.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
-        bias_type = dtype::QuantizedS32(
-                src.dtype.param<dtype::Quantized8Asymm>().scale *
-
-                filter.dtype.param<dtype::Quantized8Asymm>().scale);
-    } else if (src.dtype.enumv() == DTypeEnum::Uint8 ||
-               src.dtype.enumv() == DTypeEnum::Int8) {
-        bias_type = dtype::Int32{};
-    } else if (src.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
-        bias_type = dtype::QuantizedS32(
-                src.dtype.param<dtype::Quantized4Asymm>().scale *
-
-                filter.dtype.param<dtype::Quantized4Asymm>().scale);
-    } else {
-        megdnn_assert(src.dtype.category() == DTypeCategory::FLOAT);
-        bias_type = src.dtype;
-    }
-    ConvBiasExtraData ret = {this->handle()->create_operator<ConvBiasForward>(),
-                             TensorLayout(bias_type), TensorLayout(dst.dtype)};
-    ret.convbias_opr->param() = {param::ConvBias::NonlineMode::IDENTITY,
-                                 conv_param.mode,
-                                 conv_param.sparse,
-                                 conv_param.format,
-                                 conv_param.pad_h,
-                                 conv_param.pad_w,
-                                 conv_param.stride_h,
-                                 conv_param.stride_w,
-                                 conv_param.dilate_h,
-                                 conv_param.dilate_w,
-                                 conv_param.compute_mode};
-    ret.convbias_opr->execution_policy() = {this->execution_policy().algo, {}};
-    return ret;
-}
-
 ConvolutionForwardImpl::Algorithm*
 ConvolutionForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
                                                 const TensorLayout& filter,
                                                 const TensorLayout& dst,
                                                 size_t workspace_limit_in_bytes,
                                                 bool reproducible) {
-    auto extra_data = conv_bias_extra_data(src, filter, dst);
-    return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
-            ->get_algorithm_heuristic(src, filter, extra_data.bias_layout,
-                                      extra_data.z_layout, dst,
-                                      workspace_limit_in_bytes, reproducible);
-}
-
-ConvolutionForwardImpl::Algorithm*
-ConvolutionForwardImpl::get_algorithm_from_desc(
-        const ConvolutionForward::AlgorithmDesc& desc) {
-    auto conv_param = param();
-    auto convbias_opr = this->handle()->create_operator<ConvBiasForward>();
-    convbias_opr->param() = {param::ConvBias::NonlineMode::IDENTITY,
-                             conv_param.mode,
-                             conv_param.sparse,
-                             conv_param.format,
-                             conv_param.pad_h,
-                             conv_param.pad_w,
-                             conv_param.stride_h,
-                             conv_param.stride_w,
-                             conv_param.dilate_h,
-                             conv_param.dilate_w,
-                             conv_param.compute_mode};
-    convbias_opr->execution_policy() = {this->execution_policy().algo, {}};
-
-    return static_cast<ConvBiasForwardImpl*>(convbias_opr.get())
-            ->get_algorithm_from_desc(desc);
+    AlgoBase::SizeArgs args{this, src, filter, dst};
+    MEGDNN_MARK_USED_VAR(workspace_limit_in_bytes);
+    MEGDNN_MARK_USED_VAR(reproducible);
+    return &sm_algo_pack.algo_default;
 }
 
 std::vector<ConvolutionForwardImpl::Algorithm*>
 ConvolutionForwardImpl::get_all_algorithms(const TensorLayout& src,
                                            const TensorLayout& filter,
                                            const TensorLayout& dst) {
-    auto extra_data = conv_bias_extra_data(src, filter, dst);
-    return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
-            ->get_all_algorithms(src, filter, extra_data.bias_layout,
-                                 extra_data.z_layout, dst);
+    AlgoBase::SizeArgs args{this, src, filter, dst};
+    return megdnn::get_all_algorithms<ConvolutionForwardImpl>(args);
 }
 
 size_t ConvolutionForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
-    auto extra_data = conv_bias_extra_data(src, filter, dst);
-    return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
-            ->get_workspace_in_bytes(
-                    src, filter, extra_data.bias_layout, extra_data.z_layout,
-                    dst,
-                    reinterpret_cast<const ConvolutionBase<
-                            param::ConvBias>::PreprocessedFilter*>(
-                            preprocessed_filter));
+    MEGDNN_MARK_USED_VAR(preprocessed_filter);
+    AlgoBase::SizeArgs args{this, src, filter, dst};
+    return megdnn::get_algorithm(this, src, filter, dst)
+            ->get_workspace_in_bytes(args);
 }
 
 void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
@@ -137,20 +64,15 @@ void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
                                   _megdnn_tensor_out dst,
                                   const PreprocessedFilter* preprocessed_filter,
                                   _megdnn_workspace workspace) {
-    auto extra_data =
-            conv_bias_extra_data(src.layout, filter.layout, dst.layout);
-    TensorND bias(nullptr, extra_data.bias_layout);
-    TensorND z(nullptr, extra_data.z_layout);
-    return static_cast<ConvBiasForwardImpl*>(extra_data.convbias_opr.get())
-            ->exec(src, filter, bias, z, dst,
-                   reinterpret_cast<const ConvolutionBase<
-                           param::ConvBias>::PreprocessedFilter*>(
-                           preprocessed_filter),
-                   workspace);
+    check_exec(src.layout, filter.layout, dst.layout, workspace.size,
+               preprocessed_filter);
+    AlgoBase::ExecArgs args(this, src, filter, dst, workspace);
+    auto&& algo = get_algorithm(this, src.layout, filter.layout, dst.layout);
+    algo->check_workspace(args, workspace).exec(args);
 }
 
 const char* ConvolutionForwardImpl::get_algorithm_set_name() const {
-    return "CUDACONV0+CUDNN" CUDNN_VERSION_STR;
+    return "CUDA CONVOLUTION_FORWARD" ;
 }
 
 /* ============== ConvolutionBackwardDataImpl ============== */

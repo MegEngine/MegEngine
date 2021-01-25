@@ -273,10 +273,14 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_FORWARD) {
     Checker<Convolution> checker(handle_cuda());
     bool require_algo = false;
     checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
-                    "CHANNEL_WISE", {})
-                    .c_str(),
+            ExecutionPolicyAlgoName{
+                    "DEFAULT",
+                    {{ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
+                              "CHANNEL_WISE", {})
+                              .c_str(),
+                      {}}}},
             &require_algo));
+
     for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
         checker.set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype);
         if (dtype.enumv() == DTypeEnum::Float16)
@@ -306,8 +310,12 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_FORWARD_SMALL) {
     Checker<Convolution> checker(handle_cuda());
     bool require_algo = false;
     checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
-                    "CHANNEL_WISE_SMALL", {}).c_str(),
+            ExecutionPolicyAlgoName{
+                    "DEFAULT",
+                    {{ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
+                              "CHANNEL_WISE_SMALL", {})
+                              .c_str(),
+                      {}}}},
             &require_algo));
     for (auto dtype : std::vector<DType> {
              dtype::Float32(),
@@ -338,6 +346,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA) {
     bool require_algo = false;
     checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
             "CHANNEL_WISE", &require_algo));
+
     for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
         checker.set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype);
         if (dtype.enumv() == DTypeEnum::Float16)
@@ -368,9 +377,8 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA) {
 TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_DATA_SMALL) {
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     bool require_algo = false;
-    checker.set_before_exec_callback(
-            AlgoChecker<ConvolutionBackwardData>(
-                "CHANNEL_WISE_SMALL", &require_algo));
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
+            "CHANNEL_WISE_SMALL", &require_algo));
     for (auto dtype : std::vector<DType> {
             dtype::Float32(),
 #if CUDA_VERSION >= 9000
@@ -396,10 +404,14 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BACKWARD_FILTER) {
     Checker<ConvolutionBackwardFilter> checker(handle_cuda());
     bool require_algo = false;
     checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
-                "CHANNEL_WISE", &require_algo));
+            "CHANNEL_WISE", &require_algo));
     UniformFloatRNG rng(-0.1, 0.1);
     for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
-        checker.set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype).set_rng(0, &rng).set_rng(1, &rng);
+        checker.set_dtype(0, dtype)
+                .set_dtype(1, dtype)
+                .set_dtype(2, dtype)
+                .set_rng(0, &rng)
+                .set_rng(1, &rng);
         if (dtype.enumv() == DTypeEnum::Float16)
             checker.set_epsilon(2e-1);
         // simple case
@@ -514,7 +526,7 @@ TEST_F(CUDA, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_FWD) {
 
     auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
                    size_t FW) {
-        checker.proxy()->target_execution_policy.algo.reset();
+        checker.proxy()->target_execution_policy = {};
         checker.execs({{N, C, IH, IW}, {C, 1, 1, FH, FW}, {}});
     };
 
@@ -614,7 +626,7 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_ALL_ALGO_FORWARD) {
                 .set_dtype(2, dtype::Float32())
                 .set_rng(0, &rng)
                 .set_rng(1, &rng);
-        bencher.proxy()->target_execution_policy.algo.reset();
+        bencher.proxy()->target_execution_policy = {};
         auto time_in_ms_fp32 = bencher.execs({src, filter, {}}) / RUNS;
 
         bencher.set_param(param)
@@ -623,7 +635,7 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_ALL_ALGO_FORWARD) {
                 .set_dtype(2, dtype::Float16())
                 .set_rng(0, &rng)
                 .set_rng(1, &rng);
-        bencher.proxy()->target_execution_policy.algo.reset();
+        bencher.proxy()->target_execution_policy = {};
         auto time_in_ms_fp16 = bencher.execs({src, filter, {}}) / RUNS;
 
         bencher.proxy()->target_execution_policy.algo.reset();
@@ -677,10 +689,13 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_FORWARD_FLOAT) {
     CUBenchmarker<ConvolutionForward> bencher(handle_cuda());
     size_t RUNS = 1;
     bencher.set_display(false).set_times(RUNS);
-    bencher.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
-                    "CHANNEL_WISE", {})
-                    .c_str()));
+    bencher.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
+                    "DEFAULT",
+                    {{ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
+                              "CHANNEL_WISE", {})
+                              .c_str(),
+                      {}}}}));
 
     Convolution::Param param;
     param.format = ConvBias::Param::Format::NCHW;
@@ -783,17 +798,24 @@ TEST_F(CUDA, BENCHMARK_CHANWISE_CONV_FORWARD_FLOAT_SMALL) {
                 .set_dtype(2, dtype::Float32())
                 .set_rng(0, &rng)
                 .set_rng(1, &rng)
-                .set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-                        ConvBiasForward::algo_name<
-                                ConvBiasForward::DirectParam>("CHANNEL_WISE",
-                                                              {})
-                                .c_str()));
+                .set_before_exec_callback(
+                        AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
+                                "DEFAULT",
+                                {{ConvBiasForward::algo_name<
+                                          ConvBiasForward::DirectParam>(
+                                          "CHANNEL_WISE", {})
+                                          .c_str(),
+                                  {}}}}));
         auto time_in_ms_fp32_normal = bencher.execs({src, filter, {}}) / RUNS;
 
         bencher.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-                ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
-                        "CHANNEL_WISE", {})
-                        .c_str()));
+                ExecutionPolicyAlgoName{"DEFAULT",
+                                        {{ConvBiasForward::algo_name<
+                                                  ConvBiasForward::DirectParam>(
+                                                  "CHANNEL_WISE", {})
+                                                  .c_str(),
+                                          {}}}}));
+
         auto time_in_ms_fp32_small = bencher.execs({src, filter, {}}) / RUNS;
 
         bencher.set_param(param)

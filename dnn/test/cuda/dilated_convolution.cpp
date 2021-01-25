@@ -30,19 +30,26 @@ TEST_F(CUDA, DILATED_CONVOLUTION_FORWARD)
     auto args = get_dilated_args();
     Checker<ConvolutionForward> checker(handle_cuda());
 #if CUDNN_VERSION >= 7500
-    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            ConvBiasForward::algo_name<ConvBiasForward::DefaultParam>(
-                    "CUDNN:Convolution:CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_"
-                    "PRECOMP_"
-                    "GEMM" CUDNN_VERSION_STRING,
-                    {})
-                    .c_str()));
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
+                    "DEFAULT",
+                    {{ConvBiasForward::algo_name<ConvBiasForward::DefaultParam>(
+                              "CUDNN:Convolution:CUDNN_CONVOLUTION_FWD_ALGO_"
+                              "IMPLICIT_"
+                              "PRECOMP_"
+                              "GEMM" CUDNN_VERSION_STRING,
+                              {})
+                              .c_str(),
+                      {}}}}));
     printf("cudnn version >= 7.5, use cudnn impl for dilated convolution\n");
 #else
-    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>("MATMUL",
-                                                                     {})
-                    .c_str()));
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
+                    "DEFAULT",
+                    {{ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
+                              "MATMUL", {})
+                              .c_str(),
+                      {}}}}));
 #endif
     NormalRNG default_rng;
     for (auto &&arg: args) {

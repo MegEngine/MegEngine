@@ -532,6 +532,30 @@ private:
     bool* m_require_algo;
 };
 
+template <typename Opr>
+void construct_sub_execution_policy_heuristic(ExecutionPolicy& policy,
+                                              const TensorLayoutArray& layouts,
+                                              const std::string& param,
+                                              Handle* handle) {
+    megdnn_assert(layouts.size() == OprTrait<Opr>::arity);
+    auto opr = handle->create_operator<Opr>();
+    opr->param() = Algorithm::deserialize_read_pod<typename Opr::Param>(param);
+    if (!policy.algo.valid()) {
+        policy.algo = AlgoProxy<Opr, OprTrait<Opr>::arity>::
+                get_algorithm_info_heuristic(opr.get(), layouts).desc;
+    }
+
+    Algorithm* algo = opr->get_algorithm_from_desc(policy.algo);
+    std::vector<Algorithm::SearchItem>&& sub_items =
+            algo->get_subopr_list(layouts, opr.get());
+    FOREACH_OPR_TYPE_DISPATCH(sub_items, {
+        policy.sub_policy.push_back(ExecutionPolicy{});
+        construct_sub_execution_policy_heuristic<_Opr>(
+                policy.sub_policy.back(), _item.layouts, _item.param,
+                handle);
+    });
+}
+
 }  // namespace test
 }  // namespace megdnn
 

@@ -116,12 +116,17 @@ TEST_F(CUDA, GROUP_CONV_FORWARD_1x1) {
         std::string conv1x1_name =
                 ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
                         "MATMUL1X1", {});
-        checker.set_before_exec_callback(AlgoChecker<Convolution>(
-                ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
-                        ssprintf("%s:%s", "CUDA:GROUP_CONV",
-                                 conv1x1_name.c_str()),
-                        {})
-                        .c_str()));
+        checker.set_before_exec_callback(
+                AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
+                        "DEFAULT",
+                        {{ConvBiasForward::algo_name<
+                                  ConvBiasForward::DirectParam>(
+                                  ssprintf("%s:%s", "CUDA:GROUP_CONV",
+                                           conv1x1_name.c_str())
+                                          .c_str(),
+                                  {})
+                                  .c_str(),
+                          {}}}}));
 #endif
         Convolution::Param param;
         param.sparse = Convolution::Param::Sparse::GROUP;

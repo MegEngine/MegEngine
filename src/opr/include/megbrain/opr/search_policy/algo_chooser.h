@@ -129,13 +129,16 @@ public:
         ImplAlgo get_profile_result_from_cache(bool require_reproducible) const;
 
         /**
-         * \brief construct execution policy from cache.
+         * \brief construct execution policy from cache or heuristic.
          *
          * \param require_reproducible select algo which is reproducible
          * \param policy execution policy
+         * \param retrive_from_cache retrive algo from cache if set True, get
+         *     from heuristic otherwise.
          */
-        void construct_execution_policy_from_cache(
-                bool require_reproducible, ImplExecutionPolicy& policy) const;
+        void construct_execution_policy(
+                bool require_reproducible, ImplExecutionPolicy& policy,
+                bool retrive_from_cache = true) const;
 
     private:
         Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const;

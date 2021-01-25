@@ -570,6 +570,8 @@ void convolution::test_conv_config_combinations(int k_size,
             .set_param(param);
         auto opr = checker.opr();
         opr->param() = param;
+        std::string param_str;
+        Algorithm::serialize_write_pod(opr->param(), param_str);
         TensorLayout ily{ishp, inp_type}, fly{fshp, inp_type}, oly;
         oly.dtype = out_type;
         opr->deduce_layout(ily, fly, oly);
@@ -581,10 +583,14 @@ void convolution::test_conv_config_combinations(int k_size,
         for (auto algo : opr->get_all_algorithms_info(ily, fly, oly)) {
             used_algos.insert(algo.desc);
             opr->execution_policy().algo = algo.desc;
+
+            construct_sub_execution_policy_heuristic<ConvolutionForward>(
+                    opr->execution_policy(), {ily, fly, oly}, param_str,
+                    opr->handle());
             checker
                 .set_epsilon(eps_getter(dtype == 1, 0, algo.name.c_str()))
                 .execs({ishp, fshp, {}});
-            opr->execution_policy().algo.reset();
+            opr->execution_policy() = {};
             ASSERT_TRUE(checker.prev_succ()) << errmsg(algo.name.c_str());
         }
 
@@ -597,13 +603,19 @@ void convolution::test_conv_config_combinations(int k_size,
 
             auto opr = checker_bwd_data.opr();
             opr->param() = param;
+            std::string param_str;
+            Algorithm::serialize_write_pod(opr->param(), param_str);
             for (auto algo: opr->get_all_algorithms_info(fly, oly, ily)) {
                 used_algos_bwd_data.insert(algo.desc);
                 opr->execution_policy().algo = algo.desc;
+                construct_sub_execution_policy_heuristic<
+                        ConvolutionBackwardData>(opr->execution_policy(),
+                                                 {fly, oly, ily}, param_str,
+                                                 opr->handle());
                 checker_bwd_data
                     .set_epsilon(eps_getter(dtype == 1, 1, algo.name.c_str()))
                     .execl({fly, oly, ily});
-                opr->execution_policy().algo.reset();
+                opr->execution_policy() = {};
                 ASSERT_TRUE(checker_bwd_data.prev_succ()) <<
                     errmsg(algo.name.c_str());
             }
@@ -618,13 +630,19 @@ void convolution::test_conv_config_combinations(int k_size,
 
             auto opr = checker_bwd_filter.opr();
             opr->param() = param;
+            std::string param_str;
+            Algorithm::serialize_write_pod(opr->param(), param_str);
             for (auto algo: opr->get_all_algorithms_info(ily, oly, fly)) {
                 used_algos_bwd_flt.insert(algo.desc);
                 opr->execution_policy().algo = algo.desc;
+                construct_sub_execution_policy_heuristic<
+                        ConvolutionBackwardFilter>(opr->execution_policy(),
+                                                   {ily, oly, fly}, param_str,
+                                                   opr->handle());
                 checker_bwd_filter
                     .set_epsilon(eps_getter(dtype == 1, 2, algo.name.c_str()))
                     .execl({ily, oly, fly});
-                opr->execution_policy().algo.reset();
+                opr->execution_policy() = {};
                 ASSERT_TRUE(checker_bwd_filter.prev_succ()) <<
                     errmsg(algo.name.c_str());
             }

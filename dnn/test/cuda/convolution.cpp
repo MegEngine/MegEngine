@@ -135,10 +135,13 @@ TEST_F(CUDA, CONV_FORWARD_MATMUL_NCHW4) {
             .set_rng(1, &int_rng)
             .set_param(param);
 
-    checker.set_before_exec_callback(AlgoChecker<Convolution>(
-            ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                    "MATMUL8X8X32", {})
-                    .c_str()));
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
+                    "DEFAULT",
+                    {{ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
+                              "MATMUL8X8X32", {})
+                              .c_str(),
+                      {}}}}));
 
     param.sparse = Convolution::Param::Sparse::DENSE;
     param.pad_h = param.pad_w = 1;

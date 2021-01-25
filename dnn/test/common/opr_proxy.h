@@ -338,6 +338,7 @@ struct OprProxyProfilingBase
                        FastRunCache& cache) {
         megdnn_assert(layouts.size() == arity);
         auto opr = handle->create_operator<Opr>();
+
         opr->param() =
                 Algorithm::deserialize_read_pod<typename Opr::Param>(param);
         SmallVector<size_t> sizes_in_bytes;
@@ -427,9 +428,9 @@ struct OprProxyProfilingBase
             auto&& search_items =
                     flatten_search_space(layouts, param_str, opr->handle());
             FOREACH_OPR_TYPE_DISPATCH(search_items, {
-                OprProxyProfilingBase<_Opr>::search(_item.layouts, param_str, W,
-                                                    opr->handle(), warmup_times,
-                                                    exec_times, cache);
+                OprProxyProfilingBase<_Opr>::search(
+                        _item.layouts, _item.param, W, opr->handle(),
+                        warmup_times, exec_times, cache);
             });
 
             construct_execution_policy(layouts, param_str, opr->handle(), cache,
