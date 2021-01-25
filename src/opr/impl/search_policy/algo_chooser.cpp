@@ -11,6 +11,7 @@
  */
 
 #include "megbrain/opr/search_policy/algo_chooser.h"
+#include <limits>
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/opr/search_policy/profiler.h"
@@ -473,6 +474,13 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy
 AlgoChooser<Opr>::ExeContext::choose_by_heuristic(bool reproducible) const {
+    if (m_execution_policy.workspace_limit !=
+        std::numeric_limits<decltype(
+                m_execution_policy.workspace_limit)>::max()) {
+        mgb_log_warn(
+                "workspace_limit should not be setted if choose algo by "
+                "heuristic");
+    }
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             owner_graph(), m_cn, m_execution_policy.workspace_limit);
     ImplExecutionPolicy policy;

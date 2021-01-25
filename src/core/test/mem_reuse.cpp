@@ -17,6 +17,7 @@
 #include "megbrain/opr/blas.h"
 
 #include "megbrain/test/helper.h"
+#include "megdnn/oprs/base.h"
 
 using namespace mgb;
 
@@ -26,7 +27,8 @@ SymbolVar make_conv(SymbolVar inp, SymbolVar kern) {
     using Conv = opr::Convolution;
     Conv::ExecutionPolicy poly;
     poly.workspace_limit = 0;
-    return Conv::make(inp, kern, {}, poly);
+    SymbolVar conv = Conv::make(inp, kern, {}, poly);
+    return conv;
 }
 
 // used for test NO_SYS_MEM_ALLOC
@@ -74,9 +76,12 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(SharedDeviceTensorDirect);
 TEST(TestMemReuse, PureMLP0) {
     auto graph = ComputingGraph::make();
     HostTensorGenerator<> gen;
-    auto host_inp = gen({256, 1, 64, 64}),
-         host_kern0 = gen({32, 1, 1, 1}),
-         host_kern1 = gen({32, 32, 1, 1});
+    CompNode cn = CompNode::load("cpu0");
+    //! FIXME currently recursive chooser does not support workspace_limit in
+    //! heuristic
+    auto host_inp = gen({256, 1, 64, 64}, cn),
+         host_kern0 = gen({32, 1, 1, 1}, cn),
+         host_kern1 = gen({32, 32, 1, 1}, cn);
     auto inp = opr::SharedDeviceTensor::make(*graph, *host_inp, {"inp"}),
          kern0 = opr::SharedDeviceTensor::make(*graph, *host_kern0, {"kern0"}),
          kern1 = opr::SharedDeviceTensor::make(*graph, *host_kern1, {"kern1"});
@@ -102,9 +107,12 @@ TEST(TestMemReuse, PureMLP0) {
 TEST(TestMemReuse, PureMLP1) {
     auto graph = ComputingGraph::make();
     HostTensorGenerator<> gen;
-    auto host_inp = gen({256, 1, 64, 64}),
-         host_kern0 = gen({32, 1, 1, 1}),
-         host_kern1 = gen({32, 32, 1, 1});
+    CompNode cn = CompNode::load("cpu0");
+    //! FIXME currently recursive chooser does not support workspace_limit in
+    //! heuristic
+    auto host_inp = gen({256, 1, 64, 64}, cn),
+         host_kern0 = gen({32, 1, 1, 1}, cn),
+         host_kern1 = gen({32, 32, 1, 1}, cn);
     auto inp = opr::Host2DeviceCopy::make(*graph, host_inp, {"inp"}),
          kern0 = opr::SharedDeviceTensor::make(*graph, *host_kern0, {"kern0"}),
          kern1 = opr::SharedDeviceTensor::make(*graph, *host_kern1, {"kern1"}),
@@ -338,4 +346,3 @@ TEST(TestMemReuse, FwdNoSysMemAlloc) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
