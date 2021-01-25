@@ -3,6 +3,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from typing import Callable
 
+from ..core._imperative_rt.core2 import pop_scope, push_scope
 from ..core.autodiff.grad import Grad
 from ..logger import get_logger
 from ..tensor import Tensor
@@ -239,6 +240,7 @@ class GradManager:
         :param y: tensor or list of tensors
         :param dy: tensor or list of tensors. Defaults to 1 if y is scalar
         """
+        push_scope("backward")
         from ..functional import ones_like
 
         global backwarding_grad_manager
@@ -280,6 +282,7 @@ class GradManager:
         finally:
             self.release()
             backwarding_grad_manager = cache
+        pop_scope("backward")
 
     def record(self):
         r"""

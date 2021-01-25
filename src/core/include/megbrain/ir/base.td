@@ -30,6 +30,7 @@ class MgbHashableAttrMixin {
   string hashFunction = "mgb::hash($0)";
   // return 0 for eq, else for ne
   string cmpFunction = "$0 != $1";
+  string reprFunction = "std::to_string($0)";
 }
 
 class MgbEnumAttrMixin<string namespace, string name, list<string> members> {
@@ -98,6 +99,7 @@ def MgbStringAttr : HashableAttr<"std::string"> {
   let storageType = "::mlir::StringAttr";
   let convertFromStorage = "$_self.getValue().str()";
   let constBuilderCall = "$_builder.getStringAttr($0)"; // llvm::StringRef implicit ctor
+  string reprFunction = "$0";
 }
 
 class MgbArrayAttr<MgbAttrWrapper elem>:
@@ -123,6 +125,7 @@ class MgbArrayAttr<MgbAttrWrapper elem>:
     "    });\n"
     "    return $_builder.getArrayAttr(ret" # recursionDepth # ");"
     "}()";
+   let reprFunction = "\"{std::vector}\"";
 }
 
 defvar EmptyStrList = !listsplat("", 0);
@@ -168,6 +171,7 @@ class MgbEnumAttr<string namespace, string enumName, list<string> members>:
   let convertFromStorage = "static_cast<" # returnType # ">($_self.getInt())";
   let constBuilderCall = "$_builder.getI32IntegerAttr(static_cast<int32_t>($0))";
   let hashFunction = "mgb::enumhash()($0)";
+  string reprFunction = "std::to_string((int)$0)";
 }
 
 class MgbEnumAliasAttr<string namespace, string enumName, MgbEnumAttr base>:
@@ -179,12 +183,14 @@ def MgbDTypeAttr: HashableAttr<"::megdnn::DType"> {
   let convertFromStorage = underlyingType # "::from_enum(static_cast<::megdnn::DTypeEnum>($_self.getInt()))";
   let constBuilderCall = "$_builder.getI32IntegerAttr(static_cast<int32_t>($0.enumv()))";
   let hashFunction = "mgb::hash($0.handle())";
+  let reprFunction = "$0.name()";
 }
 
 def MgbCompNodeAttr: HashableAttr<"::mgb::CompNode"> {
   let storageType = "::mlir::StringAttr";
   let convertFromStorage = underlyingType # "::load($_self.getValue().str())";
   let constBuilderCall = "$_builder.getStringAttr($0.to_string_logical())";
+  string reprFunction = "$0.to_string()";
 }
 
 def MgbTensorShapeAttr: HashableAttr<"::megdnn::TensorShape"> {
@@ -209,6 +215,7 @@ def MgbTensorShapeAttr: HashableAttr<"::megdnn::TensorShape"> {
     "    }\n"
     "    return $_builder.getArrayAttr(ret);"
     "}()";
+    let reprFunction = "$0.to_string()";
 }
 
 class MgbDefaultValuedAttr<MgbAttrWrapper attr, string value>:

@@ -66,7 +66,7 @@ struct MgbEnumAttrMixin : public MgbAttrWrapperBase {
     }
 
     llvm::StringRef getParentNamespace() const {
-        return getBaseRecord()->getValueAsString("parentNamespce");
+        return getBaseRecord()->getValueAsString("parentNamespace");
     }
     llvm::StringRef getEnumName() const {
         return getBaseRecord()->getValueAsString("enumName");
@@ -86,6 +86,9 @@ struct MgbHashableAttrMixin : public MgbAttrWrapperBase {
     }
     llvm::StringRef getCmpFunctionTemplate() const {
         return getBaseRecord()->getValueAsString("cmpFunction");
+    }
+    llvm::StringRef getReprFunctionTemplate() const {
+        return getBaseRecord()->getValueAsString("reprFunction");
     }
 };
 
@@ -205,6 +208,39 @@ private:
         body += "    return true;\n";
         return body;
     }
+    std::string getDefaultPropsFunction() const {
+        std::string body = "    std::vector<std::pair<const char*, std::string>> props_;\n";
+        if (!getMgbAttributes().empty()) {
+            mlir::tblgen::FmtContext ctx;
+            for (auto&& it : getMgbAttributes()) {
+                if (auto* enumAttr = llvm::dyn_cast<MgbEnumAttrMixin>(&it.attr)) {
+                    body += formatv("    switch ({0}){{\n", "$_self." + it.name);
+                    for (auto&& enumMember: enumAttr->getEnumMembers()) {
+                        body += formatv(
+                            "    case {0}::{1}::{2}:\n",
+                            getCppClassName(), enumAttr->getEnumName(), enumMember
+                        );
+                        body += formatv(
+                            "        props_.emplace_back(\"{0}\", \"{1}\");\n",
+                            it.name, enumMember
+                        );
+                        body += "        break;\n";
+                    }
+                    body += "    default: break;\n";
+                    body += "    }\n";
+                } else {
+                    auto&& attr = llvm::cast<MgbHashableAttrMixin>(it.attr);
+                    body += formatv(
+                        "    props_.emplace_back(\"{0}\", {1});\n", it.name,
+                        mlir::tblgen::tgfmt(attr.getReprFunctionTemplate(),
+                            &ctx, "$_self." + it.name)
+                    );
+                }
+            }
+        }
+        body += "    return props_;\n";
+        return body;
+    }
 public:
     static bool classof(const Operator* op) {
         return op->getDef().isSubClassOf("MgbHashableOpMixin");
@@ -221,6 +257,12 @@ public:
             return f.getValue().str();
         }
         return getDefaultCmpFunction();
+    }
+    std::string getPropsFunctionTemplate() const {
+        if (auto f = getDef().getValueAsOptionalString("propsFunction")) {
+            return f.getValue().str();
+        }
+        return getDefaultPropsFunction();
     }
 };
 

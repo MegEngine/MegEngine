@@ -70,6 +70,26 @@ BackwardGraphResult OpDef::make_backward_graph(
     return def.trait()->make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
 }
 
+std::vector<std::pair<const char*, std::string>> OpDef::props(
+    const OpDef& def) {
+    return def.trait()->props(def);
+}
+
+const char* OpDef::name() const {
+    return trait()->name;
+}
+
+std::string OpDef::to_string() const {
+    std::string builder = "{";
+    for (auto&& [name, value]: props(*this)) {
+        builder += name;
+        builder += ": ";
+        builder += value;
+        builder += ",";
+    }
+    return builder + "}";
+}
+
 size_t OpDef::hash() const {
     return trait()->hash(*this);
 }

@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
 
 import numpy as np
 
+from ..core._imperative_rt.core2 import pop_scope, push_scope
 from ..core.tensor.utils import make_shape_tuple
 from ..logger import get_logger
 from ..tensor import Parameter, Tensor
@@ -78,6 +79,7 @@ class Module(metaclass=ABCMeta):
         self._forward_hooks = OrderedDict()
 
         self._modules = []
+        self._name = "{anonymous}"
 
     @abstractmethod
     def forward(self, inputs):
@@ -103,6 +105,7 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_hooks, hook)
 
     def __call__(self, *inputs, **kwargs):
+        push_scope(self._name)
         for hook in self._forward_pre_hooks.values():
             modified_inputs = hook(self, inputs)
             if modified_inputs is not None:
@@ -116,6 +119,7 @@ class Module(metaclass=ABCMeta):
             modified_outputs = hook(self, inputs, outputs)
             if modified_outputs is not None:
                 outputs = modified_outputs
+        pop_scope(self._name)
         return outputs
 
     def _flatten(
@@ -570,6 +574,14 @@ class Module(metaclass=ABCMeta):
             loaded.append(k)
 
         return set(loaded), set(skipped)
+
+    def __getattribute__(self, name: str):
+        value = super().__getattribute__(name)
+        if name == "_name":
+            return value
+        if _is_module(value):
+            value._name = name
+        return value
 
     def __setattr__(self, name: str, value):
         if _is_module(value):

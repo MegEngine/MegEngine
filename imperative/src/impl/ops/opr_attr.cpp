@@ -95,9 +95,14 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* opr) {
     return OprAttr::make(registry->name, std::move(ctx.m_param), opr->config());
 }
 
+std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
+    return {};
+}
+
 OP_TRAIT_REG(OprAttr, OprAttr)
     .make_from_op_node(make_from_op_node)
     .apply_on_var_node(apply_on_var_node)
+    .props(props)
     .fallback();
 
 } // anonymous namespace

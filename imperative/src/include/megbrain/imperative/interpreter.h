@@ -10,6 +10,7 @@
  */
 
 #include <atomic>
+#include <any>
 
 #include "megbrain/imperative/op_def.h"
 
@@ -42,12 +43,15 @@ struct Interpreter {
 
         virtual void sync() = 0;
         virtual void close() = 0;
-        virtual void set_swap_flag(bool) = 0;
-        virtual void set_drop_flag(bool) = 0;
-        virtual void set_buffer_length(int) = 0;
 
-        virtual void config_async_level(int level) = 0;
-        virtual int get_async_level() = 0;
+        virtual int get_option(std::string name) = 0;
+        virtual void set_option(std::string name, int value) = 0;
+
+        virtual void start_profile(std::unordered_map<std::string, int> option) = 0;
+        virtual void stop_profile(std::string basename, std::string format) = 0;
+
+        virtual void push_scope(std::string name) = 0;
+        virtual void pop_scope(std::string name) = 0;
     };
 
     virtual std::unique_ptr<Channel> create_channel() = 0;

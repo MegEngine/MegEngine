@@ -222,10 +222,25 @@ static void gen_op_def_c_body_single(raw_ostream &os, MgbOp& op) {
         os << mlir::tblgen::tgfmt(hashable->getCmpFunctionTemplate(), &ctx, "a_", "b_");
         os << "}\n";
 
+        // generate props()
+        os << formatv(
+            "std::vector<std::pair<const char*, std::string>> {0}(const OpDef& def_) {{\n",
+            formatMethImpl("props")
+        );
+        os << formatv(
+            "    auto&& op_ = def_.cast_final_safe<{0}>();\n"
+            "    static_cast<void>(op_);\n",
+            className
+        );
+        ctx.withSelf("op_");
+        os << mlir::tblgen::tgfmt(hashable->getPropsFunctionTemplate(), &ctx);
+        os << "}\n";
+
         os << "} // anonymous namespace\n";
 
         methods.push_back("hash");
         methods.push_back("is_same_st");
+        methods.push_back("props");
     }
     if (!methods.empty()) {
         os << formatv(
@@ -423,7 +438,7 @@ EnumWrapper<{0}::{1}>::type2str = {{
     std::vector<std::string> getsetters;
     for (auto &&i : op.getMgbAttributes()) {
         getsetters.push_back(formatv(
-            "{{\"{1}\", py_get_generic({0}, {1}), py_set_generic({0}, {1}), \"{1}\", NULL},",
+            "{{const_cast<char*>(\"{1}\"), py_get_generic({0}, {1}), py_set_generic({0}, {1}), const_cast<char*>(\"{1}\"), NULL},",
             className, i.name));
     }
 

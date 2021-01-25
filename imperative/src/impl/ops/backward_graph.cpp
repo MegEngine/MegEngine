@@ -148,9 +148,15 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_tensor_attrs(
         .graph().infer_attrs(inputs);
 }
 
+std::vector<std::pair<const char*, std::string>> props(
+    const OpDef& backward_graph) {
+    return {};
+}
+
 OP_TRAIT_REG(BackwardGraph, BackwardGraph)
     .apply_on_physical_tensor(backward_impl)
     .infer_output_attrs_fallible(infer_tensor_attrs)
+    .props(props)
     .fallback();
 } // anonymous namespace
 

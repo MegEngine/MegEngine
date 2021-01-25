@@ -72,6 +72,7 @@ using InferOutputAttrsFallible = detail::OpMeth<
         decltype(OpDef::infer_output_attrs_fallible)>;
 using GradMaker = detail::OpMeth<
         decltype(OpDef::make_backward_graph)>;
+using Props = detail::OpMeth<decltype(OpDef::props)>;
 using HashFunc = detail::OpMeth<size_t(const OpDef&)>;
 using IsSame = detail::OpMeth<bool(const OpDef&, const OpDef&)>;
 
@@ -84,6 +85,7 @@ struct OpTrait {
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
     GradMaker make_backward_graph;
+    Props props;
     HashFunc hash;
     IsSame is_same_st;
     OpTrait(const char* name);
@@ -100,6 +102,7 @@ struct OpTrait {
     cb(apply_on_var_node) \
     cb(infer_output_attrs_fallible) \
     cb(make_backward_graph) \
+    cb(props) \
     cb(hash) \
     cb(is_same_st)
 

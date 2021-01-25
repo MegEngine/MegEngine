@@ -471,6 +471,7 @@ class ExecMiniGraph : public ProxyGraph::MiniGraph {
         }
         if (can_pop) {
             for (auto _ : comp_node_trackers) {
+                MGB_MARK_USED_VAR(_);
                 busy_oprs.pop_front();
             }
             m_opr = busy_oprs.front().opr;

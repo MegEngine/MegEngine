@@ -807,16 +807,34 @@ void init_tensor(py::module m) {
         }
     }
 
+    m.def("set_option",
+          [](std::string name, int value){ interpreter_for_py->set_option(name, value); });
+    m.def("get_option",
+          [](std::string name){ return interpreter_for_py->get_option(name); });
     m.def("_set_swap_flag",
-          [](bool flag) { interpreter_for_py->set_swap_flag(flag); });
+          [](bool flag) { interpreter_for_py->set_option("enable_swap", flag); });
     m.def("_set_drop_flag",
-          [](bool flag) { interpreter_for_py->set_drop_flag(flag); });
+          [](bool flag) { interpreter_for_py->set_option("enable_drop", flag); });
     m.def("config_async_level",
-          [](int level) { interpreter_for_py->config_async_level(level); });
+          [](int level) {
+              mgb_assert(level >= 0 and level <= 2, "async_level should be 0, 1 or 2");
+              interpreter_for_py->set_option("async_level", level);
+          });
     m.def("get_async_level",
-          []() { return interpreter_for_py->get_async_level(); });
+          []() { return interpreter_for_py->get_option("async_level"); });
     m.def("set_buffer_length",
-          [](int length) { interpreter_for_py->set_buffer_length(length); });
+          [](int length) {
+              mgb_assert(length >= 0 and length < 100, "buffer_length should be in [0, 100)");
+              interpreter_for_py->set_option("buffer_length", length);
+          });
+    m.def("push_scope",
+          [](std::string name) { interpreter_for_py->push_scope(name); });
+    m.def("pop_scope",
+          [](std::string name) { interpreter_for_py->pop_scope(name); });
+    m.def("start_profile",
+          [](std::unordered_map<std::string, int> option) { return interpreter_for_py->start_profile(option); });
+    m.def("stop_profile",
+          [](std::string basename, std::string format) { interpreter_for_py->stop_profile(basename, format); });
     m.def("sync",
           []() {
               interpreter_for_py->sync();

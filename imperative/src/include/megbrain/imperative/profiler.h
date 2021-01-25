@@ -11,10 +11,12 @@
 
 #pragma once
 
-#include <any>
 #include <optional>
-#include <stack>
-#include <list>
+#include <map>
+#include <variant>
+#include <fstream>
+#include <chrono>
+#include <bitset>
 
 #include "megbrain/comp_node.h"
 #include "megbrain/graph/event.h"
@@ -27,89 +29,298 @@
 namespace mgb {
 namespace imperative {
 
-using ProfileTensor = std::tuple<size_t, std::vector<size_t>, CompNode>;
-
-struct ProfileEntry {
-    using TimeClosure = std::function<double()>;
-    size_t id;
-    size_t parent;
-    std::shared_ptr<OpDef> op;
-    //(host_begin, host_end)
-    std::tuple<double, double> host;
-    //[(device, device_begin, device_end)]
-    std::vector<std::tuple<CompNode, TimeClosure, TimeClosure>> device_list;
-    std::vector<ProfileTensor> inputs;
-    std::vector<ProfileTensor> outputs;
-    long long memory = 0;
-    long long computation = 0;
-#if MGB_ENABLE_JSON
-    std::shared_ptr<json::Value> param;
-#endif
-    void wait_device() {
-        for (auto& [cn, begin, end] : device_list) {
-            MGB_MARK_USED_VAR(cn);
-            begin = [begin = begin()] { return begin; };
-            end = [end = end()] { return end; };
-        }
-    }
-};
-
-using Profile = std::list<ProfileEntry>;
-
 class DeviceTimer {
 public:
     using SharedEvent = std::shared_ptr<CompNode::Event>;
     DeviceTimer() = default;
-    void reset(thin_function<double()> host_timer);
-    thin_function<double()> get_device_time(CompNode device);
-    void clear();
-
-private:
-    CompNode::UnorderedMap<std::tuple<SharedEvent, double>> m_base_event_table;
-    thin_function<double()> m_host_timer;
+    SharedEvent get_device_time(CompNode device);
+    SmallVector<SharedEvent> get_all(SmallVector<CompNode> device_list);
 };
 
-class TensorRecorder {
-private:
-    // active tensors
-    std::unordered_map<Tensor*, std::tuple<std::weak_ptr<Tensor>, size_t>>
-            m_tensor_map;
-    size_t m_next_id;
-
+class HostTimer {
 public:
-    size_t record_tensor(const TensorPtr& tensor);
-    void clear();
+    void reset();
+    double get_msecs();
+    double get_started_at();
+private:
+    decltype(std::chrono::steady_clock::now()) m_start;
+    double m_started_at;
 };
 
-class Profiler {
+
+class ProfilerBase {
 public:
-    enum Flags {
-        PROFILE_FOOTPRINT = 1,
+    using Host = std::thread::id;
+    using Device = CompNode;
+
+    struct HostInstant {
+        Host tid;
+        double time;
+
+        void wait() {}
     };
 
-public:
-    Profiler() = default;
-    // Start profiler by hook OpTrait
-    void start(uint32_t flags);
-    // Stop profiler and clean environment
-    void stop();
-    void clear();
-    Profile& get_profile();
+    struct DeviceInstant {
+        double before;
+        std::shared_ptr<CompNode::Event> event;
+        double after;
 
-private:
+        void wait() {
+            event->host_wait();
+        }
+    };
+
+    using Instant = std::variant<HostInstant, DeviceInstant>;
+
+    template <typename TEvent>
+    struct EventRecord {
+        Instant instant;
+        TEvent data;
+
+        HostInstant& host() {
+            return std::get<HostInstant>(instant);
+        }
+
+        DeviceInstant device() {
+            return std::get<DeviceInstant>(instant);
+        }
+
+        void wait() {
+            std::visit([&](auto& instant){ instant.wait(); }, instant);
+        }
+    };
+protected:
+    HostInstant record_host() {
+        return {std::this_thread::get_id(), m_host_timer.get_msecs()};
+    }
+    DeviceInstant record_device(Device device) {
+        auto before = m_host_timer.get_msecs();
+        auto event = m_device_timer.get_device_time(device);
+        auto after = m_host_timer.get_msecs();
+        return {before, event, after};
+    }
+protected:
+    std::atomic_int64_t m_last_id = 0;
+    HostTimer m_host_timer;
     DeviceTimer m_device_timer;
-    RealTimer m_host_timer;
-    Profile m_profile;
-    TensorRecorder m_tensor_recorder;
-    std::stack<std::tuple<const OpDef*, ProfileEntry*, std::thread::id>>
-            m_entry_stack;
-    // Hold profile owned by this Profiler
-    std::unique_ptr<Profile> m_owned_profile;
-    // Hold hooks, cleared when stop
-    std::vector<std::any> m_hooker_list;
-    size_t m_entry_count = 0;
     Spinlock m_lock;
-    std::unordered_map<Tensor*, std::weak_ptr<Tensor>> m_recorded_tensors;
+};
+
+
+template <typename... TEvents>
+class Profiler: public ProfilerBase {
+public:
+    using Record = std::variant<EventRecord<TEvents>...>;
+    using Mask = std::bitset<sizeof...(TEvents)>;
+
+    struct Data {
+        std::vector<Record> records;
+        double started_at;
+    };
+
+    template <typename TEvent, size_t index = 0>
+    static constexpr size_t index_of() {
+        if constexpr (index == std::variant_size_v<Record>) {
+            return index;
+        } else if constexpr (std::is_same_v<EventRecord<TEvent>, std::variant_alternative_t<index, Record>>) {
+            return index;
+        } else {
+            return index_of<TEvent, index+1>();
+        }
+    };
+
+    template <typename... TEvents2>
+    static Mask mask_of() {
+        return Mask{} | (Mask{}.set(index_of<TEvents2>()) |...);
+    }
+
+    enum Status {
+        NotStarted, Profiling, Stopped
+    };
+public:
+    template <typename TEvent, typename... TArgs>
+    void record_host(TArgs&&... args) {
+        auto instant = HostInstant{std::this_thread::get_id(), m_host_timer.get_msecs()};
+        MGB_LOCK_GUARD(m_lock);
+        if (!m_event_mask.test(index_of<TEvent>())) {
+            return;
+        }
+        mgb_assert(m_status != Stopped, "record after stop");
+        m_record_list.emplace_back(EventRecord<TEvent>{std::move(instant), {std::forward<TArgs>(args)...}});
+    }
+    template <typename TEvent, typename... TArgs>
+    void record_device(Device device, TArgs&&... args) {
+        auto before = m_host_timer.get_msecs();
+        auto event = m_device_timer.get_device_time(device);
+        auto after = m_host_timer.get_msecs();
+        auto instant = DeviceInstant{before, event, after};
+        MGB_LOCK_GUARD(m_lock);
+        if (!m_event_mask.test(index_of<TEvent>())) {
+            return;
+        }
+        mgb_assert(m_status != Stopped, "record after stop");
+        m_record_list.emplace_back(EventRecord<TEvent>{std::move(instant), {std::forward<TArgs>(args)...}});
+    }
+    void start(Mask mask) {
+        MGB_LOCK_GUARD(m_lock);
+        mgb_assert(m_status == NotStarted, "profiler already started");
+        m_status = Profiling;
+        m_event_mask = mask;
+        m_host_timer.reset();
+    }
+    Data stop() {
+        MGB_LOCK_GUARD(m_lock);
+        mgb_assert(m_status == Profiling, "profiler not active");
+        m_status = Stopped;
+        for (auto&& record: m_record_list) {
+            std::visit([&](auto& record){
+                record.wait();
+            }, record);
+        }
+        auto records = std::move(m_record_list);
+        return { records, m_host_timer.get_started_at() };
+    }
+protected:
+    std::vector<Record> m_record_list;
+    Mask m_event_mask;
+    Status m_status = NotStarted;
+};
+
+
+class ChromeTraceEvent {
+public:
+    ChromeTraceEvent& name(std::string name) {
+        m_name = std::move(name);
+        return *this;
+    }
+    ChromeTraceEvent& tid(uint64_t tid) {
+        m_tid = std::move(tid);
+        return *this;
+    }
+    ChromeTraceEvent& cat(std::string cat) {
+        m_cat = std::move(cat);
+        return *this;
+    }
+    ChromeTraceEvent& pid(uint64_t pid) {
+        m_pid = pid;
+        return *this;
+    }
+    ChromeTraceEvent& id(uint64_t id) {
+        m_id = id;
+        return *this;
+    }
+    ChromeTraceEvent& idx(uint64_t idx) {
+        m_idx = idx;
+        return *this;
+    }
+    ChromeTraceEvent& ts(double ts) {
+        m_ts = ts;
+        return *this;
+    }
+    ChromeTraceEvent& dur(double dur) {
+        m_dur = dur;
+        return *this;
+    }
+    ChromeTraceEvent& ph(char ph) {
+        m_ph = ph;
+        return *this;
+    }
+    ChromeTraceEvent& bp(char bp) {
+        m_bp = bp;
+        return *this;
+    }
+    ChromeTraceEvent& args(std::shared_ptr<json::Object> args) {
+        m_args = std::move(args);
+        return *this;
+    }
+    ChromeTraceEvent& arg(std::string key, std::string value) {
+        if (!m_args) {
+            m_args = json::Object::make();
+        }
+        (*m_args)[key] = json::String::make(value);
+        return *this;
+    }
+    ChromeTraceEvent& arg(std::string key, double value) {
+        if (!m_args) {
+            m_args = json::Object::make();
+        }
+        (*m_args)[key] = json::Number::make(value);
+        return *this;
+    }
+    ChromeTraceEvent& arg(std::string key, std::shared_ptr<json::Value> value) {
+        if (!m_args) {
+            m_args = json::Object::make();
+        }
+        (*m_args)[key] = value;
+        return *this;
+    }
+
+    std::shared_ptr<json::Object> to_json() const {
+        auto result = json::Object::make();
+        auto prop_str = [&](auto key, auto value) {
+            if (value.empty()) {
+                return;
+            }
+            (*result)[key] = json::String::make(value);
+        };
+        auto prop_num = [&](auto key, auto value) {
+            if (!value) {
+                return;
+            }
+            (*result)[key] = json::Number::make(value.value());
+        };
+        auto prop_char = [&](auto key, auto value) {
+            if (!value) {
+                return;
+            }
+            (*result)[key] = json::String::make(std::string{} + value.value());
+        };
+        prop_str("name", m_name);
+        prop_num("tid", m_tid);
+        prop_str("cat", m_cat);
+        prop_num("pid", m_pid);
+        prop_num("id", m_id);
+        prop_num("idx", m_idx);
+        prop_num("ts", m_ts);
+        prop_num("dur", m_dur);
+        prop_char("ph", m_ph);
+        prop_char("bp", m_bp);
+        if (m_args) {
+            (*result)["args"] = m_args;
+        }
+        return result;
+    }
+private:
+    std::string m_name;
+    std::string m_cat;
+
+    std::optional<uint64_t> m_tid;
+    std::optional<uint64_t> m_pid;
+    std::optional<uint64_t> m_id;
+    std::optional<uint64_t> m_idx;
+    std::optional<double> m_ts;
+    std::optional<double> m_dur;
+    std::optional<char> m_ph;
+    std::optional<char> m_bp;
+    std::shared_ptr<json::Object> m_args;
+};
+
+class ChromeTraceEventList {
+public:
+    ChromeTraceEvent& new_event() {
+        m_content.emplace_back();
+        return m_content.back();
+    }
+
+    std::shared_ptr<json::Array> to_json() {
+        auto result = json::Array::make();
+        for (auto&& event: m_content) {
+            result->add(event.to_json());
+        }
+        return result;
+    }
+private:
+    std::vector<ChromeTraceEvent> m_content;
 };
 
 }  // namespace imperative

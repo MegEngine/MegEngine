@@ -15,6 +15,7 @@ from typing import Union
 
 import numpy as np
 
+from ..core._imperative_rt.core2 import pop_scope, push_scope
 from ..core.tensor.utils import set_convert_inputs
 from ..tensor import Parameter, Tensor
 from ..utils.deprecation import deprecated
@@ -155,7 +156,9 @@ class Optimizer(metaclass=ABCMeta):
                     "but the ordering of parameters in sets will change between runs. "
                     "Please use a list instead."
                 )
+            push_scope("step")
             self._updates(group)
+            pop_scope("step")
         # restore the globle state `_enable_convert_inputs`
         set_convert_inputs(backup)
         return self
@@ -172,8 +175,10 @@ class Optimizer(metaclass=ABCMeta):
         Set the grad attribute to None for all parameters.
         """
         for param_group in self.param_groups:
+            push_scope("clear_grad")
             for param in param_group["params"]:
                 param.grad = None
+            pop_scope("clear_grad")
 
     def state_dict(self) -> Dict:
         r"""

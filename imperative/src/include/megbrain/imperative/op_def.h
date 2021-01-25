@@ -13,6 +13,7 @@
 
 #include "megbrain/graph.h"
 #include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/imperative/utils/to_string.h"
 
 namespace mgb {
 namespace imperative {
@@ -80,7 +81,14 @@ public:
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
 
+    static std::vector<std::pair<const char*, std::string>> props(
+        const OpDef& def);
+
     const OpTrait* trait() const;
+
+    const char* name() const;
+
+    std::string to_string() const;
 
     virtual size_t hash() const;
 
@@ -93,6 +101,16 @@ public:
     template<typename ...Args>
     static std::shared_ptr<T> make(Args&& ...args) {
         return std::make_shared<T>(std::forward<Args>(args)...);
+    }
+};
+
+template <>
+struct ToStringTrait<OpDef*>{
+    std::string operator()(OpDef* op) const {
+        if (op == nullptr) {
+            return "nullptr";
+        }
+        return op->to_string();
     }
 };
 
