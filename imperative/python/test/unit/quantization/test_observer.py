@@ -65,13 +65,7 @@ def test_passive_observer():
     assert m.get_qparams() == {"scale": mge.tensor(2.0)}
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_sync_min_max_observer():
     word_size = get_device_count_by_fork("gpu")
@@ -89,13 +83,7 @@ def test_sync_min_max_observer():
     worker()
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_sync_exponential_moving_average_observer():
     word_size = get_device_count_by_fork("gpu")

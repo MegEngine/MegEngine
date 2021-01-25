@@ -37,20 +37,15 @@ def _assert_q_val(q, val):
     assert ret == val
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("backend", ["nccl"])
 @pytest.mark.isolated_distributed
-def test_init_process_group():
+def test_init_process_group(backend):
     world_size = 2
     server = dist.Server()
     port = server.py_server_port
 
-    def worker(rank, backend):
+    def worker(rank):
         dist.init_process_group("localhost", port, world_size, rank, rank, backend)
         assert dist.is_distributed() == True
         assert dist.get_rank() == rank
@@ -67,27 +62,18 @@ def test_init_process_group():
 
         assert isinstance(dist.get_client(), dist.Client)
 
-    def check(backend):
-        procs = []
-        for rank in range(world_size):
-            p = mp.Process(target=worker, args=(rank, backend))
-            p.start()
-            procs.append(p)
+    procs = []
+    for rank in range(world_size):
+        p = mp.Process(target=worker, args=(rank,))
+        p.start()
+        procs.append(p)
 
-        for p in procs:
-            p.join(20)
-            assert p.exitcode == 0
-
-    check("nccl")
+    for p in procs:
+        p.join(20)
+        assert p.exitcode == 0
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 3, reason="need more gpu device")
+@pytest.mark.require_ngpu(3)
 @pytest.mark.isolated_distributed
 def test_new_group():
     world_size = 3
@@ -106,13 +92,7 @@ def test_new_group():
     worker()
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_group_barrier():
     world_size = 2
@@ -142,13 +122,7 @@ def test_group_barrier():
         assert p.exitcode == 0
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_synchronized():
     world_size = 2
@@ -186,17 +160,9 @@ def test_synchronized():
         assert p.exitcode == 0
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_user_set_get():
-    world_size = 2
-
     @dist.launcher
     def worker():
         # set in race condition

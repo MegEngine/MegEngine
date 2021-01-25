@@ -355,26 +355,17 @@ def copy_test(dst, src):
     assert np.allclose(data, z.numpy())
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") == 0, reason="CUDA is disabled")
+@pytest.mark.require_ngpu(1)
 def test_copy_h2d():
     copy_test("cpu0", "gpu0")
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") == 0, reason="CUDA is disabled")
+@pytest.mark.require_ngpu(1)
 def test_copy_d2h():
     copy_test("gpu0", "cpu0")
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 def test_copy_d2d():
     copy_test("gpu0", "gpu1")
     copy_test("gpu0:0", "gpu0:1")

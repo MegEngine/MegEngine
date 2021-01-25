@@ -133,15 +133,12 @@ def test_regression_1762():
         gm.backward(loss)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
-def test_remote_grad():
+@pytest.mark.parametrize(
+    "trace_mode", [True, False, None], ids=["symbolic", "trace", "no_trace"]
+)
+def test_remote_grad(trace_mode):
     @dist.launcher
     def worker():
         rank = dist.get_rank()
@@ -166,14 +163,10 @@ def test_remote_grad():
                     gm.backward(y)
                 opt.step().clear_grad()
 
-        train_funcs = [
-            train_func,
-            trace(symbolic=False)(train_func),
-            trace(symbolic=True)(train_func),
-        ]
+        if trace_mode is not None:
+            train_func = trace(symbolic=trace_mode)(train_func)
 
-        for func in train_funcs:
-            for i in range(3):
-                func(x)
+        for i in range(3):
+            train_func(x)
 
     worker()

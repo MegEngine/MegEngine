@@ -22,13 +22,7 @@ from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 _assert_allclose = functools.partial(np.testing.assert_allclose, atol=5e-6, rtol=5e-6)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_syncbn():
     nr_chan = 8
@@ -125,9 +119,6 @@ def test_batchnorm():
     _assert_allclose(yv1.numpy(), yv_expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
 def test_syncbn1d():
     nr_chan = 8
     data_shape = (3, nr_chan, 4)
@@ -215,9 +206,6 @@ def test_batchnorm2d():
     _assert_allclose(yv1.numpy(), yv_expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
 def test_syncbn2d():
     nr_chan = 8
     data_shape = (3, nr_chan, 16, 16)
@@ -285,9 +273,6 @@ def test_batchnorm_no_stats():
         _assert_allclose(yv.numpy(), yv_expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
 def test_syncbn_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 4)
@@ -333,9 +318,6 @@ def test_batchnorm2d_no_stats():
         _assert_allclose(yv.numpy(), yv_expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
 def test_syncbn2d_no_stats():
     nr_chan = 8
     data_shape = (3, nr_chan, 16, 16)

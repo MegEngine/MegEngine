@@ -33,15 +33,10 @@ from megengine.functional.distributed import (
 )
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_reduce_sum():
+def test_reduce_sum(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -52,27 +47,18 @@ def test_reduce_sum():
         else:
             assert np.allclose(output.numpy(), 0)
 
-    def check(shape):
-        x = np.random.rand(*shape)
-        y = np.random.rand(*shape)
-        z = x + y
-        data = (x, y)
-        expect = (z, None)
-        worker(data, expect)
-
-    for shape in [(), (1,), (2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = x + y
+    data = (x, y)
+    expect = (z, None)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_broadcast():
+def test_broadcast(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -80,26 +66,17 @@ def test_broadcast():
         output = broadcast(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape)
-        y = x + 1
-        data = (x, y)
-        expect = (x, x)
-        worker(data, expect)
-
-    for shape in [(), (1,), (2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = x + 1
+    data = (x, y)
+    expect = (x, x)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_gather():
+def test_all_gather(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -107,27 +84,18 @@ def test_all_gather():
         output = all_gather(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape).astype("float32")
-        y = np.random.rand(*shape).astype("float32")
-        z = np.concatenate((x, y))
-        data = (x, y)
-        expect = (z, z)
-        worker(data, expect)
-
-    for shape in [(2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = np.concatenate((x, y))
+    data = (x, y)
+    expect = (z, z)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (88, 44)], ids=str)
 @pytest.mark.isolated_distributed
-def test_reduce_scatter_sum():
+def test_reduce_scatter_sum(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -135,27 +103,18 @@ def test_reduce_scatter_sum():
         output = reduce_scatter_sum(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape).astype("float32")
-        y = np.random.rand(*shape).astype("float32")
-        z = x + y
-        data = (x, y)
-        expect = (z[: shape[0] // 2], z[shape[0] // 2 :])
-        worker(data, expect)
-
-    for shape in [(2, 4), (8, 10), (88, 44)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = x + y
+    data = (x, y)
+    expect = (z[: shape[0] // 2], z[shape[0] // 2 :])
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_reduce_sum():
+def test_all_reduce_sum(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -163,27 +122,18 @@ def test_all_reduce_sum():
         output = all_reduce_sum(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape)
-        y = np.random.rand(*shape)
-        z = x + y
-        data = (x, y)
-        expect = (z, z)
-        worker(data, expect)
-
-    for shape in [(), (1,), (2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = x + y
+    data = (x, y)
+    expect = (z, z)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_reduce_max():
+def test_all_reduce_max(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -191,27 +141,18 @@ def test_all_reduce_max():
         output = all_reduce_max(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape)
-        y = np.random.rand(*shape)
-        z = np.maximum(x, y)
-        data = (x, y)
-        expect = (z, z)
-        worker(data, expect)
-
-    for shape in [(), (1,), (2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = np.maximum(x, y)
+    data = (x, y)
+    expect = (z, z)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_reduce_min():
+def test_all_reduce_min(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -219,27 +160,18 @@ def test_all_reduce_min():
         output = all_reduce_min(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape)
-        y = np.random.rand(*shape)
-        z = np.minimum(x, y)
-        data = (x, y)
-        expect = (z, z)
-        worker(data, expect)
-
-    for shape in [(), (1,), (2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = np.minimum(x, y)
+    data = (x, y)
+    expect = (z, z)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_gather():
+def test_gather(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -250,27 +182,18 @@ def test_gather():
         else:
             assert np.allclose(output.numpy(), 0)
 
-    def check(shape):
-        x = np.random.rand(*shape).astype("float32")
-        y = np.random.rand(*shape).astype("float32")
-        z = np.concatenate((x, y))
-        data = (x, y)
-        expect = (z, None)
-        worker(data, expect)
-
-    for shape in [(2, 3), (8, 10), (99, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    z = np.concatenate((x, y))
+    data = (x, y)
+    expect = (z, None)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (100, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_scatter():
+def test_scatter(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -278,26 +201,17 @@ def test_scatter():
         output = scatter(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape).astype("float32")
-        y = x + 1
-        data = (x, y)
-        expect = (x[: shape[0] // 2], x[shape[0] // 2 :])
-        worker(data, expect)
-
-    for shape in [(2, 3), (8, 10), (100, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = x + 1
+    data = (x, y)
+    expect = (x[: shape[0] // 2], x[shape[0] // 2 :])
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (100, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_to_all():
+def test_all_to_all(shape):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -305,28 +219,19 @@ def test_all_to_all():
         output = all_to_all(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    def check(shape):
-        x = np.random.rand(*shape).astype("float32")
-        y = np.random.rand(*shape).astype("float32")
-        a = np.concatenate((x[: shape[0] // 2], y[: shape[0] // 2]))
-        b = np.concatenate((x[shape[0] // 2 :], y[shape[0] // 2 :]))
-        data = (x, y)
-        expect = (a, b)
-        worker(data, expect)
-
-    for shape in [(2, 3), (8, 10), (100, 77)]:
-        check(shape)
+    x = np.random.random_sample(shape).astype("float32")
+    y = np.random.random_sample(shape).astype("float32")
+    a = np.concatenate((x[: shape[0] // 2], y[: shape[0] // 2]))
+    b = np.concatenate((x[shape[0] // 2 :], y[shape[0] // 2 :]))
+    data = (x, y)
+    expect = (a, b)
+    worker(data, expect)
 
 
-@pytest.mark.skipif(
-    platform.system() == "Darwin", reason="do not imp GPU mode at macos now"
-)
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
-def test_io_remote():
+@pytest.mark.parametrize("shape", [(), (1,), (4, 5)], ids=str)
+def test_io_remote(shape):
     @dist.launcher(n_gpus=2)
     def worker(val, shape):
         rank = dist.get_rank()
@@ -339,6 +244,5 @@ def test_io_remote():
             assert y.device == "gpu1"
             np.testing.assert_almost_equal(val, y.numpy())
 
-    for shape in [(), (1,), (4, 5)]:
-        val = np.random.rand(*shape)
-        worker(val, shape)
+    val = np.random.random_sample(shape).astype("float32")
+    worker(val, shape)

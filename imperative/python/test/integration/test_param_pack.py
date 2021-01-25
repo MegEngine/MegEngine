@@ -32,11 +32,8 @@ class Simple(Module):
         return x
 
 
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
 def test_param_pack():
     data = np.ones([1], dtype="float32")
 
@@ -61,11 +58,8 @@ def test_param_pack():
     worker()
 
 
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="windows disable MGB_ENABLE_OPR_MM"
-)
 def test_param_pack_with_no_param():
     data = np.ones([1], dtype="float32")
 
