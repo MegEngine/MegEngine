@@ -17,11 +17,11 @@ import numpy as np
 import megengine as mge
 import megengine.core._imperative_rt as rt
 import megengine.core.tensor.megbrain_graph as G
-from megengine.utils import comp_graph_tools as cgtools
-from megengine.core.ops import builtin
-from megengine.core._imperative_rt.core2 import apply
-from megengine.core.tensor.megbrain_graph import VarNode
 from megengine import tensor
+from megengine.core._imperative_rt.core2 import apply
+from megengine.core.ops import builtin
+from megengine.core.tensor.megbrain_graph import VarNode
+from megengine.utils import comp_graph_tools as cgtools
 
 logger = mge.get_logger(__name__)
 
@@ -372,8 +372,8 @@ def main():
     )
     parser.add_argument(
         "--optimize-for-inference",
-        action="store_false",
-        help="enbale optimization for inference",
+        action="store_true",
+        help="enable optimization for inference",
     )
     parser.add_argument(
         "--no-assert",
@@ -498,7 +498,7 @@ def main():
             wrap_output_vars,
             append_json=True,
             strip_info_file=strip_info_file,
-            **sereg_kwargs
+            **sereg_kwargs,
         )
         fout.write(dump_content)
 
