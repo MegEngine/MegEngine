@@ -36,7 +36,7 @@ def test_where():
         {"input": [maskv0, xv0, yv0]},
         {"input": [maskv1, xv1, yv1]},
     ]
-    opr_test(cases, F.where, ref_fn=np.where)
+    opr_test(cases, F.where, ref_fn=np.where, test_trace=False)
 
     maskv2 = np.array([1, 1, 1], dtype=np.bool_)
     xv2 = np.array([1, 3, 2], dtype=np.float32)
@@ -50,7 +50,7 @@ def test_where():
         {"input": [maskv2, xv2, yv2]},
         {"input": [maskv3, xv3, yv3]},
     ]
-    opr_test(cases, F.where, ref_fn=np.where)
+    opr_test(cases, F.where, ref_fn=np.where, test_trace=False)
 
 
 def test_dropout():
@@ -115,14 +115,17 @@ def test_matmul():
         {"input": [data4, data5]},
     ]
     for _ in range(0, batch_size):
+        # FIXME: remove test_trace=False in the future
         opr_test(
-            cases, F.matmul, ref_fn=np.matmul,
+            cases, F.matmul, test_trace=False, ref_fn=np.matmul,
         )
 
+    # FIXME: remove test_trace=False in the future
     opr_test(
         [{"input": [data1, data4]}],
         F.matmul,
         ref_fn=lambda x, y: np.matmul(x, y.transpose(0, 1, 3, 2)),
+        test_trace=False,
         transpose_b=True,
     )
 

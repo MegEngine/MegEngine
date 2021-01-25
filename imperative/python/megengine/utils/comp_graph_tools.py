@@ -315,9 +315,9 @@ class GraphInference:
         inputs = get_dep_vars(output_nodes, "Host2DeviceCopy")
         self._inp_dict = OrderedDict()
         replace_dict = {}
-        for i in inputs:
+        for idx, i in enumerate(inputs):
             inp_node = G.InputNode(
-                device="xpux", dtype=inputs[0].dtype, graph=inputs[0].graph
+                device="xpux", dtype=inputs[idx].dtype, graph=inputs[0].graph
             )
             self._inp_dict[i.name] = inp_node
             replace_dict[i] = inp_node.outputs[0]
