@@ -57,24 +57,47 @@ deformable_conv::Param create_param(const Algo::SizeArgs& args,
 
     return p;
 }
-};  // anonymous namespace
 
-bool Algo::is_available(const SizeArgs&) const {
-    return true;
-}
-
-void Algo::get_matmul_layout(const SizeArgs& args, TensorLayout& al,
-                             TensorLayout& bl, TensorLayout& cl) {
-    auto&& dt = args.im_layout.dtype;
-    auto&& fm = args.filter_meta;
-    size_t batch_sz = args.im_layout[0], OH = args.dst_layout[2],
-           OW = args.dst_layout[3], FH = fm.spatial[0], FW = fm.spatial[1];
+std::pair<TensorLayoutArray, BatchedMatrixMulForward::Param> sub_opr_config(
+        const DeformableConvForwardImpl::CanonizedFilterMeta& fm,
+        const TensorLayout& im,
+        const TensorLayout& dst) {
+    auto&& dt = im.dtype;
+    size_t batch_sz = im[0], OH = dst[2],
+           OW = dst[3], FH = fm.spatial[0], FW = fm.spatial[1];
 
     size_t M = fm.ocpg, N = OH * OW * batch_sz, K = fm.icpg * FH * FW,
            batch = fm.group;
-    al = {{batch, M, K}, dt};
-    bl = {{batch, K, N}, dt};
-    cl = {{batch, M, N}, dt};
+    TensorLayout al = {{batch, M, K}, dt};
+    TensorLayout bl = {{batch, K, N}, dt};
+    TensorLayout cl = {{batch, M, N}, dt};
+
+    BatchedMatrixMulForward::Param param;
+    param.compute_mode = param::MatrixMul::ComputeMode::DEFAULT;
+
+    return {{al, bl, cl}, param};
+}
+
+};  // anonymous namespace
+
+std::vector<Algorithm::SearchItem>
+Algo::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    const DeformableConvForwardImpl* deformable_conv =
+            static_cast<const DeformableConvForwardImpl*>(opr);
+    CanonizedFilterMeta fm = deformable_conv->make_canonized_filter_meta(
+        layouts[0].ndim, layouts[1], layouts[2]);
+    auto&& config = sub_opr_config(fm, layouts[0], layouts[4]);
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::BATCHED_MATRIX_MUL_FORWARD, param_str,
+             config.first}};
+}
+
+
+bool Algo::is_available(const SizeArgs&) const {
+    return true;
 }
 
 WorkspaceBundle Algo::get_bundle(const SizeArgs& args) {
@@ -83,17 +106,24 @@ WorkspaceBundle Algo::get_bundle(const SizeArgs& args) {
            OC = args.dst_layout[1], OH = args.dst_layout[2],
            OW = args.dst_layout[3], FH = fm.spatial[0], FW = fm.spatial[1];
 
-    auto&& bmm_opr = args.handle->create_operator<BatchedMatrixMulForward>();
-    TensorLayout al, bl, cl;
+    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid() &&
+        !args.opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        bmatmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
 
-    get_matmul_layout(args, al, bl, cl);
-    bmm_opr->param().compute_mode = param::MatrixMul::ComputeMode::DEFAULT;
+    auto&& config =
+            sub_opr_config(args.filter_meta, args.im_layout, args.dst_layout);
+    bmatmul_opr->param() = config.second;
 
     size_t col_ws = batch_sz * IC * FH * FW * OH * OW * sizeof(float);
-    size_t bmm_ws = bmm_opr->get_workspace_in_bytes(al, bl, cl);
+    size_t bmm_ws = bmatmul_opr->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2]);
     size_t result_ws = batch_sz * OC * OH * OW * sizeof(float);
 
-    return {nullptr, {col_ws, bmm_ws, result_ws}};
+    return WorkspaceBundle{nullptr, {col_ws, bmm_ws, result_ws}};
 }
 
 size_t Algo::get_workspace_in_bytes(const SizeArgs& args) const {
@@ -123,18 +153,25 @@ void Algo::exec(const ExecArgs& args) const {
     // im2col
     deformable_conv::im2col(dev_im, dev_offset, dev_mask,
                             static_cast<float*>(col_ws), p);
-    // matmul
-    TensorLayout al, bl, cl;
-    get_matmul_layout(args, al, bl, cl);
 
-    TensorND A(static_cast<void*>(dev_filter), al),
-            B(static_cast<void*>(col_ws), bl),
-            C(static_cast<void*>(result_ws), cl);
+    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        bmatmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+
+    auto&& config =
+            sub_opr_config(args.filter_meta, args.im_layout, args.dst_layout);
+    bmatmul_opr->param() = config.second;
+
+    // matmul
+    TensorND A(static_cast<void*>(dev_filter), config.first[0]),
+            B(static_cast<void*>(col_ws), config.first[1]),
+            C(static_cast<void*>(result_ws), config.first[2]);
 
     size_t bmm_ws_size = bundle.get_size(1);
-    auto&& bmm_opr = args.handle->create_operator<BatchedMatrixMulForward>();
-    bmm_opr->param().compute_mode = param::MatrixMul::ComputeMode::DEFAULT;
-    bmm_opr->exec(
+    bmatmul_opr->exec(
             A, B, C,
             Workspace(static_cast<megdnn::dt_byte*>(bmm_ws), bmm_ws_size));
     // relayout

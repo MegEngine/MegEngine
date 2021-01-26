@@ -87,20 +87,20 @@ public:
 
 class DeformableConvForwardImpl::AlgoMatmul final : public AlgoBase {
 private:
-    static void get_matmul_layout(const SizeArgs& args, TensorLayout& al,
-                                  TensorLayout& bl, TensorLayout& cl);
     static WorkspaceBundle get_bundle(const SizeArgs& args);
 
 public:
-    AlgoMatmul(){};
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
     bool is_reproducible() const override { return true; }
 
-    const char* name() const override { return "AlgoMatmul"; }
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
+
+    const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
 };
 
