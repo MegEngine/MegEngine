@@ -361,9 +361,6 @@ private:
 };
 
 class ConvBiasForwardImpl::AlgoBatchedMatmul final : public AlgoBase {
-    static void extract_matmul_layouts(const SizeArgs& args, TensorLayout& A,
-                                       TensorLayout& B, TensorLayout& C);
-
 public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
@@ -372,10 +369,15 @@ public:
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                    "BATCHEDMATMUL", {});
+                    "BATCHED_MATMUL", {});
         }
         return m_name.c_str();
     }
+
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
+
     bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_BATCHED_MATMUL)
 

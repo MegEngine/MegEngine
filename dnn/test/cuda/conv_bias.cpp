@@ -821,7 +821,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_NCHW4) {
             {{8, 64, 12, 12, 4}, {256, 64, 3, 3, 4}, {1, 64, 1, 1, 4}, {}, {}});
 }
 
-TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_1x1) {
+TEST_F(CUDA, CONV_BIAS_FORWARD_BATCHED_MATMUL) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_args_1x1();
     Checker<ConvBiasForward> checker(handle_cuda());
@@ -834,13 +834,15 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_1x1) {
             .set_rng(1, &default_rng)
             .set_rng(2, &default_rng)
             .set_epsilon(1e-3);
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvBiasForward>(ExecutionPolicyAlgoName{
+                    ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
+                            "BATCHED_MATMUL", {})
+                            .c_str(),
+                    {{"CUBLAS", {}}}}));
+
     for (auto&& arg : args) {
         checker.set_param(arg.param);
-        checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<
-                                         ConvBias>(
-                ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                        "BATCHEDMATMUL", {})
-                        .c_str()));
         checker.execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }

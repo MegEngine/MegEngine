@@ -46,6 +46,7 @@ struct OprTypeFromOprTrait;
     }
 
 cb(MATRIX_MUL_FORWARD, MatrixMulForward);
+cb(BATCHED_MATRIX_MUL_FORWARD, BatchedMatrixMulForward);
 cb(CONVOLUTION_FORWARD, ConvolutionForward);
 cb(CONVOLUTION_BACKWARD_DATA, ConvolutionBackwardData);
 cb(CONVOLUTION_BACKWARD_FILTER, ConvolutionBackwardFilter);
@@ -66,6 +67,7 @@ cb(CONVBIAS_FORWARD, ConvBiasForward);
 // clang-format off
 #define FOREACH_OPR_TYPE(cb) \
     cb(MATRIX_MUL_FORWARD) \
+    cb(BATCHED_MATRIX_MUL_FORWARD) \
     cb(CONVOLUTION_FORWARD) \
     cb(CONVOLUTION_BACKWARD_DATA) \
     cb(CONVOLUTION_BACKWARD_FILTER) \
@@ -83,6 +85,7 @@ cb(CONVBIAS_FORWARD, ConvBiasForward);
 
 #define FOREACH_OPR_TYPE_WITH_STMT(cb, stmt) \
     cb(MATRIX_MUL_FORWARD, stmt) \
+    cb(BATCHED_MATRIX_MUL_FORWARD, stmt) \
     cb(CONVOLUTION_FORWARD, stmt) \
     cb(CONVOLUTION_BACKWARD_DATA, stmt) \
     cb(CONVOLUTION_BACKWARD_FILTER, stmt) \

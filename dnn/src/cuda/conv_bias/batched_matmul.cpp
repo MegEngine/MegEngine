@@ -6,10 +6,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
+#include "src/common/algo_chooser.h"
 #include "src/common/conv_bias.h"
+#include "src/cuda/batched_matrix_mul/algo.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.cuh"
@@ -18,18 +21,72 @@ using namespace megdnn;
 using namespace cuda;
 using namespace conv_bias;
 
+namespace {
+std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
+        const ConvBiasForwardImpl::CanonizedFilterMeta& fm,
+        const TensorLayout& src_layout, const TensorLayout&,
+        const TensorLayout& dst_layout, const ConvBiasForwardImpl* opr) {
+    // A {N, OC, IC}
+    // B {N, IC, H * W}
+    // C {N, OC, H * W}
+    size_t batched = src_layout.shape[0];
+    TensorLayout A, B, C;
+    A = {{batched, fm.ocpg, fm.icpg}, fm.dtype};
+    A.stride[0] = 0;
+    B.ndim = 3;
+    B.shape[1] = src_layout.shape[1];
+    B.shape[2] = src_layout.shape[2] * src_layout.shape[3];
+    B.shape[0] = batched;
+    B.stride[2] = 1;
+    B.stride[1] = src_layout.stride[1];
+    B.stride[0] = src_layout.stride[0];
+    B.dtype = src_layout.dtype;
+    C = {{dst_layout.shape[0], dst_layout.shape[1], B.shape[2]},
+         dst_layout.dtype};
+
+    MatrixMulForward::Param param;
+    if (opr->param().compute_mode == param::Convolution::ComputeMode::FLOAT32) {
+        param.compute_mode = param::MatrixMul::ComputeMode::FLOAT32;
+    }
+
+    return {{A, B, C}, param};
+}
+}  // namespace
+
+std::vector<Algorithm::SearchItem>
+ConvBiasForwardImpl::AlgoBatchedMatmul::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    const ConvBiasForwardImpl* conv_bias_opr =
+            static_cast<const ConvBiasForwardImpl*>(opr);
+    CanonizedFilterMeta fm =
+            conv_bias_opr->check_layout_fwd(layouts[0], layouts[1], layouts[4]);
+    auto&& config = sub_opr_config(fm, layouts[0], layouts[1], layouts[4],
+                                   conv_bias_opr);
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::BATCHED_MATRIX_MUL_FORWARD, param_str,
+             config.first}};
+}
+
 bool ConvBiasForwardImpl::AlgoBatchedMatmul::is_available(
         const SizeArgs& args) const {
     if (args.z_layout->ndim > 0)
         return false;
 
-    //! cudnn batched matmul with discontinuous stride has many bugs, so disable
-    //! here.
-    TensorLayout A, B, C;
-    extract_matmul_layouts(args, A, B, C);
-    if (!B.is_contiguous()) {
-        return false;
+    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid() &&
+        !args.opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        bmatmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
     }
+
+    auto&& config =
+            sub_opr_config(args.filter_meta, *args.src_layout,
+                           *args.filter_layout, *args.dst_layout, args.opr);
+    bmatmul_opr->param() = config.second;
+
     auto&& fm = args.filter_meta;
     return fm.format == Param::Format::NCHW &&
            (fm.dtype.enumv() == DTypeEnum::Float32 ||
@@ -37,29 +94,10 @@ bool ConvBiasForwardImpl::AlgoBatchedMatmul::is_available(
            fm.spatial_ndim == 2 && fm.group == 1 && fm.dilation[0] == 1 &&
            fm.dilation[1] == 1 && fm.spatial[0] == 1 && fm.spatial[1] == 1 &&
            fm.padding[0] == 0 && fm.padding[1] == 0 && fm.stride[0] == 1 &&
-           fm.stride[1] == 1;
-}
-
-void ConvBiasForwardImpl::AlgoBatchedMatmul::extract_matmul_layouts(
-        const SizeArgs& args, TensorLayout& A, TensorLayout& B,
-        TensorLayout& C) {
-    auto&& fm = args.filter_meta;
-    // A {N, OC, IC}
-    // B {N, IC, H * W}
-    // C {N, OC, H * W}
-    size_t batched = args.src_layout->shape[0];
-    A = {{batched, fm.ocpg, fm.icpg}, fm.dtype};
-    A.stride[0] = 0;
-    B.ndim = 3;
-    B.shape[1] = args.src_layout->shape[1];
-    B.shape[2] = args.src_layout->shape[2] * args.src_layout->shape[3];
-    B.shape[0] = batched;
-    B.stride[2] = 1;
-    B.stride[1] = args.src_layout->stride[1];
-    B.stride[0] = args.src_layout->stride[0];
-    B.dtype = args.src_layout->dtype;
-    C = {{args.dst_layout->shape[0], args.dst_layout->shape[1], B.shape[2]},
-         args.dst_layout->dtype};
+           fm.stride[1] == 1 &&
+           get_algorithm(
+                   static_cast<BatchedMatrixMulForwardImpl*>(bmatmul_opr.get()),
+                   config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoBatchedMatmul::get_workspace_bundle(
@@ -76,11 +114,23 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoBatchedMatmul::get_workspace_bundle(
 
     SizeArgs conv_args = args;
     conv_args.dst_layout = &dst_layout;
-    TensorLayout A, B, C;
-    extract_matmul_layouts(conv_args, A, B, C);
-    sizes.insert(
-            sizes.begin(),
-            args.handle->batched_matrix_mul()->get_workspace_in_bytes(A, B, C));
+
+    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid() &&
+        !args.opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        bmatmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+
+    auto&& config =
+            sub_opr_config(args.filter_meta, *args.src_layout,
+                           *args.filter_layout, *args.dst_layout, args.opr);
+    bmatmul_opr->param() = config.second;
+
+    sizes.insert(sizes.begin(),
+                 args.handle->batched_matrix_mul()->get_workspace_in_bytes(
+                         config.first[0], config.first[1], config.first[2]));
     return {ptr, std::move(sizes)};
 }
 
@@ -104,13 +154,23 @@ void ConvBiasForwardImpl::AlgoBatchedMatmul::exec(const ExecArgs& args) const {
     conv_args.dst_tensor = &conv_dst_tensor;
     conv_args.dst_layout = &conv_dst_tensor.layout;
     {
-        TensorND A, B, C;
-        extract_matmul_layouts(args, A.layout, B.layout, C.layout);
-        A.raw_ptr = args.filter_tensor->raw_ptr;
-        B.raw_ptr = args.src_tensor->raw_ptr;
-        C.raw_ptr = args.dst_tensor->raw_ptr;
-        auto mm = args.handle->batched_matrix_mul();
-        mm->exec(A, B, C, bundle.get_workspace(0));
+        auto bmatmul_opr =
+                args.handle->create_operator<BatchedMatrixMulForward>();
+        if (args.opr->execution_policy().algo.valid()) {
+            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+            bmatmul_opr->execution_policy() =
+                    args.opr->execution_policy().sub_policy[0];
+        }
+
+        auto&& config =
+                sub_opr_config(args.filter_meta, *args.src_layout,
+                               *args.filter_layout, *args.dst_layout, args.opr);
+        bmatmul_opr->param() = config.second;
+
+        TensorND A{args.filter_tensor->raw_ptr, config.first[0]},
+                B{args.src_tensor->raw_ptr, config.first[1]},
+                C{args.dst_tensor->raw_ptr, config.first[2]};
+        bmatmul_opr->exec(A, B, C, bundle.get_workspace(0));
     }
     handle_bias_and_nonlinear(args.handle, args.nonlinear_mode,
                               &conv_dst_tensor, args.dst_tensor,
