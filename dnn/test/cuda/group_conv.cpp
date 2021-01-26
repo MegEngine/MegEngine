@@ -115,7 +115,7 @@ TEST_F(CUDA, GROUP_CONV_FORWARD_1x1) {
 #if CUDNN_MAJOR <= 6
         std::string conv1x1_name =
                 ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                        "MATMUL1X1", {});
+                        "BATCHEDMATMUL", {});
         checker.set_before_exec_callback(
                 AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
                         "DEFAULT",

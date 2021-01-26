@@ -51,7 +51,6 @@ public:
         CUDA_INPLACE_MATMUL,
         CUDA_MATMUL,
         CUDA_MATMUL_INT8X8X32,
-        CUDA_1X1,
         CUDA_BATCHED_MATMUL,
         CUDA_GROUP_CONV_GENERAL,
         CUDA_WMMA_UINT4X4X32,
@@ -355,31 +354,6 @@ private:
     WorkspaceBundle get_bundle(const SizeArgs& args) const;
     template <Param::Format>
     void exec_internal(const ExecArgs& args) const;
-    mutable std::string m_name;
-};
-
-//! optimized 1x1 conv
-class ConvBiasForwardImpl::Algo1x1 final : public AlgoBase {
-    static void extract_matmul_layouts(const SizeArgs& args, TensorLayout& A,
-                                       TensorLayout& B, TensorLayout& C);
-
-public:
-    bool is_available(const SizeArgs& args) const override;
-    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    void exec(const ExecArgs& args) const override;
-
-    const char* name() const override {
-        if (m_name.empty()) {
-            m_name = ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                    "MATMUL1X1", {});
-        }
-        return m_name.c_str();
-    }
-    bool is_reproducible() const override { return true; }
-    MEGDNN_DECL_ALGO_TYPE(CUDA_1X1)
-
-private:
-    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
     mutable std::string m_name;
 };
 
@@ -738,7 +712,6 @@ public:
     AlgoMatmul matmul;
     AlgoMatmul8x8x32 matmul8x8x32;
     AlgoBatchedMatmul batched_matmul;
-    Algo1x1 a1x1;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8CHWN4DotProdImplicitGemm int8_chwn4_dotprod;
 #if CUDA_VERSION >= 10000

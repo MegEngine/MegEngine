@@ -834,12 +834,6 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_1x1) {
             .set_epsilon(1e-3);
     for (auto&& arg : args) {
         checker.set_param(arg.param);
-        checker.set_before_exec_callback(
-                conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                        ConvBiasForward::algo_name<
-                                ConvBiasForward::MatmulParam>("MATMUL1X1", {})
-                                .c_str()));
-        checker.execs({arg.src, arg.filter, arg.bias, {}, {}});
         checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<
                                          ConvBias>(
                 ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(

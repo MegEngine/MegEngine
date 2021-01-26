@@ -118,9 +118,6 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         if (sm_algo_pack.batched_matmul.is_available_reproducible(
                     size_arg, reproducible, workspace_limit_in_bytes)) {
             return &sm_algo_pack.batched_matmul;
-        } else if (sm_algo_pack.a1x1.is_available_reproducible(
-                           size_arg, reproducible, workspace_limit_in_bytes)) {
-            return &sm_algo_pack.a1x1;
         }
         return nullptr;
     };
@@ -176,12 +173,6 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     if (cudnn_conv_bias_act_supported) {
         if (auto algo = get_cudnn_algo(cudnn_conv_bias_act_from_enum_wrapper))
             return algo;
-    }
-
-    int batch = src[0];
-    if (batch == 1 && sm_algo_pack.a1x1.is_available_reproducible(
-                              args, reproducible, workspace_limit_in_bytes)) {
-        return &sm_algo_pack.a1x1;
     }
 
     // modify conv_args dst_layout
