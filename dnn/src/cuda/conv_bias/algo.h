@@ -318,17 +318,20 @@ public:
 
     const char* name() const override {
         if (m_name.empty()) {
-            m_name = ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                    "MATMUL", {});
+            m_name = ConvBiasForward::algo_name<ConvBias::MatmulParam>("MATMUL",
+                                                                       {});
         }
         return m_name.c_str();
     }
+
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
     bool is_reproducible() const override { return true; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
-
     mutable std::string m_name;
 };
 

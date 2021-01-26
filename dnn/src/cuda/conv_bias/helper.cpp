@@ -196,7 +196,8 @@ bool check_bias_share_in_channel(const TensorLayout& bias,
     return share_in_channel;
 }
 
-WorkspaceBundle matmul_get_workspace_bundle(const BiasForwardSizeArgs& args) {
+SmallVector<size_t> matmul_get_workspace_bundle(
+        const BiasForwardSizeArgs& args) {
     auto dtype = args.src_layout->dtype;
     auto&& fm = args.filter_meta;
     megdnn_assert(fm.group == 1);
@@ -208,7 +209,7 @@ WorkspaceBundle matmul_get_workspace_bundle(const BiasForwardSizeArgs& args) {
     if (args.filter_meta.should_flip) {
         sizes.push_back(dtype.size() * OC * IC * FH * FW);
     }
-    return {nullptr, std::move(sizes)};
+    return sizes;
 }
 
 void flip_filter(const BiasForwardSizeArgs& args, const Workspace& workspace,

@@ -49,7 +49,7 @@ TEST_F(CUDA, DILATED_CONVOLUTION_FORWARD)
                     {{ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
                               "MATMUL", {})
                               .c_str(),
-                      {}}}}));
+                      {{"CUBLAS", {}}}}}}));
 #endif
     NormalRNG default_rng;
     for (auto &&arg: args) {

@@ -704,10 +704,12 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL) {
     std::vector<TestArg> args = get_args();
     Checker<ConvBiasForward> checker(handle_cuda());
 
-    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBias>(
-            ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>("MATMUL",
-                                                                     {})
-                    .c_str()));
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvBiasForward>(ExecutionPolicyAlgoName{
+                    ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
+                            "MATMUL", {})
+                            .c_str(),
+                    {{"CUBLAS", {}}}}));
     param::ConvBias cur_param;
     using NLMode = param::ConvBias::NonlineMode;
     cur_param.mode = param::ConvBias::Mode::CROSS_CORRELATION;

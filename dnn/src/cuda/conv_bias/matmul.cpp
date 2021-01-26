@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/common/conv_bias.h"
@@ -18,6 +19,43 @@
 using namespace megdnn;
 using namespace cuda;
 using namespace conv_bias;
+
+namespace {
+std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
+        const ConvBiasForwardImpl::CanonizedFilterMeta& fm,
+        const TensorLayout& src_layout, const TensorLayout& filter_layout,
+        const TensorLayout& dst_layout, const ConvBiasForwardImpl* opr) {
+    size_t N = src_layout.shape[0], IC = fm.icpg, OC = fm.ocpg,
+           OH = dst_layout.shape[2], OW = dst_layout.shape[3],
+           FH = fm.spatial[0], FW = fm.spatial[1];
+
+    megdnn_assert(src_layout.dtype.category() == DTypeCategory::FLOAT);
+    TensorLayout Al({OC, IC * FH * FW}, filter_layout.dtype),
+            Bl({IC * FH * FW, OH * OW * N}, filter_layout.dtype),
+            Cl({OC, OH * OW * N}, filter_layout.dtype);
+    MatrixMulForward::Param param;
+    if (opr->param().compute_mode == param::Convolution::ComputeMode::FLOAT32) {
+        param.compute_mode = param::MatrixMul::ComputeMode::FLOAT32;
+    }
+
+    return {{Al, Bl, Cl}, param};
+}
+}  // namespace
+
+std::vector<Algorithm::SearchItem>
+ConvBiasForwardImpl::AlgoMatmul::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    const ConvBiasForwardImpl* conv_bias_opr =
+            static_cast<const ConvBiasForwardImpl*>(opr);
+    CanonizedFilterMeta fm =
+            conv_bias_opr->check_layout_fwd(layouts[0], layouts[1], layouts[4]);
+    auto&& config = sub_opr_config(fm, layouts[0], layouts[1], layouts[4],
+                                   conv_bias_opr);
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::MATRIX_MUL_FORWARD, param_str, config.first}};
+}
 
 bool ConvBiasForwardImpl::AlgoMatmul::is_available(const SizeArgs& args) const {
     if (args.src_layout->dtype == args.filter_layout->dtype &&
@@ -47,11 +85,24 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoMatmul::get_workspace_bundle(
 
     SizeArgs conv_args = args;
     conv_args.dst_layout = &dst_layout;
-    SmallVector<size_t> matmul_sizes;
-    WorkspaceBundle matmul_bundle = matmul_get_workspace_bundle(conv_args);
-    for (size_t i = 0; i < matmul_bundle.nr_workspace(); ++i) {
-        matmul_sizes.push_back(matmul_bundle.get_size(i));
+    SmallVector<size_t> matmul_sizes = matmul_get_workspace_bundle(conv_args);
+
+    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid() &&
+        !args.opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        matmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
     }
+
+    auto&& config =
+            sub_opr_config(args.filter_meta, *args.src_layout,
+                           *args.filter_layout, *args.dst_layout, args.opr);
+    matmul_opr->param() = config.second;
+    size_t mm_ws = matmul_opr->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2]);
+    matmul_sizes.push_back(mm_ws);
+
     sizes.insert(sizes.begin(), matmul_sizes.begin(), matmul_sizes.end());
     return {ptr, std::move(sizes)};
 }
@@ -110,24 +161,28 @@ void ConvBiasForwardImpl::AlgoMatmul::exec_internal(
     conv_bias::im2col<T>(args.src_tensor->ptr<T>(), col, N,
                          args.src_layout->stride[0], IC, IH, IW, FH, FW, OH, OW,
                          PH, PW, SH, SW, DH, DW, stream);
-    TensorLayout Al({OC, IC * FH * FW}, typename DTypeTrait<T>::dtype()),
-            Bl({IC * FH * FW, OH * OW * N}, typename DTypeTrait<T>::dtype()),
-            Cl({OC, OH * OW * N}, typename DTypeTrait<T>::dtype());
-    TensorND A(args.filter_tensor->ptr<T>(), Al), B(col, Bl), C(dst_t, Cl);
+
+    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        matmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+
+    auto&& config =
+            sub_opr_config(args.filter_meta, *args.src_layout,
+                           *args.filter_layout, *args.dst_layout, args.opr);
+    matmul_opr->param() = config.second;
+
+    TensorND A(args.filter_tensor->ptr<T>(), config.first[0]),
+            B(col, config.first[1]), C(dst_t, config.first[2]);
+    size_t matmul_ws_idx = 2;
     if (fm.should_flip) {
         conv_bias::flip_filter(args, bundle.get_workspace(2), A.raw_ptr);
+        matmul_ws_idx = 3;
     }
-    auto&& matmul_opr = args.handle->create_operator<MatrixMulForward>();
-    if (args.opr->param().compute_mode ==
-        param::Convolution::ComputeMode::FLOAT32) {
-        matmul_opr->param().compute_mode =
-                param::MatrixMul::ComputeMode::FLOAT32;
-    }
-    megdnn_assert(matmul_opr->get_workspace_in_bytes(A.layout, B.layout,
-                                                     C.layout) == 0_z,
-                  "Assume matmul opr in algo MATMUL doesn't need extra "
-                  "workspace");
-    matmul_opr->exec(A, B, C, Workspace());
+
+    matmul_opr->exec(A, B, C, bundle.get_workspace(matmul_ws_idx));
 
     TensorLayout C2l({OC * OH * OW, N}, typename DTypeTrait<T>::dtype()),
             C3l = C2l;

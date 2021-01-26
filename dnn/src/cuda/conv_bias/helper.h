@@ -50,7 +50,7 @@ namespace conv_bias {
     bool is_cudnn_supported(const BiasForwardSizeArgs& args);
 
     //! get workspace bundle for matmul algo
-    WorkspaceBundle matmul_get_workspace_bundle(
+    SmallVector<size_t> matmul_get_workspace_bundle(
             const BiasForwardSizeArgs& args);
 
     /*!

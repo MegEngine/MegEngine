@@ -491,6 +491,13 @@ public:
             Algorithm* algo = opr->get_algorithm_from_desc(algo_info.desc);
             std::vector<Algorithm::SearchItem>&& sub_items =
                     algo->get_subopr_list(layouts, opr.get());
+            if (sub_items.size() != policy_name.sub_policy_names.size()) {
+                printf("Invalid sub_policy_names in %s, expected %zu but got "
+                       "%zu\n",
+                       algo_info.name.c_str(), sub_items.size(),
+                       policy_name.sub_policy_names.size());
+                return {};
+            }
             FOREACH_OPR_TYPE_DISPATCH(sub_items, {
                 ExecutionPolicy policy =
                         AlgoChecker<_Opr>::construct_execution_policy_from_name(
