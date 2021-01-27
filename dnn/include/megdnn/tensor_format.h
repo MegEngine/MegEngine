@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megdnn/basic_types.h"
+#include "megdnn/handle.h"
 
 #include "megdnn/internal/visibility_prologue.h"
 namespace megdnn {
@@ -43,7 +44,7 @@ public:
 
 protected:
     ImplBase(Type type) : m_type{type} {}
-    ~ImplBase() = default;
+    virtual ~ImplBase() = default;
 
     static TensorFormat impl_to_tensor_format(ImplBase* impl) { return {impl}; }
 
@@ -93,8 +94,8 @@ namespace detail {
  *
  * \p align_axis is the axis to be aligned, also the first axis of image width.
  * More precisely speaking, `stride[align_axis-1] * dtype.size()` must divide \p
- * align_size_in_byte. Axes from 0 to align_axis-1 would be considered as the
- * height of the image, and other axes are the width.
+ * align_size_in_elements. Axes from 0 to align_axis-1 would be considered as
+ * the height of the image, and other axes are the width.
  *
  * Empty tensors and negative strides are not allowed. Only contiguous or
  * broadcasted cases are allowed.
@@ -103,40 +104,31 @@ namespace detail {
  * considered as contiguous.
  */
 class Image2DTensorFormatBase : public TensorFormat::ImplBase {
-    size_t m_align_axis, m_align_size_in_byte_log2;
+    size_t m_align_axis, m_align_size_in_elements_log2;
 
 protected:
     Image2DTensorFormatBase(Type type, size_t align_axis,
-                            size_t align_size_in_byte);
-    ~Image2DTensorFormatBase() = default;
+                            size_t align_size_in_elements);
+    virtual ~Image2DTensorFormatBase() = default;
 
 public:
     /*!
-     * \brief get alignment requirement in bytes
+     * \brief get alignment requirement in elements
      * \param div_log2 the result would be divided by `(1 << div_log2)`
      */
-    size_t align_size_in_byte(size_t div_log2 = 0) const {
-        return 1 << (m_align_size_in_byte_log2 > div_log2
-                             ? m_align_size_in_byte_log2 - div_log2
+    size_t align_size_in_elements(size_t div_log2 = 0) const {
+        return 1 << (m_align_size_in_elements_log2 > div_log2
+                             ? m_align_size_in_elements_log2 - div_log2
                              : 0);
     }
 
     size_t align_axis() const { return m_align_axis; }
 
-    size_t init_contiguous_stride(TensorLayout& layout) const override;
-
-    bool is_contiguous_spec(const TensorLayout& layout) const override;
-
-    TensorLayout collapse_contiguous_spec(
-            const TensorLayout& layout) const override;
-
-    //! span for image must include the padding at the last row
-    TensorLayout::Span span_spec(const TensorLayout& layout) const override;
+    size_t align_size_in_elements_log2() const {
+        return m_align_size_in_elements_log2;
+    }
 
     std::string to_string() const override;
-
-    //! raise exception if preconditions violated
-    virtual void assert_valid(const TensorLayout& layout) const;
 
     //! modify the align axis and return a new TensorFormat
     virtual TensorFormat change_axis(size_t axis) const = 0;
@@ -147,9 +139,6 @@ public:
     //! number of rows
     size_t image_height(const TensorLayout& layout) const;
 
-    //! delta of addresses of consecutive rows (in bytes)
-    size_t image_row_pitch(const TensorLayout& layout) const;
-
     void serialize_append(std::string& result) const override;
 protected:
     struct SerializePack {
@@ -159,9 +148,27 @@ protected:
 
 template <size_t PIXEL_SIZE>
 class Image2DPackedTensorFormatBase : public Image2DTensorFormatBase {
+    Handle::HandleVendorType m_vendor_type = Handle::HandleVendorType::NOT_SPEC;
+    /*!
+     * \brief get fix alignment requirement in bytes, consider m_vendor_type,
+     * for example on MALI, CL_DEVICE_IMAGE_PITCH_ALIGNMENT means image_width
+     * align COUNT, but mdl needs align size in byte, which equal to
+     * (image_width algin count) * sizeof(data_type) * pixel_size
+     */
+    size_t image_pitch_alignment_in_bytes(size_t align_size_in_elements,
+                                          const TensorLayout& layout) const;
+
 protected:
-    using Image2DTensorFormatBase::Image2DTensorFormatBase;
-    ~Image2DPackedTensorFormatBase() = default;
+    Image2DPackedTensorFormatBase(Type type, size_t align_axis,
+                                  size_t align_size_in_elements,
+                                  Handle::HandleVendorType vendor_type)
+            : detail::Image2DTensorFormatBase(type, align_axis,
+                                              align_size_in_elements),
+              m_vendor_type(vendor_type) {}
+
+    virtual ~Image2DPackedTensorFormatBase() = default;
+
+    Handle::HandleVendorType vendor() const { return m_vendor_type; }
 
 public:
     /*!
@@ -173,7 +180,20 @@ public:
      */
     size_t image_width(const TensorLayout& layout) const;
 
-    void assert_valid(const TensorLayout& layout) const override;
+    //! raise exception if preconditions violated
+    void assert_valid(const TensorLayout& layout) const;
+
+    size_t image_row_pitch(const TensorLayout& layout) const;
+
+    //! span for image must include the padding at the last row
+    TensorLayout::Span span_spec(const TensorLayout& layout) const override;
+
+    size_t init_contiguous_stride(TensorLayout& layout) const override;
+
+    bool is_contiguous_spec(const TensorLayout& layout) const override;
+
+    TensorLayout collapse_contiguous_spec(
+            const TensorLayout& layout) const override;
 };
 using Image2DPack4TensorFormatBase = Image2DPackedTensorFormatBase<4>;
 }  // namespace detail
@@ -190,7 +210,10 @@ public:
     static constexpr Type TYPE = Type::IMAGE2D_PACK4;
 
     //! for internal usage or test purposes
-    static TensorFormat make_raw(size_t align_axis, size_t align_size_in_byte);
+    static TensorFormat make_raw(size_t align_axis,
+                                 size_t align_size_in_elements,
+                                 Handle::HandleVendorType vendor_type =
+                                         Handle::HandleVendorType::NOT_SPEC);
 
     static TensorFormat make(size_t align_axis, const Handle* handle);
 
@@ -215,9 +238,10 @@ public:
     TensorFormat change_axis(size_t axis) const override;
 
 private:
-    Image2DPack4TensorFormat(size_t align_axis, size_t align_size_in_byte)
-            : detail::Image2DPack4TensorFormatBase(TYPE, align_axis,
-                                                   align_size_in_byte) {}
+    Image2DPack4TensorFormat(size_t align_axis, size_t align_size_in_elements,
+                             Handle::HandleVendorType vendor_type)
+            : detail::Image2DPack4TensorFormatBase(
+                      TYPE, align_axis, align_size_in_elements, vendor_type) {}
 };
 
 }  // namespace megdnn

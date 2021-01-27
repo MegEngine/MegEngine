@@ -236,6 +236,7 @@ void RelayoutFormat::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
 
 void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
     size_t align = handle()->image2d_pitch_alignment();
+    auto vendor_type = handle()->vendor_type();
     using Param = param::RelayoutFormat;
 #define CHECK_SRC(_expect)                                                \
     megdnn_assert(src == _expect, "invalid src format: expect=%s got=%s", \
@@ -251,7 +252,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             break;
         case Param::Mode::NHWC_NHWCD4I:
             CHECK_SRC(DefaultTensorFormat::make());
-            dst = Image2DPack4TensorFormat::make_raw(2, align);
+            dst = Image2DPack4TensorFormat::make_raw(2, align, vendor_type);
             break;
         case Param::Mode::NCHW_NHWCD4:
             CHECK_SRC(DefaultTensorFormat::make());
@@ -263,10 +264,10 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             break;
         case Param::Mode::NCHW_NHWCD4I:
             CHECK_SRC(DefaultTensorFormat::make());
-            dst = Image2DPack4TensorFormat::make_raw(2, align);
+            dst = Image2DPack4TensorFormat::make_raw(2, align, vendor_type);
             break;
         case Param::Mode::NHWCD4I_NCHW:
-            CHECK_SRC(Image2DPack4TensorFormat::make_raw(2, align));
+            CHECK_SRC(Image2DPack4TensorFormat::make_raw(2, align, vendor_type));
             dst = DefaultTensorFormat::make();
             break;
         case Param::Mode::NHWCD4_NCHW:
@@ -280,7 +281,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
         case Param::Mode::INTER_WEIGHT_DENSEI:
         case Param::Mode::INTER_WEIGHT_DENSEI_DOT:
             CHECK_SRC(DefaultTensorFormat::make());
-            dst = Image2DPack4TensorFormat::make_raw(3, align);
+            dst = Image2DPack4TensorFormat::make_raw(3, align, vendor_type);
             break;
         case Param::Mode::INTER_WEIGHT_GROUP:
             CHECK_SRC(DefaultTensorFormat::make());
@@ -289,7 +290,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
         case Param::Mode::INTER_WEIGHT_GROUPI:
         case Param::Mode::INTER_WEIGHT_GROUPI_DOT:
             CHECK_SRC(DefaultTensorFormat::make());
-            dst = Image2DPack4TensorFormat::make_raw(4, align);
+            dst = Image2DPack4TensorFormat::make_raw(4, align, vendor_type);
             break;
         case Param::Mode::INTER_WEIGHT_CHAN:
             CHECK_SRC(DefaultTensorFormat::make());
@@ -297,7 +298,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             break;
         case Param::Mode::INTER_WEIGHT_CHANI:
             CHECK_SRC(DefaultTensorFormat::make());
-            dst = Image2DPack4TensorFormat::make_raw(1, align);
+            dst = Image2DPack4TensorFormat::make_raw(1, align, vendor_type);
             break;
         case Param::Mode::NCHW4_CHWN4:
             CHECK_SRC(DefaultTensorFormat::make());

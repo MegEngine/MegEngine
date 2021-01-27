@@ -175,6 +175,30 @@ namespace {
     }
 }
 
+TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_WITH_VENDOR_MALI) {
+    TensorFormat fmt = Image2DPack4TensorFormat::make_raw(
+            1, 512, Handle::HandleVendorType::MALI);
+    TensorLayout layout{{5, 3, 8}, dtype::Float32{}, fmt};
+
+    ASSERT_EQ(layout.stride[2], 1);
+    ASSERT_EQ(layout.stride[1], 8);
+    ASSERT_EQ(layout.stride[0], 2048);
+    ASSERT_EQ(8192u, image_row_pitch(layout));
+    ASSERT_EQ(6u, image_width(layout));
+    ASSERT_EQ(5u, image_height(layout));
+
+    fmt = Image2DPack4TensorFormat::make_raw(1, 512,
+                                             Handle::HandleVendorType::MALI);
+    TensorLayout layout_s{{5, 3, 8}, dtype::Float16{}, fmt};
+
+    ASSERT_EQ(layout_s.stride[2], 1);
+    ASSERT_EQ(layout_s.stride[1], 8);
+    ASSERT_EQ(layout_s.stride[0], 2048);
+    ASSERT_EQ(4096u, image_row_pitch(layout_s));
+    ASSERT_EQ(6u, image_width(layout_s));
+    ASSERT_EQ(5u, image_height(layout_s));
+}
+
 TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT) {
     TensorFormat fmt = Image2DPack4TensorFormat::make_raw(1, 1024);
     ASSERT_FALSE(fmt.is_default());
@@ -233,7 +257,7 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT) {
         auto&& impl = contig.format.as_impl<Image2DPack4TensorFormat>();
         ASSERT_EQ(make_layout({1, 8}, {32, 1}, layout.dtype), contig);
         ASSERT_EQ(1u, impl.align_axis());
-        ASSERT_EQ(64u, impl.align_size_in_byte());
+        ASSERT_EQ(64u, impl.align_size_in_elements());
     }
 }
 
@@ -258,7 +282,7 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_COLLAPSE_H) {
         auto&& impl = contig.format.as_impl<Image2DPack4TensorFormat>();
         ASSERT_EQ(make_layout({v0, 8}, {32, 1}, layout.dtype), contig);
         ASSERT_EQ(1u, impl.align_axis());
-        ASSERT_EQ(64u, impl.align_size_in_byte());
+        ASSERT_EQ(64u, impl.align_size_in_elements());
     }
 }
 
@@ -274,7 +298,7 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_COLLAPSE_W) {
                               layout.dtype),
                   contig);
         ASSERT_EQ(1u, impl.align_axis());
-        ASSERT_EQ(64u, impl.align_size_in_byte());
+        ASSERT_EQ(64u, impl.align_size_in_elements());
     }
 }
 

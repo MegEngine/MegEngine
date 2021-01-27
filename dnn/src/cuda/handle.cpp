@@ -123,6 +123,10 @@ size_t HandleImpl::image2d_pitch_alignment() const {
     return align;
 }
 
+HandleImpl::HandleVendorType HandleImpl::vendor_type() const {
+    return HandleVendorType::CUDA;
+}
+
 } // namespace cuda
 } // namespace megdnn
 

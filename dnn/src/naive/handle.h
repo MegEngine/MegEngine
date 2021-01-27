@@ -169,6 +169,7 @@ public:
      * \param alignment the new alignment value to set
      */
     static size_t exchange_image2d_pitch_alignment(size_t alignment);
+    HandleVendorType vendor_type() const override;
 };
 
 }  // namespace naive

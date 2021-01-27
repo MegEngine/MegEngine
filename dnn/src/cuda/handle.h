@@ -123,6 +123,7 @@ class HandleImpl: public HandleImplHelper {
         TypeCvt* typecvt_opr() { return get_helper_opr<TypeCvt, 0>(this); }
 
         size_t image2d_pitch_alignment() const override;
+        HandleVendorType vendor_type() const override;
     private:
         bool m_is_tegra_k1;
         int m_device_id;

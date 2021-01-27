@@ -38,6 +38,17 @@ class Handle {
             CAMBRICON = 12,
         };
 
+        //! Device vendor
+        enum class HandleVendorType : uint32_t {
+            NOT_SPEC = 0,
+            MALI = 1,
+            ADRENO = 2,
+            CUDA = 3,
+            INTEL = 4,
+            POWERVR = 5,
+            AMD = 6,
+        };
+
     protected:
         Handle(megcoreComputingHandle_t computing_handle, HandleType type);
 
@@ -129,6 +140,9 @@ class Handle {
 
         //! get alignment in bytes for rows of image 2D tensor format
         virtual size_t image2d_pitch_alignment() const;
+
+        //! get vendor type
+        virtual HandleVendorType vendor_type() const;
 
         HandleType type() const {
             return m_handle_type;

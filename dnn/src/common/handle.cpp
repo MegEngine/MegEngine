@@ -147,6 +147,10 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
         megdnn_throw("image2d tensor format not supported on this handle");
     }
 
+    megdnn::HandleImplHelper::HandleVendorType Handle::vendor_type() const {
+        return HandleVendorType::NOT_SPEC;
+    }
+
     bool Handle::check_cross_dev_copy_constraint(const TensorLayout& src) {
         return src.is_contiguous();
     }

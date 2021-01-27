@@ -185,23 +185,134 @@ TensorFormat DefaultTensorFormat::make() {
 /* ===================== Image2DTensorFormatBase ===================== */
 
 Image2DTensorFormatBase::Image2DTensorFormatBase(Type type, size_t align_axis,
-                                                 size_t align_size_in_byte)
-        : ImplBase(type) {
-    megdnn_assert(align_size_in_byte && align_axis);
-    m_align_axis = align_axis;
-    m_align_size_in_byte_log2 = __builtin_ctz(align_size_in_byte);
-    megdnn_assert((1u << m_align_size_in_byte_log2) == align_size_in_byte,
-                  "align size not power of 2: %zu", align_size_in_byte);
+                                                 size_t align_size_in_elements)
+        : ImplBase(type), m_align_axis(align_axis) {
+    megdnn_assert(align_size_in_elements && align_axis);
+    m_align_size_in_elements_log2 = __builtin_ctz(align_size_in_elements);
+    megdnn_assert(
+            (1u << m_align_size_in_elements_log2) == align_size_in_elements,
+            "align size not power of 2: %zu", align_size_in_elements);
 }
 
-size_t Image2DTensorFormatBase::init_contiguous_stride(
+void Image2DTensorFormatBase::serialize_append(std::string& result) const {
+    SerializePack pack;
+    pack.align_axis = m_align_axis;
+    megdnn_assert(pack.align_axis == m_align_axis);  // detect overflow
+    result.append(reinterpret_cast<char*>(&pack), sizeof(pack));
+}
+
+size_t Image2DTensorFormatBase::image_height(const TensorLayout& layout) const {
+    size_t accum = 1;
+    for (int i = m_align_axis - 1; i >= 0; --i) {
+        if (layout.stride[i] == 0) {
+            // this dimension is broadcasted
+        } else {
+            accum *= layout.shape[i];
+        }
+    }
+    return accum;
+}
+
+size_t Image2DTensorFormatBase::image_width_elems(
+        const TensorLayout& layout) const {
+    size_t high_elem = 0;
+    for (size_t i = m_align_axis; i < layout.ndim; ++i) {
+        high_elem += (layout.shape[i] - 1) * layout.stride[i];
+    }
+    return high_elem + 1;
+}
+
+std::string Image2DTensorFormatBase::to_string() const {
+    return ssprintf("I2D{%zu,%d}", m_align_axis,
+                    1 << m_align_size_in_elements_log2);
+}
+
+/* ===================== Image2DPackedTensorFormatBase ===================== */
+
+template <size_t PIXEL_SIZE>
+size_t Image2DPackedTensorFormatBase<PIXEL_SIZE>::image_width(
+        const TensorLayout& layout) const {
+    auto ret = image_width_elems(layout);
+    megdnn_assert(ret % PIXEL_SIZE == 0);
+    return ret / PIXEL_SIZE;
+}
+
+template <size_t PIXEL_SIZE>
+void Image2DPackedTensorFormatBase<PIXEL_SIZE>::assert_valid(
+        const TensorLayout& layout) const {
+    auto m_align_axis = align_axis();
+    megdnn_assert(!(layout.shape[layout.ndim - 1] % PIXEL_SIZE),
+                  "bad shape: %zu", layout.shape[layout.ndim - 1]);
+    megdnn_assert(layout.dtype.valid() && layout.ndim > m_align_axis);
+    ptrdiff_t first_non_zero_stride = 0;
+    for (int i = layout.ndim - 1; i >= 0; --i) {
+        megdnn_assert(layout.shape[i] && layout.stride[i] >= 0);
+        if (i < static_cast<int>(m_align_axis) && !first_non_zero_stride) {
+            first_non_zero_stride = layout.stride[i];
+        }
+    }
+    size_t mask =
+            image_pitch_alignment_in_bytes(
+                    align_size_in_elements(layout.dtype.size_log()), layout) -
+            1;
+
+    megdnn_assert(!(first_non_zero_stride & mask),
+                  "first stride is %d, but alignment is %zu",
+                  static_cast<int>(first_non_zero_stride), mask + 1);
+}
+
+template <size_t PIXEL_SIZE>
+size_t Image2DPackedTensorFormatBase<PIXEL_SIZE>::image_row_pitch(
+        const TensorLayout& layout) const {
+    for (int i = align_axis() - 1; i >= 0; --i) {
+        // find a non-broadcast axis
+        if (auto s = layout.stride[i]) {
+            return layout.dtype.size(s);
+        }
+    }
+    // use width for all broadcasted case
+    size_t alignment_in_bytes_log2 = align_size_in_elements_log2();
+    if (m_vendor_type == Handle::HandleVendorType::MALI) {
+        alignment_in_bytes_log2 +=
+                __builtin_ctz(layout.dtype.size() * PIXEL_SIZE);
+    }
+
+    return get_aligned_power2<size_t>(
+            layout.dtype.size(image_width_elems(layout)),
+            1 << alignment_in_bytes_log2);
+}
+
+template <size_t PIXEL_SIZE>
+size_t
+Image2DPackedTensorFormatBase<PIXEL_SIZE>::image_pitch_alignment_in_bytes(
+        size_t align_size_in_elements, const TensorLayout& layout) const {
+    return m_vendor_type == Handle::HandleVendorType::MALI
+                   ? (align_size_in_elements * layout.dtype.size() * PIXEL_SIZE)
+                   : align_size_in_elements;
+}
+
+template <size_t PIXEL_SIZE>
+TensorLayout::Span Image2DPackedTensorFormatBase<PIXEL_SIZE>::span_spec(
+        const TensorLayout& layout) const {
+    assert_valid(layout);
+    size_t size = image_height(layout) * image_row_pitch(layout);
+    auto mask = (1 << layout.dtype.size_log()) - 1;
+    megdnn_assert(!(size & mask), "unaligned size: %zu", size);
+    return {0, 0, size >> layout.dtype.size_log(), size};
+}
+
+template <size_t PIXEL_SIZE>
+size_t Image2DPackedTensorFormatBase<PIXEL_SIZE>::init_contiguous_stride(
         TensorLayout& layout) const {
+    auto m_align_axis = align_axis();
     if (!layout.ndim)
         return 0;
     megdnn_assert(layout.dtype.valid() && layout.ndim > m_align_axis,
                   "dtype=%s ndim=%zu align=%zu", layout.dtype.name(),
                   layout.ndim, m_align_axis);
-    size_t align_size = align_size_in_byte(layout.dtype.size_log());
+    size_t align_size = image_pitch_alignment_in_bytes(
+            align_size_in_elements(layout.dtype.size_log()), layout);
+
     size_t accum = 1;
     SafeMultiplies<size_t> mul;
     for (size_t i = layout.ndim; i; --i) {
@@ -216,12 +327,15 @@ size_t Image2DTensorFormatBase::init_contiguous_stride(
     return accum;
 };
 
-bool Image2DTensorFormatBase::is_contiguous_spec(
+template <size_t PIXEL_SIZE>
+bool Image2DPackedTensorFormatBase<PIXEL_SIZE>::is_contiguous_spec(
         const TensorLayout& layout) const {
     megdnn_assert(layout.dtype.valid());
-    size_t align_size = align_size_in_byte(layout.dtype.size_log());
+    size_t align_size = image_pitch_alignment_in_bytes(
+            align_size_in_elements(layout.dtype.size_log()), layout);
+
     ptrdiff_t expected = 1;
-    int height_axis = static_cast<int>(m_align_axis - 1);
+    int height_axis = static_cast<int>(align_axis() - 1);
     for (int i = layout.ndim - 1; i >= 0; --i) {
         if (i == height_axis) {
             expected = megdnn::get_aligned_power2<size_t>(expected, align_size);
@@ -235,7 +349,12 @@ bool Image2DTensorFormatBase::is_contiguous_spec(
                     return false;
                 }
 
-                size_t mask = align_size_in_byte(layout.dtype.size_log()) - 1;
+                size_t mask =
+                        image_pitch_alignment_in_bytes(
+                                align_size_in_elements(layout.dtype.size_log()),
+                                layout) -
+                        1;
+
                 megdnn_assert(s > expected && !(s & mask),
                               "invalid row pitch: %d; layout: %s",
                               static_cast<int>(s), layout.to_string().c_str());
@@ -250,11 +369,12 @@ bool Image2DTensorFormatBase::is_contiguous_spec(
     return expected != 0;
 }
 
-TensorLayout Image2DTensorFormatBase::collapse_contiguous_spec(
+template <size_t PIXEL_SIZE>
+TensorLayout Image2DPackedTensorFormatBase<PIXEL_SIZE>::collapse_contiguous_spec(
         const TensorLayout& layout) const {
     assert_valid(layout);
     TensorLayout res{layout};
-    int new_axis = m_align_axis;
+    int new_axis = align_axis();
     // remove all dims with shape 1
     for (int i = static_cast<int>(res.ndim) - 1; i >= 0 && res.ndim >= 3; --i) {
         if (i == new_axis && static_cast<int>(res.ndim) == new_axis + 1) {
@@ -302,95 +422,6 @@ TensorLayout Image2DTensorFormatBase::collapse_contiguous_spec(
     return res;
 }
 
-TensorLayout::Span Image2DTensorFormatBase::span_spec(
-        const TensorLayout& layout) const {
-    assert_valid(layout);
-    size_t size = image_height(layout) * image_row_pitch(layout);
-    auto mask = (1 << layout.dtype.size_log()) - 1;
-    megdnn_assert(!(size & mask), "unaligned size: %zu", size);
-    return {0, 0, size >> layout.dtype.size_log(), size};
-}
-
-void Image2DTensorFormatBase::serialize_append(std::string& result) const {
-    SerializePack pack;
-    pack.align_axis = m_align_axis;
-    megdnn_assert(pack.align_axis == m_align_axis);  // detect overflow
-    result.append(reinterpret_cast<char*>(&pack), sizeof(pack));
-}
-
-size_t Image2DTensorFormatBase::image_height(const TensorLayout& layout) const {
-    size_t accum = 1;
-    for (int i = m_align_axis - 1; i >= 0; --i) {
-        if (layout.stride[i] == 0) {
-            // this dimension is broadcasted
-        } else {
-            accum *= layout.shape[i];
-        }
-    }
-    return accum;
-}
-
-size_t Image2DTensorFormatBase::image_row_pitch(
-        const TensorLayout& layout) const {
-    for (int i = m_align_axis - 1; i >= 0; --i) {
-        // find a non-broadcast axis
-        if (auto s = layout.stride[i]) {
-            return layout.dtype.size(s);
-        }
-    }
-    // use width for all broadcasted case
-    return get_aligned_power2<size_t>(
-            layout.dtype.size(image_width_elems(layout)),
-            1 << m_align_size_in_byte_log2);
-}
-
-void Image2DTensorFormatBase::assert_valid(const TensorLayout& layout) const {
-    megdnn_assert(layout.dtype.valid() && layout.ndim > m_align_axis);
-    ptrdiff_t first_non_zero_stride = 0;
-    for (int i = layout.ndim - 1; i >= 0; --i) {
-        megdnn_assert(layout.shape[i] && layout.stride[i] >= 0);
-        if (i < static_cast<int>(m_align_axis) && !first_non_zero_stride) {
-            first_non_zero_stride = layout.stride[i];
-        }
-    }
-    size_t mask = align_size_in_byte(layout.dtype.size_log()) - 1;
-    megdnn_assert(!(first_non_zero_stride & mask),
-                  "first stride is %d, but alignment is %zu",
-                  static_cast<int>(first_non_zero_stride), mask + 1);
-}
-
-size_t Image2DTensorFormatBase::image_width_elems(
-        const TensorLayout& layout) const {
-    size_t high_elem = 0;
-    for (size_t i = m_align_axis; i < layout.ndim; ++i) {
-        high_elem += (layout.shape[i] - 1) * layout.stride[i];
-    }
-    return high_elem + 1;
-}
-
-std::string Image2DTensorFormatBase::to_string() const {
-    return ssprintf("I2D{%zu,%d}", m_align_axis,
-                    1 << m_align_size_in_byte_log2);
-}
-
-/* ===================== Image2DPackedTensorFormatBase ===================== */
-
-template <size_t PIXEL_SIZE>
-size_t Image2DPackedTensorFormatBase<PIXEL_SIZE>::image_width(
-        const TensorLayout& layout) const {
-    auto ret = image_width_elems(layout);
-    megdnn_assert(ret % PIXEL_SIZE == 0);
-    return ret / PIXEL_SIZE;
-}
-
-template <size_t PIXEL_SIZE>
-void Image2DPackedTensorFormatBase<PIXEL_SIZE>::assert_valid(
-        const TensorLayout& layout) const {
-    Image2DTensorFormatBase::assert_valid(layout);
-    megdnn_assert(!(layout.shape[layout.ndim - 1] % PIXEL_SIZE),
-                  "bad shape: %zu", layout.shape[layout.ndim - 1]);
-}
-
 namespace megdnn {
 namespace detail {
 template class Image2DPackedTensorFormatBase<4>;
@@ -398,26 +429,29 @@ template class Image2DPackedTensorFormatBase<4>;
 }  // namespace megdnn
 
 /* ===================== Image2DPack4TensorFormat  ===================== */
-TensorFormat Image2DPack4TensorFormat::make_raw(size_t align_axis,
-                                                size_t align_size_in_byte) {
+TensorFormat Image2DPack4TensorFormat::make_raw(
+        size_t align_axis, size_t align_size_in_elements,
+        Handle::HandleVendorType vendor_type) {
     static std::mutex mtx;
     static std::unordered_map<uint64_t,
                               std::unique_ptr<Image2DPack4TensorFormat>>
             cache;
-    megdnn_assert(std::max(align_axis, align_size_in_byte) <=
+    megdnn_assert(std::max(align_axis, align_size_in_elements) <=
                   std::numeric_limits<uint32_t>::max());
     MEGDNN_LOCK_GUARD(mtx);
     auto&& ptr = cache[(static_cast<uint64_t>(align_axis) << 32) |
-                       align_size_in_byte];
+                       align_size_in_elements];
     if (!ptr) {
-        ptr.reset(new Image2DPack4TensorFormat{align_axis, align_size_in_byte});
+        ptr.reset(new Image2DPack4TensorFormat{
+                align_axis, align_size_in_elements, vendor_type});
     }
     return impl_to_tensor_format(ptr.get());
 }
 
 TensorFormat Image2DPack4TensorFormat::make(size_t align_axis,
                                             const Handle* handle) {
-    return make_raw(align_axis, handle->image2d_pitch_alignment());
+    return make_raw(align_axis, handle->image2d_pitch_alignment(),
+                    handle->vendor_type());
 }
 
 TensorFormat Image2DPack4TensorFormat::deserialize(const Handle* handle,
@@ -429,7 +463,7 @@ TensorFormat Image2DPack4TensorFormat::deserialize(const Handle* handle,
 }
 
 TensorFormat Image2DPack4TensorFormat::change_axis(size_t axis) const {
-    return make_raw(axis, align_size_in_byte());
+    return make_raw(axis, align_size_in_elements(), vendor());
 }
 
 // vim: syntax=cpp.doxygen

@@ -118,6 +118,10 @@ size_t HandleImpl::image2d_pitch_alignment() const {
     return g_image2d_pitch_alignment;
 }
 
+HandleImpl::HandleVendorType HandleImpl::vendor_type() const {
+    return HandleVendorType::NOT_SPEC;
+}
+
 size_t HandleImpl::exchange_image2d_pitch_alignment(size_t alignment) {
     auto ret = g_image2d_pitch_alignment;
     g_image2d_pitch_alignment = alignment;
