@@ -116,7 +116,7 @@ DEF(TQTBackward, 5, true, false);
 DEF(PowC, 2, false, true);
 DEF(UniformRNG, 1, true, true);
 DEF(GaussianRNG, 1, true, true);
-
+DEF(ChecksumForward, 1, true, false);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
