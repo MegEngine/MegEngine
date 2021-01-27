@@ -39,6 +39,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoQuint8K4x8x8 quint8_k4x8x8;
     AlgoInt8x8x16K4x2x16 int8x8x16_k4x2x16;
     AlgoInt8x8x16K4x8x8 int8x8x16_k4x8x8;
+    AlgoInt8x8x16K8x8x4 int8x8x16_k8x8x4;
     AlgoInt8x8x16MK4_8x8x4 int8x8x16_mk4_8x8x4;
     AlgoInt16x16x32K12x4x1 int16x16x32_k12x4x1;
     AlgoInt16x16x32MK8_4x8 int16x16x32_mk8_4x8;
@@ -47,7 +48,6 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
 
 public:
-
     AlgoPack() {
         m_all_algos.emplace_back(&f32_gemv);
         m_all_algos.emplace_back(&f32);
@@ -69,6 +69,7 @@ public:
         m_all_algos.emplace_back(&int8x8x16_mk4_8x8x4);
         m_all_algos.emplace_back(&int8x8x16_k4x2x16);
         m_all_algos.emplace_back(&int8x8x16_k4x8x8);
+        m_all_algos.emplace_back(&int8x8x16_k8x8x4);
 
         m_all_algos.emplace_back(&int16x16x32_k12x4x1);
         m_all_algos.emplace_back(&int16x16x32_mk8_4x8);

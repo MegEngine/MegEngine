@@ -174,7 +174,8 @@ public:
             ARMV7_INT8X8X16_MK4_K8X8X4,
             ARMV7_INT16X16X32_K12X4X1,
             ARMV7_INT16X16X32_MK8_4X8,
-            ARMV7_INT8X8X32_MK4_4X2X16
+            ARMV7_INT8X8X32_MK4_4X2X16,
+            ARMV7_INT8X8X16_K8X8X4
 #endif
 #endif
         };

@@ -41,7 +41,8 @@ private:
     class AlgoQuint8K4x8x8;         // Armv7 Quint8 Kernel 4x8x8
     class AlgoInt8x8x16K4x2x16;     // Armv7 Int8x8x16 Kernel 4x2x16
     class AlgoInt8x8x16K4x8x8;      // Armv7 Int8x8x16 Kernel 4x8x8
-    class AlgoInt8x8x16MK4_8x8x4;   // Armv7 Int8x8x16 Kernel 8x8x8
+    class AlgoInt8x8x16K8x8x4;      // Armv7 Int8x8x16 Kernel 8x8x4
+    class AlgoInt8x8x16MK4_8x8x4;   // Armv7 Int8x8x16 Kernel mk4_8x8x4
     class AlgoInt16x16x32K12x4x1;   // Armv7 Int16x16x32 Kernel 12x4x1
     class AlgoInt16x16x32MK8_4x8;   // Armv7 Int16x16x32 MK8 Format block 4x8
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC

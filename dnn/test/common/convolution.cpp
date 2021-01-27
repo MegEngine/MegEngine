@@ -517,9 +517,18 @@ void convolution::test_conv_config_combinations(int k_size,
             param.compute_mode = Param::ComputeMode::FLOAT32;
         }
         size_t IC = 6, OC = 9, G = 3, FH = ksize, FW = ksize;
-        TensorShape ishp = format ?
-            TensorShape{2, 18, 18, IC} : TensorShape{2, IC, 18, 18},
-                    fshp;
+        TensorShape ishp = TensorShape{2, 18, 18, IC}, fshp;
+        if (format) {
+            ishp.shape[0] = 2;
+            ishp.shape[1] = 18;
+            ishp.shape[2] = 18;
+            ishp.shape[3] = IC;
+        } else {
+            ishp.shape[0] = 2;
+            ishp.shape[1] = IC;
+            ishp.shape[2] = 18;
+            ishp.shape[3] = 18;
+        }
         if (padding) {
             param.pad_h = 2 + non_square;
             param.pad_w = 2 - non_square;

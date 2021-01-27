@@ -181,6 +181,18 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ARMV7_INT8X8X16_K4X8X8)
 };
 
+class MatrixMulImpl::AlgoInt8x8x16K8x8x4 final : public AlgoBase {
+public:
+    bool is_reproducible() const override { return true; }
+    const char* name() const override { return "ARMV7_INT8X8X16_K8X8X4"; }
+    bool usable(const KernSizeParam&) const override;
+    bool preferred(const KernSizeParam&) const override;
+    size_t get_workspace(const KernSizeParam&) const override;
+    kern_t get_kern(const KernSizeParam&) const override;
+    MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+    MEGDNN_DECL_ALGO_TYPE(ARMV7_INT8X8X16_K8X8X4)
+};
+
 class MatrixMulImpl::AlgoInt8x8x16MK4_8x8x4 final : public AlgoBase {
 public:
     bool is_reproducible() const override { return true; }
