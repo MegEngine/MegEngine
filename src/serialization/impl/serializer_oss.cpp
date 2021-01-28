@@ -208,6 +208,11 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
         inputs = m_builder.CreateVector(v);
     }
 
+    Offset<String> operator_name;
+    if (m_config.keep_op_name) {
+        operator_name = m_builder.CreateSharedString(opr->name());
+    }
+
     Offset<Vector<Offset<String>>> output_names;
     if (m_config.keep_var_name >= 2 ||
         (m_config.keep_var_name == 1 &&
@@ -255,6 +260,7 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
     }
     builder.add_comp_node(comp_node);
     builder.add_output_name(output_names);
+    builder.add_name(operator_name);
     builder.add_output_dtype(output_dtype);
     if (param_cnt > 0) {
         builder.add_param_type(m_cur_opr_param_type[0]);
@@ -697,6 +703,9 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
     OperatorNodeConfig config;
     if (fbopr->output_dtype()) {
         config.output_dtype(fbs::intl::load_dtype(fbopr->output_dtype()));
+    }
+    if (fbopr->name()) {
+        config.name(fbopr->name()->str());
     }
     if (fbopr->comp_node()) {
         auto cnt = fbopr->comp_node()->size();

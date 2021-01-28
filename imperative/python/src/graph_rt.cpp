@@ -294,6 +294,7 @@ void init_graph_rt(py::module m) {
     m.def("dump_graph", [](
         const std::vector<VarNode*>& dest_vars,
         int keep_var_name,
+        bool keep_op_name,
         bool keep_param_name,
         bool keep_opr_priority,
         py::list& stat,
@@ -306,7 +307,7 @@ void init_graph_rt(py::module m) {
         SymbolVarArray symvars(dest_vars.begin(), dest_vars.end());
 
         ser::GraphDumper::DumpConfig config{keep_var_name, keep_param_name,
-                                       keep_opr_priority};
+                                       keep_opr_priority, keep_op_name};
 
         auto rst = dumper->dump(symvars, config);
         for (auto i : rst.inputs) {

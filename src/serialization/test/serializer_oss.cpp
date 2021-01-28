@@ -711,6 +711,39 @@ TEST(TestSerializer2, ParamerizedDType) {
     load();
 }
 
+TEST(TestSerializer2, OperatorName) {
+    auto fname = GET_OUTPUT_FILE();
+    TensorShape shape{2, 3};
+
+    auto dump = [&]() {
+        auto cn = CompNode::load("xpu0");
+        auto host_x = std::make_shared<HostTensorND>(cn, shape),
+             host_y = std::make_shared<HostTensorND>(cn, shape);
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"}),
+             y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"});
+        using Mode = opr::Elemwise::Mode;
+        auto z = opr::Elemwise::make({x, y}, Mode::ADD, {"add(x, y)"});
+
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        auto rst = dumper->dump({z.rename("z")});
+    };
+
+    auto load = [&]() {
+        HostTensorGenerator<> gen;
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        auto rst = loader->load();
+        auto z = rst.output_var_map.at("z");
+        auto op_name = z.node()->owner_opr()->cname();
+        int cmp = strcmp(op_name, "add(x, y)");
+        EXPECT_EQ(cmp, 0);
+    };
+
+    dump();
+    load();
+}
 
 TEST(TestSerializer2, HasOutputDtype) {
     auto fname = GET_OUTPUT_FILE();

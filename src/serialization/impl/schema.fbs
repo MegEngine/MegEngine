@@ -124,6 +124,7 @@ table Operator {
     blobs:[Blob];
     /// Operator may want to save more than one OperatorParam
     additional_params:[OperatorParam];
+    name:string;
 }
 
 struct OutputVar {

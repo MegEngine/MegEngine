@@ -305,6 +305,7 @@ def dump_graph(
     output_vars: Union[Dict[str, VarNode], List[VarNode]],
     *,
     keep_var_name: int = 1,
+    keep_op_name: bool = True,
     keep_param_name: bool = False,
     keep_opr_priority: bool = False,
     strip_info_file=None,
@@ -325,6 +326,7 @@ def dump_graph(
         * 0: none of the names are kept
         * 1: (default)keep names of output vars
         * 2: keep names of all (output and internal) vars
+    :param keep_op_name: whether to keep operator names.
     :param keep_param_name: whether to keep param names, so param values can be
         easily manipulated after loading model
     :param keep_opr_priority: whether to keep priority setting for operators
@@ -368,6 +370,7 @@ def dump_graph(
     dump_content = _imperative_rt.dump_graph(
         ov,
         keep_var_name,
+        keep_op_name,
         keep_param_name,
         keep_opr_priority,
         stat,
