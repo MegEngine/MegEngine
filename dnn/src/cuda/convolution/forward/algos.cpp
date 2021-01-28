@@ -65,6 +65,20 @@ std::pair<TensorLayoutArray, ConvBiasForward::Param> sub_opr_config(
     return ret;
 }
 
+std::pair<TensorLayoutArray, std::unique_ptr<ConvBiasForward>> prepare_sub_opr(
+        const ConvolutionForwardImpl::AlgoBase::SizeArgs& args) {
+    auto conv_bias_opr = args.opr->handle()->create_operator<ConvBiasForward>();
+    set_execution_policy<ConvolutionForward, ConvBiasForward*>(
+            args.opr, conv_bias_opr.get());
+
+    auto&& config = sub_opr_config(
+            *args.layout_src, *args.layout_filter, *args.layout_dst,
+            args.opr);
+    conv_bias_opr->param() = config.second;
+
+    return {config.first, std::move(conv_bias_opr)};
+}
+
 }  // namespace
 
 ConvolutionForwardImpl::AlgoPack::AlgoPack() {
@@ -121,13 +135,8 @@ ConvolutionForwardImpl::AlgoDefault::get_subopr_list(
 
 bool ConvolutionForwardImpl::AlgoDefault::is_available(
         const SizeArgs& args) const {
-    auto conv_bias_opr =
-            args.opr->handle()->create_operator<ConvBiasForward>();
-    auto&& config = sub_opr_config(
-            *args.layout_src, *args.layout_filter, *args.layout_dst,
-            args.opr);
-    conv_bias_opr->param() = config.second;
-    return get_algorithm(static_cast<ConvBiasForwardImpl*>(conv_bias_opr.get()),
+    auto config = prepare_sub_opr(args);
+    return get_algorithm(static_cast<ConvBiasForwardImpl*>(config.second.get()),
                          *args.layout_src, *args.layout_filter, config.first[0],
                          config.first[1], *args.layout_dst);
 }
@@ -135,36 +144,15 @@ bool ConvolutionForwardImpl::AlgoDefault::is_available(
 
 size_t ConvolutionForwardImpl::AlgoDefault::get_workspace_in_bytes(
         const SizeArgs& args) const {
-    auto conv_bias_opr = args.opr->handle()->create_operator<ConvBiasForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        conv_bias_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config = sub_opr_config(
-            *args.layout_src, *args.layout_filter, *args.layout_dst,
-            args.opr);
-    conv_bias_opr->param() = config.second;
-    return conv_bias_opr->get_workspace_in_bytes(
+    auto config = prepare_sub_opr(args);
+    return config.second->get_workspace_in_bytes(
             *args.layout_src, *args.layout_filter, config.first[0],
             config.first[1], *args.layout_dst, nullptr);
 }
 
 void ConvolutionForwardImpl::AlgoDefault::exec(const ExecArgs& args) const {
-    auto conv_bias_opr = args.opr->handle()->create_operator<ConvBiasForward>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        conv_bias_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config = sub_opr_config(
-            *args.layout_src, *args.layout_filter, *args.layout_dst,
-            args.opr);
-    conv_bias_opr->param() = config.second;
-    conv_bias_opr->exec(args.tensor_src, args.tensor_filter,
+    auto config = prepare_sub_opr(args);
+    config.second->exec(args.tensor_src, args.tensor_filter,
                         {nullptr, config.first[0]}, {nullptr, config.first[1]},
                         args.tensor_dst, nullptr, args.workspace);
 }

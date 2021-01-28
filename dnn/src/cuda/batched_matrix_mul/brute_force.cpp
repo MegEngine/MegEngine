@@ -8,9 +8,12 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include <algorithm>
+#include <memory>
 #include "./algo.h"
 #include "megdnn/opr_param_defs.h"
 #include "src/common/algo_chooser.h"
+#include "src/common/algo_base.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
@@ -27,6 +30,20 @@ std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
 
     return {{mm_layout_a, mm_layout_b, mm_layout_c}, opr->param()};
 }
+
+std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
+        const BatchedMatrixMulForwardImpl::AlgoBase::SizeArgs& args) {
+    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
+    set_execution_policy<BatchedMatrixMulForward, MatrixMulForward*>(
+            args.opr, matmul_opr.get());
+
+    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
+                                   args.opr);
+    matmul_opr->param() = config.second;
+
+    return {config.first, std::move(matmul_opr)};
+}
+
 }  // namespace
 
 std::vector<Algorithm::SearchItem>
@@ -43,51 +60,23 @@ BatchedMatrixMulForwardImpl::AlgoBruteForce::get_subopr_list(
 
 bool BatchedMatrixMulForwardImpl::AlgoBruteForce::is_available(
         const SizeArgs& args) const {
-    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
+    auto config = prepare_sub_opr(args);
 
-    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
-                                   args.opr);
-    matmul_opr->param() = config.second;
-
-    return get_algorithm(static_cast<MatrixMulForwardImpl*>(matmul_opr.get()),
-                         config.first[0], config.first[1], config.first[2]);
+    return get_algorithm(
+            static_cast<MatrixMulForwardImpl*>(config.second.get()),
+            config.first[0], config.first[1], config.first[2]);
 }
 size_t BatchedMatrixMulForwardImpl::AlgoBruteForce::get_workspace_in_bytes(
         const SizeArgs& args) const {
-    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
+    auto config = prepare_sub_opr(args);
 
-    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
-                                   args.opr);
-    matmul_opr->param() = config.second;
-
-    return matmul_opr->get_workspace_in_bytes(config.first[0], config.first[1],
-                                              config.first[2]);
+    return config.second->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2]);
 }
 void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(
         const ExecArgs& args) const {
     auto N = args.layout_a.shape[0];
-    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
-                                   args.opr);
-    matmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     rep(n, N) {
         TensorND A_, B_, C_;
@@ -100,6 +89,6 @@ void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(
         tensor_n_from_batch(args.tensor_a, A_);
         tensor_n_from_batch(args.tensor_b, B_);
         tensor_n_from_batch(args.tensor_c, C_);
-        matmul_opr->exec(A_, B_, C_, args.workspace);
+        config.second->exec(A_, B_, C_, args.workspace);
     }
 }

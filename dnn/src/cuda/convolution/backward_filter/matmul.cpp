@@ -11,6 +11,7 @@
  */
 
 #include "./algo.h"
+#include "src/common/algo_base.h"
 #include "src/cuda/convolution/helper.h"
 #include "src/cuda/convolution/im2col.cuh"
 #include "src/cuda/utils.h"
@@ -42,6 +43,20 @@ std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
     param.transposeB = true;
     return {{Cl, Bl, Al}, param};
 }
+
+std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
+        const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
+    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
+    set_execution_policy<ConvolutionBackwardFilter, MatrixMulForward*>(
+            args.opr, matmul_opr.get());
+
+    auto&& config =
+            sub_opr_config(args.grad_filter_meta, *args.src_layout,
+                           *args.diff_layout, *args.grad_layout, args.opr);
+    matmul_opr->param() = config.second;
+
+    return {config.first, std::move(matmul_opr)};
+}
 }  // namespace
 
 std::vector<Algorithm::SearchItem>
@@ -56,10 +71,8 @@ ConvolutionBackwardFilterImpl::AlgoMatmul::get_subopr_list(
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
-    return {{Algorithm::OprType::MATRIX_MUL_FORWARD, param_str,
-             config.first}};
+    return {{Algorithm::OprType::MATRIX_MUL_FORWARD, param_str, config.first}};
 }
-
 
 bool ConvolutionBackwardFilterImpl::AlgoMatmul::is_available(
         const SizeArgs& args) const {
@@ -75,21 +88,10 @@ bool ConvolutionBackwardFilterImpl::AlgoMatmul::is_available(
 
 size_t ConvolutionBackwardFilterImpl::AlgoMatmul::get_workspace_in_bytes(
         const SizeArgs& args) const {
-    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config =
-            sub_opr_config(args.grad_filter_meta, *args.src_layout,
-                           *args.diff_layout, *args.grad_layout, args.opr);
-    matmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     auto&& sizes = matmul_get_workspace_bundle(args.as_fwd_args());
-    sizes.push_back(matmul_opr->get_workspace_in_bytes(
+    sizes.push_back(config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]));
     return WorkspaceBundle(nullptr, sizes).total_size_in_bytes();
 }
@@ -121,19 +123,10 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
            DW = fm.dilation[1];
     auto stream = cuda_stream(args.handle);
 
-    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-    auto&& config =
-            sub_opr_config(args.grad_filter_meta, *args.src_layout,
-                           *args.diff_layout, *args.grad_layout, args.opr);
-    matmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     auto&& sizes = matmul_get_workspace_bundle(args.as_fwd_args());
-    sizes.push_back(matmul_opr->get_workspace_in_bytes(
+    sizes.push_back(config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]));
     auto wbundle = WorkspaceBundle(args.workspace.raw_ptr, sizes);
 
@@ -164,14 +157,14 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
         TensorND A(args.grad_tensor->ptr<T>(), Al), B(col, Bl), C(diff_t, Cl);
         if (fm.should_flip) {
             A.raw_ptr = wbundle.get(2);
-            matmul_opr->exec(C, B, A, wbundle.get_workspace(3));
+            config.second->exec(C, B, A, wbundle.get_workspace(3));
             convolution::flip_filter(
                     args.as_fwd_args(),
                     {static_cast<dt_byte*>(args.grad_tensor->raw_ptr),
                      wbundle.get_size(2)},
                     A.raw_ptr);
         } else {
-            matmul_opr->exec(C, B, A, wbundle.get_workspace(2));
+            config.second->exec(C, B, A, wbundle.get_workspace(2));
         }
     }
 }

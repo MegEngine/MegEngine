@@ -14,6 +14,7 @@
 #include "src/cuda/matrix_mul/algos.h"
 #include "src/cuda/utils.h"
 #include "src/common/algo_chooser.h"
+#include "src/common/algo_base.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -37,6 +38,15 @@ std::pair<TensorLayoutArray, MatrixMulForwardImpl::Param> sub_opr_config(
     ret.second.compute_mode = MatrixMulForwardImpl::Param::ComputeMode::DEFAULT;
     return ret;
 }
+
+std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
+        const MatrixMulForwardImpl::AlgoBase::SizeArgs& args) {
+    auto&& config = sub_opr_config(
+            {args.layout_a, args.layout_b, args.layout_c}, args.opr);
+    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
+    matmul_opr->param() = config.second;
+    return {config.first, std::move(matmul_opr)};
+}
 }  // namespace
 
 std::vector<Algorithm::SearchItem>
@@ -52,27 +62,16 @@ MatrixMulForwardImpl::AlgoBFloat16::get_subopr_list(
 
 bool MatrixMulForwardImpl::AlgoBFloat16::is_available(
         const SizeArgs& args) const {
-    auto&& config = sub_opr_config(
-            {args.layout_a, args.layout_b, args.layout_c}, args.opr);
-    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    matmul_opr->param() = config.second;
-
+    auto config = prepare_sub_opr(args);
     return args.layout_a.dtype == dtype::BFloat16() &&
-           get_algorithm(static_cast<MatrixMulForwardImpl*>(matmul_opr.get()),
-                         config.first[0], config.first[1], config.first[2]);
+           get_algorithm(
+                   static_cast<MatrixMulForwardImpl*>(config.second.get()),
+                   config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle MatrixMulForwardImpl::AlgoBFloat16::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
-    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-    auto&& config = sub_opr_config(
-            {args.layout_a, args.layout_b, args.layout_c}, args.opr);
-    matmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     SmallVector<size_t> sizes;
     auto get_workspace = [&sizes](const TensorLayout& src,
@@ -85,7 +84,7 @@ WorkspaceBundle MatrixMulForwardImpl::AlgoBFloat16::get_workspace_bundle(
     get_workspace(args.layout_a, config.first[0]);
     get_workspace(args.layout_b, config.first[1]);
     get_workspace(args.layout_c, config.first[2]);
-    sizes.push_back(matmul_opr->get_workspace_in_bytes(
+    sizes.push_back(config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]));
     return {ptr, std::move(sizes)};
 }
@@ -106,17 +105,8 @@ void MatrixMulForwardImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
             .src_to_comp_type(args.tensor_b, b)
             .src_to_comp_type(args.tensor_c, c);
     {
-        auto matmul_opr =
-                args.opr->handle()->create_operator<MatrixMulForward>();
-        matmul_opr->param() = args.opr->param();
-        matmul_opr->param().compute_mode = Param::ComputeMode::DEFAULT;
-        if (args.opr->execution_policy().algo.valid()) {
-            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-            matmul_opr->execution_policy() =
-                    args.opr->execution_policy().sub_policy[0];
-        }
-
-        matmul_opr->exec(a, b, c, ctypecvt.workspace());
+        auto config = prepare_sub_opr(args);
+        config.second->exec(a, b, c, ctypecvt.workspace());
     }
     ctypecvt.comp_to_dst_type(c, args.tensor_c);
 }

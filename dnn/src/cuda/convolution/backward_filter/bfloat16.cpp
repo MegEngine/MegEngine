@@ -11,6 +11,7 @@
  */
 
 #include "./algo.h"
+#include "src/common/algo_base.h"
 #include "src/cuda/convolution/chanwise/kern.cuh"
 #include "src/cuda/utils.h"
 
@@ -39,6 +40,18 @@ sub_opr_config(const TensorLayoutArray& layouts,
             ConvolutionBackwardFilter::Param::ComputeMode::DEFAULT;
     return ret;
 }
+
+std::pair<TensorLayoutArray, std::unique_ptr<ConvolutionBackwardFilter>>
+prepare_sub_opr(const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
+    auto conv_back_filter_opr =
+            args.handle->create_operator<ConvolutionBackwardFilter>();
+
+    auto&& config = sub_opr_config(
+            {*args.src_layout, *args.diff_layout, *args.grad_layout}, args.opr);
+    conv_back_filter_opr->param() = config.second;
+
+    return {config.first, std::move(conv_back_filter_opr)};
+}
 }  // namespace
 
 std::vector<Algorithm::SearchItem>
@@ -55,36 +68,18 @@ ConvolutionBackwardFilterImpl::AlgoBFloat16::get_subopr_list(
 
 bool ConvolutionBackwardFilterImpl::AlgoBFloat16::is_available(
         const SizeArgs& args) const {
-    TensorLayout fsrc, fdiff, fgrad;
-    auto conv_back_filter_opr =
-            args.handle->create_operator<ConvolutionBackwardFilter>();
-
-    auto&& config = sub_opr_config(
-            {*args.src_layout, *args.diff_layout, *args.grad_layout},
-            args.opr);
-    conv_back_filter_opr->param() =  config.second;
+    auto config = prepare_sub_opr(args);
     return args.src_layout->dtype == args.diff_layout->dtype &&
            args.src_layout->dtype == dtype::BFloat16() &&
            get_algorithm(static_cast<ConvolutionBackwardFilterImpl*>(
-                                 conv_back_filter_opr.get()),
+                                 config.second.get()),
                          config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle
 ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
-    auto conv_back_filter_opr =
-            args.handle->create_operator<ConvolutionBackwardFilter>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        conv_back_filter_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-    auto&& config = sub_opr_config(
-            {*args.src_layout, *args.diff_layout, *args.grad_layout},
-            args.opr);
-
-    conv_back_filter_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
     SmallVector<size_t> sizes;
     auto get_workspace = [&sizes](const TensorLayout& src,
                                   const TensorLayout& dst) {
@@ -96,7 +91,7 @@ ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_bundle(
     get_workspace(*args.src_layout, config.first[0]);
     get_workspace(*args.diff_layout, config.first[1]);
     get_workspace(*args.grad_layout, config.first[2]);
-    sizes.push_back(conv_back_filter_opr->get_workspace_in_bytes(
+    sizes.push_back(config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]));
     auto ret = WorkspaceBundle{ptr, std::move(sizes)};
     return ret;
@@ -120,19 +115,9 @@ void ConvolutionBackwardFilterImpl::AlgoBFloat16::exec(
                 .src_to_comp_type(*args.grad_tensor, fgrad_tensor);
     }
     {
-        auto conv_back_filter_opr =
-                args.handle->create_operator<ConvolutionBackwardFilter>();
-        conv_back_filter_opr->param() = args.opr->param();
-        conv_back_filter_opr->param().compute_mode =
-                Param::ComputeMode::DEFAULT;
-
-        if (args.opr->execution_policy().algo.valid()) {
-            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-            conv_back_filter_opr->execution_policy() =
-                    args.opr->execution_policy().sub_policy[0];
-        }
-        conv_back_filter_opr->exec(fsrc_tensor, fdiff_tensor, fgrad_tensor,
-                                   cvter.workspace());
+        auto config = prepare_sub_opr(args);
+        config.second->exec(fsrc_tensor, fdiff_tensor, fgrad_tensor,
+                            cvter.workspace());
     }
     { cvter.comp_to_dst_type(fgrad_tensor, *args.grad_tensor); }
 }

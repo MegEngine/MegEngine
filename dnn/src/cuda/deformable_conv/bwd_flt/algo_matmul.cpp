@@ -15,6 +15,7 @@
 #include "src/cuda/deformable_conv/bwd_flt/algo.h"
 #include "src/cuda/deformable_conv/kimpl/deformable_conv.cuh"
 #include "src/cuda/deformable_conv/opr_impl.h"
+#include "src/common/algo_base.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -79,10 +80,23 @@ std::pair<TensorLayoutArray, BatchedMatrixMulForward::Param> sub_opr_config(
     return {{al, bl, cl}, param};
 }
 
+std::pair<TensorLayoutArray, std::unique_ptr<BatchedMatrixMulForward>>
+prepare_sub_opr(
+        const DeformableConvBackwardFilterImpl::AlgoBase::SizeArgs& args) {
+    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
+    set_execution_policy<DeformableConvBackwardFilter,
+                         BatchedMatrixMulForward*>(args.opr, bmatmul_opr.get());
+
+    auto&& config = sub_opr_config(args.filter_grad_meta, args.im_layout,
+                                   args.out_grad_layout);
+    bmatmul_opr->param() = config.second;
+
+    return {config.first, std::move(bmatmul_opr)};
+}
+
 };  // anonymous namespace
 
-std::vector<Algorithm::SearchItem>
-Algo::get_subopr_list(
+std::vector<Algorithm::SearchItem> Algo::get_subopr_list(
         const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     const DeformableConvBackwardFilterImpl* deformable_conv =
             static_cast<const DeformableConvBackwardFilterImpl*>(opr);
@@ -107,21 +121,11 @@ WorkspaceBundle Algo::get_bundle(const SizeArgs& args) {
     size_t IC = fm.group * fm.icpg, OC = args.out_grad_layout[1];
     auto batch_sz = args.im_layout[0];
 
-    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        bmatmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config = sub_opr_config(args.filter_grad_meta, args.im_layout,
-                                   args.out_grad_layout);
-    bmatmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     size_t col_ws = batch_sz * IC * FH * FW * OH * OW * sizeof(float);
     size_t out_grad_ws = batch_sz * OC * OH * OW * sizeof(float);
-    size_t bmm_ws = bmatmul_opr->get_workspace_in_bytes(
+    size_t bmm_ws = config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]);
 
     return {nullptr, {col_ws, out_grad_ws, bmm_ws}};
@@ -166,23 +170,14 @@ void Algo::exec(const ExecArgs& args) const {
 
     args.handle->relayout_opr()->exec(C2, C3);
     // matmul
-    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        bmatmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config = sub_opr_config(args.filter_grad_meta, args.im_layout,
-                                   args.out_grad_layout);
-    bmatmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     TensorND A(static_cast<void*>(out_grad_ws), config.first[0]),
             B(static_cast<void*>(col_ws), config.first[1]),
             C(static_cast<void*>(dev_filter_grad), config.first[2]);
 
     size_t bmm_ws_size = bundle.get_size(2);
-    bmatmul_opr->exec(
+    config.second->exec(
             A, B, C,
             Workspace(static_cast<megdnn::dt_byte*>(bmm_ws), bmm_ws_size));
 }

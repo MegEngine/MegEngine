@@ -14,6 +14,7 @@
 
 #include <functional>
 #include <string>
+#include <tuple>
 
 #include "megdnn/oprs/base.h"
 #include "src/common/utils.h"
@@ -82,6 +83,29 @@ public:
         return m_all_algos_map;
     }
 };
+
+template <std::size_t I = 0, typename Opr, typename... Tp>
+inline typename std::enable_if<I == sizeof...(Tp), void>::type
+set_sub_execution_policy(const Opr*, std::tuple<Tp...>&) {}
+
+template <std::size_t I = 0, typename Opr, typename... Tp>
+        inline typename std::enable_if <
+        I<sizeof...(Tp), void>::type set_sub_execution_policy(
+                const Opr* opr, std::tuple<Tp...>& t) {
+    std::get<I>(t)->execution_policy() = opr->execution_policy().sub_policy[I];
+    set_sub_execution_policy<I + 1, Tp...>(opr, t);
+}
+
+template <typename Opr, typename... SubOpr>
+void set_execution_policy(const Opr* opr, SubOpr... sub_oprs) {
+    if (opr->execution_policy().algo.valid() &&
+        !opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(opr->execution_policy().sub_policy.size() ==
+                      sizeof...(sub_oprs));
+        auto&& sub = std::make_tuple(sub_oprs...);
+        set_sub_execution_policy<sizeof...(sub_oprs), Opr, SubOpr...>(opr, sub);
+    }
+}
 
 }  // namespace megdnn
 

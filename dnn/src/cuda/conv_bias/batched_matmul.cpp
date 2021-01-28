@@ -11,6 +11,7 @@
  */
 
 #include "src/common/algo_chooser.h"
+#include "src/common/algo_base.h"
 #include "src/common/conv_bias.h"
 #include "src/cuda/batched_matrix_mul/algo.h"
 #include "src/cuda/conv_bias/algo.h"
@@ -51,6 +52,19 @@ std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
 
     return {{A, B, C}, param};
 }
+
+std::pair<TensorLayoutArray, std::unique_ptr<BatchedMatrixMulForward>>
+prepare_sub_opr(const ConvBiasForwardImpl::AlgoBase::SizeArgs& args) {
+    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
+    set_execution_policy<ConvBiasForward, BatchedMatrixMulForward*>(
+            args.opr, bmatmul_opr.get());
+    auto&& config =
+            sub_opr_config(args.filter_meta, *args.src_layout,
+                           *args.filter_layout, *args.dst_layout, args.opr);
+    bmatmul_opr->param() = config.second;
+
+    return {config.first, std::move(bmatmul_opr)};
+}
 }  // namespace
 
 std::vector<Algorithm::SearchItem>
@@ -74,18 +88,7 @@ bool ConvBiasForwardImpl::AlgoBatchedMatmul::is_available(
     if (args.z_layout->ndim > 0)
         return false;
 
-    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        bmatmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config =
-            sub_opr_config(args.filter_meta, *args.src_layout,
-                           *args.filter_layout, *args.dst_layout, args.opr);
-    bmatmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     auto&& fm = args.filter_meta;
     return fm.format == Param::Format::NCHW &&
@@ -95,9 +98,9 @@ bool ConvBiasForwardImpl::AlgoBatchedMatmul::is_available(
            fm.dilation[1] == 1 && fm.spatial[0] == 1 && fm.spatial[1] == 1 &&
            fm.padding[0] == 0 && fm.padding[1] == 0 && fm.stride[0] == 1 &&
            fm.stride[1] == 1 &&
-           get_algorithm(
-                   static_cast<BatchedMatrixMulForwardImpl*>(bmatmul_opr.get()),
-                   config.first[0], config.first[1], config.first[2]);
+           get_algorithm(static_cast<BatchedMatrixMulForwardImpl*>(
+                                 config.second.get()),
+                         config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoBatchedMatmul::get_workspace_bundle(
@@ -115,21 +118,10 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoBatchedMatmul::get_workspace_bundle(
     SizeArgs conv_args = args;
     conv_args.dst_layout = &dst_layout;
 
-    auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        bmatmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config =
-            sub_opr_config(args.filter_meta, *args.src_layout,
-                           *args.filter_layout, *args.dst_layout, args.opr);
-    bmatmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     sizes.insert(sizes.begin(),
-                 args.handle->batched_matrix_mul()->get_workspace_in_bytes(
+                 config.second->get_workspace_in_bytes(
                          config.first[0], config.first[1], config.first[2]));
     return {ptr, std::move(sizes)};
 }
@@ -154,23 +146,12 @@ void ConvBiasForwardImpl::AlgoBatchedMatmul::exec(const ExecArgs& args) const {
     conv_args.dst_tensor = &conv_dst_tensor;
     conv_args.dst_layout = &conv_dst_tensor.layout;
     {
-        auto bmatmul_opr =
-                args.handle->create_operator<BatchedMatrixMulForward>();
-        if (args.opr->execution_policy().algo.valid()) {
-            megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-            bmatmul_opr->execution_policy() =
-                    args.opr->execution_policy().sub_policy[0];
-        }
-
-        auto&& config =
-                sub_opr_config(args.filter_meta, *args.src_layout,
-                               *args.filter_layout, *args.dst_layout, args.opr);
-        bmatmul_opr->param() = config.second;
+        auto config = prepare_sub_opr(args);
 
         TensorND A{args.filter_tensor->raw_ptr, config.first[0]},
                 B{args.src_tensor->raw_ptr, config.first[1]},
                 C{args.dst_tensor->raw_ptr, config.first[2]};
-        bmatmul_opr->exec(A, B, C, bundle.get_workspace(0));
+        config.second->exec(A, B, C, bundle.get_workspace(0));
     }
     handle_bias_and_nonlinear(args.handle, args.nonlinear_mode,
                               &conv_dst_tensor, args.dst_tensor,

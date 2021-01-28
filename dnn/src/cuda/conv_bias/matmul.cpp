@@ -15,6 +15,7 @@
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/conv_bias/matmul/im2col.cuh"
 #include "src/cuda/utils.h"
+#include "src/common/algo_base.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -39,6 +40,19 @@ std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
     }
 
     return {{Al, Bl, Cl}, param};
+}
+
+std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
+        const ConvBiasForwardImpl::AlgoBase::SizeArgs& args) {
+    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
+    set_execution_policy<ConvBiasForward, MatrixMulForward*>(args.opr,
+                                                              matmul_opr.get());
+    auto&& config =
+            sub_opr_config(args.filter_meta, *args.src_layout,
+                           *args.filter_layout, *args.dst_layout, args.opr);
+    matmul_opr->param() = config.second;
+
+    return {config.first, std::move(matmul_opr)};
 }
 }  // namespace
 
@@ -87,19 +101,8 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoMatmul::get_workspace_bundle(
     conv_args.dst_layout = &dst_layout;
     SmallVector<size_t> matmul_sizes = matmul_get_workspace_bundle(conv_args);
 
-    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid() &&
-        !args.opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config =
-            sub_opr_config(args.filter_meta, *args.src_layout,
-                           *args.filter_layout, *args.dst_layout, args.opr);
-    matmul_opr->param() = config.second;
-    size_t mm_ws = matmul_opr->get_workspace_in_bytes(
+    auto config = prepare_sub_opr(args);
+    size_t mm_ws = config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]);
     matmul_sizes.push_back(mm_ws);
 
@@ -162,17 +165,7 @@ void ConvBiasForwardImpl::AlgoMatmul::exec_internal(
                          args.src_layout->stride[0], IC, IH, IW, FH, FW, OH, OW,
                          PH, PW, SH, SW, DH, DW, stream);
 
-    auto matmul_opr = args.handle->create_operator<MatrixMulForward>();
-    if (args.opr->execution_policy().algo.valid()) {
-        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
-        matmul_opr->execution_policy() =
-                args.opr->execution_policy().sub_policy[0];
-    }
-
-    auto&& config =
-            sub_opr_config(args.filter_meta, *args.src_layout,
-                           *args.filter_layout, *args.dst_layout, args.opr);
-    matmul_opr->param() = config.second;
+    auto config = prepare_sub_opr(args);
 
     TensorND A(args.filter_tensor->ptr<T>(), config.first[0]),
             B(col, config.first[1]), C(dst_t, config.first[2]);
@@ -182,7 +175,7 @@ void ConvBiasForwardImpl::AlgoMatmul::exec_internal(
         matmul_ws_idx = 3;
     }
 
-    matmul_opr->exec(A, B, C, bundle.get_workspace(matmul_ws_idx));
+    config.second->exec(A, B, C, bundle.get_workspace(matmul_ws_idx));
 
     TensorLayout C2l({OC * OH * OW, N}, typename DTypeTrait<T>::dtype()),
             C3l = C2l;
