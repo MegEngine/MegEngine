@@ -707,7 +707,7 @@ def transpose(inp: Tensor, pattern: Iterable[int]) -> Tensor:
 
     :param inp: input tensor.
     :param pattern: a list of integers including 0, 1, ... , ``ndim``-1,
-    and any number of ``'x'`` char in dimensions where this tensor should be broadcasted. For examples:
+        and any number of ``'x'`` char in dimensions where this tensor should be broadcasted. For examples:
 
         * (``'x'``) -> make a 0d (scalar) into a 1d vector
         * (0, 1) -> identity for 2d vectors
