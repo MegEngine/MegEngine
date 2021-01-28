@@ -15,6 +15,7 @@ bangc_library(
     ]),
     deps = [
         "//brain/megbrain/dnn:public_headers",
+        "//brain/megbrain/sdk/build_config",
     ],
     copts = megdnn_opts + [
         "-Ibrain/megbrain/dnn",
