@@ -138,12 +138,13 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args() {
 
 template <typename Opr>
 void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
-                                  Handle* handle, const char* algo,
+                                  Handle* handle,
+                                  const ExecutionPolicyAlgoName& algo,
                                   param::MatrixMul::Format format, size_t nbase,
                                   float eps, std::vector<TestArg>&& user_args) {
     megdnn_assert(A_dtype.enumv() == B_dtype.enumv());
     Checker<Opr> checker(handle);
-    if (algo) {
+    if (!algo.name.empty()) {
         checker.set_before_exec_callback(AlgoChecker<Opr>(algo));
     }
     std::unique_ptr<RNG> rng;
@@ -267,7 +268,8 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
 
 void matrix_mul::check_batched_matrix_mul(DType A_dtype, DType B_dtype,
                                           DType C_dtype, Handle* handle,
-                                          const char* algo, float eps,
+                                          const ExecutionPolicyAlgoName& algo,
+                                          float eps,
                                           std::vector<TestArg>&& args) {
     check_matrix_mul<megdnn::BatchedMatrixMul>(
             A_dtype, B_dtype, C_dtype, handle, algo,
@@ -276,7 +278,8 @@ void matrix_mul::check_batched_matrix_mul(DType A_dtype, DType B_dtype,
 }
 
 void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
-                                  Handle* handle, const char* algo,
+                                  Handle* handle,
+                                  const ExecutionPolicyAlgoName& algo,
                                   param::MatrixMul::Format format, size_t nbase,
                                   float eps) {
     check_matrix_mul<megdnn::MatrixMul>(A_dtype, B_dtype, C_dtype, handle, algo,

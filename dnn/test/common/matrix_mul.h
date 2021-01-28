@@ -16,6 +16,7 @@
 #include "megdnn/handle.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
+#include "test/common/checker.h"
 
 namespace megdnn {
 namespace test {
@@ -58,18 +59,19 @@ using TestArgFilterFunc = std::function<bool(const TestArg&)>;
 template <typename Opr = megdnn::MatrixMul>
 void check_matrix_mul(
         DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
-        const char* algo = nullptr,
+        const ExecutionPolicyAlgoName& algo = {"", {}},
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
         size_t nbase = 8, float eps = 1e-3, std::vector<TestArg>&& args = {});
 
 void check_matrix_mul(
         DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
-        const char* algo = nullptr,
+        const ExecutionPolicyAlgoName& algo = {"", {}},
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
         size_t nbase = 8, float eps = 1e-3);
 
 void check_batched_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
-                              Handle* handle, const char* algo = nullptr,
+                              Handle* handle,
+                              const ExecutionPolicyAlgoName& algo = {"", {}},
                               float eps = 1e-3,
                               std::vector<TestArg>&& args = {});
 

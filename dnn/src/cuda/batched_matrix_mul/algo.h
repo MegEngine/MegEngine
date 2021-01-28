@@ -87,26 +87,20 @@ public:
 class BatchedMatrixMulForwardImpl::AlgoBruteForce final
         : public BatchedMatrixMulForwardImpl::AlgoBase {
     using Param = MatrixMulForward::Param;
-
 private:
-    std::string m_name;
-    MatrixMulForwardImpl::AlgoBase* m_algorithm = nullptr;
     WorkspaceBundle get_workspace_bundle();
 
 public:
-    AlgoBruteForce(MatrixMulForwardImpl::AlgoBase* algo);
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
     bool is_reproducible() const override { return true; }
-    const char* name() const override { return m_name.c_str(); }
+    const char* name() const override { return "BRUTE_FORCE"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_BRUTE_FORCE)
 
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_algorithm, ret);
-        return ret;
-    }
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 };
 class BatchedMatrixMulForwardImpl::AlgoCublas final
         : public BatchedMatrixMulForwardImpl::AlgoBase {
@@ -157,7 +151,7 @@ public:
 #endif
     AlgoInt8x8x32 int8x8x32;
     std::vector<AlgoBase*> all_algos;
-    std::vector<AlgoBruteForce> brute_force_algos;
+    AlgoBruteForce brute_force;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };

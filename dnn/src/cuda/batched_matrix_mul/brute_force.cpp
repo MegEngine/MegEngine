@@ -9,48 +9,86 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "./algo.h"
+#include "megdnn/opr_param_defs.h"
+#include "src/common/algo_chooser.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
 using namespace megdnn;
 using namespace cuda;
 
-BatchedMatrixMulForwardImpl::AlgoBruteForce::AlgoBruteForce(
-        MatrixMulForwardImpl::AlgoBase* algo)
-        : m_algorithm(algo) {
-    m_name = ssprintf("BRUTE_FORCE-%s", algo->name());
+namespace {
+std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
+        const TensorLayout& layout_a, const TensorLayout& layout_b,
+        const TensorLayout& layout_c, const BatchedMatrixMulForward* opr) {
+    auto mm_layout_a = layout_a.remove_axis(0);
+    auto mm_layout_b = layout_b.remove_axis(0);
+    auto mm_layout_c = layout_c.remove_axis(0);
+
+    return {{mm_layout_a, mm_layout_b, mm_layout_c}, opr->param()};
 }
+}  // namespace
+
+std::vector<Algorithm::SearchItem>
+BatchedMatrixMulForwardImpl::AlgoBruteForce::get_subopr_list(
+        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    const BatchedMatrixMulForwardImpl* bmm_opr =
+            static_cast<const BatchedMatrixMulForwardImpl*>(opr);
+    auto&& config = sub_opr_config(layouts[0], layouts[1], layouts[2], bmm_opr);
+
+    std::string param_str;
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::MATRIX_MUL_FORWARD, param_str, config.first}};
+}
+
 bool BatchedMatrixMulForwardImpl::AlgoBruteForce::is_available(
         const SizeArgs& args) const {
-    MatrixMulForwardImpl mm{args.opr->handle()};
-    mm.param() = {args.opr->param().transposeA, args.opr->param().transposeB};
-    mm.execution_policy() = {m_algorithm->desc(), {}};
+    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid() &&
+        !args.opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        matmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
 
-    auto mm_layout_a = args.layout_a.remove_axis(0);
-    auto mm_layout_b = args.layout_b.remove_axis(0);
-    auto mm_layout_c = args.layout_c.remove_axis(0);
+    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
+                                   args.opr);
+    matmul_opr->param() = config.second;
 
-    MatrixMulForwardImpl::AlgoBase::SizeArgs mm_args{&mm, mm_layout_a,
-                                                     mm_layout_b, mm_layout_c};
-    return m_algorithm->is_available(mm_args);
+    return get_algorithm(static_cast<MatrixMulForwardImpl*>(matmul_opr.get()),
+                         config.first[0], config.first[1], config.first[2]);
 }
 size_t BatchedMatrixMulForwardImpl::AlgoBruteForce::get_workspace_in_bytes(
         const SizeArgs& args) const {
-    auto mm_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    mm_opr->param() = {args.opr->param().transposeA,
-                       args.opr->param().transposeB};
-    mm_opr->execution_policy() = {m_algorithm->desc(), {}};
+    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid() &&
+        !args.opr->execution_policy().sub_policy.empty()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        matmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
 
-    return mm_opr->get_workspace_in_bytes(args.layout_a, args.layout_b,
-                                          args.layout_c);
+    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
+                                   args.opr);
+    matmul_opr->param() = config.second;
+
+    return matmul_opr->get_workspace_in_bytes(config.first[0], config.first[1],
+                                              config.first[2]);
 }
 void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(
         const ExecArgs& args) const {
     auto N = args.layout_a.shape[0];
-    auto&& mm_opr = args.opr->handle()->create_operator<MatrixMulForward>();
-    mm_opr->param() = {args.opr->param().transposeA,
-                       args.opr->param().transposeB};
-    mm_opr->execution_policy() = {m_algorithm->desc(), {}};
+    auto matmul_opr = args.opr->handle()->create_operator<MatrixMulForward>();
+    if (args.opr->execution_policy().algo.valid()) {
+        megdnn_assert(args.opr->execution_policy().sub_policy.size() == 1);
+        matmul_opr->execution_policy() =
+                args.opr->execution_policy().sub_policy[0];
+    }
+
+    auto&& config = sub_opr_config(args.layout_a, args.layout_b, args.layout_c,
+                                   args.opr);
+    matmul_opr->param() = config.second;
+
     rep(n, N) {
         TensorND A_, B_, C_;
         auto tensor_n_from_batch = [n](const TensorND& in, TensorND& out) {
@@ -62,6 +100,6 @@ void BatchedMatrixMulForwardImpl::AlgoBruteForce::exec(
         tensor_n_from_batch(args.tensor_a, A_);
         tensor_n_from_batch(args.tensor_b, B_);
         tensor_n_from_batch(args.tensor_c, C_);
-        mm_opr->exec(A_, B_, C_, args.workspace);
+        matmul_opr->exec(A_, B_, C_, args.workspace);
     }
 }

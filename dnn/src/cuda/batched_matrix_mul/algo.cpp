@@ -54,12 +54,7 @@ BatchedMatrixMulForwardImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&cublasLt);
 #endif
     all_algos.push_back(&int8x8x32);
-    for (auto& algo : mm_pack.all_algos) {
-        brute_force_algos.emplace_back(AlgoBruteForce(algo));
-    }
-    for (auto& algo : brute_force_algos) {
-        all_algos.push_back(&algo);
-    }
+    all_algos.push_back(&brute_force);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);

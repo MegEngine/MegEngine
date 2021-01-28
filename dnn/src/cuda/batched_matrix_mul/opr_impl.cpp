@@ -56,9 +56,8 @@ std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms(
 Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
         size_t workspace_limit_in_bytes, bool reproducible) {
+    MEGDNN_MARK_USED_VAR(workspace_limit_in_bytes);
     AlgoBase::SizeArgs args(this, A, B, C);
-    std::vector<AlgoBase*> brute_force_algos;
-
     if (sm_algo_pack.cublas.is_available_reproducible(args, reproducible)) {
         return &sm_algo_pack.cublas;
     }
@@ -72,25 +71,14 @@ Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
                                                               reproducible)) {
         return &sm_algo_pack.int8x8x32;
     } else {
-        for (auto& algo : sm_algo_pack.brute_force_algos) {
-            if (algo.is_available_reproducible(args, reproducible)) {
-                return &algo;
-            }
+        if (sm_algo_pack.brute_force.is_available_reproducible(args,
+                                                               reproducible)) {
+            return &sm_algo_pack.brute_force;
         }
     }
 
-    for (auto& algo : sm_algo_pack.brute_force_algos)
-        brute_force_algos.push_back(&algo);
-
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<BatchedMatrixMulForwardImpl>(
-                brute_force_algos, args, workspace_limit_in_bytes,
-                "batched matrix mul");
-    } else {
-        return megdnn::get_usable_algo<BatchedMatrixMulForwardImpl>(
-                brute_force_algos, args, workspace_limit_in_bytes,
-                "batched matrix mul");
-    }
+    megdnn_throw("No usable algo for batched_matrix_mul");
+    return nullptr;
 };
 
 // vim: syntax=cpp.doxygen
