@@ -118,6 +118,14 @@ class Graph(_imperative_rt.ComputingGraph):
         device = as_device(device).to_c()
         return self._wrap(_imperative_rt.make_h2d(self, device, dtype, shape, name))
 
+    def _to_json(self, filename):
+        # debug interface
+        if self._function:
+            js = json.loads(self._function._to_json())
+            json.dump(js, open(filename, "w"))
+        else:
+            print("this function should be called after compilation.")
+
 
 class VarNode(TensorBase):
     def __init__(self, node: _imperative_rt.VarNode, isscalar=False):

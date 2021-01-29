@@ -196,6 +196,11 @@ void init_graph_rt(py::module m) {
         .def("execute", &cg::AsyncExecutable::execute, py::call_guard<py::gil_scoped_release>())
         .def("wait", &cg::AsyncExecutable::wait, py::call_guard<py::gil_scoped_release>())
         .def("get_prev_exec_time", &cg::AsyncExecutable::get_prev_exec_time, py::call_guard<py::gil_scoped_release>())
+        .def("_to_json", [](cg::AsyncExecutable* exec) {
+            py::call_guard<py::gil_scoped_release>();
+            // dump currently compiled computing graph for debugging
+            return exec->to_json()->to_string();
+        })
         // only used for exception handle
         .def_property_readonly("_all_rendezvous", [](cg::AsyncExecutable* exec) {
             auto ud = exec->owner_graph()->options().user_data
