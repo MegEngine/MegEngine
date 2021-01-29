@@ -115,8 +115,12 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     }
     mgb_assert(
         tshp.layout.ndim == 1,
-        "target shape of Broadcast expects ndim=1; got ndim=%lu actually",
+        "target shape of Reshape expects ndim=1; got ndim=%lu actually",
         tshp.layout.ndim);
+
+    if (src.layout.ndim == 0 && op.axis != opr::Reshape::Param::INVALID_AXIS) {
+        return {{{TensorLayout(out_shape, src.layout.dtype), src.comp_node}}, false};
+    }
 
     size_t target_ndim = tshp.layout.shape[0];
     out_shape.ndim = target_ndim;

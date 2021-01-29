@@ -122,6 +122,33 @@ def test_reshape():
         np.testing.assert_equal(yy.numpy(), y)
 
 
+def test_reshape_shape_inference():
+    x_shape_known = tensor([1, 2, 3, 4], dtype="float32")
+    x_shape_unknown = F.broadcast_to(tensor([1.0]), shape=tensor([1, 1, 1, 1]).sum())
+    tshp_unknown = astensor1d((tensor([2]), tensor([2])), x_shape_known)
+    tshp_known = astensor1d((2, 2), x_shape_known)
+    tshp_known_unspec = astensor1d((2, -1), x_shape_known)
+
+    def check_shape(output, target):
+        source = output.shape
+        if isinstance(source, tensor):
+            source = source.numpy()
+        np.testing.assert_equal(source, target)
+
+    def func(x, target_shape):
+        return x.reshape(target_shape)
+
+    cases = [
+        {"input": [x_shape_known, tshp_unknown], "output": [(2, 2),]},
+        {"input": [x_shape_unknown, tshp_unknown], "output": [(2, 2),]},
+        {"input": [x_shape_known, tshp_known], "output": [(2, 2),]},
+        {"input": [x_shape_known, tshp_known_unspec], "output": [(2, 2),]},
+        {"input": [x_shape_unknown, tshp_known], "output": [(2, 2),]},
+        {"input": [x_shape_unknown, tshp_known_unspec], "output": [(2, 2),]},
+    ]
+    opr_test(cases, func, compare_fn=check_shape, test_trace=True)
+
+
 def test_squeeze():
     x = np.arange(6, dtype="float32").reshape(1, 2, 3, 1)
     xx = tensor(x)
