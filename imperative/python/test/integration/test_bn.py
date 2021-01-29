@@ -17,7 +17,7 @@ import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.jit import trace
-from megengine.module import BatchNorm2d, Module, SyncBatchNorm
+from megengine.module import BatchNorm2d, Conv2d, Module, Sequential, SyncBatchNorm
 
 
 def run_frozen_bn(BNModule, use_trace=False, use_symbolic=False):
@@ -68,7 +68,7 @@ def test_frozen_bn():
     run_frozen_bn(BatchNorm2d, True, True)
 
 
-@pytest.mark.skipif(get_device_count_by_fork("gpu") < 2, reason="need more gpu device")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_frozen_synced_bn():
     @dist.launcher(n_gpus=2)
@@ -149,6 +149,45 @@ def test_trace_bn_forward_twice():
     x = np.ones((1, 1, 32, 32), dtype=np.float32)
     y = train_bn(x, net=Simple())
     np.testing.assert_equal(y.numpy(), 0)
+
+
+def run_syncbn(trace_mode):
+    x = F.ones([2, 16, 4, 4], dtype="float32")
+
+    net = Sequential(
+        Conv2d(16, 16, 1), SyncBatchNorm(16), Conv2d(16, 16, 1), SyncBatchNorm(16),
+    )
+
+    gm = ad.GradManager().attach(
+        net.parameters(), callbacks=dist.make_allreduce_cb("MEAN")
+    )
+    opt = optimizer.SGD(net.parameters(), 1e-3)
+
+    def train_func(x):
+        with gm:
+            y = net(x)
+            loss = y.mean()
+            gm.backward(loss)
+            opt.step().clear_grad()
+        return loss
+
+    if trace_mode is not None:
+        train_func = trace(train_func, symbolic=trace_mode)
+
+    for _ in range(3):
+        loss = train_func(x)
+        loss.numpy()
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize("trace_mode", [None, True, False])
+def test_trace_several_syncbn(trace_mode):
+    @dist.launcher(n_gpus=2)
+    def worker():
+        run_syncbn(trace_mode)
+
+    worker()
 
 
 # https://github.com/MegEngine/MegEngine/issues/145

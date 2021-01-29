@@ -177,6 +177,32 @@ TEST_PASS(DelayBroadcastPass, LongChain) {
     ASSERT_EQ(bcast(bcast(relu(relu(x)), y), z), out);
 }
 
+TEST_PASS(DelayBroadcastPass, ElemwiseChain) {
+    auto typecvt = [](SymbolVar x) {
+        return opr::TypeCvt::make(x, dtype::Int32());
+    };
+
+    auto reduce = [](SymbolVar x) {
+        SymbolVar tshp = x.make_scalar(1);
+        opr::Reduce::Param param_default{opr::Reduce::Mode::SUM, INT_MAX,
+                                    opr::Reduce::Param::DataType::DEFAULT};
+        return opr::Reduce::make(x, param_default, tshp);
+    };
+
+    auto shp = TensorShape{2, 2};
+
+    auto x = mkvar("x", {1, 1});
+    auto val = x.make_scalar(3);
+
+    auto out = reduce(typecvt(x.broadcast(shp))) + val.broadcast(shp);
+    out = gopt::GraphOptimizer{}.
+        add_pass<gopt::DelayBroadcastPass>().
+        apply({{out}}).endpoint_vars()[0];
+
+    auto expected = (reduce(typecvt(x).broadcast(shp)) + val).broadcast(shp);
+    ASSERT_EQ(out, expected);
+}
+
 TEST_PASS(ExpandVirtualGradPass, Simple) {
     auto x = mkvar("x");
     check(x * 2,

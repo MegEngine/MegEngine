@@ -226,8 +226,14 @@ void DelayBroadcastPass::apply(OptState& opt) const {
             if (!prev)
                 prev = rewriter.get_var(opr->input(inp_idx));
             if (!opr->same_type<opr::Broadcast>()) {
-                VarNodeArray new_inp = opr->input();
-                new_inp.at(inp_idx) = prev;
+                VarNodeArray new_inp(opr->input().size());
+                for (size_t i = 0; i < opr->input().size(); i++) {
+                    if (i == inp_idx) {
+                        new_inp[i] = prev;
+                    } else {
+                        new_inp[i] = rewriter.get_var(opr->input(i));
+                    }
+                }
                 opt.call_with_opr(opr, [&] {
                     // create new opr with the original opr's properties
                     auto new_opr = serialization::copy_opr_shallow(

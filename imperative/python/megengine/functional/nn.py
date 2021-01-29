@@ -784,10 +784,10 @@ def sync_batch_norm(
 
         if is_distributed():
             # reduce all nodes' data to calculate mean and variance
-            reduce_size = broadcast_to(Tensor(reduce_size, dtype=_dtype), [1] * _ndim)
-            stat = concat(
-                [reduce_size.astype(_dtype), channel_x1s, channel_x2s], axis=1
+            reduce_size = broadcast_to(
+                Tensor(reduce_size).astype(dtype=_dtype), [1] * _ndim
             )
+            stat = concat([reduce_size, channel_x1s, channel_x2s], axis=1)
             stat = all_reduce_sum(stat, group)
             reduce_size = stat[:, :1].reshape(1)
             channel_x1s = stat[:, 1 : 1 + _channels]

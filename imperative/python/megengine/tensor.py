@@ -18,6 +18,7 @@ from .core._wrap import device as as_device
 from .core.ops.builtin import Copy, GetVarShape
 from .core.tensor.array_method import ArrayMethodMixin
 from .device import _valid_device, get_default_device
+from .logger import get_logger
 from .utils.deprecation import deprecated
 
 
@@ -41,6 +42,10 @@ class Tensor(_Tensor, ArrayMethodMixin):
                 cn = device._cn
 
         if isinstance(data, _Tensor):
+            if dtype is not None:
+                get_logger().warning(
+                    "dtype does not work when creating a new Tensor with another Tensor"
+                )
             obj = _Tensor.__new__(cls, data)
         else:
             if isinstance(data, np.ndarray):
