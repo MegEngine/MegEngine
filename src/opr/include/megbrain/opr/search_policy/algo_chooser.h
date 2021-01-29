@@ -159,21 +159,6 @@ private:
                                                  bool require_reproducible,
                                                  bool enable_update = true);
 
-    /**
-     * flatten search space in postorder traversal
-     * The subopr search construct a search tree
-     *
-     *           A
-     *        /    \
-     *       B1B2   C
-     *      /     \
-     *     D1D2D3   E
-     * We use postorder traverse the search tree.
-     * D1 -> D2 -> D3 -> E -> B1 -> B2 -> C -> A
-     */
-    static std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
-            const ExeContext& ctx);
-
 public:
     /*!
      * \brief setup algorithm and return workspace size
