@@ -51,7 +51,8 @@ TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32) {
     if (cuda::current_device_prop().major < 7 ||
         (cuda::current_device_prop().major == 7 &&
          cuda::current_device_prop().minor < 5)) {
-        printf("Skip CUDA.MATRIX_MUL_QUANTIZED4x4x32 test as current device doesn't support\n");
+        printf("Skip CUDA.MATRIX_MUL_QUANTIZED4x4x32 test as current device "
+               "doesn't support\n");
         return;
     }
     Checker<MatrixMul> checker(handle_cuda(), false);
@@ -257,19 +258,19 @@ TEST_F(CUDA, MATRIX_MUL) {
             BS = TensorShape{k, n};
         CS = TensorShape{m, n};
         TensorLayout AL, BL, CL;
-        if (arg.A_stride == 0) {
+        if (arg.A_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             AL = TensorLayout(AS, dtype::Float32());
         } else {
             AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1},
                               dtype::Float32());
         }
-        if (arg.B_stride == 0) {
+        if (arg.B_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             BL = TensorLayout(BS, dtype::Float32());
         } else {
             BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1},
                               dtype::Float32());
         }
-        if (arg.C_stride == 0) {
+        if (arg.C_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             CL = TensorLayout(CS, dtype::Float32());
         } else {
             CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1},
@@ -285,8 +286,9 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT)
     NormalRNG normal_rng;
     Checker<MatrixMul> checker(handle_cuda());
     checker.set_rng(0, &normal_rng)
-           .set_rng(1, &normal_rng)
-           .set_before_exec_callback(AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+            .set_rng(1, &normal_rng)
+            .set_before_exec_callback(
+                    AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
     using Param = MatrixMul::Param;
     size_t m = 32, n = 32, k = 32;
     // test Int8 matmul
@@ -350,19 +352,19 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT)
             BS = TensorShape{k, n};
         CS = TensorShape{m, n};
         TensorLayout AL, BL, CL;
-        if (arg.A_stride == 0) {
+        if (arg.A_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             AL = TensorLayout(AS, dtype::Float32());
         } else {
             AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1},
                               dtype::Float32());
         }
-        if (arg.B_stride == 0) {
+        if (arg.B_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             BL = TensorLayout(BS, dtype::Float32());
         } else {
             BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1},
                               dtype::Float32());
         }
-        if (arg.C_stride == 0) {
+        if (arg.C_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             CL = TensorLayout(CS, dtype::Float32());
         } else {
             CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1},

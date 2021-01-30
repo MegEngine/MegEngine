@@ -109,7 +109,8 @@ void ConvBiasForwardImpl::AlgoGroupConvGeneral::exec(
         auto sub_args = args;
         sub_args.dst_tensor = &conv_dst_tensor;
         sub_args.dst_layout = &conv_dst_tensor.layout;
-        TensorND tsrc{*args.src_tensor}, tdst{conv_dst_tensor}, tbias{*args.bias_tensor};
+        TensorND tsrc{*args.src_tensor}, tdst{conv_dst_tensor},
+                tbias{*args.bias_tensor};
         SmallVector<size_t> flt_shape(0);
         std::vector<ptrdiff_t> flt_stride(0);
         size_t idx = 0;

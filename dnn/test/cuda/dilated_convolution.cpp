@@ -75,8 +75,8 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_DATA)
             "CUDNN_CONVOLUTION_BWD_DATA_ALGO_1" CUDNN_VERSION_STRING));
     printf("cudnn version >= 7.5, use cudnn impl for dilated convolution\n");
 #else
-    checker.set_before_exec_callback(
-            AlgoChecker<ConvolutionBackwardData>("MATMUL"));
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
+            ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
 #endif
     NormalRNG default_rng;
     for (auto &&arg: args) {
@@ -139,8 +139,8 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_FILTER)
             "CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1" CUDNN_VERSION_STRING));
     printf("cudnn version >= 7.5, use cudnn impl for dilated convolution\n");
 #else
-    checker.set_before_exec_callback(
-            AlgoChecker<ConvolutionBackwardFilter>("MATMUL"));
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
+            ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
 #endif
     NormalRNG default_rng;
     bool first_run = true;

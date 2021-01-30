@@ -44,6 +44,9 @@ std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
     B.dtype = src_layout.dtype;
     C = {{dst_layout.shape[0], dst_layout.shape[1], B.shape[2]},
          dst_layout.dtype};
+    C.stride[2] = 1;
+    C.stride[1] = dst_layout.stride[1];
+    C.stride[0] = dst_layout.stride[0];
 
     MatrixMulForward::Param param;
     if (opr->param().compute_mode == param::Convolution::ComputeMode::FLOAT32) {
@@ -89,6 +92,8 @@ bool ConvBiasForwardImpl::AlgoBatchedMatmul::is_available(
         return false;
 
     auto config = prepare_sub_opr(args);
+    //! The dst of batched matmul should be contiguous
+    if (!config.first[2].is_contiguous()) return false;
 
     auto&& fm = args.filter_meta;
     return fm.format == Param::Format::NCHW &&

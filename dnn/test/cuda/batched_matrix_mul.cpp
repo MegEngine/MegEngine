@@ -8,6 +8,7 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include <vector>
 #include "test/cuda/fixture.h"
 
 #include "test/common/checker.h"
@@ -61,6 +62,30 @@ TEST_F(CUDA, BATCHED_MATRIX_MUL_LT_F32_PART4) {
 }
 
 #undef F32_TEST_PART
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_BROADCAST_PART1){
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(), "CUBLAS",
+            1e-3, matrix_mul::get_batched_matmul_broadcast_args_mask(0));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_BROADCAST_PART2){
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(), "CUBLAS",
+            1e-3, matrix_mul::get_batched_matmul_broadcast_args_mask(1));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_BROADCAST_PART3){
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(), "CUBLAS",
+            1e-3, matrix_mul::get_batched_matmul_broadcast_args_mask(2));
+}
+
+TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_BROADCAST_PART4){
+    matrix_mul::check_batched_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, {}, handle_cuda(), "CUBLAS",
+            1e-3, matrix_mul::get_batched_matmul_broadcast_args_mask(3));
+}
 
 TEST_F(CUDA, BATCHED_MATRIX_MUL_F32_BRUTE_FORCE_PART1) {
     matrix_mul::check_batched_matrix_mul(

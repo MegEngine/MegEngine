@@ -24,15 +24,19 @@ namespace matrix_mul {
 
 // mask & 1 denotes transposeA; mask & 2 denotes transposeB
 struct TestArg {
+    constexpr static size_t UNSET_STRIDE_VAL = static_cast<size_t>(-1);
     size_t m, n, k, mask;
     size_t A_stride, B_stride, C_stride, b;
     size_t A_batch_stride, B_batch_stride, C_batch_stride;
     // stride = 0 means the default stride, the dim is contiguous, i.e. the
     // stride value which makes tensor compact.
-    TestArg(size_t m, size_t n, size_t k, size_t mask, size_t A_stride = 0,
-            size_t B_stride = 0, size_t C_stride = 0, size_t b = 1,
-            size_t A_batch_stride = 0, size_t B_batch_stride = 0,
-            size_t C_batch_stride = 0)
+    TestArg(size_t m, size_t n, size_t k, size_t mask,
+            size_t A_stride = UNSET_STRIDE_VAL,
+            size_t B_stride = UNSET_STRIDE_VAL,
+            size_t C_stride = UNSET_STRIDE_VAL, size_t b = 1,
+            size_t A_batch_stride = UNSET_STRIDE_VAL,
+            size_t B_batch_stride = UNSET_STRIDE_VAL,
+            size_t C_batch_stride = UNSET_STRIDE_VAL)
             : m{m},
               n{n},
               k{k},
@@ -51,6 +55,8 @@ std::vector<TestArg> get_matmul_args_mask(uint8_t mask);
 std::vector<TestArg> get_matmul_args();
 std::vector<TestArg> get_batched_matmul_args_mask(uint8_t mask);
 std::vector<TestArg> get_batched_matmul_args();
+std::vector<TestArg> get_batched_matmul_broadcast_args();
+std::vector<TestArg> get_batched_matmul_broadcast_args_mask(uint8_t mask);
 std::vector<TestArg> get_matmul_mk_packed_args(size_t nbase);
 std::vector<TestArg> get_batched_matmul_args_cublaslt();
 std::vector<TestArg> get_batched_matmul_args_int8x8x32();

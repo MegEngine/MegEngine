@@ -17,6 +17,8 @@
 using namespace megdnn;
 using namespace test;
 
+constexpr size_t matrix_mul::TestArg::UNSET_STRIDE_VAL;
+
 std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_no_mask() {
     std::vector<TestArg> args;
 
@@ -57,7 +59,9 @@ matrix_mul::get_batched_matmul_args_cublaslt() {
             // so please uncomment it if the bug is fixed
 
             for (size_t k : {32, 64}) {
-                args.emplace_back(m, n, k, 0, 0, 0, 0, 2);
+                args.emplace_back(m, n, k, 0, TestArg::UNSET_STRIDE_VAL,
+                                  TestArg::UNSET_STRIDE_VAL,
+                                  TestArg::UNSET_STRIDE_VAL, 2);
             }
         }
     }
@@ -70,7 +74,9 @@ matrix_mul::get_batched_matmul_args_int8x8x32() {
     for (size_t m : {1, 2, 3, 4, 5, 8, 64}) {
         for (size_t n : {1, 2, 3, 4, 5, 8, 64}) {
             for (size_t k : {1, 2, 3, 4, 5, 8, 64}) {
-                args.emplace_back(m, n, k, 0, 0, 0, 0, 2);
+                args.emplace_back(m, n, k, 0, TestArg::UNSET_STRIDE_VAL,
+                                  TestArg::UNSET_STRIDE_VAL,
+                                  TestArg::UNSET_STRIDE_VAL, 2);
             }
         }
     }
@@ -136,6 +142,30 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_batched_matmul_args() {
     return args;
 }
 
+std::vector<matrix_mul::TestArg>
+matrix_mul::get_batched_matmul_broadcast_args() {
+    std::vector<TestArg> args;
+    for (size_t mask = 0; mask < 4; ++mask) {
+        std::vector<TestArg> args_temp =
+                matrix_mul::get_batched_matmul_broadcast_args_mask(mask);
+        for (auto arg : args_temp)
+            args.emplace_back(arg);
+    }
+    return args;
+}
+
+std::vector<matrix_mul::TestArg>
+matrix_mul::get_batched_matmul_broadcast_args_mask(uint8_t mask) {
+    std::vector<TestArg> args;
+    std::vector<TestArg> args_temp =
+            matrix_mul::get_batched_matmul_args_mask(mask);
+    for (auto arg : args_temp) {
+        args.emplace_back(arg);
+        args.back().A_batch_stride = 0;
+    }
+    return args;
+}
+
 template <typename Opr>
 void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
                                   Handle* handle,
@@ -170,9 +200,9 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
         checker.set_rng(0, rng.get()).set_rng(1, rng.get());
     }
 
-    //! return expect if stride == 0, stride otherwise
+    //! return expect if stride == -1, stride otherwise
     auto stride_val = [](size_t stride, size_t expect) -> size_t {
-        if (stride == 0) {
+        if (stride == TestArg::UNSET_STRIDE_VAL) {
             return expect;
         } else {
             return stride;
