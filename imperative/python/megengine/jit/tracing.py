@@ -642,22 +642,24 @@ class trace:
             if self._capture_as_const:
                 self._process_inputs(*args, **kwargs)
             outputs = self.__wrapped__(*args, **kwargs)
-            transform = False
-            # outputs can be None
+            if self._capture_as_const:
+                self._process_outputs(outputs)
+
+            # outputs could be None
             if outputs is not None:
-                if not isinstance(outputs, collections.abc.Sequence):
-                    transform = True
-                    outputs = (outputs,)
-                for o in outputs:
+                list_outputs = outputs
+                if isinstance(outputs, collections.abc.Mapping):
+                    _, list_outputs = zip(*sorted(outputs.items()))
+                elif not isinstance(outputs, collections.abc.Sequence):
+                    list_outputs = (outputs,)
+
+                for o in list_outputs:
                     # if outputs are copied, then use the newest info in trace data structure
                     if o._copied:
                         self._active_tensors[o._mixin_handle] = TensorWeakRef(o)
                         if self._untraced and self._symbolic:
                             self._lazy_eval_tensors[o._mixin_handle] = TensorWeakRef(o)
-            if self._capture_as_const:
-                self._process_outputs(outputs)
-            if transform:
-                outputs = outputs[0]
+
             return outputs
 
     def dump(
