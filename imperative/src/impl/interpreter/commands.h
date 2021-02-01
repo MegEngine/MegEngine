@@ -213,7 +213,7 @@ using IdentifiedCommand = std::pair<uint64_t, Command>;
 template <>
 struct ToStringTrait<interpreter::intl::Command>{
     std::string operator()(const interpreter::intl::Command& cmd) const {
-        return std::visit([](auto& cmd){
+        return std::visit([](const auto& cmd){
             std::string result = cmd.get_name();
             result += "{";
             cmd.get_props([&](const char* key, auto&& value) {

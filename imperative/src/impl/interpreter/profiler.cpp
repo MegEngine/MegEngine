@@ -97,7 +97,7 @@ struct InterpreterProfilerDumpChromeTimelineContext {
     };
 
     // convert Command to json object. Has to be an callable object
-    static auto constexpr cmd_to_args = [](auto&& cmd) {
+    static auto constexpr cmd_to_args = [](const auto& cmd) {
         auto args = json::Object::make();
         cmd.get_props([&](const char* key, auto&& value){
             (*args)[key] = json::String::make(to_string(value));
@@ -108,14 +108,14 @@ struct InterpreterProfilerDumpChromeTimelineContext {
 
     void process() {
         // enumerate and process each record
-        for (auto&& record: profile_data.records) {
-            std::visit([this](auto& record){
+        for (auto& record: profile_data.records) {
+            std::visit([this](const auto& record){
                 using TEvent = std::decay_t<decltype(record.data)>;
                 Session<TEvent>(*this, record).process();
             }, record);
         }
         for (size_t tid = 0; tid < thread_list.size(); ++tid) {
-            auto tname = std::visit([&](auto& host_or_device) -> std::string{
+            auto tname = std::visit([&](auto host_or_device) -> std::string{
                 using T = std::decay_t<decltype(host_or_device)>;
                 if constexpr (std::is_same_v<T, std::thread::id>) {
                     // take name from host_map
@@ -142,11 +142,11 @@ struct InterpreterProfilerDumpChromeTimelineContext {
     template <typename TEvent>
     struct Session {
         InterpreterProfilerDumpChromeTimelineContext& ctx;
-        ProfilerBase::EventRecord<TEvent>& record;
-        TEvent& data;
+        const ProfilerBase::EventRecord<TEvent>& record;
+        const TEvent& data;
 
         Session(InterpreterProfilerDumpChromeTimelineContext& ctx,
-                ProfilerBase::EventRecord<TEvent>& record)
+                const ProfilerBase::EventRecord<TEvent>& record)
             : ctx{ctx}, record{record}, data{record.data} {}
 
         uint64_t get_host_tid() {

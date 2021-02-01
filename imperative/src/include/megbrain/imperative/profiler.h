@@ -57,7 +57,7 @@ public:
         Host tid;
         double time;
 
-        void wait() {}
+        void wait() const {}
     };
 
     struct DeviceInstant {
@@ -65,7 +65,7 @@ public:
         std::shared_ptr<CompNode::Event> event;
         double after;
 
-        void wait() {
+        void wait() const {
             event->host_wait();
         }
     };
@@ -77,16 +77,16 @@ public:
         Instant instant;
         TEvent data;
 
-        HostInstant& host() {
+        const HostInstant& host() const {
             return std::get<HostInstant>(instant);
         }
 
-        DeviceInstant device() {
+        const DeviceInstant& device() const {
             return std::get<DeviceInstant>(instant);
         }
 
-        void wait() {
-            std::visit([&](auto& instant){ instant.wait(); }, instant);
+        void wait() const {
+            std::visit([&](const auto& instant){ instant.wait(); }, instant);
         }
     };
 protected:
@@ -173,7 +173,7 @@ public:
         mgb_assert(m_status == Profiling, "profiler not active");
         m_status = Stopped;
         for (auto&& record: m_record_list) {
-            std::visit([&](auto& record){
+            std::visit([&](const auto& record){
                 record.wait();
             }, record);
         }
@@ -312,7 +312,7 @@ public:
         return m_content.back();
     }
 
-    std::shared_ptr<json::Array> to_json() {
+    std::shared_ptr<json::Array> to_json() const {
         auto result = json::Array::make();
         for (auto&& event: m_content) {
             result->add(event.to_json());

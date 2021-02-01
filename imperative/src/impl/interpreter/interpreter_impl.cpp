@@ -481,8 +481,8 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
         finished = true;
     };
     //TODO: remove std::visit for support osx 10.12
-    auto cmd_visitor = [&](auto& cmd) {
-            using T = std::remove_reference_t<decltype(cmd)>;
+    auto cmd_visitor = [&](const auto& cmd) {
+            using T = std::decay_t<decltype(cmd)>;
             if constexpr (std::is_same_v<T, Put>) {
                 auto value = cmd.no_cache ? std::make_shared<Tensor>(cmd.value) : Tensor::make(cmd.value);
                 produce_tensor(cmd.dest, std::move(value));
@@ -598,10 +598,10 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 do_finish_command();
                 m_worker_state.profiler->record_host<WorkerEndScope>(cmd.scope_name);
             } else {
-                static_assert(std::is_same_v<T, T>);
+                static_assert(!std::is_same_v<T, T>);
             }
     };
-    std::visit([&](auto& cmd){
+    std::visit([&](const auto& cmd){
         using T = std::decay_t<decltype(cmd)>;
         if (!m_worker_state.options.catch_worker_execption) {
             cmd_visitor(cmd);
