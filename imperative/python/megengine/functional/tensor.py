@@ -910,7 +910,7 @@ def linspace(
         import numpy as np
         import megengine.functional as F
 
-        a = F.linspace(3,10,5)
+        a = F.linspace(3, 10, 5)
         print(a.numpy())
 
     Outputs:
@@ -920,9 +920,20 @@ def linspace(
         [ 3.    4.75  6.5   8.25 10.  ]
 
     """
-    start = Tensor(start, device=device)
-    stop = Tensor(stop, device=device)
-    num = Tensor(num, device=device)
+    for item in (start, stop, num):
+        cur_device = getattr(item, "device", None)
+        if device is None:
+            device = cur_device
+        else:
+            if not (cur_device is None or device == cur_device):
+                raise ("ambiguous device for linspace opr")
+
+    if not isinstance(start, Tensor):
+        start = Tensor(start, device=device)
+    if not isinstance(stop, Tensor):
+        stop = Tensor(stop, device=device)
+    if not isinstance(num, Tensor):
+        num = Tensor(num, device=device)
 
     op = builtin.Linspace(comp_node=device)
     (result,) = apply(op, start, stop, num)

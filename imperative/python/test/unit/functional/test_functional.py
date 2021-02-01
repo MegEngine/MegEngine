@@ -114,18 +114,12 @@ def test_matmul():
         {"input": [data3, data4]},
         {"input": [data4, data5]},
     ]
-    for _ in range(0, batch_size):
-        # FIXME: remove test_trace=False in the future
-        opr_test(
-            cases, F.matmul, test_trace=False, ref_fn=np.matmul,
-        )
+    opr_test(cases, F.matmul, ref_fn=np.matmul)
 
-    # FIXME: remove test_trace=False in the future
     opr_test(
         [{"input": [data1, data4]}],
         F.matmul,
         ref_fn=lambda x, y: np.matmul(x, y.transpose(0, 1, 3, 2)),
-        test_trace=False,
         transpose_b=True,
     )
 

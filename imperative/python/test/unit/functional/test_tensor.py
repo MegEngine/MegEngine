@@ -162,24 +162,30 @@ def test_linspace():
         {"input": [1, 9, 9]},
         {"input": [3, 10, 8]},
     ]
-    # FIXME: remove test_trace=False in the future
     opr_test(
         cases,
         F.linspace,
         ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
-        test_trace=False,
     )
 
     cases = [
         {"input": [9, 1, 9]},
         {"input": [10, 3, 8]},
     ]
-    # FIXME: remove test_trace=False in the future
     opr_test(
         cases,
         F.linspace,
         ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
-        test_trace=False,
+    )
+
+    cases = [
+        {"input": [1, tensor(9), 9]},
+        {"input": [tensor(1), 9, tensor(9)]},
+    ]
+    opr_test(
+        cases,
+        F.linspace,
+        ref_fn=lambda start, end, step: np.linspace(1, 9, 9, dtype=np.float32),
     )
 
 
@@ -188,36 +194,30 @@ def test_arange():
         {"input": [1, 9, 1]},
         {"input": [2, 10, 2]},
     ]
-    # FIXME: remove test_trace=False in the future
     opr_test(
         cases,
         F.arange,
         ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
-        test_trace=False,
     )
 
     cases = [
         {"input": [9, 1, -1]},
         {"input": [10, 2, -2]},
     ]
-    # FIXME: remove test_trace=False in the future
     opr_test(
         cases,
         F.arange,
         ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
-        test_trace=False,
     )
 
     cases = [
         {"input": [9.3, 1.2, -0.5]},
         {"input": [10.3, 2.1, -1.7]},
     ]
-    # FIXME: remove test_trace=False in the future
     opr_test(
         cases,
         F.arange,
         ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
-        test_trace=False,
     )
 
 
@@ -289,8 +289,7 @@ def test_broadcast():
         {"input": [data1, output1_shape], "output": output1_shape},
         {"input": [data2, output2_shape], "output": output2_shape},
     ]
-    # FIXME: remove test_trace=False in the future
-    opr_test(cases, F.broadcast_to, compare_fn=compare_fn, test_trace=False)
+    opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
 
     x = F.ones((2, 1, 3))
     with pytest.raises(RuntimeError):
