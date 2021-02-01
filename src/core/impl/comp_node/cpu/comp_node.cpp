@@ -723,12 +723,13 @@ struct CpuCompNode::Pool {
         impl_storage[MAX_NR_COMP_NODE];
     size_t nr_used_impl_storage = 0;
 
-    ThinHashMap<std::pair<int, int>,
-        std::unique_ptr<CpuCompNodeImpl, CpuCompNodeImplDeleter>> logical2impl;
+    std::unordered_map<CompNode::LocatorPairHashKey,
+            std::unique_ptr<CpuCompNodeImpl, CpuCompNodeImplDeleter>,
+            CompNode::LocatorPairHashKey::Hash> locator2impl;
     ThinHashMap<std::pair<int, int>, std::weak_ptr<WorkerQueue>> physical2queue;
-    ThinHashMap<std::pair<int, int>,
-                std::unique_ptr<CpuCompNodeImpl, CpuCompNodeImplDeleter>>
-            logical2impl_multi_thread;
+    std::unordered_map<CompNode::LocatorPairHashKey,
+            std::unique_ptr<CpuCompNodeImpl, CpuCompNodeImplDeleter>,
+            CompNode::LocatorPairHashKey::Hash> locator2impl_multi_thread;
     ThinHashMap<std::pair<int, int>, std::weak_ptr<WorkerQueue>>
             physical2queue_multithead;
 };
@@ -792,14 +793,9 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
     MGB_LOCK_GUARD(sm_pool->mtx);
 
     // encode both device ID and type into a int
-    int compact_logical_device = locator_logical.device;
-    mgb_assert(compact_logical_device >= -1 ||
-               compact_logical_device <= Locator::DEVICE_CPU_DEFAULT);
-    if (locator_logical.type == CompNode::DeviceType::UNSPEC) {
-        compact_logical_device += std::numeric_limits<int>::min() + 1;
-        mgb_assert(compact_logical_device <
-                   Locator::DEVICE_MULTITHREAD_DEFAULT);
-    } else {
+    mgb_assert(locator_logical.device >= -1 ||
+               locator_logical.device <= Locator::DEVICE_CPU_DEFAULT);
+    if (locator_logical.type != CompNode::DeviceType::UNSPEC) {
         mgb_assert(locator_logical.type == CompNode::DeviceType::CPU ||
                    locator_logical.type == CompNode::DeviceType::MULTITHREAD);
     }
@@ -811,8 +807,8 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
             pqueue = std::make_shared<WorkerQueue>(locator);
             pqueue_weak = pqueue;
         }
-        auto&& pimpl = sm_pool->logical2impl[{compact_logical_device,
-                                              locator_logical.stream}];
+        auto&& pimpl = sm_pool->locator2impl[{locator,
+                                              locator_logical}];
         if (!pimpl) {
             mgb_assert(sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
                        "too many cpu comp nodes; max %d allowed",
@@ -833,8 +829,8 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
             pqueue = std::make_shared<WorkerQueue>(locator);
             pqueue_weak = pqueue;
         }
-        auto&& pimpl = sm_pool->logical2impl_multi_thread[{
-                compact_logical_device, locator_logical.nr_threads}];
+        auto&& pimpl = sm_pool->locator2impl_multi_thread[{
+                locator, locator_logical}];
         if (!pimpl) {
             mgb_assert(sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
                        "too many cpu multithread comp nodes; max %d allowed",
@@ -854,9 +850,9 @@ void CpuCompNode::sync_all() {
         return;
 
     MGB_LOCK_GUARD(sm_pool->mtx);
-    for (auto &&i: sm_pool->logical2impl)
+    for (auto &&i: sm_pool->locator2impl)
         i.second->sync();
-    for (auto&& i : sm_pool->logical2impl_multi_thread)
+    for (auto&& i : sm_pool->locator2impl_multi_thread)
         i.second->sync();
 }
 

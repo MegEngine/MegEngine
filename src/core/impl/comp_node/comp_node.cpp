@@ -250,6 +250,10 @@ void CompNode::Locator::set_device_map(DeviceType type, int from, int to) {
 
 void CompNode::Locator::set_unspec_device_type(DeviceType type) {
     mgb_assert(type != DeviceType::UNSPEC);
+    if (type != DeviceType::CPU && type != DeviceType::CUDA) {
+        mgb_log_warn("to resolve unspec device type as one except "
+                "CUDA and CPU may lead to unknown problems.");
+    }
     g_unspec_locator_type = type;
 }
 

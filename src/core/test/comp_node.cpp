@@ -86,19 +86,34 @@ TEST(TestCompNode, SetDefaultDev) {
     CompNode::finalize();
     using L = CompNode::Locator;
     auto orig_dt = L::parse("xpu").to_physical(),
-         orig_gpu = L::parse("gpux").to_physical();
+         orig_gpu = L::parse("gpux").to_physical(),
+         orig_cpu = L::parse("cpux").to_physical();
     constexpr auto CUDA = CompNode::DeviceType::CUDA;
+    constexpr auto CPU = CompNode::DeviceType::CPU;
     L::set_unspec_device_type(CUDA);
-    L::set_device_map(CUDA, -1, 2);
-    auto run = []() {
-        ASSERT_EQ(CompNode::load("xpu").locator(), L::parse("gpu2"));
+
+    auto run = [](int device) {
+        ASSERT_EQ(CompNode::load("xpu").locator(),
+                L::parse("gpu" + std::to_string(device)));
+    };
+    auto run_cpu = [](int device) {
+        ASSERT_EQ(CompNode::load("cpux").locator(),
+                L::parse("cpu" + std::to_string(device)));
     };
 
     MGB_TRY {
-        run();
+        L::set_device_map(CUDA, -1, 2);
+        run(2);
+        L::set_device_map(CUDA, -1, 1);
+        run(1);
+        L::set_device_map(CPU, -1, 2);
+        run_cpu(2);
+        L::set_device_map(CPU, -1, 1);
+        run_cpu(1);
     } MGB_FINALLY({
         L::set_unspec_device_type(orig_dt.type);
         L::set_device_map(CUDA, -1, orig_gpu.device);
+        L::set_device_map(CPU, -1, orig_cpu.device);
     });
     CompNode::finalize();
 }

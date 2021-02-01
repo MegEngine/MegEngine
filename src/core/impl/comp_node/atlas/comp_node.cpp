@@ -420,7 +420,7 @@ CompNode::Impl* AtlasCompNode::load_atlas(const Locator& locator,
     for (int i = 0; i < sd.nr_node; ++i) {
         auto&& cur = sd.node[i];
         if (cur.m_initialized) {
-            if (cur.m_locator_logical == locator_logical) {
+            if (cur.m_locator == locator && cur.m_locator_logical == locator_logical) {
                 return &cur;
             }
         } else {

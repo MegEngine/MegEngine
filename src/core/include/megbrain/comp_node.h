@@ -168,6 +168,22 @@ class CompNode {
                 return type == rhs.type && device == rhs.device &&
                     stream == rhs.stream;
             }
+
+        };
+
+        struct LocatorPairHashKey {
+            Locator locator, locator_logical;
+
+            bool operator==(const LocatorPairHashKey& rhs) const {
+                return locator == rhs.locator && locator_logical == rhs.locator_logical;
+            }
+
+            struct Hash {
+                size_t operator()(const LocatorPairHashKey& k) const {
+                    return hash_pair_combine(mgb::hash(k.locator),
+                                             mgb::hash(k.locator_logical));
+                }
+            };
         };
 
         //! predefined special streams
@@ -537,6 +553,7 @@ class CompNode {
 
         friend class CompNodeEnv;
         friend struct HashTrait<CompNode>;
+        friend struct HashTrait<CompNode::Locator>;
         friend class CompNodeImplHelper;
     public:
         CompNode(ImplBase* impl) : m_impl{impl} {}
@@ -683,6 +700,15 @@ struct HashTrait<CompNode> {
     static size_t eval(const CompNode &val) {
         static_assert(sizeof(size_t) == sizeof(void*), "bad hash type");
         return reinterpret_cast<size_t>(static_cast<void*>(val.m_impl));
+    }
+};
+
+template<>
+struct HashTrait<CompNode::Locator> {
+    static size_t eval(const CompNode::Locator &val) {
+        return static_cast<size_t>(val.device)
+            + (static_cast<size_t>(val.type) << 4)
+            + (static_cast<size_t>(val.stream) << 8);
     }
 };
 
