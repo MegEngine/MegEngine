@@ -25,7 +25,7 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2019 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
  * --------------------------------------------------------------------------
  */
 #include "img_act_manycolor_kepler.cuh"

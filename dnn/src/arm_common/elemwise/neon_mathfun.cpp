@@ -11,7 +11,7 @@
  * implied.
  *
  * This file has been modified by Megvii ("Megvii Modifications").
- * All Megvii Modifications are Copyright (C) 2014-2019 Megvii Inc. All rights
+ * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
  * reserved.
  *
  */
