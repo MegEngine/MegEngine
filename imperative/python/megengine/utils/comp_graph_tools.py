@@ -27,7 +27,6 @@ __all__ = [
     "replace_vars",
     "replace_oprs",
     "set_priority_to_id",
-    "load_and_inference",
     "GraphInference",
 ]
 
@@ -272,21 +271,6 @@ def replace_oprs(
         repl_dst_vec.append(j)
 
     return _imperative_rt.graph._replace_oprs(repl_src_vec, repl_dst_vec, dst_vec)
-
-
-def load_and_inference(file, inp_data_list: List[numpy.ndarray]) -> List[numpy.ndarray]:
-    """
-    Loads a serialized computing graph and run inference with input data.
-
-    :param file: path or handle of the input file.
-    :param inp_data_list: list of input data.
-    :return: list of inference results.
-
-    """
-    graph = GraphInference(file)
-    result = graph.run(*inp_data_list)
-    out_data_list = list(result.values())
-    return out_data_list
 
 
 class GraphInference:

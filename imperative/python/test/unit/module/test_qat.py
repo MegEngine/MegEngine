@@ -201,5 +201,6 @@ def test_quantize_batchmatmul_activation():
         file = io.BytesIO()
         f.dump(file, enable_nchw4=True)
         file.seek(0)
-        dumped_outputs = cgtools.load_and_inference(file, [inputs])[0]
+        infer_cg = cgtools.GraphInference(file)[0]
+        dumped_outputs = list(infer_cg.run(inputs.numpy()).values())[0]
         np.testing.assert_allclose(quantize_outputs.numpy(), dumped_outputs, atol=1e-6)
