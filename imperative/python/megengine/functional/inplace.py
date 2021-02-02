@@ -12,4 +12,8 @@ from ..core.ops.builtin import InplaceAdd
 
 
 def _inplace_add_(dest, delta, alpha, beta):
-    return dest._reset(apply(InplaceAdd(), dest, delta, alpha, beta)[0])
+    isscalar = dest.isscalar()
+    dest._reset(apply(InplaceAdd(), dest, delta, alpha, beta)[0])
+    if isscalar:
+        dest.setscalar()
+    return dest

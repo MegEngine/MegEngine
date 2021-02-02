@@ -61,7 +61,7 @@ class Adam(Optimizer):
         beta0, beta1 = param_group["betas"]
 
         def make_scalar(val):
-            return tensor([val])
+            return tensor(val)
 
         # since `conver_inputs` is disabled for param updates,
         # scalar should be explicitly tansforred to tensor

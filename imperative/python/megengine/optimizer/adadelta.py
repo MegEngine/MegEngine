@@ -61,16 +61,19 @@ class Adadelta(Optimizer):
         rho = param_group["rho"]
         eps = param_group["eps"]
 
+        def make_scalar(val):
+            return tensor(val)
+
         # since `conver_inputs` is disabled for param updates,
         # scalar should be explicitly tansforred to tensor
-        _lr = tensor([lr])
-        _weight_decay = tensor([weight_decay])
-        _rho = tensor([rho])
-        _eps = tensor([eps])
 
-        c05 = tensor([0.5])
-        c1 = tensor([1.0])
-        c2 = tensor([2.0])
+        _lr = make_scalar(lr)
+        _weight_decay = make_scalar(weight_decay)
+        _rho = make_scalar(rho)
+        _eps = make_scalar(eps)
+
+        c1, c2, c05 = map(make_scalar, (1.0, 2.0, 0.5))
+
         for param in param_group["params"]:
 
             if param.grad is None:

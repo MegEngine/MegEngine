@@ -57,13 +57,13 @@ class SGD(Optimizer):
         # since `conver_inputs` is disabled for param updates,
         # scalar should be explicitly tansforred to tensor
 
-        _lr = tensor([lr])
-        _weight_decay = tensor([weight_decay])
-        _momentum = tensor([momentum])
+        _lr = tensor(lr)
+        _weight_decay = tensor(weight_decay)
+        _momentum = tensor(momentum)
 
         inplace_mode = int(os.getenv("MEGENGINE_INPLACE_UPDATE", "0"))
         if inplace_mode:
-            _neg_lr = tensor([-lr])
+            _neg_lr = tensor(-lr)
             c1 = tensor([1.0])
 
         for param in param_group["params"]:
