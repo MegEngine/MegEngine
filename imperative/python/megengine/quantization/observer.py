@@ -17,7 +17,7 @@ from ..distributed import WORLD, get_rank, is_distributed
 from ..functional.distributed import all_reduce_max, all_reduce_min
 from ..module import Module
 from ..tensor import Tensor
-from .utils import QuantMode, Round, get_qparam_dict
+from .utils import QuantMode, get_qparam_dict
 
 
 class Observer(Module):
@@ -110,7 +110,7 @@ class MinMaxObserver(Observer):
                 (max_val - min_val) / (self.qmax - self.qmin), self.scale_limit
             )
             # caculate zero_point
-            q_dict["zero_point"] = self.qmin - Round()((min_val / q_dict["scale"]))
+            q_dict["zero_point"] = self.qmin - F.round(min_val / q_dict["scale"])
 
         return q_dict
 
@@ -453,12 +453,10 @@ class PassiveObserver(Observer):
     This class can be set :attr:`scale` derectly.
     """
 
-    def __init__(self, q_dict, dtype: str, narrow_range: bool = False, **kwargs):
+    def __init__(self, dtype: str, narrow_range: bool = False, **kwargs):
         super().__init__(dtype, narrow_range, **kwargs)
-        self.q_dict = deepcopy(q_dict)
-        if "scale" not in q_dict or q_dict["scale"] is None:
-            raise AssertionError("Can not get an initialized scale")
-        self.orig_scale = q_dict["scale"].numpy()
+        self.q_dict = None
+        self.orig_scale = None
 
     @property
     def scale(self):
@@ -471,6 +469,12 @@ class PassiveObserver(Observer):
 
     def get_qparams(self):
         return self.q_dict
+
+    def set_qparams(self, q_dict):
+        self.q_dict = deepcopy(q_dict)
+        if "scale" not in q_dict or q_dict["scale"] is None:
+            raise AssertionError("Can not get an initialized scale")
+        self.orig_scale = q_dict["scale"].numpy()
 
     def forward(self, x):
         r"""

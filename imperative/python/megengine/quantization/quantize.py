@@ -152,7 +152,10 @@ def reset_qconfig(module: Module, qconfig: QConfig, inplace: bool = True):
         module = deepcopy(module)
 
     def safe_call(func, q_dict):
-        return func(q_dict=q_dict) if func is not None else None
+        inst = func() if func is not None else None
+        if inst is not None and getattr(inst, "set_qparams", None) is not None:
+            inst.set_qparams(q_dict)
+        return inst
 
     for m in list(module._flatten(predicate=is_qat)):
         if m.with_weight:

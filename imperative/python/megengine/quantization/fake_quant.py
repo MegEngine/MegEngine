@@ -6,12 +6,8 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import math
-from typing import Iterable
-
-import numpy as np
 
 from .. import functional as F
-from ..autodiff import Function
 from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
 from ..module import Module
 from ..tensor import Parameter, Tensor
@@ -72,20 +68,10 @@ class TQT(_FakeQuantize):
     """
 
     def __init__(
-        self,
-        q_dict,
-        dtype: str,
-        narrow_range: bool = False,
-        enable: bool = True,
-        **kwargs
+        self, dtype: str, narrow_range: bool = False, enable: bool = True, **kwargs
     ):
         super().__init__(dtype, narrow_range, enable, **kwargs)
-        assert (
-            q_dict["mode"] == QuantMode.SYMMERTIC
-        ), "only symmetric quantization is supported by TQT"
-        if "scale" not in q_dict or q_dict["scale"] is None:
-            raise AssertionError("Can not get an initialized scale")
-        self.scale = Tensor(F.log(q_dict["scale"]) / math.log(2))
+        self.scale = Parameter(0.0, dtype="float32")
 
     def fake_quant_forward(self, inp, q_dict=None):
         # when enable, TQT will do fakequant forward, finetune the scale
@@ -93,14 +79,22 @@ class TQT(_FakeQuantize):
 
     def get_qparams(self):
         q_dict = get_qparam_dict(QuantMode.SYMMERTIC)
-        q_dict["scale"] = 2 ** self.scale
+        q_dict["scale"] = 2 ** self.scale.detach()
         return q_dict
+
+    def set_qparams(self, q_dict):
+        assert (
+            q_dict["mode"] == QuantMode.SYMMERTIC
+        ), "only symmetric quantization is supported by TQT"
+        if "scale" not in q_dict or q_dict["scale"] is None:
+            raise AssertionError("Can not get an initialized scale")
+        self.scale._reset(F.log(q_dict["scale"]) / math.log(2))
 
     def get_dtype(self):
         q_dict = self.get_qparams()
-        scale = None if "scale" not in q_dict else q_dict["scale"].numpy()[0]
+        scale = None if "scale" not in q_dict else q_dict["scale"].numpy()
         zero_point = (
-            None if "zero_point" not in q_dict else q_dict["zero_point"].numpy()[0]
+            None if "zero_point" not in q_dict else q_dict["zero_point"].numpy()
         )
         return get_quantized_dtype(self.dtype, scale, zero_point)
 

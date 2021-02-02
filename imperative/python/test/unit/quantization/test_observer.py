@@ -41,8 +41,8 @@ def test_exponential_moving_average_observer():
     m = ExponentialMovingAverageObserver(momentum=t)
     m(mge.tensor(x1, dtype=np.float32))
     m(mge.tensor(x2, dtype=np.float32))
-    np.testing.assert_allclose(m.min_val.numpy(), expected_min)
-    np.testing.assert_allclose(m.max_val.numpy(), expected_max)
+    np.testing.assert_allclose(m.min_val.numpy(), expected_min, atol=1e-5)
+    np.testing.assert_allclose(m.max_val.numpy(), expected_max, atol=1e-5)
 
 
 def test_histogram_observer():
@@ -57,7 +57,8 @@ def test_histogram_observer():
 
 def test_passive_observer():
     q_dict = {"scale": mge.tensor(1.0)}
-    m = PassiveObserver(q_dict, "qint8")
+    m = PassiveObserver("qint8")
+    m.set_qparams(q_dict)
     assert m.orig_scale == 1.0
     assert m.scale == 1.0
     m.scale = 2.0
