@@ -65,3 +65,77 @@ set_target_properties(libnvinfer PROPERTIES
 
 message(STATUS "Found TensorRT: ${__found_trt_root} (found version: ${TRT_VERSION_STRING})")
 
+if(TensorRT_VERSION_MAJOR GREATER_EQUAL 7)
+    if(MGE_CUDA_USE_STATIC)
+        find_library(LIBMYELIN_COMPILER
+            NAMES libmyelin_compiler_static.a myelin_compiler_static.lib
+            PATHS ${__found_trt_root}/lib
+            )
+        if(LIBMYELIN_COMPILER STREQUAL "LIBMYELIN_COMPILER-NOTFOUND")
+            message(FATAL_ERROR "Can not find LIBMYELIN_COMPILER Library")
+        else()
+            message(STATUS "Found TensorRT myelin_compiler: ${LIBMYELIN_COMPILER}")
+        endif()
+        add_library(libmyelin_compiler STATIC IMPORTED)
+        set_target_properties(libmyelin_compiler PROPERTIES
+            IMPORTED_LOCATION ${LIBMYELIN_COMPILER}
+            )
+
+        find_library(LIBMYELIN_EXECUTOR
+            NAMES libmyelin_executor_static.a myelin_executor_static.lib
+            PATHS ${__found_trt_root}/lib
+            )
+        if(LIBMYELIN_EXECUTOR STREQUAL "LIBMYELIN_EXECUTOR-NOTFOUND")
+            message(FATAL_ERROR "Can not find LIBMYELIN_EXECUTOR Library")
+        else()
+            message(STATUS "Found TensorRT libmyelin_executor: ${LIBMYELIN_EXECUTOR}")
+        endif()
+        add_library(libmyelin_executor STATIC IMPORTED)
+        set_target_properties(libmyelin_executor PROPERTIES
+            IMPORTED_LOCATION ${LIBMYELIN_EXECUTOR}
+            )
+
+        find_library(LIBMYELIN_PATTERN_RUNTIME
+            NAMES libmyelin_pattern_runtime_static.a myelin_pattern_runtime_static.lib
+            PATHS ${__found_trt_root}/lib
+            )
+        if(LIBMYELIN_PATTERN_RUNTIME STREQUAL "LIBMYELIN_PATTERN_RUNTIME-NOTFOUND")
+            message(FATAL_ERROR "Can not find LIBMYELIN_PATTERN_RUNTIME Library")
+        else()
+            message(STATUS "Found TensorRT libmyelin_pattern_runtime: ${LIBMYELIN_PATTERN_RUNTIME}")
+        endif()
+        add_library(libmyelin_pattern_runtime STATIC IMPORTED)
+        set_target_properties(libmyelin_pattern_runtime PROPERTIES
+            IMPORTED_LOCATION ${LIBMYELIN_PATTERN_RUNTIME}
+            )
+
+        find_library(LIBMYELIN_PATTERN_LIBRARY
+            NAMES libmyelin_pattern_library_static.a myelin_pattern_library_static.lib
+            PATHS ${__found_trt_root}/lib
+            )
+        if(LIBMYELIN_PATTERN_LIBRARY STREQUAL "LIBMYELIN_PATTERN_LIBRARY-NOTFOUND")
+            message(FATAL_ERROR "Can not find LIBMYELIN_PATTERN_LIBRARY Library")
+        else()
+            message(STATUS "Found TensorRT libmyelin_pattern_library: ${LIBMYELIN_PATTERN_LIBRARY}")
+        endif()
+        add_library(libmyelin_pattern_library STATIC IMPORTED)
+        set_target_properties(libmyelin_pattern_library PROPERTIES
+            IMPORTED_LOCATION ${LIBMYELIN_PATTERN_LIBRARY}
+            )
+    else()
+        find_library(LIBMYELIN_SHARED
+            NAMES libmyelin.so myelin.dll
+            PATHS ${__found_trt_root}/lib
+            )
+
+        if(LIBMYELIN_SHARED STREQUAL "LIBMYELIN_SHARED-NOTFOUND")
+            message(FATAL_ERROR "Can not find LIBMYELIN_SHARED Library")
+        else()
+            message(STATUS "Found TensorRT libmyelin_shared: ${LIBMYELIN_SHARED}")
+        endif()
+        add_library(libmyelin SHARED IMPORTED)
+        set_target_properties(libmyelin PROPERTIES
+            IMPORTED_LOCATION ${LIBMYELIN_SHARED}
+            )
+    endif()
+endif()

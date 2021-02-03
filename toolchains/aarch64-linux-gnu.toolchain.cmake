@@ -1,8 +1,6 @@
 set(ARM_CROSS_BUILD_ARCH aarch64)
 set(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
 set(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
-set(CMAKE_C_FLAGS "-Werror=unused-parameter -Wno-psabi")
-set(CMAKE_CXX_FLAGS "-Werror=unused-parameter -Wno-psabi")
 set(CMAKE_STRIP "aarch64-linux-gnu-strip")
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(CMAKE_SYSTEM_NAME Linux)

@@ -66,7 +66,7 @@ Now we support ARM-Linux on Linux and Windows fully, also experimental on MacOS
 
 * commands:
 ```
-1: download toolchains from https://releases.linaro.org/components/toolchain/gcc-linaro/ or https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads if use Windows or Linux
+1: download toolchains from http://releases.linaro.org/components/toolchain/binaries/ or https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads if use Windows or Linux
 2: download toolchains from https://github.com/thinkski/osx-arm-linux-toolchains if use MacOS
 ```
 
