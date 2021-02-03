@@ -17,6 +17,7 @@ from megengine import Parameter, Tensor
 from megengine.module import Conv2d
 
 
+# TODO: delete this test after deleting set_value
 def test_set_value():
     v0 = np.random.random((2, 3)).astype(np.float32)
     param = Parameter(v0)

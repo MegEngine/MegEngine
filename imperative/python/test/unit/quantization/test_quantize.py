@@ -8,9 +8,8 @@
 import numpy as np
 import pytest
 
-from megengine import functional
+from megengine import Parameter, Tensor
 from megengine import module as Float
-from megengine import tensor
 from megengine.module import qat as QAT
 from megengine.module import quantized as Q
 from megengine.quantization import (
@@ -40,7 +39,7 @@ class Net(Float.Module):
         self.quant = Float.QuantStub()
         self.linear = Float.Linear(3, 3)
         self.dequant = Float.DequantStub()
-        self.linear.bias.set_value(np.random.rand(3))
+        self.linear.bias[...] = Parameter(np.random.rand(3))
 
     def forward(self, x):
         x = self.quant(x)
@@ -55,7 +54,7 @@ class QATNet(Float.Module):
         self.quant = QAT.QuantStub()
         self.linear = QAT.Linear(3, 3)
         self.dequant = QAT.DequantStub()
-        self.linear.bias.set_value(np.random.rand(3))
+        self.linear.bias[...] = Parameter(np.random.rand(3))
 
     def forward(self, x):
         x = self.quant(x)
@@ -90,12 +89,12 @@ def init_qat_net():
     propagate_qconfig(net, min_max_fakequant_qconfig)
     min_val = np.random.randint(-127, 0, size=(3,))
     max_val = np.random.randint(1, 127, size=(3,))
-    net.quant.act_observer.min_val.set_value(min_val[0])
-    net.quant.act_observer.max_val.set_value(max_val[0])
-    net.linear.weight_observer.min_val.set_value(min_val[1])
-    net.linear.weight_observer.max_val.set_value(max_val[1])
-    net.linear.act_observer.min_val.set_value(min_val[2])
-    net.linear.act_observer.max_val.set_value(max_val[2])
+    net.quant.act_observer.min_val[...] = Parameter(min_val[0])
+    net.quant.act_observer.max_val[...] = Parameter(max_val[0])
+    net.linear.weight_observer.min_val[...] = Parameter(min_val[1])
+    net.linear.weight_observer.max_val[...] = Parameter(max_val[1])
+    net.linear.act_observer.min_val[...] = Parameter(min_val[2])
+    net.linear.act_observer.max_val[...] = Parameter(max_val[2])
     return net
 
 
@@ -144,7 +143,7 @@ def init_observer(module, data):
 
 
 def test_enable_and_disable_all():
-    x = tensor(np.random.randint(1, 10, size=(3, 3)).astype(np.float32))
+    x = Tensor(np.random.randint(1, 10, size=(3, 3)).astype(np.float32))
     net = Net()
     y1 = net(x).numpy()
     net = quantize_qat(net, min_max_fakequant_qconfig)
@@ -180,7 +179,7 @@ def test_quantize():
 
 def test_apply_easy_quant():
     qat_net = init_qat_net()
-    data = tensor(np.random.rand(2, 3, 3, 3), dtype=np.float32)
+    data = Tensor(np.random.rand(2, 3, 3, 3), dtype=np.float32)
     eq_net = reset_qconfig(qat_net, passive_qconfig, inplace=False)
     apply_easy_quant(eq_net, data, 0.9, 1.1, 10)
     assert isinstance(eq_net.quant.act_observer, PassiveObserver)

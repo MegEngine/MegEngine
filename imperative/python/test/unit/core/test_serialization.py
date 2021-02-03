@@ -16,11 +16,6 @@ from megengine import Parameter, Tensor
 
 
 def test_tensor_serialization():
-    def tensor_eq(a, b):
-        assert a.dtype == b.dtype
-        assert a.device == b.device
-        np.testing.assert_equal(a.numpy(), b.numpy())
-
     with TemporaryFile() as f:
         data = np.random.randint(low=0, high=7, size=[233])
         a = Tensor(data, device="xpux", dtype=np.int32)
@@ -67,3 +62,12 @@ def test_tensor_serialization():
             assert "cpu0" in str(b.device)
             np.testing.assert_equal(a.numpy(), b.numpy())
             mge.set_default_device(device_org)
+
+    with TemporaryFile() as f:
+        a = Tensor(0)
+        a.q_dict["scale"] = Tensor(1.0)
+        pickle.dump(a, f)
+        f.seek(0)
+        b = pickle.load(f)
+        assert isinstance(b.q_dict["scale"], Tensor)
+        np.testing.assert_equal(b.q_dict["scale"].numpy(), 1.0)

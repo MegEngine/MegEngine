@@ -25,7 +25,7 @@ from .utils.deprecation import deprecated
 class Tensor(_Tensor, ArrayMethodMixin):
     grad = None
     dmap_callback = None
-    q_dict = {"mode": None, "scale": None, "zero_point": None}
+    _q_dict = None
 
     def __new__(cls, data, dtype=None, device=None, is_const=False, no_cache=False):
         if device is None:
@@ -69,6 +69,12 @@ class Tensor(_Tensor, ArrayMethodMixin):
     @property
     def dtype(self) -> np.dtype:
         return super().dtype
+
+    @property
+    def q_dict(self):
+        if self._q_dict is None:
+            self._q_dict = {"mode": None, "scale": None, "zero_point": None}
+        return self._q_dict
 
     def numpy(self) -> np.ndarray:
         return super().numpy()
@@ -135,7 +141,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return state
 
     def __setstate__(self, state):
-        self.q_dict = state.pop("qdict")
+        self._q_dict = state.pop("qdict")
 
 
 tensor = Tensor

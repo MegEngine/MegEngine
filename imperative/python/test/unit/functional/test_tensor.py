@@ -379,3 +379,19 @@ def test_copy_d2h():
 def test_copy_d2d():
     copy_test("gpu0", "gpu1")
     copy_test("gpu0:0", "gpu0:1")
+
+
+def test_q_dict():
+    x = tensor(1)
+    assert x.q_dict["scale"] is None
+    x.q_dict["scale"] = tensor(1.0)
+
+    y = tensor(1)
+    assert y.q_dict["scale"] is None
+    y.q_dict["scale"] = tensor(2.0)
+
+    assert x.q_dict["scale"].numpy() == 1.0
+    assert y.q_dict["scale"].numpy() == 2.0
+
+    z = x + y
+    assert z.q_dict["scale"] is None

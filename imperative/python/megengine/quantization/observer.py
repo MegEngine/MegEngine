@@ -467,7 +467,7 @@ class PassiveObserver(Observer):
     @scale.setter
     def scale(self, value):
         assert value > 0
-        self.q_dict["scale"].set_value(value)
+        self.q_dict["scale"][...] = Tensor(value)
 
     def get_qparams(self):
         return self.q_dict
