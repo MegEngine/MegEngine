@@ -140,26 +140,31 @@ public:
 public:
     template <typename TEvent, typename... TArgs>
     void record_host(TArgs&&... args) {
-        auto instant = HostInstant{std::this_thread::get_id(), m_host_timer.get_msecs()};
         MGB_LOCK_GUARD(m_lock);
         if (!m_event_mask.test(index_of<TEvent>())) {
             return;
         }
         mgb_assert(m_status != Stopped, "record after stop");
+        auto instant = HostInstant{std::this_thread::get_id(), m_host_timer.get_msecs()};
         m_record_list.emplace_back(EventRecord<TEvent>{std::move(instant), {std::forward<TArgs>(args)...}});
     }
     template <typename TEvent, typename... TArgs>
     void record_device(Device device, TArgs&&... args) {
-        auto before = m_host_timer.get_msecs();
-        auto event = m_device_timer.get_device_time(device);
-        auto after = m_host_timer.get_msecs();
-        auto instant = DeviceInstant{before, event, after};
         MGB_LOCK_GUARD(m_lock);
         if (!m_event_mask.test(index_of<TEvent>())) {
             return;
         }
         mgb_assert(m_status != Stopped, "record after stop");
+        auto before = m_host_timer.get_msecs();
+        auto event = m_device_timer.get_device_time(device);
+        auto after = m_host_timer.get_msecs();
+        auto instant = DeviceInstant{before, event, after};
         m_record_list.emplace_back(EventRecord<TEvent>{std::move(instant), {std::forward<TArgs>(args)...}});
+    }
+    // unsafe
+    bool is_profiling() {
+        MGB_LOCK_GUARD(m_lock);
+        return m_status == Profiling;
     }
     void start(Mask mask) {
         MGB_LOCK_GUARD(m_lock);

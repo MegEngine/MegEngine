@@ -525,19 +525,23 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 // Before wait
                 //TODO: split operator wait and execute so that OpWait could be corrected recorded.
                 // Before execute
-                m_worker_state.profiler->record_host<HostOpExecuteEvent>(event_data);
-                for (auto&& device: devices) {
-                    sync_device_scope(device);
-                    m_worker_state.profiler->record_device<DeviceOpExecuteEvent>(device, event_data);
+                if (m_worker_state.profiler->is_profiling()) {
+                    m_worker_state.profiler->record_host<HostOpExecuteEvent>(event_data);
+                    for (auto&& device: devices) {
+                        sync_device_scope(device);
+                        m_worker_state.profiler->record_device<DeviceOpExecuteEvent>(device, event_data);
+                    }
                 }
                 // Apply op
                 // Here std::move is REQUIRED for removing duplicated references.
                 auto tensor_outputs = OpDef::apply_on_physical_tensor(
                     *cmd.op, std::move(tensor_inputs));
                 // After execute
-                m_worker_state.profiler->record_host<HostOpFinishEvent>(event_data);
-                for (auto&& device: devices) {
-                    m_worker_state.profiler->record_device<DeviceOpFinishEvent>(device, event_data);
+                if (m_worker_state.profiler->is_profiling()) {
+                    m_worker_state.profiler->record_host<HostOpFinishEvent>(event_data);
+                    for (auto&& device: devices) {
+                        m_worker_state.profiler->record_device<DeviceOpFinishEvent>(device, event_data);
+                    }
                 }
                 // End profiling operator
                 mgb_assert(tensor_outputs.size() == cmd.outputs.size());
