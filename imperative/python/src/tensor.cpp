@@ -495,9 +495,10 @@ PyObject* TensorWrapper::detach() {
         new_tensor = std::make_shared<Tensor>(m_tensor->m_var);
     }
     new_tensor->m_trace_info = m_tensor->m_trace_info;
+
+    new_tensor->m_flags = m_tensor->m_flags;
     auto ret = TensorWrapper::make(pytype, std::move(new_tensor));
     return ret.release().ptr();
-
 }
 
 PyObject* TensorWrapper::_dev_tensor(){
