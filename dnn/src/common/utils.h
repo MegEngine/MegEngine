@@ -667,6 +667,22 @@ struct CompTypeCvter {
         return m_workspace_bundle->get_workspace(m_workspace_idx);
     }
 };
+
+/*!
+ * \brief get TensorND raw_ptr+low_byte pointer.
+ */
+inline dt_byte* get_low_ptr(const TensorND* tensor) {
+    return static_cast<dt_byte*>(tensor->raw_ptr) +
+           tensor->layout.span().low_byte;
+}
+
+/*!
+ * \brief get the zero element pointer of TensorND.
+ */
+inline void* get_origin_ptr(const TensorND* tensor, void* ptr) {
+    return static_cast<void*>(static_cast<dt_byte*>(ptr) -
+                              tensor->layout.span().low_byte);
+}
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
