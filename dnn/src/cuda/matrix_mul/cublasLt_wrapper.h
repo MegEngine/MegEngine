@@ -47,7 +47,8 @@ struct CUBLASLTMatmulDesc {
     };
     bool is_batched;
     cublasLtMatmulDesc_t matmul_desc;
-    cudaDataType_t dt_a, dt_b, dt_c, dt_compute;
+    cudaDataType_t dt_a, dt_b, dt_c;
+    cublasComputeType_t dt_compute;
     cublasLtMatrixLayout_t layout_a, layout_b, layout_c;
     cublasLtMatrixLayout_t layout_trans_a, layout_trans_b, layout_trans_c;
     size_t workspace_a, workspace_b, workspace_c;
