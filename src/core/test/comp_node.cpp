@@ -594,7 +594,7 @@ TEST(TestCompNodeSyncManager, DeviceWait) {
         cn2.device_wait_event(mgr.busy_wait_set_ready_and_get_event());
         ev_cn1->record();
         ev_cn2_end->record();
-        EXPECT_LE(timer.get_secs(), 0.05);
+        EXPECT_LE(timer.get_secs(), 0.06);
 
         ev_cn1->host_wait();
         EXPECT_GE(timer.get_secs(), 0.1);

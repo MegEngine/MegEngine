@@ -235,6 +235,7 @@ def run_eval(
         np.testing.assert_allclose(new_value.numpy(), refer_value.numpy(), atol=max_err)
 
 
+@pytest.mark.skip(reason="close it when cu111 ci")
 def test_correctness():
     if mge.is_cuda_available():
         model_name = "mnist_model_with_test.mge"
@@ -257,6 +258,7 @@ def test_correctness():
     run_eval(model_path, True, max_err=1e-7)
 
 
+@pytest.mark.skip(reason="close it when cu111 ci")
 def test_correctness_use_adaptive_pooling():
     if mge.is_cuda_available():
         model_name = "mnist_model_with_test.mge"
