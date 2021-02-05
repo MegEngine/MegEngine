@@ -51,7 +51,6 @@ struct MatrixMulLoadDumpImpl {
     static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr_) {
         auto&& opr = opr_.cast_final_safe<Opr>();
         ctx.write_param<megdnn::param::MatrixMul>(opr.param());
-        ctx.write_param<megdnn::param::ExecutionPolicy>(opr.execution_policy());
     }
 
     static VarNode* make(const cg::VarNodeArray& inputs,
@@ -68,9 +67,7 @@ struct MatrixMulLoadDumpImpl {
                                       const cg::VarNodeArray& inputs,
                                       const OperatorNodeConfig& config) {
         auto param = ctx.read_param<megdnn::param::MatrixMul>();
-        auto execution_policy =
-                ctx.read_param<megdnn::param::ExecutionPolicy>();
-        return make(inputs, param, execution_policy, config)->owner_opr();
+        return make(inputs, param, {}, config)->owner_opr();
     }
 };
 
@@ -90,10 +87,10 @@ struct OprLoadDumpImpl<opr::BatchedMatrixMul, 2>
 
 namespace opr {
 
-using MatrixMulV3 = MatrixMul;
-using BatchedMatrixMulV3 = BatchedMatrixMul;
-MGB_SEREG_OPR(MatrixMulV3, 2);
-MGB_SEREG_OPR(BatchedMatrixMulV3, 2);
+using MatrixMulV2 = MatrixMul;
+using BatchedMatrixMulV2 = BatchedMatrixMul;
+MGB_SEREG_OPR(MatrixMulV2, 2);
+MGB_SEREG_OPR(BatchedMatrixMulV2, 2);
 MGB_SEREG_OPR(Dot, 2);
 MGB_SEREG_OPR(MatrixInverse, 1);
 MGB_SEREG_OPR(SVD, 1);
