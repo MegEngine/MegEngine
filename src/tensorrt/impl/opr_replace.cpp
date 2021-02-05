@@ -27,6 +27,9 @@
 #include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/misc.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 using namespace mgb;
 using namespace gopt;
 using namespace cg;
@@ -1749,6 +1752,7 @@ void mgb::tensorrt::transform_dest_vars_inplace(
     optimizer.apply_inplace(dest_vars);
 }
 
+#pragma GCC diagnostic pop
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

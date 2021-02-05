@@ -67,2149 +67,2618 @@ static CUresult _WRAPLIB_API_CALL cuDeviceGetName_init(char *arg0, int arg1, CUd
 static CUresult _WRAPLIB_API_CALL cuDeviceGetName_error(char *, int, CUdevice) {
     return on_init_failed<CUresult >(6);
 }
+static CUresult _WRAPLIB_API_CALL cuDeviceGetUuid_init(CUuuid *arg0, CUdevice arg1) {
+    load_library();
+    return cuDeviceGetUuid(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuDeviceGetUuid_error(CUuuid *, CUdevice) {
+    return on_init_failed<CUresult >(7);
+}
 static CUresult _WRAPLIB_API_CALL cuDeviceTotalMem_v2_init(size_t *arg0, CUdevice arg1) {
     load_library();
     return cuDeviceTotalMem_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceTotalMem_v2_error(size_t *, CUdevice) {
-    return on_init_failed<CUresult >(7);
+    return on_init_failed<CUresult >(8);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetAttribute_init(int *arg0, CUdevice_attribute arg1, CUdevice arg2) {
     load_library();
     return cuDeviceGetAttribute(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetAttribute_error(int *, CUdevice_attribute, CUdevice) {
-    return on_init_failed<CUresult >(8);
+    return on_init_failed<CUresult >(9);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetProperties_init(CUdevprop *arg0, CUdevice arg1) {
     load_library();
     return cuDeviceGetProperties(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetProperties_error(CUdevprop *, CUdevice) {
-    return on_init_failed<CUresult >(9);
+    return on_init_failed<CUresult >(10);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceComputeCapability_init(int *arg0, int *arg1, CUdevice arg2) {
     load_library();
     return cuDeviceComputeCapability(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceComputeCapability_error(int *, int *, CUdevice) {
-    return on_init_failed<CUresult >(10);
+    return on_init_failed<CUresult >(11);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxRetain_init(CUcontext *arg0, CUdevice arg1) {
     load_library();
     return cuDevicePrimaryCtxRetain(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxRetain_error(CUcontext *, CUdevice) {
-    return on_init_failed<CUresult >(11);
+    return on_init_failed<CUresult >(12);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxRelease_init(CUdevice arg0) {
     load_library();
     return cuDevicePrimaryCtxRelease(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxRelease_error(CUdevice) {
-    return on_init_failed<CUresult >(12);
+    return on_init_failed<CUresult >(13);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxSetFlags_init(CUdevice arg0, unsigned int arg1) {
     load_library();
     return cuDevicePrimaryCtxSetFlags(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxSetFlags_error(CUdevice, unsigned int) {
-    return on_init_failed<CUresult >(13);
+    return on_init_failed<CUresult >(14);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxGetState_init(CUdevice arg0, unsigned int *arg1, int *arg2) {
     load_library();
     return cuDevicePrimaryCtxGetState(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxGetState_error(CUdevice, unsigned int *, int *) {
-    return on_init_failed<CUresult >(14);
+    return on_init_failed<CUresult >(15);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxReset_init(CUdevice arg0) {
     load_library();
     return cuDevicePrimaryCtxReset(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxReset_error(CUdevice) {
-    return on_init_failed<CUresult >(15);
+    return on_init_failed<CUresult >(16);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxCreate_v2_init(CUcontext *arg0, unsigned int arg1, CUdevice arg2) {
     load_library();
     return cuCtxCreate_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxCreate_v2_error(CUcontext *, unsigned int, CUdevice) {
-    return on_init_failed<CUresult >(16);
+    return on_init_failed<CUresult >(17);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDestroy_v2_init(CUcontext arg0) {
     load_library();
     return cuCtxDestroy_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDestroy_v2_error(CUcontext) {
-    return on_init_failed<CUresult >(17);
+    return on_init_failed<CUresult >(18);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPushCurrent_v2_init(CUcontext arg0) {
     load_library();
     return cuCtxPushCurrent_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPushCurrent_v2_error(CUcontext) {
-    return on_init_failed<CUresult >(18);
+    return on_init_failed<CUresult >(19);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPopCurrent_v2_init(CUcontext *arg0) {
     load_library();
     return cuCtxPopCurrent_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPopCurrent_v2_error(CUcontext *) {
-    return on_init_failed<CUresult >(19);
+    return on_init_failed<CUresult >(20);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetCurrent_init(CUcontext arg0) {
     load_library();
     return cuCtxSetCurrent(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetCurrent_error(CUcontext) {
-    return on_init_failed<CUresult >(20);
+    return on_init_failed<CUresult >(21);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetCurrent_init(CUcontext *arg0) {
     load_library();
     return cuCtxGetCurrent(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetCurrent_error(CUcontext *) {
-    return on_init_failed<CUresult >(21);
+    return on_init_failed<CUresult >(22);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetDevice_init(CUdevice *arg0) {
     load_library();
     return cuCtxGetDevice(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetDevice_error(CUdevice *) {
-    return on_init_failed<CUresult >(22);
+    return on_init_failed<CUresult >(23);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetFlags_init(unsigned int *arg0) {
     load_library();
     return cuCtxGetFlags(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetFlags_error(unsigned int *) {
-    return on_init_failed<CUresult >(23);
+    return on_init_failed<CUresult >(24);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSynchronize_init() {
     load_library();
     return cuCtxSynchronize();
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSynchronize_error() {
-    return on_init_failed<CUresult >(24);
+    return on_init_failed<CUresult >(25);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetLimit_init(CUlimit arg0, size_t arg1) {
     load_library();
     return cuCtxSetLimit(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetLimit_error(CUlimit, size_t) {
-    return on_init_failed<CUresult >(25);
+    return on_init_failed<CUresult >(26);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetLimit_init(size_t *arg0, CUlimit arg1) {
     load_library();
     return cuCtxGetLimit(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetLimit_error(size_t *, CUlimit) {
-    return on_init_failed<CUresult >(26);
+    return on_init_failed<CUresult >(27);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetCacheConfig_init(CUfunc_cache *arg0) {
     load_library();
     return cuCtxGetCacheConfig(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetCacheConfig_error(CUfunc_cache *) {
-    return on_init_failed<CUresult >(27);
+    return on_init_failed<CUresult >(28);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetCacheConfig_init(CUfunc_cache arg0) {
     load_library();
     return cuCtxSetCacheConfig(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetCacheConfig_error(CUfunc_cache) {
-    return on_init_failed<CUresult >(28);
+    return on_init_failed<CUresult >(29);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetSharedMemConfig_init(CUsharedconfig *arg0) {
     load_library();
     return cuCtxGetSharedMemConfig(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetSharedMemConfig_error(CUsharedconfig *) {
-    return on_init_failed<CUresult >(29);
+    return on_init_failed<CUresult >(30);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetSharedMemConfig_init(CUsharedconfig arg0) {
     load_library();
     return cuCtxSetSharedMemConfig(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxSetSharedMemConfig_error(CUsharedconfig) {
-    return on_init_failed<CUresult >(30);
+    return on_init_failed<CUresult >(31);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetApiVersion_init(CUcontext arg0, unsigned int *arg1) {
     load_library();
     return cuCtxGetApiVersion(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetApiVersion_error(CUcontext, unsigned int *) {
-    return on_init_failed<CUresult >(31);
+    return on_init_failed<CUresult >(32);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetStreamPriorityRange_init(int *arg0, int *arg1) {
     load_library();
     return cuCtxGetStreamPriorityRange(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxGetStreamPriorityRange_error(int *, int *) {
-    return on_init_failed<CUresult >(32);
+    return on_init_failed<CUresult >(33);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxAttach_init(CUcontext *arg0, unsigned int arg1) {
     load_library();
     return cuCtxAttach(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxAttach_error(CUcontext *, unsigned int) {
-    return on_init_failed<CUresult >(33);
+    return on_init_failed<CUresult >(34);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDetach_init(CUcontext arg0) {
     load_library();
     return cuCtxDetach(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDetach_error(CUcontext) {
-    return on_init_failed<CUresult >(34);
+    return on_init_failed<CUresult >(35);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoad_init(CUmodule *arg0, const char *arg1) {
     load_library();
     return cuModuleLoad(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoad_error(CUmodule *, const char *) {
-    return on_init_failed<CUresult >(35);
+    return on_init_failed<CUresult >(36);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoadData_init(CUmodule *arg0, const void *arg1) {
     load_library();
     return cuModuleLoadData(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoadData_error(CUmodule *, const void *) {
-    return on_init_failed<CUresult >(36);
+    return on_init_failed<CUresult >(37);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoadDataEx_init(CUmodule *arg0, const void *arg1, unsigned int arg2, CUjit_option *arg3, void **arg4) {
     load_library();
     return cuModuleLoadDataEx(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoadDataEx_error(CUmodule *, const void *, unsigned int, CUjit_option *, void **) {
-    return on_init_failed<CUresult >(37);
+    return on_init_failed<CUresult >(38);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoadFatBinary_init(CUmodule *arg0, const void *arg1) {
     load_library();
     return cuModuleLoadFatBinary(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleLoadFatBinary_error(CUmodule *, const void *) {
-    return on_init_failed<CUresult >(38);
+    return on_init_failed<CUresult >(39);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleUnload_init(CUmodule arg0) {
     load_library();
     return cuModuleUnload(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleUnload_error(CUmodule) {
-    return on_init_failed<CUresult >(39);
+    return on_init_failed<CUresult >(40);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetFunction_init(CUfunction *arg0, CUmodule arg1, const char *arg2) {
     load_library();
     return cuModuleGetFunction(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetFunction_error(CUfunction *, CUmodule, const char *) {
-    return on_init_failed<CUresult >(40);
+    return on_init_failed<CUresult >(41);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetGlobal_v2_init(CUdeviceptr *arg0, size_t *arg1, CUmodule arg2, const char *arg3) {
     load_library();
     return cuModuleGetGlobal_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetGlobal_v2_error(CUdeviceptr *, size_t *, CUmodule, const char *) {
-    return on_init_failed<CUresult >(41);
+    return on_init_failed<CUresult >(42);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetTexRef_init(CUtexref *arg0, CUmodule arg1, const char *arg2) {
     load_library();
     return cuModuleGetTexRef(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetTexRef_error(CUtexref *, CUmodule, const char *) {
-    return on_init_failed<CUresult >(42);
+    return on_init_failed<CUresult >(43);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetSurfRef_init(CUsurfref *arg0, CUmodule arg1, const char *arg2) {
     load_library();
     return cuModuleGetSurfRef(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetSurfRef_error(CUsurfref *, CUmodule, const char *) {
-    return on_init_failed<CUresult >(43);
+    return on_init_failed<CUresult >(44);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkCreate_v2_init(unsigned int arg0, CUjit_option *arg1, void **arg2, CUlinkState *arg3) {
     load_library();
     return cuLinkCreate_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkCreate_v2_error(unsigned int, CUjit_option *, void **, CUlinkState *) {
-    return on_init_failed<CUresult >(44);
+    return on_init_failed<CUresult >(45);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddData_v2_init(CUlinkState arg0, CUjitInputType arg1, void *arg2, size_t arg3, const char *arg4, unsigned int arg5, CUjit_option *arg6, void **arg7) {
     load_library();
     return cuLinkAddData_v2(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddData_v2_error(CUlinkState, CUjitInputType, void *, size_t, const char *, unsigned int, CUjit_option *, void **) {
-    return on_init_failed<CUresult >(45);
+    return on_init_failed<CUresult >(46);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddFile_v2_init(CUlinkState arg0, CUjitInputType arg1, const char *arg2, unsigned int arg3, CUjit_option *arg4, void **arg5) {
     load_library();
     return cuLinkAddFile_v2(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddFile_v2_error(CUlinkState, CUjitInputType, const char *, unsigned int, CUjit_option *, void **) {
-    return on_init_failed<CUresult >(46);
+    return on_init_failed<CUresult >(47);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkComplete_init(CUlinkState arg0, void **arg1, size_t *arg2) {
     load_library();
     return cuLinkComplete(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkComplete_error(CUlinkState, void **, size_t *) {
-    return on_init_failed<CUresult >(47);
+    return on_init_failed<CUresult >(48);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkDestroy_init(CUlinkState arg0) {
     load_library();
     return cuLinkDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkDestroy_error(CUlinkState) {
-    return on_init_failed<CUresult >(48);
+    return on_init_failed<CUresult >(49);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetInfo_v2_init(size_t *arg0, size_t *arg1) {
     load_library();
     return cuMemGetInfo_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetInfo_v2_error(size_t *, size_t *) {
-    return on_init_failed<CUresult >(49);
+    return on_init_failed<CUresult >(50);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAlloc_v2_init(CUdeviceptr *arg0, size_t arg1) {
     load_library();
     return cuMemAlloc_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAlloc_v2_error(CUdeviceptr *, size_t) {
-    return on_init_failed<CUresult >(50);
+    return on_init_failed<CUresult >(51);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocPitch_v2_init(CUdeviceptr *arg0, size_t *arg1, size_t arg2, size_t arg3, unsigned int arg4) {
     load_library();
     return cuMemAllocPitch_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocPitch_v2_error(CUdeviceptr *, size_t *, size_t, size_t, unsigned int) {
-    return on_init_failed<CUresult >(51);
+    return on_init_failed<CUresult >(52);
 }
 static CUresult _WRAPLIB_API_CALL cuMemFree_v2_init(CUdeviceptr arg0) {
     load_library();
     return cuMemFree_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemFree_v2_error(CUdeviceptr) {
-    return on_init_failed<CUresult >(52);
+    return on_init_failed<CUresult >(53);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetAddressRange_v2_init(CUdeviceptr *arg0, size_t *arg1, CUdeviceptr arg2) {
     load_library();
     return cuMemGetAddressRange_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetAddressRange_v2_error(CUdeviceptr *, size_t *, CUdeviceptr) {
-    return on_init_failed<CUresult >(53);
+    return on_init_failed<CUresult >(54);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocHost_v2_init(void **arg0, size_t arg1) {
     load_library();
     return cuMemAllocHost_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocHost_v2_error(void **, size_t) {
-    return on_init_failed<CUresult >(54);
+    return on_init_failed<CUresult >(55);
 }
 static CUresult _WRAPLIB_API_CALL cuMemFreeHost_init(void *arg0) {
     load_library();
     return cuMemFreeHost(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemFreeHost_error(void *) {
-    return on_init_failed<CUresult >(55);
+    return on_init_failed<CUresult >(56);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostAlloc_init(void **arg0, size_t arg1, unsigned int arg2) {
     load_library();
     return cuMemHostAlloc(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostAlloc_error(void **, size_t, unsigned int) {
-    return on_init_failed<CUresult >(56);
+    return on_init_failed<CUresult >(57);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostGetDevicePointer_v2_init(CUdeviceptr *arg0, void *arg1, unsigned int arg2) {
     load_library();
     return cuMemHostGetDevicePointer_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostGetDevicePointer_v2_error(CUdeviceptr *, void *, unsigned int) {
-    return on_init_failed<CUresult >(57);
+    return on_init_failed<CUresult >(58);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostGetFlags_init(unsigned int *arg0, void *arg1) {
     load_library();
     return cuMemHostGetFlags(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostGetFlags_error(unsigned int *, void *) {
-    return on_init_failed<CUresult >(58);
+    return on_init_failed<CUresult >(59);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocManaged_init(CUdeviceptr *arg0, size_t arg1, unsigned int arg2) {
     load_library();
     return cuMemAllocManaged(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocManaged_error(CUdeviceptr *, size_t, unsigned int) {
-    return on_init_failed<CUresult >(59);
+    return on_init_failed<CUresult >(60);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetByPCIBusId_init(CUdevice *arg0, const char *arg1) {
     load_library();
     return cuDeviceGetByPCIBusId(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetByPCIBusId_error(CUdevice *, const char *) {
-    return on_init_failed<CUresult >(60);
+    return on_init_failed<CUresult >(61);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetPCIBusId_init(char *arg0, int arg1, CUdevice arg2) {
     load_library();
     return cuDeviceGetPCIBusId(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceGetPCIBusId_error(char *, int, CUdevice) {
-    return on_init_failed<CUresult >(61);
+    return on_init_failed<CUresult >(62);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcGetEventHandle_init(CUipcEventHandle *arg0, CUevent arg1) {
     load_library();
     return cuIpcGetEventHandle(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcGetEventHandle_error(CUipcEventHandle *, CUevent) {
-    return on_init_failed<CUresult >(62);
+    return on_init_failed<CUresult >(63);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcOpenEventHandle_init(CUevent *arg0, CUipcEventHandle arg1) {
     load_library();
     return cuIpcOpenEventHandle(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcOpenEventHandle_error(CUevent *, CUipcEventHandle) {
-    return on_init_failed<CUresult >(63);
+    return on_init_failed<CUresult >(64);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcGetMemHandle_init(CUipcMemHandle *arg0, CUdeviceptr arg1) {
     load_library();
     return cuIpcGetMemHandle(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcGetMemHandle_error(CUipcMemHandle *, CUdeviceptr) {
-    return on_init_failed<CUresult >(64);
+    return on_init_failed<CUresult >(65);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcOpenMemHandle_init(CUdeviceptr *arg0, CUipcMemHandle arg1, unsigned int arg2) {
     load_library();
     return cuIpcOpenMemHandle(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcOpenMemHandle_error(CUdeviceptr *, CUipcMemHandle, unsigned int) {
-    return on_init_failed<CUresult >(65);
+    return on_init_failed<CUresult >(66);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcCloseMemHandle_init(CUdeviceptr arg0) {
     load_library();
     return cuIpcCloseMemHandle(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuIpcCloseMemHandle_error(CUdeviceptr) {
-    return on_init_failed<CUresult >(66);
+    return on_init_failed<CUresult >(67);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostRegister_v2_init(void *arg0, size_t arg1, unsigned int arg2) {
     load_library();
     return cuMemHostRegister_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostRegister_v2_error(void *, size_t, unsigned int) {
-    return on_init_failed<CUresult >(67);
+    return on_init_failed<CUresult >(68);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostUnregister_init(void *arg0) {
     load_library();
     return cuMemHostUnregister(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostUnregister_error(void *) {
-    return on_init_failed<CUresult >(68);
+    return on_init_failed<CUresult >(69);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy_ptds_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     load_library();
     return cuMemcpy_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy_ptds_error(CUdeviceptr, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(69);
+    return on_init_failed<CUresult >(70);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeer_ptds_init(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4) {
     load_library();
     return cuMemcpyPeer_ptds(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeer_ptds_error(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t) {
-    return on_init_failed<CUresult >(70);
+    return on_init_failed<CUresult >(71);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_v2_ptds_init(CUdeviceptr arg0, const void *arg1, size_t arg2) {
     load_library();
     return cuMemcpyHtoD_v2_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_v2_ptds_error(CUdeviceptr, const void *, size_t) {
-    return on_init_failed<CUresult >(71);
+    return on_init_failed<CUresult >(72);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_v2_ptds_init(void *arg0, CUdeviceptr arg1, size_t arg2) {
     load_library();
     return cuMemcpyDtoH_v2_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_v2_ptds_error(void *, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(72);
+    return on_init_failed<CUresult >(73);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_v2_ptds_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     load_library();
     return cuMemcpyDtoD_v2_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_v2_ptds_error(CUdeviceptr, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(73);
+    return on_init_failed<CUresult >(74);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_v2_ptds_init(CUarray arg0, size_t arg1, CUdeviceptr arg2, size_t arg3) {
     load_library();
     return cuMemcpyDtoA_v2_ptds(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_v2_ptds_error(CUarray, size_t, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(74);
+    return on_init_failed<CUresult >(75);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_v2_ptds_init(CUdeviceptr arg0, CUarray arg1, size_t arg2, size_t arg3) {
     load_library();
     return cuMemcpyAtoD_v2_ptds(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_v2_ptds_error(CUdeviceptr, CUarray, size_t, size_t) {
-    return on_init_failed<CUresult >(75);
+    return on_init_failed<CUresult >(76);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_v2_ptds_init(CUarray arg0, size_t arg1, const void *arg2, size_t arg3) {
     load_library();
     return cuMemcpyHtoA_v2_ptds(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_v2_ptds_error(CUarray, size_t, const void *, size_t) {
-    return on_init_failed<CUresult >(76);
+    return on_init_failed<CUresult >(77);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_v2_ptds_init(void *arg0, CUarray arg1, size_t arg2, size_t arg3) {
     load_library();
     return cuMemcpyAtoH_v2_ptds(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_v2_ptds_error(void *, CUarray, size_t, size_t) {
-    return on_init_failed<CUresult >(77);
+    return on_init_failed<CUresult >(78);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_v2_ptds_init(CUarray arg0, size_t arg1, CUarray arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemcpyAtoA_v2_ptds(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_v2_ptds_error(CUarray, size_t, CUarray, size_t, size_t) {
-    return on_init_failed<CUresult >(78);
+    return on_init_failed<CUresult >(79);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2D_v2_ptds_init(const CUDA_MEMCPY2D *arg0) {
     load_library();
     return cuMemcpy2D_v2_ptds(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2D_v2_ptds_error(const CUDA_MEMCPY2D *) {
-    return on_init_failed<CUresult >(79);
+    return on_init_failed<CUresult >(80);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_v2_ptds_init(const CUDA_MEMCPY2D *arg0) {
     load_library();
     return cuMemcpy2DUnaligned_v2_ptds(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_v2_ptds_error(const CUDA_MEMCPY2D *) {
-    return on_init_failed<CUresult >(80);
+    return on_init_failed<CUresult >(81);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3D_v2_ptds_init(const CUDA_MEMCPY3D *arg0) {
     load_library();
     return cuMemcpy3D_v2_ptds(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3D_v2_ptds_error(const CUDA_MEMCPY3D *) {
-    return on_init_failed<CUresult >(81);
+    return on_init_failed<CUresult >(82);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeer_ptds_init(const CUDA_MEMCPY3D_PEER *arg0) {
     load_library();
     return cuMemcpy3DPeer_ptds(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeer_ptds_error(const CUDA_MEMCPY3D_PEER *) {
-    return on_init_failed<CUresult >(82);
+    return on_init_failed<CUresult >(83);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAsync_ptsz_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyAsync_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAsync_ptsz_error(CUdeviceptr, CUdeviceptr, size_t, CUstream) {
-    return on_init_failed<CUresult >(83);
+    return on_init_failed<CUresult >(84);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeerAsync_ptsz_init(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemcpyPeerAsync_ptsz(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeerAsync_ptsz_error(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t, CUstream) {
-    return on_init_failed<CUresult >(84);
+    return on_init_failed<CUresult >(85);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_v2_ptsz_init(CUdeviceptr arg0, const void *arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyHtoDAsync_v2_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_v2_ptsz_error(CUdeviceptr, const void *, size_t, CUstream) {
-    return on_init_failed<CUresult >(85);
+    return on_init_failed<CUresult >(86);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_v2_ptsz_init(void *arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyDtoHAsync_v2_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_v2_ptsz_error(void *, CUdeviceptr, size_t, CUstream) {
-    return on_init_failed<CUresult >(86);
+    return on_init_failed<CUresult >(87);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_v2_ptsz_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyDtoDAsync_v2_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_v2_ptsz_error(CUdeviceptr, CUdeviceptr, size_t, CUstream) {
-    return on_init_failed<CUresult >(87);
+    return on_init_failed<CUresult >(88);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_v2_ptsz_init(CUarray arg0, size_t arg1, const void *arg2, size_t arg3, CUstream arg4) {
     load_library();
     return cuMemcpyHtoAAsync_v2_ptsz(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_v2_ptsz_error(CUarray, size_t, const void *, size_t, CUstream) {
-    return on_init_failed<CUresult >(88);
+    return on_init_failed<CUresult >(89);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_v2_ptsz_init(void *arg0, CUarray arg1, size_t arg2, size_t arg3, CUstream arg4) {
     load_library();
     return cuMemcpyAtoHAsync_v2_ptsz(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_v2_ptsz_error(void *, CUarray, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(89);
+    return on_init_failed<CUresult >(90);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_v2_ptsz_init(const CUDA_MEMCPY2D *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy2DAsync_v2_ptsz(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_v2_ptsz_error(const CUDA_MEMCPY2D *, CUstream) {
-    return on_init_failed<CUresult >(90);
+    return on_init_failed<CUresult >(91);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_v2_ptsz_init(const CUDA_MEMCPY3D *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy3DAsync_v2_ptsz(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_v2_ptsz_error(const CUDA_MEMCPY3D *, CUstream) {
-    return on_init_failed<CUresult >(91);
+    return on_init_failed<CUresult >(92);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeerAsync_ptsz_init(const CUDA_MEMCPY3D_PEER *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy3DPeerAsync_ptsz(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeerAsync_ptsz_error(const CUDA_MEMCPY3D_PEER *, CUstream) {
-    return on_init_failed<CUresult >(92);
+    return on_init_failed<CUresult >(93);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8_v2_ptds_init(CUdeviceptr arg0, unsigned char arg1, size_t arg2) {
     load_library();
     return cuMemsetD8_v2_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8_v2_ptds_error(CUdeviceptr, unsigned char, size_t) {
-    return on_init_failed<CUresult >(93);
+    return on_init_failed<CUresult >(94);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16_v2_ptds_init(CUdeviceptr arg0, unsigned short arg1, size_t arg2) {
     load_library();
     return cuMemsetD16_v2_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16_v2_ptds_error(CUdeviceptr, unsigned short, size_t) {
-    return on_init_failed<CUresult >(94);
+    return on_init_failed<CUresult >(95);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32_v2_ptds_init(CUdeviceptr arg0, unsigned int arg1, size_t arg2) {
     load_library();
     return cuMemsetD32_v2_ptds(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32_v2_ptds_error(CUdeviceptr, unsigned int, size_t) {
-    return on_init_failed<CUresult >(95);
+    return on_init_failed<CUresult >(96);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8_v2_ptds_init(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemsetD2D8_v2_ptds(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8_v2_ptds_error(CUdeviceptr, size_t, unsigned char, size_t, size_t) {
-    return on_init_failed<CUresult >(96);
+    return on_init_failed<CUresult >(97);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16_v2_ptds_init(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemsetD2D16_v2_ptds(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16_v2_ptds_error(CUdeviceptr, size_t, unsigned short, size_t, size_t) {
-    return on_init_failed<CUresult >(97);
+    return on_init_failed<CUresult >(98);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32_v2_ptds_init(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemsetD2D32_v2_ptds(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32_v2_ptds_error(CUdeviceptr, size_t, unsigned int, size_t, size_t) {
-    return on_init_failed<CUresult >(98);
+    return on_init_failed<CUresult >(99);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8Async_ptsz_init(CUdeviceptr arg0, unsigned char arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemsetD8Async_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8Async_ptsz_error(CUdeviceptr, unsigned char, size_t, CUstream) {
-    return on_init_failed<CUresult >(99);
+    return on_init_failed<CUresult >(100);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16Async_ptsz_init(CUdeviceptr arg0, unsigned short arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemsetD16Async_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16Async_ptsz_error(CUdeviceptr, unsigned short, size_t, CUstream) {
-    return on_init_failed<CUresult >(100);
+    return on_init_failed<CUresult >(101);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32Async_ptsz_init(CUdeviceptr arg0, unsigned int arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemsetD32Async_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32Async_ptsz_error(CUdeviceptr, unsigned int, size_t, CUstream) {
-    return on_init_failed<CUresult >(101);
+    return on_init_failed<CUresult >(102);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8Async_ptsz_init(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemsetD2D8Async_ptsz(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8Async_ptsz_error(CUdeviceptr, size_t, unsigned char, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(102);
+    return on_init_failed<CUresult >(103);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16Async_ptsz_init(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemsetD2D16Async_ptsz(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16Async_ptsz_error(CUdeviceptr, size_t, unsigned short, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(103);
+    return on_init_failed<CUresult >(104);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32Async_ptsz_init(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemsetD2D32Async_ptsz(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32Async_ptsz_error(CUdeviceptr, size_t, unsigned int, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(104);
+    return on_init_failed<CUresult >(105);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayCreate_v2_init(CUarray *arg0, const CUDA_ARRAY_DESCRIPTOR *arg1) {
     load_library();
     return cuArrayCreate_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayCreate_v2_error(CUarray *, const CUDA_ARRAY_DESCRIPTOR *) {
-    return on_init_failed<CUresult >(105);
+    return on_init_failed<CUresult >(106);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayGetDescriptor_v2_init(CUDA_ARRAY_DESCRIPTOR *arg0, CUarray arg1) {
     load_library();
     return cuArrayGetDescriptor_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayGetDescriptor_v2_error(CUDA_ARRAY_DESCRIPTOR *, CUarray) {
-    return on_init_failed<CUresult >(106);
+    return on_init_failed<CUresult >(107);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayDestroy_init(CUarray arg0) {
     load_library();
     return cuArrayDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayDestroy_error(CUarray) {
-    return on_init_failed<CUresult >(107);
+    return on_init_failed<CUresult >(108);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DCreate_v2_init(CUarray *arg0, const CUDA_ARRAY3D_DESCRIPTOR *arg1) {
     load_library();
     return cuArray3DCreate_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DCreate_v2_error(CUarray *, const CUDA_ARRAY3D_DESCRIPTOR *) {
-    return on_init_failed<CUresult >(108);
+    return on_init_failed<CUresult >(109);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DGetDescriptor_v2_init(CUDA_ARRAY3D_DESCRIPTOR *arg0, CUarray arg1) {
     load_library();
     return cuArray3DGetDescriptor_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DGetDescriptor_v2_error(CUDA_ARRAY3D_DESCRIPTOR *, CUarray) {
-    return on_init_failed<CUresult >(109);
+    return on_init_failed<CUresult >(110);
 }
 static CUresult _WRAPLIB_API_CALL cuMipmappedArrayCreate_init(CUmipmappedArray *arg0, const CUDA_ARRAY3D_DESCRIPTOR *arg1, unsigned int arg2) {
     load_library();
     return cuMipmappedArrayCreate(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMipmappedArrayCreate_error(CUmipmappedArray *, const CUDA_ARRAY3D_DESCRIPTOR *, unsigned int) {
-    return on_init_failed<CUresult >(110);
+    return on_init_failed<CUresult >(111);
 }
 static CUresult _WRAPLIB_API_CALL cuMipmappedArrayGetLevel_init(CUarray *arg0, CUmipmappedArray arg1, unsigned int arg2) {
     load_library();
     return cuMipmappedArrayGetLevel(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMipmappedArrayGetLevel_error(CUarray *, CUmipmappedArray, unsigned int) {
-    return on_init_failed<CUresult >(111);
+    return on_init_failed<CUresult >(112);
 }
 static CUresult _WRAPLIB_API_CALL cuMipmappedArrayDestroy_init(CUmipmappedArray arg0) {
     load_library();
     return cuMipmappedArrayDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMipmappedArrayDestroy_error(CUmipmappedArray) {
-    return on_init_failed<CUresult >(112);
+    return on_init_failed<CUresult >(113);
 }
 static CUresult _WRAPLIB_API_CALL cuPointerGetAttribute_init(void *arg0, CUpointer_attribute arg1, CUdeviceptr arg2) {
     load_library();
     return cuPointerGetAttribute(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuPointerGetAttribute_error(void *, CUpointer_attribute, CUdeviceptr) {
-    return on_init_failed<CUresult >(113);
+    return on_init_failed<CUresult >(114);
 }
 static CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_ptsz_init(CUdeviceptr arg0, size_t arg1, CUdevice arg2, CUstream arg3) {
     load_library();
     return cuMemPrefetchAsync_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_ptsz_error(CUdeviceptr, size_t, CUdevice, CUstream) {
-    return on_init_failed<CUresult >(114);
+    return on_init_failed<CUresult >(115);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAdvise_init(CUdeviceptr arg0, size_t arg1, CUmem_advise arg2, CUdevice arg3) {
     load_library();
     return cuMemAdvise(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAdvise_error(CUdeviceptr, size_t, CUmem_advise, CUdevice) {
-    return on_init_failed<CUresult >(115);
+    return on_init_failed<CUresult >(116);
 }
 static CUresult _WRAPLIB_API_CALL cuMemRangeGetAttribute_init(void *arg0, size_t arg1, CUmem_range_attribute arg2, CUdeviceptr arg3, size_t arg4) {
     load_library();
     return cuMemRangeGetAttribute(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemRangeGetAttribute_error(void *, size_t, CUmem_range_attribute, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(116);
+    return on_init_failed<CUresult >(117);
 }
 static CUresult _WRAPLIB_API_CALL cuMemRangeGetAttributes_init(void **arg0, size_t *arg1, CUmem_range_attribute *arg2, size_t arg3, CUdeviceptr arg4, size_t arg5) {
     load_library();
     return cuMemRangeGetAttributes(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemRangeGetAttributes_error(void **, size_t *, CUmem_range_attribute *, size_t, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(117);
+    return on_init_failed<CUresult >(118);
 }
 static CUresult _WRAPLIB_API_CALL cuPointerSetAttribute_init(const void *arg0, CUpointer_attribute arg1, CUdeviceptr arg2) {
     load_library();
     return cuPointerSetAttribute(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuPointerSetAttribute_error(const void *, CUpointer_attribute, CUdeviceptr) {
-    return on_init_failed<CUresult >(118);
+    return on_init_failed<CUresult >(119);
 }
 static CUresult _WRAPLIB_API_CALL cuPointerGetAttributes_init(unsigned int arg0, CUpointer_attribute *arg1, void **arg2, CUdeviceptr arg3) {
     load_library();
     return cuPointerGetAttributes(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuPointerGetAttributes_error(unsigned int, CUpointer_attribute *, void **, CUdeviceptr) {
-    return on_init_failed<CUresult >(119);
+    return on_init_failed<CUresult >(120);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamCreate_init(CUstream *arg0, unsigned int arg1) {
     load_library();
     return cuStreamCreate(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamCreate_error(CUstream *, unsigned int) {
-    return on_init_failed<CUresult >(120);
+    return on_init_failed<CUresult >(121);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamCreateWithPriority_init(CUstream *arg0, unsigned int arg1, int arg2) {
     load_library();
     return cuStreamCreateWithPriority(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamCreateWithPriority_error(CUstream *, unsigned int, int) {
-    return on_init_failed<CUresult >(121);
+    return on_init_failed<CUresult >(122);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetPriority_ptsz_init(CUstream arg0, int *arg1) {
     load_library();
     return cuStreamGetPriority_ptsz(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetPriority_ptsz_error(CUstream, int *) {
-    return on_init_failed<CUresult >(122);
+    return on_init_failed<CUresult >(123);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetFlags_ptsz_init(CUstream arg0, unsigned int *arg1) {
     load_library();
     return cuStreamGetFlags_ptsz(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetFlags_ptsz_error(CUstream, unsigned int *) {
-    return on_init_failed<CUresult >(123);
+    return on_init_failed<CUresult >(124);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCtx_ptsz_init(CUstream arg0, CUcontext *arg1) {
+    load_library();
+    return cuStreamGetCtx_ptsz(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCtx_ptsz_error(CUstream, CUcontext *) {
+    return on_init_failed<CUresult >(125);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitEvent_ptsz_init(CUstream arg0, CUevent arg1, unsigned int arg2) {
     load_library();
     return cuStreamWaitEvent_ptsz(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitEvent_ptsz_error(CUstream, CUevent, unsigned int) {
-    return on_init_failed<CUresult >(124);
+    return on_init_failed<CUresult >(126);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAddCallback_ptsz_init(CUstream arg0, CUstreamCallback arg1, void *arg2, unsigned int arg3) {
     load_library();
     return cuStreamAddCallback_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAddCallback_ptsz_error(CUstream, CUstreamCallback, void *, unsigned int) {
-    return on_init_failed<CUresult >(125);
+    return on_init_failed<CUresult >(127);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_v2_ptsz_init(CUstream arg0, CUstreamCaptureMode arg1) {
+    load_library();
+    return cuStreamBeginCapture_v2_ptsz(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_v2_ptsz_error(CUstream, CUstreamCaptureMode) {
+    return on_init_failed<CUresult >(128);
+}
+static CUresult _WRAPLIB_API_CALL cuThreadExchangeStreamCaptureMode_init(CUstreamCaptureMode *arg0) {
+    load_library();
+    return cuThreadExchangeStreamCaptureMode(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuThreadExchangeStreamCaptureMode_error(CUstreamCaptureMode *) {
+    return on_init_failed<CUresult >(129);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamEndCapture_ptsz_init(CUstream arg0, CUgraph *arg1) {
+    load_library();
+    return cuStreamEndCapture_ptsz(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamEndCapture_ptsz_error(CUstream, CUgraph *) {
+    return on_init_failed<CUresult >(130);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamIsCapturing_ptsz_init(CUstream arg0, CUstreamCaptureStatus *arg1) {
+    load_library();
+    return cuStreamIsCapturing_ptsz(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamIsCapturing_ptsz_error(CUstream, CUstreamCaptureStatus *) {
+    return on_init_failed<CUresult >(131);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCaptureInfo_ptsz_init(CUstream arg0, CUstreamCaptureStatus *arg1, cuuint64_t *arg2) {
+    load_library();
+    return cuStreamGetCaptureInfo_ptsz(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCaptureInfo_ptsz_error(CUstream, CUstreamCaptureStatus *, cuuint64_t *) {
+    return on_init_failed<CUresult >(132);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAttachMemAsync_ptsz_init(CUstream arg0, CUdeviceptr arg1, size_t arg2, unsigned int arg3) {
     load_library();
     return cuStreamAttachMemAsync_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAttachMemAsync_ptsz_error(CUstream, CUdeviceptr, size_t, unsigned int) {
-    return on_init_failed<CUresult >(126);
+    return on_init_failed<CUresult >(133);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamQuery_ptsz_init(CUstream arg0) {
     load_library();
     return cuStreamQuery_ptsz(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamQuery_ptsz_error(CUstream) {
-    return on_init_failed<CUresult >(127);
+    return on_init_failed<CUresult >(134);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamSynchronize_ptsz_init(CUstream arg0) {
     load_library();
     return cuStreamSynchronize_ptsz(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamSynchronize_ptsz_error(CUstream) {
-    return on_init_failed<CUresult >(128);
+    return on_init_failed<CUresult >(135);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamDestroy_v2_init(CUstream arg0) {
     load_library();
     return cuStreamDestroy_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamDestroy_v2_error(CUstream) {
-    return on_init_failed<CUresult >(129);
+    return on_init_failed<CUresult >(136);
 }
 static CUresult _WRAPLIB_API_CALL cuEventCreate_init(CUevent *arg0, unsigned int arg1) {
     load_library();
     return cuEventCreate(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuEventCreate_error(CUevent *, unsigned int) {
-    return on_init_failed<CUresult >(130);
+    return on_init_failed<CUresult >(137);
 }
 static CUresult _WRAPLIB_API_CALL cuEventRecord_ptsz_init(CUevent arg0, CUstream arg1) {
     load_library();
     return cuEventRecord_ptsz(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuEventRecord_ptsz_error(CUevent, CUstream) {
-    return on_init_failed<CUresult >(131);
+    return on_init_failed<CUresult >(138);
 }
 static CUresult _WRAPLIB_API_CALL cuEventQuery_init(CUevent arg0) {
     load_library();
     return cuEventQuery(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuEventQuery_error(CUevent) {
-    return on_init_failed<CUresult >(132);
+    return on_init_failed<CUresult >(139);
 }
 static CUresult _WRAPLIB_API_CALL cuEventSynchronize_init(CUevent arg0) {
     load_library();
     return cuEventSynchronize(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuEventSynchronize_error(CUevent) {
-    return on_init_failed<CUresult >(133);
+    return on_init_failed<CUresult >(140);
 }
 static CUresult _WRAPLIB_API_CALL cuEventDestroy_v2_init(CUevent arg0) {
     load_library();
     return cuEventDestroy_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuEventDestroy_v2_error(CUevent) {
-    return on_init_failed<CUresult >(134);
+    return on_init_failed<CUresult >(141);
 }
 static CUresult _WRAPLIB_API_CALL cuEventElapsedTime_init(float *arg0, CUevent arg1, CUevent arg2) {
     load_library();
     return cuEventElapsedTime(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuEventElapsedTime_error(float *, CUevent, CUevent) {
-    return on_init_failed<CUresult >(135);
+    return on_init_failed<CUresult >(142);
+}
+static CUresult _WRAPLIB_API_CALL cuImportExternalMemory_init(CUexternalMemory *arg0, const CUDA_EXTERNAL_MEMORY_HANDLE_DESC *arg1) {
+    load_library();
+    return cuImportExternalMemory(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuImportExternalMemory_error(CUexternalMemory *, const CUDA_EXTERNAL_MEMORY_HANDLE_DESC *) {
+    return on_init_failed<CUresult >(143);
+}
+static CUresult _WRAPLIB_API_CALL cuExternalMemoryGetMappedBuffer_init(CUdeviceptr *arg0, CUexternalMemory arg1, const CUDA_EXTERNAL_MEMORY_BUFFER_DESC *arg2) {
+    load_library();
+    return cuExternalMemoryGetMappedBuffer(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuExternalMemoryGetMappedBuffer_error(CUdeviceptr *, CUexternalMemory, const CUDA_EXTERNAL_MEMORY_BUFFER_DESC *) {
+    return on_init_failed<CUresult >(144);
+}
+static CUresult _WRAPLIB_API_CALL cuExternalMemoryGetMappedMipmappedArray_init(CUmipmappedArray *arg0, CUexternalMemory arg1, const CUDA_EXTERNAL_MEMORY_MIPMAPPED_ARRAY_DESC *arg2) {
+    load_library();
+    return cuExternalMemoryGetMappedMipmappedArray(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuExternalMemoryGetMappedMipmappedArray_error(CUmipmappedArray *, CUexternalMemory, const CUDA_EXTERNAL_MEMORY_MIPMAPPED_ARRAY_DESC *) {
+    return on_init_failed<CUresult >(145);
+}
+static CUresult _WRAPLIB_API_CALL cuDestroyExternalMemory_init(CUexternalMemory arg0) {
+    load_library();
+    return cuDestroyExternalMemory(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuDestroyExternalMemory_error(CUexternalMemory) {
+    return on_init_failed<CUresult >(146);
+}
+static CUresult _WRAPLIB_API_CALL cuImportExternalSemaphore_init(CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_HANDLE_DESC *arg1) {
+    load_library();
+    return cuImportExternalSemaphore(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuImportExternalSemaphore_error(CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_HANDLE_DESC *) {
+    return on_init_failed<CUresult >(147);
+}
+static CUresult _WRAPLIB_API_CALL cuSignalExternalSemaphoresAsync_ptsz_init(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    load_library();
+    return cuSignalExternalSemaphoresAsync_ptsz(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuSignalExternalSemaphoresAsync_ptsz_error(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *, unsigned int, CUstream) {
+    return on_init_failed<CUresult >(148);
+}
+static CUresult _WRAPLIB_API_CALL cuWaitExternalSemaphoresAsync_ptsz_init(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    load_library();
+    return cuWaitExternalSemaphoresAsync_ptsz(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuWaitExternalSemaphoresAsync_ptsz_error(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *, unsigned int, CUstream) {
+    return on_init_failed<CUresult >(149);
+}
+static CUresult _WRAPLIB_API_CALL cuDestroyExternalSemaphore_init(CUexternalSemaphore arg0) {
+    load_library();
+    return cuDestroyExternalSemaphore(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuDestroyExternalSemaphore_error(CUexternalSemaphore) {
+    return on_init_failed<CUresult >(150);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitValue32_ptsz_init(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     load_library();
     return cuStreamWaitValue32_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitValue32_ptsz_error(CUstream, CUdeviceptr, cuuint32_t, unsigned int) {
-    return on_init_failed<CUresult >(136);
+    return on_init_failed<CUresult >(151);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWaitValue64_ptsz_init(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    load_library();
+    return cuStreamWaitValue64_ptsz(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWaitValue64_ptsz_error(CUstream, CUdeviceptr, cuuint64_t, unsigned int) {
+    return on_init_failed<CUresult >(152);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWriteValue32_ptsz_init(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     load_library();
     return cuStreamWriteValue32_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWriteValue32_ptsz_error(CUstream, CUdeviceptr, cuuint32_t, unsigned int) {
-    return on_init_failed<CUresult >(137);
+    return on_init_failed<CUresult >(153);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWriteValue64_ptsz_init(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    load_library();
+    return cuStreamWriteValue64_ptsz(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWriteValue64_ptsz_error(CUstream, CUdeviceptr, cuuint64_t, unsigned int) {
+    return on_init_failed<CUresult >(154);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamBatchMemOp_ptsz_init(CUstream arg0, unsigned int arg1, CUstreamBatchMemOpParams *arg2, unsigned int arg3) {
     load_library();
     return cuStreamBatchMemOp_ptsz(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamBatchMemOp_ptsz_error(CUstream, unsigned int, CUstreamBatchMemOpParams *, unsigned int) {
-    return on_init_failed<CUresult >(138);
+    return on_init_failed<CUresult >(155);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncGetAttribute_init(int *arg0, CUfunction_attribute arg1, CUfunction arg2) {
     load_library();
     return cuFuncGetAttribute(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncGetAttribute_error(int *, CUfunction_attribute, CUfunction) {
-    return on_init_failed<CUresult >(139);
+    return on_init_failed<CUresult >(156);
+}
+static CUresult _WRAPLIB_API_CALL cuFuncSetAttribute_init(CUfunction arg0, CUfunction_attribute arg1, int arg2) {
+    load_library();
+    return cuFuncSetAttribute(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuFuncSetAttribute_error(CUfunction, CUfunction_attribute, int) {
+    return on_init_failed<CUresult >(157);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetCacheConfig_init(CUfunction arg0, CUfunc_cache arg1) {
     load_library();
     return cuFuncSetCacheConfig(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetCacheConfig_error(CUfunction, CUfunc_cache) {
-    return on_init_failed<CUresult >(140);
+    return on_init_failed<CUresult >(158);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetSharedMemConfig_init(CUfunction arg0, CUsharedconfig arg1) {
     load_library();
     return cuFuncSetSharedMemConfig(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetSharedMemConfig_error(CUfunction, CUsharedconfig) {
-    return on_init_failed<CUresult >(141);
+    return on_init_failed<CUresult >(159);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchKernel_ptsz_init(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9, void **arg10) {
     load_library();
     return cuLaunchKernel_ptsz(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchKernel_ptsz_error(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **, void **) {
-    return on_init_failed<CUresult >(142);
+    return on_init_failed<CUresult >(160);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernel_ptsz_init(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9) {
+    load_library();
+    return cuLaunchCooperativeKernel_ptsz(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernel_ptsz_error(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **) {
+    return on_init_failed<CUresult >(161);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernelMultiDevice_init(CUDA_LAUNCH_PARAMS *arg0, unsigned int arg1, unsigned int arg2) {
+    load_library();
+    return cuLaunchCooperativeKernelMultiDevice(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernelMultiDevice_error(CUDA_LAUNCH_PARAMS *, unsigned int, unsigned int) {
+    return on_init_failed<CUresult >(162);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchHostFunc_ptsz_init(CUstream arg0, CUhostFn arg1, void *arg2) {
+    load_library();
+    return cuLaunchHostFunc_ptsz(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchHostFunc_ptsz_error(CUstream, CUhostFn, void *) {
+    return on_init_failed<CUresult >(163);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetBlockShape_init(CUfunction arg0, int arg1, int arg2, int arg3) {
     load_library();
     return cuFuncSetBlockShape(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetBlockShape_error(CUfunction, int, int, int) {
-    return on_init_failed<CUresult >(143);
+    return on_init_failed<CUresult >(164);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetSharedSize_init(CUfunction arg0, unsigned int arg1) {
     load_library();
     return cuFuncSetSharedSize(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuFuncSetSharedSize_error(CUfunction, unsigned int) {
-    return on_init_failed<CUresult >(144);
+    return on_init_failed<CUresult >(165);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetSize_init(CUfunction arg0, unsigned int arg1) {
     load_library();
     return cuParamSetSize(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetSize_error(CUfunction, unsigned int) {
-    return on_init_failed<CUresult >(145);
+    return on_init_failed<CUresult >(166);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSeti_init(CUfunction arg0, int arg1, unsigned int arg2) {
     load_library();
     return cuParamSeti(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSeti_error(CUfunction, int, unsigned int) {
-    return on_init_failed<CUresult >(146);
+    return on_init_failed<CUresult >(167);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetf_init(CUfunction arg0, int arg1, float arg2) {
     load_library();
     return cuParamSetf(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetf_error(CUfunction, int, float) {
-    return on_init_failed<CUresult >(147);
+    return on_init_failed<CUresult >(168);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetv_init(CUfunction arg0, int arg1, void *arg2, unsigned int arg3) {
     load_library();
     return cuParamSetv(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetv_error(CUfunction, int, void *, unsigned int) {
-    return on_init_failed<CUresult >(148);
+    return on_init_failed<CUresult >(169);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunch_init(CUfunction arg0) {
     load_library();
     return cuLaunch(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunch_error(CUfunction) {
-    return on_init_failed<CUresult >(149);
+    return on_init_failed<CUresult >(170);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchGrid_init(CUfunction arg0, int arg1, int arg2) {
     load_library();
     return cuLaunchGrid(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchGrid_error(CUfunction, int, int) {
-    return on_init_failed<CUresult >(150);
+    return on_init_failed<CUresult >(171);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchGridAsync_init(CUfunction arg0, int arg1, int arg2, CUstream arg3) {
     load_library();
     return cuLaunchGridAsync(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchGridAsync_error(CUfunction, int, int, CUstream) {
-    return on_init_failed<CUresult >(151);
+    return on_init_failed<CUresult >(172);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetTexRef_init(CUfunction arg0, int arg1, CUtexref arg2) {
     load_library();
     return cuParamSetTexRef(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuParamSetTexRef_error(CUfunction, int, CUtexref) {
-    return on_init_failed<CUresult >(152);
+    return on_init_failed<CUresult >(173);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphCreate_init(CUgraph *arg0, unsigned int arg1) {
+    load_library();
+    return cuGraphCreate(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphCreate_error(CUgraph *, unsigned int) {
+    return on_init_failed<CUresult >(174);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddKernelNode_init(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_KERNEL_NODE_PARAMS *arg4) {
+    load_library();
+    return cuGraphAddKernelNode(arg0, arg1, arg2, arg3, arg4);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddKernelNode_error(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_KERNEL_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(175);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphKernelNodeGetParams_init(CUgraphNode arg0, CUDA_KERNEL_NODE_PARAMS *arg1) {
+    load_library();
+    return cuGraphKernelNodeGetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphKernelNodeGetParams_error(CUgraphNode, CUDA_KERNEL_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(176);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphKernelNodeSetParams_init(CUgraphNode arg0, const CUDA_KERNEL_NODE_PARAMS *arg1) {
+    load_library();
+    return cuGraphKernelNodeSetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphKernelNodeSetParams_error(CUgraphNode, const CUDA_KERNEL_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(177);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddMemcpyNode_init(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_MEMCPY3D *arg4, CUcontext arg5) {
+    load_library();
+    return cuGraphAddMemcpyNode(arg0, arg1, arg2, arg3, arg4, arg5);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddMemcpyNode_error(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_MEMCPY3D *, CUcontext) {
+    return on_init_failed<CUresult >(178);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemcpyNodeGetParams_init(CUgraphNode arg0, CUDA_MEMCPY3D *arg1) {
+    load_library();
+    return cuGraphMemcpyNodeGetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemcpyNodeGetParams_error(CUgraphNode, CUDA_MEMCPY3D *) {
+    return on_init_failed<CUresult >(179);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemcpyNodeSetParams_init(CUgraphNode arg0, const CUDA_MEMCPY3D *arg1) {
+    load_library();
+    return cuGraphMemcpyNodeSetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemcpyNodeSetParams_error(CUgraphNode, const CUDA_MEMCPY3D *) {
+    return on_init_failed<CUresult >(180);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddMemsetNode_init(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_MEMSET_NODE_PARAMS *arg4, CUcontext arg5) {
+    load_library();
+    return cuGraphAddMemsetNode(arg0, arg1, arg2, arg3, arg4, arg5);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddMemsetNode_error(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_MEMSET_NODE_PARAMS *, CUcontext) {
+    return on_init_failed<CUresult >(181);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemsetNodeGetParams_init(CUgraphNode arg0, CUDA_MEMSET_NODE_PARAMS *arg1) {
+    load_library();
+    return cuGraphMemsetNodeGetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemsetNodeGetParams_error(CUgraphNode, CUDA_MEMSET_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(182);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemsetNodeSetParams_init(CUgraphNode arg0, const CUDA_MEMSET_NODE_PARAMS *arg1) {
+    load_library();
+    return cuGraphMemsetNodeSetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphMemsetNodeSetParams_error(CUgraphNode, const CUDA_MEMSET_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(183);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddHostNode_init(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_HOST_NODE_PARAMS *arg4) {
+    load_library();
+    return cuGraphAddHostNode(arg0, arg1, arg2, arg3, arg4);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddHostNode_error(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_HOST_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(184);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphHostNodeGetParams_init(CUgraphNode arg0, CUDA_HOST_NODE_PARAMS *arg1) {
+    load_library();
+    return cuGraphHostNodeGetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphHostNodeGetParams_error(CUgraphNode, CUDA_HOST_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(185);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphHostNodeSetParams_init(CUgraphNode arg0, const CUDA_HOST_NODE_PARAMS *arg1) {
+    load_library();
+    return cuGraphHostNodeSetParams(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphHostNodeSetParams_error(CUgraphNode, const CUDA_HOST_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(186);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddChildGraphNode_init(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, CUgraph arg4) {
+    load_library();
+    return cuGraphAddChildGraphNode(arg0, arg1, arg2, arg3, arg4);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddChildGraphNode_error(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, CUgraph) {
+    return on_init_failed<CUresult >(187);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphChildGraphNodeGetGraph_init(CUgraphNode arg0, CUgraph *arg1) {
+    load_library();
+    return cuGraphChildGraphNodeGetGraph(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphChildGraphNodeGetGraph_error(CUgraphNode, CUgraph *) {
+    return on_init_failed<CUresult >(188);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddEmptyNode_init(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3) {
+    load_library();
+    return cuGraphAddEmptyNode(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddEmptyNode_error(CUgraphNode *, CUgraph, const CUgraphNode *, size_t) {
+    return on_init_failed<CUresult >(189);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphClone_init(CUgraph *arg0, CUgraph arg1) {
+    load_library();
+    return cuGraphClone(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphClone_error(CUgraph *, CUgraph) {
+    return on_init_failed<CUresult >(190);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeFindInClone_init(CUgraphNode *arg0, CUgraphNode arg1, CUgraph arg2) {
+    load_library();
+    return cuGraphNodeFindInClone(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeFindInClone_error(CUgraphNode *, CUgraphNode, CUgraph) {
+    return on_init_failed<CUresult >(191);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeGetType_init(CUgraphNode arg0, CUgraphNodeType *arg1) {
+    load_library();
+    return cuGraphNodeGetType(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeGetType_error(CUgraphNode, CUgraphNodeType *) {
+    return on_init_failed<CUresult >(192);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphGetNodes_init(CUgraph arg0, CUgraphNode *arg1, size_t *arg2) {
+    load_library();
+    return cuGraphGetNodes(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphGetNodes_error(CUgraph, CUgraphNode *, size_t *) {
+    return on_init_failed<CUresult >(193);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphGetRootNodes_init(CUgraph arg0, CUgraphNode *arg1, size_t *arg2) {
+    load_library();
+    return cuGraphGetRootNodes(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphGetRootNodes_error(CUgraph, CUgraphNode *, size_t *) {
+    return on_init_failed<CUresult >(194);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphGetEdges_init(CUgraph arg0, CUgraphNode *arg1, CUgraphNode *arg2, size_t *arg3) {
+    load_library();
+    return cuGraphGetEdges(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphGetEdges_error(CUgraph, CUgraphNode *, CUgraphNode *, size_t *) {
+    return on_init_failed<CUresult >(195);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeGetDependencies_init(CUgraphNode arg0, CUgraphNode *arg1, size_t *arg2) {
+    load_library();
+    return cuGraphNodeGetDependencies(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeGetDependencies_error(CUgraphNode, CUgraphNode *, size_t *) {
+    return on_init_failed<CUresult >(196);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeGetDependentNodes_init(CUgraphNode arg0, CUgraphNode *arg1, size_t *arg2) {
+    load_library();
+    return cuGraphNodeGetDependentNodes(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphNodeGetDependentNodes_error(CUgraphNode, CUgraphNode *, size_t *) {
+    return on_init_failed<CUresult >(197);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddDependencies_init(CUgraph arg0, const CUgraphNode *arg1, const CUgraphNode *arg2, size_t arg3) {
+    load_library();
+    return cuGraphAddDependencies(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphAddDependencies_error(CUgraph, const CUgraphNode *, const CUgraphNode *, size_t) {
+    return on_init_failed<CUresult >(198);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphRemoveDependencies_init(CUgraph arg0, const CUgraphNode *arg1, const CUgraphNode *arg2, size_t arg3) {
+    load_library();
+    return cuGraphRemoveDependencies(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphRemoveDependencies_error(CUgraph, const CUgraphNode *, const CUgraphNode *, size_t) {
+    return on_init_failed<CUresult >(199);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphDestroyNode_init(CUgraphNode arg0) {
+    load_library();
+    return cuGraphDestroyNode(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphDestroyNode_error(CUgraphNode) {
+    return on_init_failed<CUresult >(200);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphInstantiate_init(CUgraphExec *arg0, CUgraph arg1, CUgraphNode *arg2, char *arg3, size_t arg4) {
+    load_library();
+    return cuGraphInstantiate(arg0, arg1, arg2, arg3, arg4);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphInstantiate_error(CUgraphExec *, CUgraph, CUgraphNode *, char *, size_t) {
+    return on_init_failed<CUresult >(201);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphExecKernelNodeSetParams_init(CUgraphExec arg0, CUgraphNode arg1, const CUDA_KERNEL_NODE_PARAMS *arg2) {
+    load_library();
+    return cuGraphExecKernelNodeSetParams(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphExecKernelNodeSetParams_error(CUgraphExec, CUgraphNode, const CUDA_KERNEL_NODE_PARAMS *) {
+    return on_init_failed<CUresult >(202);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphLaunch_ptsz_init(CUgraphExec arg0, CUstream arg1) {
+    load_library();
+    return cuGraphLaunch_ptsz(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphLaunch_ptsz_error(CUgraphExec, CUstream) {
+    return on_init_failed<CUresult >(203);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphExecDestroy_init(CUgraphExec arg0) {
+    load_library();
+    return cuGraphExecDestroy(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphExecDestroy_error(CUgraphExec) {
+    return on_init_failed<CUresult >(204);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphDestroy_init(CUgraph arg0) {
+    load_library();
+    return cuGraphDestroy(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphDestroy_error(CUgraph) {
+    return on_init_failed<CUresult >(205);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxActiveBlocksPerMultiprocessor_init(int *arg0, CUfunction arg1, int arg2, size_t arg3) {
     load_library();
     return cuOccupancyMaxActiveBlocksPerMultiprocessor(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxActiveBlocksPerMultiprocessor_error(int *, CUfunction, int, size_t) {
-    return on_init_failed<CUresult >(153);
+    return on_init_failed<CUresult >(206);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags_init(int *arg0, CUfunction arg1, int arg2, size_t arg3, unsigned int arg4) {
     load_library();
     return cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags_error(int *, CUfunction, int, size_t, unsigned int) {
-    return on_init_failed<CUresult >(154);
+    return on_init_failed<CUresult >(207);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxPotentialBlockSize_init(int *arg0, int *arg1, CUfunction arg2, CUoccupancyB2DSize arg3, size_t arg4, int arg5) {
     load_library();
     return cuOccupancyMaxPotentialBlockSize(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxPotentialBlockSize_error(int *, int *, CUfunction, CUoccupancyB2DSize, size_t, int) {
-    return on_init_failed<CUresult >(155);
+    return on_init_failed<CUresult >(208);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxPotentialBlockSizeWithFlags_init(int *arg0, int *arg1, CUfunction arg2, CUoccupancyB2DSize arg3, size_t arg4, int arg5, unsigned int arg6) {
     load_library();
     return cuOccupancyMaxPotentialBlockSizeWithFlags(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 }
 static CUresult _WRAPLIB_API_CALL cuOccupancyMaxPotentialBlockSizeWithFlags_error(int *, int *, CUfunction, CUoccupancyB2DSize, size_t, int, unsigned int) {
-    return on_init_failed<CUresult >(156);
+    return on_init_failed<CUresult >(209);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetArray_init(CUtexref arg0, CUarray arg1, unsigned int arg2) {
     load_library();
     return cuTexRefSetArray(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetArray_error(CUtexref, CUarray, unsigned int) {
-    return on_init_failed<CUresult >(157);
+    return on_init_failed<CUresult >(210);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmappedArray_init(CUtexref arg0, CUmipmappedArray arg1, unsigned int arg2) {
     load_library();
     return cuTexRefSetMipmappedArray(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmappedArray_error(CUtexref, CUmipmappedArray, unsigned int) {
-    return on_init_failed<CUresult >(158);
+    return on_init_failed<CUresult >(211);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress_v2_init(size_t *arg0, CUtexref arg1, CUdeviceptr arg2, size_t arg3) {
     load_library();
     return cuTexRefSetAddress_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress_v2_error(size_t *, CUtexref, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(159);
+    return on_init_failed<CUresult >(212);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_v3_init(CUtexref arg0, const CUDA_ARRAY_DESCRIPTOR *arg1, CUdeviceptr arg2, size_t arg3) {
     load_library();
     return cuTexRefSetAddress2D_v3(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_v3_error(CUtexref, const CUDA_ARRAY_DESCRIPTOR *, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(160);
+    return on_init_failed<CUresult >(213);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetFormat_init(CUtexref arg0, CUarray_format arg1, int arg2) {
     load_library();
     return cuTexRefSetFormat(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetFormat_error(CUtexref, CUarray_format, int) {
-    return on_init_failed<CUresult >(161);
+    return on_init_failed<CUresult >(214);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddressMode_init(CUtexref arg0, int arg1, CUaddress_mode arg2) {
     load_library();
     return cuTexRefSetAddressMode(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddressMode_error(CUtexref, int, CUaddress_mode) {
-    return on_init_failed<CUresult >(162);
+    return on_init_failed<CUresult >(215);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetFilterMode_init(CUtexref arg0, CUfilter_mode arg1) {
     load_library();
     return cuTexRefSetFilterMode(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetFilterMode_error(CUtexref, CUfilter_mode) {
-    return on_init_failed<CUresult >(163);
+    return on_init_failed<CUresult >(216);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapFilterMode_init(CUtexref arg0, CUfilter_mode arg1) {
     load_library();
     return cuTexRefSetMipmapFilterMode(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapFilterMode_error(CUtexref, CUfilter_mode) {
-    return on_init_failed<CUresult >(164);
+    return on_init_failed<CUresult >(217);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapLevelBias_init(CUtexref arg0, float arg1) {
     load_library();
     return cuTexRefSetMipmapLevelBias(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapLevelBias_error(CUtexref, float) {
-    return on_init_failed<CUresult >(165);
+    return on_init_failed<CUresult >(218);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapLevelClamp_init(CUtexref arg0, float arg1, float arg2) {
     load_library();
     return cuTexRefSetMipmapLevelClamp(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapLevelClamp_error(CUtexref, float, float) {
-    return on_init_failed<CUresult >(166);
+    return on_init_failed<CUresult >(219);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMaxAnisotropy_init(CUtexref arg0, unsigned int arg1) {
     load_library();
     return cuTexRefSetMaxAnisotropy(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetMaxAnisotropy_error(CUtexref, unsigned int) {
-    return on_init_failed<CUresult >(167);
+    return on_init_failed<CUresult >(220);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetBorderColor_init(CUtexref arg0, float *arg1) {
     load_library();
     return cuTexRefSetBorderColor(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetBorderColor_error(CUtexref, float *) {
-    return on_init_failed<CUresult >(168);
+    return on_init_failed<CUresult >(221);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetFlags_init(CUtexref arg0, unsigned int arg1) {
     load_library();
     return cuTexRefSetFlags(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetFlags_error(CUtexref, unsigned int) {
-    return on_init_failed<CUresult >(169);
+    return on_init_failed<CUresult >(222);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetAddress_v2_init(CUdeviceptr *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetAddress_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetAddress_v2_error(CUdeviceptr *, CUtexref) {
-    return on_init_failed<CUresult >(170);
+    return on_init_failed<CUresult >(223);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetArray_init(CUarray *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetArray(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetArray_error(CUarray *, CUtexref) {
-    return on_init_failed<CUresult >(171);
+    return on_init_failed<CUresult >(224);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmappedArray_init(CUmipmappedArray *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetMipmappedArray(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmappedArray_error(CUmipmappedArray *, CUtexref) {
-    return on_init_failed<CUresult >(172);
+    return on_init_failed<CUresult >(225);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetAddressMode_init(CUaddress_mode *arg0, CUtexref arg1, int arg2) {
     load_library();
     return cuTexRefGetAddressMode(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetAddressMode_error(CUaddress_mode *, CUtexref, int) {
-    return on_init_failed<CUresult >(173);
+    return on_init_failed<CUresult >(226);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetFilterMode_init(CUfilter_mode *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetFilterMode(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetFilterMode_error(CUfilter_mode *, CUtexref) {
-    return on_init_failed<CUresult >(174);
+    return on_init_failed<CUresult >(227);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetFormat_init(CUarray_format *arg0, int *arg1, CUtexref arg2) {
     load_library();
     return cuTexRefGetFormat(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetFormat_error(CUarray_format *, int *, CUtexref) {
-    return on_init_failed<CUresult >(175);
+    return on_init_failed<CUresult >(228);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapFilterMode_init(CUfilter_mode *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetMipmapFilterMode(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapFilterMode_error(CUfilter_mode *, CUtexref) {
-    return on_init_failed<CUresult >(176);
+    return on_init_failed<CUresult >(229);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapLevelBias_init(float *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetMipmapLevelBias(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapLevelBias_error(float *, CUtexref) {
-    return on_init_failed<CUresult >(177);
+    return on_init_failed<CUresult >(230);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapLevelClamp_init(float *arg0, float *arg1, CUtexref arg2) {
     load_library();
     return cuTexRefGetMipmapLevelClamp(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapLevelClamp_error(float *, float *, CUtexref) {
-    return on_init_failed<CUresult >(178);
+    return on_init_failed<CUresult >(231);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMaxAnisotropy_init(int *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetMaxAnisotropy(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetMaxAnisotropy_error(int *, CUtexref) {
-    return on_init_failed<CUresult >(179);
+    return on_init_failed<CUresult >(232);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetBorderColor_init(float *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetBorderColor(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetBorderColor_error(float *, CUtexref) {
-    return on_init_failed<CUresult >(180);
+    return on_init_failed<CUresult >(233);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetFlags_init(unsigned int *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetFlags(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetFlags_error(unsigned int *, CUtexref) {
-    return on_init_failed<CUresult >(181);
+    return on_init_failed<CUresult >(234);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefCreate_init(CUtexref *arg0) {
     load_library();
     return cuTexRefCreate(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefCreate_error(CUtexref *) {
-    return on_init_failed<CUresult >(182);
+    return on_init_failed<CUresult >(235);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefDestroy_init(CUtexref arg0) {
     load_library();
     return cuTexRefDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefDestroy_error(CUtexref) {
-    return on_init_failed<CUresult >(183);
+    return on_init_failed<CUresult >(236);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfRefSetArray_init(CUsurfref arg0, CUarray arg1, unsigned int arg2) {
     load_library();
     return cuSurfRefSetArray(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfRefSetArray_error(CUsurfref, CUarray, unsigned int) {
-    return on_init_failed<CUresult >(184);
+    return on_init_failed<CUresult >(237);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfRefGetArray_init(CUarray *arg0, CUsurfref arg1) {
     load_library();
     return cuSurfRefGetArray(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfRefGetArray_error(CUarray *, CUsurfref) {
-    return on_init_failed<CUresult >(185);
+    return on_init_failed<CUresult >(238);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectCreate_init(CUtexObject *arg0, const CUDA_RESOURCE_DESC *arg1, const CUDA_TEXTURE_DESC *arg2, const CUDA_RESOURCE_VIEW_DESC *arg3) {
     load_library();
     return cuTexObjectCreate(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectCreate_error(CUtexObject *, const CUDA_RESOURCE_DESC *, const CUDA_TEXTURE_DESC *, const CUDA_RESOURCE_VIEW_DESC *) {
-    return on_init_failed<CUresult >(186);
+    return on_init_failed<CUresult >(239);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectDestroy_init(CUtexObject arg0) {
     load_library();
     return cuTexObjectDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectDestroy_error(CUtexObject) {
-    return on_init_failed<CUresult >(187);
+    return on_init_failed<CUresult >(240);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectGetResourceDesc_init(CUDA_RESOURCE_DESC *arg0, CUtexObject arg1) {
     load_library();
     return cuTexObjectGetResourceDesc(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectGetResourceDesc_error(CUDA_RESOURCE_DESC *, CUtexObject) {
-    return on_init_failed<CUresult >(188);
+    return on_init_failed<CUresult >(241);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectGetTextureDesc_init(CUDA_TEXTURE_DESC *arg0, CUtexObject arg1) {
     load_library();
     return cuTexObjectGetTextureDesc(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectGetTextureDesc_error(CUDA_TEXTURE_DESC *, CUtexObject) {
-    return on_init_failed<CUresult >(189);
+    return on_init_failed<CUresult >(242);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectGetResourceViewDesc_init(CUDA_RESOURCE_VIEW_DESC *arg0, CUtexObject arg1) {
     load_library();
     return cuTexObjectGetResourceViewDesc(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexObjectGetResourceViewDesc_error(CUDA_RESOURCE_VIEW_DESC *, CUtexObject) {
-    return on_init_failed<CUresult >(190);
+    return on_init_failed<CUresult >(243);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfObjectCreate_init(CUsurfObject *arg0, const CUDA_RESOURCE_DESC *arg1) {
     load_library();
     return cuSurfObjectCreate(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfObjectCreate_error(CUsurfObject *, const CUDA_RESOURCE_DESC *) {
-    return on_init_failed<CUresult >(191);
+    return on_init_failed<CUresult >(244);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfObjectDestroy_init(CUsurfObject arg0) {
     load_library();
     return cuSurfObjectDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfObjectDestroy_error(CUsurfObject) {
-    return on_init_failed<CUresult >(192);
+    return on_init_failed<CUresult >(245);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfObjectGetResourceDesc_init(CUDA_RESOURCE_DESC *arg0, CUsurfObject arg1) {
     load_library();
     return cuSurfObjectGetResourceDesc(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuSurfObjectGetResourceDesc_error(CUDA_RESOURCE_DESC *, CUsurfObject) {
-    return on_init_failed<CUresult >(193);
+    return on_init_failed<CUresult >(246);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceCanAccessPeer_init(int *arg0, CUdevice arg1, CUdevice arg2) {
     load_library();
     return cuDeviceCanAccessPeer(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceCanAccessPeer_error(int *, CUdevice, CUdevice) {
-    return on_init_failed<CUresult >(194);
-}
-static CUresult _WRAPLIB_API_CALL cuDeviceGetP2PAttribute_init(int *arg0, CUdevice_P2PAttribute arg1, CUdevice arg2, CUdevice arg3) {
-    load_library();
-    return cuDeviceGetP2PAttribute(arg0, arg1, arg2, arg3);
-}
-static CUresult _WRAPLIB_API_CALL cuDeviceGetP2PAttribute_error(int *, CUdevice_P2PAttribute, CUdevice, CUdevice) {
-    return on_init_failed<CUresult >(195);
+    return on_init_failed<CUresult >(247);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxEnablePeerAccess_init(CUcontext arg0, unsigned int arg1) {
     load_library();
     return cuCtxEnablePeerAccess(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxEnablePeerAccess_error(CUcontext, unsigned int) {
-    return on_init_failed<CUresult >(196);
+    return on_init_failed<CUresult >(248);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDisablePeerAccess_init(CUcontext arg0) {
     load_library();
     return cuCtxDisablePeerAccess(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDisablePeerAccess_error(CUcontext) {
-    return on_init_failed<CUresult >(197);
+    return on_init_failed<CUresult >(249);
+}
+static CUresult _WRAPLIB_API_CALL cuDeviceGetP2PAttribute_init(int *arg0, CUdevice_P2PAttribute arg1, CUdevice arg2, CUdevice arg3) {
+    load_library();
+    return cuDeviceGetP2PAttribute(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuDeviceGetP2PAttribute_error(int *, CUdevice_P2PAttribute, CUdevice, CUdevice) {
+    return on_init_failed<CUresult >(250);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsUnregisterResource_init(CUgraphicsResource arg0) {
     load_library();
     return cuGraphicsUnregisterResource(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsUnregisterResource_error(CUgraphicsResource) {
-    return on_init_failed<CUresult >(198);
+    return on_init_failed<CUresult >(251);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsSubResourceGetMappedArray_init(CUarray *arg0, CUgraphicsResource arg1, unsigned int arg2, unsigned int arg3) {
     load_library();
     return cuGraphicsSubResourceGetMappedArray(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsSubResourceGetMappedArray_error(CUarray *, CUgraphicsResource, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(199);
+    return on_init_failed<CUresult >(252);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedMipmappedArray_init(CUmipmappedArray *arg0, CUgraphicsResource arg1) {
     load_library();
     return cuGraphicsResourceGetMappedMipmappedArray(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedMipmappedArray_error(CUmipmappedArray *, CUgraphicsResource) {
-    return on_init_failed<CUresult >(200);
+    return on_init_failed<CUresult >(253);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedPointer_v2_init(CUdeviceptr *arg0, size_t *arg1, CUgraphicsResource arg2) {
     load_library();
     return cuGraphicsResourceGetMappedPointer_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedPointer_v2_error(CUdeviceptr *, size_t *, CUgraphicsResource) {
-    return on_init_failed<CUresult >(201);
+    return on_init_failed<CUresult >(254);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceSetMapFlags_v2_init(CUgraphicsResource arg0, unsigned int arg1) {
     load_library();
     return cuGraphicsResourceSetMapFlags_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceSetMapFlags_v2_error(CUgraphicsResource, unsigned int) {
-    return on_init_failed<CUresult >(202);
+    return on_init_failed<CUresult >(255);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsMapResources_ptsz_init(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     load_library();
     return cuGraphicsMapResources_ptsz(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsMapResources_ptsz_error(unsigned int, CUgraphicsResource *, CUstream) {
-    return on_init_failed<CUresult >(203);
+    return on_init_failed<CUresult >(256);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsUnmapResources_ptsz_init(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     load_library();
     return cuGraphicsUnmapResources_ptsz(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsUnmapResources_ptsz_error(unsigned int, CUgraphicsResource *, CUstream) {
-    return on_init_failed<CUresult >(204);
+    return on_init_failed<CUresult >(257);
 }
 static CUresult _WRAPLIB_API_CALL cuGetExportTable_init(const void **arg0, const CUuuid *arg1) {
     load_library();
     return cuGetExportTable(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuGetExportTable_error(const void **, const CUuuid *) {
-    return on_init_failed<CUresult >(205);
+    return on_init_failed<CUresult >(258);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostRegister_init(void *arg0, size_t arg1, unsigned int arg2) {
     load_library();
     return cuMemHostRegister(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostRegister_error(void *, size_t, unsigned int) {
-    return on_init_failed<CUresult >(206);
+    return on_init_failed<CUresult >(259);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceSetMapFlags_init(CUgraphicsResource arg0, unsigned int arg1) {
     load_library();
     return cuGraphicsResourceSetMapFlags(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceSetMapFlags_error(CUgraphicsResource, unsigned int) {
-    return on_init_failed<CUresult >(207);
+    return on_init_failed<CUresult >(260);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkCreate_init(unsigned int arg0, CUjit_option *arg1, void **arg2, CUlinkState *arg3) {
     load_library();
     return cuLinkCreate(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkCreate_error(unsigned int, CUjit_option *, void **, CUlinkState *) {
-    return on_init_failed<CUresult >(208);
+    return on_init_failed<CUresult >(261);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddData_init(CUlinkState arg0, CUjitInputType arg1, void *arg2, size_t arg3, const char *arg4, unsigned int arg5, CUjit_option *arg6, void **arg7) {
     load_library();
     return cuLinkAddData(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddData_error(CUlinkState, CUjitInputType, void *, size_t, const char *, unsigned int, CUjit_option *, void **) {
-    return on_init_failed<CUresult >(209);
+    return on_init_failed<CUresult >(262);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddFile_init(CUlinkState arg0, CUjitInputType arg1, const char *arg2, unsigned int arg3, CUjit_option *arg4, void **arg5) {
     load_library();
     return cuLinkAddFile(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuLinkAddFile_error(CUlinkState, CUjitInputType, const char *, unsigned int, CUjit_option *, void **) {
-    return on_init_failed<CUresult >(210);
+    return on_init_failed<CUresult >(263);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_v2_init(CUtexref arg0, const CUDA_ARRAY_DESCRIPTOR *arg1, CUdeviceptr arg2, size_t arg3) {
     load_library();
     return cuTexRefSetAddress2D_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_v2_error(CUtexref, const CUDA_ARRAY_DESCRIPTOR *, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(211);
+    return on_init_failed<CUresult >(264);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceTotalMem_init(unsigned int *arg0, CUdevice arg1) {
     load_library();
     return cuDeviceTotalMem(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuDeviceTotalMem_error(unsigned int *, CUdevice) {
-    return on_init_failed<CUresult >(212);
+    return on_init_failed<CUresult >(265);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxCreate_init(CUcontext *arg0, unsigned int arg1, CUdevice arg2) {
     load_library();
     return cuCtxCreate(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxCreate_error(CUcontext *, unsigned int, CUdevice) {
-    return on_init_failed<CUresult >(213);
+    return on_init_failed<CUresult >(266);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetGlobal_init(CUdeviceptr_v1 *arg0, unsigned int *arg1, CUmodule arg2, const char *arg3) {
     load_library();
     return cuModuleGetGlobal(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuModuleGetGlobal_error(CUdeviceptr_v1 *, unsigned int *, CUmodule, const char *) {
-    return on_init_failed<CUresult >(214);
+    return on_init_failed<CUresult >(267);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetInfo_init(unsigned int *arg0, unsigned int *arg1) {
     load_library();
     return cuMemGetInfo(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetInfo_error(unsigned int *, unsigned int *) {
-    return on_init_failed<CUresult >(215);
+    return on_init_failed<CUresult >(268);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAlloc_init(CUdeviceptr_v1 *arg0, unsigned int arg1) {
     load_library();
     return cuMemAlloc(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAlloc_error(CUdeviceptr_v1 *, unsigned int) {
-    return on_init_failed<CUresult >(216);
+    return on_init_failed<CUresult >(269);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocPitch_init(CUdeviceptr_v1 *arg0, unsigned int *arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4) {
     load_library();
     return cuMemAllocPitch(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocPitch_error(CUdeviceptr_v1 *, unsigned int *, unsigned int, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(217);
+    return on_init_failed<CUresult >(270);
 }
 static CUresult _WRAPLIB_API_CALL cuMemFree_init(CUdeviceptr_v1 arg0) {
     load_library();
     return cuMemFree(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemFree_error(CUdeviceptr_v1) {
-    return on_init_failed<CUresult >(218);
+    return on_init_failed<CUresult >(271);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetAddressRange_init(CUdeviceptr_v1 *arg0, unsigned int *arg1, CUdeviceptr_v1 arg2) {
     load_library();
     return cuMemGetAddressRange(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemGetAddressRange_error(CUdeviceptr_v1 *, unsigned int *, CUdeviceptr_v1) {
-    return on_init_failed<CUresult >(219);
+    return on_init_failed<CUresult >(272);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocHost_init(void **arg0, unsigned int arg1) {
     load_library();
     return cuMemAllocHost(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemAllocHost_error(void **, unsigned int) {
-    return on_init_failed<CUresult >(220);
+    return on_init_failed<CUresult >(273);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostGetDevicePointer_init(CUdeviceptr_v1 *arg0, void *arg1, unsigned int arg2) {
     load_library();
     return cuMemHostGetDevicePointer(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemHostGetDevicePointer_error(CUdeviceptr_v1 *, void *, unsigned int) {
-    return on_init_failed<CUresult >(221);
+    return on_init_failed<CUresult >(274);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_init(CUdeviceptr_v1 arg0, const void *arg1, unsigned int arg2) {
     load_library();
     return cuMemcpyHtoD(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_error(CUdeviceptr_v1, const void *, unsigned int) {
-    return on_init_failed<CUresult >(222);
+    return on_init_failed<CUresult >(275);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_init(void *arg0, CUdeviceptr_v1 arg1, unsigned int arg2) {
     load_library();
     return cuMemcpyDtoH(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_error(void *, CUdeviceptr_v1, unsigned int) {
-    return on_init_failed<CUresult >(223);
+    return on_init_failed<CUresult >(276);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_init(CUdeviceptr_v1 arg0, CUdeviceptr_v1 arg1, unsigned int arg2) {
     load_library();
     return cuMemcpyDtoD(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_error(CUdeviceptr_v1, CUdeviceptr_v1, unsigned int) {
-    return on_init_failed<CUresult >(224);
+    return on_init_failed<CUresult >(277);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_init(CUarray arg0, unsigned int arg1, CUdeviceptr_v1 arg2, unsigned int arg3) {
     load_library();
     return cuMemcpyDtoA(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_error(CUarray, unsigned int, CUdeviceptr_v1, unsigned int) {
-    return on_init_failed<CUresult >(225);
+    return on_init_failed<CUresult >(278);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_init(CUdeviceptr_v1 arg0, CUarray arg1, unsigned int arg2, unsigned int arg3) {
     load_library();
     return cuMemcpyAtoD(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_error(CUdeviceptr_v1, CUarray, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(226);
+    return on_init_failed<CUresult >(279);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_init(CUarray arg0, unsigned int arg1, const void *arg2, unsigned int arg3) {
     load_library();
     return cuMemcpyHtoA(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_error(CUarray, unsigned int, const void *, unsigned int) {
-    return on_init_failed<CUresult >(227);
+    return on_init_failed<CUresult >(280);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_init(void *arg0, CUarray arg1, unsigned int arg2, unsigned int arg3) {
     load_library();
     return cuMemcpyAtoH(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_error(void *, CUarray, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(228);
+    return on_init_failed<CUresult >(281);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_init(CUarray arg0, unsigned int arg1, CUarray arg2, unsigned int arg3, unsigned int arg4) {
     load_library();
     return cuMemcpyAtoA(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_error(CUarray, unsigned int, CUarray, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(229);
+    return on_init_failed<CUresult >(282);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_init(CUarray arg0, unsigned int arg1, const void *arg2, unsigned int arg3, CUstream arg4) {
     load_library();
     return cuMemcpyHtoAAsync(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_error(CUarray, unsigned int, const void *, unsigned int, CUstream) {
-    return on_init_failed<CUresult >(230);
+    return on_init_failed<CUresult >(283);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_init(void *arg0, CUarray arg1, unsigned int arg2, unsigned int arg3, CUstream arg4) {
     load_library();
     return cuMemcpyAtoHAsync(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_error(void *, CUarray, unsigned int, unsigned int, CUstream) {
-    return on_init_failed<CUresult >(231);
+    return on_init_failed<CUresult >(284);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2D_init(const CUDA_MEMCPY2D_v1 *arg0) {
     load_library();
     return cuMemcpy2D(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2D_error(const CUDA_MEMCPY2D_v1 *) {
-    return on_init_failed<CUresult >(232);
+    return on_init_failed<CUresult >(285);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_init(const CUDA_MEMCPY2D_v1 *arg0) {
     load_library();
     return cuMemcpy2DUnaligned(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_error(const CUDA_MEMCPY2D_v1 *) {
-    return on_init_failed<CUresult >(233);
+    return on_init_failed<CUresult >(286);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3D_init(const CUDA_MEMCPY3D_v1 *arg0) {
     load_library();
     return cuMemcpy3D(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3D_error(const CUDA_MEMCPY3D_v1 *) {
-    return on_init_failed<CUresult >(234);
+    return on_init_failed<CUresult >(287);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_init(CUdeviceptr_v1 arg0, const void *arg1, unsigned int arg2, CUstream arg3) {
     load_library();
     return cuMemcpyHtoDAsync(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_error(CUdeviceptr_v1, const void *, unsigned int, CUstream) {
-    return on_init_failed<CUresult >(235);
+    return on_init_failed<CUresult >(288);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_init(void *arg0, CUdeviceptr_v1 arg1, unsigned int arg2, CUstream arg3) {
     load_library();
     return cuMemcpyDtoHAsync(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_error(void *, CUdeviceptr_v1, unsigned int, CUstream) {
-    return on_init_failed<CUresult >(236);
+    return on_init_failed<CUresult >(289);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_init(CUdeviceptr_v1 arg0, CUdeviceptr_v1 arg1, unsigned int arg2, CUstream arg3) {
     load_library();
     return cuMemcpyDtoDAsync(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_error(CUdeviceptr_v1, CUdeviceptr_v1, unsigned int, CUstream) {
-    return on_init_failed<CUresult >(237);
+    return on_init_failed<CUresult >(290);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_init(const CUDA_MEMCPY2D_v1 *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy2DAsync(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_error(const CUDA_MEMCPY2D_v1 *, CUstream) {
-    return on_init_failed<CUresult >(238);
+    return on_init_failed<CUresult >(291);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_init(const CUDA_MEMCPY3D_v1 *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy3DAsync(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_error(const CUDA_MEMCPY3D_v1 *, CUstream) {
-    return on_init_failed<CUresult >(239);
+    return on_init_failed<CUresult >(292);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8_init(CUdeviceptr_v1 arg0, unsigned char arg1, unsigned int arg2) {
     load_library();
     return cuMemsetD8(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8_error(CUdeviceptr_v1, unsigned char, unsigned int) {
-    return on_init_failed<CUresult >(240);
+    return on_init_failed<CUresult >(293);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16_init(CUdeviceptr_v1 arg0, unsigned short arg1, unsigned int arg2) {
     load_library();
     return cuMemsetD16(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16_error(CUdeviceptr_v1, unsigned short, unsigned int) {
-    return on_init_failed<CUresult >(241);
+    return on_init_failed<CUresult >(294);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32_init(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned int arg2) {
     load_library();
     return cuMemsetD32(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32_error(CUdeviceptr_v1, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(242);
+    return on_init_failed<CUresult >(295);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8_init(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned char arg2, unsigned int arg3, unsigned int arg4) {
     load_library();
     return cuMemsetD2D8(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8_error(CUdeviceptr_v1, unsigned int, unsigned char, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(243);
+    return on_init_failed<CUresult >(296);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16_init(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned short arg2, unsigned int arg3, unsigned int arg4) {
     load_library();
     return cuMemsetD2D16(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16_error(CUdeviceptr_v1, unsigned int, unsigned short, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(244);
+    return on_init_failed<CUresult >(297);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32_init(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4) {
     load_library();
     return cuMemsetD2D32(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32_error(CUdeviceptr_v1, unsigned int, unsigned int, unsigned int, unsigned int) {
-    return on_init_failed<CUresult >(245);
+    return on_init_failed<CUresult >(298);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayCreate_init(CUarray *arg0, const CUDA_ARRAY_DESCRIPTOR_v1 *arg1) {
     load_library();
     return cuArrayCreate(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayCreate_error(CUarray *, const CUDA_ARRAY_DESCRIPTOR_v1 *) {
-    return on_init_failed<CUresult >(246);
+    return on_init_failed<CUresult >(299);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayGetDescriptor_init(CUDA_ARRAY_DESCRIPTOR_v1 *arg0, CUarray arg1) {
     load_library();
     return cuArrayGetDescriptor(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArrayGetDescriptor_error(CUDA_ARRAY_DESCRIPTOR_v1 *, CUarray) {
-    return on_init_failed<CUresult >(247);
+    return on_init_failed<CUresult >(300);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DCreate_init(CUarray *arg0, const CUDA_ARRAY3D_DESCRIPTOR_v1 *arg1) {
     load_library();
     return cuArray3DCreate(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DCreate_error(CUarray *, const CUDA_ARRAY3D_DESCRIPTOR_v1 *) {
-    return on_init_failed<CUresult >(248);
+    return on_init_failed<CUresult >(301);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DGetDescriptor_init(CUDA_ARRAY3D_DESCRIPTOR_v1 *arg0, CUarray arg1) {
     load_library();
     return cuArray3DGetDescriptor(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuArray3DGetDescriptor_error(CUDA_ARRAY3D_DESCRIPTOR_v1 *, CUarray) {
-    return on_init_failed<CUresult >(249);
+    return on_init_failed<CUresult >(302);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress_init(unsigned int *arg0, CUtexref arg1, CUdeviceptr_v1 arg2, unsigned int arg3) {
     load_library();
     return cuTexRefSetAddress(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress_error(unsigned int *, CUtexref, CUdeviceptr_v1, unsigned int) {
-    return on_init_failed<CUresult >(250);
+    return on_init_failed<CUresult >(303);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_init(CUtexref arg0, const CUDA_ARRAY_DESCRIPTOR_v1 *arg1, CUdeviceptr_v1 arg2, unsigned int arg3) {
     load_library();
     return cuTexRefSetAddress2D(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_error(CUtexref, const CUDA_ARRAY_DESCRIPTOR_v1 *, CUdeviceptr_v1, unsigned int) {
-    return on_init_failed<CUresult >(251);
+    return on_init_failed<CUresult >(304);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetAddress_init(CUdeviceptr_v1 *arg0, CUtexref arg1) {
     load_library();
     return cuTexRefGetAddress(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuTexRefGetAddress_error(CUdeviceptr_v1 *, CUtexref) {
-    return on_init_failed<CUresult >(252);
+    return on_init_failed<CUresult >(305);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedPointer_init(CUdeviceptr_v1 *arg0, unsigned int *arg1, CUgraphicsResource arg2) {
     load_library();
     return cuGraphicsResourceGetMappedPointer(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedPointer_error(CUdeviceptr_v1 *, unsigned int *, CUgraphicsResource) {
-    return on_init_failed<CUresult >(253);
+    return on_init_failed<CUresult >(306);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDestroy_init(CUcontext arg0) {
     load_library();
     return cuCtxDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxDestroy_error(CUcontext) {
-    return on_init_failed<CUresult >(254);
+    return on_init_failed<CUresult >(307);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPopCurrent_init(CUcontext *arg0) {
     load_library();
     return cuCtxPopCurrent(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPopCurrent_error(CUcontext *) {
-    return on_init_failed<CUresult >(255);
+    return on_init_failed<CUresult >(308);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPushCurrent_init(CUcontext arg0) {
     load_library();
     return cuCtxPushCurrent(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuCtxPushCurrent_error(CUcontext) {
-    return on_init_failed<CUresult >(256);
+    return on_init_failed<CUresult >(309);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamDestroy_init(CUstream arg0) {
     load_library();
     return cuStreamDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamDestroy_error(CUstream) {
-    return on_init_failed<CUresult >(257);
+    return on_init_failed<CUresult >(310);
 }
 static CUresult _WRAPLIB_API_CALL cuEventDestroy_init(CUevent arg0) {
     load_library();
     return cuEventDestroy(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuEventDestroy_error(CUevent) {
-    return on_init_failed<CUresult >(258);
+    return on_init_failed<CUresult >(311);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_v2_init(CUdeviceptr arg0, const void *arg1, size_t arg2) {
     load_library();
     return cuMemcpyHtoD_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_v2_error(CUdeviceptr, const void *, size_t) {
-    return on_init_failed<CUresult >(259);
+    return on_init_failed<CUresult >(312);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_v2_init(void *arg0, CUdeviceptr arg1, size_t arg2) {
     load_library();
     return cuMemcpyDtoH_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_v2_error(void *, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(260);
+    return on_init_failed<CUresult >(313);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_v2_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     load_library();
     return cuMemcpyDtoD_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_v2_error(CUdeviceptr, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(261);
+    return on_init_failed<CUresult >(314);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_v2_init(CUarray arg0, size_t arg1, CUdeviceptr arg2, size_t arg3) {
     load_library();
     return cuMemcpyDtoA_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_v2_error(CUarray, size_t, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(262);
+    return on_init_failed<CUresult >(315);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_v2_init(CUdeviceptr arg0, CUarray arg1, size_t arg2, size_t arg3) {
     load_library();
     return cuMemcpyAtoD_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_v2_error(CUdeviceptr, CUarray, size_t, size_t) {
-    return on_init_failed<CUresult >(263);
+    return on_init_failed<CUresult >(316);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_v2_init(CUarray arg0, size_t arg1, const void *arg2, size_t arg3) {
     load_library();
     return cuMemcpyHtoA_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_v2_error(CUarray, size_t, const void *, size_t) {
-    return on_init_failed<CUresult >(264);
+    return on_init_failed<CUresult >(317);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_v2_init(void *arg0, CUarray arg1, size_t arg2, size_t arg3) {
     load_library();
     return cuMemcpyAtoH_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_v2_error(void *, CUarray, size_t, size_t) {
-    return on_init_failed<CUresult >(265);
+    return on_init_failed<CUresult >(318);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_v2_init(CUarray arg0, size_t arg1, CUarray arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemcpyAtoA_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_v2_error(CUarray, size_t, CUarray, size_t, size_t) {
-    return on_init_failed<CUresult >(266);
+    return on_init_failed<CUresult >(319);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_v2_init(CUarray arg0, size_t arg1, const void *arg2, size_t arg3, CUstream arg4) {
     load_library();
     return cuMemcpyHtoAAsync_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_v2_error(CUarray, size_t, const void *, size_t, CUstream) {
-    return on_init_failed<CUresult >(267);
+    return on_init_failed<CUresult >(320);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_v2_init(void *arg0, CUarray arg1, size_t arg2, size_t arg3, CUstream arg4) {
     load_library();
     return cuMemcpyAtoHAsync_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_v2_error(void *, CUarray, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(268);
+    return on_init_failed<CUresult >(321);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2D_v2_init(const CUDA_MEMCPY2D *arg0) {
     load_library();
     return cuMemcpy2D_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2D_v2_error(const CUDA_MEMCPY2D *) {
-    return on_init_failed<CUresult >(269);
+    return on_init_failed<CUresult >(322);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_v2_init(const CUDA_MEMCPY2D *arg0) {
     load_library();
     return cuMemcpy2DUnaligned_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_v2_error(const CUDA_MEMCPY2D *) {
-    return on_init_failed<CUresult >(270);
+    return on_init_failed<CUresult >(323);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3D_v2_init(const CUDA_MEMCPY3D *arg0) {
     load_library();
     return cuMemcpy3D_v2(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3D_v2_error(const CUDA_MEMCPY3D *) {
-    return on_init_failed<CUresult >(271);
+    return on_init_failed<CUresult >(324);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_v2_init(CUdeviceptr arg0, const void *arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyHtoDAsync_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_v2_error(CUdeviceptr, const void *, size_t, CUstream) {
-    return on_init_failed<CUresult >(272);
+    return on_init_failed<CUresult >(325);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_v2_init(void *arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyDtoHAsync_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_v2_error(void *, CUdeviceptr, size_t, CUstream) {
-    return on_init_failed<CUresult >(273);
+    return on_init_failed<CUresult >(326);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_v2_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyDtoDAsync_v2(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_v2_error(CUdeviceptr, CUdeviceptr, size_t, CUstream) {
-    return on_init_failed<CUresult >(274);
+    return on_init_failed<CUresult >(327);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_v2_init(const CUDA_MEMCPY2D *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy2DAsync_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_v2_error(const CUDA_MEMCPY2D *, CUstream) {
-    return on_init_failed<CUresult >(275);
+    return on_init_failed<CUresult >(328);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_v2_init(const CUDA_MEMCPY3D *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy3DAsync_v2(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_v2_error(const CUDA_MEMCPY3D *, CUstream) {
-    return on_init_failed<CUresult >(276);
+    return on_init_failed<CUresult >(329);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8_v2_init(CUdeviceptr arg0, unsigned char arg1, size_t arg2) {
     load_library();
     return cuMemsetD8_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8_v2_error(CUdeviceptr, unsigned char, size_t) {
-    return on_init_failed<CUresult >(277);
+    return on_init_failed<CUresult >(330);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16_v2_init(CUdeviceptr arg0, unsigned short arg1, size_t arg2) {
     load_library();
     return cuMemsetD16_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16_v2_error(CUdeviceptr, unsigned short, size_t) {
-    return on_init_failed<CUresult >(278);
+    return on_init_failed<CUresult >(331);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32_v2_init(CUdeviceptr arg0, unsigned int arg1, size_t arg2) {
     load_library();
     return cuMemsetD32_v2(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32_v2_error(CUdeviceptr, unsigned int, size_t) {
-    return on_init_failed<CUresult >(279);
+    return on_init_failed<CUresult >(332);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8_v2_init(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemsetD2D8_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8_v2_error(CUdeviceptr, size_t, unsigned char, size_t, size_t) {
-    return on_init_failed<CUresult >(280);
+    return on_init_failed<CUresult >(333);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16_v2_init(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemsetD2D16_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16_v2_error(CUdeviceptr, size_t, unsigned short, size_t, size_t) {
-    return on_init_failed<CUresult >(281);
+    return on_init_failed<CUresult >(334);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32_v2_init(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4) {
     load_library();
     return cuMemsetD2D32_v2(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32_v2_error(CUdeviceptr, size_t, unsigned int, size_t, size_t) {
-    return on_init_failed<CUresult >(282);
+    return on_init_failed<CUresult >(335);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     load_library();
     return cuMemcpy(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy_error(CUdeviceptr, CUdeviceptr, size_t) {
-    return on_init_failed<CUresult >(283);
+    return on_init_failed<CUresult >(336);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAsync_init(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemcpyAsync(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyAsync_error(CUdeviceptr, CUdeviceptr, size_t, CUstream) {
-    return on_init_failed<CUresult >(284);
+    return on_init_failed<CUresult >(337);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeer_init(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4) {
     load_library();
     return cuMemcpyPeer(arg0, arg1, arg2, arg3, arg4);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeer_error(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t) {
-    return on_init_failed<CUresult >(285);
+    return on_init_failed<CUresult >(338);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeerAsync_init(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemcpyPeerAsync(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpyPeerAsync_error(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t, CUstream) {
-    return on_init_failed<CUresult >(286);
+    return on_init_failed<CUresult >(339);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeer_init(const CUDA_MEMCPY3D_PEER *arg0) {
     load_library();
     return cuMemcpy3DPeer(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeer_error(const CUDA_MEMCPY3D_PEER *) {
-    return on_init_failed<CUresult >(287);
+    return on_init_failed<CUresult >(340);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeerAsync_init(const CUDA_MEMCPY3D_PEER *arg0, CUstream arg1) {
     load_library();
     return cuMemcpy3DPeerAsync(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuMemcpy3DPeerAsync_error(const CUDA_MEMCPY3D_PEER *, CUstream) {
-    return on_init_failed<CUresult >(288);
+    return on_init_failed<CUresult >(341);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8Async_init(CUdeviceptr arg0, unsigned char arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemsetD8Async(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD8Async_error(CUdeviceptr, unsigned char, size_t, CUstream) {
-    return on_init_failed<CUresult >(289);
+    return on_init_failed<CUresult >(342);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16Async_init(CUdeviceptr arg0, unsigned short arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemsetD16Async(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD16Async_error(CUdeviceptr, unsigned short, size_t, CUstream) {
-    return on_init_failed<CUresult >(290);
+    return on_init_failed<CUresult >(343);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32Async_init(CUdeviceptr arg0, unsigned int arg1, size_t arg2, CUstream arg3) {
     load_library();
     return cuMemsetD32Async(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD32Async_error(CUdeviceptr, unsigned int, size_t, CUstream) {
-    return on_init_failed<CUresult >(291);
+    return on_init_failed<CUresult >(344);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8Async_init(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemsetD2D8Async(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D8Async_error(CUdeviceptr, size_t, unsigned char, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(292);
+    return on_init_failed<CUresult >(345);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16Async_init(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemsetD2D16Async(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D16Async_error(CUdeviceptr, size_t, unsigned short, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(293);
+    return on_init_failed<CUresult >(346);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32Async_init(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4, CUstream arg5) {
     load_library();
     return cuMemsetD2D32Async(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 static CUresult _WRAPLIB_API_CALL cuMemsetD2D32Async_error(CUdeviceptr, size_t, unsigned int, size_t, size_t, CUstream) {
-    return on_init_failed<CUresult >(294);
+    return on_init_failed<CUresult >(347);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetPriority_init(CUstream arg0, int *arg1) {
     load_library();
     return cuStreamGetPriority(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetPriority_error(CUstream, int *) {
-    return on_init_failed<CUresult >(295);
+    return on_init_failed<CUresult >(348);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetFlags_init(CUstream arg0, unsigned int *arg1) {
     load_library();
     return cuStreamGetFlags(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamGetFlags_error(CUstream, unsigned int *) {
-    return on_init_failed<CUresult >(296);
+    return on_init_failed<CUresult >(349);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCtx_init(CUstream arg0, CUcontext *arg1) {
+    load_library();
+    return cuStreamGetCtx(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCtx_error(CUstream, CUcontext *) {
+    return on_init_failed<CUresult >(350);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitEvent_init(CUstream arg0, CUevent arg1, unsigned int arg2) {
     load_library();
     return cuStreamWaitEvent(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitEvent_error(CUstream, CUevent, unsigned int) {
-    return on_init_failed<CUresult >(297);
+    return on_init_failed<CUresult >(351);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAddCallback_init(CUstream arg0, CUstreamCallback arg1, void *arg2, unsigned int arg3) {
     load_library();
     return cuStreamAddCallback(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAddCallback_error(CUstream, CUstreamCallback, void *, unsigned int) {
-    return on_init_failed<CUresult >(298);
+    return on_init_failed<CUresult >(352);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAttachMemAsync_init(CUstream arg0, CUdeviceptr arg1, size_t arg2, unsigned int arg3) {
     load_library();
     return cuStreamAttachMemAsync(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamAttachMemAsync_error(CUstream, CUdeviceptr, size_t, unsigned int) {
-    return on_init_failed<CUresult >(299);
+    return on_init_failed<CUresult >(353);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamQuery_init(CUstream arg0) {
     load_library();
     return cuStreamQuery(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamQuery_error(CUstream) {
-    return on_init_failed<CUresult >(300);
+    return on_init_failed<CUresult >(354);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamSynchronize_init(CUstream arg0) {
     load_library();
     return cuStreamSynchronize(arg0);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamSynchronize_error(CUstream) {
-    return on_init_failed<CUresult >(301);
+    return on_init_failed<CUresult >(355);
 }
 static CUresult _WRAPLIB_API_CALL cuEventRecord_init(CUevent arg0, CUstream arg1) {
     load_library();
     return cuEventRecord(arg0, arg1);
 }
 static CUresult _WRAPLIB_API_CALL cuEventRecord_error(CUevent, CUstream) {
-    return on_init_failed<CUresult >(302);
+    return on_init_failed<CUresult >(356);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchKernel_init(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9, void **arg10) {
     load_library();
     return cuLaunchKernel(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
 }
 static CUresult _WRAPLIB_API_CALL cuLaunchKernel_error(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **, void **) {
-    return on_init_failed<CUresult >(303);
+    return on_init_failed<CUresult >(357);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchHostFunc_init(CUstream arg0, CUhostFn arg1, void *arg2) {
+    load_library();
+    return cuLaunchHostFunc(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchHostFunc_error(CUstream, CUhostFn, void *) {
+    return on_init_failed<CUresult >(358);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsMapResources_init(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     load_library();
     return cuGraphicsMapResources(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsMapResources_error(unsigned int, CUgraphicsResource *, CUstream) {
-    return on_init_failed<CUresult >(304);
+    return on_init_failed<CUresult >(359);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsUnmapResources_init(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     load_library();
     return cuGraphicsUnmapResources(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuGraphicsUnmapResources_error(unsigned int, CUgraphicsResource *, CUstream) {
-    return on_init_failed<CUresult >(305);
-}
-static CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_init(CUdeviceptr arg0, size_t arg1, CUdevice arg2, CUstream arg3) {
-    load_library();
-    return cuMemPrefetchAsync(arg0, arg1, arg2, arg3);
-}
-static CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_error(CUdeviceptr, size_t, CUdevice, CUstream) {
-    return on_init_failed<CUresult >(306);
+    return on_init_failed<CUresult >(360);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWriteValue32_init(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     load_library();
     return cuStreamWriteValue32(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWriteValue32_error(CUstream, CUdeviceptr, cuuint32_t, unsigned int) {
-    return on_init_failed<CUresult >(307);
+    return on_init_failed<CUresult >(361);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitValue32_init(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     load_library();
     return cuStreamWaitValue32(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamWaitValue32_error(CUstream, CUdeviceptr, cuuint32_t, unsigned int) {
-    return on_init_failed<CUresult >(308);
+    return on_init_failed<CUresult >(362);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWriteValue64_init(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    load_library();
+    return cuStreamWriteValue64(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWriteValue64_error(CUstream, CUdeviceptr, cuuint64_t, unsigned int) {
+    return on_init_failed<CUresult >(363);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWaitValue64_init(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    load_library();
+    return cuStreamWaitValue64(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamWaitValue64_error(CUstream, CUdeviceptr, cuuint64_t, unsigned int) {
+    return on_init_failed<CUresult >(364);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamBatchMemOp_init(CUstream arg0, unsigned int arg1, CUstreamBatchMemOpParams *arg2, unsigned int arg3) {
     load_library();
     return cuStreamBatchMemOp(arg0, arg1, arg2, arg3);
 }
 static CUresult _WRAPLIB_API_CALL cuStreamBatchMemOp_error(CUstream, unsigned int, CUstreamBatchMemOpParams *, unsigned int) {
-    return on_init_failed<CUresult >(309);
+    return on_init_failed<CUresult >(365);
+}
+static CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_init(CUdeviceptr arg0, size_t arg1, CUdevice arg2, CUstream arg3) {
+    load_library();
+    return cuMemPrefetchAsync(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_error(CUdeviceptr, size_t, CUdevice, CUstream) {
+    return on_init_failed<CUresult >(366);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernel_init(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9) {
+    load_library();
+    return cuLaunchCooperativeKernel(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+}
+static CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernel_error(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **) {
+    return on_init_failed<CUresult >(367);
+}
+static CUresult _WRAPLIB_API_CALL cuSignalExternalSemaphoresAsync_init(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    load_library();
+    return cuSignalExternalSemaphoresAsync(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuSignalExternalSemaphoresAsync_error(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *, unsigned int, CUstream) {
+    return on_init_failed<CUresult >(368);
+}
+static CUresult _WRAPLIB_API_CALL cuWaitExternalSemaphoresAsync_init(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    load_library();
+    return cuWaitExternalSemaphoresAsync(arg0, arg1, arg2, arg3);
+}
+static CUresult _WRAPLIB_API_CALL cuWaitExternalSemaphoresAsync_error(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *, unsigned int, CUstream) {
+    return on_init_failed<CUresult >(369);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_init(CUstream arg0) {
+    load_library();
+    return cuStreamBeginCapture(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_error(CUstream) {
+    return on_init_failed<CUresult >(370);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_ptsz_init(CUstream arg0) {
+    load_library();
+    return cuStreamBeginCapture_ptsz(arg0);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_ptsz_error(CUstream) {
+    return on_init_failed<CUresult >(371);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_v2_init(CUstream arg0, CUstreamCaptureMode arg1) {
+    load_library();
+    return cuStreamBeginCapture_v2(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_v2_error(CUstream, CUstreamCaptureMode) {
+    return on_init_failed<CUresult >(372);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamEndCapture_init(CUstream arg0, CUgraph *arg1) {
+    load_library();
+    return cuStreamEndCapture(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamEndCapture_error(CUstream, CUgraph *) {
+    return on_init_failed<CUresult >(373);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamIsCapturing_init(CUstream arg0, CUstreamCaptureStatus *arg1) {
+    load_library();
+    return cuStreamIsCapturing(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamIsCapturing_error(CUstream, CUstreamCaptureStatus *) {
+    return on_init_failed<CUresult >(374);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCaptureInfo_init(CUstream arg0, CUstreamCaptureStatus *arg1, cuuint64_t *arg2) {
+    load_library();
+    return cuStreamGetCaptureInfo(arg0, arg1, arg2);
+}
+static CUresult _WRAPLIB_API_CALL cuStreamGetCaptureInfo_error(CUstream, CUstreamCaptureStatus *, cuuint64_t *) {
+    return on_init_failed<CUresult >(375);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphLaunch_init(CUgraphExec arg0, CUstream arg1) {
+    load_library();
+    return cuGraphLaunch(arg0, arg1);
+}
+static CUresult _WRAPLIB_API_CALL cuGraphLaunch_error(CUgraphExec, CUstream) {
+    return on_init_failed<CUresult >(376);
 }
 static CUresult _WRAPLIB_API_CALL cuProfilerInitialize_init(const char *arg0, const char *arg1, CUoutput_mode arg2) {
     load_library();
     return cuProfilerInitialize(arg0, arg1, arg2);
 }
 static CUresult _WRAPLIB_API_CALL cuProfilerInitialize_error(const char *, const char *, CUoutput_mode) {
-    return on_init_failed<CUresult >(310);
+    return on_init_failed<CUresult >(377);
 }
 static CUresult _WRAPLIB_API_CALL cuProfilerStart_init() {
     load_library();
     return cuProfilerStart();
 }
 static CUresult _WRAPLIB_API_CALL cuProfilerStart_error() {
-    return on_init_failed<CUresult >(311);
+    return on_init_failed<CUresult >(378);
 }
 static CUresult _WRAPLIB_API_CALL cuProfilerStop_init() {
     load_library();
     return cuProfilerStop();
 }
 static CUresult _WRAPLIB_API_CALL cuProfilerStop_error() {
-    return on_init_failed<CUresult >(312);
+    return on_init_failed<CUresult >(379);
 }
-static constexpr size_t NR_FUNC = 313;
+static constexpr size_t NR_FUNC = 380;
 static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuGetErrorName_init),
     (void*)(&cuInit_init),
@@ -2217,6 +2686,7 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuDeviceGet_init),
     (void*)(&cuDeviceGetCount_init),
     (void*)(&cuDeviceGetName_init),
+    (void*)(&cuDeviceGetUuid_init),
     (void*)(&cuDeviceTotalMem_v2_init),
     (void*)(&cuDeviceGetAttribute_init),
     (void*)(&cuDeviceGetProperties_init),
@@ -2334,8 +2804,14 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuStreamCreateWithPriority_init),
     (void*)(&cuStreamGetPriority_ptsz_init),
     (void*)(&cuStreamGetFlags_ptsz_init),
+    (void*)(&cuStreamGetCtx_ptsz_init),
     (void*)(&cuStreamWaitEvent_ptsz_init),
     (void*)(&cuStreamAddCallback_ptsz_init),
+    (void*)(&cuStreamBeginCapture_v2_ptsz_init),
+    (void*)(&cuThreadExchangeStreamCaptureMode_init),
+    (void*)(&cuStreamEndCapture_ptsz_init),
+    (void*)(&cuStreamIsCapturing_ptsz_init),
+    (void*)(&cuStreamGetCaptureInfo_ptsz_init),
     (void*)(&cuStreamAttachMemAsync_ptsz_init),
     (void*)(&cuStreamQuery_ptsz_init),
     (void*)(&cuStreamSynchronize_ptsz_init),
@@ -2346,13 +2822,27 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuEventSynchronize_init),
     (void*)(&cuEventDestroy_v2_init),
     (void*)(&cuEventElapsedTime_init),
+    (void*)(&cuImportExternalMemory_init),
+    (void*)(&cuExternalMemoryGetMappedBuffer_init),
+    (void*)(&cuExternalMemoryGetMappedMipmappedArray_init),
+    (void*)(&cuDestroyExternalMemory_init),
+    (void*)(&cuImportExternalSemaphore_init),
+    (void*)(&cuSignalExternalSemaphoresAsync_ptsz_init),
+    (void*)(&cuWaitExternalSemaphoresAsync_ptsz_init),
+    (void*)(&cuDestroyExternalSemaphore_init),
     (void*)(&cuStreamWaitValue32_ptsz_init),
+    (void*)(&cuStreamWaitValue64_ptsz_init),
     (void*)(&cuStreamWriteValue32_ptsz_init),
+    (void*)(&cuStreamWriteValue64_ptsz_init),
     (void*)(&cuStreamBatchMemOp_ptsz_init),
     (void*)(&cuFuncGetAttribute_init),
+    (void*)(&cuFuncSetAttribute_init),
     (void*)(&cuFuncSetCacheConfig_init),
     (void*)(&cuFuncSetSharedMemConfig_init),
     (void*)(&cuLaunchKernel_ptsz_init),
+    (void*)(&cuLaunchCooperativeKernel_ptsz_init),
+    (void*)(&cuLaunchCooperativeKernelMultiDevice_init),
+    (void*)(&cuLaunchHostFunc_ptsz_init),
     (void*)(&cuFuncSetBlockShape_init),
     (void*)(&cuFuncSetSharedSize_init),
     (void*)(&cuParamSetSize_init),
@@ -2363,6 +2853,38 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuLaunchGrid_init),
     (void*)(&cuLaunchGridAsync_init),
     (void*)(&cuParamSetTexRef_init),
+    (void*)(&cuGraphCreate_init),
+    (void*)(&cuGraphAddKernelNode_init),
+    (void*)(&cuGraphKernelNodeGetParams_init),
+    (void*)(&cuGraphKernelNodeSetParams_init),
+    (void*)(&cuGraphAddMemcpyNode_init),
+    (void*)(&cuGraphMemcpyNodeGetParams_init),
+    (void*)(&cuGraphMemcpyNodeSetParams_init),
+    (void*)(&cuGraphAddMemsetNode_init),
+    (void*)(&cuGraphMemsetNodeGetParams_init),
+    (void*)(&cuGraphMemsetNodeSetParams_init),
+    (void*)(&cuGraphAddHostNode_init),
+    (void*)(&cuGraphHostNodeGetParams_init),
+    (void*)(&cuGraphHostNodeSetParams_init),
+    (void*)(&cuGraphAddChildGraphNode_init),
+    (void*)(&cuGraphChildGraphNodeGetGraph_init),
+    (void*)(&cuGraphAddEmptyNode_init),
+    (void*)(&cuGraphClone_init),
+    (void*)(&cuGraphNodeFindInClone_init),
+    (void*)(&cuGraphNodeGetType_init),
+    (void*)(&cuGraphGetNodes_init),
+    (void*)(&cuGraphGetRootNodes_init),
+    (void*)(&cuGraphGetEdges_init),
+    (void*)(&cuGraphNodeGetDependencies_init),
+    (void*)(&cuGraphNodeGetDependentNodes_init),
+    (void*)(&cuGraphAddDependencies_init),
+    (void*)(&cuGraphRemoveDependencies_init),
+    (void*)(&cuGraphDestroyNode_init),
+    (void*)(&cuGraphInstantiate_init),
+    (void*)(&cuGraphExecKernelNodeSetParams_init),
+    (void*)(&cuGraphLaunch_ptsz_init),
+    (void*)(&cuGraphExecDestroy_init),
+    (void*)(&cuGraphDestroy_init),
     (void*)(&cuOccupancyMaxActiveBlocksPerMultiprocessor_init),
     (void*)(&cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags_init),
     (void*)(&cuOccupancyMaxPotentialBlockSize_init),
@@ -2405,9 +2927,9 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuSurfObjectDestroy_init),
     (void*)(&cuSurfObjectGetResourceDesc_init),
     (void*)(&cuDeviceCanAccessPeer_init),
-    (void*)(&cuDeviceGetP2PAttribute_init),
     (void*)(&cuCtxEnablePeerAccess_init),
     (void*)(&cuCtxDisablePeerAccess_init),
+    (void*)(&cuDeviceGetP2PAttribute_init),
     (void*)(&cuGraphicsUnregisterResource_init),
     (void*)(&cuGraphicsSubResourceGetMappedArray_init),
     (void*)(&cuGraphicsResourceGetMappedMipmappedArray_init),
@@ -2507,6 +3029,7 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuMemsetD2D32Async_init),
     (void*)(&cuStreamGetPriority_init),
     (void*)(&cuStreamGetFlags_init),
+    (void*)(&cuStreamGetCtx_init),
     (void*)(&cuStreamWaitEvent_init),
     (void*)(&cuStreamAddCallback_init),
     (void*)(&cuStreamAttachMemAsync_init),
@@ -2514,12 +3037,25 @@ static void* g_func_table[NR_FUNC] = {(void*)(&cuGetErrorString_init),
     (void*)(&cuStreamSynchronize_init),
     (void*)(&cuEventRecord_init),
     (void*)(&cuLaunchKernel_init),
+    (void*)(&cuLaunchHostFunc_init),
     (void*)(&cuGraphicsMapResources_init),
     (void*)(&cuGraphicsUnmapResources_init),
-    (void*)(&cuMemPrefetchAsync_init),
     (void*)(&cuStreamWriteValue32_init),
     (void*)(&cuStreamWaitValue32_init),
+    (void*)(&cuStreamWriteValue64_init),
+    (void*)(&cuStreamWaitValue64_init),
     (void*)(&cuStreamBatchMemOp_init),
+    (void*)(&cuMemPrefetchAsync_init),
+    (void*)(&cuLaunchCooperativeKernel_init),
+    (void*)(&cuSignalExternalSemaphoresAsync_init),
+    (void*)(&cuWaitExternalSemaphoresAsync_init),
+    (void*)(&cuStreamBeginCapture_init),
+    (void*)(&cuStreamBeginCapture_ptsz_init),
+    (void*)(&cuStreamBeginCapture_v2_init),
+    (void*)(&cuStreamEndCapture_init),
+    (void*)(&cuStreamIsCapturing_init),
+    (void*)(&cuStreamGetCaptureInfo_init),
+    (void*)(&cuGraphLaunch_init),
     (void*)(&cuProfilerInitialize_init),
     (void*)(&cuProfilerStart_init),
     (void*)(&cuProfilerStop_init)};
@@ -2530,6 +3066,7 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuDeviceGet_error),
     (void*)(&cuDeviceGetCount_error),
     (void*)(&cuDeviceGetName_error),
+    (void*)(&cuDeviceGetUuid_error),
     (void*)(&cuDeviceTotalMem_v2_error),
     (void*)(&cuDeviceGetAttribute_error),
     (void*)(&cuDeviceGetProperties_error),
@@ -2647,8 +3184,14 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuStreamCreateWithPriority_error),
     (void*)(&cuStreamGetPriority_ptsz_error),
     (void*)(&cuStreamGetFlags_ptsz_error),
+    (void*)(&cuStreamGetCtx_ptsz_error),
     (void*)(&cuStreamWaitEvent_ptsz_error),
     (void*)(&cuStreamAddCallback_ptsz_error),
+    (void*)(&cuStreamBeginCapture_v2_ptsz_error),
+    (void*)(&cuThreadExchangeStreamCaptureMode_error),
+    (void*)(&cuStreamEndCapture_ptsz_error),
+    (void*)(&cuStreamIsCapturing_ptsz_error),
+    (void*)(&cuStreamGetCaptureInfo_ptsz_error),
     (void*)(&cuStreamAttachMemAsync_ptsz_error),
     (void*)(&cuStreamQuery_ptsz_error),
     (void*)(&cuStreamSynchronize_ptsz_error),
@@ -2659,13 +3202,27 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuEventSynchronize_error),
     (void*)(&cuEventDestroy_v2_error),
     (void*)(&cuEventElapsedTime_error),
+    (void*)(&cuImportExternalMemory_error),
+    (void*)(&cuExternalMemoryGetMappedBuffer_error),
+    (void*)(&cuExternalMemoryGetMappedMipmappedArray_error),
+    (void*)(&cuDestroyExternalMemory_error),
+    (void*)(&cuImportExternalSemaphore_error),
+    (void*)(&cuSignalExternalSemaphoresAsync_ptsz_error),
+    (void*)(&cuWaitExternalSemaphoresAsync_ptsz_error),
+    (void*)(&cuDestroyExternalSemaphore_error),
     (void*)(&cuStreamWaitValue32_ptsz_error),
+    (void*)(&cuStreamWaitValue64_ptsz_error),
     (void*)(&cuStreamWriteValue32_ptsz_error),
+    (void*)(&cuStreamWriteValue64_ptsz_error),
     (void*)(&cuStreamBatchMemOp_ptsz_error),
     (void*)(&cuFuncGetAttribute_error),
+    (void*)(&cuFuncSetAttribute_error),
     (void*)(&cuFuncSetCacheConfig_error),
     (void*)(&cuFuncSetSharedMemConfig_error),
     (void*)(&cuLaunchKernel_ptsz_error),
+    (void*)(&cuLaunchCooperativeKernel_ptsz_error),
+    (void*)(&cuLaunchCooperativeKernelMultiDevice_error),
+    (void*)(&cuLaunchHostFunc_ptsz_error),
     (void*)(&cuFuncSetBlockShape_error),
     (void*)(&cuFuncSetSharedSize_error),
     (void*)(&cuParamSetSize_error),
@@ -2676,6 +3233,38 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuLaunchGrid_error),
     (void*)(&cuLaunchGridAsync_error),
     (void*)(&cuParamSetTexRef_error),
+    (void*)(&cuGraphCreate_error),
+    (void*)(&cuGraphAddKernelNode_error),
+    (void*)(&cuGraphKernelNodeGetParams_error),
+    (void*)(&cuGraphKernelNodeSetParams_error),
+    (void*)(&cuGraphAddMemcpyNode_error),
+    (void*)(&cuGraphMemcpyNodeGetParams_error),
+    (void*)(&cuGraphMemcpyNodeSetParams_error),
+    (void*)(&cuGraphAddMemsetNode_error),
+    (void*)(&cuGraphMemsetNodeGetParams_error),
+    (void*)(&cuGraphMemsetNodeSetParams_error),
+    (void*)(&cuGraphAddHostNode_error),
+    (void*)(&cuGraphHostNodeGetParams_error),
+    (void*)(&cuGraphHostNodeSetParams_error),
+    (void*)(&cuGraphAddChildGraphNode_error),
+    (void*)(&cuGraphChildGraphNodeGetGraph_error),
+    (void*)(&cuGraphAddEmptyNode_error),
+    (void*)(&cuGraphClone_error),
+    (void*)(&cuGraphNodeFindInClone_error),
+    (void*)(&cuGraphNodeGetType_error),
+    (void*)(&cuGraphGetNodes_error),
+    (void*)(&cuGraphGetRootNodes_error),
+    (void*)(&cuGraphGetEdges_error),
+    (void*)(&cuGraphNodeGetDependencies_error),
+    (void*)(&cuGraphNodeGetDependentNodes_error),
+    (void*)(&cuGraphAddDependencies_error),
+    (void*)(&cuGraphRemoveDependencies_error),
+    (void*)(&cuGraphDestroyNode_error),
+    (void*)(&cuGraphInstantiate_error),
+    (void*)(&cuGraphExecKernelNodeSetParams_error),
+    (void*)(&cuGraphLaunch_ptsz_error),
+    (void*)(&cuGraphExecDestroy_error),
+    (void*)(&cuGraphDestroy_error),
     (void*)(&cuOccupancyMaxActiveBlocksPerMultiprocessor_error),
     (void*)(&cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags_error),
     (void*)(&cuOccupancyMaxPotentialBlockSize_error),
@@ -2718,9 +3307,9 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuSurfObjectDestroy_error),
     (void*)(&cuSurfObjectGetResourceDesc_error),
     (void*)(&cuDeviceCanAccessPeer_error),
-    (void*)(&cuDeviceGetP2PAttribute_error),
     (void*)(&cuCtxEnablePeerAccess_error),
     (void*)(&cuCtxDisablePeerAccess_error),
+    (void*)(&cuDeviceGetP2PAttribute_error),
     (void*)(&cuGraphicsUnregisterResource_error),
     (void*)(&cuGraphicsSubResourceGetMappedArray_error),
     (void*)(&cuGraphicsResourceGetMappedMipmappedArray_error),
@@ -2820,6 +3409,7 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuMemsetD2D32Async_error),
     (void*)(&cuStreamGetPriority_error),
     (void*)(&cuStreamGetFlags_error),
+    (void*)(&cuStreamGetCtx_error),
     (void*)(&cuStreamWaitEvent_error),
     (void*)(&cuStreamAddCallback_error),
     (void*)(&cuStreamAttachMemAsync_error),
@@ -2827,12 +3417,25 @@ static void* g_func_table_error[NR_FUNC] = {(void*)(&cuGetErrorString_error),
     (void*)(&cuStreamSynchronize_error),
     (void*)(&cuEventRecord_error),
     (void*)(&cuLaunchKernel_error),
+    (void*)(&cuLaunchHostFunc_error),
     (void*)(&cuGraphicsMapResources_error),
     (void*)(&cuGraphicsUnmapResources_error),
-    (void*)(&cuMemPrefetchAsync_error),
     (void*)(&cuStreamWriteValue32_error),
     (void*)(&cuStreamWaitValue32_error),
+    (void*)(&cuStreamWriteValue64_error),
+    (void*)(&cuStreamWaitValue64_error),
     (void*)(&cuStreamBatchMemOp_error),
+    (void*)(&cuMemPrefetchAsync_error),
+    (void*)(&cuLaunchCooperativeKernel_error),
+    (void*)(&cuSignalExternalSemaphoresAsync_error),
+    (void*)(&cuWaitExternalSemaphoresAsync_error),
+    (void*)(&cuStreamBeginCapture_error),
+    (void*)(&cuStreamBeginCapture_ptsz_error),
+    (void*)(&cuStreamBeginCapture_v2_error),
+    (void*)(&cuStreamEndCapture_error),
+    (void*)(&cuStreamIsCapturing_error),
+    (void*)(&cuStreamGetCaptureInfo_error),
+    (void*)(&cuGraphLaunch_error),
     (void*)(&cuProfilerInitialize_error),
     (void*)(&cuProfilerStart_error),
     (void*)(&cuProfilerStop_error)};
@@ -2843,6 +3446,7 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuDeviceGet",
     "cuDeviceGetCount",
     "cuDeviceGetName",
+    "cuDeviceGetUuid",
     "cuDeviceTotalMem_v2",
     "cuDeviceGetAttribute",
     "cuDeviceGetProperties",
@@ -2960,8 +3564,14 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuStreamCreateWithPriority",
     "cuStreamGetPriority_ptsz",
     "cuStreamGetFlags_ptsz",
+    "cuStreamGetCtx_ptsz",
     "cuStreamWaitEvent_ptsz",
     "cuStreamAddCallback_ptsz",
+    "cuStreamBeginCapture_v2_ptsz",
+    "cuThreadExchangeStreamCaptureMode",
+    "cuStreamEndCapture_ptsz",
+    "cuStreamIsCapturing_ptsz",
+    "cuStreamGetCaptureInfo_ptsz",
     "cuStreamAttachMemAsync_ptsz",
     "cuStreamQuery_ptsz",
     "cuStreamSynchronize_ptsz",
@@ -2972,13 +3582,27 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuEventSynchronize",
     "cuEventDestroy_v2",
     "cuEventElapsedTime",
+    "cuImportExternalMemory",
+    "cuExternalMemoryGetMappedBuffer",
+    "cuExternalMemoryGetMappedMipmappedArray",
+    "cuDestroyExternalMemory",
+    "cuImportExternalSemaphore",
+    "cuSignalExternalSemaphoresAsync_ptsz",
+    "cuWaitExternalSemaphoresAsync_ptsz",
+    "cuDestroyExternalSemaphore",
     "cuStreamWaitValue32_ptsz",
+    "cuStreamWaitValue64_ptsz",
     "cuStreamWriteValue32_ptsz",
+    "cuStreamWriteValue64_ptsz",
     "cuStreamBatchMemOp_ptsz",
     "cuFuncGetAttribute",
+    "cuFuncSetAttribute",
     "cuFuncSetCacheConfig",
     "cuFuncSetSharedMemConfig",
     "cuLaunchKernel_ptsz",
+    "cuLaunchCooperativeKernel_ptsz",
+    "cuLaunchCooperativeKernelMultiDevice",
+    "cuLaunchHostFunc_ptsz",
     "cuFuncSetBlockShape",
     "cuFuncSetSharedSize",
     "cuParamSetSize",
@@ -2989,6 +3613,38 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuLaunchGrid",
     "cuLaunchGridAsync",
     "cuParamSetTexRef",
+    "cuGraphCreate",
+    "cuGraphAddKernelNode",
+    "cuGraphKernelNodeGetParams",
+    "cuGraphKernelNodeSetParams",
+    "cuGraphAddMemcpyNode",
+    "cuGraphMemcpyNodeGetParams",
+    "cuGraphMemcpyNodeSetParams",
+    "cuGraphAddMemsetNode",
+    "cuGraphMemsetNodeGetParams",
+    "cuGraphMemsetNodeSetParams",
+    "cuGraphAddHostNode",
+    "cuGraphHostNodeGetParams",
+    "cuGraphHostNodeSetParams",
+    "cuGraphAddChildGraphNode",
+    "cuGraphChildGraphNodeGetGraph",
+    "cuGraphAddEmptyNode",
+    "cuGraphClone",
+    "cuGraphNodeFindInClone",
+    "cuGraphNodeGetType",
+    "cuGraphGetNodes",
+    "cuGraphGetRootNodes",
+    "cuGraphGetEdges",
+    "cuGraphNodeGetDependencies",
+    "cuGraphNodeGetDependentNodes",
+    "cuGraphAddDependencies",
+    "cuGraphRemoveDependencies",
+    "cuGraphDestroyNode",
+    "cuGraphInstantiate",
+    "cuGraphExecKernelNodeSetParams",
+    "cuGraphLaunch_ptsz",
+    "cuGraphExecDestroy",
+    "cuGraphDestroy",
     "cuOccupancyMaxActiveBlocksPerMultiprocessor",
     "cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags",
     "cuOccupancyMaxPotentialBlockSize",
@@ -3031,9 +3687,9 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuSurfObjectDestroy",
     "cuSurfObjectGetResourceDesc",
     "cuDeviceCanAccessPeer",
-    "cuDeviceGetP2PAttribute",
     "cuCtxEnablePeerAccess",
     "cuCtxDisablePeerAccess",
+    "cuDeviceGetP2PAttribute",
     "cuGraphicsUnregisterResource",
     "cuGraphicsSubResourceGetMappedArray",
     "cuGraphicsResourceGetMappedMipmappedArray",
@@ -3133,6 +3789,7 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuMemsetD2D32Async",
     "cuStreamGetPriority",
     "cuStreamGetFlags",
+    "cuStreamGetCtx",
     "cuStreamWaitEvent",
     "cuStreamAddCallback",
     "cuStreamAttachMemAsync",
@@ -3140,12 +3797,25 @@ static const char* const g_func_name[NR_FUNC] = {"cuGetErrorString",
     "cuStreamSynchronize",
     "cuEventRecord",
     "cuLaunchKernel",
+    "cuLaunchHostFunc",
     "cuGraphicsMapResources",
     "cuGraphicsUnmapResources",
-    "cuMemPrefetchAsync",
     "cuStreamWriteValue32",
     "cuStreamWaitValue32",
+    "cuStreamWriteValue64",
+    "cuStreamWaitValue64",
     "cuStreamBatchMemOp",
+    "cuMemPrefetchAsync",
+    "cuLaunchCooperativeKernel",
+    "cuSignalExternalSemaphoresAsync",
+    "cuWaitExternalSemaphoresAsync",
+    "cuStreamBeginCapture",
+    "cuStreamBeginCapture_ptsz",
+    "cuStreamBeginCapture_v2",
+    "cuStreamEndCapture",
+    "cuStreamIsCapturing",
+    "cuStreamGetCaptureInfo",
+    "cuGraphLaunch",
     "cuProfilerInitialize",
     "cuProfilerStart",
     "cuProfilerStop"};
@@ -3216,1839 +3886,2241 @@ CUresult _WRAPLIB_API_CALL cuDeviceGetName(char *arg0, int arg1, CUdevice arg2) 
     f_ptr_t f = (f_ptr_t)(g_func_table[6]);
     return f(arg0, arg1, arg2);
 }
+CUresult _WRAPLIB_API_CALL cuDeviceGetUuid(CUuuid *arg0, CUdevice arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUuuid *, CUdevice);
+    ON_ENTRY(cuDeviceGetUuid);
+    f_ptr_t f = (f_ptr_t)(g_func_table[7]);
+    return f(arg0, arg1);
+}
 CUresult _WRAPLIB_API_CALL cuDeviceTotalMem_v2(size_t *arg0, CUdevice arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(size_t *, CUdevice);
     ON_ENTRY(cuDeviceTotalMem_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[7]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[8]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceGetAttribute(int *arg0, CUdevice_attribute arg1, CUdevice arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUdevice_attribute, CUdevice);
     ON_ENTRY(cuDeviceGetAttribute);
-    f_ptr_t f = (f_ptr_t)(g_func_table[8]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[9]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceGetProperties(CUdevprop *arg0, CUdevice arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevprop *, CUdevice);
     ON_ENTRY(cuDeviceGetProperties);
-    f_ptr_t f = (f_ptr_t)(g_func_table[9]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[10]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceComputeCapability(int *arg0, int *arg1, CUdevice arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, int *, CUdevice);
     ON_ENTRY(cuDeviceComputeCapability);
-    f_ptr_t f = (f_ptr_t)(g_func_table[10]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[11]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxRetain(CUcontext *arg0, CUdevice arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *, CUdevice);
     ON_ENTRY(cuDevicePrimaryCtxRetain);
-    f_ptr_t f = (f_ptr_t)(g_func_table[11]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[12]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxRelease(CUdevice arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevice);
     ON_ENTRY(cuDevicePrimaryCtxRelease);
-    f_ptr_t f = (f_ptr_t)(g_func_table[12]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[13]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxSetFlags(CUdevice arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevice, unsigned int);
     ON_ENTRY(cuDevicePrimaryCtxSetFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[13]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[14]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxGetState(CUdevice arg0, unsigned int *arg1, int *arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevice, unsigned int *, int *);
     ON_ENTRY(cuDevicePrimaryCtxGetState);
-    f_ptr_t f = (f_ptr_t)(g_func_table[14]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[15]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuDevicePrimaryCtxReset(CUdevice arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevice);
     ON_ENTRY(cuDevicePrimaryCtxReset);
-    f_ptr_t f = (f_ptr_t)(g_func_table[15]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[16]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxCreate_v2(CUcontext *arg0, unsigned int arg1, CUdevice arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *, unsigned int, CUdevice);
     ON_ENTRY(cuCtxCreate_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[16]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[17]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuCtxDestroy_v2(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxDestroy_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[17]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[18]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxPushCurrent_v2(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxPushCurrent_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[18]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[19]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxPopCurrent_v2(CUcontext *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *);
     ON_ENTRY(cuCtxPopCurrent_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[19]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[20]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxSetCurrent(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxSetCurrent);
-    f_ptr_t f = (f_ptr_t)(g_func_table[20]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[21]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetCurrent(CUcontext *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *);
     ON_ENTRY(cuCtxGetCurrent);
-    f_ptr_t f = (f_ptr_t)(g_func_table[21]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[22]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetDevice(CUdevice *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevice *);
     ON_ENTRY(cuCtxGetDevice);
-    f_ptr_t f = (f_ptr_t)(g_func_table[22]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[23]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetFlags(unsigned int *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int *);
     ON_ENTRY(cuCtxGetFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[23]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[24]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxSynchronize() {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)();
     ON_ENTRY(cuCtxSynchronize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[24]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[25]);
     return f();
 }
 CUresult _WRAPLIB_API_CALL cuCtxSetLimit(CUlimit arg0, size_t arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlimit, size_t);
     ON_ENTRY(cuCtxSetLimit);
-    f_ptr_t f = (f_ptr_t)(g_func_table[25]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[26]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetLimit(size_t *arg0, CUlimit arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(size_t *, CUlimit);
     ON_ENTRY(cuCtxGetLimit);
-    f_ptr_t f = (f_ptr_t)(g_func_table[26]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[27]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetCacheConfig(CUfunc_cache *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunc_cache *);
     ON_ENTRY(cuCtxGetCacheConfig);
-    f_ptr_t f = (f_ptr_t)(g_func_table[27]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[28]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxSetCacheConfig(CUfunc_cache arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunc_cache);
     ON_ENTRY(cuCtxSetCacheConfig);
-    f_ptr_t f = (f_ptr_t)(g_func_table[28]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[29]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetSharedMemConfig(CUsharedconfig *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUsharedconfig *);
     ON_ENTRY(cuCtxGetSharedMemConfig);
-    f_ptr_t f = (f_ptr_t)(g_func_table[29]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[30]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxSetSharedMemConfig(CUsharedconfig arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUsharedconfig);
     ON_ENTRY(cuCtxSetSharedMemConfig);
-    f_ptr_t f = (f_ptr_t)(g_func_table[30]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[31]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetApiVersion(CUcontext arg0, unsigned int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext, unsigned int *);
     ON_ENTRY(cuCtxGetApiVersion);
-    f_ptr_t f = (f_ptr_t)(g_func_table[31]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[32]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxGetStreamPriorityRange(int *arg0, int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, int *);
     ON_ENTRY(cuCtxGetStreamPriorityRange);
-    f_ptr_t f = (f_ptr_t)(g_func_table[32]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[33]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxAttach(CUcontext *arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *, unsigned int);
     ON_ENTRY(cuCtxAttach);
-    f_ptr_t f = (f_ptr_t)(g_func_table[33]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[34]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxDetach(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxDetach);
-    f_ptr_t f = (f_ptr_t)(g_func_table[34]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[35]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuModuleLoad(CUmodule *arg0, const char *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmodule *, const char *);
     ON_ENTRY(cuModuleLoad);
-    f_ptr_t f = (f_ptr_t)(g_func_table[35]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[36]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuModuleLoadData(CUmodule *arg0, const void *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmodule *, const void *);
     ON_ENTRY(cuModuleLoadData);
-    f_ptr_t f = (f_ptr_t)(g_func_table[36]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[37]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuModuleLoadDataEx(CUmodule *arg0, const void *arg1, unsigned int arg2, CUjit_option *arg3, void **arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmodule *, const void *, unsigned int, CUjit_option *, void **);
     ON_ENTRY(cuModuleLoadDataEx);
-    f_ptr_t f = (f_ptr_t)(g_func_table[37]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[38]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuModuleLoadFatBinary(CUmodule *arg0, const void *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmodule *, const void *);
     ON_ENTRY(cuModuleLoadFatBinary);
-    f_ptr_t f = (f_ptr_t)(g_func_table[38]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[39]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuModuleUnload(CUmodule arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmodule);
     ON_ENTRY(cuModuleUnload);
-    f_ptr_t f = (f_ptr_t)(g_func_table[39]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[40]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuModuleGetFunction(CUfunction *arg0, CUmodule arg1, const char *arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction *, CUmodule, const char *);
     ON_ENTRY(cuModuleGetFunction);
-    f_ptr_t f = (f_ptr_t)(g_func_table[40]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[41]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuModuleGetGlobal_v2(CUdeviceptr *arg0, size_t *arg1, CUmodule arg2, const char *arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, size_t *, CUmodule, const char *);
     ON_ENTRY(cuModuleGetGlobal_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[41]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[42]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuModuleGetTexRef(CUtexref *arg0, CUmodule arg1, const char *arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref *, CUmodule, const char *);
     ON_ENTRY(cuModuleGetTexRef);
-    f_ptr_t f = (f_ptr_t)(g_func_table[42]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[43]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuModuleGetSurfRef(CUsurfref *arg0, CUmodule arg1, const char *arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUsurfref *, CUmodule, const char *);
     ON_ENTRY(cuModuleGetSurfRef);
-    f_ptr_t f = (f_ptr_t)(g_func_table[43]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[44]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuLinkCreate_v2(unsigned int arg0, CUjit_option *arg1, void **arg2, CUlinkState *arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUjit_option *, void **, CUlinkState *);
     ON_ENTRY(cuLinkCreate_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[44]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[45]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuLinkAddData_v2(CUlinkState arg0, CUjitInputType arg1, void *arg2, size_t arg3, const char *arg4, unsigned int arg5, CUjit_option *arg6, void **arg7) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlinkState, CUjitInputType, void *, size_t, const char *, unsigned int, CUjit_option *, void **);
     ON_ENTRY(cuLinkAddData_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[45]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[46]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 CUresult _WRAPLIB_API_CALL cuLinkAddFile_v2(CUlinkState arg0, CUjitInputType arg1, const char *arg2, unsigned int arg3, CUjit_option *arg4, void **arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlinkState, CUjitInputType, const char *, unsigned int, CUjit_option *, void **);
     ON_ENTRY(cuLinkAddFile_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[46]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[47]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuLinkComplete(CUlinkState arg0, void **arg1, size_t *arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlinkState, void **, size_t *);
     ON_ENTRY(cuLinkComplete);
-    f_ptr_t f = (f_ptr_t)(g_func_table[47]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[48]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuLinkDestroy(CUlinkState arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlinkState);
     ON_ENTRY(cuLinkDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[48]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[49]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemGetInfo_v2(size_t *arg0, size_t *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(size_t *, size_t *);
     ON_ENTRY(cuMemGetInfo_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[49]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[50]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemAlloc_v2(CUdeviceptr *arg0, size_t arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, size_t);
     ON_ENTRY(cuMemAlloc_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[50]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[51]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemAllocPitch_v2(CUdeviceptr *arg0, size_t *arg1, size_t arg2, size_t arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, size_t *, size_t, size_t, unsigned int);
     ON_ENTRY(cuMemAllocPitch_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[51]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[52]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemFree_v2(CUdeviceptr arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr);
     ON_ENTRY(cuMemFree_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[52]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[53]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemGetAddressRange_v2(CUdeviceptr *arg0, size_t *arg1, CUdeviceptr arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, size_t *, CUdeviceptr);
     ON_ENTRY(cuMemGetAddressRange_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[53]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[54]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemAllocHost_v2(void **arg0, size_t arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void **, size_t);
     ON_ENTRY(cuMemAllocHost_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[54]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[55]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemFreeHost(void *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *);
     ON_ENTRY(cuMemFreeHost);
-    f_ptr_t f = (f_ptr_t)(g_func_table[55]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[56]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostAlloc(void **arg0, size_t arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void **, size_t, unsigned int);
     ON_ENTRY(cuMemHostAlloc);
-    f_ptr_t f = (f_ptr_t)(g_func_table[56]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[57]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostGetDevicePointer_v2(CUdeviceptr *arg0, void *arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, void *, unsigned int);
     ON_ENTRY(cuMemHostGetDevicePointer_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[57]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[58]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostGetFlags(unsigned int *arg0, void *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int *, void *);
     ON_ENTRY(cuMemHostGetFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[58]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[59]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemAllocManaged(CUdeviceptr *arg0, size_t arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, size_t, unsigned int);
     ON_ENTRY(cuMemAllocManaged);
-    f_ptr_t f = (f_ptr_t)(g_func_table[59]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[60]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceGetByPCIBusId(CUdevice *arg0, const char *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdevice *, const char *);
     ON_ENTRY(cuDeviceGetByPCIBusId);
-    f_ptr_t f = (f_ptr_t)(g_func_table[60]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[61]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceGetPCIBusId(char *arg0, int arg1, CUdevice arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(char *, int, CUdevice);
     ON_ENTRY(cuDeviceGetPCIBusId);
-    f_ptr_t f = (f_ptr_t)(g_func_table[61]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[62]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuIpcGetEventHandle(CUipcEventHandle *arg0, CUevent arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUipcEventHandle *, CUevent);
     ON_ENTRY(cuIpcGetEventHandle);
-    f_ptr_t f = (f_ptr_t)(g_func_table[62]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[63]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuIpcOpenEventHandle(CUevent *arg0, CUipcEventHandle arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent *, CUipcEventHandle);
     ON_ENTRY(cuIpcOpenEventHandle);
-    f_ptr_t f = (f_ptr_t)(g_func_table[63]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[64]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuIpcGetMemHandle(CUipcMemHandle *arg0, CUdeviceptr arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUipcMemHandle *, CUdeviceptr);
     ON_ENTRY(cuIpcGetMemHandle);
-    f_ptr_t f = (f_ptr_t)(g_func_table[64]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[65]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuIpcOpenMemHandle(CUdeviceptr *arg0, CUipcMemHandle arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, CUipcMemHandle, unsigned int);
     ON_ENTRY(cuIpcOpenMemHandle);
-    f_ptr_t f = (f_ptr_t)(g_func_table[65]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[66]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuIpcCloseMemHandle(CUdeviceptr arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr);
     ON_ENTRY(cuIpcCloseMemHandle);
-    f_ptr_t f = (f_ptr_t)(g_func_table[66]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[67]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostRegister_v2(void *arg0, size_t arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, size_t, unsigned int);
     ON_ENTRY(cuMemHostRegister_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[67]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[68]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostUnregister(void *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *);
     ON_ENTRY(cuMemHostUnregister);
-    f_ptr_t f = (f_ptr_t)(g_func_table[68]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[69]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy_ptds(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpy_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[69]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[70]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyPeer_ptds(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t);
     ON_ENTRY(cuMemcpyPeer_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[70]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[71]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_v2_ptds(CUdeviceptr arg0, const void *arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, const void *, size_t);
     ON_ENTRY(cuMemcpyHtoD_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[71]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[72]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_v2_ptds(void *arg0, CUdeviceptr arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpyDtoH_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[72]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[73]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_v2_ptds(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpyDtoD_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[73]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[74]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_v2_ptds(CUarray arg0, size_t arg1, CUdeviceptr arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpyDtoA_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[74]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[75]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_v2_ptds(CUdeviceptr arg0, CUarray arg1, size_t arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUarray, size_t, size_t);
     ON_ENTRY(cuMemcpyAtoD_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[75]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[76]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_v2_ptds(CUarray arg0, size_t arg1, const void *arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, const void *, size_t);
     ON_ENTRY(cuMemcpyHtoA_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[76]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[77]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_v2_ptds(void *arg0, CUarray arg1, size_t arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUarray, size_t, size_t);
     ON_ENTRY(cuMemcpyAtoH_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[77]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[78]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_v2_ptds(CUarray arg0, size_t arg1, CUarray arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, CUarray, size_t, size_t);
     ON_ENTRY(cuMemcpyAtoA_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[78]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[79]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2D_v2_ptds(const CUDA_MEMCPY2D *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D *);
     ON_ENTRY(cuMemcpy2D_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[79]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[80]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_v2_ptds(const CUDA_MEMCPY2D *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D *);
     ON_ENTRY(cuMemcpy2DUnaligned_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[80]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[81]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3D_v2_ptds(const CUDA_MEMCPY3D *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D *);
     ON_ENTRY(cuMemcpy3D_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[81]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[82]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DPeer_ptds(const CUDA_MEMCPY3D_PEER *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D_PEER *);
     ON_ENTRY(cuMemcpy3DPeer_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[82]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[83]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAsync_ptsz(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t, CUstream);
     ON_ENTRY(cuMemcpyAsync_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[83]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[84]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyPeerAsync_ptsz(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t, CUstream);
     ON_ENTRY(cuMemcpyPeerAsync_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[84]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[85]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_v2_ptsz(CUdeviceptr arg0, const void *arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, const void *, size_t, CUstream);
     ON_ENTRY(cuMemcpyHtoDAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[85]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[86]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_v2_ptsz(void *arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUdeviceptr, size_t, CUstream);
     ON_ENTRY(cuMemcpyDtoHAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[86]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[87]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_v2_ptsz(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t, CUstream);
     ON_ENTRY(cuMemcpyDtoDAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[87]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[88]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_v2_ptsz(CUarray arg0, size_t arg1, const void *arg2, size_t arg3, CUstream arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, const void *, size_t, CUstream);
     ON_ENTRY(cuMemcpyHtoAAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[88]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[89]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_v2_ptsz(void *arg0, CUarray arg1, size_t arg2, size_t arg3, CUstream arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUarray, size_t, size_t, CUstream);
     ON_ENTRY(cuMemcpyAtoHAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[89]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[90]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_v2_ptsz(const CUDA_MEMCPY2D *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D *, CUstream);
     ON_ENTRY(cuMemcpy2DAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[90]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[91]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_v2_ptsz(const CUDA_MEMCPY3D *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D *, CUstream);
     ON_ENTRY(cuMemcpy3DAsync_v2_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[91]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[92]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DPeerAsync_ptsz(const CUDA_MEMCPY3D_PEER *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D_PEER *, CUstream);
     ON_ENTRY(cuMemcpy3DPeerAsync_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[92]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[93]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD8_v2_ptds(CUdeviceptr arg0, unsigned char arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned char, size_t);
     ON_ENTRY(cuMemsetD8_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[93]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[94]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD16_v2_ptds(CUdeviceptr arg0, unsigned short arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned short, size_t);
     ON_ENTRY(cuMemsetD16_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[94]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[95]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD32_v2_ptds(CUdeviceptr arg0, unsigned int arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned int, size_t);
     ON_ENTRY(cuMemsetD32_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[95]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[96]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D8_v2_ptds(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned char, size_t, size_t);
     ON_ENTRY(cuMemsetD2D8_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[96]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[97]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D16_v2_ptds(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned short, size_t, size_t);
     ON_ENTRY(cuMemsetD2D16_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[97]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[98]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D32_v2_ptds(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned int, size_t, size_t);
     ON_ENTRY(cuMemsetD2D32_v2_ptds);
-    f_ptr_t f = (f_ptr_t)(g_func_table[98]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[99]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD8Async_ptsz(CUdeviceptr arg0, unsigned char arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned char, size_t, CUstream);
     ON_ENTRY(cuMemsetD8Async_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[99]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[100]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD16Async_ptsz(CUdeviceptr arg0, unsigned short arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned short, size_t, CUstream);
     ON_ENTRY(cuMemsetD16Async_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[100]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[101]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD32Async_ptsz(CUdeviceptr arg0, unsigned int arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned int, size_t, CUstream);
     ON_ENTRY(cuMemsetD32Async_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[101]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[102]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D8Async_ptsz(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned char, size_t, size_t, CUstream);
     ON_ENTRY(cuMemsetD2D8Async_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[102]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[103]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D16Async_ptsz(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned short, size_t, size_t, CUstream);
     ON_ENTRY(cuMemsetD2D16Async_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[103]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[104]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D32Async_ptsz(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned int, size_t, size_t, CUstream);
     ON_ENTRY(cuMemsetD2D32Async_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[104]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[105]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuArrayCreate_v2(CUarray *arg0, const CUDA_ARRAY_DESCRIPTOR *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, const CUDA_ARRAY_DESCRIPTOR *);
     ON_ENTRY(cuArrayCreate_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[105]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[106]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuArrayGetDescriptor_v2(CUDA_ARRAY_DESCRIPTOR *arg0, CUarray arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_ARRAY_DESCRIPTOR *, CUarray);
     ON_ENTRY(cuArrayGetDescriptor_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[106]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[107]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuArrayDestroy(CUarray arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray);
     ON_ENTRY(cuArrayDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[107]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[108]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuArray3DCreate_v2(CUarray *arg0, const CUDA_ARRAY3D_DESCRIPTOR *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, const CUDA_ARRAY3D_DESCRIPTOR *);
     ON_ENTRY(cuArray3DCreate_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[108]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[109]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuArray3DGetDescriptor_v2(CUDA_ARRAY3D_DESCRIPTOR *arg0, CUarray arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_ARRAY3D_DESCRIPTOR *, CUarray);
     ON_ENTRY(cuArray3DGetDescriptor_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[109]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[110]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMipmappedArrayCreate(CUmipmappedArray *arg0, const CUDA_ARRAY3D_DESCRIPTOR *arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmipmappedArray *, const CUDA_ARRAY3D_DESCRIPTOR *, unsigned int);
     ON_ENTRY(cuMipmappedArrayCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[110]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[111]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMipmappedArrayGetLevel(CUarray *arg0, CUmipmappedArray arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, CUmipmappedArray, unsigned int);
     ON_ENTRY(cuMipmappedArrayGetLevel);
-    f_ptr_t f = (f_ptr_t)(g_func_table[111]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[112]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMipmappedArrayDestroy(CUmipmappedArray arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmipmappedArray);
     ON_ENTRY(cuMipmappedArrayDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[112]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[113]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuPointerGetAttribute(void *arg0, CUpointer_attribute arg1, CUdeviceptr arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUpointer_attribute, CUdeviceptr);
     ON_ENTRY(cuPointerGetAttribute);
-    f_ptr_t f = (f_ptr_t)(g_func_table[113]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[114]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync_ptsz(CUdeviceptr arg0, size_t arg1, CUdevice arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, CUdevice, CUstream);
     ON_ENTRY(cuMemPrefetchAsync_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[114]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[115]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemAdvise(CUdeviceptr arg0, size_t arg1, CUmem_advise arg2, CUdevice arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, CUmem_advise, CUdevice);
     ON_ENTRY(cuMemAdvise);
-    f_ptr_t f = (f_ptr_t)(g_func_table[115]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[116]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemRangeGetAttribute(void *arg0, size_t arg1, CUmem_range_attribute arg2, CUdeviceptr arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, size_t, CUmem_range_attribute, CUdeviceptr, size_t);
     ON_ENTRY(cuMemRangeGetAttribute);
-    f_ptr_t f = (f_ptr_t)(g_func_table[116]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[117]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemRangeGetAttributes(void **arg0, size_t *arg1, CUmem_range_attribute *arg2, size_t arg3, CUdeviceptr arg4, size_t arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void **, size_t *, CUmem_range_attribute *, size_t, CUdeviceptr, size_t);
     ON_ENTRY(cuMemRangeGetAttributes);
-    f_ptr_t f = (f_ptr_t)(g_func_table[117]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[118]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuPointerSetAttribute(const void *arg0, CUpointer_attribute arg1, CUdeviceptr arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const void *, CUpointer_attribute, CUdeviceptr);
     ON_ENTRY(cuPointerSetAttribute);
-    f_ptr_t f = (f_ptr_t)(g_func_table[118]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[119]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuPointerGetAttributes(unsigned int arg0, CUpointer_attribute *arg1, void **arg2, CUdeviceptr arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUpointer_attribute *, void **, CUdeviceptr);
     ON_ENTRY(cuPointerGetAttributes);
-    f_ptr_t f = (f_ptr_t)(g_func_table[119]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[120]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamCreate(CUstream *arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream *, unsigned int);
     ON_ENTRY(cuStreamCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[120]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[121]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuStreamCreateWithPriority(CUstream *arg0, unsigned int arg1, int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream *, unsigned int, int);
     ON_ENTRY(cuStreamCreateWithPriority);
-    f_ptr_t f = (f_ptr_t)(g_func_table[121]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[122]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuStreamGetPriority_ptsz(CUstream arg0, int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, int *);
     ON_ENTRY(cuStreamGetPriority_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[122]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[123]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuStreamGetFlags_ptsz(CUstream arg0, unsigned int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, unsigned int *);
     ON_ENTRY(cuStreamGetFlags_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[123]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[124]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamGetCtx_ptsz(CUstream arg0, CUcontext *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUcontext *);
+    ON_ENTRY(cuStreamGetCtx_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[125]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuStreamWaitEvent_ptsz(CUstream arg0, CUevent arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUevent, unsigned int);
     ON_ENTRY(cuStreamWaitEvent_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[124]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[126]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuStreamAddCallback_ptsz(CUstream arg0, CUstreamCallback arg1, void *arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCallback, void *, unsigned int);
     ON_ENTRY(cuStreamAddCallback_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[125]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[127]);
     return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_v2_ptsz(CUstream arg0, CUstreamCaptureMode arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCaptureMode);
+    ON_ENTRY(cuStreamBeginCapture_v2_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[128]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuThreadExchangeStreamCaptureMode(CUstreamCaptureMode *arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstreamCaptureMode *);
+    ON_ENTRY(cuThreadExchangeStreamCaptureMode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[129]);
+    return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuStreamEndCapture_ptsz(CUstream arg0, CUgraph *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUgraph *);
+    ON_ENTRY(cuStreamEndCapture_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[130]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamIsCapturing_ptsz(CUstream arg0, CUstreamCaptureStatus *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCaptureStatus *);
+    ON_ENTRY(cuStreamIsCapturing_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[131]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamGetCaptureInfo_ptsz(CUstream arg0, CUstreamCaptureStatus *arg1, cuuint64_t *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCaptureStatus *, cuuint64_t *);
+    ON_ENTRY(cuStreamGetCaptureInfo_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[132]);
+    return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuStreamAttachMemAsync_ptsz(CUstream arg0, CUdeviceptr arg1, size_t arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, size_t, unsigned int);
     ON_ENTRY(cuStreamAttachMemAsync_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[126]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[133]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamQuery_ptsz(CUstream arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
     ON_ENTRY(cuStreamQuery_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[127]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[134]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuStreamSynchronize_ptsz(CUstream arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
     ON_ENTRY(cuStreamSynchronize_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[128]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[135]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuStreamDestroy_v2(CUstream arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
     ON_ENTRY(cuStreamDestroy_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[129]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[136]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuEventCreate(CUevent *arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent *, unsigned int);
     ON_ENTRY(cuEventCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[130]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[137]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuEventRecord_ptsz(CUevent arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent, CUstream);
     ON_ENTRY(cuEventRecord_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[131]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[138]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuEventQuery(CUevent arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent);
     ON_ENTRY(cuEventQuery);
-    f_ptr_t f = (f_ptr_t)(g_func_table[132]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[139]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuEventSynchronize(CUevent arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent);
     ON_ENTRY(cuEventSynchronize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[133]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[140]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuEventDestroy_v2(CUevent arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent);
     ON_ENTRY(cuEventDestroy_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[134]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[141]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuEventElapsedTime(float *arg0, CUevent arg1, CUevent arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(float *, CUevent, CUevent);
     ON_ENTRY(cuEventElapsedTime);
-    f_ptr_t f = (f_ptr_t)(g_func_table[135]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[142]);
     return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuImportExternalMemory(CUexternalMemory *arg0, const CUDA_EXTERNAL_MEMORY_HANDLE_DESC *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUexternalMemory *, const CUDA_EXTERNAL_MEMORY_HANDLE_DESC *);
+    ON_ENTRY(cuImportExternalMemory);
+    f_ptr_t f = (f_ptr_t)(g_func_table[143]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuExternalMemoryGetMappedBuffer(CUdeviceptr *arg0, CUexternalMemory arg1, const CUDA_EXTERNAL_MEMORY_BUFFER_DESC *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, CUexternalMemory, const CUDA_EXTERNAL_MEMORY_BUFFER_DESC *);
+    ON_ENTRY(cuExternalMemoryGetMappedBuffer);
+    f_ptr_t f = (f_ptr_t)(g_func_table[144]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuExternalMemoryGetMappedMipmappedArray(CUmipmappedArray *arg0, CUexternalMemory arg1, const CUDA_EXTERNAL_MEMORY_MIPMAPPED_ARRAY_DESC *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmipmappedArray *, CUexternalMemory, const CUDA_EXTERNAL_MEMORY_MIPMAPPED_ARRAY_DESC *);
+    ON_ENTRY(cuExternalMemoryGetMappedMipmappedArray);
+    f_ptr_t f = (f_ptr_t)(g_func_table[145]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuDestroyExternalMemory(CUexternalMemory arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUexternalMemory);
+    ON_ENTRY(cuDestroyExternalMemory);
+    f_ptr_t f = (f_ptr_t)(g_func_table[146]);
+    return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuImportExternalSemaphore(CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_HANDLE_DESC *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_HANDLE_DESC *);
+    ON_ENTRY(cuImportExternalSemaphore);
+    f_ptr_t f = (f_ptr_t)(g_func_table[147]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuSignalExternalSemaphoresAsync_ptsz(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *, unsigned int, CUstream);
+    ON_ENTRY(cuSignalExternalSemaphoresAsync_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[148]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuWaitExternalSemaphoresAsync_ptsz(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *, unsigned int, CUstream);
+    ON_ENTRY(cuWaitExternalSemaphoresAsync_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[149]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuDestroyExternalSemaphore(CUexternalSemaphore arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUexternalSemaphore);
+    ON_ENTRY(cuDestroyExternalSemaphore);
+    f_ptr_t f = (f_ptr_t)(g_func_table[150]);
+    return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuStreamWaitValue32_ptsz(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint32_t, unsigned int);
     ON_ENTRY(cuStreamWaitValue32_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[136]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[151]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuStreamWaitValue64_ptsz(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint64_t, unsigned int);
+    ON_ENTRY(cuStreamWaitValue64_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[152]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamWriteValue32_ptsz(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint32_t, unsigned int);
     ON_ENTRY(cuStreamWriteValue32_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[137]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[153]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuStreamWriteValue64_ptsz(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint64_t, unsigned int);
+    ON_ENTRY(cuStreamWriteValue64_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[154]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamBatchMemOp_ptsz(CUstream arg0, unsigned int arg1, CUstreamBatchMemOpParams *arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, unsigned int, CUstreamBatchMemOpParams *, unsigned int);
     ON_ENTRY(cuStreamBatchMemOp_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[138]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[155]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuFuncGetAttribute(int *arg0, CUfunction_attribute arg1, CUfunction arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUfunction_attribute, CUfunction);
     ON_ENTRY(cuFuncGetAttribute);
-    f_ptr_t f = (f_ptr_t)(g_func_table[139]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[156]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuFuncSetAttribute(CUfunction arg0, CUfunction_attribute arg1, int arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, CUfunction_attribute, int);
+    ON_ENTRY(cuFuncSetAttribute);
+    f_ptr_t f = (f_ptr_t)(g_func_table[157]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuFuncSetCacheConfig(CUfunction arg0, CUfunc_cache arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, CUfunc_cache);
     ON_ENTRY(cuFuncSetCacheConfig);
-    f_ptr_t f = (f_ptr_t)(g_func_table[140]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[158]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuFuncSetSharedMemConfig(CUfunction arg0, CUsharedconfig arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, CUsharedconfig);
     ON_ENTRY(cuFuncSetSharedMemConfig);
-    f_ptr_t f = (f_ptr_t)(g_func_table[141]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[159]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuLaunchKernel_ptsz(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9, void **arg10) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **, void **);
     ON_ENTRY(cuLaunchKernel_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[142]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[160]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+}
+CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernel_ptsz(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **);
+    ON_ENTRY(cuLaunchCooperativeKernel_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[161]);
+    return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+}
+CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernelMultiDevice(CUDA_LAUNCH_PARAMS *arg0, unsigned int arg1, unsigned int arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_LAUNCH_PARAMS *, unsigned int, unsigned int);
+    ON_ENTRY(cuLaunchCooperativeKernelMultiDevice);
+    f_ptr_t f = (f_ptr_t)(g_func_table[162]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuLaunchHostFunc_ptsz(CUstream arg0, CUhostFn arg1, void *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUhostFn, void *);
+    ON_ENTRY(cuLaunchHostFunc_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[163]);
+    return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuFuncSetBlockShape(CUfunction arg0, int arg1, int arg2, int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, int, int);
     ON_ENTRY(cuFuncSetBlockShape);
-    f_ptr_t f = (f_ptr_t)(g_func_table[143]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[164]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuFuncSetSharedSize(CUfunction arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, unsigned int);
     ON_ENTRY(cuFuncSetSharedSize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[144]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[165]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuParamSetSize(CUfunction arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, unsigned int);
     ON_ENTRY(cuParamSetSize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[145]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[166]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuParamSeti(CUfunction arg0, int arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, unsigned int);
     ON_ENTRY(cuParamSeti);
-    f_ptr_t f = (f_ptr_t)(g_func_table[146]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[167]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuParamSetf(CUfunction arg0, int arg1, float arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, float);
     ON_ENTRY(cuParamSetf);
-    f_ptr_t f = (f_ptr_t)(g_func_table[147]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[168]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuParamSetv(CUfunction arg0, int arg1, void *arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, void *, unsigned int);
     ON_ENTRY(cuParamSetv);
-    f_ptr_t f = (f_ptr_t)(g_func_table[148]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[169]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuLaunch(CUfunction arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction);
     ON_ENTRY(cuLaunch);
-    f_ptr_t f = (f_ptr_t)(g_func_table[149]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[170]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuLaunchGrid(CUfunction arg0, int arg1, int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, int);
     ON_ENTRY(cuLaunchGrid);
-    f_ptr_t f = (f_ptr_t)(g_func_table[150]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[171]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuLaunchGridAsync(CUfunction arg0, int arg1, int arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, int, CUstream);
     ON_ENTRY(cuLaunchGridAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[151]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[172]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuParamSetTexRef(CUfunction arg0, int arg1, CUtexref arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, int, CUtexref);
     ON_ENTRY(cuParamSetTexRef);
-    f_ptr_t f = (f_ptr_t)(g_func_table[152]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[173]);
     return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphCreate(CUgraph *arg0, unsigned int arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph *, unsigned int);
+    ON_ENTRY(cuGraphCreate);
+    f_ptr_t f = (f_ptr_t)(g_func_table[174]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddKernelNode(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_KERNEL_NODE_PARAMS *arg4) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_KERNEL_NODE_PARAMS *);
+    ON_ENTRY(cuGraphAddKernelNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[175]);
+    return f(arg0, arg1, arg2, arg3, arg4);
+}
+CUresult _WRAPLIB_API_CALL cuGraphKernelNodeGetParams(CUgraphNode arg0, CUDA_KERNEL_NODE_PARAMS *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUDA_KERNEL_NODE_PARAMS *);
+    ON_ENTRY(cuGraphKernelNodeGetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[176]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphKernelNodeSetParams(CUgraphNode arg0, const CUDA_KERNEL_NODE_PARAMS *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, const CUDA_KERNEL_NODE_PARAMS *);
+    ON_ENTRY(cuGraphKernelNodeSetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[177]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddMemcpyNode(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_MEMCPY3D *arg4, CUcontext arg5) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_MEMCPY3D *, CUcontext);
+    ON_ENTRY(cuGraphAddMemcpyNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[178]);
+    return f(arg0, arg1, arg2, arg3, arg4, arg5);
+}
+CUresult _WRAPLIB_API_CALL cuGraphMemcpyNodeGetParams(CUgraphNode arg0, CUDA_MEMCPY3D *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUDA_MEMCPY3D *);
+    ON_ENTRY(cuGraphMemcpyNodeGetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[179]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphMemcpyNodeSetParams(CUgraphNode arg0, const CUDA_MEMCPY3D *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, const CUDA_MEMCPY3D *);
+    ON_ENTRY(cuGraphMemcpyNodeSetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[180]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddMemsetNode(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_MEMSET_NODE_PARAMS *arg4, CUcontext arg5) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_MEMSET_NODE_PARAMS *, CUcontext);
+    ON_ENTRY(cuGraphAddMemsetNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[181]);
+    return f(arg0, arg1, arg2, arg3, arg4, arg5);
+}
+CUresult _WRAPLIB_API_CALL cuGraphMemsetNodeGetParams(CUgraphNode arg0, CUDA_MEMSET_NODE_PARAMS *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUDA_MEMSET_NODE_PARAMS *);
+    ON_ENTRY(cuGraphMemsetNodeGetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[182]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphMemsetNodeSetParams(CUgraphNode arg0, const CUDA_MEMSET_NODE_PARAMS *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, const CUDA_MEMSET_NODE_PARAMS *);
+    ON_ENTRY(cuGraphMemsetNodeSetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[183]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddHostNode(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, const CUDA_HOST_NODE_PARAMS *arg4) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, const CUDA_HOST_NODE_PARAMS *);
+    ON_ENTRY(cuGraphAddHostNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[184]);
+    return f(arg0, arg1, arg2, arg3, arg4);
+}
+CUresult _WRAPLIB_API_CALL cuGraphHostNodeGetParams(CUgraphNode arg0, CUDA_HOST_NODE_PARAMS *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUDA_HOST_NODE_PARAMS *);
+    ON_ENTRY(cuGraphHostNodeGetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[185]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphHostNodeSetParams(CUgraphNode arg0, const CUDA_HOST_NODE_PARAMS *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, const CUDA_HOST_NODE_PARAMS *);
+    ON_ENTRY(cuGraphHostNodeSetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[186]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddChildGraphNode(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3, CUgraph arg4) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraph, const CUgraphNode *, size_t, CUgraph);
+    ON_ENTRY(cuGraphAddChildGraphNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[187]);
+    return f(arg0, arg1, arg2, arg3, arg4);
+}
+CUresult _WRAPLIB_API_CALL cuGraphChildGraphNodeGetGraph(CUgraphNode arg0, CUgraph *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUgraph *);
+    ON_ENTRY(cuGraphChildGraphNodeGetGraph);
+    f_ptr_t f = (f_ptr_t)(g_func_table[188]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddEmptyNode(CUgraphNode *arg0, CUgraph arg1, const CUgraphNode *arg2, size_t arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraph, const CUgraphNode *, size_t);
+    ON_ENTRY(cuGraphAddEmptyNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[189]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuGraphClone(CUgraph *arg0, CUgraph arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph *, CUgraph);
+    ON_ENTRY(cuGraphClone);
+    f_ptr_t f = (f_ptr_t)(g_func_table[190]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphNodeFindInClone(CUgraphNode *arg0, CUgraphNode arg1, CUgraph arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode *, CUgraphNode, CUgraph);
+    ON_ENTRY(cuGraphNodeFindInClone);
+    f_ptr_t f = (f_ptr_t)(g_func_table[191]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphNodeGetType(CUgraphNode arg0, CUgraphNodeType *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUgraphNodeType *);
+    ON_ENTRY(cuGraphNodeGetType);
+    f_ptr_t f = (f_ptr_t)(g_func_table[192]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphGetNodes(CUgraph arg0, CUgraphNode *arg1, size_t *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph, CUgraphNode *, size_t *);
+    ON_ENTRY(cuGraphGetNodes);
+    f_ptr_t f = (f_ptr_t)(g_func_table[193]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphGetRootNodes(CUgraph arg0, CUgraphNode *arg1, size_t *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph, CUgraphNode *, size_t *);
+    ON_ENTRY(cuGraphGetRootNodes);
+    f_ptr_t f = (f_ptr_t)(g_func_table[194]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphGetEdges(CUgraph arg0, CUgraphNode *arg1, CUgraphNode *arg2, size_t *arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph, CUgraphNode *, CUgraphNode *, size_t *);
+    ON_ENTRY(cuGraphGetEdges);
+    f_ptr_t f = (f_ptr_t)(g_func_table[195]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuGraphNodeGetDependencies(CUgraphNode arg0, CUgraphNode *arg1, size_t *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUgraphNode *, size_t *);
+    ON_ENTRY(cuGraphNodeGetDependencies);
+    f_ptr_t f = (f_ptr_t)(g_func_table[196]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphNodeGetDependentNodes(CUgraphNode arg0, CUgraphNode *arg1, size_t *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode, CUgraphNode *, size_t *);
+    ON_ENTRY(cuGraphNodeGetDependentNodes);
+    f_ptr_t f = (f_ptr_t)(g_func_table[197]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphAddDependencies(CUgraph arg0, const CUgraphNode *arg1, const CUgraphNode *arg2, size_t arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph, const CUgraphNode *, const CUgraphNode *, size_t);
+    ON_ENTRY(cuGraphAddDependencies);
+    f_ptr_t f = (f_ptr_t)(g_func_table[198]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuGraphRemoveDependencies(CUgraph arg0, const CUgraphNode *arg1, const CUgraphNode *arg2, size_t arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph, const CUgraphNode *, const CUgraphNode *, size_t);
+    ON_ENTRY(cuGraphRemoveDependencies);
+    f_ptr_t f = (f_ptr_t)(g_func_table[199]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuGraphDestroyNode(CUgraphNode arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphNode);
+    ON_ENTRY(cuGraphDestroyNode);
+    f_ptr_t f = (f_ptr_t)(g_func_table[200]);
+    return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuGraphInstantiate(CUgraphExec *arg0, CUgraph arg1, CUgraphNode *arg2, char *arg3, size_t arg4) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphExec *, CUgraph, CUgraphNode *, char *, size_t);
+    ON_ENTRY(cuGraphInstantiate);
+    f_ptr_t f = (f_ptr_t)(g_func_table[201]);
+    return f(arg0, arg1, arg2, arg3, arg4);
+}
+CUresult _WRAPLIB_API_CALL cuGraphExecKernelNodeSetParams(CUgraphExec arg0, CUgraphNode arg1, const CUDA_KERNEL_NODE_PARAMS *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphExec, CUgraphNode, const CUDA_KERNEL_NODE_PARAMS *);
+    ON_ENTRY(cuGraphExecKernelNodeSetParams);
+    f_ptr_t f = (f_ptr_t)(g_func_table[202]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphLaunch_ptsz(CUgraphExec arg0, CUstream arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphExec, CUstream);
+    ON_ENTRY(cuGraphLaunch_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[203]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuGraphExecDestroy(CUgraphExec arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphExec);
+    ON_ENTRY(cuGraphExecDestroy);
+    f_ptr_t f = (f_ptr_t)(g_func_table[204]);
+    return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuGraphDestroy(CUgraph arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraph);
+    ON_ENTRY(cuGraphDestroy);
+    f_ptr_t f = (f_ptr_t)(g_func_table[205]);
+    return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuOccupancyMaxActiveBlocksPerMultiprocessor(int *arg0, CUfunction arg1, int arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUfunction, int, size_t);
     ON_ENTRY(cuOccupancyMaxActiveBlocksPerMultiprocessor);
-    f_ptr_t f = (f_ptr_t)(g_func_table[153]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[206]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(int *arg0, CUfunction arg1, int arg2, size_t arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUfunction, int, size_t, unsigned int);
     ON_ENTRY(cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[154]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[207]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuOccupancyMaxPotentialBlockSize(int *arg0, int *arg1, CUfunction arg2, CUoccupancyB2DSize arg3, size_t arg4, int arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, int *, CUfunction, CUoccupancyB2DSize, size_t, int);
     ON_ENTRY(cuOccupancyMaxPotentialBlockSize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[155]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[208]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuOccupancyMaxPotentialBlockSizeWithFlags(int *arg0, int *arg1, CUfunction arg2, CUoccupancyB2DSize arg3, size_t arg4, int arg5, unsigned int arg6) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, int *, CUfunction, CUoccupancyB2DSize, size_t, int, unsigned int);
     ON_ENTRY(cuOccupancyMaxPotentialBlockSizeWithFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[156]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[209]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetArray(CUtexref arg0, CUarray arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, CUarray, unsigned int);
     ON_ENTRY(cuTexRefSetArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[157]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[210]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetMipmappedArray(CUtexref arg0, CUmipmappedArray arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, CUmipmappedArray, unsigned int);
     ON_ENTRY(cuTexRefSetMipmappedArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[158]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[211]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetAddress_v2(size_t *arg0, CUtexref arg1, CUdeviceptr arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(size_t *, CUtexref, CUdeviceptr, size_t);
     ON_ENTRY(cuTexRefSetAddress_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[159]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[212]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_v3(CUtexref arg0, const CUDA_ARRAY_DESCRIPTOR *arg1, CUdeviceptr arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, const CUDA_ARRAY_DESCRIPTOR *, CUdeviceptr, size_t);
     ON_ENTRY(cuTexRefSetAddress2D_v3);
-    f_ptr_t f = (f_ptr_t)(g_func_table[160]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[213]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetFormat(CUtexref arg0, CUarray_format arg1, int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, CUarray_format, int);
     ON_ENTRY(cuTexRefSetFormat);
-    f_ptr_t f = (f_ptr_t)(g_func_table[161]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[214]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetAddressMode(CUtexref arg0, int arg1, CUaddress_mode arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, int, CUaddress_mode);
     ON_ENTRY(cuTexRefSetAddressMode);
-    f_ptr_t f = (f_ptr_t)(g_func_table[162]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[215]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetFilterMode(CUtexref arg0, CUfilter_mode arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, CUfilter_mode);
     ON_ENTRY(cuTexRefSetFilterMode);
-    f_ptr_t f = (f_ptr_t)(g_func_table[163]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[216]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapFilterMode(CUtexref arg0, CUfilter_mode arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, CUfilter_mode);
     ON_ENTRY(cuTexRefSetMipmapFilterMode);
-    f_ptr_t f = (f_ptr_t)(g_func_table[164]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[217]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapLevelBias(CUtexref arg0, float arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, float);
     ON_ENTRY(cuTexRefSetMipmapLevelBias);
-    f_ptr_t f = (f_ptr_t)(g_func_table[165]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[218]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetMipmapLevelClamp(CUtexref arg0, float arg1, float arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, float, float);
     ON_ENTRY(cuTexRefSetMipmapLevelClamp);
-    f_ptr_t f = (f_ptr_t)(g_func_table[166]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[219]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetMaxAnisotropy(CUtexref arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, unsigned int);
     ON_ENTRY(cuTexRefSetMaxAnisotropy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[167]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[220]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetBorderColor(CUtexref arg0, float *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, float *);
     ON_ENTRY(cuTexRefSetBorderColor);
-    f_ptr_t f = (f_ptr_t)(g_func_table[168]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[221]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetFlags(CUtexref arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, unsigned int);
     ON_ENTRY(cuTexRefSetFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[169]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[222]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetAddress_v2(CUdeviceptr *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, CUtexref);
     ON_ENTRY(cuTexRefGetAddress_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[170]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[223]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetArray(CUarray *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, CUtexref);
     ON_ENTRY(cuTexRefGetArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[171]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[224]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetMipmappedArray(CUmipmappedArray *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmipmappedArray *, CUtexref);
     ON_ENTRY(cuTexRefGetMipmappedArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[172]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[225]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetAddressMode(CUaddress_mode *arg0, CUtexref arg1, int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUaddress_mode *, CUtexref, int);
     ON_ENTRY(cuTexRefGetAddressMode);
-    f_ptr_t f = (f_ptr_t)(g_func_table[173]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[226]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetFilterMode(CUfilter_mode *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfilter_mode *, CUtexref);
     ON_ENTRY(cuTexRefGetFilterMode);
-    f_ptr_t f = (f_ptr_t)(g_func_table[174]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[227]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetFormat(CUarray_format *arg0, int *arg1, CUtexref arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray_format *, int *, CUtexref);
     ON_ENTRY(cuTexRefGetFormat);
-    f_ptr_t f = (f_ptr_t)(g_func_table[175]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[228]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapFilterMode(CUfilter_mode *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfilter_mode *, CUtexref);
     ON_ENTRY(cuTexRefGetMipmapFilterMode);
-    f_ptr_t f = (f_ptr_t)(g_func_table[176]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[229]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapLevelBias(float *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(float *, CUtexref);
     ON_ENTRY(cuTexRefGetMipmapLevelBias);
-    f_ptr_t f = (f_ptr_t)(g_func_table[177]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[230]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetMipmapLevelClamp(float *arg0, float *arg1, CUtexref arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(float *, float *, CUtexref);
     ON_ENTRY(cuTexRefGetMipmapLevelClamp);
-    f_ptr_t f = (f_ptr_t)(g_func_table[178]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[231]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetMaxAnisotropy(int *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUtexref);
     ON_ENTRY(cuTexRefGetMaxAnisotropy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[179]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[232]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetBorderColor(float *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(float *, CUtexref);
     ON_ENTRY(cuTexRefGetBorderColor);
-    f_ptr_t f = (f_ptr_t)(g_func_table[180]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[233]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetFlags(unsigned int *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int *, CUtexref);
     ON_ENTRY(cuTexRefGetFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[181]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[234]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefCreate(CUtexref *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref *);
     ON_ENTRY(cuTexRefCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[182]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[235]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefDestroy(CUtexref arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref);
     ON_ENTRY(cuTexRefDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[183]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[236]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuSurfRefSetArray(CUsurfref arg0, CUarray arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUsurfref, CUarray, unsigned int);
     ON_ENTRY(cuSurfRefSetArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[184]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[237]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuSurfRefGetArray(CUarray *arg0, CUsurfref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, CUsurfref);
     ON_ENTRY(cuSurfRefGetArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[185]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[238]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexObjectCreate(CUtexObject *arg0, const CUDA_RESOURCE_DESC *arg1, const CUDA_TEXTURE_DESC *arg2, const CUDA_RESOURCE_VIEW_DESC *arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexObject *, const CUDA_RESOURCE_DESC *, const CUDA_TEXTURE_DESC *, const CUDA_RESOURCE_VIEW_DESC *);
     ON_ENTRY(cuTexObjectCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[186]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[239]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuTexObjectDestroy(CUtexObject arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexObject);
     ON_ENTRY(cuTexObjectDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[187]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[240]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuTexObjectGetResourceDesc(CUDA_RESOURCE_DESC *arg0, CUtexObject arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_RESOURCE_DESC *, CUtexObject);
     ON_ENTRY(cuTexObjectGetResourceDesc);
-    f_ptr_t f = (f_ptr_t)(g_func_table[188]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[241]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexObjectGetTextureDesc(CUDA_TEXTURE_DESC *arg0, CUtexObject arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_TEXTURE_DESC *, CUtexObject);
     ON_ENTRY(cuTexObjectGetTextureDesc);
-    f_ptr_t f = (f_ptr_t)(g_func_table[189]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[242]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexObjectGetResourceViewDesc(CUDA_RESOURCE_VIEW_DESC *arg0, CUtexObject arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_RESOURCE_VIEW_DESC *, CUtexObject);
     ON_ENTRY(cuTexObjectGetResourceViewDesc);
-    f_ptr_t f = (f_ptr_t)(g_func_table[190]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[243]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuSurfObjectCreate(CUsurfObject *arg0, const CUDA_RESOURCE_DESC *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUsurfObject *, const CUDA_RESOURCE_DESC *);
     ON_ENTRY(cuSurfObjectCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[191]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[244]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuSurfObjectDestroy(CUsurfObject arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUsurfObject);
     ON_ENTRY(cuSurfObjectDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[192]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[245]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuSurfObjectGetResourceDesc(CUDA_RESOURCE_DESC *arg0, CUsurfObject arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_RESOURCE_DESC *, CUsurfObject);
     ON_ENTRY(cuSurfObjectGetResourceDesc);
-    f_ptr_t f = (f_ptr_t)(g_func_table[193]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[246]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceCanAccessPeer(int *arg0, CUdevice arg1, CUdevice arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUdevice, CUdevice);
     ON_ENTRY(cuDeviceCanAccessPeer);
-    f_ptr_t f = (f_ptr_t)(g_func_table[194]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[247]);
     return f(arg0, arg1, arg2);
-}
-CUresult _WRAPLIB_API_CALL cuDeviceGetP2PAttribute(int *arg0, CUdevice_P2PAttribute arg1, CUdevice arg2, CUdevice arg3) {
-    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUdevice_P2PAttribute, CUdevice, CUdevice);
-    ON_ENTRY(cuDeviceGetP2PAttribute);
-    f_ptr_t f = (f_ptr_t)(g_func_table[195]);
-    return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuCtxEnablePeerAccess(CUcontext arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext, unsigned int);
     ON_ENTRY(cuCtxEnablePeerAccess);
-    f_ptr_t f = (f_ptr_t)(g_func_table[196]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[248]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxDisablePeerAccess(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxDisablePeerAccess);
-    f_ptr_t f = (f_ptr_t)(g_func_table[197]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[249]);
     return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuDeviceGetP2PAttribute(int *arg0, CUdevice_P2PAttribute arg1, CUdevice arg2, CUdevice arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(int *, CUdevice_P2PAttribute, CUdevice, CUdevice);
+    ON_ENTRY(cuDeviceGetP2PAttribute);
+    f_ptr_t f = (f_ptr_t)(g_func_table[250]);
+    return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsUnregisterResource(CUgraphicsResource arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphicsResource);
     ON_ENTRY(cuGraphicsUnregisterResource);
-    f_ptr_t f = (f_ptr_t)(g_func_table[198]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[251]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsSubResourceGetMappedArray(CUarray *arg0, CUgraphicsResource arg1, unsigned int arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, CUgraphicsResource, unsigned int, unsigned int);
     ON_ENTRY(cuGraphicsSubResourceGetMappedArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[199]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[252]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedMipmappedArray(CUmipmappedArray *arg0, CUgraphicsResource arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUmipmappedArray *, CUgraphicsResource);
     ON_ENTRY(cuGraphicsResourceGetMappedMipmappedArray);
-    f_ptr_t f = (f_ptr_t)(g_func_table[200]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[253]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedPointer_v2(CUdeviceptr *arg0, size_t *arg1, CUgraphicsResource arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr *, size_t *, CUgraphicsResource);
     ON_ENTRY(cuGraphicsResourceGetMappedPointer_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[201]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[254]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsResourceSetMapFlags_v2(CUgraphicsResource arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphicsResource, unsigned int);
     ON_ENTRY(cuGraphicsResourceSetMapFlags_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[202]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[255]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsMapResources_ptsz(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUgraphicsResource *, CUstream);
     ON_ENTRY(cuGraphicsMapResources_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[203]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[256]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsUnmapResources_ptsz(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUgraphicsResource *, CUstream);
     ON_ENTRY(cuGraphicsUnmapResources_ptsz);
-    f_ptr_t f = (f_ptr_t)(g_func_table[204]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[257]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuGetExportTable(const void **arg0, const CUuuid *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const void **, const CUuuid *);
     ON_ENTRY(cuGetExportTable);
-    f_ptr_t f = (f_ptr_t)(g_func_table[205]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[258]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostRegister(void *arg0, size_t arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, size_t, unsigned int);
     ON_ENTRY(cuMemHostRegister);
-    f_ptr_t f = (f_ptr_t)(g_func_table[206]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[259]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsResourceSetMapFlags(CUgraphicsResource arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphicsResource, unsigned int);
     ON_ENTRY(cuGraphicsResourceSetMapFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[207]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[260]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuLinkCreate(unsigned int arg0, CUjit_option *arg1, void **arg2, CUlinkState *arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUjit_option *, void **, CUlinkState *);
     ON_ENTRY(cuLinkCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[208]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[261]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuLinkAddData(CUlinkState arg0, CUjitInputType arg1, void *arg2, size_t arg3, const char *arg4, unsigned int arg5, CUjit_option *arg6, void **arg7) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlinkState, CUjitInputType, void *, size_t, const char *, unsigned int, CUjit_option *, void **);
     ON_ENTRY(cuLinkAddData);
-    f_ptr_t f = (f_ptr_t)(g_func_table[209]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[262]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 CUresult _WRAPLIB_API_CALL cuLinkAddFile(CUlinkState arg0, CUjitInputType arg1, const char *arg2, unsigned int arg3, CUjit_option *arg4, void **arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUlinkState, CUjitInputType, const char *, unsigned int, CUjit_option *, void **);
     ON_ENTRY(cuLinkAddFile);
-    f_ptr_t f = (f_ptr_t)(g_func_table[210]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[263]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D_v2(CUtexref arg0, const CUDA_ARRAY_DESCRIPTOR *arg1, CUdeviceptr arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, const CUDA_ARRAY_DESCRIPTOR *, CUdeviceptr, size_t);
     ON_ENTRY(cuTexRefSetAddress2D_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[211]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[264]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuDeviceTotalMem(unsigned int *arg0, CUdevice arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int *, CUdevice);
     ON_ENTRY(cuDeviceTotalMem);
-    f_ptr_t f = (f_ptr_t)(g_func_table[212]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[265]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuCtxCreate(CUcontext *arg0, unsigned int arg1, CUdevice arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *, unsigned int, CUdevice);
     ON_ENTRY(cuCtxCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[213]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[266]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuModuleGetGlobal(CUdeviceptr_v1 *arg0, unsigned int *arg1, CUmodule arg2, const char *arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, unsigned int *, CUmodule, const char *);
     ON_ENTRY(cuModuleGetGlobal);
-    f_ptr_t f = (f_ptr_t)(g_func_table[214]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[267]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemGetInfo(unsigned int *arg0, unsigned int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int *, unsigned int *);
     ON_ENTRY(cuMemGetInfo);
-    f_ptr_t f = (f_ptr_t)(g_func_table[215]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[268]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemAlloc(CUdeviceptr_v1 *arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, unsigned int);
     ON_ENTRY(cuMemAlloc);
-    f_ptr_t f = (f_ptr_t)(g_func_table[216]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[269]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemAllocPitch(CUdeviceptr_v1 *arg0, unsigned int *arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, unsigned int *, unsigned int, unsigned int, unsigned int);
     ON_ENTRY(cuMemAllocPitch);
-    f_ptr_t f = (f_ptr_t)(g_func_table[217]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[270]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemFree(CUdeviceptr_v1 arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1);
     ON_ENTRY(cuMemFree);
-    f_ptr_t f = (f_ptr_t)(g_func_table[218]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[271]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemGetAddressRange(CUdeviceptr_v1 *arg0, unsigned int *arg1, CUdeviceptr_v1 arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, unsigned int *, CUdeviceptr_v1);
     ON_ENTRY(cuMemGetAddressRange);
-    f_ptr_t f = (f_ptr_t)(g_func_table[219]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[272]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemAllocHost(void **arg0, unsigned int arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void **, unsigned int);
     ON_ENTRY(cuMemAllocHost);
-    f_ptr_t f = (f_ptr_t)(g_func_table[220]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[273]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemHostGetDevicePointer(CUdeviceptr_v1 *arg0, void *arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, void *, unsigned int);
     ON_ENTRY(cuMemHostGetDevicePointer);
-    f_ptr_t f = (f_ptr_t)(g_func_table[221]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[274]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoD(CUdeviceptr_v1 arg0, const void *arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, const void *, unsigned int);
     ON_ENTRY(cuMemcpyHtoD);
-    f_ptr_t f = (f_ptr_t)(g_func_table[222]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[275]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoH(void *arg0, CUdeviceptr_v1 arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUdeviceptr_v1, unsigned int);
     ON_ENTRY(cuMemcpyDtoH);
-    f_ptr_t f = (f_ptr_t)(g_func_table[223]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[276]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoD(CUdeviceptr_v1 arg0, CUdeviceptr_v1 arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, CUdeviceptr_v1, unsigned int);
     ON_ENTRY(cuMemcpyDtoD);
-    f_ptr_t f = (f_ptr_t)(g_func_table[224]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[277]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoA(CUarray arg0, unsigned int arg1, CUdeviceptr_v1 arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, unsigned int, CUdeviceptr_v1, unsigned int);
     ON_ENTRY(cuMemcpyDtoA);
-    f_ptr_t f = (f_ptr_t)(g_func_table[225]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[278]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoD(CUdeviceptr_v1 arg0, CUarray arg1, unsigned int arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, CUarray, unsigned int, unsigned int);
     ON_ENTRY(cuMemcpyAtoD);
-    f_ptr_t f = (f_ptr_t)(g_func_table[226]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[279]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoA(CUarray arg0, unsigned int arg1, const void *arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, unsigned int, const void *, unsigned int);
     ON_ENTRY(cuMemcpyHtoA);
-    f_ptr_t f = (f_ptr_t)(g_func_table[227]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[280]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoH(void *arg0, CUarray arg1, unsigned int arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUarray, unsigned int, unsigned int);
     ON_ENTRY(cuMemcpyAtoH);
-    f_ptr_t f = (f_ptr_t)(g_func_table[228]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[281]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoA(CUarray arg0, unsigned int arg1, CUarray arg2, unsigned int arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, unsigned int, CUarray, unsigned int, unsigned int);
     ON_ENTRY(cuMemcpyAtoA);
-    f_ptr_t f = (f_ptr_t)(g_func_table[229]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[282]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync(CUarray arg0, unsigned int arg1, const void *arg2, unsigned int arg3, CUstream arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, unsigned int, const void *, unsigned int, CUstream);
     ON_ENTRY(cuMemcpyHtoAAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[230]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[283]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync(void *arg0, CUarray arg1, unsigned int arg2, unsigned int arg3, CUstream arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUarray, unsigned int, unsigned int, CUstream);
     ON_ENTRY(cuMemcpyAtoHAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[231]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[284]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2D(const CUDA_MEMCPY2D_v1 *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D_v1 *);
     ON_ENTRY(cuMemcpy2D);
-    f_ptr_t f = (f_ptr_t)(g_func_table[232]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[285]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned(const CUDA_MEMCPY2D_v1 *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D_v1 *);
     ON_ENTRY(cuMemcpy2DUnaligned);
-    f_ptr_t f = (f_ptr_t)(g_func_table[233]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[286]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3D(const CUDA_MEMCPY3D_v1 *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D_v1 *);
     ON_ENTRY(cuMemcpy3D);
-    f_ptr_t f = (f_ptr_t)(g_func_table[234]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[287]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync(CUdeviceptr_v1 arg0, const void *arg1, unsigned int arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, const void *, unsigned int, CUstream);
     ON_ENTRY(cuMemcpyHtoDAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[235]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[288]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync(void *arg0, CUdeviceptr_v1 arg1, unsigned int arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUdeviceptr_v1, unsigned int, CUstream);
     ON_ENTRY(cuMemcpyDtoHAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[236]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[289]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync(CUdeviceptr_v1 arg0, CUdeviceptr_v1 arg1, unsigned int arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, CUdeviceptr_v1, unsigned int, CUstream);
     ON_ENTRY(cuMemcpyDtoDAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[237]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[290]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync(const CUDA_MEMCPY2D_v1 *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D_v1 *, CUstream);
     ON_ENTRY(cuMemcpy2DAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[238]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[291]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync(const CUDA_MEMCPY3D_v1 *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D_v1 *, CUstream);
     ON_ENTRY(cuMemcpy3DAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[239]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[292]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD8(CUdeviceptr_v1 arg0, unsigned char arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, unsigned char, unsigned int);
     ON_ENTRY(cuMemsetD8);
-    f_ptr_t f = (f_ptr_t)(g_func_table[240]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[293]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD16(CUdeviceptr_v1 arg0, unsigned short arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, unsigned short, unsigned int);
     ON_ENTRY(cuMemsetD16);
-    f_ptr_t f = (f_ptr_t)(g_func_table[241]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[294]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD32(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, unsigned int, unsigned int);
     ON_ENTRY(cuMemsetD32);
-    f_ptr_t f = (f_ptr_t)(g_func_table[242]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[295]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D8(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned char arg2, unsigned int arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, unsigned int, unsigned char, unsigned int, unsigned int);
     ON_ENTRY(cuMemsetD2D8);
-    f_ptr_t f = (f_ptr_t)(g_func_table[243]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[296]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D16(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned short arg2, unsigned int arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, unsigned int, unsigned short, unsigned int, unsigned int);
     ON_ENTRY(cuMemsetD2D16);
-    f_ptr_t f = (f_ptr_t)(g_func_table[244]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[297]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D32(CUdeviceptr_v1 arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1, unsigned int, unsigned int, unsigned int, unsigned int);
     ON_ENTRY(cuMemsetD2D32);
-    f_ptr_t f = (f_ptr_t)(g_func_table[245]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[298]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuArrayCreate(CUarray *arg0, const CUDA_ARRAY_DESCRIPTOR_v1 *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, const CUDA_ARRAY_DESCRIPTOR_v1 *);
     ON_ENTRY(cuArrayCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[246]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[299]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuArrayGetDescriptor(CUDA_ARRAY_DESCRIPTOR_v1 *arg0, CUarray arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_ARRAY_DESCRIPTOR_v1 *, CUarray);
     ON_ENTRY(cuArrayGetDescriptor);
-    f_ptr_t f = (f_ptr_t)(g_func_table[247]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[300]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuArray3DCreate(CUarray *arg0, const CUDA_ARRAY3D_DESCRIPTOR_v1 *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray *, const CUDA_ARRAY3D_DESCRIPTOR_v1 *);
     ON_ENTRY(cuArray3DCreate);
-    f_ptr_t f = (f_ptr_t)(g_func_table[248]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[301]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuArray3DGetDescriptor(CUDA_ARRAY3D_DESCRIPTOR_v1 *arg0, CUarray arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUDA_ARRAY3D_DESCRIPTOR_v1 *, CUarray);
     ON_ENTRY(cuArray3DGetDescriptor);
-    f_ptr_t f = (f_ptr_t)(g_func_table[249]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[302]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetAddress(unsigned int *arg0, CUtexref arg1, CUdeviceptr_v1 arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int *, CUtexref, CUdeviceptr_v1, unsigned int);
     ON_ENTRY(cuTexRefSetAddress);
-    f_ptr_t f = (f_ptr_t)(g_func_table[250]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[303]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefSetAddress2D(CUtexref arg0, const CUDA_ARRAY_DESCRIPTOR_v1 *arg1, CUdeviceptr_v1 arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUtexref, const CUDA_ARRAY_DESCRIPTOR_v1 *, CUdeviceptr_v1, unsigned int);
     ON_ENTRY(cuTexRefSetAddress2D);
-    f_ptr_t f = (f_ptr_t)(g_func_table[251]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[304]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuTexRefGetAddress(CUdeviceptr_v1 *arg0, CUtexref arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, CUtexref);
     ON_ENTRY(cuTexRefGetAddress);
-    f_ptr_t f = (f_ptr_t)(g_func_table[252]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[305]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsResourceGetMappedPointer(CUdeviceptr_v1 *arg0, unsigned int *arg1, CUgraphicsResource arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr_v1 *, unsigned int *, CUgraphicsResource);
     ON_ENTRY(cuGraphicsResourceGetMappedPointer);
-    f_ptr_t f = (f_ptr_t)(g_func_table[253]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[306]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuCtxDestroy(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[254]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[307]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxPopCurrent(CUcontext *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext *);
     ON_ENTRY(cuCtxPopCurrent);
-    f_ptr_t f = (f_ptr_t)(g_func_table[255]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[308]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuCtxPushCurrent(CUcontext arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUcontext);
     ON_ENTRY(cuCtxPushCurrent);
-    f_ptr_t f = (f_ptr_t)(g_func_table[256]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[309]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuStreamDestroy(CUstream arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
     ON_ENTRY(cuStreamDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[257]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[310]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuEventDestroy(CUevent arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent);
     ON_ENTRY(cuEventDestroy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[258]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[311]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoD_v2(CUdeviceptr arg0, const void *arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, const void *, size_t);
     ON_ENTRY(cuMemcpyHtoD_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[259]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[312]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoH_v2(void *arg0, CUdeviceptr arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpyDtoH_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[260]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[313]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoD_v2(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpyDtoD_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[261]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[314]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoA_v2(CUarray arg0, size_t arg1, CUdeviceptr arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpyDtoA_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[262]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[315]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoD_v2(CUdeviceptr arg0, CUarray arg1, size_t arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUarray, size_t, size_t);
     ON_ENTRY(cuMemcpyAtoD_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[263]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[316]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoA_v2(CUarray arg0, size_t arg1, const void *arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, const void *, size_t);
     ON_ENTRY(cuMemcpyHtoA_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[264]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[317]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoH_v2(void *arg0, CUarray arg1, size_t arg2, size_t arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUarray, size_t, size_t);
     ON_ENTRY(cuMemcpyAtoH_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[265]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[318]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoA_v2(CUarray arg0, size_t arg1, CUarray arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, CUarray, size_t, size_t);
     ON_ENTRY(cuMemcpyAtoA_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[266]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[319]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoAAsync_v2(CUarray arg0, size_t arg1, const void *arg2, size_t arg3, CUstream arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUarray, size_t, const void *, size_t, CUstream);
     ON_ENTRY(cuMemcpyHtoAAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[267]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[320]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAtoHAsync_v2(void *arg0, CUarray arg1, size_t arg2, size_t arg3, CUstream arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUarray, size_t, size_t, CUstream);
     ON_ENTRY(cuMemcpyAtoHAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[268]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[321]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2D_v2(const CUDA_MEMCPY2D *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D *);
     ON_ENTRY(cuMemcpy2D_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[269]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[322]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2DUnaligned_v2(const CUDA_MEMCPY2D *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D *);
     ON_ENTRY(cuMemcpy2DUnaligned_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[270]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[323]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3D_v2(const CUDA_MEMCPY3D *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D *);
     ON_ENTRY(cuMemcpy3D_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[271]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[324]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyHtoDAsync_v2(CUdeviceptr arg0, const void *arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, const void *, size_t, CUstream);
     ON_ENTRY(cuMemcpyHtoDAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[272]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[325]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoHAsync_v2(void *arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(void *, CUdeviceptr, size_t, CUstream);
     ON_ENTRY(cuMemcpyDtoHAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[273]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[326]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyDtoDAsync_v2(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t, CUstream);
     ON_ENTRY(cuMemcpyDtoDAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[274]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[327]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy2DAsync_v2(const CUDA_MEMCPY2D *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY2D *, CUstream);
     ON_ENTRY(cuMemcpy2DAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[275]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[328]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DAsync_v2(const CUDA_MEMCPY3D *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D *, CUstream);
     ON_ENTRY(cuMemcpy3DAsync_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[276]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[329]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD8_v2(CUdeviceptr arg0, unsigned char arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned char, size_t);
     ON_ENTRY(cuMemsetD8_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[277]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[330]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD16_v2(CUdeviceptr arg0, unsigned short arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned short, size_t);
     ON_ENTRY(cuMemsetD16_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[278]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[331]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD32_v2(CUdeviceptr arg0, unsigned int arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned int, size_t);
     ON_ENTRY(cuMemsetD32_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[279]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[332]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D8_v2(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned char, size_t, size_t);
     ON_ENTRY(cuMemsetD2D8_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[280]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[333]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D16_v2(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned short, size_t, size_t);
     ON_ENTRY(cuMemsetD2D16_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[281]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[334]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D32_v2(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned int, size_t, size_t);
     ON_ENTRY(cuMemsetD2D32_v2);
-    f_ptr_t f = (f_ptr_t)(g_func_table[282]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[335]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t);
     ON_ENTRY(cuMemcpy);
-    f_ptr_t f = (f_ptr_t)(g_func_table[283]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[336]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyAsync(CUdeviceptr arg0, CUdeviceptr arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUdeviceptr, size_t, CUstream);
     ON_ENTRY(cuMemcpyAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[284]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[337]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyPeer(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t);
     ON_ENTRY(cuMemcpyPeer);
-    f_ptr_t f = (f_ptr_t)(g_func_table[285]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[338]);
     return f(arg0, arg1, arg2, arg3, arg4);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpyPeerAsync(CUdeviceptr arg0, CUcontext arg1, CUdeviceptr arg2, CUcontext arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, CUcontext, CUdeviceptr, CUcontext, size_t, CUstream);
     ON_ENTRY(cuMemcpyPeerAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[286]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[339]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DPeer(const CUDA_MEMCPY3D_PEER *arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D_PEER *);
     ON_ENTRY(cuMemcpy3DPeer);
-    f_ptr_t f = (f_ptr_t)(g_func_table[287]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[340]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuMemcpy3DPeerAsync(const CUDA_MEMCPY3D_PEER *arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUDA_MEMCPY3D_PEER *, CUstream);
     ON_ENTRY(cuMemcpy3DPeerAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[288]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[341]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD8Async(CUdeviceptr arg0, unsigned char arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned char, size_t, CUstream);
     ON_ENTRY(cuMemsetD8Async);
-    f_ptr_t f = (f_ptr_t)(g_func_table[289]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[342]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD16Async(CUdeviceptr arg0, unsigned short arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned short, size_t, CUstream);
     ON_ENTRY(cuMemsetD16Async);
-    f_ptr_t f = (f_ptr_t)(g_func_table[290]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[343]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD32Async(CUdeviceptr arg0, unsigned int arg1, size_t arg2, CUstream arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, unsigned int, size_t, CUstream);
     ON_ENTRY(cuMemsetD32Async);
-    f_ptr_t f = (f_ptr_t)(g_func_table[291]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[344]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D8Async(CUdeviceptr arg0, size_t arg1, unsigned char arg2, size_t arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned char, size_t, size_t, CUstream);
     ON_ENTRY(cuMemsetD2D8Async);
-    f_ptr_t f = (f_ptr_t)(g_func_table[292]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[345]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D16Async(CUdeviceptr arg0, size_t arg1, unsigned short arg2, size_t arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned short, size_t, size_t, CUstream);
     ON_ENTRY(cuMemsetD2D16Async);
-    f_ptr_t f = (f_ptr_t)(g_func_table[293]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[346]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuMemsetD2D32Async(CUdeviceptr arg0, size_t arg1, unsigned int arg2, size_t arg3, size_t arg4, CUstream arg5) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, unsigned int, size_t, size_t, CUstream);
     ON_ENTRY(cuMemsetD2D32Async);
-    f_ptr_t f = (f_ptr_t)(g_func_table[294]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[347]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5);
 }
 CUresult _WRAPLIB_API_CALL cuStreamGetPriority(CUstream arg0, int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, int *);
     ON_ENTRY(cuStreamGetPriority);
-    f_ptr_t f = (f_ptr_t)(g_func_table[295]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[348]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuStreamGetFlags(CUstream arg0, unsigned int *arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, unsigned int *);
     ON_ENTRY(cuStreamGetFlags);
-    f_ptr_t f = (f_ptr_t)(g_func_table[296]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[349]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamGetCtx(CUstream arg0, CUcontext *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUcontext *);
+    ON_ENTRY(cuStreamGetCtx);
+    f_ptr_t f = (f_ptr_t)(g_func_table[350]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuStreamWaitEvent(CUstream arg0, CUevent arg1, unsigned int arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUevent, unsigned int);
     ON_ENTRY(cuStreamWaitEvent);
-    f_ptr_t f = (f_ptr_t)(g_func_table[297]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[351]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuStreamAddCallback(CUstream arg0, CUstreamCallback arg1, void *arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCallback, void *, unsigned int);
     ON_ENTRY(cuStreamAddCallback);
-    f_ptr_t f = (f_ptr_t)(g_func_table[298]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[352]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamAttachMemAsync(CUstream arg0, CUdeviceptr arg1, size_t arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, size_t, unsigned int);
     ON_ENTRY(cuStreamAttachMemAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[299]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[353]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamQuery(CUstream arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
     ON_ENTRY(cuStreamQuery);
-    f_ptr_t f = (f_ptr_t)(g_func_table[300]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[354]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuStreamSynchronize(CUstream arg0) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
     ON_ENTRY(cuStreamSynchronize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[301]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[355]);
     return f(arg0);
 }
 CUresult _WRAPLIB_API_CALL cuEventRecord(CUevent arg0, CUstream arg1) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUevent, CUstream);
     ON_ENTRY(cuEventRecord);
-    f_ptr_t f = (f_ptr_t)(g_func_table[302]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[356]);
     return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuLaunchKernel(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9, void **arg10) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **, void **);
     ON_ENTRY(cuLaunchKernel);
-    f_ptr_t f = (f_ptr_t)(g_func_table[303]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[357]);
     return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+}
+CUresult _WRAPLIB_API_CALL cuLaunchHostFunc(CUstream arg0, CUhostFn arg1, void *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUhostFn, void *);
+    ON_ENTRY(cuLaunchHostFunc);
+    f_ptr_t f = (f_ptr_t)(g_func_table[358]);
+    return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsMapResources(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUgraphicsResource *, CUstream);
     ON_ENTRY(cuGraphicsMapResources);
-    f_ptr_t f = (f_ptr_t)(g_func_table[304]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[359]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuGraphicsUnmapResources(unsigned int arg0, CUgraphicsResource *arg1, CUstream arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(unsigned int, CUgraphicsResource *, CUstream);
     ON_ENTRY(cuGraphicsUnmapResources);
-    f_ptr_t f = (f_ptr_t)(g_func_table[305]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[360]);
     return f(arg0, arg1, arg2);
-}
-CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync(CUdeviceptr arg0, size_t arg1, CUdevice arg2, CUstream arg3) {
-    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, CUdevice, CUstream);
-    ON_ENTRY(cuMemPrefetchAsync);
-    f_ptr_t f = (f_ptr_t)(g_func_table[306]);
-    return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamWriteValue32(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint32_t, unsigned int);
     ON_ENTRY(cuStreamWriteValue32);
-    f_ptr_t f = (f_ptr_t)(g_func_table[307]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[361]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamWaitValue32(CUstream arg0, CUdeviceptr arg1, cuuint32_t arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint32_t, unsigned int);
     ON_ENTRY(cuStreamWaitValue32);
-    f_ptr_t f = (f_ptr_t)(g_func_table[308]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[362]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuStreamWriteValue64(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint64_t, unsigned int);
+    ON_ENTRY(cuStreamWriteValue64);
+    f_ptr_t f = (f_ptr_t)(g_func_table[363]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuStreamWaitValue64(CUstream arg0, CUdeviceptr arg1, cuuint64_t arg2, unsigned int arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUdeviceptr, cuuint64_t, unsigned int);
+    ON_ENTRY(cuStreamWaitValue64);
+    f_ptr_t f = (f_ptr_t)(g_func_table[364]);
     return f(arg0, arg1, arg2, arg3);
 }
 CUresult _WRAPLIB_API_CALL cuStreamBatchMemOp(CUstream arg0, unsigned int arg1, CUstreamBatchMemOpParams *arg2, unsigned int arg3) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, unsigned int, CUstreamBatchMemOpParams *, unsigned int);
     ON_ENTRY(cuStreamBatchMemOp);
-    f_ptr_t f = (f_ptr_t)(g_func_table[309]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[365]);
     return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuMemPrefetchAsync(CUdeviceptr arg0, size_t arg1, CUdevice arg2, CUstream arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUdeviceptr, size_t, CUdevice, CUstream);
+    ON_ENTRY(cuMemPrefetchAsync);
+    f_ptr_t f = (f_ptr_t)(g_func_table[366]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuLaunchCooperativeKernel(CUfunction arg0, unsigned int arg1, unsigned int arg2, unsigned int arg3, unsigned int arg4, unsigned int arg5, unsigned int arg6, unsigned int arg7, CUstream arg8, void **arg9) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUfunction, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, CUstream, void **);
+    ON_ENTRY(cuLaunchCooperativeKernel);
+    f_ptr_t f = (f_ptr_t)(g_func_table[367]);
+    return f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+}
+CUresult _WRAPLIB_API_CALL cuSignalExternalSemaphoresAsync(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS *, unsigned int, CUstream);
+    ON_ENTRY(cuSignalExternalSemaphoresAsync);
+    f_ptr_t f = (f_ptr_t)(g_func_table[368]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuWaitExternalSemaphoresAsync(const CUexternalSemaphore *arg0, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *arg1, unsigned int arg2, CUstream arg3) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const CUexternalSemaphore *, const CUDA_EXTERNAL_SEMAPHORE_WAIT_PARAMS *, unsigned int, CUstream);
+    ON_ENTRY(cuWaitExternalSemaphoresAsync);
+    f_ptr_t f = (f_ptr_t)(g_func_table[369]);
+    return f(arg0, arg1, arg2, arg3);
+}
+CUresult _WRAPLIB_API_CALL cuStreamBeginCapture(CUstream arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
+    ON_ENTRY(cuStreamBeginCapture);
+    f_ptr_t f = (f_ptr_t)(g_func_table[370]);
+    return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_ptsz(CUstream arg0) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream);
+    ON_ENTRY(cuStreamBeginCapture_ptsz);
+    f_ptr_t f = (f_ptr_t)(g_func_table[371]);
+    return f(arg0);
+}
+CUresult _WRAPLIB_API_CALL cuStreamBeginCapture_v2(CUstream arg0, CUstreamCaptureMode arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCaptureMode);
+    ON_ENTRY(cuStreamBeginCapture_v2);
+    f_ptr_t f = (f_ptr_t)(g_func_table[372]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamEndCapture(CUstream arg0, CUgraph *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUgraph *);
+    ON_ENTRY(cuStreamEndCapture);
+    f_ptr_t f = (f_ptr_t)(g_func_table[373]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamIsCapturing(CUstream arg0, CUstreamCaptureStatus *arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCaptureStatus *);
+    ON_ENTRY(cuStreamIsCapturing);
+    f_ptr_t f = (f_ptr_t)(g_func_table[374]);
+    return f(arg0, arg1);
+}
+CUresult _WRAPLIB_API_CALL cuStreamGetCaptureInfo(CUstream arg0, CUstreamCaptureStatus *arg1, cuuint64_t *arg2) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUstream, CUstreamCaptureStatus *, cuuint64_t *);
+    ON_ENTRY(cuStreamGetCaptureInfo);
+    f_ptr_t f = (f_ptr_t)(g_func_table[375]);
+    return f(arg0, arg1, arg2);
+}
+CUresult _WRAPLIB_API_CALL cuGraphLaunch(CUgraphExec arg0, CUstream arg1) {
+    typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(CUgraphExec, CUstream);
+    ON_ENTRY(cuGraphLaunch);
+    f_ptr_t f = (f_ptr_t)(g_func_table[376]);
+    return f(arg0, arg1);
 }
 CUresult _WRAPLIB_API_CALL cuProfilerInitialize(const char *arg0, const char *arg1, CUoutput_mode arg2) {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)(const char *, const char *, CUoutput_mode);
     ON_ENTRY(cuProfilerInitialize);
-    f_ptr_t f = (f_ptr_t)(g_func_table[310]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[377]);
     return f(arg0, arg1, arg2);
 }
 CUresult _WRAPLIB_API_CALL cuProfilerStart() {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)();
     ON_ENTRY(cuProfilerStart);
-    f_ptr_t f = (f_ptr_t)(g_func_table[311]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[378]);
     return f();
 }
 CUresult _WRAPLIB_API_CALL cuProfilerStop() {
     typedef CUresult (_WRAPLIB_API_CALL *f_ptr_t)();
     ON_ENTRY(cuProfilerStop);
-    f_ptr_t f = (f_ptr_t)(g_func_table[312]);
+    f_ptr_t f = (f_ptr_t)(g_func_table[379]);
     return f();
 }

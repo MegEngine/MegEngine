@@ -1,2 +1,3 @@
 Makefile
 /test/imperative_test
+python/megengine/version.py

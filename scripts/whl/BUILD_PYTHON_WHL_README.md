@@ -8,7 +8,7 @@
 
 ```bash
 1: please refer to: https://docs.docker.com/engine/security/rootless/ to enable rootless docker env
-2: cd ./scripts/whl/manylinux2010
+2: cd ./scripts/whl/manylinux2014
 3: ./build_image.sh
 
 ```
@@ -56,24 +56,25 @@
 ```
 
 # How to build
+Note: Guarantee the git repo is mounted in docker container, do not use `git submodule update --init` in to init megbrain repo
 ## Build for linux
-* MegBrain delivers `wheel` package with `manylinux2010` tag defined in [PEP-571](https://www.python.org/dev/peps/pep-0571/).
+* MegBrain delivers `wheel` package with `manylinux2014` tag defined in [PEP-571](https://www.python.org/dev/peps/pep-0571/).
 commands:
 ```bash
 export CUDA_ROOT_DIR=/path/to/cuda
 export CUDNN_ROOT_DIR=/path/to/cudnn
 export TENSORRT_ROOT_DIR=/path/to/tensorrt
-./scripts/whl/manylinux2010/build_wheel.sh
+./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
 * And you can find all of the outputs in `output` directory.If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. eg:
 ```bash
-ALL_PYTHON="36m" ./scripts/whl/manylinux2010/build_wheel.sh
+ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
 * If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
 ```bash
-BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="36m" ./scripts/whl/manylinux2010/build_wheel.sh
+BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
 ## Build for MacOS

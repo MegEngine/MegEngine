@@ -26,6 +26,7 @@ static inline CUBLASLTMatmulDesc::SizeArgs from_local_size_args(
     return {handle,        transA,        transB,
             args.layout_a, args.layout_b, args.layout_c};
 }
+
 bool BatchedMatrixMulForwardImpl::AlgoCublasLt::is_available(
         const SizeArgs& args) const {
     auto cublasLt_args = from_local_size_args(args);
@@ -35,6 +36,7 @@ bool BatchedMatrixMulForwardImpl::AlgoCublasLt::is_available(
                                      .is_available(cublasLt_args, INT_MAX);
     return res;
 }
+
 size_t BatchedMatrixMulForwardImpl::AlgoCublasLt::get_workspace_in_bytes(
         const SizeArgs& args) const {
     auto cublasLt_args = from_local_size_args(args);
@@ -43,6 +45,7 @@ size_t BatchedMatrixMulForwardImpl::AlgoCublasLt::get_workspace_in_bytes(
     desc.get_algorithm_heuristic(cublasLt_args, INT_MAX, algo);
     return desc.get_workspace_bundle(cublasLt_args, algo).total_size_in_bytes();
 }
+
 void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(
         const ExecArgs& args) const {
     auto cublasLt_args = from_local_size_args(args);
@@ -89,6 +92,7 @@ void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(
                                     desc.layout_c, &algo, ws_bundle.get(0),
                                     ws_bundle.get_size(0), stream));
     };
+    
     auto batched_igemm = [&]() {
         auto zero = handle->zero_device();
         auto one = handle->one_device();
@@ -133,6 +137,18 @@ void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(
     };
 
     ws_bundle.set(args.workspace.raw_ptr);
+#if CUDA_VERSION >= 11000
+    if (desc.dt_compute == CUBLAS_COMPUTE_32I) {
+        batched_igemm();
+    } else if (desc.dt_compute == CUBLAS_COMPUTE_16F) {
+        batched_hgemm();
+    } else if (desc.dt_compute == CUBLAS_COMPUTE_32F) {
+        batched_sgemm();
+    } else {
+        megdnn_throw(
+                megdnn_mangle("compute_type must be int32/float16/float32"));
+    }
+#else
     if (desc.dt_compute == CUDA_R_32I) {
         batched_igemm();
     } else if (desc.dt_compute == CUDA_R_16F) {
@@ -143,5 +159,6 @@ void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(
         megdnn_throw(
                 megdnn_mangle("compute_type must be int32/float16/float32"));
     }
+#endif
 }
 #endif

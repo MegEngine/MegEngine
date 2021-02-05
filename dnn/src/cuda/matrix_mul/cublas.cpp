@@ -25,6 +25,10 @@ using namespace cuda;
 #define SE_CUDA_DATA_HALF CUBLAS_DATA_HALF
 #endif
 
+#if CUDA_VERSION < 11000
+#define CUBLAS_COMPUTE_32I CUDA_R_32I
+#endif
+
 bool MatrixMulForwardImpl::AlgoCuBlas::is_available(
         const SizeArgs& args) const {
     if (args.opr->param().format != param::MatrixMul::Format::DEFAULT)
@@ -117,7 +121,7 @@ void MatrixMulForwardImpl::AlgoCuBlas::exec(const ExecArgs& args) const {
                 args.tensor_b.layout.stride[0], args.tensor_a.raw_ptr,
                 CUDA_R_8I, args.tensor_a.layout.stride[0], zero,
                 args.tensor_c.raw_ptr, CUDA_R_32I,
-                args.tensor_c.layout.stride[0], CUDA_R_32I, CUBLAS_GEMM_DFALT));
+                args.tensor_c.layout.stride[0], CUBLAS_COMPUTE_32I, CUBLAS_GEMM_DFALT));
     };
 
     // Note that cublas takes column-major matrices as inputs,

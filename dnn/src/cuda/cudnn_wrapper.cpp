@@ -165,6 +165,23 @@ void TensorDesc::set(const TensorLayout& layout,
     }
 }
 
+std::string TensorDesc::to_string() {
+    cudnnDataType_t data_type;
+    int n;
+    int c;
+    int h;
+    int w;
+    int n_stride;
+    int c_stride;
+    int h_stride;
+    int w_stride;
+    cudnn_check(cudnnGetTensor4dDescriptor(desc, &data_type, &n, &c, &h, &w,
+                                           &n_stride, &c_stride, &h_stride,
+                                           &w_stride));
+    return ssprintf("<dtype_%d, %d,%d,%d,%d(%d,%d,%d,%d)>", data_type, n, c, h,
+                    w, n_stride, c_stride, h_stride, w_stride);
+}
+
 template <typename Param>
 FilterDesc<Param>::FilterDesc() {
     cudnn_check(cudnnCreateFilterDescriptor(&desc));
@@ -173,6 +190,20 @@ FilterDesc<Param>::FilterDesc() {
 template <typename Param>
 FilterDesc<Param>::~FilterDesc() {
     cudnn_check(cudnnDestroyFilterDescriptor(desc));
+}
+
+template <typename Param>
+std::string FilterDesc<Param>::to_string() {
+    cudnnDataType_t data_type;
+    cudnnTensorFormat_t format;
+    int k;
+    int c;
+    int h;
+    int w;
+    cudnn_check(cudnnGetFilter4dDescriptor(desc, &data_type, &format, &k, &c,
+                                           &h, &w));
+    return ssprintf("<dtype_%d, format_%d, %d,%d,%d,%d>", data_type,format, k, c, h,
+                    w);
 }
 
 template <typename Param>

@@ -128,7 +128,23 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
             stream));
         cublas_check(cublasLtMatrixTransformDescDestroy(transform_desc));
     };
-    switch(desc.dt_compute) {
+#if CUDA_VERSION >= 11000
+    switch (desc.dt_compute) {
+        case CUBLAS_COMPUTE_16F:
+            hgemm();
+            break;
+        case CUBLAS_COMPUTE_32F:
+            sgemm();
+            break;
+        case CUBLAS_COMPUTE_32I:
+            igemm();
+            break;
+        default:
+            megdnn_throw(megdnn_mangle(
+                    "compute type must be float16/float32/int32"));
+    }
+#else
+    switch (desc.dt_compute) {
         case CUDA_R_16F:
             hgemm();
             break;
@@ -139,8 +155,10 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
             igemm();
             break;
         default:
-            megdnn_throw(megdnn_mangle("compute type must be float16/float32/int32"));
+            megdnn_throw(megdnn_mangle(
+                    "compute type must be float16/float32/int32"));
     }
+#endif
 }
 #endif
 // vim: syntax=cpp.doxygen

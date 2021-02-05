@@ -309,6 +309,9 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
                         arg.f / (1e12);
             TensorShape src{arg.n, arg.ci, arg.hi, arg.wi},
                     filter{arg.co, arg.ci, arg.f, arg.f};
+            if (!algo){
+                algo = "no_name";
+            }
             printf("src=%s, filter=%s, time(algo=%s)=%.2f %.2fTops, "
                    "time(cudnn)=%.2f %.2fTops, time(batched_matmul)=%.2f "
                    "%.2fTops, "

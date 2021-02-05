@@ -81,8 +81,9 @@ void NMSKeep::CUDAKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
     init(opr, inp.shape());
 
     auto inp_ptr = inp.ptr<float>();
-    auto dev_overlap_mask = reinterpret_cast<uint64_t*>(workspace.raw_ptr()),
-         dev_rm_mask = reinterpret_cast<uint64_t*>(
+    void* workspace_ptr = workspace.raw_ptr();
+    auto dev_overlap_mask = reinterpret_cast<uint64_t*>(workspace_ptr),
+         dev_rm_mask = (uint64_t*)(
                  workspace.raw_ptr() + m_workspace_overlap_mask_bytes_align);
     auto out_idx_ptr = reinterpret_cast<uint32_t*>(out_idx.ptr<int32_t>()),
          out_size_ptr = reinterpret_cast<uint32_t*>(out_size.ptr<int32_t>());

@@ -30,6 +30,7 @@ class TensorDesc {
         //! default layout is nchw
         void set(const TensorLayout& layout, const param::Convolution::Format =
                 param::Convolution::Format::NCHW);
+        std::string to_string();
         ~TensorDesc();
         cudnnTensorDescriptor_t desc;
 };
@@ -39,6 +40,7 @@ class FilterDesc {
     public:
         FilterDesc();
         void set(const typename ConvolutionBase<Param>::CanonizedFilterMeta &meta);
+        std::string to_string();
         ~FilterDesc();
         cudnnFilterDescriptor_t desc;
 };

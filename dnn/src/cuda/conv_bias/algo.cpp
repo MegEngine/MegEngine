@@ -156,6 +156,9 @@ std::string ConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
         case param::ConvBias::NonlineMode::IDENTITY:
             nonlinear_mode_str = "IDENTITY";
             break;
+        case param::ConvBias::NonlineMode::H_SWISH:
+            nonlinear_mode_str = "H_SWISH";
+            break;
         default:
             megdnn_throw("invalid conv bias nonlinear mode");
     }

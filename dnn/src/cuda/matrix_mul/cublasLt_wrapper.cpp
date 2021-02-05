@@ -6,10 +6,11 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-#include "src/cuda/matrix_mul/cublasLt_wrapper.h"
 #include "src/common/utils.h"
+#include "src/cuda/matrix_mul/cublasLt_wrapper.h"
 #include "src/cuda/utils.h"
 #if CUDA_VERSION >= 10010
 
@@ -33,6 +34,7 @@ static cudaDataType_t to_cuda_dtype(DType tp) {
     }
 }
 
+#if CUDA_VERSION >= 11000
 static cublasComputeType_t to_cublas_compute_type(DType tp) {
     switch (tp.enumv()) {
         case DTypeEnum::Float16:
@@ -43,10 +45,11 @@ static cublasComputeType_t to_cublas_compute_type(DType tp) {
         case DTypeEnum::QuantizedS32:
             return CUBLAS_COMPUTE_32I;
         default:
-            megdnn_throw(megdnn_mangle(
-                    "dtype must be float16/float32/int32/Qs32"));
+            megdnn_throw(
+                    megdnn_mangle("dtype must be float16/float32/int32/Qs32"));
     }
 }
+#endif
 
 static const char* cuda_type_to_str(cudaDataType_t tp) {
     switch (tp) {
@@ -106,9 +109,15 @@ void CUBLASLTMatmulDesc::set(const SizeArgs& args, bool batched) {
     dt_b = to_cuda_dtype(args.layout_b.dtype);
     dt_a = to_cuda_dtype(args.layout_a.dtype);
     dt_c = to_cuda_dtype(args.layout_c.dtype);
-    dt_compute = to_cublas_compute_type(args.layout_c.dtype);
+
     megdnn_assert(dt_a == dt_b, "matrix A and B should have same precision");
+#if CUDA_VERSION >= 11000
+    dt_compute = to_cublas_compute_type(args.layout_c.dtype);
     cublas_check(cublasLtMatmulDescCreate(&matmul_desc, dt_compute, dt_c));
+#else
+    dt_compute = dt_c;
+    cublas_check(cublasLtMatmulDescCreate(&matmul_desc, dt_compute));
+#endif
     cublas_check(cublasLtMatmulDescSetAttribute(
             matmul_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &pm, sizeof(pm)));
 
@@ -262,8 +271,7 @@ WorkspaceBundle CUBLASLTMatmulDesc::get_workspace_bundle(
             dt_c == CUDA_R_32I ? layout_trans_b : layout_b,
             dt_c == CUDA_R_32I ? layout_trans_a : layout_a,
             dt_c == CUDA_R_32I ? layout_trans_c : layout_c,
-            dt_c == CUDA_R_32I ? layout_trans_c : layout_c, &algo,
-            &result);
+            dt_c == CUDA_R_32I ? layout_trans_c : layout_c, &algo, &result);
     // return empty WorkspaceBundle if cublasLtMatmulAlgoCheck() failed
     if (status != CUBLAS_STATUS_SUCCESS)
         return {nullptr, {}};

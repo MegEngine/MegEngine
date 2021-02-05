@@ -20,7 +20,8 @@
 #include "megbrain/utils/debug.h"
 
 #if MGB_ENABLE_TENSOR_RT
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "megbrain/tensorrt/tensorrt_opr.h"
 #include "make_trt_net.h"
 
@@ -111,7 +112,8 @@ intl::SimpleQuantizedTensorRTNetwork::SimpleQuantizedTensorRTNetwork() {
     host_b = range_gen({1, 8, 1, 1});
 
     {
-        float* ptr = reinterpret_cast<float*>(host_w->raw_ptr());
+        void* w_ptr = host_w->raw_ptr();
+        float* ptr = reinterpret_cast<float*>(w_ptr);
         ptr[0] = -127*1.1f;
         ptr[1] = 127*1.1f;
     }
@@ -362,6 +364,7 @@ intl::ConcatConvTensorRTNetwork::create_trt_network(bool has_batch_dim) {
     return std::make_pair(builder, network);
 }
 
+#pragma GCC diagnostic pop
 #endif  // MGB_ENABLE_TENSOR_RT
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
