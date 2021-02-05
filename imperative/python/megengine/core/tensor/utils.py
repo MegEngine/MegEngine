@@ -11,6 +11,7 @@ from typing import Iterable, Union
 
 import numpy as np
 
+from .._imperative_rt import VarNode
 from .._imperative_rt.core2 import Tensor, apply, dtype_promotion, get_device
 from ..ops import builtin
 from ..ops.special import Const
@@ -59,7 +60,7 @@ def astype(x, dtype):
 
 
 def convert_single_value(v, *, dtype=None, device=None):
-    if isinstance(v, Tensor):
+    if isinstance(v, (Tensor, VarNode)):
         if not is_quantize(v.dtype):
             v = astype(v, dtype)
     else:

@@ -65,7 +65,6 @@ def get_owner_opr_inputs(var: VarNode) -> List[VarNode]:
     """
     Gets the inputs of owner opr of a variable.
     """
-    assert isinstance(var, VarNode)
     return var.owner.inputs
 
 
@@ -74,7 +73,6 @@ def get_owner_opr_type(var: VarNode) -> str:
     Gets the type of owner opr of a variable.
 
     """
-    assert isinstance(var, VarNode)
     return var.owner.type
 
 
@@ -109,7 +107,7 @@ def graph_traversal(outputs: VarNode):
     var2oprs = collections.defaultdict(list)
     opr2receivers = collections.defaultdict(list)
 
-    queue = list(map(lambda x: x.owner, outputs))
+    queue = list(set(map(lambda x: x.owner, outputs)))
     visited = set(map(lambda x: x.id, queue))
 
     # iterate through whole comp_graph, fill in meta information
@@ -143,12 +141,15 @@ def graph_traversal(outputs: VarNode):
     return map_oprs, map_vars, var2oprs, opr2receivers, indegree2opr, opr2indegree
 
 
-def get_oprs_seq(outputs: List[VarNode], prune_reshape=False) -> List[OperatorNode]:
+def get_oprs_seq(
+    outputs: List[VarNode], prune_reshape=False, prune_immtensor=True
+) -> List[OperatorNode]:
     """
     Gets oprs in some topological order for a dumped model.
 
     :param outputs: model outputs.
-    :param prune_reshape: whether to prune the useless operators during inference.
+    :param prune_reshape: whether to prune the useless operators used by Reshape opr during inference.
+    :param prune_immtensor: whether to prune the ImmutableTensor opr.
     :return: opr list with some correct execution order.
     """
 
@@ -160,9 +161,7 @@ def get_oprs_seq(outputs: List[VarNode], prune_reshape=False) -> List[OperatorNo
             opr_id = indegree2opr[0].pop()
             opr = map_oprs[opr_id]
             nr_remain -= 1
-
-            # skip const value generation operator
-            if get_opr_type(opr) != "ImmutableTensor":
+            if opr.type != "ImmutableTensor" or not prune_immtensor:
                 oprs_seq.append(opr)
 
             for post_id in opr2receivers[opr_id]:

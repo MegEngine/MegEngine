@@ -12,11 +12,12 @@ import functools
 import numpy as np
 
 from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.graph import VarNode
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor import utils
 from ..core.tensor.array_method import _elwise_apply
-from ..core.tensor.utils import isscalar, setscalar
+from ..core.tensor.utils import astype, isscalar, setscalar
 from ..device import get_default_device
 from ..jit.tracing import is_tracing
 from ..tensor import Tensor
@@ -77,7 +78,7 @@ __all__ = [
 
 
 def _elwise(*args, mode):
-    tensor_args = list(filter(lambda x: isinstance(x, Tensor), args))
+    tensor_args = list(filter(lambda x: isinstance(x, (Tensor, VarNode)), args))
     if len(tensor_args) == 0:
         dtype = utils.dtype_promotion(args)
         first_arg = Tensor(args[0], dtype=dtype, device=get_default_device())
@@ -109,7 +110,7 @@ def _elwise(*args, mode):
             Elemwise.Mode.ROUND,
         ) and np.issubdtype(args[0].dtype, np.integer):
             return args[0]
-        args = tuple(map(lambda x: x.astype("float32"), args))
+        args = tuple(map(lambda x: astype(x, "float32"), args))
     return _elwise_apply(args, mode)
 
 

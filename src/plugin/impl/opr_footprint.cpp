@@ -17,9 +17,20 @@
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/dnn/adaptive_pooling.h"
+#include "megbrain/opr/dnn/roi_pooling.h"
+#include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/imgproc.h"
+#include "megbrain/opr/standalone/nms_opr.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/rand.h"
+#include "megbrain/opr/dnn/batch_norm.h"
+#include "megbrain/opr/misc.h"
+#include "megbrain/opr/indexing.h"
+#include "megbrain/opr/internal/indexing_helper.h"
+#include "megbrain/opr/nn_int.h"
+#include "megbrain/opr/tensor_gen.h"
 #if MGB_ENABLE_JSON
 #include "megdnn/opr_param_json.h"
 #endif
@@ -354,7 +365,7 @@ uint64_t opr_footprint_func<opr::DeformableConvForward>(
     auto&& out_shape = opr->output()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
     using Param = opr::DeformableConvForward::Param;
-    auto&& param = opr->cast_final_safe<opr::Convolution>().param();
+    auto&& param = opr->cast_final_safe<opr::DeformableConvForward>().param();
     size_t fh, fw, icpg;
     mgb_assert(param.format == Param::Format::NCHW);
     if (param.sparse == Param::Sparse::GROUP) {
@@ -425,9 +436,11 @@ uint64_t opr_footprint_func<opr::BatchConvBiasForward>(
     auto&& filter_shape = opr->input()[1]->shape();
     using Param = opr::BatchConvBiasForward::Param;
     auto&& param = opr->cast_final_safe<opr::BatchConvBiasForward>().param();
-    mgb_assert(param.format == Param::Format::NCHW4);
-    size_t packed_channels = 4;
+    size_t packed_channels = 1;
     size_t kern_spatial_pos = 3;
+    if (param.format == Param::Format::NCHW4) {
+        packed_channels = 4;
+    }
     size_t fh = filter_shape[kern_spatial_pos],
            fw = filter_shape[kern_spatial_pos + 1];
     return out_shape.total_nr_elems() * fh * fw * src_shape[1] *
@@ -508,7 +521,29 @@ REGISTE_PARAM_JSON_FUNC(LocalShareBackwardFilter)
 REGISTE_PARAM_JSON_FUNC(DeformableConvForward)
 REGISTE_PARAM_JSON_FUNC(DeformableConvBackwardFilter)
 REGISTE_PARAM_JSON_FUNC(DeformableConvBackwardData)
+REGISTE_PARAM_JSON_FUNC(DeformablePSROIPoolingForward)
 REGISTE_PARAM_JSON_FUNC(BatchConvBiasForward)
+REGISTE_PARAM_JSON_FUNC(BatchNormForward)
+REGISTE_PARAM_JSON_FUNC(ElemwiseMultiType)
+REGISTE_PARAM_JSON_FUNC(Argsort)
+REGISTE_PARAM_JSON_FUNC(Argmax)
+REGISTE_PARAM_JSON_FUNC(Argmin)
+REGISTE_PARAM_JSON_FUNC(AdaptivePooling)
+REGISTE_PARAM_JSON_FUNC(ROIPooling)
+REGISTE_PARAM_JSON_FUNC(ROIAlign)
+REGISTE_PARAM_JSON_FUNC(WarpPerspective)
+REGISTE_PARAM_JSON_FUNC(WarpAffine)
+REGISTE_PARAM_JSON_FUNC(Remap)
+REGISTE_PARAM_JSON_FUNC(Resize)
+REGISTE_PARAM_JSON_FUNC(IndexingOneHot)
+REGISTE_PARAM_JSON_FUNC(IndexingSetOneHot)
+REGISTE_PARAM_JSON_FUNC(TopK)
+REGISTE_PARAM_JSON_FUNC(UniformRNG)
+REGISTE_PARAM_JSON_FUNC(GaussianRNG)
+REGISTE_PARAM_JSON_FUNC(Linspace)
+REGISTE_PARAM_JSON_FUNC(Eye)
+REGISTE_PARAM_JSON_FUNC(CvtColor)
+
 
 template <>
 std::shared_ptr<json::Value> opr_param_json_func<opr::Dimshuffle>(
@@ -547,24 +582,83 @@ std::shared_ptr<json::Value> opr_param_json_func<opr::AxisAddRemove>(
         });
     }
 
+std::shared_ptr<json::Value> indexing_param_to_json(
+        const std::vector<opr::indexing::AxisIndexer>& indices) {
+    auto desc = json::Array::make();
+    for (auto& index : indices) {
+        desc->add(json::Object::make({
+                {"axis", json::NumberInt::make(index.axis.get_raw())},
+                {"begin",
+                    json::NumberInt::make(index.begin.node() != nullptr)},
+                {"end", json::NumberInt::make(index.end.node() != nullptr)},
+                {"step",
+                    json::NumberInt::make(index.step.node() != nullptr)},
+                {"idx", json::NumberInt::make(index.idx.node() != nullptr)},
+        }));
+    }
+    return desc;
+}
+
+#define REGISTE_INDEXING_PARAM_JSON_FUNC(cls)                         \
+    template <>                                                       \
+    std::shared_ptr<json::Value> opr_param_json_func<opr::cls>(       \
+            cg::OperatorNodeBase * opr) {                             \
+        auto indices = opr->cast_final_safe<opr::cls>().index_desc(); \
+        return indexing_param_to_json(indices);                  \
+    }
+
+REGISTE_INDEXING_PARAM_JSON_FUNC(Subtensor);
+REGISTE_INDEXING_PARAM_JSON_FUNC(SetSubtensor);
+REGISTE_INDEXING_PARAM_JSON_FUNC(IncrSubtensor);
+REGISTE_INDEXING_PARAM_JSON_FUNC(IndexingMultiAxisVec);
+REGISTE_INDEXING_PARAM_JSON_FUNC(IndexingSetMultiAxisVec);
+REGISTE_INDEXING_PARAM_JSON_FUNC(IndexingIncrMultiAxisVec);
+REGISTE_INDEXING_PARAM_JSON_FUNC(MeshIndexing);
+REGISTE_INDEXING_PARAM_JSON_FUNC(IncrMeshIndexing);
+REGISTE_INDEXING_PARAM_JSON_FUNC(SetMeshIndexing);
+REGISTE_INDEXING_PARAM_JSON_FUNC(BatchedMeshIndexing);
+REGISTE_INDEXING_PARAM_JSON_FUNC(BatchedIncrMeshIndexing);
+REGISTE_INDEXING_PARAM_JSON_FUNC(BatchedSetMeshIndexing);
+
 template <>
-std::shared_ptr<json::Value> opr_param_json_func<opr::Subtensor>(
+std::shared_ptr<json::Value> opr_param_json_func<opr::Reshape>(
     cg::OperatorNodeBase * opr) {
         auto desc = json::Array::make();
-        auto indices = opr->cast_final_safe<opr::Subtensor>().index_desc();
-        for (auto &index : indices){
-            desc->add(
-                json::Object::make({
-                    {"axis", json::NumberInt::make(index.axis.get_raw())},
-                    {"begin", json::NumberInt::make(index.begin.node() != nullptr)},
-                    {"end", json::NumberInt::make(index.end.node() != nullptr)},
-                    {"step", json::NumberInt::make(index.step.node() != nullptr)},
-                    {"idx", json::NumberInt::make(index.idx.node() != nullptr)},
-                }));
+        auto axis_param = opr->cast_final_safe<opr::Reshape>().param();
+        if (axis_param.axis != axis_param.MAX_NDIM){
+            return json::Object::make({
+                {"axis", json::NumberInt::make(axis_param.axis)},
+            });
+        } else {
+            return json::Object::make();
         }
-
-        return desc;
     }
+
+template <>
+std::shared_ptr<json::Value> opr_param_json_func<opr::GetVarShape>(
+    cg::OperatorNodeBase * opr) {
+        auto desc = json::Array::make();
+        auto axis_param = opr->cast_final_safe<opr::GetVarShape>().param();
+        if (axis_param.axis != axis_param.MAX_NDIM){
+            return json::Object::make({
+                {"axis", json::NumberInt::make(axis_param.axis)},
+            });
+        } else {
+            return json::Object::make();
+        }
+    }
+
+template <>
+std::shared_ptr<json::Value> opr_param_json_func<opr::standalone::NMSKeep>(
+    cg::OperatorNodeBase * opr) {
+        auto nms_param = opr->cast_final_safe<opr::standalone::NMSKeep>().param();
+        return json::Object::make({
+                {"iou_thresh", json::Number::make(nms_param.iou_thresh)},
+                {"max_output", json::Number::make(nms_param.max_output)},
+            });
+    }
+    
+
 #endif // MGB_ENABLE_JSON
 
 }  // namespace
@@ -632,6 +726,17 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::Dimshuffle>();
     add_single_param_json<opr::AxisAddRemove>();
     add_single_param_json<opr::Subtensor>();
+    add_single_param_json<opr::SetSubtensor>();
+    add_single_param_json<opr::IncrSubtensor>();
+    add_single_param_json<opr::IndexingMultiAxisVec>();
+    add_single_param_json<opr::IndexingSetMultiAxisVec>();
+    add_single_param_json<opr::IndexingIncrMultiAxisVec>();
+    add_single_param_json<opr::MeshIndexing>();
+    add_single_param_json<opr::SetMeshIndexing>();
+    add_single_param_json<opr::IncrMeshIndexing>();
+    add_single_param_json<opr::BatchedMeshIndexing>();
+    add_single_param_json<opr::BatchedSetMeshIndexing>();
+    add_single_param_json<opr::BatchedIncrMeshIndexing>();
     add_single_param_json<opr::Reduce>();
     add_single_param_json<opr::LocalShareForward>();
     add_single_param_json<opr::LocalShareBackwardData>();
@@ -639,7 +744,31 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::DeformableConvForward>();
     add_single_param_json<opr::DeformableConvBackwardFilter>();
     add_single_param_json<opr::DeformableConvBackwardData>();
+    add_single_param_json<opr::DeformablePSROIPoolingForward>();
     add_single_param_json<opr::BatchConvBiasForward>();
+    add_single_param_json<opr::BatchNormForward>();
+    add_single_param_json<opr::Reshape>();
+    add_single_param_json<opr::GetVarShape>();
+    add_single_param_json<opr::Argsort>();
+    add_single_param_json<opr::Argmin>();
+    add_single_param_json<opr::Argmax>();
+    add_single_param_json<opr::ElemwiseMultiType>();
+    add_single_param_json<opr::AdaptivePooling>();
+    add_single_param_json<opr::ROIPooling>();
+    add_single_param_json<opr::ROIAlign>();
+    add_single_param_json<opr::WarpPerspective>();
+    add_single_param_json<opr::Remap>();
+    add_single_param_json<opr::Resize>();
+    add_single_param_json<opr::IndexingOneHot>();
+    add_single_param_json<opr::IndexingSetOneHot>();
+    add_single_param_json<opr::WarpAffine>();
+    add_single_param_json<opr::TopK>();
+    add_single_param_json<opr::UniformRNG>();
+    add_single_param_json<opr::GaussianRNG>();
+    add_single_param_json<opr::Linspace>();
+    add_single_param_json<opr::Eye>();
+    add_single_param_json<opr::standalone::NMSKeep>();
+    add_single_param_json<opr::CvtColor>();
 
 #endif
 }

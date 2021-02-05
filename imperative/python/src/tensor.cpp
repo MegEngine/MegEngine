@@ -160,6 +160,16 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         if (ctx.op->same_type<BackwardGraph>()) {
             ctx.backward = true;
         }
+        
+        
+       if (py::isinstance<cg::VarNode>(py::handle(args[0]))){
+           SmallVector<cg::VarNode*> vinputs(nargs);
+           for (size_t i = 0; i < nargs; ++i) {
+               vinputs[i] = py::handle(args[i]).cast<cg::VarNode *>();
+           }
+           auto op = ctx.op.get();
+           return to_tuple(OpDef::apply_on_var_node(*op, vinputs)).release().ptr();
+       }
 
         for (size_t i = 0; i < nargs; ++i) {
             if (TensorWrapper* tw = TensorWrapper::try_cast(args[i])) {
@@ -675,6 +685,16 @@ PyArray_Descr* _dtype_promotion(PyObject*const* args, size_t nargs) {
                 tensors.emplace_back(descr);
                 continue;
             }
+
+            if (py::isinstance<cg::VarNode>(py::handle(handle))){
+                auto var = py::handle(handle).cast<cg::VarNode *>();
+                mgb::DType type = var->dtype();
+                auto && descr = npy::dtype_mgb2np_descr(type);
+                Py_INCREF(descr.get());
+                tensors.emplace_back(descr.get());
+                continue;
+            }
+
             PyArray_Descr* descr = scalar2dtype(handle);
             if (descr) {
                 scalars.emplace_back(descr);
@@ -719,12 +739,14 @@ CompNode _get_device(PyObject*const* args, size_t nargs) {
     for (size_t i = 0; i < nargs; ++i) {
         PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i): args[i];
         TensorWrapper* tw = TensorWrapper::try_cast(handle);
-        if (tw) {
+
+        bool is_var = py::isinstance<cg::VarNode>(py::handle(handle));
+        if (tw || is_var) {
             if (!valid) {
-                cn = tw->m_tensor->comp_node();
+                    cn = tw ? tw->m_tensor->comp_node() : py::handle(handle).cast<cg::VarNode *>()->comp_node();
                 valid = true;
             } else {
-                CompNode cn1 = tw->m_tensor->comp_node();
+                CompNode cn1 = tw ? tw->m_tensor->comp_node() : py::handle(handle).cast<cg::VarNode *>()->comp_node();
                 if (cn1 != cn) {
                     throw py::value_error(ssprintf("ambiguous device: %s vs %s",
                         cn.to_string().c_str(), cn1.to_string().c_str()));
