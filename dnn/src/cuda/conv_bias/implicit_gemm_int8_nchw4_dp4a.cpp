@@ -32,8 +32,11 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     if (!conv_bias::check_bias_share_in_channel(*(args.bias_layout),
                                                 param.format))
         return false;
-    if (param.format != Format::NCHW4 && param.format != Format::NCHW4_NCHW &&
-        param.format != Format::NCHW4_NCHW32)
+    if (param.format == Format::NCHW4_NCHW32) {
+        if (m_algo_param.threadblock_m % 32 != 0)
+            return false;
+    } else if (param.format != Format::NCHW4_NCHW &&
+               param.format != Format::NCHW4)
         return false;
     size_t n = args.src_layout->operator[](0),
            ci = args.src_layout->operator[](1) * 4,
@@ -187,7 +190,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                     cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                m_algo_param.warp_n,
                                                m_algo_param.warp_k},
-                    stream);
+                    m_algo_param.stage, stream);
         } else if (param.format == Format::NCHW4_NCHW) {
             cutlass_wrapper::
                     do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nchw<false>(
@@ -205,7 +208,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                             cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                        m_algo_param.warp_n,
                                                        m_algo_param.warp_k},
-                            stream);
+                            m_algo_param.stage, stream);
         } else {
             megdnn_assert(param.format == Format::NCHW4_NCHW32);
             cutlass_wrapper::
@@ -225,7 +228,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                             cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                        m_algo_param.warp_n,
                                                        m_algo_param.warp_k},
-                            stream);
+                            m_algo_param.stage, stream);
         }
     } else {
         if (param.format == Format::NCHW4) {
@@ -242,7 +245,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                     cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                m_algo_param.warp_n,
                                                m_algo_param.warp_k},
-                    stream);
+                    m_algo_param.stage, stream);
         } else if (param.format == Format::NCHW4_NCHW) {
             cutlass_wrapper::
                     do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nchw<true>(
@@ -260,7 +263,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                             cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                        m_algo_param.warp_n,
                                                        m_algo_param.warp_k},
-                            stream);
+                            m_algo_param.stage, stream);
 
         } else {
             megdnn_assert(param.format == Format::NCHW4_NCHW32);
@@ -281,7 +284,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                             cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                        m_algo_param.warp_n,
                                                        m_algo_param.warp_k},
-                            stream);
+                            m_algo_param.stage, stream);
         }
     }
     after_kernel_launch();

@@ -3895,6 +3895,9 @@ TEST(TestGoptInference, FoldingConvDimshuffle) {
                           .apply({{y}})
                           .endpoint_vars(),
                   y_fuse);
+    gopt::modify_opr_algo_strategy_inplace(
+            {y_fuse},
+            opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy::PROFILE);
     graph->compile({{y_fuse, {}}})
             ->to_json()
             ->writeto_fpath(output_file(
@@ -3976,6 +3979,9 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
                           .apply({{y}})
                           .endpoint_vars(),
                   y_fuse);
+    gopt::modify_opr_algo_strategy_inplace(
+            {y_fuse},
+            opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy::PROFILE);
     graph->compile({{y_fuse, {}}})
             ->to_json()
             ->writeto_fpath(output_file(

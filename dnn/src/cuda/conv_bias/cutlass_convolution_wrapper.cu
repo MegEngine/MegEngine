@@ -286,7 +286,8 @@ void megdnn::cuda::cutlass_wrapper::
                 uint32_t /* nonlinear_mode */, float /* alpha */,
                 float /* beta */, float /* gamma */, float /* scale */,
                 const GemmCoord& /* threadblock_shape */,
-                const GemmCoord& /* warp_shape */, cudaStream_t /* stream */) {}
+                const GemmCoord& /* warp_shape */, int /* stages */,
+                cudaStream_t /* stream */) {}
 #else
 template <bool NeedLoadFromConstMem>
 void megdnn::cuda::cutlass_wrapper::
@@ -296,15 +297,15 @@ void megdnn::cuda::cutlass_wrapper::
                 int* workspace, const convolution::ConvParam& param,
                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
                 float scale, const GemmCoord& threadblock_shape,
-                const GemmCoord& warp_shape, cudaStream_t stream) {
+                const GemmCoord& warp_shape, int stages, cudaStream_t stream) {
 #define DISPATCH_KERNEL_WITH_TILE_SHAPE(threadblock_m_, threadblock_n_,        \
                                         threadblock_k_, warp_m_, warp_n_,      \
-                                        warp_k_, stage_, aligned_)                     \
+                                        warp_k_, stage_, aligned_)             \
     if (threadblock_shape.m() == threadblock_m_ &&                             \
         threadblock_shape.n() == threadblock_n_ &&                             \
         threadblock_shape.k() == threadblock_k_ &&                             \
         warp_shape.m() == warp_m_ && warp_shape.n() == warp_n_ &&              \
-        warp_shape.k() == warp_k_) {                                           \
+        warp_shape.k() == warp_k_ && stages == stage_) {                       \
         using ThreadBlockShape =                                               \
                 cutlass::gemm::GemmShape<threadblock_m_, threadblock_n_,       \
                                          threadblock_k_>;                      \
@@ -397,7 +398,8 @@ void megdnn::cuda::cutlass_wrapper::
                     uint32_t nonlinear_mode, float alpha, float beta,        \
                     float gamma, float scale,                                \
                     const GemmCoord& threadblock_shape,                      \
-                    const GemmCoord& warp_shape, cudaStream_t stream);
+                    const GemmCoord& warp_shape, int stages,                 \
+                    cudaStream_t stream);
 INST(true);
 INST(false);
 #undef INST
@@ -414,7 +416,8 @@ void megdnn::cuda::cutlass_wrapper::
                 uint32_t /* nonlinear_mode */, float /* alpha */,
                 float /* beta */, float /* gamma */, float /* scale */,
                 const GemmCoord& /* threadblock_shape */,
-                const GemmCoord& /* warp_shape */, cudaStream_t /* stream */) {}
+                const GemmCoord& /* warp_shape */, int /* stages */,
+                cudaStream_t /* stream */) {}
 #else
 template <bool NeedLoadFromConstMem>
 void megdnn::cuda::cutlass_wrapper::
@@ -424,15 +427,15 @@ void megdnn::cuda::cutlass_wrapper::
                 int* workspace, const convolution::ConvParam& param,
                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
                 float scale, const GemmCoord& threadblock_shape,
-                const GemmCoord& warp_shape, cudaStream_t stream) {
+                const GemmCoord& warp_shape, int stages, cudaStream_t stream) {
 #define DISPATCH_KERNEL_WITH_TILE_SHAPE(threadblock_m_, threadblock_n_,        \
                                         threadblock_k_, warp_m_, warp_n_,      \
-                                        warp_k_, aligned_)                     \
+                                        warp_k_, stages_, aligned_)            \
     if (threadblock_shape.m() == threadblock_m_ &&                             \
         threadblock_shape.n() == threadblock_n_ &&                             \
         threadblock_shape.k() == threadblock_k_ &&                             \
         warp_shape.m() == warp_m_ && warp_shape.n() == warp_n_ &&              \
-        warp_shape.k() == warp_k_) {                                           \
+        warp_shape.k() == warp_k_ && stages == stages_) {                      \
         using ThreadBlockShape =                                               \
                 cutlass::gemm::GemmShape<threadblock_m_, threadblock_n_,       \
                                          threadblock_k_>;                      \
@@ -449,7 +452,7 @@ void megdnn::cuda::cutlass_wrapper::
                 cutlass::convolution::threadblock::                            \
                         ConvolutionNCxHWxThreadblockSwizzle<                   \
                                 cutlass::convolution::ConvType::kConvolution>, \
-                2, 4, aligned_, NeedLoadFromConstMem,                          \
+                stages_, 4, aligned_, NeedLoadFromConstMem,                    \
                 cutlass::arch::OpMultiplyAdd>;                                 \
         typename Convolution::ConvolutionParameter conv_param{                 \
                 param.n,  param.ci, param.co, param.hi, param.wi,              \
@@ -460,16 +463,17 @@ void megdnn::cuda::cutlass_wrapper::
                 epilogue, stream);                                             \
     }
 #define DISPATCH_KERNEL                                                      \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 16);           \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 64, 8, 16, 64, 8, 4);                \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 2, 16);        \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 128, 16, 16, 128, 16, 1, 8);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 64, 8, 16, 64, 8, 2, 4);             \
     megdnn_assert(false,                                                     \
                   "unsupported threadblock shape (%dx%dx%d) and warp shape " \
                   "(%dx%dx%d)",                                              \
@@ -525,7 +529,8 @@ void megdnn::cuda::cutlass_wrapper::
                     uint32_t nonlinear_mode, float alpha, float beta,    \
                     float gamma, float scale,                            \
                     const GemmCoord& threadblock_shape,                  \
-                    const GemmCoord& warp_shape, cudaStream_t stream);
+                    const GemmCoord& warp_shape, int stages,             \
+                    cudaStream_t stream);
 INST(true);
 INST(false);
 #undef INST
@@ -542,7 +547,8 @@ void megdnn::cuda::cutlass_wrapper::
                 uint32_t /* nonlinear_mode */, float /* alpha */,
                 float /* beta */, float /* gamma */, float /* scale */,
                 const GemmCoord& /* threadblock_shape */,
-                const GemmCoord& /* warp_shape */, cudaStream_t /* stream */) {}
+                const GemmCoord& /* warp_shape */, int /* stages */,
+                cudaStream_t /* stream */) {}
 #else
 template <bool NeedLoadFromConstMem>
 void megdnn::cuda::cutlass_wrapper::
@@ -552,15 +558,15 @@ void megdnn::cuda::cutlass_wrapper::
                 int* workspace, const convolution::ConvParam& param,
                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
                 float scale, const GemmCoord& threadblock_shape,
-                const GemmCoord& warp_shape, cudaStream_t stream) {
+                const GemmCoord& warp_shape, int stages, cudaStream_t stream) {
 #define DISPATCH_KERNEL_WITH_TILE_SHAPE(threadblock_m_, threadblock_n_,        \
                                         threadblock_k_, warp_m_, warp_n_,      \
-                                        warp_k_, aligned_)                     \
+                                        warp_k_, stages_, aligned_)            \
     if (threadblock_shape.m() == threadblock_m_ &&                             \
         threadblock_shape.n() == threadblock_n_ &&                             \
         threadblock_shape.k() == threadblock_k_ &&                             \
         warp_shape.m() == warp_m_ && warp_shape.n() == warp_n_ &&              \
-        warp_shape.k() == warp_k_) {                                           \
+        warp_shape.k() == warp_k_ && stages == stages_) {                      \
         using ThreadBlockShape =                                               \
                 cutlass::gemm::GemmShape<threadblock_m_, threadblock_n_,       \
                                          threadblock_k_>;                      \
@@ -577,7 +583,7 @@ void megdnn::cuda::cutlass_wrapper::
                 cutlass::convolution::threadblock::                            \
                         ConvolutionNCxHWxThreadblockSwizzle<                   \
                                 cutlass::convolution::ConvType::kConvolution>, \
-                2, 4, aligned_, NeedLoadFromConstMem>;                         \
+                stages_, 4, aligned_, NeedLoadFromConstMem>;                   \
         typename Convolution::ConvolutionParameter conv_param{                 \
                 param.n,  param.ci, param.co, param.hi, param.wi,              \
                 param.fh, param.fw, param.ho, param.wo, param.sh,              \
@@ -587,15 +593,15 @@ void megdnn::cuda::cutlass_wrapper::
                 epilogue, stream);                                             \
     }
 #define DISPATCH_KERNEL                                                      \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 16);           \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 16);             \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 2, 16);           \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 2, 16);            \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 2, 16);            \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 2, 16);            \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 2, 16);            \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 2, 16);             \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 2, 16);             \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 2, 16);             \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 2, 16);             \
     megdnn_assert(false,                                                     \
                   "unsupported threadblock shape (%dx%dx%d) and warp shape " \
                   "(%dx%dx%d)",                                              \
@@ -651,7 +657,8 @@ void megdnn::cuda::cutlass_wrapper::
                     uint32_t nonlinear_mode, float alpha, float beta,        \
                     float gamma, float scale,                                \
                     const GemmCoord& threadblock_shape,                      \
-                    const GemmCoord& warp_shape, cudaStream_t stream);
+                    const GemmCoord& warp_shape, int stages,                 \
+                    cudaStream_t stream);
 INST(true);
 INST(false);
 #undef INST
