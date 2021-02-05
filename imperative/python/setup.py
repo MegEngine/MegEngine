@@ -11,7 +11,6 @@ import os
 import re
 import pathlib
 import platform
-import subprocess
 from distutils.file_util import copy_file
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -48,11 +47,9 @@ with open("megengine/version.py") as fp:
 __version__ = v['__version__']
 
 email = 'megengine@megvii.com'
-commit_id = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('ascii')
-__version__ = '{}+1.git.{}'.format(__version__, commit_id)
 local_version = os.environ.get('LOCAL_VERSION')
 if local_version:
-    __version__ = '{}.{}'.format(__version__, local_version)
+    __version__ = '{}+{}'.format(__version__, local_version)
 
 packages = find_packages(exclude=['test'])
 megengine_data = [
