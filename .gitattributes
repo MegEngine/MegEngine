@@ -7,3 +7,5 @@ dnn/src/cuda/sass/prebuilt/map_defs.cpp binary
 tools/mlir/mlir-tblgen filter=lfs diff=lfs merge=lfs -text
 *.caffemodel filter=lfs diff=lfs merge=lfs -text
 imperative/python/test/integration/data/*.mge filter=lfs diff=lfs merge=lfs -text
+ci/resource/models/float/mobilenet_v2.pkl filter=lfs diff=lfs merge=lfs -text
+ci/resource/models/float/shufflenet_v2.pkl filter=lfs diff=lfs merge=lfs -text
