@@ -247,7 +247,7 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
 //! https://github.com/tensorflow/tensorflow/issues/18356
 //! thread local is no support on IOS,
 //! When update x-xode, this code should be deleted
-#ifndef IOS
+#if !defined(IOS) && MGB_HAVE_THREAD
     static thread_local SeqRecorderImpl* sm_cur_recorder;
 #else
     SeqRecorderImpl* sm_cur_recorder = nullptr;
@@ -463,7 +463,7 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
         }
 
         //! current sequence recorder of this thread
-#ifndef IOS
+#if !defined(IOS) && MGB_HAVE_THREAD
         static SeqRecorderImpl* cur_recorder() { return sm_cur_recorder; }
 #else
         SeqRecorderImpl* cur_recorder() { return sm_cur_recorder; }
@@ -479,7 +479,7 @@ class CpuCompNode::CompNodeImpl final: public CpuDispatchableBase {
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CpuCompNodeImpl);
 CpuCompNodeImpl* CpuCompNodeImpl::sm_default_cpu_comp_node_ptr;
-#ifndef IOS
+#if !defined(IOS) && MGB_HAVE_THREAD
 thread_local CpuCompNode::SeqRecorderImpl* CpuCompNodeImpl::sm_cur_recorder =
         nullptr;
 #endif
