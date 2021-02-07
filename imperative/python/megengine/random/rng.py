@@ -17,7 +17,7 @@ def _random_seed_generator():
     if _rng is None:
         from ..distributed.group import get_rank
 
-        seed(seed=((time.perf_counter_ns()&0x0000_FFFF_FFFF_FFFF)<<16) + get_rank())
+        seed(seed=((int(time.perf_counter()*1000) & 0x0000_FFFF_FFFF_FFFF ) << 16) + get_rank())
     while True:
         yield _rng.random_raw()
 
