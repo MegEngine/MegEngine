@@ -86,7 +86,7 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ARMV7_F16_MK8_4X8)
 };
 #endif
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 class MatrixMulImpl::AlgoInt8x8x32K6x8x4 final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {

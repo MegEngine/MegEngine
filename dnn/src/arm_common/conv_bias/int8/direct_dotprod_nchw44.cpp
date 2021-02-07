@@ -10,9 +10,8 @@
  * implied.
  */
 
-#ifdef __ARM_FEATURE_DOTPROD
-
 #include "src/arm_common/elemwise_helper/kimpl/typecvt.h"
+#if MGB_ENABLE_DOT
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/common.h"

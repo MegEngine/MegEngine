@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include <cstddef>
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/arm_common/matrix_mul/int8/gemv.h"
 #include "src/common/utils.h"
@@ -21,7 +20,6 @@ MIDOUT_DECL(megdnn_arm_common_int8_gemv)
 using namespace megdnn;
 using namespace arm_common;
 
-#if !__ARM_FEATURE_DOTPROD
 
 namespace {
 
@@ -170,12 +168,11 @@ void gemv_naive_n_mk4(const int8_t* __restrict A, const int8_t* __restrict B,
 }
 
 }  // namespace
-#endif
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 namespace {
-
-void gemv_naive_n(const int8_t* __restrict A, const int8_t* __restrict B,
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
+void gemv_naive_n_dot(const int8_t* __restrict A, const int8_t* __restrict B,
                   int32_t* __restrict C, size_t M, size_t N, size_t K,
                   size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1 && Bstride == 1);
@@ -244,7 +241,8 @@ void gemv_naive_n(const int8_t* __restrict A, const int8_t* __restrict B,
     }
 }
 
-void gemv_naive_n_mk4(const int8_t* __restrict A, const int8_t* __restrict B,
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
+void gemv_naive_n_mk4_dotprod(const int8_t* __restrict A, const int8_t* __restrict B,
                       int32_t* __restrict C, size_t M, size_t N, size_t K,
                       size_t Astride, size_t Bstride, size_t Cstride) {
     constexpr size_t PACK_SIZE = 4;
@@ -323,6 +321,7 @@ void gemv_naive_n_mk4(const int8_t* __restrict A, const int8_t* __restrict B,
     }
 }
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void gemv_naive_n_mk4_dot(const int8_t* __restrict A,
                           const int8_t* __restrict B, int32_t* __restrict C,
                           size_t M, size_t N, size_t K, size_t Astride,
@@ -403,7 +402,16 @@ void arm_common::gemv_like(const int8_t* __restrict A,
     megdnn_assert(N == 1);
     MIDOUT_BEGIN(megdnn_arm_common_int8_gemv,
                  midout_iv("INT8_gemv_like"_hash)) {
+#if MGB_ENABLE_DOT
+        if (cpuinfo_has_arm_neon_dot()) {
+            return gemv_naive_n_dot(A, B, C, M, N, K, Astride, Bstride,
+                                    Cstride);
+        } else {
+            return gemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
+        }
+#else
         return gemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
+#endif
     }
     MIDOUT_END();
 }
@@ -416,12 +424,22 @@ void arm_common::gemv_like_mk4(const int8_t* __restrict A,
     megdnn_assert(N == 1);
     MIDOUT_BEGIN(megdnn_arm_common_int8_gemv,
                  midout_iv("INT8_gemv_like_mk4"_hash)) {
+#if MGB_ENABLE_DOT
+        if (cpuinfo_has_arm_neon_dot()) {
+            return gemv_naive_n_mk4_dotprod(A, B, C, M, N, K, Astride, Bstride,
+                                            Cstride);
+        } else {
+            return gemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride,
+                                    Cstride);
+        }
+#else
         return gemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride, Cstride);
+#endif
     }
     MIDOUT_END();
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 void arm_common::gemv_like_mk4_dot(const int8_t* __restrict A,
                                    const int8_t* __restrict B,
                                    int32_t* __restrict C, size_t M, size_t N,
@@ -436,5 +454,6 @@ void arm_common::gemv_like_mk4_dot(const int8_t* __restrict A,
     MIDOUT_END();
 }
 #endif
+
 
 // vim: syntax=cpp.doxygen

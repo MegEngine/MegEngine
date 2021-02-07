@@ -42,7 +42,7 @@ protected:
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     class AlgoF16Gemv;
 #endif
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     class AlgoInt8x8x32GemvMK4Dot;// Arm_common Int8x8x32 Gemv NCHW44_DOT
 #endif
     class AlgoInt8x8x16;  // Arm_common Int 8x8x16

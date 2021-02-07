@@ -161,10 +161,13 @@ ConvBiasImpl::AlgoS8DirectStride2::dispatch_kerns(
     return {};
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 /* ===================== dot stride1 algo ======================== */
 bool ConvBiasImpl::AlgoDotS8DirectStride1::usable(const NCBKernSizeParam& param,
                                                   AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
+        return false;
+    }
     return direct_dotprod_int8_stride1::can_conv_direct_stride1_int8(param);
 }
 
@@ -195,6 +198,9 @@ ConvBiasImpl::AlgoDotS8DirectStride1::dispatch_kerns(
 /* ===================== dot stride2 algo ======================== */
 bool ConvBiasImpl::AlgoDotS8DirectStride2::usable(const NCBKernSizeParam& param,
                                                   AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return direct_dotprod_int8_stride2::can_conv_direct_stride2_int8(param);
 }
 

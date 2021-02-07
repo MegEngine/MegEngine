@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if !(__ARM_FEATURE_DOTPROD)
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
@@ -1372,4 +1371,3 @@ static void gemm_s8_8x8_transpose_pack_B_n(int8_t* outptr, const int8_t* inptr,
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-#endif

@@ -88,7 +88,7 @@ void gemm_u8_4x8::kern(const dt_uint8* packA, const dt_uint8* packB, size_t M,
     }
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 // ===========================gemm_dot_quint8_4x8======================================
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_dot_quint8_4x8);
 void gemm_dot_quint8_4x8::pack_A(dt_uint8* out, const dt_uint8* in, int ldin,

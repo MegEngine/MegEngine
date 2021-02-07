@@ -23,9 +23,6 @@
 #include "src/armv7/matrix_mul/asm/common.h"
 #endif
 
-#if MGB_ENABLE_CPUINFO
-#include "cpuinfo.h"
-#endif
 
 using namespace megdnn;
 using namespace arm_common;

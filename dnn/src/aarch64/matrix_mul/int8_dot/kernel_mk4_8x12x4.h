@@ -10,8 +10,7 @@
  * implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
-
+#if MGB_ENABLE_DOT
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
@@ -40,6 +39,7 @@ namespace matmul_mk4_8x12x4 {
 //
 //                            Accumulator
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
                       int32_t* output, int LDC, bool is_first_k) {
     K /= 4;
@@ -60,7 +60,6 @@ static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
 
     int32_t* outptr0 = output;
     int32_t* outptr1;
-
     asm volatile (
             // load accumulator C
             "add %[outptr1], %[outptr0], %x[LDC]\n"
@@ -397,6 +396,7 @@ static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
 //
 //                            Accumulator
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
                       int32_t* output, int LDC, bool is_first_k) {
     K /= 4;
@@ -543,6 +543,7 @@ static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
 //  +--------+--------+ - - - - +------------+
 //                            Accumulator
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int n_remain) {
     K /= 4;
@@ -718,6 +719,7 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
 //  +--------+--------+ - - - - +------------+
 //                            Accumulator
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int n_remain) {
     K /= 4;
@@ -928,6 +930,5 @@ static void gemm_mk4_s8_8x12_pack_B(dt_int8* out, const dt_int8* in, int ldin,
 }  // namespace matmul_mk4_8x12x4
 }  // namespace aarch64
 }  // namespace megdnn
-
 #endif
 // vim: syntax=cpp.doxygen

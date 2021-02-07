@@ -10,7 +10,7 @@
  * implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/armv7/matrix_mul/asm/common.h"
@@ -42,7 +42,7 @@ namespace matmul_mk4_dot_8x4x4 {
 //                              |q14[0-4]|
 //                              +--------+
 //                              Accumulator
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int n_remain) {
     K /= 4;
@@ -211,6 +211,7 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
 //                              +--------+
 //                              Accumulator
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int n_remain) {
     K /= 4;

@@ -14,7 +14,9 @@
 #include "src/arm_common/matrix_mul/fp16/hgemv.h"
 #include "src/arm_common/matrix_mul/fp32/exec_sgemv.h"
 #include "src/arm_common/matrix_mul/int8/gemv.h"
+
 #include "midout.h"
+
 
 MIDOUT_DECL(megdnn_arm_hgemv)
 MIDOUT_DECL(megdnn_arm_exec_int8816)
@@ -158,7 +160,7 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoInt8x8x32GemvMK4::get_kern(
     return int8x8x32_gemv_mk4_kern;
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 /* =================== Int8x8x32 Gemv MK4_DOT algo ==================== */
 namespace {
 void int8x8x32_gemv_mk4_dot_kern(const MatrixMulImpl::KernParam& kern_param) {
@@ -176,6 +178,10 @@ void int8x8x32_gemv_mk4_dot_kern(const MatrixMulImpl::KernParam& kern_param) {
 
 bool MatrixMulImpl::AlgoInt8x8x32GemvMK4Dot::usable(
         const KernSizeParam& kern_size_param) const {
+
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     auto M = kern_size_param.M;
     auto N = kern_size_param.N;
     auto K = kern_size_param.K;

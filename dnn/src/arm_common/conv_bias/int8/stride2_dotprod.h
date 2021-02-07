@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
 #pragma once
 #include "src/arm_common/conv_bias/opr_impl.h"
+#if MGB_ENABLE_DOT
 
 namespace megdnn {
 namespace arm_common {

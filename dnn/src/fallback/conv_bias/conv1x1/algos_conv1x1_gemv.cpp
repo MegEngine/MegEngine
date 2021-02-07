@@ -148,7 +148,7 @@ struct GemvLike<stype, btype, param::ConvBias::Format::NCHW44> {
     }
 };
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 template <typename stype, typename btype>
 struct GemvLike<stype, btype, param::ConvBias::Format::NCHW44_DOT> {
     inline static void do_gemv(const stype* A, const stype* B, btype* C,

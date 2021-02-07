@@ -9,11 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/convolution/quint8/conv_backdata_stride2.h"
+#if MGB_ENABLE_DOT
 #include "src/common/utils.h"
-
-#include <cstring>
 #include "src/arm_common/simd_macro/marm_neon.h"
 
 using namespace megdnn;
@@ -110,6 +108,7 @@ inline uint8x16_t vqtbx1q_u8_common(uint8x16_t a, uint8x16_t t,
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
 template <bool even, bool last_oc = false>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
                        uint8_t src_zp, uint8_t filter_zp,
@@ -402,6 +401,7 @@ void deconv_direct_2x2(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 }
 
 template <bool even, bool last_oc = false>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_3x3(const uint8_t* src, const uint8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
                        uint8_t src_zp, uint8_t filter_zp,
@@ -673,6 +673,7 @@ void deconv_direct_3x3(const uint8_t* src, const uint8_t* filter, int32_t* dst,
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);
 
 template <bool even, bool last_oc = false>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_5x5(const uint8_t* src, const uint8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
                        uint8_t src_zp, uint8_t filter_zp,
@@ -972,6 +973,7 @@ void deconv_direct_5x5(const uint8_t* src, const uint8_t* filter, int32_t* dst,
 }
 
 template <bool even, bool last_oc = false>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_7x7(const uint8_t* src, const uint8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC,
                        uint8_t src_zp, uint8_t filter_zp,

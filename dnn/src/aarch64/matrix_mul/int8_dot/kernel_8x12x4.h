@@ -9,8 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
-
+#if MGB_ENABLE_DOT
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
@@ -50,7 +49,9 @@ namespace matmul_8x12x4 {
  * same, I test in kirin980 with small and big core, here i just keep both the
  * implementation.
  */
+
 #if 1
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
                       int32_t* output, int LDC, bool is_first_k) {
     K /= 4;
@@ -408,6 +409,7 @@ static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
             );
 }
 #else
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
                       int32_t* output, int LDC, bool is_first_k) {
     K /= 4;
@@ -650,7 +652,7 @@ static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
 //  +-------+-------+ - - - - +--------+--------+--------+
 //
 //                            Accumulator
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
                       int32_t* output, int LDC, bool is_first_k, int m_remain) {
     K /= 4;
@@ -837,7 +839,7 @@ static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
 //  +-------+-------+ - - - - +---------+
 //
 //                            Accumulator
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int n_remain) {
     K /= 4;
@@ -1038,7 +1040,7 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
 //  +-------+-------+ - - - - +--------+
 //
 //                            Accumulator
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int m_remain,
                      int n_remain) {

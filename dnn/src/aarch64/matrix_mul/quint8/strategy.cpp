@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if !(__ARM_FEATURE_DOTPROD)
 #include "src/aarch64/matrix_mul/quint8/strategy.h"
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/aarch64/matrix_mul/quint8/kernel_8x8x8.h"
@@ -108,6 +107,5 @@ void gemm_u8_8x8::kern(const dt_uint8* packA, const dt_uint8* packB, size_t M,
         packA += K4;
     }
 }
-#endif
 
 // vim: syntax=cpp.doxygen

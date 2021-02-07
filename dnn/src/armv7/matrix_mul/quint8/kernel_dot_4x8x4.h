@@ -9,7 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/armv7/matrix_mul/asm/common.h"
@@ -41,7 +41,7 @@ namespace matmul_dot_4x8x4 {
 //  +-------+-------+ - - - - +--------+--------+--------+
 //
 //                            Accumulator
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, uint8_t zA,
                      uint8_t zB, uint32_t zAB, size_t m_remain = 4) {
@@ -257,6 +257,7 @@ static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
 //  +-------+-------+ - - - - +--------+--------+--------+
 //
 //                            Accumulator
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, uint8_t zA,
                      uint8_t zB, uint32_t zAB, size_t m_remain = 4,

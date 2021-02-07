@@ -87,7 +87,7 @@ TEST_F(AARCH64, MATRIX_MUL_F16_MK8) {
 }
 #endif
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(AARCH64, MATRIX_MUL_INT8X8X32_K8X12X4_DOTPROD) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
                                  handle(), "AARCH64_INT8X8X32_K8X12X4_DOTPROD");
@@ -690,7 +690,7 @@ TEST_F(AARCH64, BENCHMARK_GEMV) {
                 run(M, K, N);
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(AARCH64, BENCHMARK_TRANSPOSED_MATRIX_MUL_INT_8X8X32) {
     constexpr size_t RUNS = 50;
     param::MatrixMul param;
@@ -803,7 +803,7 @@ TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_INT8X8X32_MK4_8X12X4) {
         std::cout << std::endl;
     }
 }
-#endif  // __ARM_FEATURE_DOTPROD
+#endif  // MGB_ENABLE_DOT
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(AARCH64, BENCHMARK_MATRIX_MUL_F16_MK8) {

@@ -129,7 +129,7 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_CHANWISE_STRD2_NCHW44_S8)
 };
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 
 class ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44 final : public AlgoBase {
 public:

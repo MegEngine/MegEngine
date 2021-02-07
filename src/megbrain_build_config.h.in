@@ -21,6 +21,7 @@
 #cmakedefine01 MGB_ENABLE_LOGGING
 #cmakedefine01 MGB_ENABLE_GRAD
 #cmakedefine01 MGB_ENABLE_CPUINFO
+#cmakedefine01 MGB_ENABLE_DOT
 #cmakedefine01 MGB_VERBOSE_TYPEINFO_NAME
 #cmakedefine01 MGB_BUILD_SLIM_SERVING
 #cmakedefine01 MGB_ENABLE_EXCEPTION
@@ -96,6 +97,27 @@
 #undef MGB_ENABLE_CPUINFO
 #define MGB_ENABLE_CPUINFO      0
 #endif
+
+//! use one MACRO indicate enable_arm_dotprod
+#if __ARM_FEATURE_DOTPROD
+#ifdef MGB_ENABLE_DOT
+#undef MGB_ENABLE_DOT
+#endif
+#define MGB_ENABLE_DOT 1
+#endif
+
+
+//! ENABLE MGB DOT should enable CPUINFO
+#if MGB_ENABLE_DOT
+#if !defined(MGB_ENABLE_CPUINFO) || !MGB_ENABLE_CPUINFO
+#ifdef MGB_ENABLE_CPUINFO
+#undef MGB_ENABLE_CPUINFO
+#endif
+#define MGB_ENABLE_CPUINFO 1
+#endif
+#endif
+
+
 
 // whether to include actual class name in mgb::Typeinfo object; if this is
 // disabled, mgb::serialization::OprRegistry::find_opr_by_name would not work.

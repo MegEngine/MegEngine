@@ -500,7 +500,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE2) {
 }
 
 /****************************dot qint8 direct*************************/
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_NCHW_NCHW44) {
     auto args = get_nchw44_conv_bias_args({2, 3, 5, 7}, QUAN_NLMODE,
                                           BR_AND_NO_BIASMODE, 2, false, true);

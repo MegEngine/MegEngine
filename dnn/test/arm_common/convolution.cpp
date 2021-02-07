@@ -20,7 +20,7 @@ using namespace test;
 
 using Param = param::Convolution;
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_INT8_INT8_INT32) {
     Checker<ConvolutionBackwardData> checker(handle());
     using Param = ConvolutionBackwardData::Param;
@@ -144,7 +144,7 @@ TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_QUINT8) {
 #endif
 
 #if MEGDNN_WITH_BENCHMARK
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_I8x8x32_WITHDOTPROD) {
     using namespace convolution;
     using Param = param::Convolution;

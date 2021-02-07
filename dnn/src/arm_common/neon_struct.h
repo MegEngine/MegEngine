@@ -69,9 +69,10 @@ struct Vfmaq_laneq_f32 {
         return vfmaq_laneq_f32(a, b, v, lane);
     }
 };
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 struct Vdotq_laneq_s32 {
     template <const int lane>
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_laneq_s32(a, b, v, lane);
     }

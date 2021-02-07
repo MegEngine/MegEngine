@@ -10,15 +10,13 @@
  */
 
 #include "src/aarch64/matrix_mul/quint8_dot/gemv.h"
-#include <cstddef>
+#if MGB_ENABLE_DOT
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 #include "src/common/unroll_macro.h"
 
-#if __ARM_FEATURE_DOTPROD
-
 namespace {
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void gemv_naive_n(const uint8_t* __restrict A, const uint8_t* __restrict B,
                   int32_t* __restrict C, size_t M, size_t N, size_t K,
                   size_t Astride, size_t Bstride, size_t Cstride,
@@ -146,7 +144,6 @@ void gemv_naive_n(const uint8_t* __restrict A, const uint8_t* __restrict B,
                 acc[0] + acc[1] + acc[2] + acc[3] + zAB - acc_zA - acc_zB;
     }
 }
-
 }  // namespace
 
 bool megdnn::aarch64::matmul::is_gemv_like_preferred_quint8(
@@ -171,7 +168,5 @@ void megdnn::aarch64::matmul::gemv_like_quint8(
     return gemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride,
                         zero_point_A, zero_point_B);
 }
-
 #endif
-
 // vim: syntax=cpp.doxygen

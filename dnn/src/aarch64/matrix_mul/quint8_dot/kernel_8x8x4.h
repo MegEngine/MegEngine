@@ -9,8 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
-
+#if MGB_ENABLE_DOT
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
@@ -56,7 +55,7 @@ namespace matmul_8x8x4 {
 //  C = sum((A - zA) * (B - zB)) = sum(A * B) - sum(A) * zB - sum(B) * zA + zA *
 //      zB * k
 //  A -> v27, v28 | B -> v29, v30 |  zA * zB * k -> v26
-
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x8(const uint8_t* packA, const uint8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k,
                      uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
@@ -293,6 +292,7 @@ static void kern_8x8(const uint8_t* packA, const uint8_t* packB, int K,
 //      zB * k
 //  A -> v28 | B -> v29, v30 |  zA * zB * k -> v26
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int m_remain,
                      uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
@@ -495,6 +495,7 @@ static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
 //      zB * k
 //  A -> v27, v28 | B -> v29 |  zA * zB * k -> v26
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_8x4(const uint8_t* packA, const uint8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int n_remain,
                      uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
@@ -733,6 +734,7 @@ static void kern_8x4(const uint8_t* packA, const uint8_t* packB, int K,
 //      zB * k
 //  A -> v28 | B -> v29 |  zA * zB * k -> v26
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
                      int32_t* output, int LDC, bool is_first_k, int m_remain,
                      int n_remain, uint8_t zero_point_A, uint8_t zero_point_B,

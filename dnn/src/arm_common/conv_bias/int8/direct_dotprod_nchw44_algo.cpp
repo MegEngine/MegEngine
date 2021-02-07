@@ -10,9 +10,8 @@
  * implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
-
 #include "src/arm_common/conv_bias/block_helper.h"
+#if MGB_ENABLE_DOT
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8/direct_dotprod_nchw44.h"
 #include "src/arm_common/elemwise_op.h"
@@ -159,6 +158,9 @@ static void conv_kern(const WorkspaceBundle& bundle,
 bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
         const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     MEGDNN_MARK_USED_VAR(algo_selection_strategy);
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];

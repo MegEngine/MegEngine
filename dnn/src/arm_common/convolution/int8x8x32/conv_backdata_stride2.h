@@ -10,8 +10,8 @@
  */
 #pragma once
 
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/convolution/opr_impl.h"
+#if MGB_ENABLE_DOT
 
 #include <cstddef>
 #include <cstdint>

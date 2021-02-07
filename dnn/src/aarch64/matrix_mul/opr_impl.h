@@ -41,16 +41,15 @@ private:
     class AlgoF16MK8_8x8;  // Aarch64 F16 Format MK8 block 16x8
 #endif
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     class AlgoInt8x8x32K8x12x4DotProd;     // Aarch64 Int8x8x32 Kernel
                                            // 8x12x4 DotProduct
     class AlgoInt8x8x32MK4_8x12x4DotProd;  // Aarch64 nchw44 Int8x8x32 Kernel
                                            // 8x12x4 DotProduct
-#else
+#endif
     class AlgoInt8x8x32MK4_4x4x16;  // Aarch64 nchw44 Int8x8x32 Kernel 4x4x16
     class AlgoInt8x8x32K4x4x16;     // Aarch64 Int8x8x32 Kernel 4x4x16
     class AlgoInt8x8x32K8x8x8;      // Aarch64 Int8x8x32 Kernel 8x8x8
-#endif
     class AlgoInt8x8x16K8x8x8;       // Aarch64 Int8x8x16 Kernel 8x8x8
     class AlgoInt8x8x16K4x4x16;      // Aarch64 Int8x8x16 Kernel 4x4x16
     class AlgoInt8x8x16MK4_16x12x4;  // Aarch64 Int8x8x16 Kernel 16x12x16
@@ -59,13 +58,12 @@ private:
     class AlgoInt16x16x32K12x8x1;  // Aarch64 Int16x16x32 Kernel 12x8x1
     class AlgoInt16x16x32MK8_8x8;  // Aarch64 Int16x16x32 Format MK8 block 8x8
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     class AlgoQuint8K8x8x4DotProd;  // Aarch64 Quint8 Kernel
                                     // 8x8x4 DotProduct
     class AlgoQuint8GemvDotProd;    // Aarch64 Quint8 Gemv DotProduct
-#else
-    class AlgoQuint8K8x8x8;         // Aarch64 Quint8 Kernel 8x8x8
 #endif
+    class AlgoQuint8K8x8x8;         // Aarch64 Quint8 Kernel 8x8x8
     class AlgoInt8x8x16MK4_K8x8x8;  // Aarch64 Int8x8x16 Kernel 4x4x16
     class AlgoInt4x4x16K8x8x8;      // Aarch64 Int4x4x16 Kernel 4x4x16
     class AlgoPack;

@@ -655,7 +655,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44) {
     bench_case(1, 512, 256, 28, 28, 3, 4, 1, 2);
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44_DOT) {
     constexpr size_t RUNS = 40;
     std::vector<DType> data_type = {
@@ -892,7 +892,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
                    {1, {4}}, data_type);
 }
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CONVBIAS_INT8_INT8_INT8_STRIDE1_WITHDOTPROD) {
     constexpr size_t RUNS = 50;
@@ -1157,7 +1157,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
                    {1, {4}}, data_type);
 }
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CONVBIAS_QUINT8_QUINT8_QUINT8_STRIDE1_WITHDOTPROD) {
     constexpr size_t RUNS = 50;
@@ -1977,7 +1977,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     dtype::QuantizedS32 btype(0.04f);
     dtype::Quantized8Asymm dtype(1.4f, 110);
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     conv1x1_multithread_benchmark("CONV1x1:AARCH64_QUINT8_K8X8X4_DOTPROD:8",
                                   stype, ftype, btype, dtype);
 #else

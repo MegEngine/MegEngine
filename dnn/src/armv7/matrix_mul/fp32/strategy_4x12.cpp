@@ -10,7 +10,6 @@
  * implied.
  */
 
-#include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/armv7/matrix_mul/asm/common.h"
 #include "src/armv7/matrix_mul/fp32/strategy.h"
 #include "src/common/utils.h"

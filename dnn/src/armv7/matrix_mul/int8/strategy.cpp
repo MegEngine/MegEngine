@@ -175,7 +175,7 @@ void gemm_s8_4x8::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
     }
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 // ===========================gemm_s8_6x8======================================
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_dots8_6x8);
 void gemm_dots8_6x8::pack_A(dt_int8* out, const dt_int8* in, int ldin, int y0,

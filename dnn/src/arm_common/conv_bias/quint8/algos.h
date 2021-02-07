@@ -55,7 +55,7 @@ public:
     }
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD2_QU8)
 };
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 class ConvBiasImpl::AlgoDotU8DirectStride1 final : public AlgoBase {
 
 public:

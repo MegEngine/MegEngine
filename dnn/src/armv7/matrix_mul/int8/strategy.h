@@ -23,7 +23,7 @@ MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 4, 8, 8, false, true,
 
 MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 4, 2, 16, false, false,
                          gemm_mk4_s8_4x2);
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 MEGDNN_REG_GEMM_STRATEGY(dt_int8, dt_int32, dt_int32, 6, 8, 4, false, false,
                          gemm_dots8_6x8);
 

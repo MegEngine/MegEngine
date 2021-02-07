@@ -67,6 +67,23 @@ WorkspaceBundle ConvBiasImpl::AlgoS8MatrixMul::get_bundle(
         size_t K = IC * FH * FW;
         size_t N = OH * OW;
 
+#if MGB_ENABLE_DOT
+#define DISPATCH_GEMM_STRATEGY(_gemm, _gemm_midout_enum, _bias,          \
+                               _bias_midout_enum, _nonline,              \
+                               _nonline_midout_enum)                     \
+    matmul::gemm_##_gemm##_##_bias##_##_nonline strategy(                \
+            M, N, K, param.filter_type, param.src_type, param.dst_type); \
+    part2 = megdnn::matmul::GemmInterleaved<                             \
+                    matmul::gemm_##_gemm##_##_bias##_##_nonline>(        \
+                    M, N, K, false, false, strategy)                     \
+                    .get_workspace_size();
+
+        if (cpuinfo_has_arm_neon_dot()) {
+            DISPATCH_GEMM_BIAS(s8_8x12, 1)
+        } else {
+            DISPATCH_GEMM_BIAS(s8_4x4, 0)
+        }
+#else
 #define DISPATCH_GEMM_STRATEGY(_gemm, _gemm_midout_enum, _bias,              \
                                _bias_midout_enum, _nonline,                  \
                                _nonline_midout_enum)                         \
@@ -80,11 +97,7 @@ WorkspaceBundle ConvBiasImpl::AlgoS8MatrixMul::get_bundle(
                         .get_workspace_size();                               \
     }                                                                        \
     MIDOUT_END()
-
-#if !(__ARM_FEATURE_DOTPROD)
         DISPATCH_GEMM_BIAS(s8_4x4, 0)
-#else
-        DISPATCH_GEMM_BIAS(s8_8x12, 1)
 #endif
 #undef DISPATCH_GEMM_STRATEGY
     }
@@ -158,6 +171,23 @@ void ConvBiasImpl::AlgoS8MatrixMul::kimpl(const NCBKernParam& param,
             size_t K = IC * FH * FW;
             size_t N = OH * OW;
 
+#if MGB_ENABLE_DOT
+#define DISPATCH_GEMM_STRATEGY(_gemm, _gemm_midout_enum, _bias,          \
+                               _bias_midout_enum, _nonline,              \
+                               _nonline_midout_enum)                     \
+    matmul::gemm_##_gemm##_##_bias##_##_nonline strategy(                \
+            M, N, K, param.filter_type, param.src_type, param.dst_type); \
+    megdnn::matmul::GemmInterleaved<                                     \
+            matmul::gemm_##_gemm##_##_bias##_##_nonline>                 \
+            gemm_interleaved(M, N, K, false, false, strategy);           \
+    gemm_interleaved.execute(filter, K, B, N, dst, N, workspace.raw_ptr, bias);
+
+            if (cpuinfo_has_arm_neon_dot()) {
+                DISPATCH_GEMM_BIAS(s8_8x12, 1)
+            } else {
+                DISPATCH_GEMM_BIAS(s8_4x4, 0)
+            }
+#else
 #define DISPATCH_GEMM_STRATEGY(_gemm, _gemm_midout_enum, _bias,              \
                                _bias_midout_enum, _nonline,                  \
                                _nonline_midout_enum)                         \
@@ -172,11 +202,7 @@ void ConvBiasImpl::AlgoS8MatrixMul::kimpl(const NCBKernParam& param,
                                  bias);                                      \
     }                                                                        \
     MIDOUT_END()
-
-#if !(__ARM_FEATURE_DOTPROD)
             DISPATCH_GEMM_BIAS(s8_4x4, 0)
-#else
-            DISPATCH_GEMM_BIAS(s8_8x12, 1)
 #endif
 #undef DISPATCH_GEMM_STRATEGY
         }

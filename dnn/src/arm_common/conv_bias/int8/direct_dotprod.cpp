@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/conv_bias/int8/direct_dotprod.h"
+#if MGB_ENABLE_DOT
 #include "src/arm_common/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
@@ -90,6 +90,7 @@ inline int8x16_t vqtbl1q_s8_v7(int8x16_t a, uint8x16_t index) {
     _sum1##_c_idx = vdotq_s32(_sum1##_c_idx, _k##_k2_idx, _elem);
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_2x2_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -325,6 +326,7 @@ void conv_bias::conv_direct_stride1_2x2_int8_dot(
 }
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_3x3_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -560,6 +562,7 @@ void conv_bias::conv_direct_stride1_3x3_int8_dot(
 }
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_2x2_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -655,6 +658,7 @@ void conv_bias::conv_direct_stride2_2x2_int8_dot(
 }
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_3x3_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -810,6 +814,7 @@ void conv_bias::conv_direct_stride2_3x3_int8_dot(
     _sum1##_c_idx = vdotq_s32(_sum1##_c_idx, _k##_k11_idx, _elem);
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_5x5_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -1108,6 +1113,7 @@ void conv_bias::conv_direct_stride2_5x5_int8_dot(
 }
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_7x7_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -1470,6 +1476,7 @@ void conv_bias::conv_direct_stride2_7x7_int8_dot(
 }
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_5x5_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -1770,6 +1777,7 @@ void conv_bias::conv_direct_stride1_5x5_int8_dot(
 }
 
 template <bool first_ic, bool last_ic, BiasMode bias_mode, typename Op>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_7x7_int8_dot(
         const int8_t* src, const int8_t* filter, const int32_t* bias,
         int32_t* temp, int8_t* dst, const size_t IH, const size_t IW,
@@ -2114,6 +2122,7 @@ void conv_bias::conv_direct_stride1_7x7_int8_dot(
 #undef POSTPROCESS_1X4
 #undef ST1_S32X4
 #undef ST2_S32X4X2
+
 
 #define INSTANTIATION(stride, i, first_ic, last_ic, bias, Op)                \
     template void conv_bias::conv_direct_##stride##_##i##x##i##_int8_dot<    \

@@ -56,7 +56,7 @@ public:
     MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(ConvolutionBackwardDataImpl);
 
 private:
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     class AlgoSdot8DirectStride1;
     class AlgoSdot8DirectStride2;
     class AlgoUdot8DirectStride1;

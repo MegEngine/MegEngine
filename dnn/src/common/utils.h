@@ -60,6 +60,13 @@
 #include <windows.h>
 #endif
 
+
+#if MEGDNN_AARCH64 || MEGDNN_ARMV7
+#if MGB_ENABLE_CPUINFO
+#include "cpuinfo.h"
+#endif
+#endif
+
 #if __cplusplus >= 201703L || __clang_major__ >= 4
     #define MEGDNN_FALLTHRU [[fallthrough]];
 #elif __GNUC__ >= 7

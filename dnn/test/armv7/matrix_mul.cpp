@@ -88,7 +88,7 @@ TEST_F(ARMV7, MATRIX_MUL_F16_MK8) {
 }
 #endif
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARMV7, MATRIX_MUL_SDOT) {
     matrix_mul::check_matrix_mul(dtype::Int8(), dtype::Int8(), dtype::Int32(),
                                  handle(), "AARCH32_INT8_K6X8X4");
@@ -298,7 +298,7 @@ void run_16x16x32_benchmark(const char* algo, Handle* handle) {
     }
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 void run_8x8x32_benchmark(const char* algo, Handle* handle) {
     constexpr size_t RUNS = 50;
     param::MatrixMul param;
@@ -387,7 +387,7 @@ void run_8x8x32_quint_benchmark(Handle* handle) {
 #endif
 }  // namespace
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x32_K6x8x4) {
     run_8x8x32_benchmark("AARCH32_INT8_K6X8X4", handle());
 }

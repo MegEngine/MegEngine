@@ -27,7 +27,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoF16K4x16x1 f16_k4x16x1;
     AlgoF16MK8_4x8 f16_mk8_4x8;
 #endif
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     AlgoInt8x8x32K6x8x4 int8_k6x8x4;
     AlgoQuint8DotK4x8x4 quint8_k4x8x4;
     AlgoInt8x8x32MK4_8x4x4DotProd int8x8x32_mk4_8x4x4_dotprod;
@@ -57,7 +57,7 @@ public:
         m_all_algos.emplace_back(&f16_k4x16x1);
         m_all_algos.emplace_back(&f16_mk8_4x8);
 #endif
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
         m_all_algos.emplace_back(&int8x8x32_mk4_8x4x4_dotprod);
         m_all_algos.emplace_back(&int8_k6x8x4);
         m_all_algos.emplace_back(&quint8_k4x8x4);

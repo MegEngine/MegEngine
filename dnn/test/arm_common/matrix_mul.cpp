@@ -16,6 +16,10 @@
 #include "test/common/matrix_mul.h"
 #include "test/common/rng.h"
 
+#if MGB_ENABLE_CPUINFO
+#include "cpuinfo.h"
+#endif
+
 using namespace megdnn;
 using namespace test;
 
@@ -196,8 +200,9 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4) {
             run(M, K, 1);
 }
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4_DOT) {
+
     Checker<MatrixMul> checker(handle());
     using Param = MatrixMul::Param;
 

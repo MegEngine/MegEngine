@@ -111,7 +111,7 @@ public:
 
 #endif
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 class MatrixMulImpl::AlgoInt8x8x32K8x12x4DotProd final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
@@ -141,7 +141,7 @@ public:
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
     MEGDNN_DECL_ALGO_TYPE(AARCH64_INT8X8X32_MK4_8X12X4_DOTPROD)
 };
-#else
+#endif
 
 class MatrixMulImpl::AlgoInt8x8x32MK4_4x4x16 final : public AlgoBase {
 public:
@@ -187,7 +187,6 @@ public:
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
     MEGDNN_DECL_ALGO_TYPE(AARCH64_INT8X8X32_K8X8X8)
 };
-#endif
 
 class MatrixMulImpl::AlgoInt8x8x16K8x8x8 final : public AlgoBase {
 public:
@@ -313,7 +312,7 @@ public:
     MEGDNN_DECL_ALGO_TYPE(AARCH64_INT16X16X32_MK8_8X8)
 };
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 class MatrixMulImpl::AlgoQuint8K8x8x4DotProd final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
@@ -328,7 +327,6 @@ public:
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
     MEGDNN_DECL_ALGO_TYPE(AARCH64_QUINT8_K8X8X4_DOTPROD)
 };
-
 class MatrixMulImpl::AlgoQuint8GemvDotProd final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
@@ -344,8 +342,7 @@ public:
     MEGDNN_OVERRIDE_MATMUL_DESC(8, 16, 1, 2, AlgoDataType::QUINT8X8X32, DEFAULT)
     MEGDNN_DECL_ALGO_TYPE(AARCH64_QUINT8_GEMV_DOTPROD)
 };
-#else
-
+#endif
 class MatrixMulImpl::AlgoQuint8K8x8x8 final : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
@@ -358,7 +355,6 @@ public:
     MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
     MEGDNN_DECL_ALGO_TYPE(AARCH64_QUINT8_K8X8X8)
 };
-#endif
 
 }  // namespace aarch64
 }  // namespace megdnn

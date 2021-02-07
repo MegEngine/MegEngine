@@ -10,7 +10,6 @@
  * implied.
  */
 #pragma once
-#include <arm_neon.h>
 #include <cmath>
 #include <cstdint>
 #include <type_traits>

@@ -8,8 +8,8 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/conv_bias/quint8/stride2_dotprod.h"
+#if MGB_ENABLE_DOT
 #include "megdnn/oprs.h"
 #include "src/arm_common/conv_bias/quint8/direct_dotprod.h"
 #include "src/arm_common/elemwise_op.h"

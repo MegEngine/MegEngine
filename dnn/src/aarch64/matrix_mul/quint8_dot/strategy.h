@@ -11,13 +11,13 @@
 #pragma once
 #include "src/fallback/matrix_mul/gemm_common.h"
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 namespace megdnn {
 namespace aarch64 {
 namespace matmul {
 
 MEGDNN_REG_GEMM_STRATEGY(uint8_t, int32_t, int32_t, 8, 8, 4, false, true,
-                         gemm_u8_8x8);
+                         gemm_u8_8x8_dot);
 
 }  // namespace aarch64
 }  // namespace matmul

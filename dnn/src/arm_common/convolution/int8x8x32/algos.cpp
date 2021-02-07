@@ -13,21 +13,24 @@
 #include "src/arm_common/convolution/int8x8x32/algos.h"
 #include "src/arm_common/convolution/int8x8x32/conv_backdata_stride1.h"
 #include "src/arm_common/convolution/int8x8x32/conv_backdata_stride2.h"
+#include "src/common/opr_delegate.h"
 
 #include "midout.h"
-#include "src/common/opr_delegate.h"
 
 MIDOUT_DECL(megdnn_arm_conv_int8832_kimpl)
 
 using namespace megdnn;
 using namespace arm_common;
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 /* ===================== ConvolutionBackwardData  ===================== */
 /* ===================== direct stride 1 algo ===================== */
 bool ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::usable(
         fallback::ConvolutionBackwardDataImpl*,
         const NCBKernSizeParam& param) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return deconv::can_stride1_int8x8x32_dot(param);
 }
 
@@ -57,6 +60,9 @@ ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::dispatch_kern(
 bool ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::usable(
         fallback::ConvolutionBackwardDataImpl*,
         const NCBKernSizeParam& param) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return deconv::can_stride2_int8x8x32_dot(param);
 }
 

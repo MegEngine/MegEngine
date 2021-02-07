@@ -70,7 +70,7 @@ private:
     class AlgoFP16WinogradF63;
     class AlgoFP16WinogradF23_8x8;
 #endif
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     class AlgoDotS8DirectNCHWNCHW44;
     class AlgoDotS8DirectStride1;
     class AlgoDotS8DirectStride2;

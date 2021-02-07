@@ -10,8 +10,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied.
  */
-#if __ARM_FEATURE_DOTPROD
 #include "megdnn/oprs.h"
+#if MGB_ENABLE_DOT
 #include "src/arm_common/conv_bias/block_helper.h"
 #include "src/arm_common/conv_bias/int8/algos.h"
 #include "src/arm_common/conv_bias/int8/dot_direct_nchw_nchw44_kern.h"
@@ -175,6 +175,9 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
 
 bool ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44::usable(
         const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8_DOT>(
             param.src_type.enumv(), param.filter_type.enumv(),
             param.dst_type.enumv(), param.filter_meta, param.bias_mode,

@@ -17,7 +17,7 @@ namespace matmul {
 
 MEGDNN_REG_GEMM_STRATEGY(dt_uint8, dt_int32, dt_int32, 4, 8, 8, false, true,
                          gemm_u8_4x8);
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 MEGDNN_REG_GEMM_STRATEGY(dt_uint8, dt_int32, dt_int32, 4, 8, 4, false, false,
                          gemm_dot_quint8_4x8);
 #endif

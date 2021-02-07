@@ -10,13 +10,13 @@
  */
 
 #include "src/aarch64/matrix_mul/int8_dot/strategy.h"
+#if MGB_ENABLE_DOT
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 #include "src/aarch64/matrix_mul/int8_dot/kernel_8x12x4.h"
 #include "src/aarch64/matrix_mul/int8_dot/kernel_mk4_8x12x4.h"
 
-#if __ARM_FEATURE_DOTPROD
 using namespace megdnn;
 using namespace aarch64;
 using namespace aarch64::matmul;

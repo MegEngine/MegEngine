@@ -20,7 +20,7 @@ using namespace megdnn;
 using namespace test;
 using namespace conv_bias;
 
-#ifdef __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CONV1x1_QUANTIZEDSYM_MK4_DOT) {
     UniformIntRNG rng{-50, 50};
 
@@ -138,7 +138,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDSYM) {
             dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),    \
             dtype::QuantizedS8(60.25f), name);
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     cb("CONV1x1:AARCH64_INT8X8X32_K8X12X4_DOTPROD:24");
 #else
     cb("CONV1x1:AARCH64_INT8X8X32_K8X8X8:24");
@@ -174,7 +174,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUANTIZEDASYM) {
                              name);
     float epsilon = 0.001;
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     cb("CONV1x1:AARCH64_QUINT8_K8X8X4_DOTPROD:48");
 #else
     cb("CONV1x1:AARCH64_QUINT8_K8X8X8:24");
@@ -210,13 +210,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_QUINT8x8x32) {
                              dtype::QuantizedS32(1.2 * 1.3), {}, name);
 
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     cb("CONV1x1:AARCH64_QUINT8_K8X8X4_DOTPROD:24");
 #else
     cb("CONV1x1:AARCH64_QUINT8_K8X8X8:48");
 #endif
 #elif MEGDNN_ARMV7
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     cb("CONV1x1:AARCH32_QUINT8_K4X8X4:48");
 #endif
     cb("CONV1x1:ARMV7_QUINT8_K4X8X8:24");
@@ -287,14 +287,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32) {
 #define cb(name) checker_conv_bias_mul_int8x8x32(args, handle(), name);
 
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     cb("CONV1x1:AARCH64_INT8X8X32_K8X12X4_DOTPROD:48");
 #else
     cb("CONV1x1:AARCH64_INT8X8X32_K8X8X8:24");
     cb("CONV1x1:AARCH64_INT8X8X32_K4X4X16:24");
 #endif
 #elif MEGDNN_ARMV7
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     cb("CONV1x1:AARCH32_INT8_K6X8X4:48");
 #endif
     cb("CONV1x1:ARMV7_INT8X8X32_K4X8X8:24");
@@ -312,8 +312,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32) {
         }
     checker_conv_bias_mul_int8x8x32(gemv_args, handle(), "CONV1x1_GEMV");
 }
-
-#ifndef __ARM_FEATURE_DOTPROD
+//! enable none dot algo now
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_MK4) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args =
@@ -345,7 +344,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_MK4) {
 #endif
 #undef cb
 }
-#endif
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_NCHW44) {
     using namespace conv_bias;
@@ -364,7 +362,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_NCHW44) {
                       "CONV1x1_GEMV");
 }
 
-#ifdef __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_1X1_S1_INT8x8x32_NCHW44_DOT) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_nchw44_conv_bias_args(

@@ -17,7 +17,7 @@
 namespace megdnn {
 namespace arm_common {
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 /* ===================== ConvolutionBackwardData ===================== */
 
 class ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1 final

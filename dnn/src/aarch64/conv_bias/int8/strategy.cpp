@@ -26,7 +26,7 @@ namespace impl {
 template <BiasMode bmode, typename Op, int block_m, int block_n>
 struct KernCaller;
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 template <BiasMode bmode, typename Op>
 struct KernCaller<bmode, Op, 8, 12> {
     static void run(const dt_int8* packA, const dt_int8* packB, size_t M,
@@ -118,7 +118,7 @@ struct KernCaller<bmode, Op, 8, 12> {
     }
 };
 
-#else
+#endif
 
 template <BiasMode bmode, typename Op>
 struct KernCaller<bmode, Op, 4, 4> {
@@ -196,10 +196,8 @@ struct KernCaller<bmode, Op, 4, 4> {
     }
 };
 
-#endif
-
 }  // namespace impl
-#if !(__ARM_FEATURE_DOTPROD)
+
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_s8_4x4_nobias_identity)
 
 void gemm_s8_4x4_nobias_identity::pack_A(dt_int8* outptr, const dt_int8* inptr,
@@ -227,7 +225,8 @@ void gemm_s8_4x4_nobias_identity::pack_B(dt_int8* out, const dt_int8* in,
 size_t gemm_s8_4x4_nobias_identity::get_workspace_size() const {
     return 4 * 4 * sizeof(dt_int32);
 }
-#else
+
+#if MGB_ENABLE_DOT
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_s8_8x12_nobias_identity)
 
 void gemm_s8_8x12_nobias_identity::pack_A(dt_int8* outptr, const dt_int8* inptr,
@@ -277,11 +276,10 @@ size_t gemm_s8_8x12_nobias_identity::get_workspace_size() const {
 #define DEFINE_OP(_Op) \
     arm_common::_Op<dt_qint32, dt_qint8> op(scale_A* scale_B, scale_C);
 
-#if !(__ARM_FEATURE_DOTPROD)
 KERN(4, 4, nobias, BiasMode::NO_BIAS, identity, TypeCvtOp)
 KERN(4, 4, nobias, BiasMode::NO_BIAS, relu, ReluOp)
 KERN(4, 4, nobias, BiasMode::NO_BIAS, hswish, HSwishOp)
-#else
+#if MGB_ENABLE_DOT
 KERN(8, 12, nobias, BiasMode::NO_BIAS, identity, TypeCvtOp)
 KERN(8, 12, nobias, BiasMode::NO_BIAS, relu, ReluOp)
 KERN(8, 12, nobias, BiasMode::NO_BIAS, hswish, HSwishOp)
@@ -291,12 +289,11 @@ KERN(8, 12, nobias, BiasMode::NO_BIAS, hswish, HSwishOp)
 #define DEFINE_OP(_Op)                                        \
     arm_common::_Op<dt_qint32, dt_qint8> op(scale_A* scale_B, \
                                             scale_A* scale_B, scale_C);
-#if !(__ARM_FEATURE_DOTPROD)
 KERN(4, 4, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, identity, AddOp)
 KERN(4, 4, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, relu, FuseAddReluOp)
 KERN(4, 4, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, hswish,
      FuseAddHSwishOp)
-#else
+#if MGB_ENABLE_DOT
 KERN(8, 12, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, identity, AddOp)
 KERN(8, 12, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, relu, FuseAddReluOp)
 KERN(8, 12, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, hswish,

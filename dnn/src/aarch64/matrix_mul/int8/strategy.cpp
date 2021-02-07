@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if !(__ARM_FEATURE_DOTPROD)
 #include "src/aarch64/matrix_mul/int8/strategy.h"
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/aarch64/matrix_mul/int8/kernel_4x4x16.h"
@@ -105,7 +104,6 @@ void gemm_s8_4x4::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
         packA += K4;
     }
 }
-
 ///////////////////////// gemm_mk4_s8_4x4 ////////////////////////////////////
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_mk4_s8_4x4);
 
@@ -258,6 +256,5 @@ void gemm_s8_8x8::kern(const dt_int8* packA, const dt_int8* packB, size_t M,
         packA += K4;
     }
 }
-#endif
 
 // vim: syntax=cpp.doxygen

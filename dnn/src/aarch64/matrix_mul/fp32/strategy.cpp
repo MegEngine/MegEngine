@@ -20,9 +20,6 @@
 #include "src/aarch64/matrix_mul/fp32/strategy.h"
 #include "src/common/utils.h"
 
-#if MGB_ENABLE_CPUINFO
-#include "cpuinfo.h"
-#endif
 
 using namespace megdnn;
 using namespace aarch64;

@@ -10,7 +10,12 @@
  * implied.
  */
 #pragma once
-
+#if MGB_ENABLE_DOT
+#if defined(__ARM_FEATURE_DOTPROD)
+#undef __ARM_FEATURE_DOTPROD
+#endif
+#define __ARM_FEATURE_DOTPROD 1
+#endif
 #include <arm_neon.h>
 #include "megdnn/arch.h"
 #include "src/common/unroll_macro.h"
@@ -249,13 +254,14 @@ __ai float16x8_t vdupq_n_f16(__fp16 a) {
 
 #endif  // __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 
-#if __ARM_FEATURE_DOTPROD
-
+#if MGB_ENABLE_DOT
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 __ai int32x4_t vdotq2_s32(int8x16_t a, int8x16_t b) {
     int32x4_t c = vdupq_n_s32(0);
     return vdotq_s32(c, a, b);
 }
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 __ai uint32x4_t vdotq2_u32(uint8x16_t a, uint8x16_t b) {
     uint32x4_t c = vdupq_n_u32(0);
     return vdotq_u32(c, a, b);
@@ -275,11 +281,13 @@ __ai uint32x4_t vdotq2_u32(uint8x16_t a, uint8x16_t b) {
         c;                                 \
     })
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 __ai int32x2_t vdot2_s32(int8x8_t a, int8x8_t b) {
     int32x2_t c = vdup_n_s32(0);
     return vdot_s32(c, a, b);
 }
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 __ai uint32x2_t vdot2_u8(uint8x8_t a, uint8x8_t b) {
     uint32x2_t c = vdup_n_u32(0);
     return vdot_u32(c, a, b);
@@ -298,8 +306,7 @@ __ai uint32x2_t vdot2_u8(uint8x8_t a, uint8x8_t b) {
         c = vdot_lane_u32(c, a, b, lane); \
         c;                                \
     })
-
-#endif  // __ARM_FEATURE_DOTPROD
+#endif  // MGB_ENABLE_DOT
 
 #if __GNUC__ < 8
 #undef vld1q_f32_x2
@@ -575,7 +582,7 @@ struct Vfmsq_laneq_f32_armv7<3> {
 #define vfmsq_laneq_f32(a, b, v, lane) \
     Vfmsq_laneq_f32_armv7<lane>::impl(a, b, v)
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 namespace {
 template <int lane>
 struct Vdotq_laneq_s32_armv7 {
@@ -583,24 +590,28 @@ struct Vdotq_laneq_s32_armv7 {
 };
 template <>
 struct Vdotq_laneq_s32_armv7<0> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_low_s32(v), 0);
     }
 };
 template <>
 struct Vdotq_laneq_s32_armv7<1> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_low_s32(v), 1);
     }
 };
 template <>
 struct Vdotq_laneq_s32_armv7<2> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_high_s32(v), 0);
     }
 };
 template <>
 struct Vdotq_laneq_s32_armv7<3> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     __ai int32x4_t impl(int32x4_t a, int8x16_t b, int8x16_t v) {
         return vdotq_lane_s32(a, b, vget_high_f32(v), 1);
     }
@@ -765,7 +776,9 @@ __ai float32x4_t Vfmsq_f32(float32x4_t& a, float32x4_t& b, float32x4_t& v) {
                     :);
     return a;
 }
-
+#if MGB_ENABLE_DOT
+#undef __ARM_FEATURE_DOTPROD
+#endif
 #undef __ai
 #pragma GCC diagnostic pop
 

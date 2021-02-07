@@ -10,8 +10,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/conv_bias/int8/direct_kernels/dot_direct_nchw44_common.h"
+#if MGB_ENABLE_DOT
 
 namespace megdnn {
 namespace arm_common {
@@ -20,6 +20,7 @@ template <typename dst_type, BiasMode bias_mode, typename Op, int ow_remain,
           int filter_size, int oc_interval, int ow_interval>
 struct KernNeonSdotNCHW44<dst_type, 1, bias_mode, Op, ow_remain, filter_size,
                           oc_interval, ow_interval> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(dst_type* dst, const int dst_step, const int8_t* src,
                      const int ih, const int iw, const int8_t* filter,
                      const int32_t* bias, const int ic, const Op& op) {
@@ -109,6 +110,7 @@ struct KernNeonSdotNCHW44<dst_type, 1, bias_mode, Op, ow_remain, filter_size,
 
 template <typename dst_type, int stride, BiasMode bias_mode, typename Op,
           int filter_size>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
                                   const int8_t* src, const int ih, const int iw,
                                   const int8_t* filter, const int32_t* bias,

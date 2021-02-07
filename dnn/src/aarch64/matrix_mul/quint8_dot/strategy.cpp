@@ -16,14 +16,14 @@
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 using namespace megdnn;
 using namespace aarch64;
 using namespace aarch64::matmul;
 
-MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_u8_8x8);
+MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_u8_8x8_dot);
 
-void gemm_u8_8x8::pack_A(uint8_t* outptr, const uint8_t* inptr, int ldin,
+void gemm_u8_8x8_dot::pack_A(uint8_t* outptr, const uint8_t* inptr, int ldin,
                          int y0, int ymax, int k0, int kmax,
                          bool transpose) const {
     if (transpose) {
@@ -35,7 +35,7 @@ void gemm_u8_8x8::pack_A(uint8_t* outptr, const uint8_t* inptr, int ldin,
     }
 }
 
-void gemm_u8_8x8::pack_B(uint8_t* out, const uint8_t* in, int ldin, int x0,
+void gemm_u8_8x8_dot::pack_B(uint8_t* out, const uint8_t* in, int ldin, int x0,
                          int xmax, int k0, int kmax, bool transpose) const {
     if (transpose) {
         matmul_8x8x4::gemm_u8_8x8_interleave_pack_helper(out, in, ldin, x0,
@@ -46,7 +46,7 @@ void gemm_u8_8x8::pack_B(uint8_t* out, const uint8_t* in, int ldin, int x0,
     }
 }
 
-void gemm_u8_8x8::kern(const uint8_t* packA, const uint8_t* packB, size_t M,
+void gemm_u8_8x8_dot::kern(const uint8_t* packA, const uint8_t* packB, size_t M,
                        size_t N, size_t K, dt_int32* C, size_t LDC,
                        bool is_first_k, const dt_int32*, dt_int32*) const {
     megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&

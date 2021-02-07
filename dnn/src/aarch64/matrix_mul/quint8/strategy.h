@@ -10,7 +10,6 @@
  */
 #pragma once
 
-#if !(__ARM_FEATURE_DOTPROD)
 #include "src/fallback/matrix_mul/gemm_common.h"
 
 namespace megdnn {
@@ -23,6 +22,5 @@ MEGDNN_REG_GEMM_STRATEGY(dt_uint8, dt_int32, dt_int32, 8, 8, 8, false, true,
 }  // namespace matmul
 }  // namespace aarch64
 }  // namespace megdnn
-#endif
 
 // vim: syntax=cpp.doxygen

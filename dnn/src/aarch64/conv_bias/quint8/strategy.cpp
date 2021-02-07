@@ -23,12 +23,12 @@ using namespace aarch64;
 using namespace aarch64::matmul;
 
 namespace impl {
-template <BiasMode bmode, typename Op, int block_m, int block_n>
+template <BiasMode bmode, typename Op, int block_m, int block_n, bool dot>
 struct KernCaller;
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 template <BiasMode bmode, typename Op>
-struct KernCaller<bmode, Op, 8, 8> {
+struct KernCaller<bmode, Op, 8, 8, true> {
     static void run(const dt_uint8* packA, const dt_uint8* packB, size_t M,
                     size_t N, size_t K, dt_uint8* C, size_t LDC,
                     bool is_first_k, Op op, const dt_int32* bias,
@@ -120,10 +120,10 @@ struct KernCaller<bmode, Op, 8, 8> {
     }
 };
 
-#else
+#endif
 
 template <BiasMode bmode, typename Op>
-struct KernCaller<bmode, Op, 8, 8> {
+struct KernCaller<bmode, Op, 8, 8, false> {
     static void run(const dt_uint8* packA, const dt_uint8* packB, size_t M,
                     size_t N, size_t K, dt_uint8* C, size_t LDC,
                     bool is_first_k, Op op, const dt_int32* bias,
@@ -215,13 +215,11 @@ struct KernCaller<bmode, Op, 8, 8> {
     }
 };
 
-#endif
-
 }  // namespace impl
-#if __ARM_FEATURE_DOTPROD
-MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_u8_8x8_nobias_identity)
+#if MGB_ENABLE_DOT
+MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_u8_8x8_dot_nobias_identity)
 
-void gemm_u8_8x8_nobias_identity::pack_A(uint8_t* outptr, const uint8_t* inptr,
+void gemm_u8_8x8_dot_nobias_identity::pack_A(uint8_t* outptr, const uint8_t* inptr,
                                          int ldin, int y0, int ymax, int k0,
                                          int kmax, bool transpose) const {
     if (transpose) {
@@ -233,7 +231,7 @@ void gemm_u8_8x8_nobias_identity::pack_A(uint8_t* outptr, const uint8_t* inptr,
     }
 }
 
-void gemm_u8_8x8_nobias_identity::pack_B(uint8_t* out, const uint8_t* in,
+void gemm_u8_8x8_dot_nobias_identity::pack_B(uint8_t* out, const uint8_t* in,
                                          int ldin, int x0, int xmax, int k0,
                                          int kmax, bool transpose) const {
     if (transpose) {
@@ -245,10 +243,13 @@ void gemm_u8_8x8_nobias_identity::pack_B(uint8_t* out, const uint8_t* in,
     }
 }
 
-#else
+size_t gemm_u8_8x8_dot_nobias_identity::get_workspace_size() const {
+    return 8 * 8 * sizeof(dt_int32);
+}
 
-MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_u8_8x8_nobias_identity)
-void gemm_u8_8x8_nobias_identity::pack_A(dt_uint8* outptr,
+#endif
+MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_u8_8x8_nodot_nobias_identity)
+void gemm_u8_8x8_nodot_nobias_identity::pack_A(dt_uint8* outptr,
                                          const dt_uint8* inptr, int ldin,
                                          int y0, int ymax, int k0, int kmax,
                                          bool transpose) const {
@@ -262,7 +263,7 @@ void gemm_u8_8x8_nobias_identity::pack_A(dt_uint8* outptr,
     }
 }
 
-void gemm_u8_8x8_nobias_identity::pack_B(dt_uint8* out, const dt_uint8* in,
+void gemm_u8_8x8_nodot_nobias_identity::pack_B(dt_uint8* out, const dt_uint8* in,
                                          int ldin, int x0, int xmax, int k0,
                                          int kmax, bool transpose) const {
     uint8_t zB = B_dtype.param<dtype::Quantized8Asymm>().zero_point;
@@ -275,43 +276,52 @@ void gemm_u8_8x8_nobias_identity::pack_B(dt_uint8* out, const dt_uint8* in,
     }
 }
 
-#endif
-size_t gemm_u8_8x8_nobias_identity::get_workspace_size() const {
+size_t gemm_u8_8x8_nodot_nobias_identity::get_workspace_size() const {
     return 8 * 8 * sizeof(dt_int32);
 }
 
-#define KERN(_block_m, _block_n, _bias, _BIAS, _nonline, _OP)                 \
-    void gemm_u8_##_block_m##x##_block_n##_##_bias##_##_nonline::kern(        \
-            const dt_uint8* packA, const dt_uint8* packB, size_t M, size_t N, \
-            size_t K, dt_uint8* C, size_t LDC, bool is_first_k,               \
-            const dt_int32* bias, dt_int32* workspace) const {                \
-        float scale_A = A_dtype.param<dtype::Quantized8Asymm>().scale;        \
-        uint8_t zp_A = A_dtype.param<dtype::Quantized8Asymm>().zero_point;    \
-        float scale_B = B_dtype.param<dtype::Quantized8Asymm>().scale;        \
-        uint8_t zp_B = B_dtype.param<dtype::Quantized8Asymm>().zero_point;    \
-        float scale_C = C_dtype.param<dtype::Quantized8Asymm>().scale;        \
-        uint8_t zp_C = C_dtype.param<dtype::Quantized8Asymm>().zero_point;    \
-        DEFINE_OP(_OP);                                                       \
-        impl::KernCaller<_BIAS, decltype(op), _block_m, _block_n>::run(       \
-                packA, packB, M, N, K, C, LDC, is_first_k, op, bias,          \
-                workspace, zp_A, zp_B);                                       \
+#define KERN(_block_m, _block_n, _dot, _suffix, _bias, _BIAS, _nonline,   \
+                 _OP)                                                          \
+    void gemm_u8_##_block_m##x##_block_n##_suffix##_##_bias##_##_nonline::    \
+            kern(const dt_uint8* packA, const dt_uint8* packB, size_t M,       \
+                 size_t N, size_t K, dt_uint8* C, size_t LDC, bool is_first_k, \
+                 const dt_int32* bias, dt_int32* workspace) const {            \
+        float scale_A = A_dtype.param<dtype::Quantized8Asymm>().scale;         \
+        uint8_t zp_A = A_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
+        float scale_B = B_dtype.param<dtype::Quantized8Asymm>().scale;         \
+        uint8_t zp_B = B_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
+        float scale_C = C_dtype.param<dtype::Quantized8Asymm>().scale;         \
+        uint8_t zp_C = C_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
+        DEFINE_OP(_OP);                                                        \
+        impl::KernCaller<_BIAS, decltype(op), _block_m, _block_n, _dot>::run(  \
+                packA, packB, M, N, K, C, LDC, is_first_k, op, bias,           \
+                workspace, zp_A, zp_B);                                        \
     }
 
 #define DEFINE_OP(_Op) \
     arm_common::_Op<dt_qint32, dt_quint8> op(scale_A* scale_B, scale_C, zp_C);
 
-KERN(8, 8, nobias, BiasMode::NO_BIAS, identity, TypeCvtOp)
-KERN(8, 8, nobias, BiasMode::NO_BIAS, relu, ReluOp)
-KERN(8, 8, nobias, BiasMode::NO_BIAS, hswish, HSwishOp)
+#if MGB_ENABLE_DOT
+KERN(8, 8, true, _dot, nobias, BiasMode::NO_BIAS, identity, TypeCvtOp)
+KERN(8, 8, true, _dot, nobias, BiasMode::NO_BIAS, relu, ReluOp)
+KERN(8, 8, true, _dot, nobias, BiasMode::NO_BIAS, hswish, HSwishOp)
+#endif
+KERN(8, 8, false, _nodot, nobias, BiasMode::NO_BIAS, identity, TypeCvtOp)
+KERN(8, 8, false, _nodot, nobias, BiasMode::NO_BIAS, relu, ReluOp)
+KERN(8, 8, false, _nodot, nobias, BiasMode::NO_BIAS, hswish, HSwishOp)
 #undef DEFINE_OP
 
 #define DEFINE_OP(_Op)                                         \
     arm_common::_Op<dt_qint32, dt_quint8> op(scale_A* scale_B, \
                                              scale_A* scale_B, scale_C, zp_C);
-KERN(8, 8, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, identity, AddOp)
-KERN(8, 8, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, relu, FuseAddReluOp)
-KERN(8, 8, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, hswish,
-     FuseAddHSwishOp)
+#if MGB_ENABLE_DOT
+KERN(8, 8, true, _dot, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, identity, AddOp)
+KERN(8, 8, true, _dot, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, relu, FuseAddReluOp)
+KERN(8, 8, true, _dot, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, hswish, FuseAddHSwishOp)
+#endif
+KERN(8, 8, false, _nodot, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, identity, AddOp)
+KERN(8, 8, false, _nodot, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, relu, FuseAddReluOp)
+KERN(8, 8, false, _nodot, bias_channel, BiasMode::BROADCAST_CHANNEL_BIAS, hswish, FuseAddHSwishOp)
 #undef DEFINE_OP
 
 #undef KERN

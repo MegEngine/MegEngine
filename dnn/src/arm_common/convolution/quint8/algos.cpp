@@ -14,6 +14,7 @@
 #include "src/arm_common/convolution/quint8/conv_backdata_stride1.h"
 #include "src/arm_common/convolution/quint8/conv_backdata_stride2.h"
 #include "src/common/opr_delegate.h"
+
 #include "midout.h"
 
 MIDOUT_DECL(megdnn_arm_conv_quint8_kimpl)
@@ -21,7 +22,7 @@ MIDOUT_DECL(megdnn_arm_conv_quint8_kimpl)
 using namespace megdnn;
 using namespace arm_common;
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 
 /* ===================== ConvolutionBackwardData  ===================== */
 
@@ -29,6 +30,10 @@ using namespace arm_common;
 bool ConvolutionBackwardDataImpl::AlgoUdot8DirectStride1::usable(
         fallback::ConvolutionBackwardDataImpl*,
         const NCBKernSizeParam& param) const {
+
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return deconv::can_stride1_quint8_dot(param);
 }
 
@@ -58,6 +63,9 @@ ConvolutionBackwardDataImpl::AlgoUdot8DirectStride1::dispatch_kern(
 bool ConvolutionBackwardDataImpl::AlgoUdot8DirectStride2::usable(
         fallback::ConvolutionBackwardDataImpl*,
         const NCBKernSizeParam& param) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return deconv::can_stride2_quint8_dot(param);
 }
 

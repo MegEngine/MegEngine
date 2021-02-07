@@ -10,11 +10,8 @@
  */
 #pragma once
 
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/convolution/opr_impl.h"
-
-#include <cstddef>
-#include <cstdint>
+#if MGB_ENABLE_DOT
 
 namespace megdnn {
 namespace arm_common {

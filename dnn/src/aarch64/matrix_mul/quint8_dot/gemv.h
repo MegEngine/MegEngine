@@ -10,10 +10,9 @@
  */
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
+#include "src/common/utils.h"
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 namespace megdnn {
 namespace aarch64 {
 namespace matmul {

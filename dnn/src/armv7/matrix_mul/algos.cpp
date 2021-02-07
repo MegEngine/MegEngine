@@ -19,6 +19,9 @@
 #include "src/armv7/matrix_mul/quint8/strategy.h"
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/gemm_impl.h"
+#if MGB_ENABLE_CPUINFO
+#include "cpuinfo.h"
+#endif
 
 #include "midout.h"
 
@@ -744,7 +747,7 @@ MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL(AlgoInt16x16x32K12x4x1,
                                      armv7::matmul::gemm_s16x16x32_12x4,
                                      int16_t, int32_t,
                                      AlgoDataType::INT16X16X32, DEFAULT);
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 /* ===================== Int8 K6x8x4 algo ===================== */
 namespace {
 void int8_k6x8x4_kern(const MatrixMulImpl::KernParam& kern_param) {
@@ -769,6 +772,9 @@ void int8_k6x8x4_kern(const MatrixMulImpl::KernParam& kern_param) {
 
 bool MatrixMulImpl::AlgoInt8x8x32K6x8x4::usable(
         const KernSizeParam& kern_size_param) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return can_be_treated_as_int8x8x32(kern_size_param);
 }
 
@@ -827,6 +833,9 @@ void quint8_dot_k4x8x4_kern(const MatrixMulImpl::KernParam& kern_param) {
 
 bool MatrixMulImpl::AlgoQuint8DotK4x8x4::usable(
         const KernSizeParam& kern_size_param) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return kern_size_param.A_type.enumv() == DTypeEnum::Quantized8Asymm &&
            kern_size_param.B_type.enumv() == DTypeEnum::Quantized8Asymm &&
            kern_size_param.C_type.enumv() == DTypeEnum::QuantizedS32 &&
@@ -891,6 +900,9 @@ void int8_mk4_8x4x4_dotprod_kern(const MatrixMulImpl::KernParam& kern_param) {
 
 bool MatrixMulImpl::AlgoInt8x8x32MK4_8x4x4DotProd::usable(
         const KernSizeParam& kern_size_param) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return kern_size_param.A_type.enumv() == kern_size_param.B_type.enumv() &&
            (kern_size_param.A_type.enumv() == DTypeEnum::Int8 ||
             kern_size_param.A_type.enumv() == DTypeEnum::QuantizedS8) &&

@@ -11,7 +11,7 @@
 #pragma once
 #include "src/fallback/matrix_mul/gemm_common.h"
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 namespace megdnn {
 namespace aarch64 {
 namespace matmul {

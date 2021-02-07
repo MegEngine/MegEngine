@@ -28,7 +28,7 @@ void gemv_like_mk4(const int8_t* __restrict A, const int8_t* __restrict B,
                    int32_t* __restrict C, size_t M, size_t N, size_t K,
                    size_t Astride, size_t Bstride, size_t Cstride);
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 void gemv_like_mk4_dot(const int8_t* __restrict A, const int8_t* __restrict B,
                        int32_t* __restrict C, size_t M, size_t N, size_t K,
                        size_t Astride, size_t Bstride, size_t Cstride);

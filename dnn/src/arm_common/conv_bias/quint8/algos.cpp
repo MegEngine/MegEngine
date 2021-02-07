@@ -11,13 +11,14 @@
  */
 
 #include "src/arm_common/conv_bias/quint8/algos.h"
-#include "midout.h"
 #include "src/arm_common/conv_bias/quint8/stride1.h"
 #include "src/arm_common/conv_bias/quint8/stride1_dotprod.h"
 #include "src/arm_common/conv_bias/quint8/stride2.h"
 #include "src/arm_common/conv_bias/quint8/stride2_dotprod.h"
 #include "src/arm_common/elemwise_op.h"
 #include "src/fallback/conv_bias/common.h"
+
+#include "midout.h"
 
 MIDOUT_DECL(megdnn_arm_common_conv_bias_quint8)
 
@@ -84,10 +85,13 @@ ConvBiasImpl::AlgoQU8DirectStride2::dispatch_kerns(
     MIDOUT_END();
     return {};
 }
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
 /* ===================== stride1 algo ===================== */
 bool ConvBiasImpl::AlgoDotU8DirectStride1::usable(const NCBKernSizeParam& param,
                                                   AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return direct_dotprod_quint8_stride1::can_conv_direct_stride1_quint8(param);
 }
 
@@ -118,6 +122,9 @@ ConvBiasImpl::AlgoDotU8DirectStride1::dispatch_kerns(
 /* ===================== stride2 algo ===================== */
 bool ConvBiasImpl::AlgoDotU8DirectStride2::usable(const NCBKernSizeParam& param,
                                                   AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()){
+        return false;
+    }
     return direct_dotprod_quint8_stride2::can_conv_direct_stride2_quint8(param);
 }
 

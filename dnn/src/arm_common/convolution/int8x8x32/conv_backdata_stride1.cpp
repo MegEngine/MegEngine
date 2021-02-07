@@ -9,11 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/convolution/int8x8x32/conv_backdata_stride1.h"
+#if MGB_ENABLE_DOT
 #include "src/common/utils.h"
-
-#include <cstring>
 #include "src/arm_common/simd_macro/marm_neon.h"
 
 using namespace megdnn;
@@ -94,6 +92,7 @@ inline int8x16_t vqtbl1q_s8_common(int8x16_t a, uint8x16_t index) {
     _sum0##_c_idx = vdotq_s32(_sum0##_c_idx, _k##_k1_idx, _elem); \
     _sum1##_c_idx = vdotq_s32(_sum1##_c_idx, _k##_k2_idx, _elem);
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
@@ -328,6 +327,7 @@ void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
     }
 }
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_3x3(const int8_t* src, const int8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
@@ -530,6 +530,7 @@ void deconv_direct_3x3(const int8_t* src, const int8_t* filter, int32_t* dst,
     _sum0##_c_idx = vdotq_s32(_sum0##_c_idx, _k##_k01_idx, _elem); \
     _sum1##_c_idx = vdotq_s32(_sum1##_c_idx, _k##_k11_idx, _elem);
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_5x5(const int8_t* src, const int8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
@@ -777,6 +778,7 @@ void deconv_direct_5x5(const int8_t* src, const int8_t* filter, int32_t* dst,
     }
 }
 
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void deconv_direct_7x7(const int8_t* src, const int8_t* filter, int32_t* dst,
                        size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
@@ -1069,6 +1071,7 @@ void deconv_direct_7x7(const int8_t* src, const int8_t* filter, int32_t* dst,
 #undef CALC_2
 
 }  // anonymous namespace
+
 
 size_t deconv::get_workspace_in_bytes_stride1_int8x8x32_dot(
         const NCBKernSizeParam& param) {

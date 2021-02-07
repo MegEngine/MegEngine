@@ -49,7 +49,7 @@ private:
     class AlgoF16K4x16x1;  // Armv7 F16 Kernel 4x16x1
     class AlgoF16MK8_4x8;  // Armv7 F16 MK8 Format block 4x8
 #endif
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     class AlgoInt8x8x32K6x8x4;            // Armv7 Int8 Kernel 6x8x4
     class AlgoQuint8DotK4x8x4;            // Armv7 Quint8 Kernel 6x8x4
     class AlgoInt8x8x32MK4_8x4x4DotProd;  // Armv7 nchw44 Int8x8x32 Kernel 8x4x4

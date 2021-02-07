@@ -24,7 +24,7 @@ using namespace arm_common;
 
 /* ===================== ConvolutionBackwardData ===================== */
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
     AlgoSdot8DirectStride1 i8x8x32_direct_stride1_sdot;
     AlgoSdot8DirectStride2 i8x8x32_direct_stride2_sdot;
     AlgoUdot8DirectStride1 quint8_direct_stride1_udot;
@@ -37,7 +37,7 @@ class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENABLE_DOT
         m_all_algos.emplace_back(&i8x8x32_direct_stride1_sdot);
         m_all_algos.emplace_back(&i8x8x32_direct_stride2_sdot);
         m_all_algos.emplace_back(&quint8_direct_stride1_udot);

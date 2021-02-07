@@ -11,9 +11,9 @@
  * implied.
  */
 #pragma once
-#if __ARM_FEATURE_DOTPROD
 #include "megdnn/arch.h"
 #include "src/arm_common/conv_bias/intrinsic_helper.h"
+#if MGB_ENABLE_DOT
 #include "src/arm_common/elemwise_op.h"
 #include "src/arm_common/intrinsic_helper.h"
 #include "src/arm_common/neon_struct.h"
@@ -208,6 +208,7 @@ MEGDNN_ALWAYS_INLINE void store_ocx_owx_remain_static(int32x4_t res[][8],
 template <int res_row, int src_row, int src_start_idx, int weight_idx,
           typename T, typename T2, typename T3>
 struct ShiftCalHelper {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static MEGDNN_ALWAYS_INLINE void impl(T& res, T2& src, T3& weight) {
 #define cb(step)                                                      \
     res[res_row][step] =                                              \
@@ -221,6 +222,7 @@ struct ShiftCalHelper {
 
 template <int res_row, int src_row, int src_start_idx, int weight_idx,
           typename T, typename T2, typename T3>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 MEGDNN_ALWAYS_INLINE void cal_helper(T& res, T2& src, T3& weight) {
     ShiftCalHelper<res_row, src_row, src_start_idx, weight_idx, T, T2,
                    T3>::impl(res, src, weight);

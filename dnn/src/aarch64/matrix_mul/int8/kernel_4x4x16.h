@@ -9,7 +9,6 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#if !(__ARM_FEATURE_DOTPROD)
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
@@ -851,6 +850,5 @@ static void gemm_s8_4x4_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
 }  // namespace matmul_4x4x16
 }  // namespace aarch64
 }  // namespace megdnn
-#endif
 
 // vim: syntax=cpp.doxygen

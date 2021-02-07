@@ -10,8 +10,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#if __ARM_FEATURE_DOTPROD
 #include "src/arm_common/conv_bias/int8/dot_direct_nchw_nchw44_kern.h"
+#if MGB_ENABLE_DOT
 namespace megdnn {
 namespace arm_common {
 namespace dot_direct_nchw_nchw44 {
@@ -19,6 +19,7 @@ namespace dot_direct_nchw_nchw44 {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 8, 2, T, T2, T3, T4> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(T& c, T2& src, T3& weight) {
 #define cb(step)                                                    \
     c[0][step * 2] = Func::template impl<(src_idx + step) % 4>(     \
@@ -42,6 +43,7 @@ struct ShiftCalHelper<src_idx, weight_idx, 2, Func, 8, 2, T, T2, T3, T4> {
 template <int src_idx, int weight_idx, typename Func, typename T, typename T2,
           typename T3, typename T4>
 struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 8, 2, T, T2, T3, T4> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(T& c, T2& src, T3& weight) {
 #define cb(step)                                                    \
     c[0][step * 2] = Func::template impl<(src_idx + step) % 4>(     \
@@ -60,6 +62,7 @@ template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
 struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 2, oc_block, ow_block,
                                 2> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
                      const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
                      int iw, int ld_dst_oc, const Op& op) {
@@ -111,6 +114,7 @@ template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
 struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 3, oc_block, ow_block,
                                 2> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
                      const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
                      int iw, int ld_dst_oc, const Op& op) {
@@ -169,6 +173,7 @@ template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
 struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 5, oc_block, ow_block,
                                 2> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
                      const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
                      int iw, int ld_dst_oc, const Op& op) {
@@ -224,6 +229,7 @@ template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
 struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 7, oc_block, ow_block,
                                 2> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
                      const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
                      int iw, int ld_dst_oc, const Op& op) {
@@ -289,6 +295,7 @@ void pack_src_int8_nchw_nchw44_dot<2>(
 }
 
 template <BiasMode bias_mode, typename Op, int filter_size, int stride>
+MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_direct_int8_nchw_nchw44_dot(const int8_t* src, const int8_t* filter,
                                       const int32_t* bias, int32_t* temp,
                                       int8_t* dst, const int oc, const int ic,

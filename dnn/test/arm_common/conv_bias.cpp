@@ -166,7 +166,7 @@ static void benchmark_convbias(Handle* handle, std::string int_name,
                 .set_display(false);
     }
     auto nchw44_algo_regx = ".*(DIRECT|NCHW_NCHW44).*";
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENBALE_DOT
     if (!is_fp32) {
         nchw44_algo_regx = ".*DOT.*";
     }
@@ -1852,7 +1852,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_QINT8_STRIDE1_NCHW44) {
 
 #endif
 
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENBALE_DOT
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_INT8_STRIDE1_WITHDOTPROD) {
     // have to remove preferred restrict in usable func before run the benchmark
@@ -2440,7 +2440,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_S1_QUANTIZEDSYM) {
     dtype::QuantizedS8 stype(2.5f);
     dtype::QuantizedS32 dtype(6.25f);
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENBALE_DOT
     benchmark_conv1x1("AARCH64_INT8X8X32_K8X12X4_DOTPROD", handle(), stype,
                       dtype, dtype, dtype);
 #else
@@ -2460,7 +2460,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_S1_QUANTIZEDASYM) {
     dtype::QuantizedS32 dtype(1.2 * 1.2);
 
 #if MEGDNN_AARCH64
-#if __ARM_FEATURE_DOTPROD
+#if MGB_ENBALE_DOT
     benchmark_conv1x1("AARCH64_QUINT8_K8X8X4_DOTPROD", handle(), stype, dtype,
                       dtype, dtype);
 #else
@@ -2565,7 +2565,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_CONV1X1_GEMV_FP32) {
     }
 }
 
-#ifndef __ARM_FEATURE_DOTPROD
+//! enable none dot algo now
 TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_1X1_S1_NCHW_VS_NCHW44_INT8x8x32) {
     std::vector<TestArg> conv_bias_1x1_args_nchw44 =
             get_conv_bias_1x1_benchmark_args(4);
@@ -2634,7 +2634,6 @@ TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_1X1_S1_NCHW_VS_NCHW44_INT8x8x32) {
                computations / conv1x1_nchw44, conv1x1_nchw / conv1x1_nchw44);
     }
 }
-#endif
 
 TEST_F(ARM_COMMON, BENCHMARK_CONV_BIAS_WINOGRAD_VS_IM2COL_INT8) {
     auto&& args = get_winograd_benchmark_args(3, 8);

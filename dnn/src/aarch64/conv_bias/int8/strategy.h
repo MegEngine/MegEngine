@@ -15,7 +15,6 @@ namespace megdnn {
 namespace aarch64 {
 namespace matmul {
 
-#if !(__ARM_FEATURE_DOTPROD)
 /**
  * \brief base strategy of gemm.
  *
@@ -39,8 +38,7 @@ MEGDNN_REG_GEMM_STRATEGY_WITH_SUPER(gemm_s8_4x4_bias_channel_relu,
 
 MEGDNN_REG_GEMM_STRATEGY_WITH_SUPER(gemm_s8_4x4_bias_channel_hswish,
                                     gemm_s8_4x4_nobias_identity);
-
-#else
+#if MGB_ENABLE_DOT
 MEGDNN_REG_GEMM_STRATEGY_WITH_WRITEBACK(dt_int8, dt_int8, dt_int32, 8, 12, 4,
                                         false, true,
                                         gemm_s8_8x12_nobias_identity);
@@ -59,7 +57,6 @@ MEGDNN_REG_GEMM_STRATEGY_WITH_SUPER(gemm_s8_8x12_bias_channel_relu,
 
 MEGDNN_REG_GEMM_STRATEGY_WITH_SUPER(gemm_s8_8x12_bias_channel_hswish,
                                     gemm_s8_8x12_nobias_identity);
-
 #endif
 
 }  // namespace matmul
