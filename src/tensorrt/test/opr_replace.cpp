@@ -1978,7 +1978,7 @@ TEST(TestTensorRTReplace, FuseConvAdd) {
     MGB_ASSERT_TENSOR_NEAR(outputs[1], outputs[3], 1e-3);
 }
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestTensorRTReplace, FuseConvAddNchw2nchw4) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");

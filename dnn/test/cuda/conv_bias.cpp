@@ -216,7 +216,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
     }
 }
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
     //! not support NonlineMode::SIGMOID and NonlineMode::H_SWISH
     require_compute_capability(6, 1);

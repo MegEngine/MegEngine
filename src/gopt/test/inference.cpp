@@ -1836,7 +1836,7 @@ TEST(TestEnableTensorCore, SmallInputShape) {
 }
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, Nchw4Nchw) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -1936,7 +1936,7 @@ TEST(TestEnableTensorCore, Nchw4Nchw) {
 #endif
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, ConvBiasWithZ) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2002,7 +2002,7 @@ TEST(TestEnableTensorCore, ConvBiasWithZ) {
 #endif
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, Pooling) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2148,7 +2148,7 @@ TEST(TestGoptInference, EnableTensorCore) {
 }
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(FuseConvBiasZPass, BlockFuse) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2273,7 +2273,7 @@ TEST(FuseConvBiasZPass, BlockFuse) {
 #endif
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, ShuffleMerge) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2450,7 +2450,7 @@ TEST(FuseConvBiasZPass, Basic) {
 
 #if MGB_CUDA
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestGoptInference, EnableCHWN4) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2552,7 +2552,7 @@ TEST(TestGoptInference, EnableCHWN4) {
 #endif
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestGoptInference, EnableCHWN4WarpPespective) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2731,7 +2731,7 @@ TEST(TestGoptInference, EnableCHWN4Pooling) {
 }
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestGoptInference, EnableCHWN4ShuffleRemove) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2857,7 +2857,7 @@ TEST(TestGoptInference, EnableCHWN4ShuffleRemove) {
 #endif
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -3076,7 +3076,7 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
 }
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -3945,7 +3945,7 @@ TEST(TestGoptInference, FoldingConvDimshuffle) {
 }
 
 //! close for cu111 ci, reopen it when bug fixed
-#if 0
+#if CUDA_VERSION < 11000
 TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");

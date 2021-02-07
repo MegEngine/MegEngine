@@ -9,16 +9,16 @@ local_path=$(dirname $(readlink -f $0))
 CUDNN_LIB_DIR="/opt/cudnn/lib64/"
 CUDA_LIB_DIR="/usr/local/cuda/lib64/"
 
-CUDA_SDK="unknown"
+SDK_NAME="unknown"
 function usage() {
-    echo "use '-sdk cu111' to specify cuda toolkit config, also support cu101, cu112"
+    echo "use '-sdk cu111' to specify cuda toolkit config, also support cu101, cu112, cpu"
 }
 
 while [ "$1" != "" ]; do
     case $1 in
         -sdk)
            shift
-           CUDA_SDK=$1
+           SDK_NAME=$1
            shift
            ;;
         *)
@@ -27,17 +27,16 @@ while [ "$1" != "" ]; do
     esac
 done
 
-echo "Build with ${CUDA_SDK}"
+echo "Build with ${SDK_NAME}"
 
-if [ $CUDA_SDK == "cu101" ];then
+if [ $SDK_NAME == "cu101" ];then
     COPY_LIB_LIST="${CUDA_LIB_DIR}/libnvrtc.so.10.1"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF" 
-    OUT_DIR="cu101"  
     BUILD_GCC8="ON"  
     REQUIR_CUDA_VERSION="10010" 
     REQUIR_CUDNN_VERSION="7.6.3" 
     REQUIR_TENSORRT_VERSION="6.0.1.5" 
-elif [ $CUDA_SDK == "cu111" ];then
+elif [ $SDK_NAME == "cu111" ];then
     COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
@@ -56,11 +55,10 @@ elif [ $CUDA_SDK == "cu111" ];then
         arch=compute_80,code=sm_80 \
         arch=compute_86,code=sm_86 \
         arch=compute_86,code=compute_86" 
-    OUT_DIR="cu111"  
     REQUIR_CUDA_VERSION="11010" 
-    REQUIR_CUDNN_VERSION="8.0.5" 
+    REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 
-elif [ $CUDA_SDK == "cu112" ];then
+elif [ $SDK_NAME == "cu112" ];then
     COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
@@ -79,16 +77,17 @@ elif [ $CUDA_SDK == "cu112" ];then
         arch=compute_80,code=sm_80 \
         arch=compute_86,code=sm_86 \
         arch=compute_86,code=compute_86"  
-    OUT_DIR="cu112"  
     REQUIR_CUDA_VERSION="11020" 
-    REQUIR_CUDNN_VERSION="8.0.5" 
+    REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 
+elif [ $SDK_NAME == "cpu" ];then
+    echo "use $SDK_NAME without cuda support"
+    BUILD_WHL_CPU_ONLY="ON"
 else
-    echo "no support sdk ${CUDA_SDK}, please set by '-sdk cu111'"
+    echo "no support sdk ${SDK_NAME}, please set by '-sdk cu111'"
     exit -1
 fi
 
-BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY}
 if [[ -z ${BUILD_WHL_CPU_ONLY} ]]
 then
     BUILD_WHL_CPU_ONLY="OFF"
@@ -205,7 +204,7 @@ docker run --rm -it $TMPFS_ARGS \
     -e ALL_PYTHON="${ALL_PYTHON}" \
     -e EXTRA_CMAKE_FLAG="$EXTRA_CMAKE_FLAG" \
     -e COPY_LIB_LIST="$COPY_LIB_LIST"  \
-    -e OUT_DIR="$OUT_DIR"  \
+    -e SDK_NAME="$SDK_NAME"  \
     -v ${CUDA_ROOT_DIR}:/usr/local/cuda \
     -v ${CUDNN_ROOT_DIR}:/opt/cudnn \
     -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt \

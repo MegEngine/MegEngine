@@ -74,7 +74,7 @@ ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 
 * If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
 ```bash
-BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
+ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cpu
 ```
 
 ## Build for MacOS
