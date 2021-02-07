@@ -72,8 +72,8 @@ class Elemwise(Module):
         * "NOT": bool unary: ~x
     """
 
-    def __init__(self, method):
-        super().__init__()
+    def __init__(self, method, **kwargs):
+        super().__init__(**kwargs)
         self.method = method
 
     def forward(self, *inps):

@@ -64,8 +64,9 @@ class Embedding(Module):
         norm_type: Optional[float] = None,
         initial_weight: Parameter = None,
         freeze: bool = False,
+        **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         if padding_idx is not None:
             raise ValueError("Not support padding index now.")
         if max_norm is not None or norm_type is not None:

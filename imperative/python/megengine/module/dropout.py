@@ -20,8 +20,8 @@ class Dropout(Module):
     :param drop_prob: The probability to drop (set to zero) each single element
     """
 
-    def __init__(self, drop_prob=0.0):
-        super().__init__()
+    def __init__(self, drop_prob=0.0, **kwargs):
+        super().__init__(**kwargs)
         self.drop_prob = drop_prob
 
     def forward(self, inputs):

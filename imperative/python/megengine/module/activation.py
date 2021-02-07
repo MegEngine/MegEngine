@@ -48,8 +48,8 @@ class Softmax(Module):
 
     """
 
-    def __init__(self, axis=None):
-        super().__init__()
+    def __init__(self, axis=None, **kwargs):
+        super().__init__(**kwargs)
         self.axis = axis
 
     def forward(self, inputs):
@@ -167,8 +167,8 @@ class PReLU(Module):
 
     """
 
-    def __init__(self, num_parameters: int = 1, init: float = 0.25):
-        super().__init__()
+    def __init__(self, num_parameters: int = 1, init: float = 0.25, **kwargs):
+        super().__init__(**kwargs)
         self.num_parameters = num_parameters
         if num_parameters > 1:
             # Assume format is NCHW
@@ -225,8 +225,8 @@ class LeakyReLU(Module):
 
     """
 
-    def __init__(self, negative_slope: float = 0.01):
-        super().__init__()
+    def __init__(self, negative_slope: float = 0.01, **kwargs):
+        super().__init__(**kwargs)
         self.negative_slope = negative_slope
 
     def forward(self, inputs):

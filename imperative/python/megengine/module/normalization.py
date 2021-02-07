@@ -20,8 +20,8 @@ class GroupNorm(Module):
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     """
 
-    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True):
-        super().__init__()
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, **kwargs):
+        super().__init__(**kwargs)
         assert num_channels % num_groups == 0
         self.num_groups = num_groups
         self.num_channels = num_channels
@@ -70,8 +70,8 @@ class InstanceNorm(Module):
     Note that InstanceNorm equals using GroupNome with num_groups=num_channels.
     """
 
-    def __init__(self, num_channels, eps=1e-05, affine=True):
-        super().__init__()
+    def __init__(self, num_channels, eps=1e-05, affine=True, **kwargs):
+        super().__init__(**kwargs)
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine
@@ -114,8 +114,8 @@ class LayerNorm(Module):
     Note that LayerNorm equals using GroupNorm with num_groups=1.
     """
 
-    def __init__(self, num_channels, eps=1e-05, affine=True):
-        super().__init__()
+    def __init__(self, num_channels, eps=1e-05, affine=True, **kwargs):
+        super().__init__(**kwargs)
         self.num_channels = num_channels
         self.eps = eps
         self.affine = affine

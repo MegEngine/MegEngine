@@ -46,8 +46,8 @@ class Sequential(Module):
         pred1 = net1(data)
     """
 
-    def __init__(self, *args):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(**kwargs)
         self.layer_keys = []
         if len(args) == 1 and isinstance(args[0], OrderedDict):
             for key, module in args[0].items():

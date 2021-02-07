@@ -15,10 +15,8 @@ from .module import Module
 
 
 class _AdaptivePoolNd(Module):
-    def __init__(
-        self, oshp: Union[Tuple[int, int], int, Tensor],
-    ):
-        super(_AdaptivePoolNd, self).__init__()
+    def __init__(self, oshp: Union[Tuple[int, int], int, Tensor], **kwargs):
+        super(_AdaptivePoolNd, self).__init__(**kwargs)
         self.oshp = oshp
 
     @abstractmethod

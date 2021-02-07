@@ -30,6 +30,7 @@ class _ConvBnActivation2d(Module):
         momentum=0.9,
         affine=True,
         track_running_stats=True,
+        **kwargs
     ):
         super().__init__()
         self.conv = Conv2d(
@@ -43,6 +44,7 @@ class _ConvBnActivation2d(Module):
             bias,
             conv_mode,
             compute_mode,
+            **kwargs,
         )
         self.bn = BatchNorm2d(out_channels, eps, momentum, affine, track_running_stats)
 

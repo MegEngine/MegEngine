@@ -19,10 +19,8 @@ class TensorrtRuntimeSubgraph(Module):
     See :func:`~.tensorrt_runtime_opr` for more details.
     """
 
-    def __init__(
-        self, data,
-    ):
-        super(TensorrtRuntimeSubgraph, self).__init__()
+    def __init__(self, data, **kwargs):
+        super(TensorrtRuntimeSubgraph, self).__init__(**kwargs)
         self._data = data
 
     @property

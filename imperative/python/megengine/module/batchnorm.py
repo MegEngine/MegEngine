@@ -26,8 +26,9 @@ class _BatchNorm(Module):
         affine=True,
         track_running_stats=True,
         freeze=False,
+        **kwargs
     ):
-        super(_BatchNorm, self).__init__()
+        super(_BatchNorm, self).__init__(**kwargs)
         self.num_features = num_features
         self.eps = eps
         self.momentum = momentum
@@ -151,9 +152,10 @@ class SyncBatchNorm(_BatchNorm):
         track_running_stats=True,
         freeze=False,
         group: Optional[Group] = WORLD,
+        **kwargs
     ) -> None:
         super().__init__(
-            num_features, eps, momentum, affine, track_running_stats, freeze
+            num_features, eps, momentum, affine, track_running_stats, freeze, **kwargs
         )
         self.group = group
 

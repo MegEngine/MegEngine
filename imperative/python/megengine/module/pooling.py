@@ -19,8 +19,9 @@ class _PoolNd(Module):
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]] = None,
         padding: Union[int, Tuple[int, int]] = 0,
+        **kwargs
     ):
-        super(_PoolNd, self).__init__()
+        super(_PoolNd, self).__init__(**kwargs)
         self.kernel_size = kernel_size
         self.stride = stride or kernel_size
         self.padding = padding
