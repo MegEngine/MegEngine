@@ -456,6 +456,9 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_NCHW4) {
     checker.exec({{1, 4, 2, 2, 4}, {16, 4, 3, 3, 4}, {1, 4, 1, 1, 4}, {}, {}});
 }
 
+//! FIXME: conv kernel of cudnn for NCHW4_NCHW tensor format causes illegal
+//! memory access errors, so we have to disable this test here.
+#if 0
 TEST_F(CUDA, CONV_BIAS_FORWARD_NCHW4_NCHW) {
     require_compute_capability(6, 1);
     using namespace conv_bias;
@@ -511,6 +514,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_NCHW4_NCHW) {
     checker.set_param(param);
     checker.exec({{1, 4, 2, 2, 4}, {16, 4, 3, 3, 4}, {1, 16, 1, 1}, {}, {}});
 }
+#endif
 
 #endif
 
