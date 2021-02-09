@@ -7,8 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 from .fake_quant import FakeQuantize
-from .internal_fake_quant import *
-from .observer import HistogramObserver, Observer
+from .observer import Observer
 from .qconfig import (
     QConfig,
     calibration_qconfig,
@@ -20,4 +19,15 @@ from .qconfig import (
     sync_ema_fakequant_qconfig,
     tqt_qconfig,
 )
-from .utils import QuantMode
+from .quantize import (
+    apply_easy_quant,
+    disable_fake_quant,
+    disable_observer,
+    enable_fake_quant,
+    enable_observer,
+    propagate_qconfig,
+    quantize,
+    quantize_qat,
+    reset_qconfig,
+)
+from .utils import QParams, QuantMode, create_qparams

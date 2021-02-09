@@ -13,7 +13,6 @@ import itertools
 import json
 import os
 import typing
-import warnings
 import weakref
 
 import numpy as np

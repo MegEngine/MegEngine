@@ -6,40 +6,48 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import math
+from typing import Union
 
 from .. import functional as F
-from ..core.tensor.dtype import _metadata_dict, get_quantized_dtype
+from ..core.tensor.dtype import QuantDtypeMeta, _builtin_quant_dtypes
+from ..logger import get_logger
 from ..module import Module
-from ..tensor import Parameter, Tensor
-from .utils import QuantMode, fake_quant_tensor, get_qparam_dict, tqt_forward
+from ..tensor import Parameter
+from .utils import (
+    QParams,
+    QParamsModuleMixin,
+    QuantMode,
+    create_qparams,
+    fake_quant_tensor,
+    tqt_forward,
+)
+
+logger = get_logger(__name__)
 
 
 class _FakeQuantize(Module):
-    r"""
-    A Basic Fake Quant module.
-
-    :param dtype: a string indicating the target quantization type of input.
-    :param narrow_range: whether the absolute value of ``qmin`` is the same as ``qmax``,
-        instead of 1 greater. Usually True for weight and False for activation.
-    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
-    """
-
     def __init__(
-        self, dtype: str, narrow_range: bool = False, enable: bool = True, **kwargs
+        self, dtype: Union[str, QuantDtypeMeta], enable: bool = True, **kwargs
     ):
         super().__init__()
-        if not dtype in _metadata_dict.keys():
-            raise ValueError(
-                "unknown dtype: {}, only support {}".format(
-                    dtype, _metadata_dict.keys()
+        if isinstance(dtype, str):
+            if not dtype in _builtin_quant_dtypes:
+                raise ValueError(
+                    "unknown dtype: {}, only support {}".format(
+                        dtype, _builtin_quant_dtypes.keys()
+                    )
                 )
+            dtype = _builtin_quant_dtypes[dtype]
+        if "narrow_range" in kwargs:
+            del kwargs["narrow_range"]
+            logger.warning(
+                "FakeQuantize currently has no narrow_range param "
+                "so it is ignored here",
+                exc_info=DeprecationWarning,
             )
         self.dtype = dtype
-        self.narrow_range = narrow_range
-        self.qmin = (
-            -_metadata_dict[dtype].qmax if narrow_range else _metadata_dict[dtype].qmin
-        )
-        self.qmax = _metadata_dict[dtype].qmax
+        self.qmin = dtype.qmin
+        self.qmax = dtype.qmax
         self.enabled = enable
 
     def enable(self):
@@ -48,61 +56,64 @@ class _FakeQuantize(Module):
     def disable(self):
         self.enabled = False
 
-    def fake_quant_forward(self, inp, q_dict=None):
+    def fake_quant_forward(self, inp, qparams: QParams = None):
+        raise NotImplementedError
+
+    def normal_foward(self, inp, qparams: QParams = None):
         return inp
 
-    def normal_foward(self, inp, q_dict=None):
-        return inp
-
-    def forward(self, inp, q_dict=None):
+    def forward(self, inp, qparams: QParams = None):
         if self.enabled:
-            return self.fake_quant_forward(inp, q_dict=q_dict)
+            return self.fake_quant_forward(inp, qparams=qparams)
         else:
-            return self.normal_foward(inp, q_dict=q_dict)
+            return self.normal_foward(inp, qparams=qparams)
 
 
-class TQT(_FakeQuantize):
+class TQT(_FakeQuantize, QParamsModuleMixin):
     r"""
     TQT: https://arxiv.org/abs/1903.08066 Trained Quantization Thresholds
     for Accurate and Efficient Fixed-Point Inference of Deep Neural Networks.
+
+    :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
+    quantization dtype of input.
+    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
     def __init__(
-        self, dtype: str, narrow_range: bool = False, enable: bool = True, **kwargs
+        self, dtype: Union[str, QuantDtypeMeta], enable: bool = True, **kwargs
     ):
-        super().__init__(dtype, narrow_range, enable, **kwargs)
+        super().__init__(dtype, enable, **kwargs)
         self.scale = Parameter(0.0, dtype="float32")
 
-    def fake_quant_forward(self, inp, q_dict=None):
+    def fake_quant_forward(self, inp, qparams: QParams = None):
         # when enable, TQT will do fakequant forward, finetune the scale
         return tqt_forward(self.qmin, self.qmax, inp, self.scale)
 
-    def get_qparams(self):
-        q_dict = get_qparam_dict(QuantMode.SYMMERTIC)
-        q_dict["scale"] = 2 ** self.scale.detach()
-        return q_dict
-
-    def set_qparams(self, q_dict):
+    def set_qparams(self, qparams: QParams):
         assert (
-            q_dict["mode"] == QuantMode.SYMMERTIC
+            qparams.mode == QuantMode.SYMMERTIC
         ), "only symmetric quantization is supported by TQT"
-        if "scale" not in q_dict or q_dict["scale"] is None:
+        if qparams.scale is None:
             raise AssertionError("Can not get an initialized scale")
-        self.scale._reset(F.log(q_dict["scale"]) / math.log(2))
+        self.scale[...] = F.log(qparams.scale) / math.log(2)
 
-    def get_dtype(self):
-        q_dict = self.get_qparams()
-        scale = None if "scale" not in q_dict else q_dict["scale"].numpy()
-        zero_point = (
-            None if "zero_point" not in q_dict else q_dict["zero_point"].numpy()
-        )
-        return get_quantized_dtype(self.dtype, scale, zero_point)
+    def get_qparams(self):
+        return create_qparams(QuantMode.SYMMERTIC, self.dtype, scale=2 ** self.scale)
 
 
 class FakeQuantize(_FakeQuantize):
     r"""
     A module to do quant and dequant according to observer's scale and zero_point.
+
+    :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
+    quantization dtype of input.
+    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
-    def fake_quant_forward(self, inp, q_dict=None):
-        return fake_quant_tensor(inp, self.qmin, self.qmax, q_dict)
+    def fake_quant_forward(self, inp, qparams: QParams = None):
+        assert (
+            qparams.dtype_meta is self.dtype
+        ), "input qparams' dtype is not equal to self.dtype.\nqparams.dtype_meta={}\nself.dtype={}".format(
+            qparams.dtype_meta, self.dtype
+        )
+        return fake_quant_tensor(inp, qparams)

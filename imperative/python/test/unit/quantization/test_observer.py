@@ -6,6 +6,7 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 from megengine.distributed.helper import get_device_count_by_fork
+from megengine.quantization import QuantMode, create_qparams
 from megengine.quantization.observer import (
     ExponentialMovingAverageObserver,
     HistogramObserver,
@@ -56,14 +57,14 @@ def test_histogram_observer():
 
 
 def test_passive_observer():
-    q_dict = {"scale": mge.tensor(1.0)}
+    qparams = create_qparams(QuantMode.SYMMERTIC, "qint8", mge.tensor(1.0))
     m = PassiveObserver("qint8")
-    m.set_qparams(q_dict)
+    m.set_qparams(qparams)
     assert m.orig_scale == 1.0
-    assert m.scale == 1.0
-    m.scale = 2.0
-    assert m.scale == 2.0
-    assert m.get_qparams() == {"scale": mge.tensor(2.0)}
+    assert m.scale.numpy() == 1.0
+    assert m.get_qparams().dtype_meta == qparams.dtype_meta
+    assert m.get_qparams().scale == qparams.scale
+    assert m.get_qparams() == qparams
 
 
 @pytest.mark.require_ngpu(2)

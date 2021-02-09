@@ -6,6 +6,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import copy
+
 import numpy as np
 
 from megengine.core.tensor.dtype import get_scale, get_zero_point, qint8, quint8
@@ -86,3 +88,23 @@ def test_as_type():
     b = a.astype(quint8(0.3, 128))
     np.testing.assert_almost_equal(get_scale(b.dtype), 0.3)
     np.testing.assert_equal(get_zero_point(b.dtype), 128)
+
+
+def test_qparams():
+    x = Tensor(1)
+    assert x.qparams.scale is None
+    x.qparams.scale = Tensor(1.0)
+    assert x.qparams.scale.numpy() == 1.0
+    x2 = copy.copy(x)
+    assert x.qparams is x2.qparams and x2.qparams.scale.numpy() == 1.0
+    x3 = copy.deepcopy(x)
+    assert x.qparams is not x3.qparams and x3.qparams.scale.numpy() == 1.0
+
+
+def test_name():
+    x = Tensor(0)
+    assert x.name == ""
+    x.name = "x"
+    assert x.name == "x"
+    x = Tensor(0, name="x")
+    assert x.name == "x"

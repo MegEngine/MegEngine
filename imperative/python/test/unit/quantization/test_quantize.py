@@ -33,7 +33,7 @@ from megengine.quantization.quantize import (
 )
 
 
-class Net(Float.Module):
+class FloatNet(Float.Module):
     def __init__(self):
         super().__init__()
         self.quant = Float.QuantStub()
@@ -113,25 +113,25 @@ def test_reset_qconfig():
 def test_enable_and_disable_observer():
     net = init_qat_net()
     enable_observer(net)
-    assert net.quant.act_observer.enabled == True
-    assert net.linear.weight_observer.enabled == True
-    assert net.linear.act_observer.enabled == True
+    assert net.quant.act_observer.enabled is True
+    assert net.linear.weight_observer.enabled is True
+    assert net.linear.act_observer.enabled is True
     disable_observer(net)
-    assert net.quant.act_observer.enabled == False
-    assert net.linear.weight_observer.enabled == False
-    assert net.linear.act_observer.enabled == False
+    assert net.quant.act_observer.enabled is False
+    assert net.linear.weight_observer.enabled is False
+    assert net.linear.act_observer.enabled is False
 
 
 def test_enable_and_disable_fake_quant():
     net = init_qat_net()
     disable_fake_quant(net)
-    assert net.quant.act_fake_quant.enabled == False
-    assert net.linear.weight_fake_quant.enabled == False
-    assert net.linear.act_fake_quant.enabled == False
+    assert net.quant.act_fake_quant.enabled is False
+    assert net.linear.weight_fake_quant.enabled is False
+    assert net.linear.act_fake_quant.enabled is False
     enable_fake_quant(net)
-    assert net.quant.act_fake_quant.enabled == True
-    assert net.linear.weight_fake_quant.enabled == True
-    assert net.linear.act_fake_quant.enabled == True
+    assert net.quant.act_fake_quant.enabled is True
+    assert net.linear.weight_fake_quant.enabled is True
+    assert net.linear.act_fake_quant.enabled is True
 
 
 def init_observer(module, data):
@@ -144,7 +144,7 @@ def init_observer(module, data):
 
 def test_enable_and_disable_all():
     x = Tensor(np.random.randint(1, 10, size=(3, 3)).astype(np.float32))
-    net = Net()
+    net = FloatNet()
     y1 = net(x).numpy()
     net = quantize_qat(net, min_max_fakequant_qconfig)
 
@@ -162,7 +162,7 @@ def test_enable_and_disable_all():
 
 
 def test_quantize_qat():
-    net = Net()
+    net = FloatNet()
     qat_net = quantize_qat(net, inplace=False, qconfig=min_max_fakequant_qconfig)
     assert isinstance(qat_net.quant, QAT.QuantStub)
     assert isinstance(qat_net.linear, QAT.Linear)

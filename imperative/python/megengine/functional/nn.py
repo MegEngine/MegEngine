@@ -203,7 +203,7 @@ def conv_transpose2d(
     assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
 
     if groups != 1:
-        raise NotImplementedError("TODO")
+        raise NotImplementedError("group transposed conv2d is not supported yet.")
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)

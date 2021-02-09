@@ -6,9 +6,6 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import warnings
-from typing import Union
-
 from ..._imperative_rt import OpDef, ops
 
 __all__ = ["OpDef"]

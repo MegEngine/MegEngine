@@ -10,7 +10,13 @@ import megengine.module.qat as QAT
 import megengine.module.quantized as Q
 from megengine import Parameter, Tensor
 from megengine.core.tensor import dtype
-from megengine.quantization import FakeQuantize, MinMaxObserver, QConfig
+from megengine.quantization import (
+    FakeQuantize,
+    MinMaxObserver,
+    QConfig,
+    QuantMode,
+    create_qparams,
+)
 from megengine.quantization.quantize import (
     disable_fake_quant,
     disable_observer,
@@ -18,10 +24,10 @@ from megengine.quantization.quantize import (
 )
 
 min_max_fakequant_qconfig = QConfig(
-    weight_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=True),
-    act_observer=partial(MinMaxObserver, dtype="qint8", narrow_range=False),
-    weight_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=True),
-    act_fake_quant=partial(FakeQuantize, dtype="qint8", narrow_range=False),
+    weight_observer=partial(MinMaxObserver, dtype="qint8_narrow"),
+    act_observer=partial(MinMaxObserver, dtype="qint8"),
+    weight_fake_quant=partial(FakeQuantize, dtype="qint8_narrow"),
+    act_fake_quant=partial(FakeQuantize, dtype="qint8"),
 )
 
 inp_scale = np.float32(np.random.rand() + 1)
@@ -111,7 +117,7 @@ def test_dequant_stub():
 
     x = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x = fake_quant_act(x, inp_scale)
-    x.q_dict["scale"] = inp_scale
+    x.qparams.scale = inp_scale
 
     normal = normal_net(x)
     qat_without_fakequant = qat_from_float(x)
@@ -146,12 +152,12 @@ def test_elemwise(kind):
     x1_scale = np.float32(np.random.rand() + 1)
     x1 = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x1 = fake_quant_act(x1, x1_scale)
-    x1.q_dict["scale"] = x1_scale
+    x1.qparams.scale = x1_scale
 
     x2_scale = np.float32(np.random.rand() + 1)
     x2 = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x2 = fake_quant_act(x2, x2_scale)
-    x2.q_dict["scale"] = x2_scale
+    x2.qparams.scale = x2_scale
 
     x1_int8 = quant(x1, x1_scale)
     x2_int8 = quant(x2, x2_scale)
@@ -187,7 +193,7 @@ def test_linear():
 
     x = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x = fake_quant_act(x, inp_scale)
-    x.q_dict["scale"] = inp_scale
+    x.qparams.update(create_qparams(QuantMode.SYMMERTIC, "qint8", inp_scale))
 
     x_int8 = quant(x, inp_scale)
 
@@ -230,7 +236,7 @@ def test_conv(module):
 
     x = mge.tensor(np.random.normal(size=(1, 3, 3, 3)).astype("float32"))
     x = fake_quant_act(x, inp_scale)
-    x.q_dict["scale"] = inp_scale
+    x.qparams.update(create_qparams(QuantMode.SYMMERTIC, "qint8", inp_scale))
 
     x_int8 = quant(x, inp_scale)
 

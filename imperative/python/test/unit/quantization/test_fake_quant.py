@@ -12,9 +12,15 @@ import pytest
 import megengine as mge
 from megengine import tensor
 from megengine.core.autodiff.grad import Function, Grad
+from megengine.core.tensor.dtype import QuantDtypeMeta
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.quantization.internal_fake_quant import *
-from megengine.quantization.utils import QuantMode, fake_quant_tensor, tqt_forward
+from megengine.quantization.utils import (
+    QuantMode,
+    create_qparams,
+    fake_quant_tensor,
+    tqt_forward,
+)
 
 
 class TQT_numpy:
@@ -111,16 +117,14 @@ def fake_quant_tensor_gt(inp, scale, zero_point, qmin, qmax):
 def test_fakequant():
     qmin = -126
     qmax = 129
+    test_dtype = QuantDtypeMeta("test_qint8", None, "int8", qmin, qmax)
 
     def run(zero_point, scale):
-        q_dict = {}
-        q_dict["mode"] = QuantMode.ASYMMERTIC
-        q_dict["scale"] = scale
-        q_dict["zero_point"] = zero_point
+        qparams = create_qparams(QuantMode.ASYMMERTIC, test_dtype, scale, zero_point)
         inp_data = np.random.uniform(low=-512.0, high=512.0, size=(1, 32, 32, 32))
         inp = tensor(inp_data, dtype=np.float32)
         # test forward
-        oup = fake_quant_tensor(inp, qmin, qmax, q_dict).numpy()
+        oup = fake_quant_tensor(inp, qparams).numpy()
         oup_gt = fake_quant_tensor_gt(inp, scale, zero_point, qmin, qmax).numpy()
         assert np.allclose(oup, oup_gt)
         assert oup.shape == oup_gt.shape
@@ -128,7 +132,7 @@ def test_fakequant():
         # test backward
         x = tensor(inp_data, dtype=np.float32)
         grad = Grad().wrt(x, callback=_save_to(x))
-        y = fake_quant_tensor(x, qmin, qmax, q_dict)
+        y = fake_quant_tensor(x, qparams)
         grad(y, tensor(F.ones_like(x)))
 
         x1 = tensor(inp_data, dtype=np.float32)

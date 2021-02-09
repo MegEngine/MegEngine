@@ -6,6 +6,7 @@ import megengine.functional as F
 from megengine.core.tensor import dtype
 from megengine.distributed.helper import get_device_count_by_fork
 from megengine.functional.elemwise import _elemwise_multi_type, _elwise
+from megengine.quantization import QuantMode, create_qparams
 
 
 def quant(x, scale):
@@ -26,13 +27,13 @@ def test_elemwise(kind):
     x1 = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x1_scale = np.float32(np.random.rand() + 1)
     x1 = fake_quant(x1, x1_scale)
-    x1.q_dict["scale"] = x1_scale
+    x1.qparams.update(create_qparams(QuantMode.SYMMERTIC, "qint8", x1_scale))
     x1_int8 = quant(x1, x1_scale)
 
     x2 = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x2_scale = np.float32(np.random.rand() + 1)
     x2 = fake_quant(x2, x2_scale)
-    x2.q_dict["scale"] = x2_scale
+    x2.qparams.update(create_qparams(QuantMode.SYMMERTIC, "qint8", x2_scale))
     x2_int8 = quant(x2, x2_scale)
 
     output_scale = np.float32(np.random.rand() + 1)

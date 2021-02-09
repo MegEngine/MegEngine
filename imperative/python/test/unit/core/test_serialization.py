@@ -65,9 +65,9 @@ def test_tensor_serialization():
 
     with TemporaryFile() as f:
         a = Tensor(0)
-        a.q_dict["scale"] = Tensor(1.0)
+        a.qparams.scale = Tensor(1.0)
         pickle.dump(a, f)
         f.seek(0)
         b = pickle.load(f)
-        assert isinstance(b.q_dict["scale"], Tensor)
-        np.testing.assert_equal(b.q_dict["scale"].numpy(), 1.0)
+        assert isinstance(b.qparams.scale, Tensor)
+        np.testing.assert_equal(b.qparams.scale.numpy(), 1.0)

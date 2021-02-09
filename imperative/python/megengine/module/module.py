@@ -5,7 +5,6 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from typing import Any, Callable, Iterable, Optional, Set, Tuple, Union
@@ -204,10 +203,9 @@ class Module(metaclass=ABCMeta):
 
         if "requires_grad" in kwargs:
             del kwargs["requires_grad"]
-            warnings.warn(
+            logger.warning(
                 "Tensor currently has no requires_grad attribute "
-                "so requires_grad argument is ignored here",
-                DeprecationWarning,
+                "so requires_grad argument is ignored here"
             )
 
         def predicate(obj) -> bool:
@@ -232,10 +230,9 @@ class Module(metaclass=ABCMeta):
 
         if "requires_grad" in kwargs:
             del kwargs["requires_grad"]
-            warnings.warn(
+            logger.warning(
                 "Tensor currently has no requires_grad attribute "
-                "so requires_grad argument is ignored here",
-                DeprecationWarning,
+                "so requires_grad argument is ignored here"
             )
 
         def predicate(obj) -> bool:

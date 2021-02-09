@@ -7,7 +7,10 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from abc import abstractmethod
 
-from ...quantization import FakeQuantize, Observer, QConfig
+# avoid circular reference
+from ...quantization.fake_quant import FakeQuantize
+from ...quantization.observer import Observer
+from ...quantization.qconfig import QConfig
 from ...tensor import Tensor
 from ..module import Module
 
@@ -73,19 +76,19 @@ class QATModule(Module):
         # do observer
         if observer is None:
             oup = target
-            q_dict = None
+            qparams = None
         else:
             oup = observer(target)
-            q_dict = observer.get_qparams()
+            qparams = observer.get_qparams()
         # do fake quant
         if fake_quant is not None:
-            oup = fake_quant(oup, q_dict)
+            oup = fake_quant(oup, qparams)
             # use qparams of fake_quant if have.
             if hasattr(fake_quant, "get_qparams"):
-                q_dict = fake_quant.get_qparams()
+                qparams = fake_quant.get_qparams()
         # set to tensor qparams.
-        if q_dict is not None:
-            oup.q_dict.update(q_dict)
+        if qparams is not None:
+            oup.qparams.update(qparams)
         return oup
 
     def apply_quant_weight(self, target: Tensor):
@@ -118,7 +121,7 @@ class QATModule(Module):
         Get weight's quantization dtype as the method from ``qconfig``.
         """
         return self._get_method_result(
-            "get_dtype", self.weight_fake_quant, self.weight_observer
+            "get_quantized_dtype", self.weight_fake_quant, self.weight_observer
         )
 
     def get_activation_dtype(self):
@@ -126,7 +129,7 @@ class QATModule(Module):
         Get activation's quantization dtype as the method from ``qconfig``.
         """
         return self._get_method_result(
-            "get_dtype", self.act_fake_quant, self.act_observer
+            "get_quantized_dtype", self.act_fake_quant, self.act_observer
         )
 
     def get_weight_qparams(self):

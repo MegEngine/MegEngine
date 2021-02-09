@@ -14,7 +14,7 @@ import pytest
 import megengine.core.tensor.megbrain_graph as G
 from megengine.core.ops import builtin as ops
 from megengine.core.tensor.dtype import (
-    _metadata_dict,
+    _builtin_quant_dtypes,
     convert_from_qint4,
     convert_from_qint8,
     convert_from_quint4,
@@ -76,10 +76,10 @@ def _get_compiled_result(inp, dtype, shape, device, calc_func=None):
 
 
 def _check_result_attr(oup, dtype, dtype_str, is_unsigned=True):
-    metadata = _metadata_dict[dtype_str]
+    metadata = _builtin_quant_dtypes[dtype_str]
     assert "mgb_dtype" in oup.dtype.metadata
     assert is_quantize(oup.dtype)
-    np.testing.assert_equal(oup.dtype.metadata["mgb_dtype"]["name"], metadata.name)
+    np.testing.assert_equal(oup.dtype.metadata["mgb_dtype"]["name"], metadata.cname)
     np.testing.assert_allclose(get_scale(oup.dtype), get_scale(dtype))
     if is_unsigned:
         np.testing.assert_equal(get_zero_point(oup.dtype), get_zero_point(dtype))

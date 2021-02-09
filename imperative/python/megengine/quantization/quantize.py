@@ -18,6 +18,7 @@ from ..module import qat as QAT
 from ..module import quantized as Quantized
 from ..module.qat import QATModule
 from ..module.quantized import QuantizedModule
+from ..tensor import Tensor
 from .qconfig import QConfig, ema_fakequant_qconfig
 
 
@@ -147,10 +148,10 @@ def reset_qconfig(module: Module, qconfig: QConfig, inplace: bool = True):
     if not inplace:
         module = deepcopy(module)
 
-    def safe_call(func, q_dict):
+    def safe_call(func, qparams):
         inst = func() if func is not None else None
         if inst is not None and getattr(inst, "set_qparams", None) is not None:
-            inst.set_qparams(q_dict)
+            inst.set_qparams(qparams)
         return inst
 
     def is_qat(mod: Module):
@@ -158,13 +159,13 @@ def reset_qconfig(module: Module, qconfig: QConfig, inplace: bool = True):
 
     for m in list(module._flatten(predicate=is_qat)):
         if m.with_weight:
-            weight_q_dict = m.get_weight_qparams()
-            m.weight_observer = safe_call(qconfig.weight_observer, weight_q_dict)
-            m.weight_fake_quant = safe_call(qconfig.weight_fake_quant, weight_q_dict)
+            weight_params = m.get_weight_qparams()
+            m.weight_observer = safe_call(qconfig.weight_observer, weight_params)
+            m.weight_fake_quant = safe_call(qconfig.weight_fake_quant, weight_params)
         if m.with_act:
-            act_q_dict = m.get_activation_qparams()
-            m.act_observer = safe_call(qconfig.act_observer, act_q_dict)
-            m.act_fake_quant = safe_call(qconfig.act_fake_quant, act_q_dict)
+            act_params = m.get_activation_qparams()
+            m.act_observer = safe_call(qconfig.act_observer, act_params)
+            m.act_fake_quant = safe_call(qconfig.act_fake_quant, act_params)
 
     return module
 
@@ -202,7 +203,9 @@ def hook_qat_module(module: Module, func: Callable):
     return hooks
 
 
-def apply_easy_quant(module, data, start=0.8, stop=1.2, num=40):
+def apply_easy_quant(
+    module: Module, data: Tensor, start: float = 0.8, stop: float = 1.2, num: int = 40
+):
     r"""
     Implementation of ``EasyQuant``: https://arxiv.org/pdf/2006.16669.
     Search for optimal scales.

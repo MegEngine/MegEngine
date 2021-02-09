@@ -22,6 +22,8 @@ from .logger import get_logger
 from .utils.deprecation import deprecated
 from .utils.naming import auto_naming
 
+logger = get_logger(__name__)
+
 
 class Tensor(_Tensor, ArrayMethodMixin):
     r"""
@@ -30,7 +32,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     grad = None
     dmap_callback = None
-    _q_dict = None
+    _qparams = None
 
     def __new__(
         cls, data, dtype=None, device=None, is_const=False, no_cache=False, name=None
@@ -50,7 +52,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
         if isinstance(data, _Tensor):
             if dtype is not None:
-                get_logger().warning(
+                logger.warning(
                     "dtype does not work when creating a new Tensor with another Tensor"
                 )
             obj = _Tensor.__new__(cls, data)
@@ -101,10 +103,12 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return super().dtype
 
     @property
-    def q_dict(self):
-        if self._q_dict is None:
-            self._q_dict = {"mode": None, "scale": None, "zero_point": None}
-        return self._q_dict
+    def qparams(self):
+        from .quantization.utils import create_qparams  # pylint: disable=all
+
+        if self._qparams is None:
+            self._qparams = create_qparams()
+        return self._qparams
 
     def numpy(self) -> np.ndarray:
         r"""
@@ -185,14 +189,29 @@ class Tensor(_Tensor, ArrayMethodMixin):
     def __getstate__(self):
         r""" __getstate__ will be called for pickle serialization or deep copy
         """
-
         state = {
-            "qdict": self.q_dict,
+            "numpy": self.numpy(),
+            "dtype": self.dtype,
+            "device": self.device.logical_name,
         }
+        if self._qparams is not None:
+            state["qparams"] = self._qparams
         return state
 
     def __setstate__(self, state):
-        self._q_dict = state.pop("qdict")
+        from .quantization.utils import create_qparams  # pylint: disable=all
+
+        if "qdict" in state:
+            qparams = state.pop("qdict")
+            logger.warning(
+                "Tensor's 'qdict' state is depreciated. Use 'qparams' instead"
+            )
+        elif "qparams" in state:
+            qparams = state.pop("qparams")
+        else:
+            qparams = None
+        self._reset(Tensor(state.pop("numpy"), state.pop("dtype"), state.pop("device")))
+        self._qparams = qparams
 
 
 tensor = Tensor

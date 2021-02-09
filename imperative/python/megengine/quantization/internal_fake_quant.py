@@ -16,4 +16,6 @@ from ..autodiff import Function
 from .fake_quant import _FakeQuantize
 from .observer import MinMaxObserver
 from .qconfig import QConfig
+from .utils import QParams
+
 
