@@ -13,7 +13,7 @@ MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深�
 
 ## 安装说明
 
-**注意:** MegEngine 现在支持 Linux-64bit/Windows-64bit/macos-10.14及其以上 (MacOS只支持cpu) 平台安装，支持Python3.5 到 Python3.8。对于 Windows 10 用户，可以通过安装 [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl) 进行体验，同时我们也原生支持Windows。
+**注意:** MegEngine 现在支持在 Linux-64bit/Windows-64bit/macos-10.14及其以上 (MacOS只支持cpu) 等平台上安装 Python 包，支持Python3.5 到 Python3.8。对于 Windows 10 用户，可以通过安装 [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl) 进行体验，同时我们也原生支持Windows。MegEngine 也支持在很多其它平台上进行推理运算。
 
 ### 通过包管理器安装
 
@@ -27,11 +27,11 @@ python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 
 ### 环境依赖
 
-大多数编译 MegEngine 的依赖位于 `third_party` 目录，可以通过以下命令自动安装：
+大多数编译 MegEngine 的依赖位于 [third_party](third_party) 目录，可以通过以下命令自动安装：
 
 ```bash
-$ ./third_party/prepare.sh
-$ ./third_party/install-mkl.sh
+./third_party/prepare.sh
+./third_party/install-mkl.sh
 ```
 
 但是有一些依赖需要手动安装：
@@ -47,23 +47,23 @@ MegEngine使用CMake作为构建工具。我们提供以下脚本来帮助编译
 
 * [host_build.sh](scripts/cmake-build/host_build.sh) 用于本地编译。
 参数 -h 可用于查询脚本支持的参数:
-  
+
   ```
   scripts/cmake-build/host_build.sh -h
   ```
 * [cross_build_android_arm_inference.sh](scripts/cmake-build/cross_build_android_arm_inference.sh) 用于ARM-安卓交叉编译。
 参数 -h 可用于查询脚本支持的参数:
-  
+
   ```
   scripts/cmake-build/cross_build_android_arm_inference.sh -h
   ```
 * [cross_build_linux_arm_inference.sh](scripts/cmake-build/cross_build_linux_arm_inference.sh) 用于ARM-Linux交叉编译。
 参数 -h 可用于查询脚本支持的参数:
-  
+
   ```
   scripts/cmake-build/cross_build_linux_arm_inference.sh -h
   ```
-* [cross_build_ios_arm_inference.sh](scripts/cmake-build/cross_build_ios_arm_inference.sh) 用于IOS交叉编译。
+* [cross_build_ios_arm_inference.sh](scripts/cmake-build/cross_build_ios_arm_inference.sh) 用于iOS交叉编译。
   参数 -h 可用于查询脚本支持的参数:
 
   ```
@@ -97,7 +97,7 @@ MegEngine使用CMake作为构建工具。我们提供以下脚本来帮助编译
 * 邮箱: [megengine-support@megvii.com](mailto:megengine-support@megvii.com)
 * 论坛: [discuss.megengine.org.cn](https://discuss.megengine.org.cn)
 * QQ: 1029741705
-* OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html) 
+* OPENI: [openi.org.cn/MegEngine](https://www.openi.org.cn/html/2020/Framework_0325/18.html)
 
 ## 资源
 
@@ -109,4 +109,4 @@ MegEngine使用CMake作为构建工具。我们提供以下脚本来帮助编译
 
 MegEngine 使用 Apache License, Version 2.0
 
-Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
