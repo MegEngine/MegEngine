@@ -29,6 +29,7 @@ __all__ = [
     "dot",
     "isinf",
     "isnan",
+    "matinv",
     "matmul",
     "max",
     "mean",
@@ -727,6 +728,38 @@ def topk(
     if descending:
         tns = -tns
     return tns, ind
+
+
+def matinv(inp: Tensor) -> Tensor:
+    """
+    Computes the inverse of a batch of matrices; input must has shape [..., n, n].
+
+    :param inp: input tensor.
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        data = tensor([[1.0, 0.0], [1.0, 1.0]])
+        out = F.matinv(data)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[ 1.  0.]
+         [-1.  1.]]
+
+    """
+
+    (result,) = apply(builtin.MatrixInverse(), inp)
+    return result
 
 
 def matmul(
