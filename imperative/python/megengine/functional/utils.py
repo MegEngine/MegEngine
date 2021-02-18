@@ -63,7 +63,7 @@ def topk_accuracy(
         correct = pred[:, :k].detach() == broadcast_to(
             transpose(target, (0, "x")), (target.shape[0], k)
         )
-        accs.append(correct.astype(np.float32).sum() / target.shape[0])
+        accs.append(correct.astype(np.float32).sum() / Tensor(target.shape[0]))
     if len(topk) == 1:  # type: ignore[arg-type]
         accs = accs[0]
     return accs
