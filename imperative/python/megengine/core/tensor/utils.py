@@ -15,7 +15,6 @@ from .._imperative_rt.core2 import Tensor, apply, dtype_promotion, get_device
 from ..ops import builtin
 from ..ops.special import Const
 from .dtype import is_dtype_equal, is_quantize
-from .megbrain_graph import VarNode
 
 _enable_convert_inputs = True
 
@@ -60,7 +59,7 @@ def astype(x, dtype):
 
 
 def convert_single_value(v, *, dtype=None, device=None):
-    if isinstance(v, (Tensor, VarNode)):
+    if isinstance(v, Tensor):
         if not is_quantize(v.dtype):
             v = astype(v, dtype)
     else:

@@ -15,7 +15,7 @@ from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm
 from ..core.ops.special import Const
-from ..core.tensor import megbrain_graph, utils
+from ..core.tensor import utils
 from ..core.tensor.utils import astensor1d, setscalar
 from ..distributed import WORLD, is_distributed
 from ..jit.tracing import is_tracing
@@ -416,7 +416,6 @@ def adaptive_max_pool2d(
     :param oshp: `(OH, OW)` size of the output shape.
     :return: output tensor.
     """
-    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
 
@@ -438,7 +437,6 @@ def adaptive_avg_pool2d(
     :param oshp: `(OH, OW)` size of the output shape.
     :return: output tensor.
     """
-    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
 
@@ -1181,7 +1179,6 @@ def remap(
     op = builtin.Remap(
         imode=interp_mode, border_type=border_mode, format="NCHW", scalar=scalar
     )
-    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
     (result,) = apply(op, inp, map_xy)
     return result
 
@@ -1759,7 +1756,6 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
         print(result.numpy())
 
     """
-    assert isinstance(src, (Tensor, megbrain_graph.VarNode)), "src must be Tensor type"
     assert src.ndim == 5 and src.shape[4] == 4
 
     src = src.detach()

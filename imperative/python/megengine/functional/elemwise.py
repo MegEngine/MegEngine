@@ -14,7 +14,7 @@ import numpy as np
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
-from ..core.tensor import megbrain_graph, utils
+from ..core.tensor import utils
 from ..core.tensor.array_method import _elwise_apply
 from ..core.tensor.utils import isscalar, setscalar
 from ..device import get_default_device
@@ -77,9 +77,7 @@ __all__ = [
 
 
 def _elwise(*args, mode):
-    tensor_args = list(
-        filter(lambda x: isinstance(x, (Tensor, megbrain_graph.VarNode)), args)
-    )
+    tensor_args = list(filter(lambda x: isinstance(x, Tensor), args))
     if len(tensor_args) == 0:
         dtype = utils.dtype_promotion(args)
         first_arg = Tensor(args[0], dtype=dtype, device=get_default_device())

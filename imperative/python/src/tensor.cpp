@@ -12,6 +12,7 @@
 #include "megbrain/dtype.h"
 #include "megbrain/common.h"
 #include "megbrain/imperative/ops/utility.h"
+#include "megbrain/imperative/ops/backward_graph.h"
 
 #include "./tensor.h"
 #include "./grad.h"
@@ -156,7 +157,7 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         ctx.args = &tensors[0];
         ctx.nargs = nargs;
         ctx.pytype = pytype;
-        if (strstr(op->ob_type->tp_name, "BackwardGraph")) {
+        if (ctx.op->same_type<BackwardGraph>()) {
             ctx.backward = true;
         }
 
@@ -165,7 +166,9 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
                 auto* t = tensors[i] = tw->m_tensor.get();
                 ctx.flags |= t->m_flags;
             } else {
-                PyErr_SetString(PyExc_TypeError, "expect Tensor");
+                PyErr_SetString(PyExc_TypeError,
+                    ssprintf("op %s expect type Tensor as inputs, got %s actually",
+                        ctx.op->make_name().c_str(), Py_TYPE(args[i])->tp_name).c_str());
                 return nullptr;
             }
         }

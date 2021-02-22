@@ -15,7 +15,6 @@ from .. import functional as F
 from ..autodiff import Function
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
-from ..core.tensor import megbrain_graph
 from ..core.tensor.dtype import _metadata_dict
 from ..tensor import Tensor
 
@@ -93,14 +92,6 @@ def fake_quant_tensor(inp: Tensor, qmin: int, qmax: int, q_dict: Dict) -> Tensor
     zero_point = Tensor([0.0], dtype=np.float32)
     if q_dict["mode"] == QuantMode.ASYMMERTIC:
         zero_point = q_dict["zero_point"]
-
-    assert isinstance(inp, (Tensor, megbrain_graph.VarNode)), "inp must be Tensor type"
-    assert isinstance(
-        scale, (Tensor, megbrain_graph.VarNode)
-    ), "scale must be Tensor type"
-    assert isinstance(
-        zero_point, (Tensor, megbrain_graph.VarNode)
-    ), "zero point must be Tensor type"
 
     op = builtin.FakeQuant(qmin=qmin, qmax=qmax)
     return apply(op, inp, scale, zero_point)[0]
