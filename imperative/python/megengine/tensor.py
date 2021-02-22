@@ -24,6 +24,10 @@ from .utils.naming import auto_naming
 
 
 class Tensor(_Tensor, ArrayMethodMixin):
+    r"""
+    A tensor object represents a multidimensional, homogeneous array of fixed-size items.
+    """
+
     grad = None
     dmap_callback = None
     _q_dict = None
@@ -59,6 +63,20 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @property
     def shape(self) -> Union[tuple, "Tensor"]:
+        r"""
+        Returns a :class:`tuple` or a :class:`~.Tensor` represents tensor dimensions.
+
+        .. note::
+           
+           The shape of a tensor was usually represented by a :class:`tuple`.
+           But if a tensor was treated as symbolic placeholder with tracing, 
+           it's shape could also be a :class:`~.Tensor`. See :class:`~.trace` for more details.
+
+        The shape property is usually used to get the current shape of a tensor, 
+        but may also be used to reshape the tensor in-place by assigning a tuple of tensor dimensions to it. 
+        As with :func:`~.reshape`, one of the new shape dimensions can be -1, 
+        in which case its value is inferred from the size of the tensor and the remaining dimensions.
+        """
         shape = super().shape
         if shape == () or not use_symbolic_shape():
             return shape
@@ -69,7 +87,17 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return super().shape
 
     @property
+    def device(self) -> CompNode:
+        r"""
+        Returns a string represents the device a :class:`~.Tensor` storaged on. 
+        """
+        return super().device
+
+    @property
     def dtype(self) -> np.dtype:
+        r"""
+        Returns a :class:`numpy.dtype` object represents the data type of a :class:`~.Tensor`.
+        """
         return super().dtype
 
     @property
@@ -79,7 +107,16 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return self._q_dict
 
     def numpy(self) -> np.ndarray:
+        r"""
+        Returns self :class:`~.Tensor` as a :class:`numpy.ndarray`.
+        """
         return super().numpy()
+
+    def detach(self):
+        r"""
+        Returns a new :class:`~.Tensor`, detached from the current graph.
+        """
+        return super().detach()
 
     def _reset(self, other):
         super()._reset(other)
@@ -113,6 +150,9 @@ class Tensor(_Tensor, ArrayMethodMixin):
         self *= 0
 
     def to(self, device):
+        r"""
+        Copy self :class:`~.Tensor` to specified device. See :func:`~.copy`
+        """
         if isinstance(device, str) and not _valid_device(device):
             raise ValueError(
                 "invalid device name {}. For the correct format of the device name, please refer to the instruction of megengine.device.set_default_device()".format(

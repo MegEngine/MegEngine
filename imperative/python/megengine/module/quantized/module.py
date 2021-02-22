@@ -13,8 +13,8 @@ from ..qat import QATModule
 
 class QuantizedModule(Module):
     r"""
-    Base class of quantized Module, which should be converted from QATModule
-    and not support traning.
+    Base class of quantized :class:`~.Module`, 
+    which should be converted from :class:`~.QATModule` and not support traning.
     """
 
     def __call__(self, *inputs, **kwargs):

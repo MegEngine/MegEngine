@@ -108,7 +108,7 @@ def conv2d(
     """
     2D convolution operation.
 
-    Refer to :class:`~.Conv2d` for more information.
+    Refer to :class:`~.module.Conv2d` for more information.
 
     :param inp: feature map of the convolution operation.
     :param weight: convolution kernel.
@@ -1046,9 +1046,9 @@ def warp_affine(
 
     .. note::
 
-    Here all available options for params are listed,
-    however it does not mean that you can use all the combinations.
-    On different platforms, different combinations are supported.
+       Here all available options for params are listed,
+       however it does not mean that you can use all the combinations.
+       On different platforms, different combinations are supported.
     """
     op = builtin.WarpAffine(
         border_mode=border_mode, border_val=border_val, format=format, imode=imode
@@ -1088,9 +1088,9 @@ def warp_perspective(
         Default: "LINEAR". Currently only support "LINEAR" mode.
     :return: output tensor.
 
-    Note:
+    .. note::
 
-    The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
+       The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
 
     Examples:
 

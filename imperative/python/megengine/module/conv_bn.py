@@ -51,8 +51,8 @@ class _ConvBnActivation2d(Module):
 
 class ConvBn2d(_ConvBnActivation2d):
     r"""
-    A fused :class:`~.Module` including Conv2d, BatchNorm2d. Could be replaced
-    with :class:`~.QATModule` version :class:`~.qat.conv_bn.ConvBn2d` using
+    A fused :class:`~.Module` including :class:`~.module.Conv2d` and :class:`~.module.BatchNorm2d`. 
+    Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvBn2d` using
     :func:`~.quantize.quantize_qat`.
     """
 
@@ -62,9 +62,8 @@ class ConvBn2d(_ConvBnActivation2d):
 
 class ConvBnRelu2d(_ConvBnActivation2d):
     r"""
-    A fused :class:`~.Module` including Conv2d, BatchNorm2d and relu. Could be replaced
-    with :class:`~.QATModule` version :class:`~.qat.conv_bn.ConvBnRelu2d` using
-    :func:`~.quantize.quantize_qat`.
+    A fused :class:`~.Module` including :class:`~.module.Conv2d`, :class:`~.module.BatchNorm2d` and :func:`~.relu`. 
+    Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvBnRelu2d` using :func:`~.quantize.quantize_qat`.
     """
 
     def forward(self, inp):

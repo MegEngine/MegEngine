@@ -14,7 +14,7 @@ from .module import QATModule
 
 class Concat(Float.Concat, QATModule):
     r"""
-    A :class:`~.QATModule` to do functional concat with QAT support.
+    A :class:`~.QATModule` to do functional :func:`~.concat` with QAT support.
     Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
     """
 

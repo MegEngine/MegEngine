@@ -18,7 +18,7 @@ import megengine.distributed as dist
 
 class Sampler(ABC):
     r"""
-    An abstract class for all Sampler
+    An abstract base class for all Sampler
     """
 
     @abstractmethod
@@ -27,6 +27,28 @@ class Sampler(ABC):
 
 
 class MapSampler(Sampler):
+    r"""
+    Sampler for map dataset.
+
+    :type dataset: `dataset`
+    :param dataset: dataset to sample from.
+    :type batch_size: positive integer
+    :param batch_size: batch size for batch method.
+    :type drop_last: bool
+    :param drop_last: set ``True`` to drop the last incomplete batch,
+        if the dataset size is not divisible by the batch size. If ``False`` and 
+        the size of dataset is not divisible by the batch_size, then the last batch will
+        be smaller. Default: False
+    :type num_samples: positive integer
+    :param num_samples: number of samples assigned to one rank.
+    :type world_size: positive integer
+    :param world_size: number of ranks.
+    :type rank: non-negative integer within 0 and world_size
+    :param rank: rank id, non-negative interger within 0 and ``world_size``.
+    :type seed: non-negative integer
+    :param seed: seed for random operators.
+    """
+
     def __init__(
         self,
         dataset,
@@ -37,27 +59,6 @@ class MapSampler(Sampler):
         rank=None,
         seed=None,
     ):
-        r"""
-        An abstract class for all sampler.
-
-        :type dataset: `dataset`
-        :param dataset: dataset to sample from.
-        :type batch_size: positive integer
-        :param batch_size: batch size for batch method.
-        :type drop_last: bool
-        :param drop_last: set ``True`` to drop the last incomplete batch,
-            if the dataset size is not divisible by the batch size. If ``False`` and 
-            the size of dataset is not divisible by the batch_size, then the last batch will
-            be smaller. Default: False
-        :type num_samples: positive integer
-        :param num_samples: number of samples assigned to one rank.
-        :type world_size: positive integer
-        :param world_size: number of ranks.
-        :type rank: non-negative integer within 0 and world_size
-        :param rank: rank id, non-negative interger within 0 and ``world_size``.
-        :type seed: non-negative integer
-        :param seed: seed for random operators.
-        """
         if (
             not isinstance(batch_size, int)
             or isinstance(batch_size, bool)
@@ -156,7 +157,7 @@ class MapSampler(Sampler):
 
 
 class StreamSampler(Sampler):
-    """
+    r"""
     Sampler for stream dataset.
 
     .. warning::
@@ -181,6 +182,10 @@ class StreamSampler(Sampler):
 
 
 class SequentialSampler(MapSampler):
+    r"""
+    Sample elements sequentially.
+    """
+
     def __init__(
         self,
         dataset,
@@ -190,9 +195,6 @@ class SequentialSampler(MapSampler):
         world_size=None,
         rank=None,
     ):
-        r"""
-        Sample elements sequentially.
-        """
         super().__init__(dataset, batch_size, drop_last, None, world_size, rank)
         if indices is not None and not isinstance(indices, collections.abc.Sequence):
             raise ValueError(
@@ -212,6 +214,10 @@ class SequentialSampler(MapSampler):
 
 
 class RandomSampler(MapSampler):
+    r"""
+    Sample elements randomly without replacement.
+    """
+
     def __init__(
         self,
         dataset,
@@ -222,9 +228,6 @@ class RandomSampler(MapSampler):
         rank=None,
         seed=None,
     ):
-        r"""
-        Sample elements randomly without replacement.
-        """
         super().__init__(dataset, batch_size, drop_last, None, world_size, rank, seed)
         if indices is not None and not isinstance(indices, collections.abc.Sequence):
             raise ValueError(
@@ -241,6 +244,13 @@ class RandomSampler(MapSampler):
 
 
 class ReplacementSampler(MapSampler):
+    r"""
+    Sample elements randomly with replacement.
+
+    :type weights: List
+    :param weights: weights for sampling indices, it could be unnormalized weights.
+    """
+
     def __init__(
         self,
         dataset,
@@ -252,12 +262,6 @@ class ReplacementSampler(MapSampler):
         rank=None,
         seed=None,
     ):
-        r"""
-        Sample elements randomly with replacement.
-
-        :type weights: List
-        :param weights: weights for sampling indices, it could be unnormalized weights.
-        """
         super().__init__(
             dataset, batch_size, drop_last, num_samples, world_size, rank, seed
         )

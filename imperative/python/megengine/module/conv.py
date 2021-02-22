@@ -100,7 +100,7 @@ class Conv1d(_ConvNd):
 
     For instance, given an input of the size :math:`(N, C_{\text{in}}, H)`,
     this layer generates an output of the size
-    :math:`(N, C_{\text{out}}, H_{\text{out}}})` through the
+    :math:`(N, C_{\text{out}}, H_{\text{out}})` through the
     process described as below:
 
     .. math::
@@ -130,7 +130,7 @@ class Conv1d(_ConvNd):
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 1D convolution operation. Default: 1
     :param groups: number of groups into which the input and output channels are divided,
-    so as to perform a "grouped convolution". When ``groups`` is not 1,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be `(groups,
@@ -290,7 +290,7 @@ class Conv2d(_ConvNd):
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
     :param groups: number of groups into which the input and output channels are divided,
-    so as to perform a "grouped convolution". When ``groups`` is not 1,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be `(groups,
@@ -422,7 +422,7 @@ class ConvTranspose2d(_ConvNd):
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
     :param groups: number of groups into which the input and output channels are divided,
-    so as to perform a "grouped convolution". When ``groups`` is not 1,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be ``(groups,
@@ -592,9 +592,8 @@ class LocalConv2d(Conv2d):
 
 class ConvRelu2d(Conv2d):
     r"""
-    A fused :class:`~.Module` including Conv2d and relu. Could be replaced
-    with :class:`~.QATModule` version :class:`~.qat.conv.ConvRelu2d` using
-    :func:`~.quantize.quantize_qat`.
+    A fused :class:`~.Module` including :class:`~.module.Conv2d` and :func:`~.relu`.
+    Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvRelu2d` using :func:`~.quantize.quantize_qat`.
     """
 
     def forward(self, inp):

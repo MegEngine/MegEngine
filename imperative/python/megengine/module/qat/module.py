@@ -14,9 +14,9 @@ from ..module import Module
 
 class QATModule(Module):
     r"""
-    Base class of quantized-float related Module, basically for QAT and Calibration.
+    Base class of quantized-float related :class:`~.Module`, basically for QAT and Calibration.
 
-    Use :meth:`~.QATModule.from_float_module` to generate a instance from float :class:`~.Module`.
+    Use :meth:`from_float_module` to generate a instance from float :class:`~.Module`.
     Or use :func:`~.quantize.quantize_qat` to do it recursively and automatically.
 
     Can also be converted to :class:`~.QuantizedModule` for deployment using

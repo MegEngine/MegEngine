@@ -12,7 +12,7 @@ from .module import QuantizedModule
 
 
 class Elemwise(QuantizedModule):
-    r"""Quantized version of :class:`~.qat.elemwise.Elemwise`."""
+    r"""Quantized version of :class:`~.qat.Elemwise`."""
 
     def __init__(self, method, dtype=None):
         super().__init__()

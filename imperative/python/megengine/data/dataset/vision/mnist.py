@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 
 class MNIST(VisionDataset):
-    r""" ``Dataset`` for MNIST meta data.
+    r""" :class:`~.Dataset` for MNIST meta data.
     """
 
     url_path = "http://yann.lecun.com/exdb/mnist/"

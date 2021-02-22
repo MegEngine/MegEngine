@@ -410,6 +410,10 @@ class Resize(VisionTransform):
 
 
 class ShortestEdgeResize(VisionTransform):
+    r"""
+    Resize the input data with specified shortset edge.
+    """
+
     def __init__(
         self,
         min_size,
@@ -1010,6 +1014,15 @@ class ColorJitter(VisionTransform):
 
 
 class Lighting(VisionTransform):
+    r"""
+    Apply AlexNet-Style "lighting" augmentation to input data.
+
+    Input images are assumed to have 'RGB' channel order.
+
+    The degree of color jittering is randomly sampled via a normal distribution,
+    with standard deviation given by the scale parameter.
+    """
+
     def __init__(self, scale, *, order=None):
         super().__init__(order)
         if scale < 0:

@@ -11,7 +11,7 @@ from .module import QuantizedModule
 
 class QuantStub(QuantizedModule):
     r"""
-    Quantized version of :class:`~.qat.quant_dequant.QuantStub`,
+    Quantized version of :class:`~.qat.QuantStub`,
     will convert input to quantized dtype.
     """
 
@@ -33,7 +33,7 @@ class QuantStub(QuantizedModule):
 
 class DequantStub(QuantizedModule):
     r"""
-    Quantized version of :class:`~.qat.quant_dequant.DequantStub`,
+    Quantized version of :class:`~.qat.DequantStub`,
     will restore quantized input to float32 dtype.
     """
 

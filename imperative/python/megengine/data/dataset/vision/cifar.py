@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 
 
 class CIFAR10(VisionDataset):
-    r""" ``Dataset`` for CIFAR10 meta data.
+    r""" :class:`~.Dataset` for CIFAR10 meta data.
     """
 
     url_path = "http://www.cs.utoronto.ca/~kriz/"
@@ -138,6 +138,9 @@ class CIFAR10(VisionDataset):
 
 
 class CIFAR100(CIFAR10):
+    r""" :class:`~.Dataset` for CIFAR100 meta data.
+    """
+
     url_path = "http://www.cs.utoronto.ca/~kriz/"
     raw_file_name = "cifar-100-python.tar.gz"
     raw_file_md5 = "eb9058c3a382ffc7106e4002c42a8d85"

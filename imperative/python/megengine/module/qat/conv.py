@@ -13,7 +13,7 @@ from .module import QATModule
 
 class Conv2d(Float.Conv2d, QATModule):
     r"""
-    A :class:`~.QATModule` Conv2d with QAT support.
+    A :class:`~.QATModule` :class:`~.module.Conv2d` with QAT support.
     Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
     """
 
@@ -54,7 +54,7 @@ class Conv2d(Float.Conv2d, QATModule):
 
 class ConvRelu2d(Conv2d):
     r"""
-    A :class:`~.QATModule` include Conv2d and Relu with QAT support.
+    A :class:`~.QATModule` include :class:`~.module.Conv2d` and :func:`~.relu` with QAT support.
     Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
     """
 

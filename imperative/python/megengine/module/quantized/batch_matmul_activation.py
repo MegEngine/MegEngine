@@ -19,6 +19,8 @@ from .module import QuantizedModule
 
 
 class BatchMatMulActivation(Float.BatchMatMulActivation, QuantizedModule):
+    r"""Quantized version of :class:`~.qat.BatchMatMulActivation`."""
+
     def __init__(
         self,
         batch: int,

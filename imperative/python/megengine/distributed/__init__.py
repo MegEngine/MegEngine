@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from .group import (
     WORLD,
+    Group,
     get_backend,
     get_client,
     get_mm_server_addr,

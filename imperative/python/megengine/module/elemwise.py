@@ -12,8 +12,8 @@ from .module import Module
 
 class Elemwise(Module):
     r"""
-    A :class:`~.Module` to do elemwise operator. Could be replaced with :class:`~.QATModule`
-    version :class:`~.qat.elemwise.Elemwise` using :func:`~.quantize.quantize_qat`.
+    A :class:`~.Module` to do :mod:`~.functional.elemwise` operator. Could be replaced with :class:`~.QATModule`
+    version :class:`~.qat.Elemwise` using :func:`~.quantize.quantize_qat`.
 
     :param method: the elemwise method, support the following string.
         It will do the normal elemwise operator for float.

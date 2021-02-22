@@ -29,6 +29,17 @@ _sd = None
 
 
 class Group:
+    r"""
+    Include ranked nodes running collective communication (See :mod:`~.functional.distributed`).
+
+    By default collectives operate on the default group (also called ``WORLD``) 
+    and require all processes to enter the distributed function call. 
+
+    :param proc_ranks: rank list of the group, the first one is root rank.
+
+    
+    """
+
     def __init__(self, proc_ranks):
         if len(proc_ranks) == 0:  # empty group
             self.proc_ranks = None

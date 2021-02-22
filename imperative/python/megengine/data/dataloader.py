@@ -42,6 +42,9 @@ def raise_timeout_error():
 
 
 class DataLoader:
+    r"""
+    Provides a convenient way to iterate on a given dataset.
+    """
     __initialized = False
 
     def __init__(
@@ -56,8 +59,6 @@ class DataLoader:
         divide: bool = False,
     ):
         r"""
-        Provides a convenient way to iterate on a given dataset.
-
         `DataLoader` combines a dataset with `sampler`, `transform` and `collator`,
         make it flexible to get minibatch continually from a dataset.
 
@@ -87,7 +88,6 @@ class DataLoader:
             different sub-process will process different batch. Default: False
 
         """
-
         if num_workers < 0:
             raise ValueError("num_workers should not be negative")
 

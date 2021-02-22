@@ -91,6 +91,7 @@ class Function(ops.PyOpBase):
     Examples:
 
     .. code-block::
+
         class Sigmoid(Function):
             def forward(self, x):
                 y = 1 / (1 + F.exp(-x))
