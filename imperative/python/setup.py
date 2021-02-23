@@ -49,7 +49,9 @@ __version__ = v['__version__']
 email = 'megengine@megvii.com'
 local_version = os.environ.get('LOCAL_VERSION')
 if local_version:
-    __version__ = '{}+{}'.format(__version__, local_version)
+    __version__ = '{}{}'.format(__version__, local_version)
+sdk_name = os.environ.get('SDK_NAME', 'cpu')
+__version__ = '{}+{}'.format(__version__, sdk_name)
 
 packages = find_packages(exclude=['test'])
 megengine_data = [

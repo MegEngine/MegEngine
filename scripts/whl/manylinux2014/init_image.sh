@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 GET_PIP_URL='https://bootstrap.pypa.io/get-pip.py'
+GET_PIP_URL_35='https://bootstrap.pypa.io/3.5/get-pip.py'
 SWIG_URL='https://downloads.sourceforge.net/project/swig/swig/swig-3.0.12/swig-3.0.12.tar.gz?use_mirror=autoselect'
 LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz' 
 CLANG_URL='https://github.com/llvm-mirror/clang/archive/release_60.tar.gz'
@@ -12,7 +13,12 @@ yum install -y devtoolset-8 devtoolset-8-libatomic-devel.x86_64
 for ver in 35m 36m 37m 38 
 do
     python_ver=${ver:0:2}
-    curl ${GET_PIP_URL} | /opt/python/cp${python_ver}-cp${ver}/bin/python - \
+    PIP_URL=${GET_PIP_URL}
+    if [ ${ver} = "35m" ];then
+        PIP_URL=${GET_PIP_URL_35}
+    fi
+    echo "use pip url: ${PIP_URL}"
+    curl ${PIP_URL} | /opt/python/cp${python_ver}-cp${ver}/bin/python - \
 	--no-cache-dir --only-binary :all:
     /opt/python/cp${python_ver}-cp${ver}/bin/pip install \
 	--no-cache-dir --only-binary :all: numpy==1.18.1 setuptools==46.1.3
