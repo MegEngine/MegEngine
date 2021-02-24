@@ -7,7 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from .distribution import normal, uniform
-from .rng import seed
+from .rng import RNG, seed
 
 # pylint: disable=undefined-variable
 del distribution, rng  # type: ignore[name-defined]

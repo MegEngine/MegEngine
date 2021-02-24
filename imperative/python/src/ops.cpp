@@ -10,7 +10,10 @@
  */
 
 #include "./ops.h"
+#include "./helper.h"
+#include "./tensor.h"
 
+#include "megbrain/common.h"
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/opr_attr.h"
@@ -491,21 +494,15 @@ void init_ops(py::module m) {
     _init_py_op_base(m);
     INIT_ALL_OP(m)
 
-    m.def("new_rng_handle", &RNGMixin::new_handle);
-    // FIXME: RNG op might execute after handle released due to async dispatch,
-    // which would cause memory leak or use-after-free
-    m.def("delete_rng_handle", &RNGMixin::delete_handle);
-    m.def("set_rng_seed", &set_rng_seed);
-
-    py::class_<UniformRNG, std::shared_ptr<UniformRNG>, OpDef>(m, "UniformRNG")
-        .def(py::init<>())
-        .def(py::init<mgb::CompNode>())
-        .def(py::init<RNGMixin::Handle>());
-
-    py::class_<GaussianRNG, std::shared_ptr<GaussianRNG>, OpDef>(m, "GaussianRNG")
-        .def(py::init<>())
-        .def(py::init<mgb::CompNode>())
-        .def(py::init<float ,float>())
-        .def(py::init<float ,float, mgb::CompNode>())
-        .def(py::init<float ,float, RNGMixin::Handle>());
+    m.def("new_rng_handle", &rng::new_handle);
+    m.def("delete_rng_handle", [](size_t handle){
+        // RNG op might execute after handle released due to async dispatch, so
+        // we need sync before delete a handle to avoid memory leak or use-after-free
+        python::interpreter_for_py->sync();
+        mgb::CompNode::sync_all();
+        py_task_q.wait_all_task_finish();
+        rng::delete_handle(handle);
+    }, py::call_guard<py::gil_scoped_release>());
+    m.def("set_global_rng_seed", &rng::set_global_rng_seed);
+    m.def("get_global_rng_seed", &rng::get_global_rng_seed);
 }
