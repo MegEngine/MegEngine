@@ -6,9 +6,11 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import time
 from typing import List, Optional, Tuple
 
 from ..device import set_default_device, what_is_xpu
+from ..random import seed
 from .server import Client, Server
 
 
@@ -156,6 +158,7 @@ def init_process_group(
     WORLD.reset(list(range(world_size)))
 
     set_default_device("{}{}".format(device_type, device))
+    seed(int(time.time()) + rank)
 
 
 def is_distributed() -> bool:

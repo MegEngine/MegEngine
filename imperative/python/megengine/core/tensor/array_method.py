@@ -156,7 +156,8 @@ def _logical_binary_elwise(mode, rev=False):
 def _remove_axis(inp: Tensor, axis) -> Tensor:
     def get_axes():
         if axis is None:
-            return [i for i, s in enumerate(inp.shape) if s == 1]
+            shp = inp.shape
+            return [i for i, s in enumerate(shp) if s == 1]
         try:
             return [int(axis)]
         except (TypeError, ValueError):

@@ -9,11 +9,8 @@
 from typing import Iterable, Optional
 
 from .. import Tensor
-from ..core._imperative_rt import invoke_op
-from ..core._imperative_rt.core2 import apply
-from ..core.ops.builtin import GaussianRNG, UniformRNG
-from ..core.tensor import utils
-from .rng import _random_seed_generator
+from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
+from .rng import _normal, _uniform
 
 __all__ = ["normal", "uniform"]
 
@@ -48,14 +45,14 @@ def normal(
          [-1.4939808  -1.5824696 ]]
 
     """
-    if size is None:
-        size = (1,)
-    op = GaussianRNG(mean, std)
-    _ref = Tensor([], dtype="int32")
-    shape = utils.astensor1d(size, _ref, dtype="int32")
-    shape = Tensor(shape, dtype="int32")
-    (output,) = apply(op, shape)
-    return output
+    return _normal(
+        mean=mean,
+        std=std,
+        size=size,
+        seed=_get_global_rng_seed(),
+        device=None,
+        handle=0,
+    )
 
 
 def uniform(
@@ -88,14 +85,11 @@ def uniform(
          [0.09365904 0.62957656]]
 
     """
-    assert low < high, "Uniform is not defined when low >= high"
-
-    if size is None:
-        size = (1,)
-    op = UniformRNG()
-    _ref = Tensor([], dtype="int32")
-    shape = utils.astensor1d(size, _ref, dtype="int32")
-    shape = Tensor(shape, dtype="int32")
-    (output,) = apply(op, shape)
-
-    return low + (high - low) * output
+    return _uniform(
+        low=low,
+        high=high,
+        size=size,
+        seed=_get_global_rng_seed(),
+        device=None,
+        handle=0,
+    )

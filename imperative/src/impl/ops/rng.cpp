@@ -2,7 +2,7 @@
  * \file imperative/src/impl/ops/rng.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
- * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -10,23 +10,23 @@
  */
 
 #include "megbrain/imperative/ops/rng.h"
-#include <bits/stdint-uintn.h>
 #include "megbrain/comp_node_env.h"
 #include "megbrain/graph/helper.h"
 #include "megbrain/opr/rand.h"
-//#include "megbrain/common.h"
 
 #include "../op_trait.h"
+#include "../dnn_op_helper.h"
 
-namespace mgb {
-namespace imperative {
+namespace mgb::imperative::rng {
 
 namespace {
 
 template <typename HandleFactory, typename THandle>
 class DnnOpManagerT : public CompNodeDepedentObject, public NonCopyableObj {
 public:
+    using DT = CompNode::DeviceType;
     using Handle = THandle;
+    using OpTypeInfo = size_t;
 
     template <typename... Args>
     Handle new_handle(Args&&... args) {
@@ -38,27 +38,26 @@ public:
         size_t removed = 0;
         if (!is_finalized()) {
             MGB_LOCK_GUARD(m_mtx);
-            removed = m_handle2op.erase(handle);
+            removed = m_handle2ops.erase(handle);
         }
         static_cast<HandleFactory*>(this)->do_delete_handle(handle);
         return removed;
     }
 
     template <typename DnnOp>
-    auto get_dnn_op(Handle handle, CompNode cn) {
+    auto get_dnn_op(Handle handle, OpTypeInfo tpinfo, CompNode cn) {
         mgb_assert(!is_finalized());
         DnnOpWithMutex* dnn_op_with_mtx;
         {
             MGB_LOCK_GUARD(m_mtx);
-            dnn_op_with_mtx = &m_handle2op[handle];
+            dnn_op_with_mtx = &m_handle2ops[handle][tpinfo];
         }
         auto dnn_handle =
                 MegDNNHandle::get(CompNodeEnv::from_comp_node(cn)).handle();
-        DnnOp* dnn_op;
         std::unique_lock<std::mutex> lock(dnn_op_with_mtx->mtx);
         bool initialized = false;
-        if ((dnn_op = dynamic_cast<DnnOp*>(dnn_op_with_mtx->op.get())) !=
-            nullptr) {
+        DnnOp* dnn_op = static_cast<DnnOp*>(dnn_op_with_mtx->op.get());
+        if (dnn_op != nullptr) {
             mgb_assert(dnn_op->handle() == dnn_handle);
             initialized = true;
         } else {
@@ -77,35 +76,30 @@ private:
     struct DnnOpWithMutex {
         std::mutex mtx;
         std::unique_ptr<megdnn::OperatorBase> op;
+        DnnOpWithMutex(): op{nullptr} {}
     };
 
     std::shared_ptr<void> on_comp_node_finalize() override {
         MGB_LOCK_GUARD(m_mtx);
-        m_handle2op.clear();
+        m_handle2ops.clear();
         return {};
     }
 
-    std::unordered_map<Handle, DnnOpWithMutex> m_handle2op;
+    std::unordered_map<Handle, std::unordered_map<OpTypeInfo, DnnOpWithMutex> > m_handle2ops;
     std::mutex m_mtx;
 };
 
 class RNGDnnOpManager final
-        : public DnnOpManagerT<RNGDnnOpManager, RNGMixin::Handle> {
+        : public DnnOpManagerT<RNGDnnOpManager, Handle> {
 public:
+    Handle new_handle(CompNode comp_node, uint64_t seed) {
+        MGB_LOCK_GUARD(sm_mtx);
+        return DnnOpManagerBase::new_handle(comp_node, seed);
+    }
+
     size_t delete_handle(Handle handle) {
-        size_t ret = 0;
-        {
-            MGB_LOCK_GUARD(sm_mtx);
-            auto iter = sm_partial2full.find(handle);
-            if (iter != sm_partial2full.end()) {
-                for (auto&& h : iter->second) {
-                    ret += DnnOpManagerBase::delete_handle(h.second);
-                }
-                sm_partial2full.erase(iter);
-            }
-        }
-        ret += DnnOpManagerBase::delete_handle(handle);
-        return ret;
+        MGB_LOCK_GUARD(sm_mtx);
+        return DnnOpManagerBase::delete_handle(handle);
     }
 
     Handle do_new_handle(CompNode comp_node, uint64_t seed) {
@@ -118,32 +112,26 @@ public:
     }
 
     static uint64_t get_seed(Handle handle) {
+        if (!handle) { return glob_default_seed; }
         return reinterpret_cast<HandleData*>(handle)->seed;
     }
 
     static CompNode get_comp_node(Handle handle) {
+        mgb_assert(handle, "invalid handle");
         return reinterpret_cast<HandleData*>(handle)->comp_node;
     }
 
-    static Handle get_full_handle(Handle handle, CompNode comp_node) {
-        if (get_comp_node(handle).valid()) {
-            return handle;
-        }
-        MGB_LOCK_GUARD(sm_mtx);
-        auto&& full = sm_partial2full[handle][comp_node];
-        if (!full) {
-            full = inst().new_handle(comp_node, get_seed(handle));
-        }
-        return full;
-    }
-
     static Handle get_default_handle(CompNode comp_node) {
-        static Handle glob_partial_handle =
-                inst().new_handle(CompNode{}, glob_default_seed);
-        if (!comp_node.valid()) {
-            return glob_partial_handle;
+        mgb_assert(comp_node.valid());
+        MGB_LOCK_GUARD(sm_mtx);
+        auto&& glob_handle = glob_default_handles[comp_node];
+        if (!glob_handle) {
+            glob_handle = inst().do_new_handle(comp_node, glob_default_seed);
+        } else if (get_seed(glob_handle) != glob_default_seed) {
+            inst().DnnOpManagerBase::delete_handle(glob_handle);
+            glob_handle = inst().do_new_handle(comp_node, glob_default_seed);
         }
-        return get_full_handle(glob_partial_handle, comp_node);
+        return glob_handle;
     }
 
     static RNGDnnOpManager& inst() {
@@ -152,7 +140,13 @@ public:
     }
 
     static void set_glob_default_seed(uint64_t seed) {
+        MGB_LOCK_GUARD(sm_mtx);
         glob_default_seed = seed;
+    }
+
+    static uint64_t get_glob_default_seed() {
+        MGB_LOCK_GUARD(sm_mtx);
+        return glob_default_seed;
     }
 
 private:
@@ -165,16 +159,13 @@ private:
     MemPool<HandleData> m_handle_pool;
 
     static std::mutex sm_mtx;
-    static std::unordered_map<Handle, CompNode::UnorderedMap<Handle>>
-            sm_partial2full;
+    static CompNode::UnorderedMap<Handle> glob_default_handles;
     static uint64_t glob_default_seed;
 };
 
 uint64_t RNGDnnOpManager::glob_default_seed = 0;
 std::mutex RNGDnnOpManager::sm_mtx;
-std::unordered_map<RNGDnnOpManager::Handle,
-                   CompNode::UnorderedMap<RNGDnnOpManager::Handle>>
-        RNGDnnOpManager::sm_partial2full;
+CompNode::UnorderedMap<Handle> RNGDnnOpManager::glob_default_handles;
 
 template <typename Op>
 struct OpMeth;
@@ -185,7 +176,11 @@ struct OpMeth<UniformRNG> {
     using Param = DnnOp::Param;
     using OpNode = mgb::opr::UniformRNG;
     static Param make_param(const UniformRNG& rng) {
-        return {RNGDnnOpManager::get_seed(rng.handle())};
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+            "inconsistent rng seed: rng op: %lu handle: %lu",
+            handle_seed, rng.seed);
+        return {handle_seed};
     }
 };
 
@@ -195,7 +190,11 @@ struct OpMeth<GaussianRNG> {
     using Param = DnnOp::Param;
     using OpNode = mgb::opr::GaussianRNG;
     static Param make_param(const GaussianRNG& rng) {
-        return {RNGDnnOpManager::get_seed(rng.handle()), rng.mean, rng.std};
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+            "inconsistent rng seed: rng op: %lu handle: %lu",
+            handle_seed, rng.seed);
+        return {handle_seed, rng.mean, rng.std};
     }
 };
 
@@ -206,23 +205,22 @@ void exec(const OpDef& op, const SmallVector<TensorPtr>& inputs,
     auto dest = outputs[0];
 
     auto cn = dest->comp_node();
-    auto handle = RNGDnnOpManager::get_full_handle(rng.handle(), cn);
-    {
-        auto handle_cn = RNGDnnOpManager::get_comp_node(handle);
-        mgb_assert(cn == handle_cn,
-            "inconsistent comp_node: handle: %s, output: %s",
-            cn.to_string().c_str(), handle_cn.to_string().c_str());
+    auto handle = rng.handle;
+    if (!handle) {
+        handle = RNGDnnOpManager::get_default_handle(cn);
     }
 
     // retrieve dnn_op from glob cache
     auto dnn_op_thread_safe = RNGDnnOpManager::inst()
-            .get_dnn_op<typename OpMeth<Op>::DnnOp>(handle, cn);
+            .get_dnn_op<typename OpMeth<Op>::DnnOp>(
+                handle, reinterpret_cast<size_t>(op.dyn_typeinfo()),
+                cn);
     auto initialized = std::get<0>(dnn_op_thread_safe);
     auto dnn_op = std::get<1>(dnn_op_thread_safe);
     if (initialized) {
         auto handle_seed = RNGDnnOpManager::get_seed(handle);
         mgb_assert(dnn_op->param().seed == handle_seed,
-            "inconsistent rng seed: handle: %zu, dnn_op: %zu",
+            "inconsistent rng seed: handle: %lu, dnn_op: %lu",
             handle_seed, dnn_op->param().seed);
     }
     dnn_op->param() = OpMeth<Op>::make_param(rng);
@@ -239,9 +237,12 @@ template <typename Op>
 SmallVector<LogicalTensorDesc> infer_output_attrs(
         const OpDef& op, const SmallVector<TensorPtr>& inputs) {
     LogicalTensorDesc dest;
-    dest.comp_node = op.cast_final_safe<Op>().comp_node();
-    if (!dest.comp_node.valid())
+    auto handle = op.cast_final_safe<Op>().handle;
+    if (handle) {
+        dest.comp_node = RNGDnnOpManager::get_comp_node(handle);
+    } else {
         dest.comp_node = inputs[0]->comp_node();
+    }
 
     auto hv = inputs[0]->get_value().proxy_to_default_cpu();
     TensorShape tshape;
@@ -263,15 +264,22 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 }
 
 template<typename Op>
-cg::OperatorNodeBase* apply_on_var_node(
-    const OpDef& def, const VarNodeArray& inputs) {
+SymbolVar apply_on_var_node(
+        const OpDef& def,
+        const VarNodeArray& inputs) {
     size_t nr_inp = inputs.size();
-    mgb_assert(nr_inp == 1, "UniformRNG expects 1 inputs; got %lu actually",
-               nr_inp);
     auto&& rng = def.cast_final_safe<Op>();
+    mgb_assert(nr_inp == 1, "%s expects 1 inputs; got %lu actually",
+               rng.dyn_typeinfo()->name,
+               nr_inp);
     auto param = OpMeth<Op>::make_param(rng);
-    return OpMeth<Op>::OpNode::make(
-        inputs[0], param, {rng.comp_node()}).node()->owner_opr();
+    OperatorNodeConfig config;
+    if (rng.handle) {
+        config = {rng.make_name(), RNGDnnOpManager::get_comp_node(rng.handle)};
+    } else {
+        config = {rng.make_name()};
+    }
+    return OpMeth<Op>::OpNode::make(inputs[0], param, config);
 }
 
 template<typename T>
@@ -309,28 +317,22 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
 
 } // anonymous namespace
 
-RNGMixin::RNGMixin(CompNode cn):
-    m_handle(RNGDnnOpManager::get_default_handle(cn)) {}
-
-uint64_t RNGMixin::seed() const {
-    return RNGDnnOpManager::get_seed(m_handle);
-}
-
-CompNode RNGMixin::comp_node() const {
-    return RNGDnnOpManager::get_comp_node(m_handle);
-}
-
-RNGMixin::Handle RNGMixin::new_handle(CompNode comp_node, uint64_t seed) {
+Handle new_handle(CompNode comp_node, uint64_t seed) {
     return RNGDnnOpManager::inst().new_handle(comp_node, seed);
 }
 
-size_t RNGMixin::delete_handle(Handle handle) {
+size_t delete_handle(Handle handle) {
     return RNGDnnOpManager::inst().delete_handle(handle);
 }
 
-void set_rng_seed(uint64_t seed) {
+void set_global_rng_seed(uint64_t seed) {
     RNGDnnOpManager::set_glob_default_seed(seed);
 }
+
+uint64_t get_global_rng_seed() {
+    return RNGDnnOpManager::get_glob_default_seed();
+}
+
 #define REG_RNG_OP(NAME)\
 namespace { \
 OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode) \
@@ -339,12 +341,10 @@ OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode) \
     .infer_output_attrs_fallible(infer_output_attrs_fallible<NAME>) \
     .fallback(); \
 } \
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(NAME);
 
 REG_RNG_OP(UniformRNG)
 REG_RNG_OP(GaussianRNG)
 
-}  // namespace imperative
-}  // namespace mgb
+}  // namespace mgb::imperative::rng
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

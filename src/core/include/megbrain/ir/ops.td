@@ -114,17 +114,33 @@ def TopK: MgbHashableOp<"TopK", [TopKParam]>;
 def NvOf: MgbHashableOp<"NvOf", [NvOfParam]>;
 
 def UniformRNG: MgbHashableOp<"UniformRNG", [UniformRNGParam]> {
-  let hashFunction = [{return mgb::hash($_self.dyn_typeinfo());}];
-  let cmpFunction = [{return true;}];
-}
-
-def GaussianRNG: MgbHashableOp<"GaussianRNG", [GaussianRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
   let hashFunction = [{
     return mgb::hash_pair_combine(
       mgb::hash($_self.dyn_typeinfo()),
-      mgb::hash_pair_combine(mgb::hash($_self.mean), mgb::hash($_self.std)));
+      mgb::hash($_self.handle));
   }];
-  let cmpFunction = [{return $0.mean == $1.mean && $0.std == $1.std;}];
+  let cmpFunction = [{return $0.handle == $1.handle;}];
+}
+
+def GaussianRNG: MgbHashableOp<"GaussianRNG", [GaussianRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.handle),
+        mgb::hash_pair_combine(
+          mgb::hash($_self.mean),
+          mgb::hash($_self.std))
+      )
+    );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.mean == $1.mean && $0.std == $1.std;}];
 }
 
 def Linspace: MgbHashableOp<"Linspace", [LinspaceParam]> {
