@@ -739,3 +739,10 @@ def test_cvt_color():
     x = tensor(inp)
     y = F.img_proc.cvt_color(x, mode="RGB2GRAY")
     np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
+
+
+@pytest.mark.parametrize("val", [2, [2,], [2, 3]])
+def test_ones(val):
+    shp = tensor(val)
+    np_shp = np.array(val)
+    np.testing.assert_equal(F.ones(shp), np.ones(np_shp))
