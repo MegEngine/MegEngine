@@ -156,11 +156,16 @@ namespace mgb {
         };
 
         public:
-            AsyncQueueSC() : m_synchronizer(SCQueueSynchronizer::get_default_max_spin()) {}
-
-            //! specify max spin manually, caller must ensure the given value is optimal,
-            //! otherwise caller should leave the value adjustable by user.
-            AsyncQueueSC(size_t max_spin) : m_synchronizer(max_spin) {}
+            //! \param max_spin specify max spin manually, caller must ensure the given value
+            //!     is optimal, otherwise caller should leave the value adjustable by user.
+            //! \param max_items limit memory usage by number of items
+            AsyncQueueSC(ptrdiff_t max_spin = -1, ptrdiff_t max_items = -1)
+                    : m_synchronizer(max_spin >= 0 ? max_spin : SCQueueSynchronizer::get_default_max_spin()) {
+                if (max_items >= 0) {
+                    // -1 / 2 == 0
+                    m_block_quota = (max_items - 1) / BLOCK_SIZE + 1;
+                }
+            }
 #ifdef WIN32
             bool check_is_into_atexit() {
                 if (SCQueueSynchronizer::is_into_atexit) {
@@ -290,8 +295,10 @@ namespace mgb {
             TaskBlock *m_queue_tail = nullptr;
             std::atomic_size_t m_queue_tail_tid{0},    //!< id of next task
                 m_finished_task{0};
+            size_t m_block_quota = std::numeric_limits<size_t>::max();
             std::vector<std::unique_ptr<TaskBlock>> m_free_task_block;
             Spinlock m_mutex;
+            std::condition_variable_any m_cv;
             SyncedParam *m_cur_task = nullptr;
             SCQueueSynchronizer m_synchronizer;
 #if MGB_ENABLE_EXCEPTION
@@ -354,12 +361,18 @@ namespace mgb {
             std::unique_ptr<TaskBlock> allocate_task_block_unsafe(
                     TaskBlock *prev) {
                 std::unique_ptr<TaskBlock> ret;
-                if (!m_free_task_block.empty()) {
-                    ret = std::move(m_free_task_block.back());
-                    m_free_task_block.pop_back();
-                } else {
-                    ret = std::make_unique<TaskBlock>();
-                }
+                do {
+                    if (!m_free_task_block.empty()) {
+                        ret = std::move(m_free_task_block.back());
+                        m_free_task_block.pop_back();
+                    } else if (m_block_quota > 0) {
+                        ret = std::make_unique<TaskBlock>();
+                        m_block_quota--;
+                    } else {
+                        m_cv.wait(m_mutex);
+                        continue;
+                    }
+                } while (false);
                 ret->first_tid = m_new_block_first_tid;
                 m_new_block_first_tid += BLOCK_SIZE;
                 ret->prev = prev;
@@ -402,6 +415,7 @@ namespace mgb {
                         } else {
                             m_queue_tail = nullptr;
                         }
+                        m_cv.notify_one();
                     }
 
                     SyncedParam &cur = m_queue_head->params[qh ++];

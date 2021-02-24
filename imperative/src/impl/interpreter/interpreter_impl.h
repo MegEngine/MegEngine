@@ -120,8 +120,9 @@ private:
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
         // this won't affect throughput when python interpreter is sending enough task,
         // but will significantly save CPU time when waiting for task, e.g. wait for data input
+        // limit pending tasks to 1000000
         WorkQueue(ChannelImpl* owner)
-                : AsyncQueueSC<IdentifiedCommand, WorkQueue>(0), m_owner(owner) {
+                : AsyncQueueSC<IdentifiedCommand, WorkQueue>(0, 1000000), m_owner(owner) {
             sys::set_thread_name("interpreter");
         }
         void process_one_task(IdentifiedCommand& icmd) {

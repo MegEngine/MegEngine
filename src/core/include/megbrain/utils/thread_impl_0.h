@@ -55,8 +55,7 @@ namespace mgb {
     template<typename Param, class TaskImpl>
     class AsyncQueueSC: public NonCopyableObj {
         public:
-            AsyncQueueSC() {}
-            AsyncQueueSC(size_t max_spin) {}
+            AsyncQueueSC(ptrdiff_t max_spin = -1, ptrdiff_t max_items = -1) {}
 
             virtual ~AsyncQueueSC() = default;
 
@@ -91,4 +90,3 @@ namespace mgb {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
