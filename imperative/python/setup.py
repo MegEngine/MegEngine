@@ -47,11 +47,19 @@ with open("megengine/version.py") as fp:
 __version__ = v['__version__']
 
 email = 'megengine@megvii.com'
-local_version = os.environ.get('LOCAL_VERSION')
-if local_version:
-    __version__ = '{}{}'.format(__version__, local_version)
+# https://www.python.org/dev/peps/pep-0440
+# Public version identifiers: [N!]N(.N)*[{a|b|rc}N][.postN][.devN]
+# PUBLIC_VERSION_POSTFIX use to handle rc or dev info
+public_version_postfix = os.environ.get('PUBLIC_VERSION_POSTFIX')
+if public_version_postfix:
+    __version__ = '{}{}'.format(__version__, public_version_postfix)
 sdk_name = os.environ.get('SDK_NAME', 'cpu')
 __version__ = '{}+{}'.format(__version__, sdk_name)
+# Local version identifiers: <public version identifier>[+<local version label>]
+# reserved for special whl package
+local_version = os.environ.get('LOCAL_VERSION')
+if local_version:
+    __version__ = '{}.{}'.format(__version__, local_version)
 
 packages = find_packages(exclude=['test'])
 megengine_data = [

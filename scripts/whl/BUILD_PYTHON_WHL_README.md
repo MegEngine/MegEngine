@@ -72,7 +72,7 @@ export TENSORRT_ROOT_DIR=/path/to/tensorrt
 ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
-* If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. eg:
+* If you just want to build with cpu only version, you can set `-sdk` environment 'cpu'. eg:
 ```bash
 ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cpu
 ```
