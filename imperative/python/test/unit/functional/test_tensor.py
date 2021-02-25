@@ -408,6 +408,15 @@ def test_copy_d2d():
     copy_test("gpu0:0", "gpu0:1")
 
 
+def test_name():
+    x = tensor(0)
+    assert x.name == ""
+    x.name = "x"
+    assert x.name == "x"
+    x = tensor(0, name="x")
+    assert x.name == "x"
+
+
 def test_q_dict():
     x = tensor(1)
     assert x.q_dict["scale"] is None

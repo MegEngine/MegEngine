@@ -234,7 +234,8 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             CompNode cn = tup[2].cast<CompNode>();
             bool is_const = tup[3].cast<bool>();
             bool no_cache = nargs == 6 ? tup[4].cast<bool>() : false;
-            std::string name = tup[nargs - 1].cast<std::string>();
+            std::string name;
+            if (tup[nargs - 1].ptr() != Py_None) name = tup[nargs - 1].cast<std::string>();
 
             // const op
             if (is_const && is_tracing) {

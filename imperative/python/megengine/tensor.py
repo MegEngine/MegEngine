@@ -33,7 +33,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
     _q_dict = None
 
     def __new__(
-        cls, data, dtype=None, device=None, is_const=False, no_cache=False, name=""
+        cls, data, dtype=None, device=None, is_const=False, no_cache=False, name=None
     ):
         if device is None:
             cn = get_default_device()
