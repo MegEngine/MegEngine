@@ -84,26 +84,125 @@ hook_modules = (
 )
 
 
-def net_stats(model, input_size, bar_length_max=20, log_params=True, log_flops=True):
-    def dict2table(list_of_dict, header):
-        table_data = [header]
-        for d in list_of_dict:
-            row = []
-            for h in header:
-                v = ""
-                if h in d:
-                    v = d[h]
-                row.append(v)
-            table_data.append(row)
-        return table_data
+def dict2table(list_of_dict, header):
+    table_data = [header]
+    for d in list_of_dict:
+        row = []
+        for h in header:
+            v = ""
+            if h in d:
+                v = d[h]
+            row.append(v)
+        table_data.append(row)
+    return table_data
 
-    def sizeof_fmt(num, suffix="B"):
-        for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
-            if abs(num) < 1024.0:
-                return "{:3.3f} {}{}".format(num, unit, suffix)
-            num /= 1024.0
-        sign_str = "-" if num < 0 else ""
-        return "{}{:.1f} {}{}".format(sign_str, num, "Yi", suffix)
+
+def sizeof_fmt(num, suffix="B"):
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+        if abs(num) < 1024.0:
+            return "{:3.3f} {}{}".format(num, unit, suffix)
+        num /= 1024.0
+    sign_str = "-" if num < 0 else ""
+    return "{}{:.1f} {}{}".format(sign_str, num, "Yi", suffix)
+
+
+def print_flops_stats(flops, bar_length_max=20):
+    flops_list = [i["flops_num"] for i in flops]
+    max_flops_num = max(flops_list + [0])
+    # calc total flops and set flops_cum
+    total_flops_num = 0
+    for d in flops:
+        total_flops_num += int(d["flops_num"])
+        d["flops_cum"] = sizeof_fmt(total_flops_num, suffix="OPs")
+
+    for i in flops:
+        f = i["flops_num"]
+        i["flops"] = sizeof_fmt(f, suffix="OPs")
+        r = i["ratio"] = f / total_flops_num
+        i["percentage"] = "{:.2f}%".format(r * 100)
+        bar_length = int(f / max_flops_num * bar_length_max)
+        i["bar"] = "#" * bar_length
+
+    header = [
+        "name",
+        "class_name",
+        "input_shapes",
+        "output_shapes",
+        "flops",
+        "flops_cum",
+        "percentage",
+        "bar",
+    ]
+
+    total_flops_str = sizeof_fmt(total_flops_num, suffix="OPs")
+    total_var_size = sum(sum(s[1] for s in i["output_shapes"]) for i in flops)
+    flops.append(
+        dict(name="total", flops=total_flops_str, output_shapes=total_var_size)
+    )
+
+    logger.info("flops stats: \n" + tabulate.tabulate(dict2table(flops, header=header)))
+
+    return total_flops_num
+
+
+def print_params_stats(params, bar_length_max=20):
+    total_param_dims, total_param_size = 0, 0
+    for d in params:
+        total_param_dims += int(d["param_dim"])
+        total_param_size += int(d["size"])
+        d["size"] = sizeof_fmt(d["size"])
+        d["size_cum"] = sizeof_fmt(total_param_size)
+
+    for d in params:
+        ratio = d["param_dim"] / total_param_dims
+        d["ratio"] = ratio
+        d["percentage"] = "{:.2f}%".format(ratio * 100)
+
+    # construct bar
+    max_ratio = max([d["ratio"] for d in params])
+    for d in params:
+        bar_length = int(d["ratio"] / max_ratio * bar_length_max)
+        d["size_bar"] = "#" * bar_length
+
+    param_size = sizeof_fmt(total_param_size)
+    params.append(dict(name="total", param_dim=total_param_dims, size=param_size,))
+
+    header = [
+        "name",
+        "shape",
+        "mean",
+        "std",
+        "param_dim",
+        "bits",
+        "size",
+        "size_cum",
+        "percentage",
+        "size_bar",
+    ]
+
+    logger.info(
+        "param stats: \n" + tabulate.tabulate(dict2table(params, header=header))
+    )
+
+    return total_param_size
+
+
+def net_stats(
+    model: m.Module,
+    input_size: int,
+    bar_length_max: int = 20,
+    log_params: bool = True,
+    log_flops: bool = True,
+):
+    r"""
+    Calculate and print ``model``'s statistics by adding hook and record Module's inputs outputs size.
+
+    :param model: model that need to get stats info.
+    :param input_size: size of input for running model and calculating stats.
+    :param bar_length_max: size of bar indicating max flops or parameter size in net stats.
+    :param log_params: whether print and record params size.
+    :param log_flops: whether print and record op flops.
+    """
 
     def get_byteswidth(tensor):
         if dtype.is_quantize(tensor.dtype):
@@ -112,87 +211,6 @@ def net_stats(model, input_size, bar_length_max=20, log_params=True, log_flops=T
         #      return 2
         else:
             return 4
-
-    def print_flops_stats(flops):
-        flops_list = [i["flops_num"] for i in flops]
-        max_flops_num = max(flops_list + [0])
-        # calc total flops and set flops_cum
-        total_flops_num = 0
-        for d in flops:
-            total_flops_num += int(d["flops_num"])
-            d["flops_cum"] = sizeof_fmt(total_flops_num, suffix="OPs")
-
-        for i in flops:
-            f = i["flops_num"]
-            i["flops"] = sizeof_fmt(f, suffix="OPs")
-            r = i["ratio"] = f / total_flops_num
-            i["percentage"] = "{:.2f}%".format(r * 100)
-            bar_length = int(f / max_flops_num * bar_length_max)
-            i["bar"] = "#" * bar_length
-
-        header = [
-            "name",
-            "class_name",
-            "input_shapes",
-            "output_shapes",
-            "flops",
-            "flops_cum",
-            "percentage",
-            "bar",
-        ]
-
-        total_flops_str = sizeof_fmt(total_flops_num, suffix="OPs")
-        total_var_size = sum(sum(s[1] for s in i["output_shapes"]) for i in flops)
-        flops.append(
-            dict(name="total", flops=total_flops_str, output_shapes=total_var_size)
-        )
-
-        logger.info(
-            "flops stats: \n" + tabulate.tabulate(dict2table(flops, header=header))
-        )
-
-        return total_flops_num
-
-    def print_params_stats(params):
-        total_param_dims, total_param_size = 0, 0
-        for d in params:
-            total_param_dims += int(d["param_dim"])
-            total_param_size += int(d["size"])
-            d["size"] = sizeof_fmt(d["size"])
-            d["size_cum"] = sizeof_fmt(total_param_size)
-
-        for d in params:
-            ratio = d["param_dim"] / total_param_dims
-            d["ratio"] = ratio
-            d["percentage"] = "{:.2f}%".format(ratio * 100)
-
-        # construct bar
-        max_ratio = max([d["ratio"] for d in params])
-        for d in params:
-            bar_length = int(d["ratio"] / max_ratio * bar_length_max)
-            d["size_bar"] = "#" * bar_length
-
-        param_size = sizeof_fmt(total_param_size)
-        params.append(dict(name="total", param_dim=total_param_dims, size=param_size,))
-
-        header = [
-            "name",
-            "shape",
-            "mean",
-            "std",
-            "param_dim",
-            "bits",
-            "size",
-            "size_cum",
-            "percentage",
-            "size_bar",
-        ]
-
-        logger.info(
-            "param stats: \n" + tabulate.tabulate(dict2table(params, header=header))
-        )
-
-        return total_param_size
 
     def net_stats_hook(module, input, output, name=""):
         class_name = str(module.__class__).split(".")[-1].split("'")[0]
@@ -273,8 +291,8 @@ def net_stats(model, input_size, bar_length_max=20, log_params=True, log_flops=T
 
     total_flops, total_params = 0, 0
     if log_params:
-        total_params = print_params_stats(params)
+        total_params = print_params_stats(params, bar_length_max)
     if log_flops:
-        total_flops = print_flops_stats(flops)
+        total_flops = print_flops_stats(flops, bar_length_max)
 
     return total_params, total_flops

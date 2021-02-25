@@ -19,9 +19,9 @@ from ..core._imperative_rt import ComputingGraph
 from ..core.tensor import megbrain_graph as G
 from .comp_graph_tools import get_dep_vars, get_opr_type, get_oprs_seq
 from .network_node import (
-    NetworkNode,
     Host2DeviceCopy,
     ImmutableTensor,
+    NetworkNode,
     OpNode,
     VarNode,
     str_to_mge_class,
@@ -606,9 +606,7 @@ class NodeFilterType(NodeFilter):
     _node_type = None
 
     def __init__(self, node_iter, node_type):
-        assert issubclass(node_type, NetworkNode), "bad opr type: {}".format(
-            node_type
-        )
+        assert issubclass(node_type, NetworkNode), "bad opr type: {}".format(node_type)
         super().__init__(node_iter)
         self._node_type = node_type
 

@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -7,12 +8,55 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import argparse
 import os
+import struct
 import textwrap
 from pathlib import Path
 
 import numpy as np
 
-from megengine.utils import plugin
+
+def load_tensor_binary(fobj):
+    """
+    Load a tensor dumped by the :class:`BinaryOprIODump` plugin; the actual
+    tensor value dump is implemented by ``mgb::debug::dump_tensor``.
+
+    :param fobj: file object, or a string that contains the file name.
+    :return: tuple ``(tensor_value, tensor_name)``.
+    """
+    if isinstance(fobj, str):
+        with open(fobj, "rb") as fin:
+            return load_tensor_binary(fin)
+
+    DTYPE_LIST = {
+        0: np.float32,
+        1: np.uint8,
+        2: np.int8,
+        3: np.int16,
+        4: np.int32,
+        # 5: _mgb.intb1,
+        # 6: _mgb.intb2,
+        # 7: _mgb.intb4,
+        8: None,
+        9: np.float16,
+        # quantized dtype start from 100000
+        # see MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE in
+        # dnn/include/megdnn/dtype.h
+        100000: np.uint8,
+        100001: np.int32,
+        100002: np.int8,
+    }
+
+    header_fmt = struct.Struct("III")
+    name_len, dtype, max_ndim = header_fmt.unpack(fobj.read(header_fmt.size))
+    assert (
+        DTYPE_LIST[dtype] is not None
+    ), "Cannot load this tensor: dtype Byte is unsupported."
+
+    shape = list(struct.unpack("I" * max_ndim, fobj.read(max_ndim * 4)))
+    while shape[-1] == 0:
+        shape.pop(-1)
+    name = fobj.read(name_len).decode("ascii")
+    return np.fromfile(fobj, dtype=DTYPE_LIST[dtype]).reshape(shape), name
 
 
 def check(v0, v1, name, max_err):
@@ -26,9 +70,9 @@ def check(v0, v1, name, max_err):
     )
     vdiv = np.max([np.abs(v0), np.abs(v1), np.ones_like(v0)], axis=0)
     err = np.abs(v0 - v1) / vdiv
-    check = err > max_err
-    if check.sum():
-        idx = tuple(i[0] for i in np.nonzero(check))
+    rst = err > max_err
+    if rst.sum():
+        idx = tuple(i[0] for i in np.nonzero(rst))
         raise AssertionError(
             "{} not equal: "
             "shape={} nonequal_idx={} v0={} v1={} err={}".format(
@@ -79,8 +123,8 @@ def main():
     files1 = sorted(files1)
 
     for i, j in zip(files0, files1):
-        val0, name0 = plugin.load_tensor_binary(i)
-        val1, name1 = plugin.load_tensor_binary(j)
+        val0, name0 = load_tensor_binary(i)
+        val1, name1 = load_tensor_binary(j)
         name = "{}: \n{}\n{}\n".format(
             i, "\n  ".join(textwrap.wrap(name0)), "\n  ".join(textwrap.wrap(name1))
         )

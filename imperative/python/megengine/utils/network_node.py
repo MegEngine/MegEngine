@@ -10,6 +10,8 @@ import json
 import sys
 from typing import Callable
 
+import numpy as np
+
 from ..core import _imperative_rt as rt
 from ..core._wrap import Device
 from ..core.ops import builtin
@@ -52,7 +54,7 @@ class VarNode(NetworkNode):
         return self.var.dtype if self.var else None
 
     def set_owner_opr(self, owner_opr):
-        self.owner_opr = owner_opr
+        self.owner = owner_opr
 
 
 class OpNode(NetworkNode):
@@ -223,6 +225,9 @@ class Elemwise(OpNode):
     type = "Elemwise"
     opdef = builtin.Elemwise
 
+    def calc_flops(self):
+        return np.prod(self.outputs[0].shape)
+
 
 class Reduce(OpNode):
     type = "Reduce"
@@ -250,10 +255,20 @@ class MatrixMul(OpNode):
     type = "MatrixMul"
     opdef = builtin.MatrixMul
 
+    def calc_flops(self):
+        assert len(self.inputs[0].shape) == 2 and len(self.outputs[0].shape) == 2
+        mid_shape = self.inputs[0].shape[1]
+        return np.prod(self.outputs[0].shape) * mid_shape
+
 
 class BatchedMatrixMul(OpNode):
     type = "BatchedMatmul"
     opdef = builtin.BatchedMatrixMul
+
+    def calc_flops(self):
+        assert len(self.inputs[0].shape) == 3 and len(self.outputs[0].shape) == 3
+        mid_shape = self.inputs[0].shape[2]
+        return np.prod(self.outputs[0].shape) * mid_shape
 
 
 class Dot(OpNode):
@@ -269,6 +284,18 @@ class SVD(OpNode):
 class ConvolutionForward(OpNode):
     type = "Convolution"
     opdef = builtin.Convolution
+
+    def calc_flops(self):
+        param_W_shape = self.inputs[1].shape
+        kh = param_W_shape[-2]
+        kw = param_W_shape[-1]
+        if len(param_W_shape) == 5:
+            num_input = param_W_shape[2]
+        else:
+            num_input = param_W_shape[1]
+        NCHW = np.prod(self.outputs[0].shape)
+        # N x Cout x H x W x  (Cin x Kw x Kh)
+        return NCHW * (num_input * kw * kh)
 
 
 class ConvolutionBackwardData(OpNode):
@@ -316,6 +343,18 @@ class ConvBiasForward(OpNode):
         obj.params["dtype"] = opr.outputs[0].dtype
         return obj
 
+    def calc_flops(self):
+        param_W_shape = self.inputs[1].shape
+        kh = param_W_shape[-2]
+        kw = param_W_shape[-1]
+        if len(param_W_shape) == 5:
+            num_input = param_W_shape[2]
+        else:
+            num_input = param_W_shape[1]
+        NCHW = np.prod(self.outputs[0].shape)
+        # N x Cout x H x W x  (Cin x Kw x Kh + bias)
+        return NCHW * (num_input * kw * kh + 1)
+
 
 class BatchConvBiasForward(OpNode):
     type = "BatchConvBias"
@@ -331,6 +370,7 @@ class BatchConvBiasForward(OpNode):
 class BatchNormForward(OpNode):
     type = "BatchNorm"
     opdef = builtin.BatchNorm
+    output_idx = -1
 
 
 class ROIAlignForward(OpNode):
@@ -621,6 +661,9 @@ class ElemwiseMultiType(OpNode):
         obj = super(ElemwiseMultiType, cls).load(opr)
         obj.params["dtype"] = opr.outputs[0].dtype
         return obj
+
+    def calc_flops(self):
+        return np.prod(self.outputs[0].shape)
 
 
 class CvtColorForward(OpNode):
