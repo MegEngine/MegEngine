@@ -33,13 +33,14 @@ class _ConvBnActivation2d(Conv2d):
             qat_module.conv.dilation,
             qat_module.conv.groups,
             dtype=output_dtype,
+            name=qat_module.name,
         )
         w_fold, b_fold = qat_module.fold_weight_bias(
             qat_module.bn.running_mean, qat_module.bn.running_var
         )
         weight = w_fold.astype(qat_module.get_weight_dtype())
-        qconv.weight = Parameter(weight.numpy())
-        qconv.bias = Parameter(b_fold.numpy())
+        qconv.weight = Parameter(weight.numpy(), name=qat_module.conv.weight.name)
+        qconv.bias = Parameter(b_fold.numpy(), name=qat_module.conv.bias.name)
         return qconv
 
 

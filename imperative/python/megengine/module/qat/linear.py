@@ -36,7 +36,9 @@ class Linear(Float.Linear, QATModule):
         Return a :class:`~.QATModule` instance converted from
         a float :class:`~.Module` instance.
         """
-        qmod = cls(float_module.in_features, float_module.out_features)
+        qmod = cls(
+            float_module.in_features, float_module.out_features, name=float_module.name
+        )
         qmod.weight = float_module.weight
         qmod.bias = float_module.bias
         return qmod

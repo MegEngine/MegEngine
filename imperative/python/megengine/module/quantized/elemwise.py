@@ -14,8 +14,8 @@ from .module import QuantizedModule
 class Elemwise(QuantizedModule):
     r"""Quantized version of :class:`~.qat.Elemwise`."""
 
-    def __init__(self, method, dtype=None):
-        super().__init__()
+    def __init__(self, method, dtype=None, **kwargs):
+        super().__init__(**kwargs)
         self.method = "Q" + method
         self.output_dtype = dtype
 
@@ -30,4 +30,6 @@ class Elemwise(QuantizedModule):
         Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
-        return cls(qat_module.method, qat_module.get_activation_dtype())
+        return cls(
+            qat_module.method, qat_module.get_activation_dtype(), name=qat_module.name
+        )

@@ -17,8 +17,8 @@ from .module import QuantizedModule
 class Linear(QuantizedModule):
     r"""Quantized version of :class:`~.qat.Linear`."""
 
-    def __init__(self, dtype: np.dtype = None):
-        super().__init__()
+    def __init__(self, dtype: np.dtype = None, **kwargs):
+        super().__init__(**kwargs)
         self.weight = None
         self.bias = None
         self.output_dtype = dtype
@@ -44,9 +44,9 @@ class Linear(QuantizedModule):
         :class:`~.QATModule` instance.
         """
         output_dtype = qat_module.get_activation_dtype()
-        qmod = cls(dtype=output_dtype)
+        qmod = cls(dtype=output_dtype, name=qat_module.name)
         weight = qat_module.weight.astype(qat_module.get_weight_dtype())
-        qmod.weight = Parameter(weight.numpy())
+        qmod.weight = Parameter(weight.numpy(), name=qat_module.weight.name)
         if qat_module.bias is not None:
-            qmod.bias = Parameter(qat_module.bias.numpy())
+            qmod.bias = Parameter(qat_module.bias.numpy(), name=qat_module.bias.name)
         return qmod

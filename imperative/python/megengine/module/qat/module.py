@@ -26,8 +26,8 @@ class QATModule(Module):
     with_weight = True
     with_act = True
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self.weight_observer = None  # type: Observer
         self.act_observer = None  # type: Observer

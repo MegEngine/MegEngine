@@ -27,4 +27,4 @@ class Concat(Float.Concat, QATModule):
         Return a :class:`~.QATModule` instance converted from
         a float :class:`~.Module` instance.
         """
-        return cls()
+        return cls(name=float_module.name)

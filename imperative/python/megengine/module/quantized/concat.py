@@ -18,8 +18,8 @@ class Concat(QuantizedModule):
     A :class:`~.QuantizedModule` to do quantized :func:`~.concat`, used for inference only.
     """
 
-    def __init__(self, dtype=None):
-        super().__init__()
+    def __init__(self, dtype=None, **kwargs):
+        super().__init__(**kwargs)
         self.output_dtype = dtype
 
     def forward(self, inps: Iterable[Tensor], axis: int = 0):
@@ -32,4 +32,4 @@ class Concat(QuantizedModule):
         Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
-        return cls(qat_module.get_activation_dtype())
+        return cls(qat_module.get_activation_dtype(), name=qat_module.name)

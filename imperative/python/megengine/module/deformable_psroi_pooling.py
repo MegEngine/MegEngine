@@ -21,8 +21,9 @@ class DeformablePSROIPooling(Module):
         sample_per_part,
         spatial_scale,
         trans_std: float = 0.1,
+        **kwargs
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.no_trans = no_trans
         self.part_size = part_size
         self.pooled_h = pooled_h

@@ -37,6 +37,7 @@ class Conv2d(Float.Conv2d, QuantizedModule):
         conv_mode: str = "CROSS_CORRELATION",
         compute_mode: str = "DEFAULT",
         dtype=None,
+        **kwargs
     ):
         super().__init__(
             in_channels,
@@ -86,11 +87,12 @@ class Conv2d(Float.Conv2d, QuantizedModule):
             qat_module.dilation,
             qat_module.groups,
             dtype=output_dtype,
+            name=qat_module.name,
         )
         weight = qat_module.weight.astype(qat_module.get_weight_dtype())
-        qconv.weight = Parameter(weight.numpy())
+        qconv.weight = Parameter(weight.numpy(), name=qat_module.weight.name)
         if qat_module.bias is not None:
-            qconv.bias = Parameter(qat_module.bias.numpy())
+            qconv.bias = Parameter(qat_module.bias.numpy(), name=qat_module.bias.name)
         else:
             qconv.bias = Parameter(
                 np.zeros(qat_module._infer_bias_shape(), dtype=np.float32)

@@ -69,7 +69,17 @@ class Module(metaclass=ABCMeta):
     Base Module class.
     """
 
-    def __init__(self, name=""):
+    def __init__(self, name=None):
+        """
+        :param name: module's name, can be initialized by the ``kwargs`` parameter
+        of child class.
+        """
+
+        if name is not None:
+            assert (
+                isinstance(name, str) and name.strip()
+            ), "Module's name must be a non-empty string"
+
         self.name = name
 
         # runtime attributes
@@ -109,7 +119,7 @@ class Module(metaclass=ABCMeta):
         return HookHandler(self._forward_hooks, hook)
 
     def __call__(self, *inputs, **kwargs):
-        auto_naming.push_scope(self.name if self.name else self._name)
+        auto_naming.push_scope(self.name if self.name is not None else self._name)
         for hook in self._forward_pre_hooks.values():
             modified_inputs = hook(self, inputs)
             if modified_inputs is not None:

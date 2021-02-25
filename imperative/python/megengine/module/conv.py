@@ -641,6 +641,7 @@ class DeformableConv2d(_ConvNd):
         bias: bool = True,
         conv_mode: str = "CROSS_CORRELATION",
         compute_mode: str = "DEFAULT",
+        **kwargs
     ):
         kernel_size = _pair_nonzero(kernel_size)
         stride = _pair_nonzero(stride)
@@ -657,6 +658,7 @@ class DeformableConv2d(_ConvNd):
             dilation,
             groups,
             bias,
+            **kwargs,
         )
 
     def _get_fanin(self):

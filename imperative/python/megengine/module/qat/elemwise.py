@@ -28,4 +28,4 @@ class Elemwise(Float.Elemwise, QATModule):
         Return a :class:`~.QATModule` instance converted from
         a float :class:`~.Module` instance.
         """
-        return cls(float_module.method)
+        return cls(float_module.method, name=float_module.name)

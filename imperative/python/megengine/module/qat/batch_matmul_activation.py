@@ -28,6 +28,7 @@ class BatchMatMulActivation(Float.BatchMatMulActivation, QATModule):
             float_module.in_features,
             float_module.out_features,
             float_module.bias is not None,
+            name=float_module.name,
         )
         qat_module.weight = float_module.weight
         qat_module.bias = float_module.bias
