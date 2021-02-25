@@ -6,7 +6,6 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from ...functional import ones, relu, sqrt, sum, zeros
-from ...quantization.utils import fake_quant_bias
 from .. import conv_bn as Float
 from .module import QATModule
 
@@ -122,10 +121,7 @@ class _ConvBnActivation2d(Float._ConvBnActivation2d, QATModule):
             b_fold = beta + gamma * (conv_bias - bn_mean) * bn_istd
 
         w_qat = self.apply_quant_weight(w_fold)
-        if self.weight_fake_quant and self.weight_fake_quant.enabled:
-            b_qat = fake_quant_bias(b_fold, inp, w_qat)
-        else:
-            b_qat = b_fold
+        b_qat = self.apply_quant_bias(b_fold, inp, w_qat)
         conv = self.conv.calc_conv(inp, w_qat, b_qat)
         if not (self.training and approx):
             return conv

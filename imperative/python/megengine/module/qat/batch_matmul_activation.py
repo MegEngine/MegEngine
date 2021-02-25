@@ -5,8 +5,6 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-
-from ...quantization.utils import fake_quant_bias
 from .. import batch_matmul_activation as Float
 from .module import QATModule
 
@@ -18,7 +16,7 @@ class BatchMatMulActivation(Float.BatchMatMulActivation, QATModule):
 
     def forward(self, inp):
         w_qat = self.apply_quant_weight(self.weight)
-        b_qat = fake_quant_bias(self.bias, inp, w_qat)
+        b_qat = self.apply_quant_bias(self.bias, inp, w_qat)
         return self.apply_quant_activation(self._calc_linear(inp, w_qat, b_qat))
 
     @classmethod

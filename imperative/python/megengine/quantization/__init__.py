@@ -30,4 +30,10 @@ from .quantize import (
     quantize_qat,
     reset_qconfig,
 )
-from .utils import QParams, QuantMode, create_qparams
+from .utils import (
+    QParams,
+    QuantMode,
+    create_qparams,
+    fake_quant_bias,
+    fake_quant_tensor,
+)
