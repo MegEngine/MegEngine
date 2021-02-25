@@ -183,7 +183,7 @@ struct ConvLoadDumpImpl {
     static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr_) {
         auto&& opr = opr_.cast_final_safe<Opr>();
         ctx.write_param<ConvParam>(opr.param());
-        ctx.write_param<megdnn::param::ExecutionPolicy>(opr.execution_policy());
+        ctx.write_param<megdnn::param::ExecutionPolicy>(opr.execution_policy_transient());
     }
 
     static VarNode* make(const cg::VarNodeArray& inputs, const ConvParam& param,

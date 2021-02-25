@@ -414,9 +414,7 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     size_t workspace = ctx.get_workspace_size_bytes(policy);
 
     std::string ret;
-    if (mgb_opr->dyn_typeinfo()->name) {
-        ret.append(mgb_opr->dyn_typeinfo()->name);
-    }
+    ret.append(mgb_opr->dyn_typeinfo()->name);
     ret += format_fixlayouts<Opr>(layouts, arity_in, arity_out);
     Algorithm* palgo = megdnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "Unknown algo description");
