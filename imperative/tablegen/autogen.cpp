@@ -179,6 +179,34 @@ static void gen_op_def_c_header_single(raw_ostream &os, MgbOp& op) {
     );
 }
 
+static void gen_to_string_trait_for_enum(raw_ostream &os, MgbOp& op) {
+    for (auto &&i : op.getMgbAttributes()) {
+        if (auto attr = llvm::dyn_cast<MgbEnumAttr>(&i.attr)) {
+            if (attr->supportToString()) {
+                std::vector<std::string> case_body;
+                std::string ename = formatv("{0}::{1}",
+                    op.getCppClassName(), attr->getEnumName());
+                llvm::for_each(attr->getEnumMembers(), [&](auto&& v){
+                    case_body.push_back(formatv(
+                        "case {0}::{1}: return \"{1}\";", ename, v));
+                });
+                os << formatv(R"(
+template <>
+struct ToStringTrait<{0}> {
+    std::string operator()({0} e) const {
+        switch (e) {
+            {1}
+            default:
+                return "{0}::Unknown";
+        }
+    }
+};
+)", ename, llvm::join(case_body, "\n"));
+            }
+        }
+    }
+}
+
 static void gen_op_def_c_body_single(raw_ostream &os, MgbOp& op) {
     auto&& className = op.getCppClassName();
     os << formatv(
@@ -241,7 +269,13 @@ static void gen_op_def_c_body_single(raw_ostream &os, MgbOp& op) {
         os << formatv(
             "std::string {0}(const OpDef& def_) {{\n", formatMethImpl("make_name")
         );
-        os << mlir::tblgen::tgfmt(hashable->getNameFunctionTemplate(), &ctx);
+        os << formatv(
+            "    auto&& op_ = def_.cast_final_safe<{0}>();\n"
+            "    static_cast<void>(op_);\n",
+            className
+        );
+        ctx.withSelf("op_");
+        os << mlir::tblgen::tgfmt(op.getNameFunctionTemplate(), &ctx);
         os << "}\n";
 
         os << "} // anonymous namespace\n";
@@ -577,6 +611,7 @@ static void for_each_operator(raw_ostream &os, RecordKeeper &keeper,
 
 static bool gen_op_def_c_header(raw_ostream &os, RecordKeeper &keeper) {
     for_each_operator(os, keeper, gen_op_def_c_header_single);
+    for_each_operator(os, keeper, gen_to_string_trait_for_enum);
     return false;
 }
 

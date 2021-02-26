@@ -11,6 +11,11 @@ import io
 
 from gen_param_defs import member_defs, ParamDef, IndentWriterBase
 
+# FIXME: move supportToString flag definition into the param def source file
+ENUM_TO_STRING_SPECIAL_RULES = [
+    ("Elemwise", "Mode"),
+    ("ElemwiseMultiType", "Mode")
+]
 
 class ConverterWriter(IndentWriterBase):
     _skip_current_param = False
@@ -86,7 +91,10 @@ class ConverterWriter(IndentWriterBase):
         def format(v):
             return '\"{}\"'.format(str(v))
         enum_def += ','.join(format(i) for i in e.members)
-        enum_def += "]>"
+        enum_def += "]"
+        if ENUM_TO_STRING_SPECIAL_RULES.count((p.name, e.name)):
+            enum_def += ", 1" # whether generate ToStringTrait
+        enum_def += ">"
         self._write("def {} : {};".format(td_class, enum_def))
 
         if self._skip_current_param:

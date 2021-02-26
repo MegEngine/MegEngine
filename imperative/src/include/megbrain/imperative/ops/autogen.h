@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/imperative/op_def.h"
+#include "megbrain/imperative/utils/to_string.h"
 #include "megdnn/opr_param_defs.h"
 #include "megbrain/opr/param_defs.h"
 

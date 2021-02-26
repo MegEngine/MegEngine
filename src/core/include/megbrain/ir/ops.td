@@ -21,7 +21,9 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Elemwise : MgbHashableOp<"Elemwise", [ElemwiseParam], [NoSideEffect]> {
   let inputs = (ins Variadic<AnyType>:$input);
   let results = (outs AnyType);
-  let usingModeName = 1;
+  let nameFunction = [{
+    return to_string($_self.mode);
+  }];
 }
 
 def Reduce: MgbHashableOp<"Reduce", [ReduceParam]>;
@@ -248,7 +250,9 @@ def ElemwiseMultiType: MgbHashableOp<"ElemwiseMultiType", [ElemwiseMultiTypePara
   let extraArguments = (ins
     MgbDTypeAttr:$dtype
   );
-  let usingModeName = 1;
+  let nameFunction = [{
+    return to_string($_self.mode);
+  }];
 }
 
 def InplaceAdd: MgbHashableOp<"InplaceAdd", [EmptyParam]>;

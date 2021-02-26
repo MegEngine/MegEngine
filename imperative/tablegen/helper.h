@@ -74,6 +74,9 @@ struct MgbEnumAttrMixin : public MgbAttrWrapperBase {
     std::vector<StringRef> getEnumMembers() const {
         return getBaseRecord()->getValueAsListOfStrings("enumMembers");
     }
+    bool supportToString() const {
+        return getBaseRecord()->getValueAsBit("supportToString");
+    }
 };
 
 struct MgbHashableAttrMixin : public MgbAttrWrapperBase {
@@ -170,6 +173,12 @@ public:
         }
         return ret;
     }
+    std::string getNameFunctionTemplate() const {
+        if (auto f = getDef().getValueAsOptionalString("nameFunction")) {
+            return f.getValue().str();
+        }
+        return formatv("    return \"{0}\";\n", getCppClassName());
+    }
 };
 
 struct MgbHashableOpMixin : public MgbOpBase {
@@ -241,30 +250,6 @@ private:
         body += "    return props_;\n";
         return body;
     }
-    std::string getModeName() const {
-        std::string body = formatv(
-            "    auto&& op_ = def_.cast_final_safe<{0}>();\n"
-            "    static_cast<void>(op_);\n",
-            getCppClassName()
-        );
-        for (auto&& it : getMgbAttributes()) {
-            if (it.name == "mode") {
-                auto* enumAttr = llvm::dyn_cast<MgbEnumAttrMixin>(&it.attr);
-                body += "    switch (op_.mode){\n";
-                for (auto&& enumMember: enumAttr->getEnumMembers()) {
-                    body += formatv(
-                        "        case {0}::{1}::{2}:\n",
-                        getCppClassName(), enumAttr->getEnumName(), enumMember
-                    );
-                    body += formatv("            return \"{0}\";\n", enumMember);
-                }
-                body += formatv(
-                    "        default: return \"{0}::Unknown\";\n", getCppClassName());
-                body += "    }\n";
-            }
-        }
-        return body;
-    }
 public:
     static bool classof(const Operator* op) {
         return op->getDef().isSubClassOf("MgbHashableOpMixin");
@@ -287,12 +272,6 @@ public:
             return f.getValue().str();
         }
         return getDefaultPropsFunction();
-    }
-    std::string getNameFunctionTemplate() const {
-        if (getDef().getValueAsBit("usingModeName")) {
-            return getModeName();
-        }
-        return formatv("    return \"{0}\";\n", getCppClassName());
     }
 };
 

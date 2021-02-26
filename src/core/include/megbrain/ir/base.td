@@ -33,10 +33,11 @@ class MgbHashableAttrMixin {
   string reprFunction = "std::to_string($0)";
 }
 
-class MgbEnumAttrMixin<string namespace, string name, list<string> members> {
+class MgbEnumAttrMixin<string namespace, string name, list<string> members, bit toString> {
   string parentNamespace = namespace;
   string enumName = name;
   list<string> enumMembers = members;
+  bit supportToString = toString;
 }
 
 class MgbAttrWrapper;
@@ -165,8 +166,8 @@ class MgbTupleAttr<list<MgbAttrWrapper> args>:
 }
 
 // -- enum types
-class MgbEnumAttr<string namespace, string enumName, list<string> members>:
-    HashableAttr<namespace # "::" # enumName>, MgbEnumAttrMixin<namespace, enumName, members> {
+class MgbEnumAttr<string namespace, string enumName, list<string> members, bit toString=0>:
+    HashableAttr<namespace # "::" # enumName>, MgbEnumAttrMixin<namespace, enumName, members, toString> {
   let storageType = "::mlir::IntegerAttr";
   let convertFromStorage = "static_cast<" # returnType # ">($_self.getInt())";
   let constBuilderCall = "$_builder.getI32IntegerAttr(static_cast<int32_t>($0))";
@@ -242,7 +243,6 @@ class MgbPackedParamBase<string className, string accessor>:
 class MgbHashableOpMixin {
   string hashFunction = ?;
   string cmpFunction = ?;
-  bit usingModeName = 0;
 }
 
 class MgbOp<string mnemonic, list<MgbParamBase> params=[], list<OpTrait> traits=[]>:
@@ -251,6 +251,7 @@ class MgbOp<string mnemonic, list<MgbParamBase> params=[], list<OpTrait> traits=
   dag extraArguments = (ins);
   // TODO: remove it
   code extraOpdefDecl = ?;
+  code nameFunction = ?;
 
   let arguments = !con(
     !foldl(inputs, params, args, param, !con(args, param.fields)),
