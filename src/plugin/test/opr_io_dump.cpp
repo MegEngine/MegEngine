@@ -147,7 +147,7 @@ std::vector<std::string> getlines(std::istream& inp, size_t skip_head = 0) {
 }
 
 }  // anonymous namespace
-
+#if MGB_VERBOSE_TYPEINFO_NAME
 TEST(TestOprIODump, Text) {
     auto fname_base = output_file("test_opr_iodump");
     std::array<std::string, 3> fnames;
@@ -180,8 +180,10 @@ TEST(TestOprIODump, Text) {
 
     run_test(make_plugin, check_result);
 }
+#endif
 
 TEST(TestOprIODump, StdErr) {
+    MGB_MARK_USED_VAR(EXPECTED_TEXT_OUT_REC);
     HostTensorGenerator<> gen;
     auto host_x = gen({5});
     auto host_y = gen({5});

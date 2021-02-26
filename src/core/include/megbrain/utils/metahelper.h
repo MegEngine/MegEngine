@@ -122,7 +122,7 @@ class DynTypeObj {
 //! get class name from class object
 #define _MGB_TYPEINFO_CLASS_NAME(_cls) #_cls
 #else
-#define _MGB_TYPEINFO_CLASS_NAME(_cls) nullptr
+#define _MGB_TYPEINFO_CLASS_NAME(_cls) ""
 #endif
 
 //! put in the impl file of a class that needs static typeinfo()
