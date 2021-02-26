@@ -474,7 +474,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 #if MGB_ENABLE_SUBLINEAR
     if (options().enable_sublinear_memory_opt) {
         if (!sopr_stat.has_virtual_grad) {
-            mgb_log_warn(
+            mgb_log_debug(
                     "no virtual grad var; sublinear memory may produce "
                     "unsatisfying result");
         }
