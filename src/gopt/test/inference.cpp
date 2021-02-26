@@ -2910,7 +2910,8 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
             conv1, w2, b2, param_conv_bias, {},
             OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
-    auto y = opr::TypeCvt::make(conv2, dtype::Float32());
+    auto conv2_fp32 = opr::TypeCvt::make(conv2, dtype::Float32());
+    auto y = conv2_fp32 + opr::TypeCvt::make(b2, dtype::Float32());
 
     SymbolVar y_opt;
     {
@@ -4076,7 +4077,7 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {
 
     auto y = opr::ConvBias::make(x, w, b, param, {},
                                  OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
-    param.stride_h = param.stride_w = 1; 
+    param.stride_h = param.stride_w = 1;
     y = opr::ConvBias::make(y, w1, b1, param, {},
                             OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
     y = opr::TypeCvt::make(y, dtype::Float32());
