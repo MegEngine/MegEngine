@@ -485,52 +485,44 @@ EnumWrapper<{0}::{1}>::type2str = {{
             className, i.name));
     }
 
-    getsetters.push_back(formatv(
-        "{{\"scope\", py_get_scope({0}), py_set_scope({0}), \"scope\", NULL},",
-        className));
-
     // generate tp_init
     std::string initBody;
     if (!op.getMgbAttributes().empty()) {
         initBody += "static const char* kwlist[] = {";
+
+        std::vector<llvm::StringRef> attr_name_list;
         llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
-            initBody += formatv("\"{0}\", ", attr.name);
+            attr_name_list.push_back(attr.name);
         });
-        initBody += "\"scope\", ";
+        attr_name_list.push_back("scope");
+
+        llvm::for_each(attr_name_list, [&](auto&& attr) {
+            initBody += formatv("\"{0}\", ", attr);
+        });
         initBody += "NULL};\n";
         initBody += "    PyObject ";
-        std::vector<std::string> attrs;
-        llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
-            attrs.push_back(formatv("*{0} = NULL", attr.name));
+        std::vector<std::string> attr_init;
+        llvm::for_each(attr_name_list, [&](auto&& attr) {
+            attr_init.push_back(formatv("*{0} = NULL", attr));
         });
-        initBody += llvm::join(attrs, ", ") + ";\n";
-        initBody += "    PyObject *scope = NULL;\n";
+        initBody += llvm::join(attr_init, ", ") + ";\n";
         initBody += "    if (!PyArg_ParseTupleAndKeywords(args, kwds, \"|";
         // an extra slot created for name
-        initBody += std::string(op.getMgbAttributes().size() + 1, 'O');
+        initBody += std::string(attr_name_list.size(), 'O');
         initBody += "\", const_cast<char**>(kwlist)";
-        llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
-            initBody += formatv(", &{0}", attr.name);
+        llvm::for_each(attr_name_list, [&](auto&& attr) {
+            initBody += formatv(", &{0}", attr);
         });
-        initBody += ", &scope";
         initBody += "))\n";
         initBody += "    return -1;\n";
+
         llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
             initBody += formatv(R"(
     if ({1}) {{
         try {{
             reinterpret_cast<PyOp({0})*>(self)->inst().{1} =
                 pyobj_convert_generic<decltype({0}::{1})>::from({1});
-        } catch(py::error_already_set& e) {{
-            e.restore();
-            return -1;
-        } catch(py::builtin_exception& e) {{
-            e.set_error();
-            return -1;
-        } catch(...) {{
-            PyErr_SetString(PyExc_RuntimeError, "Unknown Error");
-            return -1;
-        }
+        } CATCH_ALL(-1)
     }
 )", className, attr.name);
         });
@@ -538,18 +530,9 @@ EnumWrapper<{0}::{1}>::type2str = {{
         initBody += formatv(R"(
     if (scope) {{
         try {{
-            reinterpret_cast<PyOp({0})*>(self)->inst().set_scope(
-                pyobj_convert_generic<std::string>::from(scope));
-        } catch(py::error_already_set& e) {{
-            e.restore();
-            return -1;
-        } catch(py::builtin_exception& e) {{
-            e.set_error();
-            return -1;
-        } catch(...) {{
-            PyErr_SetString(PyExc_RuntimeError, "Unknown Error");
-            return -1;
-        }
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(pyobj_convert_generic<std::string>::from(scope));
+        } CATCH_ALL(-1)
     }
 )", className);
 
