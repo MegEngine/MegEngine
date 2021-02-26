@@ -195,3 +195,24 @@ def test_param_pack_concat():
     offsets = mge.Tensor(offsets_val, np.int32)
     c = param_pack_concat([a, b], offsets, offsets_val)
     assert np.allclose(np.concatenate([a.numpy(), b.numpy().flatten()]), c.numpy())
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("early_return", [False, True], ids=["common", "early_return"])
+@pytest.mark.isolated_distributed
+def test_collect_results(early_return):
+    @dist.launcher
+    def worker():
+        if early_return:
+            exit(0)
+        return (dist.get_rank(), dist.get_world_size())
+
+    results = worker()
+    world_size = len(results)
+    assert world_size > 0
+    expects = (
+        [None] * world_size
+        if early_return
+        else [(dev, world_size) for dev in range(world_size)]
+    )
+    assert results == expects
