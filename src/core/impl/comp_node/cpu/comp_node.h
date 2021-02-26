@@ -54,7 +54,9 @@ namespace mgb {
                     void add_callback(Task&& task) override;
             };
 
-            class CompNodeImpl;
+            class CompNodeBaseImpl;
+            class CompNodeNoRecorderImpl;
+            class CompNodeRecorderImpl;
 
             static void foreach(thin_function<void(CompNode)> callback);
             static void finalize();

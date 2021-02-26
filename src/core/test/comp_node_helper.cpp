@@ -100,6 +100,26 @@ void run_comp_seq_rec_basic_level2(CompNode cn) {
         MGB_ASSERT_TENSOR_NEAR(expect, host_z, 1e-3) << "iter " << iter;
     }
     ASSERT_EQ(executed.size(), 2u);
+
+    //! test default_cpu with record2
+    {
+        HostTensorND hz;
+        graph = ComputingGraph::make();
+        x = opr::Host2DeviceCopy::make(*graph, host_x);
+        y = opr::Host2DeviceCopy::make(*graph, host_y);
+        z = opr::ConvBias::make(x, y, param);
+        z = opr::GetVarShape::make(z);
+        graph->options().comp_node_seq_record_level = 2;
+        graph->options().var_sanity_check_first_run = false;
+        auto func = graph->compile({make_callback_copy(z, hz, true)});
+        ComputingGraph::assert_destroy(graph);
+        func->execute();
+        ASSERT_TRUE(hz.comp_node() == cn);
+        ASSERT_EQ(hz.ptr<int>()[0], 3);
+        ASSERT_EQ(hz.ptr<int>()[1], 6);
+        ASSERT_EQ(hz.ptr<int>()[2], 8);
+        ASSERT_EQ(hz.ptr<int>()[3], 6);
+    }
 }
 
 void run_comp_seq_rec_dyn_elemwise(CompNode cn, bool fake_first) {
