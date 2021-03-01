@@ -5,6 +5,10 @@
 
 namespace {
 
+#if __CUDACC_VER_MAJOR__ >= 9
+#define __shfl_down(x, y) __shfl_down_sync(0xffffffffu, x, y)
+#endif
+
 // each thread computs one bit
 const int THREADS_PER_BLOCK = 64;
 
@@ -95,7 +99,7 @@ __device__ __forceinline__ uint32_t warp_reduce_min_brdcst(uint32_t val) {
     static_assert(WARP_SIZE == 32, "warp size != 32");
 #pragma unroll
     for (uint32_t offset = WARP_SIZE / 2; offset; offset /= 2)
-        val = min(val, __shfl_down_sync(0xFFFFFFFF, val, offset));
+        val = min(val, __shfl_down(val, offset));
 
     if (!threadIdx.x)
         ans = val;
