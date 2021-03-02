@@ -61,6 +61,7 @@ function patch_elf_depend_lib_mgb_mge() {
     handle_copy_cuda_libs ${LIBS_DIR}
 }
 
+
 ALL_PYTHON=${ALL_PYTHON}
 if [[ -z ${ALL_PYTHON} ]]
 then
@@ -120,6 +121,8 @@ do
     echo "org whl name: ${org_whl_name}"
     echo "comapt whl name: ${compat_whl_name}"
     mv ${org_whl_name} ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}/${compat_whl_name}
+
+
     cd /home/output
     chown -R ${UID}.${UID} .
     # compat for root-less docker env to remove output at host side
