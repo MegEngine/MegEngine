@@ -91,9 +91,8 @@ bool _is_dtype_equal(PyArray_Descr* dt1, PyArray_Descr* dt2) {
             PyDict_GetItemString(dt1->metadata, "mgb_dtype"), "zero_point");
         PyObject* zp2 = PyDict_GetItemString(
             PyDict_GetItemString(dt2->metadata, "mgb_dtype"), "zero_point");
-        if (!zp1 || !zp2) {
-            throw py::key_error("zero_point");
-        }
+        if (!zp1 && !zp2) return true;
+        if (!zp1 || !zp2) return false;
         return PyLong_AsLong(zp1) == PyLong_AsLong(zp2);
     }
     if (!q1 && !q2) {
