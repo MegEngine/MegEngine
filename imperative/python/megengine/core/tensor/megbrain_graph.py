@@ -529,7 +529,11 @@ class InputNode(OpNode):
 
     @property
     def device(self):
-        return self.outputs[0].device
+        var = self.outputs[0]
+        if isinstance(var, VarNode):
+            return var.device
+        else:
+            return var.comp_node
 
     @property
     def dtype(self):

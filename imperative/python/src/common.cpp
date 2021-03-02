@@ -171,6 +171,8 @@ void init_common(py::module m) {
             .value("UNSPEC", CompNode::DeviceType::UNSPEC)
             .value("CUDA", CompNode::DeviceType::CUDA)
             .value("CPU", CompNode::DeviceType::CPU)
+            .value("CAMBRICON", CompNode::DeviceType::CAMBRICON)
+            .value("ATLAS", CompNode::DeviceType::ATLAS)
             .value("MULTITHREAD", CompNode::DeviceType::MULTITHREAD)
             .value("MAX_DEVICE_ID", CompNode::DeviceType::MAX_DEVICE_ID);
 

@@ -20,3 +20,30 @@ def tensorrt_runtime_opr(inputs, *, data: bytes = None):
     op = builtin.TensorRTRuntime(data, len(data))
     # return sequence of outputs
     return apply(op, *inputs)
+
+
+def cambricon_runtime_opr(inputs, data, symbol, tensor_dim_mutable):
+    r"""
+    Load a serialized Cambricon model as a runtime operator in MegEngine.
+
+    :param inputs: list of input tensors.
+    :param data: the serialized Cambricon model.
+    :param symbol: name of the function in Cambricon model.
+    :param tensor_dim_mutable: whether the input tensors' shapes are mutable
+        in ``cnrtModel_t``.
+    """
+
+    op = builtin.CambriconRuntime(data, len(data), symbol, tensor_dim_mutable)
+    return apply(op, *inputs)
+
+
+def atlas_runtime_opr(inputs, data):
+    r"""
+    Load a serialized Atlas model as a runtime operator in MegEngine.
+
+    :param inputs: list of input tensors.
+    :param data: the serialized Atlas model.
+    """
+
+    op = builtin.AtlasRuntime(data, len(data))
+    return apply(op, *inputs)

@@ -786,7 +786,11 @@ class trace:
             )
         output_names = output_names or self._output_names
 
-        dumped_device = as_device("xpux")
+        def dumped_device(info):
+            device_name = info.device.logical_name
+            if device_name[:3] in ("cpu", "gpu", "xpu"):
+                return as_device("xpux")
+            return info.device
 
         h2v = {}
         graph = G.Graph()
@@ -794,19 +798,21 @@ class trace:
         # apply graph_opt_level in dump
         if self._graph_opt_level is not None:
             graph.options.graph_opt_level = self._graph_opt_level
-
         for i, h in enumerate(self._arg_bindings):
             info = self._tinfo[h]
             h2v[h] = graph.make_h2d(
                 dtype=info.dtype,
-                device=dumped_device,
+                device=dumped_device(info),
                 shape=info.shape or (1,),
                 name=arg_names[i] if arg_names else None,
             )
         for k, h in self._kwarg_bindings.items():
             info = self._tinfo[h]
             h2v[h] = graph.make_h2d(
-                dtype=info.dtype, device=dumped_device, shape=info.shape or (1,), name=k
+                dtype=info.dtype,
+                device=dumped_device(info),
+                shape=info.shape or (1,),
+                name=k,
             )
 
         for op, ihandles, ohandles in self._seq:
@@ -833,7 +839,7 @@ class trace:
                     h2v[h] = graph.make_const(
                         info.bound_data.numpy(),
                         dtype=info.dtype,
-                        device=dumped_device,
+                        device=dumped_device(info),
                         name=info.name,
                     )
                 ivars.append(h2v[h])

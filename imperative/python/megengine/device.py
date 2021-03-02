@@ -36,6 +36,10 @@ def _str2device_type(type_str: str, allow_unspec: bool = True):
         return DeviceType.CPU
     elif type_str == "GPU" or type_str == "CUDA":
         return DeviceType.CUDA
+    elif type_str == "CAMBRICON":
+        return DeviceType.CAMBRICON
+    elif type_str == "ATLAS":
+        return DeviceType.ATLAS
     else:
         assert allow_unspec and str == "XPU", "device type can only be cpu, gpu or xpu"
         return DeviceType.UNSPEC
@@ -62,6 +66,24 @@ def is_cuda_available() -> bool:
 
     """
     t = _str2device_type("gpu")
+    return CompNode._get_device_count(t, False) > 0
+
+
+def is_cambricon_available() -> bool:
+    """
+    Returns whether cambricon device is available on this system.
+
+    """
+    t = _str2device_type("cambricon")
+    return CompNode._get_device_count(t, False) > 0
+
+
+def is_atlas_available() -> bool:
+    """
+    Returns whether atlas device is available on this system.
+
+    """
+    t = _str2device_type("atlas")
     return CompNode._get_device_count(t, False) > 0
 
 

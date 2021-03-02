@@ -427,8 +427,9 @@ class GraphInference:
             list(self._inp_dict.keys()), list(inputs.keys())
         )
         for key in self._inp_dict:
-            self._inp_dict[key].set_value(Tensor(inputs[key])._dev_tensor())
-
+            self._inp_dict[key].set_value(
+                Tensor(inputs[key], device=self._inp_dict[key].device)._dev_tensor()
+            )
         self._func.execute()
         self._func.wait()
 

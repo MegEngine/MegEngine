@@ -266,6 +266,22 @@ def TensorRTRuntime: MgbHashableOp<"TensorRTRuntime"> {
   );
 }
 
+def AtlasRuntime: MgbHashableOp<"AtlasRuntime"> {
+  let extraArguments = (ins
+    MgbStringAttr:$buf,
+    MgbSizeTAddr:$buf_size
+  );
+}
+
+def CambriconRuntime: MgbHashableOp<"CambriconRuntime"> {
+  let extraArguments = (ins
+    MgbStringAttr:$buf,
+    MgbSizeTAddr:$buf_size,
+    MgbStringAttr:$symbol,
+    MgbBoolAttr:$tensor_dim_mutable
+  );
+}
+
 def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
 #endif // MGB_OPS
