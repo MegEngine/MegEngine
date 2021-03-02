@@ -241,10 +241,14 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
     "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL)
     benchmarker_cudnn.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_"
-                    "GEMM" CUDNN_VERSION_STRING));
-    benchmarker_matmul.set_before_exec_callback(
-            AlgoChecker<BatchedMatrixMul>("BRUTE_FORCE-CUBLAS"));
+                    ConvBiasForward::algo_name<ConvBias::DefaultParam>(
+                            "CUDNN:ConvBiasActivation:"
+                            "CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_"
+                            "GEMM" CUDNN_VERSION_STRING,
+                            {})
+                            .c_str()));
+    benchmarker_matmul.set_before_exec_callback(AlgoChecker<BatchedMatrixMul>(
+            ExecutionPolicyAlgoName{"BRUTE_FORCE", {{"CUBLAS", {}}}}));
 
     benchmarker.set_dtype(0, src_dtype)
             .set_dtype(1, filter_dtype)
