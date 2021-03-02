@@ -7,12 +7,11 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=redefined-builtin
+from . import metric, vision
 from .elemwise import *
-from .img_proc import *
 from .math import *
 from .nn import *
 from .tensor import *
-from .utils import *
 
 from . import distributed  # isort:skip
 

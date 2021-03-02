@@ -7,9 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
-import functools
 import math
-import numbers
 from typing import Optional, Sequence, Tuple, Union
 
 from ..core._imperative_rt.core2 import apply

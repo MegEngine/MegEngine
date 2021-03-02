@@ -7,8 +7,6 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=unused-argument,invalid-name,redefined-builtin,arguments-out-of-order
-import functools
-
 import numpy as np
 
 from ..core._imperative_rt.core2 import apply
@@ -17,7 +15,7 @@ from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor import utils
 from ..core.tensor.array_method import _elwise_apply
-from ..core.tensor.utils import astype, isscalar, setscalar
+from ..core.tensor.utils import astype
 from ..device import get_default_device
 from ..jit.tracing import is_tracing
 from ..tensor import Tensor
@@ -44,8 +42,6 @@ __all__ = [
     "floor_div",
     "greater",
     "greater_equal",
-    "hswish",
-    "hsigmoid",
     "left_shift",
     "less",
     "less_equal",
@@ -62,11 +58,8 @@ __all__ = [
     "neg",
     "not_equal",
     "pow",
-    "relu",
-    "relu6",
     "right_shift",
     "round",
-    "sigmoid",
     "sin",
     "sinh",
     "sqrt",
@@ -521,53 +514,6 @@ def greater_equal(x, y):
 
 
 # other functions
-
-
-def hswish(x):
-    """
-    Element-wise `x * relu6(x + 3) / 6`.
-
-    :param x: input tensor.
-    :return: computed tensor.
-
-    Example:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = tensor(np.arange(5).astype(np.float32))
-        out = F.hswish(x)
-        print(out.numpy().round(decimals=4))
-
-    .. testoutput::
-
-        [0.     0.6667 1.6667 3.     4.    ]
-
-    """
-    return _elwise(x, mode=Elemwise.Mode.H_SWISH)
-
-
-def hsigmoid(x):
-    """Element-wise `relu6(x + 3) / 6`."""
-    return relu6(x + 3) / 6
-
-
-def relu(x):
-    """Element-wise `max(x, 0)`."""
-    return _elwise(x, mode=Elemwise.Mode.RELU)
-
-
-def relu6(x):
-    """Element-wise `min(max(x, 0), 6)`."""
-    return minimum(maximum(x, 0), 6)
-
-
-def sigmoid(x):
-    """Element-wise `1 / ( 1 + exp( -x ) )`."""
-    return _elwise(x, mode=Elemwise.Mode.SIGMOID)
 
 
 def clip(x: Tensor, lower=None, upper=None) -> Tensor:

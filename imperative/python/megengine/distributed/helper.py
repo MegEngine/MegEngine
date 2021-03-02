@@ -19,7 +19,7 @@ from megengine.device import get_default_device, get_device_count
 
 from ..core._imperative_rt.core2 import apply
 from ..core.ops.builtin import ParamPackConcat, ParamPackSplit
-from ..functional.utils import copy
+from ..functional.tensor import copy
 from ..tensor import Tensor
 from ..utils.future import Future
 from .functional import all_reduce_sum, broadcast

@@ -226,7 +226,7 @@ def test_roipooling():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(inp, rois):
-        return F.nn.roi_pooling(inp, rois, (2, 2), scale=2.0)
+        return F.vision.roi_pooling(inp, rois, (2, 2), scale=2.0)
 
     output = fwd(inp, rois)
     check_pygraph_dump(fwd, [inp, rois], [output])
@@ -315,7 +315,7 @@ def test_roialign():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(inp, rois):
-        return F.nn.roi_align(inp, rois, (2, 2))
+        return F.vision.roi_align(inp, rois, (2, 2))
 
     output = fwd(inp, rois)
     check_pygraph_dump(fwd, [inp, rois], [output])
@@ -334,7 +334,7 @@ def test_warpperspective():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(x, M):
-        return F.warp_perspective(x, M, (2, 2))
+        return F.vision.warp_perspective(x, M, (2, 2))
 
     result = fwd(x, M)
     check_pygraph_dump(fwd, [x, M], [result])
@@ -347,7 +347,7 @@ def test_warpaffine():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(x, weightv):
-        return F.warp_affine(x, weightv, (2, 2), border_mode="WRAP")
+        return F.vision.warp_affine(x, weightv, (2, 2), border_mode="WRAP")
 
     outp = fwd(x, weightv)
     check_pygraph_dump(fwd, [x, weightv], [outp])
@@ -365,7 +365,7 @@ def test_remap():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(inp, map_xy):
-        return F.remap(inp, map_xy)
+        return F.vision.remap(inp, map_xy)
 
     out = fwd(inp, map_xy)
     check_pygraph_dump(fwd, [inp, map_xy], [out])
@@ -376,7 +376,7 @@ def test_resize():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(x):
-        return F.nn.interpolate(x, size=(16, 16), mode="BILINEAR")
+        return F.vision.interpolate(x, size=(16, 16), mode="BILINEAR")
 
     out = fwd(x)
     check_pygraph_dump(fwd, [x], [out])
@@ -706,7 +706,7 @@ def test_cvtcolor():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(inp):
-        return F.img_proc.cvt_color(inp, mode="RGB2GRAY")
+        return F.vision.cvt_color(inp, mode="RGB2GRAY")
 
     result = fwd(x)
     check_pygraph_dump(fwd, [x], [result])

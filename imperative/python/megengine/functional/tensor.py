@@ -6,10 +6,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import functools
 import math
-from itertools import accumulate
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Iterable, Optional, Sequence, Union
 
 import numpy as np
 
@@ -17,6 +15,7 @@ from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import apply
 from ..core._wrap import device as as_device
 from ..core.ops import builtin
+from ..core.ops.builtin import Copy, Identity
 from ..core.ops.special import Const
 from ..core.tensor.array_method import _broadcast, _remove_axis
 from ..core.tensor.utils import (
@@ -51,6 +50,7 @@ __all__ = [
     "stack",
     "scatter",
     "tile",
+    "copy",
     "transpose",
     "where",
     "zeros",
@@ -1130,3 +1130,33 @@ def tile(inp: Tensor, reps: Iterable[int]):
         inp = broadcast_to(inp.reshape(base_shape), bcast_shape).reshape(target_shape)
 
     return inp
+
+
+def copy(inp, device=None):
+    r"""
+    Copies tensor to another device.
+
+    :param inp: input tensor.
+    :param device: destination device.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([1, 2, 3], np.int32)
+        y = F.copy(x, "xpu1")
+        print(y.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [1 2 3]
+    """
+    if device is None:
+        return apply(Identity(), inp)[0]
+    return apply(Copy(comp_node=as_device(device).to_c()), inp)[0]

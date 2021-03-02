@@ -136,8 +136,8 @@ def test_interpolate():
     def linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 
-        out = F.nn.interpolate(inp, scale_factor=2.0, mode="LINEAR")
-        out2 = F.nn.interpolate(inp, 4, mode="LINEAR")
+        out = F.vision.interpolate(inp, scale_factor=2.0, mode="LINEAR")
+        out2 = F.vision.interpolate(inp, 4, mode="LINEAR")
 
         np.testing.assert_allclose(
             out.numpy(), np.array([[[1.0, 1.25, 1.75, 2.0]]], dtype=np.float32)
@@ -149,16 +149,16 @@ def test_interpolate():
     def many_batch_interpolate():
         inp = tensor(np.arange(1, 9, dtype=np.float32).reshape(2, 1, 2, 2))
 
-        out = F.nn.interpolate(inp, [4, 4])
-        out2 = F.nn.interpolate(inp, scale_factor=2.0)
+        out = F.vision.interpolate(inp, [4, 4])
+        out2 = F.vision.interpolate(inp, scale_factor=2.0)
 
         np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     def assign_corner_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
 
-        out = F.nn.interpolate(inp, [4, 4], align_corners=True)
-        out2 = F.nn.interpolate(inp, scale_factor=2.0, align_corners=True)
+        out = F.vision.interpolate(inp, [4, 4], align_corners=True)
+        out2 = F.vision.interpolate(inp, scale_factor=2.0, align_corners=True)
 
         np.testing.assert_allclose(out.numpy(), out2.numpy())
 
@@ -166,13 +166,13 @@ def test_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
 
         with pytest.raises(ValueError):
-            F.nn.interpolate(inp, scale_factor=2.0, mode="LINEAR")
+            F.vision.interpolate(inp, scale_factor=2.0, mode="LINEAR")
 
     def inappropriate_scale_linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 
         with pytest.raises(ValueError):
-            F.nn.interpolate(inp, scale_factor=[2.0, 3.0], mode="LINEAR")
+            F.vision.interpolate(inp, scale_factor=[2.0, 3.0], mode="LINEAR")
 
     linear_interpolate()
     many_batch_interpolate()
@@ -205,7 +205,7 @@ def test_roi_align():
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
 
     output_shape = (7, 7)
-    out_feat = F.nn.roi_align(
+    out_feat = F.vision.roi_align(
         inp_feat,
         rois,
         output_shape=output_shape,
@@ -228,7 +228,7 @@ def test_roi_pooling():
     inp_feat, rois = _gen_roi_inp()
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))
     output_shape = (7, 7)
-    out_feat = F.nn.roi_pooling(
+    out_feat = F.vision.roi_pooling(
         inp_feat, rois, output_shape=output_shape, mode="max", scale=1.0 / 4,
     )
     assert make_shape_tuple(out_feat.shape) == (
@@ -335,18 +335,18 @@ def test_interpolate_fastpath():
     ]
     for inp_shape, target_shape in test_cases:
         x = tensor(np.random.randn(*inp_shape), dtype=np.float32)
-        out = F.nn.interpolate(x, target_shape, mode="BILINEAR")
+        out = F.vision.interpolate(x, target_shape, mode="BILINEAR")
         assert out.shape[0] == x.shape[0] and out.shape[1] == x.shape[1]
         assert out.shape[2] == target_shape[0] and out.shape[3] == target_shape[1]
 
     # check value
     x = tensor(np.ones((3, 3, 10, 10)), dtype=np.float32)
-    out = F.nn.interpolate(x, (15, 5), mode="BILINEAR")
+    out = F.vision.interpolate(x, (15, 5), mode="BILINEAR")
     np.testing.assert_equal(out.numpy(), np.ones((3, 3, 15, 5)).astype(np.float32))
 
     np_x = np.arange(32)
     x = tensor(np_x).astype(np.float32).reshape(1, 1, 32, 1)
-    out = F.nn.interpolate(x, (1, 1), mode="BILINEAR")
+    out = F.vision.interpolate(x, (1, 1), mode="BILINEAR")
     np.testing.assert_equal(out.item(), np_x.mean())
 
 
@@ -360,7 +360,7 @@ def test_warp_perspective():
             [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0], [0.0, 0.0, 1.0]], dtype=np.float32
         ).reshape(M_shape)
     )
-    outp = F.warp_perspective(x, M, (2, 2))
+    outp = F.vision.warp_perspective(x, M, (2, 2))
     np.testing.assert_equal(
         outp.numpy(), np.array([[[[5.0, 6.0], [9.0, 10.0]]]], dtype=np.float32)
     )
@@ -370,7 +370,7 @@ def test_warp_affine():
     inp_shape = (1, 3, 3, 3)
     x = tensor(np.arange(27, dtype=np.float32).reshape(inp_shape))
     weightv = [[[1.26666667, 0.6, -83.33333333], [-0.33333333, 1, 66.66666667]]]
-    outp = F.warp_affine(x, tensor(weightv), (2, 2), border_mode="WRAP")
+    outp = F.vision.warp_affine(x, tensor(weightv), (2, 2), border_mode="WRAP")
     res = np.array(
         [
             [
@@ -393,7 +393,7 @@ def test_remap():
             [[[1.0, 0.0], [0.0, 1.0]], [[0.0, 1.0], [0.0, 1.0]]], dtype=np.float32
         ).reshape(map_xy_shape)
     )
-    outp = F.remap(inp, map_xy)
+    outp = F.vision.remap(inp, map_xy)
     np.testing.assert_equal(
         outp.numpy(), np.array([[[[1.0, 4.0], [4.0, 4.0]]]], dtype=np.float32)
     )
@@ -476,7 +476,7 @@ def test_nms():
     )
     inp = tensor(x)
     scores = tensor([0.5, 0.8, 0.9, 0.6], dtype=np.float32)
-    result = F.nn.nms(inp, scores=scores, iou_thresh=0.5)
+    result = F.vision.nms(inp, scores=scores, iou_thresh=0.5)
     np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
 
 
@@ -737,7 +737,7 @@ def test_cvt_color():
     inp = np.random.randn(3, 3, 3, 3).astype(np.float32)
     out = np.expand_dims(rgb2gray(inp), 3).astype(np.float32)
     x = tensor(inp)
-    y = F.img_proc.cvt_color(x, mode="RGB2GRAY")
+    y = F.vision.cvt_color(x, mode="RGB2GRAY")
     np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
 
 

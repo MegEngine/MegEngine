@@ -8,10 +8,9 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..core.tensor.utils import make_shape_tuple
 from ..tensor import Tensor
-from .elemwise import abs, equal, exp, log, maximum, pow, relu
-from .nn import indexing_one_hot, logsigmoid, logsumexp
+from .elemwise import abs, log
+from .nn import indexing_one_hot, logsigmoid, logsumexp, relu
 from .tensor import where
 
 __all__ = [

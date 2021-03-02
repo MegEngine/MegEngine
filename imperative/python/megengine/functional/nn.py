@@ -7,24 +7,25 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # pylint: disable=too-many-lines
-from typing import Iterable, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
-from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.graph import VarNode
 from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
-from ..core.ops.builtin import BatchNorm
+from ..core.ops.builtin import BatchNorm, Elemwise
 from ..core.ops.special import Const
-from ..core.tensor import utils
-from ..core.tensor.utils import astensor1d, setscalar
+from ..core.tensor import megbrain_graph, utils
+from ..core.tensor.array_method import _elwise_apply
+from ..core.tensor.utils import astensor1d, astype, setscalar
+from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
-from ..jit.tracing import is_tracing
 from ..random import uniform
 from ..tensor import Tensor
 from ..utils.tuple_function import _pair, _pair_nonzero
-from .debug_param import get_execution_strategy
+from .debug_param import get_conv_execution_strategy, get_execution_strategy
 from .distributed import all_reduce_sum
-from .elemwise import exp, floor, log, log1p, maximum, minimum, relu
+from .elemwise import exp, floor, log, log1p, maximum, minimum
 from .math import argsort, matmul, max, prod, sum
 from .tensor import (
     broadcast_to,
@@ -47,8 +48,10 @@ __all__ = [
     "deformable_conv2d",
     "deformable_psroi_pooling",
     "dropout",
+    "embedding",
     "indexing_one_hot",
     "leaky_relu",
+    "linear",
     "local_conv2d",
     "logsigmoid",
     "logsumexp",
@@ -56,12 +59,16 @@ __all__ = [
     "max_pool2d",
     "one_hot",
     "prelu",
-    "remap",
     "softmax",
     "softplus",
-    "warp_affine",
-    "warp_perspective",
+    "svd",
+    "sync_batch_norm",
     "conv1d",
+    "sigmoid",
+    "hsigmoid",
+    "relu",
+    "relu6",
+    "hswish",
 ]
 
 
@@ -983,193 +990,30 @@ def one_hot(inp: Tensor, num_classes: int) -> Tensor:
     return result
 
 
-def warp_affine(
-    inp: Tensor,
-    weight: Tensor,
-    out_shape,
-    border_mode="REPLICATE",
-    border_val=0,
-    format="NHWC",
-    imode="LINEAR",
-):
-    """
-    Batched affine transform on 2D images.
-
-    :param inp: input image.
-    :param weight: weight tensor.
-    :param out_shape: output tensor shape.
-    :param border_mode: pixel extrapolation method.
-        Default: "WRAP". Currently "CONSTANT", "REFLECT",
-        "REFLECT_101", "ISOLATED", "WRAP", "REPLICATE", "TRANSPARENT" are supported.
-    :param border_val: value used in case of a constant border. Default: 0
-    :param format: "NHWC" as default based on historical concerns,
-        "NCHW" is also supported. Default: "NCHW".
-    :param imode: interpolation methods. Could be "LINEAR", "NEAREST", "CUBIC", "AREA".
-        Default: "LINEAR".
-    :return: output tensor.
-
-    .. note::
-
-       Here all available options for params are listed,
-       however it does not mean that you can use all the combinations.
-       On different platforms, different combinations are supported.
-    """
-    op = builtin.WarpAffine(
-        border_mode=border_mode, border_val=border_val, format=format, imode=imode
-    )
-    out_shape = utils.astensor1d(out_shape, inp, dtype="int32", device=inp.device)
-    (result,) = apply(op, inp, weight, out_shape)
-    return result
-
-
-def warp_perspective(
-    inp: Tensor,
-    M: Tensor,
-    dsize: Union[Tuple[int, int], int, Tensor],
-    border_mode: str = "REPLICATE",
-    border_val: float = 0.0,
-    interp_mode: str = "LINEAR",
+def matmul(
+    inp1: Tensor,
+    inp2: Tensor,
+    transpose_a=False,
+    transpose_b=False,
+    compute_mode="DEFAULT",
+    format="DEFAULT",
 ) -> Tensor:
-    r"""
-    Applies perspective transformation to batched 2D images.
-
-    The input images are transformed to the output images by the transformation matrix:
-
-    .. math::
-            \text{output}(n, c, h, w) = \text{input} \left( n, c,
-                \frac{M_{00}h + M_{01}w + M_{02}}{M_{20}h + M_{21}w + M_{22}},
-                \frac{M_{10}h + M_{11}w + M_{12}}{M_{20}h + M_{21}w + M_{22}}
-                \right)
-
-    :param inp: input image.
-    :param M: `(batch, 3, 3)` transformation matrix.
-    :param dsize: `(h, w)` size of the output image.
-    :param border_mode: pixel extrapolation method.
-        Default: "REPLICATE". Currently also support "CONSTANT", "REFLECT",
-        "REFLECT_101", "WRAP".
-    :param border_val: value used in case of a constant border. Default: 0
-    :param interp_mode: interpolation methods.
-        Default: "LINEAR". Currently only support "LINEAR" mode.
-    :return: output tensor.
-
-    .. note::
-
-       The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        inp_shape = (1, 1, 4, 4)
-        x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-        M_shape = (1, 3, 3)
-        # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
-        M = tensor(np.array([[1., 0., 1.],
-                             [0., 1., 1.],
-                             [0., 0., 1.]], dtype=np.float32).reshape(M_shape))
-        out = F.warp_perspective(x, M, (2, 2))
-        print(out.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [[[[ 5.  6.]
-           [ 9. 10.]]]]
-
     """
-    op = builtin.WarpPerspective(
-        imode=interp_mode, bmode=border_mode, format="NCHW", border_val=border_val
-    )
-    inp, M = utils.convert_inputs(inp, M)
-    dsize = astensor1d(dsize, inp, dtype="int32", device=inp.device)
-    (result,) = apply(op, inp, M, dsize)
-    return result
+    Performs a matrix multiplication of the matrices ``inp1`` and ``inp2``.
 
+    With different inputs dim, this function behaves differently:
 
-def remap(
-    inp: Tensor,
-    map_xy: Tensor,
-    border_mode: str = "REPLICATE",
-    scalar: float = 0.0,
-    interp_mode: str = "LINEAR",
-) -> Tensor:
-    r"""
-    Applies remap transformation to batched 2D images.
+    - Both 1-D tensor, simply forward to ``dot``.
+    - Both 2-D tensor, normal matrix multiplication.
+    - If one input tensor is 1-D, matrix vector multiplication.
+    - If at least one tensor are 3-dimensional or >3-dimensional, the other tensor should have dim >= 2, the batched matrix-matrix is returned, and the tensor with smaller dimension will
+      be broadcasted. For example:
+        - inp1: `(n, k, m)`, inp2: `(n, m, p)`, return: `(n, k, p)`
+        - inp1: `(n, k, m)`, inp2: `(m, p)`, return: `(n, k, p)`
+        - inp1: `(n, j, k, m)`, inp2: `(n, j, m, p)`, return: `(n, j, k, p)`
 
-    The input images are transformed to the output images by the tensor map_xy.
-    The output's H and W are same as map_xy's H and W.
-
-    :param inp: input image
-    :param map_xy: (batch, oh, ow, 2) transformation matrix
-    :param border_mode: pixel extrapolation method.
-        Default: "REPLICATE". Currently also support "CONSTANT", "REFLECT",
-        "REFLECT_101", "WRAP".
-    :param scalar: value used in case of a constant border. Default: 0
-    :param interp_mode: interpolation methods.
-        Default: "LINEAR". Currently only support "LINEAR" mode.
-    :return: output tensor.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-        inp_shape = (1, 1, 4, 4)
-        inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-        map_xy_shape = (1, 2, 2, 2)
-        map_xy = tensor(np.array([[[1., 0.],[0., 1.]],
-                            [[0., 1.],[0., 1.]]],
-                             dtype=np.float32).reshape(map_xy_shape))
-        out = F.remap(inp, map_xy)
-        print(out.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [[[[1. 4.]
-           [4. 4.]]]]
-
-    """
-
-    op = builtin.Remap(
-        imode=interp_mode, border_type=border_mode, format="NCHW", scalar=scalar
-    )
-    (result,) = apply(op, inp, map_xy)
-    return result
-
-
-def interpolate(
-    inp: Tensor,
-    size: Optional[Union[int, Tuple[int, int]]] = None,
-    scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
-    mode: str = "BILINEAR",
-    align_corners: Optional[bool] = None,
-) -> Tensor:
-    r"""
-    Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
-
-    :param inp: input tensor.
-    :param size: size of the output tensor. Default: None
-    :param scale_factor: scaling factor of the output tensor. Default: None
-    :param mode: interpolation methods, acceptable values are:
-        "BILINEAR", "LINEAR". Default: "BILINEAR"
-    :param align_corners: This only has an effect when `mode`
-        is "BILINEAR" or "LINEAR". Geometrically, we consider the pixels of the input
-        and output as squares rather than points. If set to ``True``, the input
-        and output tensors are aligned by the center points of their corner
-        pixels, preserving the values at the corner pixels. If set to ``False``,
-        the input and output tensors are aligned by the corner points of their
-        corner pixels, and the interpolation uses edge value padding for
-        out-of-boundary values, making this operation *independent* of input size
-        when `scale_factor` is kept the same. Default: None
+    :param inp1: first matrix to be multiplied.
+    :param inp2: second matrix to be multiplied.
     :return: output tensor.
 
     Examples:
@@ -1180,141 +1024,171 @@ def interpolate(
         from megengine import tensor
         import megengine.functional as F
 
-        x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
-        out = F.nn.interpolate(x, [4, 4], align_corners=False)
+        data1 = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+        data2 = tensor(np.arange(0, 6, dtype=np.float32).reshape(3, 2))
+        out = F.matmul(data1, data2)
         print(out.numpy())
-        out2 = F.nn.interpolate(x, scale_factor=2.)
-        np.testing.assert_allclose(out.numpy(), out2.numpy())
 
     Outputs:
 
     .. testoutput::
 
-        [[[[1.   1.25 1.75 2.  ]
-           [1.5  1.75 2.25 2.5 ]
-           [2.5  2.75 3.25 3.5 ]
-           [3.   3.25 3.75 4.  ]]]]
+        [[10. 13.]
+         [28. 40.]]
 
     """
-    mode = mode.upper()
-    if mode not in ["BILINEAR", "LINEAR"]:
-        raise ValueError("interpolate only support linear or bilinear mode")
-    if mode not in ["BILINEAR", "LINEAR"]:
-        if align_corners is not None:
-            raise ValueError(
-                "align_corners option can only be set in the bilinear/linear interpolating mode"
-            )
-    else:
-        if align_corners is None:
-            align_corners = False
+    remove_row, remove_col = False, False
+    inp1, inp2 = utils.convert_inputs(inp1, inp2)
 
-    if (
-        size is not None
-        and scale_factor is None
-        and not align_corners
-        and mode == "BILINEAR"
-        and inp.ndim in [4, 5]
-    ):
-        # fastpath for interpolate
-        op = builtin.Resize(imode="LINEAR", format="NCHW")
-        shape = astensor1d(size, inp, dtype="int32", device=inp.device)
-        (result,) = apply(op, inp, shape)
-        return result
+    dim1, dim2 = inp1.ndim, inp2.ndim
+    # handle dim=1 cases, dot and matrix-vector multiplication
+    if dim1 == 1 and dim2 == 1:
+        return dot(inp1, inp2)
+    # the underlying matmul op requires input dims to be at least 2
+    if dim1 == 1:
+        inp1 = expand_dims(inp1, 0)
+        dim1 = 2
+        remove_row = True
+    if dim2 == 1:
+        inp2 = expand_dims(inp2, 1)
+        dim2 = 2
+        remove_col = True
 
-    if mode == "LINEAR":
-        inp = expand_dims(inp, 3)
+    batch_shape = None
+    shape1 = inp1.shape
+    shape2 = inp2.shape
 
-    if inp.ndim != 4:
-        raise ValueError("shape of input tensor must correspond to the operartion mode")
-
-    if size is None:
-        if scale_factor is None:
-            raise ValueError("scale_factor must not be None when size is None")
-
-        if isinstance(scale_factor, (float, int)):
-            scale_factor = float(scale_factor)
-            if mode == "LINEAR":
-                scale_factor = (scale_factor, float(1))
-            else:
-                scale_factor = (scale_factor, scale_factor)
+    maxdim = dim1 if dim1 > dim2 else dim2
+    if dim1 >= 3 or dim2 >= 3:
+        if use_symbolic_shape():
+            if dim1 > dim2:
+                shape2 = concat([shape1[:-2], shape2[-2:]])
+                inp2 = broadcast_to(inp2, shape2)
+            if dim1 < dim2:
+                shape1 = concat([shape2[:-2], shape1[-2:]])
+                inp1 = broadcast_to(inp1, shape1)
+            if maxdim > 3:
+                batch_shape = shape1[:-2]
+                # compress inputs to 3d
+                (inp1,) = apply(
+                    builtin.Reshape(), inp1, concat([prod(shape1[:-2]), shape1[-2:]])
+                )
+                (inp2,) = apply(
+                    builtin.Reshape(), inp2, concat([prod(shape2[:-2]), shape2[-2:]])
+                )
         else:
-            if mode == "LINEAR":
-                raise ValueError(
-                    "under LINEAR mode, scale_factor can only be single value"
-                )
+            if dim1 > dim2:
+                shape2 = shape1[:-2] + shape2[-2:]
+                inp2 = broadcast_to(inp2, shape2)
+            if dim1 < dim2:
+                shape1 = shape2[:-2] + shape1[-2:]
+                inp1 = broadcast_to(inp1, shape1)
+            if maxdim > 3:
+                batch_shape = shape1[:-2]
+                # compress inputs to 3d
+                inp1 = inp1.reshape((-1, shape1[-2], shape1[-1]))
+                inp2 = inp2.reshape((-1, shape2[-2], shape2[-1]))
 
-        assert len(scale_factor) == 2, "shape of scale_factor must be equal to (2, )"
-        assert isinstance(scale_factor[0], float) and isinstance(
-            scale_factor[1], float
-        ), "scale_factor must be float type"
-        dsize = tuple(
-            floor(
-                Tensor(
-                    inp.shape[i + 2] * scale_factor[i],
-                    dtype="float32",
-                    device=inp.device,
-                )
-            )
-            for i in range(2)
+        op = builtin.BatchedMatrixMul(
+            transposeA=transpose_a,
+            transposeB=transpose_b,
+            compute_mode=compute_mode,
+            format=format,
+            strategy=get_conv_execution_strategy(),
         )
-        dsize = concat([dsize[0], dsize[1]], axis=0)
     else:
-        if scale_factor is not None:
-            raise ValueError("scale_factor must be None when size is provided")
+        op = builtin.MatrixMul(
+            transposeA=transpose_a,
+            transposeB=transpose_b,
+            compute_mode=compute_mode,
+            format=format,
+            strategy=get_conv_execution_strategy(),
+        )
 
-        if isinstance(size, int):
-            size = (size, 1)
+    (result,) = apply(op, inp1, inp2)
+    if maxdim > 3:
+        if use_symbolic_shape():
+            (result,) = apply(
+                builtin.Reshape(), result, concat([batch_shape, result.shape[-2:]])
+            )
         else:
-            if mode == "LINEAR":
-                raise ValueError("under LINEAR mode, size can only be single value")
-        dsize = size
+            result = result.reshape(batch_shape + result.shape[-2:])
+    if remove_row:
+        result = squeeze(result, axis=-2)
+    if remove_col:
+        result = squeeze(result, axis=-1)
+    return result
 
-    oh, ow = dsize[0], dsize[1]
-    ih, iw = inp.shape[2], inp.shape[3]
 
-    if align_corners:
-        hscale = (ih - 1.0) / (oh - 1.0)
-        wscale = 1.0 * iw / ow
-        if mode != "LINEAR":
-            wscale = (iw - 1.0) / (ow - 1.0)
-        row0 = concat(
-            [wscale, Tensor([0, 0], dtype="float32", device=inp.device)], axis=0
-        ).reshape(1, 3)
-        row1 = concat(
-            [
-                Tensor(0, dtype="float32", device=inp.device),
-                hscale,
-                Tensor(0, dtype="float32", device=inp.device),
-            ],
-            axis=0,
-        ).reshape(1, 3)
-        weight = concat(
-            [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
-            axis=0,
-        ).reshape(1, 3, 3)
-        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
-    else:
-        hscale = 1.0 * ih / oh
-        wscale = 1.0 * iw / ow
-        row0 = concat(
-            [wscale, Tensor(0, dtype="float32", device=inp.device), 0.5 * wscale - 0.5],
-            axis=0,
-        ).reshape(1, 3)
-        row1 = concat(
-            [Tensor(0, dtype="float32", device=inp.device), hscale, 0.5 * hscale - 0.5],
-            axis=0,
-        ).reshape(1, 3)
-        weight = concat(
-            [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
-            axis=0,
-        ).reshape(1, 3, 3)
-        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
+def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
+    """
+    Computes dot-product of two vectors ``inp1`` and ``inp2``.
+    inputs must be 1-dimensional or scalar. A scalar input is automatically broadcasted.
+    Refer to :func:`~.matmul` for more general usage.
 
-    weight = weight.astype("float32")
-    ret = warp_perspective(inp, weight, dsize, interp_mode="LINEAR")
-    if mode == "LINEAR":
-        ret = reshape(ret, ret.shape[0:3])
-    return ret
+    :param inp1: first vector.
+    :param inp2: second vector.
+    :return: output value.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        data1 = tensor(np.arange(0, 6, dtype=np.float32))
+        data2 = tensor(np.arange(0, 6, dtype=np.float32))
+        out = F.dot(data1, data2)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        55.
+
+    """
+    op = builtin.Dot()
+    inp1, inp2 = utils.convert_inputs(inp1, inp2)
+    assert (
+        inp1.ndim <= 1 and inp2.ndim <= 1
+    ), "Input tensors for dot must be 1-dimensional or scalar"
+    (result,) = apply(op, inp1, inp2)
+    setscalar(result)
+    return result
+
+
+def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
+    """
+    Computes the singular value decompositions of input matrix.
+
+    :param inp: input matrix, must has shape `[..., M, N]`.
+    :return: output matrices, `(U, sigma, V)`.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2,3))
+        _, y, _ = F.svd(x)
+        print(y.numpy().round(decimals=3))
+
+    Outputs:
+
+    .. testoutput::
+
+        [7.348 1.   ]
+
+    """
+    op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
+    U, sigma, V = apply(op, inp)
+    return U, sigma, V
 
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
@@ -1383,127 +1257,6 @@ def embedding(
 
     dest_shp = list(inp.shape) + [weight.shape[-1]]
     return weight[inp.reshape(-1)].reshape(dest_shp)
-
-
-def roi_pooling(
-    inp: Tensor,
-    rois: Tensor,
-    output_shape: Union[int, tuple, list],
-    mode: str = "max",
-    scale: float = 1.0,
-) -> Tensor:
-    """
-    Applies roi pooling on input feature.
-
-    :param inp: tensor that represents the input feature, `(N, C, H, W)` images.
-    :param rois: `(K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
-    :param output_shape: `(height, width)` of output rois feature.
-    :param mode: "max" or "average", use max/average align just like max/average pooling. Default: "max"
-    :param scale: scale the input boxes by this number. Default: 1.0
-    :return: `(K, C, output_shape[0], output_shape[1])` feature of rois.
-
-    Examples:
-
-    .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            np.random.seed(42)
-            inp = tensor(np.random.randn(1, 1, 128, 128))
-            rois = tensor(np.random.random((4, 5)))
-            y = F.nn.roi_pooling(inp, rois, (2, 2))
-            print(y.numpy()[0].round(decimals=4))
-
-    Outputs:
-
-    .. testoutput::
-
-            [[[-0.1383 -0.1383]
-              [-0.5035 -0.5035]]]
-
-
-    """
-    assert mode in ["max", "average"], "only max/average mode is supported"
-    if isinstance(output_shape, int):
-        output_shape = (output_shape, output_shape)
-
-    op = builtin.ROIPooling(mode=mode, scale=scale)
-    inp, rois = utils.convert_inputs(inp, rois)
-    result, _ = apply(
-        op, inp, rois, Tensor(output_shape, dtype="int32", device=inp.device)
-    )
-    return result
-
-
-def roi_align(
-    inp: Tensor,
-    rois: Tensor,
-    output_shape: Union[int, tuple, list],
-    mode: str = "average",
-    spatial_scale: float = 1.0,
-    sample_points: Union[int, tuple, list] = 2,
-    aligned: bool = True,
-) -> Tensor:
-    """
-    Applies roi align on input feature.
-
-    :param inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
-    :param rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
-    :param output_shape: `(height, width)` shape of output rois feature.
-    :param mode: "max" or "average", use max/average align just like max/average pooling. Default: "average"
-    :param spatial_scale: scale the input boxes by this number. Default: 1.0
-    :param sample_points: number of inputs samples to take for each output sample.
-        0 to take samples densely. Default: 2
-    :param aligned: wheather to align the input feature, with `aligned=True`,
-        we first appropriately scale the ROI and then shift it by -0.5. Default: True
-    :return: output tensor.
-
-    Examples:
-
-    .. testcode::
-
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
-
-            np.random.seed(42)
-            inp = tensor(np.random.randn(1, 1, 128, 128))
-            rois = tensor(np.random.random((4, 5)))
-            y = F.nn.roi_align(inp, rois, (2, 2))
-            print(y.numpy()[0].round(decimals=4))
-
-    Outputs:
-
-    .. testoutput::
-
-            [[[0.175  0.175 ]
-              [0.1359 0.1359]]]
-
-    """
-    assert mode in ["max", "average"], "only max/average mode is supported"
-    if isinstance(output_shape, int):
-        output_shape = (output_shape, output_shape)
-    pooled_height, pooled_width = output_shape
-    if isinstance(sample_points, int):
-        sample_points = (sample_points, sample_points)
-    sample_height, sample_width = sample_points
-    offset = 0.5 if aligned else 0.0
-
-    op = builtin.ROIAlign(
-        mode=mode,
-        format="NCHW",
-        spatial_scale=spatial_scale,
-        offset=offset,
-        pooled_height=pooled_height,
-        pooled_width=pooled_width,
-        sample_height=sample_height,
-        sample_width=sample_width,
-    )
-    inp, rois = utils.convert_inputs(inp, rois)
-    result, *_ = apply(op, inp, rois)
-    return result
 
 
 def indexing_one_hot(
@@ -1621,72 +1374,6 @@ def conv1d(
     return output
 
 
-def nms(
-    boxes: Tensor, scores: Tensor, iou_thresh: float, max_output: Optional[int] = None
-) -> Tensor:
-    r"""
-    Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union(IoU).
-
-    :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
-    :param iou_thresh: IoU threshold for overlapping.
-    :param scores: tensor of shape `(N,)`, the score of boxes.
-    :param max_output: the maximum number of boxes to keep; it is optional if this operator is not traced
-        otherwise it required to be specified; if it is not specified, all boxes are kept.
-    :return: indices of the elements that have been kept by NMS.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = np.zeros((100,4))
-        np.random.seed(42)
-        x[:,:2] = np.random.rand(100,2)*20
-        x[:,2:] = np.random.rand(100,2)*20 + 100
-        scores = tensor(np.random.rand(100))
-        inp = tensor(x)
-        result = F.nn.nms(inp, scores, iou_thresh=0.7)
-        print(result.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [75 69]
-
-    """
-    assert (
-        boxes.ndim == 2 and boxes.shape[1] == 4
-    ), "the expected shape of boxes is (N, 4)"
-    assert scores.ndim == 1, "the expected shape of scores is (N,)"
-    assert (
-        boxes.shape[0] == scores.shape[0]
-    ), "number of boxes and scores are not matched"
-
-    boxes = boxes.detach()
-    scores = scores.detach()
-    sorted_idx = argsort(scores, descending=True)
-    boxes = boxes[sorted_idx]
-
-    if is_tracing():
-        assert (
-            max_output is not None and max_output > 0
-        ), "max_output should be specified under tracing"
-
-    if max_output is None:
-        max_output = boxes.shape[0]
-
-    op = builtin.NMSKeep(iou_thresh, max_output)
-    inp = utils.convert_inputs(boxes.reshape(1, -1, 4))
-    indices, count = apply(op, *inp)
-    indices = indices[0][: count[0]]
-    keep_inds = sorted_idx[indices]
-    return keep_inds
-
-
 def nvof(src: Tensor, precision: int = 1) -> Tensor:
     r"""
     Implements NVIDIA Optical Flow SDK.
@@ -1715,6 +1402,90 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
 
     op = builtin.NvOf(precision=precision)
     return apply(op, src)[0]
+
+
+def _elwise(*args, mode):
+    tensor_args = list(filter(lambda x: isinstance(x, (Tensor, VarNode)), args))
+    if len(tensor_args) == 0:
+        dtype = utils.dtype_promotion(args)
+        first_arg = Tensor(args[0], dtype=dtype, device=get_default_device())
+        args = utils.convert_inputs(first_arg, *args[1:])
+    else:
+        args = utils.convert_inputs(*args)
+    if mode in (
+        Elemwise.Mode.TRUE_DIV,
+        Elemwise.Mode.EXP,
+        Elemwise.Mode.POW,
+        Elemwise.Mode.LOG,
+        Elemwise.Mode.EXPM1,
+        Elemwise.Mode.LOG1P,
+        Elemwise.Mode.TANH,
+        Elemwise.Mode.ACOS,
+        Elemwise.Mode.ASIN,
+        Elemwise.Mode.ATAN2,
+        Elemwise.Mode.CEIL,
+        Elemwise.Mode.COS,
+        Elemwise.Mode.FLOOR,
+        Elemwise.Mode.H_SWISH,
+        Elemwise.Mode.ROUND,
+        Elemwise.Mode.SIGMOID,
+        Elemwise.Mode.SIN,
+    ):
+        if mode in (
+            Elemwise.Mode.CEIL,
+            Elemwise.Mode.FLOOR,
+            Elemwise.Mode.ROUND,
+        ) and np.issubdtype(args[0].dtype, np.integer):
+            return args[0]
+        args = tuple(map(lambda x: astype(x, "float32"), args))
+    return _elwise_apply(args, mode)
+
+
+def hswish(x):
+    """
+    Element-wise `x * relu6(x + 3) / 6`.
+
+    :param x: input tensor.
+    :return: computed tensor.
+
+    Example:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(5).astype(np.float32))
+        out = F.hswish(x)
+        print(out.numpy().round(decimals=4))
+
+    .. testoutput::
+
+        [0.     0.6667 1.6667 3.     4.    ]
+
+    """
+    return _elwise(x, mode=Elemwise.Mode.H_SWISH)
+
+
+def sigmoid(x):
+    """Element-wise `1 / ( 1 + exp( -x ) )`."""
+    return _elwise(x, mode=Elemwise.Mode.SIGMOID)
+
+
+def hsigmoid(x):
+    """Element-wise `relu6(x + 3) / 6`."""
+    return relu6(x + 3) / 6
+
+
+def relu(x):
+    """Element-wise `max(x, 0)`."""
+    return _elwise(x, mode=Elemwise.Mode.RELU)
+
+
+def relu6(x):
+    """Element-wise `min(max(x, 0), 6)`."""
+    return minimum(maximum(x, 0), 6)
 
 
 from .loss import *  # isort:skip

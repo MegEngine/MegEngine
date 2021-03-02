@@ -360,7 +360,7 @@ def test_trace_warp_perspective():
 
     @trace(symbolic=True)
     def f(x, M):
-        out = F.warp_perspective(x, M, (2, 2))
+        out = F.vision.warp_perspective(x, M, (2, 2))
         np.testing.assert_equal(out.shape.numpy(), np.array([1, 1, 2, 2]))
         return out
 
@@ -429,10 +429,10 @@ def test_trace_nms():
     @trace(symbolic=False)
     def f(boxes, scores):
         # with tracing, max_output must be specified
-        results = F.nn.nms(boxes, scores=scores, iou_thresh=0.5, max_output=20)
+        results = F.vision.nms(boxes, scores=scores, iou_thresh=0.5, max_output=20)
         # without tracing, max output can be inferred inside nms
         with exclude_from_trace():
-            _ = F.nn.nms(boxes, scores=scores, iou_thresh=0.5)
+            _ = F.vision.nms(boxes, scores=scores, iou_thresh=0.5)
         return results
 
     f(*make_inputs(10))

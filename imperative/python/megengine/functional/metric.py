@@ -6,22 +6,13 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import collections
 from typing import Iterable, Union
 
 import numpy as np
 
-from ..core._imperative_rt.core2 import apply
-from ..core._wrap import device as as_device
-from ..core.ops.builtin import Copy, Identity
 from ..tensor import Tensor
 from .math import topk as _topk
 from .tensor import broadcast_to, transpose
-
-__all__ = [
-    "topk_accuracy",
-    "copy",
-]
 
 
 def topk_accuracy(
@@ -46,7 +37,7 @@ def topk_accuracy(
 
         logits = tensor(np.arange(80, dtype=np.int32).reshape(8,10))
         target = tensor(np.arange(8, dtype=np.int32))
-        top1, top5 = F.topk_accuracy(logits, target, (1, 5))
+        top1, top5 = F.metric.topk_accuracy(logits, target, (1, 5))
         print(top1.numpy(), top5.numpy())
 
     Outputs:
@@ -67,33 +58,3 @@ def topk_accuracy(
     if len(topk) == 1:  # type: ignore[arg-type]
         accs = accs[0]
     return accs
-
-
-def copy(inp, device=None):
-    r"""
-    Copies tensor to another device.
-
-    :param inp: input tensor.
-    :param device: destination device.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = tensor([1, 2, 3], np.int32)
-        y = F.copy(x, "xpu1")
-        print(y.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [1 2 3]
-    """
-    if device is None:
-        return apply(Identity(), inp)[0]
-    return apply(Copy(comp_node=as_device(device).to_c()), inp)[0]
