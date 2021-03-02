@@ -351,6 +351,12 @@ class CompNode {
             return m_impl->get_mem_status_bytes();
         }
 
+#if !MGB_BUILD_SLIM_SERVING
+        size_t get_used_memory() const {
+            return m_impl->get_used_memory();
+        }
+#endif
+
         //! change to another stream on the same memory node
         CompNode change_stream(int dest_stream) const;
 
@@ -527,6 +533,12 @@ class CompNode {
 
                 virtual MemNode mem_node() = 0;
                 virtual std::pair<size_t, size_t> get_mem_status_bytes() = 0;
+
+#if !MGB_BUILD_SLIM_SERVING
+                virtual size_t get_used_memory() {
+                    return 0;
+                }
+#endif
 
                 virtual Locator locator() = 0;
                 virtual Locator locator_logical() = 0;

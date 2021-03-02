@@ -172,6 +172,9 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
     struct StaticData;
     static StaticData *sd;
     static Spinlock sd_mtx;
+#if !MGB_BUILD_SLIM_SERVING
+    std::mutex m_update_mem;
+#endif
 
     //! set to true when m_locator is assigned; set to false if async init
     //! failed
@@ -210,7 +213,17 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
 
         void* alloc_device(size_t size) override {
             activate();
+#if MGB_BUILD_SLIM_SERVING
             return m_mem_alloc->alloc(size);
+#else
+            void* ptr = m_mem_alloc->alloc(size);
+            {
+                MGB_LOCK_GUARD(m_update_mem);
+                ptr2size[ptr] = size;
+                m_used_mem += size;
+            }
+            return ptr;
+#endif
         }
 
         void free_device(void *ptr);
@@ -287,8 +300,19 @@ class CudaCompNode::CompNodeImpl final: public CompNode::Impl {
         uint64_t get_uid() override {
             return m_uid;
         }
+
+#if !MGB_BUILD_SLIM_SERVING
+        size_t get_used_memory() override {
+            return m_used_mem;
+        }
+#endif
+
     private:
         uint64_t m_uid;
+#if !MGB_BUILD_SLIM_SERVING
+        std::unordered_map<void*, size_t> ptr2size;
+        size_t m_used_mem = 0;
+#endif
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CudaCompNode::CompNodeImpl);
 
@@ -419,7 +443,16 @@ void CudaCompNodeImpl::free_device(void *ptr) {
         return;
 
     activate();
+#if !MGB_BUILD_SLIM_SERVING
+    {
+        MGB_LOCK_GUARD(m_update_mem);
+        mgb_assert(ptr2size.find(ptr) != ptr2size.end(), "ptr %p not found!", ptr);
+        m_used_mem -= ptr2size.at(ptr);
+        ptr2size.erase(ptr);
+    }
+#endif
     m_mem_alloc->free(ptr);
+
 }
 
 void* CudaCompNodeImpl::alloc_host(size_t size) {
