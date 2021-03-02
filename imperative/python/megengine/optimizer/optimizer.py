@@ -15,7 +15,7 @@ from typing import Union
 
 import numpy as np
 
-from ..core._imperative_rt.core2 import pop_scope, push_scope
+from ..core._imperative_rt.core2 import pop_scope, push_scope, set_option
 from ..core.tensor.utils import set_convert_inputs
 from ..tensor import Parameter, Tensor
 from ..utils.deprecation import deprecated
@@ -148,6 +148,7 @@ class Optimizer(metaclass=ABCMeta):
         """
         # set the globle state `_enable_convert_inputs` to `False` to disable
         # the `convert_inputs` for param updates
+        set_option("record_computing_path", 0)
         backup = set_convert_inputs(False)
         for group in self.param_groups:
             if isinstance(group["params"], set):
@@ -161,6 +162,7 @@ class Optimizer(metaclass=ABCMeta):
             pop_scope("step")
         # restore the globle state `_enable_convert_inputs`
         set_convert_inputs(backup)
+        set_option("record_computing_path", 1)
         return self
 
     @deprecated(version="1.0", reason="use clear_grad instead")

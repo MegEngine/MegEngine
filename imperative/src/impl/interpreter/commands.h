@@ -128,7 +128,7 @@ struct Drop {
 
 struct SetOption {
     std::string key;
-    int value;
+    size_t value;
 
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {

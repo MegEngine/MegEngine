@@ -25,6 +25,24 @@ enum EvictType {
     DROP = 2,
 };
 
+/*!
+ * \brief an identifier to specify a component of evicted tensors
+ * 
+ * Each component tracks the sum of the compute costs of its elements, with the
+ * union of two components having the sum of each constituent cost.
+ */
+struct DsuNode {
+    DsuNode(double _t): t(_t) {}
+    
+    std::shared_ptr<DsuNode> parent;
+
+    bool is_root() {
+        return !bool(parent);
+    }
+    
+    double t;
+};
+
 struct TensorInfo;
 using TensorInfoPtr = std::shared_ptr<TensorInfo>;
 
@@ -37,6 +55,10 @@ struct TensorInfo {
     TensorPtr ptr;
     LogicalTensorDesc desc;
 
+    double compute_time;
+    size_t memory;
+    double last_used_time;
+    
     // FIXME: broken by drop
     bool value_fetched = false;
     bool invalid = false;
@@ -49,12 +71,15 @@ struct TensorInfo {
     // reserved for auto drop
     size_t pinned = 0;
     size_t recompute_times = 0;
+    size_t ref_cnt = 0;
+    std::shared_ptr<DsuNode> dsu_ptr;
 
     struct ComputePath {
         std::shared_ptr<OpDef> op;
         SmallVector<TensorInfo*> inputs;
         SmallVector<TensorInfo*> unique_inputs;
         SmallVector<TensorInfo*> outputs;
+        double compute_time = 0;
 
         size_t ref_cnt() {
             return outputs.size() - std::count(outputs.begin(), outputs.end(), nullptr);
@@ -78,9 +103,19 @@ struct TensorInfo {
             for (auto output: outputs) {
                 output->producer = path;
             }
+            // update ref_cnt
+            for (auto input: inputs) {
+                input->ref_cnt += outputs.size();
+            }
             return path;
         }
     }* producer = nullptr;
+  
+    double eval_func(double cost, double free_mem, double cur_time,
+                     double param_cost, double param_mem, double param_time, double param_recompute_times) {
+        return pow(cost + 1e-3, param_cost) * pow(param_recompute_times, (double)recompute_times)
+               / (pow((memory + free_mem) / 1024.0 / 1024.0, param_mem) * pow((double)(cur_time - last_used_time + 1e-3), param_time));
+    }
 
     void pin() {
         ++pinned;
@@ -104,6 +139,10 @@ struct TensorInfo {
             delete producer;
         }
         producer = nullptr;
+    }
+
+    bool size_exceeds_thd(size_t thd) {
+        return memory > thd;
     }
 
     SmallVector<ComputePath*> users;

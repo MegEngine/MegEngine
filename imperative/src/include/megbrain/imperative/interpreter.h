@@ -44,8 +44,8 @@ struct Interpreter {
         virtual void sync() = 0;
         virtual void close() = 0;
 
-        virtual int get_option(std::string name) = 0;
-        virtual void set_option(std::string name, int value) = 0;
+        virtual size_t get_option(std::string name) = 0;
+        virtual void set_option(std::string name, size_t value) = 0;
 
         virtual void start_profile(std::unordered_map<std::string, int> option) = 0;
         virtual void stop_profile(std::string basename, std::string format) = 0;

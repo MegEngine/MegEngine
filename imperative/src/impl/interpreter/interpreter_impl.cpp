@@ -13,11 +13,10 @@
 
 #include "megbrain/common.h"
 #include "megbrain/imperative/opr_utility.h"
-#include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/ops/backward_graph.h"
+#include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/utils/to_string.h"
-
-#include "../op_trait.h"
 
 using namespace mgb;
 using namespace imperative;
@@ -61,8 +60,6 @@ Handle ChannelImpl::put(const DeviceTensorND& data) {
 void ChannelImpl::del(Handle handle) {
     mgb_assert(m_valid_handle.count(handle), "invalid handle: %p", handle);
     auto* info = reinterpret_cast<TensorInfo*>(handle);
-    detach_users(info);
-    info->detach_producer();
     m_valid_handle.erase(handle);
     m_buffer.enqueue(Del{info});
 }
@@ -73,7 +70,6 @@ void ChannelImpl::swap_in(Handle handle) {
                 "invalid handle: %p", handle);
         auto* info = reinterpret_cast<TensorInfo*>(handle);
         m_buffer.enqueue(SwapIn{info});
-        info->evict_type = NONE;
     }
 }
 
@@ -83,7 +79,6 @@ void ChannelImpl::swap_out(Handle handle) {
                 "invalid handle: %p", handle);
         auto* info = reinterpret_cast<TensorInfo*>(handle);
         m_buffer.enqueue(SwapOut{info});
-        info->evict_type = SWAP;
     }
 }
 
@@ -92,11 +87,6 @@ void ChannelImpl::drop(Handle handle) {
         mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                 "invalid handle: %p", handle);
         auto* info = reinterpret_cast<TensorInfo*>(handle);
-        if (!info->producer) {
-            mgb_log_warn("the input that produced tensor %p has been deleted, this drop operation will be ignored", info);
-            return;
-        }
-        info->evict_type = DROP;
         m_buffer.enqueue(Drop{info});
     }
 }
@@ -167,10 +157,6 @@ void ChannelImpl::dispatch_default_cpu(
         outputs->push_back(info);
     }
 
-    if (m_channel_state.options.enable_drop) {
-        TensorInfo::ComputePath::make(op, input_infos, output_infos);
-    }
-
     event_data.outputs = tinfo_to_tid(output_infos);
     if (m_channel_state.profiler->is_profiling()) {
         m_channel_state.profiler->record_host<HostOpFinishEvent>(event_data);
@@ -198,9 +184,6 @@ void ChannelImpl::dispatch_kernel(
         }
         cmd.outputs.push_back(info);
         outputs->push_back(info);
-    }
-    if (m_channel_state.options.enable_drop) {
-        TensorInfo::ComputePath::make(cmd.op, cmd.inputs, cmd.outputs);
     }
     m_buffer.enqueue(std::move(cmd));
     if (!validated && m_channel_state.options.async_level == 1) {
@@ -233,7 +216,6 @@ SmallVector<Handle> ChannelImpl::apply_op(
             mgb_assert(!info->invalid, "Invalid tensor, unable to apply_op!");
             input_infos.push_back(info);
             input_descs.push_back(info->desc);
-            regenerate(info);
         }
     }
 
@@ -269,7 +251,6 @@ HostTensorND ChannelImpl::get_value(Handle handle) {
     };
     if (!value_fetched()) {
         m_waitee = info;
-        regenerate(info);
         m_buffer.enqueue(GetValue{info});
         if (m_channel_state.profiler->is_profiling()) {
             m_channel_state.profiler->record_host<TensorWaitPropEvent>(info->id, TensorInfo::HostValue);
@@ -345,7 +326,6 @@ DeviceTensorND ChannelImpl::get_dev_tensor(Handle handle) {
     std::unique_lock<decltype(m_mutex)> lock(m_mutex);
     mgb_assert(!m_waitee);
     m_waitee = info;
-    regenerate(info);
     m_buffer.flush();
     if (m_channel_state.profiler->is_profiling()) {
         m_channel_state.profiler->record_host<TensorWaitPropEvent>(info->id, TensorInfo::DevValue);
@@ -379,11 +359,11 @@ void ChannelImpl::close() {
     sync();
 }
 
-int ChannelImpl::get_option(std::string name) {
+size_t ChannelImpl::get_option(std::string name) {
     return m_channel_state.options.get_option(name);
 }
 
-void ChannelImpl::set_option(std::string name, int value) {
+void ChannelImpl::set_option(std::string name, size_t value) {
     m_channel_state.options.set_option(name, value);
     m_buffer.enqueue(SetOption{name, value});
 }
@@ -399,11 +379,64 @@ TensorInfo* ChannelImpl::alloc() {
     return info;
 }
 
+
+void ChannelImpl::do_drop(TensorInfo* ptr, bool user=false) {
+    if (!ptr->producer) {
+        if (user) {
+            mgb_log_warn("the input that produced tensor %p has been deleted, this drop operation will be ignored", ptr);
+        }
+        return;
+    }
+    if (ptr->evict_type != EvictType::NONE) {
+        return;
+    }
+    ptr->evict_type = EvictType::DROP;
+    release_tensor(ptr);
+}
+
 void ChannelImpl::free(TensorInfo* ptr) {
+    if (m_worker_state.options.enable_auto_drop) {
+        // Evicting a tensor, rather than freeing it, can avoid pinning
+        // potentially exploding amounts of memory and allow us to save
+        // more memory.
+        ptr->allow_delete = true;
+        if (!ptr->ref_cnt) {
+            recursive_free(ptr);
+        } else {
+            do_drop(ptr);
+        }
+    } else {
+        real_free(ptr);
+    }
+}
+
+void ChannelImpl::recursive_free(TensorInfo* ptr) {
+    SmallVector<TensorInfo*> inps(0);
+    if (ptr->producer) {
+        for (auto i : ptr->producer->inputs) {
+            if (i && --i->ref_cnt == 0) {
+                inps.push_back(i);
+            }
+        }
+    }
+    real_free(ptr);
+    for (auto i : inps) {
+        if (i->allow_delete) {
+            recursive_free(i);
+        }
+    }
+}
+
+void ChannelImpl::real_free(TensorInfo* ptr) {
     MGB_LOCK_GUARD(m_mutex);
     if (m_channel_state.profiler->is_profiling()) {
         m_channel_state.profiler->record_host<TensorEraseEvent>(ptr->id);
     }
+    if (ptr->size_exceeds_thd(m_worker_state.options.tensor_lowerbound)) {
+        m_dtr.erase_candidate(ptr);
+    }
+    detach_users(ptr);
+    ptr->detach_producer();
     m_pool.free(ptr);
 }
 
@@ -415,17 +448,24 @@ ChannelImpl::~ChannelImpl() {
     close();
 }
 
-void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr) {
-    MGB_LOCK_GUARD(m_mutex);
-    if (m_worker_state.profiler->is_profiling()) {
+void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice=true) {
+    auto lock = notice ? std::unique_lock<std::mutex>(m_mutex)
+                       : std::unique_lock<std::mutex>();
+    m_dtr.update_used_time(dest);
+    if (notice && m_worker_state.profiler->is_profiling()) {
         m_worker_state.profiler->record_host<TensorProduceEvent>(dest->id, ptr->layout(), ptr->comp_node());
     }
     dest->value_fetched = ptr->value_fetched();
     // update tensor desc for static infer
     dest->desc.layout = ptr->layout();
     dest->desc.comp_node = ptr->comp_node();
+    dest->memory = ptr->blob()->size();
     dest->ptr = std::move(ptr);
-    if (m_waitee == dest) {
+    dest->evict_type = EvictType::NONE;
+    if (notice && dest->size_exceeds_thd(m_worker_state.options.tensor_lowerbound)) {
+        m_dtr.insert_candidate(dest);
+    }
+    if (notice && m_waitee == dest) {
         m_cv.notify_all();
     }
 }
@@ -436,37 +476,86 @@ void ChannelImpl::release_tensor(TensorInfo* dest) {
 }
 
 void ChannelImpl::regenerate(TensorInfo* dest) {
-    if (dest->evict_type == DROP) {
+    if (dest->evict_type == EvictType::DROP) {
         recompute(dest->producer);
-    } else if (dest->evict_type == SWAP) {
-        swap_in(dest);
+    } else if (dest->evict_type == EvictType::SWAP) {
+        produce_tensor(dest, Tensor::make(dest->h_value));
     }
-    mgb_assert(dest->evict_type == NONE);
 }
 
 void ChannelImpl::recompute(TensorInfo::ComputePath* path) {
-    SmallVector<TensorInfo*> workspaces(path->outputs.size(), nullptr);
-    for (auto&& input: path->inputs) {
-        regenerate(input);
-    }
-    for (auto&& output: path->outputs) {
-        if(output == nullptr) {
-            continue;
+    SmallVector<TensorPtr> inputs;
+    inputs.reserve(path->inputs.size());
+    m_dtr.pin(path->inputs);
+    for (auto i : path->inputs) {
+        if (!i->ptr) {
+            regenerate(i);
         }
-        output->evict_type = NONE;
+        inputs.push_back(i->ptr);
+        m_dtr.update_used_time(i);
     }
-    m_buffer.enqueue(ApplyOp{path->op, path->inputs, path->outputs});
+    if (m_worker_state.options.enable_auto_drop && m_worker_state.options.memory_budget > 0) {
+        auto_evict();
+    }
+    auto outputs = OpDef::apply_on_physical_tensor(*path->op, inputs);
+    m_dtr.estimate_timestamp += path->compute_time / 1e8;
+    m_dtr.unpin(path->inputs);
+    for (size_t i = 0;i < outputs.size();i ++) {
+        auto&& o = path->outputs[i];
+        if (o) {
+            o->recompute_times ++;
+            if (!o->ptr) {
+                produce_tensor(o, std::move(outputs[i]), false);
+                if (m_worker_state.options.enable_auto_drop) {
+                    m_dtr.update_dsu_after_recompute(o);
+                }
+            }
+        }
+    }
+}
+
+void ChannelImpl::auto_evict() {
+    if (!m_dtr.comp_node.valid()) {
+        return;
+    }
+    size_t current_memory = m_dtr.comp_node.get_used_memory();
+    while (current_memory > m_worker_state.options.memory_budget) {
+        auto best = m_dtr.find_best_tensor();
+        if (!best) {
+            if (!m_dtr.warn_printed) {
+                m_dtr.warn_printed = true;
+                mgb_log_warn("No tensors on %s can be evicted automatically "
+                             "when memory usage is %.0lfMB. Maybe memory "
+                             "budget is too small.",
+                              m_dtr.comp_node.to_string().c_str(),
+                              current_memory / 1024.0 / 1024.0);
+            }
+            break;
+        }
+        if (best->ptr.unique() && best->ptr->blob().unique()) {
+            current_memory -= best->memory;
+        }
+        do_drop(best);
+        if (best->evict_type == EvictType::DROP) {
+            m_dtr.update_dsu_after_evict(best);
+        }
+    }
 }
 
 void ChannelImpl::detach_users(TensorInfo* dest) {
     SmallVector<TensorInfo::ComputePath*> users = dest->users;
     for (auto* user: users) {
-        for (auto* output: user->outputs) {
+        SmallVector<TensorInfo*> outputs = user->outputs;
+        SmallVector<TensorInfo*> inputs = user->inputs;
+        for (auto* output: outputs) {
             if (output == nullptr) {
                 continue;
             }
             regenerate(output);
             output->detach_producer();
+            for (auto* input: inputs) {
+                input->ref_cnt --;
+            }
         }
     }
     mgb_assert(dest->users.size() == 0);
@@ -524,6 +613,15 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 uint64_t apply_id = ++m_last_id;
                 SmallVector<TensorPtr> tensor_inputs;
                 SmallVector<CompNode> devices;
+                if (m_worker_state.options.enable_auto_drop) {
+                    m_dtr.pin(cmd.inputs);
+                }
+                for (auto i : cmd.inputs) {
+                    if (!i->ptr && i->evict_type != EvictType::NONE) {
+                        regenerate(i);
+                    }
+                    m_dtr.update_used_time(i);
+                }
                 tensor_inputs.reserve(cmd.inputs.size());
                 // refcnt == 1, owners: [TensorInfo::ptr]
                 for (auto i : cmd.inputs) {
@@ -569,6 +667,9 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                         m_worker_state.profiler->record_device<DeviceOpExecuteEvent>(device, event_data);
                     }
                 }
+                if (m_worker_state.options.enable_auto_drop && m_worker_state.options.memory_budget > 0) {
+                    auto_evict();
+                }
                 // Apply op
                 // Here std::move is REQUIRED for removing duplicated references.
                 auto tensor_outputs = OpDef::apply_on_physical_tensor(
@@ -581,16 +682,78 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                     }
                 }
                 // End profiling operator
+                double estimate_compute_time = 0;
+                if (m_worker_state.options.enable_auto_drop) {
+                    for (auto i : cmd.inputs) {
+                        estimate_compute_time += i->memory;
+                    }
+                    for (auto i : tensor_outputs) {
+                        estimate_compute_time += i->blob()->size();
+                    }
+                    m_dtr.estimate_timestamp += estimate_compute_time / 1e8;
+                    for (auto i : cmd.outputs) {
+                        i->compute_time = estimate_compute_time;
+                        m_dtr.update_used_time(i);
+                    }
+                    if (cmd.outputs[0]->producer) {
+                        cmd.outputs[0]->producer->compute_time = estimate_compute_time;
+                    }
+                    m_dtr.unpin(cmd.inputs);
+                }
                 mgb_assert(tensor_outputs.size() == cmd.outputs.size());
                 for (size_t i = 0; i < tensor_outputs.size(); ++i) {
                     if (cmd.outputs[i] == nullptr) {
                         continue;
                     }
                     produce_tensor(cmd.outputs[i], std::move(tensor_outputs[i]));
+                    if (m_worker_state.options.enable_auto_drop) {
+                        cmd.outputs[i]->dsu_ptr = std::make_shared<DsuNode>(estimate_compute_time);
+                    }
+                }
+                if (m_worker_state.options.enable_drop == 1
+                    && m_worker_state.options.record_computing_path == 1){
+                    bool is_inplace = false;
+                    bool cross_cn = false;
+                    for (auto input : cmd.inputs) {
+                        for (auto output : cmd.outputs) {
+                            if (input->ptr->blob()->storage() == output->ptr->blob()->storage()) {
+                                is_inplace = true;
+                                break;
+                            }
+                        }
+                    }
+                    for (auto input : cmd.inputs) {
+                        if (input->ptr->comp_node() != m_dtr.comp_node) {
+                            cross_cn = true;
+                            break;
+                        }
+                    }
+                    for (auto output : cmd.outputs) {
+                        if (output->ptr->comp_node() != m_dtr.comp_node) {
+                            cross_cn = true;
+                            break;
+                        }
+                    }
+                    if (!is_inplace && !cross_cn) {
+                        TensorInfo::ComputePath::make(cmd.op, cmd.inputs, cmd.outputs);
+                        size_t detach_cnt = 0;
+                        for (auto output : cmd.outputs) {
+                            if (!output->size_exceeds_thd(m_worker_state.options.tensor_lowerbound)) {
+                                output->detach_producer();
+                                detach_cnt ++;
+                            }
+                        }
+                        for (auto input : cmd.inputs) {
+                            input->ref_cnt -= detach_cnt;
+                        }
+                    }
                 }
             } else if constexpr (std::is_same_v<T, Del>) {
                 free(cmd.dest);
             } else if constexpr (std::is_same_v<T, GetValue>) {
+                if (!cmd.dest->ptr && cmd.dest->evict_type != EvictType::NONE) {
+                    regenerate(cmd.dest);
+                }
                 mgb_assert(cmd.dest->ptr, "Invalid tensor ptr!");
                 cmd.dest->ptr->fetch_value();
                 MGB_LOCK_GUARD(m_mutex);
@@ -602,9 +765,12 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 produce_tensor(cmd.dest, Tensor::make(cmd.dest->h_value));
             } else if constexpr (std::is_same_v<T, SwapOut>) {
                 cmd.dest->h_value = cmd.dest->ptr->get_value();
-                release_tensor(cmd.dest);
+                if (cmd.dest->evict_type == EvictType::NONE) {
+                    release_tensor(cmd.dest);
+                    cmd.dest->evict_type = EvictType::SWAP;
+                }
             } else if constexpr (std::is_same_v<T, Drop>) {
-                release_tensor(cmd.dest);
+                do_drop(cmd.dest, true);
             } else if constexpr (std::is_same_v<T, SetOption>) {
                 m_worker_state.options.set_option(cmd.key, cmd.value);
             } else if constexpr (std::is_same_v<T, StartProfile>) {
@@ -832,4 +998,112 @@ void ChannelImpl::assert_in_channel() {
 
 void ChannelImpl::assert_in_worker() {
     mgb_assert(m_worker_state.tid == std::this_thread::get_id());
+}
+
+void ChannelImpl::DynamicSublinear::pin(const SmallVector<TensorInfo*>& vec) {
+    for (auto i : vec) {
+        i->pin();
+    }
+}
+
+void ChannelImpl::DynamicSublinear::unpin(const SmallVector<TensorInfo*>& vec) {
+    for (auto i : vec) {
+        i->unpin();
+    }
+}
+
+void ChannelImpl::DynamicSublinear::update_dsu_after_recompute(TensorInfo* ptr) {
+    auto&& dsu_fa = find_father(ptr->dsu_ptr);
+    dsu_fa->t -= ptr->compute_time;
+    ptr->dsu_ptr->parent.reset();
+    ptr->dsu_ptr->t = ptr->compute_time;
+}
+
+void ChannelImpl::DynamicSublinear::update_dsu_after_evict(TensorInfo* ptr) {
+    for (auto i : ptr->producer->inputs) {
+        if (i->evict_type == EvictType::DROP) {
+            merge(i->dsu_ptr, ptr->dsu_ptr);
+        }
+    }
+    for (auto i : ptr->producer->outputs) {
+        if (i && i->evict_type == EvictType::DROP) {
+            merge(ptr->dsu_ptr, i->dsu_ptr);
+        }
+    }
+}
+
+double ChannelImpl::DynamicSublinear::estimate_neighbor_cost(TensorInfo* ptr) {
+    double cost = 0;
+    for (auto i : ptr->producer->inputs) {
+        if (i->evict_type == EvictType::DROP) {
+            double t = find_father(i->dsu_ptr)->t;
+            if (t < i->compute_time) {
+                t = i->compute_time;
+            }
+            cost += t;
+        }
+    }
+    for (auto i : ptr->producer->outputs) {
+        if (i && i->evict_type == EvictType::DROP) {
+            double t = find_father(i->dsu_ptr)->t;
+            if (t < i->compute_time) {
+                t = i->compute_time;
+            }
+            cost += t;
+        }
+    }
+    return cost;
+}
+
+TensorInfo* ChannelImpl::DynamicSublinear::find_best_tensor() {
+    double min_msps = -1;
+    TensorInfo* best = nullptr;
+    for (auto i : candidates) {
+        if (i->producer && i->ptr && !i->pinned && i->evict_type == EvictType::NONE) {
+            double neighbor_cost = estimate_neighbor_cost(i);
+            size_t begin_ptr = reinterpret_cast<size_t>(i->ptr->blob()->storage().get());
+            auto side_info = i->ptr->comp_node().get_free_left_and_right(begin_ptr, begin_ptr + i->ptr->blob()->size());
+            double free_mem = side_info.first + side_info.second;
+            double msps = i->eval_func(neighbor_cost, free_mem, estimate_timestamp, 1.0, 1.0, 1.0, 1.0001);
+            if (min_msps < 0 || msps < min_msps) {
+                min_msps = msps;
+                best = i;
+            }
+        }
+    }
+    return best;
+}
+
+void ChannelImpl::DynamicSublinear::merge(std::shared_ptr<DsuNode> &x, std::shared_ptr<DsuNode> &y) {
+    auto&& f_x = find_father(x);
+    auto&& f_y = find_father(y);
+    if (f_x.get() == f_y.get()) {
+        return;
+    }
+    f_y->t += f_x->t;
+    f_x->parent = f_y;
+}
+
+std::shared_ptr<DsuNode> ChannelImpl::DynamicSublinear::find_father(std::shared_ptr<DsuNode>& x) {
+    if (x->is_root()) {
+        return x;
+    } else {
+        auto&& fa = find_father(x->parent);
+        return x->parent = fa;
+    }
+}
+
+void ChannelImpl::DynamicSublinear::insert_candidate(TensorInfo* ptr) {
+    candidates.insert(ptr);
+    if (!comp_node.valid()) {
+        comp_node = ptr->ptr->comp_node();
+    }
+}
+
+void ChannelImpl::DynamicSublinear::erase_candidate(TensorInfo* ptr) {
+    candidates.erase(ptr);
+}
+
+void ChannelImpl::DynamicSublinear::update_used_time(TensorInfo* ptr) {
+    ptr->last_used_time = estimate_timestamp;
 }

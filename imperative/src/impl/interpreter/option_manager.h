@@ -20,10 +20,10 @@ namespace mgb::imperative::interpreter::intl {
 
 struct OptionManager {
 private:
-    std::unordered_map<std::string, int*> m_option_map = {};
+    std::unordered_map<std::string, size_t*> m_option_map = {};
 public:
 #define DEF_OPTION(name, env_key, default_value, desc) \
-    int name = (m_option_map[#name]=&name, get_option_from_env(env_key, default_value));
+    size_t name = (m_option_map[#name]=&name, get_option_from_env(env_key, default_value));
 
     DEF_OPTION(async_level,             "MEGENGINE_INTERP_ASYNC_LEVEL",     2,
         "config whether raise error exactly when invoking op.\n"
@@ -39,20 +39,26 @@ public:
         "set command buffer length.");
     DEF_OPTION(enable_host_compute,     "MEGENGINE_HOST_COMPUTE",           1,
         "enable host compute, thus computation may be done in host event if it's device is gpu.");
+    DEF_OPTION(enable_auto_drop,        "MEGENGINE_AUTO_DROP",              0, "");
+    DEF_OPTION(memory_budget,           "MEGENGINE_MEMORY_BUDGET",          0,
+        "auto drop will start whenever gpu memory usage exceeds this value.");
+    DEF_OPTION(tensor_lowerbound,       "MEGENGINE_TENSOR_LOWERBOUND",      1048576,
+        "the minimum memory value of a tensor added to the candidate set");
+    DEF_OPTION(record_computing_path,   "MEGENGINE_RECORD_COMPUTING_PATH",  0, "");
 
 #undef DEF_OPTION
 
-    void set_option(const std::string& name, int value) {
+    void set_option(const std::string& name, size_t value) {
         *m_option_map[name] = value;
     }
 
-    int get_option(const std::string& name) const {
+    size_t get_option(const std::string& name) const {
         return *m_option_map.at(name);
     }
 
-    static int get_option_from_env(const std::string& name, int default_value) {
+    static size_t get_option_from_env(const std::string& name, size_t default_value) {
         if (const char* env_val = MGB_GETENV(name.c_str())) {
-            default_value = std::atoi(env_val);
+            sscanf(env_val, "%zu", &default_value);
         }
         return default_value;
     }
