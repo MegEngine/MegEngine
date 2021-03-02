@@ -24,6 +24,8 @@ public:
 
     virtual void alloc_with_defrag(Blob* blob, size_t size) = 0;
 
+    virtual DeviceTensorND alloc_workspace_with_defrag(CompNode cn, TensorLayout layout) = 0;
+
     virtual void register_blob(Blob* blob) = 0;
 
     virtual void unregister_blob(Blob* blob) = 0;

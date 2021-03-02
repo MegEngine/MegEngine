@@ -67,6 +67,29 @@ void BlobManagerImpl::alloc_direct(Blob* blob, size_t size) {
     blob->m_storage = storage.raw_storage();
 }
 
+DeviceTensorND BlobManagerImpl::alloc_workspace_with_defrag(CompNode cn, TensorLayout layout) {
+    DeviceTensorND dev_tensor;
+    if (!m_enable) {
+        dev_tensor = alloc_workspace(cn, layout);
+    } else {
+        MGB_TRY{ dev_tensor = alloc_workspace(cn, layout); }
+        MGB_CATCH(MemAllocError&, {
+            mgb_log_warn("memory allocation failed for workspace; try defragmenting");
+            defrag(cn);
+            dev_tensor = alloc_workspace(cn, layout);
+        });
+    }
+    return dev_tensor;
+};
+
+DeviceTensorND BlobManagerImpl::alloc_workspace(CompNode cn, TensorLayout layout) {
+    DeviceTensorStorage storage(cn);
+    storage.ensure_size(layout.dtype.size(layout.total_nr_elems()));
+    DeviceTensorND dev_tensor;
+    dev_tensor.reset(storage, layout);
+    return dev_tensor;
+}
+
 void BlobManagerImpl::defrag(const CompNode& cn) {
     BlobSetWithMux* blobs_set_ptr;
     {
@@ -134,6 +157,9 @@ void BlobManagerImpl::set_enable(bool flag) {
 
 struct BlobManagerStub : BlobManager {
     void alloc_with_defrag(Blob* blob, size_t size) {
+        mgb_assert(0, "prohibited after global variable destruction");
+    };
+    DeviceTensorND alloc_workspace_with_defrag(CompNode cn, TensorLayout layout) {
         mgb_assert(0, "prohibited after global variable destruction");
     };
     void register_blob(Blob* blob) {

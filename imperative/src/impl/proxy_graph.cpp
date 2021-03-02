@@ -555,10 +555,7 @@ void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs) {
         if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
             // alloc workspace
             TensorLayout layout{var->shape(), var->dtype(), var->format()};
-            DeviceTensorStorage storage;
-            storage.comp_node(var->comp_node())
-                   .ensure_size(layout.dtype.size(layout.total_nr_elems()));
-            var->m_dev_tensor.reset(storage, layout);
+            var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(var->comp_node(), layout);
         } else {
             mgb_assert(j < outputs.size());
             auto &&tensor = outputs[j];

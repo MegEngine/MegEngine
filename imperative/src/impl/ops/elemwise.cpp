@@ -16,6 +16,7 @@
 
 #include "../op_trait.h"
 #include "../dnn_op_helper.h"
+#include "../blob_manager_impl.h"
 
 namespace mgb {
 namespace imperative {
@@ -102,11 +103,16 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def,
         const SmallVector<TensorPtr>& inputs) {
 
+    auto&& op_def = def.cast_final_safe<Elemwise>();
     SmallVector<DeviceTensorND> inp_tensornds(inputs.size());
+    TensorShapeArray inp_shapes(inputs.size());
     for (unsigned i = 0; i < inputs.size(); ++i){
         inp_tensornds[i] = inputs[i]->dev_tensor();
+        inp_shapes[i] = inputs[i]->layout();
     }
-    SmallVector<DeviceTensorND> oup_tensornds = {{inp_tensornds[0].comp_node(), inp_tensornds[0].dtype()}};
+    TensorShape shape = opr::Elemwise::get_output_var_shape(op_def.mode, inp_shapes); 
+    DeviceTensorND out = BlobManager::inst()->alloc_workspace_with_defrag(inp_tensornds[0].comp_node(), {shape, inp_tensornds[0].layout().dtype});
+    SmallVector<DeviceTensorND> oup_tensornds = {out};
     apply_on_device_tensornd(def, inp_tensornds, &oup_tensornds);
     return {Tensor::make(oup_tensornds[0])};
 }
