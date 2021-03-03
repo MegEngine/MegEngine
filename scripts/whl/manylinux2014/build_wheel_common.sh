@@ -30,14 +30,14 @@ done
 echo "Build with ${SDK_NAME}"
 
 if [ $SDK_NAME == "cu101" ];then
-    COPY_LIB_LIST="${CUDA_LIB_DIR}/libnvrtc.so.10.1"
+    CUDA_COPY_LIB_LIST="${CUDA_LIB_DIR}/libnvrtc.so.10.1"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF" 
     BUILD_GCC8="ON"  
     REQUIR_CUDA_VERSION="10010" 
     REQUIR_CUDNN_VERSION="7.6.3" 
     REQUIR_TENSORRT_VERSION="6.0.1.5" 
 elif [ $SDK_NAME == "cu111" ];then
-    COPY_LIB_LIST="\
+    CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
@@ -59,7 +59,7 @@ elif [ $SDK_NAME == "cu111" ];then
     REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 
 elif [ $SDK_NAME == "cu112" ];then
-    COPY_LIB_LIST="\
+    CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
@@ -204,7 +204,7 @@ docker run --rm -it $TMPFS_ARGS \
     -e BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY} \
     -e ALL_PYTHON="${ALL_PYTHON}" \
     -e EXTRA_CMAKE_FLAG="$EXTRA_CMAKE_FLAG" \
-    -e COPY_LIB_LIST="$COPY_LIB_LIST"  \
+    -e CUDA_COPY_LIB_LIST="$CUDA_COPY_LIB_LIST"  \
     -e SDK_NAME="$SDK_NAME"  \
     -v ${CUDA_ROOT_DIR}:/usr/local/cuda \
     -v ${CUDNN_ROOT_DIR}:/opt/cudnn \
