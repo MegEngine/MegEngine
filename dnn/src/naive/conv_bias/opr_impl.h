@@ -37,7 +37,7 @@ public:
                                        const TensorLayout& z,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
     size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& filter,

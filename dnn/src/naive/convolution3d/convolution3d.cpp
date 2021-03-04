@@ -120,15 +120,13 @@ Convolution3DForward::Algorithm*
 Convolution3DForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* filter */,
         const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto algo = static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo();
-    if (reproducible) {
-        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
-                      "require reproducible algorithm, but heuristic "
-                      "algorithm(%s) is not "
-                      "reproducible",
-                      algo->name());
-    }
+    megdnn_assert(algo->contain_attribute(attr),
+                  "require algorithm with attribute%s, but heuristic "
+                  "algorithm(%s) with attribute%s ",
+                  Algorithm::attribute_str(attr).c_str(), algo->name(),
+                  Algorithm::attribute_str(algo->attribute()).c_str());
     return algo;
 }
 
@@ -152,16 +150,14 @@ Convolution3DBackwardData::Algorithm*
 Convolution3DBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& /* filter */, const TensorLayout& /* diff */,
         const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto algo =
             static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo();
-    if (reproducible) {
-        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
-                      "require reproducible algorithm, but heuristic "
-                      "algorithm(%s) is not "
-                      "reproducible",
-                      algo->name());
-    }
+    megdnn_assert(algo->contain_attribute(attr),
+                  "require algorithm with attribute%s, but heuristic "
+                  "algorithm(%s) with attribute%s ",
+                  Algorithm::attribute_str(attr).c_str(), algo->name(),
+                  Algorithm::attribute_str(algo->attribute()).c_str());
     return algo;
 }
 
@@ -187,16 +183,14 @@ Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* diff */,
         const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */
         ,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto algo = static_cast<HandleImpl*>(handle())
                         ->default_conv3d_bwd_filter_algo();
-    if (reproducible) {
-        megdnn_assert(algo->contain_attribute(AlgoAttribute::REPRODUCIBLE),
-                      "require reproducible algorithm, but heuristic "
-                      "algorithm(%s) is not "
-                      "reproducible",
-                      algo->name());
-    }
+    megdnn_assert(algo->contain_attribute(attr),
+                  "require algorithm with attribute%s, but heuristic "
+                  "algorithm(%s) with attribute%s ",
+                  Algorithm::attribute_str(attr).c_str(), algo->name(),
+                  Algorithm::attribute_str(algo->attribute()).c_str());
     return algo;
 }
 

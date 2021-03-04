@@ -34,7 +34,7 @@ public:
                                        const TensorLayout& /*filter*/,
                                        const TensorLayout& /*dst*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /*reproducible*/) override;
+                                       const AlgoAttribute& /*attr*/) override;
 
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
@@ -59,7 +59,7 @@ public:
                                        const TensorLayout& /*diff*/,
                                        const TensorLayout& /*grad*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /*reproducible*/) override;
+                                       const AlgoAttribute& /*attr*/) override;
 
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }
@@ -84,7 +84,7 @@ public:
                                        const TensorLayout& /*diff*/,
                                        const TensorLayout& /*grad*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /*reproducible*/) override;
+                                       const AlgoAttribute& /*attr*/) override;
 
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
     const char* get_algorithm_set_name() const override { return "DEFAULT"; }

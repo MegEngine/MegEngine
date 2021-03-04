@@ -198,13 +198,13 @@ std::vector<ConvolutionImpl::Algorithm*> ConvolutionImpl::get_all_algorithms(
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto fparam = make_ncb_kern_size_param(src, filter, dst, nullptr);
     auto result = get_algorithm_heuristic_with_ncb(
-            fparam, workspace_limit_in_bytes, reproducible);
+            fparam, workspace_limit_in_bytes, attr);
     if (result == nullptr) {
         result = naive::ConvolutionForwardImpl::get_algorithm_heuristic(
-                src, filter, dst, workspace_limit_in_bytes, reproducible);
+                src, filter, dst, workspace_limit_in_bytes, attr);
     }
     return result;
 }
@@ -312,18 +312,16 @@ void ConvolutionImpl::exec_with_ncb_kern(const NCBKernParam& param,
 
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto algo_data_type = param.deduce_algo_data_type();
     auto suggest_category_order = suggest_algo_category_order(param);
     for (auto category : suggest_category_order) {
         auto&& origin_algos = select_algo_type({algo_data_type, category});
         ConvolutionImpl::Algorithm* heuristic_algo = nullptr;
         for (auto i : origin_algos) {
-            bool usable_reproducible =
-                    static_cast<AlgoBase*>(i)->usable_reproducible(
-                            param, AlgoSelectionStrategy::HEURISTIC,
-                            reproducible);
-            if (usable_reproducible &&
+            bool usable_attribute = static_cast<AlgoBase*>(i)->usable_attribute(
+                    param, AlgoSelectionStrategy::HEURISTIC, attr);
+            if (usable_attribute &&
                 static_cast<AlgoBase*>(i)->get_workspace(param) <=
                         workspace_limit_in_bytes) {
                 //! store the first usable algo if no prefer algo, choose it as
@@ -392,8 +390,8 @@ ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm(
     }
     if (!m_prev_selected_algo ||
         memcmp(&m_prev_selected_algo_sizep, &param, sizeof(NCBKernSizeParam))) {
-        m_prev_selected_algo =
-                get_algorithm_heuristic_with_ncb(param, workspace_size);
+        m_prev_selected_algo = get_algorithm_heuristic_with_ncb(
+                param, workspace_size, AlgoAttribute::DEFAULT);
         m_prev_selected_algo_sizep = param;
     }
     return m_prev_selected_algo;
@@ -515,15 +513,15 @@ ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     if (param().format == param::Convolution::Format::NHWCD4 ||
         param().format == param::Convolution::Format::NCHW4) {
         return naive::ConvolutionBackwardDataImpl::get_algorithm_heuristic(
-                filter, diff, grad, workspace_limit_in_bytes, reproducible);
+                filter, diff, grad, workspace_limit_in_bytes, attr);
     }
     auto fparam = make_ncb_kern_size_param(filter, diff, grad);
     return get_algorithm_heuristic_with_ncb(fparam, workspace_limit_in_bytes,
-                                            reproducible);
+                                            attr);
 }
 
 ConvolutionBackwardDataImpl::NCBKernSizeParam
@@ -668,15 +666,15 @@ ConvolutionBackwardDataImpl::get_all_algorithms_with_ncb(
 ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     if (param.filter_meta.group != 1) {
         auto p1g = param;
         p1g.filter_meta.group = 1;
         return ncb_1g_get_algorithm_heuristic(p1g, workspace_limit_in_bytes,
-                                              reproducible);
+                                              attr);
     }
     return ncb_1g_get_algorithm_heuristic(param, workspace_limit_in_bytes,
-                                          reproducible);
+                                          attr);
 }
 
 size_t ConvolutionBackwardDataImpl::ncb_1g_get_workspace(
@@ -731,14 +729,10 @@ ConvolutionBackwardDataImpl::ncb_1g_get_all_algorithms(
 ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::ncb_1g_get_algorithm_heuristic(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     for (auto i : ncb_1g_get_all_algorithms(param)) {
         if (ncb_1g_get_workspace(i, param) <= workspace_limit_in_bytes) {
-            if (reproducible) {
-                if (i->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
-                    return i;
-                }
-            } else {
+            if (i->contain_attribute(attr)) {
                 return i;
             }
         }
@@ -788,7 +782,8 @@ ConvolutionBackwardDataImpl::get_algorithm(const NCBKernSizeParam& param) {
     if (!m_prev_selected_algo ||
         memcmp(&m_prev_selected_algo_sizep, &param, sizeof(NCBKernSizeParam))) {
         m_prev_selected_algo = ncb_1g_get_algorithm_heuristic(
-                param, std::numeric_limits<size_t>::max());
+                param, std::numeric_limits<size_t>::max(),
+                AlgoAttribute::DEFAULT);
         m_prev_selected_algo_sizep = param;
     }
     return m_prev_selected_algo;

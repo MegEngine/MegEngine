@@ -26,7 +26,7 @@ public:
                                        const TensorLayout& filter,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&) override {
         return 0;
@@ -48,7 +48,7 @@ public:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&) override {
         return 0;
@@ -70,7 +70,7 @@ public:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&) override {
         return 0;

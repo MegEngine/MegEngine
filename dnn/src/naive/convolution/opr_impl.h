@@ -29,7 +29,7 @@ class ConvolutionForwardImpl: public ConvolutionForward {
                                            const TensorLayout& filter,
                                            const TensorLayout& dst,
                                            size_t workspace_limit_in_bytes,
-                                           bool reproducible) override;
+                                           const AlgoAttribute& attr) override;
         size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                       const TensorLayout&,
                                       const PreprocessedFilter*) override {
@@ -71,7 +71,7 @@ class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
                                            const TensorLayout& diff,
                                            const TensorLayout& grad,
                                            size_t workspace_limit_in_bytes,
-                                           bool reproducible) override;
+                                           const AlgoAttribute& attr) override;
         size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                       const TensorLayout&) override;
 
@@ -94,7 +94,7 @@ class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
                                            const TensorLayout& diff,
                                            const TensorLayout& grad,
                                            size_t workspace_limit_in_bytes,
-                                           bool reproducible) override;
+                                           const AlgoAttribute& attr) override;
         size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                       const TensorLayout&) override;
 

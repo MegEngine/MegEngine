@@ -31,16 +31,16 @@ BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& A,
 BatchedMatrixMulForwardImpl::Algorithm*
 BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
-        size_t workspace_limit_in_bytes, bool reproducible) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args{this, A, B, C};
-    if (sm_algo_pack.algo_default.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.algo_default.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_default;
     }
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<BatchedMatrixMulForwardImpl>(
+    if (attr != AlgoAttribute::DEFAULT) {
+        return megdnn::get_algo_with_attribute<BatchedMatrixMulForwardImpl>(
                 sm_algo_pack.all_algos, args, workspace_limit_in_bytes,
-                "batched matrix mul forward");
+                "batched matrix mul forward", attr);
     } else {
         return megdnn::get_usable_algo<BatchedMatrixMulForwardImpl>(
                 sm_algo_pack.all_algos, args, workspace_limit_in_bytes,

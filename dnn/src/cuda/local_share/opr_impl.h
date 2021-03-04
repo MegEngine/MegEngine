@@ -43,7 +43,7 @@ protected:
                                        const TensorLayout& filter,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 private:
     static AlgoPack sm_algo_pack;
 };
@@ -75,7 +75,7 @@ protected:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -108,7 +108,7 @@ protected:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;

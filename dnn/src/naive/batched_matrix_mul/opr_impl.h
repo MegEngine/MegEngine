@@ -32,7 +32,7 @@ public:
                                        const TensorLayout& /*B*/,
                                        const TensorLayout& /*C*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /* reproducible */) override;
+                                       const AlgoAttribute& /*attr*/) override;
 
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 

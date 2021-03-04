@@ -223,11 +223,10 @@ public:
         virtual InnerBlockSize get_inner_block_size() const {
             megdnn_assert(0);
         };
-        bool preferred_reproducible(const KernSizeParam& param,
-                                    bool reproducible = true) {
-            return (!reproducible ||
-                    contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
-                   preferred(param);
+        bool preferred_attribute(
+                const KernSizeParam& param,
+                const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE) {
+            return contain_attribute(attr) && preferred(param);
         };
         virtual MatmulDescription matmul_description() const = 0;
 
@@ -272,7 +271,7 @@ protected:
                                        const TensorLayout& B,
                                        const TensorLayout& C,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 };
 

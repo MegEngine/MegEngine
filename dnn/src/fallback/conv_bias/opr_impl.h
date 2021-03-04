@@ -95,9 +95,7 @@ public:
                                        const TensorLayout& z,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
-
-
+                                       const AlgoAttribute& attr) override;
 
     //! size param for kernels with non-contiguous batch
     struct NCBKernSizeParam : ConvolutionImpl::NCBKernSizeParam {
@@ -321,11 +319,11 @@ public:
             return false;
         }
 
-        bool usable_reproducible(const NCBKernSizeParam& param,
-                                 AlgoSelectionStrategy algo_selection_strategy,
-                                 bool reproducible = true) const {
-            return (!reproducible ||
-                    contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
+        bool usable_attribute(
+                const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy,
+                const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE) const {
+            return contain_attribute(attr) &&
                    usable(param, algo_selection_strategy);
         }
 
@@ -363,7 +361,7 @@ protected:
 
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            bool reproducible = false);
+            const AlgoAttribute& attr);
 
     const char* get_algorithm_set_name() const override;
 

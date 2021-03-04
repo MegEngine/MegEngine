@@ -63,7 +63,7 @@ protected:
                                        const TensorLayout& filter,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -77,9 +77,9 @@ public:
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
             const TensorLayout& diff, const TensorLayout& grad,
-            size_t workspace_limit_in_bytes, bool reproducible) {
+            size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
         return get_algorithm_heuristic(filter, filter_meta, diff, grad,
-                                       workspace_limit_in_bytes, reproducible)
+                                       workspace_limit_in_bytes, attr)
                 ->info();
     }
 
@@ -87,9 +87,9 @@ public:
                                                const TensorLayout& diff,
                                                const TensorLayout& grad,
                                                size_t workspace_limit_in_bytes,
-                                               bool reproducible) {
+                                               const AlgoAttribute& attr) {
         return get_algorithm_heuristic(filter, diff, grad,
-                                       workspace_limit_in_bytes, reproducible)
+                                       workspace_limit_in_bytes, attr)
                 ->info();
     }
 
@@ -122,7 +122,7 @@ protected:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
@@ -130,7 +130,7 @@ private:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible);
+                                       const AlgoAttribute& attr);
 
     static AlgoPack sm_algo_pack;
 };
@@ -146,9 +146,9 @@ public:
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& src, const TensorLayout& diff,
             const TensorLayout& grad, const CanonizedFilterMeta& grad_meta,
-            size_t workspace_limit_in_bytes, bool reproducible) {
+            size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
         return get_algorithm_heuristic(src, diff, grad, grad_meta,
-                                       workspace_limit_in_bytes, reproducible)
+                                       workspace_limit_in_bytes, attr)
                 ->info();
     }
 
@@ -156,9 +156,9 @@ public:
                                                const TensorLayout& diff,
                                                const TensorLayout& grad,
                                                size_t workspace_limit_in_bytes,
-                                               bool reproducible) {
+                                               const AlgoAttribute& attr) {
         return get_algorithm_heuristic(filter, diff, grad,
-                                       workspace_limit_in_bytes, reproducible)
+                                       workspace_limit_in_bytes, attr)
                 ->info();
     }
 
@@ -185,7 +185,7 @@ protected:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     Algorithm* get_algorithm_heuristic(const TensorLayout& src,
@@ -193,7 +193,7 @@ private:
                                        const TensorLayout& grad,
                                        const CanonizedFilterMeta& grad_meta,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible);
+                                       const AlgoAttribute& attr);
 
     static AlgoPack sm_algo_pack;
 };

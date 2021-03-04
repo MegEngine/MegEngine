@@ -36,7 +36,7 @@ public:
                                        const TensorLayout& mask,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible);
+                                       const AlgoAttribute& attr);
 
     const char* get_algorithm_set_name() const override;
 
@@ -60,7 +60,7 @@ protected:
                                        const TensorLayout& mask,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -81,7 +81,7 @@ public:
                                        const TensorLayout& out_grad,
                                        const CanonizedFilterMeta& filter_grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible);
+                                       const AlgoAttribute& attr);
 
     size_t get_workspace_in_bytes(const TensorLayout& im,
                                   const TensorLayout& offset,
@@ -111,7 +111,7 @@ protected:
                                        const TensorLayout& out_grad,
                                        const TensorLayout& filter_grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -132,7 +132,7 @@ public:
             const TensorLayout& offset, const TensorLayout& mask,
             const TensorLayout& out_grad, const TensorLayout& im_grad,
             const TensorLayout& offset_grad, const TensorLayout& mask_grad,
-            size_t workspace_limit_in_bytes, bool reproducible);
+            size_t workspace_limit_in_bytes, const AlgoAttribute& attr);
 
     size_t get_workspace_in_bytes(const TensorLayout& im,
                                   const TensorLayout& filter,
@@ -166,7 +166,8 @@ protected:
             const TensorLayout& offset, const TensorLayout& mask,
             const TensorLayout& out_grad, const TensorLayout& im_grad,
             const TensorLayout& offset_grad, const TensorLayout& mask_grad,
-            size_t workspace_limit_in_bytes, bool reproducible) override;
+            size_t workspace_limit_in_bytes,
+            const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;

@@ -82,7 +82,7 @@ public:
                                        const TensorLayout& z,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
 private:
     static AlgoPack sm_algo_pack;

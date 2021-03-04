@@ -32,7 +32,7 @@ public:
                                        const TensorLayout& /* mask */,
                                        const TensorLayout& /* dst */,
                                        size_t /* workspace_limit_in_bytes */,
-                                       bool /* reproducible */) override {
+                                       const AlgoAttribute& /*attr*/) override {
         return nullptr;
     };
 
@@ -74,7 +74,7 @@ public:
                                        const TensorLayout& /* out_grad */,
                                        const TensorLayout& /* filter_grad */,
                                        size_t /* workspace_limit_in_bytes */,
-                                       bool /* reproducible */) override {
+                                       const AlgoAttribute& /*attr*/) override {
         return nullptr;
     };
 
@@ -121,7 +121,7 @@ public:
                                        const TensorLayout& /* offset_grad */,
                                        const TensorLayout& /* mask_grad */,
                                        size_t /* workspace_limit_in_bytes */,
-                                       bool /* reproducible */) override {
+                                       const AlgoAttribute& /*attr*/) override {
         return nullptr;
     };
 

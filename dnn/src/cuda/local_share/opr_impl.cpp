@@ -24,26 +24,26 @@ LocalShareForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
                                                const TensorLayout& filter,
                                                const TensorLayout& dst,
                                                size_t workspace_limit_in_bytes,
-                                               bool reproducible) {
+                                               const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, src, filter, dst);
     if (sm_algo_pack.batch_size_aware_chwn_small_image
-                .is_available_reproducible(args, reproducible,
+                .is_available_attribute(args, attr,
                                            workspace_limit_in_bytes)) {
         return &sm_algo_pack.batch_size_aware_chwn_small_image;
     }
-    if (sm_algo_pack.batch_size_aware_chwn.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.batch_size_aware_chwn.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batch_size_aware_chwn;
     }
-    if (sm_algo_pack.batched_matmul.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.batched_matmul.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(
-            ssprintf("no %s local share conv algorithm with args(%s) and "
-                     "workspace limit (%zu bytes)",
-                     reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes));
+    megdnn_throw(ssprintf(
+            "no local share conv algorithm with attribute%s, args(%s) and "
+            "workspace limit (%zu bytes)",
+            Algorithm::attribute_str(attr).c_str(), args.to_string().c_str(),
+            workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareForwardImpl::Algorithm*>
@@ -79,21 +79,21 @@ LocalShareBackwardDataImpl::Algorithm*
 LocalShareBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, filter, diff, grad);
-    if (sm_algo_pack.implicit_gemm.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.implicit_gemm.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.implicit_gemm;
     }
-    if (sm_algo_pack.batched_matmul.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.batched_matmul.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(
-            ssprintf("no %s local share bwd data algorithm with args(%s) and "
-                     "workspace limit (%zu bytes)",
-                     reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes));
+    megdnn_throw(ssprintf(
+            "no local share bwd data algorithm with attribute%s args(%s) and "
+            "workspace limit (%zu bytes)",
+            Algorithm::attribute_str(attr).c_str(), args.to_string().c_str(),
+            workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareBackwardDataImpl::Algorithm*>
@@ -129,20 +129,21 @@ LocalShareBackwardFilterImpl::Algorithm*
 LocalShareBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
-    if (sm_algo_pack.implicit_gemm.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.implicit_gemm.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.implicit_gemm;
     }
-    if (sm_algo_pack.batched_matmul.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.batched_matmul.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
     megdnn_throw(
-            ssprintf("no %s local share bwd filter algorithm with args(%s) and "
+            ssprintf("no local share bwd filter algorithm with attribute%s, "
+                     "args(%s) and "
                      "workspace limit (%zu bytes)",
-                     reproducible ? "reproducible" : "usable",
+                     Algorithm::attribute_str(attr).c_str(),
                      args.to_string().c_str(), workspace_limit_in_bytes));
 }
 

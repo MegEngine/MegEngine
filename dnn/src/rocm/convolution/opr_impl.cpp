@@ -33,70 +33,69 @@ ConvolutionForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
                                                 const TensorLayout& filter,
                                                 const TensorLayout& dst,
                                                 size_t workspace_limit_in_bytes,
-                                                bool reproducible) {
+                                                const AlgoAttribute& attr) {
     auto fm = check_layout_fwd(src, filter, dst);
     return get_algorithm_heuristic(src, fm, dst, workspace_limit_in_bytes,
-                                   reproducible);
+                                   attr);
 }
 
 ConvolutionForwardImpl::Algorithm*
 ConvolutionForwardImpl::get_algorithm_heuristic(
         const TensorLayout& src, const CanonizedFilterMeta& filter,
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, src, filter, dst);
 
     //! MIOpen auto-tuning need to run with actual tensors, so we cannot get
     //! best algorithm here.
     if (is_miopen_supported(args)) {
-        auto algo = megdnn::get_reproducible_algo<ConvolutionForwardImpl>(
-                sm_algo_pack.miopen_algos[0], reproducible);
+        auto algo = megdnn::get_algo_with_attribute<ConvolutionForwardImpl>(
+                sm_algo_pack.miopen_algos[0], attr);
         if (algo)
             return algo;
     }
 
     if (args.filter_meta.group > 1) {
-        if (sm_algo_pack.chanwise.is_available_reproducible(
-                    args, reproducible, workspace_limit_in_bytes)) {
+        if (sm_algo_pack.chanwise.is_available_attribute(
+                    args, attr, workspace_limit_in_bytes)) {
             return &sm_algo_pack.chanwise;
         }
     }
 
-    auto prefer_1x1 = [&args, reproducible, workspace_limit_in_bytes]() {
+    auto prefer_1x1 = [&args, attr, workspace_limit_in_bytes]() {
         const size_t MAX_BATCH_SIZE_FOR_1x1_MAT_ALGO = 4;
         size_t batch_size = args.src_layout->shape[0];
 
         if (batch_size > MAX_BATCH_SIZE_FOR_1x1_MAT_ALGO) {
             return false;
         }
-        return sm_algo_pack.a1x1.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes);
+        return sm_algo_pack.a1x1.is_available_attribute(
+                args, attr, workspace_limit_in_bytes);
     };
 
     if (prefer_1x1()) {
         return &sm_algo_pack.a1x1;
     }
 
-    auto prefer_1x1_large_batch = [&args, reproducible,
-                                   workspace_limit_in_bytes]() {
+    auto prefer_1x1_large_batch = [&args, attr, workspace_limit_in_bytes]() {
         const size_t MIN_BATCH_SIZE_FOR_1x1_LARGE_BATCH_ALGO = 32;
         size_t batch_size = args.src_layout->shape[0];
 
         if (batch_size < MIN_BATCH_SIZE_FOR_1x1_LARGE_BATCH_ALGO) {
             return false;
         }
-        return sm_algo_pack.batched_matrix_mul.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes);
+        return sm_algo_pack.batched_matrix_mul.is_available_attribute(
+                args, attr, workspace_limit_in_bytes);
     };
 
     if (prefer_1x1_large_batch()) {
         return &sm_algo_pack.batched_matrix_mul;
     }
 
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<ConvolutionForwardImpl>(
+    if (attr != AlgoAttribute::DEFAULT) {
+        return megdnn::get_algo_with_attribute<ConvolutionForwardImpl>(
                 sm_algo_pack.non_miopen_algos, args, workspace_limit_in_bytes,
-                "rocm conv fwd");
+                "rocm conv fwd", attr);
     } else {
         return megdnn::get_usable_algo<ConvolutionForwardImpl>(
                 sm_algo_pack.non_miopen_algos, args, workspace_limit_in_bytes,
@@ -157,36 +156,36 @@ ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto fm = check_layout_fwd(grad, filter, diff);
     return get_algorithm_heuristic(fm, diff, grad, workspace_limit_in_bytes,
-                                   reproducible);
+                                   attr);
 }
 
 ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const CanonizedFilterMeta& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, filter, diff, grad);
 
     if (is_miopen_supported(args.as_fwd_args())) {
-        auto algo = megdnn::get_reproducible_algo<ConvolutionBackwardDataImpl>(
-                sm_algo_pack.miopen_algos[0], reproducible);
+        auto algo = megdnn::get_algo_with_attribute<ConvolutionBackwardDataImpl>(
+                sm_algo_pack.miopen_algos[0], attr);
         if (algo)
             return algo;
     }
 
     if (args.filter_meta.group > 1 &&
-        sm_algo_pack.chanwise.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+        sm_algo_pack.chanwise.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.chanwise;
     }
 
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<ConvolutionBackwardDataImpl>(
+    if (attr != AlgoAttribute::DEFAULT) {
+        return megdnn::get_algo_with_attribute<ConvolutionBackwardDataImpl>(
                 sm_algo_pack.non_miopen_algos, args, workspace_limit_in_bytes,
-                "rocm conv bwd_data");
+                "rocm conv bwd_data", attr);
     } else {
         return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
                 sm_algo_pack.non_miopen_algos, args, workspace_limit_in_bytes,
@@ -230,38 +229,38 @@ ConvolutionBackwardFilterImpl::Algorithm*
 ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto fm = check_layout_fwd(src, grad, diff);
     return get_algorithm_heuristic(src, diff, fm, workspace_limit_in_bytes,
-                                   reproducible);
+                                   attr);
 }
 
 ConvolutionBackwardFilterImpl::Algorithm*
 ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const CanonizedFilterMeta& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
 
     if (is_miopen_supported(args.as_fwd_args())) {
         auto algo =
-                megdnn::get_reproducible_algo<ConvolutionBackwardFilterImpl>(
-                        sm_algo_pack.miopen_algos[0], reproducible);
+                megdnn::get_algo_with_attribute<ConvolutionBackwardFilterImpl>(
+                        sm_algo_pack.miopen_algos[0], attr);
         if (algo)
             return algo;
     }
 
     if (args.grad_filter_meta.group > 1 &&
-        sm_algo_pack.chanwise.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+        sm_algo_pack.chanwise.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         // prefer special chanwise impl
         return &sm_algo_pack.chanwise;
     }
 
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<ConvolutionBackwardFilterImpl>(
+    if (attr != AlgoAttribute::DEFAULT) {
+        return megdnn::get_algo_with_attribute<ConvolutionBackwardFilterImpl>(
                 sm_algo_pack.non_miopen_algos, args, workspace_limit_in_bytes,
-                "rocm conv bwd_filter");
+                "rocm conv bwd_filter", attr);
     } else {
         return megdnn::get_usable_algo<ConvolutionBackwardFilterImpl>(
                 sm_algo_pack.non_miopen_algos, args, workspace_limit_in_bytes,

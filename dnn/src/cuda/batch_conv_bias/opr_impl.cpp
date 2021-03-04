@@ -22,21 +22,21 @@ BatchConvBiasForwardImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args(this, src, filter, bias, z, dst);
-    if (sm_algo_pack.int8_nchw4_gemm_dotprod.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.int8_nchw4_gemm_dotprod.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.int8_nchw4_gemm_dotprod;
     }
-    if (sm_algo_pack.int8_nchw4_implicit_gemm_dotprod.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.int8_nchw4_implicit_gemm_dotprod.is_available_attribute(
+                args, attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.int8_nchw4_implicit_gemm_dotprod;
     }
-    megdnn_throw(
-            ssprintf("no %s batch conv bias algorithm with args(%s) and "
-                     "workspace limit (%zu bytes)",
-                     reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes));
+    megdnn_throw(ssprintf(
+            "no batch conv bias algorithm with attribute%s args(%s) and "
+            "workspace limit (%zu bytes)",
+            Algorithm::attribute_str(attr).c_str(), args.to_string().c_str(),
+            workspace_limit_in_bytes));
 }
 
 std::vector<BatchConvBiasForwardImpl::Algorithm*>

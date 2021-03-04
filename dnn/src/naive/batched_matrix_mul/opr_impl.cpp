@@ -76,7 +76,7 @@ BatchedMatrixMulForward::Algorithm*
 BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /*A*/, const TensorLayout& /*B*/,
         const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
-        bool /* reproducible */) {
+        const AlgoAttribute& /*attr*/) {
     return static_cast<HandleImpl*>(handle())
             ->default_batched_matmul_fwd_algo();
 }

@@ -2375,7 +2375,7 @@ public:
                  AlgorithmInfo(const TensorLayout& p0, const TensorLayout& p1,
                             const TensorLayout& p2,
                             size_t workspace_limit_in_bytes,
-                            bool reproducible));
+                            const AlgoAttribute& attr));
 
     MOCK_METHOD3(get_all_algorithms,
                  std::vector<Algorithm*>(const TensorLayout& p0,
@@ -2385,7 +2385,7 @@ public:
                  Algorithm*(const TensorLayout& p0, const TensorLayout& p1,
                             const TensorLayout& p2,
                             size_t workspace_limit_in_bytes,
-                            bool reproducible));
+                            const AlgoAttribute& attr));
 
     MOCK_METHOD1(get_algorithm_from_desc,
                  Algorithm*(const AlgorithmDesc&));

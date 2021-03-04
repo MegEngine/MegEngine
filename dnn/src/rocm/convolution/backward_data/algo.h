@@ -74,12 +74,11 @@ public:
     bool is_available_wk(const SizeArgs& args, size_t limit) {
         return is_available(args) && get_workspace_in_bytes(args) <= limit;
     }
-    bool is_available_reproducible(
-            const SizeArgs& args, bool reproducible = true,
+    bool is_available_attribute(
+            const SizeArgs& args,
+            const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return (!reproducible ||
-                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
-               is_available_wk(args, limit);
+        return contain_attribute(attr) && is_available_wk(args, limit);
     }
 
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -96,24 +95,20 @@ public:
 };
 
 class ConvolutionBackwardDataImpl::AlgoMIOpen final : public AlgoBase {
-    bool m_is_reproducible;
+    AlgoAttribute m_algo_attribute;
     const char* m_name;
 
     miopenConvBwdDataAlgorithm_t find_best_algo(const ExecArgs& args);
 
 public:
     AlgoMIOpen() = delete;
-    AlgoMIOpen(bool is_reproducible) : m_is_reproducible(is_reproducible) {}
+    AlgoMIOpen(AlgoAttribute attr) : m_algo_attribute(attr) {}
 
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     AlgoAttribute attribute() const override {
-        auto ret = static_cast<AlgoAttribute>(0);
-        if (m_is_reproducible) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-        return ret;
+        return m_algo_attribute;
     }
 
     const char* name() const override {
@@ -124,7 +119,7 @@ public:
     MEGDNN_DECL_ALGO_TYPE(ROCM_MIOPEN)
     std::string param() const override {
         std::string ret;
-        serialize_write_pod(m_is_reproducible, ret);
+        serialize_write_pod(m_algo_attribute, ret);
         return ret;
     }
 
@@ -170,7 +165,7 @@ class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
 public:
     AlgoPack();
 
-    AlgoMIOpen miopen{true};
+    AlgoMIOpen miopen{AlgoAttribute::REPRODUCIBLE};
     AlgoMatmul matmul;
     AlgoChanwise chanwise;
 

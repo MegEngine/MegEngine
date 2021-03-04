@@ -63,12 +63,11 @@ public:
     bool is_available_wk(const SizeArgs& args, size_t limit) const {
         return is_available(args) && get_workspace_in_bytes(args) <= limit;
     }
-    bool is_available_reproducible(
-            const SizeArgs& args, bool reproducible = true,
+    bool is_available_attribute(
+            const SizeArgs& args,
+            const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE,
             size_t limit = std::numeric_limits<size_t>::max()) const {
-        return (!reproducible ||
-                contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
-               is_available_wk(args, limit);
+        return contain_attribute(attr) && is_available_wk(args, limit);
     }
     AlgoBase& check_workspace(const SizeArgs& args,
                               const Workspace& workspace) {

@@ -29,16 +29,16 @@ MatrixMulForwardImpl::get_all_algorithms(const TensorLayout& A,
 
 MatrixMulForwardImpl::Algorithm* MatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
-        size_t workspace_limit_in_bytes, bool reproducible) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
     AlgoBase::SizeArgs args{this, A, B, C};
-    if (sm_algo_pack.blas.is_available_reproducible(
-                args, reproducible, workspace_limit_in_bytes)) {
+    if (sm_algo_pack.blas.is_available_attribute(args, attr,
+                                                 workspace_limit_in_bytes)) {
         return &sm_algo_pack.blas;
     }
-    if (reproducible) {
-        return megdnn::get_reproducible_algo<MatrixMulForwardImpl>(
+    if (attr != AlgoAttribute::DEFAULT) {
+        return megdnn::get_algo_with_attribute<MatrixMulForwardImpl>(
                 sm_algo_pack.all_algos, args, workspace_limit_in_bytes,
-                "matrix mul forward");
+                "matrix mul forward", attr);
     } else {
         return megdnn::get_usable_algo<MatrixMulForwardImpl>(
                 sm_algo_pack.all_algos, args, workspace_limit_in_bytes,

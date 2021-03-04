@@ -280,32 +280,29 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
     auto result = get_algorithm_heuristic_with_ncb(
-            fparam, workspace_limit_in_bytes, reproducible);
+            fparam, workspace_limit_in_bytes, attr);
     if (result == nullptr) {
         result = naive::ConvBiasForwardImpl::get_algorithm_heuristic(
-                src, filter, bias, z, dst, workspace_limit_in_bytes,
-                reproducible);
+                src, filter, bias, z, dst, workspace_limit_in_bytes, attr);
     }
     return result;
 }
 
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic_with_ncb(
         const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+        const AlgoAttribute& attr) {
     auto algo_data_type = param.deduce_algo_data_type();
     auto suggest_category_order = suggest_algo_category_order(param);
     for (auto category : suggest_category_order) {
         auto&& origin_algos = select_algo_type({algo_data_type, category});
         ConvBiasImpl::Algorithm* heuristic_algo = nullptr;
         for (auto i : origin_algos) {
-            bool usable_reproducible =
-                    static_cast<AlgoBase*>(i)->usable_reproducible(
-                            param, AlgoSelectionStrategy::HEURISTIC,
-                            reproducible);
-            if (usable_reproducible &&
+            bool usable_attribute = static_cast<AlgoBase*>(i)->usable_attribute(
+                    param, AlgoSelectionStrategy::HEURISTIC, attr);
+            if (usable_attribute &&
                 static_cast<AlgoBase*>(i)->get_workspace(param) <=
                         workspace_limit_in_bytes) {
                 //! store the first usable algo if no prefer algo, choose it as
@@ -499,8 +496,8 @@ ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm(
     }
     if (!m_prev_selected_algo ||
         memcmp(&m_prev_selected_algo_sizep, &param, sizeof(NCBKernSizeParam))) {
-        m_prev_selected_algo =
-                get_algorithm_heuristic_with_ncb(param, workspace_size);
+        m_prev_selected_algo = get_algorithm_heuristic_with_ncb(
+                param, workspace_size, AlgoAttribute::DEFAULT);
         m_prev_selected_algo_sizep = param;
     }
     return m_prev_selected_algo;

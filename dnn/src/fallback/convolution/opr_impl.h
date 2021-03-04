@@ -90,7 +90,7 @@ public:
                                        const TensorLayout& filter,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
 
     //! size param for kernels with non-contiguous batch
     struct NCBKernSizeParam {
@@ -238,11 +238,11 @@ public:
             return false;
         }
 
-        bool usable_reproducible(const NCBKernSizeParam& param,
-                                 AlgoSelectionStrategy algo_selection_strategy,
-                                 bool reproducible = true) const {
-            return (!reproducible ||
-                    contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
+        bool usable_attribute(
+                const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy,
+                const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE) const {
+            return contain_attribute(attr) &&
                    usable(param, algo_selection_strategy);
         }
 
@@ -272,7 +272,7 @@ protected:
 
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            bool reproducible = false);
+            const AlgoAttribute& attr);
 
     const char* get_algorithm_set_name() const override;
 
@@ -326,7 +326,7 @@ public:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       bool reproducible) override;
+                                       const AlgoAttribute& attr) override;
     const char* get_algorithm_set_name() const override;
 
     //! size param for kernels with non-contiguous batch
@@ -421,12 +421,10 @@ protected:
         virtual ncb_kern_t dispatch_kern(
                 ConvolutionBackwardDataImpl* opr,
                 const NCBKernSizeParam& param) const = 0;
-        bool usable_reproducible(ConvolutionBackwardDataImpl* opr,
-                                 const NCBKernSizeParam& param,
-                                 bool reproducible = true) const {
-            return (!reproducible ||
-                    contain_attribute(AlgoAttribute::REPRODUCIBLE)) &&
-                   usable(opr, param);
+        bool usable_attribute(
+                ConvolutionBackwardDataImpl* opr, const NCBKernSizeParam& param,
+                const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE) const {
+            return contain_attribute(attr) && usable(opr, param);
         }
         virtual bool is_preferred(const NCBKernSizeParam&) const {
             return false;
@@ -451,7 +449,7 @@ protected:
     //! default impl calls ncb_1g_get_algorithm_heuristic()
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            bool reproducible = false);
+            const AlgoAttribute& attr);
 
     //! get kernel pointer for float32 non-contiguous batch 1-group kernel
     virtual ncb_kern_t ncb_1g_dispatch_kern(Algorithm* algo,
@@ -469,7 +467,7 @@ protected:
      */
     virtual Algorithm* ncb_1g_get_algorithm_heuristic(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            bool reproducible = false);
+            const AlgoAttribute& attr);
 
     static bool is_matrix_mul_preferred(const NCBKernSizeParam& param);
     /**

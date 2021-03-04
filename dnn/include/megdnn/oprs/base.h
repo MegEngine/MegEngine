@@ -105,6 +105,10 @@ public:
      *
      */
     enum class Attribute : uint32_t {
+        /**
+         * \brief general algo.
+         */
+        DEFAULT = 0,
 
         /**
          * \brief whether the execution result is
@@ -162,6 +166,8 @@ public:
     virtual uint32_t type() const = 0;
 
     bool contain_attribute(const Attribute& attr) const;
+
+    static std::string attribute_str(const Attribute& attr);
 
     Handle::HandleType handle_type() const { return m_handle_type; }
     Info info() const {
@@ -311,6 +317,7 @@ class MultiAlgoOpr<Opr, 3> : public MultiAlgoOpr<Opr, -1> {
 public:
     using Algorithm = detail::Algorithm;
     using AlgorithmInfo = detail::Algorithm::Info;
+    using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
     std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
@@ -335,9 +342,9 @@ public:
             const TensorLayout& p2,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) {
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, workspace_limit_in_bytes,
-                                       reproducible)
+                                       attr)
                 ->info();
     }
 
@@ -360,7 +367,7 @@ protected:
             const TensorLayout& p2,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) = 0;
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
 };
 
 //! specializae for nargs == 4
@@ -369,6 +376,7 @@ class MultiAlgoOpr<Opr, 4> : public MultiAlgoOpr<Opr, -1> {
 public:
     using Algorithm = detail::Algorithm;
     using AlgorithmInfo = detail::Algorithm::Info;
+    using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
     std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
@@ -394,9 +402,9 @@ public:
             const TensorLayout& p2, const TensorLayout& p3,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) {
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, p3, workspace_limit_in_bytes,
-                                       reproducible)
+                                       attr)
                 ->info();
     }
 
@@ -419,7 +427,7 @@ protected:
             const TensorLayout& p2, const TensorLayout& p3,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) = 0;
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
 };
 
 //! specializae for nargs == 5
@@ -428,6 +436,7 @@ class MultiAlgoOpr<Opr, 5> : public MultiAlgoOpr<Opr, -1> {
 public:
     using Algorithm = detail::Algorithm;
     using AlgorithmInfo = detail::Algorithm::Info;
+    using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
     std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
@@ -455,9 +464,9 @@ public:
             const TensorLayout& p4,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) {
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, p3, p4,
-                                       workspace_limit_in_bytes, reproducible)
+                                       workspace_limit_in_bytes, attr)
                 ->info();
     }
 
@@ -482,7 +491,7 @@ protected:
             const TensorLayout& p4,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) = 0;
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
 };
 
 //! specializae for nargs == 8
@@ -491,6 +500,7 @@ class MultiAlgoOpr<Opr, 8> : public MultiAlgoOpr<Opr, -1> {
 public:
     using Algorithm = detail::Algorithm;
     using AlgorithmInfo = detail::Algorithm::Info;
+    using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
     std::vector<AlgorithmInfo> get_all_algorithms_info(
@@ -518,9 +528,9 @@ public:
             const TensorLayout& p6, const TensorLayout& p7,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) {
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, p3, p4, p5, p6, p7,
-                                       workspace_limit_in_bytes, reproducible)
+                                       workspace_limit_in_bytes, attr)
                 ->info();
     }
 
@@ -547,7 +557,7 @@ protected:
             const TensorLayout& p6, const TensorLayout& p7,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            bool reproducible = false) = 0;
+            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
 };
 }  // namespace detail
 

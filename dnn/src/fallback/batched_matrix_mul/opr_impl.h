@@ -40,7 +40,7 @@ private:
                                        const TensorLayout& /*B*/,
                                        const TensorLayout& /*C*/,
                                        size_t /*workspace_limit_in_bytes*/,
-                                       bool /*reproducible*/) override;
+                                       const AlgoAttribute& /*attr*/) override;
 
     const char* get_algorithm_set_name() const override {
         return "FALLBACK BATCHED MATMUL";

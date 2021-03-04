@@ -55,24 +55,21 @@ std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms(
 
 Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
-        size_t workspace_limit_in_bytes, bool reproducible) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
     MEGDNN_MARK_USED_VAR(workspace_limit_in_bytes);
     AlgoBase::SizeArgs args(this, A, B, C);
-    if (sm_algo_pack.cublas.is_available_reproducible(args, reproducible)) {
+    if (sm_algo_pack.cublas.is_available_attribute(args, attr)) {
         return &sm_algo_pack.cublas;
     }
 #if CUDA_VERSION >= 10010
-    else if (sm_algo_pack.cublasLt.is_available_reproducible(args,
-                                                             reproducible)) {
+    else if (sm_algo_pack.cublasLt.is_available_attribute(args, attr)) {
         return &sm_algo_pack.cublasLt;
     }
 #endif
-    else if (sm_algo_pack.int8x8x32.is_available_reproducible(args,
-                                                              reproducible)) {
+    else if (sm_algo_pack.int8x8x32.is_available_attribute(args, attr)) {
         return &sm_algo_pack.int8x8x32;
     } else {
-        if (sm_algo_pack.brute_force.is_available_reproducible(args,
-                                                               reproducible)) {
+        if (sm_algo_pack.brute_force.is_available_attribute(args, attr)) {
             return &sm_algo_pack.brute_force;
         }
     }
