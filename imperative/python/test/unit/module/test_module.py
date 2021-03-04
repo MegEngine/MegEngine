@@ -656,15 +656,23 @@ def test_repr_basic():
     class ConvModel(Module):
         def __init__(self):
             super().__init__()
-            self.conv1 = Conv2d(3, 128, 3, stride=2, bias=False)
-            self.conv2 = Conv2d(3, 128, 3, padding=1, bias=False)
-            self.conv3 = Conv2d(3, 128, 3, dilation=2, bias=False)
-            self.bn1 = BatchNorm2d(128)
-            self.bn2 = BatchNorm1d(128)
-            self.dropout = Dropout(drop_prob=0.1)
-            self.softmax = Softmax(axis=100)
+            self.conv1 = Conv2d(3, 128, 3, padding=1, bias=False)
+            self.conv2 = Conv2d(3, 128, 3, dilation=2, bias=False)
+            self.bn1 = BatchNorm1d(128)
+            self.bn2 = BatchNorm2d(128)
             self.pooling = MaxPool2d(kernel_size=2, padding=0)
-            self.submodule1 = Sequential(Dropout(drop_prob=0.1), Softmax(axis=100),)
+            modules = OrderedDict()
+            modules["depthwise"] = Conv2d(256, 256, 3, 1, 0, groups=256, bias=False,)
+            modules["pointwise"] = Conv2d(
+                256, 256, kernel_size=1, stride=1, padding=0, bias=True,
+            )
+            self.submodule1 = Sequential(modules)
+            self.list1 = [Dropout(drop_prob=0.1), [Softmax(axis=100)]]
+            self.tuple1 = (
+                Dropout(drop_prob=0.1),
+                (Softmax(axis=100), Dropout(drop_prob=0.2)),
+            )
+            self.dict1 = {"Dropout": Dropout(drop_prob=0.1)}
             self.fc1 = Linear(512, 1024)
 
         def forward(self, inputs):
@@ -672,16 +680,21 @@ def test_repr_basic():
 
     ground_truth = (
         "ConvModel(\n"
-        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), stride=(2, 2), bias=False)\n"
-        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1), bias=False)\n"
-        "  (conv3): Conv2d(3, 128, kernel_size=(3, 3), dilation=(2, 2), bias=False)\n"
-        "  (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
-        "  (bn2): BatchNorm1d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
-        "  (dropout): Dropout(drop_prob=0.1)\n  (softmax): Softmax(axis=100)\n"
+        "  (conv1): Conv2d(3, 128, kernel_size=(3, 3), padding=(1, 1), bias=False)\n"
+        "  (conv2): Conv2d(3, 128, kernel_size=(3, 3), dilation=(2, 2), bias=False)\n"
+        "  (bn1): BatchNorm1d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
+        "  (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.9, affine=True, track_running_stats=True)\n"
         "  (pooling): MaxPool2d(kernel_size=2, stride=2, padding=0)\n"
         "  (submodule1): Sequential(\n"
-        "    (0): Dropout(drop_prob=0.1)\n"
-        "    (1): Softmax(axis=100)\n  )\n"
+        "    (depthwise): Conv2d(256, 256, kernel_size=(3, 3), groups=256, bias=False)\n"
+        "    (pointwise): Conv2d(256, 256, kernel_size=(1, 1))\n"
+        "  )\n"
+        "  (list1.0): Dropout(drop_prob=0.1)\n"
+        "  (list1.1.0): Softmax(axis=100)\n"
+        "  (tuple1.0): Dropout(drop_prob=0.1)\n"
+        "  (tuple1.1.0): Softmax(axis=100)\n"
+        "  (tuple1.1.1): Dropout(drop_prob=0.2)\n"
+        "  (dict1.Dropout): Dropout(drop_prob=0.1)\n"
         "  (fc1): Linear(in_features=512, out_features=1024, bias=True)\n"
         ")"
     )

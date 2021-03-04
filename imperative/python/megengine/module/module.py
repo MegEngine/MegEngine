@@ -73,6 +73,7 @@ class Module(metaclass=ABCMeta):
         :param name: module's name, can be initialized by the ``kwargs`` parameter
         of child class.
         """
+        self._modules = []
 
         if name is not None:
             assert (
@@ -88,8 +89,6 @@ class Module(metaclass=ABCMeta):
         # hooks
         self._forward_pre_hooks = OrderedDict()
         self._forward_hooks = OrderedDict()
-
-        self._modules = []
 
         # used for profiler and automatic naming
         self._name = "{anonymous}"
@@ -595,7 +594,9 @@ class Module(metaclass=ABCMeta):
         return value
 
     def __setattr__(self, name: str, value):
-        if _is_module(value):
+        if _is_module(value) or (
+            isinstance(value, (list, tuple, dict)) and name != "_modules"
+        ):
             modules = self.__dict__.get("_modules")
             if modules is None:
                 raise AttributeError(
@@ -633,10 +634,17 @@ class Module(metaclass=ABCMeta):
         extra_repr = self._module_info_string()
         if extra_repr:
             extra_lines = extra_repr.split("\n")
-        child_lines = [
-            "(" + name + "): " + add_indent(repr(self.__dict__[name]), 2)
-            for name in self._modules
-        ]
+        child_lines = []
+        for name in self._modules:
+            if _is_module(self.__dict__[name]):
+                child_lines.append(
+                    "(" + name + "): " + add_indent(repr(self.__dict__[name]), 2)
+                )
+            else:
+                for k, v in _expand_structure(name, self.__dict__[name]):
+                    if _is_module(v):
+                        child_lines.append("(" + k + "): " + add_indent(repr(v), 2))
+
         lines = extra_lines + child_lines
         main_str = self.__class__.__name__ + "("
         if lines:
