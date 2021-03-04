@@ -249,6 +249,7 @@ def test_dataloader_parallel_multi_instances():
     _multi_instances_parallel_dataloader_worker()
 
 
+@pytest.mark.isolated_distributed
 def test_dataloader_parallel_multi_instances_multiprocessing():
     # set max shared memory to 100M
     os.environ["MGE_PLASMA_MEMORY"] = "100000000"
@@ -264,6 +265,7 @@ def test_dataloader_parallel_multi_instances_multiprocessing():
 
     for p in processes:
         p.join()
+        assert p.exitcode == 0
 
 
 @pytest.mark.parametrize("num_workers", [0, 2])
