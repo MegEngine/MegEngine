@@ -5,3 +5,15 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+from ...core._imperative_rt.core2 import set_cpp_apply_module_trace
+from .traced_module import (
+    TracedModule,
+    _register_all_builtin_module,
+    cpp_apply_module_trace,
+    register_as_builtin,
+    trace_module,
+)
+
+_register_all_builtin_module()
+set_cpp_apply_module_trace(cpp_apply_module_trace)
