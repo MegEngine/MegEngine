@@ -9,10 +9,9 @@
 import collections
 import json
 import os
-import threading
 import weakref
-from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Dict, List, Union
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -22,7 +21,7 @@ from .._imperative_rt.core2 import apply, set_cpp_apply_backward_varnode
 from .._imperative_rt.ops import BackwardGraph
 from .._wrap import device as as_device
 from ..ops.builtin import OpDef
-from .core import OpBase, TensorBase
+from .core import TensorBase
 
 
 def set_priority_to_id(dest_vars):
@@ -284,9 +283,9 @@ def optimize_for_inference(dest_vars, **kwargs):
     if kwargs:
         raise ValueError("unknown options: %s" % list(kwargs))
 
-    dest_vars = [var._node for var in dest_vars]
+    dest_vars = _unwrap(dest_vars)
     res_vars = _imperative_rt.optimize_for_inference(dest_vars, inference_options)
-    return [VarNode(i) for i in res_vars]
+    return _wrap(res_vars)
 
 
 CompGraphDumpResult = collections.namedtuple(
@@ -312,7 +311,7 @@ def dump_graph(
     keep_opr_priority: bool = False,
     strip_info_file=None,
     append_json=False
-):
+) -> Tuple[bytes, CompGraphDumpResult]:
     """
     serialize the computing graph of `output_vars` and get byte result.
 
@@ -347,22 +346,20 @@ def dump_graph(
             * ``params`` list of names of dumped params
             * ``outputs`` names of output vars
     """
-    ov = []
     if isinstance(output_vars, dict):
         used_vars = set()
         for name, var in output_vars.items():
-            assert isinstance(var, VarNode), "bad output var: {!r}".format(var)
             assert var.id not in used_vars, (
                 "var name is associated with a var object, so we can not have "
                 "two names given to the same var: {}".format(var)
             )
             used_vars.add(var.id)
             var.name = name
-            ov.append(var._node)
+        output_vars = list(output_vars.values())
     else:
-        for var in output_vars:
-            assert isinstance(var, VarNode), "bad output var: {!r}".format(var)
-            ov.append(var._node)
+        output_vars = list(output_vars)
+
+    ov = _unwrap(output_vars)
 
     stat = []
     inputs = []
@@ -413,7 +410,7 @@ CompGraphLoadResult = collections.namedtuple(
 )
 
 
-def load_graph(fpath):
+def load_graph(fpath) -> CompGraphLoadResult:
     """
     Load a serialized computing graph from file.
 
@@ -471,8 +468,7 @@ def apply_backward_varnode(op: BackwardGraph, *args: VarNode):
         graph._make_const_for_backward,
         args,
     )
-    outputs = [o._node if hasattr(o, "_node") else o for o in outputs]
-    return outputs
+    return _unwrap(outputs)
 
 
 set_cpp_apply_backward_varnode(apply_backward_varnode)
