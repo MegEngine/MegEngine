@@ -181,7 +181,7 @@ class ProfileAnalyzer:
         :param opr_filter: function that filter oprs.
         """
         self._opr_set = dict()  # type: dict
-        assert isinstance(obj, dict)
+        assert isinstance(obj, dict), type(obj)
         varz = obj["graph_exec"]["var"]
         for opr_id, entry in obj["graph_exec"]["operator"].items():
             inp = [varz[i] for i in entry["input"]]

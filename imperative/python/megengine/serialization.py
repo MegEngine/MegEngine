@@ -107,14 +107,14 @@ def load(f, map_location=None, pickle_module=pickle):
     .. testcode:
 
         import megengine as mge
-        # Load tensors to the same device as defined in model.mge
-        mge.load('model.mge')
+        # Load tensors to the same device as defined in model.pkl
+        mge.load('model.pkl')
         # Load all tensors to gpu0.
-        mge.load('model.mge', map_location='gpu0')
+        mge.load('model.pkl', map_location='gpu0')
         # Load all tensors originally on gpu0 to cpu0
-        mge.load('model.mge', map_location={'gpu0':'cpu0'})
+        mge.load('model.pkl', map_location={'gpu0':'cpu0'})
         # Load all tensors to cpu0
-        mge.load('model.mge', map_location=lambda dev: 'cpu0')
+        mge.load('model.pkl', map_location=lambda dev: 'cpu0')
 
     """
     if isinstance(f, str):
