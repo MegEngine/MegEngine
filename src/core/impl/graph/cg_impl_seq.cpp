@@ -11,6 +11,7 @@
 
 #include "./cg_impl_seq.h"
 #include "megbrain/graph/exc_extra_info.h"
+#include "megbrain/opr/tensor_manip.h"
 
 using namespace mgb;
 using namespace cg;
@@ -255,6 +256,22 @@ ComputingGraphImpl::ComputingSequence::check_enable_comp_node_seq_recorder() {
             }
         }
     }
+    auto check_const_shape = [&]() {
+        for (auto i : *m_opr_seq) {
+            for (auto j : i->output()) {
+                if (j->shape().ndim && !is_const_var_shape(j)) {
+                    mgb_log_warn(
+                            "Non-const var shape detected. Make sure all "
+                            "shapes are constant. Check whether "
+                            "'const_var_shape' is set "
+                            "in GraphLoadConfig under record mode");
+                    return;
+                }
+            }
+        }
+    };
+    check_const_shape();
+
     auto cn = *m_used_comp_node.begin();
     auto rec = cn.create_seq_recorder(m_owner_graph);
     if (!rec) {

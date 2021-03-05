@@ -243,7 +243,7 @@ public:
 };
 
 using CompNodeBaseImpl = CpuCompNode::CompNodeBaseImpl;
-using CompNodeNoRecorderImpl = CpuCompNode::CompNodeNoRecorderImpl;
+using CompNodeDefaultImpl = CpuCompNode::CompNodeDefaultImpl;
 using CompNodeRecorderImpl = CpuCompNode::CompNodeRecorderImpl;
 
 //! ==================== CompNodeBaseImpl ======================
@@ -466,29 +466,29 @@ public:
     }
 };
 
-//! ==================== CompNodeNoRecorderImpl ======================
+//! ==================== CompNodeDefaultImpl ======================
 /**
- * \note: CompNodeNoRecorderImpl will use most implements in base including:
+ * \note: CompNodeDefaultImpl will use most implements in base including:
  * alloc_device, alloc_host, copy_to_host, copy_to_device, peer_copy_to,
  * add_callback ...
  */
-class CpuCompNode::CompNodeNoRecorderImpl final : public CompNodeBaseImpl {
+class CpuCompNode::CompNodeDefaultImpl final : public CompNodeBaseImpl {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
 public:
     //! ptr to default cpu, only used by check_global_finalized
-    static CompNodeNoRecorderImpl* sm_default_cpu_comp_node_ptr;
+    static CompNodeDefaultImpl* sm_default_cpu_comp_node_ptr;
 
     static void static_free_device(ImplBase* self, void* ptr) {
-        static_cast<CompNodeNoRecorderImpl*>(self)->free_device(ptr);
+        static_cast<CompNodeDefaultImpl*>(self)->free_device(ptr);
     }
 
     static void static_free_host(ImplBase* self, void* ptr) {
-        static_cast<CompNodeNoRecorderImpl*>(self)->free_host(ptr);
+        static_cast<CompNodeDefaultImpl*>(self)->free_host(ptr);
     }
     using CpuEventImpl = CpuDispatchableBase::EventImpl;
 
-    CompNodeNoRecorderImpl(const Locator& locator,
+    CompNodeDefaultImpl(const Locator& locator,
                            const Locator& locator_logical)
             : CompNodeBaseImpl(locator, locator_logical, static_free_device,
                                static_free_host) {
@@ -501,7 +501,7 @@ public:
         sm_default_cpu_comp_node_ptr = this;
     }
 
-    ~CompNodeNoRecorderImpl() {
+    ~CompNodeDefaultImpl() {
         m_env.fini();
         sm_default_cpu_comp_node_ptr = nullptr;
     }
@@ -551,8 +551,8 @@ public:
 
     SeqRecorderImpl* cur_recorder() const override { return nullptr; }
 };
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(CompNodeNoRecorderImpl);
-CompNodeNoRecorderImpl* CompNodeNoRecorderImpl::sm_default_cpu_comp_node_ptr =
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(CompNodeDefaultImpl);
+CompNodeDefaultImpl* CompNodeDefaultImpl::sm_default_cpu_comp_node_ptr =
         nullptr;
 
 //! ==================== CompNodeRecorderImpl ======================
@@ -746,7 +746,7 @@ public:
     void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
                       size_t size) override {
         //! copy to default_cpu
-        if (dest_impl->same_type<CpuCompNode::CompNodeNoRecorderImpl>()) {
+        if (dest_impl->same_type<CpuCompNode::CompNodeDefaultImpl>()) {
             CompNodeBaseImpl::peer_copy_to(dest_impl, dest, src, size);
             return;
         }
@@ -986,7 +986,7 @@ void CpuCompNode::sync_all() {
 // CpuCompNode::Pool
 CompNode CompNode::default_cpu() {
     static Locator locator{DeviceType::CPU, Locator::DEVICE_CPU_DEFAULT, {-1}};
-    static CompNodeNoRecorderImpl impl{locator, locator};
+    static CompNodeDefaultImpl impl{locator, locator};
     return &impl;
 }
 

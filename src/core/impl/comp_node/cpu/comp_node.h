@@ -55,7 +55,7 @@ namespace mgb {
             };
 
             class CompNodeBaseImpl;
-            class CompNodeNoRecorderImpl;
+            class CompNodeDefaultImpl;
             class CompNodeRecorderImpl;
 
             static void foreach(thin_function<void(CompNode)> callback);
