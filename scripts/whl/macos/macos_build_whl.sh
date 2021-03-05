@@ -172,8 +172,9 @@ function do_build() {
         echo "org whl name: ${org_whl_name}"
         echo "comapt whl name: ${compat_whl_name}"
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}
-        cd ${SRC_DIR}
 
+
+        cd ${SRC_DIR}
         echo ""
         echo "##############################################################################################"
         echo "macos whl package location: ${MACOS_WHL_HOME}"
