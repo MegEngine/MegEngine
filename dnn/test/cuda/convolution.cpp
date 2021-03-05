@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "megdnn/dtype.h"
 #include "megdnn/oprs.h"
@@ -18,7 +19,6 @@
 #include "test/common/convolution.h"
 #include "test/common/rng.h"
 #include "test/cuda/benchmark.h"
-
 #include "src/cuda/utils.h"
 
 #define V1(x) #x
@@ -29,8 +29,7 @@
 namespace megdnn {
 namespace test {
 
-TEST_F(CUDA, CONVOLUTION_8X8X32)
-{
+TEST_F(CUDA, CONVOLUTION_8X8X32) {
     if (!cuda::is_compute_capability_required(6, 1)) {
         printf("Skip CUDA.CONVOLUTION_8X8X32 test as current device"
                "doesn't support\n");
@@ -41,66 +40,63 @@ TEST_F(CUDA, CONVOLUTION_8X8X32)
     std::vector<TestArg> args;
     {
         auto v = get_args();
-        for (auto &&a: v) {
+        for (auto&& a : v) {
             args.push_back(std::move(a));
         }
     }
     {
         auto v = get_dilated_args();
-        for (auto &&a: v) {
+        for (auto&& a : v) {
             args.push_back(std::move(a));
         }
     }
     {
         auto v = get_chanwise_args();
-        for (auto &&a: v) {
+        for (auto&& a : v) {
             args.push_back(std::move(a));
         }
     }
     Checker<ConvolutionForward> checker(handle_cuda());
     UniformIntRNG rng(-4, 4);
-    for (auto arg: args) {
+    for (auto arg : args) {
         arg.param.format = param::Convolution::Format::NHWC;
         arg.src = cvt_src_or_dst_nchw2nhwc(arg.src);
         arg.filter = cvt_filter_nchw2nhwc(arg.filter);
-        checker.set_dtype(0, dtype::Int8()).
-            set_dtype(1, dtype::Int8()).
-            set_dtype(2, dtype::Int32()).
-            set_param(arg.param).
-            set_rng(0, &rng).
-            set_rng(1, &rng).
-            execs({arg.src, arg.filter, {}});
+        checker.set_dtype(0, dtype::Int8())
+                .set_dtype(1, dtype::Int8())
+                .set_dtype(2, dtype::Int32())
+                .set_param(arg.param)
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .execs({arg.src, arg.filter, {}});
     }
 }
 
-TEST_F(CUDA, CONVOLUTION_FORWARD)
-{
+TEST_F(CUDA, CONVOLUTION_FORWARD) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
     Checker<ConvolutionForward> checker(handle_cuda());
     NormalRNG default_rng;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         float scale =
                 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
-        checker.
-            set_dtype(0, dtype::Float32()).
-            set_dtype(1, dtype::Float32()).
-            set_dtype(2, dtype::Float32()).
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            execs({arg.src, arg.filter, {}});
-        checker.
-            set_dtype(0, dtype::Float16()).
-            set_dtype(1, dtype::Float16()).
-            set_dtype(2, dtype::Float16()).
-            set_rng(0, &rng).
-            set_rng(1, &rng).
-            set_epsilon(1e-1).
-            set_param(arg.param).
-            execs({arg.src, arg.filter, {}});
+        checker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_dtype(2, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
+        checker.set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_dtype(2, dtype::Float16())
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_epsilon(1e-1)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
         arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
         checker.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
@@ -152,51 +148,49 @@ TEST_F(CUDA, CONV_FORWARD_MATMUL_NCHW4) {
     checker.exec({{8, 64, 12, 12, 4}, {256, 64, 3, 3, 4}, {}});
 }
 
-TEST_F(CUDA, CONVOLUTION_1X1_FORWARD)
-{
+TEST_F(CUDA, CONVOLUTION_1X1_FORWARD) {
     using namespace convolution;
     std::vector<TestArg> args = get_1x1_args();
     Checker<ConvolutionForward> checker(handle_cuda());
     NormalRNG default_rng;
-    for (auto &&arg: args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+    for (auto&& arg : args) {
+        float scale =
+                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
-        checker.
-            set_dtype(0, dtype::Float32()).
-            set_dtype(1, dtype::Float32()).
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            execs({arg.src, arg.filter, {}});
+        checker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
     }
 }
 
-TEST_F(CUDA, BENCHMARK_CONVOLUTION_1X1_FORWARD)
-{
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_1X1_FORWARD) {
     using namespace convolution;
     std::vector<TestArg> args = get_1x1_args();
     Benchmarker<ConvolutionForward> marker(handle_cuda());
     NormalRNG default_rng;
-    for (auto &&arg: args) {
-        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+    for (auto&& arg : args) {
+        float scale =
+                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
-        marker.set_dtype(0, dtype::Float32()).
-            set_dtype(1, dtype::Float32()).
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_param(arg.param).
-            execs({arg.src, arg.filter, {}});
+        marker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
     }
 }
 
-TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
-{
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA) {
     using namespace convolution;
     std::vector<TestArg> args = get_args_cuda_conv_bwd_data();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     NormalRNG default_rng;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         float scale =
                 64.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
@@ -243,8 +237,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA)
     }
 }
 
-TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL)
-{
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL) {
     using namespace convolution;
     std::vector<TestArg> args = get_args_cuda_conv_bwd_data();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
@@ -252,7 +245,7 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL)
     checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
             ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
     NormalRNG default_rng;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         float scale =
                 64.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
@@ -273,9 +266,39 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL)
     }
 }
 
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_DP4A) {
+    if (!cuda::is_compute_capability_required(6, 1)) {
+        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_DP4A test as current "
+               "device doesn't support\n");
+        return;
+    }
 
-TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5)
-{
+    using namespace convolution;
+    std::vector<TestArg> args = get_args_int8_nchw4_conv_bwd_data();
+    Checker<ConvolutionBackwardData> checker(handle_cuda());
+
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
+            "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM"));
+
+    checker.set_epsilon(1 + 1e-3).set_max_avg_error(1e-1);
+
+    for (auto&& arg : args) {
+        UniformIntRNG rng(-3, 3);
+        auto src = TensorLayout(arg.src, dtype::QuantizedS8{1.2f});
+        auto filter = TensorLayout(arg.filter, dtype::QuantizedS8{1.3f});
+        TensorLayout dst;
+        dst.dtype = dtype::QuantizedS8{1.2f};
+        {
+            auto opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = arg.param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        checker.set_rng(0, &rng).set_rng(1, &rng).set_param(arg.param).exec(
+                TensorLayoutArray{filter, dst, src});
+    }
+}
+
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5) {
     // BRAIN-481 failed on architectures 7.0, remove the following if statement,
     // when cudnn fixed the problem.
     if (cuda::is_compute_capability_required(7, 0))
@@ -284,8 +307,9 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5)
     std::vector<TestArg> args = get_args_cudnn_7_5_failures();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
     NormalRNG default_rng;
-    for (auto &&arg: args) {
-        float scale = 128.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+    for (auto&& arg : args) {
+        float scale =
+                128.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         scale = std::max(scale, 1.f);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
@@ -297,19 +321,17 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5)
             opr->deduce_layout(src, filter, dst);
         }
         src.dtype = dst.dtype = filter.dtype = dtype::Float32();
-        checker.
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            exec(TensorLayoutArray{filter, dst, src});
+        checker.set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{filter, dst, src});
         src.dtype = dst.dtype = filter.dtype = dtype::Float16();
-        checker.
-            set_rng(0, &rng).
-            set_rng(1, &rng).
-            set_epsilon(1e-1).
-            set_param(arg.param).
-            exec(TensorLayoutArray{filter, dst, src});
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_epsilon(1e-1)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{filter, dst, src});
         arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
         checker.set_rng(0, &rng)
                 .set_rng(1, &rng)
@@ -319,13 +341,12 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5)
     }
 }
 
-TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
-{
+TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
     Checker<ConvolutionBackwardFilter> checker(handle_cuda());
     bool f16_checked = false;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
         TensorLayout dst;
@@ -337,12 +358,11 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
         float scale = 1.0f / sqrt(dst[2] * dst[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         src.dtype = dst.dtype = filter.dtype = dtype::Float32();
-        checker.
-            set_rng(0, &rng).
-            set_rng(1, &rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            exec(TensorLayoutArray{src, dst, filter});
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{src, dst, filter});
 
         // reduce on large f16 array may introduce significant error
         if (dst.total_nr_elems() >= 1000 && f16_checked)
@@ -350,12 +370,11 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
 
         f16_checked = true;
         src.dtype = dst.dtype = filter.dtype = dtype::Float16();
-        checker.
-            set_rng(0, &rng).
-            set_rng(1, &rng).
-            set_epsilon(1e-1).
-            set_param(arg.param).
-            exec(TensorLayoutArray{src, dst, filter});
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_epsilon(1e-1)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{src, dst, filter});
         arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
         checker.set_rng(0, &rng)
                 .set_rng(1, &rng)
@@ -377,14 +396,13 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER)
     }
 }
 
-TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER_MATMUL)
-{
+TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER_MATMUL) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
     Checker<ConvolutionBackwardFilter> checker(handle_cuda());
     checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardFilter>(
             ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
         TensorLayout dst;
@@ -396,17 +414,16 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_FILTER_MATMUL)
         float scale = 1.0f / sqrt(dst[2] * dst[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         src.dtype = dst.dtype = filter.dtype = dtype::Float32();
-        checker.
-            set_rng(0, &rng).
-            set_rng(1, &rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            exec(TensorLayoutArray{src, dst, filter});
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{src, dst, filter});
     }
 }
 
 TEST_F(CUDA, CONV_CONFIG_COMBINATIONS) {
-    auto eps_getter = [](bool f16, int stage, const char *name) -> float {
+    auto eps_getter = [](bool f16, int stage, const char* name) -> float {
         if (f16) {
             return stage == 2 ? 0.5 : 0.2;
         }
@@ -687,6 +704,46 @@ TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_BF16) {
     run(32, 64, 64, 56, 56, 1, 1, 0);
 }
 
+TEST_F(CUDA, BENCHMARK_CONVOLUTION_BWD_DATA_INT8_DP4A) {
+    CUBenchmarker<ConvolutionBackwardData> bench{handle_cuda()};
+    std::unique_ptr<OprProxy<ConvolutionBackwardData>> proxy{
+            new OprProxy<ConvolutionBackwardData>{true}};
+    size_t RUNS = 10;
+    bench.set_proxy(proxy).set_times(RUNS);
+
+    auto run = [&](size_t N, size_t OC, size_t IC, size_t IH, size_t IW,
+                   size_t FH, size_t SH, size_t PH) {
+        bench.set_dtype(0, dtype::QuantizedS8{1.0f})
+                .set_dtype(1, dtype::QuantizedS8{1.0f})
+                .set_dtype(2, dtype::QuantizedS8{1.0f});
+        param::Convolution param;
+        param.format = param::Convolution::Format::NCHW4;
+        param.stride_h = param.stride_w = SH;
+        param.pad_h = param.pad_w = PH;
+        param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
+        bench.set_param(param);
+        bench.proxy()->target_execution_policy = {};
+        TensorLayout src{{N, IC / 4, IH, IW, 4}, dtype::QuantizedS8{1.0f}},
+                filter{{OC, IC / 4, FH, FH, 4}, dtype::QuantizedS8{1.0f}};
+        TensorLayout dst;
+        dst.dtype = dtype::QuantizedS8{1.0f};
+        {
+            auto&& opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        auto used = bench.execl({filter, dst, src}) / RUNS;
+        float flo = 2.0 * N * OC * IC * dst[2] * dst[3] * FH * FH;
+        printf("inp=%s, kern=%s, dst=%s ", src.to_string().c_str(),
+               filter.to_string().c_str(), dst.to_string().c_str());
+        printf("time_fp32=%.2fms, flops=%.3fTFLOPS\n", used,
+               (flo / (used * 1e9)));
+    };
+    run(64, 32, 32, 92, 180, 4, 2, 2);
+    run(64, 32, 32, 46, 80, 4, 2, 2);
+    run(16, 16, 16, 92, 180, 4, 2, 2);
+    run(16, 16, 16, 46, 80, 4, 2, 2);
+}
 
 TEST_F(CUDA, CONVOLUTION_BWD_FILTER_BENCHMARK) {
     CUBenchmarker<ConvolutionBackwardFilter> bench{handle_cuda()};

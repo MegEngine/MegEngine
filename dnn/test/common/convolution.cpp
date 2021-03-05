@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "test/common/checker.h"
@@ -44,14 +45,12 @@ std::vector<TestArg> convolution::get_args_common() {
         param::Convolution param;
 
         param.mode = param::Convolution::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1},
-                TensorShape{3, 2, 3, 4});
+        args.emplace_back(param, TensorShape{5, 2, i, i + 1},
+                          TensorShape{3, 2, 3, 4});
 
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1},
-                TensorShape{3, 2, 3, 4});
+        args.emplace_back(param, TensorShape{5, 2, i, i + 1},
+                          TensorShape{3, 2, 3, 4});
     }
 
     return args;
@@ -65,14 +64,12 @@ std::vector<TestArg> convolution::get_args_padding() {
         param.pad_w = 2;
 
         param.mode = param::Convolution::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1},
-                TensorShape{3, 2, 3, 4});
+        args.emplace_back(param, TensorShape{5, 2, i, i + 1},
+                          TensorShape{3, 2, 3, 4});
 
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1},
-                TensorShape{3, 2, 3, 4});
+        args.emplace_back(param, TensorShape{5, 2, i, i + 1},
+                          TensorShape{3, 2, 3, 4});
     }
 
     return args;
@@ -84,14 +81,12 @@ std::vector<TestArg> convolution::get_args_large_channel() {
         param::Convolution param;
 
         param.mode = param::Convolution::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1},
-                TensorShape{30, 20, 3, 4});
+        args.emplace_back(param, TensorShape{2, 20, i, i + 1},
+                          TensorShape{30, 20, 3, 4});
 
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1},
-                TensorShape{30, 20, 3, 4});
+        args.emplace_back(param, TensorShape{2, 20, i, i + 1},
+                          TensorShape{30, 20, 3, 4});
     }
     for (size_t i = 16; i < 24; ++i) {
         param::Convolution param;
@@ -99,14 +94,12 @@ std::vector<TestArg> convolution::get_args_large_channel() {
         param.pad_w = 2;
 
         param.mode = param::Convolution::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1},
-                TensorShape{30, 20, 3, 4});
+        args.emplace_back(param, TensorShape{2, 20, i, i + 1},
+                          TensorShape{30, 20, 3, 4});
 
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1},
-                TensorShape{30, 20, 3, 4});
+        args.emplace_back(param, TensorShape{2, 20, i, i + 1},
+                          TensorShape{30, 20, 3, 4});
     }
 
     return args;
@@ -118,14 +111,12 @@ std::vector<TestArg> convolution::get_args_1x1() {
         param::Convolution param;
 
         param.mode = param::Convolution::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1},
-                TensorShape{30, 20, 1, 1});
+        args.emplace_back(param, TensorShape{2, 20, i, i + 1},
+                          TensorShape{30, 20, 1, 1});
 
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1},
-                TensorShape{30, 20, 1, 1});
+        args.emplace_back(param, TensorShape{2, 20, i, i + 1},
+                          TensorShape{30, 20, 1, 1});
     }
 
     return args;
@@ -137,14 +128,12 @@ std::vector<TestArg> convolution::get_args_large_filter() {
         param::Convolution param;
 
         param.mode = param::Convolution::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 2, i, i+1},
-                TensorShape{3, 2, 7, 8});
+        args.emplace_back(param, TensorShape{2, 2, i, i + 1},
+                          TensorShape{3, 2, 7, 8});
 
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 2, i, i+1},
-                TensorShape{3, 2, 7, 8});
+        args.emplace_back(param, TensorShape{2, 2, i, i + 1},
+                          TensorShape{3, 2, 7, 8});
     }
 
     return args;
@@ -181,9 +170,8 @@ std::vector<TestArg> convolution::get_args_4x4() {
     for (size_t oh = 1; oh < 20; ++oh) {
         param::Convolution param;
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{4, 3, oh+3, oh+4},
-                TensorShape{2, 3, 4, 4});
+        args.emplace_back(param, TensorShape{4, 3, oh + 3, oh + 4},
+                          TensorShape{2, 3, 4, 4});
     }
 
     return args;
@@ -289,26 +277,22 @@ std::vector<TestArg> convolution::get_args_fallback_non_templated_impl() {
 std::vector<TestArg> convolution::get_args_cudnn_5_1_failures() {
     std::vector<TestArg> args;
     args.emplace_back(
-            param::Convolution{
-                param::Convolution::Mode::CROSS_CORRELATION, 0, 4, 1, 2},
-            TensorShape{5, 3, 25, 20},
-            TensorShape{10, 3, 7, 4}
-    );
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 0,
+                               4, 1, 2},
+            TensorShape{5, 3, 25, 20}, TensorShape{10, 3, 7, 4});
 
     return args;
 }
 
 std::vector<TestArg> convolution::get_args_x86_winograd_algorithm() {
     std::vector<TestArg> args;
-    for (size_t ic_size: {8, 16})
-    {
+    for (size_t ic_size : {8, 16}) {
         param::Convolution param;
         param.mode = param::Convolution::Mode::CROSS_CORRELATION;
         param.stride_h = param.stride_w = 1;
         param.pad_h = param.pad_w = 0;
-        args.emplace_back(param,
-                TensorShape{2, ic_size, 102, 102},
-                TensorShape{8, ic_size, 3, 3});
+        args.emplace_back(param, TensorShape{2, ic_size, 102, 102},
+                          TensorShape{8, ic_size, 3, 3});
     }
 
     return args;
@@ -317,18 +301,15 @@ std::vector<TestArg> convolution::get_args_x86_winograd_algorithm() {
 std::vector<TestArg> convolution::get_args_BRAIN_481() {
     std::vector<TestArg> args;
     {
-        param::Convolution param{param::Convolution::Mode::CROSS_CORRELATION,
-            0, 1, 1, 2};
-        args.emplace_back(param,
-                TensorShape{4, 4, 14, 13},
-                TensorShape{3, 4, 8, 13});
-        for (size_t margin = 0; margin < 5; ++margin)
-        {
-            param::Convolution param{param::Convolution::Mode::CROSS_CORRELATION,
-                1, 1, 2, 2};
-            args.emplace_back(param,
-                    TensorShape{4, 4, 14, 13},
-                    TensorShape{3, 4, 16-margin, 15-margin});
+        param::Convolution param{param::Convolution::Mode::CROSS_CORRELATION, 0,
+                                 1, 1, 2};
+        args.emplace_back(param, TensorShape{4, 4, 14, 13},
+                          TensorShape{3, 4, 8, 13});
+        for (size_t margin = 0; margin < 5; ++margin) {
+            param::Convolution param{
+                    param::Convolution::Mode::CROSS_CORRELATION, 1, 1, 2, 2};
+            args.emplace_back(param, TensorShape{4, 4, 14, 13},
+                              TensorShape{3, 4, 16 - margin, 15 - margin});
         }
     }
 
@@ -337,7 +318,7 @@ std::vector<TestArg> convolution::get_args_BRAIN_481() {
 
 std::vector<TestArg> convolution::get_args() {
     std::vector<TestArg> all_args, args;
-#define ADD_ARGS(NAME) \
+#define ADD_ARGS(NAME)        \
     args = get_args_##NAME(); \
     all_args.insert(all_args.end(), args.begin(), args.end());
     ADD_ARGS(common)
@@ -356,12 +337,12 @@ std::vector<TestArg> convolution::get_args() {
     ADD_ARGS(BRAIN_481)
 #undef ADD_ARGS
 
-   return all_args;
+    return all_args;
 }
 
 std::vector<TestArg> convolution::get_args_cuda_conv_bwd_data() {
     std::vector<TestArg> all_args, args;
-#define ADD_ARGS(NAME) \
+#define ADD_ARGS(NAME)        \
     args = get_args_##NAME(); \
     all_args.insert(all_args.end(), args.begin(), args.end());
     ADD_ARGS(common)
@@ -378,19 +359,19 @@ std::vector<TestArg> convolution::get_args_cuda_conv_bwd_data() {
     ADD_ARGS(x86_winograd_algorithm)
 #undef ADD_ARGS
 
-   return all_args;
+    return all_args;
 }
 
 std::vector<TestArg> convolution::get_args_cudnn_7_5_failures() {
     std::vector<TestArg> all_args, args;
-#define ADD_ARGS(NAME) \
+#define ADD_ARGS(NAME)        \
     args = get_args_##NAME(); \
     all_args.insert(all_args.end(), args.begin(), args.end());
     ADD_ARGS(cudnn_5_1_failures)
     ADD_ARGS(BRAIN_481)
 #undef ADD_ARGS
 
-   return all_args;
+    return all_args;
 }
 std::vector<TestArg> convolution::get_chanwise_args() {
     std::vector<TestArg> args;
@@ -421,12 +402,9 @@ std::vector<TestArg> convolution::get_dilated_args() {
     param::Convolution param;
     param.pad_h = param.pad_w = 2;
     param.dilate_h = param.dilate_w = 2;
-    size_t n = 1, ic = 15, ih = 128, iw = 128,
-           fh = 3, fw = 3,
-           oc = 17;
-    args.emplace_back(param,
-            TensorShape{n, ic, ih, iw},
-            TensorShape{oc, ic, fh, fw});
+    size_t n = 1, ic = 15, ih = 128, iw = 128, fh = 3, fw = 3, oc = 17;
+    args.emplace_back(param, TensorShape{n, ic, ih, iw},
+                      TensorShape{oc, ic, fh, fw});
     // exhaustive search
     // clang-format off
     for (size_t n: {2})
@@ -451,13 +429,44 @@ std::vector<TestArg> convolution::get_dilated_args() {
     return args;
 }
 
-void convolution::test_conv_config_combinations(int k_size,
-                                                Handle* handle, bool test_int8,
-                                                bool test_backward,
-                                                bool is_cuda,
-                                                ConvEPSGetter eps_getter,
-                                                bool use_io16xc32) {
-    Checker<Convolution> checker(handle);
+std::vector<TestArg> convolution::get_args_int8_nchw4_conv_bwd_data() {
+    std::vector<TestArg> args;
+    param::Convolution cur_param;
+
+    // clang-format off
+    for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
+    for (size_t b : {64, 16}) {
+    for (size_t ic : {16, 32}) {
+    for (size_t oc : {16, 32}) {
+    for (size_t h : {8}) {
+    for (size_t w : {8, 11}) {
+    for (size_t kernel_size : {3, 4, 5, 7}) {
+    for (int p : {0, static_cast<int>(kernel_size / 2)}) {
+    for (size_t s : {2}) {
+        if (kernel_size >= 7) {
+            b = std::min(b, 32_z);
+        }
+        size_t f = kernel_size;
+        cur_param.mode = mode;
+
+        cur_param.format = param::ConvBias::Format::NCHW4;
+        cur_param.sparse = param::ConvBias::Sparse::DENSE;
+        cur_param.pad_h = cur_param.pad_w = p;
+        cur_param.stride_h = cur_param.stride_w = s;
+
+        //! bias channel
+        args.emplace_back(cur_param, TensorShape{b, ic / 4, h, w, 4},
+                          TensorShape{oc, ic / 4, f, f, 4});
+    } } } } } } } } }
+    // clang-format on
+
+    return args;
+}
+
+void convolution::test_conv_config_combinations(
+        int k_size, Handle* handle, bool test_int8, bool test_backward,
+        bool is_cuda, ConvEPSGetter eps_getter, bool use_io16xc32) {
+Checker<Convolution> checker(handle);
     std::unique_ptr<Checker<ConvolutionBackwardData>> checker_bwd_data_ptr;
     std::unique_ptr<Checker<ConvolutionBackwardFilter>> checker_bwd_filter_ptr;
     if (test_backward) {
@@ -657,7 +666,6 @@ void convolution::test_conv_config_combinations(int k_size,
             }
         }
     }
-
 }
 
 // vim: syntax=cpp.doxygen

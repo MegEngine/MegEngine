@@ -1,0 +1,62 @@
+/**
+ * \file
+ * dnn/src/cuda/conv_bias/int8/conv_bias_int8_implicit_gemm_cutlass_wrapper.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ */
+#include "cutlass/convolution/device/convolution.h"
+#include "src/cuda/convolution/backward_data/cutlass_deconvolution_wrapper.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace cutlass_wrapper;
+
+template <typename Deconvolution>
+void megdnn::cuda::cutlass_wrapper::cutlass_deconvolution_wrapper(
+        const typename Deconvolution::ElementSrc* d_src,
+        const typename Deconvolution::ElementFilter* d_filter,
+        const typename Deconvolution::ElementBias* d_bias,
+        const typename Deconvolution::ElementDst* d_z,
+        typename Deconvolution::ElementDst* d_dst, int* workspace,
+        typename Deconvolution::ConvolutionParameter const& conv_param,
+        typename Deconvolution::EpilogueOutputOp::Params const& epilogue,
+        cudaStream_t stream) {
+    typename Deconvolution::TensorRefSrc tensor_src{
+            const_cast<typename Deconvolution::ElementSrc*>(d_src),
+            Deconvolution::LayoutSrc::packed(
+                    {conv_param.N, conv_param.P, conv_param.Q, conv_param.K})};
+    typename Deconvolution::TensorRefFilter tensor_filter{
+            const_cast<typename Deconvolution::ElementFilter*>(d_filter),
+            Deconvolution::LayoutFilter::packed(
+                    {conv_param.K, conv_param.R, conv_param.S, conv_param.C})};
+    typename Deconvolution::TensorRefBias tensor_bias{
+            const_cast<typename Deconvolution::ElementBias*>(d_bias),
+            Deconvolution::LayoutBias::packed({1, 1, 1, conv_param.K})};
+    typename Deconvolution::TensorRefDst tensor_z{
+            const_cast<typename Deconvolution::ElementDst*>(d_z),
+            Deconvolution::LayoutDst::packed(
+                    {conv_param.N, conv_param.H, conv_param.W, conv_param.C})};
+    typename Deconvolution::TensorRefDst tensor_dst{
+            d_dst,
+            Deconvolution::LayoutDst::packed(
+                    {conv_param.N, conv_param.H, conv_param.W, conv_param.C})};
+    typename Deconvolution::Arguments arguments{conv_param,
+                                                tensor_src.non_const_ref(),
+                                                tensor_filter.non_const_ref(),
+                                                tensor_bias.non_const_ref(),
+                                                tensor_z.non_const_ref(),
+                                                tensor_dst.non_const_ref(),
+                                                epilogue};
+    Deconvolution deconv_op;
+    cutlass_check(deconv_op.initialize(arguments, workspace));
+    cutlass_check(deconv_op(stream));
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

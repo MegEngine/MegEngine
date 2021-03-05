@@ -62,22 +62,21 @@ void megdnn::cuda::cutlass_wrapper::
                                          threadblock_k_>;                      \
         using WarpShape = cutlass::gemm::GemmShape<warp_m_, warp_n_, warp_k_>; \
         using InstructionShape = cutlass::gemm::GemmShape<8, 8, 16>;           \
-        using Convolution = cutlass::convolution::device::Convolution<         \
+        using Convolution = cutlass::conv::device::Convolution<                \
                 int8_t, cutlass::layout::TensorNCxHWx<32>, int8_t,             \
                 cutlass::layout::TensorCxRSKx<32>, ElementOutput,              \
                 cutlass::layout::TensorNCxHWx<32>, int32_t,                    \
                 cutlass::layout::TensorNCxHWx<32>, int32_t,                    \
-                cutlass::convolution::ConvType::kConvolution,                  \
+                cutlass::conv::ConvType::kConvolution,                         \
                 cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75,           \
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
-                cutlass::convolution::threadblock::                            \
-                        ConvolutionNCxHWxThreadblockSwizzle<                   \
-                                cutlass::convolution::ConvType::kConvolution>, \
+                cutlass::conv::threadblock::                                   \
+                        ConvolutionFpropNCxHWxThreadblockSwizzle,              \
                 2, 16, 16, NeedLoadFromConstMem>;                              \
-        typename Convolution::ConvolutionParameter conv_param{                 \
-                param.n,  param.ci, param.co, param.hi, param.wi,              \
-                param.fh, param.fw, param.ho, param.wo, param.sh,              \
-                param.sw, param.ph, param.pw, 1,        1};                    \
+        typename Convolution::ConvolutionParameter conv_param(                 \
+                param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
+                param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \
+                param.sw, 1, 1, cutlass::conv::Mode::kCrossCorrelation);       \
         return cutlass_convolution_wrapper<Convolution>(                       \
                 d_src, d_filter, d_bias, d_z, d_dst, workspace, conv_param,    \
                 epilogue, stream);                                             \
@@ -186,22 +185,21 @@ void megdnn::cuda::cutlass_wrapper::
                                          threadblock_k_>;                      \
         using WarpShape = cutlass::gemm::GemmShape<warp_m_, warp_n_, warp_k_>; \
         using InstructionShape = cutlass::gemm::GemmShape<8, 8, 16>;           \
-        using Convolution = cutlass::convolution::device::Convolution<         \
+        using Convolution = cutlass::conv::device::Convolution<                \
                 int8_t, cutlass::layout::TensorNCxHWx<32>, int8_t,             \
                 cutlass::layout::TensorCxRSKx<32>, ElementOutput,              \
                 cutlass::layout::TensorNCxHWx<4>, int32_t,                     \
                 cutlass::layout::TensorNCxHWx<4>, int32_t,                     \
-                cutlass::convolution::ConvType::kConvolution,                  \
+                cutlass::conv::ConvType::kConvolution,                         \
                 cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75,           \
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
-                cutlass::convolution::threadblock::                            \
-                        ConvolutionNCxHWxThreadblockSwizzle<                   \
-                                cutlass::convolution::ConvType::kConvolution>, \
+                cutlass::conv::threadblock::                                   \
+                        ConvolutionFpropNCxHWxThreadblockSwizzle,              \
                 2, 16, 16, NeedLoadFromConstMem>;                              \
-        typename Convolution::ConvolutionParameter conv_param{                 \
-                param.n,  param.ci, param.co, param.hi, param.wi,              \
-                param.fh, param.fw, param.ho, param.wo, param.sh,              \
-                param.sw, param.ph, param.pw, 1,        1};                    \
+        typename Convolution::ConvolutionParameter conv_param(                 \
+                param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
+                param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \
+                param.sw, 1, 1, cutlass::conv::Mode::kCrossCorrelation);       \
         return cutlass_convolution_wrapper<Convolution>(                       \
                 d_src, d_filter, d_bias, d_z, d_dst, workspace, conv_param,    \
                 epilogue, stream);                                             \
@@ -311,22 +309,21 @@ void megdnn::cuda::cutlass_wrapper::
                                          threadblock_k_>;                      \
         using WarpShape = cutlass::gemm::GemmShape<warp_m_, warp_n_, warp_k_>; \
         using InstructionShape = cutlass::gemm::GemmShape<1, 1, 4>;            \
-        using Convolution = cutlass::convolution::device::Convolution<         \
+        using Convolution = cutlass::conv::device::Convolution<                \
                 int8_t, cutlass::layout::TensorNCxHWx<4>, int8_t,              \
                 cutlass::layout::TensorCxRSKx<4>, ElementOutput,               \
                 cutlass::layout::TensorNCxHWx<4>, int32_t,                     \
                 cutlass::layout::TensorNCxHWx<4>, int32_t,                     \
-                cutlass::convolution::ConvType::kConvolution,                  \
+                cutlass::conv::ConvType::kConvolution,                         \
                 cutlass::arch::OpClassSimt, cutlass::arch::Sm61,               \
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
-                cutlass::convolution::threadblock::                            \
-                        ConvolutionNCxHWxThreadblockSwizzle<                   \
-                                cutlass::convolution::ConvType::kConvolution>, \
+                cutlass::conv::threadblock::                                   \
+                        ConvolutionFpropNCxHWxThreadblockSwizzle,              \
                 stage_, 4, aligned_, NeedLoadFromConstMem>;                    \
-        typename Convolution::ConvolutionParameter conv_param{                 \
-                param.n,  param.ci, param.co, param.hi, param.wi,              \
-                param.fh, param.fw, param.ho, param.wo, param.sh,              \
-                param.sw, param.ph, param.pw, 1,        1};                    \
+        typename Convolution::ConvolutionParameter conv_param(                 \
+                param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
+                param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \
+                param.sw, 1, 1, cutlass::conv::Mode::kCrossCorrelation);       \
         return cutlass_convolution_wrapper<Convolution>(                       \
                 d_src, d_filter, d_bias, d_z, d_dst, workspace, conv_param,    \
                 epilogue, stream);                                             \
@@ -441,23 +438,22 @@ void megdnn::cuda::cutlass_wrapper::
                                          threadblock_k_>;                      \
         using WarpShape = cutlass::gemm::GemmShape<warp_m_, warp_n_, warp_k_>; \
         using InstructionShape = cutlass::gemm::GemmShape<1, 1, 4>;            \
-        using Convolution = cutlass::convolution::device::Convolution<         \
+        using Convolution = cutlass::conv::device::Convolution<                \
                 int8_t, cutlass::layout::TensorNCxHWx<4>, int8_t,              \
                 cutlass::layout::TensorCxRSKx<4>, ElementOutput,               \
                 cutlass::layout::TensorNCHW, float,                            \
                 cutlass::layout::TensorNCHW, int32_t,                          \
-                cutlass::convolution::ConvType::kConvolution,                  \
+                cutlass::conv::ConvType::kConvolution,                         \
                 cutlass::arch::OpClassSimt, cutlass::arch::Sm61,               \
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
-                cutlass::convolution::threadblock::                            \
-                        ConvolutionNCxHWxThreadblockSwizzle<                   \
-                                cutlass::convolution::ConvType::kConvolution>, \
+                cutlass::conv::threadblock::                                   \
+                        ConvolutionFpropNCxHWxThreadblockSwizzle,              \
                 stages_, 4, aligned_, NeedLoadFromConstMem,                    \
                 cutlass::arch::OpMultiplyAdd>;                                 \
-        typename Convolution::ConvolutionParameter conv_param{                 \
-                param.n,  param.ci, param.co, param.hi, param.wi,              \
-                param.fh, param.fw, param.ho, param.wo, param.sh,              \
-                param.sw, param.ph, param.pw, 1,        1};                    \
+        typename Convolution::ConvolutionParameter conv_param(                 \
+                param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
+                param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \
+                param.sw, 1, 1, cutlass::conv::Mode::kCrossCorrelation);       \
         return cutlass_convolution_wrapper<Convolution>(                       \
                 d_src, d_filter, d_bias, d_z, d_dst, workspace, conv_param,    \
                 epilogue, stream);                                             \
@@ -572,36 +568,35 @@ void megdnn::cuda::cutlass_wrapper::
                                          threadblock_k_>;                      \
         using WarpShape = cutlass::gemm::GemmShape<warp_m_, warp_n_, warp_k_>; \
         using InstructionShape = cutlass::gemm::GemmShape<1, 1, 4>;            \
-        using Convolution = cutlass::convolution::device::Convolution<         \
+        using Convolution = cutlass::conv::device::Convolution<                \
                 int8_t, cutlass::layout::TensorNCxHWx<4>, int8_t,              \
                 cutlass::layout::TensorCxRSKx<4>, ElementOutput,               \
                 cutlass::layout::TensorNCxHWx<32>, int32_t,                    \
                 cutlass::layout::TensorNCxHWx<32>, int32_t,                    \
-                cutlass::convolution::ConvType::kConvolution,                  \
+                cutlass::conv::ConvType::kConvolution,                         \
                 cutlass::arch::OpClassSimt, cutlass::arch::Sm61,               \
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
-                cutlass::convolution::threadblock::                            \
-                        ConvolutionNCxHWxThreadblockSwizzle<                   \
-                                cutlass::convolution::ConvType::kConvolution>, \
+                cutlass::conv::threadblock::                                   \
+                        ConvolutionFpropNCxHWxThreadblockSwizzle,              \
                 stages_, 4, aligned_, NeedLoadFromConstMem>;                   \
-        typename Convolution::ConvolutionParameter conv_param{                 \
-                param.n,  param.ci, param.co, param.hi, param.wi,              \
-                param.fh, param.fw, param.ho, param.wo, param.sh,              \
-                param.sw, param.ph, param.pw, 1,        1};                    \
+        typename Convolution::ConvolutionParameter conv_param(                 \
+                param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
+                param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \
+                param.sw, 1, 1, cutlass::conv::Mode::kCrossCorrelation);       \
         return cutlass_convolution_wrapper<Convolution>(                       \
                 d_src, d_filter, d_bias, d_z, d_dst, workspace, conv_param,    \
                 epilogue, stream);                                             \
     }
 #define DISPATCH_KERNEL                                                      \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 2, 16);           \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 2, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 2, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 2, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 2, 16);            \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 2, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 2, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 2, 16);             \
-    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 2, 16);             \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 2, 16);        \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 2, 16);          \
     megdnn_assert(false,                                                     \
                   "unsupported threadblock shape (%dx%dx%d) and warp shape " \
                   "(%dx%dx%d)",                                              \

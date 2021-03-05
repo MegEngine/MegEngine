@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -47,6 +48,7 @@ std::vector<TestArg> get_args_cudnn_7_5_failures();
 std::vector<TestArg> get_1x1_args();
 std::vector<TestArg> get_dilated_args();
 std::vector<TestArg> get_chanwise_args();
+std::vector<TestArg> get_args_int8_nchw4_conv_bwd_data();
 
 //! \param stage 0 for fwd, 1 for bwd data, 2 for bwd filter
 using ConvEPSGetter =

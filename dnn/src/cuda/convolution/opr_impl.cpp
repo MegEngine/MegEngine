@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/cuda/convolution/opr_impl.h"
@@ -25,8 +26,9 @@ using namespace convolution;
 
 #define TO_STRING2(v) #v
 #define TO_STRING(v) TO_STRING2(v)
-#define CUDNN_VERSION_STR TO_STRING(CUDNN_MAJOR) "." \
-    TO_STRING(CUDNN_MINOR) "." TO_STRING(CUDNN_PATCHLEVEL)
+#define CUDNN_VERSION_STR  \
+    TO_STRING(CUDNN_MAJOR) \
+    "." TO_STRING(CUDNN_MINOR) "." TO_STRING(CUDNN_PATCHLEVEL)
 
 /* ============== ConvolutionForwardImpl ============== */
 ConvolutionForwardImpl::Algorithm*
@@ -72,25 +74,24 @@ void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
 }
 
 const char* ConvolutionForwardImpl::get_algorithm_set_name() const {
-    return "CUDA CONVOLUTION_FORWARD" ;
+    return "CUDA CONVOLUTION_FORWARD";
 }
 
 /* ============== ConvolutionBackwardDataImpl ============== */
 
 void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
-        _megdnn_tensor_in diff,
-        _megdnn_tensor_out grad,
-        _megdnn_workspace workspace) {
+                                       _megdnn_tensor_in diff,
+                                       _megdnn_tensor_out grad,
+                                       _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, filter, diff, grad, workspace);
-    auto algo = get_algorithm(this, filter.layout,
-                              diff.layout, grad.layout);
+    auto algo = get_algorithm(this, filter.layout, diff.layout, grad.layout);
     algo->check_workspace(args, workspace).exec(args);
 }
 
-std::vector<ConvolutionBackwardDataImpl::Algorithm *>
-ConvolutionBackwardDataImpl::get_all_algorithms(const TensorLayout &filter,
-        const TensorLayout &diff,
-        const TensorLayout &grad) {
+std::vector<ConvolutionBackwardDataImpl::Algorithm*>
+ConvolutionBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
+                                                const TensorLayout& diff,
+                                                const TensorLayout& grad) {
     return megdnn::get_all_algorithms<ConvolutionBackwardDataImpl>(
             {this, filter, diff, grad});
 }
@@ -106,10 +107,10 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
 }
 
 ConvolutionBackwardDataImpl::Algorithm*
-ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
-        const CanonizedFilterMeta& filter_meta, const TensorLayout& diff,
-        const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        bool reproducible) {
+ConvolutionBackwardDataImpl::get_algorithm_heuristic(
+        const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
+        const TensorLayout& diff, const TensorLayout& grad,
+        size_t workspace_limit_in_bytes, bool reproducible) {
     AlgoBase::SizeArgs args(this, filter, filter_meta, diff, grad);
 
     if (args.filter_meta.group > 1 &&
@@ -117,6 +118,19 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
                 args, reproducible, workspace_limit_in_bytes)) {
         // prefer special chanwise impl
         return &sm_algo_pack.chanwise;
+    }
+
+    if (args.filter_layout->dtype.enumv() ==
+        DTypeTrait<dtype::QuantizedS8>::enumv) {
+        if (reproducible) {
+            return megdnn::get_reproducible_algo<ConvolutionBackwardDataImpl>(
+                    sm_algo_pack.int8_algos, args, workspace_limit_in_bytes,
+                    "cuda conv bwd_data");
+        } else {
+            return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
+                    sm_algo_pack.int8_algos, args, workspace_limit_in_bytes,
+                    "cuda conv bwd_data");
+        }
     }
 
     auto get_cudnn_algo =
@@ -206,12 +220,11 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
 }
 
 size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
-        const TensorLayout &filter,
-        const TensorLayout &diff,
-        const TensorLayout &grad) {
+        const TensorLayout& filter, const TensorLayout& diff,
+        const TensorLayout& grad) {
     AlgoBase::SizeArgs args(this, filter, diff, grad);
-    return get_algorithm(this, filter, args.filter_meta, diff, grad)->
-        get_workspace_in_bytes(args);
+    return get_algorithm(this, filter, args.filter_meta, diff, grad)
+            ->get_workspace_in_bytes(args);
 }
 
 const char* ConvolutionBackwardDataImpl::get_algorithm_set_name() const {
@@ -221,19 +234,19 @@ const char* ConvolutionBackwardDataImpl::get_algorithm_set_name() const {
 /* ============== ConvolutionBackwardFilterImpl ============== */
 
 void ConvolutionBackwardFilterImpl::exec(_megdnn_tensor_in src,
-        _megdnn_tensor_in diff,
-        _megdnn_tensor_out grad,
-        _megdnn_workspace workspace) {
+                                         _megdnn_tensor_in diff,
+                                         _megdnn_tensor_out grad,
+                                         _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, src, diff, grad, workspace);
-    auto algo = get_algorithm(this, src.layout, diff.layout,
-            grad.layout, args.grad_filter_meta);
+    auto algo = get_algorithm(this, src.layout, diff.layout, grad.layout,
+                              args.grad_filter_meta);
     algo->check_workspace(args, workspace).exec(args);
 }
 
-std::vector<ConvolutionBackwardFilterImpl::Algorithm *>
-ConvolutionBackwardFilterImpl::get_all_algorithms(const TensorLayout &src,
-        const TensorLayout &diff,
-        const TensorLayout &grad) {
+std::vector<ConvolutionBackwardFilterImpl::Algorithm*>
+ConvolutionBackwardFilterImpl::get_all_algorithms(const TensorLayout& src,
+                                                  const TensorLayout& diff,
+                                                  const TensorLayout& grad) {
     return megdnn::get_all_algorithms<ConvolutionBackwardFilterImpl>(
             {this, src, diff, grad});
 }
@@ -269,7 +282,7 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         CUDNNBwdFilterDescs desc;
         args.init_desc(desc);
 
-        //disable, segfault in megbrain, need further investigate.
+        // disable, segfault in megbrain, need further investigate.
 #if 0
         auto is_heuristic_success =
                 convolution::PerformanceModelBackwardFilter::
@@ -358,12 +371,11 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
 }
 
 size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
-        const TensorLayout &src,
-        const TensorLayout &diff,
-        const TensorLayout &grad) {
+        const TensorLayout& src, const TensorLayout& diff,
+        const TensorLayout& grad) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
-    return get_algorithm(this, src, diff, grad, args.grad_filter_meta)->
-        get_workspace_in_bytes(args);
+    return get_algorithm(this, src, diff, grad, args.grad_filter_meta)
+            ->get_workspace_in_bytes(args);
 }
 
 const char* ConvolutionBackwardFilterImpl::get_algorithm_set_name() const {

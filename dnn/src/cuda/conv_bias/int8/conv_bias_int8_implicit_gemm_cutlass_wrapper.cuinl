@@ -29,28 +29,30 @@ void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper(
         cudaStream_t stream) {
     typename Convolution::TensorRefSrc tensor_src{
             const_cast<typename Convolution::ElementSrc*>(d_src),
-            Convolution::LayoutSrc::packed({conv_param.n(), conv_param.hi(),
-                                            conv_param.wi(), conv_param.ci()})};
+            Convolution::LayoutSrc::packed(
+                    {conv_param.N, conv_param.H, conv_param.W, conv_param.C})};
     typename Convolution::TensorRefFilter tensor_filter{
             const_cast<typename Convolution::ElementFilter*>(d_filter),
-            Convolution::LayoutFilter::packed({conv_param.co(), conv_param.fh(),
-                                               conv_param.fw(),
-                                               conv_param.ci()})};
+            Convolution::LayoutFilter::packed(
+                    {conv_param.K, conv_param.R, conv_param.S, conv_param.C})};
     typename Convolution::TensorRefBias tensor_bias{
             const_cast<typename Convolution::ElementBias*>(d_bias),
-            Convolution::LayoutBias::packed({1, 1, 1, conv_param.co()})};
+            Convolution::LayoutBias::packed({1, 1, 1, conv_param.K})};
     typename Convolution::TensorRefDst tensor_z{
             const_cast<typename Convolution::ElementDst*>(d_z),
-            Convolution::LayoutDst::packed({conv_param.n(), conv_param.ho(),
-                                            conv_param.wo(), conv_param.co()})};
+            Convolution::LayoutDst::packed(
+                    {conv_param.N, conv_param.P, conv_param.Q, conv_param.K})};
     typename Convolution::TensorRefDst tensor_dst{
             d_dst,
-            Convolution::LayoutDst::packed({conv_param.n(), conv_param.ho(),
-                                            conv_param.wo(), conv_param.co()})};
-    typename Convolution::Arguments arguments{
-            conv_param,  tensor_src, tensor_filter,
-            tensor_bias, tensor_z,   tensor_dst.non_const_ref(),
-            epilogue};
+            Convolution::LayoutDst::packed(
+                    {conv_param.N, conv_param.P, conv_param.Q, conv_param.K})};
+    typename Convolution::Arguments arguments{conv_param,
+                                              tensor_src.non_const_ref(),
+                                              tensor_filter.non_const_ref(),
+                                              tensor_bias.non_const_ref(),
+                                              tensor_z.non_const_ref(),
+                                              tensor_dst.non_const_ref(),
+                                              epilogue};
     Convolution conv_op;
     cutlass_check(conv_op.initialize(arguments, workspace));
     cutlass_check(conv_op(stream));

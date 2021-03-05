@@ -105,6 +105,7 @@ public:
     class AlgoChanwiseSmall;
     class AlgoGroupConvGeneral;
     class AlgoBFloat16;
+    class AlgoInt8NCHW4DotProdImplicitGemm;
 
     class AlgoPack;
 

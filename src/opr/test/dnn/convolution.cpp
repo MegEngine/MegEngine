@@ -598,6 +598,51 @@ TEST(TestOprDNN, Deconvolution) {
         run({TensorShape{4, 6, 7, 2}, {2, 3, 4, 8, 13}}, opt);
 }
 
+TEST(TestOprDNN, DeconvolutionExePolicy_QuantizedS8) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(6, 1);
+
+    Param param;
+    using Policy = opr::ConvolutionBackwardData::ExecutionPolicy;
+    using S = Policy::Strategy;
+
+#if MGB_ENABLE_FASTRUN
+    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
+                          S::PROFILE_HEURISTIC}) {
+#else
+    for (auto strategy : {S : HEURISTIC, S::PROFILE_HEURISTIC}) {
+#endif
+        auto graph = ComputingGraph::make();
+        HostTensorGenerator<> gen;
+
+        auto mkvar = [&](const char* name, const TensorShape& shp,
+                         const DType& dtype) {
+            return opr::TypeCvt::make(
+                    opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name),
+                    dtype);
+        };
+
+        auto x = mkvar("x", {16, 4, 50, 50, 4}, dtype::QuantizedS8(1.2f));
+        auto w = mkvar("w", {16, 4, 4, 4, 4}, dtype::QuantizedS8(1.3f));
+
+        param.format = Param::Format::NCHW4;
+        param.pad_h = param.pad_w = 2;
+        param.stride_h = param.stride_w = 2;
+
+        Policy policy;
+        policy.strategy = strategy;
+
+        auto deconv = opr::ConvolutionBackwardData::make_deconv(
+                x, w, param, policy,
+                OperatorNodeConfig{dtype::QuantizedS8(1.2f)});
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(deconv, host_y)});
+        func->execute();
+    }
+}
+
 TEST(TestOprDNN, ConvolutionBackwardFilter) {
     using Checker = AutoOprChecker<3, 1>;
 

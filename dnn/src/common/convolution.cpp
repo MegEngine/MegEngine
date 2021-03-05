@@ -46,7 +46,7 @@ void make_canonized_filter_meta_nchw_nhwc(
         size_t src_ndim, const TensorLayout& filter, const Param& param,
         typename ConvolutionBase<Parameter>::CanonizedFilterMeta& ret) {
     megdnn_assert(param.format == Param::Format::NCHW ||
-                  param.format == Param::Format::NHWC );
+                  param.format == Param::Format::NHWC);
     auto img_ndim = src_ndim - 2;
     size_t flt_start, flt_spatial_start, ocpg_pos, icpg_pos;
     if (param.sparse == Param::Sparse::DENSE) {
@@ -320,8 +320,8 @@ void make_canonized_filter_meta_nchwxx(
                           img_ndim, filter.ndim);
             megdnn_assert((filter[filter.ndim - 1] == pack_size &&
                            filter[filter.ndim - 2] == pack_size) ||
-                           (filter[filter.ndim - 1] == 2 * pack_size &&
-                            filter[filter.ndim - 2] == 2 * pack_size),
+                                  (filter[filter.ndim - 1] == 2 * pack_size &&
+                                   filter[filter.ndim - 2] == 2 * pack_size),
                           "last 2 dim of filter must be %zu, but got %zu, %zu",
                           pack_size, filter[filter.ndim - 2],
                           filter[filter.ndim - 1]);
@@ -684,7 +684,8 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         }
         if (param().format == Param::Format::NCHW44 ||
             param().format == Param::Format::NCHW44_DOT) {
-            //!support nchw44 filter change to 88 for int8 winogradf23_88 using MK8 mamtul
+            //! support nchw44 filter change to 88 for int8 winogradf23_88 using
+            //! MK8 mamtul
             megdnn_assert((src.ndim == 4 && filter.ndim == 5 &&
                            filter[filter.ndim - 1] == 4) ||
                                   (src.ndim == 5 &&
@@ -716,7 +717,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                   "currently only convolution on 2D image is supported");
     auto cflt = make_canonized_filter_meta(src.ndim, filter);
     if (param().format == Param::Format::NCHW ||
-        param().format == Param::Format::NHWC ) {
+        param().format == Param::Format::NHWC) {
         size_t src_or_dst_c_pos = 0;
         size_t src_or_dst_spatial_start = 0;
         if (param().format == Param::Format::NCHW) {
@@ -790,7 +791,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         dst[3] = infer_conv_shape(src[3], cflt.dilated_spatial[1],
                                   cflt.stride[1], cflt.padding[1]);
         dst[4] = 32;
-    } else if (param().format == Param::Format::NCHW88 ) {
+    } else if (param().format == Param::Format::NCHW88) {
         megdnn_assert(src.ndim == 5 || (src.ndim == 4 && src[1] <= 8),
                       "invalid src ndim for NCHW88, expected=5 or 4, got=%zu",
                       src.ndim);
@@ -1042,10 +1043,10 @@ void ConvolutionBackwardData::deduce_dtype(DType filter, DType diff,
     }
     megdnn_assert(param().compute_mode != Param::ComputeMode::FLOAT32
 #if !MEGDNN_DISABLE_FLOAT16
-                          || filter.enumv() == DTypeEnum::Float16
-                          || filter.enumv() == DTypeEnum::BFloat16
+                          || filter.enumv() == DTypeEnum::Float16 ||
+                          filter.enumv() == DTypeEnum::BFloat16
 #endif
-                          ,
+                  ,
                   "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
                   "input / output.");
 }
@@ -1096,6 +1097,24 @@ void ConvolutionBackwardData::deduce_layout(const TensorLayout& filter,
                     diff[i + src_or_dst_spatial_start], cflt.dilated_spatial[i],
                     cflt.stride[i], cflt.padding[i]);
         }
+    } else if (param().format == Param::Format::NCHW4) {
+        megdnn_assert(diff.ndim == 5,
+                      "valid diff ndim for NCHW4, expected=5, got=%zu",
+                      diff.ndim);
+        megdnn_assert(cflt.group == 1, "%s", errmsg().c_str());
+        megdnn_assert(cflt.ocpg * cflt.group == diff[1] * 4, "%s",
+                      errmsg().c_str());
+        grad.ndim = diff.ndim;
+        grad[0] = diff[0];
+        auto ic = cflt.icpg * cflt.group;
+        megdnn_assert(ic % 4 == 0);
+        grad[1] = ic / 4;
+        grad[2] = deduce(diff[2], cflt.dilated_spatial[0], cflt.stride[0],
+                         cflt.padding[0]);
+        grad[3] = deduce(diff[3], cflt.dilated_spatial[1], cflt.stride[1],
+                         cflt.padding[1]);
+        megdnn_assert(diff[4] == 4);
+        grad[4] = 4;
     } else {
         megdnn_assert(param().format == Param::Format::NHWCD4);
         megdnn_assert(diff.ndim == 5,

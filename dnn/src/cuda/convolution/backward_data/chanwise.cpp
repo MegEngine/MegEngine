@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "./algo.h"
@@ -19,8 +20,10 @@ using namespace convolution;
 
 bool ConvolutionBackwardDataImpl::AlgoChanwise::is_available(
         const SizeArgs& args) const {
-    if (args.diff_layout->dtype == args.filter_layout->dtype &&
-        args.diff_layout->dtype == dtype::BFloat16()) {
+    if ((args.diff_layout->dtype == args.filter_layout->dtype &&
+         args.diff_layout->dtype == dtype::BFloat16()) ||
+        (args.diff_layout->dtype == args.filter_layout->dtype &&
+         args.diff_layout->dtype == dtype::QuantizedS8())) {
         return false;
     }
     auto&& fm = args.filter_meta;
@@ -74,4 +77,3 @@ void ConvolutionBackwardDataImpl::AlgoChanwise::exec(
 }
 
 // vim: syntax=cpp.doxygen
-

@@ -14,13 +14,12 @@ using WarpShape = cutlass::gemm::GemmShape<32, 32, 64>;
 using InstructionShape = cutlass::gemm::GemmShape<8, 8, 16>;
 using EpilogueOp = cutlass::epilogue::thread::BiasAddLinearCombinationClamp<
                     int8_t, 8, int32_t, int32_t, float>;
-using Convolution = cutlass::convolution::device::Convolution<
+using Convolution = cutlass::conv::device::Convolution<
     int8_t, LayoutSrc, int8_t, LayoutFilter, int8_t, 
     LayoutDst, int32_t, LayoutDst, int32_t, 
-    cutlass::convolution::ConvType::kConvolution, cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75, 
+    cutlass::conv::ConvType::kConvolution, cutlass::arch::OpClassTensorOp, cutlass::arch::Sm75, 
     ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp, 
-    cutlass::convolution::threadblock::ConvolutionNCxHWxThreadblockSwizzle<
-    cutlass::convolution::ConvType::kConvolution>, 
+    cutlass::conv::threadblock::ConvolutionFpropNCxHWxThreadblockSwizzle, 
     2, 16, 16, true, 
     cutlass::arch::OpMultiplyAddSaturate>;
 template void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper<Convolution>(
