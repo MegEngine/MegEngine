@@ -104,6 +104,7 @@ function copy_more_dll() {
     fi
 }
 
+
 function do_build() {
     for ver in ${ALL_PYTHON}
     do
@@ -171,6 +172,7 @@ function do_build() {
         ${PYTHON_DIR}/python3 setup.py bdist_wheel
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${WINDOWS_WHL_HOME}/
 
+
         echo ""
         echo "##############################################################################################"
         echo "windows whl package location: ${WINDOWS_WHL_HOME}"
@@ -195,5 +197,10 @@ function third_party_prepare() {
 
 ######################
 export ALREADY_CONFIG_PYTHON_VER="yes"
+if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+    export SDK_NAME="cu101"
+else
+    export SDK_NAME="cpu"
+fi
 third_party_prepare
 do_build
