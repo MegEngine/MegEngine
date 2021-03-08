@@ -69,8 +69,8 @@ def test_tqt():
     def cb(grad):
         g.append(grad)
 
-    x = np.random.normal(size=(1, 2, 3, 4))
-    s = np.random.rand(1) + 1
+    x = np.random.randint(-128, 128, size=(1, 2, 3, 4)).astype("float32")
+    s = np.random.rand(1) - 1
     g_y = np.ones(shape=(1, 2, 3, 4), dtype="float32")
 
     n = TQT_numpy(-127, 127)
@@ -85,9 +85,9 @@ def test_tqt():
     grad(y, g_y)
     g_x, g_s = g
 
-    np.testing.assert_allclose(y.numpy(), y_np, atol=1e-6)
-    np.testing.assert_allclose(g_x.numpy(), g_x_np, atol=1e-6)
-    np.testing.assert_allclose(g_s.numpy(), g_s_np, atol=1e-6)
+    np.testing.assert_allclose(y.numpy(), y_np, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(g_x.numpy(), g_x_np, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(g_s.numpy(), g_s_np, rtol=5e-5, atol=5e-5)
 
 
 

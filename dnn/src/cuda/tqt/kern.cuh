@@ -58,7 +58,7 @@ struct TQTBwdKernOp {
         ctype scaled = input[idx] / t;
         ctype rounded = round(scaled);
         rounded = fmaxf(fminf(rounded, qmax), qmin);
-        bool mask_clip = scaled < -0.5 + qmin && scaled > 0.5 + qmax;
+        bool mask_clip = (scaled < -0.5 + qmin) + (scaled > 0.5 + qmax);
         bool mask_quant = !mask_clip;
 
         grad_x[idx] = diff[idx] * mask_quant;

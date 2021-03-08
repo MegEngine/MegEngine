@@ -53,7 +53,7 @@ void backward_impl(const ElemwiseOpParamN<5> src, float qmin, float qmax) {
         T rounded = round(scaled);
         rounded = rounded <= qmin ? qmin : rounded;
         rounded = rounded >= qmax ? qmax : rounded;
-        bool mask_clip = scaled < -0.5 + qmin && scaled > 0.5 + qmax;
+        bool mask_clip = (scaled < -0.5 + qmin) + (scaled > 0.5 + qmax);
         bool mask_quant = !mask_clip;
 
         *grad_x = *diff * mask_quant;
