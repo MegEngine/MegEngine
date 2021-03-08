@@ -36,6 +36,9 @@
 #if MGB_ENABLE_TENSOR_RT
 #include "megbrain/tensorrt/tensorrt_opr.h"
 #endif
+#if MGB_CUDA
+#include <cudnn.h>
+#endif
 
 #include "megbrain/gopt/misc.h"
 
@@ -1999,6 +2002,11 @@ void FuseConvBiasZPass::apply(OptState& state) const {
     auto check_fuse_dtype = [&](opr::ConvBias* conv_bias, VarNode* z) -> bool {
         return conv_bias->output(0)->dtype().enumv() == z->dtype().enumv();
     };
+#if MGB_CUDA && (CUDNN_MAJOR == 8)
+    auto check_fuse_param = [&](opr::ConvBias* conv_bias, VarNode* z) -> bool {
+        return conv_bias->input(0) != z;
+    };
+#endif
     auto get_convbias_nonline_mode = [&](OperatorNodeBase* opr) -> NonlineMode {
         if (opr->same_type<opr::Elemwise>()) {
             auto elem = try_cast_as_op<opr::Elemwise>(opr);
@@ -2037,6 +2045,9 @@ void FuseConvBiasZPass::apply(OptState& state) const {
 
         if (conv_bias && check_conv_bias(conv_bias) &&
             check_fuse_shape(conv_bias, z_inp) &&
+#if MGB_CUDA && (CUDNN_MAJOR == 8)
+            check_fuse_param(conv_bias, z_inp) &&
+#endif
             check_fuse_dtype(conv_bias, z_inp)) {
             auto param = conv_bias->param();
             param.nonlineMode = get_convbias_nonline_mode(opr);

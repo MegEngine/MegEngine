@@ -36,6 +36,10 @@
 
 #include <random>
 
+#if MGB_CUDA
+#include <cudnn.h>
+#endif
+
 using namespace mgb;
 
 namespace {
@@ -2211,8 +2215,6 @@ TEST(TestGoptInference, EnableTensorCore) {
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(FuseConvBiasZPass, BlockFuse) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2284,6 +2286,25 @@ TEST(FuseConvBiasZPass, BlockFuse) {
                      OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
         z = opr::TypeCvt::make(z, dtype::Float32());
 
+        SymbolVar z_fuse;
+        {
+            auto options = gopt::OptimizeForInferenceOptions{};
+            options.enable_fuse_conv_bias_nonlinearity()
+                    .enable_fuse_conv_bias_with_z();
+            unpack_vector(gopt::optimize_for_inference({z}, options), z_fuse);
+        }
+        graph->compile({{z_fuse, {}}})
+                ->to_json()
+                ->writeto_fpath(
+                        output_file("FuseConvBiasZPass.BlockFuse_fuse.json"));
+
+        auto nr_elem_multi_type =
+                find_opr_num<mgb::opr::ElemwiseMultiType>(z_fuse);
+        MGB_MARK_USED_VAR(nr_elem_multi_type);
+#if MGB_CUDA && (CUDNN_MAJOR == 8)
+        ASSERT_EQ(2u, nr_elem_multi_type);
+#else
+        ASSERT_EQ(1u, nr_elem_multi_type);
         //! fuse z mannually
         auto z0 = opr::ConvBias::make(
                 x, w1, b1, param, {},
@@ -2299,42 +2320,26 @@ TEST(FuseConvBiasZPass, BlockFuse) {
                      OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
         z4 = opr::TypeCvt::make(z4, dtype::Float32());
 
-        SymbolVar z_fuse;
         SymbolVar z_nonfuse;
-        {
-            auto options = gopt::OptimizeForInferenceOptions{};
-            options.enable_fuse_conv_bias_nonlinearity()
-                    .enable_fuse_conv_bias_with_z();
-            unpack_vector(gopt::optimize_for_inference({z}, options), z_fuse);
-        }
         {
             auto options = gopt::OptimizeForInferenceOptions{};
             options.enable_fuse_conv_bias_nonlinearity();
             unpack_vector(gopt::optimize_for_inference({z4}, options),
                           z_nonfuse);
         }
-        auto nr_elem_multi_type =
-                find_opr_num<mgb::opr::ElemwiseMultiType>(z_fuse);
-        MGB_MARK_USED_VAR(nr_elem_multi_type);
-        ASSERT_EQ(1u, nr_elem_multi_type);
-        graph->compile({{z_fuse, {}}})
-                ->to_json()
-                ->writeto_fpath(
-                        output_file("FuseConvBiasZPass.BlockFuse_fuse.json"));
         graph->compile({{z_nonfuse, {}}})
                 ->to_json()
                 ->writeto_fpath(output_file(
                         "FuseConvBiasZPass.BlockFuse_nonfuse.json"));
-
         HostTensorND host_z_fuse, host_z_nonfuse;
         auto func =
                 graph->compile({make_callback_copy(z_nonfuse, host_z_nonfuse),
                                 make_callback_copy(z_fuse, host_z_fuse)});
         func->execute();
         MGB_ASSERT_TENSOR_EQ(host_z_fuse, host_z_nonfuse);
+#endif
     }
 }
-#endif
 
 TEST(TestEnableTensorCore, ShuffleMerge) {
     REQUIRE_GPU(1);
