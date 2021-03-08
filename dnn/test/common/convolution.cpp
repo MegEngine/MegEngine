@@ -434,7 +434,7 @@ std::vector<TestArg> convolution::get_args_int8_nchw4_conv_bwd_data() {
     param::Convolution cur_param;
 
     // clang-format off
-    for (auto mode : {param::ConvBias::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {param::Convolution::Mode::CROSS_CORRELATION}) {
     for (size_t b : {64, 16}) {
     for (size_t ic : {16, 32}) {
     for (size_t oc : {16, 32}) {
@@ -449,8 +449,8 @@ std::vector<TestArg> convolution::get_args_int8_nchw4_conv_bwd_data() {
         size_t f = kernel_size;
         cur_param.mode = mode;
 
-        cur_param.format = param::ConvBias::Format::NCHW4;
-        cur_param.sparse = param::ConvBias::Sparse::DENSE;
+        cur_param.format = param::Convolution::Format::NCHW4;
+        cur_param.sparse = param::Convolution::Sparse::DENSE;
         cur_param.pad_h = cur_param.pad_w = p;
         cur_param.stride_h = cur_param.stride_w = s;
 
@@ -459,6 +459,54 @@ std::vector<TestArg> convolution::get_args_int8_nchw4_conv_bwd_data() {
                           TensorShape{oc, ic / 4, f, f, 4});
     } } } } } } } } }
     // clang-format on
+
+    cur_param.pad_h = cur_param.pad_w = 1;
+    cur_param.stride_h = cur_param.stride_w = 1;
+
+    args.emplace_back(cur_param, TensorShape{16, 4, 8, 11, 4},
+                      TensorShape{16, 4, 3, 3, 4});
+
+    return args;
+}
+
+
+std::vector<TestArg> convolution::get_args_int8_nchw_conv_bwd_data() {
+    std::vector<TestArg> args;
+    param::Convolution cur_param;
+
+    // clang-format off
+    for (auto mode : {param::Convolution::Mode::CROSS_CORRELATION}) {
+    for (size_t b : {64, 16}) {
+    for (size_t ic : {16, 32}) {
+    for (size_t oc : {16, 32}) {
+    for (size_t h : {8}) {
+    for (size_t w : {8, 11}) {
+    for (size_t kernel_size : {3, 4, 5, 7}) {
+    for (int p : {0, static_cast<int>(kernel_size / 2)}) {
+    for (size_t s : {2}) {
+        if (kernel_size >= 7) {
+            b = std::min(b, 32_z);
+        }
+        size_t f = kernel_size;
+        cur_param.mode = mode;
+
+        cur_param.format = param::Convolution::Format::NCHW;
+        cur_param.sparse = param::Convolution::Sparse::DENSE;
+        cur_param.pad_h = cur_param.pad_w = p;
+        cur_param.stride_h = cur_param.stride_w = s;
+
+        //! bias channel
+        args.emplace_back(cur_param, TensorShape{b, ic, h, w},
+                          TensorShape{oc, ic, f, f});
+    } } } } } } } } }
+    // clang-format on
+
+    // test stride = 1
+    cur_param.pad_h = cur_param.pad_w = 1;
+    cur_param.stride_h = cur_param.stride_w = 1;
+
+    args.emplace_back(cur_param, TensorShape{16, 16, 8, 11},
+                      TensorShape{16, 16, 3, 3});
 
     return args;
 }

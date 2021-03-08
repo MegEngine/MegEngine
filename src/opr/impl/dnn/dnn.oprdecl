@@ -51,7 +51,7 @@ decl_opr('ConvolutionBackwardData',
          ],
          desc='batched deconvolution on channeled 2D images; the underlying '
          'computation is in fact gradient of convolution w.r.t. data',
-         version=2)
+         version=2, has_out_dtype=True)
 
 decl_opr('MaskConvolution',
          inputs=[Doc('src',

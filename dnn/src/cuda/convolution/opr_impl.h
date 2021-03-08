@@ -106,6 +106,7 @@ public:
     class AlgoGroupConvGeneral;
     class AlgoBFloat16;
     class AlgoInt8NCHW4DotProdImplicitGemm;
+    class AlgoInt8NCHWDotProdImplicitGemm;
 
     class AlgoPack;
 

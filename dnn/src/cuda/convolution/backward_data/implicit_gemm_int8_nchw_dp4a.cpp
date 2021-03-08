@@ -1,5 +1,6 @@
 /**
- * \file dnn/src/cuda/convolution/backward_data/implicit_gemm_int8_nchw4_dp4a.cpp
+ * \file
+ * dnn/src/cuda/convolution/backward_data/implicit_gemm_int8_nchw4_dp4a.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -14,15 +15,14 @@
 #include "src/cuda/utils.h"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/convolution/backward_data/cutlass_deconvolution_wrapper.cuh"
-#include "src/cuda/convolution/backward_data/deconv_int8_helper.cuh"
 
 using namespace megdnn;
 using namespace cuda;
 
-bool ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::
         is_available(const SizeArgs& args) const {
     auto&& fm = args.filter_meta;
-    if (fm.format != Param::Format::NCHW4)
+    if (fm.format != Param::Format::NCHW)
         return false;
 
     bool available = true;
@@ -36,6 +36,8 @@ bool ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
                   dst_dtype.enumv() == DTypeEnum::QuantizedS8);
     // TODO support group deconv int8
     available &= (fm.group == 1);
+    // ic and oc must be multiples of 4
+    available &= ((fm.group * fm.icpg) % 4 == 0 && (fm.group * fm.ocpg) % 4 == 0);
     // mode must be cross correlation
     available &= !fm.should_flip;
     // mode must be 2D
@@ -51,25 +53,27 @@ bool ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
     return available;
 }
 
-WorkspaceBundle ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+WorkspaceBundle ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::
         get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const {
     size_t ws_filter = args.filter_layout->span().dist_byte();
-    return WorkspaceBundle{raw_ptr, {ws_filter}};
+    size_t ws_diff = args.diff_layout->span().dist_byte();
+    size_t ws_grad = args.grad_layout->span().dist_byte();
+    return WorkspaceBundle{raw_ptr, {ws_filter, ws_diff, ws_grad}};
 }
 
-size_t ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+size_t ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::
         get_workspace_in_bytes(const SizeArgs& args) const {
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
 
-void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
+void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
         const ExecArgs& args) const {
     auto&& fm = args.filter_meta;
     size_t n = args.diff_layout->operator[](0),
-           co = args.diff_layout->operator[](1) * 4,
+           co = args.diff_layout->operator[](1),
            ho = args.diff_layout->operator[](2),
            wo = args.diff_layout->operator[](3);
-    size_t ci = args.grad_layout->operator[](1) * 4,
+    size_t ci = args.grad_layout->operator[](1),
            hi = args.grad_layout->operator[](2),
            wi = args.grad_layout->operator[](3);
     size_t fh = fm.spatial[0], fw = fm.spatial[1];
@@ -78,15 +82,39 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
 
     auto&& stream = cuda_stream(args.opr->handle());
 
-    int8_t* filter_ptr = nullptr;
+    auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
+
+    int8_t* inner_filter_ptr = nullptr;
+    int8_t* inner_diff_ptr = nullptr;
     // TODO: weight preprocess
     {
-        filter_ptr = reinterpret_cast<int8_t*>(args.workspace.raw_ptr);
-        // reformat filter from nc4hw4 to n4hwc4
-        megdnn::cuda::deconv::reorder_filter_nc4hw4_to_n4hwc4(
-                filter_ptr, args.filter_tensor->compatible_ptr<int8_t>(), co,
-                ci, fh, fw, stream);
+        inner_filter_ptr = reinterpret_cast<int8_t*>(bundle.get(0));
+        // reformat filter from nchw to n4hwc4
+        TensorLayout exec_src{{co / 4, 4, ci, fh, fw}, dtype::Int8()};
+        TensorLayout exec_dst{{co / 4, fh, fw, ci, 4}, dtype::Int8()};
+
+        exec_src = exec_src.dimshuffle({0, 3, 4, 2, 1});
+
+        auto&& relayout =
+                args.opr->handle()->create_operator<RelayoutForward>();
+        relayout->exec({args.filter_tensor->raw_ptr, exec_src},
+                       {inner_filter_ptr, exec_dst});
     }
+    {
+        inner_diff_ptr = reinterpret_cast<int8_t*>(bundle.get(1));
+        // reformat diff from nchw to nchw4
+        TensorLayout exec_src{{n, co / 4, 4, ho, wo}, dtype::Int8()};
+        TensorLayout exec_dst{{n, co / 4, ho, wo, 4}, dtype::Int8()};
+
+        exec_src = exec_src.dimshuffle({0, 1, 3, 4, 2});
+
+        auto&& relayout =
+                args.opr->handle()->create_operator<RelayoutForward>();
+        relayout->exec({args.diff_tensor->raw_ptr, exec_src},
+                       {inner_diff_ptr, exec_dst});
+    }
+    int8_t* inner_grad_ptr = reinterpret_cast<int8_t*>(bundle.get(2));
+
     convolution::ConvParam kern_param;
     kern_param.n = n, kern_param.co = co, kern_param.ci = ci,
     kern_param.hi = hi, kern_param.wi = wi, kern_param.ho = ho,
@@ -101,27 +129,26 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
           grad_scale =
                   args.grad_layout->dtype.param<dtype::QuantizedS8>().scale;
     float alpha = diff_scale * filter_scale / grad_scale;
+
+    // only use 16x64x8_16x64x8_2stages impl
     cutlass_wrapper::do_deconv_int8_implicit_gemm_dp4a_ncdiv4hw4(
-            args.diff_tensor->compatible_ptr<int8_t>(), filter_ptr,
-            args.grad_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
-            alpha,
-            cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
-                                       m_algo_param.threadblock_n,
-                                       m_algo_param.threadblock_k},
-            cutlass_wrapper::GemmCoord{m_algo_param.warp_m, m_algo_param.warp_n,
-                                       m_algo_param.warp_k},
-            m_algo_param.stage, stream);
+            inner_diff_ptr, inner_filter_ptr, inner_grad_ptr, nullptr,
+            kern_param, alpha, cutlass_wrapper::GemmCoord{16, 64, 8},
+            cutlass_wrapper::GemmCoord{16, 64, 8}, 2, stream);
 
     after_kernel_launch();
-}
 
-void ConvolutionBackwardDataImpl::AlgoPack::fill_int8_dp4a_algos() {
-    using AlgoParam = AlgoInt8NCHW4DotProdImplicitGemm::AlgoParam;
-    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8, 2});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 128, 16, 16, 64, 16, 2});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{16, 128, 16, 16, 128, 16, 1});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32, 2});
-    int8_nchw4_dotprod.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32, 2});
-}
+    {
+        // reformat grad from nchw4 to nchw
+        TensorLayout exec_src{{n, ci / 4, hi, wi, 4}, dtype::Int8()};
+        TensorLayout exec_dst{{n, ci / 4, 4, hi, wi}, dtype::Int8()};
 
+        exec_src = exec_src.dimshuffle({0, 1, 4, 2, 3});
+
+        auto&& relayout =
+                args.opr->handle()->create_operator<RelayoutForward>();
+        relayout->exec({inner_grad_ptr, exec_src},
+                       {args.grad_tensor->raw_ptr, exec_dst});
+    }
+}
 // vim: syntax=cpp.doxygen

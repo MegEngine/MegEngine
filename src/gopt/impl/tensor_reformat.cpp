@@ -1514,6 +1514,46 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter() {
         return new_opr;
     };
 
+    auto replace_deconv_opr = [trans_nchw4, conv_format](
+                                    OperatorNodeBase* opr,
+                                    const VarNodeArray& new_inp) {
+        if (new_inp[1]->dtype().enumv() == DTypeEnum::Float32) {
+            return serialization::copy_opr_shallow(*opr, new_inp,
+                                                   opr->config());
+        }
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& deconv_opr = opr->cast_final_safe<opr::ConvolutionBackwardData>();
+        if ((deconv_opr.param().format !=
+             megdnn::param::Convolution::Format::NCHW) ||
+            (deconv_opr.param().sparse !=
+             megdnn::param::Convolution::Sparse::DENSE)) {
+            return serialization::copy_opr_shallow(*opr, new_inp,
+                                                   opr->config());
+        }
+        VarNode *deconv_src = new_inp[1], *deconv_filter = new_inp[0];
+        auto deconv_mode = trans_nchw4(deconv_opr.param().sparse, deconv_filter);
+        // src: NCHW --> NCWH4
+        if (deconv_src->shape().ndim != 5) {
+            mgb_assert(deconv_src->shape().ndim == 4);
+            auto new_src =
+                    RelayoutPlaceholder::make(deconv_src, deconv_mode.src);
+            deconv_src = new_src.node();
+        }
+        // weight: NCHW --> NCHW4
+        auto new_filter =
+                RelayoutPlaceholder::make(deconv_filter, deconv_mode.weight);
+        deconv_filter = new_filter.node();
+        // format: NCHW --> NCHW4
+        auto new_param = deconv_opr.param();
+        new_param.format = conv_format;
+        // dst
+        auto new_deconv_opr = opr::ConvolutionBackwardData::make_deconv(
+                deconv_src, deconv_filter, new_param,
+                deconv_opr.execution_policy(), deconv_opr.config());
+        OperatorNodeBase* new_opr = new_deconv_opr.node()->owner_opr();
+        return new_opr;
+    };
+
     auto replace_batch_conv_bias_opr = [batch_conv_bias_format,
                                         src_to_nchw4_mode](
                                                OperatorNodeBase* opr,
@@ -1806,6 +1846,8 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter() {
     auto&& replace_func = ret->m_opr_replace_func;
     //! supportted nchw4
     replace_func[opr::Convolution::typeinfo()] = replace_conv_opr;
+    replace_func[opr::ConvolutionBackwardData::typeinfo()] =
+            replace_deconv_opr;
     replace_func[opr::ConvBias::typeinfo()] = replace_conv_bias_opr;
     replace_func[opr::BatchConvBias::typeinfo()] = replace_batch_conv_bias_opr;
     replace_func[opr::PoolingForward::typeinfo()] = replace_pooling_opr;
@@ -1818,8 +1860,6 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter() {
     replace_func[opr::PowC::typeinfo()] = replace_elemwise_opr;
     //! not supported nchw4
     replace_func[opr::Concat::typeinfo()] = relayout_inp_to_nchw;
-    replace_func[opr::ConvolutionBackwardData::typeinfo()] =
-            relayout_inp_to_nchw;
     replace_func[opr::Subtensor::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::GetVarShape::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::Dimshuffle::typeinfo()] = relayout_inp_to_nchw;

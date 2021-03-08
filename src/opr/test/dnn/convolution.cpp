@@ -609,10 +609,11 @@ TEST(TestOprDNN, DeconvolutionExePolicy_QuantizedS8) {
     using S = Policy::Strategy;
 
 #if MGB_ENABLE_FASTRUN
-    for (auto strategy : {S::PROFILE, S::HEURISTIC, S::PROFILE_REPRODUCIBLE,
-                          S::PROFILE_HEURISTIC}) {
+    for (auto strategy :
+         {S::PROFILE, S::HEURISTIC, S(S::PROFILE | S::REPRODUCIBLE),
+          S(S::PROFILE | S::HEURISTIC)}) {
 #else
-    for (auto strategy : {S : HEURISTIC, S::PROFILE_HEURISTIC}) {
+    for (auto strategy: {S:HEURISTIC, S(S::PROFILE | S::HEURISTIC)}) {
 #endif
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;

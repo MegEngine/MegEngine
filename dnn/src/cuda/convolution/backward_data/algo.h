@@ -39,7 +39,8 @@ public:
         CUDA_CHANWISE_SMALL,
         CUDA_BFLOAT16,
         CUDA_GROUP_CONV_GENERAL,
-        CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8
+        CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_NCHW_DOTPROD_INT8
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -254,12 +255,6 @@ public:
         int warp_k;
         int stage;
         std::string to_string() {
-            /// default algorithm
-            if (threadblock_m == 128 && threadblock_n == 128 &&
-                threadblock_k == 32 && warp_m == 32 && warp_n == 64 &&
-                warp_k == 32 && stage == 2) {
-                return "";
-            }
             return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m,
                             threadblock_n, threadblock_k, warp_m, warp_n,
                             warp_k, stage);
@@ -284,6 +279,24 @@ private:
     std::string m_name;
 };
 
+class ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm final
+        : public AlgoBase {
+public:
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override {
+        return "INT8_NCHW_DOTPROD_IMPLICIT_GEMM";
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW_DOTPROD_INT8);
+private:
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
+                                         const SizeArgs& args) const;
+};
+
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
     // defined in cudnn.cpp
     void fill_cudnn_algos();
@@ -303,6 +316,7 @@ public:
     std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
     AlgoBFloat16 bfloat16;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
+    AlgoInt8NCHWDotProdImplicitGemm int8_nchw_dotprod;
 
     std::vector<AlgoBase*>
             //! all algorithms

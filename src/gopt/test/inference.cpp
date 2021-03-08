@@ -2923,6 +2923,7 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     auto conv1 = opr::ConvBiasForward::make(
             x, w1, b1, param_conv_bias, {},
             OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+
     // group
     // icpg != 1 && ocpg != 1
     param_conv_bias.sparse = opr::ConvBias::Param::Sparse::GROUP;
@@ -2932,8 +2933,19 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
             conv1, w2, b2, param_conv_bias, {},
             OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
 
-    auto conv2_fp32 = opr::TypeCvt::make(conv2, dtype::Float32());
-    auto y = conv2_fp32 + opr::TypeCvt::make(b2, dtype::Float32());
+    opr::Convolution::Param param_deconv;
+    param_deconv.format = opr::Convolution::Param::Format::NCHW;
+    param_deconv.stride_h = param_deconv.stride_w = 2;
+    param_deconv.pad_h = param_deconv.pad_w = 2;
+    // dense
+    param_deconv.sparse = opr::Convolution::Param::Sparse::DENSE;
+    auto w3 = mkcvar("w3", {8, 8, 4, 4}, dtype::QuantizedS8(2.5f));
+    auto deconv1 = opr::ConvolutionBackwardData::make_deconv(
+            conv2, w3, param_deconv, {},
+            OperatorNodeConfig{dtype::QuantizedS8{2.5f}});
+
+    auto deconv1_fp32 = opr::TypeCvt::make(deconv1, dtype::Float32());
+    auto y = deconv1_fp32 + opr::TypeCvt::make(b2, dtype::Float32());
 
     SymbolVar y_opt;
     {
@@ -2944,6 +2956,8 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
 
     ASSERT_EQ(opr::ConvBias::Param::Format::NCHW4,
               find_opr<opr::ConvBias>(y_opt).param().format);
+    ASSERT_EQ(opr::ConvolutionBackwardData::Param::Format::NCHW4,
+              find_opr<opr::ConvolutionBackwardData>(y_opt).param().format);
     auto nr_reshape = find_opr_num<mgb::opr::Reshape>(y_opt);
     ASSERT_EQ(2u, nr_reshape);
 

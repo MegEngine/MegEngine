@@ -266,19 +266,78 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_MATMUL) {
     }
 }
 
-TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_DP4A) {
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW4_DP4A) {
     if (!cuda::is_compute_capability_required(6, 1)) {
-        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_DP4A test as current "
-               "device doesn't support\n");
+        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_NCHW4_DP4A test as "
+               "current device doesn't support\n");
         return;
     }
 
     using namespace convolution;
     std::vector<TestArg> args = get_args_int8_nchw4_conv_bwd_data();
+
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int stage;
+        std::string to_string() {
+            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m,
+                            threadblock_n, threadblock_k, warp_m, warp_n,
+                            warp_k, stage);
+        }
+    };
+
+    std::vector<AlgoParam> all_params;
+
+    all_params.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8, 2});
+    all_params.emplace_back(AlgoParam{16, 128, 16, 16, 64, 16, 2});
+    all_params.emplace_back(AlgoParam{16, 128, 16, 16, 128, 16, 1});
+    all_params.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32, 2});
+    all_params.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32, 2});
+
+    for (auto algo_param : all_params) {
+        Checker<ConvolutionBackwardData> checker(handle_cuda());
+        std::string algo_name(ssprintf("INT8_NCHW4_DOTPROD_IMPLICIT_GEMM%s",
+                                       algo_param.to_string().c_str()));
+        checker.set_before_exec_callback(
+                AlgoChecker<ConvolutionBackwardData>(algo_name.c_str()));
+
+        checker.set_epsilon(1 + 1e-3).set_max_avg_error(1e-1);
+
+        for (auto&& arg : args) {
+            UniformIntRNG rng(-3, 3);
+            auto src = TensorLayout(arg.src, dtype::QuantizedS8{1.2f});
+            auto filter = TensorLayout(arg.filter, dtype::QuantizedS8{1.3f});
+            TensorLayout dst;
+            dst.dtype = dtype::QuantizedS8{1.2f};
+            {
+                auto opr = handle_cuda()->create_operator<Convolution>();
+                opr->param() = arg.param;
+                opr->deduce_layout(src, filter, dst);
+            }
+            checker.set_rng(0, &rng).set_rng(1, &rng).set_param(arg.param).exec(
+                    TensorLayoutArray{filter, dst, src});
+        }
+    }
+}
+
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A) {
+    if (!cuda::is_compute_capability_required(6, 1)) {
+        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A test as "
+               "current device doesn't support\n");
+        return;
+    }
+
+    using namespace convolution;
+    std::vector<TestArg> args = get_args_int8_nchw_conv_bwd_data();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
 
     checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
-            "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM"));
+            "INT8_NCHW_DOTPROD_IMPLICIT_GEMM"));
 
     checker.set_epsilon(1 + 1e-3).set_max_avg_error(1e-1);
 

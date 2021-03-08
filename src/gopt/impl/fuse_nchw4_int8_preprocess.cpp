@@ -459,7 +459,8 @@ void FuseWarpPerspectiveDimshufflePass::apply(OptState& opt) const {
                                      opr::WarpPerspective::Param new_param,
                                      megdnn::DType dst_dtype,
                                      SymbolVar& new_warp) {
-        OperatorNodeConfig new_config(dst_dtype);
+        OperatorNodeConfig new_config = warp->config();
+        new_config.output_dtype(dst_dtype);
         if (warp->input().size() == 3) {
             auto src = rewriter.get_var(warp->input(0)),
                  mat = rewriter.get_var(warp->input(1)),

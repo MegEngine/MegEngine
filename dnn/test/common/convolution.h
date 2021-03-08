@@ -49,6 +49,7 @@ std::vector<TestArg> get_1x1_args();
 std::vector<TestArg> get_dilated_args();
 std::vector<TestArg> get_chanwise_args();
 std::vector<TestArg> get_args_int8_nchw4_conv_bwd_data();
+std::vector<TestArg> get_args_int8_nchw_conv_bwd_data();
 
 //! \param stage 0 for fwd, 1 for bwd data, 2 for bwd filter
 using ConvEPSGetter =

@@ -36,6 +36,9 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
         int8_algos.push_back(&algo);
     }
 
+    int8_algos.push_back(&int8_nchw_dotprod);
+    all_algos.push_back(&int8_nchw_dotprod);
+
     all_algos.reserve(all_algos.size() * 2);
 
     // add gconv algos by AlgoGroupConvGeneral
