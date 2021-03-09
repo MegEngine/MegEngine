@@ -75,7 +75,7 @@ class TQT(_FakeQuantize, QParamsModuleMixin):
     for Accurate and Efficient Fixed-Point Inference of Deep Neural Networks.
 
     :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
-    quantization dtype of input.
+        quantization dtype of input.
     :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
@@ -106,7 +106,7 @@ class FakeQuantize(_FakeQuantize):
     A module to do quant and dequant according to observer's scale and zero_point.
 
     :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
-    quantization dtype of input.
+        quantization dtype of input.
     :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
