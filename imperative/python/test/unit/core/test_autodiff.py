@@ -367,12 +367,12 @@ def test_Broadcast():
     np.testing.assert_equal(np.ones((3, 3, 1), dtype=np.float32) * 10, x.grad.numpy())
 
 
-def test_resize():
+def test_interpolate_fastpath():
     x_np = np.random.rand(3, 3, 32, 32).astype("float32")
     x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
-    y = F.resize(x, (16, 16))
+    y = F.nn.interpolate(x, size=(16, 16), mode="BILINEAR")
 
     grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones(x_np.shape, dtype=np.float32) / 4, x.grad.numpy())

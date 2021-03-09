@@ -57,7 +57,6 @@ __all__ = [
     "one_hot",
     "prelu",
     "remap",
-    "resize",
     "softmax",
     "softplus",
     "warp_affine",
@@ -984,41 +983,6 @@ def one_hot(inp: Tensor, num_classes: int) -> Tensor:
     return result
 
 
-def resize(
-    inp: Tensor, target_shape: Iterable[int], interp_mode: str = "LINEAR"
-) -> Tensor:
-    r"""
-    Applies resize transformation to batched 2D images.
-
-    :param inp: `(N, C, H, W)` input tensor. Currently only support "NCHW" format.
-    :param target_shape: `(H, W)` target images shape.
-    :param interp_mode: interpolation methods. Defaule mode is "LINEAR", Currently only support "LINEAR".
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = tensor(np.random.randn(10, 3, 32, 32))
-        out = F.resize(x, (16, 16))
-        print(out.numpy().shape)
-
-    Outputs:
-
-    .. testoutput::
-
-        (10, 3, 16, 16)
-
-    """
-    op = builtin.Resize(imode=interp_mode, format="NCHW")
-    shape = astensor1d(target_shape, inp, dtype="int32", device=inp.device)
-    (result,) = apply(op, inp, shape)
-    return result
-
-
 def warp_affine(
     inp: Tensor,
     weight: Tensor,
@@ -1187,7 +1151,7 @@ def interpolate(
     size: Optional[Union[int, Tuple[int, int]]] = None,
     scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
     mode: str = "BILINEAR",
-    align_corners: bool = None,
+    align_corners: Optional[bool] = None,
 ) -> Tensor:
     r"""
     Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
@@ -1197,6 +1161,15 @@ def interpolate(
     :param scale_factor: scaling factor of the output tensor. Default: None
     :param mode: interpolation methods, acceptable values are:
         "BILINEAR", "LINEAR". Default: "BILINEAR"
+    :param align_corners: This only has an effect when `mode`
+        is "BILINEAR" or "LINEAR". Geometrically, we consider the pixels of the input
+        and output as squares rather than points. If set to ``True``, the input
+        and output tensors are aligned by the center points of their corner
+        pixels, preserving the values at the corner pixels. If set to ``False``,
+        the input and output tensors are aligned by the corner points of their
+        corner pixels, and the interpolation uses edge value padding for
+        out-of-boundary values, making this operation *independent* of input size
+        when `scale_factor` is kept the same. Default: None
     :return: output tensor.
 
     Examples:
@@ -1234,6 +1207,19 @@ def interpolate(
     else:
         if align_corners is None:
             align_corners = False
+
+    if (
+        size is not None
+        and scale_factor is None
+        and not align_corners
+        and mode == "BILINEAR"
+        and inp.ndim in [4, 5]
+    ):
+        # fastpath for interpolate
+        op = builtin.Resize(imode="LINEAR", format="NCHW")
+        shape = astensor1d(size, inp, dtype="int32", device=inp.device)
+        (result,) = apply(op, inp, shape)
+        return result
 
     if mode == "LINEAR":
         inp = expand_dims(inp, 3)

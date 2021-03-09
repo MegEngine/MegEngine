@@ -325,7 +325,7 @@ def test_one_hot():
     onehot_high_dimension()
 
 
-def test_resize():
+def test_interpolate_fastpath():
     # check shape
     test_cases = [
         [(1, 1, 10, 10), (5, 5)],
@@ -335,18 +335,18 @@ def test_resize():
     ]
     for inp_shape, target_shape in test_cases:
         x = tensor(np.random.randn(*inp_shape), dtype=np.float32)
-        out = F.resize(x, target_shape, interp_mode="LINEAR")
+        out = F.nn.interpolate(x, target_shape, mode="BILINEAR")
         assert out.shape[0] == x.shape[0] and out.shape[1] == x.shape[1]
         assert out.shape[2] == target_shape[0] and out.shape[3] == target_shape[1]
 
     # check value
     x = tensor(np.ones((3, 3, 10, 10)), dtype=np.float32)
-    out = F.resize(x, (15, 5), interp_mode="LINEAR")
+    out = F.nn.interpolate(x, (15, 5), mode="BILINEAR")
     np.testing.assert_equal(out.numpy(), np.ones((3, 3, 15, 5)).astype(np.float32))
 
     np_x = np.arange(32)
     x = tensor(np_x).astype(np.float32).reshape(1, 1, 32, 1)
-    out = F.resize(x, (1, 1), interp_mode="LINEAR")
+    out = F.nn.interpolate(x, (1, 1), mode="BILINEAR")
     np.testing.assert_equal(out.item(), np_x.mean())
 
 
