@@ -73,7 +73,7 @@ PyTypeObject PyOpType(name);
         }                                                                   \
     } while (0)
 
-template<typename T, typename SFINAE=void>
+template <typename T, typename SFINAE = void>
 struct pyobj_convert_generic {
     static T from(PyObject* obj) {
         // TODO: remove this guard which is used for pybind11 implicit conversion
@@ -87,7 +87,12 @@ struct pyobj_convert_generic {
     }
 };
 
-template<typename T>
+template <typename T>
+struct EnumTrait {
+    static constexpr bool is_bit_combined = false;
+};
+
+template <typename T>
 PyObject* py_new_generic(PyTypeObject* type, PyObject*, PyObject*) {
     PyObject* obj = type->tp_alloc(type, 0);
     T* self = reinterpret_cast<T*>(obj);
@@ -203,10 +208,120 @@ struct EnumWrapper {
     }
 };
 
-template<typename T>
+template <typename T>
 struct pyobj_convert_generic<T,
-        std::enable_if_t<std::is_enum_v<std::decay_t<T>>>> {
+                             std::enable_if_t<std::is_enum_v<std::decay_t<T>> &&
+                                              !EnumTrait<T>::is_bit_combined>> {
     using Wrapper = EnumWrapper<T>;
+    static T from(PyObject* obj) {
+        if (PyObject_TypeCheck(obj, &Wrapper::type)) {
+            return reinterpret_cast<Wrapper*>(obj)->value;
+        }
+        // try as string
+        // TODO: type checkcd
+        return Wrapper(pyobj_convert_generic<std::string>::from(obj)).value;
+    }
+    static PyObject* to(T t) {
+        PyTypeObject* pytype = &Wrapper::type;
+        PyObject* obj = pytype->tp_alloc(pytype, 0);
+        reinterpret_cast<Wrapper*>(obj)->value = t;
+        return obj;
+    }
+};
+
+template<typename T>
+struct BitCombinedEnumWrapper {
+    static_assert(std::is_enum_v<T>);
+    PyObject_HEAD
+    T value;
+    static const char* name;
+    static PyTypeObject type;
+    static std::unordered_map<T, std::string> type2str;
+    static std::unordered_map<std::string, T> str2type;
+    static PyNumberMethods number_methods;
+    BitCombinedEnumWrapper() = default;
+    BitCombinedEnumWrapper(T v): value(v) {}
+    BitCombinedEnumWrapper(std::string&& str)
+            : BitCombinedEnumWrapper(str2type.at(normalize_enum(str))) {}
+    std::string to_string() const {
+        if (static_cast<uint32_t>(value) == 0) {
+            return "None";
+        } else {
+            auto ret = std::string();
+            bool first = true;
+            for (uint32_t i = 0; i < 32; i++) {
+                uint32_t value_int = static_cast<uint32_t>(value);
+                auto it = type2str.find(static_cast<T>((1 << i) & value_int));
+                if (it != type2str.end()) {
+                    if (!first) {
+                        ret += " + ";
+                    } else {
+                        first = false;
+                    }
+                    ret += (std::string(name) + "." + it->second);
+                }
+            }
+            return ret;
+        }
+    }
+    static PyObject* py_new_combined_enum(PyTypeObject* type, PyObject*, PyObject*) {
+        PyObject* obj = type->tp_alloc(type, 0);
+        reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = static_cast<T>(1);
+        return obj;
+    }
+    static int py_init(PyObject* self, PyObject* args, PyObject*) {
+        int input = 1;
+        if (PyArg_ParseTuple(args, "|i", &input)){
+            reinterpret_cast<BitCombinedEnumWrapper*>(self)->value =
+                    static_cast<T>(input);
+        }
+        return 0;
+    }
+    static PyObject* py_repr(PyObject* self) {
+        return pyobj_convert_generic<std::string>::to(
+                reinterpret_cast<BitCombinedEnumWrapper*>(self)->to_string());
+    }
+    static PyObject* py_or(PyObject* self, PyObject* other) {
+        if(!(self->ob_type == other->ob_type)){
+            return PyErr_Format(
+                    PyExc_RuntimeError,
+                    "Operand in or operator must be the same type.");
+        }
+        PyObject* obj = type.tp_alloc(&type, 0);
+        T lhs = reinterpret_cast<BitCombinedEnumWrapper*>(self)->value,
+          rhs = reinterpret_cast<BitCombinedEnumWrapper*>(other)->value;
+        reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = static_cast<T>(
+                static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
+        return obj;
+    }
+    static PyObject* py_and(PyObject* self, PyObject* other) {
+        if (!(self->ob_type == other->ob_type)) {
+            return PyErr_Format(
+                    PyExc_RuntimeError,
+                    "Operand in and operator must be the same type.");
+        }
+        PyObject* obj = type.tp_alloc(&type, 0);
+        T lhs = reinterpret_cast<BitCombinedEnumWrapper*>(self)->value,
+          rhs = reinterpret_cast<BitCombinedEnumWrapper*>(other)->value;
+        reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = static_cast<T>(
+                static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs));
+        return obj;
+    }
+    static PyObject* tp_richcompare(PyObject* self, PyObject* other, int op) {
+        T lhs = reinterpret_cast<BitCombinedEnumWrapper*>(self)->value,
+          rhs = reinterpret_cast<BitCombinedEnumWrapper*>(other)->value;
+        if (op == Py_EQ || op == Py_NE) {
+            RETURN_RICHCOMPARE(lhs, rhs, op);
+        }
+        Py_RETURN_NOTIMPLEMENTED;
+    }
+};
+
+template <typename T>
+struct pyobj_convert_generic<T,
+                             std::enable_if_t<std::is_enum_v<std::decay_t<T>> &&
+                                              EnumTrait<T>::is_bit_combined>> {
+    using Wrapper = BitCombinedEnumWrapper<T>;
     static T from(PyObject* obj) {
         if (PyObject_TypeCheck(obj, &Wrapper::type)) {
             return reinterpret_cast<Wrapper*>(obj)->value;

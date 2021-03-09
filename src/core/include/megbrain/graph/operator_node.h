@@ -18,6 +18,7 @@
 #include "megbrain/utils/hashable.h"
 #include "megbrain/utils/thin/hash_table.h"
 #include "megbrain/utils/small_vector.h"
+#include "megbrain/opr/param_defs.h"
 
 #include <type_traits>
 
@@ -1042,5 +1043,11 @@ MGB_DEFINE_CLS_WITH_SUPER(_name final, _base ,##__VA_ARGS__) \
 
 } // namespace cg
 } // namespace mgb
+
+namespace megdnn {
+namespace param {
+MGB_DEF_ENUM_CLASS_BIT_OPR(ExecutionPolicy::Strategy)
+}
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

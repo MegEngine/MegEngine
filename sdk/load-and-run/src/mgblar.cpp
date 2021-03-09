@@ -141,15 +141,13 @@ R"__usage__(
 )__usage__"
 #if MGB_ENABLE_FASTRUN
 R"__usage__(
-  --fast-run
-    This param will be deperated later, please replace with param --full-profile.
- --full-profile
-    Enable full-profile mode. Operators with multiple algorithms would be profiled
+ --full-run
+    Enable full-run mode. Operators with multiple algorithms would be profiled
     on the real device with actual input shapes, all algorithms will be profiled
     include naive algorithms.
     See `mgb::gopt::enable_opr_algo_profiling_inplace` for more details.
- --fast-profile
-    Enable fast-profile mode. Operators with multiple algorithms would be profiled
+ --fast-run
+    Enable fast-run mode. Operators with multiple algorithms would be profiled
     on the real device with actual input shapes, this mode will only profile the
     well optimized algorithms to get the profile result fast.
     See `mgb::gopt::enable_opr_algo_profiling_inplace` for more details.
@@ -519,8 +517,8 @@ struct Args {
     bool disable_assert_throw = false;
     bool share_param_mem = false;
 #if MGB_ENABLE_FASTRUN
-    bool use_full_profile = false;
-    bool use_fast_profile = false;
+    bool use_full_run = false;
+    bool use_fast_run = false;
 #endif
     bool reproducible = false;
     std::string fast_run_cache_path;
@@ -704,13 +702,13 @@ void run_test_st(Args &env) {
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::HEURISTIC;
 #if MGB_ENABLE_FASTRUN
-    if (env.use_full_profile) {
+    if (env.use_full_run) {
         if (env.reproducible) {
             strategy = S::PROFILE | S::REPRODUCIBLE;
         } else {
             strategy = S::PROFILE;
         }
-    } else if (env.use_fast_profile) {
+    } else if (env.use_fast_run) {
         strategy = S::PROFILE | S::OPTMIZED;
     } else if (env.reproducible) {
         strategy = S::HEURISTIC | S::REPRODUCIBLE;
@@ -740,12 +738,12 @@ void run_test_st(Args &env) {
                     std::make_shared<InFilePersistentCache>(buf.get(), flen));
 #if MGB_ENABLE_FASTRUN
         } else {
-            mgb_assert(env.use_full_profile || env.use_fast_profile,
-                       "fast-run or fast-profile should be enabled");
+            mgb_assert(env.use_full_run || env.use_fast_run,
+                       "fast-run or fast-run should be enabled");
             PersistentCache::set_impl(
                     std::make_shared<InFilePersistentCache>());
         }
-        if (!env.use_full_profile && !env.use_fast_profile)
+        if (!env.use_full_run && !env.use_fast_run)
 #endif
             mgb::gopt::enable_opr_use_profiling_cache_inplace(vars);
     }
@@ -1326,18 +1324,11 @@ Args Args::from_argv(int argc, char **argv) {
         }
 #if MGB_ENABLE_FASTRUN
         if (!strcmp(argv[i], "--fast-run")) {
-            mgb_log_warn(
-                    "--fast-run param will be deperated later, please replace "
-                    "with --full-profile or --fast-profile.");
-            ret.use_full_profile = true;
+            ret.use_fast_run = true;
             continue;
         }
-        if (!strcmp(argv[i], "--full-profile")) {
-            ret.use_full_profile = true;
-            continue;
-        }
-        if (!strcmp(argv[i], "--fast-profile")) {
-            ret.use_fast_profile = true;
+        if (!strcmp(argv[i], "--full-run")) {
+            ret.use_full_run = true;
             continue;
         }
 #endif

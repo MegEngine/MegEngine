@@ -278,6 +278,19 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
     return ret;
 }
 
+//! Test whether the algo attribute of a algo match the require
+//! algo_strategy
+static bool algo_attribute_match_strategy(AlgoAttribute attribute,
+                                          ExecutionStrategy selected_strategy) {
+    bool ret = true;
+    if (selected_strategy & ExecutionStrategy::OPTMIZED) {
+        ret &= (!static_cast<bool>(AlgoAttribute::NAIVE & attribute));
+    } else if (selected_strategy & ExecutionStrategy::REPRODUCIBLE) {
+        ret &= static_cast<bool>(AlgoAttribute::REPRODUCIBLE & attribute);
+    }
+    return ret;
+}
+
 }  // namespace
 
 namespace mgb {
@@ -285,8 +298,8 @@ namespace opr {
 
 template <typename Opr>
 void AlgoChooser<Opr>::profile(ExeContext& ctx,
-                               ExecutionStrategy select_strategy) {
-    if (ctx.get_profile_result_from_cache(select_strategy).valid())
+                               ExecutionStrategy selected_strategy) {
+    if (ctx.get_profile_result_from_cache(selected_strategy).valid())
         return;
     AlgoChooserProfileCache::Result prof_rst;
 
@@ -306,9 +319,19 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
                                    algo.name.c_str(), str_on_inp_shape.c_str());
         ImplExecutionPolicy policy;
         policy.algo = algo.desc;
-        ctx.construct_execution_policy(select_strategy, policy);
-        if (ctx.get_workspace_size_bytes(policy) >= workspace_limit)
+        ctx.construct_execution_policy(selected_strategy, policy);
+        if (ctx.get_workspace_size_bytes(policy) >= workspace_limit) {
             continue;
+        }
+        auto algo_attribute = ctx.megdnn_opr()
+                                      ->get_algorithm_from_desc(policy.algo)
+                                      ->attribute();
+        if (!algo_attribute_match_strategy(algo_attribute, selected_strategy)) {
+            mgb_log_debug(
+                    "skip algo %s, which is not match the profile strategy.",
+                    algo.name.c_str());
+            continue;
+        }
 
         timer.reset();
         MGB_TRY { cur_rst = ctx.profile_single_algo(policy, cur_timeout); }
@@ -356,7 +379,7 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy
 AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx,
-                                    ExecutionStrategy select_strategy,
+                                    ExecutionStrategy selected_strategy,
                                     bool enable_update) {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("AlgoChooser::choose_by_profile")))
     if (ctx.owner_graph()->options().no_profiling_on_shape_change) {
@@ -378,11 +401,11 @@ AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx,
                     to_fixed_layouts<_Opr>(_item.layouts), megdnn_opr.get(),
                     _item.param, ctx.mgb_opr(), ctx.comp_node(),
                     ctx.execution_policy(), ctx.allow_weight_preprocess());
-            AlgoChooser<_Opr>::profile(sub_ctx, select_strategy);
+            AlgoChooser<_Opr>::profile(sub_ctx, selected_strategy);
         });
     }
     typename AlgoChooser<Opr>::ImplExecutionPolicy policy;
-    ctx.construct_execution_policy(select_strategy, policy);
+    ctx.construct_execution_policy(selected_strategy, policy);
     return policy;
     MIDOUT_E
 }
@@ -440,7 +463,8 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::get_policy(
         if (!policy.algo.valid())
             policy = ctx.choose_by_heuristic(opr_strategy);
         return policy;
-    } else if ((opr_strategy & ExecutionStrategy::HEURISTIC)) {
+    } else if (!static_cast<int>(opr_strategy) ||
+               (opr_strategy & ExecutionStrategy::HEURISTIC)) {
         return ctx.choose_by_heuristic(opr_strategy);
     }
 #if MGB_ENABLE_FASTRUN
@@ -449,7 +473,7 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::get_policy(
     }
 #endif
     else {
-        mgb_throw(GraphError, "bad convolution ExecutionPolicy strategy");
+        mgb_throw(GraphError, "bad ExecutionPolicy strategy");
     }
 }
 
@@ -495,7 +519,7 @@ AlgoChooser<Opr>::ExeContext::ExeContext(
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplAlgo
 AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
-        ExecutionStrategy select_strategy) const {
+        ExecutionStrategy selected_strategy) const {
     MIDOUT_B(Opr,
              midout_iv(MGB_HASH_STR(
                      "AlgoChooser::ExeContext::get_profile_result_from_cache")))
@@ -519,7 +543,7 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
     if (prof.empty())
         return {};
     for (auto&& i : prof) {
-        if (!(select_strategy & ExecutionStrategy::REPRODUCIBLE) ||
+        if (!(selected_strategy & ExecutionStrategy::REPRODUCIBLE) ||
             static_cast<AlgoAttribute>(i.attribute) &
                     AlgoAttribute::REPRODUCIBLE) {
             auto iter = algo_map.find(i.algo);
@@ -550,7 +574,7 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
 template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy
 AlgoChooser<Opr>::ExeContext::choose_by_heuristic(
-        ExecutionStrategy select_strategy) const {
+        ExecutionStrategy selected_strategy) const {
     if (m_execution_policy.workspace_limit !=
         std::numeric_limits<decltype(
                 m_execution_policy.workspace_limit)>::max()) {
@@ -558,7 +582,7 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(
                 "workspace_limit should not be setted if choose algo by "
                 "heuristic");
     }
-    bool reproducible = static_cast<bool>(select_strategy &
+    bool reproducible = static_cast<bool>(selected_strategy &
                                           ExecutionStrategy::REPRODUCIBLE);
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             owner_graph(), m_cn, m_execution_policy.workspace_limit);
@@ -582,7 +606,7 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(
                 _item.param, m_base_mgb_opr, m_cn, m_execution_policy,
                 m_allow_weight_preprocess);
         policy.sub_policy.push_back(
-                sub_ctx.choose_by_heuristic(select_strategy));
+                sub_ctx.choose_by_heuristic(selected_strategy));
     });
 
     return policy;
@@ -613,15 +637,15 @@ AlgoChooser<Opr>::ExeContext::get_all_candidates() const {
 
 template <typename Opr>
 void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
-        ExecutionStrategy select_strategy,
+        ExecutionStrategy selected_strategy,
         typename AlgoChooser<Opr>::ImplExecutionPolicy& policy,
         bool retrive_from_cache) const {
-    bool reproducible = static_cast<bool>(select_strategy &
+    bool reproducible = static_cast<bool>(selected_strategy &
                                           ExecutionStrategy::REPRODUCIBLE);
     if (!policy.algo.valid()) {
         if (retrive_from_cache) {
             policy.algo =
-                    get_profile_result_from_cache(select_strategy).desc;
+                    get_profile_result_from_cache(selected_strategy).desc;
         } else {
             auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
                     owner_graph(), m_cn, m_execution_policy.workspace_limit);
@@ -651,7 +675,7 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
                 _item.param, m_base_mgb_opr, m_cn, m_execution_policy,
                 m_allow_weight_preprocess);
         policy.sub_policy.push_back({});
-        sub_ctx.construct_execution_policy(select_strategy,
+        sub_ctx.construct_execution_policy(selected_strategy,
                                            policy.sub_policy.back(),
                                            retrive_from_cache);
     });

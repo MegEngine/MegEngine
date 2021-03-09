@@ -110,7 +110,7 @@ public:
         const FixedTensorLayouts& layouts() const { return m_layouts; }
 
         ImplExecutionPolicy choose_by_heuristic(
-                ExecutionStrategy select_strategy) const;
+                ExecutionStrategy selected_strategy) const;
 
         //! get all candidate algos, and the one choose_by_heuristic() is
         //! put first
@@ -134,17 +134,17 @@ public:
 
         //! get all profile algorithm from cache, return invalid if not exists
         ImplAlgo get_profile_result_from_cache(
-                ExecutionStrategy select_strategy) const;
+                ExecutionStrategy selected_strategy) const;
 
         /**
          * \brief construct execution policy from cache or heuristic.
          *
-         * \param select_strategy select algo which matched this strategy
+         * \param selected_strategy select algo which matched this strategy
          * \param policy execution policy
          * \param retrive_from_cache retrive algo from cache if set True, get
          *     from heuristic otherwise.
          */
-        void construct_execution_policy(ExecutionStrategy select_strategy,
+        void construct_execution_policy(ExecutionStrategy selected_strategy,
                                         ImplExecutionPolicy& policy,
                                         bool retrive_from_cache = true) const;
 
@@ -161,10 +161,10 @@ private:
 
 
     //! profile and save to cache
-    static void profile(ExeContext& ctx, ExecutionStrategy select_strategy);
+    static void profile(ExeContext& ctx, ExecutionStrategy selected_strategy);
 
     static ImplExecutionPolicy choose_by_profile(
-            ExeContext& ctx, ExecutionStrategy select_strategy,
+            ExeContext& ctx, ExecutionStrategy selected_strategy,
             bool enable_update = true);
 
 public:

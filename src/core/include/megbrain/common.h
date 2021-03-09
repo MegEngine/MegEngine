@@ -12,7 +12,6 @@
 #pragma once
 
 #include "megbrain_build_config.h"
-#include "megbrain/opr/param_defs.h"
 #include "megdnn/basic_types.h"
 
 #include <memory>
@@ -249,11 +248,5 @@ inline constexpr std::size_t operator"" _z(unsigned long long n) {
     MEGDNN_DEF_ENUM_CLASS_BIT_OPR(cls)
 
 }   // namespace mgb
-
-namespace megdnn {
-namespace param {
-MGB_DEF_ENUM_CLASS_BIT_OPR(ExecutionPolicy::Strategy)
-}
-}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

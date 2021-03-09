@@ -408,61 +408,58 @@ static void gen_op_def_pybind11_single(raw_ostream &os, MgbOp& op, EnumContext& 
     os << ";\n\n";
 }
 
-static void gen_op_def_python_c_extension_single(raw_ostream &os, MgbOp& op, EnumContext& ctx) {
-    auto className = op.getCppClassName();
+static std::string gen_op_def_python_c_extension_enum(
+        raw_ostream& os, EnumContext& ctx, MgbEnumAttr* attr,
+        llvm::StringRef className) {
     std::string body;
-
-    // generate PyType for enum class member
-    for (auto&& i : op.getMgbAttributes()) {
-        if (auto attr = llvm::dyn_cast<MgbEnumAttr>(&i.attr)) {
-            unsigned int enumID;
-            if (auto alias = llvm::dyn_cast<MgbAliasAttr>(attr)) {
-                auto&& aliasBase = alias->getAliasBase();
-                enumID =
-                    llvm::cast<MgbEnumAttr>(aliasBase)
-                            .getBaseRecord()->getID();
-            } else {
-                enumID = attr->getBaseRecord()->getID();
-            }
-            auto&& enumAlias = ctx.enumAlias;
-            auto&& iter = enumAlias.find(enumID);
-            auto enumName = attr->getEnumName();
-            body += "{\n";
-            body += formatv(
-                "auto& e_type = EnumWrapper<{0}::{1}>::type;", className, enumName
-            );
-            if (iter == enumAlias.end()) {
-                os << formatv(
-                    "template<> PyTypeObject EnumWrapper<{0}::{1}>::type={{};\n",
-                    className, enumName);
-                os << formatv(
-                    "template<> const char* EnumWrapper<{0}::{1}>::name = \"{0}.{1}\";\n",
-                    className, enumName);
-                std::vector<std::string> pairStr;
-                for (auto&& i: attr->getEnumMembers()) {
-                    pairStr.push_back(formatv(
-                        "{{normalize_enum(\"{2}\"), {0}::{1}::{2}}",
-                        className, enumName, i));
-                }
-                os << formatv(R"(
+    unsigned int enumID;
+    if (auto alias = llvm::dyn_cast<MgbAliasAttr>(attr)) {
+        auto&& aliasBase = alias->getAliasBase();
+        enumID = llvm::cast<MgbEnumAttr>(aliasBase).getBaseRecord()->getID();
+    } else {
+        enumID = attr->getBaseRecord()->getID();
+    }
+    auto&& enumAlias = ctx.enumAlias;
+    auto&& iter = enumAlias.find(enumID);
+    auto enumName = attr->getEnumName();
+    body += "{\n";
+    body += formatv("auto& e_type = EnumWrapper<{0}::{1}>::type;", className,
+                    enumName);
+    if (iter == enumAlias.end()) {
+        os << formatv(
+                "template<> PyTypeObject EnumWrapper<{0}::{1}>::type={{};\n",
+                className, enumName);
+        os << formatv(
+                "template<> const char* EnumWrapper<{0}::{1}>::name = "
+                "\"{0}.{1}\";\n",
+                className, enumName);
+        std::vector<std::string> pairStr;
+        for (auto&& i : attr->getEnumMembers()) {
+            pairStr.push_back(
+                    formatv("{{normalize_enum(\"{2}\"), {0}::{1}::{2}}",
+                            className, enumName, i));
+        }
+        os << formatv(R"(
 template<> std::unordered_map<std::string, {0}::{1}>
 EnumWrapper<{0}::{1}>::str2type = {{
     {2}
 };
-)", className, enumName, llvm::join(pairStr, ", "));
-                pairStr.clear();
-                for (auto&& i: attr->getEnumMembers()) {
-                    pairStr.push_back(formatv(
-                        "{{{0}::{1}::{2}, normalize_enum(\"{2}\")}",
-                        className, enumName, i));
-                }
-                os << formatv(R"(
+)",
+                      className, enumName, llvm::join(pairStr, ", "));
+        pairStr.clear();
+        for (auto&& i : attr->getEnumMembers()) {
+            pairStr.push_back(
+                    formatv("{{{0}::{1}::{2}, normalize_enum(\"{2}\")}",
+                            className, enumName, i));
+        }
+        os << formatv(R"(
 template<> std::unordered_map<{0}::{1}, std::string>
 EnumWrapper<{0}::{1}>::type2str = {{
     {2}
 };
-)", className, enumName, llvm::join(pairStr, ", "));
-                body += formatv(R"(
+)",
+                      className, enumName, llvm::join(pairStr, ", "));
+        body += formatv(R"(
     e_type = {{PyVarObject_HEAD_INIT(NULL, 0)};
     e_type.tp_name = "megengine.core._imperative_rt.ops.{0}.{1}";
     e_type.tp_basicsize = sizeof(EnumWrapper<{0}::{1}>);
@@ -472,22 +469,140 @@ EnumWrapper<{0}::{1}>::type2str = {{
     e_type.tp_repr = EnumWrapper<{0}::{1}>::py_repr;
     e_type.tp_richcompare = EnumWrapper<{0}::{1}>::tp_richcompare;
     mgb_assert(PyType_Ready(&e_type) >= 0);
-)", className, enumName);
-                for (auto&& i: attr->getEnumMembers()) {
-                    body += formatv(R"({{
+)",
+                        className, enumName);
+        for (auto&& i : attr->getEnumMembers()) {
+            body += formatv(R"({{
     PyObject* inst = e_type.tp_alloc(&e_type, 0);
     reinterpret_cast<EnumWrapper<{0}::{1}>*>(inst)->value = {0}::{1}::{2};
     mgb_assert(PyDict_SetItemString(e_type.tp_dict, "{2}", inst) >= 0);
-})", className, enumName, i);
-                }
-                enumAlias.emplace(enumID, std::make_pair(className, enumName));
-            }
-            body += formatv(R"(
+})",
+                            className, enumName, i);
+        }
+        enumAlias.emplace(enumID, std::make_pair(className, enumName));
+    }
+    body += formatv(R"(
     PyType_Modified(&e_type);
     mgb_assert(PyDict_SetItemString(
         py_type.tp_dict, "{0}", reinterpret_cast<PyObject*>(&e_type)) >= 0);
-)", enumName);
-            body += "}\n";
+)",
+                    enumName);
+    body += "}\n";
+    return body;
+}
+
+static std::string gen_op_def_python_c_extension_bit_combined_enum(
+        raw_ostream& os, EnumContext& ctx, MgbEnumAttr* attr,
+        llvm::StringRef className) {
+    std::string body;
+    unsigned int enumID;
+    if (auto alias = llvm::dyn_cast<MgbAliasAttr>(attr)) {
+        auto&& aliasBase = alias->getAliasBase();
+        enumID = llvm::cast<MgbEnumAttr>(aliasBase).getBaseRecord()->getID();
+    } else {
+        enumID = attr->getBaseRecord()->getID();
+    }
+    auto&& enumAlias = ctx.enumAlias;
+    auto&& iter = enumAlias.find(enumID);
+    auto enumName = attr->getEnumName();
+    body += "{\n";
+    body += formatv("auto& e_type = BitCombinedEnumWrapper<{0}::{1}>::type;",
+                    className, enumName);
+    if (iter == enumAlias.end()) {
+        os << formatv(
+                "template<> PyTypeObject "
+                "BitCombinedEnumWrapper<{0}::{1}>::type={{};\n",
+                className, enumName);
+        os << formatv(
+                "template<> PyNumberMethods "
+                "BitCombinedEnumWrapper<{0}::{1}>::number_methods={{};\n",
+                className, enumName);
+        os << formatv(
+                "template<> const char* BitCombinedEnumWrapper<{0}::{1}>::name "
+                "= \"{0}.{1}\";\n",
+                className, enumName);
+        os << formatv(
+                "template<> struct EnumTrait<{0}::{1}> {{  static constexpr "
+                "bool is_bit_combined = true;};\n",
+                className, enumName);
+        std::vector<std::string> pairStr;
+        for (auto&& i : attr->getEnumMembers()) {
+            pairStr.push_back(
+                    formatv("{{normalize_enum(\"{2}\"), {0}::{1}::{2}}",
+                            className, enumName, i));
+        }
+        os << formatv(R"(
+template<> std::unordered_map<std::string, {0}::{1}>
+BitCombinedEnumWrapper<{0}::{1}>::str2type = {{
+    {2}
+};
+)",
+                      className, enumName, llvm::join(pairStr, ", "));
+        pairStr.clear();
+        for (auto&& i : attr->getEnumMembers()) {
+            pairStr.push_back(
+                    formatv("{{{0}::{1}::{2}, normalize_enum(\"{2}\")}",
+                            className, enumName, i));
+        }
+        os << formatv(R"(
+template<> std::unordered_map<{0}::{1}, std::string>
+BitCombinedEnumWrapper<{0}::{1}>::type2str = {{
+    {2}
+};
+)",
+                      className, enumName, llvm::join(pairStr, ", "));
+        body += formatv(R"(
+    e_type = {{PyVarObject_HEAD_INIT(NULL, 0)};
+    e_type.tp_name = "megengine.core._imperative_rt.ops.{0}.{1}";
+    e_type.tp_basicsize = sizeof(BitCombinedEnumWrapper<{0}::{1}>);
+    e_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    e_type.tp_doc = "{0}.{1}";
+    e_type.tp_base = &PyBaseObject_Type;
+    e_type.tp_new = BitCombinedEnumWrapper<{0}::{1}>::py_new_combined_enum;
+    e_type.tp_init = BitCombinedEnumWrapper<{0}::{1}>::py_init;
+    e_type.tp_repr = BitCombinedEnumWrapper<{0}::{1}>::py_repr;
+    e_type.tp_richcompare = BitCombinedEnumWrapper<{0}::{1}>::tp_richcompare;
+    auto& number_method = BitCombinedEnumWrapper<{0}::{1}>::number_methods;
+    number_method.nb_or = BitCombinedEnumWrapper<{0}::{1}>::py_or;
+    number_method.nb_and = BitCombinedEnumWrapper<{0}::{1}>::py_and;
+    e_type.tp_as_number = &number_method;
+    mgb_assert(PyType_Ready(&e_type) >= 0);
+)",
+                        className, enumName);
+        for (auto&& i : attr->getEnumMembers()) {
+            body += formatv(R"({{
+    PyObject* inst = e_type.tp_alloc(&e_type, 0);
+    reinterpret_cast<BitCombinedEnumWrapper<{0}::{1}>*>(inst)->value = {0}::{1}::{2};
+    mgb_assert(PyDict_SetItemString(e_type.tp_dict, "{2}", inst) >= 0);
+})",
+                            className, enumName, i);
+        }
+        enumAlias.emplace(enumID, std::make_pair(className, enumName));
+    }
+    body += formatv(R"(
+    PyType_Modified(&e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "{0}", reinterpret_cast<PyObject*>(&e_type)) >= 0);
+)",
+                    enumName);
+    body += "}\n";
+    return body;
+}
+
+static void gen_op_def_python_c_extension_single(raw_ostream &os, MgbOp& op, EnumContext& ctx) {
+    auto className = op.getCppClassName();
+    std::string body;
+
+    // generate PyType for enum class member
+    for (auto&& i : op.getMgbAttributes()) {
+        if (auto attr = llvm::dyn_cast<MgbEnumAttr>(&i.attr)) {
+            if (attr->getEnumCombinedFlag()) {
+                body += gen_op_def_python_c_extension_bit_combined_enum(
+                        os, ctx, attr, className);
+            } else {
+                body += gen_op_def_python_c_extension_enum(os, ctx, attr,
+                                                           className);
+            }
         }
     }
 
