@@ -248,7 +248,8 @@ intl::MultiAxisVecFancyIndexingHelper::make_megdnn_index_desc(
         }
     }
 
-    if (!m_scalar_idx_warn_printed && warn_all_scalar) {
+    if (!m_scalar_idx_warn_printed && warn_all_scalar &&
+        !this->owner_graph()->options().imperative_proxy_graph) {
         bool all_scalar = true;
         for (auto &&i: index) {
             if (!i.vec.layout.is_scalar()) {
