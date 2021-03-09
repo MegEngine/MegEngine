@@ -21,6 +21,27 @@ using namespace mem_alloc;
 
 /* ===================== MemAllocImplHelper ===================== */
 
+#if !MGB_BUILD_SLIM_SERVING
+std::pair<size_t, size_t> MemAllocImplHelper::get_free_left_and_right(size_t begin_ptr, size_t end_ptr) {
+    MGB_LOCK_GUARD(m_mutex);
+    auto iter = m_free_blk_addr.lower_bound(begin_ptr);
+    size_t left_free = 0, right_free = 0;
+    if (iter != m_free_blk_addr.begin()) {
+        auto prev = iter;
+        prev --;
+        if (prev->first + prev->second.size == begin_ptr) {
+            left_free = prev->second.size;
+        }
+    }
+    if (iter != m_free_blk_addr.end()) {
+        if (iter->first == end_ptr) {
+            right_free = iter->second.size;
+        }
+    }
+    return {left_free, right_free};
+}
+#endif
+
 MemAllocImplHelper::MemAddr MemAllocImplHelper::do_alloc(
         size_t size, bool allow_from_parent, bool log_stat_on_error) {
 

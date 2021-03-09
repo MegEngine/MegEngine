@@ -134,6 +134,15 @@ class MemAllocBase {
          */
         virtual FreeMemStat get_free_memory_dev() = 0;
 
+#if !MGB_BUILD_SLIM_SERVING
+        /*!
+         * \brief get free memory adjacent to interval [begin_ptr, end_ptr]
+         */
+        virtual std::pair<size_t, size_t> get_free_left_and_right(size_t begin_ptr, size_t end_ptr) {
+            return {0, 0};
+        }
+#endif
+
         virtual ~MemAllocBase() = default;
 };
 
