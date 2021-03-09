@@ -637,13 +637,23 @@ def test_batch_conv_bias():
     run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
-def test_zero_stride_numpy_array():
+def test_conv2d_zero_stride_numpy_array():
     inp = np.random.randn(3, 224, 224).astype(np.float32)
     inp = inp[np.newaxis, :]
 
     inp = tensor(inp, dtype=np.float32)
     weight = tensor(np.random.randn(16, 3, 3, 3), dtype=np.float32)
     out = F.conv2d(inp, weight, None, (2, 2), (3, 3), (1, 1), 1)
+
+
+def test_conv3d_zero_stride_numpy_array():
+    inp = np.random.randn(3, 224, 224, 224).astype(np.float32)
+    inp = inp[np.newaxis, :]
+
+    inp = tensor(inp, dtype=np.float32)
+    weight = tensor(np.random.randn(16, 3, 3, 3, 3), dtype=np.float32)
+    out = F.conv3d(inp, weight, None, (2, 2, 2), (3, 3, 3), (1, 1, 1), 1)
+    out.numpy()
 
 
 def test_conv1d():
@@ -655,6 +665,16 @@ def test_conv1d():
         np.array(
             [[[4, 4], [4, 4], [4, 4]], [[4, 4], [4, 4], [4, 4]]], dtype=np.float32
         ),
+    )
+
+
+def test_conv3d():
+    inp = tensor(np.ones((256,), dtype=np.float32).reshape(2, 2, 4, 4, 4))
+    weight = tensor(np.ones((48,), dtype=np.float32).reshape(3, 2, 2, 2, 2))
+    out = F.conv3d(inp, weight, None, 2, 0, 1, 1)
+    print(out.numpy().shape)
+    np.testing.assert_equal(
+        out.numpy(), np.ones((2, 3, 2, 2, 2), dtype=np.float32) * 16
     )
 
 

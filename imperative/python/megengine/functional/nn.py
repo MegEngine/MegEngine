@@ -22,8 +22,8 @@ from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
 from ..random import uniform
 from ..tensor import Tensor
-from ..utils.tuple_function import _pair, _pair_nonzero
-from .debug_param import get_conv_execution_strategy, get_execution_strategy
+from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
+from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
 from .elemwise import exp, floor, log, log1p, maximum, minimum
 from .math import argsort, matmul, max, prod, sum
@@ -43,7 +43,9 @@ __all__ = [
     "adaptive_max_pool2d",
     "avg_pool2d",
     "batch_norm",
+    "conv1d",
     "conv2d",
+    "conv3d",
     "conv_transpose2d",
     "deformable_conv2d",
     "deformable_psroi_pooling",
@@ -157,6 +159,66 @@ def conv2d(
         strategy=get_execution_strategy(),
         mode=conv_mode,
         compute_mode=compute_mode,
+        sparse=sparse_type,
+    )
+    inp, weight = utils.convert_inputs(inp, weight)
+    (output,) = apply(op, inp, weight)
+    if bias is not None:
+        output += bias
+    return output
+
+
+def conv3d(
+    inp: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: Union[int, Tuple[int, int, int]] = 1,
+    padding: Union[int, Tuple[int, int, int]] = 0,
+    dilation: Union[int, Tuple[int, int, int]] = 1,
+    groups: int = 1,
+    conv_mode: str = "CROSS_CORRELATION",
+) -> Tensor:
+    """
+    3D convolution operation.
+
+    Refer to :class:`~.Conv3d` for more information.
+
+    :param inp: feature map of the convolution operation.
+    :param weight: convolution kernel.
+    :param bias: bias added to the result of convolution (if given).
+    :param stride: stride of the 3D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 3D convolution operation. Default: 1
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and the shape of weight should be `(groups, out_channel // groups,
+        in_channels // groups, t, height, width)`.
+    :param conv_mode: supports "CROSS_CORRELATION". Default:
+        "CROSS_CORRELATION"
+    :return: output tensor.
+    """
+    assert conv_mode == "CROSS_CORRELATION"
+
+    D, H, W = 0, 1, 2
+
+    pad = _triple(padding)
+    stride = _triple_nonzero(stride)
+    dilate = _triple_nonzero(dilation)
+
+    sparse_type = "DENSE" if groups == 1 else "GROUP"
+    op = builtin.Convolution3D(
+        pad_d=pad[D],
+        pad_h=pad[H],
+        pad_w=pad[W],
+        stride_d=stride[D],
+        stride_h=stride[H],
+        stride_w=stride[W],
+        dilate_d=dilate[D],
+        dilate_h=dilate[H],
+        dilate_w=dilate[W],
+        strategy=get_execution_strategy(),
+        mode=conv_mode,
         sparse=sparse_type,
     )
     inp, weight = utils.convert_inputs(inp, weight)
@@ -1094,7 +1156,7 @@ def matmul(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
-            strategy=get_conv_execution_strategy(),
+            strategy=get_execution_strategy(),
         )
     else:
         op = builtin.MatrixMul(
@@ -1102,7 +1164,7 @@ def matmul(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
-            strategy=get_conv_execution_strategy(),
+            strategy=get_execution_strategy(),
         )
 
     (result,) = apply(op, inp1, inp2)

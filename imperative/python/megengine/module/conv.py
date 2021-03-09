@@ -13,13 +13,14 @@ import numpy as np
 from ..functional import (
     conv1d,
     conv2d,
+    conv3d,
     conv_transpose2d,
     deformable_conv2d,
     local_conv2d,
     relu,
 )
 from ..tensor import Parameter
-from ..utils.tuple_function import _pair, _pair_nonzero
+from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
 from . import init
 from .module import Module
 
@@ -394,6 +395,142 @@ class Conv2d(_ConvNd):
             self.groups,
             self.conv_mode,
             self.compute_mode,
+        )
+
+    def forward(self, inp):
+        return self.calc_conv(inp, self.weight, self.bias)
+
+
+class Conv3d(_ConvNd):
+
+    r"""
+    Applies a 3D convolution over an input tensor.
+
+    For instance, given an input of the size :math:`(N, C_{\text{in}}, T, H, W)`,
+    this layer generates an output of the size
+    :math:`(N, C_{\text{out}}, T_{\text{out}}}, H_{\text{out}}}, W_{\text{out}}})` through the
+    process described as below:
+
+    .. math::
+        \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+        \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)
+
+    where :math:`\star` is the valid 3D cross-correlation operator,
+    :math:`N` is batch size, :math:`C` denotes number of channels
+
+
+    When `groups == in_channels` and `out_channels == K * in_channels`,
+    where K is a positive integer, this operation is also known as depthwise
+    convolution.
+
+    In other words, for an input of size :math:`(N, C_{in}, T_{int}, H_{in}, W_{in})`,
+    a depthwise convolution with a depthwise multiplier `K`, can be constructed
+    by arguments :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
+
+    :param in_channels: number of input channels.
+    :param out_channels: number of output channels.
+    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
+        an :class:`int`, the actual kernel size would be
+        `(kernel_size, kernel_size, kernel_size)`. Default: 1
+    :param stride: stride of the 3D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 3D convolution operation. Default: 1
+    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and there would be an extra dimension at the beginning of the weight's
+        shape. Specifically, the shape of weight would be `(groups,
+        out_channel // groups, in_channels // groups, *kernel_size)`.
+    :param bias: whether to add a bias onto the result of convolution. Default:
+        True
+    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
+        `CROSS_CORRELATION`
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        m = M.Conv3d(in_channels=3, out_channels=1, kernel_size=3)
+        inp = mge.tensor(np.arange(0, 384).astype("float32").reshape(2, 3, 4, 4, 4))
+        oup = m(inp)
+        print(oup.numpy().shape)
+
+    Outputs:
+
+    .. testoutput::
+
+        (2, 1, 2, 2, 2)
+
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int]] = 1,
+        padding: Union[int, Tuple[int, int, int]] = 0,
+        dilation: Union[int, Tuple[int, int, int]] = 1,
+        groups: int = 1,
+        bias: bool = True,
+        conv_mode: str = "CROSS_CORRELATION",
+    ):
+        kernel_size = _triple_nonzero(kernel_size)
+        stride = _triple_nonzero(stride)
+        padding = _triple(padding)
+        dilation = _triple_nonzero(dilation)
+        self.conv_mode = conv_mode
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+        )
+
+    def _get_fanin(self):
+        kt, kh, kw = self.kernel_size
+        ic = self.in_channels
+        return kt * kh * kw * ic
+
+    def _infer_weight_shape(self):
+        group = self.groups
+        ichl = self.in_channels
+        ochl = self.out_channels
+        kt, kh, kw = self.kernel_size
+        if group == 1:
+            # Assume format is NCTHW
+            return (ochl, ichl, kt, kh, kw)
+
+        assert (
+            ichl % group == 0 and ochl % group == 0
+        ), "invalid config: input_channels={} output_channels={} group={}".format(
+            ichl, ochl, group
+        )
+        # Assume format is NCTHW
+        return (group, ochl // group, ichl // group, kt, kh, kw)
+
+    def _infer_bias_shape(self):
+        # Assume format is NCTHW
+        return (1, self.out_channels, 1, 1, 1)
+
+    def calc_conv(self, inp, weight, bias):
+        return conv3d(
+            inp,
+            weight,
+            bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.conv_mode,
         )
 
     def forward(self, inp):

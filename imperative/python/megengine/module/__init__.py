@@ -15,6 +15,7 @@ from .concat import Concat
 from .conv import (
     Conv1d,
     Conv2d,
+    Conv3d,
     ConvRelu2d,
     ConvTranspose2d,
     DeformableConv2d,

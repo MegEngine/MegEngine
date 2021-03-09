@@ -36,45 +36,6 @@
 
 namespace mgb::imperative {
 
-namespace { namespace convolution {
-std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
-    auto* node = &node_->cast_final_safe<opr::Convolution>();
-    return Convolution::make(node->param(), node->execution_policy());
-}
-
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
-    auto&& conv = static_cast<const Convolution&>(def);
-    OperatorNodeConfig config{conv.make_name()};
-    return opr::Convolution::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
-}
-
-OP_TRAIT_REG(Convolution, Convolution, opr::Convolution)
-    .make_from_op_node(make_from_op_node)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // convolution
-
-namespace { namespace convolution_backward_data {
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
-    auto&& conv = static_cast<const ConvolutionBackwardData&>(def);
-    OperatorNodeConfig config{conv.make_name()};
-    if (inputs.size() == 2) {
-        return opr::ConvolutionBackwardData::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
-    } else {
-        mgb_assert(inputs.size() == 3);
-        return opr::ConvolutionBackwardData::make(inputs[0], inputs[1], inputs[2], conv.param(), conv.policy(), config);
-    }
-}
-
-OP_TRAIT_REG(ConvolutionBackwardData, ConvolutionBackwardData)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // convolution_backward_data
-
 namespace { namespace dimshuffle {
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
     auto* node = &node_->cast_final_safe<opr::Dimshuffle>();
