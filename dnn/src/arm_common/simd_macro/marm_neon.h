@@ -10,6 +10,10 @@
  * implied.
  */
 #pragma once
+
+#include "megdnn/arch.h"
+#include "src/common/unroll_macro.h"
+
 #if MGB_ENABLE_DOT
 #if defined(__ARM_FEATURE_DOTPROD)
 #undef __ARM_FEATURE_DOTPROD
@@ -17,8 +21,6 @@
 #define __ARM_FEATURE_DOTPROD 1
 #endif
 #include <arm_neon.h>
-#include "megdnn/arch.h"
-#include "src/common/unroll_macro.h"
 
 // GCC does not support __nodebug__, it reports:
 // '__nodebug__' attribute directive ignored

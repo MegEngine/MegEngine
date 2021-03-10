@@ -93,11 +93,6 @@
 #define MGB_ENABLE_CPUINFO      1
 #endif
 
-#ifdef IOS
-#undef MGB_ENABLE_CPUINFO
-#define MGB_ENABLE_CPUINFO      0
-#endif
-
 //! use one MACRO indicate enable_arm_dotprod
 #if __ARM_FEATURE_DOTPROD
 #ifdef MGB_ENABLE_DOT
@@ -117,7 +112,12 @@
 #endif
 #endif
 
-
+//! IOS disabled cpuinfo and dotprod, cpuinfo has some problem on ios
+#ifdef IOS
+#undef MGB_ENABLE_CPUINFO
+#define MGB_ENABLE_CPUINFO      0
+#undef MGB_ENABLE_DOT
+#endif
 
 // whether to include actual class name in mgb::Typeinfo object; if this is
 // disabled, mgb::serialization::OprRegistry::find_opr_by_name would not work.

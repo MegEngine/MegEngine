@@ -5,7 +5,6 @@ ARCHS=("arm64-v8a" "armeabi-v7a-softfp" "armeabi-v7a-hardfp")
 BUILD_TYPE=Release
 MGE_WITH_CUDA=OFF
 MGE_ARMV8_2_FEATURE_FP16=OFF
-MGE_ARMV8_2_FEATURE_DOTPROD=OFF
 MGE_DISABLE_FLOAT16=OFF
 ARCH=arm64-v8a
 REMOVE_OLD_BUILD=false
@@ -19,7 +18,6 @@ function usage() {
     echo "-d : Build with Debug mode, default Release mode"
     echo "-c : Build with CUDA, default without CUDA(for arm with cuda, example tx1)"
     echo "-f : enable MGE_ARMV8_2_FEATURE_FP16 for ARM64, need toolchain and hardware support"
-    echo "-p : enable MGE_ARMV8_2_FEATURE_DOTPROD for ARM64, need toolchain and hardware support"
     echo "-k : open MGE_DISABLE_FLOAT16 for NEON "
     echo "-a : config build arch available: ${ARCHS[@]}"
     echo "-r : remove old build dir before make, default off"
@@ -29,7 +27,7 @@ function usage() {
     exit -1
 }
 
-while getopts "rkhdcfpa:" arg
+while getopts "rkhdcfa:" arg
 do
     case $arg in
         d)
@@ -43,10 +41,6 @@ do
         f)
             echo "enable MGE_ARMV8_2_FEATURE_FP16 for ARM64"
             MGE_ARMV8_2_FEATURE_FP16=ON
-            ;;
-        p)
-            echo "enable MGE_ARMV8_2_FEATURE_DOTPROD for ARM64"
-            MGE_ARMV8_2_FEATURE_DOTPROD=ON
             ;;
         k)
             echo "open MGE_DISABLE_FLOAT16 for NEON"
@@ -87,7 +81,6 @@ echo "build config summary:"
 echo "BUILD_TYPE: $BUILD_TYPE"
 echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
 echo "MGE_ARMV8_2_FEATURE_FP16: $MGE_ARMV8_2_FEATURE_FP16"
-echo "MGE_ARMV8_2_FEATURE_DOTPROD: $MGE_ARMV8_2_FEATURE_DOTPROD"
 echo "MGE_DISABLE_FLOAT16: $MGE_DISABLE_FLOAT16"
 echo "ARCH: $ARCH"
 echo "----------------------------------------------------"
@@ -147,7 +140,6 @@ function cmake_build() {
         -DMGE_INFERENCE_ONLY=ON \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DMGE_ARMV8_2_FEATURE_FP16= $MGE_ARMV8_2_FEATURE_FP16 \
-        -DMGE_ARMV8_2_FEATURE_DOTPROD=$MGE_ARMV8_2_FEATURE_DOTPROD \
         -DMGE_DISABLE_FLOAT16=$MGE_DISABLE_FLOAT16 \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
         ${EXTRA_CMAKE_ARGS} \
