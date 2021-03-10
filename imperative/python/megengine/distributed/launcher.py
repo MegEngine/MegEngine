@@ -14,7 +14,7 @@ import queue
 from .. import _exit
 from ..core._imperative_rt.core2 import full_sync
 from ..logger import get_logger
-from .group import group_barrier, init_process_group
+from .group import _set_machine_ranks, group_barrier, init_process_group
 from .helper import _check_device_initialized, get_device_count_by_fork
 from .server import Client, Server
 
@@ -34,7 +34,9 @@ def _run_wrapped(
     device_type,
     args,
     kwargs,
+    backend,
     queue: mp.Queue,
+    machine_ranks: list,
 ):
     """Init distributed process group and run wrapped function."""
     _check_device_initialized(device_type)
@@ -44,10 +46,12 @@ def _run_wrapped(
         world_size=world_size,
         rank=rank,
         device=dev,
+        backend=backend,
         device_type=device_type,
     )
     # set NCCL_LAUNCH_MODE to avoid deadlock
     os.environ["NCCL_LAUNCH_MODE"] = "PARALLEL"
+    _set_machine_ranks(machine_ranks)
     if is_multimachine:
         group_barrier()
     ret = func(*args, **kwargs)
@@ -67,6 +71,7 @@ class launcher:
     :param rank_start: start number for rank.
     :param master_ip: ip address for master node (where the rank 0 is).
     :param port: server port for distributed server.
+    :param backend: set default collective communication backend.
     """
 
     def __new__(cls, *args, **kwargs):
@@ -83,6 +88,7 @@ class launcher:
         master_ip="localhost",
         port=0,
         device_type="xpu",
+        backend="auto",
     ):
         self.func = func
         self.n_gpus = (
@@ -93,6 +99,7 @@ class launcher:
         self.master_ip = master_ip
         self.port = port
         self.device_type = device_type
+        self.backend = backend
         # master node create server
         if self.rank_start == 0:
             self.server = Server(self.port)
@@ -104,6 +111,7 @@ class launcher:
         procs = []
         queue = mp.Queue(self.n_gpus)
         results = [None] * self.n_gpus
+        machine_ranks = [i + self.rank_start for i in range(self.n_gpus)]
         for dev in range(self.n_gpus):
             p = mp.Process(
                 target=_run_wrapped,
@@ -118,7 +126,9 @@ class launcher:
                     self.device_type,
                     args,
                     kwargs,
+                    self.backend,
                     queue,
+                    machine_ranks,
                 ),
             )
             p.start()

@@ -14,9 +14,10 @@ from ..core._imperative_rt.core2 import apply
 from ..core.autodiff.grad import Function, _grad_manager_dict
 from ..core.ops.builtin import CollectiveComm, Copy, RemoteRecv, RemoteSend
 from ..core.tensor.utils import isscalar, setscalar
-from ..device import get_default_device
+from ..device import get_default_device, what_is_xpu
 from ..tensor import Tensor
-from .group import WORLD, Group, get_backend, get_client, get_mm_server_addr, get_rank
+from . import group
+from .group import WORLD, Group, get_client, get_mm_server_addr, get_rank
 
 __all__ = [
     "reduce_sum",
@@ -34,14 +35,30 @@ __all__ = [
 ]
 
 
+_device2backend = {
+    "gpu": "nccl",
+    "cuda": "nccl",
+    "rocm": "rccl",
+}
+
+
+def _backend():
+    if group._sd.backend == "auto":
+        return _device2backend[what_is_xpu()]
+    else:
+        return group._sd.backend
+
+
 def collective_comm(inp, mode, group, device):
     """Helper function for applying collective communication functions."""
     assert isinstance(group, Group)
     if group is None:
         return inp
+    if device is None:
+        device = ""
     addr, port = get_mm_server_addr()
     op = CollectiveComm(
-        key=group.key,
+        key=group.key + _backend(),
         nr_devices=group.size,
         rank=group.rank,
         is_root=(group.rank == 0),
@@ -50,7 +67,7 @@ def collective_comm(inp, mode, group, device):
         port=port,
         mode=mode,
         dtype=inp.dtype,
-        backend=get_backend(),
+        backend=_backend(),
         comp_node=device,
     )
     (result,) = apply(op, inp)
@@ -112,8 +129,8 @@ def _bcast_tracer_state(group, inp):
                 g._refkeeper.append(inp)
 
 
-def _dummy_input(shape, dtype, device=""):
-    if device == "":
+def _dummy_input(shape, dtype, device=None):
+    if device is None:
         device = get_default_device()
     inp = Tensor(0, dtype=dtype, device=device)
     if len(shape) > 0:
@@ -122,14 +139,14 @@ def _dummy_input(shape, dtype, device=""):
 
 
 class _ReduceSum(Function):
-    def __init__(self, group=WORLD, device=""):
+    def __init__(self, group=WORLD, device=None):
         self.group = group
         self.out_device = device
 
     def forward(self, data):
         self.in_device = str(data.device)
         return collective_comm(
-            data, CollectiveComm.Mode.REDUCE_SUM, self.group, self.out_device
+            data, CollectiveComm.Mode.REDUCE_SUM, self.group, self.out_device,
         )
 
     def backward(self, grad):
@@ -139,7 +156,7 @@ class _ReduceSum(Function):
 
 
 def reduce_sum(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create reduce_sum operator for collective communication.
@@ -158,14 +175,14 @@ def reduce_sum(
 
 
 class _Broadcast(Function):
-    def __init__(self, group=WORLD, device=""):
+    def __init__(self, group=WORLD, device=None):
         self.group = group
         self.out_device = device
 
     def forward(self, data):
         self.in_device = str(data.device)
         return collective_comm(
-            data, CollectiveComm.Mode.BROADCAST, self.group, self.out_device
+            data, CollectiveComm.Mode.BROADCAST, self.group, self.out_device,
         )
 
     def backward(self, grad):
@@ -175,7 +192,7 @@ class _Broadcast(Function):
 
 
 def broadcast(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create broadcast operator for collective communication.
@@ -197,14 +214,14 @@ def broadcast(
 
 
 def _bcast_param(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None
 ) -> Tensor:
     mode = CollectiveComm.Mode.BROADCAST
     return collective_comm(inp, mode, group, device)
 
 
 def all_gather(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create all_gather operator for collective communication.
@@ -218,7 +235,7 @@ def all_gather(
 
 
 def reduce_scatter_sum(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create reduce_scatter_sum operator for collective communication.
@@ -232,7 +249,7 @@ def reduce_scatter_sum(
 
 
 def all_reduce_sum(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create all_reduce_sum operator for collective communication.
@@ -246,7 +263,7 @@ def all_reduce_sum(
 
 
 def all_reduce_max(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create all_reduce_max operator for collective communication.
@@ -260,7 +277,7 @@ def all_reduce_max(
 
 
 def all_reduce_min(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create all_reduce_min operator for collective communication.
@@ -274,7 +291,7 @@ def all_reduce_min(
 
 
 class _Gather(Function):
-    def __init__(self, group=WORLD, device=""):
+    def __init__(self, group=WORLD, device=None):
         self.group = group
         self.out_device = device
 
@@ -291,7 +308,7 @@ class _Gather(Function):
 
 
 def gather(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create gather operator for collective communication.
@@ -311,7 +328,7 @@ def gather(
 
 
 class _Scatter(Function):
-    def __init__(self, group=WORLD, device=""):
+    def __init__(self, group=WORLD, device=None):
         self.group = group
         self.out_device = device
 
@@ -328,7 +345,7 @@ class _Scatter(Function):
 
 
 def scatter(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create scatter operator for collective communication.
@@ -350,7 +367,7 @@ def scatter(
 
 
 def all_to_all(
-    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
     """
     Create all_to_all operator for collective communication.
@@ -407,7 +424,7 @@ class _RemoteRecv(Function):
             remote_send(grad, self.op.rank_from)
 
 
-def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
+def remote_send(inp: Tensor, dest_rank: int):
     """
     Send a Tensor to a remote process.
 
@@ -423,13 +440,13 @@ def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
     op.key = group.key
     op.addr, op.port = get_mm_server_addr()
     op.rank_to = dest_rank
-    op.backend = get_backend()
+    op.backend = _backend()
     (out,) = apply(_RemoteSend(op), inp)
 
     _save_output_for_autodiff(inp, out)
 
 
-def remote_recv(src_rank: int, device: Optional[str] = None, inp=None,) -> Tensor:
+def remote_recv(src_rank: int, device: Optional[str] = None, inp=None) -> Tensor:
     """
     Receive a Tensor from a remote process.
 
@@ -459,7 +476,7 @@ def remote_recv(src_rank: int, device: Optional[str] = None, inp=None,) -> Tenso
     op.dtype = dtype
     op.addr, op.port = get_mm_server_addr()
     op.rank_from = src_rank
-    op.backend = get_backend()
+    op.backend = _backend()
 
     (ret,) = apply(_RemoteRecv(op), inp)
     if _isscalar:

@@ -1018,6 +1018,7 @@ endif()
 
 if(MGE_WITH_DISTRIBUTED)
     set(MEGRAY_WITH_NCCL ${MGE_WITH_CUDA} CACHE BOOL "Override MegRay option" FORCE)
+    set(MEGRAY_WITH_SHM ${MGE_WITH_CUDA} CACHE BOOL "Override MegRay option" FORCE)
     set(MEGRAY_WITH_RCCL ${MGE_WITH_ROCM} CACHE BOOL "Override MegRay option" FORCE)
     add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/MegRay)
 endif()

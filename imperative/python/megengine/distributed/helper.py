@@ -22,8 +22,9 @@ from ..core.ops.builtin import ParamPackConcat, ParamPackSplit
 from ..functional.tensor import copy
 from ..tensor import Tensor
 from ..utils.future import Future
+from . import group as _group
 from .functional import _bcast_param, all_reduce_sum, broadcast
-from .group import WORLD, Group, group_barrier, is_distributed
+from .group import WORLD, Group, group_barrier, is_distributed, override_backend
 
 
 def param_pack_split(inp: Tensor, offsets: list, shapes: list):
@@ -118,10 +119,30 @@ def get_offsets(shapes):
     return offsets
 
 
+_enable_p2p_cache = None
+
+
+def _check_enable_p2p():
+    global _enable_p2p_cache
+    if _enable_p2p_cache is not None:
+        return _enable_p2p_cache
+    cmd = ["nvidia-smi", "topo", "-p2p", "w"]
+    import subprocess
+
+    output = subprocess.run(cmd, stdout=subprocess.PIPE).stdout
+    if output.count(b"OK") > 1:
+        _enable_p2p_cache = True
+        return True
+    else:
+        _enable_p2p_cache = False
+        return False
+
+
 def pack_allreduce_split(pack_list, shapes, group, reduce_method):
     offsets_val = get_offsets(shapes)
     offsets = Tensor(offsets_val)
     packed_grads = param_pack_concat(pack_list, offsets, offsets_val)
+
     packed_grads = all_reduce_sum(packed_grads, group, group.comp_node)
     if reduce_method == "mean":
         packed_grads /= group.size
@@ -207,9 +228,10 @@ class AllreduceCallback:
 
     :param reduce_method: the method to reduce gradiants.
     :param group: communication group.
+    :param backend: override distributed backend in allreduce
     """
 
-    def __init__(self, reduce_method: str, group: Group = WORLD):
+    def __init__(self, reduce_method: str, group: Group = WORLD, backend: str = None):
         reduce_method = reduce_method.lower()
         assert reduce_method in ["sum", "mean"], "reduce_method should be sum or mean"
         self._reduce_method = reduce_method
@@ -217,6 +239,15 @@ class AllreduceCallback:
         self._marked_gm = WeakSet()
         self._param_pack_thd = 10 * 1024 * 1024
         self._reset()
+        if backend is None:
+            assert _group._sd, "please call init_process_group first"
+            backend = _group._sd.backend
+        if backend == "auto":
+            if group.is_single_machine and not _check_enable_p2p():
+                backend = "shm"
+            else:
+                backend = "nccl"
+        self._backend = backend
 
     def _reset(self):
         self._params = []
@@ -231,9 +262,10 @@ class AllreduceCallback:
             return
         grad_list = [self._gradients_dict[p] for p in self._packing_list[dtype]]
         shapes = [p._tuple_shape for p in self._packing_list[dtype]]
-        reduced_grads = pack_allreduce_split(
-            grad_list, shapes, self._group, self._reduce_method
-        )
+        with override_backend(self._backend):
+            reduced_grads = pack_allreduce_split(
+                grad_list, shapes, self._group, self._reduce_method
+            )
         for param, grad in zip(self._packing_list[dtype], reduced_grads):
             self._gradients_dict[param] = grad
         self._packing_list[dtype] = []

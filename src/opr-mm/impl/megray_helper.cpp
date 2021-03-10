@@ -11,6 +11,7 @@
 
 #include "megbrain/opr/megray_helper.h"
 #include "megbrain/comp_node_env.h"
+#include "megray/common.h"
 
 using namespace mgb;
 using namespace opr;
@@ -39,6 +40,8 @@ MegRay::Backend mgb::opr::get_megray_backend(const std::string& backend) {
         return MegRay::MEGRAY_RCCL;
     } else if (backend == "ucx") {
         return MegRay::MEGRAY_UCX;
+    } else if (backend == "shm") {
+        return MegRay::MEGRAY_SHM;
     } else {
         mgb_throw(MegBrainError, "back CollectiveComm backend");
     }
@@ -90,7 +93,7 @@ std::shared_ptr<MegRay::Communicator> MegRayCommBuilder::get_megray_comm(
         if (rank == root) {
             char* c = MegRay::get_host_ip();
             master_ip = std::string(c);
-            delete c;
+            delete [] c;
             port = MegRay::get_free_port();
             auto ret = MegRay::create_server(size, port);
             mgb_assert(ret == MegRay::Status::MEGRAY_OK);

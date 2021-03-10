@@ -6,6 +6,9 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+from mprop import mproperty
+
+from . import group
 from .group import (
     WORLD,
     Group,
@@ -19,7 +22,20 @@ from .group import (
     init_process_group,
     is_distributed,
     new_group,
+    override_backend,
 )
 from .helper import bcast_list_, make_allreduce_cb, synchronized
 from .launcher import launcher
 from .server import Client, Server
+
+
+@mproperty
+def backend(mod):
+    assert group._sd, "please call init_process_group first"
+    return group._sd.backend
+
+
+@backend.setter
+def backend(mod, val):
+    assert group._sd, "please call init_process_group first"
+    group._sd.backend = val
