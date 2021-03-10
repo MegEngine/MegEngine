@@ -66,6 +66,7 @@ public:
         CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW4_DOTPROD_INT8,
         CUDA_IMPLICIT_GEMM_SASS_NCHW32_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW32_IMMA_INT8,
+        CUDA_IMPLICIT_GEMM_SASS_NCHW64_IMMA_INT4, 
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -806,6 +807,7 @@ public:
     AlgoBatchedMatmul batched_matmul;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8CHWN4DotProdImplicitGemm int8_chwn4_dotprod;
+<<<<<<< HEAD
 #if CUDA_VERSION >= 10000
     AlgoQUInt4x4x32WMMA wmma_quint4x4x32;
     std::vector<AlgoInt8CHWN4IMMAImplicitGemm> int8_chwn4_imma;
