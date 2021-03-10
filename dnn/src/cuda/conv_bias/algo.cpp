@@ -91,6 +91,7 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(&algo);
     }
     all_algos.push_back(&int8_chwn4_dotprod);
+    all_algos.push_back(&fallback_nchw_qs8);
     for (size_t i = all_algo_size; i < all_algos.size(); ++i) {
         non_cudnn_algos.push_back(all_algos[i]);
     }

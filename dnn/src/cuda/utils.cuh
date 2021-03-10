@@ -86,6 +86,7 @@
 #endif
 
 #define DIVUP(x, y) (((x) + (y)-1) / (y))
+#define ROUNDUP(x, y) (DIVUP(x, y) * (y))
 
 #define KERN_FOR(i, n)                                              \
     for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \

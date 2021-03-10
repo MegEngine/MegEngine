@@ -49,6 +49,7 @@ public:
     class AlgoChanwiseSmall;
     class AlgoChanwise8x8x32;
     class AlgoCUDNNConv;
+    class AlgoFallbackNCHWQS8;
     class AlgoInplaceMatmul;
     class AlgoMatmul;
     class AlgoMatmul8x8x32;

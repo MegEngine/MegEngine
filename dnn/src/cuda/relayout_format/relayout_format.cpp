@@ -36,7 +36,9 @@ bool relayout_format::RelayoutFormatFast::usable(
 
 void relayout_format::RelayoutFormatFast::exec(const TensorND& src,
                                                const TensorND& dst,
-                                               cudaStream_t stream) {
+                                               cudaStream_t stream,
+                                               RelayoutFormat::Param::Mode mode,
+                                               int group) {
     size_t ih = src.layout[2];
     size_t iw = src.layout[3];
     size_t hw = ih * iw;
@@ -49,11 +51,22 @@ void relayout_format::RelayoutFormatFast::exec(const TensorND& src,
     if (src.layout.dtype.enumv() == DTypeEnum::Uint8) {
         src_zero_point = 128;
     }
-    if (hw % 4 == 0) {
-        relayout_format_cuda_exec<4>(src, dst, stream, src_scale, dst_scale,
-                                     src_zero_point, dst_zero_point);
+    if (mode == RelayoutFormat::Param::Mode::NCHW_NCHW4) {
+        if (hw % 4 == 0) {
+            relayout_format_cuda_nchw_nchw4<4>(src, dst, stream, src_scale,
+                                               dst_scale, src_zero_point,
+                                               dst_zero_point, group);
+        } else {
+            relayout_format_cuda_nchw_nchw4<1>(src, dst, stream, src_scale,
+                                               dst_scale, src_zero_point,
+                                               dst_zero_point, group);
+        }
+
+    } else if (mode == RelayoutFormat::Param::Mode::NCHW_NCHW4_WEIGHT) {
+        relayout_format_cuda_nchw_nchw4_weight(src, dst, stream);
+    } else if (mode == RelayoutFormat::Param::Mode::NCHW4_NCHW) {
+        relayout_format_cuda_nchw4_nchw(src, dst, stream, group);
     } else {
-        relayout_format_cuda_exec<1>(src, dst, stream, src_scale, dst_scale,
-                                     src_zero_point, dst_zero_point);
+        megdnn_throw("only support nchw_nchw4 nchw4_nchw layout_format");
     }
 }

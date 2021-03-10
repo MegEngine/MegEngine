@@ -13,6 +13,7 @@
 #pragma once
 
 #include "megdnn/basic_types.h"
+#include "megdnn/oprs.h"
 #include "src/cuda/utils.cuh"
 
 namespace megdnn {
@@ -23,7 +24,8 @@ struct RelayoutFormatFast {
     static bool usable(const TensorLayout& src_layout,
                        const TensorLayout& dst_layout);
     static void exec(const TensorND& src, const TensorND& dst,
-                     cudaStream_t stream);
+                     cudaStream_t stream, RelayoutFormat::Param::Mode mode,
+                     int group);
 };
 
 }  // namespace relayout_format

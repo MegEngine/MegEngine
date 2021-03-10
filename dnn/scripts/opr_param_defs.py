@@ -935,8 +935,9 @@ Relayout mode.
 Note: the axis column means the corresponding ``align_axis`` for image format
 when the ``I`` suffix is present.
 
+Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later opr by seting group and oc param with NCHW4_NCHW
 """
-(pdef('RelayoutFormat', 'Change the tensor layout format').
+(pdef('RelayoutFormat', 'Change the tensor layout format', version=0, is_legacy=True).
  add_enum(
      Doc('Mode', RELAYOUT_FORMAT_MODE_DOC),
      'NHWC_NHWCD4',
@@ -964,9 +965,16 @@ when the ``I`` suffix is present.
      'NCHW_NCHW4_IC_SMALL',
      'NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT',
      'NCHW_NCHW4',
+     'NCHW4_NCHW',
+     'NCHW_NCHW4_WEIGHT',
      )
  )
 
+(pdef('RelayoutFormat', 'Change the tensor layout format', version=1).
+    add_enum_alias('Mode', 'RelayoutFormatV0').
+    add_fields('uint32', 'oc', '0').
+    add_fields('uint32', 'group', '1')
+)
 
 (pdef('SeparableFilter', version=0, is_legacy=True).
  add_enum_alias('Format', 'ConvolutionV0').

@@ -1233,6 +1233,7 @@ protected:
     void check_exec(const TensorLayout& src, const TensorLayout& dst,
                     size_t workspace_in_bytes);
     void deduce_exec_layout(const TensorLayout& src, const TensorLayout& dst,
+                            TensorLayout& exec_workspace,
                             TensorLayout& exec_src, TensorLayout& exec_dst);
 };
 }  // namespace megdnn

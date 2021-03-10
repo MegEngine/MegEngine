@@ -11,3 +11,4 @@ imperative/python/test/integration/data/*.mge filter=lfs diff=lfs merge=lfs -tex
 ci/resource/models/float/mobilenet_v2.pkl filter=lfs diff=lfs merge=lfs -text
 ci/resource/models/float/shufflenet_v2.pkl filter=lfs diff=lfs merge=lfs -text
 ci/resource/dump/roi_align_backward_8.8.0.mdl filter=lfs diff=lfs merge=lfs -text
+ci/resource/dump/relayout_format_8.10.0.mdl filter=lfs diff=lfs merge=lfs -text

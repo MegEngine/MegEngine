@@ -215,8 +215,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
                 .execs({src_shape, filter_shape, bias_shape, {}, {}});
     }
 }
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
+
 TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
     //! not support NonlineMode::SIGMOID and NonlineMode::H_SWISH
     require_compute_capability(6, 1);
@@ -274,8 +273,97 @@ TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
            }
         }
     }
+
+    for (NonlineMode mode : {NonlineMode::RELU,
+                             NonlineMode::IDENTITY, NonlineMode::H_SWISH}) {
+        for (size_t g : {13}) {
+           for (size_t b : {1, 2}) {
+               for (size_t ic : {13}) {
+                   for (size_t oc : {13}) {
+                       for (size_t fh : {1, 3}) {
+                           for (int ph : {static_cast<int>(fh / 2)}) {
+                               for (int sh : {1, 2}) {
+                                    size_t ih = 16, iw = 16;
+                                    param.nonlineMode = mode;
+                                    param.stride_h = param.stride_w = sh;
+                                    param.pad_h = param.pad_w = ph;
+                                    param.sparse =
+                                        ConvBias::Param::Sparse::GROUP;
+                                    checker.set_param(param)
+                                            .execs({{b, ic, ih, iw},
+                                                    {g, oc/g, ic/g, fh, fh},
+                                                    {1, oc, 1, 1},
+                                                    {},
+                                                    {}});
+                               }
+                           }
+                       }
+                   }
+               }
+           }
+        }
+    }
+    {
+        size_t ih = 16, iw = 16, b = 1, oc = 14, ic = 14;
+        size_t fh = 3, sh = 1, ph = 1;
+        param.nonlineMode = NonlineMode::IDENTITY;
+        param.stride_h = param.stride_w = sh;
+        param.pad_h = param.pad_w = ph;
+        param.sparse = ConvBias::Param::Sparse::DENSE;
+        checker.set_param(param).execs(
+                {{b, ic, ih, iw}, {oc, ic, fh, fh}, {}, {}, {}});
+    }
 }
-#endif
+
+TEST_F(CUDA, CONV_BIAS_NCHW_QS8_FUSE_Z) {
+    require_compute_capability(6, 1);
+    Checker<ConvBiasForward> checker(handle_cuda());
+    UniformIntRNG int_rng{-128, 127};
+    using NonlineMode = ConvBias::Param::NonlineMode;
+
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW;
+
+    checker.set_dtype(0, dtype::QuantizedS8(2.5f))
+            .set_dtype(1, dtype::QuantizedS8(2.5f))
+            .set_dtype(2, dtype::QuantizedS32(6.25f))
+            .set_dtype(3, dtype::QuantizedS8(0.25f))
+            .set_dtype(4, dtype::QuantizedS8(0.25f))
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_rng(2, &int_rng)
+            .set_rng(3, &int_rng);
+
+    for (NonlineMode mode :
+         {NonlineMode::RELU, NonlineMode::IDENTITY, NonlineMode::H_SWISH}) {
+        for (size_t b : {2}) {
+            for (size_t ic : {6, 16}) {
+                for (size_t oc : {4}) {
+                    for (size_t fh : {1, 3}) {
+                        for (int ph : {static_cast<int>(fh / 2)}) {
+                            for (int sh : {1, 2}) {
+                                size_t ih = 16, iw = 16;
+                                param.nonlineMode = mode;
+                                param.stride_h = param.stride_w = sh;
+                                param.pad_h = param.pad_w = ph;
+                                param.sparse = ConvBias::Param::Sparse::DENSE;
+                                const size_t oh = (ih - fh + 2 * ph) / sh + 1;
+                                const size_t ow = (iw - fh + 2 * ph) / sh + 1;
+                                checker.set_param(param).execs(
+                                        {{b, ic, ih, iw},
+                                         {oc, ic, fh, fh},
+                                         {1, oc, 1, 1},
+                                         {b, oc, oh, ow},
+                                         {}});
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CONV_BIAS_NCHW4_INT8) {
     require_compute_capability(6, 1);

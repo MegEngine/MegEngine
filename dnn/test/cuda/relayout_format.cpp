@@ -34,9 +34,43 @@ TEST_F(CUDA, RELAYOUT_FORMAT) {
     checker.execs({{22, 23, 24, 25, 4}, {}});
 }
 
+TEST_F(CUDA, RELAYOUT_FORMAT_NCHW4_NCHW) {
+    Checker<RelayoutFormat> checker(handle_cuda());
+    UniformIntRNG rng{-50, 50};
+    param::RelayoutFormat param;
+    param.mode = param::RelayoutFormat::Mode::NCHW4_NCHW;
+
+    checker.set_dtype(0, dtype::QuantizedS8{0.1f})
+            .set_dtype(1, dtype::QuantizedS8{0.1f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{1, 1, 2, 2, 4}, {}});
+
+    checker.set_dtype(0, dtype::QuantizedS8{0.1f})
+            .set_dtype(1, dtype::QuantizedS8{0.1f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{22, 23, 24, 25, 4}, {}});
+
+    param.oc = 90;
+    checker.set_dtype(0, dtype::QuantizedS8{0.1f})
+            .set_dtype(1, dtype::QuantizedS8{0.1f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{22, 23, 24, 25, 4}, {}});
+
+    param.oc = 16;
+    param.group = 8;
+    checker.set_dtype(0, dtype::QuantizedS8{0.1f})
+            .set_dtype(1, dtype::QuantizedS8{0.1f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{11, 16, 22, 33, 4}, {}});
+}
+
 TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NCHW4) {
     Checker<RelayoutFormat> checker(handle_cuda());
-    UniformIntRNG rng{0, 50};
+    UniformIntRNG rng{-50, 50};
     param::RelayoutFormat param;
     param.mode = param::RelayoutFormat::Mode::NCHW_NCHW4;
 
@@ -52,6 +86,12 @@ TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NCHW4) {
 
                     checker.set_dtype(0, dtype::QuantizedS8{1.f})
                             .set_dtype(1, dtype::QuantizedS8{2.f})
+                            .set_rng(0, &rng)
+                            .set_param(param)
+                            .execs({{n, c, h, w}, {}});
+
+                    checker.set_dtype(0, dtype::QuantizedS32{1.f})
+                            .set_dtype(1, dtype::QuantizedS32{1.f})
                             .set_rng(0, &rng)
                             .set_param(param)
                             .execs({{n, c, h, w}, {}});
@@ -77,6 +117,59 @@ TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NCHW4) {
             .set_rng(0, &rng)
             .set_param(param)
             .execs({{1, 6, 768, 1280}, {}});
+
+    param.group = 2;
+    checker.set_dtype(0, dtype::QuantizedS8{1.f})
+            .set_dtype(1, dtype::QuantizedS8{1.f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{8, 6, 300, 300}, {}});
+
+    param.group = 3;
+    checker.set_dtype(0, dtype::QuantizedS8{1.f})
+            .set_dtype(1, dtype::QuantizedS8{1.f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{8, 6, 300, 300}, {}});
+}
+
+TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NCHW4_WEIGHT) {
+    Checker<RelayoutFormat> checker(handle_cuda());
+    UniformIntRNG rng{-50, 50};
+    param::RelayoutFormat param;
+    param.mode = param::RelayoutFormat::Mode::NCHW_NCHW4_WEIGHT;
+
+    for (size_t oc : {1, 3, 4, 16, 33}) {
+        for (size_t ic : {1, 2, 3, 4, 8, 9, 11, 16, 33}) {
+            for (size_t h : {3, 5, 7}) {
+                for (size_t w : {3, 5, 7}) {
+                    checker.set_dtype(0, dtype::QuantizedS8{1.f})
+                            .set_dtype(1, dtype::QuantizedS8{1.f})
+                            .set_rng(0, &rng)
+                            .set_param(param)
+                            .execs({{oc, ic, h, w}, {}});
+                }
+            }
+        }
+    }
+
+    checker.set_dtype(0, dtype::QuantizedS8{1.f})
+            .set_dtype(1, dtype::QuantizedS8{1.f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{13, 13, 5, 5}, {}});
+
+    checker.set_dtype(0, dtype::QuantizedS8{1.f})
+            .set_dtype(1, dtype::QuantizedS8{1.f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{4, 16, 16, 3, 3}, {}});
+
+    checker.set_dtype(0, dtype::QuantizedS8{1.f})
+            .set_dtype(1, dtype::QuantizedS8{1.f})
+            .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{4, 13, 11, 3, 3}, {}});
 }
 
 TEST_F(CUDA, RELAYOUT_FORMAT_NCHW_NCHW4_DEFAULT) {

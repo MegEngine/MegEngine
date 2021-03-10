@@ -15,14 +15,14 @@
 #include "megdnn/oprs.h"
 
 #include "src/common/algo_base.h"
-#include "src/common/utils.h"
 #include "src/common/metahelper.h"
+#include "src/common/utils.h"
 #include "src/cuda/conv_bias/conv_bias_int8.cuh"
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/conv_bias/opr_impl.h"
 #include "src/cuda/convolution_helper/parameter.cuh"
-#include "src/cuda/handle.h"
 #include "src/cuda/cudnn_wrapper.h"
+#include "src/cuda/handle.h"
 
 #include <cuda.h>
 #include <memory>
@@ -547,6 +547,28 @@ private:
     std::string m_name;
 };
 
+class ConvBiasForwardImpl::AlgoFallbackNCHWQS8 final : public AlgoBase {
+public:
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override {
+        return "FALLBACK_CONV_NCHW_QS8";
+    }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8)
+
+private:
+    void make_inner_layout(const SizeArgs& args, TensorLayout& inner_src_layout,
+                           TensorLayout& inner_weight_layout,
+                           TensorLayout& inner_dst_layout,
+                           TensorLayout& inner_bias_layout,
+                           TensorLayout& inner_z_layout) const;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+};
+
 #if CUDA_VERSION >= 10000
 class ConvBiasForwardImpl::AlgoInt8CHWN4IMMAImplicitGemm final
         : public AlgoBase {
@@ -763,6 +785,7 @@ public:
             non_cudnn_algos, bfloat16_algos;
     std::vector<AlgoCUDNNConvBiasActivation> cudnn_conv_bias_activations;
     std::vector<AlgoCUDNNConv> cudnn_convs;
+    AlgoFallbackNCHWQS8 fallback_nchw_qs8;
     AlgoChanwise chanwise;
     AlgoChanwiseSmall chanwise_small;
     AlgoChanwise8x8x32 chanwise8x8x32;

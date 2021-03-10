@@ -201,6 +201,11 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         return algo;
     }
 
+    if (sm_algo_pack.fallback_nchw_qs8.is_available_reproducible(
+                args, reproducible, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.fallback_nchw_qs8;
+    }
+
     if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {
         if (reproducible) {
             return megdnn::get_reproducible_algo<ConvBiasForwardImpl>(

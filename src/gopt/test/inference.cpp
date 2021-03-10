@@ -1914,8 +1914,17 @@ TEST(TestEnableTensorCore, Nchw4Nchw) {
             unpack_vector(gopt::optimize_for_inference({y}, options), y_no_tc);
         }
         auto nr_dimshuffle = find_opr_num<mgb::opr::Dimshuffle>(y_opt);
+        if (format == opr::ConvBias::Param::Format::NCHW4) {
+#if CUDA_VERSION >= 10020
+//! try_conv_reformat_nchw322nchw4 used when cuda_version >= 10020
+            ASSERT_EQ(1u, nr_dimshuffle);
+#else
+            ASSERT_EQ(2u, nr_dimshuffle);
+#endif
+        } else {
+            ASSERT_EQ(2u, nr_dimshuffle);
+        }
         std::string json_name;
-        ASSERT_EQ(2u, nr_dimshuffle);
         if (format == opr::ConvBias::Param::Format::NCHW4) {
             json_name = "TestGoptInference.Nchw4Nchw.NCHW4.json";
         } else {
@@ -2856,8 +2865,6 @@ TEST(TestGoptInference, EnableCHWN4ShuffleRemove) {
 }
 #endif
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2936,7 +2943,6 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-#endif
 
 #endif
 
@@ -3076,8 +3082,6 @@ TEST(TestGoptInference, ConvertFormatNCHW4) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -3139,7 +3143,6 @@ TEST(TestGoptInference, ConvertFormatNCHW4Ic3) {
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
-#endif
 
 TEST(TestGoptInference, ConvertFormatNCHW88) {
     HostTensorGenerator<> gen;

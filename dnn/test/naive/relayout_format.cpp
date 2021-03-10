@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/naive/fixture.h"
 
@@ -16,6 +17,136 @@
 
 using namespace megdnn;
 using namespace test;
+
+TEST_F(NAIVE, RELAYOUT_FORMAT_NCHW4_NCHW) {
+    Checker<RelayoutFormat> checker(handle(), /* check_dispatch */ false);
+
+    {
+        auto tensor_nchw4 = TensorValue(
+                {1, 2, 1, 2, 4}, dtype::Float32(),
+                {1, 3, 5, 7, 2, 4, 6, 8, 9, 11, 13, 15, 10, 12, 14, 16});
+        auto tensor_nchw = TensorValue(
+                {1, 8, 1, 2}, dtype::Float32(),
+                {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+
+        RelayoutFormat::Param param{RelayoutFormat::Param::Mode::NCHW4_NCHW};
+
+        checker.set_param(param).exect(Testcase{tensor_nchw4, {}},
+                                       Testcase{{}, tensor_nchw});
+    }
+    {
+        auto tensor_nchw4 = TensorValue(
+                {1, 2, 1, 2, 4}, dtype::Float32(),
+                {1, 3, 5, 7, 2, 4, 6, 8, 9, 11, 13, 15, 10, 12, 14, 16});
+        auto tensor_nchw =
+                TensorValue({1, 7, 1, 2}, dtype::Float32(),
+                            {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
+
+        RelayoutFormat::Param param{RelayoutFormat::Param::Mode::NCHW4_NCHW};
+        param.oc = 7;
+
+        checker.set_param(param).exect(Testcase{tensor_nchw4, {}},
+                                       Testcase{{}, tensor_nchw});
+    }
+    {
+        auto tensor_nchw4 = TensorValue(
+                {1, 2, 1, 2, 4}, dtype::Float32(),
+                {1, 3, 5, 7, 2, 4, 6, 8, 9, 11, 13, 15, 10, 12, 14, 16});
+        auto tensor_nchw =
+                TensorValue({1, 6, 1, 2}, dtype::Float32(),
+                            {1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14});
+
+        RelayoutFormat::Param param{RelayoutFormat::Param::Mode::NCHW4_NCHW};
+        param.oc = 6;
+        param.group = 2;
+
+        checker.set_param(param).exect(Testcase{tensor_nchw4, {}},
+                                       Testcase{{}, tensor_nchw});
+    }
+}
+
+TEST_F(NAIVE, RELAYOUT_FORMAT_NCHW_NCHW4_WEIGHT) {
+    Checker<RelayoutFormat> checker(handle(), /* check_dispatch */ false);
+
+    {
+        auto tensor_nchw = TensorValue({2, 2, 2, 2}, dtype::Float32(),
+                                       {1, 2, 3, 4, 5, 6, 7, 8,
+
+                                        9, 10, 11, 12, 13, 14, 15, 16});
+        auto tensor_nchw4 = TensorValue(
+                {4, 1, 2, 2, 4}, dtype::Float32(),
+                {1, 5,  0, 0, 2,  6,  0, 0, 3,  7,  0, 0, 4,  8,  0, 0,
+                 9, 13, 0, 0, 10, 14, 0, 0, 11, 15, 0, 0, 12, 16, 0, 0,
+                 0, 0,  0, 0, 0,  0,  0, 0, 0,  0,  0, 0, 0,  0,  0, 0,
+                 0, 0,  0, 0, 0,  0,  0, 0, 0,  0,  0, 0, 0,  0,  0, 0});
+        RelayoutFormat::Param param{
+                RelayoutFormat::Param::Mode::NCHW_NCHW4_WEIGHT};
+
+        checker.set_param(param).exect(Testcase{tensor_nchw, {}},
+                                       Testcase{{}, tensor_nchw4});
+    }
+    {
+        auto tensor_nchw = TensorValue({2, 2, 1, 2, 2}, dtype::Float32(),
+                                       {1, 2, 3, 4, 5, 6, 7, 8,
+
+                                        9, 10, 11, 12, 13, 14, 15, 16});
+        auto tensor_nchw4 = TensorValue(
+                {2, 4, 1, 2, 2, 4}, dtype::Float32(),
+                {1,  0, 0, 0, 2,  0, 0, 0, 3,  0, 0, 0,  4,  0, 0, 0,  5,  0, 0,
+                 0,  6, 0, 0, 0,  7, 0, 0, 0,  8, 0, 0,  0,  0, 0, 0,  0,  0, 0,
+                 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0,  0,  0, 0, 0,  0,  0, 0,
+                 0,  0, 0, 0, 0,  0, 0, 9, 0,  0, 0, 10, 0,  0, 0, 11, 0,  0, 0,
+                 12, 0, 0, 0, 13, 0, 0, 0, 14, 0, 0, 0,  15, 0, 0, 0,  16, 0, 0,
+                 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0,  0,  0, 0, 0,  0,  0, 0,
+                 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0,  0,  0});
+        RelayoutFormat::Param param{
+                RelayoutFormat::Param::Mode::NCHW_NCHW4_WEIGHT};
+
+        checker.set_param(param).exect(Testcase{tensor_nchw, {}},
+                                       Testcase{{}, tensor_nchw4});
+    }
+}
+
+TEST_F(NAIVE, RELAYOUT_FORMAT_NCHW_NCHW4) {
+    Checker<RelayoutFormat> checker(handle(), /* check_dispatch */ false);
+
+    {
+        auto tensor_nchw = TensorValue(
+                {1, 8, 1, 2}, dtype::Float32(),
+                {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+        auto tensor_nchw4 = TensorValue(
+                {1, 2, 1, 2, 4}, dtype::Float32(),
+                {1, 3, 5, 7, 2, 4, 6, 8, 9, 11, 13, 15, 10, 12, 14, 16});
+        RelayoutFormat::Param param{RelayoutFormat::Param::Mode::NCHW_NCHW4};
+
+        checker.set_param(param).exect(Testcase{tensor_nchw, {}},
+                                       Testcase{{}, tensor_nchw4});
+    }
+    {
+        auto tensor_nchw = TensorValue(
+                {1, 8, 1, 2}, dtype::Float32(),
+                {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+        auto tensor_nchw4 = TensorValue(
+                {1, 4, 1, 2, 4}, dtype::Float32(),
+                {1, 3,  0, 0, 2,  4,  0, 0, 5,  7,  0, 0, 6,  8,  0, 0,
+                 9, 11, 0, 0, 10, 12, 0, 0, 13, 15, 0, 0, 14, 16, 0, 0});
+        RelayoutFormat::Param param{RelayoutFormat::Param::Mode::NCHW_NCHW4};
+        param.group = 4;
+        checker.set_param(param).exect(Testcase{tensor_nchw, {}},
+                                       Testcase{{}, tensor_nchw4});
+    }
+    {
+        auto tensor_nchw = TensorValue({1, 6, 1, 2}, dtype::Float32(),
+                                       {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+        auto tensor_nchw4 = TensorValue(
+                {1, 2, 1, 2, 4}, dtype::Float32(),
+                {1, 3, 5, 0, 2, 4, 6, 0, 7, 9, 11, 0, 8, 10, 12, 0});
+        RelayoutFormat::Param param{RelayoutFormat::Param::Mode::NCHW_NCHW4};
+        param.group = 2;
+        checker.set_param(param).exect(Testcase{tensor_nchw, {}},
+                                       Testcase{{}, tensor_nchw4});
+    }
+}
 
 TEST_F(NAIVE, RELAYOUT_FORMAT_NCHW88) {
     Checker<RelayoutFormat> checker(handle(), /* check_dispatch */ false);
