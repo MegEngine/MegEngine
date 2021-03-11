@@ -11,6 +11,7 @@ from typing import Iterable, Union
 import numpy as np
 
 from ..tensor import Tensor
+from .elemwise import abs, maximum, minimum
 from .math import topk as _topk
 from .tensor import broadcast_to, transpose
 

@@ -451,20 +451,22 @@ OP_TRAIT_REG(Identity, Identity)
 
 namespace { namespace assert_equal {
 auto apply_on_var_node(
-    const OpDef& def,
-    const VarNodeArray& inputs) {
-        auto&& op = static_cast<const AssertEqual&>(def);
-        mgb_assert(inputs.size() == 2);
-        OperatorNodeConfig config{op.make_name()};
-        return opr::AssertEqual::make(inputs[0], inputs[1], op.param(), config);
-
+        const OpDef& def,
+        const VarNodeArray& inputs) {
+    auto&& op = def.cast_final<AssertEqual>();
+    if (inputs.size() == 2) {
+        return opr::AssertEqual::make(inputs[0], inputs[1], op.param());
+    } else {
+        // workaround for MiniGraph, which only allow one opr in the graph
+        mgb_assert(inputs.size() == 3);
+        return opr::AssertEqual::make(inputs[0], inputs[1], inputs[2], op.param(), {});
     }
+}
 
 OP_TRAIT_REG(AssertEqual, AssertEqual)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
-
-}}
+}} // assert_equal
 
 namespace { namespace uniform_rng {
 auto apply_on_var_node(

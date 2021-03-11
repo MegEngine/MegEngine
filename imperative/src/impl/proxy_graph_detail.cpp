@@ -101,6 +101,10 @@ apply_on_physical_tensor(const OpDef& def,
         }
     }
     exec(def, inputs, outputs);
+    auto async_error = ProxyGraph::get_async_error();
+    if (async_error) {
+        throw *async_error;
+    }
     return outputs;
 }
 

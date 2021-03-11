@@ -24,6 +24,9 @@ namespace imperative {
 class ProxyGraph : public NonCopyableObj {
 public:
     static ProxyGraph* get_default_graph();
+    static std::unique_ptr<MegBrainError> get_async_error() {
+        return std::move(tm_async_error);
+    }
 
     /********************** Physical Tensor API **********************/
 
@@ -98,6 +101,8 @@ private:
     std::unique_ptr<ExecEnv> m_env;
     std::unique_ptr<StaticInferManager> m_static_infer_manager;
     std::unique_ptr<SeqCompNodeOptimizer> m_seq_comp_node_optimizer;
+
+    static thread_local std::unique_ptr<MegBrainError> tm_async_error;
 };
 
 } // namespace imperative

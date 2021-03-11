@@ -21,6 +21,7 @@ from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
 from megengine.core.tensor.utils import make_shape_tuple
 from megengine.distributed.helper import get_device_count_by_fork
+from megengine.jit import trace
 
 
 def test_where():
@@ -746,3 +747,18 @@ def test_ones(val):
     shp = tensor(val)
     np_shp = np.array(val)
     np.testing.assert_equal(F.ones(shp), np.ones(np_shp))
+
+
+def test_assert_equal():
+    shape = (2, 3, 4, 5)
+    x = F.ones(shape, dtype=np.float32)
+    y = F.zeros(shape, dtype=np.float32) + 1.00001
+    z = F.utils._assert_equal(x, y)
+
+
+def test_assert_not_equal():
+    shape = (2, 3, 4, 5)
+    x = F.ones(shape, dtype=np.float32)
+    y = F.zeros(shape, dtype=np.float32) + 1.1
+    with pytest.raises(RuntimeError):
+        z = F.utils._assert_equal(x, y)

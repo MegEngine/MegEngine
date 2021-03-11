@@ -445,6 +445,12 @@ public:
 
     size_t nr_oprs_in_graph() const override {return m_opr_refkeeper.size();}
 
+    void record_async_error(std::unique_ptr<MegBrainError> async_exc) override {
+        if (!ProxyGraph::tm_async_error) {
+            std::swap(async_exc, tm_async_error);
+        }
+    }
+
     std::unique_ptr<cg::AsyncExecutable> compile(const OutputSpec &out_spec) override {mgb_assert(0);}
     SmallVector<std::unique_ptr<cg::AsyncExecutable>> compile_multi_part(
             const SmallVector<OutputSpec>& out_specs) override {mgb_assert(0);}
@@ -457,7 +463,6 @@ public:
     size_t get_device_memory_size(CompNode cn) override {mgb_assert(0);}
     size_t clear_device_memory() override {mgb_assert(0);}
     void set_as_subgraph(ComputingGraph &par_graph) override {mgb_assert(0);}
-    void record_async_error(std::unique_ptr<MegBrainError> async_exc) override {mgb_assert(0);}
 };
 
 std::atomic<size_t> ProxyGraph::ProxyGraphImpl::m_node_id = 0;
@@ -860,6 +865,8 @@ TensorPtr ProxyGraph::as_tensor(cg::OperatorNodeBase* opr, bool share) {
         return {};
     }
 }
+
+thread_local std::unique_ptr<MegBrainError> ProxyGraph::tm_async_error;
 
 } // namespace imperative
 } // namespace mgb

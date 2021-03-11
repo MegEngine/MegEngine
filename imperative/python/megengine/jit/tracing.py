@@ -28,7 +28,12 @@ from ..core._imperative_rt.core2 import (
     unset_compiled,
     unset_tracing,
 )
-from ..core._imperative_rt.ops import CollectiveComm, RemoteRecv, RemoteSend
+from ..core._imperative_rt.ops import (
+    AssertEqual,
+    CollectiveComm,
+    RemoteRecv,
+    RemoteSend,
+)
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import device as as_device
 from ..core.ops.builtin import BackwardGraph, OpDef
@@ -110,7 +115,7 @@ class TensorInfo:
         self.data_reader = None
 
 
-_io_op_types = {CollectiveComm, RemoteSend, RemoteRecv}
+_io_op_types = {AssertEqual, CollectiveComm, RemoteSend, RemoteRecv}
 
 
 class trace:
