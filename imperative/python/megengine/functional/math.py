@@ -16,7 +16,7 @@ from ..core.ops import builtin
 from ..core.ops.special import Const
 from ..core.tensor import utils
 from ..tensor import Tensor
-from .debug_param import get_conv_execution_strategy
+from .debug_param import get_execution_strategy
 from .elemwise import clip, exp, log, log1p
 from .tensor import broadcast_to, concat, expand_dims, reshape, squeeze
 
@@ -864,7 +864,7 @@ def matmul(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
-            strategy=get_conv_execution_strategy(),
+            strategy=get_execution_strategy(),
         )
     else:
         op = builtin.MatrixMul(
@@ -872,7 +872,7 @@ def matmul(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
-            strategy=get_conv_execution_strategy(),
+            strategy=get_execution_strategy(),
         )
 
     (result,) = apply(op, inp1, inp2)
