@@ -807,7 +807,6 @@ public:
     AlgoBatchedMatmul batched_matmul;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8CHWN4DotProdImplicitGemm int8_chwn4_dotprod;
-<<<<<<< HEAD
 #if CUDA_VERSION >= 10000
     AlgoQUInt4x4x32WMMA wmma_quint4x4x32;
     std::vector<AlgoInt8CHWN4IMMAImplicitGemm> int8_chwn4_imma;

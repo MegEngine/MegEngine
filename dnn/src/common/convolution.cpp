@@ -370,7 +370,8 @@ void make_canonized_filter_meta_nchwx(
                   param.format == Param::Format::NCHW32 ||
                   param.format == Param::Format::NCHW4_NCHW ||
                   param.format == Param::Format::NCHW4_NCHW32 ||
-                  param.format == Param::Format::NCHW32_NCHW4);
+                  param.format == Param::Format::NCHW32_NCHW4 ||
+                  param.format == Param::Format::NCHW64);
     auto img_ndim = src_ndim - 3;
     size_t flt_start = 0, flt_spatial_start = 2;
     if (param.sparse == Param::Sparse::DENSE) {
@@ -517,6 +518,9 @@ ConvolutionBase<Parameter>::make_canonized_filter_meta(
     } else if (param().format == Param::Format::CHWN4) {
         make_canonized_filter_meta_chwnx<4, Parameter>(src_ndim, filter,
                                                        param(), ret);
+    } else if (param().format == Param::Format::NCHW64) {
+        make_canonized_filter_meta_nchwx<64, Parameter>(src_ndim, filter,
+                                                        param(), ret);
     } else {
         megdnn_assert(param().format == Param::Format::NHWC ||
                       param().format == Param::Format::NCHW);
@@ -539,6 +543,7 @@ void ConvolutionBase<Parameter>::check_or_deduce_dtype_fwd(DType src,
         supported_dst_dtype = {dtype::Int32(), dtype::Int16()};
     } else if (src.enumv() == DTypeEnum::QuantizedS8 ||
                src.enumv() == DTypeEnum::Quantized8Asymm ||
+               src.enumv() == DTypeEnum::QuantizedS4 || 
                src.enumv() == DTypeEnum::Quantized4Asymm) {
         supported_dst_dtype.push_back(
                 dtype::QuantizedS32(mul_scale(src, filter)));
@@ -614,7 +619,8 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                       param().format == Param::Format::NCHW32 ||
                       param().format == Param::Format::NCHW32_NCHW4 ||
                       param().format == Param::Format::NCHW88 ||
-                      param().format == Param::Format::CHWN4);
+                      param().format == Param::Format::CHWN4 ||
+                      param().format == Param::Format::NCHW64);
         img_dim = src.ndim - 3;
         if ((param().format == Param::Format::NCHW88 ||
              param().format == Param::Format::NCHW44_DOT ||
@@ -711,6 +717,15 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                     "shape is 4 "
                     "but got src %s, filter %s",
                     src.to_string().c_str(), filter.to_string().c_str());
+        }
+        if (param().format == Param::Format::NCHW64) {
+            megdnn_assert(src.ndim == 5 &&
+                                  (filter.ndim == 5 || filter.ndim == 6) &&
+                                  src[src.ndim - 1] == 64 &&
+                                  filter[filter.ndim - 1] == 4,
+                          "NCHW64 require src and filter's ndim is 5 or 6, and "
+                          "last shape is 64 but got src %s, filter %s",
+                          src.to_string().c_str(), filter.to_string().c_str());
         }
     }
     megdnn_assert(img_dim == 2,
@@ -899,6 +914,23 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         dst[3] = infer_conv_shape(src[3], cflt.dilated_spatial[1],
                                   cflt.stride[1], cflt.padding[1]);
         dst[4] = 4;
+    } else if (param().format == Param::Format::NCHW64) {
+        megdnn_assert(src.ndim == 5,
+                      "invalid src ndim for NCHW64, expected=5, got=%zu",
+                      src.ndim);
+        megdnn_assert(cflt.icpg * cflt.group == src[1] * 64,
+                      "%s icpg=%u group=%u", errmsg().c_str(), cflt.icpg,
+                      cflt.group);
+        dst.ndim = src.ndim;
+        dst[0] = src[0];
+        auto oc = cflt.ocpg * cflt.group;
+        megdnn_assert(oc % 64 == 0);
+        dst[1] = oc / 64;
+        dst[2] = infer_conv_shape(src[2], cflt.dilated_spatial[0],
+                                  cflt.stride[0], cflt.padding[0]);
+        dst[3] = infer_conv_shape(src[3], cflt.dilated_spatial[1],
+                                  cflt.stride[1], cflt.padding[1]);
+        dst[4] = 64;
     } else {
         megdnn_assert(param().format == Param::Format::NHWCD4);
         megdnn_assert(src.ndim == 5,

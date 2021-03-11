@@ -504,6 +504,8 @@ bool vec_contains(const SmallVector<T>& vec, const T& elem) {
 
 float mul_scale(DType lhs, DType rhs);
 
+float get_scale(DType dt);
+
 template <typename stype, typename dtype>
 dtype convert(stype src, dtype dst, size_t offset);
 

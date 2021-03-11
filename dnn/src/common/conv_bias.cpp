@@ -36,28 +36,15 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         const TensorLayout& dst, size_t workspace_in_bytes,
         const PreprocessedFilter* preprocessed_filter) {
     megdnn_assert(src.dtype.enumv() == filter.dtype.enumv());
-    if (src.dtype.enumv() == DTypeEnum::QuantizedS8) {
+    // check compatibility of bias's scale
+    if (src.dtype.category() == DTypeCategory::QUANTIZED) {
         if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
-            float scale_src = src.dtype.param<dtype::QuantizedS8>().scale;
-            float scale_filter = filter.dtype.param<dtype::QuantizedS8>().scale;
+            float scale_expected = mul_scale(src.dtype, filter.dtype);
             float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
-            megdnn_assert(
-                    std::abs(scale_src * scale_filter - scale_bias) < 1e-6,
-                    "scale_src: %f scale_filter: %f scale_bias: %f", scale_src,
-                    scale_filter, scale_bias);
-        } else {
-            megdnn_assert(bias.dtype.enumv() == DTypeEnum::Float32);
-        }
-    } else if (src.dtype.enumv() == DTypeEnum::Quantized8Asymm) {
-        if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
-            float scale_src = src.dtype.param<dtype::Quantized8Asymm>().scale;
-            float scale_filter =
-                    filter.dtype.param<dtype::Quantized8Asymm>().scale;
-            float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
-            megdnn_assert(
-                    std::abs(scale_src * scale_filter - scale_bias) < 1e-6,
-                    "scale_src: %f scale_filter: %f scale_bias: %f", scale_src,
-                    scale_filter, scale_bias);
+            megdnn_assert(std::abs(scale_expected - scale_bias) < 1e-6,
+                          "scale_src: %f scale_filter: %f scale_bias: %f",
+                          get_scale(src.dtype), get_scale(filter.dtype),
+                          scale_bias);
         } else {
             megdnn_assert(bias.dtype.enumv() == DTypeEnum::Float32);
         }
@@ -127,6 +114,13 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
             megdnn_assert(bias.shape[2] == 1);
             megdnn_assert(bias.shape[3] == 1);
             megdnn_assert(bias.shape[4] == 4);
+        } else if (param().format == param::ConvBias::Format::NCHW64) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 64);
         } else {
             megdnn_assert(param().format == param::ConvBias::Format::NHWCD4);
             megdnn_assert(bias.shape[0] == 1);

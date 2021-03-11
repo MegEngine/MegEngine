@@ -245,6 +245,17 @@ float megdnn::mul_scale(DType lhs, DType rhs) {
 }
 // clang-format on
 
+float megdnn::get_scale(DType dt) {
+    megdnn_assert(dt.category() == DTypeCategory::QUANTIZED);
+#define cb(_dt)                               \
+    if (dt.enumv() == DTypeTrait<_dt>::enumv) \
+        return dt.param<_dt>().scale;
+    MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+    MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
+#undef cb
+    megdnn_assert_internal(0);
+}
+
 bool megdnn::dtype_almost_equal(DType lhs, DType rhs) {
     if (lhs.enumv() != rhs.enumv())
         return false;
