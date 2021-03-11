@@ -21,9 +21,9 @@ from ..utils.naming import auto_naming
 logger = get_logger(__name__)
 
 
-def _expand_structure(key, obj):
+def _expand_structure(prefix, obj):
     if isinstance(obj, (Tensor, Module)):
-        return [(key, obj)]
+        return [(prefix, obj)]
     elif isinstance(obj, (list, tuple, dict)):
         ret = []
         if isinstance(obj, dict):
@@ -37,10 +37,30 @@ def _expand_structure(key, obj):
                     "keys for Tensor and Module must be str, error key: {}".format(k)
                 )
             for kt, vt in sub_ret:
-                ret.extend([(key + "." + kt, vt)])
+                ret.extend([(prefix + "." + kt, vt)])
         return ret
     else:
         return []
+
+
+def _access_structure(obj, key, callback=None):
+    key_list = key.split(".")
+    cur = obj
+    parent = None
+    for k in key_list:
+        parent = cur
+        if isinstance(cur, (Tensor, Module)):
+            cur = getattr(cur, k)
+        elif isinstance(cur, (list, tuple)):
+            k = int(k)
+            cur = cur[k]
+        elif isinstance(cur, dict):
+            cur = cur[k]
+        else:
+            raise ValueError(
+                "Unsupport value type {} to access attribute".format(type(cur))
+            )
+    return callback(parent, k, cur)
 
 
 def _is_parameter(obj):

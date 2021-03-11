@@ -18,9 +18,9 @@ class Sequential(Module):
     Alternatively, an ordered dict of modules can also be passed in.
 
     To make it easier to understand, here is a small example:
-    
+
     Examples:
-    
+
     .. testcode::
 
         import numpy as np

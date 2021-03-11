@@ -7,7 +7,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from copy import copy, deepcopy
 from functools import partial
-from typing import Callable, Dict, Tuple
+from typing import Callable
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from ..module import quantized as Quantized
 from ..module.qat import QATModule
 from ..module.quantized import QuantizedModule
 from ..tensor import Tensor
+from ..utils.module_utils import set_expand_structure
 from .qconfig import QConfig, ema_fakequant_qconfig
 
 
@@ -79,11 +80,7 @@ def quantize(module: Module, inplace: bool = True, mapping: dict = None):
         module._flatten(with_key=True, with_parent=True, predicate=is_qat)
     ):
         new_mod = convert_dict[type(submodule)].from_qat_module(submodule)
-        if isinstance(parent, Float.Sequential):
-            # cannnot use setattr to be compatible with Sequential's ``__setitem__``
-            parent[int(key.split(".")[-1])] = new_mod
-        else:
-            setattr(parent, key.split(".")[-1], new_mod)
+        set_expand_structure(parent, key, new_mod)
 
     return module
 
@@ -126,11 +123,7 @@ def quantize_qat(
             continue
 
         new_mod = convert_dict[type(submodule)].from_float_module(submodule)
-        if isinstance(parent, Float.Sequential):
-            # cannnot use setattr to be compatible with Sequential's ``__setitem__``
-            parent[int(key.split(".")[-1])] = new_mod
-        else:
-            setattr(parent, key.split(".")[-1], new_mod)
+        set_expand_structure(parent, key, new_mod)
 
     propagate_qconfig(module, qconfig)
     return module
