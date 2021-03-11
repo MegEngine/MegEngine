@@ -288,6 +288,19 @@ def optimize_for_inference(dest_vars, **kwargs):
     return _wrap(res_vars)
 
 
+def modify_opr_algo_strategy_inplace(dest_vars, strategy: str):
+    """
+    C++ graph version of :func:`~.set_execution_strategy`. Used to inplacely modify
+    dumped graph's fast-run strategy.
+
+    :param dest_vars: list of output vars in the computing graph.
+    :param strategy: fast-run algorithms strategy.
+
+    """
+    dest_vars = _unwrap(dest_vars)
+    _imperative_rt.modify_opr_algo_strategy_inplace(dest_vars, strategy)
+
+
 CompGraphDumpResult = collections.namedtuple(
     "CompGraphDumpResult",
     [
