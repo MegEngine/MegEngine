@@ -200,12 +200,6 @@ try:
 
     _megbrain_logger = get_logger("megbrain", MegBrainLogFormatter)
     _imperative_rt_logger.set_log_handler(_megbrain_logger)
-    if _default_level == logging.getLevelName("ERROR"):
-        _imperative_rt_logger.set_log_level(_imperative_rt_logger.LogLevel.Error)
-    elif _default_level == logging.getLevelName("INFO"):
-        _imperative_rt_logger.set_log_level(_imperative_rt_logger.LogLevel.Info)
-    else:
-        _imperative_rt_logger.set_log_level(_imperative_rt_logger.LogLevel.Debug)
 
     def set_mgb_log_level(level):
         r"""
@@ -215,10 +209,22 @@ try:
         :param level: new log level
         :return: original log level
         """
-        logger = _megbrain_logger
-        rst = logger.getEffectiveLevel()
-        logger.setLevel(level)
+        _megbrain_logger.setLevel(level)
+        if level == logging.getLevelName("ERROR"):
+            rst = _imperative_rt_logger.set_log_level(
+                _imperative_rt_logger.LogLevel.Error
+            )
+        elif level == logging.getLevelName("INFO"):
+            rst = _imperative_rt_logger.set_log_level(
+                _imperative_rt_logger.LogLevel.Info
+            )
+        else:
+            rst = _imperative_rt_logger.set_log_level(
+                _imperative_rt_logger.LogLevel.Debug
+            )
         return rst
+
+    set_mgb_log_level(_default_level)
 
 
 except ImportError as exc:
