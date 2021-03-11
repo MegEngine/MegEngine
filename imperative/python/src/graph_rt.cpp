@@ -259,14 +259,14 @@ void init_graph_rt(py::module m) {
         return vars;
     });
 
-    m.def("modify_opr_algo_strategy_inplace", [](const VarNodeArray& dest_vars, const std::string& strategy) {
+    m.def("modify_opr_algo_strategy_inplace", [](const VarNodeArray& dest_vars,
+                                                 const std::string& strategy) {
         _AlgoStrategy stg;
-        const std::unordered_map<std::string,std::function<void()>> m{
-            {"HEURISTIC", [&](){ stg = _AlgoStrategy::HEURISTIC; }},
-            {"HEURISTIC_REPRODUCIBLE", [&](){ stg = _AlgoStrategy::HEURISTIC_REPRODUCIBLE; }},
-            {"PROFILE", [&](){ stg = _AlgoStrategy::PROFILE; }},
-            {"PROFILE_REPRODUCIBLE", [&](){ stg = _AlgoStrategy::PROFILE_REPRODUCIBLE; }},
-            {"PROFILE_HEURISTIC", [&](){ stg = _AlgoStrategy::PROFILE_HEURISTIC; }},
+        const std::unordered_map<std::string, std::function<void()>> m{
+                {"HEURISTIC", [&]() { stg = _AlgoStrategy::HEURISTIC; }},
+                {"PROFILE", [&]() { stg = _AlgoStrategy::PROFILE; }},
+                {"REPRODUCIBLE", [&]() { stg = _AlgoStrategy::REPRODUCIBLE; }},
+                {"OPTMIZED", [&]() { stg = _AlgoStrategy::OPTMIZED; }},
         };
         auto it = m.find(strategy);
         mgb_assert(it != m.end(), "Invalid strategy string!");

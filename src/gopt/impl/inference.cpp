@@ -154,7 +154,7 @@ void gopt::modify_opr_algo_strategy_inplace(
         opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy) {
 #if !MGB_ENABLE_FASTRUN
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
-    if (strategy == S::PROFILE || strategy == S::PROFILE_REPRODUCIBLE) {
+    if ((strategy & S::PROFILE) && !(strategy & S::HEURISTIC)) {
         mgb_throw(MegBrainError, "fastrun is disabled at compile time");
     }
 #endif
