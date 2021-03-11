@@ -32,10 +32,10 @@ function handle_copy_cuda_libs() {
         handle_strip ${TO_DIR}/libcuda_stub.so
         cp /usr/local/cuda/lib64/libnvToolsExt.so.1 ${TO_DIR}
         IFS=: read -a lib_name_array <<<"$CUDA_COPY_LIB_LIST"
-        append_rpath='$ORIGIN/.'
+        append_rpath='$ORIGIN'
         for lib_name in ${lib_name_array[@]};do
             echo "cuda copy detail: ${lib_name} to ${TO_DIR}"
-            full_copy_so $lib_name ${TO_DIR} $lib_append_rpath
+            full_copy_so $lib_name ${TO_DIR} $append_rpath
         done
     fi
 }

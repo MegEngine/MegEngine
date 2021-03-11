@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 GET_PIP_URL='https://bootstrap.pypa.io/get-pip.py'
-GET_PIP_URL_35='https://bootstrap.pypa.io/3.5/get-pip.py'
+GET_PIP_URL_35='https://bootstrap.pypa.io/pip/3.5/get-pip.py'
 SWIG_URL='https://downloads.sourceforge.net/project/swig/swig/swig-3.0.12/swig-3.0.12.tar.gz?use_mirror=autoselect'
 LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz' 
 CLANG_URL='https://github.com/llvm-mirror/clang/archive/release_60.tar.gz'
@@ -67,7 +67,7 @@ popd >/dev/null
 pushd /tmp >/dev/null
     curl -sSL https://github.com/NixOS/patchelf/archive/0.12.tar.gz | tar xz
     pushd /tmp/patchelf-0.12 >/dev/null
-        sed -i '331s/32/64/' ./src/patchelf.cc
+        sed -i '331s/32/256/' ./src/patchelf.cc
         ./bootstrap.sh && ./configure && make install-strip
     popd
     rm -rf /tmp/patchelf-0.12
