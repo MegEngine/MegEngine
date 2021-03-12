@@ -98,6 +98,20 @@ def test_as_type():
     np.testing.assert_equal(get_zero_point(b.dtype), 128)
 
 
+def test_serialization():
+    x = Tensor([1, 2, 3], dtype=np.float32)
+    newargs = x.__getnewargs__()
+    states = x.__getstate__()
+    assert np.all(newargs[0] == x.numpy())
+    assert newargs[1] == x.dtype
+    assert newargs[2] == x.device.logical_name
+    assert not states
+    x.qparams
+    states = x.__getstate__()
+    assert len(states.keys()) == 1
+    assert states["qparams"] == x.qparams
+
+
 def test_qparams():
     x = Tensor(1)
     assert x.qparams.scale is None

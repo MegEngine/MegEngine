@@ -55,7 +55,7 @@ def _get_callable_map_location(map_location):
     if map_location is None:
 
         def callable_map_location(state):
-            return str(get_default_device())
+            return state
 
     elif isinstance(map_location, str):
 

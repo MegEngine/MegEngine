@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
 import pickle
 from tempfile import TemporaryFile
 
@@ -18,25 +19,27 @@ from megengine import Parameter, Tensor
 def test_tensor_serialization():
     with TemporaryFile() as f:
         data = np.random.randint(low=0, high=7, size=[233])
-        a = Tensor(data, device="xpux", dtype=np.int32)
-        pickle.dump(a, f)
+        a = Tensor(data, device="cpu0", dtype=np.int32)
+        mge.save(a, f)
         f.seek(0)
-        b = pickle.load(f)
-        np.testing.assert_equal(a.numpy(), b.numpy())
+        b = mge.load(f)
+        np.testing.assert_equal(a.numpy(), data)
+        assert b.device.logical_name == "cpu0:0"
+        assert b.dtype == np.int32
 
     with TemporaryFile() as f:
         a = Parameter(np.random.random(size=(233, 2)).astype(np.float32))
-        pickle.dump(a, f)
+        mge.save(a, f)
         f.seek(0)
-        b = pickle.load(f)
+        b = mge.load(f)
         assert isinstance(b, Parameter)
         np.testing.assert_equal(a.numpy(), b.numpy())
 
     with TemporaryFile() as f:
         a = Tensor(np.random.random(size=(2, 233)).astype(np.float32))
-        pickle.dump(a, f)
+        mge.save(a, f)
         f.seek(0)
-        b = pickle.load(f)
+        b = mge.load(f)
         assert type(b) is Tensor
         np.testing.assert_equal(a.numpy(), b.numpy())
 
@@ -66,8 +69,20 @@ def test_tensor_serialization():
     with TemporaryFile() as f:
         a = Tensor(0)
         a.qparams.scale = Tensor(1.0)
-        pickle.dump(a, f)
+        mge.save(a, f)
         f.seek(0)
-        b = pickle.load(f)
+        b = mge.load(f)
         assert isinstance(b.qparams.scale, Tensor)
         np.testing.assert_equal(b.qparams.scale.numpy(), 1.0)
+
+
+def test_compatibility():
+    def test_old_tensor(model_name):
+        path = os.path.join(os.path.dirname(__file__), model_name)
+        old_tensor = mge.load(path)
+        assert np.all(old_tensor.numpy() == [1, 2, 3])
+        assert old_tensor.device.logical_name == "cpu0:0"
+        assert old_tensor.dtype == np.int8
+
+    test_old_tensor("tensor_v1_1.mge")
+    test_old_tensor("tensor_v1_2.mge")
