@@ -16,7 +16,6 @@ from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import Tensor, apply
 from ..ops import builtin
 from ..ops.builtin import Elemwise, GetVarShape
-from ..ops.special import Const
 from . import utils
 from .indexing import getitem as _getitem
 from .indexing import setitem as _setitem
@@ -373,7 +372,7 @@ class ArrayMethodMixin(abc.ABC):
     @property
     def size(self):
         r"""
-        Returns the size of the self :class:`~.Tensor`. 
+        Returns the size of the self :class:`~.Tensor`.
         The returned value is a subclass of :class:`tuple`.
         """
         shape = self.shape
@@ -390,7 +389,7 @@ class ArrayMethodMixin(abc.ABC):
 
     def item(self, *args):
         r"""
-        Returns the value of this :class:`~.Tensor` as a standard Python :class:`numbers.Number`. 
+        Returns the value of this :class:`~.Tensor` as a standard Python :class:`numbers.Number`.
         This only works for tensors with one element. For other cases, see :meth:`~.tolist`.
         """
         if not args:
@@ -401,8 +400,8 @@ class ArrayMethodMixin(abc.ABC):
 
     def tolist(self):
         r"""
-        Returns the tensor as a (nested) list. 
-        For scalars, a standard Python number is returned, just like with :meth:`~.item`. 
+        Returns the tensor as a (nested) list.
+        For scalars, a standard Python number is returned, just like with :meth:`~.item`.
         Tensors are automatically moved to the CPU first if necessary.
 
         This operation is not differentiable.
@@ -450,7 +449,7 @@ class ArrayMethodMixin(abc.ABC):
     def sum(self, axis=None, keepdims: bool = False):
         r"""
         Returns the sum of each row of the input tensor in the given dimension ``axis``.
-        
+
         If ``axis`` is a list of axises, reduce over all of them.
         If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
         except in the dimension(s) ``axis`` where it is of size 1.
@@ -483,7 +482,7 @@ class ArrayMethodMixin(abc.ABC):
     def prod(self, axis=None, keepdims: bool = False):
         r"""
         Returns the product of each row of the input tensor in the given dimension ``axis``.
-        
+
         If ``axis`` is a list of axises, reduce over all of them.
         If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
         except in the dimension(s) ``axis`` where it is of size 1.
@@ -516,7 +515,7 @@ class ArrayMethodMixin(abc.ABC):
     def min(self, axis=None, keepdims: bool = False):
         r"""
         Returns the min value of each row of the input tensor in the given dimension ``axis``.
-        
+
         If ``axis`` is a list of axises, reduce over all of them.
         If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
         except in the dimension(s) ``axis`` where it is of size 1.
@@ -549,7 +548,7 @@ class ArrayMethodMixin(abc.ABC):
     def max(self, axis=None, keepdims: bool = False):
         r"""
         Returns the max value of each row of the input tensor in the given dimension ``axis``.
-        
+
         If ``axis`` is a list of axises, reduce over all of them.
         If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
         except in the dimension(s) ``axis`` where it is of size 1.
@@ -582,7 +581,7 @@ class ArrayMethodMixin(abc.ABC):
     def mean(self, axis=None, keepdims: bool = False):
         r"""
         Returns the mean value of each row of the input tensor in the given dimension ``axis``.
-        
+
         If ``axis`` is a list of axises, reduce over all of them.
         If ``keepdims`` is ``True``, the shape of output tensor is the same as the input tensor,
         except in the dimension(s) ``axis`` where it is of size 1.

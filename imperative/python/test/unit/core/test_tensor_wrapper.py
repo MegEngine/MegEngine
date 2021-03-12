@@ -50,6 +50,14 @@ def test_reduce():
     test_x(np.array([True, False, True]))
 
 
+def test_set_value():
+    v0 = np.random.random((2, 3)).astype(np.float32)
+    param = Tensor(v0)
+    v1 = np.random.random((2, 3)).astype(np.float32)
+    param[...] = v1
+    np.testing.assert_allclose(param.numpy(), v1, atol=5e-6)
+
+
 def test_set_subtensor():
     x = Tensor([1, 2, 3])
     x[:] = [1, 1, 1]

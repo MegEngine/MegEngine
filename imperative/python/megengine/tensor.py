@@ -119,6 +119,8 @@ class Tensor(_Tensor, ArrayMethodMixin):
         return super().detach()
 
     def _reset(self, other):
+        if not isinstance(other, _Tensor):
+            other = Tensor(other, dtype=self.dtype, device=self.device)
         super()._reset(other)
 
     def __repr__(self):
@@ -141,8 +143,6 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     @deprecated(version="1.0", reason="no need to reuse an existing tensor since 1.0")
     def set_value(self, value):
-        if not isinstance(value, _Tensor):
-            value = Tensor(value, dtype=self.dtype, device=self.device)
         self._reset(value)
 
     @deprecated(version="1.0", reason="use *= 0 instead")
