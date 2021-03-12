@@ -551,6 +551,10 @@ if(MGE_WITH_CUDA)
     endif()
     
     set(MGE_CUDA_LIBS "${MGE_CUDA_LIBS} -lrt")
+    if(UNIX)
+        set(MGE_CUDA_LIBS "${MGE_CUDA_LIBS} -ldl")
+    endif()
+
 endif()
 
 if(MGE_WITH_CAMBRICON)
