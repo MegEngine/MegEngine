@@ -63,7 +63,6 @@ __all__ = [
     "prelu",
     "softmax",
     "softplus",
-    "svd",
     "sync_batch_norm",
     "conv1d",
     "sigmoid",
@@ -1220,37 +1219,6 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
     (result,) = apply(op, inp1, inp2)
     setscalar(result)
     return result
-
-
-def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
-    """
-    Computes the singular value decompositions of input matrix.
-
-    :param inp: input matrix, must has shape `[..., M, N]`.
-    :return: output matrices, `(U, sigma, V)`.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = tensor(np.arange(0, 6, dtype=np.float32).reshape(2,3))
-        _, y, _ = F.svd(x)
-        print(y.numpy().round(decimals=3))
-
-    Outputs:
-
-    .. testoutput::
-
-        [7.348 1.   ]
-
-    """
-    op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
-    U, sigma, V = apply(op, inp)
-    return U, sigma, V
 
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
