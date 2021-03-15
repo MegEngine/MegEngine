@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 CWD=$(dirname $0)
 BASEDIR=$(readlink -f ${CWD}/../../..)
 OUTPUTDIR=$(readlink -f ${CWD}/output)
@@ -36,6 +36,7 @@ if [ $SDK_NAME == "cu101" ];then
     REQUIR_CUDA_VERSION="10010" 
     REQUIR_CUDNN_VERSION="7.6.3" 
     REQUIR_TENSORRT_VERSION="6.0.1.5" 
+    REQUIR_CUBLAS_VERSION="10.2.1.243"
 elif [ $SDK_NAME == "cu111" ];then
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
@@ -58,6 +59,7 @@ elif [ $SDK_NAME == "cu111" ];then
     REQUIR_CUDA_VERSION="11010" 
     REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 
+    REQUIR_CUBLAS_VERSION="11.2.1.74"
 elif [ $SDK_NAME == "cu112" ];then
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
@@ -80,6 +82,7 @@ elif [ $SDK_NAME == "cu112" ];then
     REQUIR_CUDA_VERSION="11020" 
     REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 
+    REQUIR_CUBLAS_VERSION="11.3.1.68"
 elif [ $SDK_NAME == "cpu" ];then
     echo "use $SDK_NAME without cuda support"
     BUILD_WHL_CPU_ONLY="ON"
@@ -122,6 +125,7 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     CUDNN_ROOT_DIR_=${CUDNN_ROOT_DIR%*/}
     TENSORRT_ROOT_DIR_=${TENSORRT_ROOT_DIR%*/}
 
+    CUBLAS_VERSION_PATH=${CUDA_ROOT_DIR_}/include/cublas_api.h
     CUDA_VERSION_PATH=${CUDA_ROOT_DIR_}/include/cuda.h
     if [ "$REQUIR_CUDA_VERSION" -ge "11000" ];then
         CUDNN_VERSION_PATH=${CUDNN_ROOT_DIR_}/include/cudnn_version.h
@@ -145,7 +149,12 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo please check the Environment must use TensorRT-$REQUIR_TENSORRT_VERSION
         exit -1
     fi
+    if [ ! -e $CUBLAS_VERSION_PATH ] ; then
+        echo file $CUBLAS_VERSION_PATH is not exist
+        exit -1
+    fi
 
+    CUBLAS_VERSION_CONTEXT=$(head -150 ${CUBLAS_VERSION_PATH})
     CUDA_VERSION_CONTEXT=$(head -300 ${CUDA_VERSION_PATH})
     CUDNN_VERSION_CONTEXT=$(head -62 ${CUDNN_VERSION_PATH})
     TENSORRT_VERSION_CONTEXT=$(tail -12 ${TENSORRT_VERSION_PATH})
@@ -171,6 +180,13 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     TENSORRT_VERSION=${TENSORRT_VERSION_MAJOR:0-1}.${TENSORRT_VERSION_MINOR:0-1}.${TENSORRT_VERSION_PATCH:0-1}.${TENSORRT_VERSION_BUILD:0-1}
     echo TENSORRT_VERSION:$TENSORRT_VERSION
 
+    CUBLAS_VERSION_MAJOR=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_MAJOR * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+    CUBLAS_VERSION_MINOR=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_MINOR * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+    CUBLAS_VERSION_PATCH=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_PATCH * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+    CUBLAS_VERSION_BUILD=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_BUILD * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+    CUBLAS_VERSION=${CUBLAS_VERSION_MAJOR}.${CUBLAS_VERSION_MINOR}.${CUBLAS_VERSION_PATCH}.${CUBLAS_VERSION_BUILD}
+    echo CUBLAS_VERSION:$CUBLAS_VERSION
+
     if [ $CUDA_VERSION != $REQUIR_CUDA_VERSION ] ; then
         echo please check the Environment must use CUDA-10.1 NO.$REQUIR_CUDA_VERSION
         exit -1
@@ -183,6 +199,11 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
 
     if [ $TENSORRT_VERSION != $REQUIR_TENSORRT_VERSION ] ; then
         echo please check the Environment must use TENSORRT-$REQUIR_TENSORRT_VERSION
+        exit -1
+    fi
+
+    if [ $CUBLAS_VERSION != $REQUIR_CUBLAS_VERSION ] ; then
+        echo please check the Environment must use CUBLAS-$REQUIR_CUBLAS_VERSION
         exit -1
     fi
 fi
