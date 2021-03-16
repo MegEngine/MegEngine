@@ -253,7 +253,7 @@ Tensor::Tensor(const DeviceTensorND &dv, const HostTensorND& hv) {
     }
     m_layout = dv.layout();
     m_blob = Blob::make(dv.storage());
-    m_offset = 0;
+    m_offset = dv.storage().offset();
 }
 
 Tensor::Tensor(const TensorLayout& layout, const CompNode& cn)
