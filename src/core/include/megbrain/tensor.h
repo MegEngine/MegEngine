@@ -176,6 +176,13 @@ class TensorStorage {
             return m_size;
         }
 
+        /*!
+         * \brief offset on allocated block in bytes
+         */
+        size_t offset() const {
+            return m_offset;
+        }
+
         //! get underlying comp node; error would be raised if it is invalid
         CompNode comp_node() const {
             check_comp_node_valid();

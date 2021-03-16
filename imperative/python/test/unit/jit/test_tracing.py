@@ -570,9 +570,9 @@ def test_random(shape_mode):
 def test_trace_advance_indexing(shape_mode):
     funcs = [
         lambda x, i: x[i],
-        # lambda x, i, j: x[i, j],  # FIXME
+        lambda x, i, j: x[i, j],
         lambda x, i, j: x[i, :, j, ...],
-        # lambda x, start, end: x[start:end],  # FIXME
+        lambda x, start, end: x[start:end],
         lambda x, start, end: x[:, 0, start:end, ..., 1],
         lambda x, vec: x[vec],
         lambda x, vec: x[vec, ..., 0, 1:3],
