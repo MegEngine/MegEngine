@@ -80,7 +80,7 @@ def quantize(module: Module, inplace: bool = True, mapping: dict = None):
         module._flatten(with_key=True, with_parent=True, predicate=is_qat)
     ):
         new_mod = convert_dict[type(submodule)].from_qat_module(submodule)
-        set_expand_structure(parent, key, new_mod)
+        set_expand_structure(module, key, new_mod)
 
     return module
 
@@ -123,7 +123,7 @@ def quantize_qat(
             continue
 
         new_mod = convert_dict[type(submodule)].from_float_module(submodule)
-        set_expand_structure(parent, key, new_mod)
+        set_expand_structure(module, key, new_mod)
 
     propagate_qconfig(module, qconfig)
     return module
