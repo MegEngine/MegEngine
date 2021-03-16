@@ -28,7 +28,8 @@ bool Convolution3DBackwardFilterImpl::AlgoCUDNN::is_available(
 
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
+    auto& cudnn = args.handle->cudnn();
+    auto status = cudnn.GetConvolutionBackwardFilterWorkspaceSize(
             args.handle->cudnn_handle(), D.src_desc.desc, D.diff_desc.desc,
             D.conv_desc.desc, D.grad_desc.desc, m_cudnn_enum, &workspace_size);
     return status == CUDNN_STATUS_SUCCESS;
@@ -40,7 +41,8 @@ size_t Convolution3DBackwardFilterImpl::AlgoCUDNN::get_workspace_in_bytes(
 
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
+    auto& cudnn = args.handle->cudnn();
+    auto status = cudnn.GetConvolutionBackwardFilterWorkspaceSize(
             args.handle->cudnn_handle(), D.src_desc.desc, D.diff_desc.desc,
             D.conv_desc.desc, D.grad_desc.desc, m_cudnn_enum, &workspace_size);
     megdnn_assert(status == CUDNN_STATUS_SUCCESS,

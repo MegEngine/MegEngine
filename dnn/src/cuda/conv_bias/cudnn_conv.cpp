@@ -39,7 +39,8 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
     conv_args.init_conv_desc(D);
 
     size_t workspace_size;
-    auto status = cudnnGetConvolutionForwardWorkspaceSize(
+    auto& cudnn = conv_args.handle->cudnn();
+    auto status = cudnn.GetConvolutionForwardWorkspaceSize(
             conv_args.handle->cudnn_handle(), D.src_desc.desc,
             D.filter_desc.desc, D.conv_desc.conv_desc, D.dst_desc.desc,
             m_cudnn_enum, &workspace_size);
@@ -65,7 +66,8 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoCUDNNConv::get_workspace_bundle(
     conv_args.init_conv_desc(D);
 
     size_t conv_workspace_size;
-    auto status = cudnnGetConvolutionForwardWorkspaceSize(
+    auto& cudnn = conv_args.handle->cudnn();
+    auto status = cudnn.GetConvolutionForwardWorkspaceSize(
             conv_args.handle->cudnn_handle(), D.src_desc.desc,
             D.filter_desc.desc, D.conv_desc.conv_desc, D.dst_desc.desc,
             m_cudnn_enum, &conv_workspace_size);
