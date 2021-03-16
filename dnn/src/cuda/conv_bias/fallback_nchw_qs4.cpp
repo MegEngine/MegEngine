@@ -69,12 +69,9 @@ size_t ConvBiasForwardImpl::AlgoFallbackNCHWQS4::get_workspace_in_bytes(
 
 void ConvBiasForwardImpl::AlgoFallbackNCHWQS4::exec(
         const ExecArgs& args) const {
-    using Format = Param::Format;
-    auto&& param = args.opr->param();
-    auto&& fm = args.filter_meta;
     auto layouts = make_underlying_tensor_layout(
-            *(args.src_layout), fm, *(args.bias_layout), *(args.z_layout),
-            *(args.dst_layout));
+            *(args.src_layout), *(args.filter_layout), *(args.bias_layout),
+            *(args.z_layout), *(args.dst_layout));
     auto ws = get_workspace_bundle(args.workspace.raw_ptr, args);
     auto ws_src = ws.get(0);
     auto ws_filter = ws.get(1);
@@ -82,20 +79,27 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS4::exec(
     void* ws_z = nullptr;
     if (args.z_layout->ndim > 0)
         ws_z = ws.get(4);
-    auto&& stream = cuda_stream(args.opr->handle());
-    auto nchw2nchw64 = [](const TensorND& src, void* raw_dptr) {
-        if (raw_dptr == nullptr)
+    // auto&& stream = cuda_stream(args.opr->handle());
+    auto nchw2nchw64 = [&args](const TensorND& src, TensorND&& dst) {
+        if (dst.raw_ptr == nullptr)
             return;
+        auto relayout = args.handle->create_operator<RelayoutFormat>();
+        relayout->param() = RelayoutFormat::Param::Mode::NCHW_NCHW64;
+        Workspace dummy;
+        relayout->exec(src, dst, dummy);
     };
-    auto nchw642nchw = [](const TensorND& src, void* raw_dptr) {
-
+    auto nchw642nchw = [&args](const TensorND& src, TensorND&& dst) {
+        auto relayout = args.handle->create_operator<RelayoutFormat>();
+        relayout->param() = RelayoutFormat::Param::Mode::NCHW64_NCHW;
+        Workspace dummy;
+        relayout->exec(src, dst, dummy);
     };
     // reformat src
-    nchw2nchw64(*(args.src_tensor), ws_src);
+    nchw2nchw64(*(args.src_tensor), {ws_src, layouts[0]});
     // reformat filter
-    nchw2nchw64(*(args.filter_tensor), ws_filter);
+    nchw2nchw64(*(args.filter_tensor), {ws_filter, layouts[1]});
     // reformat z
-    nchw2nchw64(*(args.z_tensor), ws_z);
+    nchw2nchw64(*(args.z_tensor), {ws_z, layouts[3]});
     TensorND src_{ws_src, layouts[0]}, filter_{ws_filter, layouts[1]},
             bias_{args.bias_tensor->raw_ptr, layouts[2]}, z_{ws_z, layouts[3]},
             dst_{ws_dst, layouts[4]};
@@ -109,22 +113,22 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS4::exec(
                    args.preprocessed_filter};
     m_underlying_algo.exec(args);
     // reformat dst
-    nchw642nchw(dst_, args.dst_tensor->raw_ptr);
+    nchw642nchw(dst_, {args.dst_tensor->raw_ptr, args.dst_tensor->layout});
 }
 
 SmallVector<TensorLayout>
 ConvBiasForwardImpl::AlgoFallbackNCHWQS4::make_underlying_tensor_layout(
-        const TensorLayout& src, const CanonizedFilterMeta& filter_meta,
+        const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst) const {
     size_t n = src[0], ci = src[1], hi = src[2], wi = src[3];
     size_t co = dst[1], ho = dst[2], wo = dst[3];
-    size_t fh = filter_meta.spatial[0], fw = filter_meta.spatial[1];
+    size_t fh = filter[2], fw = filter[3];
     SmallVector<TensorLayout> rst;
     rst.emplace_back(TensorLayout{{n, ci / 64, hi, wi, 64}, src.dtype});
     rst.emplace_back(TensorLayout{{co, ci / 64, fh, fw, 64}, filter.dtype});
     rst.emplace_back(TensorLayout{{1, co / 64, 1, 1, 64}, bias.dtype});
-    if (z.layout.ndim > 0) {
+    if (z.ndim > 0) {
         rst.emplace_back(TensorLayout{{n, co / 64, ho, wo, 64}, z.dtype});
     } else {
         rst.emplace_back(TensorLayout{});
@@ -134,15 +138,13 @@ ConvBiasForwardImpl::AlgoFallbackNCHWQS4::make_underlying_tensor_layout(
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoFallbackNCHWQS4::get_workspace_bundle(
-        void* ptr, const SizeArgs& args) const {
+        void* raw_ptr, const SizeArgs& args) const {
     size_t ws_size_src = args.src_layout->span().dist_byte();
     size_t ws_size_filter = args.filter_layout->span().dist_byte();
     size_t ws_size_dst = args.dst_layout->span().dist_byte();
-    auto&& param = args.opr->param();
-    auto&& fm = args.filter_meta;
     auto layouts = make_underlying_tensor_layout(
-            *(args.src_layout), fm, *(args.bias_layout), *(args.z_layout),
-            *(args.dst_layout));
+            *(args.src_layout), *(args.filter_layout), *(args.bias_layout),
+            *(args.z_layout), *(args.dst_layout));
     SizeArgs args_{args.opr,
                    layouts[0],
                    layouts[1],

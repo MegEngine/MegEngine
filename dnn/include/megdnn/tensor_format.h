@@ -196,6 +196,32 @@ public:
             const TensorLayout& layout) const override;
 };
 using Image2DPack4TensorFormatBase = Image2DPackedTensorFormatBase<4>;
+
+///*!
+// * \brief used for tensors with lowbit data type
+// *
+// * \p SIZE_NBITS is the size in bits of element of the tensor.
+// * 
+// */
+//template <size_t SIZE_NBITS_>
+//class LowbitTensorFormat : public TensorFormat::ImplBase {
+//    static constexpr size_t SIZE_NBITS = SIZE_NBITS_;
+//    size_t m_align_size_in_bits;
+//
+//protected: //?
+//    LowbitTensorFormat(Type type, size_t m_align_size_in_bits);
+//
+//public:
+//    size_t align_size_in_bits() const {
+//        return m_align_size_in_bits;
+//    }
+//
+//    std::string to_string() const override;
+//
+//    void serialize_append(
+//
+//
+//};
 }  // namespace detail
 
 /*!

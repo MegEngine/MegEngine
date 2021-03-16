@@ -78,29 +78,33 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         return handle()->create_operator<RelayoutForward>()->exec(
                 {src.raw_ptr, exec_src_layout}, {dst.raw_ptr, exec_dst_layout});
     }
-
-    if (param().mode == Param::Mode::NCHW_NCHW4 ||
-        param().mode == Param::Mode::NCHW4_NCHW ||
-        param().mode == Param::Mode::NCHW_NCHW4_WEIGHT) {
+    bool is_trans_4bits = (param().mode == Param::Mode::NCHW_NCHW64 ||
+                           param().mode == Param::Mode::NCHW64_NCHW) &&
+                          (src_dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                           src_dtype.enumv() == DTypeEnum::Quantized4Asymm);
+    bool is_nchw_nchw4 = param().mode == Param::Mode::NCHW_NCHW4 ||
+                         param().mode == Param::Mode::NCHW4_NCHW ||
+                         param().mode == Param::Mode::NCHW_NCHW4_WEIGHT;
+    if (is_trans_4bits || is_nchw_nchw4) {
         bool is_usable = relayout_format::RelayoutFormatFast::usable(
                 src.layout, dst.layout);
         megdnn_assert(is_usable,
-                      "RelayoutFormatNCHW_NCHW4 kernel not usable for %s(%s) "
-                      "to %s(%s)",
+                      "RelayoutFormatFast kernel is not usable for "
+                      "transforming %s(%s) to %s(%s).",
                       src.layout.to_string().c_str(), src.layout.dtype.name(),
                       dst.layout.to_string().c_str(), dst.layout.dtype.name());
-        relayout_format::RelayoutFormatFast::exec(src, dst,
-                                                  cuda_stream(this->handle()),
-                                                  param().mode, param().group);
-    } else {
-        TensorLayout exec_src, exec_dst, exec_workspace;
-        deduce_exec_layout(src.layout, dst.layout, exec_workspace, exec_src,
-                           exec_dst);
-        TensorND exec_src_nd{src.raw_ptr, exec_src};
-        TensorND exec_dst_nd{dst.raw_ptr, exec_dst};
-        handle()->create_operator<RelayoutForward>()->exec(exec_src_nd,
-                                                           exec_dst_nd);
+        return relayout_format::RelayoutFormatFast::exec(
+                src, dst, cuda_stream(this->handle()), param().mode,
+                param().group);
     }
+    // fallback impls
+    TensorLayout exec_src, exec_dst, exec_workspace;
+    deduce_exec_layout(src.layout, dst.layout, exec_workspace, exec_src,
+                       exec_dst);
+    TensorND exec_src_nd{src.raw_ptr, exec_src};
+    TensorND exec_dst_nd{dst.raw_ptr, exec_dst};
+    handle()->create_operator<RelayoutForward>()->exec(exec_src_nd,
+                                                       exec_dst_nd);
 }
 
 size_t RelayoutFormatImpl::get_workspace_in_bytes(

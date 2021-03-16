@@ -251,6 +251,23 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src,
             dst[3] = src[3];
             megdnn_assert(dst[1] % param().group == 0);
             break;
+        case Param::Mode::NCHW_NCHW64:
+            megdnn_assert(src.ndim == 4 && (src[1] % 64) == 0);
+            dst.ndim = 5;
+            dst[0] = src[0];
+            dst[1] = src[1] / 64;
+            dst[2] = src[2];
+            dst[3] = src[3];
+            dst[4] = 64;
+            break;
+        case Param::Mode::NCHW64_NCHW:
+            megdnn_assert(src.ndim == 5);
+            dst.ndim = 4;
+            dst[0] = src[0];
+            dst[1] = src[1] * 64;
+            dst[2] = src[2];
+            dst[3] = src[3];
+            break;
         default:
             megdnn_assert(0, "Invalid RelayoutFormat Mode");
             break;
@@ -352,7 +369,12 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             CHECK_SRC(DefaultTensorFormat::make());
             dst = src;
             break;
-
+        case Param::Mode::NCHW_NCHW64:
+            dst = src;
+            break;
+        case Param::Mode::NCHW64_NCHW:
+            dst = src;
+            break;
         default:
             megdnn_throw("Invalid relayout format mode");
             break;
@@ -631,6 +653,19 @@ void RelayoutFormat::deduce_exec_layout(const TensorLayout& src,
             // src is {C/4, H, W, N, 4}
             // dst is {N, C/4, H, W, 4}
             exec_src = src.dimshuffle({3, 0, 1, 2, 4});
+            exec_dst = dst;
+            break;
+        case Param::Mode::NCHW_NCHW64:
+            // src is {N, C, H, W}
+            // dst is {N, C/64, H, W, 64}
+            exec_src = src.reshape({src[0], src[1] / 64, 64, src[2], src[3]})
+                               .dimshuffle({0, 1, 3, 4, 2});
+            exec_dst = dst;
+            break;
+        case Param::Mode::NCHW64_NCHW:
+            // src is {N, C/64, H, W, 64}
+            // dst is {N, C, H, W}
+            exec_src = src.dimshuffle({0, 1, 4, 2, 3});
             exec_dst = dst;
             break;
         default:

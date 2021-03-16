@@ -10,6 +10,12 @@
  * implied.
  */
 
+#include <stdint.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include "cutlass/arch/memory.h"
+#pragma GCC diagnostic pop
 #include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/relayout_format/relayout_format.cuh"
 using namespace megdnn;
@@ -104,37 +110,121 @@ struct CudaPostProcess<dtype::QuantizedS32, dtype::QuantizedS32, true> {
     inline __device__ int operator()(int val) { return val; }
 };
 
-template <typename SrcType, int pack_w>
-struct DTypeRWHelper;
 template <>
-struct DTypeRWHelper<char, 1> {
+struct CudaPostProcess<dtype::QuantizedS4, dtype::QuantizedS4, false> {
+    CudaDTypeParamImpl<dt_qint4> m_dst_type_cvt;
+    CudaDTypeParamImpl<dt_qint4> m_src_type_cvt;
+    CudaPostProcess(float src_scale, uint8_t, float dst_scale, uint8_t) {
+        m_dst_type_cvt = CudaDTypeParamImpl<dt_qint4>(dst_scale);
+        m_src_type_cvt = CudaDTypeParamImpl<dt_qint4>(src_scale);
+    }
+    inline __device__ int8_t operator()(int8_t val) {
+        float intermediate = m_src_type_cvt.dequantize(dt_qint4(val));
+        return m_dst_type_cvt.quantize(intermediate).as_int8();
+    }
+};
+
+template <>
+struct CudaPostProcess<dtype::QuantizedS4, dtype::QuantizedS4, true> {
+    CudaPostProcess(float, uint8_t, float, uint8_t){};
+    inline __device__ int8_t operator()(int8_t val) { return val; }
+};
+
+template <>
+struct CudaPostProcess<dtype::Quantized4Asymm, dtype::Quantized4Asymm, false> {
+    CudaDTypeParamImpl<dt_quint4> m_dst_type_cvt;
+    CudaDTypeParamImpl<dt_quint4> m_src_type_cvt;
+    CudaPostProcess(float src_scale, uint8_t src_zero_point, float dst_scale,
+                    uint8_t dst_zero_point) {
+        m_dst_type_cvt =
+                CudaDTypeParamImpl<dt_quint4>(dst_scale, dst_zero_point);
+        m_src_type_cvt =
+                CudaDTypeParamImpl<dt_quint4>(src_scale, src_zero_point);
+    };
+    inline __device__ uint8_t operator()(uint8_t val) {
+        float intermediate = m_src_type_cvt.dequantize(dt_quint4(val));
+        return m_dst_type_cvt.quantize(intermediate).as_uint8();
+    }
+};
+
+template <>
+struct CudaPostProcess<dtype::Quantized4Asymm, dtype::Quantized4Asymm, true> {
+    uint8_t m_src_zero_point = 0;
+    uint8_t m_dst_zero_point = 0;
+    CudaPostProcess(float, uint8_t src_zero_point, float,
+                    uint8_t dst_zero_point) {
+        m_src_zero_point = src_zero_point;
+        m_dst_zero_point = dst_zero_point;
+    };
+    inline __device__ uint8_t operator()(uint8_t val) {
+        int result = val - m_src_zero_point + m_dst_zero_point;
+        result = result >= 0 ? result : 0;
+        result = result < 16 ? result : 15;
+        return static_cast<uint8_t>(result);
+    }
+};
+
+template <typename cype, int pack_w, typename enable = void>
+struct DTypeRWHelper;
+template <typename ctype>
+struct DTypeRWHelper<
+        ctype, 1,
+        typename std::enable_if<std::is_same<ctype, dt_qint8>::value ||
+                                std::is_same<ctype, dt_quint8>::value ||
+                                std::is_same<ctype, dt_uint8>::value>::type> {
     using InnerDtype = char;
     using DstDtype = char4;
 };
 
-template <>
-struct DTypeRWHelper<char, 4> {
+template <typename ctype>
+struct DTypeRWHelper<
+        ctype, 4,
+        typename std::enable_if<std::is_same<ctype, dt_qint8>::value ||
+                                std::is_same<ctype, dt_quint8>::value ||
+                                std::is_same<ctype, dt_uint8>::value>::type> {
     using InnerDtype = char4;
     using DstDtype = char4;
 };
 
 template <>
-struct DTypeRWHelper<int, 1> {
+struct DTypeRWHelper<dt_qint32, 1> {
     using InnerDtype = int;
     using DstDtype = int4;
 };
 
 template <>
-struct DTypeRWHelper<int, 4> {
+struct DTypeRWHelper<dt_qint32, 4> {
     using InnerDtype = int4;
     using DstDtype = int4;
+};
+    
+template <typename ctype>
+struct DTypeRWHelper<
+        ctype, 2,
+        typename std::enable_if<std::is_same<ctype, dt_qint4>::value ||
+                                std::is_same<ctype, dt_quint4>::value>::type> {
+    using InnerDtype = char;
+    using DstDtype = array_wrapper<uint8_t, 32>;
+};
+
+template <typename ctype>
+struct DTypeRWHelper<
+        ctype, 8,
+        typename std::enable_if<std::is_same<ctype, dt_qint4>::value ||
+                                std::is_same<ctype, dt_quint4>::value>::type> {
+    using InnerDtype = unsigned;
+    using DstDtype = array_wrapper<uint8_t, 32>;
 };
 
 template <int pack_w, int pack_c, typename SrcType, typename DnnSrcType,
           typename DnnDstType, bool same_scale>
 struct Translayout {
-    using InnerDtype = typename DTypeRWHelper<SrcType, pack_w>::InnerDtype;
-    using DstDtype = typename DTypeRWHelper<SrcType, pack_w>::DstDtype;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   pack_w>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   pack_w>::DstDtype;
     static inline __device__ void trans(DstDtype (&dst_width)[pack_w],
                                         InnerDtype (&read_channel)[pack_c],
                                         const char zero_point);
@@ -143,8 +233,12 @@ struct Translayout {
 template <typename SrcType, typename DnnSrcType, typename DnnDstType,
           bool same_scale>
 struct Translayout<1, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
-    using InnerDtype = typename DTypeRWHelper<SrcType, 1>::InnerDtype;
-    using DstDtype = typename DTypeRWHelper<SrcType, 1>::DstDtype;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   1>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   1>::DstDtype;
     static inline __device__ void trans(
             DstDtype (&dst_width)[1], InnerDtype (&read_channel)[4],
             CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
@@ -159,8 +253,12 @@ struct Translayout<1, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
 template <typename SrcType, typename DnnSrcType, typename DnnDstType,
           bool same_scale>
 struct Translayout<4, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
-    using InnerDtype = typename DTypeRWHelper<SrcType, 4>::InnerDtype;
-    using DstDtype = typename DTypeRWHelper<SrcType, 4>::DstDtype;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   4>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   4>::DstDtype;
     static inline __device__ void trans(
             DstDtype (&dst_width)[4], InnerDtype (&read_channel)[4],
             CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
@@ -186,6 +284,412 @@ struct Translayout<4, 4, SrcType, DnnSrcType, DnnDstType, same_scale> {
         dst_width[3].w = post_process(read_channel[3].w);
     }
 };
+
+#define pack_channel(_idx)                                        \
+    transform_int8_to_int4x8(post_process(intermediate[0][_idx]), \
+                             post_process(intermediate[1][_idx]), \
+                             post_process(intermediate[2][_idx]), \
+                             post_process(intermediate[3][_idx]), \
+                             post_process(intermediate[4][_idx]), \
+                             post_process(intermediate[5][_idx]), \
+                             post_process(intermediate[6][_idx]), \
+                             post_process(intermediate[7][_idx]));
+template <typename SrcType, bool same_scale>
+struct Translayout<2, 64, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
+                   same_scale> {
+    using DnnSrcType = dtype::QuantizedS4;
+    using DnnDstType = dtype::QuantizedS4;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   2>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   2>::DstDtype;
+    static inline __device__ void trans(
+            DstDtype (&dst_width)[2], InnerDtype (&read_channel)[64],
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
+            const char zero_point) {
+        int intermediate[8][2];
+        int* dst_frag = reinterpret_cast<int*>(dst_width);
+#pragma unroll
+        for (int i = 0; i < 64; i += 8) {
+#define unpack_int4x2(_idx)                                          \
+    intermediate[_idx][0] = unpack_integer_4bits<true>(              \
+            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 0); \
+    intermediate[_idx][1] = unpack_integer_4bits<true>(              \
+            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 4);
+            // clang-format off
+            unpack_int4x2(0)
+            unpack_int4x2(1)
+            unpack_int4x2(2)
+            unpack_int4x2(3)
+            unpack_int4x2(4)
+            unpack_int4x2(5)
+            unpack_int4x2(6)
+            unpack_int4x2(7)
+            // clang-format on
+
+            int frag_idx = i / 8;
+            dst_frag[0 * 8 + frag_idx] = pack_channel(0);
+            dst_frag[1 * 8 + frag_idx] = pack_channel(1);
+#undef unpack_int4x2
+        }
+    }
+};
+
+template <typename SrcType, bool same_scale>
+struct Translayout<8, 64, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
+                   same_scale> {
+    using DnnSrcType = dtype::QuantizedS4;
+    using DnnDstType = dtype::QuantizedS4;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   8>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   8>::DstDtype;
+    static inline __device__ void trans(
+            DstDtype (&dst_width)[8], InnerDtype (&read_channel)[64],
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
+            const char zero_point) {
+        int intermediate[8][8];
+        int* dst_frag = reinterpret_cast<int*>(dst_width);
+#pragma unroll
+        for (int i = 0; i < 64; i += 8) {
+            transform_int4x8_to_int8(intermediate[0], read_channel[i + 0]);
+            transform_int4x8_to_int8(intermediate[1], read_channel[i + 1]);
+            transform_int4x8_to_int8(intermediate[2], read_channel[i + 2]);
+            transform_int4x8_to_int8(intermediate[3], read_channel[i + 3]);
+            transform_int4x8_to_int8(intermediate[4], read_channel[i + 4]);
+            transform_int4x8_to_int8(intermediate[5], read_channel[i + 5]);
+            transform_int4x8_to_int8(intermediate[6], read_channel[i + 6]);
+            transform_int4x8_to_int8(intermediate[7], read_channel[i + 7]);
+            int frag_idx = i / 8;
+            dst_frag[0 * 8 + frag_idx] = pack_channel(0);
+            dst_frag[1 * 8 + frag_idx] = pack_channel(1);
+            dst_frag[2 * 8 + frag_idx] = pack_channel(2);
+            dst_frag[3 * 8 + frag_idx] = pack_channel(3);
+            dst_frag[4 * 8 + frag_idx] = pack_channel(4);
+            dst_frag[5 * 8 + frag_idx] = pack_channel(5);
+            dst_frag[6 * 8 + frag_idx] = pack_channel(6);
+            dst_frag[7 * 8 + frag_idx] = pack_channel(7);
+        }
+    }
+};
+#undef pack_channel
+
+#define pack_channel(_idx)                                         \
+    transform_int8_to_uint4x8(post_process(intermediate[0][_idx]), \
+                              post_process(intermediate[1][_idx]), \
+                              post_process(intermediate[2][_idx]), \
+                              post_process(intermediate[3][_idx]), \
+                              post_process(intermediate[4][_idx]), \
+                              post_process(intermediate[5][_idx]), \
+                              post_process(intermediate[6][_idx]), \
+                              post_process(intermediate[7][_idx]));
+template <typename SrcType, bool same_scale>
+struct Translayout<2, 64, SrcType, dtype::Quantized4Asymm,
+                   dtype::Quantized4Asymm, same_scale> {
+    using DnnSrcType = dtype::Quantized4Asymm;
+    using DnnDstType = dtype::Quantized4Asymm;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   2>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   2>::DstDtype;
+    static inline __device__ void trans(
+            DstDtype (&dst_width)[2], InnerDtype (&read_channel)[64],
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
+            const char zero_point) {
+        int intermediate[8][2];
+        int* dst_frag = reinterpret_cast<int*>(dst_width);
+#pragma unroll
+        for (int i = 0; i < 64; i += 8) {
+#define unpack_int4x2(_idx)                                          \
+    intermediate[_idx][0] = unpack_integer_4bits<false>(             \
+            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 0); \
+    intermediate[_idx][1] = unpack_integer_4bits<false>(             \
+            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 4);
+            // clang-format off
+            unpack_int4x2(0)
+            unpack_int4x2(1)
+            unpack_int4x2(2)
+            unpack_int4x2(3)
+            unpack_int4x2(4)
+            unpack_int4x2(5)
+            unpack_int4x2(6)
+            unpack_int4x2(7)
+            // clang-format on
+
+            int frag_idx = i / 8;
+            dst_frag[0 * 8 + frag_idx] = pack_channel(0);
+            dst_frag[1 * 8 + frag_idx] = pack_channel(1);
+#undef unpack_int4x2
+        }
+    }
+};
+
+template <typename SrcType, bool same_scale>
+struct Translayout<8, 64, SrcType, dtype::Quantized4Asymm,
+                   dtype::Quantized4Asymm, same_scale> {
+    using DnnSrcType = dtype::Quantized4Asymm;
+    using DnnDstType = dtype::Quantized4Asymm;
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   8>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   8>::DstDtype;
+    static inline __device__ void trans(
+            DstDtype (&dst_width)[8], InnerDtype (&read_channel)[64],
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
+            const char zero_point) {
+        int intermediate[8][8];
+        int* dst_frag = reinterpret_cast<int*>(dst_width);
+#pragma unroll
+        for (int i = 0; i < 64; i += 8) {
+            transform_uint4x8_to_int8(intermediate[0], read_channel[i + 0]);
+            transform_uint4x8_to_int8(intermediate[1], read_channel[i + 1]);
+            transform_uint4x8_to_int8(intermediate[2], read_channel[i + 2]);
+            transform_uint4x8_to_int8(intermediate[3], read_channel[i + 3]);
+            transform_uint4x8_to_int8(intermediate[4], read_channel[i + 4]);
+            transform_uint4x8_to_int8(intermediate[5], read_channel[i + 5]);
+            transform_uint4x8_to_int8(intermediate[6], read_channel[i + 6]);
+            transform_uint4x8_to_int8(intermediate[7], read_channel[i + 7]);
+            int frag_idx = i / 8;
+            dst_frag[0 * 8 + frag_idx] = pack_channel(0);
+            dst_frag[1 * 8 + frag_idx] = pack_channel(1);
+            dst_frag[2 * 8 + frag_idx] = pack_channel(2);
+            dst_frag[3 * 8 + frag_idx] = pack_channel(3);
+            dst_frag[4 * 8 + frag_idx] = pack_channel(4);
+            dst_frag[5 * 8 + frag_idx] = pack_channel(5);
+            dst_frag[6 * 8 + frag_idx] = pack_channel(6);
+            dst_frag[7 * 8 + frag_idx] = pack_channel(7);
+        }
+    }
+};
+#undef pack_channel
+
+#define pack(_idx)                                                \
+    transform_int8_to_int4x8(post_process(intermediate[0][_idx]), \
+                             post_process(intermediate[1][_idx]), \
+                             post_process(intermediate[2][_idx]), \
+                             post_process(intermediate[3][_idx]), \
+                             post_process(intermediate[4][_idx]), \
+                             post_process(intermediate[5][_idx]), \
+                             post_process(intermediate[6][_idx]), \
+                             post_process(intermediate[7][_idx]));
+template <typename SrcType, bool same_scale>
+struct Translayout<64, 8, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
+                   same_scale> {
+    using DnnSrcType = dtype::QuantizedS4;
+    using DnnDstType = dtype::QuantizedS4;
+    static constexpr int row = 8;
+    static constexpr int col = 64;
+    static constexpr int size_nbits = 4;
+    static constexpr int col_in_type = col * size_nbits / (8 * sizeof(SrcType));
+    static constexpr int elements_in_type = row * col_in_type;
+    static constexpr int inc_col = 8;
+    static constexpr int inc_col_in_type =
+            inc_col * size_nbits / (8 * sizeof(SrcType));
+    using Fragment = array_wrapper<SrcType, elements_in_type>;
+    static MEGDNN_DEVICE __forceinline__ void trans(
+            Fragment& dst, const Fragment& src,
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
+        int intermediate[8][8];
+        int* dst_frag = reinterpret_cast<int*>(&dst);
+#pragma unroll
+        for (int j = 0; j < col_in_type; j += inc_col_in_type) {
+            transform_int4x8_to_int8(
+                    intermediate[0],
+                    reinterpret_cast<const int&>(src[0 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[1],
+                    reinterpret_cast<const int&>(src[1 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[2],
+                    reinterpret_cast<const int&>(src[2 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[3],
+                    reinterpret_cast<const int&>(src[3 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[4],
+                    reinterpret_cast<const int&>(src[4 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[5],
+                    reinterpret_cast<const int&>(src[5 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[6],
+                    reinterpret_cast<const int&>(src[6 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[7],
+                    reinterpret_cast<const int&>(src[7 * col_in_type + j]));
+            dst_frag[(j / inc_col_in_type) * 8 + 0] = pack(0);
+            dst_frag[(j / inc_col_in_type) * 8 + 1] = pack(1);
+            dst_frag[(j / inc_col_in_type) * 8 + 2] = pack(2);
+            dst_frag[(j / inc_col_in_type) * 8 + 3] = pack(3);
+            dst_frag[(j / inc_col_in_type) * 8 + 4] = pack(4);
+            dst_frag[(j / inc_col_in_type) * 8 + 5] = pack(5);
+            dst_frag[(j / inc_col_in_type) * 8 + 6] = pack(6);
+            dst_frag[(j / inc_col_in_type) * 8 + 7] = pack(7);
+        }
+    }
+};
+#undef pack
+
+#define pack(_idx)                                    \
+    ((uint8_t)(post_process(intermediate[0][_idx])) | \
+     ((uint8_t)(post_process(intermediate[1][_idx])) << 4))
+template <typename SrcType, bool same_scale>
+struct Translayout<64, 2, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
+                   same_scale> {
+    using DnnSrcType = dtype::QuantizedS4;
+    using DnnDstType = dtype::QuantizedS4;
+    static constexpr int row = 2;
+    static constexpr int col = 64;
+    static constexpr int size_nbits = 4;
+    static constexpr int col_in_type = col * size_nbits / (8 * sizeof(SrcType));
+    static constexpr int elements_in_type = row * col_in_type;
+    static constexpr int inc_col = 8;
+    static constexpr int inc_col_in_type =
+            inc_col * size_nbits / (8 * sizeof(SrcType));
+    using Fragment = array_wrapper<SrcType, elements_in_type>;
+    static MEGDNN_DEVICE __forceinline__ void trans(
+            Fragment& dst, const Fragment& src,
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
+        int intermediate[2][8];
+        uint8_t* dst_frag = reinterpret_cast<uint8_t*>(&dst);
+#pragma unroll
+        for (int j = 0; j < col_in_type; j += inc_col_in_type) {
+            transform_int4x8_to_int8(
+                    intermediate[0],
+                    reinterpret_cast<const int&>(src[0 * col_in_type + j]));
+            transform_int4x8_to_int8(
+                    intermediate[1],
+                    reinterpret_cast<const int&>(src[1 * col_in_type + j]));
+            dst_frag[(j / inc_col_in_type) * 8 + 0] = pack(0);
+            dst_frag[(j / inc_col_in_type) * 8 + 1] = pack(1);
+            dst_frag[(j / inc_col_in_type) * 8 + 2] = pack(2);
+            dst_frag[(j / inc_col_in_type) * 8 + 3] = pack(3);
+            dst_frag[(j / inc_col_in_type) * 8 + 4] = pack(4);
+            dst_frag[(j / inc_col_in_type) * 8 + 5] = pack(5);
+            dst_frag[(j / inc_col_in_type) * 8 + 6] = pack(6);
+            dst_frag[(j / inc_col_in_type) * 8 + 7] = pack(7);
+        }
+    }
+};
+#undef pack
+
+#define pack(_idx)                                                 \
+    transform_int8_to_uint4x8(post_process(intermediate[0][_idx]), \
+                              post_process(intermediate[1][_idx]), \
+                              post_process(intermediate[2][_idx]), \
+                              post_process(intermediate[3][_idx]), \
+                              post_process(intermediate[4][_idx]), \
+                              post_process(intermediate[5][_idx]), \
+                              post_process(intermediate[6][_idx]), \
+                              post_process(intermediate[7][_idx]));
+template <typename SrcType, bool same_scale>
+struct Translayout<64, 8, SrcType, dtype::Quantized4Asymm,
+                   dtype::Quantized4Asymm, same_scale> {
+    using DnnSrcType = dtype::Quantized4Asymm;
+    using DnnDstType = dtype::Quantized4Asymm;
+    static constexpr int row = 8;
+    static constexpr int col = 64;
+    static constexpr int size_nbits = 4;
+    static constexpr int col_in_type = col * size_nbits / (8 * sizeof(SrcType));
+    static constexpr int elements_in_type = row * col_in_type;
+    static constexpr int inc_col = 8;
+    static constexpr int inc_col_in_type =
+            inc_col * size_nbits / (8 * sizeof(SrcType));
+    using Fragment = array_wrapper<SrcType, elements_in_type>;
+    static MEGDNN_DEVICE __forceinline__ void trans(
+            Fragment& dst, const Fragment& src,
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
+        int intermediate[8][8];
+        int* dst_frag = reinterpret_cast<int*>(&dst);
+#pragma unroll
+        for (int j = 0; j < col_in_type; j += inc_col_in_type) {
+            transform_uint4x8_to_int8(
+                    intermediate[0],
+                    reinterpret_cast<const int&>(src[0 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[1],
+                    reinterpret_cast<const int&>(src[1 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[2],
+                    reinterpret_cast<const int&>(src[2 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[3],
+                    reinterpret_cast<const int&>(src[3 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[4],
+                    reinterpret_cast<const int&>(src[4 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[5],
+                    reinterpret_cast<const int&>(src[5 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[6],
+                    reinterpret_cast<const int&>(src[6 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[7],
+                    reinterpret_cast<const int&>(src[7 * col_in_type + j]));
+            dst_frag[(j / inc_col_in_type) * 8 + 0] = pack(0);
+            dst_frag[(j / inc_col_in_type) * 8 + 1] = pack(1);
+            dst_frag[(j / inc_col_in_type) * 8 + 2] = pack(2);
+            dst_frag[(j / inc_col_in_type) * 8 + 3] = pack(3);
+            dst_frag[(j / inc_col_in_type) * 8 + 4] = pack(4);
+            dst_frag[(j / inc_col_in_type) * 8 + 5] = pack(5);
+            dst_frag[(j / inc_col_in_type) * 8 + 6] = pack(6);
+            dst_frag[(j / inc_col_in_type) * 8 + 7] = pack(7);
+        }
+    }
+};
+#undef pack
+
+#define pack(_idx)                                    \
+    ((uint8_t)(post_process(intermediate[0][_idx])) | \
+     ((uint8_t)(post_process(intermediate[1][_idx])) << 4))
+template <typename SrcType, bool same_scale>
+struct Translayout<64, 2, SrcType, dtype::Quantized4Asymm,
+                   dtype::Quantized4Asymm, same_scale> {
+    using DnnSrcType = dtype::Quantized4Asymm;
+    using DnnDstType = dtype::Quantized4Asymm;
+    static constexpr int row = 2;
+    static constexpr int col = 64;
+    static constexpr int size_nbits = 4;
+    static constexpr int col_in_type = col * size_nbits / (8 * sizeof(SrcType));
+    static constexpr int elements_in_type = row * col_in_type;
+    static constexpr int inc_col = 8;
+    static constexpr int inc_col_in_type =
+            inc_col * size_nbits / (8 * sizeof(SrcType));
+    using Fragment = array_wrapper<SrcType, elements_in_type>;
+    static MEGDNN_DEVICE __forceinline__ void trans(
+            Fragment& dst, const Fragment& src,
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
+        int intermediate[2][8];
+        uint8_t* dst_frag = reinterpret_cast<uint8_t*>(&dst);
+#pragma unroll
+        for (int j = 0; j < col_in_type; j += inc_col_in_type) {
+            transform_uint4x8_to_int8(
+                    intermediate[0],
+                    reinterpret_cast<const int&>(src[0 * col_in_type + j]));
+            transform_uint4x8_to_int8(
+                    intermediate[1],
+                    reinterpret_cast<const int&>(src[1 * col_in_type + j]));
+            dst_frag[(j / inc_col_in_type) * 8 + 0] = pack(0);
+            dst_frag[(j / inc_col_in_type) * 8 + 1] = pack(1);
+            dst_frag[(j / inc_col_in_type) * 8 + 2] = pack(2);
+            dst_frag[(j / inc_col_in_type) * 8 + 3] = pack(3);
+            dst_frag[(j / inc_col_in_type) * 8 + 4] = pack(4);
+            dst_frag[(j / inc_col_in_type) * 8 + 5] = pack(5);
+            dst_frag[(j / inc_col_in_type) * 8 + 6] = pack(6);
+            dst_frag[(j / inc_col_in_type) * 8 + 7] = pack(7);
+        }
+    }
+};
+#undef pack
 
 template <typename DstType>
 inline __device__ DstType make_zero_pad(const char zero_point) {
@@ -213,13 +717,33 @@ inline __device__ void write_helper<char4>(char4* ptr, char4 val) {
     *rel_ptr = *(int32_t*)(&val);
 }
 
+template <>
+inline __device__ void write_helper<array_wrapper<uint8_t, 32>>(
+        array_wrapper<uint8_t, 32>* ptr, array_wrapper<uint8_t, 32> val) {
+    uint4 const* data = reinterpret_cast<uint4 const*>(&val);
+    void* ptr_ = reinterpret_cast<void*>(ptr);
+    asm volatile(
+            "{\n"
+            " st.global.v4.u32 [%0], {%1, %2, %3, %4};\n"
+            " st.global.v4.u32 [%5], {%6, %7, %8, %9};\n"
+            "}\n"
+            :
+            : "l"(ptr_), "r"(data[0].x), "r"(data[0].y), "r"(data[0].z),
+              "r"(data[0].w), "l"(((uint8_t*)ptr_) + 16), "r"(data[1].x),
+              "r"(data[1].y), "r"(data[1].z), "r"(data[1].w));
+};
+
 template <bool with_pad, int pack_w, int pack_c, bool same_scale, bool all_pad,
           typename SrcType, typename DstType, typename DnnSrcType,
           typename DnnDstType>
 struct RelayoutKern {
-    using InnerDtype = typename DTypeRWHelper<SrcType, pack_w>::InnerDtype;
-    using DstDtype = typename DTypeRWHelper<SrcType, pack_w>::DstDtype;
-    static inline __device__ void write(DstType* dst_ptr,
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   pack_w>::InnerDtype;
+    using DstDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   pack_w>::DstDtype;
+    static inline __device__ void write(DstDtype* dst_ptr,
                                         DstDtype (&dst_width)[pack_w]) {
         DstDtype* dst_inner_ptr = (DstDtype*)dst_ptr;
 #pragma unroll
@@ -262,56 +786,57 @@ struct RelayoutKern {
     }
 
     static inline __device__ void core_relayout_kern(
-            const SrcType* src, DstType* dst, const int src_offset_base,
-            const int dst_offset_base, const int ic_offset, const int ic_stride,
+            const SrcType* src, DstType* dst, const int ic_stride,
             const int remain_ic,
             CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
             const char zero_point) {
         InnerDtype read_channel[pack_c];
         if (all_pad) {
             const InnerDtype zero_pad = make_zero_pad<InnerDtype>(zero_point);
-            fake_read(src + ic_offset + src_offset_base, read_channel,
-                      ic_stride, remain_ic, zero_pad);
+            fake_read(src, read_channel, ic_stride, remain_ic, zero_pad);
         } else {
             if (with_pad) {
                 const InnerDtype zero_pad =
                         make_zero_pad<InnerDtype>(zero_point);
-                read_with_pad(src + ic_offset + src_offset_base, read_channel,
-                              ic_stride, remain_ic, zero_pad);
+                read_with_pad(src, read_channel, ic_stride, remain_ic,
+                              zero_pad);
             } else {
-                read(src + ic_offset + src_offset_base, read_channel,
-                     ic_stride);
+                read(src, read_channel, ic_stride);
             }
         }
         DstDtype dst_width[pack_w];
         Translayout<pack_w, pack_c, SrcType, DnnSrcType, DnnDstType,
                     same_scale>::trans(dst_width, read_channel, post_process,
                                        zero_point);
-        write(dst + ic_offset + dst_offset_base, dst_width);
+        write(reinterpret_cast<DstDtype*>(dst), dst_width);
     }
 };
 
-template <int pack_w, bool same_scale, typename SrcType, typename DstType,
-          typename DnnSrcType, typename DnnDstType>
-__global__ void kern_nchw_nchw4(
+template <int pack_w, int pack_c, bool same_scale, typename SrcType,
+          typename DstType, typename DnnSrcType, typename DnnDstType,
+          int size_nbits = 8>
+__global__ void kern_nchw_nchwx(
         const SrcType* src, DstType* dst, int in_n, int ic, int ihw,
-        int n_stride_src, int ic_stride, int n_stride_dst,
+        int n_stride_src, int ic_stride, int n_stride_dst, int oc_stride,
         CudaPostProcess<DnnSrcType, DnnDstType, same_scale> post_process,
         const char zero_point, const int group, const int ocpg) {
-    constexpr int pack_c = 4;
     const int n_idx = blockIdx.y;
     const int ihw_block_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    const int ihw_offset = ihw_block_idx * pack_w;
+    const int ihw_offset =
+            ihw_block_idx * pack_w;
+    const int ihw_offset_in_type =
+            ihw_offset * size_nbits / (8 * sizeof(SrcType));
 
     if (ihw_offset < ihw) {
-        const int src_offset_base = n_idx * n_stride_src + ihw_offset;
-        const int dst_offset_base = n_idx * n_stride_dst + ihw_offset * pack_c;
+        const int src_offset_base = n_idx * n_stride_src + ihw_offset_in_type;
+        const int dst_offset_base =
+                n_idx * n_stride_dst + ihw_offset_in_type * pack_c;
         if (n_idx < in_n) {
             const int icpg = ic / group;
             const int ic_block = icpg / pack_c;
             const int remain_ic = icpg % pack_c;
             const int src_group_stride = icpg * ic_stride;
-            const int dst_group_stride = ocpg * ic_stride;
+            const int dst_group_stride = ocpg * oc_stride;
             for (int g_idx = 0; g_idx < group; ++g_idx) {
                 const int src_offset =
                         src_offset_base + g_idx * src_group_stride;
@@ -319,30 +844,24 @@ __global__ void kern_nchw_nchw4(
                         dst_offset_base + g_idx * dst_group_stride;
                 for (int ic_blk_idx = 0; ic_blk_idx < ic_block; ++ic_blk_idx) {
                     const int ic_offset = ic_blk_idx * pack_c * ic_stride;
+                    const int oc_offset = ic_blk_idx * oc_stride;
                     RelayoutKern<false, pack_w, pack_c, same_scale, false,
-                                 SrcType, DstType, DnnSrcType,
-                                 DnnDstType>::core_relayout_kern(src, dst,
-                                                                 src_offset,
-                                                                 dst_offset,
-                                                                 ic_offset,
-                                                                 ic_stride,
-                                                                 remain_ic,
-                                                                 post_process,
-                                                                 zero_point);
+                                 SrcType, DstType, DnnSrcType, DnnDstType>::
+                            core_relayout_kern(src + src_offset + ic_offset,
+                                               dst + dst_offset + oc_offset,
+                                               ic_stride, remain_ic,
+                                               post_process, zero_point);
                 }
 
                 if (remain_ic > 0) {
                     const int ic_offset = ic_block * pack_c * ic_stride;
+                    const int oc_offset = ic_block * oc_stride;
                     RelayoutKern<true, pack_w, pack_c, same_scale, false,
-                                 SrcType, DstType, DnnSrcType,
-                                 DnnDstType>::core_relayout_kern(src, dst,
-                                                                 src_offset,
-                                                                 dst_offset,
-                                                                 ic_offset,
-                                                                 ic_stride,
-                                                                 remain_ic,
-                                                                 post_process,
-                                                                 zero_point);
+                                 SrcType, DstType, DnnSrcType, DnnDstType>::
+                            core_relayout_kern(src + src_offset + ic_offset,
+                                               dst + dst_offset + oc_offset,
+                                               ic_stride, remain_ic,
+                                               post_process, zero_point);
                 }
             }
         } else {
@@ -350,13 +869,10 @@ __global__ void kern_nchw_nchw4(
             const int ic_full_block = group * ocpg / pack_c;
             for (int ic_blk_idx = 0; ic_blk_idx < ic_full_block; ++ic_blk_idx) {
                 RelayoutKern<false, pack_w, pack_c, same_scale, true, SrcType,
-                             DstType, DnnSrcType,
-                             DnnDstType>::core_relayout_kern(src, dst,
-                                                             src_offset_base,
-                                                             dst_offset_base, 0,
-                                                             ic_stride, 0,
-                                                             post_process,
-                                                             zero_point);
+                             DstType, DnnSrcType, DnnDstType>::
+                        core_relayout_kern(src + src_offset_base,
+                                           dst + dst_offset_base, ic_stride, 0,
+                                           post_process, zero_point);
             }
         }
     }
@@ -443,29 +959,21 @@ __global__ void kern_nchw_nchw4_weight(
             for (int ic_blk_idx = 0; ic_blk_idx < ic_block; ++ic_blk_idx) {
                 const int ic_offset = ic_blk_idx * pack_c * ic_stride;
                 RelayoutKern<false, pack_w, pack_c, same_scale, false, SrcType,
-                             DstType, DnnSrcType,
-                             DnnDstType>::core_relayout_kern(src, dst,
-                                                             src_offset_base,
-                                                             dst_offset_base,
-                                                             ic_offset,
-                                                             ic_stride,
-                                                             remain_ic,
-                                                             post_process,
-                                                             zero_point);
+                             DstType, DnnSrcType, DnnDstType>::
+                        core_relayout_kern(src + src_offset_base + ic_offset,
+                                           dst + dst_offset_base + ic_offset,
+                                           ic_stride, remain_ic, post_process,
+                                           zero_point);
             }
 
             if (remain_ic > 0) {
                 const int ic_offset = ic_block * pack_c * ic_stride;
                 RelayoutKern<true, pack_w, pack_c, same_scale, false, SrcType,
-                             DstType, DnnSrcType,
-                             DnnDstType>::core_relayout_kern(src, dst,
-                                                             src_offset_base,
-                                                             dst_offset_base,
-                                                             ic_offset,
-                                                             ic_stride,
-                                                             remain_ic,
-                                                             post_process,
-                                                             zero_point);
+                             DstType, DnnSrcType, DnnDstType>::
+                        core_relayout_kern(src + src_offset_base + ic_offset,
+                                           dst + dst_offset_base + ic_offset,
+                                           ic_stride, remain_ic, post_process,
+                                           zero_point);
             }
         } else {
             //! pad oc per group
@@ -473,29 +981,174 @@ __global__ void kern_nchw_nchw4_weight(
             for (int ic_blk_idx = 0; ic_blk_idx < ic_full_block; ++ic_blk_idx) {
                 const int ic_offset = ic_blk_idx * pack_c * ic_stride;
                 RelayoutKern<false, pack_w, pack_c, same_scale, true, SrcType,
-                             DstType, DnnSrcType,
-                             DnnDstType>::core_relayout_kern(src, dst,
-                                                             src_offset_base,
-                                                             dst_offset_base,
-                                                             ic_offset,
-                                                             ic_stride,
-                                                             remain_ic,
-                                                             post_process,
-                                                             zero_point);
+                             DstType, DnnSrcType, DnnDstType>::
+                        core_relayout_kern(src + src_offset_base + ic_offset,
+                                           dst + dst_offset_base + ic_offset,
+                                           ic_stride, remain_ic, post_process,
+                                           zero_point);
             }
         }
     }
 }
 
+template <typename Type_, int pack_size_, int chan_blk_, int width_,
+          int size_nbits_>
+class TensorIteratorOverChannel {
+public:
+    using Type = Type_;
+    static constexpr int pack_size = pack_size_;
+    static constexpr int chan_blk = chan_blk_;
+    static constexpr int width = width_;
+    static constexpr int size_nbits = size_nbits_;
+    static constexpr int elements_in_type =
+            chan_blk * width * size_nbits / (8 * sizeof(Type));
+    static constexpr int lane_size_in_type =
+            (width * pack_size * size_nbits) / (8 * sizeof(Type));
+    static constexpr int pack_size_in_type =
+            (pack_size * size_nbits) >= (8 * sizeof(Type))
+                    ? (pack_size * size_nbits / (8 * sizeof(Type)))
+                    : (width * pack_size * size_nbits / (8 * sizeof(Type)));
+    static constexpr int pack_size_in_byte = pack_size_in_type * sizeof(Type);
+    using AccessType = array_wrapper<Type, pack_size_in_type>;
+    using Fragment = array_wrapper<Type, elements_in_type>;
+
+    MEGDNN_DEVICE TensorIteratorOverChannel()
+            : pointer{nullptr}, chan_stride_in_elements{0}, channel{0} {}
+    MEGDNN_DEVICE TensorIteratorOverChannel(Type* pointer_,
+                                            int chan_stride_in_elements_,
+                                            int channel_)
+            : pointer{pointer_},
+              chan_stride_in_elements{chan_stride_in_elements},
+              channel{channel_} {}
+
+    MEGDNN_DEVICE __forceinline__ void load(Fragment& frag) {
+        AccessType* frag_ptr = reinterpret_cast<AccessType*>(&frag);
+        Type* pointer_ = pointer;
+#pragma unroll
+        for (int i = 0; i < chan_blk; i += pack_size) {
+#pragma unroll
+            for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
+                int frag_idx = i / pack_size *
+                                       (lane_size_in_type / pack_size_in_type) +
+                               j;
+                bool guard = i >= channel;
+                cutlass::arch::global_load<AccessType, pack_size_in_byte>(
+                        frag_ptr[frag_idx],
+                        reinterpret_cast<void*>(pointer_ +
+                                                j * pack_size_in_type),
+                        guard);
+            }
+            pointer_ += chan_stride_in_elements;
+        }
+    }
+
+    MEGDNN_DEVICE __forceinline__ void store(const Fragment& frag) {
+        const AccessType* frag_ptr = reinterpret_cast<const AccessType*>(&frag);
+        Type* pointer_ = pointer;
+#pragma unroll
+        for (int i = 0; i < chan_blk; i += pack_size) {
+#pragma unroll
+            for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
+                int frag_idx = i / pack_size *
+                                       (lane_size_in_type / pack_size_in_type) +
+                               j;
+                bool guard = i >= channel;
+                cutlass::arch::global_store<AccessType, pack_size_in_byte>(
+                        frag_ptr[frag_idx],
+                        reinterpret_cast<void*>(pointer_ +
+                                                j * pack_size_in_type),
+                        guard);
+            }
+            pointer_ += chan_stride_in_elements;
+        }
+    }
+
+
+    MEGDNN_DEVICE __forceinline__ void advance() {
+        pointer += (chan_blk / pack_size) * chan_stride_in_elements;
+        channel -= chan_blk;
+    }
+
+private:
+    Type* pointer;
+    int chan_stride_in_elements;
+    int channel;
+};
+
+template <int pack_w, int pack_c, bool same_scale, typename SrcType,
+          typename DstType, typename DnnSrcType, typename DnnDstType,
+          int size_nbits = 8>
+__global__ void kern_nchwx_nchw(
+        const SrcType* src, DstType* dst, int ic, int ihw, int n_stride_src,
+        int ic_stride, int n_stride_dst, int oc_stride,
+        CudaPostProcess<DnnSrcType, DnnDstType, same_scale> post_process,
+        const char zero_point) {
+    using InnerDtype =
+            typename DTypeRWHelper<typename DTypeTrait<DnnSrcType>::ctype,
+                                   pack_w>::InnerDtype;
+    using SrcIterator = TensorIteratorOverChannel<SrcType, pack_c, pack_c,
+                                                  pack_w, size_nbits>;
+    using DstIteraotr = TensorIteratorOverChannel<InnerDtype, 1, pack_c, pack_w,
+                                                  size_nbits>;
+    using Transpose = Translayout<pack_c, pack_w, SrcType, DnnSrcType,
+                                  DnnDstType, same_scale>;
+    const int n_idx = blockIdx.y;
+    const int ihw_block_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int ihw_offset = ihw_block_idx * pack_w;
+    const int ihw_offset_in_type =
+            ihw_offset * size_nbits / (8 * sizeof(SrcType));
+    if (ihw_offset < ihw) {
+        const int ic_block = (ic + pack_c - 1) / pack_c;
+        const int src_offset_base =
+                n_idx * n_stride_src + ihw_offset_in_type * pack_c;
+        const int dst_offset_base = n_idx * n_stride_dst + ihw_offset_in_type;
+        SrcIterator src_iterator{const_cast<SrcType*>(src + src_offset_base),
+                                 ic_stride, ic};
+        DstIteraotr dst_iterator{
+                reinterpret_cast<InnerDtype*>(dst + dst_offset_base), oc_stride,
+                ic};
+
+        for (int ic_blk_idx = 0; ic_blk_idx < ic_block; ++ic_blk_idx) {
+            typename SrcIterator::Fragment src_frag;
+            typename DstIteraotr::Fragment dst_frag;
+            src_iterator.load(src_frag);
+            Transpose::trans(
+                    reinterpret_cast<typename SrcIterator::Fragment&>(dst_frag),
+                    src_frag, post_process);
+            dst_iterator.store(dst_frag);
+            src_iterator.advance();
+            dst_iterator.advance();
+        }
+    }
+}
 }  // namespace
 
-template <int pack_w = 1>
-void relayout_format::relayout_format_cuda_nchw_nchw4(
+void relayout_format::relayout_format_cuda_nchw_nchwx(
         const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
         const float src_scale, const float dst_scale,
-        const uint8_t src_zero_point, const uint8_t dst_zero_point,
-        const int group) {
-    constexpr int pack_oc = 4;
+        const uint8_t src_zero_point, const uint8_t dst_zero_point, int group) {
+    auto&& stype = src.layout.dtype;
+    auto&& dtype = dst.layout.dtype;
+    auto& src_layout = src.layout;
+    auto& dst_layout = dst.layout;
+    // check pack size
+    int pack_oc = std::numeric_limits<int>::min();
+#define DEF(_pack_oc, _src_type, _dst_type)             \
+    if (stype.enumv().ev == DTypeEnum::Ev::_src_type && \
+        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) { \
+        pack_oc = _pack_oc;                             \
+    }
+    // clang-format off
+    DEF(64, QuantizedS4, QuantizedS4)
+    DEF(64, Quantized4Asymm, Quantized4Asymm)
+    DEF(4, QuantizedS8, QuantizedS8)
+    DEF(4, Uint8, QuantizedS8)
+    DEF(4, Quantized8Asymm, Quantized8Asymm)
+    DEF(4, QuantizedS32, QuantizedS32);
+    // clang-format on
+    megdnn_assert(pack_oc == 4 || pack_oc == 64,
+                  "Unsupport pack size(pack_oc:%d)", pack_oc);
+#undef DEF  
     const int in_n = src.layout[0];
     const int out_n = dst.layout[0];
     const int ic = src.layout[1];
@@ -504,75 +1157,149 @@ void relayout_format::relayout_format_cuda_nchw_nchw4(
     const int oc = dst.layout[1] * pack_oc;
     const int hw = h * w;
     const int ocpg = oc / group;
-    const int n_stride_src = ic * hw;
-    const int ic_stride = hw;
-    const int n_stride_dst = oc * hw;
+    const int n_stride_src = src_layout.dtype.size(src_layout.stride[0]);
+    const int ic_stride = src_layout.dtype.size(src_layout.stride[1]);
+    const int n_stride_dst = dst_layout.dtype.size(dst_layout.stride[0]);
+    const int oc_stride = dst_layout.dtype.size(dst_layout.stride[1]);
 
-    auto& src_layout = src.layout;
-    auto& dst_layout = dst.layout;
     bool same_scale = src_scale == dst_scale;
-#define RUN_KERNEL(same_scale, SRC_TYPE, DST_TYPE, SRC_C_TYPE, DST_C_TYPE)     \
-    if (same_scale) {                                                          \
-        int nr_threads = query_blocksize_for_kernel(                           \
-                kern_nchw_nchw4<pack_w, true, SRC_C_TYPE, DST_C_TYPE,          \
-                                SRC_TYPE, DST_TYPE>);                          \
-        const dim3 block_dim(DIVUP(hw, nr_threads* pack_w), out_n);            \
-        const dim3 thread_dim(nr_threads);                                     \
-        kern_nchw_nchw4<pack_w, true><<<block_dim, thread_dim, 0, stream>>>(   \
-                (SRC_C_TYPE*)src.raw_ptr, (DST_C_TYPE*)dst.raw_ptr, in_n, ic,  \
-                hw, n_stride_src, ic_stride, n_stride_dst,                     \
-                CudaPostProcess<SRC_TYPE, DST_TYPE, true>(                     \
-                        src_scale, src_zero_point, dst_scale, dst_zero_point), \
-                src_zero_point, group, ocpg);                                  \
-    } else {                                                                   \
-        int nr_threads = query_blocksize_for_kernel(                           \
-                kern_nchw_nchw4<pack_w, false, SRC_C_TYPE, DST_C_TYPE,         \
-                                SRC_TYPE, DST_TYPE>);                          \
-        const dim3 block_dim(DIVUP(hw, nr_threads* pack_w), out_n);            \
-        const dim3 thread_dim(nr_threads);                                     \
-        kern_nchw_nchw4<pack_w, false><<<block_dim, thread_dim, 0, stream>>>(  \
-                (SRC_C_TYPE*)src.raw_ptr, (DST_C_TYPE*)dst.raw_ptr, in_n, ic,  \
-                hw, n_stride_src, ic_stride, n_stride_dst,                     \
-                CudaPostProcess<SRC_TYPE, DST_TYPE, false>(                    \
-                        src_scale, src_zero_point, dst_scale, dst_zero_point), \
-                src_zero_point, group, ocpg);                                  \
+#define DISPATCH_RAW(_same_scale, _pack_w, _pack_oc, _src_type, _dst_type,   \
+                     _src_c_type, _dst_c_type, _size_nbits)                  \
+    if (same_scale == _same_scale && hw % _pack_w == 0 &&                    \
+        stype.enumv().ev == DTypeEnum::Ev::_src_type &&                      \
+        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) {                      \
+        auto kernel =                                                        \
+                kern_nchw_nchwx<_pack_w, _pack_oc, _same_scale, _src_c_type, \
+                                _dst_c_type, dtype::_src_type,               \
+                                dtype::_dst_type, _size_nbits>;              \
+        int nr_threads = query_blocksize_for_kernel(kernel);                 \
+        const dim3 block_dim(DIVUP(hw, nr_threads* _pack_w), out_n);         \
+        const dim3 thread_dim(nr_threads);                                   \
+        return kernel<<<block_dim, thread_dim, 0, stream>>>(                 \
+                (_src_c_type*)src.raw_ptr, (_dst_c_type*)dst.raw_ptr, in_n,  \
+                ic, hw, n_stride_src, ic_stride, n_stride_dst, oc_stride,    \
+                CudaPostProcess<dtype::_src_type, dtype::_dst_type,          \
+                                _same_scale>(src_scale, src_zero_point,      \
+                                             dst_scale, dst_zero_point),     \
+                src_zero_point, group, ocpg);                                \
     }
-
-    if (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Uint8 &&
-        dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) {
-        RUN_KERNEL(same_scale, dtype::Uint8, dtype::QuantizedS8, char, char);
-    } else if (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized8Asymm &&
-               dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) {
-        RUN_KERNEL(same_scale, dtype::Quantized8Asymm, dtype::QuantizedS8, char,
-                   char);
-    } else if (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8 &&
-               dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) {
-        RUN_KERNEL(same_scale, dtype::QuantizedS8, dtype::QuantizedS8, char,
-                   char);
-    } else if (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32 &&
-               dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32) {
-        RUN_KERNEL(same_scale, dtype::QuantizedS32, dtype::QuantizedS32, int,
-                   int);
-    } else {
-        megdnn_assert(0, "not support dtype %s %s", src_layout.dtype.name(),
-                      dst_layout.dtype.name());
-    }
+#define DISPATCH_INT(_src_type, _dst_type)                         \
+    DISPATCH_RAW(true, 4, 4, _src_type, _dst_type, int, int, 32);  \
+    DISPATCH_RAW(false, 4, 4, _src_type, _dst_type, int, int, 32); \
+    DISPATCH_RAW(true, 1, 4, _src_type, _dst_type, int, int, 32);  \
+    DISPATCH_RAW(false, 1, 4, _src_type, _dst_type, int, int, 32);
+#define DISPATCH_BYTE(_src_type, _dst_type)                         \
+    DISPATCH_RAW(true, 4, 4, _src_type, _dst_type, char, char, 8);  \
+    DISPATCH_RAW(false, 4, 4, _src_type, _dst_type, char, char, 8); \
+    DISPATCH_RAW(true, 1, 4, _src_type, _dst_type, char, char, 8);  \
+    DISPATCH_RAW(false, 1, 4, _src_type, _dst_type, char, char, 8);
+#define DISPATCH_4BITS(_src_type, _dst_type)                         \
+    DISPATCH_RAW(true, 8, 64, _src_type, _dst_type, char, char, 4);  \
+    DISPATCH_RAW(false, 8, 64, _src_type, _dst_type, char, char, 4); \
+    DISPATCH_RAW(true, 2, 64, _src_type, _dst_type, char, char, 4);  \
+    DISPATCH_RAW(false, 2, 64, _src_type, _dst_type, char, char, 4);
+    DISPATCH_INT(QuantizedS32, QuantizedS32);
+    DISPATCH_BYTE(Uint8, QuantizedS8);
+    DISPATCH_BYTE(Quantized8Asymm, QuantizedS8);
+    DISPATCH_BYTE(QuantizedS8, QuantizedS8);
+    DISPATCH_4BITS(QuantizedS4, QuantizedS4);
+    DISPATCH_4BITS(Quantized4Asymm, Quantized4Asymm);
+#undef DISPATCH_4BITS
+#undef DISPATCH_BYTE
+#undef DISPATCH_INT
+#undef DISPATCH_RAW
+    megdnn_assert(false,
+                  "Unsupported data type(src:%s, dst:%s) or image size(%dx%d).",
+                  stype.name(), dtype.name(), h, w);
 }
 
 bool relayout_format::relayout_format_cuda_usable(
         const TensorLayout& src_layout, const TensorLayout& dst_layout) {
     bool is_all_continue =
             src_layout.is_contiguous() && dst_layout.is_contiguous();
+    bool is_all_int32 =
+            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32 &&
+             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32);
     bool is_all_int8 =
             (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Uint8 &&
              dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) ||
             (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized8Asymm &&
              dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) ||
             (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8 &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) ||
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32 &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32);
-    return is_all_continue && is_all_int8;
+             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8);
+    bool is_all_int4 =
+            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS4 &&
+             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS4) ||
+            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized4Asymm &&
+             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized4Asymm);
+    return is_all_continue && (is_all_int32 || is_all_int8 || is_all_int4);
+}
+
+void relayout_format::relayout_format_cuda_nchwx_nchw(
+        const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
+        const float src_scale, const float dst_scale,
+        const uint8_t src_zero_point, const uint8_t dst_zero_point) {
+    auto&& stype = src.layout.dtype;
+    auto&& dtype = dst.layout.dtype;
+    auto& src_layout = src.layout;
+    auto& dst_layout = dst.layout;
+    // check pack size
+    int pack_oc = std::numeric_limits<int>::min();
+#define DEF(_pack_oc, _src_type, _dst_type)             \
+    if (stype.enumv().ev == DTypeEnum::Ev::_src_type && \
+        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) { \
+        pack_oc = _pack_oc;                             \
+    }
+    // clang-format off
+    DEF(64, QuantizedS4, QuantizedS4)
+    DEF(64, Quantized4Asymm, Quantized4Asymm)
+    // clang-format on
+    megdnn_assert(pack_oc == 64, "Unsupport pack size(pack_oc:%d)", pack_oc);
+#undef DEF
+    const int n = src.layout[0];
+    const int c = src.layout[1];
+    const int h = src.layout[2];
+    // align to byte
+    const int w = src.layout[3];
+    const int hw = h * w;
+    const int n_stride_src = src_layout.dtype.size(src_layout.stride[0]);
+    const int ic_stride = src_layout.dtype.size(src_layout.stride[1]);
+    const int n_stride_dst = dst_layout.dtype.size(dst_layout.stride[0]);
+    const int oc_stride = dst_layout.dtype.size(dst_layout.stride[1]);
+    
+    bool same_scale = src_scale == dst_scale;
+#define DISPATCH_RAW(_same_scale, _pack_w, _pack_oc, _src_type, _dst_type,   \
+                     _src_c_type, _dst_c_type, _size_nbits)                  \
+    if (same_scale == _same_scale && hw % _pack_w == 0 &&                    \
+        stype.enumv().ev == DTypeEnum::Ev::_src_type &&                      \
+        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) {                      \
+        auto kernel =                                                        \
+                kern_nchwx_nchw<_pack_w, _pack_oc, _same_scale, _src_c_type, \
+                                _dst_c_type, dtype::_src_type,               \
+                                dtype::_dst_type, _size_nbits>;              \
+        int nr_threads = query_blocksize_for_kernel(kernel);                 \
+        const dim3 block_dim(DIVUP(hw, nr_threads* _pack_w), n);             \
+        const dim3 thread_dim(nr_threads);                                   \
+        return kernel<<<block_dim, thread_dim, 0, stream>>>(                 \
+                (_src_c_type*)src.raw_ptr, (_dst_c_type*)dst.raw_ptr, c, hw, \
+                n_stride_src, ic_stride, n_stride_dst, oc_stride,            \
+                CudaPostProcess<dtype::_src_type, dtype::_dst_type,          \
+                                _same_scale>(src_scale, src_zero_point,      \
+                                             dst_scale, dst_zero_point),     \
+                src_zero_point);                                             \
+    }
+#define DISPATCH_4BITS(_src_type, _dst_type)                         \
+    DISPATCH_RAW(true, 8, 64, _src_type, _dst_type, char, char, 4);  \
+    DISPATCH_RAW(false, 8, 64, _src_type, _dst_type, char, char, 4); \
+    DISPATCH_RAW(true, 2, 64, _src_type, _dst_type, char, char, 4);  \
+    DISPATCH_RAW(false, 2, 64, _src_type, _dst_type, char, char, 4);
+    DISPATCH_4BITS(QuantizedS4, QuantizedS4);
+    DISPATCH_4BITS(Quantized4Asymm, Quantized4Asymm);
+#undef DISPATCH_4BITS
+#undef DISPATCH_RAW
+    megdnn_assert(false,
+                  "Unsupported data type(src:%s, dst:%s) or image size(%dx%d).",
+                  stype.name(), dtype.name(), h, w);
 }
 
 void relayout_format::relayout_format_cuda_nchw4_nchw(
@@ -619,15 +1346,3 @@ void relayout_format::relayout_format_cuda_nchw_nchw4_weight(
             ic_stride, oc_stride_dst, group_stride_src, group_stride_dst, 0,
             {});
 }
-
-template void relayout_format::relayout_format_cuda_nchw_nchw4<1>(
-        const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
-        const float src_scale, const float dst_scale,
-        const uint8_t src_zero_point, const uint8_t dst_zero_point,
-        const int group);
-
-template void relayout_format::relayout_format_cuda_nchw_nchw4<4>(
-        const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
-        const float src_scale, const float dst_scale,
-        const uint8_t src_zero_point, const uint8_t dst_zero_point,
-        const int group);

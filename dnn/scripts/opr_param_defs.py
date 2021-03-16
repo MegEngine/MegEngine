@@ -895,6 +895,7 @@ Relayout mode.
 * ``NCHW4`` layout: ``{N, C/4, H, W, 4}``
 * ``NCHW88`` layout: ``{N, C/8, H, W, 8}``
 * ``CHWN4`` layout: ``{C/4, H, W, N, 4}``
+* ``NCHW64`` layout: ``{N, C/64, H, W, 64}``
 
 **Float weight transformation definitions**
 
@@ -969,6 +970,8 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
      'NCHW_NCHW4',
      'NCHW4_NCHW',
      'NCHW_NCHW4_WEIGHT',
+     'NCHW_NCHW64', 
+     'NCHW64_NCHW', 
      )
  )
 

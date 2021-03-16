@@ -24,6 +24,8 @@ inline void get_scale_zeropoint(const DType& tensor_dtype, float& scale,
         scale = tensor_dtype.param<dtype::Quantized8Asymm>().scale;
     } else if (tensor_dtype.enumv() == DTypeEnum::QuantizedS8) {
         scale = tensor_dtype.param<dtype::QuantizedS8>().scale;
+    } else if (tensor_dtype.enumv() == DTypeEnum::QuantizedS4) {
+        scale = tensor_dtype.param<dtype::QuantizedS4>().scale;
     }
 }
 
@@ -39,9 +41,8 @@ void relayout_format::RelayoutFormatFast::exec(const TensorND& src,
                                                cudaStream_t stream,
                                                RelayoutFormat::Param::Mode mode,
                                                int group) {
-    size_t ih = src.layout[2];
-    size_t iw = src.layout[3];
-    size_t hw = ih * iw;
+    auto&& stype = src.layout.dtype;
+    auto&& dtype = dst.layout.dtype;
     float src_scale = 1.f;
     float dst_scale = 1.f;
     uint8_t src_zero_point = 0;
@@ -51,22 +52,28 @@ void relayout_format::RelayoutFormatFast::exec(const TensorND& src,
     if (src.layout.dtype.enumv() == DTypeEnum::Uint8) {
         src_zero_point = 128;
     }
-    if (mode == RelayoutFormat::Param::Mode::NCHW_NCHW4) {
-        if (hw % 4 == 0) {
-            relayout_format_cuda_nchw_nchw4<4>(src, dst, stream, src_scale,
+    if (mode == RelayoutFormat::Param::Mode::NCHW_NCHW4 ||
+        mode == RelayoutFormat::Param::Mode::NCHW_NCHW64) {
+        return relayout_format_cuda_nchw_nchwx(src, dst, stream, src_scale,
                                                dst_scale, src_zero_point,
                                                dst_zero_point, group);
-        } else {
-            relayout_format_cuda_nchw_nchw4<1>(src, dst, stream, src_scale,
+    } else if (mode == RelayoutFormat::Param::Mode::NCHW64_NCHW) {
+        megdnn_assert(group == 1,
+                      "RelayoutFormat kernel only support transforming NCHW64 "
+                      "to NCHW with group = 1(group:%d)",
+                      group);
+        return relayout_format_cuda_nchwx_nchw(src, dst, stream, src_scale,
                                                dst_scale, src_zero_point,
-                                               dst_zero_point, group);
-        }
-
+                                               dst_zero_point);
     } else if (mode == RelayoutFormat::Param::Mode::NCHW_NCHW4_WEIGHT) {
-        relayout_format_cuda_nchw_nchw4_weight(src, dst, stream);
+        return relayout_format_cuda_nchw_nchw4_weight(src, dst, stream);
     } else if (mode == RelayoutFormat::Param::Mode::NCHW4_NCHW) {
-        relayout_format_cuda_nchw4_nchw(src, dst, stream, group);
+        return relayout_format_cuda_nchw4_nchw(src, dst, stream, group);
     } else {
-        megdnn_throw("only support nchw_nchw4 nchw4_nchw layout_format");
+        megdnn_throw(
+                "only support nchw_nchw64/nchw64_nchw/nchw_nchw4/nchw4_nchw "
+                "layout_format");
     }
 }
+
+// vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

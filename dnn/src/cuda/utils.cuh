@@ -110,6 +110,12 @@ MEGDNN_NORETURN void report_error(const char* msg);
 template <typename T, size_t N>
 struct array_wrapper {
     T data[N];
+    MEGDNN_DEVICE __forceinline__ T& operator[](size_t pos) {
+        return reinterpret_cast<T&>(data[pos]);
+    }
+    MEGDNN_DEVICE __forceinline__ T const& operator[](size_t pos) const {
+        return reinterpret_cast<T const&>(data[pos]);
+    }
 };
 
 /*!
@@ -207,12 +213,29 @@ struct CudaDTypeParamImpl<dt_quint4> : DTypeParamImpl<dt_quint4> {
     CudaDTypeParamImpl(const DTypeParamImpl<dt_quint4>& param)
             : CudaDTypeParamImpl(param.scale, param.zero_point) {}
 
-    __device__ uint8_t quantize(float in) const {
+    __device__ dt_quint4 quantize(float in) const {
         float v = in * inv_scale;
         v = roundf(v);
         v = v + zero_point;
         v = fmin(fmax(0.f, v), 15.f);
-        return static_cast<uint8_t>(v);
+        return static_cast<dt_quint4>(v);
+    }
+};
+
+template <>
+struct CudaDTypeParamImpl<dt_qint4> : DTypeParamImpl<dt_qint4> {
+    float inv_scale;
+    CudaDTypeParamImpl() = default;
+    CudaDTypeParamImpl(float scale)
+            : DTypeParamImpl<dt_qint4>(scale), inv_scale(1.0f / scale) {}
+    CudaDTypeParamImpl(const DTypeParamImpl<dt_qint4>& param)
+            : CudaDTypeParamImpl(param.scale) {}
+
+    __device__ dt_qint4 quantize(float in) const {
+        float v = in * inv_scale;
+        v = roundf(v);
+        v = fmin(fmax(-8.f, v), 7.f);
+        return static_cast<dt_qint4>(v);
     }
 };
 
@@ -350,6 +373,110 @@ MEGDNN_DEVICE __forceinline__ static float4 operator+(float4 lval,
                                                       float4 rval) {
     return make_float4(lval.x + rval.x, lval.y + rval.y, lval.z + rval.z,
                        lval.w + rval.w);
+}
+
+MEGDNN_DEVICE __forceinline__ static int transform_int8_to_int4x8(
+        int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
+    unsigned out;
+#if __CUDA_ARCH__ >= 750
+    asm volatile(
+            "{ .reg .u32 r4;"
+            "cvt.pack.sat.s4.s32.b32    r4, %8, %7, 0;"
+            "cvt.pack.sat.s4.s32.b32    r4, %6, %5, r4;"
+            "cvt.pack.sat.s4.s32.b32    r4, %4, %3, r4;"
+            "cvt.pack.sat.s4.s32.b32    %0, %2, %1, r4;"
+            "}"
+            : "=r"(out)
+            : "r"(s0), "r"(s1), "r"(s2), "r"(s3), "r"(s4), "r"(s5), "r"(s6),
+              "r"(s7));
+#else
+#define CVT_SAT_S4_S32(r, bits) \
+    r = r <= -8 ? -8 : r;       \
+    r = r > 7 ? 7 : r;          \
+    r = (((unsigned)r & 0xf) << bits);
+    CVT_SAT_S4_S32(s0, 0)
+    CVT_SAT_S4_S32(s1, 4)
+    CVT_SAT_S4_S32(s2, 8)
+    CVT_SAT_S4_S32(s3, 12)
+    CVT_SAT_S4_S32(s4, 16)
+    CVT_SAT_S4_S32(s5, 20)
+    CVT_SAT_S4_S32(s6, 24)
+    CVT_SAT_S4_S32(s7, 28)
+    out = s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7;
+#undef CVT_SAT_S4_S32
+#endif
+    return reinterpret_cast<int const&>(out);
+}
+
+MEGDNN_DEVICE __forceinline__ static int transform_int8_to_uint4x8(
+        int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
+    unsigned out;
+#if __CUDA_ARCH__ >= 750
+    asm volatile(
+            "{ .reg .u32 r4;"
+            "cvt.pack.sat.u4.s32.b32    r4, %8, %7, 0;"
+            "cvt.pack.sat.u4.s32.b32    r4, %6, %5, r4;"
+            "cvt.pack.sat.u4.s32.b32    r4, %4, %3, r4;"
+            "cvt.pack.sat.u4.s32.b32    %0, %2, %1, r4;"
+            "}"
+            : "=r"(out)
+            : "r"(s0), "r"(s1), "r"(s2), "r"(s3), "r"(s4), "r"(s5), "r"(s6),
+              "r"(s7));
+#else
+#define CVT_SAT_U4_S32(r, bits) \
+    r = r <= 0 ? 0 : r;         \
+    r = r > 15 ? 15 : r;        \
+    r = (((unsigned)r & 0xf) << bits);
+    CVT_SAT_U4_S32(s0, 0)
+    CVT_SAT_U4_S32(s1, 4)
+    CVT_SAT_U4_S32(s2, 8)
+    CVT_SAT_U4_S32(s3, 12)
+    CVT_SAT_U4_S32(s4, 16)
+    CVT_SAT_U4_S32(s5, 20)
+    CVT_SAT_U4_S32(s6, 24)
+    CVT_SAT_U4_S32(s7, 28)
+    out = s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7;
+#undef CVT_SAT_U4_S32
+#endif
+    return reinterpret_cast<int const&>(out);
+}
+
+template <bool signedness>
+MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(unsigned storage,
+                                                              unsigned bits);
+
+template <>
+MEGDNN_DEVICE __forceinline__ int unpack_integer_4bits<true>(unsigned storage,
+                                                             unsigned bits) {
+    uint8_t result = (uint8_t)((unsigned)(storage >> bits) & 0xf);
+    static constexpr uint8_t mask = (uint8_t)((1 << 4) - 1);
+    return (result & uint8_t(1 << 3)) ? ((int)(result) | ~(int)(mask))
+                                      : (int)(result);
+}
+
+template <>
+MEGDNN_DEVICE __forceinline__ int unpack_integer_4bits<false>(unsigned storage,
+                                                              unsigned bits) {
+    uint8_t result = (uint8_t)((unsigned)(storage >> bits) & 0xf);
+    return (int)(result);
+}
+
+MEGDNN_DEVICE __forceinline__ static void transform_int4x8_to_int8(
+        int (&result)[8], const int& source) {
+#pragma unroll
+    for (int i = 0; i < 8; i++) {
+        result[i] = unpack_integer_4bits<true>(
+                reinterpret_cast<unsigned const&>(source), (i << 2));
+    }
+}
+
+MEGDNN_DEVICE __forceinline__ static void transform_uint4x8_to_int8(
+        int (&result)[8], const int& source) {
+#pragma unroll
+    for (int i = 0; i < 8; i++) {
+        result[i] = unpack_integer_4bits<false>(
+                reinterpret_cast<unsigned const&>(source), (i << 2));
+    }
 }
 #endif
 }  // namespace cuda
