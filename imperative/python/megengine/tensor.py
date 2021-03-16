@@ -153,7 +153,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
         super()._reset(other)
 
     def __repr__(self):
-        piece = "Tensor("
+        piece = "{}(".format(self.__class__.__name__)
         with np.printoptions(precision=4, suppress=True):
             piece += "{}".format(str(self.numpy()))
         if self.dtype != np.float32:
