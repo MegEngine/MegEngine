@@ -135,7 +135,9 @@ def print_flops_stats(flops, bar_length_max=20):
     ]
 
     total_flops_str = sizeof_fmt(total_flops_num, suffix="OPs")
-    total_var_size = sum(sum(s[1] for s in i["output_shapes"]) for i in flops)
+    total_var_size = sum(
+        sum(s[1] if len(s) > 1 else 0 for s in i["output_shapes"]) for i in flops
+    )
     flops.append(
         dict(name="total", flops=total_flops_str, output_shapes=total_var_size)
     )
