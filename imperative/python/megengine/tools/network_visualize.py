@@ -31,7 +31,7 @@ def visualize(
 ):
     r"""
     Load megengine dumped model and visualize graph structure with tensorboard log files.
-    Can also record and print model's statistics like :func:`~.net_stats`
+    Can also record and print model's statistics like :func:`~.module_stats`
 
     :param model_path: dir path for megengine dumped model.
     :param log_path: dir path for tensorboard graph log.
