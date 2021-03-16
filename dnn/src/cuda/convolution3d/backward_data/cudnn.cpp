@@ -28,7 +28,8 @@ bool Convolution3DBackwardDataImpl::AlgoCUDNN::is_available(
 
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionBackwardDataWorkspaceSize(
+    auto& cudnn = args.handle->cudnn();
+    auto status = cudnn.GetConvolutionBackwardDataWorkspaceSize(
             args.handle->cudnn_handle(),
             D.filter_desc.desc,
             D.diff_desc.desc,
@@ -44,7 +45,8 @@ size_t Convolution3DBackwardDataImpl::AlgoCUDNN::get_workspace_in_bytes(
     CUDNNBwdDataDescs D;
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionBackwardDataWorkspaceSize(
+    auto& cudnn = args.handle->cudnn();
+    auto status = cudnn.GetConvolutionBackwardDataWorkspaceSize(
             args.handle->cudnn_handle(),
             D.filter_desc.desc,
             D.diff_desc.desc,

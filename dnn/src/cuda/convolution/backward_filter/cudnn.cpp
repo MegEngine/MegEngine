@@ -21,6 +21,7 @@ using namespace convolution;
 
 bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
         const SizeArgs &args) const {
+    auto& cudnn = args.handle->cudnn();
     CUDNNBwdFilterDescs D;
 
     if (!is_cudnn_supported(args.as_fwd_args()))
@@ -28,7 +29,7 @@ bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
 
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
+    auto status = cudnn.GetConvolutionBackwardFilterWorkspaceSize(
             args.handle->cudnn_handle(),
             D.src_desc.desc,
             D.diff_desc.desc,
@@ -41,10 +42,11 @@ bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
 
 size_t ConvolutionBackwardFilterImpl::AlgoCUDNN::get_workspace_in_bytes(
         const SizeArgs &args) const {
+    auto& cudnn = args.handle->cudnn();
     CUDNNBwdFilterDescs D;
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
+    auto status = cudnn.GetConvolutionBackwardFilterWorkspaceSize(
             args.handle->cudnn_handle(),
             D.src_desc.desc,
             D.diff_desc.desc,

@@ -108,7 +108,8 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
             megdnn_throw("unsupported NonlineMode");
     }
     size_t workspace_size;
-    auto status = cudnnGetConvolutionForwardWorkspaceSize(
+    auto& cudnn = args.handle->cudnn();
+    auto status = cudnn.GetConvolutionForwardWorkspaceSize(
             args.handle->cudnn_handle(), D.src_desc.desc, D.filter_desc.desc,
             D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum,
             &workspace_size);
@@ -121,7 +122,8 @@ size_t ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::get_workspace_in_bytes(
 
     args.init_conv_bias_desc(D);
     size_t workspace_size;
-    auto status = cudnnGetConvolutionForwardWorkspaceSize(
+    auto& cudnn = args.handle->cudnn();
+    auto status = cudnn.GetConvolutionForwardWorkspaceSize(
             args.handle->cudnn_handle(), D.src_desc.desc, D.filter_desc.desc,
             D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum,
             &workspace_size);

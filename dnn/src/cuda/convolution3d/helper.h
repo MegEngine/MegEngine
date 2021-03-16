@@ -92,7 +92,7 @@ namespace convolution3d {
             const Workspace &workspace, void *&raw_ptr);
 
     inline bool cudnn_get_convolution_fwd_algo_helper(
-            cudnnHandle_t cudnn_handle, const cudnnTensorDescriptor_t x_desc,
+            Handle* handle, const cudnnTensorDescriptor_t x_desc,
             const cudnnFilterDescriptor_t w_desc,
             const cudnnConvolutionDescriptor_t conv_desc,
             const cudnnTensorDescriptor_t y_desc,
@@ -102,13 +102,14 @@ namespace convolution3d {
         MEGDNN_MARK_USED_VAR(positive_attr);
         MEGDNN_MARK_USED_VAR(negative_attr);
 #if CUDNN_MAJOR >= 7
+        auto& cudnn = static_cast<HandleImpl*>(handle)->cudnn();
         int algo_max_count = 0;
-        cudnn_check(cudnnGetConvolutionForwardAlgorithmMaxCount(
-                cudnn_handle, &algo_max_count));
+        cudnn_check(cudnn.GetConvolutionForwardAlgorithmMaxCount(
+                cuda::cudnn_handle(handle), &algo_max_count));
         SmallVector<cudnnConvolutionFwdAlgoPerf_t> algo_perf(algo_max_count);
         int algo_count = 0;
-        cudnn_check(cudnnGetConvolutionForwardAlgorithm_v7(
-                cudnn_handle, x_desc, w_desc, conv_desc, y_desc, algo_max_count,
+        cudnn_check(cudnn.GetConvolutionForwardAlgorithm_v7(
+                cuda::cudnn_handle(handle), x_desc, w_desc, conv_desc, y_desc, algo_max_count,
                 &algo_count, algo_perf.data()));
         for (int i = 0; i < algo_count; ++i) {
             if (algo_perf[i].algo ==
@@ -116,8 +117,8 @@ namespace convolution3d {
                         CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING)
                 continue;
             size_t workspace_size = 0;
-            cudnn_check(cudnnGetConvolutionForwardWorkspaceSize(
-                    cudnn_handle, x_desc, w_desc, conv_desc, y_desc,
+            cudnn_check(cudnn.GetConvolutionForwardWorkspaceSize(
+                    cuda::cudnn_handle(handle), x_desc, w_desc, conv_desc, y_desc,
                     algo_perf[i].algo, &workspace_size));
             if (workspace_size > workspace_limit_in_bytes) continue;
             if (!(positive_attr & AlgoAttribute::REPRODUCIBLE)) {
@@ -133,7 +134,7 @@ namespace convolution3d {
         return false;
 #else
         cudnn_check(cudnnGetConvolutionForwardAlgorithm(
-                cudnn_handle, x_desc, w_desc, conv_desc, y_desc,
+                cuda::cudnn_handle(handle), x_desc, w_desc, conv_desc, y_desc,
                 CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
                 workspace_limit_in_bytes, algo));
         return true;

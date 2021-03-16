@@ -56,7 +56,7 @@ namespace convolution {
     using KernLayout = _kern_layout;                                   \
     using OutputLayout = _output_layout;                               \
     using Param = _conv_param;                                         \
-    static constexpr bool check_bounds = check_bounds_;
+    static constexpr bool check_bounds = check_bounds_
 #define MEGDNN_COMMA ,
 
 template <bool check_bounds_, typename src_ldg_dtype, typename filter_ldg_dtype,
