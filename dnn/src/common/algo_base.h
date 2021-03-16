@@ -93,7 +93,7 @@ template <std::size_t I = 0, typename Opr, typename... Tp>
         I<sizeof...(Tp), void>::type set_sub_execution_policy(
                 const Opr* opr, std::tuple<Tp...>& t) {
     std::get<I>(t)->execution_policy() = opr->execution_policy().sub_policy[I];
-    set_sub_execution_policy<I + 1, Tp...>(opr, t);
+    set_sub_execution_policy<I + 1, Opr, Tp...>(opr, t);
 }
 
 template <typename Opr, typename... SubOpr>
@@ -103,7 +103,7 @@ void set_execution_policy(const Opr* opr, SubOpr... sub_oprs) {
         megdnn_assert(opr->execution_policy().sub_policy.size() ==
                       sizeof...(sub_oprs));
         auto&& sub = std::make_tuple(sub_oprs...);
-        set_sub_execution_policy<sizeof...(sub_oprs), Opr, SubOpr...>(opr, sub);
+        set_sub_execution_policy<0, Opr, SubOpr...>(opr, sub);
     }
 }
 
