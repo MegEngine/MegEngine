@@ -28,50 +28,6 @@ using namespace mgb;
 using namespace nvinfer1;
 using namespace opr;
 
-TEST(TestOprTensorRT, Profile) {
-    REQUIRE_GPU(1);
-    intl::ConcatConvTensorRTNetwork net;
-
-    auto p = net.create_trt_network(true);
-
-    auto y2 = TensorRTOpr::make(TensorRTOpr::to_shared_ptr_builder(p.first),
-                                TensorRTOpr::to_shared_ptr_network(p.second),
-                                intl::TensorRTGraphFeatureBits::NCHW_FLOAT, {},
-                                {net.x0, net.x1})[0];
-
-    HostTensorND host_z1;
-    HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
-    {
-        mgb::GraphProfiler profiler(net.graph.get());
-
-        func->execute();
-
-        profiler.to_json()->writeto_fpath(
-                output_file("TestOprTensorRT.Profile.FromProfiler.json"));
-        auto prof_obj = *static_cast<json::Object*>(profiler.to_json().get());
-
-        auto record_obj =
-                *static_cast<json::Object*>(prof_obj["opr_internal_pf"].get());
-        auto opr_prof_arr = *static_cast<json::Array*>(
-                record_obj[y2.node()->owner_opr()->id_str()].get());
-        for (auto item_arr : opr_prof_arr.get_impl()) {
-            auto layer_info_arr = *static_cast<json::Array*>(item_arr.get());
-            auto layer_time =
-                    *static_cast<json::Number*>(layer_info_arr[1].get());
-
-            mgb_assert(layer_time.get_impl() > 0, "Error occured in json.");
-        }
-
-        MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
-    }
-    // Run it again after profiler is not in existance.
-    func->execute();
-
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
-}
-
 TEST(TestOprTensorRT, Basic) {
     REQUIRE_GPU(1);
     intl::SimpleTensorRTNetwork net;

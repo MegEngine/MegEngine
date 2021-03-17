@@ -10,7 +10,6 @@
  */
 
 #include "megbrain/comp_node_env.h"
-#include "megbrain/plugin/profiler.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
@@ -99,69 +98,6 @@ TEST(TestOprTensorRT, ConcatRuntimeBasic) {
     auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
                                     make_callback_copy(y2, host_z2)});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
-}
-
-TEST(TestOprTensorRT, RuntimeProfile) {
-    REQUIRE_GPU(1);
-    intl::ConcatConvTensorRTNetwork net;
-    SymbolVar y2;
-    {
-        auto p = net.create_trt_network(false);
-        TensorRTUniquePtr<INetworkDefinition> trt_net{p.second, {}};
-        TensorRTUniquePtr<IBuilder> builder{p.first, {}};
-        builder->setMaxBatchSize(5);
-#if NV_TENSOR_RT_VERSION >= 6001
-        TensorRTUniquePtr<IBuilderConfig> build_config{
-                builder->createBuilderConfig()};
-        auto cuda_engine =
-                builder->buildEngineWithConfig(*trt_net, *build_config);
-#else
-        auto cuda_engine = builder->buildCudaEngine(*trt_net);
-#endif
-        TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
-
-        FILE* fout = fopen(output_file("trt_cuda_engine").c_str(), "wb");
-        auto wr = fwrite(mem->data(), 1, mem->size(), fout);
-        mgb_assert(wr == mem->size());
-        fclose(fout);
-
-        y2 = TensorRTRuntimeOpr::make(
-                TensorRTRuntimeOpr::to_shared_ptr_engine(cuda_engine), {},
-                {net.x0, net.x1})[0];
-    }
-
-    HostTensorND host_z1;
-    HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
-
-    {
-        mgb::GraphProfiler profiler(net.graph.get());
-
-        func->execute();
-
-        profiler.to_json()->writeto_fpath(output_file(
-                "TestOprTensorRT.RuntimeProfile.FromProfiler.json"));
-
-        auto prof_obj = *static_cast<json::Object*>(profiler.to_json().get());
-        auto record_obj =
-                *static_cast<json::Object*>(prof_obj["opr_internal_pf"].get());
-        auto opr_prof_arr = *static_cast<json::Array*>(
-                record_obj[y2.node()->owner_opr()->id_str()].get());
-        for (auto item_arr : opr_prof_arr.get_impl()) {
-            auto layer_info_arr = *static_cast<json::Array*>(item_arr.get());
-            auto layer_time =
-                    *static_cast<json::Number*>(layer_info_arr[1].get());
-
-            mgb_assert(layer_time.get_impl() > 0, "Error occured in json.");
-        }
-
-        MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
-    }
-    // Run it again after profiler is not in existance.
-    func->execute();
-
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
 }
 

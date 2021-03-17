@@ -50,11 +50,11 @@ class TensorRTManager {
     std::vector<void*> m_trt_iobuf;
     TensorRTUniquePtr<nvinfer1::IExecutionContext> m_context;
     void* m_device_workspace_memory_ptr;
-    bool m_has_profiler;
 
 public:
     void exec(cg::SingleCNOperatorNodeBase* opr, CompNode comp_node_check,
-              nvinfer1::ICudaEngine* engine, size_t batch = 1);
+              nvinfer1::ICudaEngine* engine, size_t batch = 1,
+              bool use_trt_profiler = false);
 
     void clear_trt_context() { m_context.reset(); }
 

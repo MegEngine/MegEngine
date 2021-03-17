@@ -50,17 +50,6 @@ void TensorRTProfiler::print_layer_times() {
     printf("Total time: %4.3fms\n", total_time);
 }
 
-std::shared_ptr<json::Value> TensorRTProfiler::to_json() {
-    using namespace json;
-    auto prof_arr = Array::make();
-    for (auto&& rec : profile) {
-        auto&& item = Array::make();
-        item->add(String::make(rec.first));
-        item->add(Number::make(rec.second));
-        prof_arr->add(item);
-    }
-    return prof_arr;
-}
 #endif  // MGB_ENABLE_JSON
 
 
@@ -168,7 +157,7 @@ void TensorRTOpr::GpuAllocator::free(void* memory) {
 void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
                            CompNode comp_node_check,
                            nvinfer1::ICudaEngine* engine,
-                           size_t batch) {
+                           size_t batch, bool use_trt_profiler) {
 
     auto comp_node = opr->comp_node();
     // ICudaEngine is bound to the currently active device
@@ -180,22 +169,11 @@ void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
                    comp_node_check.to_string().c_str(),
                    comp_node.to_string().c_str());
     }
-#if MGB_ENABLE_JSON
-    auto pf_holder_pair =
-            opr->owner_graph()
-                    ->options()
-                    .user_data.get_user_data<opr_profile::OprProfileHolder>();
-    if (m_has_profiler && !pf_holder_pair.second) {
-        m_context.reset();
-        m_has_profiler = false;
-    }
-#endif
     auto workspace_ptr = opr->output().back()->dev_tensor().raw_ptr();
     bool should_reinit_device_memory =
             !m_context || m_device_workspace_memory_ptr != workspace_ptr;
     if (!m_context) {
         m_context = {engine->createExecutionContextWithoutDeviceMemory(), {}};
-        m_has_profiler = false;
     }
     m_trt_iobuf.resize(opr->input().size() + opr->output().size() - 1);
     bool is_trt_opr = false;
@@ -235,11 +213,7 @@ void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
 
     bool exec_success = false;
 
-#if MGB_ENABLE_JSON
-    if (!pf_holder_pair.second) {
-        mgb_assert(!m_has_profiler,
-                   "Invalid state of TensorRTRuntimeOpr: should not have "
-                   "profiler.");
+    if (!use_trt_profiler) {
 #if NV_TENSOR_RT_VERSION >= 6001
         if (is_trt_opr)
             exec_success = m_context->enqueueV2(m_trt_iobuf.data(),
@@ -255,7 +229,6 @@ void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
     } else {
         TensorRTProfiler trt_profiler;
         m_context->setProfiler(&trt_profiler);
-        m_has_profiler = true;
         // TensorRT documentation stated that IExecutionContext->execute
         // "Synchronously execute inference on a batch", and it does not take a
         // cudaStream_t, we expect it do a device synchronize. But it seems like
@@ -272,24 +245,9 @@ void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
         exec_success = m_context->execute(batch, m_trt_iobuf.data());
 #endif
         mgb_assert(exec_success, "trt execution failed: opr=%s", opr->cname());
-        pf_holder_pair.first[0]->id2object_map[opr] = trt_profiler.to_json();
         printf("TRT profile info of opr %s:\n", opr->name().c_str());
         trt_profiler.print_layer_times();
     }
-#else
-#if NV_TENSOR_RT_VERSION >= 6001
-    if (is_trt_opr)
-        exec_success = m_context->enqueueV2(m_trt_iobuf.data(),
-                                            env.cuda_env().stream, nullptr);
-    else
-        exec_success = m_context->enqueue(batch, m_trt_iobuf.data(),
-                                          env.cuda_env().stream, nullptr);
-#else
-    exec_success = m_context->enqueue(batch, m_trt_iobuf.data(),
-                                      env.cuda_env().stream, nullptr);
-#endif
-    mgb_assert(exec_success, "trt execution failed: opr=%s", opr->cname());
-#endif
 }
 
 /* ========================== TensorRTOpr ========================== */
