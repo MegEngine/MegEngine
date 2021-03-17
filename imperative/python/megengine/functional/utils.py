@@ -10,7 +10,10 @@ from ..core._imperative_rt.core2 import apply
 from ..core._imperative_rt.core2 import sync as _sync
 from ..core.ops.builtin import AssertEqual
 from ..tensor import Tensor
+from ..utils.deprecation import deprecated_func
 from .elemwise import abs, maximum, minimum
+
+__all__ = ["topk_accuracy"]
 
 
 def _assert_equal(
@@ -55,3 +58,9 @@ def _assert_equal(
     result = apply(AssertEqual(maxerr=maxerr, verbose=verbose), expect, actual, err)[0]
     _sync()  # sync interpreter to get exception
     return result
+
+
+topk_accuracy = deprecated_func(
+    "1.3", "megengine.functional.metric", "topk_accuracy", True
+)
+copy = deprecated_func("1.3", "megengine.functional.tensor", "copy", True)

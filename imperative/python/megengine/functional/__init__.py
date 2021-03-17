@@ -12,6 +12,7 @@ from .elemwise import *
 from .math import *
 from .nn import *
 from .tensor import *
+from .utils import *
 
 from . import distributed  # isort:skip
 

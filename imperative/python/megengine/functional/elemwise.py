@@ -19,6 +19,7 @@ from ..core.tensor.utils import astype
 from ..device import get_default_device
 from ..jit.tracing import is_tracing
 from ..tensor import Tensor
+from ..utils.deprecation import deprecated_func
 
 __all__ = [
     "abs",
@@ -567,3 +568,10 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
             return maximum(x, lower)
     else:
         return minimum(x, upper)
+
+
+sigmoid = deprecated_func("1.3", "megengine.functional.nn", "sigmoid", True)
+hsigmoid = deprecated_func("1.3", "megengine.functional.nn", "hsigmoid", True)
+relu = deprecated_func("1.3", "megengine.functional.nn", "relu", True)
+relu6 = deprecated_func("1.3", "megengine.functional.nn", "relu6", True)
+hswish = deprecated_func("1.3", "megengine.functional.nn", "hswish", True)

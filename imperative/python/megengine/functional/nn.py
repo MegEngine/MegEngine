@@ -22,10 +22,11 @@ from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
 from ..random import uniform
 from ..tensor import Tensor
+from ..utils.deprecation import deprecated_func
 from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
 from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
-from .elemwise import exp, floor, log, log1p, maximum, minimum
+from .elemwise import _elwise, exp, floor, log, log1p, maximum, minimum
 from .math import argsort, matmul, max, prod, sum
 from .tensor import (
     broadcast_to,
@@ -70,6 +71,10 @@ __all__ = [
     "relu",
     "relu6",
     "hswish",
+    "resize",
+    "remap",
+    "warp_affine",
+    "warp_perspective",
 ]
 
 
@@ -1434,43 +1439,6 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
     return apply(op, src)[0]
 
 
-def _elwise(*args, mode):
-    tensor_args = list(filter(lambda x: isinstance(x, (Tensor, VarNode)), args))
-    if len(tensor_args) == 0:
-        dtype = utils.dtype_promotion(args)
-        first_arg = Tensor(args[0], dtype=dtype, device=get_default_device())
-        args = utils.convert_inputs(first_arg, *args[1:])
-    else:
-        args = utils.convert_inputs(*args)
-    if mode in (
-        Elemwise.Mode.TRUE_DIV,
-        Elemwise.Mode.EXP,
-        Elemwise.Mode.POW,
-        Elemwise.Mode.LOG,
-        Elemwise.Mode.EXPM1,
-        Elemwise.Mode.LOG1P,
-        Elemwise.Mode.TANH,
-        Elemwise.Mode.ACOS,
-        Elemwise.Mode.ASIN,
-        Elemwise.Mode.ATAN2,
-        Elemwise.Mode.CEIL,
-        Elemwise.Mode.COS,
-        Elemwise.Mode.FLOOR,
-        Elemwise.Mode.H_SWISH,
-        Elemwise.Mode.ROUND,
-        Elemwise.Mode.SIGMOID,
-        Elemwise.Mode.SIN,
-    ):
-        if mode in (
-            Elemwise.Mode.CEIL,
-            Elemwise.Mode.FLOOR,
-            Elemwise.Mode.ROUND,
-        ) and np.issubdtype(args[0].dtype, np.integer):
-            return args[0]
-        args = tuple(map(lambda x: astype(x, "float32"), args))
-    return _elwise_apply(args, mode)
-
-
 def hswish(x):
     """
     Element-wise `x * relu6(x + 3) / 6`.
@@ -1517,6 +1485,17 @@ def relu6(x):
     """Element-wise `min(max(x, 0), 6)`."""
     return minimum(maximum(x, 0), 6)
 
+
+interpolate = deprecated_func("1.3", "megengine.functional.vision", "interpolate", True)
+roi_pooling = deprecated_func("1.3", "megengine.functional.vision", "roi_pooling", True)
+roi_align = deprecated_func("1.3", "megengine.functional.vision", "roi_align", True)
+nms = deprecated_func("1.3", "megengine.functional.vision", "nms", True)
+resize = deprecated_func("1.3", "megengine.functional.vision", "resize", True)
+remap = deprecated_func("1.3", "megengine.functional.vision", "remap", True)
+warp_affine = deprecated_func("1.3", "megengine.functional.vision", "warp_affine", True)
+warp_perspective = deprecated_func(
+    "1.3", "megengine.functional.vision", "warp_perspective", True
+)
 
 from .loss import *  # isort:skip
 from .quantized import conv_bias_activation  # isort:skip
