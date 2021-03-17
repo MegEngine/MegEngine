@@ -290,8 +290,11 @@ ExternCOprRunner::ExternCOprRunner(std::string& name,
           m_dump_name{name},
           m_param{nullptr} {
     mgb_assert(m_desc->size == sizeof(MGBOprDesc),
-               "invalid MGBOprDesc size: expect=%zu got=%u", sizeof(MGBOprDesc),
-               m_desc->size);
+               "invalid MGBOprDesc size: expect=%zu got=%u, may caused by "
+               "extern_c_opr.h mismatch, please confirm that the "
+               "extern_c_opr.h used when compiling the loader is consistent "
+               "with the runtime caller build used",
+               sizeof(MGBOprDesc), m_desc->size);
     for (auto i : inputs) {
         add_input({i});
     }
