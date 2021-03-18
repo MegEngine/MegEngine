@@ -75,6 +75,7 @@ protected:
     ExtraOprImpl m_extra_opr_impl;
     OutputCanonizer m_output_canonizer;
     TensorsConstriant m_tensor_constraint;
+    bool no_naive_and_check = false;
     /**
      * the offset from the start of malloc memory
      *

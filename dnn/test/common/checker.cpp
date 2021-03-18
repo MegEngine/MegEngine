@@ -273,10 +273,20 @@ namespace {
 }
 
 CheckerHelper::CheckerHelper(Handle *handle, bool check_dispatch):
-    m_handle_naive(create_cpu_handle(2, check_dispatch)),
     m_handle_cur(handle),
     m_default_rng(new NormalRNG())
 {
+    //! set MGB_NO_NAIVE_CHECK=1 to close megdnn test check with naive
+    const char* env_p = std::getenv("MGB_NO_NAIVE_CHECK");
+    if (env_p) {
+        int no_naive_flag = atoi(env_p);
+        no_naive_and_check = no_naive_flag > 0 ? true : false;
+        check_dispatch = false;
+    } else {
+        no_naive_and_check = false;
+    }
+    auto tmp_handle = create_cpu_handle(2, check_dispatch);
+    m_handle_naive = std::move(tmp_handle);
 }
 
 CheckerHelper::~CheckerHelper() noexcept = default;
@@ -368,6 +378,10 @@ void CheckerHelper::do_exec(const TensorLayoutArray &user_layouts,
     if (m_expect_exec_fail) {
         m_expect_exec_fail();
         m_expect_exec_fail = {};
+        return;
+    }
+    if (no_naive_and_check){
+        m_prev_succ = !::testing::Test::HasFailure();
         return;
     }
     exec_naive(tensors_naive);
