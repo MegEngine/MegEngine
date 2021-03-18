@@ -378,7 +378,9 @@ MEGDNN_DEVICE __forceinline__ static float4 operator+(float4 lval,
 MEGDNN_DEVICE __forceinline__ static int transform_int8_to_int4x8(
         int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
     unsigned out;
-#if __CUDA_ARCH__ >= 750
+#if __CUDA_ARCH__ >= 750 &&             \
+        ((__CUDACC_VER_MAJOR__ > 10) || \
+         ((__CUDACC_VER_MAJOR__ >= 10) && (__CUDACC_VER_MINOR__ >= 2)))
     asm volatile(
             "{ .reg .u32 r4;"
             "cvt.pack.sat.s4.s32.b32    r4, %8, %7, 0;"
@@ -411,7 +413,9 @@ MEGDNN_DEVICE __forceinline__ static int transform_int8_to_int4x8(
 MEGDNN_DEVICE __forceinline__ static int transform_int8_to_uint4x8(
         int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
     unsigned out;
-#if __CUDA_ARCH__ >= 750
+#if __CUDA_ARCH__ >= 750 &&             \
+        ((__CUDACC_VER_MAJOR__ > 10) || \
+         ((__CUDACC_VER_MAJOR__ >= 10) && (__CUDACC_VER_MINOR__ >= 2)))
     asm volatile(
             "{ .reg .u32 r4;"
             "cvt.pack.sat.u4.s32.b32    r4, %8, %7, 0;"

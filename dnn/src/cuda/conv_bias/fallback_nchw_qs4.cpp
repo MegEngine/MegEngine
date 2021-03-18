@@ -161,7 +161,7 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoFallbackNCHWQS4::get_workspace_bundle(
                                 ws_size_underlying_algo, ws_size_z}};
     }
     return WorkspaceBundle{raw_ptr,
-                           {ws_size_src, ws_size_filter,
-                            ws_size_underlying_algo, ws_size_dst}};
+                           {ws_size_src, ws_size_filter, ws_size_dst,
+                            ws_size_underlying_algo}};
 }
 // vim: syntax=cpp.doxygen

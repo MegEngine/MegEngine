@@ -30,7 +30,10 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                     param().mode == param::RelayoutFormat::Mode::CHWN4_NCHW4 ||
                     param().mode == Param::Mode::NCHW_NCHW4_IC_SMALL ||
                     param().mode ==
-                            Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT,
+                            Param::Mode::
+                                    NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT ||
+                    param().mode == Param::Mode::NCHW_NCHW64 ||
+                    param().mode == Param::Mode::NCHW64_NCHW,
             "relayout format of cuda only support NCHW4->CHWN4 or "
             "CHWN4->NCHW4 or NCHW->NCHW4");
     if ((param().mode == param::RelayoutFormat::Mode::NCHW4_CHWN4 ||

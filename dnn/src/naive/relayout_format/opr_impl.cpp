@@ -226,6 +226,7 @@ void do_copy_diff_q8_q8(const TensorND& dst, const TensorND& src) {
         ++isrc;
     }
 }
+
 void do_copy_diff_q32_q32(const TensorND& dst, const TensorND& src) {
     auto isrc = tensor_iter_valonly<DTypeTrait<dtype::QuantizedS32>::ctype>(src)
                         .begin();
@@ -248,6 +249,38 @@ void do_copy_diff_u8_q8(const TensorND& dst, const TensorND& src) {
     auto dst_dt_parm = dst.layout.dtype.param<dtype::QuantizedS8>();
     for (size_t i = 0, it = dst.layout.total_nr_elems(); i < it; ++i) {
         *idst = dst_dt_parm.quantize((float)(*isrc) - 128.f);
+        ++idst;
+        ++isrc;
+    }
+}
+
+void do_copy_diff_q4_q4(const TensorND& dst, const TensorND& src) {
+    auto isrc =
+            tensor_iter_valonly<DTypeTrait<dtype::QuantizedS4>::ctype>(src)
+                    .begin();
+    auto idst =
+            tensor_iter_valonly<DTypeTrait<dtype::QuantizedS4>::ctype>(dst)
+                    .begin();
+    auto src_dt_parm = src.layout.dtype.param<dtype::QuantizedS4>();
+    auto dst_dt_parm = dst.layout.dtype.param<dtype::QuantizedS4>();
+    for (size_t i = 0, it = dst.layout.total_nr_elems(); i < it; ++i) {
+        *idst = dst_dt_parm.quantize(src_dt_parm.dequantize(int8_t(*isrc)));
+        ++idst;
+        ++isrc;
+    }
+}
+
+void do_copy_diff_qu4_qu4(const TensorND& dst, const TensorND& src) {
+    auto isrc =
+            tensor_iter_valonly<DTypeTrait<dtype::Quantized4Asymm>::ctype>(src)
+                    .begin();
+    auto idst =
+            tensor_iter_valonly<DTypeTrait<dtype::Quantized4Asymm>::ctype>(dst)
+                    .begin();
+    auto src_dt_parm = src.layout.dtype.param<dtype::Quantized4Asymm>();
+    auto dst_dt_parm = dst.layout.dtype.param<dtype::Quantized4Asymm>();
+    for (size_t i = 0, it = dst.layout.total_nr_elems(); i < it; ++i) {
+        *idst = dst_dt_parm.quantize(src_dt_parm.dequantize(uint8_t(*isrc)));
         ++idst;
         ++isrc;
     }
@@ -592,6 +625,24 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         check_layout_and_canonize(src0.layout, src0.layout);
         auto func = [](const TensorND& dst, const TensorND& src) {
             do_copy_diff_q32_q32(dst, src);
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
+        return;
+    } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
+               dst.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
+        TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
+        check_layout_and_canonize(src0.layout, src0.layout);
+        auto func = [](const TensorND& dst, const TensorND& src) {
+            do_copy_diff_q4_q4(dst, src);
+        };
+        MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
+        return;
+    } else if (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
+               dst.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
+        check_layout_and_canonize(src0.layout, src0.layout);
+        auto func = [](const TensorND& dst, const TensorND& src) {
+            do_copy_diff_qu4_qu4(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
         return;

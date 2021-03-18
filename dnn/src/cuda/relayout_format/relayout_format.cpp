@@ -26,6 +26,9 @@ inline void get_scale_zeropoint(const DType& tensor_dtype, float& scale,
         scale = tensor_dtype.param<dtype::QuantizedS8>().scale;
     } else if (tensor_dtype.enumv() == DTypeEnum::QuantizedS4) {
         scale = tensor_dtype.param<dtype::QuantizedS4>().scale;
+    } else if (tensor_dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        zero_point = tensor_dtype.param<dtype::Quantized4Asymm>().zero_point;
+        scale = tensor_dtype.param<dtype::Quantized4Asymm>().scale;
     }
 }
 
@@ -41,8 +44,6 @@ void relayout_format::RelayoutFormatFast::exec(const TensorND& src,
                                                cudaStream_t stream,
                                                RelayoutFormat::Param::Mode mode,
                                                int group) {
-    auto&& stype = src.layout.dtype;
-    auto&& dtype = dst.layout.dtype;
     float src_scale = 1.f;
     float dst_scale = 1.f;
     uint8_t src_zero_point = 0;
