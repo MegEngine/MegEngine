@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <variant>
 
+#include "megbrain/comp_node.h"
 #include "megbrain/utils/mempool.h"
 #include "megbrain/imperative/interpreter.h"
 #include "megbrain/imperative/profiler.h"
@@ -102,8 +103,7 @@ private:
         const SmallVector<LogicalTensorDesc>& input_descs,
         SmallVector<Handle>* outputs);
 
-    void assert_in_channel();
-    void assert_in_worker();
+    bool check_available();
 
     void sync_device_scope(CompNode device);
 
@@ -119,6 +119,8 @@ private:
     TensorInfo* m_waitee = nullptr;
     std::exception_ptr m_worker_exc;
     std::atomic_uint64_t m_last_id = 0;
+
+    bool m_closed = false;
 
     struct WorkQueue : AsyncQueueSC<IdentifiedCommand, WorkQueue> {
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
@@ -186,7 +188,6 @@ private:
     int m_async_level = 2;
 
     struct State {
-        std::thread::id tid;
         OptionManager options;
         std::vector<std::string> scopes;
         std::unique_ptr<InterpreterProfiler> profiler;
@@ -199,6 +200,7 @@ private:
     struct ChannelState: State {};
 
     struct WorkerState: State {
+        std::thread::id tid;
         CompNode::UnorderedMap<std::vector<std::string>> device_scope_map;
     };
 
