@@ -20,6 +20,7 @@
 
 MIDOUT_DECL(megdnn_x86_matmul_kern)
 MIDOUT_DECL(megdnn_x86_matmul_kern_mk8_8x8)
+MIDOUT_DECL(megdnn_x86_matmul_kern_mkldnn)
 using namespace megdnn;
 using namespace x86;
 
