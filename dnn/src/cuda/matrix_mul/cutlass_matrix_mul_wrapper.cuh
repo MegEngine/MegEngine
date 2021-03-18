@@ -37,12 +37,6 @@ void cutlass_matrix_mul_float32_simt(
         const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
         cudaStream_t stream, int split_k_slices = 1);
 
-size_t cutlass_matrix_mul_float32_simt_get_workspace_size(
-        bool transpose_A, size_t lda, bool transpose_B, size_t ldb, size_t ldc,
-        GemmCoord const& problem_size, float alpha, float beta,
-        const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
-        int split_k_slices = 1);
-
 template <typename GemvKernel>
 void cutlass_vector_matrix_mul_batched_strided_wrapper(
         BatchedGemmCoord const& problem_size,

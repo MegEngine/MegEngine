@@ -33,21 +33,11 @@ bool MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::is_available(
 
 size_t MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::get_workspace_in_bytes(
         const SizeArgs& args) const {
-    size_t lda = args.layout_a.stride[0], ldb = args.layout_b.stride[0],
-           ldc = args.layout_c.stride[0];
     auto&& param = args.opr->param();
     int m = args.layout_c.shape[0], n = args.layout_c.shape[1],
         k = args.layout_a.shape[param.transposeA ? 0 : 1];
-    GemmCoord problem_size{m, n, k};
     int split_k_slices = k / n;
-    return cutlass_matrix_mul_float32_simt_get_workspace_size(
-            param.transposeA, lda, param.transposeB, ldb, ldc, problem_size,
-            1.f, 0.f,
-            GemmCoord{m_algo_param.threadblock_m, m_algo_param.threadblock_n,
-                      m_algo_param.threadblock_k},
-            GemmCoord{m_algo_param.warp_m, m_algo_param.warp_n,
-                      m_algo_param.warp_k},
-            split_k_slices);
+    return args.layout_c.dtype.size(m * n * split_k_slices);
 }
 
 void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::exec(
