@@ -163,7 +163,6 @@ public:
     }
     // unsafe
     bool is_profiling() {
-        MGB_LOCK_GUARD(m_lock);
         return m_status == Profiling;
     }
     void start(Mask mask) {
@@ -188,7 +187,7 @@ public:
 protected:
     std::vector<Record> m_record_list;
     Mask m_event_mask;
-    Status m_status = NotStarted;
+    std::atomic<Status> m_status = NotStarted;
 };
 
 
