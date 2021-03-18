@@ -897,6 +897,11 @@ void init_tensor(py::module m) {
         }
     }
 
+    static constexpr auto sync_py_task_q = []{
+        py::gil_scoped_release _;
+        py_task_q.wait_all_task_finish();
+    };
+
     m.def("set_option",
           [](std::string name, size_t value){ interpreter_for_py->set_option(name, value); });
     m.def("get_option",
@@ -928,16 +933,19 @@ void init_tensor(py::module m) {
     m.def("sync",
           []() {
               interpreter_for_py->sync();
-              py_task_q.wait_all_task_finish();
-          },
-          py::call_guard<py::gil_scoped_release>());
+              sync_py_task_q();
+          });
     m.def("full_sync",
           []() {
               interpreter_for_py->sync();
               CompNode::sync_all();
-              py_task_q.wait_all_task_finish();
-          },
-          py::call_guard<py::gil_scoped_release>());
+              sync_py_task_q();
+          });
+    m.def("close",
+          []() {
+              interpreter_for_py->close();
+              sync_py_task_q();
+          });
 
     py::handle grad_key_type = GradKeyWrapper::wrap_t::type()
         .def<&GradKeyWrapper::attach>("attach")

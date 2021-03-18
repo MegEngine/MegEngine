@@ -67,6 +67,7 @@ std::shared_ptr<void> EventPool::on_comp_node_finalize() {
     for (auto&& i : m_cn2pool) {
         i.second.assert_all_freed();
     }
+    m_cn2pool.clear();
     return {};
 }
 EventPool::~EventPool() {

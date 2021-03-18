@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 import numpy as np
 import pytest
 
@@ -76,3 +79,14 @@ def test_swap_drop_basic():
     z.numpy()
     _set_swap_flag(False)
     _set_drop_flag(False)
+
+
+def test_finalize():
+    prog = """
+import megengine
+with megengine.core.option("enable_host_compute", 0):
+    x = megengine.tensor(0)
+    y = x + 1
+    y.numpy()
+"""
+    subprocess.check_call([sys.executable, "-c", prog])
