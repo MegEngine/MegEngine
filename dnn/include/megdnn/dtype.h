@@ -505,9 +505,9 @@ class DType {
             return std::numeric_limits<size_t>::max() >> m_trait->size_log;
         }
 
-        bool is_low_bit() const {
-            return m_trait->low_bit != 0;
-        }
+        size_t low_bit() const { return m_trait->low_bit; }
+
+        bool is_low_bit() const { return low_bit() != 0; }
 
         /*!
          * \brief size of this data type, in bytes

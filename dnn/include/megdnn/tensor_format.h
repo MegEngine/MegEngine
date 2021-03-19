@@ -20,11 +20,14 @@ namespace megdnn {
 enum class TensorFormat::Type {
     DEFAULT = 0,        //!< see DefaultTensorFormat
     IMAGE2D_PACK4 = 1,  //!< see Image2DPack4TensorFormat
+    FOURBITS_ALIGNED_TO_BYTE = 2, //!< 
 };
 
 class TensorFormat::ImplBase {
 public:
     using Type = TensorFormat::Type;
+
+    virtual void assert_valid(const TensorLayout& layout) const = 0;
 
     virtual size_t init_contiguous_stride(TensorLayout& layout) const = 0;
 
@@ -62,6 +65,8 @@ public:
     static constexpr Type TYPE = Type::DEFAULT;
 
     DefaultTensorFormat() : ImplBase(TYPE) {}
+
+    void assert_valid(const TensorLayout& layout) const override;
 
     size_t init_contiguous_stride(TensorLayout& layout) const override;
 
@@ -180,10 +185,10 @@ public:
      */
     size_t image_width(const TensorLayout& layout) const;
 
-    //! raise exception if preconditions violated
-    void assert_valid(const TensorLayout& layout) const;
-
     size_t image_row_pitch(const TensorLayout& layout) const;
+
+    //! raise exception if preconditions violated
+    void assert_valid(const TensorLayout& layout) const override;
 
     //! span for image must include the padding at the last row
     TensorLayout::Span span_spec(const TensorLayout& layout) const override;
@@ -197,31 +202,48 @@ public:
 };
 using Image2DPack4TensorFormatBase = Image2DPackedTensorFormatBase<4>;
 
-///*!
-// * \brief used for tensors with lowbit data type
-// *
-// * \p SIZE_NBITS is the size in bits of element of the tensor.
-// * 
-// */
-//template <size_t SIZE_NBITS_>
-//class LowbitTensorFormat : public TensorFormat::ImplBase {
-//    static constexpr size_t SIZE_NBITS = SIZE_NBITS_;
-//    size_t m_align_size_in_bits;
-//
-//protected: //?
-//    LowbitTensorFormat(Type type, size_t m_align_size_in_bits);
-//
-//public:
-//    size_t align_size_in_bits() const {
-//        return m_align_size_in_bits;
-//    }
-//
-//    std::string to_string() const override;
-//
-//    void serialize_append(
-//
-//
-//};
+/*!
+ * \brief used for tensors storing lowbit data 
+ *
+ * \p SIZE_NBITS is the size in bits of element of the tensor.
+ *
+ */
+template <size_t SIZE_NBITS_>
+class LowbitsTensorFormatBase : public TensorFormat::ImplBase {
+    static constexpr size_t SIZE_NBITS = SIZE_NBITS_;
+    size_t m_align_size_in_bits, m_align_size_in_elements;
+
+protected:  //?
+    LowbitsTensorFormatBase(Type type, size_t align_size_in_bits);
+
+    virtual ~LowbitsTensorFormatBase() = default;
+
+public:
+    size_t align_size_in_bits() const { return m_align_size_in_bits; }
+
+    std::string to_string() const override;
+
+    //! raise exception if given layout is illegal
+    void assert_valid(const TensorLayout& layout) const;
+
+    void serialize_append(std::string& result) const override;
+
+    //! span for lowbit tensor must include the padding at the innermost
+    //! dimemsion that make lowbit tensor be aligned to bytes
+    TensorLayout::Span span_spec(const TensorLayout& layout) const override;
+
+    size_t init_contiguous_stride(TensorLayout& layout) const override;
+
+    bool is_contiguous_spec(const TensorLayout& layout) const override;
+
+    TensorLayout collapse_contiguous_spec(
+            const TensorLayout& layout) const override;
+protected:
+    struct SerializePack {
+        uint8_t align_size_in_bits;
+    };
+};
+using FourBitsAlignedToBytesTensorFormatBase = LowbitsTensorFormatBase<4>;
 }  // namespace detail
 
 /*!
@@ -270,6 +292,34 @@ private:
                       TYPE, align_axis, align_size_in_elements, vendor_type) {}
 };
 
+/*!
+ * \brief Tensor for storing 4bit data that requires stride corresponding to
+ * non-innermost dimension to be aligned to bytes, and pack 2 elems into a byte
+ */
+class FourBitsAlignedToBytesTensorFormat final
+        : public detail::FourBitsAlignedToBytesTensorFormatBase {
+public:
+    static constexpr Type TYPE = Type::FOURBITS_ALIGNED_TO_BYTE;
+
+    static TensorFormat make(size_t align_size_in_bits);
+
+    static TensorFormat deserialize(const Handle* handle, const void* buf,
+                                    size_t size);
+
+    static bool is_valid_layout(const TensorLayout& layout) {
+        if (layout.format.type() == TYPE) {
+            layout.format.as_impl<FourBitsAlignedToBytesTensorFormat>()
+                    .assert_valid(layout);
+            return true;
+        }
+        return false;
+    }
+
+private:
+    FourBitsAlignedToBytesTensorFormat(size_t align_size_in_bits)
+            : detail::FourBitsAlignedToBytesTensorFormatBase(
+                      TYPE, align_size_in_bits) {}
+};
 }  // namespace megdnn
 
 #include "megdnn/internal/visibility_epilogue.h"

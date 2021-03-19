@@ -128,9 +128,11 @@ public:
         for (size_t i = 0; i < shapes.size(); ++i) {
             DType dt = (m_dtype.find(i) != m_dtype.end() ? m_dtype[i]
                                                          : dtype::Float32());
-            TensorFormat fmt =
-                    (m_fmt.find(i) != m_fmt.end() ? m_fmt[i] : TensorFormat{});
-            layouts[i] = TensorLayout(shapes[i], dt, fmt);
+            if (m_fmt.find(i) == m_fmt.end()) {
+                layouts[i] = TensorLayout(shapes[i], dt);
+                layouts[i].init_contiguous_stride();
+            } else
+                layouts[i] = TensorLayout(shapes[i], dt, m_fmt[i]);
         }
         return layouts;
     }

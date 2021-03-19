@@ -302,4 +302,50 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_COLLAPSE_W) {
     }
 }
 
+TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS) {
+    TensorLayout layout{{16, 32, 7, 7}, dtype::QuantizedS4{1.2f}};
+    layout.init_contiguous_stride();
+    ASSERT_EQ(layout.stride[0], 1792);
+    ASSERT_EQ(layout.stride[1], 56);
+    ASSERT_EQ(layout.stride[2], 8);
+    ASSERT_EQ(layout.stride[3], 1);
+    auto span = layout.span();
+    ASSERT_EQ(0, span.low_elem);
+    ASSERT_EQ(28671, span.high_elem);
+    ASSERT_EQ(0, span.low_byte);
+    ASSERT_EQ(14336, span.high_byte);
+    EXPECT_EQ(make_layout({3584, 7}, {8, 1}, dtype::QuantizedS4{1.2f}),
+              layout.collapse_contiguous());
+
+
+    layout = make_layout({16, 32, 7, 7}, {1792, 56, 8, 1},
+                            dtype::QuantizedS4{1.3f});
+    layout.format = FourBitsAlignedToBytesTensorFormat::make(8_z);
+    EXPECT_TRUE(layout.is_contiguous());
+
+    layout = TensorLayout{{1, 32, 1, 1}, dtype::QuantizedS4{1.2f}};
+    layout = layout.broadcast({16, 32, 7, 7});
+    EXPECT_EQ(make_layout({16, 32, 49}, {0, 1, 0}, dtype::QuantizedS4{1.2}),
+              layout.collapse_contiguous());
+
+    layout = TensorLayout{{1, 32, 1, 1}, dtype::QuantizedS4{1.2f}};
+    layout.init_contiguous_stride();
+    layout = layout.broadcast({16, 32, 7, 7});
+    ASSERT_THROW(layout.span(), MegDNNError);
+}
+
+TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS_VALID) {
+    ASSERT_THROW(TensorLayout({1, 32, 1, 1}, dtype::QuantizedS4{1.2f},
+                              DefaultTensorFormat::make()),
+                 MegDNNError);
+    ASSERT_THROW(TensorLayout({1, 32, 1, 1}, dtype::QuantizedS32{1.2f},
+                              FourBitsAlignedToBytesTensorFormat::make(8_z))
+                         .span(),
+                 MegDNNError);
+    ASSERT_THROW(TensorLayout({16, 32, 7, 7}, dtype::IntB2{},
+                              FourBitsAlignedToBytesTensorFormat::make(8_z))
+                         .span(),
+                 MegDNNError);
+}
+
 // vim: syntax=cpp.doxygen

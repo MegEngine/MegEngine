@@ -201,7 +201,15 @@ TensorLayout::TensorLayout(DType dtype_, Format format_)
         : dtype{dtype_}, format{format_} {}
 
 TensorLayout::TensorLayout(const TensorShape& shape, DType dtype)
-        : TensorLayout(shape, dtype, DefaultTensorFormat::make()) {}
+        : TensorShape(shape), dtype{dtype} {
+    if (dtype.low_bit() == 4_z) {
+        format = FourBitsAlignedToBytesTensorFormat::make(8_z);
+    } else {
+        megdnn_assert(!dtype.is_low_bit(), "Unsupported data type(%s)",
+                      dtype.name());
+        format = DefaultTensorFormat::make();
+    }
+}
 
 TensorLayout::TensorLayout(const TensorShape& shape, DType dtype,
                            TensorFormat format_)
