@@ -49,14 +49,14 @@ LocalShareForwardImpl::AlgoBase::ExecArgs::ExecArgs(LocalShareForwardImpl* opr,
 std::string LocalShareForwardImpl::AlgoBase::SizeArgs::to_string() const {
     auto&& param = opr->param();
     MEGDNN_MARK_USED_VAR(param);
-    return megdnn_mangle(ssprintf(
+    return ssprintf(
             "src=%s, filter=%s, dst=%s, "
             "pad=%ux%u, stride=%ux%u, dilate=%ux%u, xcorr=%d, dtype=%s,%s",
             src_layout.to_string().c_str(), filter_layout.to_string().c_str(),
             dst_layout.to_string().c_str(), param.pad_h, param.pad_w,
             param.stride_h, param.stride_w, param.dilate_h, param.dilate_w,
             static_cast<int>(param.mode), src_layout.dtype.name(),
-            dst_layout.dtype.name()));
+            dst_layout.dtype.name());
 }
 
 // vim: syntax=cpp.doxygen

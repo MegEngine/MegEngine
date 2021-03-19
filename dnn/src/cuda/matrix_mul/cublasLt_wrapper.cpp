@@ -29,8 +29,7 @@ static cudaDataType_t to_cuda_dtype(DType tp) {
         case DTypeEnum::QuantizedS32:
             return CUDA_R_32I;
         default:
-            megdnn_throw(megdnn_mangle(
-                    "dtype must be float16/float32/int8/qs8/int32"));
+            megdnn_throw("dtype must be float16/float32/int8/qs8/int32");
     }
 }
 
@@ -45,8 +44,7 @@ static cublasComputeType_t to_cublas_compute_type(DType tp) {
         case DTypeEnum::QuantizedS32:
             return CUBLAS_COMPUTE_32I;
         default:
-            megdnn_throw(
-                    megdnn_mangle("dtype must be float16/float32/int32/Qs32"));
+            megdnn_throw("dtype must be float16/float32/int32/Qs32");
     }
 }
 #endif
@@ -62,8 +60,7 @@ static const char* cuda_type_to_str(cudaDataType_t tp) {
         case CUDA_R_32I:
             return "CUDA_R_32I";
         default:
-            megdnn_throw(
-                    megdnn_mangle("dtype must be float16/float32/int8/int32"));
+            megdnn_throw("dtype must be float16/float32/int8/int32");
     }
 }
 
@@ -77,8 +74,7 @@ static size_t cuda_dtype_size(cudaDataType_t dt) {
         case CUDA_R_32I:
             return 4_z;
         default:
-            megdnn_throw(
-                    megdnn_mangle("dtype must be float16/float32/int8/int32"));
+            megdnn_throw("dtype must be float16/float32/int8/int32");
     }
 }
 

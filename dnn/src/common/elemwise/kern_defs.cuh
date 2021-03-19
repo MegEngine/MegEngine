@@ -87,8 +87,8 @@ namespace megdnn {
 //! define kernel for all float types
 #define DEF_KERN_FLOAT(_mode, _imp) \
     DEF_KERN(dt_float32, _mode, _imp); \
-    MEGDNN_INC_FLOAT16(DEF_KERN(dt_float16, _mode, _imp);) \
-    MEGDNN_INC_FLOAT16(DEF_KERN(dt_bfloat16, _mode, _imp);)
+    DNN_INC_FLOAT16(DEF_KERN(dt_float16, _mode, _imp);) \
+    DNN_INC_FLOAT16(DEF_KERN(dt_bfloat16, _mode, _imp);)
 
 //! define kernel for all int types
 #define DEF_KERN_INT(_mode, _imp) \

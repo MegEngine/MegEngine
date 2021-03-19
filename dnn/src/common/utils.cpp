@@ -81,21 +81,21 @@ bool megdnn::get_next_addr(size_t* idx, const size_t* shp, size_t n,
                            size_t stride) {
     auto errmsg = [&]() {
         std::string res;
-        res.append(megdnn_mangle("idx={"));
+        res.append("idx={");
         for (size_t i = 0; i < n; ++i) {
             res.append(std::to_string(idx[i]));
             if (i + 1 < n)
-                res.append(megdnn_mangle(","));
+                res.append(",");
         }
-        res.append(megdnn_mangle("}, shp={"));
+        res.append("}, shp={");
         for (size_t i = 0; i < n; ++i) {
             res.append(std::to_string(shp[i]));
             if (i + 1 < n)
-                res.append(megdnn_mangle(","));
+                res.append(",");
         }
-        res.append(megdnn_mangle("}, n="));
+        res.append("}, n=");
         res.append(std::to_string(n));
-        res.append(megdnn_mangle(", stride="));
+        res.append(", stride=");
         res.append(std::to_string(stride));
         return res;
     };

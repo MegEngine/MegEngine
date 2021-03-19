@@ -43,8 +43,7 @@ void resize_cv_proxy(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                     src_mat.step(), dst_mat.step(), src_mat.channels(), imode,
                     workspace, stream);
         } else {
-            megdnn_throw(
-                    megdnn_mangle("Unsupported datatype of WarpAffine optr."));
+            megdnn_throw("Unsupported datatype of WarpAffine optr.");
         }
     }
 }

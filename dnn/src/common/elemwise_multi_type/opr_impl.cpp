@@ -158,7 +158,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
 #define SET(f, m)                                                         \
     MIDOUT_BEGIN(megdnn_common_elemwise_multi_type, midout_iv(Mode::m)) { \
-        f(traits[static_cast<int>(Mode::m)], megdnn_mangle(#m));          \
+        f(traits[static_cast<int>(Mode::m)], (#m));                       \
     }                                                                     \
     MIDOUT_END();
         SET(init_fma3_int16x32x32x32, FUSE_MUL_ADD3_INT16x32x32x32);

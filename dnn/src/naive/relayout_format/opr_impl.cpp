@@ -426,7 +426,7 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         break;                                                               \
     }
                 cb(Float32, dt_float32);
-                MEGDNN_INC_FLOAT16(cb(Float16, dt_float16));
+                DNN_INC_FLOAT16(cb(Float16, dt_float16));
                 cb(Quantized8Asymm, dt_uint8);
                 cb(QuantizedS8, dt_int8);
 #undef cb

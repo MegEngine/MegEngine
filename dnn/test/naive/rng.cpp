@@ -63,7 +63,7 @@ TEST_F(NAIVE, UNIFORM_RNG_F32) {
 }
 
 TEST_F(NAIVE, UNIFORM_RNG_F16) {
-    MEGDNN_INC_FLOAT16(run_uniform<dtype::Float16>(handle()));
+    DNN_INC_FLOAT16(run_uniform<dtype::Float16>(handle()));
 }
 
 TEST_F(NAIVE, GAUSSIAN_RNG_F32) {
@@ -71,7 +71,7 @@ TEST_F(NAIVE, GAUSSIAN_RNG_F32) {
 }
 
 TEST_F(NAIVE, GAUSSIAN_RNG_F16) {
-    MEGDNN_INC_FLOAT16(run_gaussian<dtype::Float16>(handle()));
+    DNN_INC_FLOAT16(run_gaussian<dtype::Float16>(handle()));
 }
 
 } // namespace test

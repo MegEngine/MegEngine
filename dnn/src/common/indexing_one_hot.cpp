@@ -32,10 +32,11 @@ void IndexingOneHotBase::check_layout_fwd(
         const TensorLayout &src, const TensorLayout &index,
         const TensorLayout &dst) {
     auto errmsg = [&]() -> std::string {
-        return megdnn_mangle(ssprintf("bad layout for IndexingOneHot: "
-                    "src=%s index=%s dst=%s axis=%d",
-                    src.to_string().c_str(), index.to_string().c_str(),
-                    dst.to_string().c_str(), m_param.axis));
+        return ssprintf(
+                "bad layout for IndexingOneHot: "
+                "src=%s index=%s dst=%s axis=%d",
+                src.to_string().c_str(), index.to_string().c_str(),
+                dst.to_string().c_str(), m_param.axis);
     };
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert_eq_dtype(src, dst);

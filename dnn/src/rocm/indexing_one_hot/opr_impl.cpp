@@ -54,7 +54,7 @@ void IndexingOneHotForwardImpl::exec(
     switch (src.layout.dtype.enumv()) {
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         default:
-            megdnn_throw(megdnn_mangle("bad dtype"));
+            megdnn_throw("bad dtype");
     }
 #undef cb
 }
@@ -81,7 +81,7 @@ void IndexingSetOneHotForwardImpl::exec(
     switch (data.layout.dtype.enumv()) {
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         default:
-            megdnn_throw(megdnn_mangle("bad dtype"));
+            megdnn_throw("bad dtype");
     }
 #undef cb
 }

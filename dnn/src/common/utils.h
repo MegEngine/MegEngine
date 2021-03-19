@@ -116,7 +116,7 @@
     } while (0)
 
 #define megdnn_layout_msg(layout) \
-    std::string(megdnn_mangle(#layout "=" + (layout).to_string()))
+    std::string(#layout "=" + (layout).to_string())
 
 #define MEGDNN_LOCK_GUARD(var) \
     std::lock_guard<std::remove_cv_t<decltype(var)>> _lock_guard_##var { var }
@@ -124,6 +124,16 @@
 namespace megdnn {
 
 /* ================ logging ================  */
+#if MEGDNN_ENABLE_MANGLING
+#define megdnn_log_debug(fmt...) \
+    _megdnn_do_log(::megdnn::LogLevel::DEBUG, "", "", __LINE__, fmt)
+#define megdnn_log(fmt...) \
+    _megdnn_do_log(::megdnn::LogLevel::INFO, "", "", __LINE__, fmt)
+#define megdnn_log_warn(fmt...) \
+    _megdnn_do_log(::megdnn::LogLevel::WARN, "", "", __LINE__, fmt)
+#define megdnn_log_error(fmt...) \
+    _megdnn_do_log(::megdnn::LogLevel::ERROR, "", "", __LINE__, fmt)
+#else
 #define megdnn_log_debug(fmt...) \
     _megdnn_do_log(::megdnn::LogLevel::DEBUG, __FILE__, __func__, __LINE__, fmt)
 #define megdnn_log(fmt...) \
@@ -132,6 +142,7 @@ namespace megdnn {
     _megdnn_do_log(::megdnn::LogLevel::WARN, __FILE__, __func__, __LINE__, fmt)
 #define megdnn_log_error(fmt...) \
     _megdnn_do_log(::megdnn::LogLevel::ERROR, __FILE__, __func__, __LINE__, fmt)
+#endif
 
 #if MEGDNN_ENABLE_LOGGING
 void __log__(LogLevel level, const char* file, const char* func, int line,

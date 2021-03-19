@@ -163,7 +163,7 @@ std::string ConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
         default:
             megdnn_throw("invalid conv bias nonlinear mode");
     }
-    return megdnn_mangle(ssprintf(
+    return ssprintf(
             "src=%s, filter=%u{%u,%u,%u,%u}, bias=%s, z=%s, dst=%s, "
             "pad=%ux%u, stride=%ux%u, dilate=%ux%u, xcorr=%d, dtype=%s,%s, "
             "nonlinear_mode=%s",
@@ -173,7 +173,7 @@ std::string ConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
             fm.padding[0], fm.padding[1], fm.stride[0], fm.stride[1],
             fm.dilation[0], fm.dilation[1], !fm.should_flip,
             src_layout->dtype.name(), dst_layout->dtype.name(),
-            nonlinear_mode_str.c_str()));
+            nonlinear_mode_str.c_str());
 }
 
 void ConvBiasForwardImpl::AlgoPack::fill_cudnn_algos() {
@@ -253,9 +253,8 @@ ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(
-            megdnn_mangle(ssprintf("can not find cudnn conv fwd algorithm %d",
-                                   static_cast<int>(algo))));
+    megdnn_throw(ssprintf("can not find cudnn conv fwd algorithm %d",
+                          static_cast<int>(algo)));
 }
 
 ConvBiasForwardImpl::AlgoBase*
@@ -265,9 +264,8 @@ ConvBiasForwardImpl::AlgoPack::cudnn_conv_bias_act_from_enum(
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(megdnn_mangle(
-            ssprintf("can not find cudnn conv bias act algorithm %d",
-                     static_cast<int>(algo))));
+    megdnn_throw(ssprintf("can not find cudnn conv bias act algorithm %d",
+                          static_cast<int>(algo)));
 }
 
 // vim: syntax=cpp.doxygen

@@ -37,8 +37,8 @@ class ArgmxxRNG final: public RNG {
     }
             MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb);
 #undef cb
-            megdnn_throw(megdnn_mangle(ssprintf("Unsupported DType: %s",
-                                                tensor.layout.dtype.name())));
+            megdnn_throw(ssprintf("Unsupported DType: %s",
+                                  tensor.layout.dtype.name()));
         }
 };
 

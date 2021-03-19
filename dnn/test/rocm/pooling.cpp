@@ -25,7 +25,7 @@ namespace test {
 TEST_F(ROCM, POOLING_FORWARD) {
     auto args = pooling::get_args();
     using Format = param::Pooling::Format;
-    std::vector<DType> dtypes{MEGDNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
+    std::vector<DType> dtypes{DNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
                                       dtype::Float32()};
     for (auto dtype : dtypes)
         for (auto format : {Format::NCHW})

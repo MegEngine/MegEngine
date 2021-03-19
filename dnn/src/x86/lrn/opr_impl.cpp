@@ -114,7 +114,7 @@ void LRNImpl::exec(_megdnn_tensor_in src,
     } else if (is_supported(SIMDType::SSE)) {
         f = &lrn_single_instance<SIMDType::SSE>;
     } else {
-        megdnn_throw(megdnn_mangle("no fma/avx/sse detected"));
+        megdnn_throw("no fma/avx/sse detected");
     }
     auto n = param().n;
     auto k = param().k;

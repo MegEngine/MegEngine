@@ -37,8 +37,7 @@ miopenDataType_t to_miopen_dtype(DType type,
         case DTypeEnum::Int8:
             return miopenInt8;
         default:
-            megdnn_throw(
-                    megdnn_mangle("dtype must be float16/float32/int8/int32"));
+            megdnn_throw("dtype must be float16/float32/int8/int32");
     }
 }
 }  // namespace
@@ -84,8 +83,7 @@ void ConvDesc::set(const param::Convolution& param, const size_t nr_group,
             mode = is_depthwise ? miopenDepthwise : miopenGroupConv;
         }
     } else {
-        megdnn_throw(megdnn_mangle(
-                "for now, miopen do not support non xcorr convolution"));
+        megdnn_throw("fornow, miopen do not support non xcorr convolution");
     }
 
     miopen_check(miopenInitConvolutionDescriptor(
@@ -119,7 +117,7 @@ void PoolingDesc::set(const param::Pooling& param) {
             mode = miopenPoolingAverageInclusive;
             break;
         default:
-            megdnn_throw(megdnn_mangle("Unsupported pooling mode for miopen"));
+            megdnn_throw("Unsupported pooling mode for miopen");
     }
     miopen_check(miopenSet2dPoolingDescriptor(
             desc, mode, param.window_h, param.window_w, param.pad_h,

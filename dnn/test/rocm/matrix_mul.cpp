@@ -24,7 +24,7 @@ TEST_F(ROCM, MATRIX_MUL) {
     using Param = MatrixMul::Param;
     size_t m = 12, n = 16, k = 20;
     //! result error for Int8x8x32, not test correctness
-    std::vector<DType> dtypes{MEGDNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
+    std::vector<DType> dtypes{DNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
                                       dtype::Float32()/*, dtype::Int32()*/};
     for (auto dtype : dtypes) {
         for (unsigned mask = 0; mask < 4; ++mask) {
@@ -45,10 +45,10 @@ TEST_F(ROCM, MATRIX_MUL) {
                     .set_dtype(0, stype)
                     .set_dtype(1, stype)
                     .set_dtype(2, dtype)
-                    .set_epsilon(MEGDNN_FLOAT16_SELECT(
-                                         dtype == dtype::Float16(), false)
-                                         ? 5e-2
-                                         : 5e-3)
+                    .set_epsilon(
+                            DNN_FLOAT16_SELECT(dtype == dtype::Float16(), false)
+                                    ? 5e-2
+                                    : 5e-3)
                     .execs({A, B, {}});
         }
     }

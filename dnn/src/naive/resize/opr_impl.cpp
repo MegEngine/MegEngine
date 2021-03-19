@@ -58,8 +58,8 @@ ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
         ret.ow = dst.layout.shape[3];
     }
     if (src.layout.dtype.enumv() == DTypeEnum::Float32 ||
-        MEGDNN_FLOAT16_SELECT(src.layout.dtype.enumv() == DTypeEnum::Float16,
-                              false) ||
+        DNN_FLOAT16_SELECT(src.layout.dtype.enumv() == DTypeEnum::Float16,
+                           false) ||
         src.layout.dtype.enumv() == DTypeEnum::Int8 ||
         src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
         src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
@@ -283,7 +283,7 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
 
         switch (src.layout.dtype.enumv()) {
             cb(dtype::Float32, float, 0);
-            MEGDNN_INC_FLOAT16(cb(dtype::Float16, dt_float16, 1));
+            DNN_INC_FLOAT16(cb(dtype::Float16, dt_float16, 1));
             cb(dtype::Int8, int8_t, 2);
             cb(dtype::QuantizedS8, int8_t, 3);
             cb(dtype::Uint8, uint8_t, 4);

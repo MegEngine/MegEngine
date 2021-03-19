@@ -25,13 +25,13 @@
 #include "megdnn/internal/visibility_prologue.h"
 
 #if MEGDNN_DISABLE_FLOAT16
-#define MEGDNN_INC_FLOAT16(_x)
-#define MEGDNN_FLOAT16_SELECT(_x, _y)   _y
+#define DNN_INC_FLOAT16(_x)
+#define DNN_FLOAT16_SELECT(_x, _y)   _y
 #else
 #include "megdnn/dtype/half.hpp"
 #include "megdnn/dtype/bfloat16.hpp"
-#define MEGDNN_INC_FLOAT16(_x) _x
-#define MEGDNN_FLOAT16_SELECT(_x, _y)   _x
+#define DNN_INC_FLOAT16(_x) _x
+#define DNN_FLOAT16_SELECT(_x, _y)   _x
 #endif
 
 namespace megdnn {
@@ -49,8 +49,8 @@ namespace megdnn {
     cb(IntB2) \
     cb(IntB4) \
     cb(Byte) \
-    MEGDNN_INC_FLOAT16(cb(Float16)) \
-    MEGDNN_INC_FLOAT16(cb(BFloat16)) \
+    DNN_INC_FLOAT16(cb(Float16)) \
+    DNN_INC_FLOAT16(cb(BFloat16)) \
     cb(UintB4) \
     cb(Bool) \
     cb(Uint16) \
@@ -65,8 +65,8 @@ namespace megdnn {
     cb(Int16) \
     cb(Int32) \
     cb(Byte) \
-    MEGDNN_INC_FLOAT16(cb(Float16)) \
-    MEGDNN_INC_FLOAT16(cb(BFloat16)) \
+    DNN_INC_FLOAT16(cb(Float16)) \
+    DNN_INC_FLOAT16(cb(BFloat16)) \
     cb(Bool) \
     cb(Uint16) \
 
@@ -108,8 +108,8 @@ namespace megdnn {
 
 #define MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb) \
     cb(::megdnn::dtype::Float32) \
-    MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::Float16)) \
-    MEGDNN_INC_FLOAT16(cb(::megdnn::dtype::BFloat16))
+    DNN_INC_FLOAT16(cb(::megdnn::dtype::Float16)) \
+    DNN_INC_FLOAT16(cb(::megdnn::dtype::BFloat16))
 
 
 /*!
@@ -360,8 +360,8 @@ typedef int8_t dt_int8;
 typedef uint8_t dt_uint8;
 typedef bool dt_bool;
 typedef uint16_t dt_uint16;
-MEGDNN_INC_FLOAT16(typedef half_float::half dt_float16;)
-MEGDNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
+DNN_INC_FLOAT16(typedef half_float::half dt_float16;)
+DNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
 
 #define MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE 100000
 #if MEGDNN_CC_HOST
@@ -722,10 +722,10 @@ MEGDNN_DEF_DT(Int8, dt_int8, INT, SIGNED, INT8_MIN, INT8_MAX);
 MEGDNN_DEF_DT(Uint8, dt_uint8, INT, UNSIGNED, 0, UINT8_MAX);
 MEGDNN_DEF_DT(Bool, dt_bool, BOOL, UNSIGNED, false, true);
 MEGDNN_DEF_DT(Uint16, dt_uint16, INT, UNSIGNED, 0, UINT16_MAX);
-MEGDNN_INC_FLOAT16(MEGDNN_DEF_DT(Float16, dt_float16, FLOAT, SIGNED,
+DNN_INC_FLOAT16(MEGDNN_DEF_DT(Float16, dt_float16, FLOAT, SIGNED,
             std::numeric_limits<dt_float16>::lowest(),
             std::numeric_limits<dt_float16>::max()));
-MEGDNN_INC_FLOAT16(MEGDNN_DEF_DT(BFloat16, dt_bfloat16, FLOAT, SIGNED,
+DNN_INC_FLOAT16(MEGDNN_DEF_DT(BFloat16, dt_bfloat16, FLOAT, SIGNED,
             std::numeric_limits<dt_bfloat16>::lowest(),
             std::numeric_limits<dt_bfloat16>::max()));
 

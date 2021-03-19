@@ -77,11 +77,11 @@ AlgoFwd* Fwd::get_algorithm_heuristic(const TensorLayout& im,
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_matmul;
     }
-    megdnn_throw(megdnn_mangle(
+    megdnn_throw(
             ssprintf("no %s deformable conv fwd algorithm with args(%s) and "
                      "workspace limit (%zu bytes)",
                      reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes)));
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 const char* Fwd::get_algorithm_set_name() const {
@@ -131,11 +131,11 @@ AlgoBwdFlt* BwdFlt::get_algorithm_heuristic(
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_matmul;
     }
-    megdnn_throw(megdnn_mangle(ssprintf(
+    megdnn_throw(ssprintf(
             "no %s deformable conv bwd filter algorithm with args(%s) and "
             "workspace limit (%zu bytes)",
             reproducible ? "reproducible" : "usable", args.to_string().c_str(),
-            workspace_limit_in_bytes)));
+            workspace_limit_in_bytes));
 }
 
 size_t BwdFlt::get_workspace_in_bytes(
@@ -194,11 +194,11 @@ AlgoBwdData* BwdData::get_algorithm_heuristic(
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_matmul;
     }
-    megdnn_throw(megdnn_mangle(ssprintf(
+    megdnn_throw(ssprintf(
             "no %s deformable conv bwd data algorithm with args(%s) and "
             "workspace limit (%zu bytes)",
             reproducible ? "reproducible" : "usable", args.to_string().c_str(),
-            workspace_limit_in_bytes)));
+            workspace_limit_in_bytes));
 }
 
 size_t BwdData::get_workspace_in_bytes(

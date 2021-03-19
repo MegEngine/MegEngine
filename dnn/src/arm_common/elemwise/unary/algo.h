@@ -21,7 +21,7 @@ class ElemwiseImpl::AlgoUnary final : public ElemwiseImpl::AlgoBase {
     }
     const char* name() const override {
         if (m_name.empty()) {
-            m_name = megdnn_mangle(ssprintf("Elemwise::AlgoUnary"));
+            m_name = ssprintf("Elemwise::AlgoUnary");
         }
         return m_name.c_str();
     }

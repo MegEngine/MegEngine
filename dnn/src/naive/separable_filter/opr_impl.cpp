@@ -180,7 +180,7 @@ void SeparableFilterForwardImpl::exec_internal(_megdnn_tensor_in src,
         cb(BORDER_ISOLATED);
 #undef cb
         default:
-            megdnn_throw(megdnn_mangle("Unexpected border mode"));
+            megdnn_throw("Unexpected border mode");
     }
 }
 

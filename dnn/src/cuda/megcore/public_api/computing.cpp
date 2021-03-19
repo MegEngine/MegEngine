@@ -38,9 +38,10 @@ megcoreStatus_t megcore::getCUDAContext(megcoreComputingHandle_t handle,
     megcoreDeviceHandle_t dev_handle = H->content->dev_handle();
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_assert(platform == megcorePlatformCUDA);
-    auto context = static_cast<megcore::cuda::CUDAComputingContext *>(
-            H->content.get());
+    megdnn_throw_if(platform != megcorePlatformCUDA, megdnn_error,
+                    "platform should be CUDA Platform");
+    auto context =
+            static_cast<megcore::cuda::CUDAComputingContext*>(H->content.get());
     *ctx = context->context();
     return megcoreSuccess;
 }

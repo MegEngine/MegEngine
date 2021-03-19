@@ -19,20 +19,17 @@ void LocalShareBase::deduce_layout_fwd(const TensorLayout& src,
     using Mode = LocalShare::Param::Mode;
     auto errmsg =
             megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter) + ", " +
-            megdnn_layout_msg(dst) + ", " + megdnn_mangle("is_xcorr=") +
+            megdnn_layout_msg(dst) + ", " + "is_xcorr=" +
             std::to_string((param().mode == Mode::CROSS_CORRELATION)) + ", " +
-            megdnn_mangle("pad_h=") + std::to_string(param().pad_h) + ", " +
-            megdnn_mangle("pad_w=") + std::to_string(param().pad_w) + ", " +
-            megdnn_mangle("stride_h=") + std::to_string(param().stride_h) +
-            ", " + megdnn_mangle("stride_w=") +
-            std::to_string(param().stride_w) + ", " +
-            megdnn_mangle("dilate_h=") + std::to_string(param().dilate_h) +
-            ", " + megdnn_mangle("dilate_w=") +
-            std::to_string(param().dilate_w) + ", " +
-            megdnn_mangle("spatial_groups_h=") +
-            std::to_string(param().spatial_groups_h) + ", " +
-            megdnn_mangle("spatial_groups_w=") +
-            std::to_string(param().spatial_groups_w);
+            "pad_h=" + std::to_string(param().pad_h) + ", " +
+            "pad_w=" + std::to_string(param().pad_w) + ", " +
+            "stride_h=" + std::to_string(param().stride_h) + ", " +
+            "stride_w=" + std::to_string(param().stride_w) + ", " +
+            "dilate_h=" + std::to_string(param().dilate_h) + ", " +
+            "dilate_w=" + std::to_string(param().dilate_w) + ", " +
+            "spatial_groups_h=" + std::to_string(param().spatial_groups_h) +
+            ", " +
+            "spatial_groups_w=" + std::to_string(param().spatial_groups_w);
     auto errmsg_c = errmsg.c_str();
     MEGDNN_MARK_USED_VAR(errmsg_c);
 
@@ -118,20 +115,17 @@ void LocalShareBackwardData::deduce_layout(const TensorLayout& filter,
     using Mode = LocalShare::Param::Mode;
     auto errmsg =
             megdnn_layout_msg(filter) + ", " + megdnn_layout_msg(diff) + ", " +
-            megdnn_layout_msg(grad) + ", " + megdnn_mangle("is_xcorr=") +
+            megdnn_layout_msg(grad) + ", " + "is_xcorr=" +
             std::to_string((param().mode == Mode::CROSS_CORRELATION)) + ", " +
-            megdnn_mangle("pad_h=") + std::to_string(param().pad_h) + ", " +
-            megdnn_mangle("pad_w=") + std::to_string(param().pad_w) + ", " +
-            megdnn_mangle("stride_h=") + std::to_string(param().stride_h) +
-            ", " + megdnn_mangle("stride_w=") +
-            std::to_string(param().stride_w) + ", " +
-            megdnn_mangle("dilate_h=") + std::to_string(param().dilate_h) +
-            ", " + megdnn_mangle("dilate_w=") +
-            std::to_string(param().dilate_w) + ", " +
-            megdnn_mangle("spatial_groups_h=") +
-            std::to_string(param().spatial_groups_h) + ", " +
-            megdnn_mangle("spatial_groups_w=") +
-            std::to_string(param().spatial_groups_w);
+            "pad_h=" + std::to_string(param().pad_h) + ", " +
+            "pad_w=" + std::to_string(param().pad_w) + ", " +
+            "stride_h=" + std::to_string(param().stride_h) + ", " +
+            "stride_w=" + std::to_string(param().stride_w) + ", " +
+            "dilate_h=" + std::to_string(param().dilate_h) + ", " +
+            "dilate_w=" + std::to_string(param().dilate_w) + ", " +
+            "spatial_groups_h=" + std::to_string(param().spatial_groups_h) +
+            ", " +
+            "spatial_groups_w=" + std::to_string(param().spatial_groups_w);
     auto errmsg_c = errmsg.c_str();
     MEGDNN_MARK_USED_VAR(errmsg_c);
 

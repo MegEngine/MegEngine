@@ -88,7 +88,7 @@ protected:
                 ret.ow = dst.layout.shape[3];
             }
             if ((src.layout.dtype.enumv() == DTypeEnum::Float32 ||
-                 MEGDNN_FLOAT16_SELECT(
+                 DNN_FLOAT16_SELECT(
                          (src.layout.dtype.enumv() == DTypeEnum::Float16 ||
                           src.layout.dtype.enumv() == DTypeEnum::BFloat16),
                          false) ||

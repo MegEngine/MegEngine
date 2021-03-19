@@ -73,9 +73,8 @@ ConvolutionBackwardDataImpl::AlgoPack::cudnn_from_enum(
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(
-            megdnn_mangle(ssprintf("can not find cudnn bwd_data algorithm %d",
-                                   static_cast<int>(algo))));
+    megdnn_throw(ssprintf("can not find cudnn bwd_data algorithm %d",
+                          static_cast<int>(algo)));
 }
 
 ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
@@ -110,14 +109,14 @@ ConvolutionBackwardDataImpl::AlgoBase::ExecArgs::ExecArgs(
 std::string ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::to_string() const {
     auto&& fm = filter_meta;
     MEGDNN_MARK_USED_VAR(fm);
-    return megdnn_mangle(ssprintf(
+    return ssprintf(
             "filter=%u{%u,%u,%u,%u}, diff=%s, grad=%s, "
             "pad=%ux%u, stride=%ux%u, dilate=%ux%u, xcorr=%d, dtype=%s,%s",
             fm.group, fm.ocpg, fm.icpg, fm.spatial[0], fm.spatial[1],
             diff_layout->to_string().c_str(), grad_layout->to_string().c_str(),
             fm.padding[0], fm.padding[1], fm.stride[0], fm.stride[1],
             fm.dilation[0], fm.dilation[1], !fm.should_flip,
-            diff_layout->dtype.name(), grad_layout->dtype.name()));
+            diff_layout->dtype.name(), grad_layout->dtype.name());
 }
 
 // vim: syntax=cpp.doxygen

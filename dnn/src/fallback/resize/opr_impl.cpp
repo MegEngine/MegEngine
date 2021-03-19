@@ -133,7 +133,7 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
 
         switch (src.layout.dtype.enumv()) {
             cb(dtype::Float32, float);
-            MEGDNN_INC_FLOAT16(cb(dtype::Float16, dt_float16));
+            DNN_INC_FLOAT16(cb(dtype::Float16, dt_float16));
             cb(dtype::Int8, int8_t);
             cb(dtype::QuantizedS8, int8_t);
             cb(dtype::Uint8, uint8_t);

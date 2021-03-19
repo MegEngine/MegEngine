@@ -23,8 +23,7 @@ namespace arm_common {
         }                                                             \
         const char* name() const override {                           \
             if (m_name.empty()) {                                     \
-                m_name = megdnn_mangle(                               \
-                        ssprintf("Elemwise::AlgoTernaryFma3" #case)); \
+                m_name = ssprintf("Elemwise::AlgoTernaryFma3" #case); \
             }                                                         \
             return m_name.c_str();                                    \
         }                                                             \

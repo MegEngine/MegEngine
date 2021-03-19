@@ -40,7 +40,8 @@ CPUDispatcher* megcoreGetCPUDispatcher(megcoreComputingHandle_t handle) {
     megcoreDeviceHandle_t dev_handle = H->content->dev_handle();
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_assert(platform &megcorePlatformCPU);
+    megdnn_throw_if(!(platform & megcorePlatformCPU), megdnn_error,
+                    "can not be default ComputingContext");
     auto context = static_cast<megcore::cpu::DefaultComputingContext*>(
             H->content.get());
     return context->get_dispatcher();

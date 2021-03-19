@@ -20,11 +20,13 @@ namespace {
     class MegDNNErrorHandler final: public megdnn::ErrorHandler {
         static MegDNNErrorHandler inst;
         void do_on_megdnn_error(const std::string &msg) override {
-            mgb_throw_raw(MegDNNError{msg});
+            mgb_throw_raw(MegDNNError{
+                    LogLevel::NO_LOG == get_log_level() ? "" : msg});
         }
 
         void do_on_tensor_reshape_error(const std::string &msg) override {
-            mgb_throw_raw(TensorReshapeError{msg});
+            mgb_throw_raw(TensorReshapeError{
+                    LogLevel::NO_LOG == get_log_level() ? "" : msg});
         }
 
         public:

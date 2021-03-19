@@ -55,7 +55,7 @@ TEST_F(ROCM, REDUCE) {
                      Reduce::DataType data_type) {
         for (int32_t axis : {0, 1, 2, 3}) {
             if (data_type == Reduce::DataType::DEFAULT &&
-                MEGDNN_FLOAT16_SELECT(src_dtype == dtype::Float16(), false)) {
+                DNN_FLOAT16_SELECT(src_dtype == dtype::Float16(), false)) {
                 checker.set_epsilon(1e-2);
             } else {
                 checker.set_epsilon(1e-3);
@@ -72,7 +72,7 @@ TEST_F(ROCM, REDUCE) {
     for (auto mode : {Mode::SUM, Mode::MEAN, Mode::SUM_SQR, Mode::PRODUCT,
                       Mode::MIN, Mode::MAX}) {
         for (auto dtype : std::vector<DType>{
-                     MEGDNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
+                     DNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
                              dtype::Float32(),
                      dtype::Int32()}) {
             check(mode, dtype, dtype, Reduce::DataType::DEFAULT);

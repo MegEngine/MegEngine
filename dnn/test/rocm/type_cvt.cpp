@@ -18,7 +18,7 @@ using namespace test;
 
 TEST_F(ROCM, TYPE_CVT) {
     UniformFloatRNG init(0, 20);
-    std::vector<DType> dtypes = {dtype::Float32(), MEGDNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
+    std::vector<DType> dtypes = {dtype::Float32(), DNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
                                  dtype::Int32(),   dtype::Int16(),
                                  dtype::Int8(),    dtype::Uint8()};
     for (auto sdtype : dtypes)

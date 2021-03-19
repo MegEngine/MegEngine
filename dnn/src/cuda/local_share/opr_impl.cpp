@@ -39,11 +39,11 @@ LocalShareForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(megdnn_mangle(
+    megdnn_throw(
             ssprintf("no %s local share conv algorithm with args(%s) and "
                      "workspace limit (%zu bytes)",
                      reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes)));
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareForwardImpl::Algorithm*>
@@ -89,11 +89,11 @@ LocalShareBackwardDataImpl::get_algorithm_heuristic(
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(megdnn_mangle(
+    megdnn_throw(
             ssprintf("no %s local share bwd data algorithm with args(%s) and "
                      "workspace limit (%zu bytes)",
                      reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes)));
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareBackwardDataImpl::Algorithm*>
@@ -139,11 +139,11 @@ LocalShareBackwardFilterImpl::get_algorithm_heuristic(
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(megdnn_mangle(
+    megdnn_throw(
             ssprintf("no %s local share bwd filter algorithm with args(%s) and "
                      "workspace limit (%zu bytes)",
                      reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes)));
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareBackwardFilterImpl::Algorithm*>

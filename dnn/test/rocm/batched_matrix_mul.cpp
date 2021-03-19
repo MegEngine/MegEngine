@@ -22,7 +22,7 @@ TEST_F(ROCM, BATCHED_MATRIX_MUL) {
     checker.set_epsilon(1e-2);
     using Param = MatrixMul::Param;
     size_t b = 9, m = 10, n = 11, k = 12;
-    std::vector<DType> dtypes{MEGDNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
+    std::vector<DType> dtypes{DNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA)
                                       dtype::Float32()};
     for (auto dtype : dtypes)
         for (unsigned mask = 0; mask < 4; ++mask) {

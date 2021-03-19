@@ -53,7 +53,7 @@ void CambriconComputingContext::memcpy(void* dst, const void* src,
             dir = CNRT_MEM_TRANS_DIR_DEV2DEV;
             break;
         default:
-            megdnn_throw(megdnn_mangle("bad cnrt mem trans dir"));
+            megdnn_throw("bad cnrt mem trans dir");
     }
     if (kind == megcoreMemcpyDeviceToDevice) {
         cnrt_check(cnrtSyncQueue(context_.queue));

@@ -23,17 +23,17 @@ std::string get_errmsg(const TensorLayout& src, const TensorLayout& filter,
     MEGDNN_MARK_USED_VAR(filter);
     MEGDNN_MARK_USED_VAR(dst);
     return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter) + ", " +
-           megdnn_layout_msg(dst) + ", " + megdnn_mangle("is_nchw=") +
+           megdnn_layout_msg(dst) + ", " + "is_nchw=" +
            std::to_string(param.format == param::Convolution::Format::NCHW) +
-           ", " + +megdnn_mangle("is_xcorr=") +
+           ", " + "is_xcorr=" +
            std::to_string(
                    (param.mode == Convolution::Mode::CROSS_CORRELATION)) +
-           ", " + megdnn_mangle("pad_h=") + std::to_string(param.pad_h) + ", " +
-           megdnn_mangle("pad_w=") + std::to_string(param.pad_w) + ", " +
-           megdnn_mangle("stride_h=") + std::to_string(param.stride_h) + ", " +
-           megdnn_mangle("stride_w=") + std::to_string(param.stride_w) + ", " +
-           megdnn_mangle("dilate_h=") + std::to_string(param.dilate_h) + ", " +
-           megdnn_mangle("dilate_w=") + std::to_string(param.dilate_w);
+           ", " + "pad_h=" + std::to_string(param.pad_h) + ", " +
+           "pad_w=" + std::to_string(param.pad_w) + ", " +
+           "stride_h=" + std::to_string(param.stride_h) + ", " +
+           "stride_w=" + std::to_string(param.stride_w) + ", " +
+           "dilate_h=" + std::to_string(param.dilate_h) + ", " +
+           "dilate_w=" + std::to_string(param.dilate_w);
 }
 
 template <typename Param, typename Param::Format>

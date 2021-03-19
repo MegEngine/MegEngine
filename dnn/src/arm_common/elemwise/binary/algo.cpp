@@ -115,7 +115,7 @@ bool ElemwiseImpl::AlgoBinaryVecBcast101x4::is_available(
     auto& elparam = kern_param.binary_elparam;
     auto& src0 = elparam[0];
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    if (MEGDNN_FLOAT16_SELECT(src0.layout.dtype == dtype::Float16{}, false)) {
+    if (DNN_FLOAT16_SELECT(src0.layout.dtype == dtype::Float16{}, false)) {
         return false;
     }
 #endif

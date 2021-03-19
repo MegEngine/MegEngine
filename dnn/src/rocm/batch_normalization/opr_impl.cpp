@@ -36,8 +36,7 @@ void BNTensorDescHolder::setup(const TensorLayout& x,
             bn_mode = miopenBNSpatial;
             break;
         default:
-            megdnn_throw(megdnn_mangle(
-                    "Unknown param dim type of batch normalization."));
+            megdnn_throw("Unknown param dim type of batch normalization.");
     }
     xy_desc.set(TensorLayout(xy_shape, x.dtype));
     param_desc.set(xy_desc.desc, bn_mode);
@@ -82,8 +81,7 @@ void BNForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
                     m_param.epsilon));
             break;
         default:
-            megdnn_throw(megdnn_mangle(
-                    "Unknown forward mode type of batch normalization."));
+            megdnn_throw("Unknown forward mode type of batch normalization.");
     }
 }
 

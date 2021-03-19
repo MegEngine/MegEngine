@@ -63,18 +63,18 @@ public:
 };
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#define DISPATCH_TYPE(_case)                                                \
-    if (src0.layout.dtype == dtype::Float32{}) {                            \
-        DISPATCH_MODE_FLOAT(_case, float, 0);                               \
-    } else if (MEGDNN_FLOAT16_SELECT(src0.layout.dtype == dtype::Float16{}, \
-                                     false)) {                              \
-        DISPATCH_MODE_FLOAT(_case, __fp16, 1);                              \
-    } else if (src0.layout.dtype == dtype::Int32{}) {                       \
-        DISPATCH_MODE_INT(_case, int, 2);                                   \
-    } else if (src0.layout.dtype == dtype::Int16{}) {                       \
-        DISPATCH_MODE_INT(_case, dt_int16, 3);                              \
-    } else if (src0.layout.dtype == dtype::Int8{}) {                        \
-        DISPATCH_MODE_INT(_case, dt_int8, 4);                               \
+#define DISPATCH_TYPE(_case)                                             \
+    if (src0.layout.dtype == dtype::Float32{}) {                         \
+        DISPATCH_MODE_FLOAT(_case, float, 0);                            \
+    } else if (DNN_FLOAT16_SELECT(src0.layout.dtype == dtype::Float16{}, \
+                                  false)) {                              \
+        DISPATCH_MODE_FLOAT(_case, __fp16, 1);                           \
+    } else if (src0.layout.dtype == dtype::Int32{}) {                    \
+        DISPATCH_MODE_INT(_case, int, 2);                                \
+    } else if (src0.layout.dtype == dtype::Int16{}) {                    \
+        DISPATCH_MODE_INT(_case, dt_int16, 3);                           \
+    } else if (src0.layout.dtype == dtype::Int8{}) {                     \
+        DISPATCH_MODE_INT(_case, dt_int8, 4);                            \
     }
 #else
 #define DISPATCH_TYPE(_case)                          \

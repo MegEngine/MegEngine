@@ -69,8 +69,8 @@ void RemapBase::check_layout_fwd(const TensorLayout& src,
                       "%s", errmsg().c_str());
     } else {
         megdnn_throw(
-                "megdnn currently do not support other param.format except "
-                "NHWC and NCHW");
+                "currently do not support other param.format except NHWC and "
+                "NCHW");
     }
 }
 
@@ -91,7 +91,7 @@ void RemapBackwardData::check_exec(const TensorLayout& map_xy,
                                    const TensorLayout& grad,
                                    size_t workspace_in_bytes) {
     check_layout_fwd(grad, map_xy, diff);
-    megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+    megdnn_assert(grad.dtype == dtype::Float32() DNN_INC_FLOAT16(
                                        || grad.dtype == dtype::BFloat16()),
                   "Backward Remap only supports Float32/BFloat16.");
     auto required_workspace_in_bytes =
@@ -106,7 +106,7 @@ void RemapBackwardMat::check_exec(const TensorLayout& src,
                                   size_t workspace_in_bytes) {
     check_layout_fwd(src, map_xy, diff);
     megdnn_assert_eq_layout(map_xy, grad);
-    megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+    megdnn_assert(grad.dtype == dtype::Float32() DNN_INC_FLOAT16(
                                        || grad.dtype == dtype::BFloat16()),
                   "Backward Remap only supports Float32/BFloat16.");
     auto required_workspace_in_bytes =

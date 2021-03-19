@@ -59,8 +59,8 @@ Convolution3DForwardImpl::AlgoPack::cudnn_from_enum(
         if (i.cudnn_enum() == algo)
             return &i;
     }
-    megdnn_throw(megdnn_mangle(ssprintf("can not find cudnn fwd algorithm %d",
-                    static_cast<int>(algo))));
+    megdnn_throw(ssprintf("can not find cudnn fwd algorithm %d",
+                          static_cast<int>(algo)));
 }
 
 Convolution3DForwardImpl::AlgoPack Convolution3DForwardImpl::sm_algo_pack;
@@ -101,18 +101,16 @@ Convolution3DForwardImpl::AlgoBase::ExecArgs::ExecArgs(
 std::string Convolution3DForwardImpl::AlgoBase::SizeArgs::to_string() const {
     auto &&fm = filter_meta;
     MEGDNN_MARK_USED_VAR(fm);
-    return megdnn_mangle(ssprintf(
-                "src=%s, filter=%u{%u,%u,%u,%u,%u}, dst=%s, "
-                "pad=%ux%ux%u, stride=%ux%ux%u, dilate=%ux%ux%u, xcorr=%d, dtype=%s,%s",
-                src_layout->to_string().c_str(),
-                fm.group, fm.ocpg, fm.icpg,
-                fm.spatial[0], fm.spatial[1], fm.spatial[2],
-                dst_layout->to_string().c_str(),
-                fm.padding[0], fm.padding[1], fm.padding[2],
-                fm.stride[0], fm.stride[1], fm.stride[2],
-                fm.dilation[0], fm.dilation[1], fm.dilation[2],
-                !fm.should_flip,
-                src_layout->dtype.name(), dst_layout->dtype.name()));
+    return ssprintf(
+            "src=%s, filter=%u{%u,%u,%u,%u,%u}, dst=%s, "
+            "pad=%ux%ux%u, stride=%ux%ux%u, dilate=%ux%ux%u, xcorr=%d, "
+            "dtype=%s,%s",
+            src_layout->to_string().c_str(), fm.group, fm.ocpg, fm.icpg,
+            fm.spatial[0], fm.spatial[1], fm.spatial[2],
+            dst_layout->to_string().c_str(), fm.padding[0], fm.padding[1],
+            fm.padding[2], fm.stride[0], fm.stride[1], fm.stride[2],
+            fm.dilation[0], fm.dilation[1], fm.dilation[2], !fm.should_flip,
+            src_layout->dtype.name(), dst_layout->dtype.name());
 }
 
 // vim: syntax=cpp.doxygen

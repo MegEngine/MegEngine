@@ -66,7 +66,7 @@ void ElemwiseImpl::exec(const TensorNDArray& srcs, _megdnn_tensor_out dst) {
     }
 
     if (m_dst->layout.dtype == dtype::Float32() ||
-        MEGDNN_FLOAT16_SELECT(m_dst->layout.dtype == dtype::Float16(), false) ||
+        DNN_FLOAT16_SELECT(m_dst->layout.dtype == dtype::Float16(), false) ||
         m_dst->layout.dtype == dtype::Int32() ||
         m_dst->layout.dtype == dtype::Int16() ||
         m_dst->layout.dtype == dtype::Int8()) {

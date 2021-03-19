@@ -56,10 +56,10 @@ void ConvolutionForwardImpl::exec(_megdnn_tensor_in src,
         DISPATCH(Int8, Int16, dt_int8, dt_int16, dt_int16);
         DISPATCH(Int8, Int32, dt_int8, dt_int32, dt_int32);
         DISPATCH(QuantizedS8, QuantizedS32, dt_int8, dt_int32, dt_int32);
-        MEGDNN_INC_FLOAT16(DISPATCH_CMODE(Float16, Float16, dt_float16,
+        DNN_INC_FLOAT16(DISPATCH_CMODE(Float16, Float16, dt_float16,
                                           dt_float16, dt_float32,
                                           ComputeMode::FLOAT32));
-        MEGDNN_INC_FLOAT16(DISPATCH_CMODE(BFloat16, BFloat16, dt_bfloat16,
+        DNN_INC_FLOAT16(DISPATCH_CMODE(BFloat16, BFloat16, dt_bfloat16,
                                           dt_bfloat16, dt_float32,
                                           ComputeMode::FLOAT32));
         DISPATCH(Quantized8Asymm, QuantizedS32, dt_quint8, dt_qint32,

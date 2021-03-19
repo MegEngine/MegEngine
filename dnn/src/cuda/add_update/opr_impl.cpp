@@ -39,7 +39,7 @@ void AddUpdateForwardImpl::exec(
 #undef cb
 
         default:
-            megdnn_throw(megdnn_mangle("unsupported dtype for AddUpdate"));
+            megdnn_throw("unsupported dtype for AddUpdate");
     }
 }
 
@@ -59,7 +59,7 @@ void AddUpdateForwardImpl::exec_noncontig(
 #undef cb
 
         default:
-            megdnn_throw(megdnn_mangle("unsupported dtype for AddUpdate"));
+            megdnn_throw("unsupported dtype for AddUpdate");
     }
 }
 

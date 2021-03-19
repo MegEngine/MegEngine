@@ -2413,7 +2413,7 @@ void megdnn::x86::resize_cv_exec(_megdnn_tensor_in src,
                     break;
             }
         } else {
-            megdnn_throw(megdnn_mangle("Unsupported datatype of resize optr."));
+            megdnn_throw("Unsupported datatype of resize optr.");
         }
     }
 }

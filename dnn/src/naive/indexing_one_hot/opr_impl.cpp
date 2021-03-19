@@ -99,7 +99,7 @@ void IndexingOneHotForwardImpl::exec(
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         cb(megdnn::dtype::Quantized8Asymm)
         default:
-            megdnn_throw(megdnn_mangle("bad dtype"));
+            megdnn_throw("bad dtype");
     }
 #undef cb
 }
@@ -122,7 +122,7 @@ void IndexingSetOneHotForwardImpl::exec(
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         cb(megdnn::dtype::Quantized8Asymm)
         default:
-            megdnn_throw(megdnn_mangle("bad dtype"));
+            megdnn_throw("bad dtype");
     }
 #undef cb
 }

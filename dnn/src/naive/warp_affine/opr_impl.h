@@ -53,7 +53,7 @@ public:
                 ret.ow = dst.layout.shape[2];
             }
             if (src.layout.dtype.enumv() == DTypeEnum::Float32 ||
-                MEGDNN_FLOAT16_SELECT(
+                DNN_FLOAT16_SELECT(
                         src.layout.dtype.enumv() == DTypeEnum::Float16,
                         false) ||
                 src.layout.dtype.enumv() == DTypeEnum::Int8 ||

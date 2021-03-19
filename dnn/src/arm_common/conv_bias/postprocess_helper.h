@@ -152,8 +152,9 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
         MEGDNN_MARK_USED_VAR(OH);
         MEGDNN_MARK_USED_VAR(OW);
         MEGDNN_MARK_USED_VAR(pack_oc_size);
-        megdnn_assert(bias_mode == megdnn::BiasMode::NO_BIAS &&
-                      nonlineMode == megdnn::NonlineMode::IDENTITY);
+        megdnn_throw_if(bias_mode != megdnn::BiasMode::NO_BIAS ||
+                                nonlineMode != megdnn::NonlineMode::IDENTITY,
+                        megdnn_error, "biasmode or nonlineMode do not support");
     }
 };
 
@@ -310,7 +311,8 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
                     megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
                     megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
                     size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
-        megdnn_assert(nonlineMode == megdnn::NonlineMode::IDENTITY);
+        megdnn_throw_if(nonlineMode != megdnn::NonlineMode::IDENTITY,
+                        megdnn_error, "nonlineMode do not support");
         FOR_BIAS(bias_mode, OH, OW);
     }
 };

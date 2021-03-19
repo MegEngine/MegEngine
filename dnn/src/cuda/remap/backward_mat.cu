@@ -158,7 +158,7 @@ void backwardmat_proxy(const ctype* src, const float* map_xy, const ctype* diff,
     INST(ctype, NCHW, BORDER_WRAP)
 
 FOR_FORMAT_BMODE(float)
-MEGDNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_bfloat16))
+DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_bfloat16))
 
 #undef FOR_FORMAT_BMODE
 #undef INST

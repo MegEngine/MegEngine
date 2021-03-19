@@ -914,7 +914,7 @@ DEF_TEST(all_modes) {
             run(dtype::Int32{});
         }
         if (trait.allow_float) {
-            MEGDNN_FLOAT16_SELECT(
+            DNN_FLOAT16_SELECT(
                     run(dtype::Float16{},
                         mode == Mode::FAST_TANH_GRAD ? 0.5 : 0.05), );
             run(dtype::Float32{});

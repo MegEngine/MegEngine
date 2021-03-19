@@ -28,8 +28,8 @@ LocalForwardImpl::dispatch_float_noncontig_batch(
         } else {
             return &naive_kern<false, float>;
         }
-    } else if (MEGDNN_FLOAT16_SELECT(src.dtype == dtype::Float16(), false)) {
-        MEGDNN_INC_FLOAT16(
+    } else if (DNN_FLOAT16_SELECT(src.dtype == dtype::Float16(), false)) {
+        DNN_INC_FLOAT16(
         megdnn_assert(src.dtype == dtype::Float16());
         if (param().mode == Mode::CROSS_CORRELATION) {
             return &naive_kern<true MEGDNN_COMMA dt_float16>;

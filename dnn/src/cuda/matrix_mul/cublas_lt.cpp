@@ -140,8 +140,7 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
             igemm();
             break;
         default:
-            megdnn_throw(megdnn_mangle(
-                    "compute type must be float16/float32/int32"));
+            megdnn_throw("compute type must be float16/float32/int32");
     }
 #else
     switch (desc.dt_compute) {
@@ -155,8 +154,7 @@ void MatrixMulForwardImpl::AlgoCuBlasLt::exec(const ExecArgs& args) const {
             igemm();
             break;
         default:
-            megdnn_throw(megdnn_mangle(
-                    "compute type must be float16/float32/int32"));
+            megdnn_throw("compute type must be float16/float32/int32");
     }
 #endif
 }

@@ -40,7 +40,7 @@ void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest,
 #undef cb
 
         default:
-            megdnn_throw(megdnn_mangle("unsupported dtype for AddUpdate"));
+            megdnn_throw("unsupported dtype for AddUpdate");
     }
 }
 
@@ -59,7 +59,7 @@ void AddUpdateForwardImpl::exec_noncontig(_megdnn_tensor_inout dest,
 #undef cb
 
         default:
-            megdnn_throw(megdnn_mangle("unsupported dtype for AddUpdate"));
+            megdnn_throw("unsupported dtype for AddUpdate");
     }
 }
 

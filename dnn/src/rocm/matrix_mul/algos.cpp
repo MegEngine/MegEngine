@@ -52,11 +52,11 @@ std::string MatrixMulForwardImpl::AlgoBase::SizeArgs::to_string() const {
     MEGDNN_MARK_USED_VAR(m);
     MEGDNN_MARK_USED_VAR(n);
     MEGDNN_MARK_USED_VAR(k);
-    return megdnn_mangle(ssprintf(
+    return ssprintf(
             "A={%zux%zu},B={%zux%zu},C={%zux%zu},Transpose A=%d,Transpose "
             "B=%d,ldA=%zu,ldB=%zu,ldC=%zu",
             m, k, k, n, m, n, param.transposeA, param.transposeB,
-            layout_a.stride[0], layout_b.stride[0], layout_c.stride[0]));
+            layout_a.stride[0], layout_b.stride[0], layout_c.stride[0]);
 }
 
 // vim: syntax=cpp.doxygen

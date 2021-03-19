@@ -31,8 +31,8 @@ ConvBiasDesc::~ConvBiasDesc() {
 void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
                                  size_t nr_group) {
 #if CUDNN_VERSION < 7100
-    megdnn_throw(megdnn_mangle(
-            "ConvBias(CUDNN_ACTIVATION_IDENTITY) require cudnn 7.1 or higher"));
+    megdnn_throw(
+            "ConvBias(CUDNN_ACTIVATION_IDENTITY) require cudnn 7.1 or higher");
 #else
     cudnnConvolutionMode_t mode;
     using Param = param::ConvBias;
@@ -44,7 +44,7 @@ void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
             mode = CUDNN_CONVOLUTION;
             break;
         default:
-            megdnn_throw(megdnn_mangle("conv mode must be conv or xcorr."));
+            megdnn_throw("conv mode must be conv or xcorr.");
     }
     cudnn_check(cudnnSetConvolutionGroupCount(conv_desc, nr_group));
     cudnnDataType_t compute_type;
@@ -57,7 +57,7 @@ void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
             compute_type = CUDNN_DATA_INT32;
             break;
         default:
-            megdnn_throw(megdnn_mangle("unspport data type for conv bias"));
+            megdnn_throw("unspport data type for conv bias");
     }
     if (data_type.enumv() == DTypeEnum::Float16) {
         auto comp_mode = param.compute_mode;
@@ -81,7 +81,7 @@ void ConvBiasDesc::set_conv_bias(DType data_type, const param::ConvBias& param,
                     0));
             break;
         default:
-            megdnn_throw(megdnn_mangle("unsupported non linear mode"));
+            megdnn_throw("unsupported non linear mode");
     }
 #endif
 }
@@ -98,7 +98,7 @@ void ConvBiasDesc::set_conv(DType data_type, const param::ConvBias& param,
             mode = CUDNN_CONVOLUTION;
             break;
         default:
-            megdnn_throw(megdnn_mangle("conv mode must be conv or xcorr."));
+            megdnn_throw("conv mode must be conv or xcorr.");
     }
     cudnnDataType_t compute_type;
     MEGDNN_MARK_USED_VAR(compute_type);
@@ -114,7 +114,7 @@ void ConvBiasDesc::set_conv(DType data_type, const param::ConvBias& param,
         compute_type = CUDNN_DATA_INT32;
 #endif
     } else {
-        megdnn_throw(megdnn_mangle("unspport data type for conv bias"));
+        megdnn_throw("unspport data type for conv bias");
     }
 #if CUDNN_MAJOR >= 7
     cudnn_check(cudnnSetConvolutionGroupCount(conv_desc, nr_group));

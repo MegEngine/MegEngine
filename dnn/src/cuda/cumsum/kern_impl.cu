@@ -62,7 +62,7 @@ uint32_t cumsum::get_workspace_bytes_for_cub_1d(uint32_t nr_item,
         CASE(8, uint64_t);
 #undef CASE
         default:
-            report_error(megdnn_mangle("unsupported item size in cumsum"));
+            report_error("unsupported item size in cumsum");
     }
 }
 

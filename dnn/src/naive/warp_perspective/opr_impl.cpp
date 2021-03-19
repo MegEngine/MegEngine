@@ -467,9 +467,9 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in src,
         DISPATCH_ST(dtype::Quantized8Asymm, uint8_t, float, KERN_CD4);
         DISPATCH_ST(dtype::QuantizedS8, int8_t, float, KERN_CD4);
 
-        MEGDNN_INC_FLOAT16(
+        DNN_INC_FLOAT16(
                 DISPATCH_ST_MT(dtype::Float16, dt_float16, KERN_CD4));
-        MEGDNN_INC_FLOAT16(
+        DNN_INC_FLOAT16(
                 DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16, KERN_CD4));
         megdnn_throw(ssprintf("Unsupported input DType in "
                               "WarpPerspective: %s",
@@ -560,8 +560,8 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in src,
         DISPATCH_ST(dtype::Uint8, uint8_t, float, KERN);
         DISPATCH_ST(dtype::Quantized8Asymm, uint8_t, float, KERN);
 
-        MEGDNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::Float16, dt_float16, KERN));
-        MEGDNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16, KERN));
+        DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::Float16, dt_float16, KERN));
+        DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16, KERN));
         megdnn_throw(ssprintf("Unsupported input DType in "
                               "WarpPerspective: %s",
                               src.layout.dtype.name())
@@ -660,7 +660,7 @@ void WarpPerspectiveBackwardDataImpl::exec(_megdnn_tensor_in mat,
         }                                                                      \
     }
     DISPATCH_ST_MT(dtype::Float32, dt_float32);
-    MEGDNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16));
+    DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16));
     megdnn_throw(ssprintf("Unsupported input DType in "
                           "WarpPerspective: %s",
                           diff.layout.dtype.name())
@@ -801,7 +801,7 @@ void WarpPerspectiveBackwardMatImpl::exec(_megdnn_tensor_in src,
         }                                                                    \
     }
     DISPATCH_ST_MT(dtype::Float32, dt_float32);
-    MEGDNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16));
+    DNN_INC_FLOAT16(DISPATCH_ST_MT(dtype::BFloat16, dt_bfloat16));
     megdnn_throw(ssprintf("Unsupported input DType in "
                           "WarpPerspective: %s",
                           diff.layout.dtype.name())

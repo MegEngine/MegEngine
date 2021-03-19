@@ -297,7 +297,7 @@ void megdnn::x86::warp_affine_cv_exec(_megdnn_tensor_in src,
         DISPATCH_IMODE(imode, bmode, ch, cb)
 #undef cb
     } else {
-        megdnn_throw(megdnn_mangle("Unsupported datatype of WarpAffine optr."));
+        megdnn_throw("Unsupported datatype of WarpAffine optr.");
     }
 }
 

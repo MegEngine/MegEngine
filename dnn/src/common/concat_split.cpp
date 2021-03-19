@@ -41,8 +41,8 @@ void ConcatSplitBase::check_layout_common(const TensorLayoutArray &srcs,
         megdnn_assert_eq_size_t(src.ndim, ndim);
 	}
 	// ensure param().axis is correct
-    auto errmsg = megdnn_mangle("param().axis=") +
-        std::to_string(param().axis) + megdnn_mangle(", ndim=") +
+    auto errmsg = "param().axis=" +
+        std::to_string(param().axis) + ", ndim=" +
         std::to_string(ndim);
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert(param().axis < static_cast<int32_t>(ndim), "%s",

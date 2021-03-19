@@ -353,7 +353,7 @@ void StrategyHelper<
                                   _output_compute_type>;
 
 INST(float, float, float, float)
-MEGDNN_INC_FLOAT16(INST(dt_float16, dt_float16, dt_float16, dt_float16))
+DNN_INC_FLOAT16(INST(dt_float16, dt_float16, dt_float16, dt_float16))
 INST(int8_t, int8_t, int16_t, int)
 INST(uint8_t, uint8_t, int16_t, int)
 #undef INST
@@ -376,7 +376,7 @@ INST(int8_t, int8_t, float, float, param::ConvBias::Format::NCHW44)
 INST(int8_t, int8_t, int16_t, int, param::ConvBias::Format::NCHW)
 INST(int8_t, int8_t, int16_t, int, param::ConvBias::Format::NCHW44)
 INST(float, float, float, float, param::ConvBias::Format::NCHW88)
-MEGDNN_INC_FLOAT16(INST(dt_float16, dt_float16, dt_float16, dt_float16,
+DNN_INC_FLOAT16(INST(dt_float16, dt_float16, dt_float16, dt_float16,
                         param::ConvBias::Format::NCHW))
 #undef INST
 }  // namespace winograd

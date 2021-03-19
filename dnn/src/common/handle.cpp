@@ -87,7 +87,7 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
             } else if (debug_level == 2) {
                 return make_unique<naive::HandleImpl>(computing_handle);
             } else {
-                megdnn_throw(megdnn_mangle("Debug level must be 0/1/2."));
+                megdnn_throw("Debug level must be 0/1/2.");
             }
         }
         MIDOUT_END();
@@ -116,7 +116,8 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
         }
         else {
             // CUDA
-            megdnn_assert_internal(platform == megcorePlatformCUDA);
+            megdnn_throw_if(platform != megcorePlatformCUDA, megdnn_error,
+                            "platform should be CUDA Platform");
 #if MEGDNN_WITH_CUDA
             return make_unique<cuda::HandleImpl>(computing_handle);
 #else
@@ -216,7 +217,7 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
             CASE(CAMBRICON, cambricon);
 #endif
             default:
-                megdnn_throw(megdnn_mangle("bad handle type"));
+                megdnn_throw("bad handle type");
         }
 #undef CASE
     }

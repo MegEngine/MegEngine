@@ -41,7 +41,7 @@ LocalImpl::dispatch_float_noncontig_batch(
         } else if (is_supported(SIMDType::SSE)) {
             return local_xcorr_SSE;
         } else {
-            megdnn_throw(megdnn_mangle("no fma/avx/sse detected"));
+            megdnn_throw("no fma/avx/sse detected");
         }
     } else {
         if (is_supported(SIMDType::FMA)) {
@@ -51,7 +51,7 @@ LocalImpl::dispatch_float_noncontig_batch(
         } else if (is_supported(SIMDType::SSE)) {
             return local_conv_SSE;
         } else {
-            megdnn_throw(megdnn_mangle("no fma/avx/sse detected"));
+            megdnn_throw("no fma/avx/sse detected");
         }
     }
 }

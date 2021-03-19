@@ -64,7 +64,7 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
         if (param().format == param::WarpPerspective::Format::NCHW) {
             megdnn_assert(
                     src.dtype.enumv() == DTypeEnum::Float32 ||
-                            MEGDNN_FLOAT16_SELECT(
+                            DNN_FLOAT16_SELECT(
                                     (src.dtype.enumv() == DTypeEnum::Float16 ||
                                      src.dtype.enumv() == DTypeEnum::BFloat16),
                                     false) ||
@@ -73,7 +73,7 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
                             (src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                              src.dtype.enumv() == DTypeEnum::Quantized8Asymm),
                     "WarpPerspective NCHW input dtype should be "
-                    "Float32/Int8/Uint8/QInt8/QUint8" MEGDNN_FLOAT16_SELECT(
+                    "Float32/Int8/Uint8/QInt8/QUint8" DNN_FLOAT16_SELECT(
                             "/Float16/BFloat16", "") ".");
             megdnn_assert(
                     (src.dtype.category() == DTypeCategory::FLOAT &&
@@ -120,14 +120,13 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
                           param::WarpPerspective::Format::NHWCD4);
             megdnn_assert(
                     src.dtype == dtype::Float32() ||
-                            MEGDNN_FLOAT16_SELECT(
-                                    (src.dtype == dtype::Float16() ||
-                                     src.dtype == dtype::BFloat16()),
-                                    false) ||
+                            DNN_FLOAT16_SELECT((src.dtype == dtype::Float16() ||
+                                                src.dtype == dtype::BFloat16()),
+                                               false) ||
                             src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                             src.dtype.enumv() == DTypeEnum::Quantized8Asymm,
                     "WarpPerspective NHWCD4 input dtype should be "
-                    "Float32" MEGDNN_FLOAT16_SELECT(
+                    "Float32" DNN_FLOAT16_SELECT(
                             "/Float16/BFloat16",
                             "") ",QunatizedS8, Quantized8Asymm.");
             megdnn_assert(
@@ -189,46 +188,46 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
 
 std::string WarpPerspectiveBase::param_msg() const {
     std::string res;
-    res.append(megdnn_mangle("imode="));
+    res.append("imode=");
     switch (param().imode) {
         case InterpolationMode::NEAREST:
-            res.append(megdnn_mangle("NEAREST"));
+            res.append("NEAREST");
             break;
         case InterpolationMode::LINEAR:
-            res.append(megdnn_mangle("LINEAR"));
+            res.append("LINEAR");
             break;
         case InterpolationMode::AREA:
-            res.append(megdnn_mangle("AREA"));
+            res.append("AREA");
             break;
         case InterpolationMode::CUBIC:
-            res.append(megdnn_mangle("CUBIC"));
+            res.append("CUBIC");
             break;
         case InterpolationMode::LANCZOS4:
-            res.append(megdnn_mangle("LANCZOS4"));
+            res.append("LANCZOS4");
             break;
     }
-    res.append(megdnn_mangle("bmode="));
+    res.append("bmode=");
     switch (param().bmode) {
         case BorderMode::WRAP:
-            res.append(megdnn_mangle("WRAP"));
+            res.append("WRAP");
             break;
         case BorderMode::CONSTANT:
-            res.append(megdnn_mangle("CONSTANT"));
+            res.append("CONSTANT");
             break;
         case BorderMode::REFLECT:
-            res.append(megdnn_mangle("REFLECT"));
+            res.append("REFLECT");
             break;
         case BorderMode::REFLECT_101:
-            res.append(megdnn_mangle("REFLECT_101"));
+            res.append("REFLECT_101");
             break;
         case BorderMode::REPLICATE:
-            res.append(megdnn_mangle("REPLICATE"));
+            res.append("REPLICATE");
             break;
         case BorderMode::TRANSPARENT:
-            res.append(megdnn_mangle("TRANSPARENT"));
+            res.append("TRANSPARENT");
             break;
         case BorderMode::ISOLATED:
-            res.append(megdnn_mangle("ISOLATED"));
+            res.append("ISOLATED");
             break;
     }
     if (param().bmode == BorderMode::CONSTANT) {
@@ -301,7 +300,7 @@ void WarpPerspectiveBackwardData::check_exec(const TensorLayout& mat,
                                              const TensorLayout& grad,
                                              size_t workspace_in_bytes) {
     check_layout_fwd(grad, mat, mat_idx, diff);
-    megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+    megdnn_assert(grad.dtype == dtype::Float32() DNN_INC_FLOAT16(
                                         || grad.dtype == dtype::BFloat16()),
                   "Backward WarpPerspective only supports Float32/BFloat16.");
     auto required_workspace_in_bytes =
@@ -317,7 +316,7 @@ void WarpPerspectiveBackwardMat::check_exec(const TensorLayout& src,
                                             size_t workspace_in_bytes) {
     check_layout_fwd(src, mat, mat_idx, diff);
     megdnn_assert_eq_layout(mat, grad);
-    megdnn_assert(grad.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+    megdnn_assert(grad.dtype == dtype::Float32() DNN_INC_FLOAT16(
                                         || grad.dtype == dtype::BFloat16()),
                   "Backward WarpPerspective only supports Float32/BFloat16.");
     auto required_workspace_in_bytes =

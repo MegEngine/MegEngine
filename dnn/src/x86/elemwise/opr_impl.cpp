@@ -29,9 +29,6 @@ void check_mkl_error(const char* func) {
     MEGDNN_MARK_USED_VAR(func);
     int err = vmlClearErrStatus();
     if (err != VML_STATUS_OK) {
-#if MEGDNN_ENABLE_MANGLING
-        megdnn_throw("mkl error");
-#else
         const char* name;
         switch (err) {
 #define ON(x)      \
@@ -51,10 +48,9 @@ void check_mkl_error(const char* func) {
         }
         MEGDNN_MARK_USED_VAR(name);
         megdnn_throw(
-                ssprintf("MKL func %s reported error: code=%d(%s); "
-                         "possibly due to input data corruption.",
+                ssprintf("MKL func %s reported error: code=%d(%s);possibly due "
+                         "to input data corruption.",
                          func, err, name));
-#endif
     }
 }
 #endif

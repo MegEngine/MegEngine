@@ -101,7 +101,7 @@ class MGBOprDescImpl {
             for (size_t x = 0; x < i.shape.shape[0]; ++x) {
                 output_p[x] = input_p[x] + bias;
             }
-        } else if (MEGDNN_FLOAT16_SELECT(out_dtype == MGB_DTYPE_FLOAT16,
+        } else if (DNN_FLOAT16_SELECT(out_dtype == MGB_DTYPE_FLOAT16,
                                          false)) {
 #if !MEGDNN_DISABLE_FLOAT16
             auto output_p = static_cast<dt_float16*>(output[0].data);

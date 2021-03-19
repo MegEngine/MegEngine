@@ -413,7 +413,7 @@ TensorLayout::Span TensorLayout::span() const {
 
 TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
     megdnn_throw_if(!ndim || !tshape.ndim, tensor_reshape_error,
-                    megdnn_mangle("broadcast involves empty tensor"));
+                    "broadcast involves empty tensor");
 
     if (is_scalar()) {
         TensorLayout result{dtype, format};
@@ -426,10 +426,9 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
     }
 
     megdnn_throw_if(tshape.ndim < ndim, tensor_reshape_error,
-                    megdnn_mangle(ssprintf(
-                            "dimension for broadcast less than "
-                            "dst_shape: src_shape=%s dst_shape=%s",
-                            to_string().c_str(), tshape.to_string().c_str())));
+                    ssprintf("dimension for broadcast less than "
+                             "dst_shape: src_shape=%s dst_shape=%s",
+                             to_string().c_str(), tshape.to_string().c_str()));
     TensorLayout result{dtype, format};
     for (size_t i = 0; i < tshape.ndim; ++i) {
         int target_idx = tshape.ndim - i - 1;
@@ -439,10 +438,9 @@ TensorLayout TensorLayout::broadcast(const TensorShape& tshape) const {
         if (tshape.shape[target_idx] != cur_shape) {
             megdnn_throw_if(
                     cur_shape != 1 && cur_stride != 0, tensor_reshape_error,
-                    megdnn_mangle(ssprintf(
-                            "broadcast on dim with shape not equal to 1: "
-                            "src_shape=%s dst_shape=%s",
-                            to_string().c_str(), tshape.to_string().c_str())));
+                    ssprintf("broadcast on dim with shape not equal to 1: "
+                             "src_shape=%s dst_shape=%s",
+                             to_string().c_str(), tshape.to_string().c_str()));
             result.shape[target_idx] = tshape.shape[target_idx];
             result.stride[target_idx] = 0;
         } else {
@@ -461,9 +459,9 @@ bool TensorLayout::try_reshape(TensorLayout& result,
     bool is_empty_shape = false;
     for (size_t i = 0; i < tshp.ndim; ++i) {
         if (!tshp.shape[i]) {
-            megdnn_throw_if(!format.is_default(), tensor_reshape_error,
-                            megdnn_mangle(ssprintf("bad target tshp: %s",
-                                                   tshp.to_string().c_str())));
+            megdnn_throw_if(
+                    !format.is_default(), tensor_reshape_error,
+                    ssprintf("bad target tshp: %s", tshp.to_string().c_str()));
             is_empty_shape = true;
             break;
         }
@@ -472,11 +470,10 @@ bool TensorLayout::try_reshape(TensorLayout& result,
     megdnn_throw_if(
             !tshp.ndim || total_nr_elems() != tshp.total_nr_elems(),
             tensor_reshape_error,
-            megdnn_mangle(ssprintf(
-                    "number of elements do not match "
-                    "in reshape: src=%s dest=%s",
-                    static_cast<const TensorShape&>(*this).to_string().c_str(),
-                    tshp.to_string().c_str())));
+            ssprintf("number of elements do not match "
+                     "in reshape: src=%s dest=%s",
+                     static_cast<const TensorShape&>(*this).to_string().c_str(),
+                     tshp.to_string().c_str()));
 
     auto cont = collapse_contiguous();
     result.dtype = this->dtype;
@@ -516,9 +513,8 @@ TensorLayout TensorLayout::reshape(const TensorShape& shape) const {
     TensorLayout ret;
     auto succ = try_reshape(ret, shape);
     megdnn_throw_if(!succ, tensor_reshape_error,
-                    megdnn_mangle(ssprintf("can not reshape from %s to %s",
-                                           to_string().c_str(),
-                                           shape.to_string().c_str())));
+                    ssprintf("can not reshape from %s to %s",
+                             to_string().c_str(), shape.to_string().c_str()));
     return ret;
 }
 

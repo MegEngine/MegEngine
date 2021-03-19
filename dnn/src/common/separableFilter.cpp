@@ -21,14 +21,11 @@ void SeparableFilterBase::deduce_layout_fwd(const TensorLayout& src,
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter_x) +
                ", " + megdnn_layout_msg(dst) + ", " +
-               megdnn_mangle("borderMode=") +
-               std::to_string((int)(param().borderMode)) + ", " +
-               megdnn_mangle("ksize_h=") + std::to_string(param().ksize_h) +
-               ", " + megdnn_mangle("ksize_w=") +
-               std::to_string(param().ksize_w) + ", " +
-               megdnn_mangle("anchor_h=") + std::to_string(param().anchor_h) +
-               ", " + megdnn_mangle("anchor_w=") +
-               std::to_string(param().anchor_w);
+               "borderMode=" + std::to_string((int)(param().borderMode)) +
+               ", " + "ksize_h=" + std::to_string(param().ksize_h) + ", " +
+               "ksize_w=" + std::to_string(param().ksize_w) + ", " +
+               "anchor_h=" + std::to_string(param().anchor_h) + ", " +
+               "anchor_w=" + std::to_string(param().anchor_w);
     };
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert_contiguous(src);

@@ -262,10 +262,10 @@ void PowCImpl::do_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
 #if !MEGDNN_DISABLE_FLOAT16
         case DTypeTrait<dtype::Float16>::enumv:
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-            return MEGDNN_INC_FLOAT16(
+            return DNN_INC_FLOAT16(
                     do_exec_ct<__fp16>(src, dst, exp_f, exp_i));
 #else
-            return MEGDNN_INC_FLOAT16(
+            return DNN_INC_FLOAT16(
                     do_exec_ct<dt_float16>(src, dst, exp_f, exp_i));
 #endif
 #endif

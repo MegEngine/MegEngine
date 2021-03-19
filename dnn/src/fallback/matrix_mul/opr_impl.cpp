@@ -263,9 +263,8 @@ MatrixMulImpl::KernSizeParam::deduce_algo_data_type() const {
     } else if (A_type.enumv() == DTypeEnum::Int16) {
         return MatrixMulImpl::AlgoDataType::INT16X16X32;
     } else {
-        megdnn_throw(ssprintf(
-                "megdnn matmul not support data type of %s * %s -> %s\n",
-                A_type.name(), B_type.name(), C_type.name()));
+        megdnn_throw(ssprintf("matmul not support data type of %s * %s -> %s\n",
+                              A_type.name(), B_type.name(), C_type.name()));
     }
 }
 

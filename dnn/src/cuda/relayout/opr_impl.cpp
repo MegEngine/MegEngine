@@ -194,8 +194,8 @@ void RelayoutForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         megcoreGetDeviceHandle(src_handle->megcore_computing_handle(), &dev);
         megcorePlatform_t plat;
         megcoreGetPlatform(dev, &plat);
-        megdnn_assert(plat == megcorePlatformCUDA,
-                      "only relayout between cuda devices are supported");
+        megdnn_throw_if(plat != megcorePlatformCUDA, megdnn_error,
+                        "only relayout between cuda devices are supported");
         int dst_dev_id = -1, src_dev_id = -1;
         megcoreGetDeviceID(dev, &src_dev_id);
 

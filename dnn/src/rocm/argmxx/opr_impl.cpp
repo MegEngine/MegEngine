@@ -83,8 +83,7 @@ void ArgmaxForwardImpl::exec(_megdnn_tensor_in src,
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
-    megdnn_throw(megdnn_mangle(ssprintf("Unsupported DType: %s",
-                                        src.layout.dtype.name())));
+    megdnn_throw(ssprintf("Unsupported DType: %s", src.layout.dtype.name()));
 }
 
 size_t ArgminForwardImpl::get_workspace_in_bytes(const TensorLayout &src,
@@ -119,8 +118,7 @@ void ArgminForwardImpl::exec(_megdnn_tensor_in src,
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
-    megdnn_throw(megdnn_mangle(ssprintf("Unsupported DType: %s",
-                                        src.layout.dtype.name())));
+    megdnn_throw(ssprintf("Unsupported DType: %s", src.layout.dtype.name()));
 }
 
 } // namespace rocm

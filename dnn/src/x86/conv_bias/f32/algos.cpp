@@ -187,15 +187,15 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
         }
     }
 };
-#define DISPATCH                                                \
-    if (is_supported(SIMDType::FMA)) {                          \
-        DISPATCH_SIMD(fma)                                      \
-    } else if (is_supported(SIMDType::AVX)) {                   \
-        DISPATCH_SIMD(avx)                                      \
-    } else if (is_supported(SIMDType::SSE)) {                   \
-        DISPATCH_SIMD(sse)                                      \
-    } else {                                                    \
-        megdnn_throw(megdnn_mangle("no fma/avx/sse detected")); \
+#define DISPATCH                                 \
+    if (is_supported(SIMDType::FMA)) {           \
+        DISPATCH_SIMD(fma)                       \
+    } else if (is_supported(SIMDType::AVX)) {    \
+        DISPATCH_SIMD(avx)                       \
+    } else if (is_supported(SIMDType::SSE)) {    \
+        DISPATCH_SIMD(sse)                       \
+    } else {                                     \
+        megdnn_throw("no fma/avx/sse detected"); \
     }
 
 #define DISPATCH_SIMD(simd)             \
@@ -205,31 +205,31 @@ void ConvBiasImpl::AlgoDirect::copy_padding_kern(
         DISPATCH_SIMD_MODE(simd, conv)  \
     }
 
-#define DISPATCH_SIMD_MODE(simd, mode)                              \
-    switch (FH) {                                                   \
-        case 1:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 1);                \
-            break;                                                  \
-        case 2:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 2);                \
-            break;                                                  \
-        case 3:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 3);                \
-            break;                                                  \
-        case 4:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 4);                \
-            break;                                                  \
-        case 5:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 5);                \
-            break;                                                  \
-        case 6:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 6);                \
-            break;                                                  \
-        case 7:                                                     \
-            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 7);                \
-            break;                                                  \
-        default:                                                    \
-            megdnn_throw(megdnn_mangle("unsupported filter size")); \
+#define DISPATCH_SIMD_MODE(simd, mode)               \
+    switch (FH) {                                    \
+        case 1:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 1); \
+            break;                                   \
+        case 2:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 2); \
+            break;                                   \
+        case 3:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 3); \
+            break;                                   \
+        case 4:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 4); \
+            break;                                   \
+        case 5:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 5); \
+            break;                                   \
+        case 6:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 6); \
+            break;                                   \
+        case 7:                                      \
+            DISPATCH_SIMD_MODE_FSIZE(simd, mode, 7); \
+            break;                                   \
+        default:                                     \
+            megdnn_throw("unsupported filter size"); \
     }
 
 #define DISPATCH_SIMD_MODE_FSIZE(simd, mode, fsize) \

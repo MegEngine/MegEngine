@@ -503,7 +503,7 @@ WorkspaceBundle PoolingBackwardImpl::get_workspace_bundle(
     TensorLayout fdiff = diff;
     TensorLayout fgrad = grad;
     auto get_workspace = [&sizes](TensorLayout& layout) {
-        if (MEGDNN_FLOAT16_SELECT(layout.dtype == dtype::BFloat16(), false)) {
+        if (DNN_FLOAT16_SELECT(layout.dtype == dtype::BFloat16(), false)) {
             layout.dtype = dtype::Float32();
             sizes.push_back(layout.span().dist_byte());
         }

@@ -85,7 +85,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
     MIDOUT_BEGIN(megdnn_common_elemwise, midout_iv(Mode::_m)) { \
         auto&& t = get(Mode::_m);                               \
         t.arity = _a;                                           \
-        t.name = megdnn_mangle(#_m);                            \
+        t.name = (#_m);                                         \
     }                                                           \
     MIDOUT_END();
 #define _a 1
@@ -111,7 +111,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
         t.allow_float = true;                                   \
         t.allow_bool = true;                                    \
         t.arity = _arity;                                       \
-        t.name = megdnn_mangle(#_m);                            \
+        t.name = (#_m);                                         \
     }                                                           \
     MIDOUT_END();
         FUSE(FUSE_MUL_ADD3, 3);
@@ -159,14 +159,13 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 void ElemwiseForward::deduce_shape(const TensorShapeArray& src,
                                    TensorShape& dst) {
     auto err = [&]() {
-        std::string msg(
-                megdnn_mangle("bad input shape for polyadic operator: "));
+        std::string msg("bad input shape for polyadic operator: ");
         bool first = true;
         for (auto&& i : src) {
             if (first)
                 first = false;
             else
-                msg.append(megdnn_mangle(", "));
+                msg.append(", ");
             msg.append(i.to_string());
         }
         megdnn_throw(msg);

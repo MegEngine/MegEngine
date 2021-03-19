@@ -55,7 +55,7 @@ BatchConvBiasForwardImpl::AlgoBase::ExecArgs::ExecArgs(
 std::string BatchConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
     auto&& param = opr->param();
     MEGDNN_MARK_USED_VAR(param);
-    return megdnn_mangle(ssprintf(
+    return ssprintf(
             "src=%s, filter=%s, bias=%s, z=%s, dst=%s, "
             "pad=%ux%u, stride=%ux%u, dilate=%ux%u, xcorr=%d, "
             "dtype=(%s(src),%s(flt),%s(bias),%s(z))->(%s(dst))",
@@ -65,7 +65,7 @@ std::string BatchConvBiasForwardImpl::AlgoBase::SizeArgs::to_string() const {
             param.stride_h, param.stride_w, param.dilate_h, param.dilate_w,
             static_cast<int>(param.mode), src_layout.dtype.name(),
             filter_layout.dtype.name(), bias_layout.dtype.name(),
-            z_layout.dtype.name(), dst_layout.dtype.name()));
+            z_layout.dtype.name(), dst_layout.dtype.name());
 }
 
 // vim: syntax=cpp.doxygen

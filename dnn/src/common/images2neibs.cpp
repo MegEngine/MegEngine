@@ -19,16 +19,12 @@ void Images2NeibsBase::deduce_layout_fwd(const TensorLayout &src,
 {
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " +
-            megdnn_mangle("pad_h=") + std::to_string(param().pad_h) + ", " +
-            megdnn_mangle("pad_w=") + std::to_string(param().pad_w) + ", " +
-            megdnn_mangle("stride_h=") +
-            std::to_string(param().stride_h) + ", " +
-            megdnn_mangle("stride_w=") +
-            std::to_string(param().stride_w) + ", " +
-            megdnn_mangle("window_h=") +
-            std::to_string(param().window_h) + ", " +
-            megdnn_mangle("window_w=") +
-            std::to_string(param().window_w);
+               "pad_h=" + std::to_string(param().pad_h) + ", " +
+               "pad_w=" + std::to_string(param().pad_w) + ", " +
+               "stride_h=" + std::to_string(param().stride_h) + ", " +
+               "stride_w=" + std::to_string(param().stride_w) + ", " +
+               "window_h=" + std::to_string(param().window_h) + ", " +
+               "window_w=" + std::to_string(param().window_w);
     };
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert_contiguous(src);

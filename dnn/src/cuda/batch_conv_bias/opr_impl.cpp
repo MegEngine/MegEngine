@@ -32,11 +32,11 @@ BatchConvBiasForwardImpl::get_algorithm_heuristic(
                 args, reproducible, workspace_limit_in_bytes)) {
         return &sm_algo_pack.int8_nchw4_implicit_gemm_dotprod;
     }
-    megdnn_throw(megdnn_mangle(
+    megdnn_throw(
             ssprintf("no %s batch conv bias algorithm with args(%s) and "
                      "workspace limit (%zu bytes)",
                      reproducible ? "reproducible" : "usable",
-                     args.to_string().c_str(), workspace_limit_in_bytes)));
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 std::vector<BatchConvBiasForwardImpl::Algorithm*>

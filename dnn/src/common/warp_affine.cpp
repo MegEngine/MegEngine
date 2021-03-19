@@ -34,7 +34,7 @@ void WarpAffineBase::check_layout_fwd(const TensorLayout& src,
         megdnn_assert(src.ndim == 4_z, "%s", errmsg().c_str());
         megdnn_assert(dst.ndim == 4_z, "%s", errmsg().c_str());
         megdnn_assert(src.dtype.enumv() == DTypeEnum::Float32 ||
-                              MEGDNN_FLOAT16_SELECT(
+                              DNN_FLOAT16_SELECT(
                                       src.dtype.enumv() == DTypeEnum::Float16,
                                       false) ||
                               src.dtype.enumv() == DTypeEnum::Int8 ||
@@ -42,7 +42,7 @@ void WarpAffineBase::check_layout_fwd(const TensorLayout& src,
                               (src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                                src.dtype.enumv() == DTypeEnum::Quantized8Asymm),
                       "WarpAffine NCHW input dtype should be "
-                      "Float32/Int8/Uint8/QInt8/QUint8" MEGDNN_FLOAT16_SELECT(
+                      "Float32/Int8/Uint8/QInt8/QUint8" DNN_FLOAT16_SELECT(
                               "/Float16", "") ".");
         megdnn_assert(
                 (src.dtype.category() == DTypeCategory::FLOAT &&
@@ -95,46 +95,46 @@ void WarpAffine::check_exec(const TensorLayout& src, const TensorLayout& mat,
 
 std::string WarpAffineBase::param_msg() const {
     std::string res;
-    res.append(megdnn_mangle("imode="));
+    res.append("imode=");
     switch (param().imode) {
         case InterpolationMode::NEAREST:
-            res.append(megdnn_mangle("NEAREST"));
+            res.append("NEAREST");
             break;
         case InterpolationMode::LINEAR:
-            res.append(megdnn_mangle("LINEAR"));
+            res.append("LINEAR");
             break;
         case InterpolationMode::AREA:
-            res.append(megdnn_mangle("AREA"));
+            res.append("AREA");
             break;
         case InterpolationMode::CUBIC:
-            res.append(megdnn_mangle("CUBIC"));
+            res.append("CUBIC");
             break;
         case InterpolationMode::LANCZOS4:
-            res.append(megdnn_mangle("LANCZOS4"));
+            res.append("LANCZOS4");
             break;
     }
-    res.append(megdnn_mangle("bmode="));
+    res.append("bmode=");
     switch (param().border_mode) {
         case BorderMode::WRAP:
-            res.append(megdnn_mangle("WRAP"));
+            res.append("WRAP");
             break;
         case BorderMode::CONSTANT:
-            res.append(megdnn_mangle("CONSTANT"));
+            res.append("CONSTANT");
             break;
         case BorderMode::REFLECT:
-            res.append(megdnn_mangle("REFLECT"));
+            res.append("REFLECT");
             break;
         case BorderMode::REFLECT_101:
-            res.append(megdnn_mangle("REFLECT_101"));
+            res.append("REFLECT_101");
             break;
         case BorderMode::REPLICATE:
-            res.append(megdnn_mangle("REPLICATE"));
+            res.append("REPLICATE");
             break;
         case BorderMode::TRANSPARENT:
-            res.append(megdnn_mangle("TRANSPARENT"));
+            res.append("TRANSPARENT");
             break;
         case BorderMode::ISOLATED:
-            res.append(megdnn_mangle("ISOLATED"));
+            res.append("ISOLATED");
             break;
     }
     if (param().border_mode == BorderMode::CONSTANT) {

@@ -41,7 +41,8 @@ DefaultComputingContext::DefaultComputingContext(
 {
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_assert(platform & megcorePlatformCPU);
+    megdnn_throw_if(!(platform & megcorePlatformCPU), megdnn_error,
+                    "can not be default ComputingContext");
 }
 
 DefaultComputingContext::~DefaultComputingContext() noexcept = default;

@@ -73,8 +73,7 @@ void warp_affine_cv_exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
             }
 
         } else {
-            megdnn_throw(
-                megdnn_mangle("Unsupported datatype of Warpaffine optr."));
+            megdnn_throw("Unsupported datatype of Warpaffine optr.");
         }
 
         trans_ptr += 2 * 3;

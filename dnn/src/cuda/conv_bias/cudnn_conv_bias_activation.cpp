@@ -104,7 +104,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
                 break;
             return false;
         default:
-            megdnn_throw(megdnn_mangle("unsupported NonlineMode"));
+            megdnn_throw("unsupported NonlineMode");
     }
     size_t workspace_size;
     auto status = cudnnGetConvolutionForwardWorkspaceSize(
@@ -139,7 +139,7 @@ size_t ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::get_workspace_in_bytes(
 void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         const ExecArgs& args) const {
 #if CUDNN_MAJOR < 7
-    megdnn_throw(megdnn_mangle("ConvBias require cudnn 7.0 or higher"));
+    megdnn_throw("ConvBias require cudnn 7.0 or higher");
 #else
     megdnn_assert(cudnnGetVersion() >= 7401);
     CUDNNForwardDescs D;
@@ -269,7 +269,7 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
             break;
         }
         default:
-            megdnn_throw(megdnn_mangle("unsupported NonlineMode"));
+            megdnn_throw("unsupported NonlineMode");
     }
 #endif
 }

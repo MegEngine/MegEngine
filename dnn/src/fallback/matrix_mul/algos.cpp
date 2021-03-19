@@ -165,7 +165,7 @@ MatrixMulImpl::kern_t MatrixMulImpl::AlgoGemv::get_kern(
     }
 
     DISPATCH(Float32, Float32, (gemm_gemv_like<dt_float32, dt_float32>), 0);
-    MEGDNN_INC_FLOAT16(DISPATCH(Float16, Float16,
+    DNN_INC_FLOAT16(DISPATCH(Float16, Float16,
                                 (gemm_gemv_like<dt_float16, dt_float16>), 1));
     DISPATCH(Int8, Int16, (gemm_gemv_like<dt_int8, dt_int16>), 2);
     DISPATCH(Quantized8Asymm, QuantizedS32,

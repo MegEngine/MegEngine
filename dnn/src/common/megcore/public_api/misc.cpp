@@ -13,7 +13,7 @@
 
 const char *megcoreGetErrorName(megcoreStatus_t status)
 {
-#define CASE(x) case x: return megdnn_mangle(#x)
+#define CASE(x) case x: return (#x)
     switch (status) {
         CASE(megcoreSuccess);
         CASE(megcoreErrorMemoryAllocation);
@@ -22,7 +22,7 @@ const char *megcoreGetErrorName(megcoreStatus_t status)
         CASE(megcoreErrorInternalError);
         CASE(megcoreErrorInvalidComputingHandle);
         default:
-            return megdnn_mangle("<Unknown MegCore Error>");
+            return "<Unknown MegCore Error>";
     }
 #undef CASE
 }

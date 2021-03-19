@@ -295,7 +295,7 @@ SmallVector<ConvolutionImpl::NCBKern> ConvolutionImpl::AlgoNaive::dispatch_kern(
     cb(dtype::Int8, dtype::Int32);
     cb(dtype::Quantized8Asymm, dtype::QuantizedS32);
     cb(dtype::QuantizedS8, dtype::QuantizedS32);
-    megdnn_throw(megdnn_mangle("unknown convolution data type"));
+    megdnn_throw("unknown convolution data type");
 #undef cb
 }
 
@@ -596,8 +596,8 @@ ConvolutionBackwardDataImpl::AlgoMatrixMul::dispatch_kern(
         }                                                                 \
     } while (0);
     cb(dtype::Float32, "FLOAT"_hash);
-    MEGDNN_INC_FLOAT16(cb(dtype::Float16, "FLOAT16"_hash));
-    MEGDNN_INC_FLOAT16(cb(dtype::BFloat16, "BFLOAT16"_hash));
+    DNN_INC_FLOAT16(cb(dtype::Float16, "FLOAT16"_hash));
+    DNN_INC_FLOAT16(cb(dtype::BFloat16, "BFLOAT16"_hash));
 #undef cb
 
 #define cb(dt_src, dt_dst, midout_tag)                                    \

@@ -145,8 +145,7 @@ void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(
     } else if (desc.dt_compute == CUBLAS_COMPUTE_32F) {
         batched_sgemm();
     } else {
-        megdnn_throw(
-                megdnn_mangle("compute_type must be int32/float16/float32"));
+        megdnn_throw("compute_type must be int32/float16/float32");
     }
 #else
     if (desc.dt_compute == CUDA_R_32I) {
@@ -156,8 +155,7 @@ void BatchedMatrixMulForwardImpl::AlgoCublasLt::exec(
     } else if (desc.dt_compute == CUDA_R_32F) {
         batched_sgemm();
     } else {
-        megdnn_throw(
-                megdnn_mangle("compute_type must be int32/float16/float32"));
+        megdnn_throw("compute_type must be int32/float16/float32");
     }
 #endif
 }

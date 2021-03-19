@@ -110,10 +110,10 @@ ConvolutionForwardImpl::AlgoBase::ExecArgs::ExecArgs(
           workspace{workspace} {}
 
 std::string ConvolutionForwardImpl::AlgoBase::SizeArgs::to_string() const {
-    return megdnn_mangle(ssprintf("src=%s, filter=%s, dst=%s",
-                                  layout_src->to_string().c_str(),
-                                  layout_filter->to_string().c_str(),
-                                  layout_dst->to_string().c_str()));
+    return ssprintf("src=%s, filter=%s, dst=%s",
+                    layout_src->to_string().c_str(),
+                    layout_filter->to_string().c_str(),
+                    layout_dst->to_string().c_str());
 }
 
 /* ===================== default algo ===================== */

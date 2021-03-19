@@ -2044,7 +2044,7 @@ void megdnn::arm_common::resize_cv_exec(
             }
             MIDOUT_END();
         } else {
-            megdnn_throw(megdnn_mangle("Unsupported datatype of resize optr."));
+            megdnn_throw("Unsupported datatype of resize optr.");
         }
     }
 }

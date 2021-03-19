@@ -134,7 +134,7 @@ void __assert_fail__() __attribute__((noreturn));
 #endif // MGB_ASSERT_LOC
 
 /* ================ logging ================  */
-//! caused by need remve sensitive words at opt release
+//! caused by need remve some words at opt release
 #if MGB_ENABLE_LOGGING
 #define mgb_log_debug(fmt...) \
     _mgb_do_log(::mgb::LogLevel::DEBUG, __FILE__, __func__, __LINE__, fmt)
@@ -145,16 +145,18 @@ void __assert_fail__() __attribute__((noreturn));
 #define mgb_log_error(fmt...) \
     _mgb_do_log(::mgb::LogLevel::ERROR, __FILE__, __func__, __LINE__, fmt)
 #else
+#define LOC "about location info, please build with debug"
 #define mgb_log_debug(fmt...) \
-    _mgb_do_log(::mgb::LogLevel::DEBUG, "", "", 1, fmt)
+    _mgb_do_log(::mgb::LogLevel::DEBUG, "", "", __LINE__, fmt)
 #define mgb_log(fmt...) \
-    _mgb_do_log(::mgb::LogLevel::INFO, "", "", 1, fmt)
+    _mgb_do_log(::mgb::LogLevel::INFO, "", "", __LINE__, fmt)
 #define mgb_log_warn(fmt...) \
-    _mgb_do_log(::mgb::LogLevel::WARN, "", "", 1, fmt)
+    _mgb_do_log(::mgb::LogLevel::WARN, "", "", __LINE__, fmt)
 #define mgb_log_error(fmt...) \
-    _mgb_do_log(::mgb::LogLevel::ERROR, "", "", 1, fmt)
+    _mgb_do_log(::mgb::LogLevel::ERROR, LOC, "", __LINE__, fmt)
+#undef LOC
 #endif
-enum class LogLevel { DEBUG, INFO, WARN, ERROR };
+enum class LogLevel { DEBUG, INFO, WARN, ERROR, NO_LOG };
 
 typedef void(*LogHandler)(LogLevel level,
         const char *file, const char *func, int line, const char *fmt,
@@ -167,6 +169,13 @@ typedef void(*LogHandler)(LogLevel level,
  * \return previous log level
  */
 LogLevel set_log_level(LogLevel level);
+
+/*!
+ * \brief get logging level
+ *
+ * \return current log level
+ */
+LogLevel get_log_level();
 
 /*!
  * \brief set callback for receiving log requests

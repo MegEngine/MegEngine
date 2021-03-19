@@ -49,7 +49,7 @@ void Convolution3DForwardImpl::exec(_megdnn_tensor_in src,
 #undef cb
                 break;
             case Param::DataType::FLOAT_IO16xC32:
-                MEGDNN_INC_FLOAT16(MEGDNN_DISPATCH_CPU_KERN(
+                DNN_INC_FLOAT16(MEGDNN_DISPATCH_CPU_KERN(
                         static_cast<HandleImpl*>(handle()),
                         convolution3d::forward<
                                 dt_float16 MEGDNN_COMMA dt_float16 MEGDNN_COMMA

@@ -77,9 +77,9 @@
 #include <xmmintrin.h>
 #endif
 
-#define MegCVException(expr)                \
-    do {                                    \
-        megdnn_throw(megdnn_mangle(#expr)); \
+#define MegCVException(expr) \
+    do {                     \
+        megdnn_throw(#expr); \
     } while (0)
 
 namespace megdnn {

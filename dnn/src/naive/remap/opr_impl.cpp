@@ -267,8 +267,8 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
     }
 
         support_dtype(dtype::Float32);
-        MEGDNN_INC_FLOAT16(support_dtype(dtype::Float16));
-        MEGDNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
+        DNN_INC_FLOAT16(support_dtype(dtype::Float16));
+        DNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
         support_dtype(dtype::Int8);
         support_dtype(dtype::Uint8);
 #undef cb
@@ -321,7 +321,7 @@ void RemapBackwardDataImpl::exec(_megdnn_tensor_in map_xy,
     }
 
         support_dtype(dtype::Float32);
-        MEGDNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
+        DNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
 #undef cb
 #undef support_dtype
 
@@ -374,7 +374,7 @@ void RemapBackwardMatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
     }
 
         support_dtype(dtype::Float32);
-        MEGDNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
+        DNN_INC_FLOAT16(support_dtype(dtype::BFloat16));
 #undef cb
 #undef support_dtype
 

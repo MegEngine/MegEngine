@@ -45,7 +45,7 @@ public:
             switch (tensor.layout.dtype.enumv()) {
                 CASE(Float32, float);
                 CASE(Int32, int);
-                MEGDNN_INC_FLOAT16(CASE(Float16, half_float::half));
+                DNN_INC_FLOAT16(CASE(Float16, half_float::half));
                 default:
                     megdnn_throw("bad dtype");
             }
@@ -193,7 +193,7 @@ namespace test {
 
 INST(dtype::Float32);
 INST(dtype::Int32);
-MEGDNN_INC_FLOAT16(INST(dtype::Float16));
+DNN_INC_FLOAT16(INST(dtype::Float16));
 #undef INST
 }
 }  // namespace megdnn

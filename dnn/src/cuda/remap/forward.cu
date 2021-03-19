@@ -209,8 +209,8 @@ void forward_proxy(const ctype* src, const float* map_xy, ctype* dst, int N,
     INST(ctype, NHWC, BORDER_WRAP)
 
 FOR_FORMAT_BMODE(float)
-MEGDNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_float16))
-MEGDNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_bfloat16))
+DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_float16))
+DNN_INC_FLOAT16(FOR_FORMAT_BMODE(dt_bfloat16))
 FOR_FORMAT_BMODE(int8_t)
 FOR_FORMAT_BMODE(uint8_t)
 

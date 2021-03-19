@@ -28,8 +28,20 @@
 using namespace mgb;
 
 namespace {
-    LogLevel min_log_level;
+LogLevel config_default_log_level() {
+    auto default_level = LogLevel::ERROR;
+    //! env to config LogLevel
+    //!  DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3, NO_LOG = 4
+    //! for example , export MGE_OVERRIDE_LOG_LEVEL=0, means set LogLevel to
+    //! DEBUG
+    if (auto env = MGB_GETENV("MGE_OVERRIDE_LOG_LEVEL"))
+        default_level = static_cast<LogLevel>(std::stoi(env));
+
+    return default_level;
 }
+
+LogLevel min_log_level = config_default_log_level();
+}  // namespace
 
 #if MGB_ENABLE_LOGGING
 
@@ -226,9 +238,16 @@ namespace {
 #endif // MGB_ENABLE_LOGGING
 
 LogLevel mgb::set_log_level(LogLevel level) {
+    if (auto env = MGB_GETENV("MGE_OVERRIDE_LOG_LEVEL"))
+        level = static_cast<LogLevel>(std::stoi(env));
+
     auto ret = min_log_level;
     min_log_level = level;
     return ret;
+}
+
+LogLevel mgb::get_log_level() {
+    return min_log_level;
 }
 
 LogHandler mgb::set_log_handler(LogHandler handler) {

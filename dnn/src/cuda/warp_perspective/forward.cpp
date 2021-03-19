@@ -75,8 +75,7 @@ void warp_perspective_cv_exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
             }
 
         } else {
-            megdnn_throw(megdnn_mangle(
-                    "Unsupported datatype of WarpPerspective optr."));
+            megdnn_throw("Unsupported datatype of WarpPerspective optr.");
         }
 
         trans_ptr += 3 * 3;
@@ -215,7 +214,7 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                             C, IH, IW, OH, OW, bval, bmode,
                             async_error_info(handle()), m_error_tracker,
                             stream);
-                } else if (MEGDNN_FLOAT16_SELECT(
+                } else if (DNN_FLOAT16_SELECT(
                                    src.layout.dtype == dtype::Float16(),
                                    false)) {
 #ifndef MEGDNN_DISABLE_FLOAT16

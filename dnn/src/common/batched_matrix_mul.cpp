@@ -39,15 +39,15 @@ void BatchedMatrixMulForward::deduce_layout(const TensorLayout& A,
                                             TensorLayout& C) {
     auto errmsg = [&]() {
         std::string msg;
-        msg.append(megdnn_mangle("A="));
+        msg.append("A=");
         msg.append(A.to_string());
-        msg.append(megdnn_mangle(", B="));
+        msg.append(", B=");
         msg.append(B.to_string());
-        msg.append(megdnn_mangle(", C="));
+        msg.append(", C=");
         msg.append(C.to_string());
-        msg.append(megdnn_mangle(", transposeA="));
+        msg.append(", transposeA=");
         msg.append(std::to_string(m_param.transposeA));
-        msg.append(megdnn_mangle(", transposeB="));
+        msg.append(", transposeB=");
         msg.append(std::to_string(m_param.transposeB));
         return msg;
     };

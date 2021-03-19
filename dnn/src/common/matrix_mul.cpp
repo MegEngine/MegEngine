@@ -100,15 +100,15 @@ void MatrixMulForward::check_exec(const TensorLayout& A, const TensorLayout& B,
                                   size_t workspace_in_bytes) {
     auto errmsg = [&]() {
         std::string msg;
-        msg.append(megdnn_mangle("A="));
+        msg.append("A=");
         msg.append(A.to_string());
-        msg.append(megdnn_mangle(", B="));
+        msg.append(", B=");
         msg.append(B.to_string());
-        msg.append(megdnn_mangle(", C="));
+        msg.append(", C=");
         msg.append(C.to_string());
-        msg.append(megdnn_mangle(", transposeA="));
+        msg.append(", transposeA=");
         msg.append(std::to_string(param().transposeA));
-        msg.append(megdnn_mangle(", transposeB="));
+        msg.append(", transposeB=");
         msg.append(std::to_string(param().transposeB));
         return msg;
     };
@@ -175,7 +175,7 @@ void MatrixMulForward::check_exec(const TensorLayout& A, const TensorLayout& B,
         megdnn_assert(C.dtype.enumv() == DTypeEnum::QuantizedS16);
     }
     megdnn_assert(param().compute_mode !=
-                          Param::ComputeMode::FLOAT32 MEGDNN_INC_FLOAT16(
+                          Param::ComputeMode::FLOAT32 DNN_INC_FLOAT16(
                                   || A.dtype == dtype::Float16() ||
                                   A.dtype == dtype::BFloat16()),
                   "ComputeMode::FLOAT32 is only available for Float16/BFloat16 "
@@ -195,7 +195,7 @@ size_t MatrixMulForward::pack_size(const Param::Format format) {
         case Param::Format::MK8:
             return 8;
         default:
-            megdnn_throw(megdnn_mangle("Unknown matmul format."));
+            megdnn_throw("Unknown matmul format.");
     }
 }
 

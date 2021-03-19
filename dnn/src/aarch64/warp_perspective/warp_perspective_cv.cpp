@@ -270,8 +270,7 @@ void megdnn::aarch64::warp_perspective_cv_exec(
             DISPATCH_IMODE(imode, bmode, ch, cb)
 #undef cb
         } else {
-            megdnn_throw(
-                    megdnn_mangle("Unsupported datatype of WarpPerspective optr."));
+            megdnn_throw("Unsupported datatype of WarpPerspective optr.");
         }
 }
 // vim: syntax=cpp.doxygen

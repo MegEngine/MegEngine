@@ -65,14 +65,14 @@ ConvolutionForwardImpl::AlgoBase::ExecArgs::ExecArgs(
 std::string ConvolutionForwardImpl::AlgoBase::SizeArgs::to_string() const {
     auto&& fm = filter_meta;
     MEGDNN_MARK_USED_VAR(fm);
-    return megdnn_mangle(ssprintf(
+    return ssprintf(
             "src=%s, filter=%u{%u,%u,%u,%u}, dst=%s, "
             "pad=%ux%u, stride=%ux%u, dilate=%ux%u, xcorr=%d, dtype=%s,%s",
             src_layout->to_string().c_str(), fm.group, fm.ocpg, fm.icpg,
             fm.spatial[0], fm.spatial[1], dst_layout->to_string().c_str(),
             fm.padding[0], fm.padding[1], fm.stride[0], fm.stride[1],
             fm.dilation[0], fm.dilation[1], !fm.should_flip,
-            src_layout->dtype.name(), dst_layout->dtype.name()));
+            src_layout->dtype.name(), dst_layout->dtype.name());
 }
 
 convolution::MIOpenCacheKey

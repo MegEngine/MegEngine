@@ -126,8 +126,7 @@ void SeparableFilterImpl::exec(_megdnn_tensor_in src,
         MEGDNN_DISPATCH_CPU_KERN_OPR(
                 separable_filter_exec_8u(src, filter_x, filter_y, dst));
     } else {
-        megdnn_throw(
-                megdnn_mangle("Unsupported datatype of SeparableFilter opr."));
+        megdnn_throw("Unsupported datatype of SeparableFilter opr.");
     };
 }
 

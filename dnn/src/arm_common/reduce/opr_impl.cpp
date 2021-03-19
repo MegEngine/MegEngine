@@ -916,7 +916,7 @@ void ReduceImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         }
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         if (src.layout.dtype.enumv() == DTypeEnum::Float16) {
-            MEGDNN_INC_FLOAT16(DISPATCH_MODE_FLOAT(__fp16, __fp16, __fp16));
+            DNN_INC_FLOAT16(DISPATCH_MODE_FLOAT(__fp16, __fp16, __fp16));
         }
 #endif
     }

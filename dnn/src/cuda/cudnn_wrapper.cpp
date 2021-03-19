@@ -54,9 +54,9 @@ cudnnDataType_t to_cudnn_dtype(DType type,
 #endif
         default:
 #if CUDNN_MAJOR >= 6
-    megdnn_throw(megdnn_mangle("dtype must be float16/float32/int8/int32"));
+    megdnn_throw("dtype must be float16/float32/int8/int32");
 #else
-    megdnn_throw(megdnn_mangle("dtype must be float16/float32"));
+    megdnn_throw("dtype must be float16/float32");
 #endif
     }
 
@@ -259,7 +259,7 @@ void ConvDesc::set(DType data_type, const param::Convolution& param,
             mode = CUDNN_CONVOLUTION;
             break;
         default:
-            megdnn_throw(megdnn_mangle("conv mode must be conv or xcorr."));
+            megdnn_throw("conv mode must be conv or xcorr.");
     }
     cudnnDataType_t compute_type;
     MEGDNN_MARK_USED_VAR(compute_type);
@@ -275,7 +275,7 @@ void ConvDesc::set(DType data_type, const param::Convolution& param,
         compute_type = CUDNN_DATA_INT32;
 #endif
     } else {
-        megdnn_throw(megdnn_mangle("unspport data type for conv bias"));
+        megdnn_throw("unspport data type for conv bias");
     }
 #if CUDNN_MAJOR >= 7
     cudnn_check(cudnnSetConvolutionGroupCount(desc, nr_group));
@@ -445,7 +445,7 @@ void Conv3DDesc::set(const param::Convolution3D& param, const size_t nr_group) {
             mode = CUDNN_CONVOLUTION;
             break;
         default:
-            megdnn_throw(megdnn_mangle("conv mode must be conv or xcorr."));
+            megdnn_throw("conv mode must be conv or xcorr.");
     }
 #if CUDNN_MAJOR >= 7
     cudnn_check(cudnnSetConvolutionGroupCount(desc, nr_group));

@@ -22,20 +22,20 @@ std::string get_errmsg(const TensorLayout& src, const TensorLayout& filter,
     MEGDNN_MARK_USED_VAR(filter);
     MEGDNN_MARK_USED_VAR(dst);
     return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter) + ", " +
-           megdnn_layout_msg(dst) + ", " + megdnn_mangle("is_ncdhw=") +
+           megdnn_layout_msg(dst) + ", " + "is_ncdhw=" +
            std::to_string(param.format == param::Convolution3D::Format::NCDHW) +
-           ", " + +megdnn_mangle("is_xcorr=") +
+           ", " + "is_xcorr=" +
            std::to_string(
                    (param.mode == Convolution3D::Mode::CROSS_CORRELATION)) +
-           ", " + megdnn_mangle("pad_d=") + std::to_string(param.pad_d) + ", " +
-           megdnn_mangle("pad_h=") + std::to_string(param.pad_h) + ", " +
-           megdnn_mangle("pad_w=") + std::to_string(param.pad_w) + ", " +
-           megdnn_mangle("stride_d=") + std::to_string(param.stride_d) + ", " +
-           megdnn_mangle("stride_h=") + std::to_string(param.stride_h) + ", " +
-           megdnn_mangle("stride_w=") + std::to_string(param.stride_w) + ", " +
-           megdnn_mangle("dilate_d=") + std::to_string(param.dilate_d) + ", " +
-           megdnn_mangle("dilate_h=") + std::to_string(param.dilate_h) + ", " +
-           megdnn_mangle("dilate_w=") + std::to_string(param.dilate_w);
+           ", " + "pad_d=" + std::to_string(param.pad_d) + ", " +
+           "pad_h=" + std::to_string(param.pad_h) + ", " +
+           "pad_w=" + std::to_string(param.pad_w) + ", " +
+           "stride_d=" + std::to_string(param.stride_d) + ", " +
+           "stride_h=" + std::to_string(param.stride_h) + ", " +
+           "stride_w=" + std::to_string(param.stride_w) + ", " +
+           "dilate_d=" + std::to_string(param.dilate_d) + ", " +
+           "dilate_h=" + std::to_string(param.dilate_h) + ", " +
+           "dilate_w=" + std::to_string(param.dilate_w);
 }
 }  // namespace
 
@@ -127,15 +127,15 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::deduce_layout_fwd(
     megdnn_assert(src.ndim >= 5_z, "%s", errmsg().c_str());
     megdnn_assert(src.dtype == filter.dtype, "%s", errmsg().c_str());
     if (param().data_type == Param::DataType::FLOAT) {
-        megdnn_assert(src.dtype == dtype::Float32() MEGDNN_INC_FLOAT16(
+        megdnn_assert(src.dtype == dtype::Float32() DNN_INC_FLOAT16(
                                            || src.dtype == dtype::Float16()),
                       "invalid src dtype for conv: %s", src.dtype.name());
         dst.dtype = src.dtype;
     } else {
         megdnn_assert(param().data_type == Param::DataType::FLOAT_IO16xC32);
-        MEGDNN_INC_FLOAT16(megdnn_assert(src.dtype == dtype::Float16(),
+        DNN_INC_FLOAT16(megdnn_assert(src.dtype == dtype::Float16(),
                       "invalid src dtype for conv: %s", src.dtype.name()));
-        MEGDNN_INC_FLOAT16(dst.dtype = dtype::Float16());
+        DNN_INC_FLOAT16(dst.dtype = dtype::Float16());
     }
     auto img_dim = src.ndim - 2;
     megdnn_assert(img_dim == 3, "this is the convolution for 3D image");

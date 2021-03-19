@@ -432,7 +432,7 @@ ConvolutionImpl::NCBKernSizeParam::deduce_algo_data_type() const {
     } else if (src_type.enumv() == DTypeEnum::Quantized8Asymm) {
         return ConvolutionImpl::AlgoDataType::QUINT8X8X32;
     } else {
-        megdnn_throw(ssprintf("megdnn not support data type of %s * %s -> %s\n",
+        megdnn_throw(ssprintf("not support data type of %s * %s -> %s\n",
                               src_type.name(), filter_type.name(),
                               dst_type.name()));
     }
@@ -697,8 +697,7 @@ ConvolutionBackwardDataImpl::ncb_1g_dispatch_kern(
         return static_cast<AlgoBase*>(algo)->dispatch_kern(this, param);
     }
 
-    megdnn_throw(
-            megdnn_mangle("no suitable ConvolutionBackwardData algorithm"));
+    megdnn_throw("no suitable ConvolutionBackwardData algorithm");
 }
 
 bool ConvolutionBackwardDataImpl::is_matrix_mul_preferred(

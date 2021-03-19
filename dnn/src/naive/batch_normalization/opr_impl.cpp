@@ -224,7 +224,7 @@ void BNForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
                variance.layout, batch_mean.layout, batch_inv_variance.layout,
                dst.layout, workspace.size);
 
-    MEGDNN_INC_FLOAT16(if (src.layout.dtype == dtype::Float16() &&
+    DNN_INC_FLOAT16(if (src.layout.dtype == dtype::Float16() &&
                            bn_scale.layout.dtype == dtype::Float32()) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(({
             using T0 = typename DTypeTrait<dtype::Float16>::ctype;
@@ -285,7 +285,7 @@ void BNBackwardImpl::exec(_megdnn_tensor_in x_in, _megdnn_tensor_in dy_in,
                                          bn_scale.layout.total_nr_elems(),
                                          workspace.raw_ptr);
 
-    MEGDNN_INC_FLOAT16(if (x_in.layout.dtype == dtype::Float16() &&
+    DNN_INC_FLOAT16(if (x_in.layout.dtype == dtype::Float16() &&
                            bn_scale.layout.dtype == dtype::Float32()) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(({
             using T0 = typename DTypeTrait<dtype::Float16>::ctype;

@@ -19,18 +19,15 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
                                     TensorLayout& dst) {
     auto errmsg =
             megdnn_layout_msg(src) + ", " + megdnn_layout_msg(dst) + ", " +
-            megdnn_mangle("pad_h=") + std::to_string(param().pad_h) + ", " +
-            megdnn_mangle("pad_w=") + std::to_string(param().pad_w) + ", " +
-            megdnn_mangle("stride_h=") + std::to_string(param().stride_h) +
-            ", " + megdnn_mangle("stride_w=") +
-            std::to_string(param().stride_w) + ", " +
-            megdnn_mangle("window_h=") + std::to_string(param().window_h) +
-            ", " + megdnn_mangle("window_w=") +
-            std::to_string(param().window_w) + ", " + megdnn_mangle("is_max=") +
-            std::to_string(param().mode == Mode::MAX) + ", " +
-            megdnn_mangle("is_nhwc=") +
-            std::to_string(param().format == Param::Format::NHWC) + ", " +
-            megdnn_mangle("is_nhwcd4=") +
+            "pad_h=" + std::to_string(param().pad_h) + ", " +
+            "pad_w=" + std::to_string(param().pad_w) + ", " +
+            "stride_h=" + std::to_string(param().stride_h) + ", " +
+            "stride_w=" + std::to_string(param().stride_w) + ", " +
+            "window_h=" + std::to_string(param().window_h) + ", " +
+            "window_w=" + std::to_string(param().window_w) + ", " +
+            "is_max=" + std::to_string(param().mode == Mode::MAX) + ", " +
+            "is_nhwc=" + std::to_string(param().format == Param::Format::NHWC) +
+            ", " + "is_nhwcd4=" +
             std::to_string(param().format == Param::Format::NHWCD4);
     auto errmsg_c = errmsg.c_str();
 

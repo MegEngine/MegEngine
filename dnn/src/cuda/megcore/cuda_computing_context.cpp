@@ -27,7 +27,8 @@ CUDAComputingContext::CUDAComputingContext(megcoreDeviceHandle_t dev_handle,
 {
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_assert(platform == megcorePlatformCUDA);
+    megdnn_throw_if(platform != megcorePlatformCUDA, megdnn_error,
+                    "platform should be CUDA Platform");
     if (own_stream_) {
         cuda_check(cudaStreamCreateWithFlags(&context_.stream,
                     cudaStreamNonBlocking));

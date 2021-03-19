@@ -13,43 +13,55 @@
 #include "megdnn/arch.h"
 
 //! a comma to be used in macro for template params
-#define MEGDNN_COMMA    ,
+#define MEGDNN_COMMA ,
 #define MEGDNN_MARK_USED_VAR(v) static_cast<void>(v)
 
-#if MEGDNN_ENABLE_MANGLING
-#define megdnn_mangle(x) ("")
+#if MEGDNN_ENABLE_LOGGING
+#define megdnn_message_strip(x) (x)
 #else
-#define megdnn_mangle(x) (x)
-#endif // MEGDNN_ENABLE_MANGLING
+#define megdnn_message_strip(x) ("")
+#endif  // MEGDNN_ENABLE_LOGGING
 
-#define megdnn_throw(msg) ::megdnn::ErrorHandler::on_megdnn_error( \
-        megdnn_mangle(msg))
-#define megdnn_throw_if(cond, err_type, msg) do { \
-    if (megdnn_unlikely(cond)) { \
-        ::megdnn::ErrorHandler::on_##err_type(megdnn_mangle(msg)); \
-    } \
-} while(0)
+#define megdnn_throw(msg) \
+    ::megdnn::ErrorHandler::on_megdnn_error(megdnn_message_strip(msg))
+#define megdnn_throw_if(cond, err_type, msg)                                  \
+    do {                                                                      \
+        if (megdnn_unlikely(cond)) {                                          \
+            ::megdnn::ErrorHandler::on_##err_type(megdnn_message_strip(msg)); \
+        }                                                                     \
+    } while (0)
 
 //! megdnn_assert
+#if MEGDNN_ENABLE_LOGGING
 #if MEGDNN_ENABLE_MANGLING
-#define megdnn_assert(expr, ...) \
-    do { \
-        if (megdnn_unlikely(!(expr))) { \
-            ::megdnn::__assert_fail__(NULL, 0, NULL, NULL, NULL); \
-        } \
+#define megdnn_assert(expr, ...)                                              \
+    do {                                                                      \
+        if (megdnn_unlikely(!(expr))) {                                       \
+            ::megdnn::__assert_fail__(                                        \
+                    "about location info, please build with debug", __LINE__, \
+                    NULL, #expr, ##__VA_ARGS__);                              \
+        }                                                                     \
     } while (0)
 #else
-#define megdnn_assert(expr, ...) \
-    do { \
-        if (megdnn_unlikely(!(expr))) { \
-            ::megdnn::__assert_fail__(__FILE__, __LINE__, \
-                    __PRETTY_FUNCTION__, # expr, ## __VA_ARGS__); \
-        } \
+#define megdnn_assert(expr, ...)                                               \
+    do {                                                                       \
+        if (megdnn_unlikely(!(expr))) {                                        \
+            ::megdnn::__assert_fail__(__FILE__, __LINE__, __PRETTY_FUNCTION__, \
+                                      #expr, ##__VA_ARGS__);                   \
+        }                                                                      \
     } while (0)
-#endif // MEGDNN_ENABLE_MANGLING
+#endif  // MEGDNN_ENABLE_MANGLING
+#else
+#define megdnn_assert(expr, ...)                                  \
+    do {                                                          \
+        if (megdnn_unlikely(!(expr))) {                           \
+            ::megdnn::__assert_fail__(NULL, 0, NULL, NULL, NULL); \
+        }                                                         \
+    } while (0)
+#endif  // MEGDNN_ENABLE_LOGGING
 
-#define megdnn_assert_internal(expr) \
-    do { \
+#define megdnn_assert_internal(expr)                        \
+    do {                                                    \
         megdnn_assert(expr, "Impossible: internal error."); \
     } while (0)
 

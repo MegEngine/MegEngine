@@ -201,7 +201,7 @@ bool x86::is_supported(SIMDType type) {
         default:
             break;
     }
-    megdnn_throw(megdnn_mangle("unknown cpu feature"));
+    megdnn_throw("unknown cpu feature");
 }
 
 void x86::disable_simd_type(SIMDType type) {

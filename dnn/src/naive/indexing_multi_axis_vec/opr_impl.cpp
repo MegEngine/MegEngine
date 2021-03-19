@@ -90,7 +90,7 @@ void dispatch_exec(HandleImpl *handle,
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         cb(::megdnn::dtype::Bool)
         default:
-            megdnn_throw(megdnn_mangle("bad dtype"));
+            megdnn_throw("bad dtype");
     }
 #undef cb
 }

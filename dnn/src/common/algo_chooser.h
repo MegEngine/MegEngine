@@ -120,16 +120,15 @@ typename Opr::Algorithm* get_reproducible_algo(
 
     MEGDNN_MARK_USED_VAR(name);
     if (available_but_limited_by_workspace) {
-        megdnn_throw(megdnn_mangle(ssprintf(
+        megdnn_throw(ssprintf(
                 "no reproducible %s algorithm: %s workspace limit %zu is "
                 "less than mini workspace limit %zu",
                 name, args.to_string().c_str(), workspace_limit_in_bytes,
-                min_workspace_limit_in_bytes)));
+                min_workspace_limit_in_bytes));
     } else if (available_but_not_reproducible) {
-        megdnn_throw(
-                megdnn_mangle(ssprintf("no reproducible %s algorithm", name)));
+        megdnn_throw(ssprintf("no reproducible %s algorithm", name));
     } else {
-        megdnn_throw(megdnn_mangle(ssprintf("no usable %s algorithm", name)));
+        megdnn_throw(ssprintf("no usable %s algorithm", name));
     }
 }
 
@@ -154,13 +153,13 @@ typename Opr::Algorithm* get_usable_algo(
 
     MEGDNN_MARK_USED_VAR(name);
     if (available_but_limited_by_workspace) {
-        megdnn_throw(megdnn_mangle(ssprintf(
+        megdnn_throw(ssprintf(
                 "no usable %s algorithm: %s workspace limit %zu is "
                 "less than mini workspace limit %zu",
                 name, args.to_string().c_str(), workspace_limit_in_bytes,
-                min_workspace_limit_in_bytes)));
+                min_workspace_limit_in_bytes));
     } else {
-        megdnn_throw(megdnn_mangle(ssprintf("no usable %s algorithm", name)));
+        megdnn_throw(ssprintf("no usable %s algorithm", name));
     }
 }
 

@@ -877,8 +877,8 @@ void ConvBiasForward::check_winograd_param_valid(
                    "winograd param, got %u",
                    param.channel_block_size);
     } else {
-        mgb_assert((MEGDNN_FLOAT16_SELECT(dtype.enumv() == DTypeEnum::Float16,
-                                          false) ||
+        mgb_assert((DNN_FLOAT16_SELECT(dtype.enumv() == DTypeEnum::Float16,
+                                       false) ||
                     dtype.enumv() == DTypeEnum::QuantizedS8 ||
                     dtype.enumv() == DTypeEnum::Quantized8Asymm) &&
                            (param.channel_block_size == 1 ||

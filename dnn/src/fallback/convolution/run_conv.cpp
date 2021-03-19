@@ -134,8 +134,7 @@ void run_xcorr_single_channel_templated(
     DISPATCH(6)
     DISPATCH(7)
 #undef DISPATCH
-    megdnn_throw(megdnn_mangle(
-                "internal error in conv template dispatching: impossible"));
+    megdnn_throw("internal error in conv template dispatching: impossible");
 }
 
 void run_xcorr_single_channel_nontemplated(
@@ -339,8 +338,7 @@ void conv_backdata_single_channel_templated(
     DISPATCH(7)
 #undef DISPATCH
     megdnn_throw(
-            megdnn_mangle("internal error in conv_backdata template "
-                          "dispatching: impossible"));
+            "internal error in conv_backdata template dispatching: impossible");
 }
 
 void conv_backdata_single_channel_nontemplated(

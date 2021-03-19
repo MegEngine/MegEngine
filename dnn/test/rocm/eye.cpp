@@ -23,7 +23,7 @@ TEST_F(ROCM, EYE)
 {
     Checker<Eye> checker(handle_rocm());
     for (DType dtype: std::vector<DType>{
-            MEGDNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA) dtype::Int32(), dtype::Float32()})
+            DNN_INC_FLOAT16(dtype::Float16() MEGDNN_COMMA) dtype::Int32(), dtype::Float32()})
     for (int k = -20; k < 20; ++k) {
         checker.set_param({k, dtype.enumv()});
         checker.set_dtype(0, dtype);
