@@ -56,9 +56,9 @@
 ```
 
 # How to build
-Note: Guarantee the git repo is mounted in docker container, do not use `git submodule update --init` in to init megbrain repo
+Note: Guarantee the git repo is mounted in docker container, do not use `git submodule update --init` in to init Project repo
 ## Build for linux
-* MegBrain delivers `wheel` package with `manylinux2014` tag defined in [PEP-571](https://www.python.org/dev/peps/pep-0571/).
+* This Project delivers `wheel` package with `manylinux2014` tag defined in [PEP-571](https://www.python.org/dev/peps/pep-0571/).
 commands:
 ```bash
 export CUDA_ROOT_DIR=/path/to/cuda
