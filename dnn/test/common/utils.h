@@ -228,6 +228,14 @@ static inline int diff(dt_qint8 x, dt_qint8 y) {
     return x.as_int8() - y.as_int8();
 }
 
+static inline int diff(dt_qint4 x, dt_qint4 y) {
+    return x.as_int8() - y.as_int8();
+}
+
+static inline int diff(dt_quint4 x, dt_quint4 y) {
+    return x.as_uint8() - y.as_uint8();
+}
+
 inline TensorShape cvt_src_or_dst_nchw2nhwc(const TensorShape& shape) {
     megdnn_assert(shape.ndim == 4);
     auto N = shape[0], C = shape[1], H = shape[2], W = shape[3];
@@ -356,6 +364,15 @@ static inline int operator+(dt_qint16 lhs, int rhs) {
     return lhs.as_int16();
 }
 
+static inline int operator+(dt_quint4 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return lhs.as_uint8();
+}
+
+static inline int operator+(dt_qint4 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return lhs.as_int8();
+}
 }  // namespace test
 
 static inline bool operator==(const TensorLayout& a, const TensorLayout& b) {

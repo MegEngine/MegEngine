@@ -380,7 +380,7 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             break;
     }
 
-    if (!dst.is_default() &&
+    if (dst.type() == TensorFormat::Type::IMAGE2D_PACK4 &&
         (
                 handle()->type() != Handle::HandleType::NAIVE)) {
 #if MEGDNN_ENABLE_MANGLING
