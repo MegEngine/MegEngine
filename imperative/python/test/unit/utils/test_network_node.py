@@ -466,6 +466,19 @@ def test_topk():
     check_pygraph_dump(fwd, [x], [top, indices])
 
 
+def test_nvof():
+    if not is_cuda_available():
+        return
+    src_shape = (4, 5, 224, 224, 4)
+    src = np.random.randint(0, 255, src_shape).astype("uint8")
+    src = Tensor(src)
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(src):
+        return F.nn.nvof(src, precision=1)
+
+    result = fwd(src)
+    check_pygraph_dump(fwd, [src], [result])
 
 
 def test_random():
