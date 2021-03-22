@@ -885,5 +885,44 @@ TEST(TestOprBlas, SingularValueDecompositionZeroGrad) {
     run_svd_empty_grad_test<1, 1, 1>();
 }
 
+#if MGB_ENABLE_FASTRUN
+TEST(TestOprBlas, MatrixMulExePolicy) {
+    using Param = opr::MatrixMul::Param;
+    Param param;
+    using Policy = opr::MatrixMul::ExecutionPolicy;
+    using S = Policy::Strategy;
+    Policy policy;
+    policy.strategy = S::PROFILE;
+
+    auto cn = CompNode::load("cpux");
+
+    int nr_get = 0;
+    auto on_get = [&nr_get](const std::string&, const void*, size_t,
+                            const void*, size_t) { ++nr_get; };
+    PersistentCacheHook cache_hook{on_get};
+
+    auto graph = ComputingGraph::make();
+    HostTensorGenerator<> gen;
+
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp), cn).rename(name);
+    };
+
+    auto a = mkvar("a", {20, 50});
+    auto b = mkvar("b", {50, 40});
+    auto matmul = opr::MatrixMul::make(a, b, param, policy, {});
+
+    HostTensorND host_y;
+    graph->options().no_profiling_on_shape_change = true;
+    auto func = graph->compile({make_callback_copy(matmul, host_y)});
+    func->execute();
+    ASSERT_EQ(nr_get, 0);
+    graph->options().no_profiling_on_shape_change = false;
+    func = graph->compile({make_callback_copy(matmul, host_y)});
+    func->execute();
+    ASSERT_GT(nr_get, 0);
+}
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
 //

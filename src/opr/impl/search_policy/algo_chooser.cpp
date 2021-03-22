@@ -384,8 +384,15 @@ AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx,
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("AlgoChooser::choose_by_profile")))
     if (ctx.owner_graph()->options().no_profiling_on_shape_change) {
         auto policy = ctx.megdnn_opr()->execution_policy();
-        if (policy.algo.valid())
+        if (policy.algo.valid()){
             return policy;
+        }
+        if (!algo_usable_on_shape_change<Opr>()) {
+            mgb_log_warn(
+                    "choose algo by heuristic, which may cause performance "
+                    "regression.");
+            return ctx.choose_by_heuristic(selected_strategy);
+        }
     }
 
     if (enable_update) {
