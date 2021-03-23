@@ -13,6 +13,8 @@ else
     exit 1
 fi
 
+export MEGENGINE_LOGGING_LEVEL="ERROR"
+
 pushd $(dirname "${BASH_SOURCE[0]}")/.. >/dev/null
     PYTHONPATH="." PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest $test_dirs -m 'not isolated_distributed'
     if [[ "$TEST_PLAT" == cuda ]]; then

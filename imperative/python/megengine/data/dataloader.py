@@ -230,7 +230,7 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
         ]
 
         # use shared-memory queue implemented by pyarrow plasma store.
-        from ._queue import PlasmaShmQueue
+        from .tools._queue import PlasmaShmQueue
 
         self.batch_queue = PlasmaShmQueue(maxsize=2)
 
@@ -458,7 +458,7 @@ class _ParallelStreamDataLoaderIter(_BaseStreamDataLoaderIter):
         ]
 
         # shared-memory queue implemented by pyarrow plasma store
-        from ._queue import PlasmaShmQueue
+        from .tools._queue import PlasmaShmQueue
 
         self.batch_queue = PlasmaShmQueue(maxsize=2)
 
