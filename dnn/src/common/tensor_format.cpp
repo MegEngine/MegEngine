@@ -488,10 +488,6 @@ void LowbitsAlignedTensorFormatBase::assert_valid(
                 "bad stride:%s, %zu", layout.to_string().c_str(),
                 layout.stride[i]);
     }
-    /// FIXME
-    if (layout.ndim == 0) {
-        printf("%s\n", layout.to_string().c_str());
-    }
     megdnn_assert(layout.ndim == 0 || has_dim_unity_stride,
                   "innermost dim not contiguous");
 }
@@ -553,7 +549,7 @@ bool LowbitsAlignedTensorFormatBase::is_contiguous_spec(
         if (layout.shape[i] != 1 && layout.stride[i] != expected)
             return false;
         auto multiplier = layout.shape[i];
-        if (i == layout.ndim - 1)
+        if (i == static_cast<int>(layout.ndim) - 1)
             multiplier = round_up(multiplier, m_align_size_in_elements);
         expected *= multiplier;
     }

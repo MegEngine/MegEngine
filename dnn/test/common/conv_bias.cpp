@@ -752,6 +752,15 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
         checker.set_epsilon(1 + 1e-3)
                 .set_max_avg_error(1e-1)
                 .set_max_avg_biased_error(1e-3);
+    } else if (src_dtype.enumv() == DTypeEnum::QuantizedS4) {
+        rng = std::make_unique<UniformIntRNG>(-3, 3);
+        const_rng = std::make_unique<UniformIntRNG>(1, 1);
+        zero_rng = std::make_unique<UniformIntRNG>(0, 0);
+        megdnn_assert(bias_dtype.enumv() == DTypeEnum::QuantizedS32);
+        bias_rng = std::make_unique<UniformIntRNG>(-50, 50);
+        checker.set_epsilon(1 + 1e-3)
+                .set_max_avg_error(1e-1)
+                .set_max_avg_biased_error(1e-3);
     } else if (src_dtype.enumv() == DTypeEnum::Float16) {
         rng = std::make_unique<NormalRNG>(2.f);
         megdnn_assert(bias_dtype.enumv() == DTypeEnum::Float16);
@@ -783,6 +792,12 @@ void check_conv_bias(DType src_dtype, DType filter_dtype, DType bias_dtype,
                 fh = arg.filter[2];
                 fw = arg.filter[3];
                 z[1] = arg.filter[0] / 32;
+            } else if (format == Format::NCHW64) {
+                hi = arg.src[2];
+                wi = arg.src[3];
+                fh = arg.filter[2];
+                fw = arg.filter[3];
+                z[1] = arg.filter[0] / 64;
             } else {
                 megdnn_assert(format == Format::CHWN4);
                 hi = arg.src[1];

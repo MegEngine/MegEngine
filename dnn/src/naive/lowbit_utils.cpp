@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/naive/lowbit_utils.h"
@@ -40,6 +41,7 @@ void megdnn::naive::int4_to_int8(const TensorND& in, const TensorND& out) {
     auto out_ptr =
             static_cast<int8_t*>(out.raw_ptr) + out.layout.span().low_byte;
 
+    megdnn_assert(in.layout.span().dist_elem() % 2 == 0);
     for (size_t i = 0; i < in.layout.span().dist_elem(); i += 2) {
         int8_t cur = in_ptr[i / 2];
         out_ptr[i] = cur << 4;

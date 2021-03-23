@@ -67,6 +67,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
     }
 
     if (param.format == param::ConvBias::Format::NCHW8 ||
+        param.format == param::ConvBias::Format::NCHW64 ||
         param.format == param::ConvBias::Format::CHWN4)
         return false;
     if (param.format == param::ConvBias::Format::NCHW32) {

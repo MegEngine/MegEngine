@@ -147,7 +147,22 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_UNARY) {
         checker.execs({{10, 4, 5, 6}, {}});
         checker.execs({{1, 4, 5, 6}, {}});
         checker.execs({{1, 4, 5, 1}, {}});
+
+        checker.set_dtype(1, dtype::QuantizedS4(0.35f));
+        checker.execs({{3, 4, 5, 6}, {}});
+        checker.execs({{10, 4, 5, 6}, {}});
+        checker.execs({{1, 4, 5, 6}, {}});
+        checker.execs({{1, 4, 5, 1}, {}});
     }
+}
+TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_UNARY_Q4) {
+    using Param = ElemwiseMultiType::Param;
+
+    Checker<ElemwiseMultiType> checker(handle());
+    checker.set_param(Param::Mode::QRELU);
+    checker.set_dtype(0, dtype::QuantizedS32(1.f));
+    checker.set_dtype(1, dtype::QuantizedS4(1.f));
+    checker.execs({{3, 4, 5, 6}, {}});
 }
 
 TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
@@ -225,6 +240,13 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
         checker.execs({{10, 4, 5, 6}, {10, 4, 5, 6}, {}});
         checker.execs({{1, 4, 5, 6}, {20, 4, 5, 6}, {}});
         checker.execs({{1, 4, 5, 1}, {2, 1, 1, 2}, {}});
+
+        checker.set_dtype(2, dtype::QuantizedS4(0.35f));
+        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+        checker.execs({{10, 4, 5, 6}, {10, 4, 5, 6}, {}});
+        checker.execs({{1, 4, 5, 6}, {20, 4, 5, 6}, {}});
+        checker.execs({{1, 4, 5, 1}, {2, 1, 1, 2}, {}});
+
     }
 }
 
@@ -273,6 +295,10 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
         checker.execs({{10, 4, 5, 6}, {10, 4, 5, 6}, {10, 4, 5, 6}, {}});
 
         checker.set_dtype(3, dtype::QuantizedS32(0.35f));
+        checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+        checker.execs({{10, 4, 5, 6}, {10, 4, 5, 6}, {10, 4, 5, 6}, {}});
+
+        checker.set_dtype(3, dtype::QuantizedS4(0.35f));
         checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}});
         checker.execs({{10, 4, 5, 6}, {10, 4, 5, 6}, {10, 4, 5, 6}, {}});
     }

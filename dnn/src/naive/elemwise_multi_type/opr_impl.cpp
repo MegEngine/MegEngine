@@ -179,7 +179,7 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
     auto size = param.size;
     auto param0 = param[0].layout.dtype
                           .param<typename DTypeTrait<src_ctype>::dtype>();
-    auto dst = dst_tensor.ptr<dst_ctype>();
+    auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
     auto dst_param = dst_tensor.layout.dtype
                              .param<typename DTypeTrait<dst_ctype>::dtype>();
 
@@ -205,7 +205,7 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
                           .param<typename DTypeTrait<src_ctype>::dtype>();
     auto param1 = param[1].layout.dtype
                           .param<typename DTypeTrait<src_ctype>::dtype>();
-    auto dst = dst_tensor.ptr<dst_ctype>();
+    auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
     auto dst_param = dst_tensor.layout.dtype
                              .param<typename DTypeTrait<dst_ctype>::dtype>();
 
@@ -238,7 +238,7 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
                           .param<typename DTypeTrait<src_ctype>::dtype>();
     auto param2 = param[2].layout.dtype
                           .param<typename DTypeTrait<src_ctype>::dtype>();
-    auto dst = dst_tensor.ptr<dst_ctype>();
+    auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
     auto dst_param = dst_tensor.layout.dtype
                              .param<typename DTypeTrait<dst_ctype>::dtype>();
 
@@ -272,10 +272,13 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op_dst(const ElemParam& param,
                              typename DTypeTrait<_dt>::ctype>(param, dst); \
         break;
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+        MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
 
         default:
-            megdnn_assert_internal(0);
+            megdnn_assert(0, "not support %s %s\n",
+                          param[0].layout.dtype.name(),
+                          dst.layout.dtype.name());
     }
 }
 

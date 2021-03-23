@@ -6,18 +6,19 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/naive/conv_bias/opr_impl.h"
 #include "src/naive/convolution/helper.h"
 
 #include <cstring>
 #include "megdnn/dtype.h"
+#include "src/common/conv_bias.h"
+#include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 #include "src/naive/lowbit_utils.h"
-#include "src/common/conv_bias.h"
-#include "src/common/opr_delegate.h"
 
 #include "midout.h"
 MIDOUT_DECL(megdnn_naive_conv_bias_fwd)
@@ -32,7 +33,7 @@ void handle_z_inp_and_activation_naive(
         const TensorND& conv_bias_tensor, const TensorND& z_tensor,
         const TensorND& dst_tensor, dt_byte* workspace_ptr) {
     auto res = dst_tensor, z_float = z_tensor;
-    //!create naive inplace handle
+    //! create naive inplace handle
     auto handle = inplace_cpu_handle(2);
     if (z_tensor.layout.ndim > 0 &&
         z_tensor.layout.dtype.category() != DTypeCategory::FLOAT) {
@@ -121,6 +122,7 @@ void forward_bias<dt_quint4, dt_quint4, dt_qint32, dt_qint32>(
         auto ret = layout;
         auto param = layout.dtype.param<dtype::Quantized4Asymm>();
         ret.dtype = dtype::Quantized8Asymm(param.scale, param.zero_point);
+        ret.format = TensorFormat(ret.dtype);
         return ret;
     };
     TensorND new_src = {workspace_ptr, convert_layout(src.layout)};
@@ -132,6 +134,29 @@ void forward_bias<dt_quint4, dt_quint4, dt_qint32, dt_qint32>(
     auto new_filter_meta = filter_meta;
     new_filter_meta.dtype = new_flt.layout.dtype;
     forward_bias<dt_quint8, dt_quint8, dt_qint32, dt_qint32>(
+            new_src, new_flt, bias, dst, nullptr, new_filter_meta);
+}
+
+template <>
+void forward_bias<dt_qint4, dt_qint4, dt_qint32, dt_qint32>(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+        _megdnn_tensor_out dst, dt_byte* workspace_ptr,
+        const ConvBiasForward::CanonizedFilterMeta& filter_meta) {
+    auto convert_layout = [](const TensorLayout& layout) {
+        auto ret = layout;
+        auto param = layout.dtype.param<dtype::QuantizedS4>();
+        ret.dtype = dtype::QuantizedS8(param.scale);
+        ret.format = TensorFormat(ret.dtype);
+        return ret;
+    };
+    TensorND new_src = {workspace_ptr, convert_layout(src.layout)};
+    TensorND new_flt = {workspace_ptr + new_src.layout.span().dist_byte(),
+                        convert_layout(filter.layout)};
+    int4_to_int8(src, new_src);
+    int4_to_int8(filter, new_flt);
+    auto new_filter_meta = filter_meta;
+    new_filter_meta.dtype = new_flt.layout.dtype;
+    forward_bias<dt_qint8, dt_qint8, dt_qint32, dt_qint32>(
             new_src, new_flt, bias, dst, nullptr, new_filter_meta);
 }
 }  // namespace convolution
@@ -150,15 +175,17 @@ size_t ConvBiasForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
         float_workspace_size =
                 2 * TensorLayout{z, dtype::Float32()}.span().dist_byte();
     }
+    
+    if ((src.dtype.enumv() == DTypeEnum::Quantized4Asymm ||
+         src.dtype.enumv() == DTypeEnum::QuantizedS4) &&
+        bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
+        float_workspace_size +=
+                (src.total_nr_elems() + flt.total_nr_elems()) * sizeof(uint8_t);
+    }
 
     if (bias.dtype.enumv() != dst.dtype.enumv()) {
-        return float_workspace_size +
-               TensorLayout{dst, bias.dtype}.span().dist_byte();
-    } else if (src.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
-               dst.dtype.enumv() == DTypeEnum::QuantizedS32) {
-        return float_workspace_size +
-               (src.span().dist_elem() + flt.span().dist_elem()) *
-                       sizeof(uint8_t);
+        float_workspace_size +=
+                TensorLayout{dst, bias.dtype}.span().dist_byte();
     }
     return float_workspace_size;
 }
@@ -169,7 +196,7 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                const PreprocessedFilter* preprocessed_filter,
                                _megdnn_workspace workspace) {
     MIDOUT_BEGIN(megdnn_naive_conv_bias_fwd) {
-        dt_byte *workspace_ptr = workspace.raw_ptr;
+        dt_byte* workspace_ptr = workspace.raw_ptr;
         // ============================w * f + b================================
 
         auto filter_meta =
@@ -198,7 +225,8 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                        DTypeTrait<dtype::in_dt>::ctype,  \
                                        DTypeTrait<dtype::out_dt>::ctype, \
                                        DTypeTrait<dtype::out_dt>::ctype>))
-        if (0) {}
+        if (0) {
+        }
         DISPATCH(Float32, Float32)
         DISPATCH(Int8, Int16)
         DISPATCH(Int8, Int32)
@@ -209,6 +237,7 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         DISPATCH_RAW(QuantizedS8, QuantizedS32, QuantizedS32, FLOAT32,
                      (convolution::forward_bias<dt_int8, dt_int8, dt_int32,
                                                 dt_int32>))
+        DISPATCH(QuantizedS4, QuantizedS32)
 #if !MEGDNN_DISABLE_FLOAT16
         DISPATCH(Float16, Float16)
         DISPATCH_RAW(Float16, Float16, Float16, FLOAT32,
@@ -254,8 +283,7 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     return algo;
 }
 
-ConvBiasForward::Algorithm*
-ConvBiasForwardImpl::get_algorithm_from_desc(
+ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_from_desc(
         const AlgorithmDesc& desc) {
     Algorithm* ret =
             static_cast<HandleImpl*>(handle())->default_conv_bias_fwd_algo();

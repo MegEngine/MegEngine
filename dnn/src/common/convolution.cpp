@@ -559,7 +559,7 @@ void ConvolutionBase<Parameter>::check_or_deduce_dtype_fwd(DType src,
         supported_dst_dtype.push_back(
                 dtype::QuantizedS8(src.param<dtype::QuantizedS32>().scale /
                                    filter.param<dtype::QuantizedS8>().scale));
-    } else {
+    }else {
         megdnn_throw(ssprintf("unsupported input / filter DType: %s x %s",
                               src.name(), filter.name()));
     }

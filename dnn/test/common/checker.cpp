@@ -29,7 +29,7 @@ namespace {
         double error_sum = 0;
         double error_sum_biased = 0;
         for (size_t i = 0; i < nr_elem; ++ i) {
-            ctype iv0 = ctype(*it0), iv1 = ctype(*it1);
+            ctype iv0 = *it0, iv1 = *it1;
             float err = diff(iv0, iv1);
             error_sum += std::abs(err);
             error_sum_biased += err;

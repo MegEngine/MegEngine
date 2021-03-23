@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -419,13 +420,28 @@ TensorND TensorValueLowbit4(const TensorShape& shape, T dtype,
     tensor.raw_ptr =
             static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
     megdnn_assert(values.size() == tensor.layout.total_nr_elems());
-    auto ptr = static_cast<U*>(tensor.raw_ptr);
-    for (size_t i = 0; i < values.size(); i += 2) {
+    auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
+    size_t i;
+    for (i = 0; i + 1 < values.size(); i += 2) {
         U val0 = values[i], val1 = values[i + 1];
         megdnn_assert(val0 >= DTypeTrait<T>::min());
         megdnn_assert(val1 <= DTypeTrait<T>::max());
-        ptr[i / 2] = (val0 & 0xF) | (val1 << 4);
+        ptr[i / 2] = typename DTypeTrait<T>::ctype((val0 & 0xF) | (val1 << 4));
     }
+    if (i < values.size()) {
+        U val0 = values[i];
+        megdnn_assert(val0 >= DTypeTrait<T>::min() &&
+                      val0 <= DTypeTrait<T>::max());
+        if (i + 1 < values.size()) {
+            U val1 = values[i + 1];
+            megdnn_assert(val1 >= DTypeTrait<T>::min() &&
+                          val1 <= DTypeTrait<T>::max());
+            ptr[i / 2] = typename DTypeTrait<T>::ctype((val0 & 0xF) | (val1 << 4));
+        } else {
+            ptr[i / 2] = typename DTypeTrait<T>::ctype(val0 & 0xF);
+        }
+    }
+
     return tensor;
 }
 
@@ -466,7 +482,6 @@ struct ExecutionPolicyAlgoName {
 template <class Opr, typename OprAlgoProxy = OprAlgoProxy<Opr>>
 class AlgoChecker {
 public:
-
     AlgoChecker(ExecutionPolicyAlgoName name, bool* require_algo = nullptr)
             : m_policy_name{name}, m_require_algo{require_algo} {}
 
@@ -554,7 +569,8 @@ void construct_sub_execution_policy_heuristic(ExecutionPolicy& policy,
     opr->param() = Algorithm::deserialize_read_pod<typename Opr::Param>(param);
     if (!policy.algo.valid()) {
         policy.algo = AlgoProxy<Opr, OprTrait<Opr>::arity>::
-                get_algorithm_info_heuristic(opr.get(), layouts).desc;
+                              get_algorithm_info_heuristic(opr.get(), layouts)
+                                      .desc;
     }
 
     Algorithm* algo = opr->get_algorithm_from_desc(policy.algo);
@@ -563,8 +579,7 @@ void construct_sub_execution_policy_heuristic(ExecutionPolicy& policy,
     FOREACH_OPR_TYPE_DISPATCH(sub_items, {
         policy.sub_policy.push_back(ExecutionPolicy{});
         construct_sub_execution_policy_heuristic<_Opr>(
-                policy.sub_policy.back(), _item.layouts, _item.param,
-                handle);
+                policy.sub_policy.back(), _item.layouts, _item.param, handle);
     });
 }
 

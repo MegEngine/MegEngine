@@ -330,6 +330,7 @@ bool check_bias_share_in_channel(const TensorLayout& bias,
     } else if (format == param::ConvBias::Format::NCHW4 ||
                format == param::ConvBias::Format::NCHW8 ||
                format == param::ConvBias::Format::NCHW32 ||
+               format == param::ConvBias::Format::NCHW64 ||
                format == param::ConvBias::Format::NCHW4_NCHW32 ||
                format == param::ConvBias::Format::NCHW32_NCHW4) {
         share_in_channel = (bias.ndim == 5 && bias[0] == 1 && bias[2] == 1 &&
