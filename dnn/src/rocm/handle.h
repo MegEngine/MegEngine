@@ -18,7 +18,6 @@
 #include "src/common/utils.h"
 #include "src/rocm/miopen_with_check.h"
 
-#include <rocblas-types.h>
 #include <rocblas.h>
 #include <atomic>
 #include <mutex>
