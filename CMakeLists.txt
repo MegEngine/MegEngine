@@ -165,6 +165,7 @@ endif()
 if(MSVC OR WIN32)
     # for cmake after 3.15.2
     cmake_policy(SET CMP0091 NEW)
+    set(CMAKE_OBJECT_PATH_MAX 300)
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
     else()
