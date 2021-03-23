@@ -65,7 +65,7 @@ set(HIP_LIBRARY_DIR ${HIP_ROOT_DIR}/../lib)
 function(find_rocm_library name dirname include library)
     find_path(${name}_LIBRARY_DIR
         NAMES ${library}
-        HINTS "${HIP_ROOT_DIR}/../${dirname}"
+        HINTS "${${name}_ROOT_DIR}" "${HIP_ROOT_DIR}/../${dirname}"
         PATH_SUFFIXES lib lib/x86_64
         DOC "Path to ${name} library directory")
 
@@ -75,7 +75,7 @@ function(find_rocm_library name dirname include library)
 
     find_path(${name}_INCLUDE_DIR
         NAMES ${include}
-        HINTS "${HIP_ROOT_DIR}/../${dirname}"
+        HINTS "${${name}_ROOT_DIR}" "${HIP_ROOT_DIR}/../${dirname}"
         PATH_SUFFIXES include
         DOC "Path to ${name} include directory")
 
