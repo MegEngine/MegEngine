@@ -445,24 +445,16 @@ MEGDNN_DEVICE __forceinline__ static int transform_int8_to_uint4x8(
     return reinterpret_cast<int const&>(out);
 }
 
-template <bool signedness>
-MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(unsigned storage,
-                                                              unsigned bits);
-
-template <>
-MEGDNN_DEVICE __forceinline__ int unpack_integer_4bits<true>(unsigned storage,
-                                                             unsigned bits) {
-    uint8_t result = (uint8_t)((unsigned)(storage >> bits) & 0xf);
-    static constexpr uint8_t mask = (uint8_t)((1 << 4) - 1);
-    return (result & uint8_t(1 << 3)) ? ((int)(result) | ~(int)(mask))
-                                      : (int)(result);
-}
-
-template <>
-MEGDNN_DEVICE __forceinline__ int unpack_integer_4bits<false>(unsigned storage,
-                                                              unsigned bits) {
-    uint8_t result = (uint8_t)((unsigned)(storage >> bits) & 0xf);
-    return (int)(result);
+template <bool signedness, typename T>
+MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(T storage,
+                                                              int bits) {
+    uint8_t result = (uint8_t)((storage >> bits) & 0xf);
+    if (signedness) {
+        static constexpr uint8_t mask = (uint8_t)((1 << 4) - 1);
+        return (result & uint8_t(1 << 3)) ? ((int)(result) | ~(int)(mask))
+                                          : (int)(result);
+    }
+    return int(result);
 }
 
 MEGDNN_DEVICE __forceinline__ static void transform_int4x8_to_int8(

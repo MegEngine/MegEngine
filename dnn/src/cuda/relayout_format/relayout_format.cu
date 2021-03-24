@@ -321,11 +321,11 @@ struct Translayout<2, 64, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
         int* dst_frag = reinterpret_cast<int*>(dst_width);
 #pragma unroll
         for (int i = 0; i < 64; i += 8) {
-#define unpack_int4x2(_idx)                                          \
-    intermediate[_idx][0] = unpack_integer_4bits<true>(              \
-            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 0); \
-    intermediate[_idx][1] = unpack_integer_4bits<true>(              \
-            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 4);
+#define unpack_int4x2(_idx)                                         \
+    intermediate[_idx][0] = unpack_integer_4bits<true>(             \
+            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 0); \
+    intermediate[_idx][1] = unpack_integer_4bits<true>(             \
+            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 4);
             // clang-format off
             unpack_int4x2(0)
             unpack_int4x2(1)
@@ -336,7 +336,7 @@ struct Translayout<2, 64, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
             unpack_int4x2(6)
             unpack_int4x2(7)
             // clang-format on
-            
+
             int frag_idx = i / 8;
             dst_frag[0 * 8 + frag_idx] = pack_channel(0);
             dst_frag[1 * 8 + frag_idx] = pack_channel(1);
@@ -428,11 +428,11 @@ struct Translayout<2, 64, SrcType, dtype::Quantized4Asymm,
         int* dst_frag = reinterpret_cast<int*>(dst_width);
 #pragma unroll
         for (int i = 0; i < 64; i += 8) {
-#define unpack_int4x2(_idx)                                          \
-    intermediate[_idx][0] = unpack_integer_4bits<false>(             \
-            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 0); \
-    intermediate[_idx][1] = unpack_integer_4bits<false>(             \
-            reinterpret_cast<unsigned&>(read_channel[i + _idx]), 4);
+#define unpack_int4x2(_idx)                                         \
+    intermediate[_idx][0] = unpack_integer_4bits<false>(            \
+            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 0); \
+    intermediate[_idx][1] = unpack_integer_4bits<false>(            \
+            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 4);
             // clang-format off
             unpack_int4x2(0)
             unpack_int4x2(1)
@@ -1257,7 +1257,7 @@ private:
     uint32_t mul;
     uint32_t shr;
     uint32_t mask[mask_size];
-    size_t stride[accesses];
+    size_t stride[lane_size_in_type / pack_size_in_type];
 };
 
 template <bool padding_, typename Type_, int pack_size_, int chan_blk_,
