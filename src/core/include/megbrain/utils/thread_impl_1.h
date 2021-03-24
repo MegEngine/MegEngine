@@ -365,14 +365,16 @@ namespace mgb {
                     if (!m_free_task_block.empty()) {
                         ret = std::move(m_free_task_block.back());
                         m_free_task_block.pop_back();
+                        break;
                     } else if (m_block_quota > 0) {
                         ret = std::make_unique<TaskBlock>();
                         m_block_quota--;
+                        break;
                     } else {
                         m_cv.wait(m_mutex);
                         continue;
                     }
-                } while (false);
+                } while (true);
                 ret->first_tid = m_new_block_first_tid;
                 m_new_block_first_tid += BLOCK_SIZE;
                 ret->prev = prev;
