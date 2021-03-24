@@ -124,6 +124,35 @@ def test_with_submodule(symbolic):
 
 
 @pytest.mark.parametrize("symbolic", [False, True])
+def test_with_submodule_in_container(symbolic):
+    class Simple(M.Module):
+        def __init__(self, name):
+            super().__init__()
+            self.name = name
+            self.l0 = [M.Linear(3, 3) for _ in range(2)]
+            self.l1 = tuple(self.l0)
+            self.l2 = dict(zip(["l2-0", "l2-1"], self.l0))
+
+        def forward(self, x):
+            for i in range(2):
+                x = self.l0[i](x)
+                x = self.l1[i](x)
+                x = self.l2["l2-%d" % i](x)
+            return x
+
+    m = Simple("simple")
+
+    ops = _dump_and_load(m, symbolic)
+    assert ops[-1].outputs[0].name == "simple.l2.l2-1.ADD"
+    assert ops[-1].name == "simple.l2.l2-1.ADD"
+    assert ops[-2].name == "simple.l2.l2-1.MatrixMul"
+    assert ops[-3].name == "simple.l1.1.ADD"
+    assert ops[-4].name == "simple.l1.1.MatrixMul"
+    assert ops[-5].name == "simple.l0.1.ADD"
+    assert ops[-6].name == "simple.l0.1.MatrixMul"
+
+
+@pytest.mark.parametrize("symbolic", [False, True])
 def test_named_submodule(symbolic):
     class Simple(M.Module):
         def __init__(self, name):
@@ -264,4 +293,4 @@ def test_quantized_module_user_naming_param(symbolic):
     (matrix_mul_op,) = [op for op in ops if op.name == "simple.linear.MatrixMul"]
     for var in matrix_mul_op.inputs:
         assert var.name in ("simple.quant.TypeCvt", "simple.linear.user-weight")
-    # BUG bias' name does not meet expectations because of astype operator after quantization
+    # WONTFIX: bias' name does not meet expectations because of astype operator after quantization

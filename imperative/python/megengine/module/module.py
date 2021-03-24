@@ -607,10 +607,10 @@ class Module(metaclass=ABCMeta):
 
     def __getattribute__(self, name: str):
         value = super().__getattribute__(name)
-        if name == "_name":
+        if name == "__dict__":
             return value
-        if isinstance(value, (Tensor, Module)):
-            value._name = name
+        for prefix, variable in _expand_structure(name, value):
+            variable._name = prefix
         return value
 
     def __setattr__(self, name: str, value):
