@@ -722,7 +722,7 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
             megdnn_assert(src.ndim == 5 &&
                                   (filter.ndim == 5 || filter.ndim == 6) &&
                                   src[src.ndim - 1] == 64 &&
-                                  filter[filter.ndim - 1] == 4,
+                                  filter[filter.ndim - 1] == 64,
                           "NCHW64 require src and filter's ndim is 5 or 6, and "
                           "last shape is 64 but got src %s, filter %s",
                           src.to_string().c_str(), filter.to_string().c_str());
@@ -754,7 +754,6 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                     src[i + src_or_dst_spatial_start], cflt.dilated_spatial[i],
                     cflt.stride[i], cflt.padding[i]);
         }
-        dst.init_contiguous_stride();
     } else if (param().format == Param::Format::NCHW4) {
         megdnn_assert(src.ndim == 5,
                       "invalid src ndim for NCHW4, expected=5, got=%zu",

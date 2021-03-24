@@ -320,7 +320,7 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS) {
 
     layout = make_layout({16, 32, 7, 7}, {1792, 56, 8, 1},
                             dtype::QuantizedS4{1.3f});
-    layout.format = FourBitsAlignedToBytesTensorFormat::make(8_z);
+    layout.format = LowbitsAlignedToBytesTensorFormat::make(4_z);
     EXPECT_TRUE(layout.is_contiguous());
 
     layout = TensorLayout{{1, 32, 1, 1}, dtype::QuantizedS4{1.2f}};
@@ -339,12 +339,10 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS_VALID) {
                               DefaultTensorFormat::make()),
                  MegDNNError);
     ASSERT_THROW(TensorLayout({1, 32, 1, 1}, dtype::QuantizedS32{1.2f},
-                              FourBitsAlignedToBytesTensorFormat::make(8_z))
-                         .span(),
+                              LowbitsAlignedToBytesTensorFormat::make(4_z)),
                  MegDNNError);
     ASSERT_THROW(TensorLayout({16, 32, 7, 7}, dtype::IntB2{},
-                              FourBitsAlignedToBytesTensorFormat::make(8_z))
-                         .span(),
+                              LowbitsAlignedToBytesTensorFormat::make(2_z)),
                  MegDNNError);
 }
 

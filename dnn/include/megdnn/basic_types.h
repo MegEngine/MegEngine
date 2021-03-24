@@ -170,6 +170,7 @@ struct TensorLayout : public TensorShape {
 
 #if MEGDNN_CC_HOST
         Format();
+        Format(DType dtype);
 
         const ImplBase* impl() const { return m_impl; }
 
@@ -197,6 +198,9 @@ struct TensorLayout : public TensorShape {
 
         //! whether this is the default tensor format
         bool is_default() const;
+
+        //! whether this is the lowbit aligned to bytes tensor format
+        bool is_lowbit_aligned() const;
 
         bool operator==(Format rhs) const { return m_impl == rhs.m_impl; }
         bool operator!=(Format rhs) const { return m_impl != rhs.m_impl; }

@@ -638,10 +638,18 @@ AlgoChooser<Opr>::AlgoChooserHelper::profile_single_algo(
     param.workspace = get_workspace_size_bytes(policy);
     for (int i = 0; i < arity; ++i) {
         auto&& src = m_layouts[i];
-        mgb_assert(src.format.is_default() &&
+        bool cond_normal = src.format.is_default() &&
                            (src.dtype.category() == DTypeCategory::FLOAT ||
                             src.dtype.category() == DTypeCategory::INT ||
-                            src.dtype.category() == DTypeCategory::QUANTIZED),
+                            src.dtype.category() == DTypeCategory::QUANTIZED);
+
+        bool cond_low_bit = src.dtype.is_low_bit() &&
+                            src.format.is_lowbit_aligned() &&
+                            (src.dtype.category() == DTypeCategory::QUANTIZED ||
+                             src.dtype.category() == DTypeCategory::LOWBIT);
+        MGB_MARK_USED_VAR(cond_normal);
+        MGB_MARK_USED_VAR(cond_low_bit);
+        mgb_assert(cond_normal || cond_low_bit,
                    "unsupported layout in profiling: %s",
                    src.to_string().c_str());
         param.dtypes[i] = src.dtype.enumv();

@@ -814,8 +814,13 @@ MGB_IMPL_OPR_GRAD(TypeCvt) {
 #endif
 
 void TypeCvt::mem_plan_fwd_in2out_writable() {
-    if (input(0)->dtype().size() == output(0)->dtype().size() &&
-            input(0)->layout().is_contiguous()) {
+    bool cond_low_bit =
+            input(0)->dtype().is_low_bit() && output(0)->dtype().is_low_bit() &&
+            input(0)->dtype().low_bit() == output(0)->dtype().low_bit();
+    bool cond_normal = !input(0)->dtype().is_low_bit() &&
+                       !output(0)->dtype().is_low_bit() &&
+                       input(0)->dtype().size() == output(0)->dtype().size();
+    if ((cond_low_bit || cond_normal) && input(0)->layout().is_contiguous()) {
         output(0)->set_fwd_in2out_writable(input(0));
     }
 }

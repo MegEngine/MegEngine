@@ -338,21 +338,26 @@ void OperatorNodeBase::init_output_format() {
     TensorFormat format, default_;
     for (auto i : input()) {
         auto cur = i->format();
-        if (cur != default_) {
+        if (!cur.is_default() && !cur.is_lowbit_aligned()) {
             if (format == default_) {
                 format = cur;
             } else {
                 mgb_assert(format == cur,
-                           "multiple non-default formats in inputs: %s vs %s",
+                           "multiple non-default or non-lowbits aligned "
+                           "formats in inputs: %s vs %s",
                            format.to_string().c_str(), cur.to_string().c_str());
             }
         }
     }
     for (auto i : output()) {
         if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-            i->format(default_);
+            mgb_assert(format.is_default());
+            i->format(TensorFormat(i->dtype()));
         } else {
-            i->format(format);
+            if (!format.is_default())
+                i->format(format);
+            else
+                i->format(TensorFormat(i->dtype()));
         }
     }
 }

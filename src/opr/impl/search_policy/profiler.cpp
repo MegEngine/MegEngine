@@ -175,15 +175,17 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     case DTypeTrait<_dt>::enumv: \
         return _dt(1.0f, static_cast<uint8_t>(0))
             cb(dtype::Quantized8Asymm);
+            cb(dtype::Quantized4Asymm);
 #undef cb
 
 #define cb(_dt)                  \
     case DTypeTrait<_dt>::enumv: \
         return _dt(1.0f)
-
+            
             cb(dtype::QuantizedS8);
             cb(dtype::QuantizedS16);
             cb(dtype::QuantizedS32);
+            cb(dtype::QuantizedS4);        
             default:
                 return DType::from_enum(enumv);
 #undef cb

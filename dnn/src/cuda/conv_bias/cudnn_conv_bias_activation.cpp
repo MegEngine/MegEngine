@@ -24,6 +24,9 @@ using namespace conv_bias;
 
 bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         const SizeArgs& args) const {
+    if (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS4 &&
+        args.filter_layout->dtype.enumv() == DTypeEnum::QuantizedS4)
+        return false;
     if (args.src_layout->dtype == args.filter_layout->dtype &&
         args.src_layout->dtype == dtype::BFloat16()) {
         return false;

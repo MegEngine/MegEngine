@@ -554,14 +554,16 @@ void ParamFusePass::apply(OptState &state) const {
 
         SymbolVar new_var;
         bool is_default_format = var->format().is_default();
-        if (cg::is_static_var_value(var) && is_default_format) {
+        bool is_lowbit_aligned = var->format().is_lowbit_aligned();
+        if (cg::is_static_var_value(var) &&
+            (is_default_format || is_lowbit_aligned)) {
             // use ImmutableTensor for inferable vars
             HostTensorND hv;
             hv.copy_from(*inferred_val).sync();
             new_var = opr::ImmutableTensor::make(
                     *var->owner_graph(), hv, var_namer.name(var));
         } else {
-            if (is_default_format) {
+            if (is_default_format || is_lowbit_aligned) {
                 new_var = opr::SharedDeviceTensor::make_const(
                         *var->owner_graph(), inferred_val, var_namer.name(var));
             } else {

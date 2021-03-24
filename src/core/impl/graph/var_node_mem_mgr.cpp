@@ -1063,15 +1063,22 @@ bool VarNodeMemManager::fwd_in2out_readonly(
         return false;
     }
 
-    mgb_assert(
-            src != dest &&
-            src->comp_node().mem_node() == dest->comp_node().mem_node() &&
-            dest->m_mem_plan.valid() && src->m_mem_plan.valid() &&
-            dest->m_mem_plan.layout().eq_shape(sub.layout()) &&
-            dest->m_mem_plan.layout().dtype.size() == sub.layout().dtype.size()
-            );
-    assert_in_mem_opt_phase(
-            SeqMemOptimizer::Status::ALLOW_FWD_IN2OUT_READONLY);
+    bool cond_low_bit = dest->m_mem_plan.layout().dtype.is_low_bit() &&
+                        sub.layout().dtype.is_low_bit() &&
+                        dest->m_mem_plan.layout().dtype.low_bit() ==
+                                sub.layout().dtype.low_bit();
+    bool cond_normal =
+            !dest->m_mem_plan.layout().dtype.is_low_bit() &&
+            !sub.layout().dtype.is_low_bit() &&
+            dest->m_mem_plan.layout().dtype.size() == sub.layout().dtype.size();
+    MGB_MARK_USED_VAR(cond_low_bit);
+    MGB_MARK_USED_VAR(cond_normal);
+    mgb_assert(src != dest &&
+               src->comp_node().mem_node() == dest->comp_node().mem_node() &&
+               dest->m_mem_plan.valid() && src->m_mem_plan.valid() &&
+               dest->m_mem_plan.layout().eq_shape(sub.layout()) &&
+               (cond_normal || cond_low_bit));
+    assert_in_mem_opt_phase(SeqMemOptimizer::Status::ALLOW_FWD_IN2OUT_READONLY);
 
     if (!m_owner_graph->options().seq_opt.enable_mem_plan_opt)
         return false;

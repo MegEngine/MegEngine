@@ -72,11 +72,11 @@ std::string ConvBiasForwardImpl::AlgoSASSInt4NCHW64IMMAImplicitGemm::kernel_key(
     auto&& param = args.opr->param();
     if (args.z_layout->ndim > 0) {
         kernel_key =
-                ssprintf("%s_conv_bias_int4_fuse_z_imma_ldg16_%ux%u",
+                ssprintf("%s_conv_bias_int4_fuse_z_imma8832_ldg16_%ux%u",
                          current_device_arch_name(), m_tile_nhw, m_tile_oc);
     } else {
         kernel_key =
-                ssprintf("%s_conv_bias_int4_imma_ldg16_%ux%u",
+                ssprintf("%s_conv_bias_int4_imma8832_ldg16_%ux%u",
                          current_device_arch_name(), m_tile_nhw, m_tile_oc);
     }
     if (param.nonlineMode == NonlineMode::H_SWISH) {
@@ -170,7 +170,7 @@ void ConvBiasForwardImpl::AlgoSASSInt4NCHW64IMMAImplicitGemm::exec(
         reorder_imma_filter_bias<4, 64>(
                 reinterpret_cast<int8_t*>(filter_ptr),
                 reinterpret_cast<int32_t*>(bias_ptr),
-                args.filter_tensor->compatible_ptr<int8_t>(),
+                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), 
                 args.bias_tensor->compatible_ptr<int32_t>(), co, ci, fh, fw,
                 stream);
     }
@@ -292,9 +292,10 @@ void ConvBiasForwardImpl::AlgoSASSInt4NCHW64IMMAImplicitGemm::exec_preprocess(
                                   param);
     auto&& stream = cuda_stream(args.opr->handle());
     reorder_imma_filter_bias<4, 64>(
-            args.preprocessed_filter->tensors[0].compatible_ptr<int8_t>(),
+            reinterpret_cast<int8_t*>(
+                    args.preprocessed_filter->tensors[0].raw_ptr),
             args.preprocessed_filter->tensors[1].compatible_ptr<int32_t>(),
-            args.filter_tensor->compatible_ptr<int8_t>(),
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr),
             args.bias_tensor->compatible_ptr<int32_t>(), co, ci, fh, fw,
             stream);
 }

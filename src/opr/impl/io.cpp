@@ -120,12 +120,11 @@ public:
     explicit DevValueExecDep(DeviceTensorStorage val) : m_val{std::move(val)} {}
 };
 
-
 void intl::DeviceTensorHolder::init_output_format() {
     auto format = get_dev_tensor().format();
-    mgb_assert(format.is_default(), "non-default tensor format: %s",
-               format.to_string().c_str());
-    // no need to set output foramt since it is initialized as default
+    mgb_assert(format.is_default() || format.is_lowbit_aligned(),
+               "invalid tensor format: %s", format.to_string().c_str());
+    output(0)->format(format);
 }
 
 void intl::DeviceTensorHolder::init_output_mem_plan(bool dynamic) {

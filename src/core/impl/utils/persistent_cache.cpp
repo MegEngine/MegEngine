@@ -261,7 +261,8 @@ PersistentCache::Blob AlgoChooserProfileCache::Key::build_blob() const {
         ret.push_back(';');
         ret.append(ly.dtype.name());
         ret.push_back('|');
-        mgb_assert(ly.format.is_default(),
+        mgb_assert(ly.format.is_default() || (ly.format.is_lowbit_aligned() &&
+                                              ly.dtype.is_low_bit()),
                    "currently only default format is supported");
     }
     if (m_param_size) {

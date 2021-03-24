@@ -20,7 +20,7 @@ namespace megdnn {
 enum class TensorFormat::Type {
     DEFAULT = 0,        //!< see DefaultTensorFormat
     IMAGE2D_PACK4 = 1,  //!< see Image2DPack4TensorFormat
-    FOURBITS_ALIGNED_TO_BYTE = 2, //!< 
+    LOWBITS_ALIGNED_TO_BYTE = 2, //!< 
 };
 
 class TensorFormat::ImplBase {
@@ -205,21 +205,23 @@ using Image2DPack4TensorFormatBase = Image2DPackedTensorFormatBase<4>;
 /*!
  * \brief used for tensors storing lowbit data 
  *
- * \p SIZE_NBITS is the size in bits of element of the tensor.
- *
+ * \param m_size_nbits size in bits of elements in the tensor
+ * \param m_align_size_in_bits aligned size in bits
+ * \param m_align_size_in_elements aligned size in elements
  */
-template <size_t SIZE_NBITS_>
-class LowbitsTensorFormatBase : public TensorFormat::ImplBase {
-    static constexpr size_t SIZE_NBITS = SIZE_NBITS_;
-    size_t m_align_size_in_bits, m_align_size_in_elements;
+class LowbitsAlignedTensorFormatBase : public TensorFormat::ImplBase {
+    size_t m_size_nbits, m_align_size_in_bits, m_align_size_in_elements;
 
 protected:  //?
-    LowbitsTensorFormatBase(Type type, size_t align_size_in_bits);
+    LowbitsAlignedTensorFormatBase(Type type, size_t size_nbits,
+                                   size_t align_size_in_bits);
 
-    virtual ~LowbitsTensorFormatBase() = default;
+    virtual ~LowbitsAlignedTensorFormatBase() = default;
 
 public:
     size_t align_size_in_bits() const { return m_align_size_in_bits; }
+    
+    size_t size_nbits() const { return m_size_nbits; }
 
     std::string to_string() const override;
 
@@ -240,10 +242,10 @@ public:
             const TensorLayout& layout) const override;
 protected:
     struct SerializePack {
+        uint8_t size_nbits;
         uint8_t align_size_in_bits;
     };
 };
-using FourBitsAlignedToBytesTensorFormatBase = LowbitsTensorFormatBase<4>;
 }  // namespace detail
 
 /*!
@@ -296,19 +298,20 @@ private:
  * \brief Tensor for storing 4bit data that requires stride corresponding to
  * non-innermost dimension to be aligned to bytes, and pack 2 elems into a byte
  */
-class FourBitsAlignedToBytesTensorFormat final
-        : public detail::FourBitsAlignedToBytesTensorFormatBase {
+class LowbitsAlignedToBytesTensorFormat final
+        : public detail::LowbitsAlignedTensorFormatBase {
 public:
-    static constexpr Type TYPE = Type::FOURBITS_ALIGNED_TO_BYTE;
+    static constexpr Type TYPE = Type::LOWBITS_ALIGNED_TO_BYTE;
+    static constexpr size_t BYTE_IN_BITS = 8;
 
-    static TensorFormat make(size_t align_size_in_bits);
+    static TensorFormat make(size_t size_nbits);
 
     static TensorFormat deserialize(const Handle* handle, const void* buf,
                                     size_t size);
 
     static bool is_valid_layout(const TensorLayout& layout) {
         if (layout.format.type() == TYPE) {
-            layout.format.as_impl<FourBitsAlignedToBytesTensorFormat>()
+            layout.format.as_impl<LowbitsAlignedToBytesTensorFormat>()
                     .assert_valid(layout);
             return true;
         }
@@ -316,9 +319,9 @@ public:
     }
 
 private:
-    FourBitsAlignedToBytesTensorFormat(size_t align_size_in_bits)
-            : detail::FourBitsAlignedToBytesTensorFormatBase(
-                      TYPE, align_size_in_bits) {}
+    LowbitsAlignedToBytesTensorFormat(size_t size_nbits)
+            : detail::LowbitsAlignedTensorFormatBase(TYPE, size_nbits,
+                                                     BYTE_IN_BITS) {}
 };
 }  // namespace megdnn
 

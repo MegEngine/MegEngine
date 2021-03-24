@@ -443,8 +443,8 @@ TensorND<TensorStorage>::name
 
 DEF(resize, &)(const TensorShape& shape) {
     mgb_assert(m_layout.dtype.valid());
-    auto nr_elems = m_layout.init_contiguous_stride(shape);
-    m_storage.ensure_size(m_layout.dtype.size(nr_elems));
+    m_layout = TensorLayout(shape, m_layout.dtype);
+    m_storage.ensure_size(m_layout.span().dist_byte());
     return static_cast<ChainReturnType&>(*this);
 }
 
@@ -584,15 +584,19 @@ TensorND<TensorStorage>::copy_from(const TensorND<RStorage> &src) {
         m_layout.dtype.assert_is(src.dtype());
     else
         m_layout.dtype = src.dtype();
-    m_layout.format = {};
 
-    size_t size_bytes = dtype().size(
-            m_layout.init_contiguous_stride(src.shape()));
+    m_layout = TensorLayout(src.shape(), m_layout.dtype);
+    size_t size_bytes = m_layout.span().dist_byte();
     m_storage.ensure_size(size_bytes);
     if (!size_bytes) {
         return static_cast<ChainReturnType&>(*this);
     }
-    if (src.layout().is_physical_contiguous()) {
+    // requirement:
+    // default case, physical contiguous
+    // lowbit aligned, logical contiguous
+    if (src.layout().is_physical_contiguous() ||
+        (src.layout().format.is_lowbit_aligned() &&
+         src.layout().is_contiguous())) {
         if (should_check_overlap(*this, src)) {
             check_overlapped(m_storage.ptr(),
                              m_storage.ptr() + size_bytes,
@@ -635,10 +639,17 @@ TensorND<TensorStorage>::copy_from_fixlayout(
                          src.raw_ptr() + src_span.high_byte);
     }
 
-    bool self_contig = m_layout.is_physical_contiguous(),
-         src_contig = src.layout().is_physical_contiguous();
+    bool self_contig = m_layout.is_physical_contiguous() ||
+                       (m_layout.format.is_lowbit_aligned() &&
+                        m_layout.is_contiguous()),
+         src_contig = src.layout().is_physical_contiguous() ||
+                      (m_layout.format.is_lowbit_aligned() &&
+                       m_layout.is_contiguous());
     if (self_contig && src_contig) {
-        if (m_layout.format.is_default() && src.layout().format.is_default()) {
+        if ((m_layout.format.is_default() &&
+             src.layout().format.is_default()) ||
+            (m_layout.format.is_lowbit_aligned() &&
+             src.layout().format.is_lowbit_aligned())) {
             mgb_assert(src_span.low_byte == 0 && dst_span.low_byte == 0 &&
                        src_span.high_byte == dst_span.high_byte);
             m_storage.copy_from(src.storage(), src_span.high_byte);

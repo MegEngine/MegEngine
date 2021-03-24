@@ -103,15 +103,18 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS4::exec(
     TensorND src_{ws_src, layouts[0]}, filter_{ws_filter, layouts[1]},
             bias_{args.bias_tensor->raw_ptr, layouts[2]}, z_{ws_z, layouts[3]},
             dst_{ws_dst, layouts[4]};
-    ExecArgs args_{args.opr,
+    auto conv_op = args.opr->handle()->create_operator<ConvBiasForward>();
+    conv_op->param() = args.opr->param();
+    using Format = param::ConvBias::Format;
+    conv_op->param().format = Format::NCHW64;
+    ExecArgs args_{dynamic_cast<ConvBiasForwardImpl*>(conv_op.get()),
                    src_,
                    filter_,
                    bias_,
                    z_,
                    dst_,
-                   ws.get_workspace(3),
-                   args.preprocessed_filter};
-    m_underlying_algo.exec(args);
+                   ws.get_workspace(3)};
+    m_underlying_algo.exec(args_);
     // reformat dst
     nchw642nchw(dst_, {args.dst_tensor->raw_ptr, args.dst_tensor->layout});
 }
@@ -134,6 +137,9 @@ ConvBiasForwardImpl::AlgoFallbackNCHWQS4::make_underlying_tensor_layout(
         rst.emplace_back(TensorLayout{});
     }
     rst.emplace_back(TensorLayout{{n, co / 64, ho, wo, 64}, dst.dtype});
+    for (auto& i : rst) {
+        i.init_contiguous_stride();
+    }
     return rst;
 }
 
@@ -145,13 +151,16 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoFallbackNCHWQS4::get_workspace_bundle(
     auto layouts = make_underlying_tensor_layout(
             *(args.src_layout), *(args.filter_layout), *(args.bias_layout),
             *(args.z_layout), *(args.dst_layout));
-    SizeArgs args_{args.opr,
+    auto conv_op = args.opr->handle()->create_operator<ConvBiasForward>();
+    conv_op->param() = args.opr->param();
+    using Format = param::ConvBias::Format;
+    conv_op->param().format = Format::NCHW64;
+    SizeArgs args_{dynamic_cast<ConvBiasForwardImpl*>(conv_op.get()),
                    layouts[0],
                    layouts[1],
                    layouts[2],
                    layouts[3],
-                   layouts[4],
-                   args.preprocessed_filter};
+                   layouts[4]};
     size_t ws_size_underlying_algo =
             m_underlying_algo.get_workspace_in_bytes(args_);
     if (args.z_layout->ndim > 0) {
