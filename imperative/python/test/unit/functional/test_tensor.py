@@ -309,12 +309,17 @@ def test_broadcast():
     output2_shape = (20, 10, 20)
     data2 = np.random.random(input2_shape).astype(np.float32)
 
+    input3_shape = (10, 10)
+    output3_shape = (10, 10)
+    data3 = np.random.random(input3_shape).astype(np.float32)
+
     def compare_fn(x, y):
         assert x.shape[0] == y
 
     cases = [
         {"input": [data1, output1_shape], "output": output1_shape},
         {"input": [data2, output2_shape], "output": output2_shape},
+        {"input": [data3, output3_shape], "output": output3_shape},
     ]
     opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
 
