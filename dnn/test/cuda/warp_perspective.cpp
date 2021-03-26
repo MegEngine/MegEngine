@@ -664,10 +664,10 @@ TEST_F(CUDA, WARP_PERSPECTIVE_BACKWARD_MAT_BFLOAT16) {
             param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
             param.bmode = bmode;
             checker.set_param(param);
-            checker.execs({{1000, 3, 11, 12},
-                           {1000, 3, 3},
-                           {1000, 3, 10, 11},
-                           {1000, 3, 3}});
+            checker.execs({{10, 3, 11, 12},
+                           {10, 3, 3},
+                           {10, 3, 10, 11},
+                           {10, 3, 3}});
         }
     }
 }
