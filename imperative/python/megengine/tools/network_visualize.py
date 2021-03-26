@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import argparse
+import json
 import logging
 
 import numpy as np
@@ -14,6 +15,7 @@ import numpy as np
 from megengine.core.tensor.dtype import is_quantize
 from megengine.logger import _imperative_rt_logger, get_logger, set_mgb_log_level
 from megengine.utils.module_stats import (
+    get_flops_stats,
     get_param_stats,
     print_flops_stats,
     print_params_stats,
@@ -89,6 +91,7 @@ def visualize(
 
         inp_list = [process_name(var.owner.name) for var in node.inputs]
         if log_path:
+            # detail format see tensorboard/compat/proto/attr_value.proto
             attr = {
                 "_output_shapes": AttrValue(
                     list=AttrValue.ListValue(
@@ -101,24 +104,20 @@ def visualize(
                         ]
                     )
                 ),
+                "params": AttrValue(s=str(node.params).encode(encoding="utf-8")),
+                "dtype": AttrValue(s=str(node_oup.dtype).encode(encoding="utf-8")),
             }
-        if hasattr(node, "calc_flops"):
-            flops_num = node.calc_flops()
+        flops_stats = get_flops_stats(node, node.inputs, node.outputs)
+        if flops_stats is not None:
             # add op flops attr
-            if log_path:
+            if log_path and hasattr(flops_stats, "flops_num"):
                 attr["flops"] = AttrValue(
-                    s=sizeof_fmt(flops_num).encode(encoding="utf-8")
+                    s=sizeof_fmt(flops_stats["flops"]).encode(encoding="utf-8")
                 )
-            flops_list.append(
-                dict(
-                    name=node.name,
-                    class_name=node.type,
-                    input_shapes=[i.shape for i in node.inputs],
-                    output_shapes=[o.shape for o in node.outputs],
-                    flops_num=flops_num,
-                    flops_cum=0,
-                )
-            )
+            flops_stats["name"] = node.name
+            flops_stats["class_name"] = node.type
+            flops_list.append(flops_stats)
+
         if node.type == "ImmutableTensor":
             param_stats = get_param_stats(node.numpy())
             # add tensor size attr
@@ -132,6 +131,7 @@ def visualize(
         # FIXME(MGE-2165): nodes outside network module may lead to unknown display bug
         if not len(node.name.split(".")) > 2 and not node in graph.input_vars:
             continue
+
         if log_path:
             node_list.append(
                 NodeDef(
@@ -141,14 +141,26 @@ def visualize(
                     attr=attr,
                 )
             )
+    # summary
+    extra_info = {
+        "#ops": len(graph.all_oprs),
+        "#params": len(params_list),
+    }
 
-    total_flops, total_params = None, None
+    total_flops, total_param_dims, total_param_size = 0, 0, 0
     if log_params:
         total_param_dims, total_param_size = print_params_stats(
             params_list, bar_length_max
         )
+        extra_info["total_param_dims"] = sizeof_fmt(total_param_dims)
+        extra_info["total_param_size"] = sizeof_fmt(total_param_size)
     if log_flops:
         total_flops = print_flops_stats(flops_list, bar_length_max)
+        extra_info["total_flops"] = sizeof_fmt(total_flops, suffix="OPs")
+    if log_params and log_flops:
+        extra_info["flops/param_size"] = "{:3.3f}".format(
+            total_flops / total_param_size
+        )
 
     if log_path:
         graph_def = GraphDef(node=node_list, versions=VersionDef(producer=22))
@@ -160,21 +172,12 @@ def visualize(
         writer = SummaryWriter(log_path)
         writer._get_file_writer().add_graph((graph_def, stepstats))
 
-    # summary
-    extra_info = {
-        "#ops": len(graph.all_oprs),
-        "#params": len(params_list),
-        "total_param_dims": sizeof_fmt(total_param_dims),
-        "total_param_size": sizeof_fmt(total_param_size),
-        "total_flops": sizeof_fmt(total_flops, suffix="OPs"),
-        "flops/param_size": "{:3.3f}".format(total_flops / total_param_size),
-    }
     print_summary(**extra_info)
 
     # FIXME: remove this after resolving "span dist too large" warning
     _imperative_rt_logger.set_log_level(old_level)
 
-    return total_params, total_flops
+    return total_param_size, total_flops
 
 
 def main():
