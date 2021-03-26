@@ -434,6 +434,8 @@ ConvolutionImpl::NCBKernSizeParam::deduce_algo_data_type() const {
         }
     } else if (src_type.enumv() == DTypeEnum::Quantized8Asymm) {
         return ConvolutionImpl::AlgoDataType::QUINT8X8X32;
+    } else if (src_type.enumv() == DTypeEnum::QuantizedS4) {
+        return ConvolutionImpl::AlgoDataType::QINT4x4x32;
     } else {
         megdnn_throw(ssprintf("not support data type of %s * %s -> %s\n",
                               src_type.name(), filter_type.name(),
