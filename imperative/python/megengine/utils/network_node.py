@@ -18,6 +18,11 @@ from ..core.ops import builtin
 from ..core.tensor.megbrain_graph import InputNode
 from ..tensor import Tensor
 from .comp_graph_tools import replace_vars
+from .module_stats import (
+    preprocess_receptive_field,
+    register_flops,
+    register_receptive_field,
+)
 
 
 class NetworkNode:
@@ -225,8 +230,21 @@ class Elemwise(OpNode):
     type = "Elemwise"
     opdef = builtin.Elemwise
 
-    def calc_flops(self):
-        return np.prod(self.outputs[0].shape)
+
+class ElemwiseMultiType(OpNode):
+    type = "ElemwiseMultiType"
+    opdef = builtin.ElemwiseMultiType
+
+    @classmethod
+    def load(cls, opr):
+        obj = super(ElemwiseMultiType, cls).load(opr)
+        obj.params["dtype"] = opr.outputs[0].dtype
+        return obj
+
+
+@register_flops(Elemwise, ElemwiseMultiType)
+def flops_elemwise(opnode: Elemwise, inputs, outputs):
+    return np.prod(outputs[0].shape)
 
 
 class Reduce(OpNode):
@@ -255,20 +273,24 @@ class MatrixMul(OpNode):
     type = "MatrixMul"
     opdef = builtin.MatrixMul
 
-    def calc_flops(self):
-        assert len(self.inputs[0].shape) == 2 and len(self.outputs[0].shape) == 2
-        mid_shape = self.inputs[0].shape[1]
-        return np.prod(self.outputs[0].shape) * mid_shape
+
+@register_flops(MatrixMul)
+def flops_matmul(opnode: MatrixMul, inputs, outputs):
+    assert len(inputs[0].shape) == 2 and len(outputs[0].shape) == 2
+    mid_shape = inputs[0].shape[1]
+    return np.prod(outputs[0].shape) * mid_shape
 
 
 class BatchedMatrixMul(OpNode):
     type = "BatchedMatmul"
     opdef = builtin.BatchedMatrixMul
 
-    def calc_flops(self):
-        assert len(self.inputs[0].shape) == 3 and len(self.outputs[0].shape) == 3
-        mid_shape = self.inputs[0].shape[2]
-        return np.prod(self.outputs[0].shape) * mid_shape
+
+@register_flops(BatchedMatrixMul)
+def flops_batchmatmul(opnode: BatchedMatrixMul, inputs, outputs):
+    assert len(inputs[0].shape) == 3 and len(outputs[0].shape) == 3
+    mid_shape = inputs[0].shape[2]
+    return np.prod(outputs[0].shape) * mid_shape
 
 
 class Dot(OpNode):
@@ -284,18 +306,6 @@ class SVD(OpNode):
 class ConvolutionForward(OpNode):
     type = "Convolution"
     opdef = builtin.Convolution
-
-    def calc_flops(self):
-        param_W_shape = self.inputs[1].shape
-        kh = param_W_shape[-2]
-        kw = param_W_shape[-1]
-        if len(param_W_shape) == 5:
-            num_input = param_W_shape[2]
-        else:
-            num_input = param_W_shape[1]
-        NCHW = np.prod(self.outputs[0].shape)
-        # N x Cout x H x W x  (Cin x Kw x Kh)
-        return NCHW * (num_input * kw * kh)
 
 
 class ConvolutionBackwardData(OpNode):
@@ -343,17 +353,41 @@ class ConvBiasForward(OpNode):
         obj.params["dtype"] = opr.outputs[0].dtype
         return obj
 
-    def calc_flops(self):
-        param_W_shape = self.inputs[1].shape
-        kh = param_W_shape[-2]
-        kw = param_W_shape[-1]
-        if len(param_W_shape) == 5:
-            num_input = param_W_shape[2]
-        else:
-            num_input = param_W_shape[1]
-        NCHW = np.prod(self.outputs[0].shape)
-        # N x Cout x H x W x  (Cin x Kw x Kh + bias)
-        return NCHW * (num_input * kw * kh + 1)
+
+@register_flops(
+    ConvolutionForward, ConvBiasForward,
+)
+def flops_conv(opnode: ConvolutionForward, inputs, outputs):
+    param_W_shape = inputs[1].shape
+    kh = param_W_shape[-2]
+    kw = param_W_shape[-1]
+    if len(param_W_shape) == 5:
+        num_input = param_W_shape[2]
+    else:
+        num_input = param_W_shape[1]
+    NCHW = np.prod(outputs[0].shape)
+    bias = 1 if isinstance(opnode, ConvBiasForward) else 0
+    # N x Cout x H x W x  (Cin x Kw x Kh)
+    return NCHW * (num_input * kw * kh + bias)
+
+
+@register_receptive_field(ConvolutionForward, ConvBiasForward)
+def receptive_field(opnode: ConvolutionForward, inputs, outputs):
+    pre_rf, pre_stride = preprocess_receptive_field(opnode, inputs, outputs)
+    param_W_shape = inputs[1].shape
+    kh = param_W_shape[-2]
+    kw = param_W_shape[-1]
+    rf = (
+        kh * pre_stride[0] + pre_rf[0] - pre_stride[0],
+        kw * pre_stride[1] + pre_rf[1] - pre_stride[1],
+    )
+    stride = (
+        opnode.params["stride_h"] * pre_stride[0],
+        opnode.params["stride_w"] * pre_stride[1],
+    )
+    opnode._rf = rf
+    opnode._stride = stride
+    return rf, stride
 
 
 class BatchConvBiasForward(OpNode):
@@ -650,20 +684,6 @@ class BatchedIncrMeshIndexing(IndexingBase):
 class AssertEqual(OpNode):
     type = "AssertEqual"
     opdef = builtin.AssertEqual
-
-
-class ElemwiseMultiType(OpNode):
-    type = "ElemwiseMultiType"
-    opdef = builtin.ElemwiseMultiType
-
-    @classmethod
-    def load(cls, opr):
-        obj = super(ElemwiseMultiType, cls).load(opr)
-        obj.params["dtype"] = opr.outputs[0].dtype
-        return obj
-
-    def calc_flops(self):
-        return np.prod(self.outputs[0].shape)
 
 
 class CvtColorForward(OpNode):
