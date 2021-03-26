@@ -14,8 +14,10 @@ import numpy as np
 from megengine.core.tensor.dtype import is_quantize
 from megengine.logger import _imperative_rt_logger, get_logger, set_mgb_log_level
 from megengine.utils.module_stats import (
+    get_param_stats,
     print_flops_stats,
     print_params_stats,
+    print_summary,
     sizeof_fmt,
 )
 from megengine.utils.network import Network
@@ -69,6 +71,7 @@ def visualize(
     def process_name(name):
         return name.replace(".", "/").encode(encoding="utf-8")
 
+    summary = [["item", "value"]]
     node_list = []
     flops_list = []
     params_list = []
@@ -117,26 +120,15 @@ def visualize(
                 )
             )
         if node.type == "ImmutableTensor":
-            param_dim = np.prod(node_oup.shape)
-            # TODO: consider other quantize dtypes
-            param_bytes = 1 if is_quantize(node_oup.dtype) else 4
+            param_stats = get_param_stats(node.numpy())
             # add tensor size attr
             if log_path:
                 attr["size"] = AttrValue(
-                    s=sizeof_fmt(param_dim * param_bytes).encode(encoding="utf-8")
+                    s=sizeof_fmt(param_stats["size"]).encode(encoding="utf-8")
                 )
-            params_list.append(
-                dict(
-                    name=node.name,
-                    shape=node_oup.shape,
-                    param_dim=param_dim,
-                    bits=param_bytes * 8,
-                    size=param_dim * param_bytes,
-                    size_cum=0,
-                    mean="{:.2g}".format(node.numpy().mean()),
-                    std="{:.2g}".format(node.numpy().std()),
-                )
-            )
+            param_stats["name"] = node.name
+            params_list.append(param_stats)
+
         # FIXME(MGE-2165): nodes outside network module may lead to unknown display bug
         if not len(node.name.split(".")) > 2 and not node in graph.input_vars:
             continue
@@ -152,7 +144,9 @@ def visualize(
 
     total_flops, total_params = None, None
     if log_params:
-        total_params = print_params_stats(params_list, bar_length_max)
+        total_param_dims, total_param_size = print_params_stats(
+            params_list, bar_length_max
+        )
     if log_flops:
         total_flops = print_flops_stats(flops_list, bar_length_max)
 
@@ -167,6 +161,15 @@ def visualize(
         writer._get_file_writer().add_graph((graph_def, stepstats))
 
     # summary
+    extra_info = {
+        "#ops": len(graph.all_oprs),
+        "#params": len(params_list),
+        "total_param_dims": sizeof_fmt(total_param_dims),
+        "total_param_size": sizeof_fmt(total_param_size),
+        "total_flops": sizeof_fmt(total_flops, suffix="OPs"),
+        "flops/param_size": "{:3.3f}".format(total_flops / total_param_size),
+    }
+    print_summary(**extra_info)
 
     # FIXME: remove this after resolving "span dist too large" warning
     _imperative_rt_logger.set_log_level(old_level)

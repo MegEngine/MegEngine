@@ -5,6 +5,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import re
 from collections import namedtuple
 from typing import Union
 
@@ -20,6 +21,12 @@ from .._imperative_rt.common import (
     is_dtype_equal,
     is_quantize,
 )
+
+
+def get_dtype_bit(dtype_name: str):
+    numbers = re.findall(r"\d+", dtype_name)
+    assert len(numbers) == 1, "Unsupport dtype name with more than one number."
+    return int(numbers[0])
 
 
 # normal dtype related
