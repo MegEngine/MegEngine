@@ -113,6 +113,48 @@ def test_exclude_from_trace(trace_mode):
         np.testing.assert_equal(f(x).numpy(), y)
 
 
+@pytest.mark.parametrize("trace_mode", [False, True])
+def test_elemwise_fuse(trace_mode):
+    # explicitly declare opt_level as 2
+    @trace(symbolic=trace_mode, opt_level=2)
+    def f(a, b):
+        base = 0
+        c = b - a
+        _, idx = F.topk(c, 3)
+        # internally, biased_idx will be idx as gopt will ignore the addition
+        biased_idx = base + idx
+        return biased_idx
+
+    a = tensor(np.ones((7, 2)), dtype=np.int32)
+    b = tensor(2 * np.ones((7, 2)), dtype=np.float32)
+
+    for i in range(3):
+        y = f(a, b)
+        y.numpy()
+
+
+@pytest.mark.parametrize("trace_mode", [False, True])
+def test_elemwise_fuse_in_grad(trace_mode):
+    w = Parameter(np.ones([4, 6]), dtype="float32")
+
+    gm = GradManager().attach(w)
+    opt = optim.SGD([w], lr=0.01, momentum=0.9, weight_decay=5e-4)
+
+    # explicitly declare opt_level as 2
+    @trace(symbolic=trace_mode, opt_level=2)
+    def f():
+        with gm:
+            wm = F.sum(w ** 2, axis=1) ** 0.5
+            loss = wm.mean()
+            gm.backward(loss)
+            opt.step().clear_grad()
+        return loss
+
+    for i in range(3):
+        y = f()
+        y.numpy()
+
+
 def test_print_in_trace():
     for symbolic in [False]:  # cannot read value in symbolic mode
 
@@ -221,7 +263,6 @@ def test_trace_profiler(trace_mode):
     assert out.get("profiler")
 
 
-@pytest.mark.skip(reason="force opt_level=0 when building graph")
 def test_goptions():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x):
@@ -240,7 +281,6 @@ def test_goptions():
     np.testing.assert_equal(g(d).numpy().item(), 1.0)
 
 
-@pytest.mark.skip(reason="force opt_level=0 when building graph")
 def test_goptions_log_sum_exp():
     @trace(symbolic=True, opt_level=0, capture_as_const=True)
     def f(x, y):

@@ -27,12 +27,12 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
     return Elemwise::make(node->param().mode);
 }
 
-cg::OperatorNodeBase* apply_on_var_node(
+auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     auto&& elemwise_opr = def.cast_final_safe<Elemwise>();
     OperatorNodeConfig config{elemwise_opr.make_name()};
-    return opr::Elemwise::make(inputs, elemwise_opr.mode, config).node()->owner_opr();
+    return opr::Elemwise::make(inputs, elemwise_opr.mode, config);
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(

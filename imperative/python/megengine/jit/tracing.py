@@ -131,7 +131,7 @@ class trace:
     :param sublinear_memory_config: configuration for sublinear memory optimization.
         If not None, it enables sublinear memory optimization with given setting.
     :param profiling: whether to profile compiled trace. Default: False
-    :param opt_level: optimization level for compiling trace.
+    :param opt_level: optimization level for compiling trace. Default: 2
     :param symbolic_shape: whether to use symbolic shape for tracing. Default: True
     """
 
@@ -147,7 +147,7 @@ class trace:
         capture_as_const=False,
         sublinear_memory_config: SublinearMemoryConfig = None,
         profiling: bool = False,
-        opt_level: int = None,
+        opt_level: int = 2,
         symbolic_shape: bool = True,
     ):
         self.__wrapped__ = function
@@ -377,11 +377,7 @@ class trace:
         )
         readers = [G.OutputNode(x()._varnode).outputs[0] for x in lazy_eval_tensors]
         self._apply_graph_options(lazy_eval_graph)
-        # FIXME
-        if self._graph_opt_level is not None:
-            lazy_eval_graph.options.graph_opt_level = self._graph_opt_level
-        else:
-            lazy_eval_graph.options.graph_opt_level = 2
+        lazy_eval_graph.options.graph_opt_level = self._graph_opt_level
         lazy_eval_graph._set_priority_to_id([*lazy_eval_links, *readers])
         lazy_eval_graph.compile(*lazy_eval_links, *readers)
         lazy_eval_graph()
@@ -500,11 +496,7 @@ class trace:
 
         graph.options.no_force_inplace = True
         graph.options.seq_opt.enable_seq_comp_node_opt = False
-        # graph opt level
-        # if self._graph_opt_level is not None:
-        #     graph.options.graph_opt_level = self._graph_opt_level
-        # FIXME
-        graph.options.graph_opt_level = 0
+        graph.options.graph_opt_level = self._graph_opt_level
         # sublinear
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True
@@ -634,11 +626,7 @@ class trace:
                     opnode = info.shape_reader = G.AttrOutputNode(v, *in_out_links)
                     add_reader(opnode)
 
-        # FIXME
-        if self._graph_opt_level is not None:
-            graph.options.graph_opt_level = self._graph_opt_level
-        else:
-            graph.options.graph_opt_level = 2
+        graph.options.graph_opt_level = self._graph_opt_level
         graph._set_priority_to_id([*readers, *in_out_links, *io_links])
         graph.compile(*readers, *in_out_links, *io_links)
 
