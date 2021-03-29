@@ -1,6 +1,7 @@
 # mgb tablegen executable
 set(TABLE_TARGET mgb-mlir-autogen)
-add_executable(${TABLE_TARGET} autogen.cpp)
+file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+add_executable(${TABLE_TARGET} ${SRCS})
 target_include_directories(${TABLE_TARGET} PRIVATE ${MLIR_LLVM_INCLUDE_DIR})
 target_link_libraries(${TABLE_TARGET} PRIVATE LLVMTableGen MLIRTableGen LLVMSupport)
 set(MGB_TABLEGEN_EXE ${TABLE_TARGET})
