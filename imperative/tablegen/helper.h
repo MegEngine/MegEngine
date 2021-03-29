@@ -1,3 +1,16 @@
+/**
+ * \file imperative/tablegen/helper.h
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ */
+#pragma once
+
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -277,6 +290,29 @@ public:
         return getDefaultPropsFunction();
     }
 };
+
+using MgbAttrWrapper = mlir::tblgen::MgbAttrWrapperBase;
+using MgbEnumAttr = mlir::tblgen::MgbEnumAttrMixin;
+using MgbHashableAttr = mlir::tblgen::MgbHashableAttrMixin;
+using MgbAliasAttr = mlir::tblgen::MgbAliasAttrMixin;
+using MgbOp = mlir::tblgen::MgbOpBase;
+using MgbHashableOp = mlir::tblgen::MgbHashableOpMixin;
+
+static inline void foreach_operator(llvm::RecordKeeper &keeper,
+        std::function<void(MgbOp&)> callback) {
+    auto op_base_class = keeper.getClass("Op");
+    ASSERT(op_base_class, "could not find base class Op");
+    for (auto&& i: keeper.getDefs()) {
+        auto&& r = i.second;
+        if (r->isSubClassOf(op_base_class)) {
+            auto op = mlir::tblgen::Operator(r.get());
+            if (op.getDialectName().str() == "mgb") {
+                std::cerr << "\033[34;15m" << "Generating " << r->getName().str() << "\033[0m" << std::endl;
+                callback(llvm::cast<MgbOp>(op));
+            }
+        }
+    }
+}
 
 } // namespace tblgen
 } // namespace mlir
