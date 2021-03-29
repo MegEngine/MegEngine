@@ -29,7 +29,8 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
     };
     MEGDNN_MARK_USED_VAR(errmsg);
     if (param().format == param::WarpPerspective::Format::NHWCD4 ||
-        param().format == param::WarpPerspective::Format::NCHW4) {
+        param().format == param::WarpPerspective::Format::NCHW4 ||
+        param().format == param::WarpPerspective::Format::NCHW64) {
         megdnn_assert(src.ndim == 5_z, "%s", errmsg().c_str());
         megdnn_assert(dst.ndim == 5_z, "%s", errmsg().c_str());
 
@@ -71,7 +72,8 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
                             src.dtype.enumv() == DTypeEnum::Int8 ||
                             src.dtype.enumv() == DTypeEnum::Uint8 ||
                             (src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                             src.dtype.enumv() == DTypeEnum::Quantized8Asymm),
+                             src.dtype.enumv() == DTypeEnum::Quantized8Asymm) ||
+                            src.dtype.enumv() == DTypeEnum::QuantizedS4,
                     "WarpPerspective NCHW input dtype should be "
                     "Float32/Int8/Uint8/QInt8/QUint8" DNN_FLOAT16_SELECT(
                             "/Float16/BFloat16", "") ".");
@@ -107,6 +109,22 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
                           "matrix dtype expected float, got %s",
                           mat.dtype.name());
             megdnn_assert(src.shape[4] == 4 && dst.shape[4] == 4);
+            megdnn_assert(src.shape[1] == dst.shape[1], "%s", errmsg().c_str());
+
+            megdnn_assert(param().imode ==
+                          param::WarpPerspective::InterpolationMode::LINEAR);
+            megdnn_assert(param().bmode !=
+                          param::WarpPerspective::BorderMode::TRANSPARENT);
+            megdnn_assert(param().bmode !=
+                          param::WarpPerspective::BorderMode::ISOLATED);
+        } else if (param().format == param::WarpPerspective::Format::NCHW64) {
+            megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS4,
+                          "src expected QuantizedS4, but got %s",
+                          src.dtype.name());
+            megdnn_assert(mat.dtype == dtype::Float32(),
+                          "matrix dtype expected float, got %s",
+                          mat.dtype.name());
+            megdnn_assert(src.shape[4] == 64 && dst.shape[4] == 64);
             megdnn_assert(src.shape[1] == dst.shape[1], "%s", errmsg().c_str());
 
             megdnn_assert(param().imode ==
@@ -288,7 +306,8 @@ void WarpPerspectiveForward::check_exec_allow_nhwc_mat_idx(
         param().format != Param::Format::NCHW4 &&
         param().format != Param::Format::NHWC_NCHW &&
         param().format != Param::Format::NHWC_NCHW4_IC_SMALL &&
-        param().format != Param::Format::NCHW_NCHW4_IC_SMALL) {
+        param().format != Param::Format::NCHW_NCHW4_IC_SMALL &&
+        param().format != Param::Format::NCHW64) {
         megdnn_assert(!mat_idx.ndim,
                       "mat_idx not supported for current format");
     }

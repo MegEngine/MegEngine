@@ -35,6 +35,13 @@ void forward_proxy_nchw4(const ctype* src, const float* mat, const int* mat_idx,
                          megcore::AsyncErrorInfo* error_info,
                          void* error_tracker, cudaStream_t stream);
 
+template <typename ctype>
+void forward_proxy_nchw64(const ctype* src, const float* mat,
+                          const int* mat_idx, ctype* dst, int N_SRC, int N_MAT,
+                          int C, int IH, int IW, int OH, int OW, ctype bval,
+                          BorderMode bmode, megcore::AsyncErrorInfo* error_info,
+                          void* error_tracker, cudaStream_t stream);
+
 template <typename src_dtype, typename src_ctype, typename dst_ctype>
 void forward_proxy_quint8_dimshuffle_typecvt_nchw4(
         bool is_nhwc, const src_ctype* src, const float* mat,

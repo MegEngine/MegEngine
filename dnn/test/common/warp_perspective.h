@@ -55,6 +55,65 @@ private:
     size_t idx;
 };
 
+class WarpPerspectiveMatRNG_V2 final : public IIDRNG {
+public:
+    WarpPerspectiveMatRNG_V2() : idx(0) {}
+    void set_hw(size_t h, size_t w) {
+        ih = h;
+        iw = w;
+        idx = 0;
+        rng.seed(time(NULL));
+    }
+    dt_float32 gen_single_val() override {
+        auto rand_real = [&](double lo, double hi) {
+            return rng() / (std::mt19937::max() + 1.0) * (hi - lo) + lo;
+        };
+        auto rand_real2 = [&](double range) {
+            return rand_real(-range, range);
+        };
+        dt_float32 res;
+        switch (idx) {
+            case 0:
+                rot = rand_real(0, M_PI * 2);
+                scale = rand_real(0.8, 1.2);
+                sheer = rand_real(0.9, 1.1);
+                res = cos(rot) * scale;
+                break;
+            case 1:
+                res = -sin(rot) * scale;
+                break;
+            case 2:
+                res = rand_real2(iw * 0.5);
+                break;
+            case 3:
+                res = sin(rot) * scale * sheer;
+                break;
+            case 4:
+                res = cos(rot) * scale * sheer;
+                break;
+            case 5:
+                res = rand_real2(ih * 0.5);
+                break;
+            case 6:
+                res = rand_real2(0.1 / iw);
+                break;
+            case 7:
+                res = rand_real2(0.1 / ih);
+                break;
+            case 8:
+                res = rand_real2(0.1) + 1;
+                break;
+        }
+        idx = (idx + 1) % 9;
+        return res;
+    }
+
+private:
+    size_t idx, ih, iw;
+    float rot, scale, sheer;
+    std::mt19937 rng;
+};
+
 namespace warp_perspective {
 
 struct TestArg {

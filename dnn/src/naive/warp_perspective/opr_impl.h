@@ -79,6 +79,12 @@ protected:
                 ret.iw = src.layout.shape[3];
                 ret.oh = dst.layout.shape[2];
                 ret.ow = dst.layout.shape[3];
+            } else if (format == Format::NCHW64) {
+                ret.c = src.layout.shape[1] * 64;
+                ret.ih = src.layout.shape[2];
+                ret.iw = src.layout.shape[3];
+                ret.oh = dst.layout.shape[2];
+                ret.ow = dst.layout.shape[3];
             } else {
                 megdnn_assert(format == Format::NHWCD4);
                 ret.c = src.layout.shape[2] * 4;
@@ -100,7 +106,8 @@ protected:
                 ret.sptr = src.compatible_ptr<ctype>();
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = dst.compatible_ptr<ctype>();
-            } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
+            } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                       src.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
                 ret.sptr = src.compatible_ptr<ctype>();
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = dst.compatible_ptr<ctype>();
@@ -140,6 +147,9 @@ public:
 private:
     template <typename ctype, typename mtype>
     void kern_naive_nhwcd4(const KernParam<ctype, mtype>& kern_param,
+                           size_t task_id);
+    template <typename ctype, typename mtype>
+    void kern_naive_int4(const KernParam<ctype, mtype>& kern_param,
                            size_t task_id);
     template <typename ctype, typename dst_ctype, typename mtype>
     void kern_naive_dimshuffle_typecvt(

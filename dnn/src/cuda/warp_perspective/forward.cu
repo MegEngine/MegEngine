@@ -142,6 +142,92 @@ __global__ void kern_general_nchw4(SrcVisitor src, const float* __restrict mat,
     }
 }
 
+#define warp_perspective_transform(idx)                           \
+    static_cast<int>(output_converter(s00[idx] * nalpha * nbeta + \
+                                      s01[idx] * nalpha * pbeta + \
+                                      s10[idx] * palpha * nbeta + \
+                                      s11[idx] * palpha * pbeta)  \
+                             .as_int8())
+
+#define pack_output                                                       \
+    transform_int8_to_int4x8(                                             \
+            warp_perspective_transform(0), warp_perspective_transform(1), \
+            warp_perspective_transform(2), warp_perspective_transform(3), \
+            warp_perspective_transform(4), warp_perspective_transform(5), \
+            warp_perspective_transform(6), warp_perspective_transform(7))
+
+template <typename ctype, typename Getter, typename SrcVisitor,
+          typename OutputConverter>
+__global__ void kern_general_nchw64(SrcVisitor src, const float* __restrict mat,
+                                    ctype* __restrict dst, int C, int IH,
+                                    int IW, int OH, int OW) {
+    Getter getter;
+    OutputConverter output_converter;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int c1 = ow % 2;
+    ow = ow / 2;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = src.get(blockIdx.z, C * IH * IW / 2);
+    dst += blockIdx.z * C * OH * OW / 2;
+    mat += blockIdx.z * 3 * 3;
+    const int4* sptr_int4 = reinterpret_cast<const int4*>(sptr);
+    int4* dst_int4 = reinterpret_cast<int4*>(dst);
+    if (ow < OW && oh < OH) {
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
+        float iw = (mat[0] * ow + mat[1] * oh + mat[2]) / denominator;
+        float ih = (mat[3] * ow + mat[4] * oh + mat[5]) / denominator;
+        int iw0 = getter(floor(iw) + 0, IW);
+        int iw1 = getter(floor(iw) + 1, IW);
+        int ih0 = getter(floor(ih) + 0, IH);
+        int ih1 = getter(floor(ih) + 1, IH);
+        float palpha = ih - floor(ih);
+        float pbeta = iw - floor(iw);
+        float nalpha = 1.0f - palpha;
+        float nbeta = 1.0f - pbeta;
+        int o_coor = (oh * OW + ow) << 1;
+        int i_coor_00 = (ih0 * IW + iw0) << 1;
+        int i_coor_01 = (ih0 * IW + iw1) << 1;
+        int i_coor_10 = (ih1 * IW + iw0) << 1;
+        int i_coor_11 = (ih1 * IW + iw1) << 1;
+        int s00[8], s01[8], s10[8], s11[8];
+        int4 s[4], d;
+        for (int c0 = 0, nr_chan = C / 64; c0 < nr_chan; ++c0) {
+            s[0] = __ldg(sptr_int4 + i_coor_00 + c1);
+            s[1] = __ldg(sptr_int4 + i_coor_01 + c1);
+            s[2] = __ldg(sptr_int4 + i_coor_10 + c1);
+            s[3] = __ldg(sptr_int4 + i_coor_11 + c1);
+
+            transform_int4x8_to_int8(s00, s[0].x);
+            transform_int4x8_to_int8(s01, s[1].x);
+            transform_int4x8_to_int8(s10, s[2].x);
+            transform_int4x8_to_int8(s11, s[3].x);
+            d.x = pack_output;
+
+            transform_int4x8_to_int8(s00, s[0].y);
+            transform_int4x8_to_int8(s01, s[1].y);
+            transform_int4x8_to_int8(s10, s[2].y);
+            transform_int4x8_to_int8(s11, s[3].y);
+            d.y = pack_output;
+
+            transform_int4x8_to_int8(s00, s[0].z);
+            transform_int4x8_to_int8(s01, s[1].z);
+            transform_int4x8_to_int8(s10, s[2].z);
+            transform_int4x8_to_int8(s11, s[3].z);
+            d.z = pack_output;
+
+            transform_int4x8_to_int8(s00, s[0].w);
+            transform_int4x8_to_int8(s01, s[1].w);
+            transform_int4x8_to_int8(s10, s[2].w);
+            transform_int4x8_to_int8(s11, s[3].w);
+            d.w = pack_output;
+
+            dst_int4[o_coor + c1] = d;
+            sptr_int4 += IH * IW * 2;
+            dst_int4 += OH * OW * 2;
+        }
+    }
+}
+
 template <typename ctype, typename SrcVisitor, typename OutputConverter>
 __global__ void kern_const_border(SrcVisitor src, const float* __restrict mat,
                                   ctype* __restrict dst, int C, int IH, int IW,
@@ -229,6 +315,107 @@ __global__ void kern_const_border_nchw4(SrcVisitor src,
             }
             sptr += IH * IW * 4;
             dst += OH * OW * 4;
+        }
+    }
+}
+
+template <typename ctype, typename SrcVisitor, typename OutputConverter>
+__global__ void kern_const_border_nchw64(SrcVisitor src,
+                                         const float* __restrict mat,
+                                         ctype* __restrict dst, int C, int IH,
+                                         int IW, int OH, int OW, ctype bval) {
+    OutputConverter output_converter;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int c1 = ow %2;
+    ow = ow / 2;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = src.get(blockIdx.z, C * IH * IW / 2);
+    dst += blockIdx.z * C * OH * OW / 2;
+    mat += blockIdx.z * 3 * 3;
+    const int4* sptr_int4 = reinterpret_cast<const int4*>(sptr);
+    int4* dst_int4 = reinterpret_cast<int4*>(dst);
+    if (ow < OW && oh < OH) {
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
+        float iw = (mat[0] * ow + mat[1] * oh + mat[2]) / denominator;
+        float ih = (mat[3] * ow + mat[4] * oh + mat[5]) / denominator;
+        int iw0 = floor(iw) + 0;
+        int iw1 = floor(iw) + 1;
+        int ih0 = floor(ih) + 0;
+        int ih1 = floor(ih) + 1;
+        bool okw0 = (iw0 >= 0 && iw0 < IW);
+        bool okw1 = (iw1 >= 0 && iw1 < IW);
+        bool okh0 = (ih0 >= 0 && ih0 < IH);
+        bool okh1 = (ih1 >= 0 && ih1 < IH);
+        float palpha = ih - floor(ih);
+        float pbeta = iw - floor(iw);
+        float nalpha = 1.0f - palpha;
+        float nbeta = 1.0f - pbeta;
+        int o_coor = (oh * OW + ow) << 1;
+        int i_coor_00 = (ih0 * IW + iw0) << 1;
+        int i_coor_01 = (ih0 * IW + iw1) << 1;
+        int i_coor_10 = (ih1 * IW + iw0) << 1;
+        int i_coor_11 = (ih1 * IW + iw1) << 1;
+        bool flag00 = okh0 && okw0, flag01 = okh0 && okw1,
+             flag10 = okh1 && okw0, flag11 = okh1 && okw1;
+        int8_t bval_4 = bval.as_int8() & 0xF;
+        int bval_8 = transform_int8_to_int4x8(bval_4, bval_4, bval_4, bval_4,
+                                              bval_4, bval_4, bval_4, bval_4);
+        int4 bval_int4;
+        bval_int4.x = bval_8;
+        bval_int4.y = bval_8;
+        bval_int4.z = bval_8;
+        bval_int4.w = bval_8;
+        int s00[8], s01[8], s10[8], s11[8];
+        int4 s[4], d;
+        for (int c0 = 0, nr_chan = C / 64; c0 < nr_chan; ++c0) {
+            if (flag00) {
+                s[0] = __ldg(sptr_int4 + i_coor_00 + c1);
+            } else {
+                s[0] = bval_int4;
+            }
+            if (flag01) {
+                s[1] = __ldg(sptr_int4 + i_coor_01 + c1);
+            } else {
+                s[1] = bval_int4;
+            }
+            if (flag10) {
+                s[2] = __ldg(sptr_int4 + i_coor_10 + c1);
+            } else {
+                s[2] = bval_int4;
+            }
+            if (flag11) {
+                s[3] = __ldg(sptr_int4 + i_coor_11 + c1);
+            } else {
+                s[3] = bval_int4;
+            }
+
+            transform_int4x8_to_int8(s00, s[0].x);
+            transform_int4x8_to_int8(s01, s[1].x);
+            transform_int4x8_to_int8(s10, s[2].x);
+            transform_int4x8_to_int8(s11, s[3].x);
+            d.x = pack_output;
+
+            transform_int4x8_to_int8(s00, s[0].y);
+            transform_int4x8_to_int8(s01, s[1].y);
+            transform_int4x8_to_int8(s10, s[2].y);
+            transform_int4x8_to_int8(s11, s[3].y);
+            d.y = pack_output;
+
+            transform_int4x8_to_int8(s00, s[0].z);
+            transform_int4x8_to_int8(s01, s[1].z);
+            transform_int4x8_to_int8(s10, s[2].z);
+            transform_int4x8_to_int8(s11, s[3].z);
+            d.z = pack_output;
+
+            transform_int4x8_to_int8(s00, s[0].w);
+            transform_int4x8_to_int8(s01, s[1].w);
+            transform_int4x8_to_int8(s10, s[2].w);
+            transform_int4x8_to_int8(s11, s[3].w);
+            d.w = pack_output;
+
+            dst_int4[o_coor + c1] = d;
+            sptr_int4 += IH * IW * 2;
+            dst_int4 += OH * OW * 2;
         }
     }
 }
@@ -420,6 +607,58 @@ void dispatch_with_visitor_nchw4(SrcVisitor src, const float* mat, ctype* dst,
         src.move_batch(curr_batch_size, C * IH * IW);
         mat += curr_batch_size * 3 * 3;
         dst += curr_batch_size * C * OH * OW;
+    }
+}
+
+template <typename ctype, typename SrcVisitor>
+void dispatch_with_visitor_nchw64(SrcVisitor src, const float* mat, ctype* dst,
+                                  int N, int C, int IH, int IW, int OH, int OW,
+                                  ctype bval, BorderMode bmode,
+                                  cudaStream_t stream) {
+    const int BY = 16, BX = 32;
+#define DISPATCH(Getter)                                                       \
+    do {                                                                       \
+        kern_general_nchw64<ctype, Getter, SrcVisitor,                         \
+                            rounding::RoundingConverter<ctype>>                \
+                <<<blocks, threads, 0, stream>>>(src, mat, dst, C, IH, IW, OH, \
+                                                 OW);                          \
+    } while (0)
+
+    const int max_batch_size = 65535;
+    while (N) {
+        size_t curr_batch_size = N < max_batch_size ? N : max_batch_size;
+        dim3 threads(BX, BY);
+        dim3 blocks((OW * 2 + BX - 1) / BX, (OH + BY - 1) / BY,
+                    curr_batch_size);
+
+        switch (bmode) {
+            case BORDER_REPLICATE:
+                DISPATCH(ReplicateGetter);
+                break;
+            case BORDER_REFLECT:
+                DISPATCH(ReflectGetter);
+                break;
+            case BORDER_REFLECT_101:
+                DISPATCH(Reflect101Getter);
+                break;
+            case BORDER_WRAP:
+                DISPATCH(WrapGetter);
+                break;
+#undef DISPATCH
+            case BORDER_CONSTANT:
+                kern_const_border_nchw64<ctype, SrcVisitor,
+                                         rounding::RoundingConverter<ctype>>
+                        <<<blocks, threads, 0, stream>>>(src, mat, dst, C, IH,
+                                                         IW, OH, OW, bval);
+                break;
+            default:
+                break;
+        }
+
+        N -= curr_batch_size;
+        src.move_batch(curr_batch_size, C * IH * IW / 2);
+        mat += curr_batch_size * 3 * 3;
+        dst += curr_batch_size * C * OH * OW / 2;
     }
 }
 
@@ -1154,6 +1393,30 @@ void forward_proxy_nchw4(const ctype* src, const float* mat, const int* mat_idx,
     after_kernel_launch();
 }
 
+template <typename ctype>
+void forward_proxy_nchw64(const ctype* src, const float* mat, const int* mat_idx,
+                         ctype* dst, int N_SRC, int N_MAT, int C, int IH,
+                         int IW, int OH, int OW, ctype bval, BorderMode bmode,
+                         megcore::AsyncErrorInfo* error_info,
+                         void* error_tracker, cudaStream_t stream) {
+    if (mat_idx) {
+        IndexedSrcVisitor<ctype> visitor;
+        visitor.ptr = src;
+        visitor.idx = mat_idx;
+        visitor.N_SRC = N_SRC;
+        visitor.error_info = error_info;
+        visitor.error_tracker = error_tracker;
+        dispatch_with_visitor_nchw64(visitor, mat, dst, N_MAT, C, IH, IW, OH, OW,
+                                    bval, bmode, stream);
+    } else {
+        DirectSrcVisitor<ctype> visitor;
+        visitor.ptr = src;
+        dispatch_with_visitor_nchw64(visitor, mat, dst, N_MAT, C, IH, IW, OH, OW,
+                                    bval, bmode, stream);
+    }
+    after_kernel_launch();
+}
+
 #define INST(ctype)                                                           \
     template void forward_proxy(bool, const ctype*, const float*, const int*, \
                                 ctype*, int, int, int, int, int, int, int,    \
@@ -1174,6 +1437,15 @@ INST(int8_t)
             void*, cudaStream_t);
 
 INST(int8_t)
+#undef INST
+
+#define INST(ctype)                                                          \
+    template void forward_proxy_nchw64(                                      \
+            const ctype*, const float*, const int*, ctype*, int, int, int,   \
+            int, int, int, int, ctype, BorderMode, megcore::AsyncErrorInfo*, \
+            void*, cudaStream_t);
+
+INST(dt_qint4)
 #undef INST
 
 template <typename src_dtype, typename src_ctype, typename dst_ctype>
