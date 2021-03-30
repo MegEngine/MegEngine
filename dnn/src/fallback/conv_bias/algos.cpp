@@ -187,7 +187,9 @@ bool ConvBiasImpl::AlgoNaive::usable(
         const NCBKernSizeParam& param,
         AlgoSelectionStrategy /*algo_selection_strategy*/) const {
     MIDOUT_BEGIN(megdnn_fallback_naive, 0) {
-        return param.filter_meta.format == param::ConvBias::Format::NCHW;
+        auto algo_data_type = param.deduce_algo_data_type();
+        return param.filter_meta.format == param::ConvBias::Format::NCHW &&
+               contain_data_type(get_algo_type().data_type, algo_data_type);
     }
     MIDOUT_END();
     return false;

@@ -123,6 +123,7 @@ void forward_bias<dt_quint4, dt_quint4, dt_qint32, dt_qint32>(
         auto param = layout.dtype.param<dtype::Quantized4Asymm>();
         ret.dtype = dtype::Quantized8Asymm(param.scale, param.zero_point);
         ret.format = TensorFormat(ret.dtype);
+        ret.init_contiguous_stride();
         return ret;
     };
     TensorND new_src = {workspace_ptr, convert_layout(src.layout)};
@@ -147,6 +148,7 @@ void forward_bias<dt_qint4, dt_qint4, dt_qint32, dt_qint32>(
         auto param = layout.dtype.param<dtype::QuantizedS4>();
         ret.dtype = dtype::QuantizedS8(param.scale);
         ret.format = TensorFormat(ret.dtype);
+        ret.init_contiguous_stride();
         return ret;
     };
     TensorND new_src = {workspace_ptr, convert_layout(src.layout)};
