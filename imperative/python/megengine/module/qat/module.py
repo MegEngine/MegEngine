@@ -39,6 +39,9 @@ class QATModule(Module):
         self.weight_fake_quant = None  # type: FakeQuantize
         self.act_fake_quant = None  # type: FakeQuantize
 
+    def __repr__(self):
+        return "QAT." + super().__repr__()
+
     def set_qconfig(self, qconfig: QConfig):
         r"""
         Set quantization related configs with ``qconfig``, including
