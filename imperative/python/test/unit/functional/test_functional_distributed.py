@@ -44,8 +44,6 @@ def test_reduce_sum(shape):
         output = reduce_sum(inp)
         if rank == 0:
             assert np.allclose(output.numpy(), expect[rank])
-        else:
-            assert np.allclose(output.numpy(), 0)
 
     x = np.random.random_sample(shape).astype("float32")
     y = np.random.random_sample(shape).astype("float32")
@@ -179,8 +177,6 @@ def test_gather(shape):
         output = gather(inp)
         if rank == 0:
             assert np.allclose(output.numpy(), expect[rank])
-        else:
-            assert np.allclose(output.numpy(), 0)
 
     x = np.random.random_sample(shape).astype("float32")
     y = np.random.random_sample(shape).astype("float32")
