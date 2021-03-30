@@ -271,10 +271,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             }
 
             interpreter::Interpreter::Handle handle;
-            constexpr auto size_threshhold = TensorShape::MAX_NDIM;
-            if (data.size() > size_threshhold) {
-                handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::borrow(cn), dtype), no_cache);
-            } else {
+            {
                 HostTensorND ret(cn);
                 handle = interpreter_for_py->put(npy::np2tensor(data.ptr(), npy::Meth::copy_into(&ret), dtype), no_cache);
             }
