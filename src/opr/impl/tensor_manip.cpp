@@ -1410,8 +1410,11 @@ SymbolVar ParamPackConcat::make(const SmallVector<SymbolVar>& inp,
 void ParamPackConcat::scn_do_execute() {
     mgb_assert(m_opr.comp_node() == comp_node());
     auto&& inputs = input();
-    m_inp_ptr.resize(inputs.size() - 1);
-    auto ptr = m_inp_ptr.data();
+    if (!m_inp_ptr) {
+        void** raw_inp_ptr = (void**)comp_node().alloc_host(sizeof(void*)*inputs.size());
+        m_inp_ptr = {raw_inp_ptr, [comp_node=comp_node()](void** ptr){comp_node.free_host(ptr);}};
+    }
+    auto ptr = m_inp_ptr.get();
     for (size_t i = 0; i < inputs.size() - 1; i++) {
         ptr[i] = inputs[i]->dev_tensor().as_megdnn().raw_ptr;
     }
