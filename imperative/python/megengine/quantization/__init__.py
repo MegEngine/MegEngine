@@ -6,8 +6,16 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-from .fake_quant import FakeQuantize
-from .observer import Observer
+from .fake_quant import TQT, FakeQuantize
+from .observer import (
+    ExponentialMovingAverageObserver,
+    HistogramObserver,
+    MinMaxObserver,
+    Observer,
+    PassiveObserver,
+    SyncExponentialMovingAverageObserver,
+    SyncMinMaxObserver,
+)
 from .qconfig import (
     QConfig,
     calibration_qconfig,

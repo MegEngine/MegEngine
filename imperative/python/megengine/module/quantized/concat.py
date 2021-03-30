@@ -23,7 +23,7 @@ class Concat(QuantizedModule):
         self.output_dtype = dtype
 
     def forward(self, inps: Iterable[Tensor], axis: int = 0):
-        new_inps = (x.astype(self.output_dtype) for x in inps)
+        new_inps = tuple(x.astype(self.output_dtype) for x in inps)
         return F.concat(new_inps, axis)
 
     @classmethod
