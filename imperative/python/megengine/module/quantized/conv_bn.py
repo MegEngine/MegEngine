@@ -50,11 +50,11 @@ class ConvBn2d(_ConvBnActivation2d):
     r"""Quantized version of :class:`~.qat.ConvBn2d`."""
 
     def forward(self, inp):
-        return self.calc_conv_quantized(inp, nonlinear_mode="IDENTITY")
+        return self.calc_conv_quantized(inp, nonlinear_mode="identity")
 
 
 class ConvBnRelu2d(_ConvBnActivation2d):
     r"""Quantized version of :class:`~.qat.ConvBnRelu2d`."""
 
     def forward(self, inp):
-        return self.calc_conv_quantized(inp, nonlinear_mode="RELU")
+        return self.calc_conv_quantized(inp, nonlinear_mode="relu")

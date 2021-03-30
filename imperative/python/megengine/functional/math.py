@@ -604,9 +604,9 @@ def argsort(inp: Tensor, descending: bool = False) -> Tensor:
     """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
-        order = "DESCENDING"
+        order = "descending"
     else:
-        order = "ASCENDING"
+        order = "ascending"
 
     op = builtin.Argsort(order=order)
     if len(inp.shape) == 1:
@@ -646,9 +646,9 @@ def sort(inp: Tensor, descending: bool = False) -> Tuple[Tensor, Tensor]:
     """
     assert len(inp.shape) <= 2, "Input should be 1d or 2d"
     if descending:
-        order = "DESCENDING"
+        order = "descending"
     else:
-        order = "ASCENDING"
+        order = "ascending"
 
     op = builtin.Argsort(order=order)
     if len(inp.shape) == 1:
@@ -699,11 +699,11 @@ def topk(
         inp = -inp
 
     if kth_only:
-        mode = "KTH_ONLY"
+        mode = "kth_only"
     elif no_sort:
-        mode = "VALUE_IDX_NOSORT"
+        mode = "value_idx_nosort"
     else:
-        mode = "VALUE_IDX_SORTED"
+        mode = "value_idx_sorted"
     op = builtin.TopK(mode=mode)
 
     if not isinstance(k, Tensor):
@@ -765,8 +765,8 @@ def matmul(
     inp2: Tensor,
     transpose_a=False,
     transpose_b=False,
-    compute_mode="DEFAULT",
-    format="DEFAULT",
+    compute_mode="default",
+    format="default",
 ) -> Tensor:
     """
     Performs a matrix multiplication of the matrices ``inp1`` and ``inp2``.
@@ -776,7 +776,9 @@ def matmul(
     - Both 1-D tensor, simply forward to ``dot``.
     - Both 2-D tensor, normal matrix multiplication.
     - If one input tensor is 1-D, matrix vector multiplication.
-    - If at least one tensor are 3-dimensional or >3-dimensional, the other tensor should have dim >= 2, the batched matrix-matrix is returned, and the tensor with smaller dimension will be broadcasted. For example:
+    - If at least one tensor are 3-dimensional or >3-dimensional, the other tensor should have dim >= 2,
+         the batched matrix-matrix is returned, and the tensor with smaller dimension will be broadcasted.
+         For example:
 
       - inp1: `(n, k, m)`, inp2: `(n, m, p)`, return: `(n, k, p)`
       - inp1: `(n, k, m)`, inp2: `(m, p)`, return: `(n, k, p)`

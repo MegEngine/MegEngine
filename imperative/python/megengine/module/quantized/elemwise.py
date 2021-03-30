@@ -16,7 +16,7 @@ class Elemwise(QuantizedModule):
 
     def __init__(self, method, dtype=None, **kwargs):
         super().__init__(**kwargs)
-        self.method = "Q" + method
+        self.method = "q" + method
         self.output_dtype = dtype
 
     def forward(self, *inps):

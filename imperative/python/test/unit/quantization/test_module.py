@@ -133,7 +133,7 @@ def test_dequant_stub():
     np.testing.assert_allclose(q, fake_quant_normal.numpy())
 
 
-@pytest.mark.parametrize("kind", ["COS", "RELU", "ADD", "MUL", "FUSE_ADD_RELU"])
+@pytest.mark.parametrize("kind", ["cos", "relu", "add", "mul", "fuse_add_relu"])
 def test_elemwise(kind):
     normal_net = Float.Elemwise(kind)
     normal_net.eval()
@@ -167,7 +167,7 @@ def test_elemwise(kind):
     x2_int8 = quant(x2, x2_scale)
 
     # test correctness of `Float`, `QAT` and `Quantized`
-    if kind in ("ADD", "MUL", "FUSE_ADD_RELU"):
+    if kind in ("add", "mul", "fuse_add_relu"):
         normal = normal_net(x1, x2)
         qat_without_fakequant = qat_from_float(x1, x2)
         fake_quant_normal = fake_quant_act(normal_net(x1, x2), act_scale)

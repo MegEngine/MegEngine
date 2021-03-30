@@ -372,7 +372,7 @@ def test_interpolate_fastpath():
     x = mge.Tensor(x_np)
 
     grad = Grad().wrt(x, callback=save_to(x))
-    y = F.vision.interpolate(x, size=(16, 16), mode="BILINEAR")
+    y = F.vision.interpolate(x, size=(16, 16), mode="bilinear")
 
     grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones(x_np.shape, dtype=np.float32) / 4, x.grad.numpy())

@@ -65,7 +65,7 @@ def _elwise(*args, mode):
 
 def _matmul(inp1, inp2):
     op = builtin.MatrixMul(
-        transposeA=False, transposeB=False, compute_mode="DEFAULT", format="DEFAULT"
+        transposeA=False, transposeB=False, compute_mode="default", format="default"
     )
     inp1, inp2 = utils.convert_inputs(inp1, inp2)
     (result,) = apply(op, inp1, inp2)
@@ -178,7 +178,7 @@ def _reduce(mode):
     def f(self, axis=None, keepdims: bool = False):
         data = self
         (data,) = utils.convert_inputs(data)
-        if mode == "MEAN":
+        if mode == "mean":
             data = data.astype("float32")
         elif self.dtype == np.bool_:
             data = data.astype("int32")
@@ -204,7 +204,7 @@ def _reduce(mode):
             if not keepdims:
                 result = _remove_axis(result, axis)
         if self.dtype == np.bool_:
-            if mode in ["MIN", "MAX"]:
+            if mode in ["min", "max"]:
                 result = result.astype("bool")
         if axis is None or self.ndim == 1:
             setscalar(result)
@@ -479,7 +479,7 @@ class ArrayMethodMixin(abc.ABC):
             10.0
 
         """
-        return _reduce("SUM")(self, axis, keepdims)
+        return _reduce("sum")(self, axis, keepdims)
 
     def prod(self, axis=None, keepdims: bool = False):
         r"""
@@ -512,7 +512,7 @@ class ArrayMethodMixin(abc.ABC):
             24.0
 
         """
-        return _reduce("PRODUCT")(self, axis, keepdims)
+        return _reduce("product")(self, axis, keepdims)
 
     def min(self, axis=None, keepdims: bool = False):
         r"""
@@ -545,7 +545,7 @@ class ArrayMethodMixin(abc.ABC):
             1.0
 
         """
-        return _reduce("MIN")(self, axis, keepdims)
+        return _reduce("min")(self, axis, keepdims)
 
     def max(self, axis=None, keepdims: bool = False):
         r"""
@@ -578,7 +578,7 @@ class ArrayMethodMixin(abc.ABC):
             4.0
 
         """
-        return _reduce("MAX")(self, axis, keepdims)
+        return _reduce("max")(self, axis, keepdims)
 
     def mean(self, axis=None, keepdims: bool = False):
         r"""
@@ -611,4 +611,4 @@ class ArrayMethodMixin(abc.ABC):
             2.5
 
         """
-        return _reduce("MEAN")(self, axis, keepdims)
+        return _reduce("mean")(self, axis, keepdims)

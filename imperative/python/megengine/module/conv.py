@@ -138,11 +138,11 @@ class Conv1d(_ConvNd):
         out_channel // groups, in_channels // groups, *kernel_size)`.
     :param bias: whether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
-        `CROSS_CORRELATION`
-    :param compute_mode: When set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
+    :param conv_mode: Supports `cross_correlation`. Default:
+        `cross_correlation`
+    :param compute_mode: When set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of float16 dtype.
 
     Examples:
@@ -176,8 +176,8 @@ class Conv1d(_ConvNd):
         dilation: int = 1,
         groups: int = 1,
         bias: bool = True,
-        conv_mode: str = "CROSS_CORRELATION",
-        compute_mode: str = "DEFAULT",
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
         **kwargs
     ):
         kernel_size = kernel_size
@@ -298,11 +298,11 @@ class Conv2d(_ConvNd):
         out_channel // groups, in_channels // groups, *kernel_size)`.
     :param bias: whether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
-        `CROSS_CORRELATION`
-    :param compute_mode: When set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
+    :param conv_mode: Supports `cross_correlation`. Default:
+        `cross_correlation`
+    :param compute_mode: When set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of float16 dtype.
 
     Examples:
@@ -336,8 +336,8 @@ class Conv2d(_ConvNd):
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
-        conv_mode: str = "CROSS_CORRELATION",
-        compute_mode: str = "DEFAULT",
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
         **kwargs
     ):
         kernel_size = _pair_nonzero(kernel_size)
@@ -436,15 +436,16 @@ class Conv3d(_ConvNd):
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 3D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a "grouped convolution". When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and there would be an extra dimension at the beginning of the weight's
         shape. Specifically, the shape of weight would be `(groups,
         out_channel // groups, in_channels // groups, *kernel_size)`.
     :param bias: whether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
-        `CROSS_CORRELATION`
+    :param conv_mode: Supports `cross_correlation`. Default:
+        `cross_correlation`
 
     Examples:
 
@@ -477,7 +478,7 @@ class Conv3d(_ConvNd):
         dilation: Union[int, Tuple[int, int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
-        conv_mode: str = "CROSS_CORRELATION",
+        conv_mode: str = "cross_correlation",
     ):
         kernel_size = _triple_nonzero(kernel_size)
         stride = _triple_nonzero(stride)
@@ -566,11 +567,11 @@ class ConvTranspose2d(_ConvNd):
         out_channels // groups, in_channels // groups, *kernel_size)``. Default: 1
     :param bias: wether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
-        `CROSS_CORRELATION`
-    :param compute_mode: When set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
+    :param conv_mode: Supports `cross_correlation`. Default:
+        `cross_correlation`
+    :param compute_mode: When set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of float16 dtype.
     """
 
@@ -584,8 +585,8 @@ class ConvTranspose2d(_ConvNd):
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
-        conv_mode: str = "CROSS_CORRELATION",
-        compute_mode: str = "DEFAULT",
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
         **kwargs
     ):
         kernel_size = _pair_nonzero(kernel_size)
@@ -679,7 +680,7 @@ class LocalConv2d(Conv2d):
         padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
-        conv_mode: str = "CROSS_CORRELATION",
+        conv_mode: str = "cross_correlation",
         **kwargs
     ):
         self.input_height = input_height
@@ -758,11 +759,11 @@ class DeformableConv2d(_ConvNd):
         out_channel // groups, in_channels // groups, *kernel_size)`.
     :param bias: whether to add a bias onto the result of convolution. Default:
         True
-    :param conv_mode: Supports `CROSS_CORRELATION`. Default:
-        `CROSS_CORRELATION`
-    :param compute_mode: When set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
+    :param conv_mode: Supports `cross_correlation`. Default:
+        `cross_correlation`
+    :param compute_mode: When set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
         effective when input and output are of float16 dtype.
     """
 
@@ -776,8 +777,8 @@ class DeformableConv2d(_ConvNd):
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: bool = True,
-        conv_mode: str = "CROSS_CORRELATION",
-        compute_mode: str = "DEFAULT",
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
         **kwargs
     ):
         kernel_size = _pair_nonzero(kernel_size)

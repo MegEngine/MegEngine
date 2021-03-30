@@ -140,8 +140,8 @@ def test_interpolate():
     def linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 
-        out = F.vision.interpolate(inp, scale_factor=2.0, mode="LINEAR")
-        out2 = F.vision.interpolate(inp, 4, mode="LINEAR")
+        out = F.vision.interpolate(inp, scale_factor=2.0, mode="linear")
+        out2 = F.vision.interpolate(inp, 4, mode="linear")
 
         np.testing.assert_allclose(
             out.numpy(), np.array([[[1.0, 1.25, 1.75, 2.0]]], dtype=np.float32)
@@ -170,13 +170,13 @@ def test_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
 
         with pytest.raises(ValueError):
-            F.vision.interpolate(inp, scale_factor=2.0, mode="LINEAR")
+            F.vision.interpolate(inp, scale_factor=2.0, mode="linear")
 
     def inappropriate_scale_linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))
 
         with pytest.raises(ValueError):
-            F.vision.interpolate(inp, scale_factor=[2.0, 3.0], mode="LINEAR")
+            F.vision.interpolate(inp, scale_factor=[2.0, 3.0], mode="linear")
 
     linear_interpolate()
     many_batch_interpolate()
@@ -339,18 +339,18 @@ def test_interpolate_fastpath():
     ]
     for inp_shape, target_shape in test_cases:
         x = tensor(np.random.randn(*inp_shape), dtype=np.float32)
-        out = F.vision.interpolate(x, target_shape, mode="BILINEAR")
+        out = F.vision.interpolate(x, target_shape, mode="bilinear")
         assert out.shape[0] == x.shape[0] and out.shape[1] == x.shape[1]
         assert out.shape[2] == target_shape[0] and out.shape[3] == target_shape[1]
 
     # check value
     x = tensor(np.ones((3, 3, 10, 10)), dtype=np.float32)
-    out = F.vision.interpolate(x, (15, 5), mode="BILINEAR")
+    out = F.vision.interpolate(x, (15, 5), mode="bilinear")
     np.testing.assert_equal(out.numpy(), np.ones((3, 3, 15, 5)).astype(np.float32))
 
     np_x = np.arange(32)
     x = tensor(np_x).astype(np.float32).reshape(1, 1, 32, 1)
-    out = F.vision.interpolate(x, (1, 1), mode="BILINEAR")
+    out = F.vision.interpolate(x, (1, 1), mode="bilinear")
     np.testing.assert_equal(out.item(), np_x.mean())
 
 
@@ -374,7 +374,7 @@ def test_warp_affine():
     inp_shape = (1, 3, 3, 3)
     x = tensor(np.arange(27, dtype=np.float32).reshape(inp_shape))
     weightv = [[[1.26666667, 0.6, -83.33333333], [-0.33333333, 1, 66.66666667]]]
-    outp = F.vision.warp_affine(x, tensor(weightv), (2, 2), border_mode="WRAP")
+    outp = F.vision.warp_affine(x, tensor(weightv), (2, 2), border_mode="wrap")
     res = np.array(
         [
             [
@@ -509,7 +509,7 @@ def test_conv_bias():
         SH,
         SW,
         has_bias=True,
-        nonlinear_mode="IDENTITY",
+        nonlinear_mode="identity",
     ):
         inp_v = np.random.normal(size=(N, IC, IH, IW))
         w_v = np.random.normal(size=(OC, IC, KH, KW))
@@ -541,7 +541,7 @@ def test_conv_bias():
             O = F.conv2d(
                 inp, w, b if has_bias else None, stride=(SH, SW), padding=(PH, PW),
             )
-            if nonlinear_mode == "RELU":
+            if nonlinear_mode == "relu":
                 return F.relu(O)
             else:
                 return O
@@ -583,8 +583,8 @@ def test_conv_bias():
     run(10, 12, 24, 46, 46, 1, 1, 2, 1, 3, 1)
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2)
 
-    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
-    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
+    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "relu")
+    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "relu")
 
 
 @pytest.mark.skipif(

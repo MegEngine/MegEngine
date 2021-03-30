@@ -267,6 +267,7 @@ def hinge_loss(pred: Tensor, label: Tensor, norm: str = "L1") -> Tensor:
         1.5
 
     """
+    norm = norm.upper()
     assert norm in ["L1", "L2"], "norm must be L1 or L2"
     # Converts binary labels to -1/1 labels.
     loss = relu(1.0 - pred * label)

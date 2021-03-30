@@ -280,7 +280,7 @@ def test_convbias():
     @trace(symbolic=True, capture_as_const=True)
     def fwd(inp, weight, bias):
         return F.quantized.conv_bias_activation(
-            inp, weight, bias, dtype=dtype.qint8(scale=1.0), nonlinear_mode="RELU"
+            inp, weight, bias, dtype=dtype.qint8(scale=1.0), nonlinear_mode="relu"
         )
 
     inp = Tensor(np.random.random((1, 3, 64, 64)), dtype=dtype.qint8(scale=1.0))
@@ -297,7 +297,7 @@ def test_batch_convbias():
     @trace(symbolic=True, capture_as_const=True)
     def fwd(inp, weight, bias):
         return F.quantized.batch_conv_bias_activation(
-            inp, weight, bias, dtype=dtype.qint8(scale=1.0), nonlinear_mode="RELU"
+            inp, weight, bias, dtype=dtype.qint8(scale=1.0), nonlinear_mode="relu"
         )
 
     inp = Tensor(np.random.random((1, 3, 64, 64)), dtype=dtype.qint8(scale=1.0))
@@ -358,7 +358,7 @@ def test_warpaffine():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(x, weightv):
-        return F.vision.warp_affine(x, weightv, (2, 2), border_mode="WRAP")
+        return F.vision.warp_affine(x, weightv, (2, 2), border_mode="wrap")
 
     outp = fwd(x, weightv)
     check_pygraph_dump(fwd, [x, weightv], [outp])
@@ -387,7 +387,7 @@ def test_resize():
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(x):
-        return F.vision.interpolate(x, size=(16, 16), mode="BILINEAR")
+        return F.vision.interpolate(x, size=(16, 16), mode="bilinear")
 
     out = fwd(x)
     check_pygraph_dump(fwd, [x], [out])
@@ -697,7 +697,7 @@ def test_assert_equal():
 
 
 def test_elemwise_multitype():
-    op = builtin.ElemwiseMultiType(mode="QADD", dtype=dtype.qint32(2.0))
+    op = builtin.ElemwiseMultiType(mode="qadd", dtype=dtype.qint32(2.0))
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(x, y):

@@ -24,7 +24,7 @@ class BatchMatMulActivation(Module):
         in_features: int,
         out_features: int,
         bias: bool = True,
-        nonlinear_mode="IDENTITY",
+        nonlinear_mode="identity",
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -37,7 +37,7 @@ class BatchMatMulActivation(Module):
         if bias:
             b_shape = (out_features,)
             self.bias = Parameter(np.zeros(b_shape, dtype=np.float32))
-        self.nonlinear_mode = nonlinear_mode
+        self.nonlinear_mode = nonlinear_mode.lower()
         self.reset_parameters()
 
     def _get_fanin(self):
@@ -54,7 +54,7 @@ class BatchMatMulActivation(Module):
         res = matmul(weight, x)
         if self.bias is not None:
             res += bias
-        if self.nonlinear_mode == "RELU":
+        if self.nonlinear_mode == "relu":
             res = relu(res)
         return res
 

@@ -27,7 +27,7 @@ class BatchMatMulActivation(Float.BatchMatMulActivation, QuantizedModule):
         in_features: int,
         out_features: int,
         bias: bool = True,
-        nonlinear_mode="IDENTITY",
+        nonlinear_mode="identity",
         dtype=None,
         **kwargs
     ):

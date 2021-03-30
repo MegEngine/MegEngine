@@ -46,6 +46,7 @@ def cvt_color(inp: Tensor, mode: str = ""):
         [[[[0.86555195]]]]
 
     """
+    mode = mode.upper()
     assert mode in builtin.CvtColor.Mode.__dict__, "unspport mode for cvt_color"
     mode = getattr(builtin.CvtColor.Mode, mode)
     assert isinstance(mode, builtin.CvtColor.Mode)
@@ -92,9 +93,8 @@ def roi_pooling(
             [[[-0.1383 -0.1383]
               [-0.5035 -0.5035]]]
 
-
     """
-    assert mode in ["max", "average"], "only max/average mode is supported"
+    assert mode.lower() in ["max", "average"], "only max/average mode is supported"
     if isinstance(output_shape, int):
         output_shape = (output_shape, output_shape)
 
@@ -151,6 +151,7 @@ def roi_align(
               [0.1359 0.1359]]]
 
     """
+    mode = mode.lower()
     assert mode in ["max", "average"], "only max/average mode is supported"
     if isinstance(output_shape, int):
         output_shape = (output_shape, output_shape)
@@ -244,9 +245,9 @@ def nms(
 def remap(
     inp: Tensor,
     map_xy: Tensor,
-    border_mode: str = "REPLICATE",
+    border_mode: str = "replicate",
     scalar: float = 0.0,
-    interp_mode: str = "LINEAR",
+    interp_mode: str = "linear",
 ) -> Tensor:
     r"""
     Applies remap transformation to batched 2D images.
@@ -257,11 +258,11 @@ def remap(
     :param inp: input image
     :param map_xy: (batch, oh, ow, 2) transformation matrix
     :param border_mode: pixel extrapolation method.
-        Default: "REPLICATE". Currently also support "CONSTANT", "REFLECT",
-        "REFLECT_101", "WRAP".
+        Default: "replicate". Currently also support "constant", "reflect",
+        "reflect_101", "wrap".
     :param scalar: value used in case of a constant border. Default: 0
     :param interp_mode: interpolation methods.
-        Default: "LINEAR". Currently only support "LINEAR" mode.
+        Default: "linear". Currently only support "linear" mode.
     :return: output tensor.
 
     Examples:
@@ -301,10 +302,10 @@ def warp_affine(
     inp: Tensor,
     weight: Tensor,
     out_shape,
-    border_mode="REPLICATE",
+    border_mode="replicate",
     border_val=0,
     format="NHWC",
-    imode="LINEAR",
+    imode="linear",
 ):
     """
     Batched affine transform on 2D images.
@@ -313,13 +314,13 @@ def warp_affine(
     :param weight: weight tensor.
     :param out_shape: output tensor shape.
     :param border_mode: pixel extrapolation method.
-        Default: "WRAP". Currently "CONSTANT", "REFLECT",
-        "REFLECT_101", "ISOLATED", "WRAP", "REPLICATE", "TRANSPARENT" are supported.
+        Default: "wrap". Currently "constant", "reflect",
+        "reflect_101", "isolated", "wrap", "replicate", "transparent" are supported.
     :param border_val: value used in case of a constant border. Default: 0
     :param format: "NHWC" as default based on historical concerns,
-        "NCHW" is also supported. Default: "NCHW".
-    :param imode: interpolation methods. Could be "LINEAR", "NEAREST", "CUBIC", "AREA".
-        Default: "LINEAR".
+        "NCHW" is also supported. Default: "NHWC".
+    :param imode: interpolation methods. Could be "linear", "nearest", "cubic", "area".
+        Default: "linear".
     :return: output tensor.
 
     .. note::
@@ -340,9 +341,9 @@ def warp_perspective(
     inp: Tensor,
     M: Tensor,
     dsize: Union[Tuple[int, int], int, Tensor],
-    border_mode: str = "REPLICATE",
+    border_mode: str = "replicate",
     border_val: float = 0.0,
-    interp_mode: str = "LINEAR",
+    interp_mode: str = "linear",
 ) -> Tensor:
     r"""
     Applies perspective transformation to batched 2D images.
@@ -359,11 +360,11 @@ def warp_perspective(
     :param M: `(batch, 3, 3)` transformation matrix.
     :param dsize: `(h, w)` size of the output image.
     :param border_mode: pixel extrapolation method.
-        Default: "REPLICATE". Currently also support "CONSTANT", "REFLECT",
-        "REFLECT_101", "WRAP".
+        Default: "replicate". Currently also support "constant", "reflect",
+        "reflect_101", "wrap".
     :param border_val: value used in case of a constant border. Default: 0
     :param interp_mode: interpolation methods.
-        Default: "LINEAR". Currently only support "LINEAR" mode.
+        Default: "linear". Currently only support "linear" mode.
     :return: output tensor.
 
     Note:
@@ -409,7 +410,7 @@ def interpolate(
     inp: Tensor,
     size: Optional[Union[int, Tuple[int, int]]] = None,
     scale_factor: Optional[Union[float, Tuple[float, float]]] = None,
-    mode: str = "BILINEAR",
+    mode: str = "bilinear",
     align_corners: Optional[bool] = None,
 ) -> Tensor:
     r"""
@@ -419,9 +420,9 @@ def interpolate(
     :param size: size of the output tensor. Default: None
     :param scale_factor: scaling factor of the output tensor. Default: None
     :param mode: interpolation methods, acceptable values are:
-        "BILINEAR", "LINEAR". Default: "BILINEAR"
+        "bilinear", "linear". Default: "bilinear"
     :param align_corners: This only has an effect when `mode`
-        is "BILINEAR" or "LINEAR". Geometrically, we consider the pixels of the input
+        is "bilinear" or "linear". Geometrically, we consider the pixels of the input
         and output as squares rather than points. If set to ``True``, the input
         and output tensors are aligned by the center points of their corner
         pixels, preserving the values at the corner pixels. If set to ``False``,
@@ -455,10 +456,10 @@ def interpolate(
            [3.   3.25 3.75 4.  ]]]]
 
     """
-    mode = mode.upper()
-    if mode not in ["BILINEAR", "LINEAR"]:
+    mode = mode.lower()
+    if mode not in ["bilinear", "linear"]:
         raise ValueError("interpolate only support linear or bilinear mode")
-    if mode not in ["BILINEAR", "LINEAR"]:
+    if mode not in ["bilinear", "linear"]:
         if align_corners is not None:
             raise ValueError(
                 "align_corners option can only be set in the bilinear/linear interpolating mode"
@@ -471,16 +472,16 @@ def interpolate(
         size is not None
         and scale_factor is None
         and not align_corners
-        and mode == "BILINEAR"
+        and mode == "bilinear"
         and inp.ndim in [4, 5]
     ):
         # fastpath for interpolate
-        op = builtin.Resize(imode="LINEAR", format="NCHW")
+        op = builtin.Resize(imode="linear", format="NCHW")
         shape = astensor1d(size, inp, dtype="int32", device=inp.device)
         (result,) = apply(op, inp, shape)
         return result
 
-    if mode == "LINEAR":
+    if mode == "linear":
         inp = expand_dims(inp, 3)
 
     if inp.ndim != 4:
@@ -492,14 +493,14 @@ def interpolate(
 
         if isinstance(scale_factor, (float, int)):
             scale_factor = float(scale_factor)
-            if mode == "LINEAR":
+            if mode == "linear":
                 scale_factor = (scale_factor, float(1))
             else:
                 scale_factor = (scale_factor, scale_factor)
         else:
-            if mode == "LINEAR":
+            if mode == "linear":
                 raise ValueError(
-                    "under LINEAR mode, scale_factor can only be single value"
+                    "under linear mode, scale_factor can only be single value"
                 )
 
         assert len(scale_factor) == 2, "shape of scale_factor must be equal to (2, )"
@@ -524,8 +525,8 @@ def interpolate(
         if isinstance(size, int):
             size = (size, 1)
         else:
-            if mode == "LINEAR":
-                raise ValueError("under LINEAR mode, size can only be single value")
+            if mode == "linear":
+                raise ValueError("under linear mode, size can only be single value")
         dsize = size
 
     oh, ow = dsize[0], dsize[1]
@@ -534,7 +535,7 @@ def interpolate(
     if align_corners:
         hscale = (ih - 1.0) / (oh - 1.0)
         wscale = 1.0 * iw / ow
-        if mode != "LINEAR":
+        if mode != "linear":
             wscale = (iw - 1.0) / (ow - 1.0)
         row0 = concat(
             [wscale, Tensor([0, 0], dtype="float32", device=inp.device)], axis=0
@@ -570,8 +571,8 @@ def interpolate(
         weight = broadcast_to(weight, (inp.shape[0], 3, 3))
 
     weight = weight.astype("float32")
-    ret = warp_perspective(inp, weight, dsize, interp_mode="LINEAR")
-    if mode == "LINEAR":
+    ret = warp_perspective(inp, weight, dsize, interp_mode="linear")
+    if mode == "linear":
         ret = reshape(ret, ret.shape[0:3])
     return ret
 

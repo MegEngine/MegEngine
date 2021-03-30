@@ -52,6 +52,8 @@ __all__ = [
     "deformable_psroi_pooling",
     "dropout",
     "embedding",
+    "hsigmoid",
+    "hswish",
     "indexing_one_hot",
     "leaky_relu",
     "linear",
@@ -62,17 +64,14 @@ __all__ = [
     "max_pool2d",
     "one_hot",
     "prelu",
+    "relu",
+    "relu6",
+    "remap",
+    "resize",
+    "sigmoid",
     "softmax",
     "softplus",
     "sync_batch_norm",
-    "conv1d",
-    "sigmoid",
-    "hsigmoid",
-    "relu",
-    "relu6",
-    "hswish",
-    "resize",
-    "remap",
     "warp_affine",
     "warp_perspective",
 ]
@@ -106,6 +105,83 @@ def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor
     return ret
 
 
+def conv1d(
+    inp: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: int = 1,
+    padding: int = 0,
+    dilation: int = 1,
+    groups: int = 1,
+    conv_mode="cross_correlation",
+    compute_mode="default",
+) -> Tensor:
+    """1D convolution operation.
+
+    Refer to :class:`~.Conv1d` for more information.
+
+    :param inp: The feature map of the convolution operation
+    :param weight: The convolution kernel
+    :param bias: The bias added to the result of convolution (if given)
+    :param stride: Stride of the 1D convolution operation. Default: 1
+    :param padding: Size of the paddings added to the input on both sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: Dilation of the 1D convolution operation. Default: 1
+    :param groups: number of groups to divide input and output channels into,
+        so as to perform a "grouped convolution". When ``groups`` is not 1,
+        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+        and the shape of weight should be ``(groups, out_channel // groups,
+        in_channels // groups, height, width)``.
+    :type conv_mode: string or :class:`mgb.opr_param_defs.Convolution.Mode`
+    :param conv_mode: Supports 'cross_correlation'. Default:
+        'cross_correlation'.
+    :type compute_mode: string or
+        :class:`mgb.opr_param_defs.Convolution.ComputeMode`
+    :param compute_mode: When set to 'default', no special requirements will be
+        placed on the precision of intermediate results. When set to 'float32',
+        float32 would be used for accumulator and intermediate result, but only
+        effective when input and output are of float16 dtype.
+
+    """
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
+    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
+    assert inp.ndim == 3, "the input dimension of conv1d should be 3"
+    assert weight.ndim == 3, "the weight dimension of conv1d should be 3"
+
+    inp = expand_dims(inp, 3)
+    weight = expand_dims(weight, 3)
+    if bias is not None:
+        assert bias.ndim == 3, "the bias dimension of conv1d should be 3"
+        bias = expand_dims(bias, 3)
+
+    stride_h = stride
+    pad_h = padding
+    dilate_h = dilation
+
+    sparse_type = "dense" if groups == 1 else "group"
+    op = builtin.Convolution(
+        stride_h=stride_h,
+        stride_w=1,
+        pad_h=pad_h,
+        pad_w=0,
+        dilate_h=dilate_h,
+        dilate_w=1,
+        strategy=get_execution_strategy(),
+        mode=conv_mode,
+        compute_mode=compute_mode,
+        sparse=sparse_type,
+    )
+    inp, weight = utils.convert_inputs(inp, weight)
+    (output,) = apply(op, inp, weight)
+    if bias is not None:
+        output += bias
+    output = squeeze(output, 3)
+    return output
+
+
 def conv2d(
     inp: Tensor,
     weight: Tensor,
@@ -114,8 +190,8 @@ def conv2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
-    conv_mode="CROSS_CORRELATION",
-    compute_mode="DEFAULT",
+    conv_mode="cross_correlation",
+    compute_mode="default",
 ) -> Tensor:
     """
     2D convolution operation.
@@ -135,24 +211,27 @@ def conv2d(
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`.
     :type conv_mode: string or :class:`Convolution.Mode`
-    :param conv_mode: supports "CROSS_CORRELATION". Default:
-        "CROSS_CORRELATION"
+    :param conv_mode: supports "cross_correlation". Default:
+        "cross_correlation"
     :type compute_mode: string or
         :class:`Convolution.ComputeMode`
-    :param compute_mode: when set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of Float16 dtype.
+    :param compute_mode: when set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
+        effective when input and output are of float16 dtype.
     :return: output tensor.
     """
-    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
-    assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
+    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
-    sparse_type = "DENSE" if groups == 1 else "GROUP"
+    sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -180,7 +259,7 @@ def conv3d(
     padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
     groups: int = 1,
-    conv_mode: str = "CROSS_CORRELATION",
+    conv_mode: str = "cross_correlation",
 ) -> Tensor:
     """
     3D convolution operation.
@@ -194,15 +273,16 @@ def conv3d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 3D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+    :param groups: number of groups into which the input and output channels are divided,
+        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, t, height, width)`.
-    :param conv_mode: supports "CROSS_CORRELATION". Default:
-        "CROSS_CORRELATION"
+    :param conv_mode: supports "cross_correlation". Default:
+        "cross_correlation"
     :return: output tensor.
     """
-    assert conv_mode == "CROSS_CORRELATION"
+    assert conv_mode.lower() == "cross_correlation"
 
     D, H, W = 0, 1, 2
 
@@ -210,7 +290,7 @@ def conv3d(
     stride = _triple_nonzero(stride)
     dilate = _triple_nonzero(dilation)
 
-    sparse_type = "DENSE" if groups == 1 else "GROUP"
+    sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3D(
         pad_d=pad[D],
         pad_h=pad[H],
@@ -240,8 +320,8 @@ def conv_transpose2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
-    conv_mode="CROSS_CORRELATION",
-    compute_mode="DEFAULT",
+    conv_mode="cross_correlation",
+    compute_mode="default",
 ) -> Tensor:
     """
     2D transposed convolution operation.
@@ -261,18 +341,21 @@ def conv_transpose2d(
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
     :type conv_mode: string or :class:`Convolution.Mode`
-    :param conv_mode: supports "CROSS_CORRELATION". Default:
-        "CROSS_CORRELATION"
+    :param conv_mode: supports "cross_correlation". Default:
+        "cross_correlation"
     :type compute_mode: string or
         :class:`Convolution.ComputeMode`
-    :param compute_mode: when set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of Float16 dtype.
+    :param compute_mode: when set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
+        effective when input and output are of float16 dtype.
     :return: output tensor.
     """
-    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
-    assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
+    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
 
     if groups != 1:
         raise NotImplementedError("group transposed conv2d is not supported yet.")
@@ -307,8 +390,8 @@ def deformable_conv2d(
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
-    conv_mode="CROSS_CORRELATION",
-    compute_mode="DEFAULT",
+    conv_mode="cross_correlation",
+    compute_mode="default",
 ) -> Tensor:
     """
     Deformable Convolution.
@@ -328,24 +411,27 @@ def deformable_conv2d(
         and the shape of weight should be `(groups, out_channel // groups,
         in_channels // groups, height, width)`. Default: 1
     :type conv_mode: string or :class:`Convolution.Mode`
-    :param conv_mode: supports "CROSS_CORRELATION". Default:
-        "CROSS_CORRELATION"
+    :param conv_mode: supports "cross_correlation". Default:
+        "cross_correlation"
     :type compute_mode: string or
         :class:`Convolution.ComputeMode`
-    :param compute_mode: when set to "DEFAULT", no special requirements will be
-        placed on the precision of intermediate results. When set to "FLOAT32",
-        "Float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of Float16 dtype.
+    :param compute_mode: when set to "default", no special requirements will be
+        placed on the precision of intermediate results. When set to "float32",
+        "float32" would be used for accumulator and intermediate result, but only
+        effective when input and output are of float16 dtype.
     :return: output tensor.
     """
-    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
-    assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
+    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
-    sparse_type = "DENSE" if groups == 1 else "GROUP"
+    sparse_type = "dense" if groups == 1 else "group"
     op = builtin.DeformableConv(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -372,10 +458,13 @@ def local_conv2d(
     stride: Union[int, Tuple[int, int]] = 1,
     padding: Union[int, Tuple[int, int]] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
-    conv_mode="CROSS_CORRELATION",
+    conv_mode="cross_correlation",
 ):
     """Applies spatial 2D convolution over an groupped channeled image with untied kernels."""
-    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -389,8 +478,8 @@ def local_conv2d(
         dilate_h=dilate_h,
         dilate_w=dilate_w,
         mode=conv_mode,
-        compute_mode="DEFAULT",
-        sparse="DENSE",
+        compute_mode="default",
+        sparse="dense",
     )
     inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
@@ -430,7 +519,7 @@ def max_pool2d(
         stride_w=stride_w,
         pad_h=padding_h,
         pad_w=padding_w,
-        mode="MAX",
+        mode="max",
     )
     (output,) = apply(op, inp)
     return output
@@ -441,7 +530,7 @@ def avg_pool2d(
     kernel_size: Union[int, Tuple[int, int]],
     stride: Optional[Union[int, Tuple[int, int]]] = None,
     padding: Union[int, Tuple[int, int]] = 0,
-    mode: str = "AVERAGE_COUNT_EXCLUDE_PADDING",
+    mode: str = "average_count_exclude_padding",
 ) -> Tensor:
     """
     Applies 2D average pooling over an input tensor.
@@ -453,7 +542,8 @@ def avg_pool2d(
     :param stride: stride of the window. If not provided, its value is set to ``kernel_size``.
         Default: None
     :param padding: implicit zero padding added on both sides. Default: 0
-    :param mode: whether to count padding values. Default: "AVERAGE_COUNT_EXCLUDE_PADDING"
+    :param mode: whether to count padding values, set to "average" will do counting.
+        Default: "average_count_exclude_padding"
     :return: output tensor.
     """
     if stride is None:
@@ -490,7 +580,7 @@ def adaptive_max_pool2d(
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
 
-    op = builtin.AdaptivePooling(mode="MAX", format="NCHW",)
+    op = builtin.AdaptivePooling(mode="max", format="NCHW",)
     oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
     (output,) = apply(op, inp, oshp)
     return output
@@ -511,7 +601,7 @@ def adaptive_avg_pool2d(
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
 
-    op = builtin.AdaptivePooling(mode="AVERAGE", format="NCHW",)
+    op = builtin.AdaptivePooling(mode="average", format="NCHW",)
     oshp = astensor1d(oshp, inp, dtype="int32", device=inp.device)
     (output,) = apply(op, inp, oshp)
     return output
@@ -554,6 +644,53 @@ def deformable_psroi_pooling(
     )
     output, _ = apply(op, inp, rois, trans)
     return output
+
+
+def hswish(x):
+    """
+    Element-wise `x * relu6(x + 3) / 6`.
+
+    :param x: input tensor.
+    :return: computed tensor.
+
+    Example:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(5).astype(np.float32))
+        out = F.hswish(x)
+        print(out.numpy().round(decimals=4))
+
+    .. testoutput::
+
+        [0.     0.6667 1.6667 3.     4.    ]
+
+    """
+    return _elwise(x, mode=Elemwise.Mode.H_SWISH)
+
+
+def sigmoid(x):
+    """Element-wise `1 / ( 1 + exp( -x ) )`."""
+    return _elwise(x, mode=Elemwise.Mode.SIGMOID)
+
+
+def hsigmoid(x):
+    """Element-wise `relu6(x + 3) / 6`."""
+    return relu6(x + 3) / 6
+
+
+def relu(x):
+    """Element-wise `max(x, 0)`."""
+    return _elwise(x, mode=Elemwise.Mode.RELU)
+
+
+def relu6(x):
+    """Element-wise `min(max(x, 0), 6)`."""
+    return minimum(maximum(x, 0), 6)
 
 
 def prelu(inp: Tensor, weight: Tensor) -> Tensor:
@@ -872,14 +1009,14 @@ def batch_norm(
 
     if not training:
         op = builtin.BatchNorm(
-            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim="DIM_1C11"
+            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim="dim_1c11"
         )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
         op = builtin.BatchNorm(
-            avg_factor=1 - momentum, epsilon=eps, param_dim="DIM_1C11"
+            avg_factor=1 - momentum, epsilon=eps, param_dim="dim_1c11"
         )
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
@@ -915,7 +1052,7 @@ def sync_batch_norm(
     training: bool = False,
     momentum: Union[float, Tensor] = 0.9,
     eps: float = 1e-5,
-    eps_mode="ADDITIVE",
+    eps_mode="additive",
     group=WORLD,
 ) -> Tensor:
     r"""
@@ -939,7 +1076,9 @@ def sync_batch_norm(
         Default: 1e-5
     :return: output tensor.
     """
-    assert eps_mode in {"MAX", "ADDITIVE"}, "unknown eps_mode: {}".format(eps_mode)
+    assert eps_mode.lower() in {"max", "additive"}, "unknown eps_mode: {}".format(
+        eps_mode
+    )
     _channels = inp.shape[1]
     _ndim = inp.ndim
     _device = inp.device
@@ -979,7 +1118,7 @@ def sync_batch_norm(
         channel_mean = running_mean.reshape(*_param_shape)
 
     invsqrt_channel_variance = (
-        maximum(channel_variance, eps) if eps_mode == "MAX" else channel_variance + eps
+        maximum(channel_variance, eps) if eps_mode == "max" else channel_variance + eps
     ) ** -0.5
 
     if weight is not None:
@@ -1017,213 +1156,6 @@ def sync_batch_norm(
         running_var += (1 - momentum) * channel_variance_unbiased
 
     return outvar
-
-
-def one_hot(inp: Tensor, num_classes: int) -> Tensor:
-    r"""
-    Performs one-hot encoding for the input tensor.
-
-    :param inp: input tensor.
-    :param num_classes: number of classes denotes the last dimension of the output tensor.
-    :return: output tensor.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = tensor(np.arange(1, 4, dtype=np.int32))
-        out = F.one_hot(x, num_classes=4)
-        print(out.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [[0 1 0 0]
-         [0 0 1 0]
-         [0 0 0 1]]
-
-    """
-    zeros_tensor = zeros(list(inp.shape) + [num_classes], inp.dtype, inp.device)
-    ones_tensor = ones(list(inp.shape) + [1], inp.dtype, inp.device)
-
-    op = builtin.IndexingSetOneHot(axis=inp.ndim)
-    (result,) = apply(op, zeros_tensor, inp, ones_tensor)
-    return result
-
-
-def matmul(
-    inp1: Tensor,
-    inp2: Tensor,
-    transpose_a=False,
-    transpose_b=False,
-    compute_mode="DEFAULT",
-    format="DEFAULT",
-) -> Tensor:
-    """
-    Performs a matrix multiplication of the matrices ``inp1`` and ``inp2``.
-
-    With different inputs dim, this function behaves differently:
-
-    - Both 1-D tensor, simply forward to ``dot``.
-    - Both 2-D tensor, normal matrix multiplication.
-    - If one input tensor is 1-D, matrix vector multiplication.
-    - If at least one tensor are 3-dimensional or >3-dimensional, the other tensor should have dim >= 2, the batched matrix-matrix is returned, and the tensor with smaller dimension will
-      be broadcasted. For example:
-        - inp1: `(n, k, m)`, inp2: `(n, m, p)`, return: `(n, k, p)`
-        - inp1: `(n, k, m)`, inp2: `(m, p)`, return: `(n, k, p)`
-        - inp1: `(n, j, k, m)`, inp2: `(n, j, m, p)`, return: `(n, j, k, p)`
-
-    :param inp1: first matrix to be multiplied.
-    :param inp2: second matrix to be multiplied.
-    :return: output tensor.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        data1 = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
-        data2 = tensor(np.arange(0, 6, dtype=np.float32).reshape(3, 2))
-        out = F.matmul(data1, data2)
-        print(out.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        [[10. 13.]
-         [28. 40.]]
-
-    """
-    remove_row, remove_col = False, False
-    inp1, inp2 = utils.convert_inputs(inp1, inp2)
-
-    dim1, dim2 = inp1.ndim, inp2.ndim
-    # handle dim=1 cases, dot and matrix-vector multiplication
-    if dim1 == 1 and dim2 == 1:
-        return dot(inp1, inp2)
-    # the underlying matmul op requires input dims to be at least 2
-    if dim1 == 1:
-        inp1 = expand_dims(inp1, 0)
-        dim1 = 2
-        remove_row = True
-    if dim2 == 1:
-        inp2 = expand_dims(inp2, 1)
-        dim2 = 2
-        remove_col = True
-
-    batch_shape = None
-    shape1 = inp1.shape
-    shape2 = inp2.shape
-
-    maxdim = dim1 if dim1 > dim2 else dim2
-    if dim1 >= 3 or dim2 >= 3:
-        if use_symbolic_shape():
-            if dim1 > dim2:
-                shape2 = concat([shape1[:-2], shape2[-2:]])
-                inp2 = broadcast_to(inp2, shape2)
-            if dim1 < dim2:
-                shape1 = concat([shape2[:-2], shape1[-2:]])
-                inp1 = broadcast_to(inp1, shape1)
-            if maxdim > 3:
-                batch_shape = shape1[:-2]
-                # compress inputs to 3d
-                (inp1,) = apply(
-                    builtin.Reshape(), inp1, concat([prod(shape1[:-2]), shape1[-2:]])
-                )
-                (inp2,) = apply(
-                    builtin.Reshape(), inp2, concat([prod(shape2[:-2]), shape2[-2:]])
-                )
-        else:
-            if dim1 > dim2:
-                shape2 = shape1[:-2] + shape2[-2:]
-                inp2 = broadcast_to(inp2, shape2)
-            if dim1 < dim2:
-                shape1 = shape2[:-2] + shape1[-2:]
-                inp1 = broadcast_to(inp1, shape1)
-            if maxdim > 3:
-                batch_shape = shape1[:-2]
-                # compress inputs to 3d
-                inp1 = inp1.reshape((-1, shape1[-2], shape1[-1]))
-                inp2 = inp2.reshape((-1, shape2[-2], shape2[-1]))
-
-        op = builtin.BatchedMatrixMul(
-            transposeA=transpose_a,
-            transposeB=transpose_b,
-            compute_mode=compute_mode,
-            format=format,
-            strategy=get_execution_strategy(),
-        )
-    else:
-        op = builtin.MatrixMul(
-            transposeA=transpose_a,
-            transposeB=transpose_b,
-            compute_mode=compute_mode,
-            format=format,
-            strategy=get_execution_strategy(),
-        )
-
-    (result,) = apply(op, inp1, inp2)
-    if maxdim > 3:
-        if use_symbolic_shape():
-            (result,) = apply(
-                builtin.Reshape(), result, concat([batch_shape, result.shape[-2:]])
-            )
-        else:
-            result = result.reshape(batch_shape + result.shape[-2:])
-    if remove_row:
-        result = squeeze(result, axis=-2)
-    if remove_col:
-        result = squeeze(result, axis=-1)
-    return result
-
-
-def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
-    """
-    Computes dot-product of two vectors ``inp1`` and ``inp2``.
-    inputs must be 1-dimensional or scalar. A scalar input is automatically broadcasted.
-    Refer to :func:`~.matmul` for more general usage.
-
-    :param inp1: first vector.
-    :param inp2: second vector.
-    :return: output value.
-
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        data1 = tensor(np.arange(0, 6, dtype=np.float32))
-        data2 = tensor(np.arange(0, 6, dtype=np.float32))
-        out = F.dot(data1, data2)
-        print(out.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        55.
-
-    """
-    op = builtin.Dot()
-    inp1, inp2 = utils.convert_inputs(inp1, inp2)
-    assert (
-        inp1.ndim <= 1 and inp2.ndim <= 1
-    ), "Input tensors for dot must be 1-dimensional or scalar"
-    (result,) = apply(op, inp1, inp2)
-    setscalar(result)
-    return result
 
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
@@ -1264,6 +1196,43 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
     if training:
         inp *= 1 / (1 - drop_prob)
     return inp
+
+
+def one_hot(inp: Tensor, num_classes: int) -> Tensor:
+    r"""
+    Performs one-hot encoding for the input tensor.
+
+    :param inp: input tensor.
+    :param num_classes: number of classes denotes the last dimension of the output tensor.
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor(np.arange(1, 4, dtype=np.int32))
+        out = F.one_hot(x, num_classes=4)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[0 1 0 0]
+         [0 0 1 0]
+         [0 0 0 1]]
+
+    """
+    zeros_tensor = zeros(list(inp.shape) + [num_classes], inp.dtype, inp.device)
+    ones_tensor = ones(list(inp.shape) + [1], inp.dtype, inp.device)
+
+    op = builtin.IndexingSetOneHot(axis=inp.ndim)
+    (result,) = apply(op, zeros_tensor, inp, ones_tensor)
+    return result
 
 
 def embedding(
@@ -1332,128 +1301,6 @@ def indexing_one_hot(
     if not keepdims:
         result = squeeze(result, axis)
     return result
-
-
-def conv1d(
-    inp: Tensor,
-    weight: Tensor,
-    bias: Optional[Tensor] = None,
-    stride: int = 1,
-    padding: int = 0,
-    dilation: int = 1,
-    groups: int = 1,
-    conv_mode="CROSS_CORRELATION",
-    compute_mode="DEFAULT",
-) -> Tensor:
-    """1D convolution operation.
-
-    Refer to :class:`~.Conv1d` for more information.
-
-    :param inp: The feature map of the convolution operation
-    :param weight: The convolution kernel
-    :param bias: The bias added to the result of convolution (if given)
-    :param stride: Stride of the 1D convolution operation. Default: 1
-    :param padding: Size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: Dilation of the 1D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and the shape of weight should be ``(groups, out_channel // groups,
-        in_channels // groups, height, width)``.
-    :type conv_mode: string or :class:`mgb.opr_param_defs.Convolution.Mode`
-    :param conv_mode: Supports 'CROSS_CORRELATION'. Default:
-        'CROSS_CORRELATION'.
-    :type compute_mode: string or
-        :class:`mgb.opr_param_defs.Convolution.ComputeMode`
-    :param compute_mode: When set to 'DEFAULT', no special requirements will be
-        placed on the precision of intermediate results. When set to 'FLOAT32',
-        Float32 would be used for accumulator and intermediate result, but only
-        effective when input and output are of Float16 dtype.
-
-    """
-
-    assert conv_mode == "CROSS_CORRELATION" or conv_mode.name == "CROSS_CORRELATION"
-    assert compute_mode == "DEFAULT" or compute_mode.name == "DEFAULT"
-    assert inp.ndim == 3, "the input dimension of conv1d should be 3"
-    assert weight.ndim == 3, "the weight dimension of conv1d should be 3"
-
-    inp = expand_dims(inp, 3)
-    weight = expand_dims(weight, 3)
-    if bias is not None:
-        assert bias.ndim == 3, "the bias dimension of conv1d should be 3"
-        bias = expand_dims(bias, 3)
-
-    stride_h = stride
-    pad_h = padding
-    dilate_h = dilation
-
-    sparse_type = "DENSE" if groups == 1 else "GROUP"
-    op = builtin.Convolution(
-        stride_h=stride_h,
-        stride_w=1,
-        pad_h=pad_h,
-        pad_w=0,
-        dilate_h=dilate_h,
-        dilate_w=1,
-        strategy=get_execution_strategy(),
-        mode=conv_mode,
-        compute_mode=compute_mode,
-        sparse=sparse_type,
-    )
-    inp, weight = utils.convert_inputs(inp, weight)
-    (output,) = apply(op, inp, weight)
-    if bias is not None:
-        output += bias
-    output = squeeze(output, 3)
-    return output
-
-
-def hswish(x):
-    """
-    Element-wise `x * relu6(x + 3) / 6`.
-
-    :param x: input tensor.
-    :return: computed tensor.
-
-    Example:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        x = tensor(np.arange(5).astype(np.float32))
-        out = F.hswish(x)
-        print(out.numpy().round(decimals=4))
-
-    .. testoutput::
-
-        [0.     0.6667 1.6667 3.     4.    ]
-
-    """
-    return _elwise(x, mode=Elemwise.Mode.H_SWISH)
-
-
-def sigmoid(x):
-    """Element-wise `1 / ( 1 + exp( -x ) )`."""
-    return _elwise(x, mode=Elemwise.Mode.SIGMOID)
-
-
-def hsigmoid(x):
-    """Element-wise `relu6(x + 3) / 6`."""
-    return relu6(x + 3) / 6
-
-
-def relu(x):
-    """Element-wise `max(x, 0)`."""
-    return _elwise(x, mode=Elemwise.Mode.RELU)
-
-
-def relu6(x):
-    """Element-wise `min(max(x, 0), 6)`."""
-    return minimum(maximum(x, 0), 6)
 
 
 interpolate = deprecated_func("1.3", "megengine.functional.vision", "interpolate", True)

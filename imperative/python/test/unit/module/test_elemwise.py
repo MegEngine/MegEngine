@@ -23,8 +23,8 @@ def test_module_elemwise():
     y = np.random.rand(100).astype("float32")
     x, y = tensor(x), tensor(y)
     np.testing.assert_almost_equal(
-        test_func("H_SWISH", x), F.hswish(x).numpy(), decimal=6
+        test_func("h_swish", x), F.hswish(x).numpy(), decimal=6
     )
     np.testing.assert_almost_equal(
-        test_func("ADD", x, y), F.add(x, y).numpy(), decimal=6
+        test_func("add", x, y), F.add(x, y).numpy(), decimal=6
     )

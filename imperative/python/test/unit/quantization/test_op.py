@@ -22,7 +22,7 @@ def fake_quant(x, scale):
     return x
 
 
-@pytest.mark.parametrize("kind", ["ABS", "SIN", "SUB", "MUL", "FUSE_ADD_TANH"])
+@pytest.mark.parametrize("kind", ["abs", "sin", "sub", "mul", "fuse_add_tanh"])
 def test_elemwise(kind):
     x1 = mge.tensor(np.random.normal(size=(3, 3)).astype("float32"))
     x1_scale = np.float32(np.random.rand() + 1)
@@ -39,8 +39,8 @@ def test_elemwise(kind):
     output_scale = np.float32(np.random.rand() + 1)
     output_dtype = dtype.qint8(output_scale)
 
-    quantized_kind = "Q" + kind
-    if kind in ("ABS", "SIN"):
+    quantized_kind = "q" + kind
+    if kind in ("abs", "sin"):
         desired_out = fake_quant(_elwise(x1, mode=kind), output_scale)
         actual_out = (
             _elemwise_multi_type(
@@ -84,7 +84,7 @@ def test_conv_bias():
         SH,
         SW,
         has_bias=True,
-        nonlinear_mode="IDENTITY",
+        nonlinear_mode="identity",
     ):
         inp_v = np.random.normal(size=(N, IC, IH, IW))
         w_v = np.random.normal(size=(OC, IC, KH, KW))
@@ -116,7 +116,7 @@ def test_conv_bias():
             O = F.conv2d(
                 inp, w, b if has_bias else None, stride=(SH, SW), padding=(PH, PW),
             )
-            if nonlinear_mode == "RELU":
+            if nonlinear_mode == "relu":
                 return F.relu(O)
             else:
                 return O
@@ -158,5 +158,5 @@ def test_conv_bias():
     run(10, 12, 24, 46, 46, 1, 1, 2, 1, 3, 1)
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2)
 
-    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "RELU")
-    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "RELU")
+    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "relu")
+    run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "relu")

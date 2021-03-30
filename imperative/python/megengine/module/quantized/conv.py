@@ -34,8 +34,8 @@ class Conv2d(Float.Conv2d, QuantizedModule):
         padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
-        conv_mode: str = "CROSS_CORRELATION",
-        compute_mode: str = "DEFAULT",
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
         dtype=None,
         **kwargs
     ):
@@ -53,7 +53,7 @@ class Conv2d(Float.Conv2d, QuantizedModule):
         )
         self.output_dtype = dtype
 
-    def calc_conv_quantized(self, inp, nonlinear_mode="IDENTITY"):
+    def calc_conv_quantized(self, inp, nonlinear_mode="identity"):
         inp_scale = dtype.get_scale(inp.dtype)
         w_scale = dtype.get_scale(self.weight.dtype)
         bias_scale = inp_scale * w_scale
@@ -100,11 +100,11 @@ class Conv2d(Float.Conv2d, QuantizedModule):
         return qconv
 
     def forward(self, inp):
-        return self.calc_conv_quantized(inp, nonlinear_mode="IDENTITY")
+        return self.calc_conv_quantized(inp, nonlinear_mode="identity")
 
 
 class ConvRelu2d(Conv2d):
     r"""Quantized version of :class:`~.qat.ConvRelu2d`."""
 
     def forward(self, inp):
-        return self.calc_conv_quantized(inp, nonlinear_mode="RELU")
+        return self.calc_conv_quantized(inp, nonlinear_mode="relu")

@@ -335,12 +335,8 @@ def split(inp, nsplits_or_sections, axis=0):
         y = F.split(x, 3)
         z = F.split(x, [6, 17], axis=1)
         
-        if os.environ.get("MEGENGINE_USE_SYMBOLIC_SHAPE"):
-            print([tuple(i.shape.numpy().tolist()) for i in y])
-            print([tuple(i.shape.numpy().tolist()) for i in z])
-        else:
-            print([i.shape for i in y])
-            print([i.shape for i in z])
+        print([i.numpy().shape for i in y])
+        print([i.numpy().shape for i in z])
 
     Outputs:
 

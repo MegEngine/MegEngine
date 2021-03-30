@@ -18,58 +18,58 @@ class Elemwise(Module):
     :param method: the elemwise method, support the following string.
         It will do the normal elemwise operator for float.
 
-        * "ADD": a + b
-        * "FUSE_ADD_RELU": max(x+y, 0)
-        * "MUL": x * y
-        * "MIN": min(x, y)
-        * "MAX": max(x, y)
-        * "SUB": x - y
-        * "TRUE_DIV": x / y
-        * "FUSE_ADD_SIGMOID": sigmoid(x + y)
-        * "FUSE_ADD_TANH": tanh(x + y)
-        * "RELU": x > 0 ? x : 0
-        * "ABS": x > 0 ? x : -x
-        * "SIGMOID": sigmoid(x)
-        * "EXP": exp(x)
-        * "TANH": tanh(x)
-        * "FUSE_MUL_ADD3": x * y + z
-        * "FAST_TANH": x * (27. + x * x) / (27. + 9. * x * x)
-        * "NEGATE": -x
-        * "ACOS": acos(x)
-        * "ASIN": asin(x)
-        * "CEIL": ceil(x)
-        * "COS": cos(x)
-        * "EXPM1": expm1(x)
-        * "FLOOR": floor(x)
-        * "LOG": log(x)
-        * "LOG1P": log1p(x)
-        * "SIN": sin(x)
-        * "ROUND": round(x)
-        * "ERF": erf(x)
-        * "ERFINV": erfinv(x)
-        * "ERFC": erfc(x)
-        * "ERFCINV": erfcinv(x)
-        * "ABS_GRAD": abs_grad
-        * "FLOOR_DIV": floor_div
-        * "MOD": mod
-        * "SIGMOID_GRAD": sigmoid_grad
-        * "SWITCH_GT0": switch_gt0
-        * "TANH_GRAD": tanh_grad
-        * "LT": less
-        * "LEQ": leq
-        * "EQ": equal
-        * "POW": pow
-        * "LOG_SUM_EXP": log_sum_exp
-        * "FAST_TANH_GRAD": fast_tanh_grad
-        * "ATAN2": atan2
-        * "COND_LEQ_MOV": cond_leq_mov
-        * "H_SWISH": h_swish
-        * "FUSE_ADD_H_SWISH": h_swish(x+y)
-        * "H_SWISH_GRAD": h_swish_grad
-        * "AND": bool binary: x && y
-        * "OR": bool binary: x || y
-        * "XOR": bool binary: x ^ y
-        * "NOT": bool unary: ~x
+        * "add": a + b
+        * "fuse_add_relu": max(x+y, 0)
+        * "mul": x * y
+        * "min": min(x, y)
+        * "max": max(x, y)
+        * "sub": x - y
+        * "true_div": x / y
+        * "fuse_add_sigmoid": sigmoid(x + y)
+        * "fuse_add_tanh": tanh(x + y)
+        * "relu": x > 0 ? x : 0
+        * "abs": x > 0 ? x : -x
+        * "sigmoid": sigmoid(x)
+        * "exp": exp(x)
+        * "tanh": tanh(x)
+        * "fuse_mul_add3": x * y + z
+        * "fast_tanh": x * (27. + x * x) / (27. + 9. * x * x)
+        * "negate": -x
+        * "acos": acos(x)
+        * "asin": asin(x)
+        * "ceil": ceil(x)
+        * "cos": cos(x)
+        * "expm1": expm1(x)
+        * "floor": floor(x)
+        * "log": log(x)
+        * "log1p": log1p(x)
+        * "sin": sin(x)
+        * "round": round(x)
+        * "erf": erf(x)
+        * "erfinv": erfinv(x)
+        * "erfc": erfc(x)
+        * "erfcinv": erfcinv(x)
+        * "abs_grad": abs_grad
+        * "floor_div": floor_div
+        * "mod": mod
+        * "sigmoid_grad": sigmoid_grad
+        * "switch_gt0": switch_gt0
+        * "tanh_grad": tanh_grad
+        * "lt": less
+        * "leq": leq
+        * "eq": equal
+        * "pow": pow
+        * "log_sum_exp": log_sum_exp
+        * "fast_tanh_grad": fast_tanh_grad
+        * "atan2": atan2
+        * "cond_leq_mov": cond_leq_mov
+        * "h_swish": h_swish
+        * "fuse_add_h_swish": h_swish(x+y)
+        * "h_swish_grad": h_swish_grad
+        * "and": bool binary: x && y
+        * "or": bool binary: x || y
+        * "xor": bool binary: x ^ y
+        * "not": bool unary: ~x
     """
 
     def __init__(self, method, **kwargs):

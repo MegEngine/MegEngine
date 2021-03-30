@@ -162,7 +162,7 @@ def test_qadd():
     x = tensor(x, dtype=dtype.qint8(inp_scale))
     y = tensor(y, dtype=dtype.qint8(inp_scale))
     result_mge = F.elemwise._elemwise_multi_type(
-        x, y, mode="QADD", dtype=dtype.qint8(outp_scale)
+        x, y, mode="qadd", dtype=dtype.qint8(outp_scale)
     )
     result_mge = result_mge.astype("float32").numpy()
     result_expect = x.astype("float32").numpy() + y.astype("float32").numpy()
