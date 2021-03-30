@@ -265,6 +265,7 @@ def remote_send(inp: Tensor, dest_rank: int) -> Tensor:
     op.key = key
     op.addr, op.port = get_mm_server_addr()
     op.rank_to = dest_rank
+    op.backend = get_backend()
     (dummy,) = apply(_RemoteSend(op), inp)
 
     for g in grad_keys.values():
@@ -313,6 +314,7 @@ def remote_recv(
     op.dtype = dtype
     op.addr, op.port = get_mm_server_addr()
     op.rank_from = src_rank
+    op.backend = get_backend()
 
     (ret,) = apply(_RemoteRecv(op), inp)
     if _isscalar:

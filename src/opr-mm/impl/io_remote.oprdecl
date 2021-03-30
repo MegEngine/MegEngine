@@ -9,6 +9,8 @@ decl_raw_opr(
         Doc('key', 'key to bind send-recv pair', 'str'),
         Doc('var', 'variable to be sent', ':class:`.SymbolVar`'),
         Doc('is_grad', 'whether the send', 'bool'),
+        Doc('backend', 'Backend for collective communication, nccl or ucx',
+            'str', '\'nccl\''),
     ]
 )
 
@@ -24,7 +26,9 @@ decl_raw_opr(
             ':class:`.CompGraph`'),
         Doc('shape', 'output var shape'),
         Doc('dtype', 'data type of the output var; must match dtype at sender',
-            ':class:`numpy.dtype` compatible')
+            ':class:`numpy.dtype` compatible'),
+        Doc('backend', 'Backend for collective communication, nccl or ucx',
+            'str', '\'nccl\''),
     ]
 )
 
