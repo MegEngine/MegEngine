@@ -35,7 +35,7 @@ cg::OperatorNodeBase* apply_on_var_node_remote_send(
     OperatorNodeConfig config{send.make_name()};
     cg::OperatorNodeBase* opr =
             graph->insert_opr(std::make_unique<mgb::opr::RemoteSend>(
-                    send.key, inputs[0], group_client, true, config));
+                    send.key, inputs[0], group_client, true, send.backend, config));
     return opr;
 }
 
@@ -49,7 +49,7 @@ cg::OperatorNodeBase* apply_on_var_node_remote_recv(
     auto&& graph = inputs[0]->owner_graph();
     return graph->insert_opr(std::make_unique<mgb::opr::RemoteRecv>(
             recv.key, inputs[0], *graph, group_client, config,
-            recv.shape, recv.dtype));
+            recv.shape, recv.dtype, recv.backend));
 }
 
 OP_TRAIT_REG(RemoteSend, RemoteSend, mgb::opr::RemoteSend)

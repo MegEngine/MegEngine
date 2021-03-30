@@ -48,17 +48,19 @@ MGB_DEFINE_OPR_CLASS(RemoteSend, RemoteIOBase) // {
     public:
         RemoteSend(const std::string& key, VarNode* var,
                    std::shared_ptr<GroupClient> group_client,
-                   bool is_grad, const OperatorNodeConfig& config);
+                   bool is_grad, std::string backend, const OperatorNodeConfig& config);
 
         static SymbolVar make(
                 const std::string& key, SymbolVar var,
                 std::shared_ptr<GroupClient> group_client,
-                bool is_grad, const OperatorNodeConfig& config = {});
+                bool is_grad, std::string backend, const OperatorNodeConfig& config = {});
 
+        const std::string& backend() const { return m_backend; }
         bool is_grad() const { return m_is_grad; }
 
     private:
         HostTensorND m_output_val;
+        std::string m_backend;
         bool m_is_grad;
 
         void scn_do_execute() override;
@@ -75,31 +77,33 @@ MGB_DEFINE_OPR_CLASS(RemoteRecv, RemoteIOBase) // {
         RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
                    std::shared_ptr<GroupClient> group_client,
                    const OperatorNodeConfig& config, const TensorShape& shape,
-                   DType dtype);
+                   DType dtype, std::string backend);
 
         RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph& graph,
                    std::shared_ptr<GroupClient> group_client,
                    const OperatorNodeConfig& config, const TensorShape& shape,
-                   DType dtype);
+                   DType dtype, std::string backend);
 
         static SymbolVar make(
                 const std::string& key, cg::ComputingGraph& graph,
                 std::shared_ptr<GroupClient> group_client,
                 const OperatorNodeConfig& config, const TensorShape& shape,
-                DType dtype);
+                DType dtype, std::string backend);
 
         static SymbolVar make(
                 const std::string& key, SymbolVar var, cg::ComputingGraph& graph,
                 std::shared_ptr<GroupClient> group_client,
                 const OperatorNodeConfig& config, const TensorShape& shape,
-                DType dtype);
+                DType dtype, std::string backend);
 
         const TensorShape& shape() const { return m_shape; }
         const DType& dtype() const { return m_dtype; }
+        const std::string& backend() const { return m_backend; }
 
     private:
         const TensorShape m_shape;
         const DType m_dtype;
+        const std::string m_backend;
         const CompNode m_comp_node;
         DeviceTensorND m_dev_buffer;
 

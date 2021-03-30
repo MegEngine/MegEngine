@@ -24,8 +24,9 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteSend);
 
 RemoteSend::RemoteSend(const std::string& key, VarNode* var,
                        std::shared_ptr<GroupClient> group_client,
-                       bool is_grad, const OperatorNodeConfig& config) :
+                       bool is_grad, std::string backend, const OperatorNodeConfig& config) :
         Super(var->owner_graph(), config, "remote_send", {var}),
+        m_backend(backend),
         m_is_grad(is_grad) {
     m_key = key;
     m_group_client = group_client;
@@ -41,9 +42,9 @@ RemoteSend::RemoteSend(const std::string& key, VarNode* var,
 
 SymbolVar RemoteSend::make(const std::string& key, SymbolVar var,
                            std::shared_ptr<GroupClient> group_client,
-                           bool is_grad, const OperatorNodeConfig& config) {
+                           bool is_grad, std::string backend, const OperatorNodeConfig& config) {
     return var.insert_single_output_opr<RemoteSend>(key, var.node(), group_client,
-                                                    is_grad, config);
+                                                    is_grad, backend, config);
 }
 
 void RemoteSend::scn_do_execute() {
@@ -64,7 +65,7 @@ void RemoteSend::scn_do_execute() {
         }
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
-                reg_info.hash, m_key, 2, 0, MegRay::MEGRAY_NCCL, m_group_client);
+                reg_info.hash, m_key, 2, 0, get_megray_backend(m_backend), m_group_client);
 
         m_megray_ctx = get_megray_context(output(0)->comp_node());
 
@@ -122,7 +123,7 @@ MGB_IMPL_OPR_GRAD(RemoteSend) {
                             *opr.owner_graph(), opr.group_client(),
                             OperatorNodeConfig{opr.comp_node()}.name(
                                     opr.name() + ":grad_recv"),
-                            opr.input(0)->shape(), opr.input(0)->dtype())
+                            opr.input(0)->shape(), opr.input(0)->dtype(), opr.backend())
             .node();
 }
 #endif
@@ -134,9 +135,9 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteRecv);
 RemoteRecv::RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
                        std::shared_ptr<GroupClient> group_client,
                        const OperatorNodeConfig& config,
-                       const TensorShape& shape, DType dtype) :
+                       const TensorShape& shape, DType dtype, std::string backend) :
         Super(&graph, config, "remote_recv", {}),
-        m_shape(shape), m_dtype(dtype) {
+        m_shape(shape), m_dtype(dtype), m_backend(backend) {
     m_key = key;
     m_group_client = group_client;
 
@@ -150,9 +151,9 @@ RemoteRecv::RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
 RemoteRecv::RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph& graph,
                        std::shared_ptr<GroupClient> group_client,
                        const OperatorNodeConfig& config,
-                       const TensorShape& shape, DType dtype) :
+                       const TensorShape& shape, DType dtype, std::string backend) :
         Super(&graph, config, "remote_recv", {}),
-        m_shape(shape), m_dtype(dtype) {
+        m_shape(shape), m_dtype(dtype), m_backend(backend) {
     m_key = key;
     m_group_client = group_client;
 
@@ -167,18 +168,18 @@ RemoteRecv::RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph&
 SymbolVar RemoteRecv::make(const std::string& key, cg::ComputingGraph& graph,
                            std::shared_ptr<GroupClient> group_client,
                            const OperatorNodeConfig& config,
-                           const TensorShape& shape, DType dtype) {
+                           const TensorShape& shape, DType dtype, std::string backend) {
     auto opr = graph.insert_opr(std::make_unique<RemoteRecv>(
-            key, graph, group_client, config, shape, dtype));
+            key, graph, group_client, config, shape, dtype, backend));
     return opr->output(0);
 }
 
 SymbolVar RemoteRecv::make(const std::string& key, SymbolVar var, cg::ComputingGraph& graph,
                            std::shared_ptr<GroupClient> group_client,
                            const OperatorNodeConfig& config,
-                           const TensorShape& shape, DType dtype) {
+                           const TensorShape& shape, DType dtype, std::string backend) {
     auto opr = graph.insert_opr(std::make_unique<RemoteRecv>(
-            key, var.node(), graph, group_client, config, shape, dtype));
+            key, var.node(), graph, group_client, config, shape, dtype, backend));
     return opr->output(0);
 }
 
@@ -201,7 +202,7 @@ void RemoteRecv::scn_do_execute() {
         }
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
-                reg_info.hash, m_key, 2, 1, MegRay::MEGRAY_NCCL, m_group_client);
+                reg_info.hash, m_key, 2, 1, get_megray_backend(m_backend), m_group_client);
 
         m_megray_ctx = get_megray_context(output(0)->comp_node());
 
@@ -251,7 +252,7 @@ cg::OperatorNodeBase* opr_shallow_copy_remote_send(
     mgb_assert(inputs.size() == 1);
     auto&& opr = opr_.cast_final_safe<RemoteSend>();
     return RemoteSend::make(opr.key(), inputs[0], opr.group_client(),
-                            opr.is_grad(), config)
+                            opr.is_grad(), opr.backend(), config)
             .node()
             ->owner_opr();
 }
@@ -265,14 +266,14 @@ cg::OperatorNodeBase* opr_shallow_copy_remote_recv(
     if (inputs.size() == 1) {
         return RemoteRecv::make(opr.key(), inputs[0], *opr.owner_graph(),
                                 opr.group_client(), config, opr.shape(),
-                                opr.dtype())
+                                opr.dtype(), opr.backend())
                 .node()
                 ->owner_opr();
     } else {
         mgb_assert(inputs.size() == 0, "recv should have 1 or 0 input");
         return RemoteRecv::make(opr.key(), *opr.owner_graph(),
                                 opr.group_client(), config, opr.shape(),
-                                opr.dtype())
+                                opr.dtype(), opr.backend())
                 .node()
                 ->owner_opr();
     }

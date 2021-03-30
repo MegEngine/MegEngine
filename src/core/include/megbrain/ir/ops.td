@@ -169,7 +169,8 @@ def RemoteSend : MgbHashableOp<"RemoteSend"> {
     MgbStringAttr:$key,
     MgbStringAttr:$addr,
     MgbUI32Attr:$port,
-    MgbUI32Attr:$rank_to
+    MgbUI32Attr:$rank_to,
+    MgbStringAttr:$backend
   );
 }
 
@@ -181,7 +182,8 @@ def RemoteRecv : MgbHashableOp<"RemoteRecv"> {
     MgbUI32Attr:$rank_from,
     MgbCompNodeAttr:$cn,
     MgbTensorShapeAttr:$shape,
-    MgbDTypeAttr:$dtype
+    MgbDTypeAttr:$dtype,
+    MgbStringAttr:$backend
   );
 }
 
