@@ -44,7 +44,9 @@ def _str2device_type(type_str: str, allow_unspec: bool = True):
     elif type_str == "ROCM" or type_str == "AMDGPU":
         return DeviceType.ROCM
     else:
-        assert allow_unspec and str == "XPU", "device type can only be cpu, gpu or xpu"
+        assert (
+            allow_unspec and type_str == "XPU"
+        ), "device type can only be cpu, gpu or xpu"
         return DeviceType.UNSPEC
 
 
