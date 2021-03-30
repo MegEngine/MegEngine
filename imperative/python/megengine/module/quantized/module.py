@@ -22,6 +22,9 @@ class QuantizedModule(Module):
             raise ValueError("quantized module only support inference.")
         return super().__call__(*inputs, **kwargs)
 
+    def __repr__(self):
+        return "Quantized." + super().__repr__()
+
     @classmethod
     @abstractmethod
     def from_qat_module(cls, qat_module: QATModule):
