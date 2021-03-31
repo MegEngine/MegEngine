@@ -104,6 +104,10 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
             )
             step += 1
             check_func(ori_params, net.parameters(), step)
+            try_state_dict = {
+                "net": net.state_dict(),
+                "opt": opt.state_dict(),
+            }
 
 
 def test_sgd():
