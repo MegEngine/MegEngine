@@ -230,6 +230,7 @@ def get_param_stats(param: np.ndarray):
     param_dim = np.prod(param.shape)
     param_size = param_dim * nbits // 8
     return {
+        "dtype": param.dtype,
         "shape": shape,
         "mean": "{:.3g}".format(param.mean()),
         "std": "{:.3g}".format(param.std()),
@@ -260,6 +261,7 @@ def print_params_stats(params, bar_length_max=20):
 
     header = [
         "name",
+        "dtype",
         "shape",
         "mean",
         "std",
