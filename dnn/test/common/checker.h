@@ -414,34 +414,34 @@ TensorND TensorValue(const TensorShape& shape, T dtype,
 
 template <typename T, typename U>
 TensorND TensorValueLowbit4(const TensorShape& shape, T dtype,
-                            std::vector<U> values) {
+                                std::vector<U> values) {
     TensorND tensor;
     tensor.layout = {shape, dtype};
     tensor.raw_ptr =
             static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
     megdnn_assert(values.size() == tensor.layout.total_nr_elems());
     auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
-    size_t i;
-    for (i = 0; i + 1 < values.size(); i += 2) {
-        U val0 = values[i], val1 = values[i + 1];
-        megdnn_assert(val0 >= DTypeTrait<T>::min());
-        megdnn_assert(val1 <= DTypeTrait<T>::max());
-        ptr[i / 2] = typename DTypeTrait<T>::ctype((val0 & 0xF) | (val1 << 4));
-    }
-    if (i < values.size()) {
-        U val0 = values[i];
-        megdnn_assert(val0 >= DTypeTrait<T>::min() &&
-                      val0 <= DTypeTrait<T>::max());
-        if (i + 1 < values.size()) {
-            U val1 = values[i + 1];
-            megdnn_assert(val1 >= DTypeTrait<T>::min() &&
-                          val1 <= DTypeTrait<T>::max());
-            ptr[i / 2] = typename DTypeTrait<T>::ctype((val0 & 0xF) | (val1 << 4));
-        } else {
-            ptr[i / 2] = typename DTypeTrait<T>::ctype(val0 & 0xF);
+    auto layout = tensor.layout;
+    auto dim_in = shape[layout.ndim - 1];
+    auto elems = tensor.layout.total_nr_elems();
+    auto dim_out = elems / dim_in;
+    auto stride_out = div_ceil(dim_in, 2_z);
+    size_t in_offset = 0;
+    for (size_t i = 0; i < dim_out; ++i) {
+        for (size_t j = 0; j < dim_in; j += 2) {
+            U a = values[in_offset + j];
+            U b = 0;
+            if (j + 1 < dim_in)
+                b = values[in_offset + j + 1];
+            megdnn_assert(a >= DTypeTrait<T>::min());
+            megdnn_assert(a <= DTypeTrait<T>::max());
+            megdnn_assert(b >= DTypeTrait<T>::min());
+            megdnn_assert(b <= DTypeTrait<T>::max());
+            ptr[j / 2] = (a & 0xF) | (b << 4);
         }
+        in_offset += dim_in;
+        ptr += stride_out;
     }
-
     return tensor;
 }
 

@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/pooling/pooling2d_int8.cuh
+ * \file dnn/src/cuda/pooling/pooling2d_qint.cuh
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -32,6 +32,11 @@ void do_pooling2d_int8_ncdiv4hw4(const int8_t* d_src, int8_t* d_dst,
 void do_pooling2d_int8_ncdiv32hw32(const int8_t* d_src, int8_t* d_dst,
                                    const Param& param, cudaStream_t stream,
                                    uint32_t mode);
+
+void do_pooling2d_int4_ncdiv64hw64(const int8_t* d_src, int8_t* d_dst,
+                                   const Param& param, cudaStream_t stream,
+                                   uint32_t mode);
+
 }  // namespace pooling2d
 }  // namespace cuda
 }  // namespace megdnn

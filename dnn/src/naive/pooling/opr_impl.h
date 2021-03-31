@@ -20,10 +20,12 @@ class PoolingForwardImpl: public PoolingForward {
         using PoolingForward::PoolingForward;
         void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                 _megdnn_workspace workspace) override;
-        size_t get_workspace_in_bytes(const TensorLayout &,
-                const TensorLayout &) override {
-            return 0;
-        }
+        size_t get_workspace_in_bytes(const TensorLayout&,
+                                      const TensorLayout&) override;
+
+    private:
+        WorkspaceBundle get_workspace_bundle(void* ptr, const TensorLayout&,
+                                             const TensorLayout&) const;
 };
 
 class PoolingBackwardImpl : public PoolingBackward {

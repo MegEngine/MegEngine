@@ -47,7 +47,8 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
     } else if (param().format == Param::Format::NCHW4 ||
                param().format == Param::Format::NCHW44 ||
                param().format == Param::Format::NCHW88 ||
-               param().format == Param::Format::NCHW32) {
+               param().format == Param::Format::NCHW32 ||
+               param().format == Param::Format::NCHW64) {
         megdnn_assert(src.ndim == 5_z, "%s", errmsg_c);
 
         spatial_pos = 2;
@@ -82,6 +83,9 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
     if (param().format == Param::Format::NCHW32) {
         c *= 32;
     }
+    if (param().format == Param::Format::NCHW64) {
+        c *= 64;
+    }
     size_t oh, ow;
     size_t fh = this->param().window_h;
     size_t fw = this->param().window_w;
@@ -109,6 +113,8 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
         dst = TensorLayout{{n, c / 8, oh, ow, 8}, src.dtype, src.format};
     } else if (param().format == Param::Format::NCHW32) {
         dst = TensorLayout{{n, c / 32, oh, ow, 32}, src.dtype, src.format};
+    } else if (param().format == Param::Format::NCHW64) {
+        dst = TensorLayout{{n, c / 64, oh, ow, 64}, src.dtype, src.format};
     } else if (param().format == Param::Format::CHWN4) {
         dst = TensorLayout{{c / 4, oh, ow, n, 4}, src.dtype, src.format};
     } else {
