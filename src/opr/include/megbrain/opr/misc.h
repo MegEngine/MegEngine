@@ -86,6 +86,7 @@ public:
 //! cumulative sum along given axis
 MGB_DEFINE_OPR_CLASS(Cumsum, cg::SingleCNOperatorNodeBaseT<
         mixin::MegDNNOprHolderImpl<megdnn::Cumsum>>) // {
+    void add_input_layout_constraint() override;
 
     public:
         Cumsum(VarNode *src, const Param &param, const OperatorNodeConfig &config);

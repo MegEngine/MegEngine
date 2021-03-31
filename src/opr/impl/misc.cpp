@@ -132,6 +132,10 @@ void Cumsum::scn_do_execute() {
                        intl::get_megdnn_workspace_from_var(output().back()));
 }
 
+void Cumsum::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+}
+
 void Cumsum::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto infer_shape = [](TensorShape& dest, const InpVal& iv) {
