@@ -409,6 +409,16 @@ namespace gopt {
             void apply(OptState& opt) const override;
     };
 
+    /*!
+     * \brief padding channel to enable fast int8/int4 support
+     * assume input network is built in NCHW tensor format
+     */
+    class PaddingChannelPass final : public Pass {
+        public:
+            const char* name() const override;
+            void apply(OptState& opt) const override;
+    };
+
 }  // namespace gopt
 } // namespace mgb
 

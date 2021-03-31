@@ -4178,6 +4178,313 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {
     MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
 }
 #endif
+
+TEST(TestGoptInference, PaddingChannels) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 61) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 61);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {16, 3, 14, 14}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {20, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 20, 1, 1}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    auto w1 = mkcvar("w1", {24, 20, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 24, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto y1 = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    auto w2 = mkcvar("w2", {20, 24, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b2 = mkcvar("b2", {1, 20, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto y2 = opr::ConvBias::make(y1, w2, b2, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    using ElemMultiMode = opr::ElemwiseMultiType::Param::Mode;
+    auto y3 = opr::ElemwiseMultiType::make(
+            {y, y2}, {ElemMultiMode::QFUSE_ADD_RELU},
+            OperatorNodeConfig{dtype::QuantizedS8{1.2f}});
+    y3 = opr::TypeCvt::make(y3, dtype::Float32());
+    SymbolVar y3_pad;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::PaddingChannelPass>()
+                          .apply({{y3}})
+                          .endpoint_vars(),
+                  y3_pad);
+    ASSERT_EQ(y3_pad.node()->shape()[1], y3.node()->shape()[1]);
+    SmallVector<cg::OperatorNodeBase*> oprs;
+    auto cb = [&oprs](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::ConvBias>()) {
+            oprs.push_back(opr);
+        }
+    };
+    cg::DepOprIter{cb}.add(y3_pad.node()->owner_opr());
+    ASSERT_EQ(oprs.size(), 3);
+    ASSERT_EQ(oprs[0]->output(0)->shape()[1], 20);
+    ASSERT_EQ(oprs[1]->output(0)->shape()[1], 32);
+    ASSERT_EQ(oprs[2]->output(0)->shape()[1], 32);
+    HostTensorND t1, t2;
+    auto func1 = graph->compile({make_callback_copy(y3, t1)});
+    func1->execute();
+    auto func2 = graph->compile({make_callback_copy(y3_pad, t2)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
+TEST(TestGoptInference, ConcatAfterPaddingChannels) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 61) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 61);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {16, 3, 14, 14}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {18, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 18, 1, 1}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    auto w1 = mkcvar("w1", {18, 18, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 18, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto y1 = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    // concat at batch dim
+    auto y2 = opr::Concat::make({y, y1}, 0);
+    y2 = opr::TypeCvt::make(y2, dtype::Float32());
+    SymbolVar y2_pad;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::PaddingChannelPass>()
+                          .apply({{y2}})
+                          .endpoint_vars(),
+                  y2_pad);
+    ASSERT_EQ(y2_pad.node()->shape()[1], y2.node()->shape()[1]);
+    SmallVector<cg::OperatorNodeBase*> oprs;
+    auto cb = [&oprs](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::ConvBias>()) {
+            oprs.push_back(opr);
+        }
+    };
+    cg::DepOprIter{cb}.add(y2_pad.node()->owner_opr());
+    ASSERT_EQ(oprs.size(), 2);
+    ASSERT_EQ(oprs[0]->output(0)->shape()[1], 20);
+    ASSERT_EQ(oprs[1]->output(0)->shape()[1], 32);
+    HostTensorND t1, t2;
+    auto func1 = graph->compile({make_callback_copy(y2, t1)});
+    func1->execute();
+    auto func2 = graph->compile({make_callback_copy(y2_pad, t2)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
+// FIXME replace cpu with gpu to enable gpu validation
+TEST(TestGoptInference, PaddingChannelsWithPooling) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("cpu0");
+//    cn.activate();
+//    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+//    auto sm_ver = prop.major * 10 + prop.minor;
+//    if (sm_ver < 61) {
+//        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+//               "expected: %d)\n",
+//               sm_ver, 61);
+//        return;
+//    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {16, 3, 14, 14}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {20, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 20, 1, 1}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    auto w1 = mkcvar("w1", {24, 20, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 24, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto y1 = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+
+    opr::Pooling::Param pool_param;
+    pool_param.format = opr::Pooling::Param::Format::NCHW;
+    y1 = opr::Pooling::make(y1, pool_param);
+    y1 = opr::TypeCvt::make(y1, dtype::Float32());
+    SymbolVar y1_pad;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::PaddingChannelPass>()
+                          .apply({{y1}})
+                          .endpoint_vars(),
+                  y1_pad);
+    ASSERT_EQ(y1_pad.node()->shape()[1], y1.node()->shape()[1]);
+    SmallVector<cg::OperatorNodeBase*> oprs;
+    auto cb = [&oprs](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::Pooling>()) {
+            oprs.push_back(opr);
+        }
+    };
+    cg::DepOprIter{cb}.add(y1_pad.node()->owner_opr());
+    ASSERT_EQ(oprs[0]->output(0)->shape()[1], 32);
+    HostTensorND t1, t2;
+    auto func1 = graph->compile({make_callback_copy(y1, t1)});
+    func1->execute();
+    auto func2 = graph->compile({make_callback_copy(y1_pad, t2)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
+// FIXME replace cpu with gpu to enable gpu validation
+TEST(TestGoptInference, PaddingChannelsWithWarpPerspective) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("cpu0");
+//    cn.activate();
+//    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+//    auto sm_ver = prop.major * 10 + prop.minor;
+//    if (sm_ver < 61) {
+//        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+//               "expected: %d)\n",
+//               sm_ver, 61);
+//        return;
+//    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    std::shared_ptr<HostTensorND> mat = std::make_shared<HostTensorND>(
+            cn, TensorShape{16, 3, 3}, dtype::Float32());
+    warp_perspective_mat_gen(*mat, 16, 14, 14);
+    auto mat_var = opr::Host2DeviceCopy::make(*graph, mat).rename("mat");
+
+    auto x = mkvar("x", {16, 3, 14, 14}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {20, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 20, 1, 1}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    auto w1 = mkcvar("w1", {24, 20, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b1 = mkcvar("b1", {1, 24, 1, 1}, dtype::QuantizedS32(6.25f));
+    auto y1 = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+
+    opr::WarpPerspective::Param warp_param;
+    warp_param.format = opr::WarpPerspective::Param::Format::NCHW;
+    y1 = opr::WarpPerspective::make(y1, mat_var, TensorShape{14, 14},
+                                    warp_param);
+    y1 = opr::TypeCvt::make(y1, dtype::Float32());
+    SymbolVar y1_pad;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::PaddingChannelPass>()
+                          .apply({{y1}})
+                          .endpoint_vars(),
+                  y1_pad);
+    ASSERT_EQ(y1_pad.node()->shape()[1], y1.node()->shape()[1]);
+    SmallVector<cg::OperatorNodeBase*> oprs;
+    auto cb = [&oprs](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::WarpPerspective>()) {
+            oprs.push_back(opr);
+        }
+    };
+    cg::DepOprIter{cb}.add(y1_pad.node()->owner_opr());
+    ASSERT_EQ(oprs[0]->output(0)->shape()[1], 32);
+    HostTensorND t1, t2;
+    auto func1 = graph->compile({make_callback_copy(y1, t1)});
+    func1->execute();
+    auto func2 = graph->compile({make_callback_copy(y1_pad, t2)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
