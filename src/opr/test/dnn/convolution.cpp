@@ -2189,7 +2189,7 @@ TEST(TestOprDNN, HeuristicReproducible) {
                     megdnn_opr->get_algorithm_from_desc(algo);
             mgb_assert(palgo, "Unknown algo description");
             if (strategy == S(S::HEURISTIC | S::REPRODUCIBLE)) {
-                EXPECT_TRUE(palgo->contain_attribute(
+                EXPECT_TRUE(palgo->contain_attribute_all(
                             megdnn::AlgoAttribute::REPRODUCIBLE));
             }
             algo_name0 = palgo->name();
@@ -2371,21 +2371,23 @@ public:
                  std::vector<AlgorithmInfo>(const TensorLayout& p0,
                                          const TensorLayout& p1,
                                          const TensorLayout& p2));
-    MOCK_METHOD5(get_algorithm_info_heuristic,
+    MOCK_METHOD6(get_algorithm_info_heuristic,
                  AlgorithmInfo(const TensorLayout& p0, const TensorLayout& p1,
-                            const TensorLayout& p2,
-                            size_t workspace_limit_in_bytes,
-                            const AlgoAttribute& attr));
+                               const TensorLayout& p2,
+                               size_t workspace_limit_in_bytes,
+                               const AlgoAttribute& positive_attr,
+                               const AlgoAttribute& negative_attr));
 
     MOCK_METHOD3(get_all_algorithms,
                  std::vector<Algorithm*>(const TensorLayout& p0,
                                          const TensorLayout& p1,
                                          const TensorLayout& p2));
-    MOCK_METHOD5(get_algorithm_heuristic,
+    MOCK_METHOD6(get_algorithm_heuristic,
                  Algorithm*(const TensorLayout& p0, const TensorLayout& p1,
                             const TensorLayout& p2,
                             size_t workspace_limit_in_bytes,
-                            const AlgoAttribute& attr));
+                            const AlgoAttribute& positive_attr,
+                            const AlgoAttribute& negative_attr));
 
     MOCK_METHOD1(get_algorithm_from_desc,
                  Algorithm*(const AlgorithmDesc&));
@@ -2468,7 +2470,7 @@ TEST_F(TestWeightPreprocess, NoPreprocessNeeded) {
     auto& mock = mock_conv();
 
     MockAlgorithm algo;
-    EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+    EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _, _))
             .WillRepeatedly(Return(&algo));
     EXPECT_CALL(mock, get_algorithm_from_desc(_))
             .WillRepeatedly(Return(&algo));
@@ -2508,7 +2510,7 @@ TEST_F(TestWeightPreprocess, PreprocessCalledOnlyOnce) {
             .WillRepeatedly(Return(&algo));
 
     Expectation algo_call =
-            EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+            EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _, _))
                     .WillOnce(Return(&algo));
     Expectation ws_call = EXPECT_CALL(mock, get_workspace_in_bytes(_, _, _, _))
                                   .After(algo_call)
@@ -2567,7 +2569,7 @@ TEST_F(TestNoWeightPreprocess, NoPreprocess) {
     auto& mock = mock_conv();
 
     MockAlgorithm algo;
-    EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _))
+    EXPECT_CALL(mock, get_algorithm_heuristic(_, _, _, _, _, _))
             .WillRepeatedly(Return(&algo));
     EXPECT_CALL(mock, get_algorithm_from_desc(_))
             .WillRepeatedly(Return(&algo));

@@ -76,13 +76,12 @@ public:
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& bias,
-                                       const TensorLayout& z,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     static AlgoPack sm_algo_pack;

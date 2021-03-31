@@ -131,20 +131,24 @@ MatrixMulImpl::Algorithm* MatrixMulImpl::get_algorithm_from_desc(
 
 MatrixMul::Algorithm* MatrixMulImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto kern_size_param = make_kern_size_param(A, B, C);
     if (auto algo = static_cast<AlgoBase*>(
                 get_algorithm_from_desc(execution_policy().algo))) {
         megdnn_assert(algo->get_workspace(kern_size_param) <
                       workspace_limit_in_bytes);
-        auto cur = megdnn::get_algo_with_attribute<MatrixMulImpl>(algo, attr);
+        auto cur = megdnn::get_algo_match_attribute<MatrixMulImpl>(
+                algo, positive_attr, negative_attr);
         if (cur)
             return cur;
-        megdnn_throw(ssprintf(
-                "require algorithm with attribute%s, but given algorithm with "
-                "attribute%s",
-                Algorithm::attribute_str(attr).c_str(),
-                Algorithm::attribute_str(algo->attribute()).c_str()));
+        megdnn_throw(
+                ssprintf("require algorithm without attribute(%s) with "
+                         "attribute(%s), but given algorithm with "
+                         "attribute(%s)",
+                         Algorithm::attribute_str(negative_attr).c_str(),
+                         Algorithm::attribute_str(positive_attr).c_str(),
+                         Algorithm::attribute_str(algo->attribute()).c_str()));
     }
     AlgoTypePack algo_type;
     algo_type.data_type = kern_size_param.deduce_algo_data_type();
@@ -157,7 +161,7 @@ MatrixMul::Algorithm* MatrixMulImpl::get_algorithm_heuristic(
             static_cast<AlgoBase*>(algo)->get_workspace(kern_size_param) <=
                     workspace_limit_in_bytes) {
             if (static_cast<AlgoBase*>(algo)->preferred_attribute(
-                        kern_size_param, attr)) {
+                        kern_size_param, positive_attr, negative_attr)) {
                 //! use gemv algo if it's prefered
                 if (algo->algoset() == AlgoBase::AlgoSet::ALGO_TYPE_GEMV) {
                     return algo;
@@ -215,9 +219,9 @@ MatrixMulImpl::KernParam MatrixMulImpl::make_kern_param(
 size_t MatrixMulImpl::get_workspace_in_bytes(const TensorLayout& A,
                                              const TensorLayout& B,
                                              const TensorLayout& C) {
-    if (auto algo = get_algorithm_heuristic(A, B, C,
-                                            std::numeric_limits<size_t>::max(),
-                                            AlgoAttribute::DEFAULT)) {
+    if (auto algo = get_algorithm_heuristic(
+                A, B, C, std::numeric_limits<size_t>::max(),
+                AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT)) {
         auto kern_size_param = make_kern_size_param(A, B, C);
         return static_cast<AlgoBase*>(algo)->get_workspace(kern_size_param);
     }
@@ -230,6 +234,7 @@ void MatrixMulImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
 
     if (auto algo = get_algorithm_heuristic(A.layout, B.layout, C.layout,
                                             std::numeric_limits<size_t>::max(),
+                                            AlgoAttribute::DEFAULT,
                                             AlgoAttribute::DEFAULT)) {
         auto kern_param = make_kern_param(A, B, C, workspace);
         auto kern = static_cast<AlgoBase*>(algo)->get_kern(kern_param);

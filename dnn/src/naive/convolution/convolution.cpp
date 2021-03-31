@@ -272,14 +272,11 @@ ConvolutionForwardImpl:: get_all_algorithms(const TensorLayout &,
 ConvolutionForward::Algorithm* ConvolutionForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* diff */,
         const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto algo =
             static_cast<HandleImpl*>(handle())->default_conv_fwd_algo();
-    megdnn_assert(algo->contain_attribute(attr),
-                  "require algorithm with attribute%s, but heuristic "
-                  "algorithm(%s) with attribute%s ",
-                  Algorithm::attribute_str(attr).c_str(), algo->name(),
-                  Algorithm::attribute_str(algo->attribute()).c_str());
+    algo->check_attribute(positive_attr, negative_attr);
     return algo;
 }
 
@@ -302,14 +299,11 @@ ConvolutionBackwardData::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& /* filter */, const TensorLayout& /* diff */,
         const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto algo =
             static_cast<HandleImpl*>(handle())->default_conv_bwd_data_algo();
-    megdnn_assert(algo->contain_attribute(attr),
-                  "require algorithm with attribute%s, but heuristic "
-                  "algorithm(%s) with attribute%s ",
-                  Algorithm::attribute_str(attr).c_str(), algo->name(),
-                  Algorithm::attribute_str(algo->attribute()).c_str());
+    algo->check_attribute(positive_attr, negative_attr);
     return algo;
 }
 
@@ -333,14 +327,11 @@ ConvolutionBackwardFilter::Algorithm*
 ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* diff */,
         const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto algo =
             static_cast<HandleImpl*>(handle())->default_conv_bwd_filter_algo();
-    megdnn_assert(algo->contain_attribute(attr),
-                  "require algorithm with attribute%s, but heuristic "
-                  "algorithm(%s) with attribute%s ",
-                  Algorithm::attribute_str(attr).c_str(), algo->name(),
-                  Algorithm::attribute_str(algo->attribute()).c_str());
+    algo->check_attribute(positive_attr, negative_attr);
     return algo;
 }
 

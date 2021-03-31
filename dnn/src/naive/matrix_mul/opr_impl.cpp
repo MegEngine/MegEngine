@@ -91,7 +91,8 @@ MatrixMulForwardImpl::get_all_algorithms(const TensorLayout& /*A*/,
 MatrixMulForward::Algorithm* MatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /*A*/, const TensorLayout& /*B*/,
         const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
-        const AlgoAttribute& /*attr*/) {
+        const AlgoAttribute& /*positive_attr*/,
+        const AlgoAttribute& /*negative_attr*/) {
     return static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo();
 }
 

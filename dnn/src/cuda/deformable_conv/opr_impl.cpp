@@ -59,10 +59,12 @@ AlgoFwd* Fwd::get_algorithm_heuristic(const TensorLayout& im,
                                       const TensorLayout& mask,
                                       const TensorLayout& dst,
                                       size_t workspace_limit_in_bytes,
-                                      const AlgoAttribute& attr) {
+                                      const AlgoAttribute& positive_attr,
+                                      const AlgoAttribute& negative_attr) {
     auto fm = make_canonized_filter_meta(im.ndim, filter, offset);
     return get_algorithm_heuristic(im, fm, offset, mask, dst,
-                                   workspace_limit_in_bytes, attr);
+                                   workspace_limit_in_bytes, positive_attr,
+                                   negative_attr);
 }
 
 AlgoFwd* Fwd::get_algorithm_heuristic(const TensorLayout& im,
@@ -71,17 +73,20 @@ AlgoFwd* Fwd::get_algorithm_heuristic(const TensorLayout& im,
                                       const TensorLayout& mask,
                                       const TensorLayout& dst,
                                       size_t workspace_limit_in_bytes,
-                                      const AlgoAttribute& attr) {
+                                      const AlgoAttribute& positive_attr,
+                                      const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, im, filter, offset, mask, dst);
     if (sm_algo_pack.algo_matmul.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_matmul;
     }
-    megdnn_throw(ssprintf(
-            "no deformable conv fwd algorithm with attribute%s , args(%s) and "
-            "workspace limit (%zu bytes)",
-            Algorithm::attribute_str(attr).c_str(), args.to_string().c_str(),
-            workspace_limit_in_bytes));
+    megdnn_throw(
+            ssprintf("no deformable conv fwd algorithm without attribute(%s) "
+                     "with attribute(%s) , args(%s) and "
+                     "workspace limit (%zu bytes)",
+                     Algorithm::attribute_str(negative_attr).c_str(),
+                     Algorithm::attribute_str(positive_attr).c_str(),
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 const char* Fwd::get_algorithm_set_name() const {
@@ -114,28 +119,33 @@ std::vector<AlgoBwdFlt*> BwdFlt::get_all_algorithms(const TensorLayout& /* im */
 AlgoBwdFlt* BwdFlt::get_algorithm_heuristic(
         const TensorLayout& im, const TensorLayout& offset,
         const TensorLayout& mask, const TensorLayout& out_grad,
-        const TensorLayout& filter_grad,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        const TensorLayout& filter_grad, size_t workspace_limit_in_bytes,
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto fm = make_canonized_filter_meta(im.ndim, filter_grad, offset);
     return get_algorithm_heuristic(im, offset, mask, out_grad, fm,
-                                   workspace_limit_in_bytes, attr);
+                                   workspace_limit_in_bytes, positive_attr,
+                                   negative_attr);
 }
 
 AlgoBwdFlt* BwdFlt::get_algorithm_heuristic(
         const TensorLayout& im, const TensorLayout& offset,
         const TensorLayout& mask, const TensorLayout& out_grad,
-        const CanonizedFilterMeta& filter_grad,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        const CanonizedFilterMeta& filter_grad, size_t workspace_limit_in_bytes,
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, im, offset, mask, out_grad, filter_grad);
     if (sm_algo_pack.algo_matmul.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_matmul;
     }
     megdnn_throw(
-            ssprintf("no deformable conv bwd filter algorithm with "
-                     "attribute%s, args(%s) and "
+            ssprintf("no deformable conv bwd filter algorithm without "
+                     "attribute(%s) with "
+                     "attribute(%s), args(%s) and "
                      "workspace limit (%zu bytes)",
-                     Algorithm::attribute_str(attr).c_str(),
+                     Algorithm::attribute_str(negative_attr).c_str(),
+                     Algorithm::attribute_str(positive_attr).c_str(),
                      args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
@@ -176,11 +186,12 @@ AlgoBwdData* BwdData::get_algorithm_heuristic(
         const TensorLayout& offset, const TensorLayout& mask,
         const TensorLayout& out_grad, const TensorLayout& im_grad,
         const TensorLayout& offset_grad, const TensorLayout& mask_grad,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto fm = make_canonized_filter_meta(im.ndim, filter, offset);
-    return get_algorithm_heuristic(im, fm, offset, mask, out_grad, im_grad,
-                                   offset_grad, mask_grad,
-                                   workspace_limit_in_bytes, attr);
+    return get_algorithm_heuristic(
+            im, fm, offset, mask, out_grad, im_grad, offset_grad, mask_grad,
+            workspace_limit_in_bytes, positive_attr, negative_attr);
 }
 
 AlgoBwdData* BwdData::get_algorithm_heuristic(
@@ -188,18 +199,21 @@ AlgoBwdData* BwdData::get_algorithm_heuristic(
         const TensorLayout& offset, const TensorLayout& mask,
         const TensorLayout& out_grad, const TensorLayout& im_grad,
         const TensorLayout& offset_grad, const TensorLayout& mask_grad,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, im, filter, offset, mask, out_grad, im_grad,
                             offset_grad, mask_grad);
     if (sm_algo_pack.algo_matmul.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.algo_matmul;
     }
     megdnn_throw(
-            ssprintf("no deformable conv bwd data algorithm with attribute%s, "
+            ssprintf("no deformable conv bwd data algorithm without "
+                     "attribute(%s) with attribute(%s), "
                      "args(%s) and "
                      "workspace limit (%zu bytes)",
-                     Algorithm::attribute_str(attr).c_str(),
+                     Algorithm::attribute_str(negative_attr).c_str(),
+                     Algorithm::attribute_str(positive_attr).c_str(),
                      args.to_string().c_str(), workspace_limit_in_bytes));
 }
 

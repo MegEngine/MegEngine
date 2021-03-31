@@ -27,7 +27,7 @@ inline const char* attr_str(const AlgoAttribute& attr) {
         return #attr;
     switch (attr) { FOREACH_ALGO_ATTRIBUTE(cb) }
 #undef cb
-    return "unknown arch";
+    return "UNKNOWN";
 }
 }  // namespace
 
@@ -43,11 +43,30 @@ std::string Algorithm::attribute_str(const Attribute& attr) {
         ret.append(attr_str(sub_attr));
         attr_val = attr_val & (attr_val - 1);
     }
+    if (ret.empty()) {
+        ret = "DEFAULT";
+    }
     return ret;
 }
 
-bool Algorithm::contain_attribute(const Attribute& attr) const {
+bool Algorithm::contain_attribute_all(const Attribute& attr) const {
     return attr == static_cast<Attribute>(attribute() & attr);
+}
+
+bool Algorithm::contain_attribute_any(const Attribute& attr) const {
+    return static_cast<bool>(attribute() & attr);
+}
+
+void Algorithm::check_attribute(const Attribute& positive_attr,
+                                const Attribute& negative_attr) const {
+    megdnn_assert(contain_attribute_all(positive_attr) &&
+                          !contain_attribute_any(negative_attr),
+                  "require algorithm with attribute(%s) and without "
+                  "attribute(%s), but get"
+                  "algorithm(%s) with attribute(%s) ",
+                  Algorithm::attribute_str(positive_attr).c_str(),
+                  Algorithm::attribute_str(negative_attr).c_str(), name(),
+                  Algorithm::attribute_str(attribute()).c_str());
 }
 
 // vim: syntax=cpp.doxygen

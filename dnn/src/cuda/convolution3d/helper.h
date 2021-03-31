@@ -97,8 +97,10 @@ namespace convolution3d {
             const cudnnConvolutionDescriptor_t conv_desc,
             const cudnnTensorDescriptor_t y_desc,
             size_t workspace_limit_in_bytes, cudnnConvolutionFwdAlgo_t* algo,
-            const AlgoAttribute& attr) {
-        MEGDNN_MARK_USED_VAR(attr);
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
+        MEGDNN_MARK_USED_VAR(positive_attr);
+        MEGDNN_MARK_USED_VAR(negative_attr);
 #if CUDNN_MAJOR >= 7
         int algo_max_count = 0;
         cudnn_check(cudnnGetConvolutionForwardAlgorithmMaxCount(
@@ -118,7 +120,7 @@ namespace convolution3d {
                     cudnn_handle, x_desc, w_desc, conv_desc, y_desc,
                     algo_perf[i].algo, &workspace_size));
             if (workspace_size > workspace_limit_in_bytes) continue;
-            if (!(attr & AlgoAttribute::REPRODUCIBLE)) {
+            if (!(positive_attr & AlgoAttribute::REPRODUCIBLE)) {
                 *algo = algo_perf[i].algo;
                 return true;
             } else {
@@ -144,8 +146,11 @@ namespace convolution3d {
             const cudnnConvolutionDescriptor_t conv_desc,
             const cudnnTensorDescriptor_t dx_desc,
             size_t workspace_limit_in_bytes,
-            cudnnConvolutionBwdDataAlgo_t* algo, const AlgoAttribute& attr) {
-        MEGDNN_MARK_USED_VAR(attr);
+            cudnnConvolutionBwdDataAlgo_t* algo,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
+        MEGDNN_MARK_USED_VAR(positive_attr);
+        MEGDNN_MARK_USED_VAR(negative_attr);
 #if CUDNN_MAJOR >= 7
         int algo_max_count = 0;
         cudnn_check(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
@@ -166,7 +171,7 @@ namespace convolution3d {
                     cudnn_handle, w_desc, dy_desc, conv_desc, dx_desc,
                     algo_perf[i].algo, &workspace_size));
             if (workspace_size > workspace_limit_in_bytes) continue;
-            if (!(attr & AlgoAttribute::REPRODUCIBLE)) {
+            if (!(positive_attr & AlgoAttribute::REPRODUCIBLE)) {
                 *algo = algo_perf[i].algo;
                 return true;
             } else {
@@ -193,8 +198,11 @@ namespace convolution3d {
             const cudnnConvolutionDescriptor_t conv_desc,
             const cudnnFilterDescriptor_t dw_desc,
             size_t workspace_limit_in_bytes,
-            cudnnConvolutionBwdFilterAlgo_t* algo, const AlgoAttribute& attr) {
-        MEGDNN_MARK_USED_VAR(attr);
+            cudnnConvolutionBwdFilterAlgo_t* algo,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
+        MEGDNN_MARK_USED_VAR(positive_attr);
+        MEGDNN_MARK_USED_VAR(negative_attr);
 #if CUDNN_MAJOR >= 7
         int algo_max_count = 0;
         cudnn_check(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
@@ -215,7 +223,7 @@ namespace convolution3d {
                     cudnn_handle, x_desc, dy_desc, conv_desc, dw_desc,
                     algo_perf[i].algo, &workspace_size));
             if (workspace_size > workspace_limit_in_bytes) continue;
-            if (!(attr & AlgoAttribute::REPRODUCIBLE)) {
+            if (!(positive_attr & AlgoAttribute::REPRODUCIBLE)) {
                 *algo = algo_perf[i].algo;
                 return true;
             } else {
@@ -234,7 +242,6 @@ namespace convolution3d {
         return true;
 #endif
     }
-
 
 } // namespace convolution3d
 } // namespace cuda

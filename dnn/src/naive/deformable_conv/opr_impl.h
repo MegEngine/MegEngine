@@ -26,13 +26,13 @@ public:
         return std::vector<Algorithm*>();
     };
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& /* src */,
-                                       const TensorLayout& /* filter */,
-                                       const TensorLayout& /* offset */,
-                                       const TensorLayout& /* mask */,
-                                       const TensorLayout& /* dst */,
-                                       size_t /* workspace_limit_in_bytes */,
-                                       const AlgoAttribute& /*attr*/) override {
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& /* src */, const TensorLayout& /* filter */,
+            const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+            const TensorLayout& /* dst */,
+            size_t /* workspace_limit_in_bytes */,
+            const AlgoAttribute& /*positive_attr*/,
+            const AlgoAttribute& /*negative_attr*/) override {
         return nullptr;
     };
 
@@ -68,13 +68,13 @@ public:
         return std::vector<Algorithm*>();
     };
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& /* im */,
-                                       const TensorLayout& /* offset */,
-                                       const TensorLayout& /* mask */,
-                                       const TensorLayout& /* out_grad */,
-                                       const TensorLayout& /* filter_grad */,
-                                       size_t /* workspace_limit_in_bytes */,
-                                       const AlgoAttribute& /*attr*/) override {
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& /* im */, const TensorLayout& /* offset */,
+            const TensorLayout& /* mask */, const TensorLayout& /* out_grad */,
+            const TensorLayout& /* filter_grad */,
+            size_t /* workspace_limit_in_bytes */,
+            const AlgoAttribute& /*positive_attr*/,
+            const AlgoAttribute& /*negative_attr*/) override {
         return nullptr;
     };
 
@@ -112,16 +112,16 @@ public:
         return std::vector<Algorithm*>();
     };
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& /* im */,
-                                       const TensorLayout& /* filter */,
-                                       const TensorLayout& /* offset */,
-                                       const TensorLayout& /* mask */,
-                                       const TensorLayout& /* out_grad */,
-                                       const TensorLayout& /* im_grad */,
-                                       const TensorLayout& /* offset_grad */,
-                                       const TensorLayout& /* mask_grad */,
-                                       size_t /* workspace_limit_in_bytes */,
-                                       const AlgoAttribute& /*attr*/) override {
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& /* im */, const TensorLayout& /* filter */,
+            const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+            const TensorLayout& /* out_grad */,
+            const TensorLayout& /* im_grad */,
+            const TensorLayout& /* offset_grad */,
+            const TensorLayout& /* mask_grad */,
+            size_t /* workspace_limit_in_bytes */,
+            const AlgoAttribute& /*positive_attr*/,
+            const AlgoAttribute& /*negative_attr*/) override {
         return nullptr;
     };
 

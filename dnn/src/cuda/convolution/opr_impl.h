@@ -59,11 +59,11 @@ protected:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -77,19 +77,22 @@ public:
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
             const TensorLayout& diff, const TensorLayout& grad,
-            size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
         return get_algorithm_heuristic(filter, filter_meta, diff, grad,
-                                       workspace_limit_in_bytes, attr)
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
                 ->info();
     }
 
-    AlgorithmInfo get_algorithm_info_heuristic(const TensorLayout& filter,
-                                               const TensorLayout& diff,
-                                               const TensorLayout& grad,
-                                               size_t workspace_limit_in_bytes,
-                                               const AlgoAttribute& attr) {
+    AlgorithmInfo get_algorithm_info_heuristic(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
         return get_algorithm_heuristic(filter, diff, grad,
-                                       workspace_limit_in_bytes, attr)
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
                 ->info();
     }
 
@@ -118,11 +121,11 @@ protected:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
@@ -130,7 +133,8 @@ private:
                                        const TensorLayout& diff,
                                        const TensorLayout& grad,
                                        size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr);
+                                       const AlgoAttribute& positive_attr,
+                                       const AlgoAttribute& negative_attr);
 
     static AlgoPack sm_algo_pack;
 };
@@ -146,19 +150,22 @@ public:
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& src, const TensorLayout& diff,
             const TensorLayout& grad, const CanonizedFilterMeta& grad_meta,
-            size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
         return get_algorithm_heuristic(src, diff, grad, grad_meta,
-                                       workspace_limit_in_bytes, attr)
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
                 ->info();
     }
 
-    AlgorithmInfo get_algorithm_info_heuristic(const TensorLayout& filter,
-                                               const TensorLayout& diff,
-                                               const TensorLayout& grad,
-                                               size_t workspace_limit_in_bytes,
-                                               const AlgoAttribute& attr) {
+    AlgorithmInfo get_algorithm_info_heuristic(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
         return get_algorithm_heuristic(filter, diff, grad,
-                                       workspace_limit_in_bytes, attr)
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
                 ->info();
     }
 
@@ -181,11 +188,11 @@ protected:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& diff,
             const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     Algorithm* get_algorithm_heuristic(const TensorLayout& src,
@@ -193,7 +200,8 @@ private:
                                        const TensorLayout& grad,
                                        const CanonizedFilterMeta& grad_meta,
                                        size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr);
+                                       const AlgoAttribute& positive_attr,
+                                       const AlgoAttribute& negative_attr);
 
     static AlgoPack sm_algo_pack;
 };

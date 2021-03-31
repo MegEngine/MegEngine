@@ -76,9 +76,12 @@ public:
     }
     bool is_available_attribute(
             const SizeArgs& args,
-            const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE,
+            const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return contain_attribute(attr) && is_available_wk(args, limit);
+        return contain_attribute_all(positive_attr) &&
+               !contain_attribute_any(negative_attr) &&
+               is_available_wk(args, limit);
     }
 
     AlgoBase& check_workspace(const SizeArgs& args,

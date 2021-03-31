@@ -22,11 +22,11 @@ public:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&) override {
         return 0;
@@ -44,11 +44,11 @@ public:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&) override {
         return 0;
@@ -66,11 +66,11 @@ public:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& diff,
             const TensorLayout& grad) override;
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
                                   const TensorLayout&) override {
         return 0;

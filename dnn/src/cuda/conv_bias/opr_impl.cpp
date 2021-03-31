@@ -51,7 +51,8 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     using namespace conv_bias;
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
     auto dst_layout = *args.dst_layout;
@@ -74,7 +75,8 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     };
 
     auto get_cudnn_algo =
-            [this, &conv_args, &args, workspace_limit_in_bytes, attr](
+            [this, &conv_args, &args, workspace_limit_in_bytes, positive_attr,
+             negative_attr](
                     const thin_function<AlgoBase*(cudnnConvolutionFwdAlgo_t)>&
                             cb) -> AlgoBase* {
         auto cudnn_handle = cuda::cudnn_handle(this->handle());
@@ -93,7 +95,8 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         for (int i = 0; i < ret_count; ++i) {
             auto conv_bias_algo = cb(algo_perf[i].algo);
             if (conv_bias_algo->is_available_attribute(
-                        args, attr, workspace_limit_in_bytes))
+                        args, positive_attr, negative_attr,
+                        workspace_limit_in_bytes))
                 return conv_bias_algo;
         }
 #else
@@ -105,18 +108,20 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
                 workspace_limit_in_bytes, &algo));
 
         auto conv_bias_algo = cb(algo);
-        if (conv_bias_algo->is_available_attribute(args, attr,
+        if (conv_bias_algo->is_available_attribute(args, positive_attr,
+                                                   negative_attr,
                                                    workspace_limit_in_bytes))
             return conv_bias_algo;
 #endif
         return nullptr;
     };
 
-    auto get_1x1_algo = [workspace_limit_in_bytes,
-                         attr](const AlgoBase::SizeArgs& size_arg)
+    auto get_1x1_algo = [workspace_limit_in_bytes, positive_attr,
+                         negative_attr](const AlgoBase::SizeArgs& size_arg)
             -> ConvBiasForwardImpl::AlgoBase* {
         if (sm_algo_pack.batched_matmul.is_available_attribute(
-                    size_arg, attr, workspace_limit_in_bytes)) {
+                    size_arg, positive_attr, negative_attr,
+                    workspace_limit_in_bytes)) {
             return &sm_algo_pack.batched_matmul;
         }
         return nullptr;
@@ -145,10 +150,12 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     if (is_chanwise) {
         if (prefer_dnn_chanwise) {
             if (sm_algo_pack.chanwise.is_available_attribute(
-                        args, attr, workspace_limit_in_bytes))
+                        args, positive_attr, negative_attr,
+                        workspace_limit_in_bytes))
                 return &sm_algo_pack.chanwise;
             if (sm_algo_pack.chanwise8x8x32.is_available_attribute(
-                        args, attr, workspace_limit_in_bytes))
+                        args, positive_attr, negative_attr,
+                        workspace_limit_in_bytes))
                 return &sm_algo_pack.chanwise8x8x32;
         } else {
             conv_args.dst_layout = &dst_layout;
@@ -163,7 +170,8 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     //! Prefer CUDNN CONVBIAS.
     bool cudnn_conv_bias_act_supported = false;
     for (auto&& algo : sm_algo_pack.cudnn_conv_bias_activations) {
-        if (algo.is_available_attribute(args, attr, workspace_limit_in_bytes)) {
+        if (algo.is_available_attribute(args, positive_attr, negative_attr,
+                                        workspace_limit_in_bytes)) {
             cudnn_conv_bias_act_supported = true;
             break;
         }
@@ -201,30 +209,18 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
     }
 
     if (sm_algo_pack.fallback_nchw_qs8.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.fallback_nchw_qs8;
     }
 
     if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<ConvBiasForwardImpl>(
-                    sm_algo_pack.non_cudnn_algos, args,
-                    workspace_limit_in_bytes, "cuda convbias fwd", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvBiasForwardImpl>(
-                    sm_algo_pack.non_cudnn_algos, args,
-                    workspace_limit_in_bytes, "cuda convbias fwd");
-        }
+        return megdnn::get_algo_match_attribute<ConvBiasForwardImpl>(
+                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
+                "cuda convbias fwd", positive_attr, negative_attr);
     } else {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<ConvBiasForwardImpl>(
-                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
-                    "cuda convbias fwd", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvBiasForwardImpl>(
-                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
-                    "cuda convbias fwd");
-        }
+        return megdnn::get_algo_match_attribute<ConvBiasForwardImpl>(
+                sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                "cuda convbias fwd", positive_attr, negative_attr);
     }
 }
 

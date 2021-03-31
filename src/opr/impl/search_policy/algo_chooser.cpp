@@ -278,27 +278,21 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
     return ret;
 }
 
-AlgoAttribute extract_algo_attribute_from_execution_strategy(
+//! return pair<positive_attr, negative_attr>
+std::pair<AlgoAttribute, AlgoAttribute>
+extract_algo_attribute_from_execution_strategy(
         const ExecutionStrategy& strategy) {
-    AlgoAttribute ret = AlgoAttribute::DEFAULT;
+    std::pair<AlgoAttribute, AlgoAttribute> ret =
+            std::make_pair(AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT);
     if (strategy & ExecutionStrategy::REPRODUCIBLE) {
-        ret |= AlgoAttribute::REPRODUCIBLE;
+        ret.first |= AlgoAttribute::REPRODUCIBLE;
+    }
+    if (strategy & ExecutionStrategy::OPTMIZED) {
+        ret.second |= AlgoAttribute::NAIVE;
     }
     return ret;
 }
 
-//! Test whether the algo attribute of a algo match the require
-//! algo_strategy
-static bool algo_attribute_match_strategy(AlgoAttribute attribute,
-                                          ExecutionStrategy selected_strategy) {
-    bool ret = true;
-    if (selected_strategy & ExecutionStrategy::OPTMIZED) {
-        ret &= (!static_cast<bool>(AlgoAttribute::NAIVE & attribute));
-    } else if (selected_strategy & ExecutionStrategy::REPRODUCIBLE) {
-        ret &= static_cast<bool>(AlgoAttribute::REPRODUCIBLE & attribute);
-    }
-    return ret;
-}
 }  // namespace
 
 namespace mgb {
@@ -311,7 +305,7 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
         return;
     AlgoChooserProfileCache::Result prof_rst;
 
-    auto target_attribute =
+    auto target_attr =
             extract_algo_attribute_from_execution_strategy(selected_strategy);
     std::string layouts_str = format_fixlayouts<Opr>(ctx.layouts(), arity_in, arity_out);
     double cur_timeout = 0;
@@ -332,14 +326,16 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
             continue;
         }
         auto palgo = ctx.megdnn_opr()->get_algorithm_from_desc(policy.algo);
-        if (!algo_attribute_match_strategy(palgo->attribute(),
-                                           selected_strategy)) {
+        if (!(palgo->contain_attribute_all(target_attr.first) &&
+            !palgo->contain_attribute_any(target_attr.second))) {
             mgb_log_debug(
-                    "skip algo %s with attribute%s, which is not match the "
-                    "profile strategy required attribute%s.",
+                    "skip algo %s with attribute(%s), which is not match the "
+                    "profile strategy required contain attribute(%s) and not "
+                    "contain attribute(%s).",
                     algo.name.c_str(),
                     Algorithm::attribute_str(palgo->attribute()).c_str(),
-                    Algorithm::attribute_str(target_attribute).c_str());
+                    Algorithm::attribute_str(target_attr.first).c_str(),
+                    Algorithm::attribute_str(target_attr.second).c_str());
             continue;
         }
 
@@ -370,10 +366,12 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
                       rst.workspace, rst.time);
         prof_rst.push_back(rst);
     }
-    std::string msg =
-            ssprintf("no usable %s algorithm %s with attribute(%s)",
-                     ctx.mgb_opr()->dyn_typeinfo()->name, layouts_str.c_str(),
-                     Algorithm::attribute_str(target_attribute).c_str());
+    std::string msg = ssprintf(
+            "no usable %s algorithm %s with attribute(%s) and without "
+            "attribute(%s)",
+            ctx.mgb_opr()->dyn_typeinfo()->name, layouts_str.c_str(),
+            Algorithm::attribute_str(target_attr.first).c_str(),
+            Algorithm::attribute_str(target_attr.second).c_str());
     mgb_assert(!prof_rst.empty(), "%s", msg.c_str());
 
     FixedTensorLayouts origin_layouts = ctx.layouts();
@@ -460,9 +458,9 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     Algorithm* palgo = megdnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "Unknown algo description");
     ret.append("): algo=" + std::string(palgo->name()));
-    ret.append(ssprintf(" workspace=%.2fMiB attirbute=%d",
+    ret.append(ssprintf(" workspace=%.2fMiB attirbute(%s)",
                         workspace / (1024 * 1024.0),
-                        static_cast<uint32_t>(palgo->attribute())));
+                        Algorithm::attribute_str(palgo->attribute()).c_str()));
     mgb_log_debug("%s", ret.c_str());
 
     megdnn_opr->execution_policy() = policy;
@@ -602,13 +600,14 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(
     }
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             owner_graph(), m_cn, m_execution_policy.workspace_limit);
+    auto attr =
+            extract_algo_attribute_from_execution_strategy(selected_strategy);
     ImplExecutionPolicy policy;
-    policy.algo = APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
-                                args..., workspace_limit,
-                                extract_algo_attribute_from_execution_strategy(
-                                        selected_strategy)),
-                        m_layouts)
-                          .desc;
+    policy.algo =
+            APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
+                          args..., workspace_limit, attr.first, attr.second),
+                  m_layouts)
+                    .desc;
 
     Algorithm* algo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(algo, "Unknown algo description");
@@ -666,13 +665,14 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
         } else {
             auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
                     owner_graph(), m_cn, m_execution_policy.workspace_limit);
-            policy.algo =
-                    APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
-                                  args..., workspace_limit,
-                                  extract_algo_attribute_from_execution_strategy(
-                                          selected_strategy)),
-                          m_layouts)
-                            .desc;
+
+            auto attr = extract_algo_attribute_from_execution_strategy(
+                    selected_strategy);
+            policy.algo = APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
+                                        args..., workspace_limit, attr.first,
+                                        attr.second),
+                                m_layouts)
+                                  .desc;
         }
         mgb_assert(policy.algo.valid(),
                    "No algo found from cache or heuristic, maybe some error "

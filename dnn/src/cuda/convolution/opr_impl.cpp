@@ -33,14 +33,15 @@ using namespace convolution;
 
 /* ============== ConvolutionForwardImpl ============== */
 ConvolutionForwardImpl::Algorithm*
-ConvolutionForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
-                                                const TensorLayout& filter,
-                                                const TensorLayout& dst,
-                                                size_t workspace_limit_in_bytes,
-                                                const AlgoAttribute& attr) {
+ConvolutionForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& dst, size_t workspace_limit_in_bytes,
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args{this, src, filter, dst};
     MEGDNN_MARK_USED_VAR(workspace_limit_in_bytes);
-    MEGDNN_MARK_USED_VAR(attr);
+    MEGDNN_MARK_USED_VAR(positive_attr);
+    MEGDNN_MARK_USED_VAR(negative_attr);
     return &sm_algo_pack.algo_default;
 }
 
@@ -101,46 +102,45 @@ ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto fm = check_layout_fwd(grad, filter, diff);
     return get_algorithm_heuristic(filter, fm, diff, grad,
-                                   workspace_limit_in_bytes, attr);
+                                   workspace_limit_in_bytes, positive_attr,
+                                   negative_attr);
 }
 
 ConvolutionBackwardDataImpl::Algorithm*
 ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
         const CanonizedFilterMeta& filter_meta, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, filter, filter_meta, diff, grad);
 
     if (args.filter_meta.group > 1 &&
         sm_algo_pack.chanwise.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         // prefer special chanwise impl
         return &sm_algo_pack.chanwise;
     }
 
     if (args.filter_layout->dtype.enumv() ==
         DTypeTrait<dtype::QuantizedS8>::enumv) {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<ConvolutionBackwardDataImpl>(
-                    sm_algo_pack.int8_algos, args, workspace_limit_in_bytes,
-                    "cuda conv bwd_data", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
-                    sm_algo_pack.int8_algos, args, workspace_limit_in_bytes,
-                    "cuda conv bwd_data");
-        }
+        return megdnn::get_algo_match_attribute<ConvolutionBackwardDataImpl>(
+                sm_algo_pack.int8_algos, args, workspace_limit_in_bytes,
+                "cuda conv bwd_data", positive_attr, negative_attr);
     }
 
-    auto get_cudnn_algo = [this, &args, workspace_limit_in_bytes,
-                           attr]() -> ConvolutionBackwardDataImpl::AlgoBase* {
+    auto get_cudnn_algo =
+            [this, &args, workspace_limit_in_bytes, positive_attr,
+             negative_attr]() -> ConvolutionBackwardDataImpl::AlgoBase* {
         auto cudnn_handle = cuda::cudnn_handle(this->handle());
         CUDNNBwdDataDescs desc;
         args.init_desc(desc);
 
 #if CUDNN_MAJOR >= 7
+        MEGDNN_MARK_USED_VAR(negative_attr);
         int max_count = 0;
         cudnn_check(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
                 cudnn_handle, &max_count));
@@ -153,7 +153,7 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
         for (int i = 0; i < ret_count; ++i) {
             if (algo_perf[i].memory > workspace_limit_in_bytes)
                 continue;
-            if (attr & AlgoAttribute::REPRODUCIBLE) {
+            if ((positive_attr & AlgoAttribute::REPRODUCIBLE)) {
                 if (algo_perf[i].determinism == CUDNN_DETERMINISTIC) {
                     return reinterpret_cast<AlgoBase*>(
                             sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
@@ -174,8 +174,8 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
         auto&& cast_algo =
                 reinterpret_cast<AlgoBase*>(sm_algo_pack.cudnn_from_enum(algo));
         return reinterpret_cast<AlgoBase*>(
-                megdnn::get_algo_with_attribute<ConvolutionBackwardDataImpl>(
-                        cast_algo, attr));
+                megdnn::get_algo_match_attribute<ConvolutionBackwardDataImpl>(
+                        cast_algo, positive_attr, negative_attr));
 #endif
     };
 
@@ -197,25 +197,13 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(const TensorLayout& filter,
 
     if (args.filter_layout->dtype.enumv() !=
         DTypeTrait<dtype::BFloat16>::enumv) {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<ConvolutionBackwardDataImpl>(
-                    sm_algo_pack.non_cudnn_algos, args,
-                    workspace_limit_in_bytes, "cuda conv bwd_data", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
-                    sm_algo_pack.non_cudnn_algos, args,
-                    workspace_limit_in_bytes, "cuda conv bwd_data");
-        }
+        return megdnn::get_algo_match_attribute<ConvolutionBackwardDataImpl>(
+                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
+                "cuda conv bwd_data", positive_attr, negative_attr);
     } else {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<ConvolutionBackwardDataImpl>(
-                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
-                    "cuda conv bwd_data", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvolutionBackwardDataImpl>(
-                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
-                    "cuda conv bwd_data");
-        }
+        return megdnn::get_algo_match_attribute<ConvolutionBackwardDataImpl>(
+                sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                "cuda conv bwd_data", positive_attr, negative_attr);
     }
 }
 
@@ -255,29 +243,33 @@ ConvolutionBackwardFilterImpl::Algorithm*
 ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     auto fm = check_layout_fwd(src, grad, diff);
     return get_algorithm_heuristic(src, diff, grad, fm,
-                                   workspace_limit_in_bytes, attr);
+                                   workspace_limit_in_bytes, positive_attr,
+                                   negative_attr);
 }
 
 ConvolutionBackwardFilterImpl::Algorithm*
 ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad, const CanonizedFilterMeta& grad_meta,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        size_t workspace_limit_in_bytes,
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, src, diff, grad, grad_meta);
 
     if (args.grad_filter_meta.group > 1 &&
         sm_algo_pack.chanwise.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         // prefer special chanwise impl
         return &sm_algo_pack.chanwise;
     }
 
     auto get_cudnn_algo =
-            [this, &args, workspace_limit_in_bytes,
-             attr]() -> ConvolutionBackwardFilterImpl::AlgoBase* {
+            [this, &args, workspace_limit_in_bytes, positive_attr,
+             negative_attr]() -> ConvolutionBackwardFilterImpl::AlgoBase* {
         auto cudnn_handle = cuda::cudnn_handle(this->handle());
         CUDNNBwdFilterDescs desc;
         args.init_desc(desc);
@@ -293,6 +285,7 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         }
 #endif
 #if CUDNN_MAJOR >= 7
+        MEGDNN_MARK_USED_VAR(negative_attr);
         int max_count = 0;
         cudnn_check(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
                 cudnn_handle, &max_count));
@@ -305,7 +298,7 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         for (int i = 0; i < ret_count; ++i) {
             if (algo_perf[i].memory > workspace_limit_in_bytes)
                 continue;
-            if (attr & AlgoAttribute::REPRODUCIBLE) {
+            if ((positive_attr & AlgoAttribute::REPRODUCIBLE)) {
                 if (algo_perf[i].determinism == CUDNN_DETERMINISTIC) {
                     return reinterpret_cast<AlgoBase*>(
                             sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
@@ -326,8 +319,8 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         auto&& cast_algo =
                 reinterpret_cast<AlgoBase*>(sm_algo_pack.cudnn_from_enum(algo));
         return reinterpret_cast<AlgoBase*>(
-                megdnn::get_algo_with_attribute<ConvolutionBackwardFilterImpl>(
-                        cast_algo, attr));
+                megdnn::get_algo_match_attribute<ConvolutionBackwardFilterImpl>(
+                        cast_algo, positive_attr, negative_attr));
 #endif
     };
 
@@ -348,27 +341,13 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
     }
 
     if (args.src_layout->dtype.enumv() != DTypeTrait<dtype::BFloat16>::enumv) {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<
-                    ConvolutionBackwardFilterImpl>(
-                    sm_algo_pack.non_cudnn_algos, args,
-                    workspace_limit_in_bytes, "cuda conv bwd_filter", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvolutionBackwardFilterImpl>(
-                    sm_algo_pack.non_cudnn_algos, args,
-                    workspace_limit_in_bytes, "cuda conv bwd_filter");
-        }
+        return megdnn::get_algo_match_attribute<ConvolutionBackwardFilterImpl>(
+                sm_algo_pack.non_cudnn_algos, args, workspace_limit_in_bytes,
+                "cuda conv bwd_filter", positive_attr, negative_attr);
     } else {
-        if (attr != AlgoAttribute::DEFAULT) {
-            return megdnn::get_algo_with_attribute<
-                    ConvolutionBackwardFilterImpl>(
-                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
-                    "cuda conv bwd_filter", attr);
-        } else {
-            return megdnn::get_usable_algo<ConvolutionBackwardFilterImpl>(
-                    sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
-                    "cuda conv bwd_filter");
-        }
+        return megdnn::get_algo_match_attribute<ConvolutionBackwardFilterImpl>(
+                sm_algo_pack.bfloat16_algos, args, workspace_limit_in_bytes,
+                "cuda conv bwd_filter", positive_attr, negative_attr);
     }
 }
 

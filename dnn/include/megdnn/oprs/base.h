@@ -165,7 +165,15 @@ public:
     virtual std::string param() const { return {}; }
     virtual uint32_t type() const = 0;
 
-    bool contain_attribute(const Attribute& attr) const;
+    //! if algo contain all of the attribute in attr
+    bool contain_attribute_all(const Attribute& attr) const;
+
+    //! if algo contain any attribute in attr
+    bool contain_attribute_any(const Attribute& attr) const;
+
+    void check_attribute(
+            const Attribute& positive_attr = Attribute::DEFAULT,
+            const Attribute& negative_attr = Attribute::DEFAULT) const;
 
     static std::string attribute_str(const Attribute& attr);
 
@@ -342,9 +350,10 @@ public:
             const TensorLayout& p2,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, workspace_limit_in_bytes,
-                                       attr)
+                                       positive_attr, negative_attr)
                 ->info();
     }
 
@@ -367,7 +376,8 @@ protected:
             const TensorLayout& p2,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
 
 //! specializae for nargs == 4
@@ -402,9 +412,10 @@ public:
             const TensorLayout& p2, const TensorLayout& p3,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, p3, workspace_limit_in_bytes,
-                                       attr)
+                                       positive_attr, negative_attr)
                 ->info();
     }
 
@@ -427,7 +438,8 @@ protected:
             const TensorLayout& p2, const TensorLayout& p3,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
 
 //! specializae for nargs == 5
@@ -464,9 +476,11 @@ public:
             const TensorLayout& p4,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, p3, p4,
-                                       workspace_limit_in_bytes, attr)
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
                 ->info();
     }
 
@@ -491,7 +505,8 @@ protected:
             const TensorLayout& p4,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
 
 //! specializae for nargs == 8
@@ -528,9 +543,11 @@ public:
             const TensorLayout& p6, const TensorLayout& p7,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) {
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
         return get_algorithm_heuristic(p0, p1, p2, p3, p4, p5, p6, p7,
-                                       workspace_limit_in_bytes, attr)
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
                 ->info();
     }
 
@@ -557,7 +574,8 @@ protected:
             const TensorLayout& p6, const TensorLayout& p7,
             size_t workspace_limit_in_bytes =
                     std::numeric_limits<size_t>::max(),
-            const AlgoAttribute& attr = AlgoAttribute::DEFAULT) = 0;
+            const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
 }  // namespace detail
 

@@ -29,11 +29,11 @@ public:
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
             const TensorLayout& /*C*/) override;
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& /*A*/,
-                                       const TensorLayout& /*B*/,
-                                       const TensorLayout& /*C*/,
-                                       size_t /*workspace_limit_in_bytes*/,
-                                       const AlgoAttribute& /*attr*/) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,
+            const AlgoAttribute& /*positive_attr*/,
+            const AlgoAttribute& /*negative_attr*/) override;
 
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 

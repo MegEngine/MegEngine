@@ -225,8 +225,11 @@ public:
         };
         bool preferred_attribute(
                 const KernSizeParam& param,
-                const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE) {
-            return contain_attribute(attr) && preferred(param);
+                const AlgoAttribute& positive_attr =
+                        AlgoAttribute::REPRODUCIBLE,
+                const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
+            return contain_attribute_all(positive_attr) &&
+                   !contain_attribute_any(negative_attr) && preferred(param);
         };
         virtual MatmulDescription matmul_description() const = 0;
 
@@ -267,12 +270,10 @@ protected:
                                                const TensorLayout& B,
                                                const TensorLayout& C) override;
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& A,
-                                       const TensorLayout& B,
-                                       const TensorLayout& C,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
-
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 };
 
 }  // namespace fallback

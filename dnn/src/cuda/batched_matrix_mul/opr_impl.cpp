@@ -55,26 +55,37 @@ std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms(
 
 Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
-        size_t workspace_limit_in_bytes, const AlgoAttribute& attr) {
+        size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     MEGDNN_MARK_USED_VAR(workspace_limit_in_bytes);
     AlgoBase::SizeArgs args(this, A, B, C);
-    if (sm_algo_pack.cublas.is_available_attribute(args, attr)) {
+    if (sm_algo_pack.cublas.is_available_attribute(args, positive_attr,
+                                                   negative_attr)) {
         return &sm_algo_pack.cublas;
     }
 #if CUDA_VERSION >= 10010
-    else if (sm_algo_pack.cublasLt.is_available_attribute(args, attr)) {
+    else if (sm_algo_pack.cublasLt.is_available_attribute(args, positive_attr,
+                                                          negative_attr)) {
         return &sm_algo_pack.cublasLt;
     }
 #endif
-    else if (sm_algo_pack.int8x8x32.is_available_attribute(args, attr)) {
+    else if (sm_algo_pack.int8x8x32.is_available_attribute(args, positive_attr,
+                                                           negative_attr)) {
         return &sm_algo_pack.int8x8x32;
     } else {
-        if (sm_algo_pack.brute_force.is_available_attribute(args, attr)) {
+        if (sm_algo_pack.brute_force.is_available_attribute(args, positive_attr,
+                                                            negative_attr)) {
             return &sm_algo_pack.brute_force;
         }
     }
 
-    megdnn_throw("No usable algo for batched_matrix_mul");
+    megdnn_throw(ssprintf(
+            "no batched_matrix_mul algorithm without attribute(%s) with "
+            "attribute(%s) args(%s) and "
+            "workspace limit (%zu bytes)",
+            Algorithm::attribute_str(negative_attr).c_str(),
+            Algorithm::attribute_str(positive_attr).c_str(),
+            args.to_string().c_str(), workspace_limit_in_bytes));
     return nullptr;
 };
 

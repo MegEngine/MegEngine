@@ -80,9 +80,12 @@ public:
 
     bool is_available_attribute(
             const SizeArgs& args,
-            const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE,
+            const AlgoAttribute& positive_attr = AlgoAttribute::REPRODUCIBLE,
+            const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
-        return contain_attribute(attr) && is_available_wk(args, limit);
+        return contain_attribute_all(positive_attr) &&
+               !contain_attribute_any(negative_attr) &&
+               is_available_wk(args, limit);
     }
 
     AlgoBase& check_workspace(const SizeArgs& args,
@@ -214,7 +217,7 @@ public:
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
     AlgoAttribute attribute() const override {
         auto ret = static_cast<AlgoAttribute>(0);
-        if (m_impl->contain_attribute(AlgoAttribute::REPRODUCIBLE)) {
+        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
             ret |= AlgoAttribute::REPRODUCIBLE;
         }
         return ret;

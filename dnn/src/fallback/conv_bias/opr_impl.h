@@ -89,13 +89,12 @@ public:
             const TensorLayout& dst) override;
 
     //! implemented by get_algorithm_heuristic_with_ncb()
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& bias,
-                                       const TensorLayout& z,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
     //! size param for kernels with non-contiguous batch
     struct NCBKernSizeParam : ConvolutionImpl::NCBKernSizeParam {
@@ -319,11 +318,14 @@ public:
             return false;
         }
 
-        bool usable_attribute(
-                const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy,
-                const AlgoAttribute& attr = AlgoAttribute::REPRODUCIBLE) const {
-            return contain_attribute(attr) &&
+        bool usable_attribute(const NCBKernSizeParam& param,
+                              AlgoSelectionStrategy algo_selection_strategy,
+                              const AlgoAttribute& positive_attr =
+                                      AlgoAttribute::REPRODUCIBLE,
+                              const AlgoAttribute& negative_attr =
+                                      AlgoAttribute::DEFAULT) const {
+            return contain_attribute_all(positive_attr) &&
+                   !contain_attribute_any(negative_attr) &&
                    usable(param, algo_selection_strategy);
         }
 
@@ -361,7 +363,8 @@ protected:
 
     virtual Algorithm* get_algorithm_heuristic_with_ncb(
             const NCBKernSizeParam& param, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& attr);
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr);
 
     const char* get_algorithm_set_name() const override;
 

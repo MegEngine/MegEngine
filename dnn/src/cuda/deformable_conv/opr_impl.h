@@ -36,7 +36,8 @@ public:
                                        const TensorLayout& mask,
                                        const TensorLayout& dst,
                                        size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr);
+                                       const AlgoAttribute& positive_attr,
+                                       const AlgoAttribute& negative_attr);
 
     const char* get_algorithm_set_name() const override;
 
@@ -54,13 +55,12 @@ protected:
             const TensorLayout& offset, const TensorLayout& mask,
             const TensorLayout& dst) override;
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& im,
-                                       const TensorLayout& filter,
-                                       const TensorLayout& offset,
-                                       const TensorLayout& mask,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& im, const TensorLayout& filter,
+            const TensorLayout& offset, const TensorLayout& mask,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -81,7 +81,8 @@ public:
                                        const TensorLayout& out_grad,
                                        const CanonizedFilterMeta& filter_grad,
                                        size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr);
+                                       const AlgoAttribute& positive_attr,
+                                       const AlgoAttribute& negative_attr);
 
     size_t get_workspace_in_bytes(const TensorLayout& im,
                                   const TensorLayout& offset,
@@ -105,13 +106,12 @@ protected:
             const TensorLayout& mask, const TensorLayout& out_grad,
             const TensorLayout& filter_grad) override;
 
-    Algorithm* get_algorithm_heuristic(const TensorLayout& im,
-                                       const TensorLayout& offset,
-                                       const TensorLayout& mask,
-                                       const TensorLayout& out_grad,
-                                       const TensorLayout& filter_grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& attr) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& im, const TensorLayout& offset,
+            const TensorLayout& mask, const TensorLayout& out_grad,
+            const TensorLayout& filter_grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     static AlgoPack sm_algo_pack;
@@ -132,7 +132,8 @@ public:
             const TensorLayout& offset, const TensorLayout& mask,
             const TensorLayout& out_grad, const TensorLayout& im_grad,
             const TensorLayout& offset_grad, const TensorLayout& mask_grad,
-            size_t workspace_limit_in_bytes, const AlgoAttribute& attr);
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr);
 
     size_t get_workspace_in_bytes(const TensorLayout& im,
                                   const TensorLayout& filter,
@@ -166,8 +167,8 @@ protected:
             const TensorLayout& offset, const TensorLayout& mask,
             const TensorLayout& out_grad, const TensorLayout& im_grad,
             const TensorLayout& offset_grad, const TensorLayout& mask_grad,
-            size_t workspace_limit_in_bytes,
-            const AlgoAttribute& attr) override;
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
 
 private:
     static AlgoPack sm_algo_pack;

@@ -20,30 +20,32 @@ using namespace cuda;
 
 /* ============== LocalShareForwardImpl ============== */
 LocalShareForwardImpl::Algorithm*
-LocalShareForwardImpl::get_algorithm_heuristic(const TensorLayout& src,
-                                               const TensorLayout& filter,
-                                               const TensorLayout& dst,
-                                               size_t workspace_limit_in_bytes,
-                                               const AlgoAttribute& attr) {
+LocalShareForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& dst, size_t workspace_limit_in_bytes,
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, src, filter, dst);
     if (sm_algo_pack.batch_size_aware_chwn_small_image
-                .is_available_attribute(args, attr,
+                .is_available_attribute(args, positive_attr, negative_attr,
                                            workspace_limit_in_bytes)) {
         return &sm_algo_pack.batch_size_aware_chwn_small_image;
     }
     if (sm_algo_pack.batch_size_aware_chwn.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batch_size_aware_chwn;
     }
     if (sm_algo_pack.batched_matmul.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(ssprintf(
-            "no local share conv algorithm with attribute%s, args(%s) and "
-            "workspace limit (%zu bytes)",
-            Algorithm::attribute_str(attr).c_str(), args.to_string().c_str(),
-            workspace_limit_in_bytes));
+    megdnn_throw(
+            ssprintf("no local share conv algorithm without attribute(%s) with "
+                     "attribute(%s), args(%s) and "
+                     "workspace limit (%zu bytes)",
+                     Algorithm::attribute_str(negative_attr).c_str(),
+                     Algorithm::attribute_str(positive_attr).c_str(),
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareForwardImpl::Algorithm*>
@@ -79,21 +81,24 @@ LocalShareBackwardDataImpl::Algorithm*
 LocalShareBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, filter, diff, grad);
     if (sm_algo_pack.implicit_gemm.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.implicit_gemm;
     }
     if (sm_algo_pack.batched_matmul.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
-    megdnn_throw(ssprintf(
-            "no local share bwd data algorithm with attribute%s args(%s) and "
-            "workspace limit (%zu bytes)",
-            Algorithm::attribute_str(attr).c_str(), args.to_string().c_str(),
-            workspace_limit_in_bytes));
+    megdnn_throw(
+            ssprintf("no local share bwd data algorithm without attribute(%s) "
+                     "with attribute(%s) args(%s) and "
+                     "workspace limit (%zu bytes)",
+                     Algorithm::attribute_str(negative_attr).c_str(),
+                     Algorithm::attribute_str(positive_attr).c_str(),
+                     args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
 std::vector<LocalShareBackwardDataImpl::Algorithm*>
@@ -129,21 +134,24 @@ LocalShareBackwardFilterImpl::Algorithm*
 LocalShareBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& attr) {
+        const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
     if (sm_algo_pack.implicit_gemm.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.implicit_gemm;
     }
     if (sm_algo_pack.batched_matmul.is_available_attribute(
-                args, attr, workspace_limit_in_bytes)) {
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.batched_matmul;
     }
     megdnn_throw(
-            ssprintf("no local share bwd filter algorithm with attribute%s, "
+            ssprintf("no local share bwd filter algorithm without "
+                     "attribute(%s) with attribute(%s), "
                      "args(%s) and "
                      "workspace limit (%zu bytes)",
-                     Algorithm::attribute_str(attr).c_str(),
+                     Algorithm::attribute_str(negative_attr).c_str(),
+                     Algorithm::attribute_str(positive_attr).c_str(),
                      args.to_string().c_str(), workspace_limit_in_bytes));
 }
 
