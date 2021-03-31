@@ -99,6 +99,9 @@ class OpNode(NetworkNode):
     def add_out_var(self, x):
         self.outputs.append(x)
 
+    def __repr__(self):
+        return "%s{%s}" % (self.name, self.type)
+
 
 def str_to_mge_class(classname):
     # TODO: use megbrain C++ RTTI to replace type string
@@ -230,10 +233,16 @@ class Elemwise(OpNode):
     type = "Elemwise"
     opdef = builtin.Elemwise
 
+    def __repr__(self):
+        return "%s{Elemwise:%s}" % (self.name, self.params["mode"])
+
 
 class ElemwiseMultiType(OpNode):
     type = "ElemwiseMultiType"
     opdef = builtin.ElemwiseMultiType
+
+    def __repr__(self):
+        return "%s{ElemwiseMultiType:%s}" % (self.name, self.params["mode"])
 
     @classmethod
     def load(cls, opr):
