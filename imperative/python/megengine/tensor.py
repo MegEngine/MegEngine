@@ -20,7 +20,7 @@ from .core.tensor.array_method import ArrayMethodMixin
 from .device import _valid_device, get_default_device
 from .logger import get_logger
 from .utils.deprecation import deprecated
-from .utils.naming import auto_naming
+from .utils.naming import AutoNaming
 
 logger = get_logger(__name__)
 
@@ -168,7 +168,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
     @name.setter
     def name(self, name):
         self.c_name = name
-        auto_naming.record_var_name(self._mixin_handle, name)
+        AutoNaming.record_var_name(self._mixin_handle, name)
 
     @deprecated(version="1.0", reason="no need to reuse an existing tensor since 1.0")
     def set_value(self, value):

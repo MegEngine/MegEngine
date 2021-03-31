@@ -28,7 +28,7 @@ from megengine.functional import exp, log
 from megengine.jit import exclude_from_trace, trace
 from megengine.module import Module
 from megengine.random import normal, uniform
-from megengine.utils.naming import auto_naming
+from megengine.utils.naming import AutoNaming
 
 
 @pytest.mark.parametrize("trace_mode", [False, True])
@@ -141,7 +141,7 @@ def test_dump():
         return a + b
 
     # prevent from remaining scope from exception test
-    auto_naming.clear()
+    AutoNaming.clear()
     a = tensor([2])
     b = tensor([4])
     y = f(a, b).numpy()

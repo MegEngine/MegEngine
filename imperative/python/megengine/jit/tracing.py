@@ -40,7 +40,7 @@ from ..core.ops.builtin import BackwardGraph, OpDef
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
-from ..utils.naming import auto_naming
+from ..utils.naming import AutoNaming
 from .sublinear_memory_config import SublinearMemoryConfig
 
 
@@ -297,9 +297,7 @@ class trace:
             h = getattr(x, "_mixin_handle", -1)
             if h < 0 or (not self._capture_as_const and self._tinfo[h].exported):
                 h, info = self._new_handle()
-                name = (
-                    auto_naming.get_scope() + "." + (x.c_name if x.c_name else x._name)
-                )
+                name = AutoNaming.gen_name(x)
                 info.name = name
                 info.external = True
                 info.device = x.device
@@ -845,17 +843,17 @@ class trace:
                 ivars.append(h2v[h])
             ovars = G.apply_normal_varnode(op, *ivars)
 
-            auto_naming.record_opnode(ovars[0].op)
+            AutoNaming.record_opnode(ovars[0].op)
 
             assert len(ovars) == len(ohandles)
             h2v.update(zip(ohandles, ovars))
 
             for i in ohandles:
-                name = auto_naming.get_var_name(i)
+                name = AutoNaming.get_var_name(i)
                 if name is not None:
                     h2v[i].name = name
 
-        auto_naming.remove_duplicate_names()
+        AutoNaming.remove_duplicate_names()
 
         dest_vars = []
         for i, h in enumerate(self._output_bindings):
@@ -1173,7 +1171,7 @@ def apply_const_compiled_mode(value, dtype, device, is_const, no_cache, name):
 
 def apply_with_tracing(op: OpDef, *args: RawTensor):
     if hasattr(op, "scope"):
-        op.scope = auto_naming.get_scope()
+        op.scope = AutoNaming.get_scope()
     if active_trace._symbolic:
         outputs = apply_symbolic_mode(op, *args)
     else:

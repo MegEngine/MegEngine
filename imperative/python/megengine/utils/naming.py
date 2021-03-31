@@ -15,40 +15,57 @@ class AutoNaming:
     renamed by the user.
     """
 
-    def __init__(self):
-        self.scopes = []
-        self.c_ops = []
-        self.name2ops = {}
-        self.handle2names = {}
+    scopes = []
+    c_ops = []
+    name2ops = {}
+    handle2names = {}
+    __cls_attributes__ = {"scopes", "c_ops", "name2ops", "handle2names"}
 
-    def clear(self):
-        for var in vars(self).values():
-            var.clear()
+    @classmethod
+    def clear(cls):
+        for attr in cls.__cls_attributes__:
+            getattr(cls, attr).clear()
 
-    def push_scope(self, scope):
-        push_scope(scope)
-        self.scopes.append(scope)
+    @classmethod
+    def push_scope(cls, scope):
+        if scope is not None:
+            push_scope(scope)
+        cls.scopes.append(scope)
 
-    def pop_scope(self):
-        scope = self.scopes.pop()
-        pop_scope(scope)
+    @classmethod
+    def pop_scope(cls):
+        scope = cls.scopes.pop()
+        if scope is not None:
+            pop_scope(scope)
 
-    def get_scope(self):
-        return ".".join(self.scopes)
+    @classmethod
+    def get_scope(cls):
+        return ".".join(s for s in cls.scopes if s is not None)
 
-    def record_var_name(self, handle, name):
-        self.handle2names[handle] = name
+    @classmethod
+    def gen_name(cls, x) -> str:
+        scope = cls.get_scope()
+        name = x.c_name if x.c_name else x._name
+        return scope + "." + name if len(scope) else name
 
-    def get_var_name(self, handle):
-        return self.handle2names.pop(handle, None)
+    @classmethod
+    def record_var_name(cls, handle, name):
+        cls.handle2names[handle] = name
 
-    def record_opnode(self, op):
-        ops = self.name2ops.get(op.name, [])
-        ops.append(op)
-        self.name2ops[op.name] = ops
+    @classmethod
+    def get_var_name(cls, handle):
+        return cls.handle2names.pop(handle, None)
 
-    def remove_duplicate_names(self):
-        for key, ops in self.name2ops.items():
+    @classmethod
+    def record_opnode(cls, op):
+        ops = cls.name2ops.get(op.name, [])
+        if op not in ops:
+            ops.append(op)
+        cls.name2ops[op.name] = ops
+
+    @classmethod
+    def remove_duplicate_names(cls):
+        for key, ops in cls.name2ops.items():
             if len(ops) == 1:
                 continue
             for i, op in enumerate(ops):
@@ -57,7 +74,4 @@ class AutoNaming:
                     continue
                 for var in op.outputs:
                     var.name = var.name.replace(key, op.name)
-        self.name2ops.clear()
-
-
-auto_naming = AutoNaming()
+        cls.name2ops.clear()

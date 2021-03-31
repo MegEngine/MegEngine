@@ -18,11 +18,11 @@ from megengine import Parameter, Tensor
 from megengine.core.tensor import megbrain_graph as G
 from megengine.jit.tracing import trace
 from megengine.quantization.quantize import quantize, quantize_qat
-from megengine.utils.naming import auto_naming
+from megengine.utils.naming import AutoNaming
 
 
 def _dump_and_load(func, symbolic, keep_opr_name=True):
-    auto_naming.clear()
+    AutoNaming.clear()
     func = trace(func, symbolic=symbolic, capture_as_const=True)
     x = Tensor(np.ones(shape=(2, 3)))
     func(x).numpy()
@@ -101,6 +101,18 @@ def test_without_module(symbolic):
 
     op = _dump_and_load(f, symbolic)[-1]
     assert op.name == "MUL"
+
+
+@pytest.mark.parametrize("symbolic", [False, True])
+def test_ignore_top_module(symbolic):
+    class Simple(M.Module):
+        def forward(self, x):
+            return x + x
+
+    m = Simple()
+    op = _dump_and_load(m, symbolic)[-1]
+    assert op.name == "ADD"
+    assert op.outputs[0].name == "ADD"
 
 
 @pytest.mark.parametrize("symbolic", [False, True])
@@ -196,7 +208,7 @@ def test_not_keep_opr_name():
         return 2 * x
 
     op = _dump_and_load(f, True, False)[-1]
-    assert op.name == "MUL(x,2[2])[4]"
+    assert op.name == "MUL(x,const<2>[2])[4]"
 
 
 @pytest.mark.parametrize("symbolic", [False, True])
