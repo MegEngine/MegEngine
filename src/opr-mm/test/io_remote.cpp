@@ -46,6 +46,7 @@ TEST(TestOprIORemote, Identity) {
 }
 
 TEST(TestOprIORemote, IdentityMultiThread) {
+    REQUIRE_GPU(2);
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3}, cns[1]);
@@ -79,6 +80,7 @@ TEST(TestOprIORemote, IdentityMultiThread) {
 }
 
 TEST(TestOprIORemote, IdentityWithGopt) {
+    REQUIRE_GPU(2);
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3}, cns[1]);
@@ -113,6 +115,7 @@ TEST(TestOprIORemote, IdentityWithGopt) {
 }
 
 TEST(TestOprIORemote, APlusB) {
+    REQUIRE_GPU(2);
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;
     auto host_x = gen({5, 7}, cns[0]), host_y = gen({5, 1}, cns[0]);
@@ -164,6 +167,7 @@ TEST(TestOprIORemote, APlusB) {
 }
 
 TEST(TestOprIORemote, SendGrad) {
+    REQUIRE_GPU(2);
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen;
     auto host_x = gen({2, 3}, cns[0]);
