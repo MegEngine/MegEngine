@@ -74,7 +74,7 @@ public:
 
     std::string param() const override {
         std::string ret;
-        serialize_write_pod(m_matmul_algo, ret);
+        serialize_write_pod(m_matmul_algo->name(), ret);
         serialize_write_pod(m_ohw_tile_size, ret);
         return ret;
     }

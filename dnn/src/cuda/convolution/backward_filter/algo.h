@@ -223,7 +223,7 @@ public:
 
     std::string param() const override {
         std::string ret;
-        serialize_write_pod(m_impl, ret);
+        serialize_write_pod(m_impl->name(), ret);
         return ret;
     }
 };

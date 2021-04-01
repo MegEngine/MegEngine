@@ -157,7 +157,7 @@ public:
 
     std::string param() const override {
         std::string ret;
-        serialize_write_pod(m_algorithm, ret);
+        serialize_write_pod(m_algorithm->name(), ret);
         return ret;
     }
 

@@ -172,7 +172,10 @@ public:
 
     template <typename T>
     static void serialize_write_pod(const T& val, std::string& result) {
-        static_assert(std::is_standard_layout<T>::value, "invalid type");
+        static_assert(std::is_trivially_copyable<T>::value,
+                      "type should be trivially copyable");
+        static_assert(!std::is_pointer<T>::value,
+                      "serialize pointer is unsafe in eager execution mode");
         result.append(reinterpret_cast<const char*>(&val), sizeof(T));
     }
 
@@ -182,7 +185,7 @@ public:
 
     template <typename T>
     static T deserialize_read_pod(const std::string& data, size_t offset = 0) {
-        static_assert(std::is_standard_layout<T>::value, "invalid type");
+        static_assert(std::is_trivially_copyable<T>::value, "invalid type");
         T ret;
         //! A pointer to an object or incomplete type may be converted to a
         //! pointer to a different object or incomplete type. If the resulting
@@ -197,7 +200,7 @@ public:
 
     template <typename T>
     static T deserialize_read_pod(const char* data, size_t offset = 0) {
-        static_assert(std::is_standard_layout<T>::value, "invalid type");
+        static_assert(std::is_trivially_copyable<T>::value, "invalid type");
         T ret;
         //! A pointer to an object or incomplete type may be converted to a
         //! pointer to a different object or incomplete type. If the resulting
