@@ -114,7 +114,8 @@ public:
     void exec(const ExecArgs& args) const override;
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLAS)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
 };
 
@@ -231,7 +232,8 @@ public:
     const char* name() const override { return m_name.c_str(); }
     void exec(const ExecArgs& args) const override;
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_SPLIT_K)
 

@@ -122,6 +122,11 @@ public:
          * these algorithms to speed up fastrun.
          * */
         NAIVE = 1 << 1,
+
+        /**
+         * \brief whether the algo is usable once shape changed.
+         * */
+        USABLE_DEPEND_ON_SHAPE = 1 << 2,
     };
 
     /**

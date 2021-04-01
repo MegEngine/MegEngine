@@ -184,7 +184,8 @@ public:
     const char* name() const override { return "CHANNEL_WISE_SMALL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_SMALL)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
 };
 

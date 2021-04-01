@@ -100,7 +100,8 @@ public:
     const char* name() const override { return "BLAS"; }
     void exec(const ExecArgs& args) const override;
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     MEGDNN_DECL_ALGO_TYPE(ROCM_BLAS)
 };
