@@ -34,7 +34,8 @@ public:
 class MatrixMulImpl::AlgoInt8x8x32Gemv : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV"; }
     bool usable(const KernSizeParam&) const override;
@@ -50,7 +51,8 @@ public:
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4 : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV_MK4"; }
     bool usable(const KernSizeParam&) const override;
@@ -67,7 +69,8 @@ public:
 class MatrixMulImpl::AlgoInt8x8x32GemvMK4Dot : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_INT8X8X32_GEMV_MK4_DOT"; }
     bool usable(const KernSizeParam&) const override;
@@ -102,7 +105,8 @@ public:
 class MatrixMulImpl::AlgoF32GemvMK4 : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "ARM_COMMON_F32_GEMV_MK4"; }
     bool usable(const KernSizeParam&) const override;

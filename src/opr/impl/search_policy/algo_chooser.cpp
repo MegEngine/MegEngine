@@ -276,21 +276,6 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
     return ret;
 }
 
-//! return pair<positive_attr, negative_attr>
-std::pair<AlgoAttribute, AlgoAttribute>
-extract_algo_attribute_from_execution_strategy(
-        const ExecutionStrategy& strategy) {
-    std::pair<AlgoAttribute, AlgoAttribute> ret =
-            std::make_pair(AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT);
-    if (strategy & ExecutionStrategy::REPRODUCIBLE) {
-        ret.first |= AlgoAttribute::REPRODUCIBLE;
-    }
-    if (strategy & ExecutionStrategy::OPTIMIZED) {
-        ret.second |= AlgoAttribute::NAIVE;
-    }
-    return ret;
-}
-
 }  // namespace
 
 namespace mgb {
@@ -303,9 +288,9 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
         return;
     AlgoChooserProfileCache::Result prof_rst;
 
-    auto target_attr =
-            extract_algo_attribute_from_execution_strategy(selected_strategy);
-    std::string layouts_str = format_fixlayouts<Opr>(ctx.layouts(), arity_in, arity_out);
+    auto target_attr = ctx.extract_algo_attribute(selected_strategy);
+    std::string layouts_str =
+            format_fixlayouts<Opr>(ctx.layouts(), arity_in, arity_out);
     double cur_timeout = 0;
 
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
@@ -558,16 +543,15 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
     if (prof.empty())
         return {};
 
-    auto attr_from_strategy =
-            extract_algo_attribute_from_execution_strategy(selected_strategy);
+    auto target_attr = extract_algo_attribute(selected_strategy);
     for (auto&& i : prof) {
         auto attr_of_algo =
                 static_cast<megdnn::Algorithm::Attribute>(i.attribute);
         bool contain_attr_all_positive =
-                (attr_from_strategy.first ==
-                 (attr_of_algo & attr_from_strategy.first));
+                (target_attr.first ==
+                 (attr_of_algo & target_attr.first));
         bool contain_attr_any_negative =
-                static_cast<bool>(attr_of_algo & attr_from_strategy.second);
+                static_cast<bool>(attr_of_algo & target_attr.second);
         if (contain_attr_all_positive && !contain_attr_any_negative) {
             auto iter = algo_map.find(i.algo);
             mgb_assert(iter != algo_map.end(),
@@ -586,8 +570,8 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
     mgb_log_error(
             "algos read from cache could not satisfy attribute with %s and "
             "without %s",
-            Algorithm::attribute_str(attr_from_strategy.first).c_str(),
-            Algorithm::attribute_str(attr_from_strategy.second).c_str());
+            Algorithm::attribute_str(target_attr.first).c_str(),
+            Algorithm::attribute_str(target_attr.second).c_str());
 
     mgb_trap();
     MIDOUT_E
@@ -606,8 +590,7 @@ AlgoChooser<Opr>::ExeContext::choose_by_heuristic(
     }
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
             owner_graph(), m_cn, m_execution_policy.workspace_limit);
-    auto attr =
-            extract_algo_attribute_from_execution_strategy(selected_strategy);
+    auto attr = extract_algo_attribute(selected_strategy);
     ImplExecutionPolicy policy;
     policy.algo =
             APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
@@ -668,9 +651,7 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
         if (retrive_from_cache) {
             policy.algo = get_profile_result_from_cache(selected_strategy).desc;
             if (!policy.algo.valid()) {
-                auto target_attr =
-                        extract_algo_attribute_from_execution_strategy(
-                                selected_strategy);
+                auto target_attr = extract_algo_attribute(selected_strategy);
                 std::string layouts_str =
                         format_fixlayouts<Opr>(m_layouts, arity_in, arity_out);
                 std::string msg = ssprintf(
@@ -692,8 +673,7 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
             auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
                     owner_graph(), m_cn, m_execution_policy.workspace_limit);
 
-            auto attr = extract_algo_attribute_from_execution_strategy(
-                    selected_strategy);
+            auto attr = extract_algo_attribute(selected_strategy);
             policy.algo = APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
                                         args..., workspace_limit, attr.first,
                                         attr.second),
@@ -837,6 +817,24 @@ AlgoChooser<Opr>::ExeContext::construct_fake_preprocess_filter() const {
     return result;
 }
 
+template <typename Opr>
+std::pair<AlgoAttribute, AlgoAttribute>
+AlgoChooser<Opr>::ExeContext::extract_algo_attribute(
+        const ExecutionStrategy& strategy) const {
+    std::pair<AlgoAttribute, AlgoAttribute> ret =
+            std::make_pair(AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT);
+
+    //! from strategy
+    if (strategy & ExecutionStrategy::REPRODUCIBLE) {
+        ret.first |= AlgoAttribute::REPRODUCIBLE;
+    }
+    if (strategy & ExecutionStrategy::OPTMIZED) {
+        ret.second |= AlgoAttribute::NAIVE;
+    }
+
+    return ret;
+}
+
 #define INST(Opr)                                                              \
     template AlgoChooser<megdnn::Opr>::ExeContext::ExeContext(                 \
             const FixedTensorLayouts& layouts, megdnn::Opr* megdnn_opr,        \
@@ -865,7 +863,10 @@ AlgoChooser<Opr>::ExeContext::construct_fake_preprocess_filter() const {
     AlgoChooser<megdnn::Opr>::ExeContext::profile_single_algo(                 \
             const typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy&      \
                     policy,                                                    \
-            double& timeout) const;
+            double& timeout) const;                                            \
+    template std::pair<AlgoAttribute, AlgoAttribute>                           \
+    AlgoChooser<megdnn::Opr>::ExeContext::extract_algo_attribute(              \
+            const ExecutionStrategy& strategy) const;
 
 MGB_FOREACH_FASTRUN_OPR(INST)
 

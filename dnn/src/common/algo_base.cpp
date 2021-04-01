@@ -18,7 +18,8 @@ using namespace megdnn;
 #define FOREACH_ALGO_ATTRIBUTE(cb) \
     cb(DEFAULT)                    \
     cb(REPRODUCIBLE)               \
-    cb(NAIVE)
+    cb(NAIVE)                      \
+    cb(USABLE_DEPEND_ON_SHAPE)
 
 namespace {
 inline const char* attr_str(const AlgoAttribute& attr) {

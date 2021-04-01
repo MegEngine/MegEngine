@@ -149,6 +149,16 @@ public:
                                         ImplExecutionPolicy& policy,
                                         bool retrive_from_cache = true) const;
 
+        /**
+         * \brief extract algo attribute from execution strategy and graph
+         * option.
+         *
+         * \param strategy select algo which matched this strategy
+         * \return pair<positive_attr, negative_attr>
+         */
+        std::pair<AlgoAttribute, AlgoAttribute> extract_algo_attribute(
+                const ExecutionStrategy& strategy) const;
+
     private:
         Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const;
     };

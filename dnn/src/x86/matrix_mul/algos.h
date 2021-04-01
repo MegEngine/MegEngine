@@ -135,7 +135,8 @@ public:
 class MatrixMulImpl::AlgoF32MK8_8x8 : public AlgoBase {
 public:
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     const char* name() const override { return "X86_F32MK8_8X8"; }
     bool usable(const KernSizeParam&) const override;
