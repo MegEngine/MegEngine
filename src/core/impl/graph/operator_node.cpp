@@ -351,7 +351,6 @@ void OperatorNodeBase::init_output_format() {
     }
     for (auto i : output()) {
         if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-            mgb_assert(format.is_default());
             i->format(TensorFormat(i->dtype()));
         } else {
             if (!format.is_default())

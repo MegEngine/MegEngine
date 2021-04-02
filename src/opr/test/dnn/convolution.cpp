@@ -2642,7 +2642,7 @@ TEST(TestOprDNN, ConvBiasInt4NCHW) {
                         cn);
         opr::ConvBias::Param param;
         param.format = opr::ConvBias::Param::Format::NCHW;
-        param.nonlineMode = opr::ConvBias::Param::NonlineMode::IDENTITY;
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
         param.stride_h = param.stride_w = S;
         param.pad_h = param.pad_w = P;
         Policy policy;
@@ -2719,7 +2719,7 @@ TEST(TestOprDNN, ConvBiasInt4NCHW64) {
                         cn);
         opr::ConvBias::Param param;
         param.format = opr::ConvBias::Param::Format::NCHW64;
-        param.nonlineMode = opr::ConvBias::Param::NonlineMode::IDENTITY;
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
         param.stride_h = param.stride_w = S;
         param.pad_h = param.pad_w = P;
         Policy policy;

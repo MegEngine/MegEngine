@@ -481,7 +481,9 @@ void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
                                        _megdnn_tensor_out grad,
                                        _megdnn_workspace workspace) {
     if (param().format == param::Convolution::Format::NHWCD4 ||
-        param().format == param::Convolution::Format::NCHW4) {
+        param().format == param::Convolution::Format::NCHW4 ||
+        (param().format == param::Convolution::Format::NCHW &&
+         grad.layout.dtype.enumv() == DTypeEnum::QuantizedS8)) {
         return naive::ConvolutionBackwardDataImpl::exec(filter, diff, grad,
                                                         workspace);
     }
@@ -493,7 +495,9 @@ size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
     if (param().format == param::Convolution::Format::NHWCD4 ||
-        param().format == param::Convolution::Format::NCHW4) {
+        param().format == param::Convolution::Format::NCHW4 ||
+        (param().format == param::Convolution::Format::NCHW &&
+         grad.dtype.enumv() == DTypeEnum::QuantizedS8)) {
         return naive::ConvolutionBackwardDataImpl::get_workspace_in_bytes(
                 filter, diff, grad);
     }
@@ -506,7 +510,9 @@ ConvolutionBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
                                                 const TensorLayout& diff,
                                                 const TensorLayout& grad) {
     if (param().format == param::Convolution::Format::NHWCD4 ||
-        param().format == param::Convolution::Format::NCHW4) {
+        param().format == param::Convolution::Format::NCHW4 ||
+        (param().format == param::Convolution::Format::NCHW &&
+         grad.dtype.enumv() == DTypeEnum::QuantizedS8)) {
         return naive::ConvolutionBackwardDataImpl::get_all_algorithms(
                 filter, diff, grad);
     }
@@ -523,7 +529,9 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         const AlgoAttribute& positive_attr,
         const AlgoAttribute& negative_attr) {
     if (param().format == param::Convolution::Format::NHWCD4 ||
-        param().format == param::Convolution::Format::NCHW4) {
+        param().format == param::Convolution::Format::NCHW4 ||
+        (param().format == param::Convolution::Format::NCHW &&
+         grad.dtype.enumv() == DTypeEnum::QuantizedS8)) {
         return naive::ConvolutionBackwardDataImpl::get_algorithm_heuristic(
                 filter, diff, grad, workspace_limit_in_bytes, positive_attr,
                 negative_attr);

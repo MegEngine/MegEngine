@@ -230,6 +230,11 @@ R"__usage__(
   --enable-fuse-preprocess
     Fusion astype\pad_channel\dimshuffle and etc opr from h2d op
 )__usage__"
+R"__usage__(
+  --enable-nchw64
+    Execute operators with kernels implemented in MegDNN with NCHW64 tensor format. Can only be used
+    on Nvidia GPUs, which natively support fast int4 tensorcore inference.
+)__usage__"
 ;
 
 struct DataParser {
@@ -1150,6 +1155,7 @@ Args Args::from_argv(int argc, char **argv) {
         cb(nchw88);
         cb(nchw32);
         cb(nhwcd4);
+        cb(nchw64);
 #undef cb
         if (!strcmp(argv[i], "--enable-nchw44-dot")) {
             mgb_log_warn("enable-nchw44-dot optimization");

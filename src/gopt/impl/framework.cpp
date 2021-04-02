@@ -774,6 +774,17 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<ShuffleShuffleRemovePass>();
         add_pass<RemoveRedundantTypeCvtPass>();
     });
+    cb(nchw64, {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass<PaddingChannelPass>();
+        add_pass<FuseConvBiasZPass>();
+        add_pass(EnableNCHW64Pass::make_nchw64_converter());
+        add_pass<ShuffleShuffleRemovePass>();
+        add_pass<RemoveRedundantTypeCvtPass>();
+        add_pass(FuseNCHW4Int8Preprocess::make());
+        add_pass<FuseWarpPerspectiveDimshufflePass>();
+        add_pass<FoldingConvBiasDimshufflePass>();
+    });
 
     cb(fuse_conv_bias_nonlinearity, { add_pass<FuseConvBiasNonlinPass>(); });
     cb(fuse_conv_bias_with_z, {

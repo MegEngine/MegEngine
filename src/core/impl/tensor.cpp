@@ -643,8 +643,8 @@ TensorND<TensorStorage>::copy_from_fixlayout(
                        (m_layout.format.is_lowbit_aligned() &&
                         m_layout.is_contiguous()),
          src_contig = src.layout().is_physical_contiguous() ||
-                      (m_layout.format.is_lowbit_aligned() &&
-                       m_layout.is_contiguous());
+                      (src.layout().format.is_lowbit_aligned() &&
+                       src.layout().is_contiguous());
     if (self_contig && src_contig) {
         if ((m_layout.format.is_default() &&
              src.layout().format.is_default()) ||

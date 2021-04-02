@@ -419,6 +419,27 @@ namespace gopt {
             void apply(OptState& opt) const override;
     };
 
+    /*!
+     * \brief convert tensor format to nchw64 to enable tensorcore int4 on CUDA
+     * we assume that the input network is in NCHW layout
+     */
+    class EnableNCHW64Pass final : public TensorReformatPass {
+    public:
+        using Format = opr::ConvBias::Param::Format;
+        const char* name() const override {
+            return mgb_cstr_log("tensor_format_nchw64");
+        }
+
+        //! make nchw -> nchw64 converter opt pass
+        static std::unique_ptr<EnableNCHW64Pass> make_nchw64_converter();
+
+    private:
+        ThinHashMap<OperatorNodeBase*, Format> m_opr_format_map;
+
+        VarNode* on_graph_endpoint_var(VarNode* new_var,
+                                       VarNode* orig_var) const override;
+    };
+
 }  // namespace gopt
 } // namespace mgb
 

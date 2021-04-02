@@ -229,6 +229,13 @@ void RelayoutForwardImpl::exec(
         return;
     }
 
+    // FIXME: optimize for lowbit cases
+    if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+        src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        NaiveRelayoutForwardImpl::do_exec(src, dst);
+        return;
+    }
+
     relayout::TransposeParam trans_param;
     bool trans = relayout::is_transpose(src.layout, dst.layout, trans_param);
     exec_after_preprocess(src, dst, trans ? &trans_param : nullptr);

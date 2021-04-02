@@ -112,6 +112,8 @@ struct GraphCommonOptimizeOptions {
                      ///< tensorcore
         CHWN4,       ///< compute using CHWN4 tensor format, transformed mainly
                      ///< used for cuda
+        NCHW64,      ///< compute using NCHW64 tensor format, used for fast int4
+                     ///< support on Nvidia GPU
     };
     LayoutTransform layout_transform = LayoutTransform::DEFAULT;
 
@@ -154,6 +156,7 @@ struct GraphCommonOptimizeOptions {
     SET(nchw44_dot, NCHW44_DOT);
     SET(nchw32, NCHW32);
     SET(chwn4, CHWN4);
+    SET(nchw64, NCHW64);
 #undef SET
 };
 
