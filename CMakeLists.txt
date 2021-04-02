@@ -22,6 +22,8 @@ endif()
 
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
+include(CheckIPOSupported)
+
 CHECK_CXX_COMPILER_FLAG(-Wclass-memaccess CXX_SUPPORT_WCLASS_MEMACCESS)
 
 set(MGE_ARCH AUTO CACHE STRING "Architecture on which MegEngine to be built.")
@@ -86,8 +88,25 @@ if(NOT ${MGE_BIN_REDUCE} STREQUAL "")
     endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${MGE_BIN_REDUCE}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include ${MGE_BIN_REDUCE}")
+endif()
+
+CHECK_CXX_COMPILER_FLAG("-ffunction-sections -fdata-sections  -Wl,--gc-sections"  CXX_FUNCTION_DATA_GC_SECTIONS_SUPPORT)
+
+if(CXX_FUNCTION_DATA_GC_SECTIONS_SUPPORT)
+    #mac or apple not support
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+endif()
+
+check_ipo_supported(RESULT IS_LTO_SUPPORT OUTPUT output_info)
+if(IS_LTO_SUPPORT)
+    message(STATUS "lto is supported in this compiler")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto=full")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=full")
+else()
+    message(STATUS "lto is not supported in this compiler")
 endif()
 
 if(MGE_WITH_MIDOUT_PROFILE)
@@ -514,7 +533,7 @@ if(MGE_WITH_CUDA)
                 if(MGE_WITH_CUBLAS_SHARED)
                     list(APPEND MGE_CUDA_LIBS cublasLt)
                 else()
-                    list(APPEND MGE_CUDA_LIBS cublasLt_static)
+                    list(APPEND MGE_CUDA_LIBS cublasLt_static culibos)
                 endif()
             endif()
         endif()
