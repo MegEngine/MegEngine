@@ -87,9 +87,13 @@ struct pyobj_convert_generic {
     }
 };
 
+template<typename T, typename SFINAE=void>
+struct EnumTrait;
+
 template <typename T>
-struct EnumTrait {
+struct EnumTrait<T, std::enable_if_t<std::is_enum_v<T>>> {
     static constexpr bool is_bit_combined = false;
+    static constexpr std::underlying_type_t<T> max = 0;
 };
 
 template <typename T>
@@ -264,18 +268,25 @@ struct BitCombinedEnumWrapper {
             return ret;
         }
     }
-    static PyObject* py_new_combined_enum(PyTypeObject* type, PyObject*, PyObject*) {
-        PyObject* obj = type->tp_alloc(type, 0);
-        reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = static_cast<T>(1);
-        return obj;
-    }
-    static int py_init(PyObject* self, PyObject* args, PyObject*) {
-        int input = 1;
-        if (PyArg_ParseTuple(args, "|i", &input)){
-            reinterpret_cast<BitCombinedEnumWrapper*>(self)->value =
-                    static_cast<T>(input);
+    static PyObject* py_new_combined_enum(PyTypeObject* type, PyObject* args, PyObject*) {
+        if (!PyTuple_Size(args)) {
+            PyObject* obj = type->tp_alloc(type, 0);
+            reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = T();
+            return obj;
         }
-        return 0;
+        else {
+            PyObject* input;
+            if (!PyArg_ParseTuple(args, "|O", &input)) {
+                return nullptr;
+            }
+            T value;
+            try {
+                value = pyobj_convert_generic<T>::from(input);
+            } CATCH_ALL(nullptr);
+            PyObject* obj = type->tp_alloc(type, 0);
+            reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = value;
+            return obj;
+        }
     }
     static PyObject* py_repr(PyObject* self) {
         return pyobj_convert_generic<std::string>::to(
@@ -325,6 +336,12 @@ struct pyobj_convert_generic<T,
     static T from(PyObject* obj) {
         if (PyObject_TypeCheck(obj, &Wrapper::type)) {
             return reinterpret_cast<Wrapper*>(obj)->value;
+        } else if(PyLong_Check(obj)) {
+            auto value = pyobj_convert_generic<std::underlying_type_t<T>>::from(obj);
+            mgb_throw_if(value > EnumTrait<T>::max, mgb::MegBrainError,
+                    "out of range, cannot convert %zu to %s",
+                    static_cast<uint32_t>(value), Wrapper::name);
+            return static_cast<T>(value);
         }
         // try as string
         // TODO: type checkcd

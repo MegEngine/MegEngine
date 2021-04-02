@@ -6,7 +6,7 @@ decl_opr('Convolution',
                      'convolution kernel in '
                      '(out channel, in channel, kern row, kern col) format')],
          params=[('param', 'ConvolutionV0'),
-                 ('execution_polity', 'ExecutionPolicy')],
+                 ('execution_polity', 'ExecutionPolicyV0')],
          desc='batched convolution on channeled 2D images')
 
 decl_opr('Convolution',
@@ -28,7 +28,7 @@ decl_opr('ConvolutionBackwardData',
                      'convolution kernel in '
                      '(out channel, in channel, kern row, kern col) format')],
          params=[('param', 'ConvolutionV0'),
-                 ('execution_polity', 'ExecutionPolicy')],
+                 ('execution_polity', 'ExecutionPolicyV0')],
          body=[
              'a, b = all_inputs',
              'all_inputs = [b, a]'
@@ -201,7 +201,7 @@ decl_opr('ConvBiasForward',
              Doc('bias', 'bias'),
          ],
          params=[('param', 'ConvBiasV1'),
-                 ('execution_policy', 'ExecutionPolicy')],
+                 ('execution_policy', 'ExecutionPolicyV0')],
          desc=('activation(convolution(src, filter) + bias) with specified '
                'dtype'),
          has_out_dtype=True)

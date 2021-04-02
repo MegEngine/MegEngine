@@ -52,14 +52,11 @@ class FlatBuffersWriter(IndentWriterBase):
             name = p + e
             e = self._enums[(p, e)]
             self._write_doc(e.name)
-            self._write("enum %s%s : uint {", p, e.name, indent=1)
+            attribute = "(bit_flags)" if e.combined else ""
+            self._write("enum %s%s : uint %s {", p, e.name, attribute, indent=1)
             for idx, member in enumerate(e.members):
                 self._write_doc(member)
-                if e.combined:
-                    self._write("%s=%d,", scramble_enum_member_name(str(member)),
-                            1<<idx)
-                else:
-                    self._write("%s,", scramble_enum_member_name(str(member)))
+                self._write("%s,", scramble_enum_member_name(str(member)))
             self._write("}\n", indent=-1)
 
     def _write_doc(self, doc):
@@ -97,8 +94,11 @@ class FlatBuffersWriter(IndentWriterBase):
             return
         self._write_doc(e.name)
         self._used_enum.add(key)
-        self._write("%s:%s%s = %s;", e.name_field, p.name, e.name,
-                    scramble_enum_member_name(str(e.members[e.default])))
+        if e.combined:
+            default = e.compose_combined_enum(e.default)
+        else:
+            default = scramble_enum_member_name(str(e.members[e.default]))
+        self._write("%s:%s%s = %s;", e.name_field, p.name, e.name, default)
 
     def _resolve_const(self, v):
         while v in self._cur_const_val:
@@ -120,9 +120,12 @@ class FlatBuffersWriter(IndentWriterBase):
             return
         self._used_enum.add((e.src_class, e.src_name))
         enum_name = e.src_class + e.src_name
-        self._write(
-            "%s:%s = %s;", e.name_field, enum_name,
-            scramble_enum_member_name(str(e.src_enum.members[e.get_default()])))
+        s = e.src_enum
+        if s.combined:
+            default = s.compose_combined_enum(e.get_default())
+        else:
+            default = scramble_enum_member_name(str(s.members[e.get_default()]))
+        self._write("%s:%s = %s;", e.name_field, enum_name, default)
 
     def _get_fb_default(self, cppdefault):
         if not isinstance(cppdefault, str):

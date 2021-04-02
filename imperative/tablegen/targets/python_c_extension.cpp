@@ -90,10 +90,12 @@ void EnumAttrEmitter::emit_tpl_spl() {
                 "template<> PyNumberMethods "
                 "$enumTpl<$opClass::$enumClass>::number_methods={};\n",
                 &ctx);
-        os << tgfmt(
-                "template<> struct EnumTrait<$opClass::$enumClass> {  static constexpr "
-                "bool is_bit_combined = true;};\n",
-                &ctx);
+        os << tgfmt(R"(
+template<> struct EnumTrait<$opClass::$enumClass> {
+    static constexpr bool is_bit_combined = true;
+    static constexpr std::underlying_type_t<$opClass::$enumClass> max = (1llu << $0) - 1;
+};
+)", &ctx, attr->getEnumMembers().size());
     }
 
     auto str2type = [&](auto&& i) -> std::string {
@@ -138,7 +140,6 @@ void $0(PyTypeObject& py_type) {
             // others should always use singleton
             os << tgfmt(R"(
     e_type.tp_new = $enumTpl<$opClass::$enumClass>::py_new_combined_enum;
-    e_type.tp_init = $enumTpl<$opClass::$enumClass>::py_init;
     auto& number_method = $enumTpl<$opClass::$enumClass>::number_methods;
     number_method.nb_or = $enumTpl<$opClass::$enumClass>::py_or;
     number_method.nb_and = $enumTpl<$opClass::$enumClass>::py_and;
