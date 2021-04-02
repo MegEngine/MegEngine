@@ -106,7 +106,12 @@ class ConverterWriter(IndentWriterBase):
             return
 
         # wrapped with default value
-        default_val = "static_cast<{}::{}>({})".format(fullname, e.name, e.default)
+        if e.combined:
+            default_val = "static_cast<{}::{}>({})".format(
+                    fullname, e.name, e.compose_combined_enum(e.default))
+        else:
+            default_val = "{}::{}::{}".format(fullname, e.name, e.members[e.default])
+
         wrapped = self._wrapped_with_default_value(td_class, default_val)
 
         self._current_tparams.append("{}:${}".format(wrapped, e.name_field))
@@ -124,7 +129,13 @@ class ConverterWriter(IndentWriterBase):
         self._write("def {} : {};".format(td_class, enum_def))
 
         # wrapped with default value
-        default_val = "static_cast<{}::{}>({})".format(fullname, e.name, e.get_default())
+        s = e.src_enum
+        if s.combined:
+            default_val = "static_cast<{}::{}>({})".format(
+                    fullname, e.name, s.compose_combined_enum(e.get_default()))
+        else:
+            default_val = "{}::{}::{}".format(fullname, e.name, s.members[e.get_default()])
+
         wrapped = self._wrapped_with_default_value(td_class, default_val)
 
         self._current_tparams.append("{}:${}".format(wrapped, e.name_field))
