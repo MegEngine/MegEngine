@@ -772,7 +772,8 @@ class trace:
                     len(self._output_bindings)
                 )
             )
-        if arg_names is None:
+        without_arg_names = arg_names is None
+        if without_arg_names:
             arg_names = ["arg_%d" % i for i in range(len(self._arg_bindings))]
         if arg_names and not isinstance(arg_names, collections.abc.Sequence):
             arg_names = (arg_names,)
@@ -802,7 +803,7 @@ class trace:
                 dtype=info.dtype,
                 device=dumped_device(info),
                 shape=info.shape or (1,),
-                name=arg_names[i] if arg_names else None,
+                name=info.name if without_arg_names and info.name else arg_names[i],
             )
         for k, h in self._kwarg_bindings.items():
             info = self._tinfo[h]
@@ -889,6 +890,7 @@ class trace:
                     return
                 h, info = self._new_handle()
                 info.external = False
+                info.name = x.c_name
                 info.device = x.device
                 info.dtype = x.dtype
                 info.shape = x.numpy().shape

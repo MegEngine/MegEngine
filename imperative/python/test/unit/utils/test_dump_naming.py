@@ -203,12 +203,29 @@ def test_with_same_operators(symbolic):
     assert ops[-2].name == "simple.RELU[0]"
 
 
-def test_not_keep_opr_name():
+@pytest.mark.parametrize("symbolic", [False, True])
+def test_not_keep_opr_name(symbolic):
     def f(x):
         return 2 * x
 
-    op = _dump_and_load(f, True, False)[-1]
+    op = _dump_and_load(f, symbolic, False)[-1]
     assert op.name == "MUL(x,const<2>[2])[4]"
+
+
+@pytest.mark.parametrize("tensor_name, var_name", [("data", "data"), (None, "arg_0")])
+def test_catch_input_name(tensor_name, var_name):
+    def f(x):
+        return 2 * x
+
+    func = trace(f, symbolic=True, capture_as_const=True)
+    x = Tensor(np.ones(shape=(2, 3)), name=tensor_name)
+    func(x).numpy()
+    file = io.BytesIO()
+    func.dump(file, optimize_for_inference=False, keep_opr_name=True, keep_var_name=2)
+    file.seek(0)
+    *_, outputs = G.load_graph(file)
+    op = cgtools.get_oprs_seq(outputs)[-1]
+    assert op.inputs[0].name == var_name
 
 
 @pytest.mark.parametrize("symbolic", [False, True])
