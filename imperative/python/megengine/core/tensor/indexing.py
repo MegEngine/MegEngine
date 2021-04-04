@@ -10,7 +10,7 @@ from typing import Iterable
 
 import numpy as np
 
-from .._imperative_rt.core2 import Tensor, apply
+from .._imperative_rt.core2 import SymbolVar, Tensor, apply
 from .._trace_option import use_symbolic_shape
 from ..ops import builtin
 from ..ops.special import Const
@@ -149,13 +149,13 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
             return True
 
         def get_index(i):
-            if not isinstance(i, (Tensor)):
+            if not isinstance(i, (Tensor, SymbolVar)):
                 if is_bool_list(i) or isinstance(i, np.ndarray) and i.dtype == np.bool_:
-                    (i,) = Const(i, dtype=np.bool_, device=inp.device)()
+                    (i,) = Const(i, dtype=np.bool_, device=inp.device)(inp)
                 else:
-                    (i,) = Const(i, dtype=np.int32, device=inp.device)()
+                    (i,) = Const(i, dtype=np.int32, device=inp.device)(inp)
                     return i
-            assert isinstance(i, Tensor)
+            assert isinstance(i, (Tensor, SymbolVar))
             if i.dtype != np.bool_:
                 return i
             _, ind = apply(builtin.CondTake(), i, i)
@@ -197,9 +197,9 @@ def try_condtake(tensor, index):
     ):
         return []
     if isinstance(index, np.ndarray):
-        (index,) = Const(index, dtype=np.bool_, device=tensor.device)()
-    assert isinstance(index, Tensor)
-    if not isinstance(tensor, Tensor):
+        (index,) = Const(index, dtype=np.bool_, device=tensor.device)(tensor)
+    assert isinstance(index, (Tensor, SymbolVar))
+    if not isinstance(tensor, (Tensor, SymbolVar)):
         raise TypeError("input must be a tensor")
     if tensor.device != index.device:
         raise ValueError(
@@ -214,11 +214,16 @@ def getitem(tensor, index):
         return try_result[0]
     tensor, tensors, items, use_subtensor, ret_scalar = unpack_getitem(tensor, index)
     for v in tensors:
+        if v.shape is None:
+            break
         if isinstance(v.shape, v.__class__):
             break
         if len(v.shape) > 0 and v.shape[0] == 0:
-            (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)()
+            (empty_tensor,) = Const([], dtype=tensor.dtype, device=tensor.device)(
+                tensor
+            )
             return empty_tensor
+
     if use_subtensor:
         op = builtin.Subtensor(items=items)
     else:
@@ -235,8 +240,8 @@ def setitem(tensor, index, value):
     if len(try_result) == 2:
         index = try_result[1]
         tensor = tensor.reshape(-1)
-    if not isinstance(value, Tensor):
-        (value,) = Const(value, dtype=tensor.dtype, device=tensor.device)()
+    if not isinstance(value, (Tensor, SymbolVar)):
+        (value,) = Const(value, dtype=tensor.dtype, device=tensor.device)(tensor)
     tensor, tensors, items, use_subtensor, _ = unpack_getitem(tensor, index)
     if use_subtensor:
         op = builtin.Subtensor(items=items)
