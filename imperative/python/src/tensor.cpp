@@ -160,16 +160,21 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         if (ctx.op->same_type<BackwardGraph>()) {
             ctx.backward = true;
         }
-        
-        
-       if (py::isinstance<cg::VarNode>(py::handle(args[0]))){
-           SmallVector<cg::VarNode*> vinputs(nargs);
-           for (size_t i = 0; i < nargs; ++i) {
-               vinputs[i] = py::handle(args[i]).cast<cg::VarNode *>();
-           }
-           auto op = ctx.op.get();
-           return to_tuple(OpDef::apply_on_var_node(*op, vinputs)).release().ptr();
-       }
+
+        if (py::isinstance<PySymbolVar>(py::handle(args[0]))){
+            SmallVector<cg::VarNode*> vinputs(nargs);
+            for (size_t i = 0; i < nargs; ++i) {
+                    vinputs[i] = py::handle(args[i]).cast<PySymbolVar*>()->m_node;   
+            }
+            auto op = ctx.op.get();
+            auto rst = OpDef::apply_on_var_node(*op, vinputs);
+            auto ret = pybind11::tuple(rst.size());
+            auto typeobj = py::handle(args[0]).get_type();
+            for (size_t i = 0; i<rst.size(); ++i) {
+                ret[i] = typeobj(pybind11::cast(rst[i], pybind11::return_value_policy::automatic));
+            }
+            return ret.release().ptr();
+        }
 
         for (size_t i = 0; i < nargs; ++i) {
             if (TensorWrapper* tw = TensorWrapper::try_cast(args[i])) {
@@ -686,9 +691,9 @@ PyArray_Descr* _dtype_promotion(PyObject*const* args, size_t nargs) {
                 continue;
             }
 
-            if (py::isinstance<cg::VarNode>(py::handle(handle))){
-                auto var = py::handle(handle).cast<cg::VarNode *>();
-                mgb::DType type = var->dtype();
+            if (py::isinstance<PySymbolVar>(py::handle(handle))){
+                auto var = py::handle(handle).cast<PySymbolVar*>();
+                mgb::DType type = var->m_node->dtype();
                 auto && descr = npy::dtype_mgb2np_descr(type);
                 Py_INCREF(descr.get());
                 tensors.emplace_back(descr.get());
@@ -737,19 +742,26 @@ CompNode _get_device(PyObject*const* args, size_t nargs) {
     bool valid = false;
     CompNode cn;
     for (size_t i = 0; i < nargs; ++i) {
-        PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i): args[i];
+        PyObject* handle = is_tuple ? PyTuple_GetItem(tuple, i) : args[i];
         TensorWrapper* tw = TensorWrapper::try_cast(handle);
 
-        bool is_var = py::isinstance<cg::VarNode>(py::handle(handle));
-        if (tw || is_var) {
+        bool is_symvar = py::isinstance<PySymbolVar>(py::handle(handle));
+        if (tw || is_symvar) {
             if (!valid) {
-                    cn = tw ? tw->m_tensor->comp_node() : py::handle(handle).cast<cg::VarNode *>()->comp_node();
+                cn = tw ? tw->m_tensor->comp_node()
+                        : py::handle(handle)
+                                     .cast<PySymbolVar*>()
+                                     ->m_node->comp_node();
                 valid = true;
             } else {
-                CompNode cn1 = tw ? tw->m_tensor->comp_node() : py::handle(handle).cast<cg::VarNode *>()->comp_node();
+                CompNode cn1 = tw ? tw->m_tensor->comp_node()
+                                  : py::handle(handle)
+                                               .cast<PySymbolVar*>()
+                                               ->m_node->comp_node();
                 if (cn1 != cn) {
                     throw py::value_error(ssprintf("ambiguous device: %s vs %s",
-                        cn.to_string().c_str(), cn1.to_string().c_str()));
+                                                   cn.to_string().c_str(),
+                                                   cn1.to_string().c_str()));
                 }
             }
         }
@@ -848,6 +860,32 @@ void init_tensor(py::module m) {
         .def(py::init<const TensorWrapper&>())
         .def("__call__", &TensorWeakRef::operator())
         .def("_use_cnt", &TensorWeakRef::_use_cnt);
+
+    py::class_<PySymbolVar, std::shared_ptr<PySymbolVar>>(m, "SymbolVar")
+            .def_property_readonly(
+                    "dtype", [](PySymbolVar* v) { return v->m_node->dtype(); })
+            .def_property("var", [](PySymbolVar* v) { return v->m_node; },
+                          [](PySymbolVar* s, cg::VarNode* v) { s->m_node = v; })
+            .def_property_readonly(
+                    "device",
+                    [](PySymbolVar* v) { return v->m_node->comp_node(); })
+            .def_property_readonly(
+                    "graph",
+                    [](PySymbolVar* v) { return v->m_node->owner_graph(); })
+            .def_property_readonly(
+                    "shape",
+                    [](PySymbolVar* v) -> const TensorShape* {
+                        auto&& mgr = v->m_node->owner_graph()
+                                             ->static_infer_manager();
+                        return mgr.infer_shape_fallible(v->m_node);
+                    })
+            .def("_isscalar", [](PySymbolVar* v) { return v->is_scalar; })
+            .def("_setscalar",
+                 [](PySymbolVar* v) { return v->is_scalar = true; })
+            .def(py::init([](cg::VarNode* node) {
+                     return std::make_shared<PySymbolVar>(node);
+                 }),
+                 py::arg() = nullptr);
 
     static PyMethodDef method_defs[] = {
             MGE_PY_INTERFACE(apply, py_apply),

@@ -2,9 +2,11 @@ import io
 
 import numpy as np
 
+import megengine.core.tensor.megbrain_graph as G
 import megengine.utils.comp_graph_tools as cgtools
 from megengine import tensor
 from megengine.jit import trace
+from megengine.utils.network_node import VarNode
 
 
 def _default_compare_fn(x, y):
@@ -14,8 +16,23 @@ def _default_compare_fn(x, y):
         np.testing.assert_allclose(x.numpy(), y, rtol=1e-6)
 
 
+def make_tensor(x, network=None, device=None):
+    if network is not None:
+        if isinstance(x, VarNode):
+            return VarNode(x.var)
+        return network.make_const(x, device=device)
+    else:
+        return tensor(x, device=device)
+
+
 def opr_test(
-    cases, func, compare_fn=_default_compare_fn, ref_fn=None, test_trace=True, **kwargs
+    cases,
+    func,
+    compare_fn=_default_compare_fn,
+    ref_fn=None,
+    test_trace=True,
+    network=None,
+    **kwargs
 ):
     """
     :param cases: the list which have dict element, the list length should be 2 for dynamic shape test.
@@ -44,7 +61,7 @@ def opr_test(
         if not isinstance(results, (tuple, list)):
             results = (results,)
         for r, e in zip(results, expected):
-            if not isinstance(r, tensor):
+            if not isinstance(r, (tensor, VarNode)):
                 r = tensor(r)
             compare_fn(r, e)
 
@@ -72,9 +89,9 @@ def opr_test(
         raise ValueError("the input func should be callable")
 
     inp, outp = get_param(cases, 0)
-    inp_tensor = [tensor(inpi) for inpi in inp]
+    inp_tensor = [make_tensor(inpi, network) for inpi in inp]
 
-    if test_trace:
+    if test_trace and not network:
         copied_inp = inp_tensor.copy()
         for symbolic in [False, True]:
             traced_func = trace(symbolic=symbolic)(func)

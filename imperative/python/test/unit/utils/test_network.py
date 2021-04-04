@@ -34,13 +34,11 @@ def test_replace_var():
     vara = graph.var_filter.name("a").as_unique()
     varb = graph.var_filter.name("b").as_unique()
 
-    out = F.mul(vara.var, varb.var)
+    out = F.mul(vara, varb)
     out = F.relu(out)
 
-    var_list = graph.add_dep_oprs(out)
-
     opnode = list(graph.opr_filter.has_input(vara))
-    repl_dict = {opnode[0].outputs[0]: var_list[0]}
+    repl_dict = {opnode[0].outputs[0]: out}
     graph.replace_vars(repl_dict)
 
     modified_model = io.BytesIO()
@@ -72,14 +70,12 @@ def test_replace_opr():
     vara = graph.var_filter.name("a").as_unique()
     varb = graph.var_filter.name("b").as_unique()
 
-    out1 = F.sub(vara.var, varb.var)
+    out1 = F.sub(vara, varb)
     out1 = F.relu(out1)
-
-    var_list = graph.add_dep_oprs(out1)
-    repl_opr = as_oprnode(var_list)
+    out1 = graph.add_dep_oprs(out1)
     orig_opr = graph.opr_filter.has_input(vara).as_unique()
 
-    repl_dict = {orig_opr: repl_opr}
+    repl_dict = {orig_opr: out1[0].owner}
     graph.replace_oprs(repl_dict)
     modified_model1 = io.BytesIO()
     graph.dump(modified_model1)
@@ -171,8 +167,7 @@ def test_add_input():
     inp_c = graph.make_input_node((2,), np.int32, name="c")
     varo = graph.var_filter.name("o").as_unique()
 
-    out = F.add(varo.var, inp_c.var)
-    out = graph.add_dep_oprs(out)[0]
+    out = F.add(varo, inp_c)
     out.name = "o1"
     graph.remove_output(varo)
     graph.add_output(out)
@@ -206,12 +201,11 @@ def test_add_output():
     var_a = net.var_filter.name("a").as_unique()
     var_b = net.var_filter.name("b").as_unique()
 
-    y = F.add(var_a.var, var_b.var)
+    y = F.add(var_a, var_b)
     y = F.sigmoid(y)
 
-    new_vars = net.add_dep_oprs(y)[0]
-    new_vars.name = "o1"
-    net.add_output(new_vars)
+    y.name = "o1"
+    net.add_output(y)
 
     modified_model = io.BytesIO()
     net.dump(modified_model)

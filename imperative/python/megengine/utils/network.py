@@ -16,6 +16,7 @@ from typing import Dict, List
 import numpy as np
 
 from ..core._imperative_rt import ComputingGraph
+from ..core._imperative_rt.core2 import SymbolVar
 from ..core.tensor import megbrain_graph as G
 from .comp_graph_tools import get_dep_vars, get_opr_type, get_oprs_seq
 from .network_node import (
@@ -60,12 +61,12 @@ class Network:
             )
             outputs = [new_outputs[i] for i in outspec]
         self._orig_outputs = outputs
-        self.add_dep_oprs(*outputs)
+        for x in self._orig_outputs:
+            self.output_vars.append(self._get_var(x))
+        self.add_dep_oprs()
         for x in self._orig_inputs:
             self.input_vars.append(self._get_var(x))
 
-        for x in self._orig_outputs:
-            self.output_vars.append(self._get_var(x))
         self.graph = self._orig_outputs[0].graph
         return self
 
@@ -197,6 +198,8 @@ class Network:
     def add_output(self, *vars: VarNode):
         """Adds vars into the network output node list
         """
+        if not all([var.owner for var in vars]):
+            self.add_dep_oprs(*vars)
         for var in vars:
             if var not in self.output_vars:
                 self.output_vars.append(var)
@@ -209,21 +212,25 @@ class Network:
                 self.output_vars.remove(var)
 
     def add_dep_oprs(self, *vars):
-        """Adds dependent opnodes and varnodes of vars into network
-        """
-        oprs = get_oprs_seq(vars, False, False)
-        for mge_opr in oprs:
+        if len(vars) == 0:
+            vars = self.output_vars
+        q = list(vars)
+        while len(q) > 0:
+            cur = q.pop(0)
+            if cur.owner is not None:
+                continue
+            if cur.name is None:
+                cur.name = cur.var.name
+            self.all_vars_map[cur.var.id] = cur
+            mge_opr = cur.var.owner
             if get_opr_type(mge_opr) == "Host2DeviceCopy":
                 self._orig_inputs.extend(mge_opr.outputs)
-            opr = self._add_opr(mge_opr)
-            if opr is not None:
-                for x in mge_opr.inputs:
-                    opr.add_inp_var(self._get_var(x))
-                # set out var
-                for x in mge_opr.outputs:
-                    opr.add_out_var(self._get_var(x))
-
-        return [self.all_vars_map[var.id] for var in vars]
+            cur.owner = self._add_opr(mge_opr)
+            if cur.owner is None:
+                cur.owner = self.all_oprs_map[mge_opr.id]
+                continue
+            q.extend(cur.owner.inputs)
+        return list(vars)
 
     def modify_opr_names(self, modifier):
         """Modifies names of operators **inplace**; useful for merging loaded
@@ -275,6 +282,9 @@ class Network:
         Replaces vars in the graph.
         :param repl_dict: the map {old_var: new_var} that specifies how to replace the vars.
         """
+        if not all([var.owner for var in repl_dict.values()]):
+            print(repl_dict.values())
+            self.add_dep_oprs(*list(repl_dict.values()))
         for var in self.all_vars:
             if var in repl_dict:
                 repl_var = repl_dict[var]
@@ -282,6 +292,7 @@ class Network:
                 idx = owner.outputs.index(repl_var)
                 owner.outputs[idx] = var
                 var.__dict__.update(repl_var.__dict__)
+                var.var = repl_var.var
 
     def replace_oprs(self, repl_dict: Dict[OpNode, OpNode]):
         """
@@ -297,6 +308,7 @@ class Network:
                 for ind, var in enumerate(opr.outputs):
                     var.owner = repl_dict[opr]
                     var.__dict__.update(repl_dict[opr].outputs[ind].__dict__)
+                    var.var = repl_dict[opr].outputs[ind].var
 
     def get_opr_by_type(self, oprcls, unique=True):
         assert issubclass(oprcls, OpNode)
@@ -381,11 +393,16 @@ class Network:
         return self.opr_filter.as_dict()
 
     # used for loading and building graph
-    def _add_opr(self, x):
+    def _add_opr(self, opr):
         # TODO: use megbrain C++ RTTI to replace type string
-        if x.id not in self.all_oprs_map:
-            self.all_oprs_map[x.id] = str_to_mge_class(get_opr_type(x)).load(x)
-            return self.all_oprs_map[x.id]
+        if opr.id not in self.all_oprs_map:
+            opnode = str_to_mge_class(get_opr_type(opr)).load(opr)
+            self.all_oprs_map[opr.id] = opnode
+            for var in opr.inputs:
+                opnode.add_inp_var(self._get_var(var))
+            for var in opr.outputs:
+                opnode.add_out_var(self._get_var(var))
+            return opnode
         else:
             return None
 
@@ -397,7 +414,7 @@ class Network:
 
     def _get_var(self, x):
         # auto convert to VarNode of Network
-        if x.id not in self.all_vars_map:
+        if x.id not in self.all_vars_map or self.all_vars_map[x.id].var != x:
             self.all_vars_map[x.id] = VarNode.load(x, self._get_opr(x.owner))
         return self.all_vars_map[x.id]
 
@@ -652,7 +669,7 @@ class NodeFilterHasInput(NodeFilter):
             assert isinstance(
                 i, OpNode
             ), "has_input() must be used with OpNode; " "got {!r}".format(i)
-            if self.var in i.inputs:
+            if any(self.var is _ for _ in i.inputs):
                 yield i
 
 

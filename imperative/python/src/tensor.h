@@ -181,6 +181,12 @@ struct TensorWrapper {
     PyObject* _use_cnt() { return PyLong_FromSize_t(m_tensor.use_count()); };
 };
 
+struct PySymbolVar {
+    cg::VarNode* m_node = nullptr;
+    bool is_scalar = false;
+    PySymbolVar() = default;
+    PySymbolVar(VarNode *m): m_node(m){}
+};
 
 PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObject* kwnames */);
 

@@ -11,13 +11,16 @@ import platform
 
 import numpy as np
 import pytest
-from utils import opr_test
+from utils import make_tensor, opr_test
 
 import megengine.functional as F
 from megengine import tensor
 from megengine.core._trace_option import use_symbolic_shape
+from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
+from megengine.utils.network import Network
+from megengine.utils.network_node import VarNode
 
 
 def test_eye():
@@ -38,7 +41,13 @@ def test_eye():
         )
 
 
-def test_concat():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_concat(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     def get_data_shape(length: int):
         return (length, 2, 3)
 
@@ -50,18 +59,30 @@ def test_concat():
         return F.concat([data1, data2])
 
     cases = [{"input": [data1, data2]}, {"input": [data1, data3]}]
-    opr_test(cases, run, ref_fn=lambda x, y: np.concatenate([x, y]))
+    opr_test(cases, run, ref_fn=lambda x, y: np.concatenate([x, y]), network=network)
 
 
-def test_concat_device():
-    data1 = tensor(np.random.random((3, 2, 2)).astype("float32"), device="cpu0")
-    data2 = tensor(np.random.random((2, 2, 2)).astype("float32"), device="cpu1")
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_concat_device(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    data1 = make_tensor(np.random.random((3, 2, 2)).astype("float32"), network, "cpu0")
+    data2 = make_tensor(np.random.random((2, 2, 2)).astype("float32"), network, "cpu1")
 
     out = F.concat([data1, data2], device="cpu0")
     assert str(out.device).split(":")[0] == "cpu0"
 
 
-def test_stack():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_stack(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     data1 = np.random.random((3, 2, 2)).astype("float32")
     data2 = np.random.random((3, 2, 2)).astype("float32")
     data3 = np.random.random((3, 2, 2)).astype("float32")
@@ -72,12 +93,20 @@ def test_stack():
         def run(data1, data2):
             return F.stack([data1, data2], axis=ai)
 
-        opr_test(cases, run, ref_fn=lambda x, y: np.stack([x, y], axis=ai))
+        opr_test(
+            cases, run, ref_fn=lambda x, y: np.stack([x, y], axis=ai), network=network
+        )
 
 
-def test_split():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_split(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     data = np.random.random((2, 3, 4, 5)).astype(np.float32)
-    inp = tensor(data)
+    inp = make_tensor(data, network)
 
     mge_out0 = F.split(inp, 2, axis=3)
     mge_out1 = F.split(inp, [3], axis=3)
@@ -106,26 +135,42 @@ def test_split():
         assert str(e) == "Invalid nsplits_or_secions: [3, 3, 5]"
 
 
-def test_reshape():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_reshape(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     x = np.arange(6, dtype="float32")
-    xx = tensor(x)
+    xx = make_tensor(x, network)
     y = x.reshape(1, 2, 3)
 
     for shape in [
         (1, 2, 3),
         (1, -1, 3),
-        (1, tensor(-1), 3),
+        (1, make_tensor(-1, network), 3),
         np.array([1, -1, 3], dtype="int32"),
-        tensor([1, -1, 3]),
+        make_tensor([1, -1, 3], network),
     ]:
         yy = F.reshape(xx, shape)
         np.testing.assert_equal(yy.numpy(), y)
 
 
-def test_reshape_shape_inference():
-    x_shape_known = tensor([1, 2, 3, 4], dtype="float32")
-    x_shape_unknown = F.broadcast_to(tensor([1.0]), shape=tensor([1, 1, 1, 1]).sum())
-    tshp_unknown = astensor1d((tensor([2]), tensor([2])), x_shape_known)
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_reshape_shape_inference(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    x_shape_known = make_tensor([1, 2, 3, 4], network)
+    x_shape_unknown = F.broadcast_to(
+        make_tensor([1.0], network), shape=make_tensor([1, 1, 1, 1], network).sum()
+    )
+    tshp_unknown = astensor1d(
+        (make_tensor([2], network), make_tensor([2], network)), x_shape_known
+    )
     tshp_known = astensor1d((2, 2), x_shape_known)
     tshp_known_unspec = astensor1d((2, -1), x_shape_known)
 
@@ -146,12 +191,18 @@ def test_reshape_shape_inference():
         {"input": [x_shape_unknown, tshp_known], "output": [(2, 2),]},
         {"input": [x_shape_unknown, tshp_known_unspec], "output": [(2, 2),]},
     ]
-    opr_test(cases, func, compare_fn=check_shape, test_trace=True)
+    opr_test(cases, func, compare_fn=check_shape, test_trace=True, network=network)
 
 
-def test_squeeze():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_squeeze(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     x = np.arange(6, dtype="float32").reshape(1, 2, 3, 1)
-    xx = tensor(x)
+    xx = make_tensor(x, network)
 
     for axis in [None, 3, -4, (3, -4)]:
         y = np.squeeze(x, axis)
@@ -159,9 +210,15 @@ def test_squeeze():
         np.testing.assert_equal(y, yy.numpy())
 
 
-def test_expand_dims():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_expand_dims(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     x = np.arange(6, dtype="float32").reshape(2, 3)
-    xx = tensor(x)
+    xx = make_tensor(x, network)
 
     for axis in [2, -3, (3, -4), (1, -4)]:
         y = np.expand_dims(x, axis)
@@ -169,11 +226,17 @@ def test_expand_dims():
         np.testing.assert_equal(y, yy.numpy())
 
 
-def test_elemwise_dtype_promotion():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_elemwise_dtype_promotion(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     x = np.random.rand(2, 3).astype("float32")
     y = np.random.rand(1, 3).astype("float16")
-    xx = tensor(x)
-    yy = tensor(y)
+    xx = make_tensor(x, network)
+    yy = make_tensor(y, network)
     z = xx * yy
     np.testing.assert_equal(z.numpy(), x * y)
 
@@ -184,7 +247,13 @@ def test_elemwise_dtype_promotion():
     np.testing.assert_equal(z.numpy(), x - y)
 
 
-def test_linspace():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_linspace(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     cases = [
         {"input": [1, 9, 9]},
         {"input": [3, 10, 8]},
@@ -193,6 +262,7 @@ def test_linspace():
         cases,
         F.linspace,
         ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
+        network=network,
     )
 
     cases = [
@@ -203,20 +273,28 @@ def test_linspace():
         cases,
         F.linspace,
         ref_fn=lambda start, end, step: np.linspace(start, end, step, dtype=np.float32),
+        network=network,
     )
 
     cases = [
-        {"input": [1, tensor(9), 9]},
-        {"input": [tensor(1), 9, tensor(9)]},
+        {"input": [1, make_tensor(9, network), 9]},
+        {"input": [make_tensor(1, network), 9, make_tensor(9, network)]},
     ]
     opr_test(
         cases,
         F.linspace,
         ref_fn=lambda start, end, step: np.linspace(1, 9, 9, dtype=np.float32),
+        network=network,
     )
 
 
-def test_arange():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_arange(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     cases = [
         {"input": [1, 9, 1]},
         {"input": [2, 10, 2]},
@@ -225,6 +303,7 @@ def test_arange():
         cases,
         F.arange,
         ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+        network=network,
     )
 
     cases = [
@@ -235,6 +314,7 @@ def test_arange():
         cases,
         F.arange,
         ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+        network=network,
     )
 
     cases = [
@@ -245,20 +325,33 @@ def test_arange():
         cases,
         F.arange,
         ref_fn=lambda start, end, step: np.arange(start, end, step, dtype=np.float32),
+        network=network,
     )
 
 
-def test_round():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_round(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     data1_shape = (15,)
     data2_shape = (25,)
     data1 = np.random.random(data1_shape).astype(np.float32)
     data2 = np.random.random(data2_shape).astype(np.float32)
 
     cases = [{"input": data1}, {"input": data2}]
-    opr_test(cases, F.round, ref_fn=np.round)
+    opr_test(cases, F.round, ref_fn=np.round, network=network)
 
 
-def test_flatten():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_flatten(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     data0_shape = (2, 3, 4, 5)
     data1_shape = (4, 5, 6, 7)
     data0 = np.random.random(data0_shape).astype(np.float32)
@@ -273,7 +366,7 @@ def test_flatten():
         {"input": data0, "output": output0},
         {"input": data1, "output": output1},
     ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn)
+    opr_test(cases, F.flatten, compare_fn=compare_fn, network=network)
 
     output0 = (2, 3 * 4 * 5)
     output1 = (4, 5 * 6 * 7)
@@ -281,7 +374,7 @@ def test_flatten():
         {"input": data0, "output": output0},
         {"input": data1, "output": output1},
     ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1)
+    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1, network=network)
 
     output0 = (2, 3, 4 * 5)
     output1 = (4, 5, 6 * 7)
@@ -289,7 +382,7 @@ def test_flatten():
         {"input": data0, "output": output0},
         {"input": data1, "output": output1},
     ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=2)
+    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=2, network=network)
 
     output0 = (2, 3 * 4, 5)
     output1 = (4, 5 * 6, 7)
@@ -297,10 +390,23 @@ def test_flatten():
         {"input": data0, "output": output0},
         {"input": data1, "output": output1},
     ]
-    opr_test(cases, F.flatten, compare_fn=compare_fn, start_axis=1, end_axis=2)
+    opr_test(
+        cases,
+        F.flatten,
+        compare_fn=compare_fn,
+        start_axis=1,
+        end_axis=2,
+        network=network,
+    )
 
 
-def test_broadcast():
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_broadcast(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     input1_shape = (20, 30)
     output1_shape = (30, 20, 30)
     data1 = np.random.random(input1_shape).astype(np.float32)
@@ -321,7 +427,7 @@ def test_broadcast():
         {"input": [data2, output2_shape], "output": output2_shape},
         {"input": [data3, output3_shape], "output": output3_shape},
     ]
-    opr_test(cases, F.broadcast_to, compare_fn=compare_fn)
+    opr_test(cases, F.broadcast_to, compare_fn=compare_fn, network=network)
 
     x = F.ones((2, 1, 3))
     with pytest.raises(RuntimeError):
@@ -334,35 +440,41 @@ def test_broadcast():
         F.broadcast_to(x, (1, 3))
 
 
-def test_utils_astensor1d():
-    reference = tensor(0)
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_utils_astensor1d(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    reference = make_tensor(0, network)
 
     # literal
     x = [1, 2, 3]
     for dtype in [None, "float32"]:
         xx = astensor1d(x, reference, dtype=dtype)
-        assert type(xx) is tensor
+        assert isinstance(xx, type(reference))
         np.testing.assert_equal(xx.numpy(), x)
 
     # numpy array
     x = np.asarray([1, 2, 3], dtype="int32")
     for dtype in [None, "float32"]:
         xx = astensor1d(x, reference, dtype=dtype)
-        assert type(xx) is tensor
+        assert isinstance(xx, type(reference))
         np.testing.assert_equal(xx.numpy(), x.astype(dtype) if dtype else x)
 
     # tensor
-    x = tensor([1, 2, 3], dtype="int32")
+    x = make_tensor([1, 2, 3], network)
     for dtype in [None, "float32"]:
         xx = astensor1d(x, reference, dtype=dtype)
-        assert type(xx) is tensor
+        assert isinstance(xx, type(reference))
         np.testing.assert_equal(xx.numpy(), x.numpy())
 
     # mixed
-    x = [1, tensor(2), 3]
+    x = [1, make_tensor(2, network), 3]
     for dtype in [None, "float32"]:
         xx = astensor1d(x, reference, dtype=dtype)
-        assert type(xx) is tensor
+        assert isinstance(xx, type(reference))
         np.testing.assert_equal(xx.numpy(), [1, 2, 3])
 
 
@@ -382,35 +494,60 @@ def test_device():
     np.testing.assert_almost_equal(y5.numpy(), y6.numpy())
 
 
-def test_identity():
-    x = tensor(np.random.random((5, 10)).astype(np.float32))
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_identity(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    x = make_tensor(np.random.random((5, 10)).astype(np.float32), network)
     y = F.copy(x)
     np.testing.assert_equal(y.numpy(), x)
 
 
-def copy_test(dst, src):
+def copy_test(dst, src, network):
     data = np.random.random((2, 3)).astype(np.float32)
-    x = tensor(data, device=src)
+    x = make_tensor(data, device=src, network=network)
     y = F.copy(x, dst)
     assert np.allclose(data, y.numpy())
-    z = x.to(dst)
-    assert np.allclose(data, z.numpy())
+    if network is None:
+        z = x.to(dst)
+        assert np.allclose(data, z.numpy())
 
 
 @pytest.mark.require_ngpu(1)
-def test_copy_h2d():
-    copy_test("cpu0", "gpu0")
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_copy_h2d(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    copy_test("cpu0", "gpu0", network=network)
 
 
 @pytest.mark.require_ngpu(1)
-def test_copy_d2h():
-    copy_test("gpu0", "cpu0")
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_copy_d2h(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    copy_test("gpu0", "cpu0", network=network)
 
 
 @pytest.mark.require_ngpu(2)
-def test_copy_d2d():
-    copy_test("gpu0", "gpu1")
-    copy_test("gpu0:0", "gpu0:1")
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_copy_d2d(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    copy_test("gpu0", "gpu1", network=network)
+    copy_test("gpu0:0", "gpu0:1", network=network)
 
 
 @pytest.mark.parametrize(
@@ -425,7 +562,13 @@ def test_copy_d2d():
         ((), 10, None),
     ],
 )
-def test_repeat(shape, repeats, axis):
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_repeat(shape, repeats, axis, is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     def repeat_func(inp):
         return F.repeat(inp=inp, repeats=repeats, axis=axis)
 
@@ -437,7 +580,10 @@ def test_repeat(shape, repeats, axis):
         cases = [{"input": np.array(1.23)}]
 
     opr_test(
-        cases, repeat_func, ref_fn=lambda inp: np.repeat(inp, repeats, axis),
+        cases,
+        repeat_func,
+        ref_fn=lambda inp: np.repeat(inp, repeats, axis),
+        network=network,
     )
 
 
@@ -450,14 +596,16 @@ def test_repeat(shape, repeats, axis):
         ((2, 3, 4, 5), (2, 2, 2, 2, 2, 2, 2)),
     ],
 )
-def test_tile(shape, reps):
+@pytest.mark.parametrize("is_varnode", [True])
+def test_tile(shape, reps, is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
     def tile_func(inp):
         return F.tile(inp=inp, reps=reps)
 
-    cases = [
-        {"input": np.random.randn(*shape).astype("float32")},
-    ]
+    cases = [{"input": np.random.randn(*shape).astype("float32")}]
 
-    opr_test(
-        cases, tile_func, ref_fn=lambda inp: np.tile(inp, reps),
-    )
+    opr_test(cases, tile_func, ref_fn=lambda inp: np.tile(inp, reps), network=network)

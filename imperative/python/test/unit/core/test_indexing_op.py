@@ -10,12 +10,17 @@ import collections
 
 import numpy as np
 import pytest
+from utils import make_tensor
 
 import megengine
+import megengine.core.tensor.megbrain_graph as G
+import megengine.functional as F
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops import builtin
 from megengine.tensor import Tensor
+from megengine.utils.network import Network
+from megengine.utils.network_node import VarNode
 
 
 def cvt_to_shape_desc(val, inpvar, config=None):
@@ -387,108 +392,130 @@ def test_batched_mesh_indexing():
 
 
 # high level
+def get_value(x):
+    if isinstance(x, VarNode):
+        var = x.var
+        o = G.OutputNode(var)
+        graph = x.graph
+        graph.compile(o.outputs).execute()
+        return o.get_value().numpy()
+    else:
+        return x.numpy()
 
 
-def test_advance_indexing_high_level():
+@pytest.mark.parametrize("test_varnode", [True, False])
+def test_advance_indexing_high_level(test_varnode):
+    if test_varnode:
+        network = Network()
+    else:
+        network = None
+
     x = np.arange(25).reshape(5, 5).astype("int32")
     d = np.arange(15).reshape(3, 5).astype("int32")
-    xx = Tensor(x)
+    xx = make_tensor(x, network)
 
-    np.testing.assert_equal(x[1, :], xx[1, :].numpy())
-    np.testing.assert_equal(x[:, 1], xx[:, 1].numpy())
-    np.testing.assert_equal(x[1:3, :], xx[1:3, :].numpy())
+    np.testing.assert_equal(x[1, :], get_value(xx[1, :]))
+    np.testing.assert_equal(x[:, 1], get_value(xx[:, 1]))
+    np.testing.assert_equal(x[1:3, :], get_value(xx[1:3, :]))
 
-    np.testing.assert_equal(x[:, :], xx[:, :].numpy())
-    np.testing.assert_equal(x[1, 1], xx[1, 1].numpy())
+    np.testing.assert_equal(x[:, :], get_value(xx[:, :]))
+    np.testing.assert_equal(x[1, 1], get_value(xx[1, 1]))
     yy = xx[(0, 4, 2), :]
-    np.testing.assert_equal(x[(0, 4, 2), :], yy.numpy())
+    np.testing.assert_equal(x[(0, 4, 2), :], get_value(yy))
 
     x_ = x.copy()
     x_[(0, 4, 2), :] = d
-    xx_ = Tensor(xx)
+    xx_ = make_tensor(xx, network)
     xx_[(0, 4, 2), :] = d
-    np.testing.assert_equal(x_, xx_.numpy())
+    np.testing.assert_equal(x_, get_value(xx_))
 
     x = np.arange(27).reshape(3, 3, 3).astype("int32")
-    xx = Tensor(x)
+    xx = make_tensor(x, network)
 
-    np.testing.assert_equal(x[1, :, :], xx[1, :, :].numpy())
-    np.testing.assert_equal(x[1, :, 1], xx[1, :, 1].numpy())
-    np.testing.assert_equal(x[1, 0:1, :], xx[1, 0:1, :].numpy())
-    np.testing.assert_equal(x[0:1, 1, 1], xx[0:1, 1, 1].numpy())
-    np.testing.assert_equal(x[:, 1, 1], xx[:, 1, 1].numpy())
-    np.testing.assert_equal(x[:, 1], xx[:, 1].numpy())
-    np.testing.assert_equal(x[1, 1:2], xx[1, 1:2].numpy())
+    np.testing.assert_equal(x[1, :, :], get_value(xx[1, :, :]))
+    np.testing.assert_equal(x[1, :, 1], get_value(xx[1, :, 1]))
+    np.testing.assert_equal(x[1, 0:1, :], get_value(xx[1, 0:1, :]))
+    np.testing.assert_equal(x[0:1, 1, 1], get_value(xx[0:1, 1, 1]))
+    np.testing.assert_equal(x[:, 1, 1], get_value(xx[:, 1, 1]))
+    np.testing.assert_equal(x[:, 1], get_value(xx[:, 1]))
+    np.testing.assert_equal(x[1, 1:2], get_value(xx[1, 1:2]))
 
     x_ = x.copy()
     x_[1, 1, 1] = -1
     xx[1, 1, 1] = -1
-    np.testing.assert_equal(x_, xx.numpy())
+    np.testing.assert_equal(x_, get_value(xx))
 
     x_[:, 1, 1] = -2
     xx[:, 1, 1] = x_[:, 1, 1]
-    np.testing.assert_equal(x_, xx.numpy())
+    np.testing.assert_equal(x_, get_value(xx))
 
     x_[0:1, :, 1] = -3
     xx[0:1, :, 1] = x_[0:1, :, 1]
-    np.testing.assert_equal(x_, xx.numpy())
+    np.testing.assert_equal(x_, get_value(xx))
 
     x_[0:1, :, 1] = -4
-    y = Tensor(x_)
+    y = make_tensor(x_, network)
     xx[0:1, :, 1] = y[0:1, :, 1]
-    np.testing.assert_equal(y.numpy(), xx.numpy())
+    np.testing.assert_equal(get_value(y), get_value(xx))
 
     x[:] = 1
     xx[:] = 1
-    np.testing.assert_equal(x, xx.numpy())
+    np.testing.assert_equal(x, get_value(xx))
 
     x = np.arange(9).reshape(3, 3).astype("int32")
-    xx = Tensor(x)
+    xx = make_tensor(x, network)
     y = np.array([1, 2])
-    yy = Tensor(y)
-    np.testing.assert_equal(x[:, y[0]], xx[:, y[0]].numpy())
-    np.testing.assert_equal(x[:, y[0]], xx[:, yy[0]].numpy())
-    np.testing.assert_equal(x[:, y], xx[:, y].numpy())
-    np.testing.assert_equal(x[:, y], xx[:, yy].numpy())
+    yy = make_tensor(y, network)
+    np.testing.assert_equal(x[:, y[0]], get_value(xx[:, y[0]]))
+    np.testing.assert_equal(x[:, y[0]], get_value(xx[:, yy[0]]))
+    np.testing.assert_equal(x[:, y], get_value(xx[:, y]))
+    np.testing.assert_equal(x[:, y], get_value(xx[:, yy]))
 
     x_ = x.copy()
     x_[:, y[0]] = -1
-    xx_ = Tensor(x_)
+    xx_ = make_tensor(x_, network)
     xx[:, yy[0]] = xx_[:, yy[0]]
-    np.testing.assert_equal(x_, xx.numpy())
+    np.testing.assert_equal(x_, get_value(xx))
 
     x_[:, y] = -1
-    xx_ = Tensor(x_)
+    xx_ = make_tensor(x_, network)
     xx[:, yy] = xx_[:, yy]
-    np.testing.assert_equal(x_, xx.numpy())
+    np.testing.assert_equal(x_, get_value(xx))
 
     x = np.arange(9).reshape(3, 3).astype("int32")
-    xx = Tensor(x)
+    xx = make_tensor(x, network)
     y = np.array([1])
-    yy = Tensor(y)
-    np.testing.assert_equal(x[:, y[0]], xx[:, y[0]].numpy())
-    np.testing.assert_equal(x[:, y[0]], xx[:, yy[0]].numpy())
-    np.testing.assert_equal(x[:, y], xx[:, y].numpy())
+    yy = make_tensor(y, network)
+    np.testing.assert_equal(x[:, y[0]], get_value(xx[:, y[0]]))
+    np.testing.assert_equal(x[:, y[0]], get_value(xx[:, yy[0]]))
+    np.testing.assert_equal(x[:, y], get_value(xx[:, y]))
 
-    np.testing.assert_equal(x[:, y], xx[:, yy].numpy())
+    np.testing.assert_equal(x[:, y], get_value(xx[:, yy]))
 
     x = np.arange(9).reshape(3, 3).astype("int32")
-    xx = Tensor(x)
-    np.testing.assert_equal(x[[0, 1], 0], xx[[0, 1], 0].numpy())
-    np.testing.assert_equal(x[0:2, 0], xx[0:2, 0].numpy())
+    xx = make_tensor(x, network)
+    np.testing.assert_equal(x[[0, 1], 0], get_value(xx[[0, 1], 0]))
+    np.testing.assert_equal(x[0:2, 0], get_value(xx[0:2, 0]))
 
 
-def test_advance_indexing_with_bool():
+@pytest.mark.parametrize(
+    "test_varnode", [True, False],
+)
+def test_advance_indexing_with_bool(test_varnode):
+    if test_varnode:
+        network = Network()
+    else:
+        network = None
     a = np.arange(9).reshape(3, 3).astype(np.float32)
     b = np.array([1, 2, 3])
     c = np.array([1, 2, 3])
-    aa = Tensor(a)
-    bb = Tensor(b)
-    cc = Tensor(c)
-    np.testing.assert_equal(a[b == 1, c == 2], aa[bb == 1, cc == 2].numpy())
+    aa = make_tensor(a, network)
+    bb = make_tensor(b, network)
+    cc = make_tensor(c, network)
+    np.testing.assert_equal(a[b == 1, c == 2], get_value(aa[bb == 1, cc == 2]))
     a[b == 1, c == 2] = -1.0
     aa[bb == 1, cc == 2] = -1.0
-    np.testing.assert_equal(a, aa.numpy())
+    np.testing.assert_equal(a, get_value(aa))
 
     a = np.arange(9).reshape(3, 3).astype(np.float32)
     b = np.array([False, True, True])

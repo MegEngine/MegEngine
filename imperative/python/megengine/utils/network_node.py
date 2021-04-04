@@ -6,16 +6,21 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import abc
 import json
 import sys
-from typing import Callable
+from typing import Callable, Sequence
 
 import numpy as np
 
 from ..core import _imperative_rt as rt
+from ..core._imperative_rt.core2 import SymbolVar
 from ..core._wrap import Device
 from ..core.ops import builtin
-from ..core.tensor.megbrain_graph import InputNode
+from ..core.tensor.array_method import ArrayMethodMixin
+from ..core.tensor.indexing import getitem as _getitem
+from ..core.tensor.indexing import setitem as _setitem
+from ..core.tensor.megbrain_graph import InputNode, OutputNode
 from ..tensor import Tensor
 from .comp_graph_tools import replace_vars
 from .module_stats import (
@@ -29,9 +34,13 @@ class NetworkNode:
     pass
 
 
-class VarNode(NetworkNode):
-    def __init__(self, owner_opr=None, name=None):
-        self.var = None
+class VarNodeMeta(type(SymbolVar), type(ArrayMethodMixin)):
+    pass
+
+
+class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
+    def __init__(self, var=None, *, owner_opr=None, name=None):
+        SymbolVar.__init__(self, var)
         self.owner = owner_opr
         self.name = name
         self.id = id(self)
@@ -57,6 +66,40 @@ class VarNode(NetworkNode):
     @property
     def dtype(self):
         return self.var.dtype if self.var else None
+
+    def __bool__(self):
+        return False
+
+    __index__ = None
+    __int__ = None
+    __float__ = None
+    __complex__ = None
+
+    def __hash__(self):
+        return id(self)
+
+    @property
+    def _tuple_shape(self):
+        return self.var.shape
+
+    def numpy(self):
+        o = OutputNode(self.var)
+        self.graph.compile(o.outputs).execute()
+        return o.get_value().numpy()
+
+    def __getitem__(self, index):
+        return _getitem(self, index)
+
+    def __setitem__(self, index, value):
+        if index is not Ellipsis:
+            value = _setitem(self, index, value)
+        if self.owner is not None:
+            idx = self.owner.outputs.index(self)
+            self.owner.outputs[idx] = VarNode(
+                self.var, owner_opr=self.owner, name=self.var.name
+            )
+        self.var = value.var
+        self.owner = None
 
     def set_owner_opr(self, owner_opr):
         self.owner = owner_opr
@@ -138,7 +181,7 @@ class Host2DeviceCopy(OpNode):
         outputs = rt.make_h2d(graph, self.device, self.dtype, self.shape, self.name)
         self._opr = outputs.owner
         if len(self.outputs) == 0:
-            self.outputs.append(VarNode(self, self.name))
+            self.outputs.append(VarNode(owner_opr=self, name=self.name))
         self.outputs[0].var = outputs
         assert self.outputs[0].owner is self
 
@@ -176,8 +219,8 @@ class ImmutableTensor(OpNode):
     def set_value(self, data, device=None):
         assert self.graph is not None
         cn = device if device else self.device
-        assert isinstance(data, (int, float, np.ndarray))
-        if isinstance(data, (int, float)):
+        assert isinstance(data, (int, float, Sequence, np.ndarray))
+        if not isinstance(data, np.ndarray):
             data = np.array(data)
         if data.dtype == np.float64:
             data = data.astype(np.float32)
@@ -185,7 +228,7 @@ class ImmutableTensor(OpNode):
             data = data.astype(np.int32)
         varnode = rt.make_const(self.graph, data, cn, data.dtype, self.name)
         if len(self.outputs) == 0:
-            self.outputs.append(VarNode(self, self.name))
+            self.outputs.append(VarNode(owner_opr=self, name=self.name))
         self.outputs[0].var = varnode
         self._opr = varnode.owner
 

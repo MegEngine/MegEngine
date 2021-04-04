@@ -12,7 +12,7 @@ from typing import Iterable, Optional, Sequence, Union
 import numpy as np
 
 from ..core._imperative_rt import CompNode
-from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.core2 import SymbolVar, apply
 from ..core._wrap import device as as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
@@ -101,7 +101,7 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
     return result
 
 
-def full(shape, value, dtype="float32", device=None):
+def full(shape, value, dtype="float32", device=None) -> Tensor:
     """
     Returns a tensor with given shape and value.
     """
@@ -115,7 +115,7 @@ def full(shape, value, dtype="float32", device=None):
     return broadcast_to(x, shape)
 
 
-def ones(shape, dtype="float32", device=None):
+def ones(shape, dtype="float32", device=None) -> Tensor:
     """
     Returns a ones tensor with given shape.
 
@@ -142,14 +142,14 @@ def ones(shape, dtype="float32", device=None):
     return full(shape, 1.0, dtype=dtype, device=device)
 
 
-def zeros(shape, dtype="float32", device=None):
+def zeros(shape, dtype="float32", device=None) -> Tensor:
     """
     Returns a zero tensor with given shape.
     """
     return full(shape, 0.0, dtype=dtype, device=device)
 
 
-def zeros_like(inp: Tensor) -> Tensor:
+def zeros_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
     """
     Returns a zero tensor with the same shape as input tensor.
 
@@ -176,21 +176,26 @@ def zeros_like(inp: Tensor) -> Tensor:
          [0 0 0]]
 
     """
-    return zeros(inp.shape, dtype=inp.dtype, device=inp.device)
+    return full_like(inp, 0.0)
 
 
-def ones_like(inp: Tensor) -> Tensor:
+def ones_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
     """
     Returns a ones tensor with the same shape as input tensor.
     """
-    return ones(inp.shape, dtype=inp.dtype, device=inp.device)
+    return full_like(inp, 1.0)
 
 
-def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:
+def full_like(
+    inp: Union[Tensor, SymbolVar], value: Union[int, float]
+) -> Union[Tensor, SymbolVar]:
     """
     Returns a tensor filled with given value with the same shape as input tensor.
     """
-    return full(inp.shape, value, dtype=inp.dtype, device=inp.device)
+    (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
+    if inp.shape is ():
+        return x
+    return broadcast_to(x, inp.shape)
 
 
 def broadcast_to(inp: Tensor, shape: Union[int, Iterable[int]]) -> Tensor:
@@ -259,15 +264,10 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
     if len(inps) == 1:
         return inps[0]
 
-    dtype = dtype_promotion(inps)
+    inps = convert_inputs(*inps, device=device)
     if device is None:
         device = get_device(inps)
     device = as_device(device)
-
-    def convert(x):
-        return convert_single_value(x, dtype=dtype, device=device)
-
-    inps = tuple(map(convert, inps))
     (result,) = apply(builtin.Concat(axis=axis, comp_node=device.to_c()), *inps)
     return result
 
@@ -379,8 +379,14 @@ def split(inp, nsplits_or_sections, axis=0):
                     Ntotal, axis, Nsections
                 )
             )
+
+        func = (
+            floor_div
+            if isinstance(Nsections, (SymbolVar, Tensor))
+            else lambda x, y: x // y
+        )
         div_points = [0] + [
-            floor_div(Ntotal + Nsections - i - 1, Nsections) for i in range(Nsections)
+            func(Ntotal + Nsections - i - 1, Nsections) for i in range(Nsections)
         ]
         for i in range(2, Nsections + 1):
             div_points[i] = div_points[i - 1] + div_points[i]
@@ -925,11 +931,15 @@ def linspace(
             if not (cur_device is None or device == cur_device):
                 raise ("ambiguous device for linspace opr")
 
-    if not isinstance(start, Tensor):
+    is_symbolvar = list(isinstance(x, SymbolVar) for x in [start, stop, num])
+    if any(is_symbolvar) and not all(is_symbolvar):
+        raise TypeError("start, stop and num should all be VarNode or none of them")
+
+    if not isinstance(start, (Tensor, SymbolVar)):
         start = Tensor(start, device=device)
-    if not isinstance(stop, Tensor):
+    if not isinstance(stop, (Tensor, SymbolVar)):
         stop = Tensor(stop, device=device)
-    if not isinstance(num, Tensor):
+    if not isinstance(num, (Tensor, SymbolVar)):
         num = Tensor(num, device=device)
 
     op = builtin.Linspace(comp_node=device)
@@ -983,7 +993,7 @@ def arange(
         stop = stop.astype("float32")
     if isinstance(step, Tensor):
         step = step.astype("float32")
-    num = ceil(Tensor((stop - start) / step, device=device))
+    num = ceil((stop - start) / step)
     stop = start + step * (num - 1)
     result = linspace(start, stop, num, device=device)
     if np.dtype(dtype) == np.int32:

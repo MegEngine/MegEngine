@@ -9,8 +9,7 @@
 # pylint: disable=unused-argument,invalid-name,redefined-builtin,arguments-out-of-order
 import numpy as np
 
-from ..core._imperative_rt.core2 import apply
-from ..core._imperative_rt.graph import VarNode
+from ..core._imperative_rt.core2 import SymbolVar, apply
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor import utils
@@ -72,7 +71,7 @@ __all__ = [
 
 
 def _elwise(*args, mode):
-    tensor_args = list(filter(lambda x: isinstance(x, (Tensor, VarNode)), args))
+    tensor_args = list(filter(lambda x: isinstance(x, (Tensor, SymbolVar)), args))
     if len(tensor_args) == 0:
         dtype = utils.dtype_promotion(args)
         first_arg = Tensor(args[0], dtype=dtype, device=get_default_device())

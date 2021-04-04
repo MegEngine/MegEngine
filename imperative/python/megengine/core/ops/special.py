@@ -8,6 +8,9 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
+from .._imperative_rt import make_const
+from .._imperative_rt.core2 import SymbolVar, Tensor
+
 
 class Const:
     def __init__(self, value=None, *, dtype=None, device=None):
@@ -19,7 +22,19 @@ class Const:
         from ...tensor import Tensor
 
         device = self.device
-        if device is None:
-            device = reference[0].device
+
+        if len(reference) != 0:
+            reference = reference[0]
+            assert isinstance(
+                reference, (SymbolVar, Tensor)
+            ), "Reference should be Tensor or VarNode"
+
+            if device is None:
+                device = reference.device
+
+            if isinstance(reference, SymbolVar):
+                cls = type(reference)
+                rst = cls(make_const(reference.graph, self.value, device, self.dtype))
+                return (rst,)
 
         return (Tensor(self.value, self.dtype, self.device, True),)
