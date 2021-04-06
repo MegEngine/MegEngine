@@ -19,7 +19,8 @@ using namespace megdnn;
     cb(DEFAULT)                    \
     cb(REPRODUCIBLE)               \
     cb(NAIVE)                      \
-    cb(USABLE_DEPEND_ON_SHAPE)
+    cb(USABLE_DEPEND_ON_SHAPE)     \
+    cb(ACCURACY_DEPEND_ON_BATCH)
 
 namespace {
 inline const char* attr_str(const AlgoAttribute& attr) {

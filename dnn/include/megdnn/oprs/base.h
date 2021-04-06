@@ -127,6 +127,15 @@ public:
          * \brief whether the algo is usable once shape changed.
          * */
         USABLE_DEPEND_ON_SHAPE = 1 << 2,
+
+        /**
+         * \brief whether the accuracy of the algo is dependent with respect
+         * to batch
+         * In the case of using algorithm with this attribute, even if the
+         * content of each batch is the same, the output under multiple batch
+         * input and single batch input may not equal
+         * */
+        ACCURACY_DEPEND_ON_BATCH = 1 << 3,
     };
 
     /**
