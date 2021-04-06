@@ -44,14 +44,14 @@ TEST(TestOprTensorRT, Basic) {
     auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
                                     make_callback_copy(y2, host_z2)});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 2e-4);
 
     auto&& host_x = net.host_x;
     auto&& gen = net.gen;
 
     *host_x = *gen({1, 23, 43, 43});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 2e-4);
     *host_x = *gen({10, 23, 12, 12});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-3);

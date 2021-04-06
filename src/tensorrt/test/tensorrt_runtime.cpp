@@ -58,7 +58,7 @@ TEST(TestOprTensorRT, RuntimeBasic) {
     auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
                                     make_callback_copy(y2, host_z2)});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
 }
 
 
@@ -128,13 +128,13 @@ TEST(TestOprTensorRT, RuntimeChangeBatchSize) {
     auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
                                     make_callback_copy(y2, host_z2)});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
     *net.host_x = *net.gen({1, 23, 28, 28});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
     *net.host_x = *net.gen({10, 23, 28, 28});
     func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
 }
 
 #endif  // MGB_ENABLE_TENSOR_RT

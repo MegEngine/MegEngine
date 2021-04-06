@@ -1959,8 +1959,6 @@ TEST(TestEnableTensorCore, Nchw4Nchw) {
 }
 #endif
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, ConvBiasWithZ) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2023,10 +2021,7 @@ TEST(TestEnableTensorCore, ConvBiasWithZ) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-#endif
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, Pooling) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2094,7 +2089,6 @@ TEST(TestEnableTensorCore, Pooling) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-#endif
 
 TEST(TestGoptInference, EnableTensorCore) {
     REQUIRE_GPU(1);
@@ -2296,8 +2290,6 @@ TEST(FuseConvBiasZPass, BlockFuse) {
 }
 #endif
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, ShuffleMerge) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2391,7 +2383,6 @@ TEST(TestEnableTensorCore, ShuffleMerge) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-#endif
 
 #endif
 
@@ -2575,8 +2566,6 @@ TEST(TestGoptInference, EnableCHWN4) {
 }
 #endif
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestGoptInference, EnableCHWN4WarpPespective) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2664,7 +2653,6 @@ TEST(TestGoptInference, EnableCHWN4WarpPespective) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-#endif
 
 TEST(TestGoptInference, EnableCHWN4Pooling) {
     REQUIRE_GPU(1);
@@ -2754,8 +2742,6 @@ TEST(TestGoptInference, EnableCHWN4Pooling) {
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestGoptInference, EnableCHWN4ShuffleRemove) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -2878,7 +2864,6 @@ TEST(TestGoptInference, EnableCHWN4ShuffleRemove) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
-#endif
 
 TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     REQUIRE_GPU(1);
@@ -3977,8 +3962,6 @@ TEST(TestGoptInference, FoldingConvDimshuffle) {
     func->execute();
 }
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -4063,7 +4046,6 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
 }
-#endif
 
 #if CUDA_VERSION >= 10020
 TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {

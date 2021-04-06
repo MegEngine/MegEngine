@@ -223,7 +223,7 @@ TEST(TestTensorRTReplace, ElemAddFusion) {
     ASSERT_EQ(3u, trt_opr->cast_final_safe<opr::TensorRTOpr>()
                           .trt_manager()
                           .iobuf_size());
-    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
 }
 
 TEST(TestTensorRTReplace, BatchedMatrixMulBasic) {
