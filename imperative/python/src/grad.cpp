@@ -9,11 +9,12 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
 #include "./grad.h"
 #include "megbrain/imperative/proxy_graph_detail.h"
 #include "megbrain/imperative/backward_graph_opt.h"
 #include "megbrain/imperative/ops/autogen.h"
-#include "megbrain/imperative/ops/utility.h"
 #include "megbrain/utils/mempool.h"
 
 #include "range/v3/all.hpp"
@@ -434,7 +435,8 @@ apply_result_t apply_grad(ApplyContext& ctx) {
                 if (backward.output_requires_grad(i)) {
                     if (backward.output_captured(i)) {
                         // avoid reference cycle [Tensor <-> GradFn]
-                        outputs[i] = outputs[i]->copy();
+                        static std::shared_ptr<OpDef> op = std::shared_ptr<OpDef>(new FastpathCopy());
+                        outputs[i] = python::apply(op, outputs[i])[0];
                     }
                     // populate grad info of output tensor
                     auto& grad_info = outputs[i]->m_grad_info;

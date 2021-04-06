@@ -12,6 +12,7 @@
 #pragma once
 
 #include "./tensor.h"
+#include "megbrain/imperative/ops/utility.h"
 
 #include <megbrain/utils/small_vector.h>
 #include <memory>

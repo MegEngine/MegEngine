@@ -18,4 +18,18 @@ namespace mgb::imperative {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GenericPyOp);
 
+namespace { namespace fastpathcopy {
+    auto apply_on_var_node(
+            const OpDef& def,
+            const VarNodeArray& inputs) {
+        return inputs;
+    }
+
+OP_TRAIT_REG(FastpathCopy,FastpathCopy)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+}} // fastpathcopy
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(FastpathCopy);
+
 } // namespace mgb::imperative

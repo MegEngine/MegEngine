@@ -118,9 +118,18 @@ apply_result_t apply(ApplyContext& ctx) {
             handles[i] = ctx.args[i]->m_handle.get();
         }
 
+        apply_result_t outputs;
+
+        // fast copy without really applying
+        if (ctx.op->same_type<FastpathCopy>()) {
+            mgb_assert(ctx.nargs == 1);
+            outputs.reserve(ctx.nargs);
+            outputs.emplace_back(std::make_shared<Tensor>(ctx.args[0]->m_handle));
+            return outputs;
+        }
+
         auto output_handles = interpreter_for_py->apply_op(ctx.op, handles);
 
-        apply_result_t outputs;
         outputs.reserve(output_handles.size());
         for (auto h : output_handles) {
             outputs.emplace_back(std::make_shared<Tensor>(h));
@@ -301,11 +310,6 @@ REGISTE_TENSORWRAPPER_FUNC(int64_t, mixin_handle)
 REGISTE_TENSORWRAPPER_FUNC(bool, recording)
 
 #undef REGISTE_TENSORWRAPPER_FUNC
-
-
-PyObject* TensorWrapper::copied() {
-    return py::cast(m_tensor->m_trace_info.copied).release().ptr();
-}
 
 
 #define REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(member)                                 \
@@ -841,7 +845,6 @@ void init_tensor(py::module m) {
         .def<&TensorWrapper::reset_varnode>("_reset_varnode")
         .def<&TensorWrapper::_use_cnt>("_use_cnt")
         .def_getset<&TensorWrapper::varnode>("_varnode")
-        .def_getset<&TensorWrapper::copied>("_copied")
         .def_getset<&TensorWrapper::mixin_handle, &TensorWrapper::set_mixin_handle>("_mixin_handle")
         .def_getset<&TensorWrapper::recording, &TensorWrapper::set_recording>("_recording")
         .def_getset<&TensorWrapper::handle, &TensorWrapper::set_handle>("_handle")

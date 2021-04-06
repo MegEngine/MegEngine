@@ -170,9 +170,9 @@ class trace:
         self._graph = None
         self._need_reset_nodes = None
         self._lazy_eval_graph = None
-        self._lazy_eval_tensors = {}
+        self._lazy_eval_tensors = set()
         self._lazy_eval_links = None
-        self._active_tensors = {}
+        self._active_tensors = set()
         self._tensor_remaps = None
         self._inputs_to_restore = None
         self._arg_bindings = None
@@ -258,7 +258,7 @@ class trace:
             y._compiled_info = CompiledTensorProxy(h)
             y._mixin_handle = h
             outputs += [y]
-            self._active_tensors[h] = TensorWeakRef(y)
+            self._active_tensors.add(TensorWeakRef(y))
         self._output_handles.update(ohandles)
         return outputs
 
@@ -318,9 +318,9 @@ class trace:
             x._mixin_handle = h
             x._recording = True
             x._trace_mixin_info = info
-            self._active_tensors[h] = TensorWeakRef(x)
+            self._active_tensors.add(TensorWeakRef(x))
             if self._symbolic:
-                self._lazy_eval_tensors[h] = TensorWeakRef(x)
+                self._lazy_eval_tensors.add(TensorWeakRef(x))
 
         self._seq.append((op, tuple(ihandles), tuple(ohandles)))
 
@@ -345,7 +345,7 @@ class trace:
         x._recording = True
         x._trace_mixin_info = info
         if self._symbolic:
-            self._lazy_eval_tensors[h] = TensorWeakRef(x)
+            self._lazy_eval_tensors.add(TensorWeakRef(x))
         self._seq.append(("Const", tuple(), tuple(ohandles)))
 
     def _set_active(self, active: bool):
@@ -365,17 +365,14 @@ class trace:
             self._lazy_eval_links = ()
 
     def _take_escaped_tensors(self):
-        escaped_tensors = tuple(
-            filter(lambda x: x() is not None, self._active_tensors.values())
-        )
+        escaped_tensors = tuple(filter(lambda x: x() is not None, self._active_tensors))
         self._active_tensors.clear()
         return escaped_tensors
 
     def _lazy_eval(self, lazy_eval_graph, lazy_eval_tensors, lazy_eval_links):
-        lazy_eval_tensors = list(
-            filter(lambda x: x() is not None, lazy_eval_tensors.values())
-        )
-        readers = [G.OutputNode(x()._varnode).outputs[0] for x in lazy_eval_tensors]
+        lazy_eval_tensors = [x() for x in lazy_eval_tensors]
+        lazy_eval_tensors = [x for x in lazy_eval_tensors if x is not None]
+        readers = [G.OutputNode(x._varnode).outputs[0] for x in lazy_eval_tensors]
         self._apply_graph_options(lazy_eval_graph)
         lazy_eval_graph.options.graph_opt_level = self._graph_opt_level
         lazy_eval_graph._set_priority_to_id([*lazy_eval_links, *readers])
@@ -383,8 +380,8 @@ class trace:
         lazy_eval_graph()
         for r, x in zip(readers, lazy_eval_tensors):
             # get values from lazy_eval_graph and assign to lazy_eval tensor
-            x()._handle = RawTensor(r.op.get_value())._handle
-            x()._reset_varnode()
+            x._handle = RawTensor(r.op.get_value())._handle
+            x._reset_varnode()
 
     @contextlib.contextmanager
     def _setup(self):
@@ -454,13 +451,14 @@ class trace:
                 raise TraceMismatchError("premature end")
             if not self._symbolic or not self._untraced:
                 # reset output tensors
-                for x in self._active_tensors.values():
-                    if x() is not None:
-                        x()._dev_tensor()
-                        x()._reset_varnode()
-                        x()._mixin_handle = -1
-                        x()._recording = False
-                        x()._trace_mixin_info = None
+                for x in self._active_tensors.copy():
+                    strong_x = x()
+                    if strong_x is not None:
+                        strong_x._dev_tensor()
+                        strong_x._reset_varnode()
+                        strong_x._mixin_handle = -1
+                        strong_x._recording = False
+                        strong_x._trace_mixin_info = None
 
         try:
             do_enter()
@@ -482,15 +480,17 @@ class trace:
         if self._untraced:
             # conditionally reading a compiled tensor in excluded region
             # is permitted, so we have to assume every tensor might be read
-            for x in self._active_tensors.values():
-                if x():
-                    info = self._tinfo[x()._mixin_handle]
+            for x in self._active_tensors:
+                strong_x = x()
+                if strong_x:
+                    info = self._tinfo[strong_x._mixin_handle]
                     info.exported = True
                     info.data_read = True
         else:
-            for x in self._active_tensors.values():
-                if x():
-                    x()._dev_tensor()
+            for x in self._active_tensors:
+                strong_x = x()
+                if strong_x:
+                    strong_x._dev_tensor()
 
     def _apply_graph_options(self, graph):
 
@@ -520,7 +520,6 @@ class trace:
         graph = self._graph = G.Graph()
         graph.options.async_exec_level = 0b100
         self._apply_graph_options(graph)
-        # graph.options.graph_opt_level = 0
         need_reset_nodes = self._need_reset_nodes = []
         # links enforce ordering of I/O nodes
         in_out_links = ()
@@ -563,7 +562,7 @@ class trace:
                 if not hasattr(info, "varnode"):
                     assert info.external
                     if info.bound_data:
-                        if hasattr(info, "is_const") and info.is_const:
+                        if getattr(info, "is_const", False):
                             info.varnode = graph.make_const(
                                 info.bound_data.numpy(),
                                 info.bound_data.dtype,
@@ -635,30 +634,12 @@ class trace:
             opnode.reset()
 
     def __call__(self, *args, **kwargs):
-        if is_tracing():
-            return self.__wrapped__(*args, **kwargs)
         with self._setup():
             if self._capture_as_const:
                 self._process_inputs(*args, **kwargs)
             outputs = self.__wrapped__(*args, **kwargs)
             if self._capture_as_const:
                 self._process_outputs(outputs)
-
-            # outputs could be None
-            if outputs is not None:
-                list_outputs = outputs
-                if isinstance(outputs, collections.abc.Mapping):
-                    _, list_outputs = zip(*sorted(outputs.items()))
-                elif not isinstance(outputs, collections.abc.Sequence):
-                    list_outputs = (outputs,)
-
-                for o in list_outputs:
-                    # if outputs are copied, then use the newest info in trace data structure
-                    if o._copied:
-                        self._active_tensors[o._mixin_handle] = TensorWeakRef(o)
-                        if self._untraced and self._symbolic:
-                            self._lazy_eval_tensors[o._mixin_handle] = TensorWeakRef(o)
-
             return outputs
 
     def dump(

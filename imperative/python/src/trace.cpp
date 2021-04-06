@@ -35,7 +35,7 @@ apply_result_t apply_trace(ApplyContext& ctx) {
 
         // assumption: python function always returns PyList
         auto tup = py::reinterpret_borrow<py::list>(ret);
-        for (auto i = 0; i < tup.size(); i++) {
+        for (size_t i = 0; i < tup.size(); i++) {
             auto pitem = tup[i].cast<cg::VarNode*>();
             outputs.emplace_back(std::make_shared<Tensor>(pitem));
         }

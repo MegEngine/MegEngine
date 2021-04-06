@@ -221,6 +221,21 @@ apply_result_t removeAxis_grad_rule(ApplyContext& ctx, CustomBackward::Maker& ma
     return apply(ctx);
 }
 
+apply_result_t fastpathcopy_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+    mgb_assert(ctx.nargs == 1);
+    maker.output_size(1).output_captured(0, false);
+    maker.backward([](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+        mgb_assert(ngrads == 1);
+        Tensor* grad = grads[0];
+        apply_result_t ret(1);
+        if (grad) {
+            ret[0] = grad->shared_from_this();
+        }
+        return ret;
+    });
+    return apply(ctx);
+}
+
 struct Init {
     Init() {
         auto& reg = grad_rule_registry();
@@ -231,6 +246,7 @@ struct Init {
         reg.emplace(Reduce::typeinfo(), reduce_grad_rule);
         reg.emplace(AddAxis::typeinfo(), addAxis_grad_rule);
         reg.emplace(RemoveAxis::typeinfo(), removeAxis_grad_rule);
+        reg.emplace(FastpathCopy::typeinfo(), fastpathcopy_grad_rule);
     }
 } _;
 
