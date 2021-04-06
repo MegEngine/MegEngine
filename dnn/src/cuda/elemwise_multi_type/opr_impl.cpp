@@ -167,6 +167,7 @@ struct ModeDispatcher;
                                  param_enumv::Elemwise::Mode::_m, float>; \
             using Op = kern_ops_quantized::QuantizedMultiTypeOp<          \
                     arity, src_ctype, dst_ctype, KernImpl>;               \
+            dst_ctype* dst = dst_tensor.ptr<dst_ctype>();                 \
             Op op(src_params, dst, dst_param);                            \
             return run_elemwise<Op, src_ctype, arity>(param, stream, op); \
         } while (0);
@@ -178,7 +179,8 @@ struct ModeDispatcher;
         using src_ctype = _src_ctype;                                      \
         using dst_ctype = _dst_ctype;                                      \
         static void run(                                                   \
-                const ElemwiseOpParamN<_arity>& param, _dst_ctype* dst,    \
+                const ElemwiseOpParamN<_arity>& param,                     \
+                const TensorND& dst_tensor,                                \
                 const SmallVector<CudaDTypeParam<_src_ctype>>& src_params, \
                 const CudaDTypeParam<_dst_ctype>& dst_param,               \
                 param::Elemwise::Mode mode, cudaStream_t stream) {         \
@@ -211,6 +213,8 @@ IMPL_MODE_DISPATCHER(3, dt_qint8, dt_qint8);
     MEGDNN_ELEMWISE_MODE_ENABLE(H_SWISH, cb)
 IMPL_MODE_DISPATCHER(1, dt_qint8, dt_qint32);
 IMPL_MODE_DISPATCHER(1, dt_qint32, dt_qint8);
+IMPL_MODE_DISPATCHER(1, dt_qint4, dt_qint32);
+IMPL_MODE_DISPATCHER(1, dt_quint4, dt_qint32);
 #undef FOREACH
 
 #define FOREACH(cb)                                   \
@@ -221,6 +225,88 @@ IMPL_MODE_DISPATCHER(1, dt_qint32, dt_qint8);
     MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_H_SWISH, cb)
 IMPL_MODE_DISPATCHER(2, dt_qint8, dt_qint32);
 IMPL_MODE_DISPATCHER(2, dt_qint32, dt_qint8);
+IMPL_MODE_DISPATCHER(2, dt_qint4, dt_qint32);
+IMPL_MODE_DISPATCHER(2, dt_quint4, dt_qint32);
+#undef FOREACH
+
+#undef _cb_dispatch_mode
+
+#define _cb_dispatch_mode(_m)                                               \
+    case param::Elemwise::Mode::_m:                                         \
+        do {                                                                \
+            using KernImpl =                                                \
+                    ElemwiseKern<megcorePlatformCUDA,                       \
+                                 param_enumv::Elemwise::Mode::_m, float>;   \
+            using Op = kern_ops_quantized::QuantizedMultiTypeOp<            \
+                    arity, src_ctype, dst_ctype, KernImpl>;                 \
+            using dst_storage = typename VectTypeTrait<dst_ctype>::Storage; \
+            dst_storage* dst =                                              \
+                    reinterpret_cast<dst_storage*>(dst_tensor.raw_ptr);     \
+            Op op(src_params, dst, dst_param);                              \
+            ElemwiseOpParamN<1> param_dst;                                  \
+            param_dst[0] = dst_tensor;                                      \
+            param_dst.init_from_given_tensor();                             \
+            run_elemwise<Op, src_ctype, dst_ctype, arity>(param, param_dst, \
+                                                          stream, op);      \
+            return;                                                         \
+        } while (0);
+
+#define FOREACH(cb)                            \
+    MEGDNN_ELEMWISE_MODE_ENABLE(RELU, cb)      \
+    MEGDNN_ELEMWISE_MODE_ENABLE(ABS, cb)       \
+    MEGDNN_ELEMWISE_MODE_ENABLE(NEGATE, cb)    \
+    MEGDNN_ELEMWISE_MODE_ENABLE(CEIL, cb)      \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FLOOR, cb)     \
+    MEGDNN_ELEMWISE_MODE_ENABLE(SIGMOID, cb)   \
+    MEGDNN_ELEMWISE_MODE_ENABLE(TANH, cb)      \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FAST_TANH, cb) \
+    MEGDNN_ELEMWISE_MODE_ENABLE(ROUND, cb)     \
+    MEGDNN_ELEMWISE_MODE_ENABLE(H_SWISH, cb)
+IMPL_MODE_DISPATCHER(1, dt_qint4, dt_qint4);
+IMPL_MODE_DISPATCHER(1, dt_quint4, dt_quint4);
+#undef FOREACH
+
+#define FOREACH(cb)                                   \
+    MEGDNN_ELEMWISE_MODE_ENABLE(ADD, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(MAX, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(MIN, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(MUL, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(SUB, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(SWITCH_GT0, cb)       \
+    MEGDNN_ELEMWISE_MODE_ENABLE(LT, cb)               \
+    MEGDNN_ELEMWISE_MODE_ENABLE(LEQ, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(EQ, cb)               \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_RELU, cb)    \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_TANH, cb)    \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_SIGMOID, cb) \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_H_SWISH, cb)
+IMPL_MODE_DISPATCHER(2, dt_qint4, dt_qint4);
+IMPL_MODE_DISPATCHER(2, dt_quint4, dt_quint4);
+#undef FOREACH
+
+#define FOREACH MEGDNN_FOREACH_ELEMWISE_MODE_TERNARY_FLOAT
+IMPL_MODE_DISPATCHER(3, dt_qint4, dt_qint4);
+IMPL_MODE_DISPATCHER(3, dt_quint4, dt_quint4);
+#undef FOREACH
+
+#define FOREACH(cb)                            \
+    MEGDNN_ELEMWISE_MODE_ENABLE(RELU, cb)      \
+    MEGDNN_ELEMWISE_MODE_ENABLE(SIGMOID, cb)   \
+    MEGDNN_ELEMWISE_MODE_ENABLE(TANH, cb)      \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FAST_TANH, cb) \
+    MEGDNN_ELEMWISE_MODE_ENABLE(H_SWISH, cb)
+IMPL_MODE_DISPATCHER(1, dt_qint32, dt_qint4);
+IMPL_MODE_DISPATCHER(1, dt_qint32, dt_quint4);
+#undef FOREACH
+
+#define FOREACH(cb)                                   \
+    MEGDNN_ELEMWISE_MODE_ENABLE(ADD, cb)              \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_RELU, cb)    \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_SIGMOID, cb) \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_TANH, cb)    \
+    MEGDNN_ELEMWISE_MODE_ENABLE(FUSE_ADD_H_SWISH, cb)
+IMPL_MODE_DISPATCHER(2, dt_qint32, dt_qint4);
+IMPL_MODE_DISPATCHER(2, dt_qint32, dt_quint4);
 #undef FOREACH
 
 #undef _cb_dispatch_mode
@@ -235,8 +321,7 @@ void dispatch_src_ctype(const ElemwiseOpParamN<1>&, const TensorND& dst_tensor,
         auto param_a = param[0].layout.dtype.param<ctype_src>();            \
         auto dst_param = dst_tensor.layout.dtype.param<_dt>();              \
         ModeDispatcher<1, ctype_src, typename DTypeTrait<_dt>::ctype>::run( \
-                param, dst_tensor.ptr<typename DTypeTrait<_dt>::ctype>(),   \
-                {param_a}, dst_param, mode, stream);                        \
+                param, dst_tensor, {param_a}, dst_param, mode, stream);     \
         break;                                                              \
     }
 
@@ -262,6 +347,38 @@ void dispatch_src_ctype<dt_qint32>(const ElemwiseOpParamN<1>& param,
     typedef dt_qint32 ctype_src;
     switch (dst_tensor.layout.dtype.enumv()) {
         DISPATCH(dtype::QuantizedS8);
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::Quantized4Asymm);
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported output dtype %s for ElemwiseMultiType",
+                    dst_tensor.layout.dtype.name()));
+    }
+}
+
+template <>
+void dispatch_src_ctype<dt_qint4>(const ElemwiseOpParamN<1>& param,
+                                  const TensorND& dst_tensor,
+                                  Elemwise::Mode mode, cudaStream_t stream) {
+    typedef dt_qint4 ctype_src;
+    switch (dst_tensor.layout.dtype.enumv()) {
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::QuantizedS32);
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported output dtype %s for ElemwiseMultiType",
+                    dst_tensor.layout.dtype.name()));
+    }
+}
+
+template <>
+void dispatch_src_ctype<dt_quint4>(const ElemwiseOpParamN<1>& param,
+                                   const TensorND& dst_tensor,
+                                   Elemwise::Mode mode, cudaStream_t stream) {
+    typedef dt_quint4 ctype_src;
+    switch (dst_tensor.layout.dtype.enumv()) {
+        DISPATCH(dtype::Quantized4Asymm);
+        DISPATCH(dtype::QuantizedS32);
         default:
             megdnn_throw(ssprintf(
                     "Unsupported output dtype %s for ElemwiseMultiType",
@@ -277,8 +394,8 @@ void dispatch_src_ctype<dt_qint32>(const ElemwiseOpParamN<1>& param,
         auto param_b = param[1].layout.dtype.param<ctype_src>();            \
         auto dst_param = dst_tensor.layout.dtype.param<_dt>();              \
         ModeDispatcher<2, ctype_src, typename DTypeTrait<_dt>::ctype>::run( \
-                param, dst_tensor.ptr<typename DTypeTrait<_dt>::ctype>(),   \
-                {param_a, param_b}, dst_param, mode, stream);               \
+                param, dst_tensor, {param_a, param_b}, dst_param, mode,     \
+                stream);                                                    \
         break;                                                              \
     }
 
@@ -308,12 +425,45 @@ void dispatch_src_ctype<dt_qint32>(const ElemwiseOpParamN<2>& param,
     typedef dt_qint32 ctype_src;
     switch (dst_tensor.layout.dtype.enumv()) {
         DISPATCH(dtype::QuantizedS8);
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::Quantized4Asymm);
         default:
             megdnn_throw(ssprintf(
                     "Unsupported output dtype %s for ElemwiseMultiType",
                     dst_tensor.layout.dtype.name()));
     }
 }
+
+template <>
+void dispatch_src_ctype<dt_qint4>(const ElemwiseOpParamN<2>& param,
+                                  const TensorND& dst_tensor,
+                                  Elemwise::Mode mode, cudaStream_t stream) {
+    typedef dt_qint4 ctype_src;
+    switch (dst_tensor.layout.dtype.enumv()) {
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::QuantizedS32);
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported output dtype %s for ElemwiseMultiType",
+                    dst_tensor.layout.dtype.name()));
+    }
+}
+
+template <>
+void dispatch_src_ctype<dt_quint4>(const ElemwiseOpParamN<2>& param,
+                                   const TensorND& dst_tensor,
+                                   Elemwise::Mode mode, cudaStream_t stream) {
+    typedef dt_quint4 ctype_src;
+    switch (dst_tensor.layout.dtype.enumv()) {
+        DISPATCH(dtype::Quantized4Asymm);
+        DISPATCH(dtype::QuantizedS32);
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported output dtype %s for ElemwiseMultiType",
+                    dst_tensor.layout.dtype.name()));
+    }
+}
+
 #undef DISPATCH
 
 #define DISPATCH(_dt)                                                       \
@@ -323,8 +473,8 @@ void dispatch_src_ctype<dt_qint32>(const ElemwiseOpParamN<2>& param,
         auto param_c = param[2].layout.dtype.param<ctype_src>();            \
         auto dst_param = dst_tensor.layout.dtype.param<_dt>();              \
         ModeDispatcher<3, ctype_src, typename DTypeTrait<_dt>::ctype>::run( \
-                param, dst_tensor.ptr<typename DTypeTrait<_dt>::ctype>(),   \
-                {param_a, param_b, param_c}, dst_param, mode, stream);      \
+                param, dst_tensor, {param_a, param_b, param_c}, dst_param,  \
+                mode, stream);                                              \
         break;                                                              \
     }
 
@@ -346,6 +496,34 @@ void dispatch_src_ctype<dt_qint8>(const ElemwiseOpParamN<3>& param,
     }
 }
 
+template <>
+void dispatch_src_ctype<dt_qint4>(const ElemwiseOpParamN<3>& param,
+                                  const TensorND& dst_tensor,
+                                  Elemwise::Mode mode, cudaStream_t stream) {
+    typedef dt_qint4 ctype_src;
+    switch (dst_tensor.layout.dtype.enumv()) {
+        DISPATCH(dtype::QuantizedS4);
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported output dtype %s for ElemwiseMultiType",
+                    dst_tensor.layout.dtype.name()));
+    }
+}
+
+template <>
+void dispatch_src_ctype<dt_quint4>(const ElemwiseOpParamN<3>& param,
+                                   const TensorND& dst_tensor,
+                                   Elemwise::Mode mode, cudaStream_t stream) {
+    typedef dt_quint4 ctype_src;
+    switch (dst_tensor.layout.dtype.enumv()) {
+        DISPATCH(dtype::Quantized4Asymm);
+        default:
+            megdnn_throw(ssprintf(
+                    "Unsupported output dtype %s for ElemwiseMultiType",
+                    dst_tensor.layout.dtype.name()));
+    }
+}
+
 #undef DISPATCH
 
 }  // namespace
@@ -355,8 +533,10 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<1>& param,
                                               Elemwise::Mode mode) {
     megdnn_assert(
             param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS32,
-            "expect inputs dtype to be qint8/qint32, but got: %s",
+                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS32 ||
+                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                    param[0].layout.dtype.enumv() == DTypeEnum::Quantized4Asymm,
+            "expect inputs dtype to be qint8/qint32/q4, but got: %s",
             param[0].layout.dtype.name());
     auto stream = cuda_stream(this->handle());
     switch (param[0].layout.dtype.enumv()) {
@@ -369,6 +549,8 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<1>& param,
 
         DISPATCH(dtype::QuantizedS8);
         DISPATCH(dtype::QuantizedS32);
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::Quantized4Asymm);
 
         default:
             megdnn_throw(
@@ -386,8 +568,10 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<2>& param,
                   param[1].layout.dtype.enumv());
     megdnn_assert(
             param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS32,
-            "expect inputs dtype to be qint8/qint32, but got: %s",
+                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS32 ||
+                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                    param[0].layout.dtype.enumv() == DTypeEnum::Quantized4Asymm,
+            "expect inputs dtype to be qint8/qint32/q4, but got: %s",
             param[0].layout.dtype.name());
     auto stream = cuda_stream(this->handle());
     switch (param[0].layout.dtype.enumv()) {
@@ -400,6 +584,8 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<2>& param,
 
         DISPATCH(dtype::QuantizedS8);
         DISPATCH(dtype::QuantizedS32);
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::Quantized4Asymm);
 
         default:
             megdnn_throw(
@@ -419,8 +605,10 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<3>& param,
                   param[2].layout.dtype.enumv());
 
     megdnn_assert(
-            param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS8,
-            "expect inputs dtype to be qint8, but got: %s",
+            param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                    param[0].layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                    param[0].layout.dtype.enumv() == DTypeEnum::Quantized4Asymm,
+            "expect inputs dtype to be qint8/q4, but got: %s",
             param[0].layout.dtype.name());
     auto stream = cuda_stream(this->handle());
     switch (param[0].layout.dtype.enumv()) {
@@ -432,6 +620,8 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<3>& param,
     }
 
         DISPATCH(dtype::QuantizedS8);
+        DISPATCH(dtype::QuantizedS4);
+        DISPATCH(dtype::Quantized4Asymm);
 
         default:
             megdnn_throw(

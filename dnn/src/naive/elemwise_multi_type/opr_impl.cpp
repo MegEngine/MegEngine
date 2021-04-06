@@ -187,7 +187,8 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         auto iA = iter_a;
         auto pD = dst;
         for (size_t i = 0; i < size; i++) {
-            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(*iA)));
+            src_ctype a = *iA;
+            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(a)));
             ++iA;
             ++pD;
         }
@@ -215,8 +216,10 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         auto iB = iter_b;
         auto pD = dst;
         for (size_t i = 0; i < size; i++) {
-            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(*iA),
-                                                     param1.dequantize(*iB)));
+            src_ctype a = *iA;
+            src_ctype b = *iB;
+            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(a),
+                                                     param1.dequantize(b)));
             ++iA;
             ++iB;
             ++pD;
@@ -250,9 +253,12 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         auto iC = iter_c;
         auto pD = dst;
         for (size_t i = 0; i < size; i++) {
-            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(*iA),
-                                                     param1.dequantize(*iB),
-                                                     param2.dequantize(*iC)));
+            src_ctype a = *iA;
+            src_ctype b = *iB;
+            src_ctype c = *iC;
+            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(a),
+                                                     param1.dequantize(b),
+                                                     param2.dequantize(c)));
             ++iA;
             ++iB;
             ++iC;
@@ -292,6 +298,7 @@ void ElemwiseMultiTypeImpl::dispatch_qint_op_dtype(const ElemParam& param,
                                  ElemParam>(param, dst);                    \
         break;
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+        MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
 
         default:

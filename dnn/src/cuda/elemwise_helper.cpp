@@ -236,33 +236,66 @@ INST(dt_qint8);
 INST(dt_quint8);
 #undef dt_ibyte
 
+template <int ndim>
+void ParamElemVisitor4bitBase<ndim, BCAST_OTHER>::host_init(
+        const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
+    m_ptr = reinterpret_cast<Storage*>(rv.raw_ptr);
+    for (size_t i = 0; i < rv.layout.ndim; ++i) {
+        m_stride[i] = rv.layout.stride[i];
+        m_shape[i] = rv.layout.shape[i];
+        if (i + 1 < rv.layout.ndim) {
+            m_shape_highdim[i] = rv.layout.shape[i + 1];
+            if (rv.layout.stride[i + 1] == 1)
+                m_align_shape_highdim[i] =
+                        (uint32_t)round_up((int)rv.layout.shape[i + 1], 2);
+            else
+                m_align_shape_highdim[i] = rv.layout.shape[i + 1];
+        }
+    }
+    for (size_t i = rv.layout.ndim - 1; i < ndim - 1; ++i) {
+        m_shape_highdim[i] = 1;
+        m_align_shape_highdim[i] = 1;
+    }
+    for (size_t i = rv.layout.ndim; i < ndim; ++i) {
+        m_stride[i] = 0;
+        m_shape[i] = 1;
+    }
+    m_is_physical_contiguous = rv.layout.is_physical_contiguous();
+}
+
+#define ndim_cb(_ndim) \
+    template class ParamElemVisitor4bitBase<_ndim, BCAST_OTHER>;
+MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb)
+#undef ndim_cb
+
 }  // namespace elemwise_intl
 
 void elemwise_intl::get_launch_spec(const void* kern, size_t size,
                                     int* grid_size, int* block_size) {
-    safe_size_in_kern(size);
-    auto config = query_launch_config_for_kernel(kern);
-    *block_size = config.block_size;
-    int a = size / (config.block_size * 2),
-        b = (size - 1) / (config.block_size * 3) + 1;
-    if (current_device_prop().major <= 3) {
-        // for Kepler, less blocks (more work per thread) is faster
-        *grid_size = b;
-    } else {
-        *grid_size = std::max(a, b);
+        safe_size_in_kern(size);
+        auto config = query_launch_config_for_kernel(kern);
+        *block_size = config.block_size;
+        int a = size / (config.block_size * 2),
+            b = (size - 1) / (config.block_size * 3) + 1;
+        if (current_device_prop().major <= 3) {
+            // for Kepler, less blocks (more work per thread) is faster
+            *grid_size = b;
+        } else {
+            *grid_size = std::max(a, b);
+        }
+        if (!*grid_size) {
+            *block_size = std::min<int>(std::max<int>(size / 64, 1) * 32, 1024);
+            *grid_size = std::max<int>(size / *block_size, 1);
+        }
+        // because we unroll 3 times in the kernel
+        megdnn_assert(static_cast<size_t>(*block_size) * *grid_size * 3 >=
+                      size);
     }
-    if (!*grid_size) {
-        *block_size = std::min<int>(std::max<int>(size / 64, 1) * 32, 1024);
-        *grid_size = std::max<int>(size / *block_size, 1);
-    }
-    // because we unroll 3 times in the kernel
-    megdnn_assert(static_cast<size_t>(*block_size) * *grid_size * 3 >= size);
-}
 
-void elemwise_intl::on_bad_ndim(int ndim) {
-    megdnn_throw(ssprintf("invalid ndim: %d", ndim));
-    MEGDNN_MARK_USED_VAR(ndim);
-}
+    void elemwise_intl::on_bad_ndim(int ndim) {
+        megdnn_throw(ssprintf("invalid ndim: %d", ndim));
+        MEGDNN_MARK_USED_VAR(ndim);
+    }
 }  // namespace cuda
 }  // namespace megdnn
 

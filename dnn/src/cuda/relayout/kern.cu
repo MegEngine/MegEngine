@@ -22,23 +22,30 @@ void copy_noncontig_general(const TensorND &dst, const TensorND &src, cudaStream
     param[0] = dst;
     param[1] = src;
 
-#define RUN(_dt)                                                        \
+#define RUN(_dt, body)                                                  \
     do {                                                                \
         typedef DTypeTrait<dtype::_dt>::ctype ctype;                    \
-        param[0].layout.dtype = param[1].layout.dtype = dtype::_dt();   \
+        body;                                                           \
         param.init_from_given_tensor();                                 \
         param.assert_initialized();                                     \
         noncontig_general_intl::UserOpInvoker<ctype, 2>(param, stream); \
         return;                                                         \
     } while (0)
 
-    switch (dst.layout.dtype.size()) {
-        case 1:
-            RUN(Byte);
-        case 2:
-            RUN(Float16);
-        case 4:
-            RUN(Int32);
+    if (!dst.layout.dtype.is_low_bit()) {
+        switch (dst.layout.dtype.size()) {
+            case 1:
+                RUN(Byte, param[0].layout.dtype = param[1].layout.dtype =
+                                  dtype::Byte());
+            case 2:
+                RUN(Float16, param[0].layout.dtype = param[1].layout.dtype =
+                                     dtype::Float16());
+            case 4:
+                RUN(Int32, param[0].layout.dtype = param[1].layout.dtype =
+                                   dtype::Int32());
+        }
+    } else {
+        RUN(Quantized4Asymm, );
     }
     megdnn_assert(0, "bad dtype size");
 }

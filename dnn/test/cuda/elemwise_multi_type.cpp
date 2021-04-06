@@ -38,7 +38,7 @@ static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) 
     for (auto type : std::vector<std::pair<DType, DType>>{
                  {dtype::QuantizedS8(1.4f), dtype::QuantizedS8(1.7f)},
                  {dtype::QuantizedS8(1.4f), dtype::QuantizedS32(0.1f)},
-                 {dtype::QuantizedS32(0.1f), dtype::QuantizedS8(0.4f)}
+                 {dtype::QuantizedS32(0.1f), dtype::QuantizedS8(0.4f)},
          }) {
         if (type.first.enumv() == DTypeEnum::QuantizedS32 ||
             type.second.enumv() == DTypeEnum::QuantizedS32) {
@@ -102,6 +102,64 @@ static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) 
     }
 }
 
+static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker,
+                        Mode mode) {
+    for (auto type : std::vector<std::pair<DType, DType>>{
+                 {dtype::QuantizedS4(1.4f), dtype::QuantizedS4(1.7f)},
+                 {dtype::Quantized4Asymm(8, 1.4f),
+                  dtype::Quantized4Asymm(8, 1.7f)},
+                 {dtype::QuantizedS4(1.4f), dtype::QuantizedS32(0.1f)},
+                 {dtype::QuantizedS32(0.1f), dtype::QuantizedS4(0.4f)}}) {
+        if (type.first.enumv() == DTypeEnum::QuantizedS32 ||
+            type.second.enumv() == DTypeEnum::QuantizedS32) {
+            if (mode != Mode::QRELU && mode != Mode::QH_SWISH &&
+                mode != Mode::QSIGMOID && mode != Mode::QTANH &&
+                mode != Mode::QFAST_TANH && mode != Mode::QADD &&
+                mode != Mode::QFUSE_ADD_RELU &&
+                mode != Mode::QFUSE_ADD_SIGMOID &&
+                mode != Mode::QFUSE_ADD_TANH &&
+                mode != Mode::QFUSE_ADD_H_SWISH) {
+                return;
+            }
+        }
+        checker.set_param(mode);
+        UniformIntRNG rng_int4{-7, 7};
+        UniformIntRNG rng_uint4{0, 15};
+        UniformIntRNG rng_int32{INT16_MIN >> 1, INT16_MAX >> 1};
+
+        auto set_rng = [&](DType dtype, size_t i) {
+            if (dtype.enumv() == DTypeEnum::QuantizedS4) {
+                checker.set_rng(i, &rng_int4);
+            } else if (dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+                checker.set_rng(i, &rng_uint4);
+            } else {
+                megdnn_assert(dtype.enumv() == DTypeEnum::QuantizedS32);
+                checker.set_rng(i, &rng_int32);
+            }
+            checker.set_dtype(i, dtype);
+        };
+        //! As some mode may cause compute error
+        checker.set_epsilon(1 + 1e-3);
+
+        auto src_type = type.first;
+        auto dst_type = type.second;
+        for (int i = 0; i < arity; i++) {
+            set_rng(src_type, i);
+        }
+        set_rng(dst_type, arity);
+
+        if (arity == 1) {
+            checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}})
+                    .execs({{1, 4, 5, 5}, {1, 4, 5, 5}});
+        } else if (arity == 2) {
+            checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}})
+                    .execs({{1, 4, 5, 5}, {1, 4, 5, 5}, {1, 4, 5, 5}});
+        } else {
+            megdnn_assert(0);
+        }
+    }
+}
+
 TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_UNARY) {
     Checker<ElemwiseMultiType> checker(handle_cuda());
     for (auto mode :
@@ -112,6 +170,11 @@ TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_UNARY) {
           Mode::QROUND,   Mode::QERF,    Mode::QERFINV, Mode::QERFC,
           Mode::QERFCINV, Mode::QH_SWISH}) {
         run_test(1, checker, mode);
+    }
+    for (auto mode : {Mode::QRELU, Mode::QABS, Mode::QCEIL, Mode::QFLOOR,
+                      Mode::QNEGATE, Mode::QSIGMOID, Mode::QTANH,
+                      Mode::QFAST_TANH, Mode::QROUND, Mode::QH_SWISH}) {
+        run_test_q4(1, checker, mode);
     }
 }
 
@@ -145,6 +208,15 @@ TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_BINARY) {
                       Mode::QFUSE_ADD_H_SWISH}) {
         run_test(2, checker, mode);
     }
+    for (auto mode : {Mode::QADD, Mode::QMAX, Mode::QMIN, Mode::QMUL,
+                      Mode::QSUB, Mode::QSWITCH_GT0,
+
+                      Mode::QLT, Mode::QLEQ, Mode::QEQ,
+
+                      Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID,
+                      Mode::QFUSE_ADD_TANH, Mode::QFUSE_ADD_H_SWISH}) {
+        run_test_q4(2, checker, mode);
+    }
 }
 
 TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_TENARY) {
@@ -152,7 +224,6 @@ TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_TENARY) {
     Checker<ElemwiseMultiType> checker(handle_cuda());
 
     for (auto mode : {Mode::QFUSE_MUL_ADD3, Mode::QCOND_LEQ_MOV}) {
-        printf("Testing mode: %d\n", (int)mode);
         UniformIntRNG rng_int8{-127, 127};
         UniformIntRNG rng_uint8{0, 225};
         checker.set_param({mode})
@@ -169,7 +240,17 @@ TEST_F(CUDA, ELEMWISE_QUANTIZED_MODE_TENARY) {
                 .execs({{9}, {9}, {9}, {}})
                 .execs({{17}, {17}, {17}, {}})
                 .execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}});
-
+        UniformIntRNG rng_int4{-7, 7};
+        checker.set_param({mode})
+                .set_rng(0, &rng_int4)
+                .set_rng(1, &rng_int4)
+                .set_rng(2, &rng_int4)
+                .set_dtype(0, dtype::QuantizedS4(1.2f))
+                .set_dtype(1, dtype::QuantizedS4(1.6f))
+                .set_dtype(2, dtype::QuantizedS4(1.8f))
+                .set_dtype(3, dtype::QuantizedS4(1.4f))
+                .execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}, {}})
+                .execs({{1, 4, 5, 5}, {1, 4, 5, 5}, {1, 4, 5, 5}, {}});
     }
 }
 
@@ -365,6 +446,44 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_TENARY) {
             printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
                    (2.0 * N * C * H * W + 1) / (time * 1e6));
 
+        };
+        run_bench(256, 256, 56, 56);
+        run_bench(64, 256, 56, 56);
+        run_bench(256, 128, 28, 28);
+        run_bench(64, 128, 28, 28);
+    }
+}
+
+TEST_F(CUDA, BENCHMARK_ELEMWISE_QUANTIZED_MODE_BINARY_Q4) {
+    using Mode = ElemwiseMultiType::Param::Mode;
+    CUBenchmarker<ElemwiseMultiType> bencher(handle_cuda());
+    UniformIntRNG rng{-7, 7};
+
+    for (auto mode : {Mode::QADD, Mode::QFUSE_ADD_RELU, Mode::QFUSE_ADD_SIGMOID,
+                      Mode::QFUSE_ADD_TANH, Mode::QFUSE_ADD_H_SWISH}) {
+        printf("Benchmark mode: %d\n", (int)mode);
+        bencher.set_param({mode})
+                .set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_dtype(0, dtype::QuantizedS4(0.1f))
+                .set_dtype(1, dtype::QuantizedS4(0.2f))
+                .set_dtype(2, dtype::QuantizedS4(0.01f));
+        size_t nr_times = 50;
+        bencher.set_times(nr_times);
+        auto run_bench = [&](size_t N, size_t C, size_t H, size_t W) {
+            printf("(NxCxHxW)=(%zux%zux%zux%zu)\n", N, C, H, W);
+            auto time =
+                    bencher.execs({{N, C, H, W}, {N, C, H, W}, {N, C, H, W}}) /
+                    nr_times;
+            printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
+                   (3.0 * N * C * H * W) / 2 / (time * 1e6));
+
+            time = bencher.execs({{N, C / 64, H, W, 64},
+                                  {N, C / 64, H, W, 64},
+                                  {N, C / 64, H, W, 64}}) /
+                   nr_times;
+            printf("time = %.2f, bandwidth = %.2f GB/s\n", time,
+                   (3.0 * N * C * H * W) / 2 / (time * 1e6));
         };
         run_bench(256, 256, 56, 56);
         run_bench(64, 256, 56, 56);

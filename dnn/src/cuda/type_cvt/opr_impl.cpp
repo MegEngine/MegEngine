@@ -26,8 +26,9 @@ void exec_src_quantized(
         cudaStream_t stream) {
     bool is_dst_quantized =
             dst.layout.dtype.category() == DTypeCategory::QUANTIZED;
+    bool is_dst_lowbit = dst.layout.dtype.is_low_bit();
     using ctype_src = typename DTypeTrait<T>::ctype;
-    if (!is_dst_quantized) {
+    if (!is_dst_quantized && !is_dst_lowbit) {
         switch (dst.layout.dtype.enumv()) {
 #define cb(_dt)                                                               \
     case DTypeTrait<_dt>::enumv: {                                            \
@@ -40,7 +41,7 @@ void exec_src_quantized(
                 megdnn_assert_internal(0);
 #undef cb
         }
-    } else {
+    } else if (!is_dst_lowbit) {
         switch (dst.layout.dtype.enumv()) {
 #define cb(_dt)                                                      \
     case DTypeTrait<_dt>::enumv: {                                   \
@@ -55,6 +56,21 @@ void exec_src_quantized(
                 megdnn_assert_internal(0);
 #undef cb
         }
+    } else {
+        switch (dst.layout.dtype.enumv()) {
+#define cb(_dt)                                                        \
+    case DTypeTrait<_dt>::enumv: {                                     \
+        auto dst_param = dst.layout.dtype.param<_dt>();                \
+        using ctype_dest = typename DTypeTrait<_dt>::ctype;            \
+        typecvt_kern_q2q4<ctype_src, ctype_dest>(dst, src, src_param, \
+                                                  dst_param, stream);  \
+        return;                                                        \
+    }
+            MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb);
+            default:
+                megdnn_assert_internal(0);
+#undef cb
+        }
     }
 }
 
@@ -63,8 +79,9 @@ void exec_src_normal(const TensorND& dst, const TensorND& src,
                      cudaStream_t stream) {
     bool is_dst_quantized =
             dst.layout.dtype.category() == DTypeCategory::QUANTIZED;
+    bool is_dst_lowbit = dst.layout.dtype.is_low_bit();
     using ctype_src = typename DTypeTrait<T>::ctype;
-    if (!is_dst_quantized) {
+    if (!is_dst_quantized && !is_dst_lowbit) {
         switch (dst.layout.dtype.enumv()) {
 #define cb(_dt)                                                    \
     case DTypeTrait<_dt>::enumv: {                                 \
@@ -78,7 +95,7 @@ void exec_src_normal(const TensorND& dst, const TensorND& src,
             default:
                 megdnn_assert_internal(0);
         }
-    } else {
+    } else if (!is_dst_lowbit) {
         switch (dst.layout.dtype.enumv()) {
 #define cb(_dt)                                                               \
     case DTypeTrait<_dt>::enumv: {                                            \
@@ -88,9 +105,23 @@ void exec_src_normal(const TensorND& dst, const TensorND& src,
         return;                                                               \
     }
             MEGDNN_FOREACH_QUANTIZED_DTYPE(cb);
+#undef cb
             default:
                 megdnn_assert_internal(0);
+        }
+    } else {
+        switch (dst.layout.dtype.enumv()) {
+#define cb(_dt)                                                                \
+    case DTypeTrait<_dt>::enumv: {                                             \
+        auto dst_param = dst.layout.dtype.param<_dt>();                        \
+        using ctype_dest = typename DTypeTrait<_dt>::ctype;                    \
+        typecvt_kern_n2q4<ctype_src, ctype_dest>(dst, src, dst_param, stream); \
+        return;                                                                \
+    }
+            MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb);
 #undef cb
+            default:
+                megdnn_assert_internal(0);
         }
     }
 }
@@ -101,6 +132,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     bool is_src_quantized =
             src.layout.dtype.category() == DTypeCategory::QUANTIZED;
     auto stream = cuda_stream(handle());
+
     if (!is_src_quantized)
         switch (src.layout.dtype.enumv()) {
 #define cb(_dt)                                 \
@@ -123,6 +155,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         return;                                           \
     }
             MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+            MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
             default:
                 megdnn_assert_internal(0);

@@ -308,6 +308,8 @@ class dt_qulowbit {
             return _;
         }
 
+        MEGDNN_DEVICE uint8_t as_storage() const { return _; }
+
         MEGDNN_HOST MEGDNN_DEVICE explicit dt_qulowbit(uint8_t val):_(val) {}
 #ifdef MEGDNN_CC_HOST
         explicit operator uint8_t() { return _; }
@@ -331,6 +333,8 @@ class dt_qlowbit {
         MEGDNN_DEVICE int8_t as_int8() const {
             return _;
         }
+
+        MEGDNN_DEVICE int8_t as_storage() const { return _; }
 
         MEGDNN_HOST MEGDNN_DEVICE explicit dt_qlowbit(int8_t val):_(val) {}
 #ifdef MEGDNN_CC_HOST

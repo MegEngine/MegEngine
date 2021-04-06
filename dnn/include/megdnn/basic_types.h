@@ -382,6 +382,9 @@ struct TensorLayout : public TensorShape {
 
     //! get lowest and highest offset reachable from this layout
     Span span() const;
+
+    //! total number of access bytes
+    size_t access_bytes() const;
 };
 
 /**

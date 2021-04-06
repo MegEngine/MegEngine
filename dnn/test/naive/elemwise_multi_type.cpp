@@ -115,8 +115,8 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_UNARY) {
         auto extra_impl = [&](const TensorNDArray& tensors) {
             TensorNDArray float_tensors;
             for (size_t i = 0; i < tensors.size(); ++i) {
-                auto layout = tensors[i].layout;
-                layout.dtype = dtype::Float32();
+                TensorLayout layout(static_cast<TensorShape>(tensors[i].layout),
+                                    dtype::Float32());
                 float_tensors.emplace_back(malloc(layout.span().dist_byte()),
                                            std::move(layout));
             }
@@ -206,8 +206,8 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_BINARY) {
         auto extra_impl = [&](const TensorNDArray& tensors) {
             TensorNDArray float_tensors;
             for (size_t i = 0; i < tensors.size(); ++i) {
-                auto layout = tensors[i].layout;
-                layout.dtype = dtype::Float32();
+                TensorLayout layout(static_cast<TensorShape>(tensors[i].layout),
+                                    dtype::Float32());
                 float_tensors.emplace_back(malloc(layout.span().dist_byte()),
                                            std::move(layout));
             }
@@ -266,8 +266,8 @@ TEST_F(NAIVE, ELEMWISE_QUANTIZED_MODE_TERNARY) {
         auto extra_impl = [&](const TensorNDArray& tensors) {
             TensorNDArray float_tensors;
             for (size_t i = 0; i < tensors.size(); ++i) {
-                auto layout = tensors[i].layout;
-                layout.dtype = dtype::Float32();
+                TensorLayout layout(static_cast<TensorShape>(tensors[i].layout),
+                                    dtype::Float32());
                 float_tensors.emplace_back(malloc(layout.span().dist_byte()),
                                            std::move(layout));
             }

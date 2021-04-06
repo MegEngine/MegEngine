@@ -29,6 +29,8 @@ RelayoutForwardImpl::Param::Param(const TensorND &src, const TensorND &dst,
 }
 
 bool RelayoutForwardImpl::Param::try_transpose() {
+    if (m_dst.layout.dtype.is_low_bit())
+        return false;
     relayout::TransposeParam transp;
     bool trans = relayout::is_transpose(m_src.layout, m_dst.layout, transp);
     if (!trans)
@@ -81,10 +83,15 @@ bool RelayoutForwardImpl::Param::try_copy_contig() {
         return false;
     if (lsrc.stride[0] != 1 || ldst.stride[0] != 1)
         return false;
-    cuda_check(cudaMemcpyAsync(
-                m_dst.raw_ptr, m_src.raw_ptr,
-                ldst.total_nr_elems() * dtype_size(),
-                cudaMemcpyDeviceToDevice, m_opr->stream()));
+    size_t copy_size;
+    if (ldst.dtype.is_low_bit()) {
+        copy_size = ldst.access_bytes();
+    } else {
+        copy_size = ldst.total_nr_elems() * dtype_size();
+    }
+
+    cuda_check(cudaMemcpyAsync(m_dst.raw_ptr, m_src.raw_ptr, copy_size,
+                               cudaMemcpyDeviceToDevice, m_opr->stream()));
     return true;
 }
 
@@ -106,6 +113,8 @@ bool RelayoutForwardImpl::Param::try_copy_2d(bool cross_dev) {
     TensorLayout lsrc = m_src.layout, ldst = m_dst.layout;
 
     if (lsrc.ndim > 2 || ldst.ndim > 2)
+        return false;
+    if (ldst.dtype.is_low_bit())
         return false;
 
     if (ldst.ndim == 1 && lsrc.ndim == 1) {
@@ -147,6 +156,8 @@ bool RelayoutForwardImpl::Param::try_copy_2d(bool cross_dev) {
 };
 
 bool RelayoutForwardImpl::Param::try_copy_last_contig() {
+    if (m_dst.layout.dtype.is_low_bit())
+        return false;
     //! check if the last stride is contiguous
     auto gcd = [](size_t a, size_t b) {
         if (a > b) std::swap(a, b);

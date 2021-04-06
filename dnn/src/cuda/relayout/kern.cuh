@@ -267,6 +267,129 @@ public:
 
 #undef DEFINE_CONTIG_RECEIVER
 
+#define ON(access_idx, par0, par1)                                     \
+    {                                                                  \
+        int32_t idx0 = par0.idx(access_idx * 2);                       \
+        int32_t idx1 = par0.idx(access_idx * 2 + 1);                   \
+        Storage x = (idx0 >= 0) ? par1.at(idx0) : (Storage)0;          \
+        Storage y = (idx1 >= 0) ? par1.at(idx1) : (Storage)0;          \
+        Storage dst = par0.make_vector(x, y).x;                        \
+        Storage* ptr = par0.ptr();                                     \
+        int32_t offset = par0.offset_from_access(access_idx * 2) >> 1; \
+        ptr[offset] = dst;                                             \
+    }
+
+template <typename OpCaller>
+__global__ void cuda_kern_general_q4(OpCaller op_caller, uint32_t size) {
+    uint32_t access_idx = blockIdx.x * blockDim.x + threadIdx.x,
+             delta = blockDim.x * gridDim.x;
+    using Storage = uint8_t;
+    if (access_idx < size) {
+        ON(access_idx, op_caller.par0, op_caller.par1);
+        access_idx += delta;
+        if (access_idx < size) {
+            ON(access_idx, op_caller.par0, op_caller.par1);
+            access_idx += delta;
+            if (access_idx < size) {
+                ON(access_idx, op_caller.par0, op_caller.par1);
+            }
+        }
+    }
+}
+
+#undef ON
+
+#define DEFINE_CONTIG_RECEIVER(_ndim, _cb_header, _cb_dispatch) \
+    _cb_header(_ndim) { return _cb_dispatch(_ndim, CONTIG_OTHER); }
+
+template <>
+class UserOpInvoker<dt_quint4, 2> {
+    bool m_invoked;
+    const ElemwiseOpParamN<2>& m_param;
+    cudaStream_t m_stream;
+    size_t m_rw_size;
+
+    void dispatch0() {
+        switch (m_param[0].layout.ndim) {
+#define cb(ndim) \
+    case ndim:   \
+        return dispatch1_##ndim();
+            MEGDNN_FOREACH_TENSOR_NDIM(cb)
+#undef cb
+        }
+    }
+
+#define cb_header(ndim) void dispatch1_##ndim()
+#define cb_dispatch(ndim, contig_mask) \
+    dispatch2<ParamElemVisitor<ndim, dt_quint4, contig_mask>>()
+    DEFINE_CONTIG_RECEIVER(1, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(2, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(3, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(4, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(5, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(6, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(7, cb_header, cb_dispatch)
+#undef cb_header
+#undef cb_dispatch
+
+    template <class PVis0>
+    void dispatch2() {
+        switch (m_param[1].layout.ndim) {
+#define cb(ndim) \
+    case ndim:   \
+        return dispatch3_##ndim<PVis0>();
+            MEGDNN_FOREACH_TENSOR_NDIM(cb)
+#undef cb
+        }
+    }
+
+#define cb_header(ndim)    \
+    template <class PVis0> \
+    void dispatch3_##ndim()
+#define cb_dispatch(ndim, contig_mask) \
+    do_run<PVis0, ParamElemVisitor<ndim, dt_quint4, contig_mask>>()
+    DEFINE_CONTIG_RECEIVER(1, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(2, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(3, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(4, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(5, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(6, cb_header, cb_dispatch)
+    DEFINE_CONTIG_RECEIVER(7, cb_header, cb_dispatch)
+#undef cb_header
+#undef cb_dispatch
+
+    int count = 0;
+    template <class PVis0, class PVis1>
+    void do_run() {
+        megdnn_assert(!m_invoked);
+        m_invoked = true;
+        typedef OpCallerBinaryNoContiguous<PVis0, PVis1> Caller;
+        size_t size = m_param[0].layout.access_bytes();
+        int grid_size, block_size;
+
+        Caller caller;
+        auto param_host_init = [&]() {
+            caller.par0.host_init(m_param[0], grid_size, block_size);
+            caller.par1.host_init(m_param[1], grid_size, block_size);
+        };
+        //! general
+        auto fptr = cuda_kern_general_q4<Caller>;
+        elemwise_intl::get_launch_spec(reinterpret_cast<const void*>(fptr),
+                                       size, &grid_size, &block_size);
+        param_host_init();
+        (*fptr)<<<grid_size, block_size, 0, m_stream>>>(caller, size);
+        after_kernel_launch();
+    }
+
+public:
+    UserOpInvoker(const ElemwiseOpParamN<2>& param, cudaStream_t stream)
+            : m_rw_size(param.size), m_param(param), m_stream(stream) {
+        m_invoked = false;
+        dispatch0();
+        megdnn_assert(m_invoked);
+    }
+};
+
 /* f}}} */
 
 #endif

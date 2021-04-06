@@ -917,4 +917,48 @@ TEST_F(CUDA, RELAYOUT_TEST) {
         checker.exec(TensorLayoutArray{arg.src, arg.dst});
     }
 }
+
+TEST_F(CUDA, RELAYOUT_Q4) {
+    Checker<Relayout> checker(handle_cuda());
+    UniformIntRNG rng_int4{-7, 7};
+    checker.set_rng(0, &rng_int4)
+            .set_rng(1, &rng_int4)
+            .set_dtype(0, dtype::QuantizedS4(1.f))
+            .set_dtype(1, dtype::QuantizedS4(1.f))
+            .execs({{1, 64, 15, 15}, {1, 15, 15, 64}})
+            .execs({{1, 5, 9, 32}, {1, 5, 32, 9}})
+            .execl(TensorLayoutArray{
+                    {{6400}, {1}, dtype::QuantizedS4{1.f}},
+                    {{20, 320}, {1024, 1}, dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{
+                    {{1200, 3}, {4, 1}, dtype::QuantizedS4{1.f}},
+                    {{20, 60, 3}, {256, 4, 1}, dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{
+                    {{20, 20, 3, 3}, {256, 12, 4, 1}, dtype::QuantizedS4{1.f}},
+                    {{1200, 3}, {4, 1}, dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{{{5, 16, 7, 7, 4},
+                                      {3136, 196, 28, 4, 1},
+                                      dtype::QuantizedS4{1.f}},
+                                     {{5, 16, 7, 7, 4},
+                                      {3136, 4, 448, 64, 1},
+                                      dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{{{5, 7, 7, 16, 4},
+                                      {3136, 448, 64, 4, 1},
+                                      dtype::QuantizedS4{1.f}},
+                                     {{5, 7, 7, 16, 4},
+                                      {3136, 28, 4, 196, 1},
+                                      dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{{{5, 2, 7, 7, 32},
+                                      {3136, 1568, 224, 32, 1},
+                                      dtype::QuantizedS4{1.f}},
+                                     {{5, 2, 7, 7, 32},
+                                      {3136, 32, 448, 64, 1},
+                                      dtype::QuantizedS4{1.f}}})
+            .execl(TensorLayoutArray{{{5, 7, 7, 2, 32},
+                                      {3136, 448, 64, 32, 1},
+                                      dtype::QuantizedS4{1.f}},
+                                     {{5, 7, 7, 2, 32},
+                                      {3136, 224, 32, 1568, 1},
+                                      dtype::QuantizedS4{1.f}}});
+}
 // vim: syntax=cpp.doxygen
