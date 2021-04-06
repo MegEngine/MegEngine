@@ -35,4 +35,18 @@ struct GenericPyOp final : OpDefImplBase<GenericPyOp> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 };
 
+struct FastpathCopy final : OpDefImplBase<FastpathCopy> {
+    FastpathCopy() = default;
+
+    size_t hash() const override {
+        return mgb::hash(this->dyn_typeinfo());
+    }
+
+    bool is_same_st(const Hashable& rhs) const override {
+        return this->dyn_typeinfo() == rhs.dyn_typeinfo();
+    }
+
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
 } // namespace mgb::imperative

@@ -17,7 +17,6 @@ namespace mgb::imperative::python {
 struct TraceInfo {
     int64_t mixin_handle = -1;
     bool recording = false;
-    bool copied = false;
 
     // refer to CompiledTensorProxy in tracing.py, works from second trace step
     PyObject* compiled_info = nullptr;
@@ -35,7 +34,6 @@ struct TraceInfo {
         compiled_info = that.compiled_info;
         Py_XINCREF(compiled_info);
 
-        copied = true;
         return *this;
     }
 
