@@ -55,6 +55,12 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle):
     megdnn_assert(cublasLtGetVersion() >= 10010,
         "cuda library version is too low to run cublasLt");
 #endif
+#if CUDNN_VERSION >= 8000
+    megdnn_log_warn(R"(
+        Cudnn8 will jit ptx code with cache. You can set 
+        CUDA_CACHE_MAXSIZE and CUDA_CACHE_PATH environment var to avoid repeat jit(very slow).
+        For example `export CUDA_CACHE_MAXSIZE=2147483647` and `export CUDA_CACHE_PATH=/data/.cuda_cache`)");
+#endif
     cudnn_check(cudnnCreate(&m_cudnn_handle));
     cublas_check(cublasCreate(&m_cublas_handle));
 #if CUDA_VERSION >= 10010

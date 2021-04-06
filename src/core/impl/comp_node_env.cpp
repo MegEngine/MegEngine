@@ -214,6 +214,8 @@ void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
             mgb_assert(
                     m_property.mem_alignment ==
                     MegDNNHandle::get(*this).handle()->alignment_requirement());
+            auto err = atexit(&CompNode::finalize);
+            mgb_assert(!err, "failed to register CompNode::finalize at exit");
         }
         MGB_CATCH(std::exception & exc, {
             mgb_log_error("async cuda init failed: %s", exc.what());
@@ -304,6 +306,8 @@ void CompNodeEnv::init_rocm_async(int dev, CompNode comp_node,
             mgb_assert(
                     m_property.mem_alignment ==
                     MegDNNHandle::get(*this).handle()->alignment_requirement());
+            auto err = atexit(&CompNode::finalize);
+            mgb_assert(!err, "failed to register CompNode::finalize at exit");
         }
         MGB_CATCH(std::exception & exc, {
             mgb_log_error("async rocm init failed: %s", exc.what());

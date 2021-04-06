@@ -199,4 +199,4 @@ def test_dp_correctness():
     model_name = "mnist_model_with_test.mge"
     model_path = os.path.join(os.path.dirname(__file__), model_name)
     set_execution_strategy("HEURISTIC_REPRODUCIBLE")
-    run_test(model_path, False, False, max_err=1e-5)
+    run_test(model_path, False, False, max_err=5e-5)

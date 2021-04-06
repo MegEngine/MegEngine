@@ -31,7 +31,7 @@ echo "Build with ${SDK_NAME}"
 
 if [ $SDK_NAME == "cu101" ];then
     CUDA_COPY_LIB_LIST="${CUDA_LIB_DIR}/libnvrtc.so.10.1"
-    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF" 
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF -DMGE_WITH_CUBLAS_SHARED=OFF" 
     BUILD_GCC8="ON"  
     REQUIR_CUDA_VERSION="10010" 
     REQUIR_CUDNN_VERSION="7.6.3" 
@@ -49,7 +49,7 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
-    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON\
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
         -gencode arch=compute_61,code=sm_61 \
         arch=compute_70,code=sm_70 \
         arch=compute_75,code=sm_75 \
@@ -72,7 +72,7 @@ elif [ $SDK_NAME == "cu112" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
-    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON \
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
         -gencode arch=compute_61,code=sm_61 \
         arch=compute_70,code=sm_70 \
         arch=compute_75,code=sm_75 \

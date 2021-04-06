@@ -1850,8 +1850,6 @@ TEST(TestEnableTensorCore, SmallInputShape) {
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
 
-//! close for cu111 ci, reopen it when bug fixed
-#if CUDA_VERSION < 11000
 TEST(TestEnableTensorCore, Nchw4Nchw) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -1957,7 +1955,6 @@ TEST(TestEnableTensorCore, Nchw4Nchw) {
         MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
     }
 }
-#endif
 
 TEST(TestEnableTensorCore, ConvBiasWithZ) {
     REQUIRE_GPU(1);

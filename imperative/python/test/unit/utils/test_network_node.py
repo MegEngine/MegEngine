@@ -22,7 +22,7 @@ from megengine.utils.comp_graph_tools import GraphInference
 from megengine.utils.network import Network as Net
 
 
-def check_pygraph_dump(trace_func, inp_data, expect_results):
+def check_pygraph_dump(trace_func, inp_data, expect_results, max_err=None):
     orig_model = io.BytesIO()
     inp_size = len(inp_data)
     out_size = len(expect_results)
@@ -46,7 +46,12 @@ def check_pygraph_dump(trace_func, inp_data, expect_results):
     results = graph.run(inp_dict=inp_dict)
 
     for ind, tensor in enumerate(expect_results):
-        np.testing.assert_equal(tensor.numpy(), results[output_names[ind]])
+        if max_err:
+            np.testing.assert_almost_equal(
+                tensor.numpy(), results[output_names[ind]], max_err
+            )
+        else:
+            np.testing.assert_equal(tensor.numpy(), results[output_names[ind]])
         assert tensor.dtype == results[output_names[ind]].dtype
 
 
@@ -178,7 +183,8 @@ def test_convtranspose():
 
     data = Tensor(np.random.random((1, 32, 32, 32)))
     result = fwd(data)
-    check_pygraph_dump(fwd, [data], [result])
+    # cu111 has 1e-7 diff
+    check_pygraph_dump(fwd, [data], [result], 5)
 
 
 @pytest.mark.skip(reason="pytest aborted")
