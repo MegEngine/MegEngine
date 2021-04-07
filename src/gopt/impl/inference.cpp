@@ -1565,7 +1565,7 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 if (new_inp[i]->shape()[1] % 4 != 0) {
                     can_exec_cd4 = false;
                 }
-                //! cd4 elemwise with scaler is supported
+                //! cd4 elemwise with scaler is unsupported
             } else if (!new_inp[i]->shape().is_scalar()) {
                 can_exec_cd4 = false;
             }
@@ -1627,6 +1627,7 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
     replace_func[opr::Broadcast::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::IncrSubtensor::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::AxisAddRemove::typeinfo()] = relayout_inp_to_chw;
+    replace_func[opr::TypeCvt::typeinfo()] = replace_elemwise_opr;
     replace_func[opr::ResizeForward::typeinfo()] = replace_resize_opr;
     replace_func[opr::WarpPerspectiveForward::typeinfo()] =
             replace_warp_perspective_opr;
