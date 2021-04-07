@@ -287,7 +287,7 @@ extract_algo_attribute_from_execution_strategy(
     if (strategy & ExecutionStrategy::REPRODUCIBLE) {
         ret.first |= AlgoAttribute::REPRODUCIBLE;
     }
-    if (strategy & ExecutionStrategy::OPTMIZED) {
+    if (strategy & ExecutionStrategy::OPTIMIZED) {
         ret.second |= AlgoAttribute::NAIVE;
     }
     return ret;
