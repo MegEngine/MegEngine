@@ -283,7 +283,7 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
 static bool algo_attribute_match_strategy(AlgoAttribute attribute,
                                           ExecutionStrategy selected_strategy) {
     bool ret = true;
-    if (selected_strategy & ExecutionStrategy::OPTMIZED) {
+    if (selected_strategy & ExecutionStrategy::OPTIMIZED) {
         ret &= (!static_cast<bool>(AlgoAttribute::NAIVE & attribute));
     } else if (selected_strategy & ExecutionStrategy::REPRODUCIBLE) {
         ret &= static_cast<bool>(AlgoAttribute::REPRODUCIBLE & attribute);

@@ -1756,8 +1756,8 @@ TEST(TestGoptInference, FastProfileCache) {
     using S = opr::Convolution::ExecutionPolicy::Strategy;
     ASSERT_EQ(S::HEURISTIC, conv.execution_policy_transient().strategy);
     gopt::modify_opr_algo_strategy_inplace({z + 2.3f},
-                                           S::PROFILE | S::OPTMIZED);
-    ASSERT_EQ(S::PROFILE | S::OPTMIZED, conv.execution_policy().strategy);
+                                           S::PROFILE | S::OPTIMIZED);
+    ASSERT_EQ(S::PROFILE | S::OPTIMIZED, conv.execution_policy().strategy);
 }
 
 TEST(TestGoptInference, AlgoWorkspaceLimit) {

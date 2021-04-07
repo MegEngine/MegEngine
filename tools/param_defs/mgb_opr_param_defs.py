@@ -41,12 +41,13 @@ pdef('PersistentOutputStorage').add_fields(
           Doc('REPRODUCIBLE',
               'when profile or heuristic algo selection it require the algos'
               'must be reproducible'),
-          Doc('OPTMIZED',
+          Doc('OPTIMIZED',
               'profile require algos are optmized to achieve fast-profile'),
           default=('HEURISTIC',),
           member_alias=[(('HEURISTIC', 'REPRODUCIBLE'), 'HEURISTIC_REPRODUCIBLE'),
                         (('PROFILE', 'REPRODUCIBLE'), 'PROFILE_REPRODUCIBLE'),
                         (('PROFILE', 'HEURISTIC'), 'PROFILE_HEURISTIC'),
+                        (('OPTIMIZED',), 'OPTMIZED'),
                         ]).
  add_fields('uint64',
             Doc('workspace_limit', 'workspace limit in bytes'),

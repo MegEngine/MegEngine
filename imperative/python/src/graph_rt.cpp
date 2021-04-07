@@ -266,7 +266,7 @@ void init_graph_rt(py::module m) {
                 {"HEURISTIC", [&]() { stg = _AlgoStrategy::HEURISTIC; }},
                 {"PROFILE", [&]() { stg = _AlgoStrategy::PROFILE; }},
                 {"REPRODUCIBLE", [&]() { stg = _AlgoStrategy::REPRODUCIBLE; }},
-                {"OPTMIZED", [&]() { stg = _AlgoStrategy::OPTMIZED; }},
+                {"OPTIMIZED", [&]() { stg = _AlgoStrategy::OPTIMIZED; }},
         };
         auto it = m.find(strategy);
         mgb_assert(it != m.end(), "Invalid strategy string!");

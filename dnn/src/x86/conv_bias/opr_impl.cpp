@@ -185,7 +185,7 @@ SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
     }
     //! conv1x1
     im2col_prefer |= (FH == 1 && FW == 1);
-    //! x86 8x8x16 not optmized, so it will use fallback im2col+matmul
+    //! x86 8x8x16 not optimized, so it will use fallback im2col+matmul
     if (param.deduce_algo_data_type() == AlgoDataType::INT8X8X16) {
         im2col_prefer = true;
     }

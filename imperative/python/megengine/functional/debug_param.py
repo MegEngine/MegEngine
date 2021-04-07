@@ -40,7 +40,7 @@ def set_execution_strategy(option):
         * HEURISTIC uses heuristic to choose the fastest algorithm.
         * PROFILE runs possible algorithms on real device to find the best one.
         * REPRODUCIBLE uses the algorithms that is reproducible.
-        * OPTMIZED uses the algorithms that is optimized.
+        * OPTIMIZED uses the algorithms that is optimized.
 
         The default strategy is HEURISTIC, this options can be combined to
         form a combination option, e.g. PROFILE | REPRODUCIBLE

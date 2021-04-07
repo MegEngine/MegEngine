@@ -357,7 +357,7 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
@@ -444,7 +444,7 @@ TEST(TestOprDNN, ConvolutionExePolicy) {
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
@@ -1717,7 +1717,7 @@ TEST(TestOprDNN, LocalShareForwardExecPolicy) {
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
@@ -1828,7 +1828,7 @@ TEST(TestOprDNN, DeformableConvForward) {
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
@@ -1997,7 +1997,7 @@ TEST(TestOprDNN, BatchConvBiasForward) {
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTMIZED}) {
+          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
