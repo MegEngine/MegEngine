@@ -629,11 +629,10 @@ Checker<Convolution> checker(handle);
             out_type = inp_type;
         }
 
-        checker
-            .set_dtype(0, inp_type)
-            .set_dtype(1, inp_type)
-            .set_dtype(2, out_type)
-            .set_param(param);
+        checker.set_dtype(0, inp_type)
+                .set_dtype(1, inp_type)
+                .set_dtype(2, out_type)
+                .set_param(param);
         auto opr = checker.opr();
         opr->param() = param;
         std::string param_str;
@@ -642,7 +641,8 @@ Checker<Convolution> checker(handle);
         oly.dtype = out_type;
         opr->deduce_layout(ily, fly, oly);
         int channel_start = 1;
-        if (format) channel_start = 3;
+        if (format)
+            channel_start = 3;
         float scale = 1.0f / sqrt(fshp[channel_start] * FH * FW);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_rng(0, &rng).set_rng(1, &rng);
@@ -653,11 +653,11 @@ Checker<Convolution> checker(handle);
             construct_sub_execution_policy_heuristic<ConvolutionForward>(
                     opr->execution_policy(), {ily, fly, oly}, param_str,
                     opr->handle());
-            checker
-                .set_epsilon(eps_getter(dtype == 1, 0, algo.name.c_str()))
-                .execs({ishp, fshp, {}});
+            checker.set_epsilon(
+                           eps_getter(dtype == 1, 0, algo.desc.name.c_str()))
+                    .execs({ishp, fshp, {}});
             opr->execution_policy() = {};
-            ASSERT_TRUE(checker.prev_succ()) << errmsg(algo.name.c_str());
+            ASSERT_TRUE(checker.prev_succ()) << errmsg(algo.desc.name.c_str());
         }
 
         if (test_backward) {
@@ -671,7 +671,7 @@ Checker<Convolution> checker(handle);
             opr->param() = param;
             std::string param_str;
             Algorithm::serialize_write_pod(opr->param(), param_str);
-            for (auto algo: opr->get_all_algorithms_info(fly, oly, ily)) {
+            for (auto algo : opr->get_all_algorithms_info(fly, oly, ily)) {
                 used_algos_bwd_data.insert(algo.desc);
                 opr->execution_policy().algo = algo.desc;
                 construct_sub_execution_policy_heuristic<
@@ -679,26 +679,26 @@ Checker<Convolution> checker(handle);
                                                  {fly, oly, ily}, param_str,
                                                  opr->handle());
                 checker_bwd_data
-                    .set_epsilon(eps_getter(dtype == 1, 1, algo.name.c_str()))
-                    .execl({fly, oly, ily});
+                        .set_epsilon(eps_getter(dtype == 1, 1,
+                                                algo.desc.name.c_str()))
+                        .execl({fly, oly, ily});
                 opr->execution_policy() = {};
-                ASSERT_TRUE(checker_bwd_data.prev_succ()) <<
-                    errmsg(algo.name.c_str());
+                ASSERT_TRUE(checker_bwd_data.prev_succ())
+                        << errmsg(algo.desc.name.c_str());
             }
         }
         if (test_backward) {
             // backward filter
-            checker_bwd_filter
-                .set_dtype(0, inp_type)
-                .set_dtype(1, out_type)
-                .set_dtype(2, inp_type)
-                .set_param(param);
+            checker_bwd_filter.set_dtype(0, inp_type)
+                    .set_dtype(1, out_type)
+                    .set_dtype(2, inp_type)
+                    .set_param(param);
 
             auto opr = checker_bwd_filter.opr();
             opr->param() = param;
             std::string param_str;
             Algorithm::serialize_write_pod(opr->param(), param_str);
-            for (auto algo: opr->get_all_algorithms_info(ily, oly, fly)) {
+            for (auto algo : opr->get_all_algorithms_info(ily, oly, fly)) {
                 used_algos_bwd_flt.insert(algo.desc);
                 opr->execution_policy().algo = algo.desc;
                 construct_sub_execution_policy_heuristic<
@@ -706,11 +706,12 @@ Checker<Convolution> checker(handle);
                                                    {ily, oly, fly}, param_str,
                                                    opr->handle());
                 checker_bwd_filter
-                    .set_epsilon(eps_getter(dtype == 1, 2, algo.name.c_str()))
-                    .execl({ily, oly, fly});
+                        .set_epsilon(eps_getter(dtype == 1, 2,
+                                                algo.desc.name.c_str()))
+                        .execl({ily, oly, fly});
                 opr->execution_policy() = {};
-                ASSERT_TRUE(checker_bwd_filter.prev_succ()) <<
-                    errmsg(algo.name.c_str());
+                ASSERT_TRUE(checker_bwd_filter.prev_succ())
+                        << errmsg(algo.desc.name.c_str());
             }
         }
     }

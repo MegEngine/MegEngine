@@ -65,11 +65,6 @@ public:
         return {AlgoDataType::FLOAT32, AlgoCategory::WINOGRAD};
     }
     MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_F32)
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_matmul_algo->name(), ret);
-        return ret;
-    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -101,11 +96,6 @@ public:
         return {AlgoDataType::FLOAT32, AlgoCategory::WINOGRAD};
     }
     MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_4X4_F32)
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_matmul_algo->name(), ret);
-        return ret;
-    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -137,11 +127,6 @@ public:
         return {AlgoDataType::QINT8X8X32, AlgoCategory::WINOGRAD};
     }
     MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_QS8)
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_matmul_algo->name(), ret);
-        return ret;
-    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;
@@ -173,11 +158,6 @@ public:
         return {AlgoDataType::QINT8X8X32, AlgoCategory::WINOGRAD};
     }
     MEGDNN_DECL_ALGO_TYPE(FB_WINOGRAD_8X8_QS8)
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_matmul_algo->name(), ret);
-        return ret;
-    }
 
 private:
     MatrixMulImpl::AlgoBase* m_matmul_algo;

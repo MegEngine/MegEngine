@@ -116,8 +116,10 @@ struct hash<megdnn::detail::Algorithm::Info::Desc> {
             const megdnn::detail::Algorithm::Info::Desc& desc) const {
         return megdnn::hash_combine<size_t>(
                 megdnn::hash_combine<size_t>(
-                        std::hash<std::string>()(desc.param),
-                        std::hash<uint32_t>()(desc.type)),
+                        std::hash<std::string>()(desc.name),
+                        megdnn::hash_combine<size_t>(
+                                std::hash<std::string>()(desc.param),
+                                std::hash<uint32_t>()(desc.type))),
                 std::hash<uint32_t>()(static_cast<uint32_t>(desc.handle_type)));
     }
 };

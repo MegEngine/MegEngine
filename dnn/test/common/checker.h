@@ -482,7 +482,7 @@ public:
              AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info(
                      opr.get(), layouts)) {
             if (std::regex_match(
-                        algo_info.name,
+                        algo_info.desc.name,
                         std::regex("(" + policy_name.name + ")(.*)"))) {
                 ret.algo = algo_info.desc;
             } else {
@@ -495,7 +495,7 @@ public:
             if (sub_items.size() != policy_name.sub_policy_names.size()) {
                 printf("Invalid sub_policy_names in %s, expected %zu but got "
                        "%zu\n",
-                       algo_info.name.c_str(), sub_items.size(),
+                       algo_info.desc.name.c_str(), sub_items.size(),
                        policy_name.sub_policy_names.size());
                 return {};
             }
@@ -528,7 +528,7 @@ public:
             auto algo =
                     OprAlgoProxy::get_algorithm_info_heuristic(opr, layouts);
             ASSERT_STREQ(opr->get_algorithm_from_desc(m_policy.algo)->name(),
-                         algo.name.c_str());
+                         algo.desc.name.c_str());
         } else {
             opr->execution_policy() = m_policy;
         }

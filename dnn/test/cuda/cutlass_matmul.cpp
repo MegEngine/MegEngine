@@ -88,7 +88,7 @@ void test_multibatchsize(
                          A_tensor.layout(), B_tensor.layout(),
                          C_tensor.layout())) {
                 if (std::regex_match(
-                            i.name.c_str(),
+                            i.desc.name.c_str(),
                             std::regex("(" + std::string(algo) + ")(.*)"))) {
                     opr_reference->execution_policy().algo = i.desc;
                     break;
@@ -117,7 +117,7 @@ void test_multibatchsize(
                          A_tensor_prime.layout(), B_tensor.layout(),
                          C_tensor_batch.layout())) {
                 if (std::regex_match(
-                            i.name.c_str(),
+                            i.desc.name.c_str(),
                             std::regex("(" + std::string(algo) + ")(.*)"))) {
                     opr_reference->execution_policy().algo = i.desc;
                     break;

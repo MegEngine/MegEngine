@@ -400,7 +400,7 @@ struct OprProxyProfilingBase
             megcoreSynchronize(opr->handle()->megcore_computing_handle());
             timer.stop();
             megdnn_log("%.3fms %s", timer.get_time_in_us() / 1e3,
-                       algo.name.c_str());
+                       algo.desc.name.c_str());
             if (min_time > timer.get_time_in_us()) {
                 min_time = timer.get_time_in_us();
                 best_algo = algo.desc;
@@ -522,7 +522,7 @@ struct OprWeightPreprocessProxyImpl : public OprProxyProfilingBase<Opr> {
                 megcoreSynchronize(opr->handle()->megcore_computing_handle());
                 timer.stop();
                 printf("%.3fms %s\n", timer.get_time_in_us() / 1e3,
-                       algo.name.c_str());
+                       algo.desc.name.c_str());
                 if (min_time > timer.get_time_in_us()) {
                     min_time = timer.get_time_in_us();
                     Base::target_execution_policy.algo = algo.desc;

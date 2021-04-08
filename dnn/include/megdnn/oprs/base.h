@@ -136,16 +136,16 @@ public:
             uint32_t type = INVALID_ALGO_TYPE;
             //! serialized param of the algo type
             std::string param;
+            //! algorithm name
+            std::string name;
             bool valid() const { return type != INVALID_ALGO_TYPE; }
             void reset() { type = INVALID_ALGO_TYPE; }
 
             bool operator==(const Desc& rhs) const {
                 return handle_type == rhs.handle_type && type == rhs.type &&
-                       param == rhs.param;
+                       param == rhs.param && name == rhs.name;
             }
         } desc;
-        //! algorithm name
-        std::string name;
         Attribute attribute;
         bool valid() const { return desc.valid(); }
         void reset() { desc.reset(); }
@@ -178,11 +178,11 @@ public:
     static std::string attribute_str(const Attribute& attr);
 
     Handle::HandleType handle_type() const { return m_handle_type; }
-    Info info() const {
-        return {{handle_type(), type(), param()}, name(), attribute()};
-    }
 
-    Info::Desc desc() const { return {handle_type(), type(), param()}; }
+    Info::Desc desc() const { return {handle_type(), type(), param(), name()}; }
+    Info info() const {
+        return {desc(), attribute()};
+    }
 
     template <typename T>
     static void serialize_write_pod(const T& val, std::string& result) {

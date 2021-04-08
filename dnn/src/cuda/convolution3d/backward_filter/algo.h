@@ -183,11 +183,6 @@ public:
                                  TensorLayout& diff_pg);
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_impl->name(), ret);
-        return ret;
-    }
 };
 
 class Convolution3DBackwardFilterImpl::AlgoPack : NonCopyableObj {

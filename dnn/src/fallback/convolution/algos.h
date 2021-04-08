@@ -155,12 +155,6 @@ public:
     //! select matmul to the highest preference
     bool is_preferred(const NCBKernSizeParam& param) const override;
 
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_algorithm->name(), ret);
-        return ret;
-    }
-
     static ConvBiasImpl::NCBKernSizeParam init_conv_bias_param(
             const NCBKernSizeParam& param);
 

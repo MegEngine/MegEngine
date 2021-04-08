@@ -318,7 +318,7 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
         Maybe<AlgoChooserProfileCache::ResultEntry> cur_rst;
         std::string msg = ssprintf("profiling %s algorithm %s %s",
                                    ctx.mgb_opr()->dyn_typeinfo()->name,
-                                   algo.name.c_str(), layouts_str.c_str());
+                                   algo.desc.name.c_str(), layouts_str.c_str());
         ImplExecutionPolicy policy;
         policy.algo = algo.desc;
         ctx.construct_execution_policy(selected_strategy, policy);
@@ -327,12 +327,12 @@ void AlgoChooser<Opr>::profile(ExeContext& ctx,
         }
         auto palgo = ctx.megdnn_opr()->get_algorithm_from_desc(policy.algo);
         if (!(palgo->contain_attribute_all(target_attr.first) &&
-            !palgo->contain_attribute_any(target_attr.second))) {
+              !palgo->contain_attribute_any(target_attr.second))) {
             mgb_log_debug(
                     "skip algo %s with attribute(%s), which is not match the "
                     "profile strategy required contain attribute(%s) and not "
                     "contain attribute(%s).",
-                    algo.name.c_str(),
+                    algo.desc.name.c_str(),
                     Algorithm::attribute_str(palgo->attribute()).c_str(),
                     Algorithm::attribute_str(target_attr.first).c_str(),
                     Algorithm::attribute_str(target_attr.second).c_str());
@@ -552,8 +552,8 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
     auto&& prof = rst.val();
     std::unordered_map<std::string, ImplAlgo> algo_map;
     for (auto i : get_all_candidates()) {
-        auto ins = algo_map.emplace(i.name.c_str(), i);
-        mgb_assert(ins.second, "duplicated algo name: %s", i.name.c_str());
+        auto ins = algo_map.emplace(i.desc.name.c_str(), i);
+        mgb_assert(ins.second, "duplicated algo name: %s", i.desc.name.c_str());
     }
 
     if (prof.empty())

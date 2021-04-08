@@ -41,8 +41,11 @@ std::string serialize_policy(const megdnn::ExecutionPolicy& policy) {
     megdnn::Algorithm::serialize_write_pod(policy.algo.handle_type, ret);
     megdnn::Algorithm::serialize_write_pod(policy.algo.type, ret);
     uint32_t param_size = policy.algo.param.size();
+    uint32_t name_size = policy.algo.name.size();
     megdnn::Algorithm::serialize_write_pod<uint32_t>(param_size, ret);
+    megdnn::Algorithm::serialize_write_pod<uint32_t>(name_size, ret);
     ret += policy.algo.param;
+    ret += policy.algo.name;
 
     //! serialize sub_policy
     uint32_t size = policy.sub_policy.size();
@@ -64,10 +67,16 @@ megdnn::ExecutionPolicy deserialize_policy(const char* buf, uint32_t size,
     cb(ret.algo.type, uint32_t);
 
     uint32_t param_size = 0;
+    uint32_t name_size = 0;
     cb(param_size, uint32_t);
+    cb(name_size, uint32_t);
     if (param_size > 0) {
         ret.algo.param = std::string(buf + offset, param_size);
         offset += param_size;
+    }
+    if (name_size > 0) {
+        ret.algo.name = std::string(buf + offset, name_size);
+        offset += name_size;
     }
 
     uint32_t nr_policy = 0;
