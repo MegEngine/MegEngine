@@ -10,6 +10,7 @@ global:
         *megdnn::*;
         *megcore::*;
         megcore*;
+        base_exceptions*;
     };
     megcore*;
 
