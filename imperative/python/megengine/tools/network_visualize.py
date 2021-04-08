@@ -15,10 +15,11 @@ import numpy as np
 from megengine.core.tensor.dtype import is_quantize
 from megengine.logger import _imperative_rt_logger, get_logger, set_mgb_log_level
 from megengine.utils.module_stats import (
-    get_flops_stats,
+    enable_receptive_field,
+    get_op_stats,
     get_param_stats,
-    print_flops_stats,
-    print_params_stats,
+    print_op_stats,
+    print_param_stats,
     print_summary,
     sizeof_fmt,
 )
@@ -68,6 +69,8 @@ def visualize(
     # FIXME: remove this after resolving "span dist too large" warning
     old_level = set_mgb_log_level(logging.ERROR)
 
+    enable_receptive_field()
+
     graph = Network.load(model_path)
 
     def process_name(name):
@@ -110,7 +113,7 @@ def visualize(
                 "params": AttrValue(s=str(node.params).encode(encoding="utf-8")),
                 "dtype": AttrValue(s=str(node_oup.dtype).encode(encoding="utf-8")),
             }
-        flops_stats = get_flops_stats(node, node.inputs, node.outputs)
+        flops_stats = get_op_stats(node, node.inputs, node.outputs)
         if flops_stats is not None:
             # add op flops attr
             if log_path and hasattr(flops_stats, "flops_num"):
@@ -148,13 +151,13 @@ def visualize(
 
     total_flops, total_param_dims, total_param_size = 0, 0, 0
     if log_params:
-        total_param_dims, total_param_size = print_params_stats(
+        total_param_dims, total_param_size = print_param_stats(
             params_list, bar_length_max
         )
         extra_info["total_param_dims"] = sizeof_fmt(total_param_dims)
         extra_info["total_param_size"] = sizeof_fmt(total_param_size)
     if log_flops:
-        total_flops = print_flops_stats(flops_list, bar_length_max)
+        total_flops = print_op_stats(flops_list, bar_length_max)
         extra_info["total_flops"] = sizeof_fmt(total_flops, suffix="OPs")
     if log_params and log_flops:
         extra_info["flops/param_size"] = "{:3.3f}".format(
