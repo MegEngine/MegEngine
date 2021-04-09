@@ -92,6 +92,7 @@ class Sequential(Module):
         return [getattr(self, key) for key in self.layer_keys]
 
     def forward(self, inp):
-        for layer in self.layer_values:
+        # avoid layer_values as a name prefix, see Module.__getattribute__
+        for layer in [getattr(self, key) for key in self.layer_keys]:
             inp = layer(inp)
         return inp
