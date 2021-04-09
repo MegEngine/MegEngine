@@ -663,6 +663,7 @@ class NodeFilterName(NodeFilter):
 
     def __init__(self, node_iter, pattern, ignorecase):
         super().__init__(node_iter)
+        self.pattern = pattern
         self._re = self.make_re(pattern, ignorecase)
 
     @classmethod
@@ -676,5 +677,5 @@ class NodeFilterName(NodeFilter):
 
     def __iter__(self):
         for i in self._iter:
-            if self._re.match(i.name):
+            if self.pattern == i.name or self._re.match(i.name):
                 yield i
