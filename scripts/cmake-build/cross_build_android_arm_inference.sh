@@ -127,7 +127,7 @@ function cmake_build() {
         ${EXTRA_CMAKE_ARGS} \
         $SRC_DIR
 
-    make -j$(nproc)
+    make -j$(nproc) ${Target}
     make install/strip
 }
 
