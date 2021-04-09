@@ -227,8 +227,10 @@ void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
 #endif
         mgb_assert(exec_success, "TensorRTOpr failed in execution.");
     } else {
+#if MGB_ENABLE_JSON
         TensorRTProfiler trt_profiler;
         m_context->setProfiler(&trt_profiler);
+#endif  // MGB_ENABLE_JSON
         // TensorRT documentation stated that IExecutionContext->execute
         // "Synchronously execute inference on a batch", and it does not take a
         // cudaStream_t, we expect it do a device synchronize. But it seems like
@@ -245,8 +247,10 @@ void TensorRTManager::exec(cg::SingleCNOperatorNodeBase* opr,
         exec_success = m_context->execute(batch, m_trt_iobuf.data());
 #endif
         mgb_assert(exec_success, "trt execution failed: opr=%s", opr->cname());
+#if MGB_ENABLE_JSON
         printf("TRT profile info of opr %s:\n", opr->name().c_str());
         trt_profiler.print_layer_times();
+#endif  // MGB_ENABLE_JSON
     }
 }
 
