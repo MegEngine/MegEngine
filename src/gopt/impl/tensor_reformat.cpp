@@ -4535,7 +4535,7 @@ EnableNCHW64Pass::make_nchw64_converter() {
         ThinHashMap<Format, size_t> format_size;
         bool same_format = true;
         bool first_touch = false;
-        Format format;
+        Format format(Format::NCHW);
         for (const auto& i : opr->input()) {
             Format cur;
             auto iter = format_map.find(i->owner_opr());
@@ -4561,7 +4561,7 @@ EnableNCHW64Pass::make_nchw64_converter() {
                                                    opr->config());
         }
 
-        Format max_format;
+        Format max_format(Format::NCHW);
         size_t max_size = std::numeric_limits<size_t>::min();
         for (const auto& item : format_size) {
             if (item.second > max_size) {
