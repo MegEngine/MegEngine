@@ -21,6 +21,7 @@
 #include "cuda.h"
 #include "src/cuda/cudnn_with_check.h"
 #include "cutlass/cutlass.h"
+#include "cutlass/platform/platform.h"
 
 #define cuda_check(_x)                                       \
     do {                                                     \
@@ -448,13 +449,12 @@ MEGDNN_DEVICE __forceinline__ static int transform_int8_to_uint4x8(
 template <bool signedness, typename T>
 MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(T storage,
                                                               int bits) {
-    uint8_t result = (uint8_t)((storage >> bits) & 0xf);
-    if (signedness) {
-        static constexpr uint8_t mask = (uint8_t)((1 << 4) - 1);
-        return (result & uint8_t(1 << 3)) ? ((int)(result) | ~(int)(mask))
-                                          : (int)(result);
-    }
-    return int(result);
+    static constexpr int shift = 28;
+    using type = typename cutlass::platform::conditional<signedness, int,
+                                                         unsigned>::type;
+    unsigned intermediate = static_cast<unsigned>(storage);
+    type result = reinterpret_cast<type&>(intermediate);
+    return (result << (shift - bits)) >> shift;
 }
 
 MEGDNN_DEVICE __forceinline__ static void transform_int4x8_to_int8(

@@ -42,6 +42,36 @@ void recursive_cp(const TensorND& dst, const TensorND& src, size_t idx = 0,
     }
 }
 
+template <size_t size_nbits>
+void lowbit_recursive_cp(const TensorND& dst, const TensorND& src,
+                         size_t idx = 0, size_t src_offset = 0,
+                         size_t dst_offset = 0) {
+    MEGDNN_STATIC_ASSERT(!(8_z % size_nbits),
+                         "size in bits of lowbit data type can only be 1, 2, 4 "
+                         "or 8");
+    if (idx < (src.layout.ndim - 1)) {
+        for (size_t i = 0; i < src.layout[idx]; ++i) {
+            lowbit_recursive_cp<size_nbits>(
+                    dst, src, idx + 1, src_offset + i * src.layout.stride[idx],
+                    dst_offset + i * dst.layout.stride[idx]);
+        }
+    } else {
+        megdnn_assert(src.layout.stride[idx] == 1);
+        megdnn_assert(dst.layout.stride[idx] == 1);
+        size_t dim_bytes = div_ceil(src.layout[idx], 8_z / size_nbits);
+        // offset in elements
+        uint8_t* dptr = reinterpret_cast<uint8_t*>(dst.raw_ptr) +
+                        (dst_offset * size_nbits / 8);
+        uint8_t* sptr = reinterpret_cast<uint8_t*>(src.raw_ptr) +
+                        (src_offset * size_nbits / 8);
+        for (size_t i = 0; i < dim_bytes; ++i) {
+            *dptr = *sptr;
+            dptr++;
+            sptr++;
+        }
+    }
+}
+
 void padding_to_workspace(_megdnn_tensor_out dst, _megdnn_tensor_in src) {
     switch (src.layout.dtype.enumv()) {
 #define cb(name, ctype)                \
@@ -54,10 +84,17 @@ void padding_to_workspace(_megdnn_tensor_out dst, _megdnn_tensor_in src) {
         cb(Int32, dt_int32);
         cb(QuantizedS32, dt_int32);
         cb(QuantizedS8, dt_qint8);
-
+#undef cb
+#define cb(name, size_nbits)                       \
+    case (DTypeEnum::name): {                      \
+        lowbit_recursive_cp<size_nbits>(dst, src); \
+        break; \
+    }
+        cb(QuantizedS4, 4);
+        cb(Quantized4Asymm, 4);
+#undef cb
         default:
             megdnn_assert(0, "not support dtype %s", src.layout.dtype.name());
-#undef cb
     }
 }
 
@@ -66,24 +103,27 @@ void extract_from_workspace(_megdnn_tensor_out dst, _megdnn_tensor_in src,
     megdnn_assert(dst.layout.is_contiguous() && src.layout.is_contiguous(),
                   "dst %s, src %s", dst.layout.to_string().c_str(),
                   src.layout.to_string().c_str());
-    const size_t type_size = dst.layout.dtype.size();
     const size_t n = dst.layout[0];
-    const size_t n_stride_dst = dst.layout.stride[0];
-    const size_t n_stride_src = src.layout.stride[0];
+    const size_t n_stride_dst_in_bytes =
+            dst.layout.dtype.size(dst.layout.stride[0]);
+    const size_t n_stride_src_in_bytes =
+            src.layout.dtype.size(src.layout.stride[0]);
     const size_t ocpg = dst.layout[1] / group;
     const size_t icpg = src.layout[1] / group;
-    const size_t dst_hw = dst.layout[2] * dst.layout[3];
-    const size_t src_hw = src.layout[2] * src.layout[3];
-    megdnn_assert(dst_hw == src_hw);
+    const size_t dst_c_stride_in_bytes =
+            dst.layout.dtype.size(dst.layout.stride[1]);
+    const size_t src_c_stride_in_bytes =
+            src.layout.dtype.size(src.layout.stride[1]);
+    megdnn_assert(dst_c_stride_in_bytes == src_c_stride_in_bytes);
     for (size_t nid = 0; nid < n; ++nid) {
-        const size_t n_offset_dst = nid * n_stride_dst * type_size;
-        const size_t n_offset_src = nid * n_stride_src * type_size;
+        const size_t n_offset_dst = nid * n_stride_dst_in_bytes;
+        const size_t n_offset_src = nid * n_stride_src_in_bytes;
         for (size_t gid = 0; gid < group; ++gid) {
             memcpy((char*)dst.raw_ptr + n_offset_dst +
-                           gid * ocpg * dst_hw * type_size,
+                           gid * ocpg * dst_c_stride_in_bytes,
                    (char*)src.raw_ptr + n_offset_src +
-                           gid * icpg * src_hw * type_size,
-                   ocpg * dst_hw * type_size);
+                           gid * icpg * src_c_stride_in_bytes,
+                   ocpg * dst_c_stride_in_bytes);
         }
     }
 };
@@ -415,6 +455,30 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(const TensorLayout& src,
             return oc * ic * h * w * src.dtype.size();
         }
 
+        case Param::Mode::NCHW_NCHW64: {
+            if (src[1] % 64 != 0) {
+                size_t n = src[0];
+                size_t c = round_up(src[1], 64_z);
+                size_t h = src[2];
+                size_t w = src[3];
+                TensorLayout wsly({n, c, h, w}, src.dtype);
+                return wsly.span().dist_byte();
+            }
+            return 0_z;
+        }
+
+        case Param::Mode::NCHW64_NCHW: {
+            if (param().oc != 0) {
+                size_t n = src[0];
+                size_t c = src[1] * 64;
+                size_t h = src[2];
+                size_t w = src[3];
+                TensorLayout wsly({n, c, h, w}, dst.dtype);
+                return wsly.span().dist_byte();
+            }
+            return 0_z;
+        }
+
         default:
             return 0;
     }
@@ -437,6 +501,7 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     // clean dst
     MEGDNN_DISPATCH_CPU_KERN(
             m_handle, memset(dst.raw_ptr, 0, dst.layout.span().dist_byte()));
+    // pre
     if (param().mode == Param::Mode::NCHW_NHWCD4I) {
         size_t N = src.layout[0];
         size_t IC = src.layout[1];
@@ -551,6 +616,27 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             cb2(2, 4, NCHW_NCHW4, group_src_layout, workspace_layout);
 
         }
+    } else if (param().mode == Param::Mode::NCHW_NCHW64) {
+        MIDOUT_BEGIN(megdnn_naive_relayout_format,
+                     midout_iv(Param::Mode::NCHW_NCHW64)) {
+            size_t c = src.layout[1];
+            if (c % 64 != 0) {
+                uint8_t zp = 0;
+                if (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+                    zp = src.layout.dtype.param<dtype::Quantized4Asymm>()
+                                 .zero_point;
+                    zp = (zp & 0xf) | (zp << 4);
+                }
+                MEGDNN_DISPATCH_CPU_KERN(
+                        m_handle, memset(workspace.raw_ptr, zp,
+                                         exec_workspace.span().dist_byte()));
+                TensorND ws_nd(workspace.raw_ptr, exec_workspace);
+                MEGDNN_DISPATCH_CPU_KERN(m_handle,
+                                         padding_to_workspace(ws_nd, src););
+                exec_src_nd.raw_ptr = workspace.raw_ptr;
+            }
+        }
+        MIDOUT_END();
     } else if (param().mode ==
                Param::Mode::NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT) {
         cb(1, 4, NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT);
@@ -574,24 +660,16 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             cb(1, 2, 4, NCHW_NCHW4_WEIGHT);
         }
     } else if (param().mode == Param::Mode::NCHW4_NCHW) {
-        if (exec_workspace.total_nr_elems() == dst.layout.total_nr_elems()) {
-            m_handle->relayout_opr()->exec(
-                    exec_src_nd, {dst.raw_ptr, exec_workspace}, handle());
-            return;
-        } else {
-            m_handle->relayout_opr()->exec(
-                    exec_src_nd, {workspace.raw_ptr, exec_workspace}, handle());
-            TensorLayout workspace_layout{{src.layout[0], src.layout[1] * 4,
-                                           src.layout[2], src.layout[3]},
-                                          src.layout.dtype,
-                                          src.layout.format};
-            extract_from_workspace(exec_dst_nd,
-                                   {workspace.raw_ptr, workspace_layout},
-                                   param().group);
-            return;
+        if (exec_workspace.total_nr_elems() != dst.layout.total_nr_elems()) {
+            exec_dst_nd = {workspace.raw_ptr, exec_workspace};
+        }
+    } else if (param().mode == Param::Mode::NCHW64_NCHW) {
+        if (exec_workspace.total_nr_elems() != dst.layout.total_nr_elems()) {
+            exec_dst_nd = {workspace.raw_ptr, exec_workspace};
         }
     }
-
+    
+    // do relayout
     if (src.layout.dtype.enumv() == DTypeEnum::Quantized8Asymm &&
         dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
         TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
@@ -600,7 +678,6 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             do_copy_diff_qu8_q8(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
-        return;
     } else if (src.layout.dtype.enumv() == DTypeEnum::Uint8 &&
                dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
         TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
@@ -609,7 +686,6 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             do_copy_diff_u8_q8(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
-        return;
     } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 &&
                dst.layout.dtype.enumv() == DTypeEnum::QuantizedS8) {
         TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
@@ -618,7 +694,6 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             do_copy_diff_q8_q8(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
-        return;
     } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS32 &&
                dst.layout.dtype.enumv() == DTypeEnum::QuantizedS32) {
         TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
@@ -627,7 +702,6 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             do_copy_diff_q32_q32(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
-        return;
     } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
                dst.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
         TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
@@ -636,7 +710,6 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             do_copy_diff_q4_q4(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
-        return;
     } else if (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
                dst.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
         TensorND src0 = exec_src_nd, dst0 = exec_dst_nd;
@@ -645,9 +718,20 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             do_copy_diff_qu4_qu4(dst, src);
         };
         MEGDNN_DISPATCH_CPU_KERN_OPR(func(dst0, src0));
-        return;
     } else {
         m_handle->relayout_opr()->exec(exec_src_nd, exec_dst_nd, handle());
+    } 
+
+    // post
+    if (param().mode == Param::Mode::NCHW4_NCHW ||
+        param().mode == Param::Mode::NCHW64_NCHW) {
+        if (exec_workspace.total_nr_elems() != dst.layout.total_nr_elems()) {
+            megdnn_assert(exec_workspace.dtype == dst.layout.dtype);
+            TensorND ws_nd{workspace.raw_ptr, exec_workspace};
+            MEGDNN_DISPATCH_CPU_KERN(
+                    m_handle,
+                    extract_from_workspace(dst, ws_nd, param().group););
+        }
     }
 #undef cb
 }
