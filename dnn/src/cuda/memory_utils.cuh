@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/relayout_format/helper.cuh
+ * \file dnn/src/cuda/memory_utils.cuh
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -9,24 +9,17 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#if MEGDNN_CC_CUDA
+#pragma once
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
-namespace relayout_format {
+namespace memory {
 
-#define devfunc __forceinline__ __device__
-template <int size_nbits>
-devfunc int make_zero(int zero_point);
-
-template <>
-devfunc int make_zero<4>(int zero_point) {
-    return transform_int8_to_uint4x8(zero_point, zero_point, zero_point,
-                                     zero_point, zero_point, zero_point,
-                                     zero_point, zero_point);
-}
-
+/////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename AccessType, int LoadBytes>
-struct global_load_with_zero_point;
+struct global_load;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -39,9 +32,9 @@ struct global_load_with_zero_point;
 // The redundant mov PTX instruction is used to enforce the compiler to
 // initialize data to zero before ld.global
 template <typename AccessType>
-struct global_load_with_zero_point<AccessType, 32> {
-    devfunc global_load_with_zero_point(AccessType& D, void const* ptr,
-                                        bool pred_guard, int zero_point) {
+struct global_load<AccessType, 32> {
+    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
+                                              bool pred_guard, int val = 0) {
         uint4* data = reinterpret_cast<uint4*>(&D);
 
         asm volatile(
@@ -63,15 +56,15 @@ struct global_load_with_zero_point<AccessType, 32> {
                   "=r"(data[0].w), "=r"(data[1].x), "=r"(data[1].y),
                   "=r"(data[1].z), "=r"(data[1].w)
                 : "l"(ptr), "r"((int)pred_guard),
-                  "r"(reinterpret_cast<unsigned&>(zero_point)),
+                  "r"(reinterpret_cast<unsigned&>(val)),
                   "l"(((uint8_t*)ptr) + 16));
     }
 };
 
 template <typename AccessType>
-struct global_load_with_zero_point<AccessType, 16> {
-    devfunc global_load_with_zero_point(AccessType& D, void const* ptr,
-                                        bool pred_guard, int zero_point) {
+struct global_load<AccessType, 16> {
+    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
+                                              bool pred_guard, int val) {
         uint4& data = reinterpret_cast<uint4&>(D);
 
         asm volatile(
@@ -86,14 +79,14 @@ struct global_load_with_zero_point<AccessType, 16> {
                 "}\n"
                 : "=r"(data.x), "=r"(data.y), "=r"(data.z), "=r"(data.w)
                 : "l"(ptr), "r"((int)pred_guard),
-                  "r"(reinterpret_cast<unsigned&>(zero_point)));
+                  "r"(reinterpret_cast<unsigned&>(val)));
     }
 };
 
 template <typename AccessType>
-struct global_load_with_zero_point<AccessType, 8> {
-    devfunc global_load_with_zero_point(AccessType& D, void const* ptr,
-                                        bool pred_guard, int zero_point) {
+struct global_load<AccessType, 8> {
+    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
+                                              bool pred_guard, int val) {
         uint2& data = reinterpret_cast<uint2&>(D);
 
         asm volatile(
@@ -106,14 +99,14 @@ struct global_load_with_zero_point<AccessType, 8> {
                 "}\n"
                 : "=r"(data.x), "=r"(data.y)
                 : "l"(ptr), "r"((int)pred_guard),
-                  "r"(reinterpret_cast<unsigned&>(zero_point)));
+                  "r"(reinterpret_cast<unsigned&>(val)));
     }
 };
 
 template <typename AccessType>
-struct global_load_with_zero_point<AccessType, 4> {
-    devfunc global_load_with_zero_point(AccessType& D, void const* ptr,
-                                        bool pred_guard, int zero_point) {
+struct global_load<AccessType, 4> {
+    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
+                                              bool pred_guard, int val) {
         unsigned& data = reinterpret_cast<unsigned&>(D);
 
         asm volatile(
@@ -125,18 +118,18 @@ struct global_load_with_zero_point<AccessType, 4> {
                 "}\n"
                 : "=r"(data)
                 : "l"(ptr), "r"((int)pred_guard),
-                  "r"(reinterpret_cast<unsigned&>(zero_point)));
+                  "r"(reinterpret_cast<unsigned&>(val)));
     }
 };
 
 template <typename AccessType>
-struct global_load_with_zero_point<AccessType, 1> {
-    devfunc global_load_with_zero_point(AccessType& D, void const* ptr,
-                                        bool pred_guard, int zero_point) {
+struct global_load<AccessType, 1> {
+    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
+                                              bool pred_guard, int val) {
         if (pred_guard)
             D = *(reinterpret_cast<AccessType const*>(ptr));
         else {
-            unsigned uv = reinterpret_cast<unsigned&>(zero_point);
+            unsigned uv = reinterpret_cast<unsigned&>(val);
             uint8_t& data = reinterpret_cast<uint8_t&>(D);
             data = uv & 0xff;
         }
@@ -159,7 +152,8 @@ struct global_store;
 
 template <typename AccessType>
 struct global_store<AccessType, 32> {
-    devfunc global_store(AccessType const& D, void* ptr, bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
+                                               bool pred_guard) {
         uint4 const* data = reinterpret_cast<uint4 const*>(&D);
 
         asm volatile(
@@ -179,7 +173,8 @@ struct global_store<AccessType, 32> {
 
 template <typename AccessType>
 struct global_store<AccessType, 16> {
-    devfunc global_store(AccessType const& D, void* ptr, bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
+                                               bool pred_guard) {
         uint4 const& data = reinterpret_cast<uint4 const&>(D);
         asm volatile(
                 "{\n"
@@ -195,7 +190,8 @@ struct global_store<AccessType, 16> {
 
 template <typename AccessType>
 struct global_store<AccessType, 8> {
-    devfunc global_store(AccessType const& D, void* ptr, bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
+                                               bool pred_guard) {
         uint2 const& data = reinterpret_cast<uint2 const&>(D);
         asm volatile(
                 "{\n"
@@ -210,7 +206,8 @@ struct global_store<AccessType, 8> {
 
 template <typename AccessType>
 struct global_store<AccessType, 4> {
-    devfunc global_store(AccessType const& D, void* ptr, bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
+                                               bool pred_guard) {
         uint32_t const& data = reinterpret_cast<uint32_t const&>(D);
         asm volatile(
                 "{\n"
@@ -225,7 +222,8 @@ struct global_store<AccessType, 4> {
 
 template <typename AccessType>
 struct global_store<AccessType, 2> {
-    devfunc global_store(AccessType const& D, void* ptr, bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
+                                               bool pred_guard) {
         uint16_t const& data = reinterpret_cast<uint16_t const&>(D);
         asm volatile(
                 "{\n"
@@ -240,13 +238,16 @@ struct global_store<AccessType, 2> {
 
 template <typename AccessType>
 struct global_store<AccessType, 1> {
-    devfunc global_store(AccessType const& D, void* ptr, bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
+                                               bool pred_guard) {
         if (pred_guard)
             *(reinterpret_cast<AccessType*>(ptr)) = D;
     }
 };
 
-#undef devfunc
-}  // namespace relayout_format
+}  // namespace memory
 }  // namespace cuda
 }  // namespace megdnn
+#endif
+
+// vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

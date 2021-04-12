@@ -390,7 +390,37 @@ bool mgb::check_compute_capability(int major, int minor) {
     MGB_CUDA_CHECK(cudaGetDevice(&dev));
     cudaDeviceProp prop;
     MGB_CUDA_CHECK(cudaGetDeviceProperties(&prop, dev));
-    return prop.major > major || (prop.major == major && prop.minor >= minor);
+    bool available = prop.major > major || (prop.major == major && prop.minor >= minor);
+    if (!available) {
+        mgb_log_warn(
+                "This testcase is ignored due to insufficient cuda cap(got: "
+                "%d.%d, "
+                "expected: %d.%d)",
+                prop.major, prop.minor, major, minor);
+    }
+    return available;
+#else
+    MGB_MARK_USED_VAR(major);
+    MGB_MARK_USED_VAR(minor);
+    return false;
+#endif
+}
+
+bool mgb::check_compute_capability_eq(int major, int minor) {
+#if MGB_CUDA
+    int dev;
+    MGB_CUDA_CHECK(cudaGetDevice(&dev));
+    cudaDeviceProp prop;
+    MGB_CUDA_CHECK(cudaGetDeviceProperties(&prop, dev));
+    bool available = prop.major == major && prop.minor == minor;
+    if (!available) {
+        mgb_log_warn(
+                "This testcase is ignored due to insufficient cuda cap(got: "
+                "%d.%d, "
+                "expected: %d.%d)",
+                prop.major, prop.minor, major, minor);
+    }
+    return available;
 #else
     MGB_MARK_USED_VAR(major);
     MGB_MARK_USED_VAR(minor);

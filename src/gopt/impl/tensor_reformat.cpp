@@ -68,7 +68,7 @@ using namespace gopt;
  * oprs should not get involved in any actual computing.
  */
 MGB_DEFINE_OPR_CLASS(TensorReformatPass::RelayoutPlaceholder,
-                     cg::SingleCNOperatorNodeBase) // {
+                           cg::SingleCNOperatorNodeBase) // {
 public:
     //! relayout type of this opr
     enum class LayoutType {
@@ -124,14 +124,14 @@ public:
         NCHW4_TO_NCHW64,   //! <from nchw4 layout to nchw64 layout
     };
 
-    RelayoutPlaceholder(VarNode * src_var, LayoutType layout_type);
+    RelayoutPlaceholder(VarNode* src_var, LayoutType layout_type);
 
     /*!
      * \param src_var the input var
      * \param layout_type tensor layout transform type of this relayout
      * placeholder as described in LayoutType
      */
-    static SymbolVar make(VarNode * src_var, LayoutType layout_type);
+    static SymbolVar make(VarNode* src_var, LayoutType layout_type);
 
     LayoutType layout_type() const { return m_layout_type; }
 
@@ -141,7 +141,6 @@ private:
     void init_output_comp_node() override;
     const LayoutType m_layout_type;
 };
-
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(TensorReformatPass::RelayoutPlaceholder);
 
 TensorReformatPass::RelayoutPlaceholder::RelayoutPlaceholder(
@@ -3866,8 +3865,12 @@ void PaddingChannelPass::apply(OptState& opt) const {
     };
 
     auto extract_subtensor = [](VarNode* inp,
-                                size_t orig_channels) -> VarNode* {
+                                const TensorShape& orig_shape) -> VarNode* {
         mgb_assert(inp->shape().ndim == 4);
+        mgb_assert(inp->shape()[0] == orig_shape[0]);
+        mgb_assert(inp->shape()[2] == orig_shape[2]);
+        mgb_assert(inp->shape()[3] == orig_shape[3]);
+        size_t orig_channels = orig_shape[1];
         auto x = SymbolVar(inp);
         auto cv = [&x](int v) { return x.make_scalar(v); };
         using AIdx = opr::Subtensor::AxisIndexer;
@@ -4108,8 +4111,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
                 bool padding_cur_inp =
                         padding_oprs.count(cur_inp->owner_opr()) > 0;
                 if (padding_cur_inp) {
-                    size_t orig_channels = cur_inp->shape()[1];
-                    inps[i] = extract_subtensor(inps[i], orig_channels);
+                    inps[i] = extract_subtensor(inps[i], cur_inp->shape());
                 }
             }
             return serialization::copy_opr_shallow(*opr, inps, opr->config());
@@ -4133,8 +4135,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
             auto cur_inp = opr->input(i);
             bool padding_cur_inp = padding_oprs.count(cur_inp->owner_opr()) > 0;
             if (padding_cur_inp) {
-                size_t orig_channels = cur_inp->shape()[1];
-                inps[i] = extract_subtensor(inps[i], orig_channels);
+                inps[i] = extract_subtensor(inps[i], cur_inp->shape());
             }
         }
         return serialization::copy_opr_shallow(*opr, inps, opr->config());
@@ -4142,6 +4143,8 @@ void PaddingChannelPass::apply(OptState& opt) const {
     opr_replace_funcs[opr::Reshape::typeinfo()] = replace_nonpadding_oprs;
     opr_replace_funcs[opr::GetVarShape::typeinfo()] = replace_nonpadding_oprs;
     opr_replace_funcs[opr::Concat::typeinfo()] = replace_nonpadding_oprs;
+    opr_replace_funcs[opr::Reduce::typeinfo()] = replace_nonpadding_oprs;
+    opr_replace_funcs[opr::Subtensor::typeinfo()] = replace_nonpadding_oprs;
 
     auto on_opr = [&opt, &rewriter, &opr_replace_funcs,
                    &extract_subtensor](OperatorNodeBase* opr) {
@@ -4169,8 +4172,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
                     auto dst = out1[i];
                     if (opt.graph().endpoint_contain(src) &&
                         !src->shape().eq_shape(dst->shape())) {
-                        size_t orig_channels = src->shape()[1];
-                        dst = extract_subtensor(dst, orig_channels);
+                        dst = extract_subtensor(dst, src->shape());
                     }
                     rewriter.replace_var(src, dst, nullptr);
                 }

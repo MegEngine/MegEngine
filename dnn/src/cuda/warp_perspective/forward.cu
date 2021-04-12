@@ -17,10 +17,12 @@
 #include "src/common/rounding_converter.cuh"
 #include "megdnn/dtype.h"
 #include <cstdio>
+#include "src/cuda/integer_subbyte_utils.cuh"
 
 using namespace megdnn;
 using namespace cuda;
 using namespace warp_perspective;
+using namespace integer_subbyte;
 
 namespace {
 

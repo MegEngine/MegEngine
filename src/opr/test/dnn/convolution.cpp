@@ -2604,11 +2604,21 @@ TEST_F(TestNoWeightPreprocess, NoPreprocess) {
 #endif
 
 namespace {
-// FIXME change comp node from "cpu0" to "gpu0"    
 TEST(TestOprDNN, ConvBiasInt4NCHW) {
-    auto run = [](size_t N, size_t C, size_t H, size_t W, size_t F, size_t S,
-                  size_t P) {
-        auto cn = CompNode::load("cpu0");
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver != 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+
+    auto run = [&cn](size_t N, size_t C, size_t H, size_t W, size_t F, size_t S,
+                     size_t P) {
         auto graph = ComputingGraph::make();
 
         HostTensorGenerator<dtype::Int8> gen;
@@ -2671,6 +2681,18 @@ TEST(TestOprDNN, ConvBiasInt4NCHW) {
 }
 
 TEST(TestOprDNN, ConvBiasInt4NCHW64) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver != 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+
     auto nchw2nchw64 = [](SymbolVar x) {
         auto y = opr::RelayoutFormat::make(
                 x, opr::RelayoutFormat::Param::Mode::NCHW_NCHW64);
@@ -2685,7 +2707,6 @@ TEST(TestOprDNN, ConvBiasInt4NCHW64) {
 
     auto run = [&](size_t N, size_t C, size_t H, size_t W, size_t F, size_t S,
                    size_t P) {
-        auto cn = CompNode::load("cpu0");
         auto graph = ComputingGraph::make();
 
         HostTensorGenerator<dtype::Int8> gen;

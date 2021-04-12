@@ -504,6 +504,9 @@ bool check_cambricon_device_available(size_t num);
 //! check current capability >= major.minor
 bool check_compute_capability(int major, int minor);
 
+//! check current capability == major.minor
+bool check_compute_capability_eq(int major, int minor);
+
 //! check compnode avaiable
 bool check_device_type_avaiable(CompNode::DeviceType device_type);
 
@@ -538,6 +541,12 @@ public:
     do {                                              \
         if (!check_compute_capability(major, minor))  \
             return;                                   \
+    } while (0)
+
+#define REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(major, minor) \
+    do {                                                 \
+        if (!check_compute_capability_eq(major, minor))  \
+            return;                                      \
     } while (0)
 
 //! skip a testcase if amd gpu not available

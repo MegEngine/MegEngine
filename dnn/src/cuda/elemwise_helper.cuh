@@ -16,6 +16,7 @@
 #include "src/cuda/int_fastdiv.cuh"
 #include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/utils.cuh"
+#include "src/cuda/integer_subbyte_utils.cuh"
 
 /*
  * please note that all arithmetics on GPU are 32-bit for best performance; this
@@ -633,7 +634,7 @@ public:
         int vec_idx = offset_ >> 1;
         int lane_idx = offset_ & 0x1;
 
-        Storage item = Storage(unpack_integer_4bits<true>(
+        Storage item = Storage(integer_subbyte::unpack_integer_4bits<true>(
                 *(Storage*)&Super::m_ptr[vec_idx], lane_idx * 4));
 
         dt_qint4 result(item);
@@ -664,7 +665,7 @@ public:
         int vec_idx = offset_ >> 1;
         int lane_idx = offset_ & 0x1;
 
-        Storage item = Storage(unpack_integer_4bits<false>(
+        Storage item = Storage(integer_subbyte::unpack_integer_4bits<false>(
                 *(Storage*)&Super::m_ptr[vec_idx], lane_idx * 4));
 
         dt_quint4 result(item);

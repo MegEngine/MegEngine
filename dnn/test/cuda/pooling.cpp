@@ -247,14 +247,13 @@ TEST_F(CUDA, POOLING_FORWARD_NCHW_Q4) {
     using Param = param::Pooling;
     Checker<Pooling> checker(handle_cuda());
     Param param{Param::Mode::MAX, 0, 0, 2, 2, 2, 2};
-    checker.set_dtype(0, dtype::QuantizedS4(0.1f));
+    checker.set_dtype(0, dtype::QuantizedS4(3.1415926f));
     param.format = Param::Format::NCHW;
-    checker.set_epsilon(1 + 1e-3);
     checker.set_param(param).exec({{20, 64, 22, 33}, {}});
     param.mode = Param::Mode::AVERAGE;
-    checker.set_param(param).exec({{20, 64, 22, 33}, {}});
+    checker.set_param(param).exec({{20, 96, 22, 33}, {}});
     param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
-    checker.set_param(param).exec({{20, 64, 22, 33}, {}});
+    checker.set_param(param).exec({{20, 24, 22, 33}, {}});
 }
 
 TEST_F(CUDA, POOLING_FORWARD_NCHW4) {

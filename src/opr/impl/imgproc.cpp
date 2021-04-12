@@ -102,7 +102,8 @@ void WarpPerspectiveForward::outshape_by_symvar_do_get_output_shape(
         default:
             size_t height_idx = 0;
             if (param().format == Param::Format::NCHW ||
-                param().format == Param::Format::NCHW4) {
+                param().format == Param::Format::NCHW4 ||
+                param().format == Param::Format::NCHW64) {
                 height_idx = 2;
             } else {
                 height_idx = 1;

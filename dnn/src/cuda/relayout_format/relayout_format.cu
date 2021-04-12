@@ -10,17 +10,14 @@
  * implied.
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include "cutlass/fast_math.h"
-#include "cutlass/arch/memory.h"
-#pragma GCC diagnostic pop
+#include "src/cuda/int_fastdiv.cuh"
 #include "src/cuda/query_blocksize.cuh"
 #include "src/cuda/relayout_format/relayout_format.cuh"
-#include "src/cuda/relayout_format/helper.cuh"
+#include "src/cuda/integer_subbyte_utils.cuh"
+#include "src/cuda/memory_utils.cuh"
 using namespace megdnn;
 using namespace cuda;
+using namespace integer_subbyte;
 
 namespace {
 
@@ -322,26 +319,34 @@ struct Translayout<2, 64, SrcType, dtype::QuantizedS4, dtype::QuantizedS4,
         int* dst_frag = reinterpret_cast<int*>(dst_width);
 #pragma unroll
         for (int i = 0; i < 64; i += 8) {
-#define unpack_int4x2(_idx)                                         \
-    intermediate[_idx][0] = unpack_integer_4bits<true>(             \
-            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 0); \
-    intermediate[_idx][1] = unpack_integer_4bits<true>(             \
-            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 4);
-            // clang-format off
-            unpack_int4x2(0)
-            unpack_int4x2(1)
-            unpack_int4x2(2)
-            unpack_int4x2(3)
-            unpack_int4x2(4)
-            unpack_int4x2(5)
-            unpack_int4x2(6)
-            unpack_int4x2(7)
-            // clang-format on
+            transform_int4x2_to_int8(
+                    intermediate[0],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 0]));
+            transform_int4x2_to_int8(
+                    intermediate[1],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 1]));
+            transform_int4x2_to_int8(
+                    intermediate[2],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 2]));
+            transform_int4x2_to_int8(
+                    intermediate[3],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 3]));
+            transform_int4x2_to_int8(
+                    intermediate[4],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 4]));
+            transform_int4x2_to_int8(
+                    intermediate[5],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 5]));
+            transform_int4x2_to_int8(
+                    intermediate[6],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 6]));
+            transform_int4x2_to_int8(
+                    intermediate[7],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 7]));
 
             int frag_idx = i / 8;
             dst_frag[0 * 8 + frag_idx] = pack_channel(0);
             dst_frag[1 * 8 + frag_idx] = pack_channel(1);
-#undef unpack_int4x2
         }
     }
     using Fragment = array_wrapper<SrcType, 64>;
@@ -429,26 +434,34 @@ struct Translayout<2, 64, SrcType, dtype::Quantized4Asymm,
         int* dst_frag = reinterpret_cast<int*>(dst_width);
 #pragma unroll
         for (int i = 0; i < 64; i += 8) {
-#define unpack_int4x2(_idx)                                         \
-    intermediate[_idx][0] = unpack_integer_4bits<false>(            \
-            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 0); \
-    intermediate[_idx][1] = unpack_integer_4bits<false>(            \
-            reinterpret_cast<uint8_t&>(read_channel[i + _idx]), 4);
-            // clang-format off
-            unpack_int4x2(0)
-            unpack_int4x2(1)
-            unpack_int4x2(2)
-            unpack_int4x2(3)
-            unpack_int4x2(4)
-            unpack_int4x2(5)
-            unpack_int4x2(6)
-            unpack_int4x2(7)
-            // clang-format on
+            transform_uint4x2_to_int8(
+                    intermediate[0],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 0]));
+            transform_uint4x2_to_int8(
+                    intermediate[1],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 1]));
+            transform_uint4x2_to_int8(
+                    intermediate[2],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 2]));
+            transform_uint4x2_to_int8(
+                    intermediate[3],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 3]));
+            transform_uint4x2_to_int8(
+                    intermediate[4],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 4]));
+            transform_uint4x2_to_int8(
+                    intermediate[5],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 5]));
+            transform_uint4x2_to_int8(
+                    intermediate[6],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 6]));
+            transform_uint4x2_to_int8(
+                    intermediate[7],
+                    reinterpret_cast<uint8_t&>(read_channel[i + 7]));
 
             int frag_idx = i / 8;
             dst_frag[0 * 8 + frag_idx] = pack_channel(0);
             dst_frag[1 * 8 + frag_idx] = pack_channel(1);
-#undef unpack_int4x2
         }
     }
     using Fragment = array_wrapper<SrcType, 64>;
@@ -742,6 +755,16 @@ inline __device__ char4 make_zero_pad<char4>(const uint8_t zero_point) {
 template <>
 inline __device__ int4 make_zero_pad<int4>(const uint8_t zero_point) {
     return {zero_point, zero_point, zero_point, zero_point};
+}
+
+template <int size_nbits>
+inline __device__ int make_zero(int zero_point);
+
+template <>
+inline __device__ int make_zero<4>(int zero_point) {
+    return transform_int8_to_uint4x8(zero_point, zero_point, zero_point,
+                                     zero_point, zero_point, zero_point,
+                                     zero_point, zero_point);
 }
 
 template <typename DstDtype>
@@ -1062,11 +1085,11 @@ public:
     using AccessType = array_wrapper<Type, pack_size_in_type>;
     using Fragment = array_wrapper<Type, elements_in_type>;
 
-    MEGDNN_DEVICE TensorIteratorOverChannel()
+    MEGDNN_HOST TensorIteratorOverChannel()
             : pointer{nullptr}, chan_stride_in_elements{0}, channel{0} {}
-    MEGDNN_DEVICE TensorIteratorOverChannel(Type* pointer_,
-                                            int chan_stride_in_elements_,
-                                            int channel_, int, int)
+    MEGDNN_HOST TensorIteratorOverChannel(Type* pointer_,
+                                          int chan_stride_in_elements_,
+                                          int channel_, int, int)
             : pointer{pointer_},
               chan_stride_in_elements{chan_stride_in_elements_},
               channel{channel_} {}
@@ -1093,8 +1116,7 @@ public:
                                        (lane_size_in_type / pack_size_in_type) +
                                j;
                 bool guard = i < channel;
-                relayout_format::global_load_with_zero_point<AccessType,
-                                                             pack_size_in_byte>(
+                memory::global_load<AccessType, pack_size_in_byte>(
                         frag_ptr[frag_idx],
                         reinterpret_cast<void*>(pointer_ +
                                                 j * pack_size_in_type),
@@ -1115,7 +1137,7 @@ public:
                                        (lane_size_in_type / pack_size_in_type) +
                                j;
                 bool guard = i < channel;
-                cutlass::arch::global_store<AccessType, pack_size_in_byte>(
+                memory::global_store<AccessType, pack_size_in_byte>(
                         frag_ptr[frag_idx],
                         reinterpret_cast<void*>(pointer_ +
                                                 j * pack_size_in_type),
@@ -1160,20 +1182,18 @@ public:
     using AccessType = array_wrapper<Type, pack_size_in_type>;
     using Fragment = array_wrapper<Type, elements_in_type>;
 
-    MEGDNN_HOST MEGDNN_DEVICE MaskedTensorIteratorOverChannel()
+    MEGDNN_HOST MaskedTensorIteratorOverChannel()
             : pointer{nullptr},
               chan_stride_in_elements{0},
               channel{0} {}
-    MEGDNN_HOST MEGDNN_DEVICE MaskedTensorIteratorOverChannel(
+    MEGDNN_HOST MaskedTensorIteratorOverChannel(
             Type* pointer_, int chan_stride_in_elements_, int channel_,
             int bound_, int div_)
             : pointer{pointer_},
               chan_stride_in_elements{chan_stride_in_elements_},
               channel{channel_},
               bound{bound_},
-              div{div_} {
-        cutlass::find_divisor(mul, shr, div);
-    }
+              div{uint32_t(div_)} {}
 
     MEGDNN_DEVICE __forceinline__ void initialize(int c_idx, int hw_idx) {
         pointer += (c_idx / pack_size) * chan_stride_in_elements;
@@ -1187,8 +1207,8 @@ public:
 #pragma unroll
             for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
                 int offset = hw_idx + j;
-                int h, w;
-                cutlass::fast_divmod(h, w, offset, div, mul, shr);
+                int h = (int)((uint32_t)(offset) / div);
+                int w = (int)((uint32_t)(offset) % div);
                 bool guard = (i < channel) && (w < bound);
                 int index = (i / pack_size) *
                                     (lane_size_in_type / pack_size_in_type) +
@@ -1219,8 +1239,7 @@ public:
                 int mask_index = (frag_idx >> 5);
                 int mask_shift = (frag_idx & 0x1f);
                 bool guard = (mask[mask_index] & (1 << mask_shift));
-                relayout_format::global_load_with_zero_point<AccessType,
-                                                             pack_size_in_byte>(
+                memory::global_load<AccessType, pack_size_in_byte>(
                         frag_ptr[frag_idx],
                         reinterpret_cast<void*>(pointer_ + stride[j]), guard,
                         zero_point);
@@ -1242,7 +1261,7 @@ public:
                 int mask_index = (frag_idx >> 5);
                 int mask_shift = (frag_idx & 0x1f);
                 bool guard = (mask[mask_index] & (1 << mask_shift));
-                cutlass::arch::global_store<AccessType, pack_size_in_byte>(
+                memory::global_store<AccessType, pack_size_in_byte>(
                         frag_ptr[frag_idx],
                         reinterpret_cast<void*>(pointer_ + stride[j]), guard);
             }
@@ -1260,9 +1279,7 @@ private:
     int chan_stride_in_elements;
     int channel;
     int bound;
-    int div;
-    uint32_t mul;
-    uint32_t shr;
+    Uint32Fastdiv div;
     uint32_t mask[mask_size];
     size_t stride[lane_size_in_type / pack_size_in_type];
 };
@@ -1355,8 +1372,7 @@ __global__ void relayout_kern(typename RelayoutProblem_::Param param) {
         param.dst_iterator.initialize(c_idx, hw_idx);
         typename SrcIterator::Fragment src_frag;
         typename DstIterator::Fragment dst_frag;
-        int zp = relayout_format::make_zero<SrcIterator::size_nbits>(
-                param.zero_point);
+        int zp = make_zero<SrcIterator::size_nbits>(param.zero_point);
         param.src_iterator.load(src_frag, zp);
         RelayoutProblem_::Transpose::trans(
                 reinterpret_cast<typename SrcIterator::Fragment&>(dst_frag),
@@ -1456,7 +1472,7 @@ void relayout_format::relayout_format_cuda_nchw_nchwx(
         megdnn_assert(src_layout.dtype.is_low_bit());
         int n = src.layout[0];
         int ic = src.layout[1];
-        int oc = dst.layout[1] * 64;
+        int oc = dst.layout[1] * pack_oc;
         int h = src.layout[2];
         // align to byte
         int w = src.layout[3];

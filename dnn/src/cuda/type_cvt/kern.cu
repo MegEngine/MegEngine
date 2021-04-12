@@ -223,10 +223,12 @@ struct TypeCvtOpFromQuantizedToQuantized4bit<
     }
     __device__ __forceinline__ void operator()(uint32_t idx,
                                                src_vect_type src) {
-        dst_storage x = apply(
-                src_storage(unpack_integer_4bits<src_signedness>(src.x, 0)));
-        dst_storage y = apply(
-                src_storage(unpack_integer_4bits<src_signedness>(src.x, 4)));
+        dst_storage x = apply(src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(src.x,
+                                                                      0)));
+        dst_storage y = apply(src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(src.x,
+                                                                      4)));
 
         *(dst_vect_type*)(&dest[idx]) =
                 VectTypeTrait<ctype_dest>::make_vector(x, y);

@@ -83,12 +83,7 @@ bool RelayoutForwardImpl::Param::try_copy_contig() {
         return false;
     if (lsrc.stride[0] != 1 || ldst.stride[0] != 1)
         return false;
-    size_t copy_size;
-    if (ldst.dtype.is_low_bit()) {
-        copy_size = ldst.access_bytes();
-    } else {
-        copy_size = ldst.total_nr_elems() * dtype_size();
-    }
+    size_t copy_size = ldst.span().dist_byte();
 
     cuda_check(cudaMemcpyAsync(m_dst.raw_ptr, m_src.raw_ptr, copy_size,
                                cudaMemcpyDeviceToDevice, m_opr->stream()));
@@ -191,7 +186,6 @@ bool RelayoutForwardImpl::Param::try_copy_last_contig() {
 }
 
 void RelayoutForwardImpl::Param::copy_general() {
-
     copy_noncontig_general(m_dst, m_src, m_opr->stream());
 }
 

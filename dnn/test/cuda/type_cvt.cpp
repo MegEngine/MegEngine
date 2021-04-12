@@ -107,7 +107,7 @@ TEST_F(CUDA, QUANTIZED_TYPECVT) {
 }
 
 TEST_F(CUDA, QUANTIZED_TYPECVT_4BIT) {
-    UniformIntRNG int_rng{0, 8};
+    UniformIntRNG int_rng{-8, 8};
     Checker<TypeCvt> checker(handle_cuda());
     checker.set_rng(0, &int_rng).set_rng(1, &int_rng);
 

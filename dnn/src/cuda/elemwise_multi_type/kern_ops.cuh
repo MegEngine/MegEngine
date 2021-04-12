@@ -15,6 +15,7 @@
 #include "src/cuda/elemwise_helper_q4.cuh"
 #include "src/cuda/elemwise_multi_type/kern.cuh"
 #include "src/cuda/utils.cuh"
+#include "src/cuda/integer_subbyte_utils.cuh"
 
 namespace megdnn {
 namespace cuda {
@@ -380,10 +381,10 @@ struct QuantizedMultiTypeOp<
     }
 
     __device__ __forceinline__ void operator()(uint32_t idx, src_vect_type a) {
-        dst_storage x = apply(
-                src_storage(unpack_integer_4bits<src_signedness>(a.x, 0)));
-        dst_storage y = apply(
-                src_storage(unpack_integer_4bits<src_signedness>(a.x, 4)));
+        dst_storage x = apply(src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(a.x, 0)));
+        dst_storage y = apply(src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(a.x, 4)));
 
         *(dst_vect_type*)(&dst[idx]) =
                 elemwise_intl::VectTypeTrait<ctype_dst>::make_vector(x, y);
@@ -470,14 +471,14 @@ struct QuantizedMultiTypeOp<
 
     __device__ __forceinline__ void operator()(uint32_t idx, src_vect_type a,
                                                src_vect_type b) {
-        src_storage a_x =
-                src_storage(unpack_integer_4bits<src_signedness>(a.x, 0));
-        src_storage a_y =
-                src_storage(unpack_integer_4bits<src_signedness>(a.x, 4));
-        src_storage b_x =
-                src_storage(unpack_integer_4bits<src_signedness>(b.x, 0));
-        src_storage b_y =
-                src_storage(unpack_integer_4bits<src_signedness>(b.x, 4));
+        src_storage a_x = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(a.x, 0));
+        src_storage a_y = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(a.x, 4));
+        src_storage b_x = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(b.x, 0));
+        src_storage b_y = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(b.x, 4));
 
         dst_storage x = apply(a_x, b_x), y = apply(a_y, b_y);
 
@@ -572,18 +573,18 @@ struct QuantizedMultiTypeOp<
     __device__ __forceinline__ void operator()(uint32_t idx, src_vect_type a,
                                                src_vect_type b,
                                                src_vect_type c) {
-        src_storage a_x =
-                src_storage(unpack_integer_4bits<src_signedness>(a.x, 0));
-        src_storage a_y =
-                src_storage(unpack_integer_4bits<src_signedness>(a.x, 4));
-        src_storage b_x =
-                src_storage(unpack_integer_4bits<src_signedness>(b.x, 0));
-        src_storage b_y =
-                src_storage(unpack_integer_4bits<src_signedness>(b.x, 4));
-        src_storage c_x =
-                src_storage(unpack_integer_4bits<src_signedness>(c.x, 0));
-        src_storage c_y =
-                src_storage(unpack_integer_4bits<src_signedness>(c.x, 4));
+        src_storage a_x = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(a.x, 0));
+        src_storage a_y = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(a.x, 4));
+        src_storage b_x = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(b.x, 0));
+        src_storage b_y = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(b.x, 4));
+        src_storage c_x = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(c.x, 0));
+        src_storage c_y = src_storage(
+                integer_subbyte::unpack_integer_4bits<src_signedness>(c.x, 4));
 
         dst_storage x = apply(a_x, b_x, c_x), y = apply(a_y, b_y, c_y);
 

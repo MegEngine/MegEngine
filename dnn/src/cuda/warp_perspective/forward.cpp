@@ -348,6 +348,7 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                         RelayoutFormat::Param trans_param;
                         trans_param.mode =
                                 RelayoutFormat::Param::Mode::NCHW64_NCHW;
+                        trans_param.oc = sdst.layout[1]; 
                         relayout_opr->param() = trans_param;
                         relayout_opr->exec(dst, sdst, {});
                     }

@@ -627,9 +627,9 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_QINT4) {
     Checker<WarpPerspectiveForward> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
-    checker.set_dtype(0, dtype::QuantizedS4(0.1f))
+    checker.set_dtype(0, dtype::QuantizedS4(1.25f))
             .set_dtype(1, dtype::Float32())
-            .set_dtype(2, dtype::QuantizedS4(0.1f));
+            .set_dtype(2, dtype::QuantizedS4(1.25f));
     for (auto bmode : {WarpPerspective::BorderMode::WRAP,
                        WarpPerspective::BorderMode::REFLECT,
                        WarpPerspective::BorderMode::REPLICATE,

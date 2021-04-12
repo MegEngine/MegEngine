@@ -568,7 +568,7 @@ TensorLayout LowbitsAlignedTensorFormatBase::collapse_contiguous_spec(
             res.stride[0] = 1;
             return res;
         }
-        if (res.shape[i] == 1) {
+        if (res.shape[i] == 1 && res.stride[i] != 1) {
             res.remove_axis_inplace(i);
         }
     }
