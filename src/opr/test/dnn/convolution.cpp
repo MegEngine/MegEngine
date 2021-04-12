@@ -364,7 +364,6 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
-
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
 
@@ -454,7 +453,7 @@ TEST(TestOprDNN, ConvolutionExePolicy) {
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
+                        S::PROFILE | S::HEURISTIC}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {

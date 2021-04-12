@@ -557,10 +557,18 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
 
     if (prof.empty())
         return {};
+
+    auto attr_from_strategy =
+            extract_algo_attribute_from_execution_strategy(selected_strategy);
     for (auto&& i : prof) {
-        if (!(selected_strategy & ExecutionStrategy::REPRODUCIBLE) ||
-            static_cast<AlgoAttribute>(i.attribute) &
-                    AlgoAttribute::REPRODUCIBLE) {
+        auto attr_of_algo =
+                static_cast<megdnn::Algorithm::Attribute>(i.attribute);
+        bool contain_attr_all_positive =
+                (attr_from_strategy.first ==
+                 (attr_of_algo & attr_from_strategy.first));
+        bool contain_attr_any_negative =
+                static_cast<bool>(attr_of_algo & attr_from_strategy.second);
+        if (contain_attr_all_positive && !contain_attr_any_negative) {
             auto iter = algo_map.find(i.algo);
             mgb_assert(iter != algo_map.end(),
                        "algorithm %s exists in "
@@ -576,12 +584,11 @@ AlgoChooser<Opr>::ExeContext::get_profile_result_from_cache(
     }
 
     mgb_log_error(
-            "Workspace requirement (%zu) could not be satisfied. Abort now "
-            "to "
-            "avoid further problems",
-            WorkspaceLimitGetter::get_workspace_limit(
-                    m_base_mgb_opr->owner_graph(), m_cn,
-                    m_execution_policy.workspace_limit));
+            "algos read from cache could not satisfy attribute with %s and "
+            "without %s",
+            Algorithm::attribute_str(attr_from_strategy.first).c_str(),
+            Algorithm::attribute_str(attr_from_strategy.second).c_str());
+
     mgb_trap();
     MIDOUT_E
 }
