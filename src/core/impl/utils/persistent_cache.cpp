@@ -25,79 +25,9 @@
 
 using namespace mgb;
 
-namespace {
-
-    class InMemoryPersistentCache final: public PersistentCache {
-        struct BlobStorage: public Blob {
-            std::unique_ptr<uint8_t[]> data_refhold;
-            size_t hash = 0;
-
-            BlobStorage& init_data_ref(const Blob &b) {
-                data_refhold = std::make_unique<uint8_t[]>(b.size + 1);
-                memcpy(data_refhold.get(), b.ptr, b.size);
-                data_refhold.get()[b.size] = 0;   // for C-string safety
-                ptr = data_refhold.get();
-                size = b.size;
-                return *this;
-            }
-
-            BlobStorage& init_hash() {
-                hash = XXHash{}.update(ptr, size).digest();
-                return *this;
-            }
-
-            bool operator == (const BlobStorage &rhs) const {
-                return size == rhs.size && !memcmp(ptr, rhs.ptr, size);
-            }
-
-            struct Hash {
-                size_t operator() (const BlobStorage &b) const {
-                    return b.hash;
-                }
-            };
-        };
-        std::unordered_map<std::string,
-            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
-                m_cache;
-        std::mutex m_mtx;
-
-        Maybe<Blob> get(const std::string& category, const Blob& key) override {
-            decltype(m_cache.begin()) iter0;
-            {
-                MGB_LOCK_GUARD(m_mtx);
-                iter0 = m_cache.find(category);
-                if (iter0 == m_cache.end())
-                    return None;
-            }
-
-            BlobStorage key_storage;
-            key_storage.Blob::operator=(key);
-            key_storage.init_hash();
-
-            MGB_LOCK_GUARD(m_mtx);
-
-            auto iter1 = iter0->second.find(key_storage);
-            if (iter1 == iter0->second.end())
-                return None;
-            return iter1->second;
-        }
-
-        void put(const std::string& category, const Blob& key,
-                 const Blob& value) override {
-            BlobStorage key_storage;
-            key_storage.init_data_ref(key).init_hash();
-
-            MGB_LOCK_GUARD(m_mtx);
-            auto size0 = m_cache.size();
-            m_cache[category][std::move(key_storage)].init_data_ref(value);
-            if (m_cache.size() > size0) {
-                mgb_log_debug("new cache category: %s", category.c_str());
-            }
-        }
-    };
-}
+// ================= PersistentCache ======================
 std::shared_ptr<PersistentCache> PersistentCache::sm_impl =
-std::make_shared<InMemoryPersistentCache>();
+        std::make_shared<InMemoryPersistentCache>();
 
 std::shared_ptr<PersistentCache> PersistentCache::set_impl(
         std::shared_ptr<PersistentCache> impl) {
@@ -141,6 +71,65 @@ std::string PersistentCache::make_category_from_comp_node(CompNode comp_node) {
     }
 }
 
+// ================= InMemoryPersistentCache ==================
+using Blob = PersistentCache::Blob;
+InMemoryPersistentCache::BlobStorage&
+InMemoryPersistentCache::BlobStorage::init_data_ref(const Blob& b) {
+    data_refhold = std::make_unique<uint8_t[]>(b.size + 1);
+    memcpy(data_refhold.get(), b.ptr, b.size);
+    data_refhold.get()[b.size] = 0;  // for C-string safety
+    ptr = data_refhold.get();
+    size = b.size;
+    return *this;
+}
+
+InMemoryPersistentCache::BlobStorage&
+InMemoryPersistentCache::BlobStorage::init_hash() {
+    hash = XXHash{}.update(ptr, size).digest();
+    return *this;
+}
+
+bool InMemoryPersistentCache::BlobStorage::operator==(
+        const BlobStorage& rhs) const {
+    return size == rhs.size && !memcmp(ptr, rhs.ptr, size);
+}
+
+Maybe<Blob> InMemoryPersistentCache::get(const std::string& category,
+                                         const Blob& key) {
+    decltype(m_cache.begin()) iter0;
+    {
+        MGB_LOCK_GUARD(m_mtx);
+        iter0 = m_cache.find(category);
+        if (iter0 == m_cache.end())
+            return None;
+    }
+
+    BlobStorage key_storage;
+    key_storage.Blob::operator=(key);
+    key_storage.init_hash();
+
+    MGB_LOCK_GUARD(m_mtx);
+
+    auto iter1 = iter0->second.find(key_storage);
+    if (iter1 == iter0->second.end())
+        return None;
+    return iter1->second;
+}
+
+void InMemoryPersistentCache::put(const std::string& category, const Blob& key,
+                                  const Blob& value) {
+    BlobStorage key_storage;
+    key_storage.init_data_ref(key).init_hash();
+
+    MGB_LOCK_GUARD(m_mtx);
+    auto size0 = m_cache.size();
+    m_cache[category][std::move(key_storage)].init_data_ref(value);
+    if (m_cache.size() > size0) {
+        mgb_log_debug("new cache category: %s", category.c_str());
+    }
+}
+
+// ================= AlgoChooserProfileCache ==================
 AlgoChooserProfileCache::AlgoChooserProfileCache(
         CompNode cn, const char *opr_type) {
     m_category = "profile:";

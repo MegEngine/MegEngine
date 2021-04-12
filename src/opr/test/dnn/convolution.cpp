@@ -30,7 +30,6 @@
 #include <random>
 
 using namespace mgb;
-
 namespace {
 
 using Param = opr::Convolution::Param;
@@ -354,21 +353,26 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
 
     auto cn = CompNode::load("cpux");
 
+    auto orig_impl = PersistentCache::set_impl(
+            std::make_shared<InMemoryPersistentCache>());
+
 #if MGB_ENABLE_FASTRUN
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-          S::PROFILE | S::HEURISTIC, S::PROFILE | S::OPTIMIZED}) {
+                        S::PROFILE | S::HEURISTIC}) {
 #else
     for (auto strategy :
          SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
 #endif
+
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
 
         auto mkvar = [&](const char* name, const TensorShape& shp,
                          const DType& dtype) {
             return opr::TypeCvt::make(
-                    opr::Host2DeviceCopy::make(*graph, gen(shp), cn).rename(name),
+                    opr::Host2DeviceCopy::make(*graph, gen(shp), cn)
+                            .rename(name),
                     dtype);
         };
 
@@ -388,7 +392,11 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
         HostTensorND host_y;
         auto func = graph->compile({make_callback_copy(conv_bias, host_y)});
         func->execute();
+
+        //! set a new cache
+        PersistentCache::set_impl(std::make_shared<InMemoryPersistentCache>());
     }
+    PersistentCache::set_impl(orig_impl);
 }
 
 TEST(TestOprDNN, ConvBiasExePolicy_Quantized8Asym) {
@@ -401,19 +409,21 @@ TEST(TestOprDNN, ConvBiasExePolicy_Quantized8Asym) {
 
     for (auto strategy :
          SmallVector<S>{S::PROFILE, S::PROFILE | S::REPRODUCIBLE}) {
-
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
 
         auto mkvar = [&](const char* name, const TensorShape& shp,
                          const DType& dtype) {
             return opr::TypeCvt::make(
-                    opr::Host2DeviceCopy::make(*graph, gen(shp), cn).rename(name),
+                    opr::Host2DeviceCopy::make(*graph, gen(shp), cn)
+                            .rename(name),
                     dtype);
         };
 
-        auto x = mkvar("x", {20, 50, 50, 16}, dtype::Quantized8Asymm(2.5f, static_cast<uint8_t>(0)));
-        auto w = mkvar("w", {24, 3, 3, 16}, dtype::Quantized8Asymm(2.5f, static_cast<uint8_t>(0)));
+        auto x = mkvar("x", {20, 50, 50, 16},
+                       dtype::Quantized8Asymm(2.5f, static_cast<uint8_t>(0)));
+        auto w = mkvar("w", {24, 3, 3, 16},
+                       dtype::Quantized8Asymm(2.5f, static_cast<uint8_t>(0)));
         auto bias = mkvar("bias", {1, 1, 1, 24}, dtype::QuantizedS32(6.25f));
 
         param.nonlineMode = Param::NonlineMode::RELU;
