@@ -56,6 +56,37 @@ namespace mgb {
     };
 
     /*!
+     * \brief persistent cache that keep in memory
+     * The implementation is thread safe.
+     */
+    class InMemoryPersistentCache final : public PersistentCache {
+        struct BlobStorage : public PersistentCache::Blob {
+            std::unique_ptr<uint8_t[]> data_refhold;
+            size_t hash = 0;
+
+            BlobStorage& init_data_ref(const Blob& b);
+
+            BlobStorage& init_hash();
+
+            bool operator==(const BlobStorage& rhs) const;
+
+            struct Hash {
+                size_t operator()(const BlobStorage& b) const { return b.hash; }
+            };
+        };
+
+        Maybe<Blob> get(const std::string& category, const Blob& key) override;
+        void put(const std::string& category, const Blob& key,
+                 const Blob& value) override;
+
+        std::unordered_map<
+                std::string,
+                std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
+                m_cache;
+        std::mutex m_mtx;
+    };
+
+    /*!
      * \brief proxy PersistentCache to be better suited for managing profiling
      *      results of operator impl algorithms
      *

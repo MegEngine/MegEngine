@@ -140,9 +140,10 @@ public:
          * \brief construct execution policy from cache or heuristic.
          *
          * \param selected_strategy select algo which matched this strategy
-         * \param policy execution policy
+         * \param [out] policy execution policy
          * \param retrive_from_cache retrive algo from cache if set True, get
          *     from heuristic otherwise.
+         * \note When contruction fail, the policy will be cleaned.
          */
         void construct_execution_policy(ExecutionStrategy selected_strategy,
                                         ImplExecutionPolicy& policy,
@@ -152,13 +153,12 @@ public:
         Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const;
     };
 
-    template<typename U>
+    template <typename U>
     friend class AlgoChooser;
 
 private:
     //! entrance for getting algorithm according to execution strategy
     static ImplExecutionPolicy get_policy(ExeContext& ctx);
-
 
     //! profile and save to cache
     static void profile(ExeContext& ctx, ExecutionStrategy selected_strategy);

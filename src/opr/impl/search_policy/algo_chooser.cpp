@@ -68,7 +68,6 @@ std::string format_fixlayouts(
             ret.append(", ");
         }
         ret.append(layouts[i].to_string() + " ");
-        ret.append(layouts[i].dtype.name());
     }
     ret.append(") -> (");
     for (size_t i = 0; i < arity_out; ++i) {
@@ -76,7 +75,6 @@ std::string format_fixlayouts(
             ret.append(", ");
         }
         ret.append(layouts[i + arity_in].to_string() + " ");
-        ret.append(layouts[i + arity_in].dtype.name());
     }
     return ret;
 }
@@ -420,6 +418,7 @@ AlgoChooser<Opr>::choose_by_profile(ExeContext& ctx,
             AlgoChooser<_Opr>::profile(sub_ctx, selected_strategy);
         });
     }
+
     typename AlgoChooser<Opr>::ImplExecutionPolicy policy;
     ctx.construct_execution_policy(selected_strategy, policy);
     return policy;
@@ -660,8 +659,28 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
         bool retrive_from_cache) const {
     if (!policy.algo.valid()) {
         if (retrive_from_cache) {
-            policy.algo =
-                    get_profile_result_from_cache(selected_strategy).desc;
+            policy.algo = get_profile_result_from_cache(selected_strategy).desc;
+            if (!policy.algo.valid()) {
+                auto target_attr =
+                        extract_algo_attribute_from_execution_strategy(
+                                selected_strategy);
+                std::string layouts_str =
+                        format_fixlayouts<Opr>(m_layouts, arity_in, arity_out);
+                std::string msg = ssprintf(
+                        "(mbg_opr : %s, layouts %s, with attribute(%s) and "
+                        "without attribute(%s)",
+                        m_base_mgb_opr->dyn_typeinfo()->name,
+                        layouts_str.c_str(),
+                        Algorithm::attribute_str(target_attr.first).c_str(),
+                        Algorithm::attribute_str(target_attr.second).c_str());
+                mgb_log_warn(
+                        "No algo get from cache for %s. This may caused by "
+                        "mismatch with model and cache file. ex. profiling "
+                        "with version1, but inferencing on version2 or "
+                        "profiling modelA but inferencing modelB",
+                        msg.c_str());
+                return;
+            }
         } else {
             auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
                     owner_graph(), m_cn, m_execution_policy.workspace_limit);
@@ -673,10 +692,12 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
                                         attr.second),
                                 m_layouts)
                                   .desc;
+            mgb_assert(policy.algo.valid(),
+                       "No algo found from heuristic with strategy %u and "
+                       "workspace limit %zu",
+                       static_cast<uint32_t>(selected_strategy),
+                       workspace_limit);
         }
-        mgb_assert(policy.algo.valid(),
-                   "No algo found from cache or heuristic, maybe some error "
-                   "occured");
     }
 
     Algorithm* algo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
@@ -697,9 +718,13 @@ void AlgoChooser<Opr>::ExeContext::construct_execution_policy(
         sub_ctx.construct_execution_policy(selected_strategy,
                                            policy.sub_policy.back(),
                                            retrive_from_cache);
+        if (!policy.sub_policy.back().algo.valid()) {
+            // means sub_ctx.construct_execution_policy fails. clean up
+            // policy.algo and return
+            policy = {};
+            return;
+        }
     });
-
-    return;
 }
 
 template <typename Opr>
