@@ -114,6 +114,7 @@ class launcher:
                 procs[dev].terminate()
             devs.clear()
 
+        result_count = 0
         while len(devs) > 0:
             left = []
             # check all processes in one second
@@ -129,11 +130,21 @@ class launcher:
                 ), "subprocess {} exit with code {}".format(dev + self.rank_start, code)
                 if code == None:
                     left.append(dev)
-                elif queue.empty():
-                    get_logger().warning(WARN_SUBPROCESS_EXIT_WITHOUT_RETURN)
-                else:
+
+                # DO NOT delete it, multiprocess.Queue has small buffer
+                # fetch data early to avoid dead lock
+                if not queue.empty():
+                    result_count += 1
                     dev, ret = queue.get_nowait()
                     results[dev] = ret
             devs = left
+
+        while not queue.empty():
+            result_count += 1
+            dev, ret = queue.get_nowait()
+            results[dev] = ret
+
+        if result_count < self.n_gpus:
+            get_logger().warning(WARN_SUBPROCESS_EXIT_WITHOUT_RETURN)
 
         return results
