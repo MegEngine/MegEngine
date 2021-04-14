@@ -13,7 +13,7 @@
 
 #define MGB_MAJOR   8
 #define MGB_MINOR   10
-#define MGB_PATCH   0
+#define MGB_PATCH   1
 //! whether it is development version
 #ifndef MGB_IS_DEV
 #define MGB_IS_DEV  0
