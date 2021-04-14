@@ -21,6 +21,7 @@
 #include "./helper.h"
 #include "megbrain/plugin/profiler.h"
 #include "./common.h"
+#include "./ops.h"
 #include "megbrain/gopt/inference.h"
 
 
@@ -265,18 +266,8 @@ void init_graph_rt(py::module m) {
     });
 
     m.def("modify_opr_algo_strategy_inplace", [](const VarNodeArray& dest_vars,
-                                                 const std::string& strategy) {
-        _AlgoStrategy stg;
-        const std::unordered_map<std::string, std::function<void()>> m{
-                {"HEURISTIC", [&]() { stg = _AlgoStrategy::HEURISTIC; }},
-                {"PROFILE", [&]() { stg = _AlgoStrategy::PROFILE; }},
-                {"REPRODUCIBLE", [&]() { stg = _AlgoStrategy::REPRODUCIBLE; }},
-                {"OPTIMIZED", [&]() { stg = _AlgoStrategy::OPTIMIZED; }},
-        };
-        auto it = m.find(strategy);
-        mgb_assert(it != m.end(), "Invalid strategy string!");
-        it->second();
-        mgb::gopt::modify_opr_algo_strategy_inplace(dest_vars, stg);
+                                                 const _AlgoStrategy& strategy) {
+        mgb::gopt::modify_opr_algo_strategy_inplace(dest_vars, strategy);
     });
 
     m.def("get_info_for_strip", [](const std::vector<VarNode*>& dest_vars) {

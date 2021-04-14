@@ -12,6 +12,7 @@
 #include "./targets/cpp_class.h"
 #include "./targets/pybind11.h"
 #include "./targets/python_c_extension.h"
+#include "./targets/macros.h"
 
 using llvm::raw_ostream;
 using llvm::RecordKeeper;
@@ -21,7 +22,8 @@ enum ActionType {
     CppHeader,
     CppBody,
     Pybind,
-    CPython
+    CPython,
+    EnumListMacro
 };
 
 // NOLINTNEXTLINE
@@ -34,7 +36,9 @@ llvm::cl::opt<ActionType> action(
                      clEnumValN(Pybind, "gen-python-binding",
                                 "Generate pybind11 python bindings"),
                      clEnumValN(CPython, "gen-python-c-extension",
-                                "Generate python c extensions")));
+                                "Generate python c extensions"),
+                     clEnumValN(EnumListMacro, "gen-enum-list-macro",
+                                "Generate enum param list macro")));
 
 using namespace mlir::tblgen;
 
@@ -52,6 +56,9 @@ int main(int argc, char **argv) {
     }
     if (action == ActionType::CPython) {
         return TableGenMain(argv[0], &gen_op_def_python_c_extension);
+    }
+    if (action == ActionType::EnumListMacro) {
+        return TableGenMain(argv[0], &gen_enum_param_list_macro);
     }
     return -1;
 }

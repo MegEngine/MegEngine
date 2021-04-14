@@ -60,6 +60,7 @@ public:
 
     Initproc emit();
 protected:
+    void emit_trait();
     void emit_tpl_spl();
     Initproc emit_initproc();
 
@@ -69,50 +70,63 @@ protected:
 };
 
 Initproc EnumAttrEmitter::emit() {
+    emit_trait();
     emit_tpl_spl();
     return emit_initproc();
+}
+
+void EnumAttrEmitter::emit_trait() {
+    if (!firstOccur) return;
+
+    auto enumMax = [&] {
+        if (attr->getEnumCombinedFlag()) {
+            return formatv("(1llu << {0}) - 1", attr->getEnumMembers().size());
+        } else {
+            return formatv("{0} - 1", attr->getEnumMembers().size());
+        }
+    };
+    os << tgfmt(R"(
+template<> struct EnumTrait<$opClass::$enumClass> {
+    static constexpr const char *name = "$opClass.$enumClass";
+    static constexpr std::underlying_type_t<$opClass::$enumClass> max = $0;
+};
+)", &ctx, enumMax());
 }
 
 void EnumAttrEmitter::emit_tpl_spl() {
     if (!firstOccur) return;
 
     os << tgfmt(
-            "template<> PyTypeObject $enumTpl<$opClass::$enumClass>::type={};\n",
+            "template<> PyTypeObject $enumTpl<$opClass::$enumClass>::type = {};\n",
             &ctx);
 
-    os << tgfmt(
-            "template<> const char* $enumTpl<$opClass::$enumClass>::name = "
-            "\"$opClass.$enumClass\";\n", 
-            &ctx);
+    auto quote = [&](auto&& i) -> std::string {
+        return formatv("\"{0}\"", i);
+    };
+    os << tgfmt(R"(
+template<> const char*
+$enumTpl<$opClass::$enumClass>::members[] = {$0};
+)", &ctx, llvm::join(llvm::map_range(attr->getEnumMembers(), quote), ", "));
 
-    if (attr->getEnumCombinedFlag()) {
-        os << tgfmt(
-                "template<> PyNumberMethods "
-                "$enumTpl<$opClass::$enumClass>::number_methods={};\n",
-                &ctx);
-        os << tgfmt(R"(
-template<> struct EnumTrait<$opClass::$enumClass> {
-    static constexpr bool is_bit_combined = true;
-    static constexpr std::underlying_type_t<$opClass::$enumClass> max = (1llu << $0) - 1;
-};
-)", &ctx, attr->getEnumMembers().size());
-    }
-
-    auto str2type = [&](auto&& i) -> std::string {
+    auto mem2value = [&](auto&& i) -> std::string {
         return tgfmt("{normalize_enum(\"$0\"), $opClass::$enumClass::$0}", &ctx, i);
     };
     os << tgfmt(R"(
 template<> std::unordered_map<std::string, $opClass::$enumClass>
-$enumTpl<$opClass::$enumClass>::str2type = {$0};
-)", &ctx, llvm::join(llvm::map_range(attr->getEnumMembers(), str2type), ", "));
+$enumTpl<$opClass::$enumClass>::mem2value = {$0};
+)", &ctx, llvm::join(llvm::map_range(attr->getEnumMembers(), mem2value), ", "));
 
-    auto type2str = [&](auto&& i) -> std::string {
-        return tgfmt("{$opClass::$enumClass::$0, normalize_enum(\"$0\")}", &ctx, i);
-    };
-    os << tgfmt(R"(
-template<> std::unordered_map<$opClass::$enumClass, std::string>
-$enumTpl<$opClass::$enumClass>::type2str = {$0};
-)", &ctx, llvm::join(llvm::map_range(attr->getEnumMembers(), type2str), ", "));
+    os << tgfmt(
+            "template<> PyObject* "
+            "$enumTpl<$opClass::$enumClass>::pyobj_insts[$0] = {nullptr};\n",
+            &ctx, attr->getEnumMembers().size());
+
+    if (attr->getEnumCombinedFlag()) {
+        os << tgfmt(
+                "template<> PyNumberMethods "
+                "$enumTpl<$opClass::$enumClass>::number_methods = {};\n",
+                &ctx);
+    }
 }
 
 Initproc EnumAttrEmitter::emit_initproc() {
@@ -150,14 +164,16 @@ void $0(PyTypeObject& py_type) {
         os << "    mgb_assert(PyType_Ready(&e_type) >= 0);\n";
 
 
-        for (auto&& i : attr->getEnumMembers()) {
+        auto&& members = attr->getEnumMembers();
+        for (size_t idx = 0; idx < members.size(); ++ idx) {
             os << tgfmt(R"({
     PyObject* inst = e_type.tp_alloc(&e_type, 0);
     reinterpret_cast<$enumTpl<$opClass::$enumClass>*>(inst)->value = $opClass::$enumClass::$0;
     mgb_assert(PyDict_SetItemString(e_type.tp_dict, "$0", inst) >= 0);
-    PyType_Modified(&e_type);
-})", &ctx, i);
+    $enumTpl<$opClass::$enumClass>::pyobj_insts[$1] = inst;
+})", &ctx, members[idx], idx);
         }
+        os << "    PyType_Modified(&e_type);\n";
     }
 
     os << tgfmt(R"(
@@ -225,8 +241,10 @@ void OpDefEmitter::emit_py_init() {
             initBody += tgfmt(R"(
     if ($0) {
         try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
             reinterpret_cast<PyOp($_self)*>(self)->inst().$0 =
-                pyobj_convert_generic<decltype($_self::$0)>::from($0);
+                    py::cast<decltype($_self::$0)>(py::handle($0));
         } CATCH_ALL(-1)
     }
 )", &ctx, attr.name);
@@ -236,7 +254,7 @@ void OpDefEmitter::emit_py_init() {
     if (scope) {
         try {
             reinterpret_cast<PyOp(OpDef)*>(self)->op
-                ->set_scope(pyobj_convert_generic<std::string>::from(scope));
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
         } CATCH_ALL(-1)
     }
 )", &ctx);
