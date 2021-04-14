@@ -9,6 +9,7 @@
 from .adadelta import Adadelta
 from .adagrad import Adagrad
 from .adam import Adam
+from .adamw import AdamW
 from .lr_scheduler import LRScheduler
 from .multi_step_lr import MultiStepLR
 from .optimizer import Optimizer

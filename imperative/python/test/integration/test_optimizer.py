@@ -6,7 +6,10 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
+
 import numpy as np
+import pytest
 
 import megengine.autodiff as ad
 import megengine.functional as F
@@ -110,7 +113,17 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
             }
 
 
-def test_sgd():
+@pytest.mark.parametrize(
+    "case",
+    [
+        {"momentum": 0.9, "lr": 0.01},  # SGD with momentum
+        {"lr": 0.01},  # simple SGD
+        {"weight_decay": 0.1, "lr": 0.01},  # with weight_decay
+    ],
+)
+@pytest.mark.parametrize("update_lr", [False, True])
+@pytest.mark.parametrize("inplace_mode", [False, True])
+def test_sgd(monkeypatch, case, update_lr, inplace_mode):
     class CheckValue:
         def __init__(self, net, **kwarg):
             self.slots = {}
@@ -131,17 +144,26 @@ def test_sgd():
                     param.numpy(), ori_params[param] + delta, decimal=6
                 )
 
-    cases = [
-        {"momentum": 0.9, "lr": 0.01},  # SGD with momentum
-        {"lr": 0.01},  # simple SGD
-        {"weight_decay": 0.1, "lr": 0.01},  # with weight_decay
-    ]
-    for case in cases:
-        _test_optimizer("SGD", case, CheckValue)
-        _test_optimizer("SGD", case, CheckValue, update_lr=True)
+    with monkeypatch.context() as mk:
+        mk.setenv("MEGENGINE_INPLACE_UPDATE", str(int(inplace_mode)))
+        _test_optimizer("SGD", case, CheckValue, update_lr=update_lr)
 
 
-def test_adam():
+@pytest.mark.parametrize(
+    "case",
+    [
+        {"betas": (0.8, 0.9), "eps": 1e-04, "lr": 0.01},
+        {
+            "betas": (0.8, 0.9),
+            "eps": 1e-04,
+            "lr": 0.01,
+            "weight_decay": 0.1,
+        },  # with weight_decay
+    ],
+)
+@pytest.mark.parametrize("update_lr", [False, True])
+@pytest.mark.parametrize("inplace_mode", [False, True])
+def test_adam(monkeypatch, case, update_lr, inplace_mode):
     class CheckValue:
         def __init__(self, net, **kwarg):
             self.m_slots = {}
@@ -168,21 +190,27 @@ def test_adam():
                     param.numpy(), ori_params[param] - self.lr * delta, decimal=6
                 )
 
-    cases = [
-        {"betas": (0.8, 0.9), "eps": 1e-04, "lr": 0.01},
+    with monkeypatch.context() as mk:
+        mk.setenv("MEGENGINE_INPLACE_UPDATE", str(int(inplace_mode)))
+        _test_optimizer("Adam", case, CheckValue, update_lr=update_lr)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        {"lr": 0.01, "eps": 1e-06, "lr_decay": 0.01},
+        {"lr": 0.01, "eps": 1e-06, "lr_decay": 0.0},  # without lr_decay
         {
-            "betas": (0.8, 0.9),
-            "eps": 1e-04,
             "lr": 0.01,
+            "eps": 1e-06,
+            "lr_decay": 0.01,
             "weight_decay": 0.1,
         },  # with weight_decay
-    ]
-    for case in cases:
-        _test_optimizer("Adam", case, CheckValue)
-        _test_optimizer("Adam", case, CheckValue, update_lr=True)
-
-
-def test_adagrad():
+    ],
+)
+@pytest.mark.parametrize("update_lr", [False, True])
+@pytest.mark.parametrize("inplace_mode", [False, True])
+def test_adagrad(monkeypatch, case, update_lr, inplace_mode):
     class CheckValue:
         def __init__(self, net, **kwarg):
             self.s_slots = {}
@@ -201,22 +229,21 @@ def test_adagrad():
                     param.numpy(), ori_params[param] + delta, decimal=6
                 )
 
-    cases = [
-        {"lr": 0.01, "eps": 1e-06, "lr_decay": 0.01},
-        {"lr": 0.01, "eps": 1e-06, "lr_decay": 0.0},  # without lr_decay
-        {
-            "lr": 0.01,
-            "eps": 1e-06,
-            "lr_decay": 0.01,
-            "weight_decay": 0.1,
-        },  # with weight_decay
-    ]
-    for case in cases:
-        _test_optimizer("Adagrad", case, CheckValue)
-        _test_optimizer("Adagrad", case, CheckValue, update_lr=True)
+    with monkeypatch.context() as mk:
+        mk.setenv("MEGENGINE_INPLACE_UPDATE", str(int(inplace_mode)))
+        _test_optimizer("Adagrad", case, CheckValue, update_lr=update_lr)
 
 
-def test_adadelta():
+@pytest.mark.parametrize(
+    "case",
+    [
+        {"lr": 1.0, "eps": 1e-06, "rho": 0.9},
+        {"lr": 1.0, "eps": 1e-06, "rho": 0.9, "weight_decay": 0.9},  # with weight_decay
+    ],
+)
+@pytest.mark.parametrize("update_lr", [False, True])
+@pytest.mark.parametrize("inplace_mode", [False, True])
+def test_adadelta(monkeypatch, case, update_lr, inplace_mode):
     class CheckValue:
         def __init__(self, net, **kwarg):
             self.s_slots = {}
@@ -246,10 +273,55 @@ def test_adadelta():
                     param.numpy(), ori_params[param] + delta, decimal=6
                 )
 
-    cases = [
-        {"lr": 1.0, "eps": 1e-06, "rho": 0.9},
-        {"lr": 1.0, "eps": 1e-06, "rho": 0.9, "weight_decay": 0.9},  # with weight_decay
-    ]
-    for case in cases:
-        _test_optimizer("Adadelta", case, CheckValue)
-        _test_optimizer("Adadelta", case, CheckValue, update_lr=True)
+    with monkeypatch.context() as mk:
+        mk.setenv("MEGENGINE_INPLACE_UPDATE", str(int(inplace_mode)))
+        _test_optimizer("Adadelta", case, CheckValue, update_lr=update_lr)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        {"betas": (0.8, 0.9), "eps": 1e-08, "lr": 0.01},
+        {
+            "betas": (0.8, 0.9),
+            "eps": 1e-08,
+            "lr": 0.01,
+            "weight_decay": 0.1,
+        },  # with weight_decay
+    ],
+)
+@pytest.mark.parametrize("update_lr", [False, True])
+@pytest.mark.parametrize("inplace_mode", [False, True])
+def test_adamw(monkeypatch, case, update_lr, inplace_mode):
+    class CheckValue:
+        def __init__(self, net, **kwarg):
+            self.m_slots = {}
+            self.v_slots = {}
+            for param in net.parameters():
+                self.m_slots[param] = np.zeros(param.shape).astype(np.float32)
+                self.v_slots[param] = np.zeros(param.shape).astype(np.float32)
+            self.weight_decay = 0.01
+            for k, v in kwarg.items():
+                setattr(self, k, v)
+
+        def __call__(self, ori_params, new_params, step):
+            step = np.array(step).astype(np.float32)
+            for param in new_params:
+                grad = param.grad.numpy()
+                m = self.m_slots[param]
+                v = self.v_slots[param]
+                m *= self.betas[0]
+                m += (1 - self.betas[0]) * grad
+                v *= self.betas[1]
+                v += (1 - self.betas[1]) * grad * grad
+                delta = (m / (1 - self.betas[0] ** step)) / (
+                    np.sqrt(v / (1 - self.betas[1] ** step)) + self.eps
+                )
+                delta += ori_params[param] * self.weight_decay
+                np.testing.assert_almost_equal(
+                    param.numpy(), ori_params[param] - self.lr * delta, decimal=6
+                )
+
+    with monkeypatch.context() as mk:
+        mk.setenv("MEGENGINE_INPLACE_UPDATE", str(int(inplace_mode)))
+        _test_optimizer("AdamW", case, CheckValue, update_lr=update_lr)
