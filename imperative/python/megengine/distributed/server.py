@@ -253,6 +253,17 @@ class Client:
         """Get user defined key-value pairs across processes."""
         return self.proxy.user_get(key)
 
+    def bcast_val(self, val, key, size):
+        if val is not None:
+            self.user_set(key + "_sync", val)
+            self.group_barrier(key, size)
+            self.group_barrier(key, size)
+        else:
+            self.group_barrier(key, size)
+            val = self.user_get(key + "_sync")
+            self.group_barrier(key, size)
+            return val
+
 
 def main(port=0, verbose=True):
     mm_server_port = create_mm_server("0.0.0.0", 0)

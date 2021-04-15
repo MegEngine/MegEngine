@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import functools
 import multiprocessing as mp
+import os
 import queue
 
 from ..core._imperative_rt.core2 import sync
@@ -43,6 +44,8 @@ def _run_wrapped(
         device=dev,
         device_type=device_type,
     )
+    # set NCCL_LAUNCH_MODE to avoid deadlock
+    os.environ["NCCL_LAUNCH_MODE"] = "PARALLEL"
     if is_multimachine:
         group_barrier()
     ret = func(*args, **kwargs)
