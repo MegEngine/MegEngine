@@ -29,7 +29,6 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
 #if CUDA_VERSION >= 10010
     all_algos.push_back(&cublas_lt);
 #endif
-    all_algos.push_back(&naive);
 #if !MEGDNN_DISABLE_FLOAT16
     all_algos.push_back(&bfloat16);
 #endif
@@ -45,6 +44,7 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(&algo);
     }
 #endif
+    all_algos.push_back(&naive);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);

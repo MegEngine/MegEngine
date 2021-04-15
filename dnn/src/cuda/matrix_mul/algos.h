@@ -157,7 +157,7 @@ public:
     void exec(const ExecArgs& args) const override;
     MEGDNN_DECL_ALGO_TYPE(CUDA_NAIVE)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
     }
 };
 
