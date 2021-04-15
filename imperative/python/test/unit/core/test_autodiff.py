@@ -67,7 +67,7 @@ def test_dist_grad():
             grad.wrt(x, callback=save_to(x))
             # need a placeholder to trace operator
             remote_send(x, 1)
-            recv_x = remote_recv(1, x_np.shape, x_np.dtype)
+            recv_x = remote_recv(1)
             y = recv_x * recv_x
 
             grad([y], [as_tensor(np.ones_like(x_np))])
@@ -75,7 +75,7 @@ def test_dist_grad():
         elif rank == 1:
             grad = Grad()
 
-            recv_x = remote_recv(0, x_np.shape, x_np.dtype)
+            recv_x = remote_recv(0)
             remote_send(recv_x, 0)
 
             grad([], [])
