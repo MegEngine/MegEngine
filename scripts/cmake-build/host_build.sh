@@ -97,7 +97,7 @@ function cmake_build() {
     echo "create build dir"
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
-    cd $BUILD_DIR
+    cd_real_build_dir $BUILD_DIR
     cmake \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
@@ -229,7 +229,7 @@ function cmake_build_windows() {
     echo "create build dir"
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
-    cd $BUILD_DIR
+    cd_real_build_dir $BUILD_DIR
     echo "now try build windows native with cmake/clang-ci/Ninja/Visual Studio ....."
     export CFLAGS=-$MGE_WINDOWS_BUILD_MARCH
     export CXXFLAGS=-$MGE_WINDOWS_BUILD_MARCH

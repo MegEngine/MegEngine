@@ -9,6 +9,18 @@ if [[ $OS =~ "NT" ]]; then
     MAKEFILE_TYPE="Unix"
 fi
 
+READLINK=readlink
+if [ $OS = "Darwin" ];then
+    READLINK=greadlink
+fi
+
+function cd_real_build_dir() {
+    REAL_DIR=$($READLINK -f $1)
+    echo "may alias dir: $1"
+    echo "cd real build dir: ${REAL_DIR}"
+    cd ${REAL_DIR}
+}
+
 function build_flatc() {
     BUILD_DIR=$1/build_dir/host_flatc/build
     INSTALL_DIR=$BUILD_DIR/../install
@@ -25,7 +37,7 @@ function build_flatc() {
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
 
-    cd $BUILD_DIR
+    cd_real_build_dir $BUILD_DIR
     cmake -G "$MAKEFILE_TYPE Makefiles" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \

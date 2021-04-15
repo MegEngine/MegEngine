@@ -108,7 +108,7 @@ function cmake_build() {
     echo "create build dir"
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
-    cd $BUILD_DIR
+    cd_real_build_dir $BUILD_DIR
     cmake -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DIOS_TOOLCHAIN_ROOT=$TOOLCHAIN \
