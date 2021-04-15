@@ -44,6 +44,8 @@ def test_reduce_sum(shape):
         output = reduce_sum(inp)
         if rank == 0:
             assert np.allclose(output.numpy(), expect[rank])
+        else:
+            assert output is None
 
     x = np.random.random_sample(shape).astype("float32")
     y = np.random.random_sample(shape).astype("float32")
@@ -177,6 +179,8 @@ def test_gather(shape):
         output = gather(inp)
         if rank == 0:
             assert np.allclose(output.numpy(), expect[rank])
+        else:
+            assert output is None
 
     x = np.random.random_sample(shape).astype("float32")
     y = np.random.random_sample(shape).astype("float32")
@@ -236,7 +240,7 @@ def test_io_remote(shape):
             remote_send(x, 1)
             sync()
         else:  # remote recv
-            y = remote_recv(0, shape, np.float32)
+            y = remote_recv(0)
             assert y.device == get_default_device()
             np.testing.assert_almost_equal(val, y.numpy())
 

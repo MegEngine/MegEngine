@@ -5,6 +5,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import os
 import platform
 import weakref
 
@@ -151,9 +152,7 @@ def test_remote_grad(trace_mode):
         def train_func(x):
             with gm:
                 if rank != 0:
-                    x = dist.functional.remote_recv(
-                        rank - 1, shape=(1, rank * 2 + 2), dtype=np.float32
-                    )
+                    x = dist.functional.remote_recv(rank - 1)
                 y = m(x)
                 if rank != size - 1:
                     dist.functional.remote_send(y, dest_rank=rank + 1)
@@ -168,5 +167,115 @@ def test_remote_grad(trace_mode):
 
         for i in range(3):
             train_func(x)
+
+    worker()
+
+
+@pytest.mark.require_ngpu(3)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize(
+    "trace_mode", [True, False, None], ids=["symbolic", "trace", "no_trace"]
+)
+def test_gather_grad(trace_mode):
+    @dist.launcher(n_gpus=3)
+    def worker():
+        m = M.Linear(10, 10)
+        x = F.ones([3, 10], dtype="float32")
+
+        def func():
+            with GradManager().attach(m.parameters()) as gm:
+                y = m(x)
+                y = F.distributed.gather(y)
+                if dist.get_rank() == 0:
+                    loss = (2 * y + 1).mean()
+                    gm.backward(loss)
+                else:
+                    gm.backward()
+
+        if trace_mode is not None:
+            func = trace(symbolic=trace_mode)(func)
+        func()
+
+    worker()
+
+
+@pytest.mark.require_ngpu(3)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize(
+    "trace_mode", [True, False, None], ids=["symbolic", "trace", "no_trace"]
+)
+def test_scatter_grad(trace_mode):
+    @dist.launcher(n_gpus=3)
+    def worker():
+        x = F.ones([3, 10], dtype="float32")
+        m = M.Linear(10, 10)
+
+        def func():
+            with GradManager().attach(m.parameters()) as gm:
+                if dist.get_rank() == 0:
+                    y = m(x)
+                else:
+                    y = x
+                y = F.distributed.scatter(y)
+                gm.backward(y)
+
+        if trace_mode is not None:
+            func = trace(symbolic=trace_mode)(func)
+        func()
+
+    worker()
+
+
+@pytest.mark.require_ngpu(3)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize(
+    "trace_mode", [True, False, None], ids=["symbolic", "trace", "no_trace"]
+)
+def test_reduce_grad(trace_mode):
+    @dist.launcher(n_gpus=3)
+    def worker():
+        m = M.Linear(10, 10)
+        x = F.ones([3, 10], dtype="float32")
+
+        def func():
+            with GradManager().attach(m.parameters()) as gm:
+                y = m(x)
+                y = F.distributed.reduce_sum(y)
+                if dist.get_rank() == 0:
+                    loss = (2 * y + 1).mean()
+                    gm.backward(loss)
+                else:
+                    gm.backward()
+
+        if trace_mode is not None:
+            func = trace(symbolic=trace_mode)(func)
+        func()
+
+    worker()
+
+
+@pytest.mark.require_ngpu(3)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize(
+    "trace_mode", [True, False, None], ids=["symbolic", "trace", "no_trace"]
+)
+def test_broadcast_grad(trace_mode):
+    @dist.launcher(n_gpus=3)
+    def worker():
+        x = F.ones([3, 10], dtype="float32")
+        m = M.Linear(10, 10)
+
+        def func():
+            with GradManager().attach(m.parameters()) as gm:
+                if dist.get_rank() == 0:
+                    y = m(x)
+                else:
+                    y = x
+                y = F.distributed.broadcast(y)
+                gm.backward(y)
+
+        if trace_mode is not None:
+            func = trace(symbolic=trace_mode)(func)
+        func()
 
     worker()
