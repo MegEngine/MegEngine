@@ -62,6 +62,37 @@ TEST(TestOprTensorRT, RuntimeBasic) {
 }
 
 
+TEST(TestOprTensorRT, RuntimeBasicBatched) {
+    REQUIRE_GPU(1);
+    intl::BatchedTensorRTNetwork net;
+    auto make_trt = [&net]() {
+        auto p = net.create_trt_network(false);
+        TensorRTUniquePtr<INetworkDefinition> trt_net{p.second, {}};
+        TensorRTUniquePtr<IBuilder> builder{p.first, {}};
+        builder->setMaxBatchSize(5);
+#if NV_TENSOR_RT_VERSION >= 6001
+        TensorRTUniquePtr<IBuilderConfig> build_config{
+                builder->createBuilderConfig()};
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{
+                builder->buildEngineWithConfig(*trt_net, *build_config)};
+#else
+        TensorRTUniquePtr<ICudaEngine> cuda_engine{
+                builder->buildCudaEngine(*trt_net)};
+#endif
+        TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
+        auto nx = opr::Broadcast::make(net.x, {1, net.x.shape()[0], net.x.shape()[1], net.x.shape()[2]});
+        return TensorRTRuntimeOpr::make(mem->data(), mem->size(), {nx})[0];
+    };
+    auto y2 = make_trt();
+
+    HostTensorND host_z1;
+    HostTensorND host_z2;
+    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
+                                    make_callback_copy(y2, host_z2)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 5e-4);
+}
+
 
 TEST(TestOprTensorRT, ConcatRuntimeBasic) {
     REQUIRE_GPU(1);

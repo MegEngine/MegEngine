@@ -106,6 +106,70 @@ intl::SimpleTensorRTNetwork::create_trt_network(bool has_batch_dim) {
     return std::make_pair(builder, network);
 }
 
+intl::BatchedTensorRTNetwork::BatchedTensorRTNetwork() {
+    host_x = gen({23, 28, 28});
+
+    graph = ComputingGraph::make();
+    x = Host2DeviceCopy::make(*graph, host_x);
+    opr::Reduce::Param param1{Reduce::Mode::SUM, 0, Reduce::Param::DataType::DEFAULT};
+    opr::Reduce::Param param2{Reduce::Mode::SUM, 1, Reduce::Param::DataType::DEFAULT};
+    auto y0 = opr::Reduce::make(x, param1);
+    auto y1 = opr::Reduce::make(y0, param2);
+    TensorShape tshp{1, 28};
+    y = opr::Reshape::make(y1, tshp);
+}
+
+std::pair<nvinfer1::IBuilder*, INetworkDefinition*>
+intl::BatchedTensorRTNetwork::create_trt_network(bool has_batch_dim) {
+    CompNode::load("xpu0").activate();
+    auto builder = createInferBuilder(TensorRTOpr::Logger::instance());
+#if NV_TENSOR_RT_VERSION >= 6001
+    nvinfer1::NetworkDefinitionCreationFlags flags;
+    ::memset(&flags, 0, sizeof(nvinfer1::NetworkDefinitionCreationFlags));
+    if (has_batch_dim)
+        flags = 1 << static_cast<int>(nvinfer1::NetworkDefinitionCreationFlag::
+                                              kEXPLICIT_BATCH);
+    auto network = builder->createNetworkV2(flags);
+#else
+    auto network = builder->createNetwork();
+#endif
+    nvinfer1::ITensor* data;
+#if NV_TENSOR_RT_VERSION >= 6001
+    if (has_batch_dim) {
+        data = network->addInput("data", DataType::kFLOAT,
+                                 Dims4{1, 23, 28, 28});
+    } else {
+        data = network->addInput("data", DataType::kFLOAT, Dims3{23, 28, 28});
+    }
+    {
+        nvinfer1::TensorFormats formats =
+                1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
+        data->setAllowedFormats(formats);
+    }
+#else
+    if (has_batch_dim) {
+        data = network->addInput("data", DataType::kFLOAT,
+                                 DimsNCHW{1, 23, 28, 28});
+    } else {
+        data = network->addInput("data", DataType::kFLOAT, DimsCHW{23, 28, 28});
+    }
+#endif
+    mgb_assert(data != nullptr, "data is invalid");
+    auto reduce1 = network->addReduce(*data, nvinfer1::ReduceOperation::kSUM, 3, false);
+    mgb_assert(reduce1 != nullptr, "reduce1 is invalid");
+    reduce1->getOutput(0)->setName("prob");
+    network->markOutput(*reduce1->getOutput(0));
+#if NV_TENSOR_RT_VERSION >= 6001
+    {
+        nvinfer1::TensorFormats formats =
+                1 << static_cast<int>(nvinfer1::TensorFormat::kLINEAR);
+        reduce1->getOutput(0)->setAllowedFormats(formats);
+    }
+#endif
+
+    return std::make_pair(builder, network);
+}
+
 intl::SimpleQuantizedTensorRTNetwork::SimpleQuantizedTensorRTNetwork() {
     host_x = range_gen({32, 8, 28, 28});
     host_w = weight_gen({8, 8, 3, 3});

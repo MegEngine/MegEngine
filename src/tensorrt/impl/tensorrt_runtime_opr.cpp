@@ -72,12 +72,11 @@ TensorRTRuntimeOpr::TensorRTRuntimeOpr(
     size_t nr_input = 0;
     bool is_input = true;
     for (int i = 0; i < m_engine->getNbBindings(); ++i) {
-        // nbDims == 3, means CHW, without batch
-        if (m_engine->getBindingDimensions(i).nbDims != 3)
-            m_trt_engine_has_batch = true;
-
         if (m_engine->bindingIsInput(nr_input)) {
             mgb_assert(is_input, "mixed input/output bindings");
+            // nbDims == 3, means CHW, without batch
+            if (m_engine->getBindingDimensions(nr_input).nbDims != 3)
+                m_trt_engine_has_batch = true;
             ++nr_input;
         } else {
             is_input = false;
