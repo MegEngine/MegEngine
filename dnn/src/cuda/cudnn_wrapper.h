@@ -112,6 +112,7 @@ public:
     struct Attr {
         std::string name;
         bool is_reproducible;
+        bool accuracy_depend_on_batch;
     };
 
     static const std::unordered_map<cudnnConvolutionBwdDataAlgo_t, Attr>

@@ -19,50 +19,6 @@ using namespace megdnn;
 using namespace test;
 
 namespace {
-    bool good_float(float val) {
-        return std::isfinite(val);
-    }
-
-    bool good_float(int) {
-        return true;
-    }
-
-    bool good_float(dt_qint8) {
-        return true;
-    }
-
-    bool good_float(dt_qint16) {
-        return true;
-    }
-
-    bool good_float(dt_quint8) {
-        return true;
-    }
-
-    bool good_float(dt_qint32) {
-        return true;
-    }
-
-    // A hack for the (x+0) promote to int trick on dt_quint8.
-    int operator +(dt_quint8 lhs, int rhs) {
-        megdnn_assert(rhs == 0, "unexpected rhs");
-        return lhs.as_uint8();
-    }
-
-    int operator +(dt_qint32 lhs, int rhs) {
-        megdnn_assert(rhs == 0, "unexpected rhs");
-        return lhs.as_int32();
-    }
-
-    int operator +(dt_qint8 lhs, int rhs) {
-        megdnn_assert(rhs == 0, "unexpected rhs");
-        return int8_t(lhs);
-    }
-
-    int operator +(dt_qint16 lhs, int rhs) {
-        megdnn_assert(rhs == 0, "unexpected rhs");
-        return lhs.as_int16();
-    }
 
     template<typename ctype, class Iter>
     ::testing::AssertionResult assert_tensor_eq_with_iter(

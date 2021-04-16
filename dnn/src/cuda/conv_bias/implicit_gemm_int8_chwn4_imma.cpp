@@ -15,6 +15,7 @@
 #include "src/cuda/convolution_helper/layout.cuh"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/utils.h"
+#include "src/common/conv_bias.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -71,7 +72,7 @@ bool ConvBiasForwardImpl::AlgoInt8CHWN4IMMAImplicitGemm::is_available(
     bool available = true;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    if (!conv_bias::check_bias_share_in_channel(*(args.bias_layout),
+    if (!check_bias_share_in_channel(*(args.bias_layout),
                                                 param.format))
         return false;
     if (param.format != Format::CHWN4)

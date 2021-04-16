@@ -311,6 +311,51 @@ public:
 
 size_t get_cpu_count();
 
+static inline bool good_float(float val) {
+    return std::isfinite(val);
+}
+
+static inline bool good_float(int) {
+    return true;
+}
+
+static inline bool good_float(dt_qint8) {
+    return true;
+}
+
+static inline bool good_float(dt_qint16) {
+    return true;
+}
+
+static inline bool good_float(dt_quint8) {
+    return true;
+}
+
+static inline bool good_float(dt_qint32) {
+    return true;
+}
+
+// A hack for the (x+0) promote to int trick on dt_quint8.
+static inline int operator+(dt_quint8 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return lhs.as_uint8();
+}
+
+static inline int operator+(dt_qint32 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return lhs.as_int32();
+}
+
+static inline int operator+(dt_qint8 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return int8_t(lhs);
+}
+
+static inline int operator+(dt_qint16 lhs, int rhs) {
+    megdnn_assert(rhs == 0, "unexpected rhs");
+    return lhs.as_int16();
+}
+
 }  // namespace test
 
 static inline bool operator==(const TensorLayout& a, const TensorLayout& b) {

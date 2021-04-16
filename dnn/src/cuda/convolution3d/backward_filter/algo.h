@@ -112,6 +112,9 @@ public:
         if (m_attr.is_reproducible) {
             ret |= AlgoAttribute::REPRODUCIBLE;
         }
+        if (m_attr.accuracy_depend_on_batch) {
+            ret |= AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        }
         return ret;
     }
 

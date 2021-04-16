@@ -20,6 +20,7 @@
 #include "test/common/rng.h"
 #include "test/cuda/benchmark.h"
 #include "src/cuda/utils.h"
+#include "test/common/accuracy_shake_checker.h"
 
 #define V1(x) #x
 #define V(x) V1(x)
