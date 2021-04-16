@@ -115,7 +115,8 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
     const char* name() const override { return "CUBLAS"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLAS)
@@ -128,7 +129,8 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& /*args*/) const override;
     void exec(const ExecArgs& args) const final;
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
     const char* name() const override { return "CUBLAS_LT"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CUBLASLT)

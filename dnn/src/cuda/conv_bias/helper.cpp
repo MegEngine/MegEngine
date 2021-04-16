@@ -168,34 +168,6 @@ bool is_cudnn_supported(const BiasForwardSizeArgs& args) {
     return supported;
 }
 
-bool check_bias_share_in_channel(const TensorLayout& bias,
-                                 const param::ConvBias::Format format) {
-    bool share_in_channel = false;
-    if (format == param::ConvBias::Format::NCHW ||
-        format == param::ConvBias::Format::NCHW4_NCHW) {
-        share_in_channel = (bias.ndim == 4 && bias[0] == 1 && bias[2] == 1 &&
-                            bias[3] == 1);
-    } else if (format == param::ConvBias::Format::NHWC) {
-        share_in_channel = (bias.ndim == 4 && bias[0] == 1 && bias[1] == 1 &&
-                            bias[2] == 1);
-    } else if (format == param::ConvBias::Format::NCHW4 ||
-               format == param::ConvBias::Format::NCHW8 ||
-               format == param::ConvBias::Format::NCHW32 ||
-               format == param::ConvBias::Format::NCHW4_NCHW32 ||
-               format == param::ConvBias::Format::NCHW32_NCHW4) {
-        share_in_channel = (bias.ndim == 5 && bias[0] == 1 && bias[2] == 1 &&
-                            bias[3] == 1);
-    } else if (format == param::ConvBias::Format::NHWCD4) {
-        share_in_channel = (bias.ndim == 5 && bias[0] == 1 && bias[1] == 1 &&
-                            bias[3] == 1);
-    } else {
-        megdnn_assert(format == param::ConvBias::Format::CHWN4);
-        share_in_channel = (bias.ndim == 5 && bias[1] == 1 && bias[2] == 1 &&
-                            bias[3] == 1);
-    }
-    return share_in_channel;
-}
-
 SmallVector<size_t> matmul_get_workspace_bundle(
         const BiasForwardSizeArgs& args) {
     auto dtype = args.src_layout->dtype;

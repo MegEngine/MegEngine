@@ -106,7 +106,8 @@ public:
 
     const char* name() const override { return "1x1x1"; }
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_1X1X1)
 };
@@ -126,10 +127,17 @@ public:
     const char* name() const override { return m_name.c_str(); }
 
     AlgoAttribute attribute() const override {
-        auto ret = static_cast<AlgoAttribute>(0);
+        auto ret = AlgoAttribute::DEFAULT;
         if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
             ret |= AlgoAttribute::REPRODUCIBLE;
         }
+#define cb(attr)                               \
+    if (m_impl->contain_attribute_all(attr)) { \
+        ret |= attr;                           \
+    }
+        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
+#undef cb
+
         return ret;
     }
     static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
@@ -156,6 +164,9 @@ public:
         auto ret = static_cast<AlgoAttribute>(0);
         if (m_attr.is_reproducible) {
             ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        if (m_attr.accuracy_depend_on_batch) {
+            ret |= AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
         }
         return ret;
     }

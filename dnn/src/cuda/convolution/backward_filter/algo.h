@@ -123,6 +123,9 @@ public:
         if (m_attr.is_reproducible) {
             ret |= AlgoAttribute::REPRODUCIBLE;
         }
+        if (m_attr.accuracy_depend_on_batch) {
+            ret |= AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        }
         return ret;
     }
 
@@ -155,7 +158,8 @@ public:
     const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
 };
 

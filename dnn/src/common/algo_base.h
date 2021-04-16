@@ -47,6 +47,9 @@ namespace megdnn {
         return algo_pack().all_algos_map().at(desc);            \
     }
 
+#define MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb) \
+    cb(AlgoAttribute::ACCURACY_DEPEND_ON_BATCH)
+
 /**
  * \brief construct algo from AlgorithmDesc
  */

@@ -86,6 +86,7 @@ protected:
     size_t m_offset = 0;
 
     CheckerHelper(Handle* handle, bool check_dispatch = true);
+
     ~CheckerHelper() noexcept;
 
     using OprExec = std::function<void(const TensorValueArray&)>;
@@ -100,14 +101,15 @@ protected:
 
     void enable_contig_naive() { m_enable_contig_naive = true; }
 
-private:
-    std::shared_ptr<TensorValueArray> m_tensors_naive;
-
-    void init_naive_values();
     void copy_tensors_to_device(const TensorValueArray& dest,
                                 const TensorValueArray& src);
     void copy_tensors_from_device(const TensorValueArray& dest,
                                   const TensorValueArray& src);
+
+private:
+    std::shared_ptr<TensorValueArray> m_tensors_naive;
+
+    void init_naive_values();
     void check_tensors(const TensorValueArray& expected,
                        const TensorValueArray& computed);
 };

@@ -16,6 +16,7 @@
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/cudnn_wrapper.h"
 #include "src/cuda/utils.h"
+#include "src/common/conv_bias.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -29,7 +30,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
     }
 
     if (args.bias_layout->ndim == 0 ||
-        !conv_bias::check_bias_share_in_channel(*(args.bias_layout),
+        !check_bias_share_in_channel(*(args.bias_layout),
                                                 args.opr->param().format)) {
         return false;
     }

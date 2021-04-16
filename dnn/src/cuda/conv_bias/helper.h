@@ -126,9 +126,6 @@ namespace conv_bias {
         }
     };
 
-    bool check_bias_share_in_channel(const TensorLayout& bias,
-                                     const param::ConvBias::Format format);
-
 }  // namespace conv_bias
 } // namespace cuda
 } // namespace megdnn

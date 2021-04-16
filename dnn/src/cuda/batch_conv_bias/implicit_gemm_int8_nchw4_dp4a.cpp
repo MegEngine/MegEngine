@@ -10,7 +10,7 @@
  */
 
 #include "megdnn/oprs/general.h"
-#include "src/common/utils.h"
+#include "src/common/conv_bias.h"
 #include "src/cuda/batch_conv_bias/algo.h"
 #include "src/cuda/batch_conv_bias/batch_conv_bias.cuh"
 #include "src/cuda/batch_conv_bias/opr_impl.h"
@@ -86,7 +86,7 @@ bool BatchConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemmPrecomp::
     using Mode = Param::Mode;
     bool available = true;
     auto&& param = args.opr->param();
-    if (!conv_bias::check_bias_share_in_channel(args.bias_layout, param.format))
+    if (!check_bias_share_in_channel(args.bias_layout, param.format))
         return false;
     if (param.format != Format::NCHW4)
         return false;

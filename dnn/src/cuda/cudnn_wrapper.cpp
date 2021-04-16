@@ -470,9 +470,9 @@ void Conv3DDesc::set(const param::Convolution3D& param, const size_t nr_group) {
 #define V(v) V1(v)
 #define DEF_NAME(NAME) \
     #NAME "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL)
-#define DEF_ALGO(NAME, PROD)           \
-    {                                  \
-        NAME, { DEF_NAME(NAME), PROD } \
+#define DEF_ALGO(NAME, PROD1, PROD2)           \
+    {                                          \
+        NAME, { DEF_NAME(NAME), PROD1, PROD2 } \
     }
 
 #if !(CUDNN_MAJOR >= 6 || CUDNN_MINOR >= 1)
@@ -483,19 +483,18 @@ const std::unordered_map<cudnnConvolutionBwdDataAlgo_t, CudnnAlgoPack::Attr>
 CudnnAlgoPack::conv_bwd_data_algos() {
     static const std::unordered_map<cudnnConvolutionBwdDataAlgo_t,
                                     CudnnAlgoPack::Attr>
-            algos = {
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, false),
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING, true),
+            algos =
+    { DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, false, false),
+      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true, false),
+      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT, true, true),
+      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING, true, true),
 #if CUDNN_MAJOR >= 5
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD, true),
+      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD, true, false),
 #if CUDNN_MAJOR >= 6 || CUDNN_MINOR >= 1
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED,
-                         true),
+      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED, true, false),
 #endif
 #endif
-            };
+    };
 
     return algos;
 }
@@ -505,15 +504,16 @@ CudnnAlgoPack::conv_bwd_flt_algos() {
     static const std::unordered_map<cudnnConvolutionBwdFilterAlgo_t,
                                     CudnnAlgoPack::Attr>
             algos = {
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, false),
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3, false),
+                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, false, false),
+                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, true, false),
+                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT, true, true),
+                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3, false, false),
 #if CUDNN_MAJOR >= 6 || (CUDNN_MAJOR >= 5 && CUDNN_MINOR >= 1)
                 DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED,
-                         true),
+                         true, false),
 #if CUDNN_MAJOR >= 6
-                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING, true),
+                DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING, true,
+                         true),
 #endif
 #endif
 
@@ -522,28 +522,30 @@ CudnnAlgoPack::conv_bwd_flt_algos() {
     return algos;
 }
 
-
 const std::unordered_map<cudnnConvolutionFwdAlgo_t, CudnnAlgoPack::Attr>
 CudnnAlgoPack::conv_fwd_algos() {
     static const std::unordered_map<cudnnConvolutionFwdAlgo_t,
                                     CudnnAlgoPack::Attr>
-            algos = {
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM,
-                         true),
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_GEMM, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_DIRECT, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT, true),
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING, true),
+            algos =
+    { DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, true, false),
+#if CUDNN_VERSION == 8004
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true, true),
+#else
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true, false),
+#endif
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_GEMM, true, false),
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_DIRECT, true, false),
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT, true, true),
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING, true, true),
 
 #if CUDNN_MAJOR >= 5
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD, true),
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD, true, false),
 #if CUDNN_MAJOR >= 6 || CUDNN_MINOR >= 1
-                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED, true),
+      DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED, true, false),
 #endif
 #endif
 
-            };
+    };
 
     return algos;
 }
@@ -553,9 +555,10 @@ CudnnAlgoPack::conv3d_bwd_data_algos() {
     static const std::unordered_map<cudnnConvolutionBwdDataAlgo_t,
                                     CudnnAlgoPack::Attr>
             algos = {
-                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, false),
-                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true),
-                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING, true),
+                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, false, false),
+                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true, false),
+                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING, true,
+                             true),
             };
 
     return algos;
@@ -568,9 +571,9 @@ CudnnAlgoPack::conv3d_bwd_flt_algos() {
     static const std::unordered_map<cudnnConvolutionBwdFilterAlgo_t,
                                     CudnnAlgoPack::Attr>
             algos = {
-                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, false),
-                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, true),
-                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3, false),
+                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, false, false),
+                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, true, false),
+                    DEF_ALGO(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3, false, false),
             };
 
     return algos;
@@ -581,10 +584,15 @@ CudnnAlgoPack::conv3d_fwd_algos() {
     static const std::unordered_map<cudnnConvolutionFwdAlgo_t,
                                     CudnnAlgoPack::Attr>
             algos = {
-                    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, true),
-                    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM,
-                             true),
-                    DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING, true),
+                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, true, false),
+#if CUDNN_VERSION == 8004
+                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true,
+                         true),
+#else
+                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true,
+                         false),
+#endif
+                DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING, true, true),
             };
 
     return algos;

@@ -13,6 +13,7 @@
 #include "src/cuda/utils.h"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
+#include "src/common/conv_bias.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -29,7 +30,7 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     bool available = true;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    if (!conv_bias::check_bias_share_in_channel(*(args.bias_layout),
+    if (!check_bias_share_in_channel(*(args.bias_layout),
                                                 param.format))
         return false;
     if (param.format == Format::NCHW4_NCHW32) {

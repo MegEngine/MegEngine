@@ -15,6 +15,7 @@
 #include "megdnn/oprs.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/accuracy_shake_checker.h"
 #include "test/common/convolution.h"
 #include "test/common/rng.h"
 #include "test/common/tensor.h"
