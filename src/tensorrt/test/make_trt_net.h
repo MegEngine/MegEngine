@@ -48,6 +48,20 @@ struct SimpleTensorRTNetwork {
     create_trt_network(bool has_batch_dim);
 };
 
+struct BatchedTensorRTNetwork {
+    HostTensorGenerator<> gen;
+    std::shared_ptr<HostTensorND> host_x, host_w, host_b;
+    std::shared_ptr<ComputingGraph> graph;
+    SymbolVar x, y;
+
+    HostTensorND host_z1;
+
+    BatchedTensorRTNetwork();
+
+    std::pair<nvinfer1::IBuilder*, INetworkDefinition*>
+    create_trt_network(bool has_batch_dim);
+};
+
 struct SimpleQuantizedTensorRTNetwork {
     HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> weight_gen{
             1*1.1f, 127*1.1f};
