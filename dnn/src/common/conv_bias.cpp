@@ -35,7 +35,9 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_in_bytes,
         const PreprocessedFilter* preprocessed_filter) {
-    megdnn_assert(src.dtype.enumv() == filter.dtype.enumv());
+    megdnn_assert((src.dtype.enumv() == filter.dtype.enumv()) ||
+                  (src.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
+                   filter.dtype.enumv() == DTypeEnum::QuantizedS4));
     // check compatibility of bias's scale
     if (src.dtype.category() == DTypeCategory::QUANTIZED) {
         if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {

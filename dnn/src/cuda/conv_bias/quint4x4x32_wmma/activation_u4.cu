@@ -87,11 +87,10 @@ __global__ void kern_activation_u4(int32_t* dst, const int32_t* zp_data,
 }  // namespace
 
 template <typename ActivationOp>
-void _do_dispatch_activation_u4(int32_t* dst, BiasVisitor visitor,
-                                const int32_t* zp_data,
-                                const int32_t* zp_filter,
-                                int32_t zp_data_filter, int batch_size, int co,
-                                int ho, int wo, cudaStream_t stream) {
+void do_dispatch_activation_u4(int32_t* dst, BiasVisitor visitor,
+                               const int32_t* zp_data, const int32_t* zp_filter,
+                               int32_t zp_data_filter, int batch_size, int co,
+                               int ho, int wo, cudaStream_t stream) {
     void (*fptr)(int32_t*, const int32_t*, const int32_t*, int32_t, int, int OC,
                  int, int, BiasVisitor) = kern_activation_u4<ActivationOp>;
     dim3 grids{0, 0, 0};
@@ -105,7 +104,7 @@ void _do_dispatch_activation_u4(int32_t* dst, BiasVisitor visitor,
 }
 
 #define INST(_op)                                                             \
-    template void _do_dispatch_activation_u4<_op>(                            \
+    template void do_dispatch_activation_u4<_op>(                             \
             int32_t * dst, BiasVisitor visitor, const int32_t* zp_data,       \
             const int32_t* zp_filter, int32_t zp_data_filter, int batch_size, \
             int co, int ho, int wo, cudaStream_t stream);

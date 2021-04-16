@@ -82,12 +82,10 @@ struct ActivationIdentity {
 }  // namespace activation_u4
 
 template <typename ActivationOp>
-void _do_dispatch_activation_u4(int32_t* dst,
-                                activation_u4::BiasVisitor visitor,
-                                const int32_t* zp_data,
-                                const int32_t* zp_filter,
-                                int32_t zp_data_filter, int batch_size, int co,
-                                int ho, int wo, cudaStream_t stream);
+void do_dispatch_activation_u4(int32_t* dst, activation_u4::BiasVisitor visitor,
+                               const int32_t* zp_data, const int32_t* zp_filter,
+                               int32_t zp_data_filter, int batch_size, int co,
+                               int ho, int wo, cudaStream_t stream);
 
 }  // namespace cuda
 }  // namespace megdnn

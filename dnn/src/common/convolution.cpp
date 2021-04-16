@@ -598,8 +598,10 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(filter);
     megdnn_assert(src.ndim >= 3_z, "%s", errmsg().c_str());
-    megdnn_assert(src.dtype.enumv() == filter.dtype.enumv(), "%s",
-                  errmsg().c_str());
+    megdnn_assert(((src.dtype.enumv() == filter.dtype.enumv()) ||
+                   (src.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
+                    filter.dtype.enumv() == DTypeEnum::QuantizedS4)),
+                  "%s", errmsg().c_str());
     check_or_deduce_dtype_fwd(src.dtype, filter.dtype, dst.dtype);
     size_t img_dim;
     if (param().format == Param::Format::NCHW ||

@@ -161,6 +161,38 @@ void forward_bias<dt_qint4, dt_qint4, dt_qint32, dt_qint32>(
     forward_bias<dt_qint8, dt_qint8, dt_qint32, dt_qint32>(
             new_src, new_flt, bias, dst, nullptr, new_filter_meta);
 }
+
+template <>
+void forward_bias<dt_quint4, dt_qint4, dt_qint32, dt_qint32>(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
+        _megdnn_tensor_out dst, dt_byte* workspace_ptr,
+        const ConvBiasForward::CanonizedFilterMeta& filter_meta) {
+    auto convert_layout_src = [](const TensorLayout& layout) {
+        auto ret = layout;
+        auto param = layout.dtype.param<dtype::Quantized4Asymm>();
+        ret.dtype = dtype::QuantizedS8(param.scale);
+        ret.format = TensorFormat(ret.dtype);
+        ret.init_contiguous_stride();
+        return ret;
+    };
+    auto convert_layout_flt = [](const TensorLayout& layout) {
+        auto ret = layout;
+        auto param = layout.dtype.param<dtype::QuantizedS4>();
+        ret.dtype = dtype::QuantizedS8(param.scale);
+        ret.format = TensorFormat(ret.dtype);
+        ret.init_contiguous_stride();
+        return ret;
+    };
+    TensorND new_src = {workspace_ptr, convert_layout_src(src.layout)};
+    TensorND new_flt = {workspace_ptr + new_src.layout.span().dist_byte(),
+                        convert_layout_flt(filter.layout)};
+    uint4_to_int8(src, new_src);
+    int4_to_int8(filter, new_flt);
+    auto new_filter_meta = filter_meta;
+    new_filter_meta.dtype = new_flt.layout.dtype;
+    forward_bias<dt_qint8, dt_qint8, dt_qint32, dt_qint32>(
+            new_src, new_flt, bias, dst, nullptr, new_filter_meta);
+}
 }  // namespace convolution
 
 size_t ConvBiasForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
@@ -211,9 +243,10 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                            TensorLayout{dst.layout, bias.layout.dtype}};
             workspace_ptr += sfb.layout.span().dist_byte();
         }
-#define DISPATCH_RAW(in_dt, bias_dt, out_dt, cmode, func)                      \
+#define DISPATCH_RAW(in_dt, flt_dt, bias_dt, out_dt, cmode, func)              \
     else if (src.layout.dtype.enumv() == DTypeTrait<dtype::in_dt>::enumv &&    \
-             filter.layout.dtype.enumv() == DTypeTrait<dtype::in_dt>::enumv && \
+             filter.layout.dtype.enumv() ==                                    \
+                     DTypeTrait<dtype::flt_dt>::enumv &&                       \
              bias.layout.dtype.enumv() == DTypeTrait<dtype::bias_dt>::enumv && \
              sfb.layout.dtype.enumv() == DTypeTrait<dtype::out_dt>::enumv &&   \
              param().compute_mode == Param::ComputeMode::cmode) {              \
@@ -222,7 +255,7 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
     }
 #define DISPATCH(in_dt, out_dt)                                          \
     DISPATCH_RAW(                                                        \
-            in_dt, out_dt, out_dt, DEFAULT,                              \
+            in_dt, in_dt, out_dt, out_dt, DEFAULT,                       \
             (convolution::forward_bias<DTypeTrait<dtype::in_dt>::ctype,  \
                                        DTypeTrait<dtype::in_dt>::ctype,  \
                                        DTypeTrait<dtype::out_dt>::ctype, \
@@ -236,16 +269,21 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         DISPATCH(QuantizedS8, Float32)
         DISPATCH(Quantized8Asymm, QuantizedS32)
         DISPATCH(Quantized4Asymm, QuantizedS32)
-        DISPATCH_RAW(QuantizedS8, QuantizedS32, QuantizedS32, FLOAT32,
+        DISPATCH_RAW(QuantizedS8, QuantizedS8, QuantizedS32, QuantizedS32,
+                     FLOAT32,
                      (convolution::forward_bias<dt_int8, dt_int8, dt_int32,
                                                 dt_int32>))
         DISPATCH(QuantizedS4, QuantizedS32)
+        DISPATCH_RAW(Quantized4Asymm, QuantizedS4, QuantizedS32, QuantizedS32,
+                     DEFAULT,
+                     (convolution::forward_bias<dt_quint4, dt_qint4, dt_qint32,
+                                                dt_qint32>))
 #if !MEGDNN_DISABLE_FLOAT16
         DISPATCH(Float16, Float16)
-        DISPATCH_RAW(Float16, Float16, Float16, FLOAT32,
+        DISPATCH_RAW(Float16, Float16, Float16, Float16, FLOAT32,
                      (convolution::forward_bias<dt_float16, dt_float16,
                                                 dt_float16, dt_float32>))
-        DISPATCH_RAW(BFloat16, BFloat16, BFloat16, FLOAT32,
+        DISPATCH_RAW(BFloat16, BFloat16, BFloat16, BFloat16, FLOAT32,
                      (convolution::forward_bias<dt_bfloat16, dt_bfloat16,
                                                 dt_bfloat16, dt_float32>))
 #endif

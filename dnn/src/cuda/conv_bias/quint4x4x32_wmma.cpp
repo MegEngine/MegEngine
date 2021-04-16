@@ -15,7 +15,7 @@
 
 #include "./quint4x4x32_wmma/activation_u4.cuh"
 #include "./quint4x4x32_wmma/reduce_with_scale_data.cuh"
-#include "./quint4x4x32_wmma/reduce_with_scale_filter.cuh"
+#include "./reduce_with_scale_filter.cuh"
 #include "./quint4x4x32_wmma/wmma_conv_integer_u4.cuh"
 
 using namespace megdnn;
@@ -75,7 +75,7 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoQUInt4x4x32WMMA::get_workspace_bundle(
     // for reduce filter
     {
         size_t A = OC, B = IC * FH * FW / 8, C = 1;
-        ws_size_zp_filter += _do_dispatch_reduce_workspace_in_bytes(A, B, C);
+        ws_size_zp_filter += do_dispatch_reduce_workspace_in_bytes(A, B, C);
     }
     size_t ws_size_zp_data = N * OH * OW * sizeof(int32_t);
     size_t ws_size_relayout_filter = get_workspace_in_bytes_do_conv(args);
@@ -135,11 +135,11 @@ void ConvBiasForwardImpl::AlgoQUInt4x4x32WMMA::exec(
     int32_t zp_data_filter = zp_data * zp_filter * FH * FW * IC;
     auto&& stream = cuda_stream(handle);
     // zp filter
-    _do_dispatch_reduce_with_scale_filter_u4(
+    do_dispatch_reduce_with_scale_filter_4bit<false>(
             static_cast<uint8_t*>(args.filter_tensor->raw_ptr), -zp_data, OC,
             FH * FW * IC / 8, ws_zp_filter.ptr<int32_t>(), stream);
     // zp data
-    _do_dispatch_reduce_with_scale_data_u4(
+    do_dispatch_reduce_with_scale_data_u4(
             ws_zp_data.ptr<int32_t>(),
             static_cast<uint8_t*>(args.src_tensor->raw_ptr), N, IH, IW, OH, OW,
             PH, PW, FH, FW, SH, SW, IC, -zp_filter,
@@ -173,12 +173,12 @@ void ConvBiasForwardImpl::AlgoQUInt4x4x32WMMA::exec(
             args.bias_tensor->compatible_ptr<int32_t>(), s0, s1, s2, s3};
     auto&& param = args.opr->param();
     if (param.nonlineMode == Param::NonlineMode::RELU) {
-        _do_dispatch_activation_u4<ActivationRELU>(
+        do_dispatch_activation_u4<ActivationRELU>(
                 args.dst_tensor->compatible_ptr<int32_t>(), visitor,
                 ws_zp_data.ptr<int32_t>(), ws_zp_filter.ptr<int32_t>(),
                 zp_data_filter, N, OC, OH, OW, stream);
     } else if (param.nonlineMode == Param::NonlineMode::IDENTITY) {
-        _do_dispatch_activation_u4<ActivationIdentity>(
+        do_dispatch_activation_u4<ActivationIdentity>(
                 args.dst_tensor->compatible_ptr<int32_t>(), visitor,
                 ws_zp_data.ptr<int32_t>(), ws_zp_filter.ptr<int32_t>(),
                 zp_data_filter, N, OC, OH, OW, stream);

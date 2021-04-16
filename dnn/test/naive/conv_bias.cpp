@@ -746,6 +746,45 @@ TEST_F(NAIVE, CONV_BIAS_QUANTIZED4) {
 
     checker.set_param(param).exect(Testcase{input, filter, bias, z, {}},
                                    Testcase{{}, {}, {}, {}, output});
+
+    // test qu4 x q4
+
+    for (size_t i = 0; i < input_values.size(); i++) {
+        input_values[i] = input_values[i] + 8;
+    }
+
+    for (size_t i = 0; i < z_values.size(); i++) {
+        z_values[i] = z_values[i] + 8;
+    }
+
+    std::vector<int> output_uint4;
+    auto dtype_qu4 = dtype::Quantized4Asymm(0.01, 8);
+    for (size_t i = 0; i < output_values.size(); i++) {
+        int result =
+                static_cast<int>(dtype_qu4.param()
+                                         .quantize(output_values.at(i) * 0.01)
+                                         .as_uint8());
+        output_uint4.push_back(result);
+    }
+
+    auto input_qu4 = TensorValueLowbit4(
+            {1, 1, 4, 4}, dtype::Quantized4Asymm(0.1, 8), input_values);
+
+    auto filter_q4 = TensorValueLowbit4({3, 1, 3, 3}, dtype::QuantizedS4(0.1),
+                                        filter_values);
+
+    auto bias_s32 = GenTensorValue({1, 3, 1, 1}, dtype::QuantizedS32(0.01),
+                                   bias_values);
+
+    auto z_qu4 = TensorValueLowbit4({1, 3, 2, 2},
+                                    dtype::Quantized4Asymm(0.01, 8), z_values);
+
+    auto output_qu4 = TensorValueLowbit4(
+            {1, 3, 2, 2}, dtype::Quantized4Asymm(0.01, 8), output_uint4);
+
+    checker.set_param(param).exect(
+            Testcase{input_qu4, filter_q4, bias_s32, z_qu4, {}},
+            Testcase{{}, {}, {}, {}, output_qu4});
 }
 
 TEST_F(NAIVE, CONV_BIAS_NCHW64_Q4) {
@@ -3329,7 +3368,7 @@ TEST_F(NAIVE, CONV_BIAS_NCHW64_Q4) {
 
     auto input_64 = TensorValueLowbit4({1, 1, 4, 4, 64},
                                        dtype::QuantizedS4(0.1), input_values);
-    auto fliter_64 = TensorValueLowbit4({64, 1, 3, 3, 64},
+    auto filter_64 = TensorValueLowbit4({64, 1, 3, 3, 64},
                                         dtype::QuantizedS4(0.1), filter_values);
     auto bias1_64 =
             GenTensorValue({1, 1, 1, 1, 64}, dtype::QuantizedS32(0.01), bias_1);
@@ -3338,7 +3377,31 @@ TEST_F(NAIVE, CONV_BIAS_NCHW64_Q4) {
             {1, 1, 2, 2, 64}, dtype::QuantizedS4(1), output_values);
 
     checker.set_param(param).exect(
-            Testcase{input_64, fliter_64, bias1_64, {}, {}},
+            Testcase{input_64, filter_64, bias1_64, {}, {}},
             Testcase{{}, {}, {}, {}, output_64});
+
+    // test qu4 x q4
+
+    for (size_t i = 0; i < input_values.size(); i++) {
+        input_values[i] = input_values[i] + 8;
+    }
+
+    for (size_t i = 0; i < output_values.size(); i++) {
+        output_values[i] = output_values[i] + 8;
+    }
+
+    auto input_qu4_64 = TensorValueLowbit4(
+            {1, 1, 4, 4, 64}, dtype::Quantized4Asymm(0.1, 8), input_values);
+    auto filter_q4_64 = TensorValueLowbit4(
+            {64, 1, 3, 3, 64}, dtype::QuantizedS4(0.1), filter_values);
+    auto bias_64 =
+            GenTensorValue({1, 1, 1, 1, 64}, dtype::QuantizedS32(0.01), bias_1);
+
+    auto output_q4_64 = TensorValueLowbit4(
+            {1, 1, 2, 2, 64}, dtype::Quantized4Asymm(1, 8), output_values);
+
+    checker.set_param(param).exect(
+            Testcase{input_qu4_64, filter_q4_64, bias_64, {}, {}},
+            Testcase{{}, {}, {}, {}, output_q4_64});
 }
 // vim: syntax=cpp.doxygen

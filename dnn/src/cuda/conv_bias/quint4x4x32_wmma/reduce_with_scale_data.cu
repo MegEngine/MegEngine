@@ -444,7 +444,7 @@ reduce_in_spatial_block_and_along_input_channel_with_scale_u4_large_channels(
 
 }  // namespace
 
-void megdnn::cuda::_do_dispatch_reduce_with_scale_data_u4(
+void megdnn::cuda::do_dispatch_reduce_with_scale_data_u4(
         int32_t* dst, const uint8_t* src, int batch_size, int ih, int iw,
         int oh, int ow, int ph, int pw, int fh, int fw, int sh, int sw, int ic,
         int32_t scale, uint8_t zp_data, cudaStream_t stream) {

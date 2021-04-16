@@ -488,6 +488,10 @@ void LowbitsAlignedTensorFormatBase::assert_valid(
                 "bad stride:%s, %zu", layout.to_string().c_str(),
                 layout.stride[i]);
     }
+    if (!has_dim_unity_stride &&
+        (int)layout.stride[layout.ndim - 1] ==
+                round_up(1, (int)m_align_size_in_elements))
+        has_dim_unity_stride = true;
     megdnn_assert(layout.ndim == 0 || has_dim_unity_stride,
                   "innermost dim not contiguous");
 }
@@ -546,7 +550,12 @@ bool LowbitsAlignedTensorFormatBase::is_contiguous_spec(
     assert_valid(layout);
     ptrdiff_t expected = 1;
     for (int i = static_cast<int>(layout.ndim) - 1; i >= 0; --i) {
-        if (layout.shape[i] != 1 && layout.stride[i] != expected)
+        bool is_valid_stride =
+                (layout.stride[i] == expected) ||
+                (expected == 1 &&
+                 (int)layout.stride[i] ==
+                         round_up(1, (int)m_align_size_in_elements));
+        if (layout.shape[i] != 1 && !is_valid_stride)
             return false;
         auto multiplier = layout.shape[i];
         if (i == static_cast<int>(layout.ndim) - 1)
@@ -568,7 +577,7 @@ TensorLayout LowbitsAlignedTensorFormatBase::collapse_contiguous_spec(
             res.stride[0] = 1;
             return res;
         }
-        if (res.shape[i] == 1 && res.stride[i] != 1) {
+        if (res.shape[i] == 1) {
             res.remove_axis_inplace(i);
         }
     }

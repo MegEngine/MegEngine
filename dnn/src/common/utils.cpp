@@ -232,6 +232,7 @@ float megdnn::mul_scale(DType lhs, DType rhs) {
         (rhs.enumv() == DTypeTrait<dt2>::enumv))   \
         return lhs.param<dt1>().scale * rhs.param<dt2>().scale;
     cb_binary(::megdnn::dtype::QuantizedS8, ::megdnn::dtype::QuantizedS16)
+    cb_binary(::megdnn::dtype::Quantized4Asymm, ::megdnn::dtype::QuantizedS4)
 #undef cb_binary
 
     megdnn_assert(lhs.enumv() == rhs.enumv());

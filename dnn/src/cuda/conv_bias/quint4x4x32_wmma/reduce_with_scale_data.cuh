@@ -37,7 +37,7 @@
 
 namespace megdnn {
 namespace cuda {
-void _do_dispatch_reduce_with_scale_data_u4(
+void do_dispatch_reduce_with_scale_data_u4(
         int32_t* dst, const uint8_t* src, int batch_size, int ih, int iw,
         int oh, int ow, int ph, int pw, int fh, int fw, int sh, int sw, int ic,
         int32_t scale, uint8_t zp_data, cudaStream_t stream);
