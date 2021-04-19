@@ -71,7 +71,7 @@ public:
         auto rand_real2 = [&](double range) {
             return rand_real(-range, range);
         };
-        dt_float32 res;
+        dt_float32 res = 0;
         switch (idx) {
             case 0:
                 rot = rand_real(0, M_PI * 2);

@@ -182,10 +182,10 @@ CheckerHelper::CheckerHelper(Handle *handle, bool check_dispatch):
     const char* env_p = std::getenv("MGB_NO_NAIVE_CHECK");
     if (env_p) {
         int no_naive_flag = atoi(env_p);
-        no_naive_and_check = no_naive_flag > 0 ? true : false;
+        m_no_naive_and_check = no_naive_flag > 0 ? true : false;
         check_dispatch = false;
     } else {
-        no_naive_and_check = false;
+        m_no_naive_and_check = false;
     }
     auto tmp_handle = create_cpu_handle(2, check_dispatch);
     m_handle_naive = std::move(tmp_handle);
@@ -282,7 +282,18 @@ void CheckerHelper::do_exec(const TensorLayoutArray &user_layouts,
         m_expect_exec_fail = {};
         return;
     }
-    if (no_naive_and_check){
+    if (m_stable_check) {
+        auto tensors_bak_host_storage =
+                alloc_tensors(m_handle_naive.get(), layouts, m_offset);
+        auto&& tensors_bak_host = *tensors_bak_host_storage;
+        copy_tensors_from_device(tensors_bak_host, tensors_cur);
+        for (int i = 0; i < 10; i++) {
+            exec_opr(tensors_cur);
+            copy_tensors_from_device(tensors_cur_host, tensors_cur);
+            check_tensors(tensors_bak_host, tensors_cur_host);
+        }
+    }
+    if (m_no_naive_and_check) {
         m_prev_succ = !::testing::Test::HasFailure();
         return;
     }

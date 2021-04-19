@@ -28,6 +28,13 @@ bool check_compute_capability_eq(int major, int minor) {
     cuda_check(cudaGetDeviceProperties(&prop, dev));
     return (prop.major == major && prop.minor == minor);
 }
+const cudaDeviceProp current_cuda_device_prop() {
+    int dev;
+    cuda_check(cudaGetDevice(&dev));
+    cudaDeviceProp prop;
+    cuda_check(cudaGetDeviceProperties(&prop, dev));
+    return prop;
+}
 }  // namespace test
 }  // namespace megdnn
 

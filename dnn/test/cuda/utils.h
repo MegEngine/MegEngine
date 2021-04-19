@@ -27,6 +27,7 @@ namespace megdnn {
 namespace test {
 bool check_compute_capability(int major, int minor);
 bool check_compute_capability_eq(int major, int minor);
+const cudaDeviceProp current_cuda_device_prop();
 }  // namespace test
 }  // namespace megdnn
 

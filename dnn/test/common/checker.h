@@ -76,7 +76,8 @@ protected:
     ExtraOprImpl m_extra_opr_impl;
     OutputCanonizer m_output_canonizer;
     TensorsConstriant m_tensor_constraint;
-    bool no_naive_and_check = false;
+    bool m_no_naive_and_check = false;
+    bool m_stable_check = false;
     /**
      * the offset from the start of malloc memory
      *
@@ -227,6 +228,17 @@ public:
 
     Checker& set_perf_check_threshold(float perf_check_threshold) {
         m_perf_check_threshold = perf_check_threshold;
+        return *this;
+    }
+
+    //! stable check will run many iter and compare result with first iter
+    Checker& set_stable_check(bool stable_check) {
+        m_stable_check = stable_check;
+        return *this;
+    }
+
+    Checker& set_no_naive_check(bool no_naive_and_check) {
+        m_no_naive_and_check = no_naive_and_check;
         return *this;
     }
 
