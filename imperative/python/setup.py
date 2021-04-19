@@ -49,17 +49,24 @@ __version__ = v['__version__']
 email = 'megengine@megvii.com'
 # https://www.python.org/dev/peps/pep-0440
 # Public version identifiers: [N!]N(.N)*[{a|b|rc}N][.postN][.devN]
+# Local version identifiers: <public version identifier>[+<local version label>]
 # PUBLIC_VERSION_POSTFIX use to handle rc or dev info
 public_version_postfix = os.environ.get('PUBLIC_VERSION_POSTFIX')
 if public_version_postfix:
     __version__ = '{}{}'.format(__version__, public_version_postfix)
+
+local_version = []
+strip_sdk_info = os.environ.get('STRIP_SDK_INFO', 'False').lower()
 sdk_name = os.environ.get('SDK_NAME', 'cpu')
-__version__ = '{}+{}'.format(__version__, sdk_name)
-# Local version identifiers: <public version identifier>[+<local version label>]
-# reserved for special whl package
-local_version = os.environ.get('LOCAL_VERSION')
-if local_version:
-    __version__ = '{}.{}'.format(__version__, local_version)
+if 'true' == strip_sdk_info:
+    print('wheel version strip sdk info')
+else:
+    local_version.append(sdk_name)
+local_postfix = os.environ.get('LOCAL_VERSION')
+if local_postfix:
+    local_version.append(local_postfix)
+if len(local_version):
+    __version__ = '{}+{}'.format(__version__, '.'.join(local_version))
 
 packages = find_packages(exclude=['test'])
 megengine_data = [
