@@ -300,18 +300,18 @@ def remap(
 
 def warp_affine(
     inp: Tensor,
-    weight: Tensor,
-    out_shape,
-    border_mode="replicate",
-    border_val=0,
-    format="NHWC",
-    imode="linear",
-):
+    mat: Tensor,
+    out_shape: Union[Tuple[int, int], int, Tensor],
+    border_mode: str = "replicate",
+    border_val: float = 0.0,
+    format: str = "NHWC",
+    interp_mode: str = "linear",
+) -> Tensor:
     """
     Batched affine transform on 2D images.
 
     :param inp: input image.
-    :param weight: weight tensor.
+    :param mat: `(batch, 2, 3)` transformation matrix.
     :param out_shape: output tensor shape.
     :param border_mode: pixel extrapolation method.
         Default: "wrap". Currently "constant", "reflect",
@@ -319,30 +319,35 @@ def warp_affine(
     :param border_val: value used in case of a constant border. Default: 0
     :param format: "NHWC" as default based on historical concerns,
         "NCHW" is also supported. Default: "NHWC".
-    :param imode: interpolation methods. Could be "linear", "nearest", "cubic", "area".
+    :param interp_mode: interpolation methods. Could be "linear", "nearest", "cubic", "area".
         Default: "linear".
     :return: output tensor.
 
     .. note::
 
-    Here all available options for params are listed,
-    however it does not mean that you can use all the combinations.
-    On different platforms, different combinations are supported.
+       Here all available options for params are listed,
+       however it does not mean that you can use all the combinations.
+       On different platforms, different combinations are supported.
     """
     op = builtin.WarpAffine(
-        border_mode=border_mode, border_val=border_val, format=format, imode=imode
+        border_mode=border_mode,
+        border_val=border_val,
+        format=format,
+        imode=interp_mode,
     )
     out_shape = utils.astensor1d(out_shape, inp, dtype="int32", device=inp.device)
-    (result,) = apply(op, inp, weight, out_shape)
+    (result,) = apply(op, inp, mat, out_shape)
     return result
 
 
 def warp_perspective(
     inp: Tensor,
-    M: Tensor,
-    dsize: Union[Tuple[int, int], int, Tensor],
+    mat: Tensor,
+    out_shape: Union[Tuple[int, int], int, Tensor],
+    mat_idx: Optional[Union[Iterable[int], Tensor]] = None,
     border_mode: str = "replicate",
     border_val: float = 0.0,
+    format: str = "NCHW",
     interp_mode: str = "linear",
 ) -> Tensor:
     r"""
@@ -356,20 +361,25 @@ def warp_perspective(
                 \frac{M_{10}h + M_{11}w + M_{12}}{M_{20}h + M_{21}w + M_{22}}
                 \right)
 
+    Optionally, we can set `mat_idx` to assign different transformations to the same image,
+    otherwise the input images and transformations should be one-to-one correnspondence.
+
     :param inp: input image.
-    :param M: `(batch, 3, 3)` transformation matrix.
-    :param dsize: `(h, w)` size of the output image.
+    :param mat: `(batch, 3, 3)` transformation matrix.
+    :param out_shape: `(h, w)` size of the output image.
+    :param mat_idx: `(batch, )` image batch idx assigned to each matrix. Default: None
     :param border_mode: pixel extrapolation method.
         Default: "replicate". Currently also support "constant", "reflect",
         "reflect_101", "wrap".
     :param border_val: value used in case of a constant border. Default: 0
+    :param format: "NHWC" is also supported. Default: "NCHW".
     :param interp_mode: interpolation methods.
         Default: "linear". Currently only support "linear" mode.
     :return: output tensor.
 
-    Note:
+    .. note::
 
-    The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
+       The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
 
     Examples:
 
@@ -398,11 +408,15 @@ def warp_perspective(
 
     """
     op = builtin.WarpPerspective(
-        imode=interp_mode, bmode=border_mode, format="NCHW", border_val=border_val
+        imode=interp_mode, bmode=border_mode, format=format, border_val=border_val
     )
-    inp, M = utils.convert_inputs(inp, M)
-    dsize = astensor1d(dsize, inp, dtype="int32", device=inp.device)
-    (result,) = apply(op, inp, M, dsize)
+    inp, mat = utils.convert_inputs(inp, mat)
+    out_shape = astensor1d(out_shape, inp, dtype="int32", device=inp.device)
+    if mat_idx is not None:
+        mat_idx = astensor1d(mat_idx, inp, dtype="int32", device=inp.device)
+        (result,) = apply(op, inp, mat, mat_idx, out_shape)
+        return result
+    (result,) = apply(op, inp, mat, out_shape)
     return result
 
 
