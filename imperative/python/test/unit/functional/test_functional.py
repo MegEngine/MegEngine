@@ -370,6 +370,32 @@ def test_warp_perspective():
     )
 
 
+def test_warp_perspective_mat_idx():
+    inp_shape = (2, 1, 4, 4)
+    x = tensor(np.arange(32, dtype=np.float32).reshape(inp_shape))
+    M_shape = (1, 3, 3)
+    # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
+    M = tensor(
+        np.array(
+            [[1.0, 0.0, 1.0], [0.0, 1.0, 1.0], [0.0, 0.0, 1.0]], dtype=np.float32
+        ).reshape(M_shape)
+    )
+    M = F.concat([M,] * 4, 0)
+    outp = F.vision.warp_perspective(x, M, (2, 2), mat_idx=[0, 1, 1, 0])
+    np.testing.assert_equal(
+        outp.numpy(),
+        np.array(
+            [
+                [[[5.0, 6.0], [9.0, 10.0]]],
+                [[[21.0, 22.0], [25.0, 26.0]]],
+                [[[21.0, 22.0], [25.0, 26.0]]],
+                [[[5.0, 6.0], [9.0, 10.0]]],
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+
 def test_warp_affine():
     inp_shape = (1, 3, 3, 3)
     x = tensor(np.arange(27, dtype=np.float32).reshape(inp_shape))
