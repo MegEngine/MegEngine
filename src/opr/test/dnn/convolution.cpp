@@ -356,14 +356,7 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
     auto orig_impl = PersistentCache::set_impl(
             std::make_shared<InMemoryPersistentCache>());
 
-#if MGB_ENABLE_FASTRUN
-    for (auto strategy :
-         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
-                        S::PROFILE | S::HEURISTIC}) {
-#else
-    for (auto strategy :
-         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
-#endif
+    auto run = [&](S strategy) {
         auto graph = ComputingGraph::make();
         HostTensorGenerator<> gen;
 
@@ -378,10 +371,8 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
         auto x = mkvar("x", {20, 50, 50, 16}, dtype::QuantizedS8(2.5f));
         auto w = mkvar("w", {24, 3, 3, 16}, dtype::QuantizedS8(2.5f));
         auto bias = mkvar("bias", {1, 1, 1, 24}, dtype::QuantizedS32(6.25f));
-
         param.nonlineMode = Param::NonlineMode::RELU;
         param.format = Param::Format::NHWC;
-
         Policy policy;
         policy.strategy = strategy;
 
@@ -391,10 +382,21 @@ TEST(TestOprDNN, ConvBiasExePolicy) {
         HostTensorND host_y;
         auto func = graph->compile({make_callback_copy(conv_bias, host_y)});
         func->execute();
-
         //! set a new cache
         PersistentCache::set_impl(std::make_shared<InMemoryPersistentCache>());
+    };
+
+#if MGB_ENABLE_FASTRUN
+    for (auto strategy :
+         SmallVector<S>{S::PROFILE, S::HEURISTIC, S::PROFILE | S::REPRODUCIBLE,
+                        S::PROFILE | S::HEURISTIC}) {
+#else
+    for (auto strategy :
+         SmallVector<S>{S : HEURISTIC, S::PROFILE | S::HEURISTIC}) {
+#endif
+        run(strategy);
     }
+    ASSERT_THROW(run(S::OPTIMIZED | S::PROFILE), MegBrainError);
     PersistentCache::set_impl(orig_impl);
 }
 
