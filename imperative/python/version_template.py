@@ -6,5 +6,5 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-__version__ = "1.4.0.dev"
+__version__ = "1.4.0"
 
