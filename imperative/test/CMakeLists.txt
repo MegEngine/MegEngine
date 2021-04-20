@@ -11,6 +11,7 @@ endif()
 
 # TODO: turn python binding into a static/object library
 add_executable(imperative_test ${SOURCES} ${SRCS})
+add_dependencies(imperative_test mgb_opdef)
 target_include_directories(imperative_test PRIVATE ${MGB_TEST_DIR}/include ../src/include ${MGB_OPDEF_OUT_DIR})
 
 # Python binding

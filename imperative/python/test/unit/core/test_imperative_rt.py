@@ -69,3 +69,16 @@ def test_raw_tensor():
     np.testing.assert_allclose(x * x, yy.numpy())
     (yy,) = apply(Elemwise(Elemwise.Mode.MUL), xx, xx)
     np.testing.assert_allclose(x * x, yy.numpy())
+
+
+def test_opdef_path():
+    from megengine.core.ops.builtin import Elemwise
+
+    assert Elemwise.__module__ == "megengine.core._imperative_rt.ops"
+    assert Elemwise.__name__ == "Elemwise"
+    assert Elemwise.__qualname__ == "Elemwise"
+
+    Mode = Elemwise.Mode
+    assert Mode.__module__ == "megengine.core._imperative_rt.ops"
+    assert Mode.__name__ == "Mode"
+    assert Mode.__qualname__ == "Elemwise.Mode"
