@@ -170,7 +170,7 @@ struct EnumTrait;
     PyObject_HEAD \
     T value; \
     constexpr static const char *name = EnumTrait<T>::name; \
-    static PyTypeObject type; \
+    static PyTypeObject* type; \
     static const char* members[]; \
     static std::unordered_map<std::string, T> mem2value; \
     static PyObject* pyobj_insts[];
@@ -196,7 +196,7 @@ struct EnumWrapper {
     }
     static bool load(py::handle src, T& value) {
         PyObject* obj = src.ptr();
-        if (PyObject_TypeCheck(obj, &type)) {
+        if (PyObject_TypeCheck(obj, type)) {
             value = reinterpret_cast<EnumWrapper*>(obj)->value;
             return true;
         }
@@ -224,7 +224,6 @@ struct EnumWrapper {
 template<typename T>
 struct BitCombinedEnumWrapper {
     PyEnumHead
-    static PyNumberMethods number_methods;
     std::string to_string() const {
         uint32_t value_int = static_cast<uint32_t>(value);
         if (value_int == 0) {
@@ -302,7 +301,7 @@ struct BitCombinedEnumWrapper {
     }
     static bool load(py::handle src, T& value) {
         PyObject* obj = src.ptr();
-        if (PyObject_TypeCheck(obj, &type)) {
+        if (PyObject_TypeCheck(obj, type)) {
             value = reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value;
             return true;
         }
@@ -330,8 +329,7 @@ struct BitCombinedEnumWrapper {
         auto v = static_cast<std::underlying_type_t<T>>(value);
         mgb_assert(v <= EnumTrait<T>::max);
         if ((!v) || (v & (v - 1))) {
-            PyTypeObject* pytype = &type;
-            PyObject* obj = pytype->tp_alloc(pytype, 0);
+            PyObject* obj = type->tp_alloc(type, 0);
             reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = value;
             return obj;
         } else {
